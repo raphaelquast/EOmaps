@@ -21,23 +21,23 @@ numpy, pandas, geopandas, matplotlib, cartopy >= 0.20.0, descartes, mapclassify,
 
 # basic usage
 
-- check out the jupyter notebook: 🛸 [A_basic_map.ipynb](https://github.com/raphaelquast/maps/blob/dev/examples/A_basic_map.ipynb) 🛸
+- check out the example-notebook: 🛸 [A_basic_map.ipynb](https://github.com/raphaelquast/maps/blob/dev/examples/A_basic_map.ipynb) 🛸
 
 ```python
 from maps import Maps
 
 m = Maps()
 
-m.data = ... a pandas-dataframe with coordinates and data-values ...
+m.data = "... a pandas-dataframe with coordinates and data-values ..."
 
-m.set_data_specs( ... data specifications ...)
-m.set_plot_specs( ... variables that control the appearance of the plot ...)
-m.set_classify_specs( ... automatic classification of the data va mapclassify ...)
+m.set_data_specs("... data specifications ...")
+m.set_plot_specs("... variables that control the appearance of the plot ...")
+m.set_classify_specs("... automatic classification of the data va mapclassify ...")
 
 # plot the map
 m.plot_map()
 
-m.figure.(...)  # access to individual objects of the generated figure
+m.figure.   # access to individual objects of the generated figure (f, ax, cb, gridspec etc.)
 
 ```
 
