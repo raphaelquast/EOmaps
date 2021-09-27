@@ -14,3 +14,23 @@ a general-purpose library to plot maps of large non-rectangular datasets.
 
 ### contact
 Raphael Quast (raphael.quast@geo.tuwien.ac.at)
+
+
+# usage
+
+```python
+from maps import RTmaps
+
+m = RTmaps()
+
+m.set_data_specs( ... data specifications ...)
+m.set_plot_specs( ... variables that control the appearance of the plot ...)
+m.set_classify_specs( ... automatic classification of the data va mapclassify ...)
+
+# plot the map
+m.plot_map()
+
+
+m.figure.(...)  # access to individual objects of the generated figure
+
+```
