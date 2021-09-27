@@ -1,1 +1,1 @@
-from .rtmaps import RTmaps
+from .maps import Maps, cmap_alpha
