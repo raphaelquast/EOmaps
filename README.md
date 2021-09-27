@@ -23,6 +23,8 @@ from maps import RTmaps
 
 m = RTmaps()
 
+m.data = ... a pandas-dataframe with coordinates and data-values ...
+
 m.set_data_specs( ... data specifications ...)
 m.set_plot_specs( ... variables that control the appearance of the plot ...)
 m.set_classify_specs( ... automatic classification of the data va mapclassify ...)
