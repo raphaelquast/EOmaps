@@ -2,7 +2,8 @@
 
 a general-purpose library to plot maps of large non-rectangular datasets.
 
-(it's a work-in-progress... feel free to contribute!)
+❗ ❗  it's a work-in-progress library that is subject to structural changes!   
+🚀  feel free to contribute!
 
 ### features
 - plot data-points as ellipses or rectangles with actual geographical dimensions
@@ -12,11 +13,7 @@ a general-purpose library to plot maps of large non-rectangular datasets.
 - get a nice colorbar with a colored histogram on top
 
 
-### contact
-Raphael Quast (raphael.quast at geo.tuwien.ac.at)
-
-
-# usage
+# basic usage
 
 ```python
 from maps import RTmaps
