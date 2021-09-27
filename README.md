@@ -2,7 +2,7 @@
 
 a general-purpose library to plot maps of large non-rectangular datasets.
 
-❗❗❗ it's a **work-in-progress** library that is subject to structural changes!   
+❗❗❗ it's a **work-in-progress** library that is subject to structural changes!
 🚀  feel free to contribute!
 
 ### features
@@ -16,9 +16,9 @@ a general-purpose library to plot maps of large non-rectangular datasets.
 # basic usage
 
 ```python
-from maps import RTmaps
+from maps import Maps
 
-m = RTmaps()
+m = Maps()
 
 m.data = ... a pandas-dataframe with coordinates and data-values ...
 

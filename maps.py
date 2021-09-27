@@ -57,7 +57,7 @@ def cmap_alpha(cmap, alpha, interpolate=False):
     return new_cmap
 
 
-class _RTmaps_plot(object):
+class _Maps_plot(object):
     def __init__(self, **kwargs):
 
         for key, val in kwargs.items():
@@ -68,7 +68,7 @@ class _RTmaps_plot(object):
     #         setattr(self, key, val)
 
 
-class RTmaps(object):
+class Maps(object):
     """
     A class to perform reading an plotting of spatial maps
 
@@ -155,8 +155,8 @@ class RTmaps(object):
 
         Returns
         -------
-        copy_cls : rt1.rtmaps.RTmaps
-            a new RTmaps class.
+        copy_cls : maps.Maps object
+            a new Maps class.
         """
 
         initdict = dict()
@@ -261,7 +261,7 @@ class RTmaps(object):
             list of callback-functions that are triggered if a patch is double-clicked.
             There are some useful builtin-callbacks:
 
-            >>> m = RTmaps(...)
+            >>> m = Maps(...)
             >>> m.set_plot_specs(
             >>>     callback=[
             >>>         m.cb_annotate, # annotate properties of selected patch])
@@ -291,6 +291,18 @@ class RTmaps(object):
     def set_classify_specs(self, **kwargs):
         for key, val in kwargs.items():
             self.classify_specs[key] = val
+
+    def set_orientation(self, orientation="horizontal"):
+        """
+        set the orientation of the plot
+
+        Parameters
+        ----------
+        orientation : str
+            the orientation to use (either "horizontal" or "vertical").
+            The default is "horizontal".
+        """
+        self.orientation = orientation
 
     def load_data(
         self,
@@ -616,7 +628,7 @@ class RTmaps(object):
                     ind = event.ind
 
                     clickdict = dict(
-                        pos=coll._rtmaps_positions[ind],
+                        pos=coll._Maps_positions[ind],
                         ID=coll.get_urls()[ind],
                         val=coll.get_array()[ind],
                         f=f,
@@ -646,7 +658,7 @@ class RTmaps(object):
             tick_precision=tick_precision,
         )
 
-        self.figure = _RTmaps_plot(**self.updatedict)
+        self.figure = _Maps_plot(**self.updatedict)
 
     def _prepare_data(
         self,
@@ -920,7 +932,7 @@ class RTmaps(object):
             )
 
             # add centroid positions (used by the picker in self._spatial_plot)
-            coll._rtmaps_positions = list(zip(x0, y0))
+            coll._Maps_positions = list(zip(x0, y0))
 
 
         if color is not None:
@@ -1187,7 +1199,13 @@ class RTmaps(object):
         overlay_df.crs = CRS.from_epsg(4326)
         overlay_df.to_crs(self.plot_specs["plot_epsg"], inplace=True)
 
-        overlay_df = overlay_df[~np.isnan(overlay_df.area)]
+        import warnings
+        with warnings.catch_warnings():
+            warnings.filterwarnings("ignore", category=UserWarning)
+            # ignore the UserWarning that area is proabably inexact when using
+            # projected coordinate-systems (we only care about > 0)
+            overlay_df = overlay_df[~np.isnan(overlay_df.area)]
+
         if maskshp is not None:
             overlay_df = gpd.overlay(overlay_df[["geometry"]], maskshp)
 
