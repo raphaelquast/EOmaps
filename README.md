@@ -13,7 +13,7 @@ a general-purpose library to plot maps of large non-rectangular datasets.
 
 
 ### contact
-Raphael Quast (raphael.quast@geo.tuwien.ac.at)
+Raphael Quast (raphael.quast at geo.tuwien.ac.at)
 
 
 # usage
