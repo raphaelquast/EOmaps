@@ -4,6 +4,7 @@ from .helpers import pairwise
 
 try:
     from rt1.rtresults import RTresults
+
     _rt1 = True
 except ImportError:
     _rt1 = False
@@ -28,6 +29,7 @@ from cartopy.io import shapereader
 
 from functools import partial
 
+
 def cmap_alpha(cmap, alpha, interpolate=False):
     """
     add transparency to an existing colormap
@@ -49,7 +51,7 @@ def cmap_alpha(cmap, alpha, interpolate=False):
     """
 
     new_cmap = cmap(np.arange(cmap.N))
-    new_cmap[:,-1] = alpha
+    new_cmap[:, -1] = alpha
     if interpolate:
         new_cmap = LinearSegmentedColormap("new_cmap", new_cmap)
     else:
@@ -59,7 +61,9 @@ def cmap_alpha(cmap, alpha, interpolate=False):
 
 class _Maps_plot(object):
     def __init__(self, **kwargs):
-
+        """
+        a container for accessing the figure objects
+        """
         for key, val in kwargs.items():
             setattr(self, key, val)
 
@@ -102,14 +106,14 @@ class Maps(object):
         ncfile_name=None,
         plot_specs=None,
         classify_specs=None,
-        orientation="horizontal"
+        orientation="horizontal",
     ):
 
         self.respath = respath
         self.dumpfolder = dumpfolder
         self.ncfile_name = ncfile_name
 
-        self.orientation=orientation
+        self.orientation = orientation
 
         # initialize default plotspecs
         self.data_specs = dict(parameter=None, xcoord="x", ycoord="y", in_crs=None)
@@ -131,7 +135,7 @@ class Maps(object):
             add_colorbar=True,
             coastlines=True,
             density=False,
-            shape="ellipses"
+            shape="ellipses",
         )
         self.classify_specs = dict()
 
@@ -166,7 +170,7 @@ class Maps(object):
             else:
                 initdict[key] = self.__dict__.get(key, None)
 
-        initdict["data_specs"] = dict()
+        initdict["data_specs"] = self.data_specs
         initdict["plot_specs"] = {
             key: val for key, val in self.plot_specs.items() if key != "callback"
         }
@@ -196,9 +200,7 @@ class Maps(object):
         return a file-handler to the used NetCDF file
         NOTICE: Each call initializes a new filehandler!
         """
-        assert _rt1, (
-            "you need to have the rt1 module installed to use this feature!")
-
+        assert _rt1, "you need to have the rt1 module installed to use this feature!"
 
         res = RTresults(self.respath)
 
@@ -416,7 +418,7 @@ class Maps(object):
         add_colorbar=True,
         coastlines=True,
         density=False,
-        shape="ellipses"
+        shape="ellipses",
     ):
         """
         A fast way to genereate a plot of "projected circles" of datapoints.
@@ -580,7 +582,7 @@ class Maps(object):
                 vmin=vmin,
                 vmax=vmax,
                 tick_precision=tick_precision,
-                density=density
+                density=density,
             )
 
             # save colorbar instance for later use
@@ -808,8 +810,7 @@ class Maps(object):
             gs_func = GridSpec
         else:
             f = f_gridspec[0]
-            gs_func = partial(GridSpecFromSubplotSpec,
-                              subplot_spec=f_gridspec[1])
+            gs_func = partial(GridSpecFromSubplotSpec, subplot_spec=f_gridspec[1])
 
         if self.orientation == "horizontal":
             # gridspec for the plot
@@ -891,11 +892,24 @@ class Maps(object):
             gs, cbgs = None, None
             cb_ax, cb_plot_ax = None, None
 
-
         return f, gs, cbgs, ax, cb_ax, cb_plot_ax
 
     def _add_collection(
-        self, ax, z_data, x0, y0, w, h, theta, cmap, vmin, vmax, norm, ids, color=None, shape="ellipses",
+        self,
+        ax,
+        z_data,
+        x0,
+        y0,
+        w,
+        h,
+        theta,
+        cmap,
+        vmin,
+        vmax,
+        norm,
+        ids,
+        color=None,
+        shape="ellipses",
     ):
 
         if shape == "ellipses":
@@ -912,28 +926,43 @@ class Maps(object):
             theta = np.deg2rad(theta)
 
             # top right
-            p0 = np.array([x0 + w * np.cos(theta) - h * np.sin(theta),
-                           y0 + w * np.sin(theta) + h * np.cos(theta)]).T
+            p0 = np.array(
+                [
+                    x0 + w * np.cos(theta) - h * np.sin(theta),
+                    y0 + w * np.sin(theta) + h * np.cos(theta),
+                ]
+            ).T
             # top left
-            p1 = np.array([x0 - w * np.cos(theta) - h * np.sin(theta),
-                           y0 - w * np.sin(theta) + h * np.cos(theta)]).T
+            p1 = np.array(
+                [
+                    x0 - w * np.cos(theta) - h * np.sin(theta),
+                    y0 - w * np.sin(theta) + h * np.cos(theta),
+                ]
+            ).T
             # bottom left
-            p2 = np.array([x0 - w * np.cos(theta) + h * np.sin(theta),
-                           y0 - w * np.sin(theta) - h * np.cos(theta)]).T
+            p2 = np.array(
+                [
+                    x0 - w * np.cos(theta) + h * np.sin(theta),
+                    y0 - w * np.sin(theta) - h * np.cos(theta),
+                ]
+            ).T
             # bottom right
-            p3 = np.array([x0 + w * np.cos(theta) + h * np.sin(theta),
-                           y0 + w * np.sin(theta) - h * np.cos(theta)]).T
+            p3 = np.array(
+                [
+                    x0 + w * np.cos(theta) + h * np.sin(theta),
+                    y0 + w * np.sin(theta) - h * np.cos(theta),
+                ]
+            ).T
 
             verts = np.array(list(zip(p0, p1, p2, p3)))
 
             coll = collections.PolyCollection(
-                verts = verts,
+                verts=verts,
                 transOffset=ax.transData,
             )
 
             # add centroid positions (used by the picker in self._spatial_plot)
             coll._Maps_positions = list(zip(x0, y0))
-
 
         if color is not None:
             coll.set_color(color)
@@ -975,8 +1004,12 @@ class Maps(object):
         n_cmap = cm.ScalarMappable(cmap=cmap, norm=norm)
         n_cmap.set_array(np.ma.masked_invalid(z_data))
         cb = plt.colorbar(
-            n_cmap, cax=cb_ax, label=label, extend="both", spacing="proportional",
-            orientation=cb_orientation
+            n_cmap,
+            cax=cb_ax,
+            label=label,
+            extend="both",
+            spacing="proportional",
+            orientation=cb_orientation,
         )
 
         # plot the histogram
@@ -989,7 +1022,6 @@ class Maps(object):
             # range=(norm.vmin, norm.vmax),
             density=density,
         )
-
 
         # color the histogram
         for patch in list(cb_plot_ax.patches):
@@ -1006,7 +1038,6 @@ class Maps(object):
                 height = patch.get_height()
                 maxval = minval + width
 
-
             patch.set_facecolor(cmap(norm((minval + maxval) / 2)))
 
             # take care of histogram-bins that have splitted colors
@@ -1021,22 +1052,28 @@ class Maps(object):
                     b0 = splitbins[0]
                     if self.orientation == "horizontal":
                         p0 = mpl.patches.Rectangle(
-                            (0, minval), width, (b0 - minval), facecolor=cmap(norm(minval))
+                            (0, minval),
+                            width,
+                            (b0 - minval),
+                            facecolor=cmap(norm(minval)),
                         )
                     elif self.orientation == "vertical":
                         p0 = mpl.patches.Rectangle(
-                            (minval, 0), (b0 - minval), height, facecolor=cmap(norm(minval))
+                            (minval, 0),
+                            (b0 - minval),
+                            height,
+                            facecolor=cmap(norm(minval)),
                         )
 
                     b1 = splitbins[-1]
                     if self.orientation == "horizontal":
                         p1 = mpl.patches.Rectangle(
                             (0, b1), width, (maxval - b1), facecolor=cmap(norm(maxval))
-                            )
+                        )
                     elif self.orientation == "vertical":
                         p1 = mpl.patches.Rectangle(
                             (b1, 0), (maxval - b1), height, facecolor=cmap(norm(maxval))
-                            )
+                        )
 
                     cb_plot_ax.add_patch(p0)
                     cb_plot_ax.add_patch(p1)
@@ -1050,17 +1087,16 @@ class Maps(object):
 
                             if self.orientation == "horizontal":
                                 pi = mpl.patches.Rectangle(
-                                (0, b0), width, (b1 - b0), facecolor=cmap(norm(b0))
+                                    (0, b0), width, (b1 - b0), facecolor=cmap(norm(b0))
                                 )
                             elif self.orientation == "vertical":
                                 pi = mpl.patches.Rectangle(
-                                (b0, 0), (b1 - b0), height, facecolor=cmap(norm(b0))
-                            )
+                                    (b0, 0), (b1 - b0), height, facecolor=cmap(norm(b0))
+                                )
 
                             cb_plot_ax.add_patch(pi)
                 else:
                     patch.set_facecolor(cmap(norm((minval + maxval) / 2)))
-
 
         # setup appearance of histogram
         if self.orientation == "horizontal":
@@ -1095,8 +1131,6 @@ class Maps(object):
             cb_plot_ax.plot(
                 [0, 1], [0, 0], "k--", alpha=0.5, transform=cb_plot_ax.transAxes
             )
-
-
 
         cb.outline.set_visible(False)
 
@@ -1200,6 +1234,7 @@ class Maps(object):
         overlay_df.to_crs(self.plot_specs["plot_epsg"], inplace=True)
 
         import warnings
+
         with warnings.catch_warnings():
             warnings.filterwarnings("ignore", category=UserWarning)
             # ignore the UserWarning that area is proabably inexact when using
@@ -1311,7 +1346,7 @@ class Maps(object):
         in_crs=4326,
         cpos="c",
         legend_kwargs=True,
-        shape="ellipses"
+        shape="ellipses",
     ):
         """
         Parameters
@@ -1410,8 +1445,9 @@ class Maps(object):
             else:
                 if color:
                     proxies = [Patch(color=color)]
-                    labels = [label_dict.get("label", "overlay")
-                              if label_dict else "overlay"]
+                    labels = [
+                        label_dict.get("label", "overlay") if label_dict else "overlay"
+                    ]
                 else:
                     proxies = [Patch(color=cmap(norm(val))) for val in uniquevals]
                     if label_dict:
@@ -1503,7 +1539,7 @@ class Maps(object):
         cpos="c",
         classify_specs=None,
         adjust_data_callable=None,
-        shape="ellipses"
+        shape="ellipses",
     ):
 
         ax = self.updatedict["ax"]
