@@ -1,18 +1,10 @@
 """a collection of helper-functions to generate map-plots"""
 
-from .helpers import pairwise
-
-try:
-    from rt1.rtresults import RTresults
-    _rt1 = True
-except ImportError:
-    _rt1 = False
+from functools import partial
 
 import numpy as np
 import pandas as pd
 import geopandas as gpd
-
-import mapclassify
 from pyproj import CRS, Transformer
 
 import matplotlib as mpl
@@ -26,7 +18,13 @@ from cartopy import crs as ccrs
 from cartopy import feature as cfeature
 from cartopy.io import shapereader
 
-from functools import partial
+from .helpers import pairwise
+
+try:
+    import mapclassify
+except ImportError:
+    print("No module named 'mapclassify'... classification will not work!")
+
 
 def cmap_alpha(cmap, alpha, interpolate=False):
     """
@@ -49,7 +47,7 @@ def cmap_alpha(cmap, alpha, interpolate=False):
     """
 
     new_cmap = cmap(np.arange(cmap.N))
-    new_cmap[:,-1] = alpha
+    new_cmap[:, -1] = alpha
     if interpolate:
         new_cmap = LinearSegmentedColormap("new_cmap", new_cmap)
     else:
@@ -59,7 +57,9 @@ def cmap_alpha(cmap, alpha, interpolate=False):
 
 class _Maps_plot(object):
     def __init__(self, **kwargs):
-
+        """
+        a container for accessing the figure objects
+        """
         for key, val in kwargs.items():
             setattr(self, key, val)
 
@@ -102,17 +102,22 @@ class Maps(object):
         ncfile_name=None,
         plot_specs=None,
         classify_specs=None,
-        orientation="horizontal"
+        orientation="horizontal",
     ):
 
         self.respath = respath
         self.dumpfolder = dumpfolder
         self.ncfile_name = ncfile_name
 
-        self.orientation=orientation
+        self.orientation = orientation
 
-        # initialize default plotspecs
-        self.data_specs = dict(parameter=None, xcoord="x", ycoord="y", in_crs=None)
+        # initialize default plot specs
+        self.data_specs = dict(
+            parameter=None,
+            xcoord="lon",
+            ycoord="lat",
+            in_crs=4326,
+        )
 
         self.plot_specs = dict(
             label=None,
@@ -131,8 +136,9 @@ class Maps(object):
             add_colorbar=True,
             coastlines=True,
             density=False,
-            shape="ellipses"
+            shape="ellipses",
         )
+
         self.classify_specs = dict()
 
         if plot_specs is not None:
@@ -166,7 +172,7 @@ class Maps(object):
             else:
                 initdict[key] = self.__dict__.get(key, None)
 
-        initdict["data_specs"] = dict()
+        initdict["data_specs"] = self.data_specs
         initdict["plot_specs"] = {
             key: val for key, val in self.plot_specs.items() if key != "callback"
         }
@@ -190,39 +196,37 @@ class Maps(object):
         copy_cls.__dict__.update(initdict)
         return copy_cls
 
-    @property
-    def ncfile(self):
-        """
-        return a file-handler to the used NetCDF file
-        NOTICE: Each call initializes a new filehandler!
-        """
-        assert _rt1, (
-            "you need to have the rt1 module installed to use this feature!")
-
-
-        res = RTresults(self.respath)
-
-        if self.dumpfolder is None:
-            self.dumpfolder = list(res._paths)[0]
-            print(f'dumpfolder: "{self.dumpfolder}" used')
-        else:
-            assert (
-                self.dumpfolder in res._paths
-            ), f"dumpfolder not in {list(res._paths)}"
-
-        self.useres = getattr(res, self.dumpfolder)
-
-        if self.ncfile_name is None:
-            self.ncfile_name = list(self.useres._nc_paths)[0]
-            print(f'NetCDF: "{self.ncfile_name}" used')
-        else:
-            assert (
-                self.ncfile_name in self.useres._nc_paths
-            ), f"NetCDF {self.ncfile_name} not in {list(self.useres._nc_paths)}"
-
-        return self.useres.load_nc(self.ncfile_name)
-
     def set_data_specs(self, **kwargs):
+        """
+        Use this function to update the data-specs
+
+        Parameters
+        ----------
+        parameter : str, optional
+            The name of the parameter to use. If None, the first variable in the
+            provided dataframe will be used.
+            The default is None.
+        xcoord, ycoord : str, optional
+            The name of the x- and y-coordinate as provided in the dataframe.
+            The default is "lon" and "lat".
+        in_crs : int, dict or str
+            The coordinate-system identifier.
+            Can be any input usable with `pyproj.CRS.from_user_input`:
+
+                - PROJ string
+                - Dictionary of PROJ parameters
+                - PROJ keyword arguments for parameters
+                - JSON string with PROJ parameters
+                - CRS WKT string
+                - An authority string [i.e. 'epsg:4326']
+                - An EPSG integer code [i.e. 4326]
+                - A tuple of ("auth_name": "auth_code") [i.e ('epsg', '4326')]
+                - An object with a `to_wkt` method.
+                - A :class:`pyproj.crs.CRS` class
+
+            The default is 4326 (e.g. lon/lat projection)
+        """
+
         for key, val in kwargs.items():
             if key in self.data_specs:
                 self.data_specs[key] = val
@@ -231,52 +235,82 @@ class Maps(object):
 
     def set_plot_specs(self, **kwargs):
         """
-        use this function to update the plot-specs
+        Use this function to update the plot-specs
 
         Parameters
         ----------
         label : str, optional
-            the colorbar-label. The default is None.
+            The colorbar-label.
+            If None, the name of the parameter will be used.
+            The default is None.
         title : str, optional
-            the plot-title. The default is None.
+            The plot-title.
+            If None, the name of the parameter will be used.
+            The default is None.
         cmap : str or matplotlib.colormap, optional
-            the colormap to use. The default is "viridis".
+            The colormap to use. The default is "viridis".
         plot_epsg : in, optional
-            the epsg-code of the projection to use for plotting. The default is 4326.
+            The epsg-code of the projection to use for plotting. The default is 4326.
         radius_crs : str, optional
-            indicator if the radius is specified in data-crs units (e.g. "in")-
-            or in plot-crs units (e.g. "out").
-            The default is "in".
+            Indicator if the radius is specified in data-crs units (e.g. "in")-
+            or in plot-crs units (e.g. "out"). The default is "in".
         radius : float, optional
-            the radius of the patches in the crs defined via "radius_crs".
-            The default is None, in which case it will be automatically determined
-            from the x-y coordinate separation of the data.
+            The radius of the patches in the crs defined via "radius_crs".
+            If None, the radius will be automatically determined from the x-y coordinate
+            separation of the data. The default is None.
         histbins : int, optional
-            the number of histogram-bins to use for the colorbar. The default is 256.
+            The number of histogram-bins to use for the colorbar. The default is 256.
         tick_precision : int, optional
-            the precision of the tick-labels in the colorbar. The default is 2.
+            The precision of the tick-labels in the colorbar. The default is 2.
         vmin, vmax : float, optional
-            min- and max. values assigned to the colorbar. The default is None.
+            Min- and max. values assigned to the colorbar. The default is None.
         callback : list of callables, optional
-            list of callback-functions that are triggered if a patch is double-clicked.
+            List of callback-functions that are triggered if a patch is double-clicked.
             There are some useful builtin-callbacks:
 
             >>> m = Maps(...)
             >>> m.set_plot_specs(
             >>>     callback=[
-            >>>         m.cb_annotate, # annotate properties of selected patch])
+            >>>         m.cb_annotate  # annotate properties of selected patch
             >>>         m.cb_load      # load the associated fit-object (if available)
-            >>>     ]
+            >>>         m.cb_print     # print info to the console on click
+            >>>     ])
+
+            You can also define custom functions that are automatically connected to
+            the Maps-class instance:
+
+            >>> m = Maps()
+            >>>
+            >>> def some_callback(self, **kwargs)
+            >>>     ID = kwargs["ID"]    # index of the selected pixel in the dataframe
+            >>>     ID = kwargs["pos"]   # (x, y) position of the selected pixel
+            >>>     ...
+            >>>     ... add any functionality you want ...
+            >>>     ...
+            >>>
+            >>> m.set_plot_specs(callback=[some_callback])
 
             The default is None.
         cpos : str, optional
-            indicator if the provided x-y coordinates correspond to the center ("c"),
-            upper-left ("ul"), lower-left ("ll") etc.  of the pixel. The default is "c".
-        coastlines : bool
-            indicator if simple coastlines and ocean-colorings should be added
+            Indicator if the provided x-y coordinates correspond to the center ("c"),
+            upper-left ("ul"), lower-left ("ll") etc.  of the pixel.
+            The default is "c".
+        alpha : int, optional
+            Set the transparency of the plot (0-1)
+            The default is 1.
+        add_colorbar : bool, optional
+            Indicator if a colorbar with a histogram should be added to the plot or not.
             The default is True.
-        **kwargs :
-            additional kwargs.
+        coastlines : bool, optional
+            Indicator if simple coastlines and ocean-colorings should be added
+            The default is True.
+        density : bool, optional
+            Indicator if the y-axis of the histogram should represent the
+            probability-density (True) or the number of counts per bin (False)
+            The default is False.
+        shape : str, optional
+            Indicator if "rectangles" or "ellipses" should be potted
+            The default is "ellipses".
         """
 
         for key, val in kwargs.items():
@@ -289,6 +323,36 @@ class Maps(object):
                 print(f'"{key}" is not a valid plot_specs parameter!')
 
     def set_classify_specs(self, **kwargs):
+        """
+        Set classification specifications for the data
+        (classification is performed by the `mapclassify` module)
+
+        Parameters
+        ----------
+        scheme : str, optional
+            The classification scheme to use.
+            E.g. one of:
+            [ "scheme" (**kwargs)  ]
+
+                - BoxPlot (hinge)
+                - EqualInterval (k)
+                - FisherJenks (k)
+                - FisherJenksSampled (k, pct, truncate)
+                - HeadTailBreaks ()
+                - JenksCaspall (k)
+                - JenksCaspallForced (k)
+                - JenksCaspallSampled (k, pct)
+                - MaxP (k, initial)
+                - MaximumBreaks (k, mindiff)
+                - NaturalBreaks (k, initial)
+                - Quantiles (k)
+                - Percentiles (pct)
+                - StdMean (multiples)
+                - UserDefined (bins)
+
+        **kwargs :
+            kwargs passed to the call to the respective mapclassify classifier
+        """
         for key, val in kwargs.items():
             self.classify_specs[key] = val
 
@@ -304,78 +368,10 @@ class Maps(object):
         """
         self.orientation = orientation
 
-    def load_data(
-        self,
-        parameter,
-        xcoord="x",
-        ycoord="y",
-        sel_kwargs=None,
-        isel_kwargs=None,
-        mean_dim=None,
-    ):
-        """
-        a convenience-function to load data from exported netcdf files
-
-        Parameters
-        ----------
-        dumpfolder : str, optional
-            the dumpfolder
-        ncfile_name : str, optional
-            the name of the NetCDF file to load. The default is None.
-        dropna : True
-            indicator if rows containing nan-values should be returned or not
-            (if true, nan's are removed!)
-        sel_kwargs, isel_kwargs : dict
-            kwargs passed to dataset.sel() or dataset.isel()
-        mean_dim : str, optional
-            if provided, the selection will be averaged with respect to
-            dataset.mean(dim=mean_dim)
-
-        Returns
-        -------
-        data : array-like
-            the data.
-        data_crs : str
-            the crs provided within the NetCDF file.
-        """
-
-        self.data_specs["parameter"] = parameter
-        self.data_specs["xcoord"] = xcoord
-        self.data_specs["ycoord"] = ycoord
-
-        with self.ncfile as ncfile:
-            if sel_kwargs is not None:
-                sel = ncfile.sel(**sel_kwargs)[
-                    [xcoord, ycoord, *np.atleast_1d(parameter)]
-                ]
-            elif isel_kwargs is not None:
-                sel = ncfile.isel(**isel_kwargs)[
-                    [xcoord, ycoord, *np.atleast_1d(parameter)]
-                ]
-            else:
-                sel = ncfile[[xcoord, ycoord, *np.atleast_1d(parameter)]]
-
-            if mean_dim is not None:
-                self.data = sel.mean(dim=mean_dim, skipna=True).to_dataframe()
-            else:
-                self.data = sel.to_dataframe()
-
-            # if dropna:
-            #     data = data.dropna()
-
-            if hasattr(ncfile, "crs"):
-                self.data_specs["in_crs"] = ncfile.crs
-            else:
-                print(
-                    "warning, no crs information found in the netcdf file!",
-                    "data_specs['in_crs'] is set to 4326 (e.g. lat/lon) ",
-                )
-                self.data_specs["in_crs"] = 4326
-
     def plot_map(self, f_gridspec=None):
         """
         Actually generate the map-plot
-        (you must call `load_data()` first!)
+        (you must set the data first!)
 
         Parameters
         ----------
@@ -386,7 +382,7 @@ class Maps(object):
             The default is None in which case a new figure is created.
         """
         if not hasattr(self, "data"):
-            print("you must call load_data first!")
+            print("you must set the data first!")
 
         self._spatial_plot(
             data=self.data, **self.plot_specs, **self.data_specs, f_gridspec=f_gridspec
@@ -416,7 +412,7 @@ class Maps(object):
         add_colorbar=True,
         coastlines=True,
         density=False,
-        shape="ellipses"
+        shape="ellipses",
     ):
         """
         A fast way to genereate a plot of "projected circles" of datapoints.
@@ -580,7 +576,7 @@ class Maps(object):
                 vmin=vmin,
                 vmax=vmax,
                 tick_precision=tick_precision,
-                density=density
+                density=density,
             )
 
             # save colorbar instance for later use
@@ -808,8 +804,7 @@ class Maps(object):
             gs_func = GridSpec
         else:
             f = f_gridspec[0]
-            gs_func = partial(GridSpecFromSubplotSpec,
-                              subplot_spec=f_gridspec[1])
+            gs_func = partial(GridSpecFromSubplotSpec, subplot_spec=f_gridspec[1])
 
         if self.orientation == "horizontal":
             # gridspec for the plot
@@ -891,11 +886,24 @@ class Maps(object):
             gs, cbgs = None, None
             cb_ax, cb_plot_ax = None, None
 
-
         return f, gs, cbgs, ax, cb_ax, cb_plot_ax
 
     def _add_collection(
-        self, ax, z_data, x0, y0, w, h, theta, cmap, vmin, vmax, norm, ids, color=None, shape="ellipses",
+        self,
+        ax,
+        z_data,
+        x0,
+        y0,
+        w,
+        h,
+        theta,
+        cmap,
+        vmin,
+        vmax,
+        norm,
+        ids,
+        color=None,
+        shape="ellipses",
     ):
 
         if shape == "ellipses":
@@ -912,28 +920,43 @@ class Maps(object):
             theta = np.deg2rad(theta)
 
             # top right
-            p0 = np.array([x0 + w * np.cos(theta) - h * np.sin(theta),
-                           y0 + w * np.sin(theta) + h * np.cos(theta)]).T
+            p0 = np.array(
+                [
+                    x0 + w * np.cos(theta) - h * np.sin(theta),
+                    y0 + w * np.sin(theta) + h * np.cos(theta),
+                ]
+            ).T
             # top left
-            p1 = np.array([x0 - w * np.cos(theta) - h * np.sin(theta),
-                           y0 - w * np.sin(theta) + h * np.cos(theta)]).T
+            p1 = np.array(
+                [
+                    x0 - w * np.cos(theta) - h * np.sin(theta),
+                    y0 - w * np.sin(theta) + h * np.cos(theta),
+                ]
+            ).T
             # bottom left
-            p2 = np.array([x0 - w * np.cos(theta) + h * np.sin(theta),
-                           y0 - w * np.sin(theta) - h * np.cos(theta)]).T
+            p2 = np.array(
+                [
+                    x0 - w * np.cos(theta) + h * np.sin(theta),
+                    y0 - w * np.sin(theta) - h * np.cos(theta),
+                ]
+            ).T
             # bottom right
-            p3 = np.array([x0 + w * np.cos(theta) + h * np.sin(theta),
-                           y0 + w * np.sin(theta) - h * np.cos(theta)]).T
+            p3 = np.array(
+                [
+                    x0 + w * np.cos(theta) + h * np.sin(theta),
+                    y0 + w * np.sin(theta) - h * np.cos(theta),
+                ]
+            ).T
 
             verts = np.array(list(zip(p0, p1, p2, p3)))
 
             coll = collections.PolyCollection(
-                verts = verts,
+                verts=verts,
                 transOffset=ax.transData,
             )
 
             # add centroid positions (used by the picker in self._spatial_plot)
             coll._Maps_positions = list(zip(x0, y0))
-
 
         if color is not None:
             coll.set_color(color)
@@ -975,8 +998,12 @@ class Maps(object):
         n_cmap = cm.ScalarMappable(cmap=cmap, norm=norm)
         n_cmap.set_array(np.ma.masked_invalid(z_data))
         cb = plt.colorbar(
-            n_cmap, cax=cb_ax, label=label, extend="both", spacing="proportional",
-            orientation=cb_orientation
+            n_cmap,
+            cax=cb_ax,
+            label=label,
+            extend="both",
+            spacing="proportional",
+            orientation=cb_orientation,
         )
 
         # plot the histogram
@@ -989,7 +1016,6 @@ class Maps(object):
             # range=(norm.vmin, norm.vmax),
             density=density,
         )
-
 
         # color the histogram
         for patch in list(cb_plot_ax.patches):
@@ -1006,7 +1032,6 @@ class Maps(object):
                 height = patch.get_height()
                 maxval = minval + width
 
-
             patch.set_facecolor(cmap(norm((minval + maxval) / 2)))
 
             # take care of histogram-bins that have splitted colors
@@ -1021,22 +1046,28 @@ class Maps(object):
                     b0 = splitbins[0]
                     if self.orientation == "horizontal":
                         p0 = mpl.patches.Rectangle(
-                            (0, minval), width, (b0 - minval), facecolor=cmap(norm(minval))
+                            (0, minval),
+                            width,
+                            (b0 - minval),
+                            facecolor=cmap(norm(minval)),
                         )
                     elif self.orientation == "vertical":
                         p0 = mpl.patches.Rectangle(
-                            (minval, 0), (b0 - minval), height, facecolor=cmap(norm(minval))
+                            (minval, 0),
+                            (b0 - minval),
+                            height,
+                            facecolor=cmap(norm(minval)),
                         )
 
                     b1 = splitbins[-1]
                     if self.orientation == "horizontal":
                         p1 = mpl.patches.Rectangle(
                             (0, b1), width, (maxval - b1), facecolor=cmap(norm(maxval))
-                            )
+                        )
                     elif self.orientation == "vertical":
                         p1 = mpl.patches.Rectangle(
                             (b1, 0), (maxval - b1), height, facecolor=cmap(norm(maxval))
-                            )
+                        )
 
                     cb_plot_ax.add_patch(p0)
                     cb_plot_ax.add_patch(p1)
@@ -1050,17 +1081,16 @@ class Maps(object):
 
                             if self.orientation == "horizontal":
                                 pi = mpl.patches.Rectangle(
-                                (0, b0), width, (b1 - b0), facecolor=cmap(norm(b0))
+                                    (0, b0), width, (b1 - b0), facecolor=cmap(norm(b0))
                                 )
                             elif self.orientation == "vertical":
                                 pi = mpl.patches.Rectangle(
-                                (b0, 0), (b1 - b0), height, facecolor=cmap(norm(b0))
-                            )
+                                    (b0, 0), (b1 - b0), height, facecolor=cmap(norm(b0))
+                                )
 
                             cb_plot_ax.add_patch(pi)
                 else:
                     patch.set_facecolor(cmap(norm((minval + maxval) / 2)))
-
 
         # setup appearance of histogram
         if self.orientation == "horizontal":
@@ -1095,8 +1125,6 @@ class Maps(object):
             cb_plot_ax.plot(
                 [0, 1], [0, 0], "k--", alpha=0.5, transform=cb_plot_ax.transAxes
             )
-
-
 
         cb.outline.set_visible(False)
 
@@ -1145,7 +1173,7 @@ class Maps(object):
         dataspec,
         styledict=None,
         legend=True,
-        legendlabel="overlay",
+        legendlabel=None,
         legend_loc="upper right",
         maskshp=None,
     ):
@@ -1162,8 +1190,10 @@ class Maps(object):
             cartopy.shapereader.natural_earth(**dataspec)
 
             - (resolution='10m', category='cultural', name='urban_areas')
+            - (resolution='10m', category='cultural', name='admin_0_countries')
             - (resolution='10m', category='physical', name='rivers_lake_centerlines')
             - (resolution='10m', category='physical', name='lakes')
+            - etc.
 
         styledict : dict, optional
             a dict with style-kwargs used for plotting.
@@ -1172,13 +1202,16 @@ class Maps(object):
         legend : bool, optional
             indicator if a legend should be added or not. The default is True.
         legendlabel : str, optional
-            the label of the legend. The default is 'overlay'.
+            The label of the legend. If None, the name specified in dataspec is used.
+            The default is None.
         legend_loc : str, optional
             the position of the legend. The default is 'upper right'.
         maskshp : gpd.GeoDataFrame
-            a geopandas.GeoDataFrame that will be used to mask the dataset
+            a geopandas.GeoDataFrame that will be used as a mask for overlay
             (does not work with line-geometries!)
         """
+        if legendlabel is None:
+            legendlabel = dataspec.get("name", "overlay")
 
         assert hasattr(self, "updatedict"), "you must call .plot_map() first!"
 
@@ -1200,6 +1233,7 @@ class Maps(object):
         overlay_df.to_crs(self.plot_specs["plot_epsg"], inplace=True)
 
         import warnings
+
         with warnings.catch_warnings():
             warnings.filterwarnings("ignore", category=UserWarning)
             # ignore the UserWarning that area is proabably inexact when using
@@ -1311,7 +1345,7 @@ class Maps(object):
         in_crs=4326,
         cpos="c",
         legend_kwargs=True,
-        shape="ellipses"
+        shape="ellipses",
     ):
         """
         Parameters
@@ -1410,8 +1444,9 @@ class Maps(object):
             else:
                 if color:
                     proxies = [Patch(color=color)]
-                    labels = [label_dict.get("label", "overlay")
-                              if label_dict else "overlay"]
+                    labels = [
+                        label_dict.get("label", "overlay") if label_dict else "overlay"
+                    ]
                 else:
                     proxies = [Patch(color=cmap(norm(val))) for val in uniquevals]
                     if label_dict:
@@ -1419,145 +1454,5 @@ class Maps(object):
                     else:
                         labels = [str(val) for val in uniquevals]
                 leg = ax.legend(proxies, labels, **legkwargs)
-
-        return coll
-
-    def _get_additional_data(
-        self,
-        parameter,
-        xcoord="x",
-        ycoord="y",
-        sel_kwargs=None,
-        isel_kwargs=None,
-        mean_dim=None,
-    ):
-        """
-        a convenience-function to load data from exported netcdf files
-
-        Parameters
-        ----------
-        dumpfolder : str, optional
-            the dumpfolder
-        ncfile_name : str, optional
-            the name of the NetCDF file to load. The default is None.
-        dropna : True
-            indicator if rows containing nan-values should be returned or not
-            (if true, nan's are removed!)
-        sel_kwargs, isel_kwargs : dict
-            kwargs passed to dataset.sel() or dataset.isel()
-        mean_dim : str, optional
-            if provided, the selection will be averaged with respect to
-            dataset.mean(dim=mean_dim)
-
-        Returns
-        -------
-        data : array-like
-            the data.
-        data_crs : str
-            the crs provided within the NetCDF file.
-        """
-
-        with self.ncfile as ncfile:
-            if sel_kwargs is not None:
-                sel = ncfile.sel(**sel_kwargs)[
-                    [xcoord, ycoord, *np.atleast_1d(parameter)]
-                ]
-            elif isel_kwargs is not None:
-                sel = ncfile.isel(**isel_kwargs)[
-                    [xcoord, ycoord, *np.atleast_1d(parameter)]
-                ]
-            else:
-                sel = ncfile[[xcoord, ycoord, *np.atleast_1d(parameter)]]
-
-            if mean_dim is not None:
-                data = sel.mean(dim=mean_dim, skipna=True).to_dataframe()
-            else:
-                data = sel.to_dataframe()
-
-            if hasattr(ncfile, "crs"):
-                in_crs = ncfile.crs
-            else:
-                print(
-                    "warning, no crs information found in the netcdf file!",
-                    "data_specs['in_crs'] is set to 4326 (e.g. lat/lon) ",
-                )
-                in_crs = 4326
-
-        return data, parameter, xcoord, ycoord, in_crs
-
-    def add_additional_layer(
-        self,
-        parameter=None,
-        xcoord="x",
-        ycoord="y",
-        sel_kwargs=None,
-        isel_kwargs=None,
-        mean_dim=None,
-        cmap="viridis",
-        radius=None,
-        radius_crs="in",
-        histbins=256,
-        tick_precision=2,
-        vmin=None,
-        vmax=None,
-        cpos="c",
-        classify_specs=None,
-        adjust_data_callable=None,
-        shape="ellipses"
-    ):
-
-        ax = self.updatedict["ax"]
-
-        data, parameter, xcoord, ycoord, in_crs = self._get_additional_data(
-            parameter,
-            xcoord="x",
-            ycoord="y",
-            sel_kwargs=None,
-            isel_kwargs=None,
-            mean_dim=None,
-        )
-
-        if callable(adjust_data_callable):
-            data = adjust_data_callable(data)
-
-        # ---------------------- prepare the data
-        parameter, ids, z_data, x0, y0, w, h, theta = self._prepare_data(
-            data=data,
-            in_crs=in_crs,
-            plot_epsg=self.plot_specs["plot_epsg"],
-            radius=radius,
-            radius_crs=radius_crs,
-            cpos=cpos,
-            parameter=parameter,
-            xcoord=xcoord,
-            ycoord=ycoord,
-        )
-
-        # ---------------------- classify the data
-        cbcmap, norm, bins, classified = self._classify_data(
-            z_data=z_data,
-            cmap=cmap,
-            histbins=histbins,
-            vmin=vmin,
-            vmax=vmax,
-            classify_specs=classify_specs,
-        )
-
-        # ------------- plot the data
-        coll = self._add_collection(
-            ax=ax,
-            z_data=z_data,
-            x0=x0,
-            y0=y0,
-            w=w,
-            h=h,
-            theta=theta,
-            cmap=cbcmap,
-            vmin=vmin,
-            vmax=vmax,
-            norm=norm,
-            ids=ids,
-            shape=shape,
-        )
 
         return coll
