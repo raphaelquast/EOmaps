@@ -115,8 +115,13 @@ class Maps(object):
 
         self.orientation = orientation
 
-        # initialize default plotspecs
-        self.data_specs = dict(parameter=None, xcoord="x", ycoord="y", in_crs=None)
+        # initialize default plot specs
+        self.data_specs = dict(
+            parameter=None,
+            xcoord="x",
+            ycoord="y",
+            in_crs=None,
+        )
 
         self.plot_specs = dict(
             label=None,
@@ -137,6 +142,7 @@ class Maps(object):
             density=False,
             shape="ellipses",
         )
+
         self.classify_specs = dict()
 
         if plot_specs is not None:
