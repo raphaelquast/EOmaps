@@ -118,9 +118,9 @@ class Maps(object):
         # initialize default plot specs
         self.data_specs = dict(
             parameter=None,
-            xcoord="x",
-            ycoord="y",
-            in_crs=None,
+            xcoord="lon",
+            ycoord="lat",
+            in_crs=4326,
         )
 
         self.plot_specs = dict(
@@ -231,6 +231,36 @@ class Maps(object):
         return self.useres.load_nc(self.ncfile_name)
 
     def set_data_specs(self, **kwargs):
+        """
+        Use this function to update the data-specs
+
+        Parameters
+        ----------
+        parameter : str, optional
+            The name of the parameter to use. If None, the first variable in the
+            provided dataframe will be used.
+            The default is None.
+        xcoord, ycoord : str, optional
+            The name of the x- and y-coordinate as provided in the dataframe.
+            The default is "lon" and "lat".
+        in_crs : int, dict or str
+            The coordinate-system identifier.
+            Can be any input usable with `pyproj.CRS.from_user_input`:
+
+                - PROJ string
+                - Dictionary of PROJ parameters
+                - PROJ keyword arguments for parameters
+                - JSON string with PROJ parameters
+                - CRS WKT string
+                - An authority string [i.e. 'epsg:4326']
+                - An EPSG integer code [i.e. 4326]
+                - A tuple of ("auth_name": "auth_code") [i.e ('epsg', '4326')]
+                - An object with a `to_wkt` method.
+                - A :class:`pyproj.crs.CRS` class
+
+            The default is 4326 (e.g. lon/lat projection)
+        """
+
         for key, val in kwargs.items():
             if key in self.data_specs:
                 self.data_specs[key] = val
@@ -239,34 +269,37 @@ class Maps(object):
 
     def set_plot_specs(self, **kwargs):
         """
-        use this function to update the plot-specs
+        Use this function to update the plot-specs
 
         Parameters
         ----------
         label : str, optional
-            the colorbar-label. The default is None.
+            The colorbar-label.
+            If None, the name of the parameter will be used.
+            The default is None.
         title : str, optional
-            the plot-title. The default is None.
+            The plot-title.
+            If None, the name of the parameter will be used.
+            The default is None.
         cmap : str or matplotlib.colormap, optional
-            the colormap to use. The default is "viridis".
+            The colormap to use. The default is "viridis".
         plot_epsg : in, optional
-            the epsg-code of the projection to use for plotting. The default is 4326.
+            The epsg-code of the projection to use for plotting. The default is 4326.
         radius_crs : str, optional
-            indicator if the radius is specified in data-crs units (e.g. "in")-
-            or in plot-crs units (e.g. "out").
-            The default is "in".
+            Indicator if the radius is specified in data-crs units (e.g. "in")-
+            or in plot-crs units (e.g. "out"). The default is "in".
         radius : float, optional
-            the radius of the patches in the crs defined via "radius_crs".
-            The default is None, in which case it will be automatically determined
-            from the x-y coordinate separation of the data.
+            The radius of the patches in the crs defined via "radius_crs".
+            If None, the radius will be automatically determined from the x-y coordinate
+            separation of the data. The default is None.
         histbins : int, optional
-            the number of histogram-bins to use for the colorbar. The default is 256.
+            The number of histogram-bins to use for the colorbar. The default is 256.
         tick_precision : int, optional
-            the precision of the tick-labels in the colorbar. The default is 2.
+            The precision of the tick-labels in the colorbar. The default is 2.
         vmin, vmax : float, optional
-            min- and max. values assigned to the colorbar. The default is None.
+            Min- and max. values assigned to the colorbar. The default is None.
         callback : list of callables, optional
-            list of callback-functions that are triggered if a patch is double-clicked.
+            List of callback-functions that are triggered if a patch is double-clicked.
             There are some useful builtin-callbacks:
 
             >>> m = Maps(...)
@@ -278,13 +311,25 @@ class Maps(object):
 
             The default is None.
         cpos : str, optional
-            indicator if the provided x-y coordinates correspond to the center ("c"),
-            upper-left ("ul"), lower-left ("ll") etc.  of the pixel. The default is "c".
-        coastlines : bool
-            indicator if simple coastlines and ocean-colorings should be added
+            Indicator if the provided x-y coordinates correspond to the center ("c"),
+            upper-left ("ul"), lower-left ("ll") etc.  of the pixel.
+            The default is "c".
+        alpha : int, optional
+            Set the transparency of the plot (0-1)
+            The default is 1.
+        add_colorbar : bool, optional
+            Indicator if a colorbar with a histogram should be added to the plot or not.
             The default is True.
-        **kwargs :
-            additional kwargs.
+        coastlines : bool, optional
+            Indicator if simple coastlines and ocean-colorings should be added
+            The default is True.
+        density : bool, optional
+            Indicator if the y-axis of the histogram should represent the
+            probability-density (True) or the number of counts per bin (False)
+            The default is False.
+        shape : str, optional
+            Indicator if "rectangles" or "ellipses" should be potted
+            The default is "ellipses".
         """
 
         for key, val in kwargs.items():
@@ -297,6 +342,36 @@ class Maps(object):
                 print(f'"{key}" is not a valid plot_specs parameter!')
 
     def set_classify_specs(self, **kwargs):
+        """
+        Set classification specifications for the data
+        (classification is performed by the `mapclassify` module)
+
+        Parameters
+        ----------
+        scheme : str, optional
+            The classification scheme to use.
+            E.g. one of:
+            [ "scheme" (**kwargs)  ]
+
+                - BoxPlot (hinge)
+                - EqualInterval (k)
+                - FisherJenks (k)
+                - FisherJenksSampled (k, pct, truncate)
+                - HeadTailBreaks ()
+                - JenksCaspall (k)
+                - JenksCaspallForced (k)
+                - JenksCaspallSampled (k, pct)
+                - MaxP (k, initial)
+                - MaximumBreaks (k, mindiff)
+                - NaturalBreaks (k, initial)
+                - Quantiles (k)
+                - Percentiles (pct)
+                - StdMean (multiples)
+                - UserDefined (bins)
+
+        **kwargs :
+            kwargs passed to the call to the respective mapclassify classifier
+        """
         for key, val in kwargs.items():
             self.classify_specs[key] = val
 
