@@ -1,19 +1,10 @@
 """a collection of helper-functions to generate map-plots"""
 
-from .helpers import pairwise
-
-try:
-    from rt1.rtresults import RTresults
-
-    _rt1 = True
-except ImportError:
-    _rt1 = False
+from functools import partial
 
 import numpy as np
 import pandas as pd
 import geopandas as gpd
-
-import mapclassify
 from pyproj import CRS, Transformer
 
 import matplotlib as mpl
@@ -27,7 +18,12 @@ from cartopy import crs as ccrs
 from cartopy import feature as cfeature
 from cartopy.io import shapereader
 
-from functools import partial
+from .helpers import pairwise
+
+try:
+    import mapclassify
+except ImportError:
+    print("No module named 'mapclassify'... classification will not work!")
 
 
 def cmap_alpha(cmap, alpha, interpolate=False):
@@ -200,36 +196,6 @@ class Maps(object):
         copy_cls.__dict__.update(initdict)
         return copy_cls
 
-    @property
-    def ncfile(self):
-        """
-        return a file-handler to the used NetCDF file
-        NOTICE: Each call initializes a new filehandler!
-        """
-        assert _rt1, "you need to have the rt1 module installed to use this feature!"
-
-        res = RTresults(self.respath)
-
-        if self.dumpfolder is None:
-            self.dumpfolder = list(res._paths)[0]
-            print(f'dumpfolder: "{self.dumpfolder}" used')
-        else:
-            assert (
-                self.dumpfolder in res._paths
-            ), f"dumpfolder not in {list(res._paths)}"
-
-        self.useres = getattr(res, self.dumpfolder)
-
-        if self.ncfile_name is None:
-            self.ncfile_name = list(self.useres._nc_paths)[0]
-            print(f'NetCDF: "{self.ncfile_name}" used')
-        else:
-            assert (
-                self.ncfile_name in self.useres._nc_paths
-            ), f"NetCDF {self.ncfile_name} not in {list(self.useres._nc_paths)}"
-
-        return self.useres.load_nc(self.ncfile_name)
-
     def set_data_specs(self, **kwargs):
         """
         Use this function to update the data-specs
@@ -305,9 +271,24 @@ class Maps(object):
             >>> m = Maps(...)
             >>> m.set_plot_specs(
             >>>     callback=[
-            >>>         m.cb_annotate, # annotate properties of selected patch])
+            >>>         m.cb_annotate  # annotate properties of selected patch
             >>>         m.cb_load      # load the associated fit-object (if available)
-            >>>     ]
+            >>>         m.cb_print     # print info to the console on click
+            >>>     ])
+
+            You can also define custom functions that are automatically connected to
+            the Maps-class instance:
+
+            >>> m = Maps()
+            >>>
+            >>> def some_callback(self, **kwargs)
+            >>>     ID = kwargs["ID"]    # index of the selected pixel in the dataframe
+            >>>     ID = kwargs["pos"]   # (x, y) position of the selected pixel
+            >>>     ...
+            >>>     ... add any functionality you want ...
+            >>>     ...
+            >>>
+            >>> m.set_plot_specs(callback=[some_callback])
 
             The default is None.
         cpos : str, optional
@@ -387,78 +368,10 @@ class Maps(object):
         """
         self.orientation = orientation
 
-    def load_data(
-        self,
-        parameter,
-        xcoord="x",
-        ycoord="y",
-        sel_kwargs=None,
-        isel_kwargs=None,
-        mean_dim=None,
-    ):
-        """
-        a convenience-function to load data from exported netcdf files
-
-        Parameters
-        ----------
-        dumpfolder : str, optional
-            the dumpfolder
-        ncfile_name : str, optional
-            the name of the NetCDF file to load. The default is None.
-        dropna : True
-            indicator if rows containing nan-values should be returned or not
-            (if true, nan's are removed!)
-        sel_kwargs, isel_kwargs : dict
-            kwargs passed to dataset.sel() or dataset.isel()
-        mean_dim : str, optional
-            if provided, the selection will be averaged with respect to
-            dataset.mean(dim=mean_dim)
-
-        Returns
-        -------
-        data : array-like
-            the data.
-        data_crs : str
-            the crs provided within the NetCDF file.
-        """
-
-        self.data_specs["parameter"] = parameter
-        self.data_specs["xcoord"] = xcoord
-        self.data_specs["ycoord"] = ycoord
-
-        with self.ncfile as ncfile:
-            if sel_kwargs is not None:
-                sel = ncfile.sel(**sel_kwargs)[
-                    [xcoord, ycoord, *np.atleast_1d(parameter)]
-                ]
-            elif isel_kwargs is not None:
-                sel = ncfile.isel(**isel_kwargs)[
-                    [xcoord, ycoord, *np.atleast_1d(parameter)]
-                ]
-            else:
-                sel = ncfile[[xcoord, ycoord, *np.atleast_1d(parameter)]]
-
-            if mean_dim is not None:
-                self.data = sel.mean(dim=mean_dim, skipna=True).to_dataframe()
-            else:
-                self.data = sel.to_dataframe()
-
-            # if dropna:
-            #     data = data.dropna()
-
-            if hasattr(ncfile, "crs"):
-                self.data_specs["in_crs"] = ncfile.crs
-            else:
-                print(
-                    "warning, no crs information found in the netcdf file!",
-                    "data_specs['in_crs'] is set to 4326 (e.g. lat/lon) ",
-                )
-                self.data_specs["in_crs"] = 4326
-
     def plot_map(self, f_gridspec=None):
         """
         Actually generate the map-plot
-        (you must call `load_data()` first!)
+        (you must set the data first!)
 
         Parameters
         ----------
@@ -469,7 +382,7 @@ class Maps(object):
             The default is None in which case a new figure is created.
         """
         if not hasattr(self, "data"):
-            print("you must call load_data first!")
+            print("you must set the data first!")
 
         self._spatial_plot(
             data=self.data, **self.plot_specs, **self.data_specs, f_gridspec=f_gridspec
@@ -1260,7 +1173,7 @@ class Maps(object):
         dataspec,
         styledict=None,
         legend=True,
-        legendlabel="overlay",
+        legendlabel=None,
         legend_loc="upper right",
         maskshp=None,
     ):
@@ -1277,8 +1190,10 @@ class Maps(object):
             cartopy.shapereader.natural_earth(**dataspec)
 
             - (resolution='10m', category='cultural', name='urban_areas')
+            - (resolution='10m', category='cultural', name='admin_0_countries')
             - (resolution='10m', category='physical', name='rivers_lake_centerlines')
             - (resolution='10m', category='physical', name='lakes')
+            - etc.
 
         styledict : dict, optional
             a dict with style-kwargs used for plotting.
@@ -1287,13 +1202,16 @@ class Maps(object):
         legend : bool, optional
             indicator if a legend should be added or not. The default is True.
         legendlabel : str, optional
-            the label of the legend. The default is 'overlay'.
+            The label of the legend. If None, the name specified in dataspec is used.
+            The default is None.
         legend_loc : str, optional
             the position of the legend. The default is 'upper right'.
         maskshp : gpd.GeoDataFrame
-            a geopandas.GeoDataFrame that will be used to mask the dataset
+            a geopandas.GeoDataFrame that will be used as a mask for overlay
             (does not work with line-geometries!)
         """
+        if legendlabel is None:
+            legendlabel = dataspec.get("name", "overlay")
 
         assert hasattr(self, "updatedict"), "you must call .plot_map() first!"
 
@@ -1536,145 +1454,5 @@ class Maps(object):
                     else:
                         labels = [str(val) for val in uniquevals]
                 leg = ax.legend(proxies, labels, **legkwargs)
-
-        return coll
-
-    def _get_additional_data(
-        self,
-        parameter,
-        xcoord="x",
-        ycoord="y",
-        sel_kwargs=None,
-        isel_kwargs=None,
-        mean_dim=None,
-    ):
-        """
-        a convenience-function to load data from exported netcdf files
-
-        Parameters
-        ----------
-        dumpfolder : str, optional
-            the dumpfolder
-        ncfile_name : str, optional
-            the name of the NetCDF file to load. The default is None.
-        dropna : True
-            indicator if rows containing nan-values should be returned or not
-            (if true, nan's are removed!)
-        sel_kwargs, isel_kwargs : dict
-            kwargs passed to dataset.sel() or dataset.isel()
-        mean_dim : str, optional
-            if provided, the selection will be averaged with respect to
-            dataset.mean(dim=mean_dim)
-
-        Returns
-        -------
-        data : array-like
-            the data.
-        data_crs : str
-            the crs provided within the NetCDF file.
-        """
-
-        with self.ncfile as ncfile:
-            if sel_kwargs is not None:
-                sel = ncfile.sel(**sel_kwargs)[
-                    [xcoord, ycoord, *np.atleast_1d(parameter)]
-                ]
-            elif isel_kwargs is not None:
-                sel = ncfile.isel(**isel_kwargs)[
-                    [xcoord, ycoord, *np.atleast_1d(parameter)]
-                ]
-            else:
-                sel = ncfile[[xcoord, ycoord, *np.atleast_1d(parameter)]]
-
-            if mean_dim is not None:
-                data = sel.mean(dim=mean_dim, skipna=True).to_dataframe()
-            else:
-                data = sel.to_dataframe()
-
-            if hasattr(ncfile, "crs"):
-                in_crs = ncfile.crs
-            else:
-                print(
-                    "warning, no crs information found in the netcdf file!",
-                    "data_specs['in_crs'] is set to 4326 (e.g. lat/lon) ",
-                )
-                in_crs = 4326
-
-        return data, parameter, xcoord, ycoord, in_crs
-
-    def add_additional_layer(
-        self,
-        parameter=None,
-        xcoord="x",
-        ycoord="y",
-        sel_kwargs=None,
-        isel_kwargs=None,
-        mean_dim=None,
-        cmap="viridis",
-        radius=None,
-        radius_crs="in",
-        histbins=256,
-        tick_precision=2,
-        vmin=None,
-        vmax=None,
-        cpos="c",
-        classify_specs=None,
-        adjust_data_callable=None,
-        shape="ellipses",
-    ):
-
-        ax = self.updatedict["ax"]
-
-        data, parameter, xcoord, ycoord, in_crs = self._get_additional_data(
-            parameter,
-            xcoord="x",
-            ycoord="y",
-            sel_kwargs=None,
-            isel_kwargs=None,
-            mean_dim=None,
-        )
-
-        if callable(adjust_data_callable):
-            data = adjust_data_callable(data)
-
-        # ---------------------- prepare the data
-        parameter, ids, z_data, x0, y0, w, h, theta = self._prepare_data(
-            data=data,
-            in_crs=in_crs,
-            plot_epsg=self.plot_specs["plot_epsg"],
-            radius=radius,
-            radius_crs=radius_crs,
-            cpos=cpos,
-            parameter=parameter,
-            xcoord=xcoord,
-            ycoord=ycoord,
-        )
-
-        # ---------------------- classify the data
-        cbcmap, norm, bins, classified = self._classify_data(
-            z_data=z_data,
-            cmap=cmap,
-            histbins=histbins,
-            vmin=vmin,
-            vmax=vmax,
-            classify_specs=classify_specs,
-        )
-
-        # ------------- plot the data
-        coll = self._add_collection(
-            ax=ax,
-            z_data=z_data,
-            x0=x0,
-            y0=y0,
-            w=w,
-            h=h,
-            theta=theta,
-            cmap=cbcmap,
-            vmin=vmin,
-            vmax=vmax,
-            norm=norm,
-            ids=ids,
-            shape=shape,
-        )
 
         return coll
