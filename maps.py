@@ -1267,12 +1267,6 @@ class Maps(object):
                 loc=legend_loc,
             )
 
-    def _cb_hide_annotate(self):
-        # a function to hide the annotation of an empty area is clicked
-        if hasattr(self, "annotation"):
-            self.annotation.set_visible(False)
-            self.updatedict["f"].canvas.draw_idle()
-
     def add_discrete_layer(
         self,
         data,
@@ -1375,7 +1369,6 @@ class Maps(object):
         if norm is None:
             norm = coll.norm
 
-        leg = None
         if legend_kwargs is True or isinstance(legend_kwargs, dict):
             legkwargs = dict(loc="upper right")
             try:
@@ -1398,13 +1391,9 @@ class Maps(object):
                         labels = [label_dict[val] for val in uniquevals]
                     else:
                         labels = [str(val) for val in uniquevals]
-                leg = ax.legend(proxies, labels, **legkwargs)
+                _ = ax.legend(proxies, labels, **legkwargs)
 
         return coll
-
-    @lru_cache()
-    def _get_crs(self, crs):
-        return CRS.from_user_input(crs)
 
     def attach_callback(self, callback):
         """
@@ -1467,3 +1456,13 @@ class Maps(object):
         # call cleanup methods on removal
         if hasattr(self.cb, f"_{name}_cleanup"):
             getattr(self.cb, f"_{name}_cleanup")(self)
+
+    @lru_cache()
+    def _get_crs(self, crs):
+        return CRS.from_user_input(crs)
+
+    def _cb_hide_annotate(self):
+        # a function to hide the annotation of an empty area is clicked
+        if hasattr(self, "annotation"):
+            self.annotation.set_visible(False)
+            self.updatedict["f"].canvas.draw_idle()
