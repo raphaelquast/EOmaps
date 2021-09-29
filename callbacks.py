@@ -15,10 +15,20 @@ class callbacks(object):
     to remove an already attached callback, use:
         >>> m.remove_callback(m.cb.annotate)
 
+    you can also define custom callback functions as follows:
+
+        >>> def some_callback(self, **kwargs):
+        >>>     print("hello world")
+        >>>     print("the position of the clicked pixel", kwargs["pos"])
+        >>>     print("the data-index of the clicked pixel", kwargs["ID"])
+        >>>     print("data-value of the clicked pixel", kwargs["val"])
+        >>>
+        >>> m.attach_callback(some_callback)
     """
 
     def __init__(self, m):
-        self = m
+        pass
+        # self = m
 
     def __repr__(self):
         return "available callbacks:\n    - " + "\n    - ".join(
@@ -64,6 +74,12 @@ class callbacks(object):
         use as:    spatial_plot(... , callback=cb_annotate)
         """
 
+        if not hasattr(self, "background"):
+            self.background = self.figure.f.canvas.copy_from_bbox(self.figure.f.bbox)
+            self.draw_cid = self.figure.f.canvas.mpl_connect(
+                "draw_event", self.grab_background
+            )
+
         # to hide the annotation, Maps._cb_hide_annotate() is called when an empty
         # area is clicked!
         crs = self._get_crs(self.plot_specs["plot_epsg"])
@@ -97,7 +113,11 @@ class callbacks(object):
 
         self.annotation.set_text(printstr)
         self.annotation.get_bbox_patch().set_alpha(0.75)
-        self.figure.f.canvas.draw_idle()
+
+        # use blitting to speed up annotation generation
+        self.figure.f.canvas.restore_region(self.background)
+        self.figure.ax.draw_artist(self.annotation)
+        self.figure.f.canvas.blit(self.figure.f.bbox)
 
     def scatter(self, **kwargs):
         """
