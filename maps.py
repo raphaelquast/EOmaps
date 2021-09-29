@@ -1,10 +1,11 @@
 """a collection of helper-functions to generate map-plots"""
 
-from functools import partial
+from functools import partial, lru_cache
 
 import numpy as np
 import pandas as pd
 import geopandas as gpd
+from scipy.spatial import cKDTree
 from pyproj import CRS, Transformer
 
 import matplotlib as mpl
@@ -19,6 +20,8 @@ from cartopy import feature as cfeature
 from cartopy.io import shapereader
 
 from .helpers import pairwise
+from .callbacks import callbacks
+
 
 try:
     import mapclassify
@@ -145,6 +148,9 @@ class Maps(object):
             self.plot_specs.update(plot_specs)
         if classify_specs is not None:
             self.classify_specs.update(classify_specs)
+
+        self.cb = callbacks(self)
+        self._attached_cbs = dict()
 
     def copy(self, **kwargs):
         """
@@ -588,24 +594,23 @@ class Maps(object):
         f.canvas.draw_idle()
 
         # ------------- add a callback
+
+        # use a cKDTree based picking to speed up picks for large collections
+        tree = cKDTree(np.stack([x0, y0], axis=1))
+        maxdist = np.max([w.max(), h.max()])
+
+        def picker(artist, event):
+            if event.dblclick:
+                dist, index = tree.query((event.xdata, event.ydata))
+                if dist < maxdist:
+                    return True, dict(ind=index)
+                else:
+                    return True, dict(ind=None)
+            return False, None
+
+        coll.set_picker(picker)
+
         if callback is not None:
-            from scipy.spatial import cKDTree
-
-            # use a cKDTree based picking to speed up picks for large collections
-            tree = cKDTree(np.stack([x0, y0], axis=1))
-            maxdist = np.max([w.max(), h.max()])
-
-            def picker(artist, event):
-                if event.dblclick:
-                    dist, index = tree.query((event.xdata, event.ydata))
-                    if dist < maxdist:
-                        return True, dict(ind=index)
-                    else:
-                        if self.cb_annotate in np.atleast_1d(callback):
-                            self._cb_hide_annotate()
-                return False, None
-
-            coll.set_picker(picker)
 
             def onpick(event):
                 if isinstance(event.artist, collections.EllipseCollection):
@@ -672,6 +677,7 @@ class Maps(object):
 
         if parameter is None:
             parameter = next(i for i in data.keys() if i not in [xcoord, ycoord])
+            self.set_data_specs(parameter=parameter)
 
         assert isinstance(parameter, str), (
             "you must proivide a single string" + "as parameter name!"
@@ -1261,81 +1267,11 @@ class Maps(object):
                 loc=legend_loc,
             )
 
-    def cb_load(self, **kwargs):
-        """
-        a callback-function that can be used to load the corresponding fit-objects
-        stored in `dumpfolder / dumps / *.dump` on double-clickin a shape
-        """
-        try:
-            self.fit = self.useres.load_fit(kwargs["ID"])
-        except FileNotFoundError:
-            print(f"could not load fit with ID:  '{kwargs['ID']}'")
-
-    def cb_print(self, **kwargs):
-        """
-        a callback-function that prints details on the clicked pixel to the
-        console
-        """
-
-        printstr = ""
-        for key, val in kwargs.items():
-            if key == "f":
-                continue
-            if key == "pos":
-                x, y = [
-                    np.format_float_positional(i, trim="-", precision=4) for i in val
-                ]
-                printstr += f"pos = ({x}, {y})\n"
-            else:
-                if isinstance(val, (int, float)):
-                    val = np.format_float_positional(val, trim="-", precision=4)
-                printstr += f"{key} = {val}\n"
-        print(printstr)
-
     def _cb_hide_annotate(self):
+        # a function to hide the annotation of an empty area is clicked
         if hasattr(self, "annotation"):
             self.annotation.set_visible(False)
             self.updatedict["f"].canvas.draw_idle()
-
-    def cb_annotate(self, **kwargs):
-        """
-        a callback-function to annotate basic properties from the fit on double-click
-        use as:    spatial_plot(... , callback=cb_annotate)
-        """
-        f = self.updatedict["f"]
-        ax = f.axes[0]
-
-        if not hasattr(self, "annotation"):
-            self.annotation = ax.annotate(
-                "",
-                xy=kwargs["pos"],
-                xytext=(20, 20),
-                textcoords="offset points",
-                bbox=dict(boxstyle="round", fc="w"),
-                arrowprops=dict(arrowstyle="->"),
-            )
-
-        self.annotation.set_visible(True)
-
-        self.annotation.xy = kwargs["pos"]
-
-        printstr = ""
-        for key, val in kwargs.items():
-            if key == "f":
-                continue
-            if key == "pos":
-                x, y = [
-                    np.format_float_positional(i, trim="-", precision=4) for i in val
-                ]
-                printstr += f"pos = ({x}, {y})\n"
-            else:
-                if isinstance(val, (int, float)):
-                    val = np.format_float_positional(val, trim="-", precision=4)
-                printstr += f"{key} = {val}\n"
-
-        self.annotation.set_text(printstr)
-        self.annotation.get_bbox_patch().set_alpha(0.75)
-        f.canvas.draw_idle()
 
     def add_discrete_layer(
         self,
@@ -1465,3 +1401,69 @@ class Maps(object):
                 leg = ax.legend(proxies, labels, **legkwargs)
 
         return coll
+
+    @lru_cache()
+    def _get_crs(self, crs):
+        return CRS.from_user_input(crs)
+
+    def attach_callback(self, callback):
+        """
+        attach a callback to the plot that will be executed if a pixel is double-clicked
+
+        A list of pre-defined callbacks is available at `m.cb...`
+
+            >>> m.attach_callback(m.cb.annotate)
+            >>> m.attach_callback(m.cb.scatter)
+            >>> # to remove the callback again, call:
+            >>> m.remove_callback(m.cb.scatter)
+
+        """
+
+        if callback is None:
+            return
+
+        # re-bind the callback methods to the Maps object
+        # in case custom functions are used
+        if hasattr(callback, "__func__"):
+            callback = callback.__func__.__get__(self)
+        else:
+            newcb = partial(callback, self=self)
+            newcb.__name__ = callback.__name__
+            callback = newcb
+
+        # ------------- add a callback
+        def onpick(event):
+            ind = event.ind
+            if ind is not None:
+                if isinstance(event.artist, collections.EllipseCollection):
+                    clickdict = dict(
+                        pos=self.figure.coll.get_offsets()[ind],
+                        ID=self.figure.coll.get_urls()[ind],
+                        val=self.figure.coll.get_array()[ind],
+                    )
+
+                    callback(**clickdict)
+                elif isinstance(event.artist, collections.PolyCollection):
+                    clickdict = dict(
+                        pos=self.figure.coll._Maps_positions[ind],
+                        ID=self.figure.coll.get_urls()[ind],
+                        val=self.figure.coll.get_array()[ind],
+                    )
+
+                    callback(**clickdict)
+            else:
+                if "cb_annotate" in self._attached_cbs:
+                    self._cb_hide_annotate()
+
+        self._attached_cbs[callback.__name__] = self.figure.f.canvas.mpl_connect(
+            "pick_event", onpick
+        )
+
+    def remove_callback(self, callback):
+        name = callback.__name__
+
+        self.figure.f.canvas.mpl_disconnect(self._attached_cbs[name])
+
+        # call cleanup methods on removal
+        if hasattr(self.cb, f"_{name}_cleanup"):
+            getattr(self.cb, f"_{name}_cleanup")(self)
