@@ -932,7 +932,7 @@ class Maps(object):
         if shape == "rectangles":
             # see https://stackoverflow.com/a/61664630/9703451
 
-            theta = np.deg2rad(theta)
+            theta = -np.deg2rad(theta)
 
             # top right
             p0 = np.array(
