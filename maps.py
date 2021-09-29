@@ -46,12 +46,12 @@ class Maps(object):
     ----------
     orientation : str, optional
         Indicator if the colorbar should be plotted right of the map ("horizontal")
-        or below the map ("vertical"). The default is "horizontal"
+        or below the map ("vertical"). The default is "vertical"
     """
 
     def __init__(
         self,
-        orientation="horizontal",
+        orientation="vertical",
     ):
 
         self.orientation = orientation
@@ -782,8 +782,10 @@ class Maps(object):
             )
 
         if shape == "rectangles":
-            # see https://stackoverflow.com/a/61664630/9703451
+            # rectangles are just the bounding-boxes of the ellipses...
+            # TODO make proper rectangles!
 
+            # for the equations, see https://stackoverflow.com/a/61664630/9703451
             theta = -np.deg2rad(theta)
 
             # top right
@@ -1258,10 +1260,26 @@ class Maps(object):
             >>> # to remove the callback again, call:
             >>> m.remove_callback(m.cb.scatter)
 
+        Parameters
+        ----------
+        callback : callable
+            the callback-function to attach. Use either a function of the
+            `m.cb` collection or a custom function with the following call-signature:
+
+                >>> def some_callback(self, **kwargs):
+                >>>     print("hello world")
+                >>>     print("the position of the clicked pixel", kwargs["pos"])
+                >>>     print("the data-index of the clicked pixel", kwargs["ID"])
+                >>>     print("data-value of the clicked pixel", kwargs["val"])
+                >>>     print("the plot-crs is:", self.plot_specs["plot_epsg"])
+                >>>
+                >>> m.attach_callback(some_callback)
+
         """
 
-        if callback is None:
-            return
+        assert (
+            callback.__name__ not in self._attached_cbs
+        ), f"the callback '{callback.__name__}' is already attached to the plot!"
 
         # re-bind the callback methods to the Maps object
         # in case custom functions are used
@@ -1318,3 +1336,37 @@ class Maps(object):
         if hasattr(self, "annotation"):
             self.annotation.set_visible(False)
             self.updatedict["f"].canvas.draw_idle()
+
+    # implement blitting
+    # https://stackoverflow.com/a/29284318/9703451
+    def safe_draw(self):
+        """Temporarily disconnect the draw_event callback to avoid recursion"""
+        canvas = self.figure.f.canvas
+        canvas.mpl_disconnect(self.draw_cid)
+        canvas.draw()
+        self.draw_cid = canvas.mpl_connect("draw_event", self.grab_background)
+
+    def grab_background(self, event=None):
+        """
+        When the figure is resized, hide the points, draw everything,
+        and update the background.
+        """
+        if hasattr(self, "annotation"):
+            self.annotation.set_visible(False)
+        self.safe_draw()
+
+        # With most backends (e.g. TkAgg), we could grab (and refresh, in
+        # self.blit) self.ax.bbox instead of self.fig.bbox, but Qt4Agg, and
+        # some others, requires us to update the _full_ canvas, instead.
+        self.background = self.figure.f.canvas.copy_from_bbox(self.figure.f.bbox)
+
+        self.annotation.set_visible(True)
+        self.blit()
+
+    def blit(self):
+        """
+        Efficiently update the figure, without needing to redraw the
+        "background" artists.
+        """
+        self.figure.f.canvas.restore_region(self.background)
+        self.figure.f.canvas.blit(self.figure.f.bbox)
