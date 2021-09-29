@@ -686,9 +686,16 @@ class Maps(object):
         )
         xorig, yorig = (data[xcoord].ravel(), data[ycoord].ravel())
 
+        # transform center-points
+        x0, y0 = transformer.transform(xorig, yorig)
+
         if radius is None:
-            radiusx = np.abs(np.diff(np.unique(xorig)).mean()) / 2.0
-            radiusy = np.abs(np.diff(np.unique(yorig)).mean()) / 2.0
+            if radius_crs == "in":
+                radiusx = np.abs(np.diff(np.unique(xorig)).mean()) / 2.0
+                radiusy = np.abs(np.diff(np.unique(yorig)).mean()) / 2.0
+            elif radius_crs == "out":
+                radiusx = np.abs(np.diff(np.unique(x0)).mean()) / 2.0
+                radiusy = np.abs(np.diff(np.unique(y0)).mean()) / 2.0
         elif isinstance(radius, (list, tuple)):
             radiusx, radiusy = radius
         else:
@@ -712,8 +719,7 @@ class Maps(object):
                 xorig -= radiusx
                 yorig -= radiusx
 
-        # center
-        x0, y0 = transformer.transform(xorig, yorig)
+        # transform corner-points
         if radius_crs == "in":
             x3, y3 = transformer.transform(xorig + radiusx, yorig)
             x4, y4 = transformer.transform(xorig, yorig + radiusy)
@@ -918,6 +924,8 @@ class Maps(object):
             )
 
         if shape == "rectangles":
+            # see https://stackoverflow.com/a/61664630/9703451
+
             theta = np.deg2rad(theta)
 
             # top right
