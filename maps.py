@@ -133,7 +133,6 @@ class Maps(object):
             tick_precision=2,
             vmin=None,
             vmax=None,
-            callback=None,
             cpos="c",
             alpha=1,
             add_colorbar=True,
@@ -178,26 +177,13 @@ class Maps(object):
             else:
                 initdict[key] = self.__dict__.get(key, None)
 
-        initdict["data_specs"] = self.data_specs
-        initdict["plot_specs"] = {
-            key: val for key, val in self.plot_specs.items() if key != "callback"
-        }
+        initdict["data_specs"] = {**self.data_specs}
+        initdict["plot_specs"] = {**self.plot_specs}
         initdict["classify_specs"] = {**self.classify_specs}
 
         # create a new class
         cls = self.__class__
         copy_cls = cls.__new__(cls)
-
-        # re-bind the callback methods to the newly created copy-class
-        cb = self.plot_specs["callback"]
-        if cb is not None:
-            new_cb = []
-            for f in cb:
-                if hasattr(f, "__func__"):
-                    new_cb.append(f.__func__.__get__(copy_cls))
-            initdict["plot_specs"]["callback"] = new_cb
-        else:
-            initdict["plot_specs"]["callback"] = None
 
         copy_cls.__dict__.update(initdict)
         return copy_cls
@@ -270,33 +256,6 @@ class Maps(object):
             The precision of the tick-labels in the colorbar. The default is 2.
         vmin, vmax : float, optional
             Min- and max. values assigned to the colorbar. The default is None.
-        callback : list of callables, optional
-            List of callback-functions that are triggered if a patch is double-clicked.
-            There are some useful builtin-callbacks:
-
-            >>> m = Maps(...)
-            >>> m.set_plot_specs(
-            >>>     callback=[
-            >>>         m.cb_annotate  # annotate properties of selected patch
-            >>>         m.cb_load      # load the associated fit-object (if available)
-            >>>         m.cb_print     # print info to the console on click
-            >>>     ])
-
-            You can also define custom functions that are automatically connected to
-            the Maps-class instance:
-
-            >>> m = Maps()
-            >>>
-            >>> def some_callback(self, **kwargs)
-            >>>     ID = kwargs["ID"]    # index of the selected pixel in the dataframe
-            >>>     ID = kwargs["pos"]   # (x, y) position of the selected pixel
-            >>>     ...
-            >>>     ... add any functionality you want ...
-            >>>     ...
-            >>>
-            >>> m.set_plot_specs(callback=[some_callback])
-
-            The default is None.
         cpos : str, optional
             Indicator if the provided x-y coordinates correspond to the center ("c"),
             upper-left ("ul"), lower-left ("ll") etc.  of the pixel.
@@ -411,7 +370,6 @@ class Maps(object):
         tick_precision=2,
         vmin=None,
         vmax=None,
-        callback=None,
         cpos="c",
         f_gridspec=None,
         alpha=1,
@@ -466,10 +424,6 @@ class Maps(object):
             The default is None in which case the whole data-range will be used.
         scheme : str, optional
             The name of a classification scheme of the "mapclassify" module.
-            The default is None.
-        callback: callable, optional
-            a function that will be called when a pixel is clicked.
-            call-signature:  callback(ID)
             The default is None.
         cpos : str
             the position of the coordinate
@@ -593,8 +547,7 @@ class Maps(object):
 
         f.canvas.draw_idle()
 
-        # ------------- add a callback
-
+        # ------------- add a picker that will be used by the callbacks
         # use a cKDTree based picking to speed up picks for large collections
         tree = cKDTree(np.stack([x0, y0], axis=1))
         maxdist = np.max([w.max(), h.max()])
@@ -609,38 +562,6 @@ class Maps(object):
             return False, None
 
         coll.set_picker(picker)
-
-        if callback is not None:
-
-            def onpick(event):
-                if isinstance(event.artist, collections.EllipseCollection):
-                    ind = event.ind
-
-                    clickdict = dict(
-                        pos=coll.get_offsets()[ind],
-                        ID=coll.get_urls()[ind],
-                        val=coll.get_array()[ind],
-                        f=f,
-                    )
-
-                    if callback is not None:
-                        for cb_i in np.atleast_1d(callback):
-                            cb_i(**clickdict)
-                elif isinstance(event.artist, collections.PolyCollection):
-                    ind = event.ind
-
-                    clickdict = dict(
-                        pos=coll._Maps_positions[ind],
-                        ID=coll.get_urls()[ind],
-                        val=coll.get_array()[ind],
-                        f=f,
-                    )
-
-                    if callback is not None:
-                        for cb_i in np.atleast_1d(callback):
-                            cb_i(**clickdict)
-
-            f.canvas.mpl_connect("pick_event", onpick)
 
         self.updatedict = dict(
             f=f,
