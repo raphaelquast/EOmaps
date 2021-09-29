@@ -50,8 +50,9 @@ class callbacks(object):
         a callback-function that prints details on the clicked pixel to the
         console
         """
-        crs = self._get_crs(self.plot_specs["plot_epsg"])
-        xlabel, ylabel = [crs.axis_info[0].abbrev, crs.axis_info[1].abbrev]
+        # crs = self._get_crs(self.plot_specs["plot_epsg"])
+        # xlabel, ylabel = [crs.axis_info[0].abbrev, crs.axis_info[1].abbrev]
+        xlabel, ylabel = [i.name for i in self.figure.ax.projection.axis_info[:2]]
 
         printstr = ""
         for key, val in kwargs.items():
@@ -75,15 +76,14 @@ class callbacks(object):
         """
 
         if not hasattr(self, "background"):
+            # cache the background before the first annotation is drawn
             self.background = self.figure.f.canvas.copy_from_bbox(self.figure.f.bbox)
-            self.draw_cid = self.figure.f.canvas.mpl_connect(
-                "draw_event", self.grab_background
-            )
 
         # to hide the annotation, Maps._cb_hide_annotate() is called when an empty
         # area is clicked!
-        crs = self._get_crs(self.plot_specs["plot_epsg"])
-        xlabel, ylabel = [crs.axis_info[0].abbrev, crs.axis_info[1].abbrev]
+        # crs = self._get_crs(self.plot_specs["plot_epsg"])
+        # xlabel, ylabel = [crs.axis_info[0].abbrev, crs.axis_info[1].abbrev]
+        xlabel, ylabel = [i.abbrev for i in self.figure.ax.projection.axis_info[:2]]
 
         ax = self.figure.ax
 
@@ -114,10 +114,9 @@ class callbacks(object):
         self.annotation.set_text(printstr)
         self.annotation.get_bbox_patch().set_alpha(0.75)
 
-        # use blitting to speed up annotation generation
-        self.figure.f.canvas.restore_region(self.background)
-        self.figure.ax.draw_artist(self.annotation)
-        self.figure.f.canvas.blit(self.figure.f.bbox)
+        # use blitting instead of f.canvas.draw() to speed up annotation generation
+        # in case a large collection is plotted
+        self._blit(self.annotation)
 
     def scatter(self, **kwargs):
         """
@@ -133,8 +132,11 @@ class callbacks(object):
 
             self._pick_ax.set_ylabel(self.data_specs["parameter"])
 
-        crs = self._get_crs(self.plot_specs["plot_epsg"])
-        _pick_xlabel, _pick_ylabel = [crs.axis_info[0].abbrev, crs.axis_info[1].abbrev]
+        # crs = self._get_crs(self.plot_specs["plot_epsg"])
+        # _pick_xlabel, _pick_ylabel = [crs.axis_info[0].abbrev, crs.axis_info[1].abbrev]
+        _pick_xlabel, _pick_ylabel = [
+            i.abbrev for i in self.figure.ax.projection.axis_info[:2]
+        ]
 
         x, y = [
             np.format_float_positional(i, trim="-", precision=4) for i in kwargs["pos"]

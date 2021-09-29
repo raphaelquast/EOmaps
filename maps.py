@@ -286,6 +286,11 @@ class Maps(object):
             data=self.data, **self.plot_specs, **self.data_specs, f_gridspec=f_gridspec
         )
 
+        # attach draw_event that handles blitting
+        self.draw_cid = self.figure.f.canvas.mpl_connect(
+            "draw_event", self._grab_background
+        )
+
     def _spatial_plot(
         self,
         data,
@@ -1311,7 +1316,7 @@ class Maps(object):
 
                     callback(**clickdict)
             else:
-                if "cb_annotate" in self._attached_cbs:
+                if "annotate" in self._attached_cbs:
                     self._cb_hide_annotate()
 
         self._attached_cbs[callback.__name__] = self.figure.f.canvas.mpl_connect(
@@ -1335,38 +1340,52 @@ class Maps(object):
         # a function to hide the annotation of an empty area is clicked
         if hasattr(self, "annotation"):
             self.annotation.set_visible(False)
-            self.updatedict["f"].canvas.draw_idle()
+            self._blit()
+            print("aaaaa")
+            # self.updatedict["f"].canvas.draw_idle()
 
     # implement blitting
     # https://stackoverflow.com/a/29284318/9703451
-    def safe_draw(self):
+    def _safe_draw(self):
         """Temporarily disconnect the draw_event callback to avoid recursion"""
         canvas = self.figure.f.canvas
         canvas.mpl_disconnect(self.draw_cid)
         canvas.draw()
-        self.draw_cid = canvas.mpl_connect("draw_event", self.grab_background)
+        self.draw_cid = canvas.mpl_connect("draw_event", self._grab_background)
 
-    def grab_background(self, event=None):
+    def _grab_background(self, event=None):
         """
         When the figure is resized, hide the points, draw everything,
         and update the background.
         """
+        annotation_visible = False
         if hasattr(self, "annotation"):
-            self.annotation.set_visible(False)
-        self.safe_draw()
+            if self.annotation.get_visible():
+                annotation_visible = True
+                self.annotation.set_visible(False)
+        self._safe_draw()
 
         # With most backends (e.g. TkAgg), we could grab (and refresh, in
         # self.blit) self.ax.bbox instead of self.fig.bbox, but Qt4Agg, and
         # some others, requires us to update the _full_ canvas, instead.
         self.background = self.figure.f.canvas.copy_from_bbox(self.figure.f.bbox)
 
-        self.annotation.set_visible(True)
-        self.blit()
+        if annotation_visible:
+            self.annotation.set_visible(True)
+            self._blit(self.annotation)
+        else:
+            self._blit()
 
-    def blit(self):
+    def _blit(self, artist=None):
         """
         Efficiently update the figure, without needing to redraw the
         "background" artists.
+
+        Parameters
+        ----------
+        artist : the matplotlib artist to draw on top of the background
         """
         self.figure.f.canvas.restore_region(self.background)
+        if artist is not None:
+            self.figure.ax.draw_artist(artist)
         self.figure.f.canvas.blit(self.figure.f.bbox)
