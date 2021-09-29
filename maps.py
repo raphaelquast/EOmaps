@@ -1,16 +1,17 @@
 """a collection of helper-functions to generate map-plots"""
 
-from functools import partial
+from functools import partial, lru_cache
 
 import numpy as np
 import pandas as pd
 import geopandas as gpd
+from scipy.spatial import cKDTree
 from pyproj import CRS, Transformer
 
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 from matplotlib import cm, collections
-from matplotlib.colors import LinearSegmentedColormap, ListedColormap
+from matplotlib.colors import LinearSegmentedColormap
 from matplotlib.gridspec import GridSpec, GridSpecFromSubplotSpec, SubplotSpec
 from matplotlib.patches import Patch
 
@@ -18,41 +19,14 @@ from cartopy import crs as ccrs
 from cartopy import feature as cfeature
 from cartopy.io import shapereader
 
-from .helpers import pairwise
+from .helpers import pairwise, cmap_alpha
+from .callbacks import callbacks
+
 
 try:
     import mapclassify
 except ImportError:
     print("No module named 'mapclassify'... classification will not work!")
-
-
-def cmap_alpha(cmap, alpha, interpolate=False):
-    """
-    add transparency to an existing colormap
-
-    Parameters
-    ----------
-    cmap : matplotlib.colormap
-        the colormap to use
-    alpha : float
-        the transparency
-    interpolate : bool
-        indicator if a listed colormap (False) or a interpolated colormap (True)
-        should be generated. The default is False
-
-    Returns
-    -------
-    new_cmap : matplotlib.colormap
-        a new colormap with the desired transparency
-    """
-
-    new_cmap = cmap(np.arange(cmap.N))
-    new_cmap[:, -1] = alpha
-    if interpolate:
-        new_cmap = LinearSegmentedColormap("new_cmap", new_cmap)
-    else:
-        new_cmap = ListedColormap(new_cmap)
-    return new_cmap
 
 
 class _Maps_plot(object):
@@ -63,10 +37,6 @@ class _Maps_plot(object):
         for key, val in kwargs.items():
             setattr(self, key, val)
 
-    # def update(self, **kwargs):
-    #     for key, val in update:
-    #         setattr(self, key, val)
-
 
 class Maps(object):
     """
@@ -74,44 +44,19 @@ class Maps(object):
 
     Parameters
     ----------
-    respath : str, optional
-        The parent path to a folder containing results
-        The default is None
-    dumpfolder : str, optional
-        The name of the actual sub-folder containing the results.
-        (with a sub-folder structure of 'cfg', 'dumps', 'results'])
-        The default is None
-    ncfile_name : str, optional
-        The name of the NetCDF file to use (located in the 'results' subfolder)
-        If only 1 NetCDF file is available, it will be used automatically.
-        The default is None
-    plot_specs : dict, optional
-        A dict of keyword-arguments specifying the appearance of the plot
-        See `set_plot_specs()` for details.
-        The default is None
-    classify_specs : dict, optional
-        A dict of keyword-arguments that specify the classification of the data
-        See `set_classify_specs()` for details.
-        The default is None
+    orientation : str, optional
+        Indicator if the colorbar should be plotted right of the map ("horizontal")
+        or below the map ("vertical"). The default is "horizontal"
     """
 
     def __init__(
         self,
-        respath=None,
-        dumpfolder=None,
-        ncfile_name=None,
-        plot_specs=None,
-        classify_specs=None,
         orientation="horizontal",
     ):
 
-        self.respath = respath
-        self.dumpfolder = dumpfolder
-        self.ncfile_name = ncfile_name
-
         self.orientation = orientation
 
-        # initialize default plot specs
+        # default data specs
         self.data_specs = dict(
             parameter=None,
             xcoord="lon",
@@ -119,6 +64,7 @@ class Maps(object):
             in_crs=4326,
         )
 
+        # default plot specs
         self.plot_specs = dict(
             label=None,
             title=None,
@@ -130,7 +76,6 @@ class Maps(object):
             tick_precision=2,
             vmin=None,
             vmax=None,
-            callback=None,
             cpos="c",
             alpha=1,
             add_colorbar=True,
@@ -139,12 +84,11 @@ class Maps(object):
             shape="ellipses",
         )
 
+        # default classify specs
         self.classify_specs = dict()
 
-        if plot_specs is not None:
-            self.plot_specs.update(plot_specs)
-        if classify_specs is not None:
-            self.classify_specs.update(classify_specs)
+        self.cb = callbacks(self)
+        self._attached_cbs = dict()  # dict to memorize attached callbacks
 
     def copy(self, **kwargs):
         """
@@ -166,32 +110,13 @@ class Maps(object):
         """
 
         initdict = dict()
-        for key in ["respath", "dumpfolder", "ncfile_name"]:
-            if key in kwargs:
-                initdict[key] = kwargs[key]
-            else:
-                initdict[key] = self.__dict__.get(key, None)
-
-        initdict["data_specs"] = self.data_specs
-        initdict["plot_specs"] = {
-            key: val for key, val in self.plot_specs.items() if key != "callback"
-        }
+        initdict["data_specs"] = {**self.data_specs}
+        initdict["plot_specs"] = {**self.plot_specs}
         initdict["classify_specs"] = {**self.classify_specs}
 
         # create a new class
         cls = self.__class__
         copy_cls = cls.__new__(cls)
-
-        # re-bind the callback methods to the newly created copy-class
-        cb = self.plot_specs["callback"]
-        if cb is not None:
-            new_cb = []
-            for f in cb:
-                if hasattr(f, "__func__"):
-                    new_cb.append(f.__func__.__get__(copy_cls))
-            initdict["plot_specs"]["callback"] = new_cb
-        else:
-            initdict["plot_specs"]["callback"] = None
 
         copy_cls.__dict__.update(initdict)
         return copy_cls
@@ -264,33 +189,6 @@ class Maps(object):
             The precision of the tick-labels in the colorbar. The default is 2.
         vmin, vmax : float, optional
             Min- and max. values assigned to the colorbar. The default is None.
-        callback : list of callables, optional
-            List of callback-functions that are triggered if a patch is double-clicked.
-            There are some useful builtin-callbacks:
-
-            >>> m = Maps(...)
-            >>> m.set_plot_specs(
-            >>>     callback=[
-            >>>         m.cb_annotate  # annotate properties of selected patch
-            >>>         m.cb_load      # load the associated fit-object (if available)
-            >>>         m.cb_print     # print info to the console on click
-            >>>     ])
-
-            You can also define custom functions that are automatically connected to
-            the Maps-class instance:
-
-            >>> m = Maps()
-            >>>
-            >>> def some_callback(self, **kwargs)
-            >>>     ID = kwargs["ID"]    # index of the selected pixel in the dataframe
-            >>>     ID = kwargs["pos"]   # (x, y) position of the selected pixel
-            >>>     ...
-            >>>     ... add any functionality you want ...
-            >>>     ...
-            >>>
-            >>> m.set_plot_specs(callback=[some_callback])
-
-            The default is None.
         cpos : str, optional
             Indicator if the provided x-y coordinates correspond to the center ("c"),
             upper-left ("ul"), lower-left ("ll") etc.  of the pixel.
@@ -405,7 +303,6 @@ class Maps(object):
         tick_precision=2,
         vmin=None,
         vmax=None,
-        callback=None,
         cpos="c",
         f_gridspec=None,
         alpha=1,
@@ -461,10 +358,6 @@ class Maps(object):
         scheme : str, optional
             The name of a classification scheme of the "mapclassify" module.
             The default is None.
-        callback: callable, optional
-            a function that will be called when a pixel is clicked.
-            call-signature:  callback(ID)
-            The default is None.
         cpos : str
             the position of the coordinate
             (one of 'c', 'll', 'lr', 'ul', 'ur')
@@ -507,10 +400,8 @@ class Maps(object):
         if label is None:
             label = parameter
         if title is None:
-            if self.dumpfolder is not None and self.ncfile_name is not None:
-                title = self.dumpfolder + "  ||  " + self.ncfile_name + ".nc"
-            else:
-                title = parameter
+            title = parameter
+
         if vmin is None:
             vmin = np.nanmin(z_data)
         if vmax is None:
@@ -587,55 +478,21 @@ class Maps(object):
 
         f.canvas.draw_idle()
 
-        # ------------- add a callback
-        if callback is not None:
-            from scipy.spatial import cKDTree
+        # ------------- add a picker that will be used by the callbacks
+        # use a cKDTree based picking to speed up picks for large collections
+        tree = cKDTree(np.stack([x0, y0], axis=1))
+        maxdist = np.max([w.max(), h.max()])
 
-            # use a cKDTree based picking to speed up picks for large collections
-            tree = cKDTree(np.stack([x0, y0], axis=1))
-            maxdist = np.max([w.max(), h.max()])
+        def picker(artist, event):
+            if event.dblclick:
+                dist, index = tree.query((event.xdata, event.ydata))
+                if dist < maxdist:
+                    return True, dict(ind=index)
+                else:
+                    return True, dict(ind=None)
+            return False, None
 
-            def picker(artist, event):
-                if event.dblclick:
-                    dist, index = tree.query((event.xdata, event.ydata))
-                    if dist < maxdist:
-                        return True, dict(ind=index)
-                    else:
-                        if self.cb_annotate in np.atleast_1d(callback):
-                            self._cb_hide_annotate()
-                return False, None
-
-            coll.set_picker(picker)
-
-            def onpick(event):
-                if isinstance(event.artist, collections.EllipseCollection):
-                    ind = event.ind
-
-                    clickdict = dict(
-                        pos=coll.get_offsets()[ind],
-                        ID=coll.get_urls()[ind],
-                        val=coll.get_array()[ind],
-                        f=f,
-                    )
-
-                    if callback is not None:
-                        for cb_i in np.atleast_1d(callback):
-                            cb_i(**clickdict)
-                elif isinstance(event.artist, collections.PolyCollection):
-                    ind = event.ind
-
-                    clickdict = dict(
-                        pos=coll._Maps_positions[ind],
-                        ID=coll.get_urls()[ind],
-                        val=coll.get_array()[ind],
-                        f=f,
-                    )
-
-                    if callback is not None:
-                        for cb_i in np.atleast_1d(callback):
-                            cb_i(**clickdict)
-
-            f.canvas.mpl_connect("pick_event", onpick)
+        coll.set_picker(picker)
 
         self.updatedict = dict(
             f=f,
@@ -672,6 +529,7 @@ class Maps(object):
 
         if parameter is None:
             parameter = next(i for i in data.keys() if i not in [xcoord, ycoord])
+            self.set_data_specs(parameter=parameter)
 
         assert isinstance(parameter, str), (
             "you must proivide a single string" + "as parameter name!"
@@ -686,9 +544,16 @@ class Maps(object):
         )
         xorig, yorig = (data[xcoord].ravel(), data[ycoord].ravel())
 
+        # transform center-points
+        x0, y0 = transformer.transform(xorig, yorig)
+
         if radius is None:
-            radiusx = np.abs(np.diff(np.unique(xorig)).mean()) / 2.0
-            radiusy = np.abs(np.diff(np.unique(yorig)).mean()) / 2.0
+            if radius_crs == "in":
+                radiusx = np.abs(np.diff(np.unique(xorig)).mean()) / 2.0
+                radiusy = np.abs(np.diff(np.unique(yorig)).mean()) / 2.0
+            elif radius_crs == "out":
+                radiusx = np.abs(np.diff(np.unique(x0)).mean()) / 2.0
+                radiusy = np.abs(np.diff(np.unique(y0)).mean()) / 2.0
         elif isinstance(radius, (list, tuple)):
             radiusx, radiusy = radius
         else:
@@ -712,8 +577,7 @@ class Maps(object):
                 xorig -= radiusx
                 yorig -= radiusx
 
-        # center
-        x0, y0 = transformer.transform(xorig, yorig)
+        # transform corner-points
         if radius_crs == "in":
             x3, y3 = transformer.transform(xorig + radiusx, yorig)
             x4, y4 = transformer.transform(xorig, yorig + radiusy)
@@ -918,7 +782,9 @@ class Maps(object):
             )
 
         if shape == "rectangles":
-            theta = np.deg2rad(theta)
+            # see https://stackoverflow.com/a/61664630/9703451
+
+            theta = -np.deg2rad(theta)
 
             # top right
             p0 = np.array(
@@ -1253,82 +1119,6 @@ class Maps(object):
                 loc=legend_loc,
             )
 
-    def cb_load(self, **kwargs):
-        """
-        a callback-function that can be used to load the corresponding fit-objects
-        stored in `dumpfolder / dumps / *.dump` on double-clickin a shape
-        """
-        try:
-            self.fit = self.useres.load_fit(kwargs["ID"])
-        except FileNotFoundError:
-            print(f"could not load fit with ID:  '{kwargs['ID']}'")
-
-    def cb_print(self, **kwargs):
-        """
-        a callback-function that prints details on the clicked pixel to the
-        console
-        """
-
-        printstr = ""
-        for key, val in kwargs.items():
-            if key == "f":
-                continue
-            if key == "pos":
-                x, y = [
-                    np.format_float_positional(i, trim="-", precision=4) for i in val
-                ]
-                printstr += f"pos = ({x}, {y})\n"
-            else:
-                if isinstance(val, (int, float)):
-                    val = np.format_float_positional(val, trim="-", precision=4)
-                printstr += f"{key} = {val}\n"
-        print(printstr)
-
-    def _cb_hide_annotate(self):
-        if hasattr(self, "annotation"):
-            self.annotation.set_visible(False)
-            self.updatedict["f"].canvas.draw_idle()
-
-    def cb_annotate(self, **kwargs):
-        """
-        a callback-function to annotate basic properties from the fit on double-click
-        use as:    spatial_plot(... , callback=cb_annotate)
-        """
-        f = self.updatedict["f"]
-        ax = f.axes[0]
-
-        if not hasattr(self, "annotation"):
-            self.annotation = ax.annotate(
-                "",
-                xy=kwargs["pos"],
-                xytext=(20, 20),
-                textcoords="offset points",
-                bbox=dict(boxstyle="round", fc="w"),
-                arrowprops=dict(arrowstyle="->"),
-            )
-
-        self.annotation.set_visible(True)
-
-        self.annotation.xy = kwargs["pos"]
-
-        printstr = ""
-        for key, val in kwargs.items():
-            if key == "f":
-                continue
-            if key == "pos":
-                x, y = [
-                    np.format_float_positional(i, trim="-", precision=4) for i in val
-                ]
-                printstr += f"pos = ({x}, {y})\n"
-            else:
-                if isinstance(val, (int, float)):
-                    val = np.format_float_positional(val, trim="-", precision=4)
-                printstr += f"{key} = {val}\n"
-
-        self.annotation.set_text(printstr)
-        self.annotation.get_bbox_patch().set_alpha(0.75)
-        f.canvas.draw_idle()
-
     def add_discrete_layer(
         self,
         data,
@@ -1431,7 +1221,6 @@ class Maps(object):
         if norm is None:
             norm = coll.norm
 
-        leg = None
         if legend_kwargs is True or isinstance(legend_kwargs, dict):
             legkwargs = dict(loc="upper right")
             try:
@@ -1454,6 +1243,78 @@ class Maps(object):
                         labels = [label_dict[val] for val in uniquevals]
                     else:
                         labels = [str(val) for val in uniquevals]
-                leg = ax.legend(proxies, labels, **legkwargs)
+                _ = ax.legend(proxies, labels, **legkwargs)
 
         return coll
+
+    def attach_callback(self, callback):
+        """
+        attach a callback to the plot that will be executed if a pixel is double-clicked
+
+        A list of pre-defined callbacks is available at `m.cb...`
+
+            >>> m.attach_callback(m.cb.annotate)
+            >>> m.attach_callback(m.cb.scatter)
+            >>> # to remove the callback again, call:
+            >>> m.remove_callback(m.cb.scatter)
+
+        """
+
+        if callback is None:
+            return
+
+        # re-bind the callback methods to the Maps object
+        # in case custom functions are used
+        if hasattr(callback, "__func__"):
+            callback = callback.__func__.__get__(self)
+        else:
+            newcb = partial(callback, self=self)
+            newcb.__name__ = callback.__name__
+            callback = newcb
+
+        # ------------- add a callback
+        def onpick(event):
+            ind = event.ind
+            if ind is not None:
+                if isinstance(event.artist, collections.EllipseCollection):
+                    clickdict = dict(
+                        pos=self.figure.coll.get_offsets()[ind],
+                        ID=self.figure.coll.get_urls()[ind],
+                        val=self.figure.coll.get_array()[ind],
+                    )
+
+                    callback(**clickdict)
+                elif isinstance(event.artist, collections.PolyCollection):
+                    clickdict = dict(
+                        pos=self.figure.coll._Maps_positions[ind],
+                        ID=self.figure.coll.get_urls()[ind],
+                        val=self.figure.coll.get_array()[ind],
+                    )
+
+                    callback(**clickdict)
+            else:
+                if "cb_annotate" in self._attached_cbs:
+                    self._cb_hide_annotate()
+
+        self._attached_cbs[callback.__name__] = self.figure.f.canvas.mpl_connect(
+            "pick_event", onpick
+        )
+
+    def remove_callback(self, callback):
+        name = callback.__name__
+
+        self.figure.f.canvas.mpl_disconnect(self._attached_cbs[name])
+
+        # call cleanup methods on removal
+        if hasattr(self.cb, f"_{name}_cleanup"):
+            getattr(self.cb, f"_{name}_cleanup")(self)
+
+    @lru_cache()
+    def _get_crs(self, crs):
+        return CRS.from_user_input(crs)
+
+    def _cb_hide_annotate(self):
+        # a function to hide the annotation of an empty area is clicked
+        if hasattr(self, "annotation"):
+            self.annotation.set_visible(False)
+            self.updatedict["f"].canvas.draw_idle()
