@@ -497,6 +497,7 @@ class Maps(object):
             in_crs=in_crs,
             plot_epsg=plot_epsg,
             radius=radius,
+            radius_crs=radius_crs,
             cpos="c",
             parameter=parameter,
             xcoord=xcoord,
