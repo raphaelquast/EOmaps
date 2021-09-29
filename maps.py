@@ -11,7 +11,7 @@ from pyproj import CRS, Transformer
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 from matplotlib import cm, collections
-from matplotlib.colors import LinearSegmentedColormap, ListedColormap
+from matplotlib.colors import LinearSegmentedColormap
 from matplotlib.gridspec import GridSpec, GridSpecFromSubplotSpec, SubplotSpec
 from matplotlib.patches import Patch
 
@@ -19,7 +19,7 @@ from cartopy import crs as ccrs
 from cartopy import feature as cfeature
 from cartopy.io import shapereader
 
-from .helpers import pairwise
+from .helpers import pairwise, cmap_alpha
 from .callbacks import callbacks
 
 
@@ -27,35 +27,6 @@ try:
     import mapclassify
 except ImportError:
     print("No module named 'mapclassify'... classification will not work!")
-
-
-def cmap_alpha(cmap, alpha, interpolate=False):
-    """
-    add transparency to an existing colormap
-
-    Parameters
-    ----------
-    cmap : matplotlib.colormap
-        the colormap to use
-    alpha : float
-        the transparency
-    interpolate : bool
-        indicator if a listed colormap (False) or a interpolated colormap (True)
-        should be generated. The default is False
-
-    Returns
-    -------
-    new_cmap : matplotlib.colormap
-        a new colormap with the desired transparency
-    """
-
-    new_cmap = cmap(np.arange(cmap.N))
-    new_cmap[:, -1] = alpha
-    if interpolate:
-        new_cmap = LinearSegmentedColormap("new_cmap", new_cmap)
-    else:
-        new_cmap = ListedColormap(new_cmap)
-    return new_cmap
 
 
 class _Maps_plot(object):
@@ -66,10 +37,6 @@ class _Maps_plot(object):
         for key, val in kwargs.items():
             setattr(self, key, val)
 
-    # def update(self, **kwargs):
-    #     for key, val in update:
-    #         setattr(self, key, val)
-
 
 class Maps(object):
     """
@@ -77,44 +44,19 @@ class Maps(object):
 
     Parameters
     ----------
-    respath : str, optional
-        The parent path to a folder containing results
-        The default is None
-    dumpfolder : str, optional
-        The name of the actual sub-folder containing the results.
-        (with a sub-folder structure of 'cfg', 'dumps', 'results'])
-        The default is None
-    ncfile_name : str, optional
-        The name of the NetCDF file to use (located in the 'results' subfolder)
-        If only 1 NetCDF file is available, it will be used automatically.
-        The default is None
-    plot_specs : dict, optional
-        A dict of keyword-arguments specifying the appearance of the plot
-        See `set_plot_specs()` for details.
-        The default is None
-    classify_specs : dict, optional
-        A dict of keyword-arguments that specify the classification of the data
-        See `set_classify_specs()` for details.
-        The default is None
+    orientation : str, optional
+        Indicator if the colorbar should be plotted right of the map ("horizontal")
+        or below the map ("vertical"). The default is "horizontal"
     """
 
     def __init__(
         self,
-        respath=None,
-        dumpfolder=None,
-        ncfile_name=None,
-        plot_specs=None,
-        classify_specs=None,
         orientation="horizontal",
     ):
 
-        self.respath = respath
-        self.dumpfolder = dumpfolder
-        self.ncfile_name = ncfile_name
-
         self.orientation = orientation
 
-        # initialize default plot specs
+        # default data specs
         self.data_specs = dict(
             parameter=None,
             xcoord="lon",
@@ -122,6 +64,7 @@ class Maps(object):
             in_crs=4326,
         )
 
+        # default plot specs
         self.plot_specs = dict(
             label=None,
             title=None,
@@ -141,15 +84,11 @@ class Maps(object):
             shape="ellipses",
         )
 
+        # default classify specs
         self.classify_specs = dict()
 
-        if plot_specs is not None:
-            self.plot_specs.update(plot_specs)
-        if classify_specs is not None:
-            self.classify_specs.update(classify_specs)
-
         self.cb = callbacks(self)
-        self._attached_cbs = dict()
+        self._attached_cbs = dict()  # dict to memorize attached callbacks
 
     def copy(self, **kwargs):
         """
@@ -171,12 +110,6 @@ class Maps(object):
         """
 
         initdict = dict()
-        for key in ["respath", "dumpfolder", "ncfile_name"]:
-            if key in kwargs:
-                initdict[key] = kwargs[key]
-            else:
-                initdict[key] = self.__dict__.get(key, None)
-
         initdict["data_specs"] = {**self.data_specs}
         initdict["plot_specs"] = {**self.plot_specs}
         initdict["classify_specs"] = {**self.classify_specs}
@@ -467,10 +400,8 @@ class Maps(object):
         if label is None:
             label = parameter
         if title is None:
-            if self.dumpfolder is not None and self.ncfile_name is not None:
-                title = self.dumpfolder + "  ||  " + self.ncfile_name + ".nc"
-            else:
-                title = parameter
+            title = parameter
+
         if vmin is None:
             vmin = np.nanmin(z_data)
         if vmax is None:
