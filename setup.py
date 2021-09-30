@@ -8,11 +8,10 @@ For COPYING and LICENSE details, please refer to the LICENSE file
 from setuptools import setup, find_packages
 
 # from setuptools import find_packages
-from mapit import __version__
 
 setup(
     name="mapit",
-    version=__version__,
+    version=0.0,
     description="a general-purpose library to plot and analyze large geographical datasets.",
     packages=find_packages(),
     package_dir={"mapit": "mapit"},
