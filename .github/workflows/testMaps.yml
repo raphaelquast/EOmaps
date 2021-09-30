@@ -1,0 +1,44 @@
+name: test_Maps
+
+on: [push]
+
+jobs:
+  build:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        # set operating systems to test
+        os: [ubuntu-latest]
+        # set python versions to test
+        python-version: ['3.7', '3.8', '3.9']
+
+    name: test_Maps ${{ matrix.os }}  ${{ matrix.python-version }}
+    steps:
+      # checkout the repository
+      - uses: actions/checkout@v2
+      # install miniconda environment
+      - uses: conda-incubator/setup-miniconda@v2
+        with:
+          environment-file: tests/test_env.yml
+          activate-environment: testMaps
+
+          show-channel-urls: true
+          use-only-tar-bz2: true
+
+          python-version: ${{ matrix.python-version }}
+
+          auto-activate-base: false
+          auto-update-conda: true
+      # run pytest
+      - name: test Maps
+        # do this to ensure proper activation of conda environment
+        shell: bash -l {0}
+        run: |
+          python -m pytest --cov=maps --cov-report=xml
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v1
+        with:
+          env_vars: ${{ matrix.os }}, ${{ matrix.python-version }}
+          name: maps_coverage
+          fail_ci_if_error: true
+          verbose: true

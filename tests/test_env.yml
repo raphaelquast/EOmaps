@@ -1,0 +1,17 @@
+name: testMaps
+channels:
+  - conda-forge
+
+dependencies:
+  - numpy
+  - pandas
+  - geopandas
+  - matplotlib
+  - cartopy
+  - descartes
+  - mapclassify
+  - pyproj
+
+  - coveralls
+  - pytest
+  - pytest-cov
