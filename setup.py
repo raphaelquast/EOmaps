@@ -10,11 +10,11 @@ from setuptools import setup, find_packages
 # from setuptools import find_packages
 
 setup(
-    name="mapit",
+    name="eomaps",
     version=0.1,
     description="a general-purpose library to plot and analyze large geographical datasets.",
     packages=find_packages(),
-    package_dir={"mapit": "mapit"},
+    package_dir={"eomaps": "eomaps"},
     include_package_data=False,
     author="Raphael Quast",
     author_email="raphael.quast@geo.tuwien.ac.at",

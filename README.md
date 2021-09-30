@@ -1,5 +1,5 @@
-[![codecov](https://codecov.io/gh/raphaelquast/MapIt/branch/dev/graph/badge.svg?token=25M85P7MJG)](https://codecov.io/gh/raphaelquast/MapIt)
-# MapIt
+[![codecov](https://codecov.io/gh/raphaelquast/EOmaps/branch/dev/graph/badge.svg?token=25M85P7MJG)](https://codecov.io/gh/raphaelquast/MapIt)
+# EOmaps
 
 a general-purpose library to plot maps of large non-rectangular datasets.
 
@@ -19,9 +19,9 @@ a general-purpose library to plot maps of large non-rectangular datasets.
 - check out the example-notebook: 🛸 [A_basic_map.ipynb](https://github.com/raphaelquast/maps/blob/dev/examples/A_basic_map.ipynb) 🛸
 
 ```python
-from mapit import MapIt
+from eomaps import Maps
 
-m = MapIt()
+m = Maps()
 
 m.data = "... a pandas-dataframe with coordinates and data-values ..."
 
