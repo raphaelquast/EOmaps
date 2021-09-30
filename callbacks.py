@@ -41,44 +41,115 @@ class callbacks(object):
             [i for i in self.__dir__() if not i.startswith("_")]
         )
 
-    def load(self, **kwargs):
+    def load(
+        self,
+        ID=None,
+        pos=None,
+        val=None,
+        database=None,
+        load_method="load_fit",
+        load_multiple=False,
+    ):
         """
-        a callback-function that can be used to load the corresponding fit-objects
-        stored in `dumpfolder / dumps / *.dump` on double-clicking a shape
-        """
-        try:
-            self.fit = self.useres.load_fit(kwargs["ID"])
-        except FileNotFoundError:
-            print(f"could not load fit with ID:  '{kwargs['ID']}'")
+        A callback-function that can be used to load objects from a given
+        database.
 
-    def print_to_console(self, **kwargs):
+        The returned object is accessible via `m.picked_object`.
+
+        Note: `m.picked_object` will be replaced on each pick-event!
+
+        Parameters
+        ----------
+        ID : any
+            The index-value of the pixel in the data.
+        pos : tuple
+            A tuple of the position of the pixel in plot-coordinates.
+        val : int or float
+            The parameter-value of the pixel.
+        database : any
+            The database object to use for loading the object
+        load_method : str or callable
+            If str: The name of the method to use for loading objects from the provided
+                    database (the call-signature used is `database.load_method(ID)`)
+            If callable: A callable that will be executed on the database with the
+                         following call-signature: `load_method(database, ID)`
+        load_multiple : bool
+            True: A single-object is returned, replacing `m.picked_object` on each pick.
+            False: A list of objects is returned that is extended with each pick.
+        """
+
+        assert database is not None, "you must provide a database object!"
+
+        try:
+            if isinstance(load_method, str):
+                assert hasattr(
+                    database, load_method
+                ), "The provided database has no method '{load_method}'"
+                pick = getattr(database, load_method)(ID)
+            elif callable(load_method):
+                pick = load_method(database, ID)
+            else:
+                raise TypeError("load_method must be a string or a callable!")
+        except Exception:
+            print(f"could not load object with ID:  '{ID}' from {database}")
+
+        if load_multiple is True:
+            self.picked_object = getattr(self, "picked_object", list()) + [pick]
+        else:
+            self.picked_object = pick
+
+    def _load_cleanup(self, m):
+        if hasattr(m, "picked_object"):
+            del m.picked_object
+
+    def print_to_console(self, ID=None, pos=None, val=None):
         """
         a callback-function that prints details on the clicked pixel to the
         console
+
+        Parameters
+        ----------
+        ID : any
+            The index-value of the pixel in the data.
+        pos : tuple
+            A tuple of the position of the pixel in plot-coordinates.
+        val : int or float
+            The parameter-value of the pixel.
         """
         # crs = self._get_crs(self.plot_specs["plot_epsg"])
         # xlabel, ylabel = [crs.axis_info[0].abbrev, crs.axis_info[1].abbrev]
         xlabel, ylabel = [i.name for i in self.figure.ax.projection.axis_info[:2]]
 
         printstr = ""
-        for key, val in kwargs.items():
-            if key == "f":
-                continue
-            if key == "pos":
-                x, y = [
-                    np.format_float_positional(i, trim="-", precision=4) for i in val
-                ]
-                printstr += f"{xlabel} = {x}\n{ylabel} = {y}\n"
-            else:
-                if isinstance(val, (int, float)):
-                    val = np.format_float_positional(val, trim="-", precision=4)
-                printstr += f"{self.data_specs['parameter']} = {val}\n"
+        x, y = [np.format_float_positional(i, trim="-", precision=4) for i in pos]
+        printstr += f"{xlabel} = {x}\n{ylabel} = {y}\n"
+        printstr += f"ID = {ID}\n"
+
+        if isinstance(val, (int, float)):
+            val = np.format_float_positional(val, trim="-", precision=4)
+        printstr += f"{self.data_specs['parameter']} = {val}"
+
         print(printstr)
 
-    def annotate(self, **kwargs):
+    def annotate(self, ID=None, pos=None, val=None, pos_precision=4, val_precision=4):
         """
         a callback-function to annotate basic properties from the fit on double-click
         use as:    spatial_plot(... , callback=cb_annotate)
+
+        Parameters
+        ----------
+        ID : any
+            The index-value of the pixel in the data.
+        pos : tuple
+            A tuple of the position of the pixel in plot-coordinates.
+        val : int or float
+            The parameter-value of the pixel.
+        pos_precision : int
+            The floating-point precision of the coordinates.
+            The default is 4.
+        val_precision : int
+            The floating-point precision of the parameter-values.
+            The default is 4.
         """
 
         if not hasattr(self, "background"):
@@ -96,7 +167,7 @@ class callbacks(object):
         if not hasattr(self, "annotation"):
             self.annotation = ax.annotate(
                 "",
-                xy=kwargs["pos"],
+                xy=pos,
                 xytext=(20, 20),
                 textcoords="offset points",
                 bbox=dict(boxstyle="round", fc="w"),
@@ -104,17 +175,18 @@ class callbacks(object):
             )
 
         self.annotation.set_visible(True)
-        self.annotation.xy = kwargs["pos"]
+        self.annotation.xy = pos
 
         printstr = ""
         x, y = [
-            np.format_float_positional(i, trim="-", precision=4) for i in kwargs["pos"]
+            np.format_float_positional(i, trim="-", precision=pos_precision)
+            for i in pos
         ]
         printstr += f"{xlabel} = {x}\n{ylabel} = {y}\n"
+        printstr += f"ID = {ID}\n"
 
-        val = kwargs["val"]
         if isinstance(val, (int, float)):
-            val = np.format_float_positional(val, trim="-", precision=4)
+            val = np.format_float_positional(val, trim="-", precision=val_precision)
         printstr += f"{self.data_specs['parameter']} = {val}"
 
         self.annotation.set_text(printstr)
@@ -124,7 +196,9 @@ class callbacks(object):
         # in case a large collection is plotted
         self._blit(self.annotation)
 
-    def scatter(self, **kwargs):
+    def scatter(
+        self, ID=None, pos=None, val=None, x_index="pos", precision=4, **kwargs
+    ):
         """
         a callback-function to generate a dynamically updated scatterplot
 
@@ -136,11 +210,35 @@ class callbacks(object):
             >>> m.remove_callback("scatter")
             >>> m.add_callback("scatter")
 
+
+        Parameters
+        ----------
+        ID : any
+            The index-value of the pixel in the data.
+        pos : tuple
+            A tuple of the position of the pixel in plot-coordinates.
+        val : int or float
+            The parameter-value of the pixel.
+        x_index : str
+            Indicator how the x-axis is labelled
+
+                - pos : The position of the pixel in plot-coordinates
+                - ID  : The index of the pixel in the data
+        precision : int
+            The floating-point precision of the coordinates printed to the
+            x-axis if `x_index="pos"` is used.
+            The default is 4.
+        **kwargs :
+            kwargs forwarded to the call to `plt.plot([...], [...], **kwargs)`.
+
         """
+
+        style = dict(marker=".")
+        style.update(**kwargs)
+
         if not hasattr(self, "_pick_f"):
             self._pick_f, self._pick_ax = plt.subplots()
             self._pick_ax.tick_params(axis="x", rotation=90)
-
             self._pick_ax.set_ylabel(self.data_specs["parameter"])
 
         # crs = self._get_crs(self.plot_specs["plot_epsg"])
@@ -149,16 +247,27 @@ class callbacks(object):
             i.abbrev for i in self.figure.ax.projection.axis_info[:2]
         ]
 
-        x, y = [
-            np.format_float_positional(i, trim="-", precision=4) for i in kwargs["pos"]
-        ]
+        if x_index == "pos":
+            x, y = [
+                np.format_float_positional(i, trim="-", precision=precision)
+                for i in pos
+            ]
+            xindex = f"{_pick_xlabel}={x}\n{_pick_ylabel}={y}"
+        elif x_index == "ID":
+            xindex = str(ID)
 
-        self._pick_ax.plot(
-            [f"{_pick_xlabel}={x}\n{_pick_ylabel}={y}"], [kwargs["val"]], marker="."
-        )
-        self._pick_ax.autoscale()
-        self._pick_f.tight_layout()
+        if not hasattr(self, "_pick_l"):
+            (self._pick_l,) = self._pick_ax.plot([xindex], [val], **style)
+        else:
+            self._pick_l.set_xdata(list(self._pick_l.get_xdata()) + [xindex])
+            self._pick_l.set_ydata(list(self._pick_l.get_ydata()) + [val])
+
+        # self._pick_ax.autoscale()
+        self._pick_ax.relim()
+        self._pick_ax.autoscale_view(True, True, True)
+
         self._pick_f.canvas.draw()
+        self._pick_f.tight_layout()
 
     def _scatter_cleanup(self, m):
         # cleanup method for scatter callback
@@ -167,7 +276,7 @@ class callbacks(object):
         if hasattr(m, "_pick_ax"):
             del m._pick_ax
 
-    def get_values(self, **kwargs):
+    def get_values(self, ID=None, pos=None, val=None):
         """
         a callback-function that successively collects return-values in a dict
         that can be accessed via "m.picked_vals", with the following structure:
@@ -177,14 +286,22 @@ class callbacks(object):
                                      val=[... the values ...])
 
         removing the callback will also remove the associated value-dictionary!
+
+        Parameters
+        ----------
+        ID : any
+            The index-value of the pixel in the data.
+        pos : tuple
+            A tuple of the position of the pixel in plot-coordinates.
+        val : int or float
+            The parameter-value of the pixel.
         """
 
         if not hasattr(self, "picked_vals"):
             self.picked_vals = defaultdict(list)
 
-        for key, val in kwargs.items():
-            if key in ["pos", "ID", "val"]:
-                self.picked_vals[key].append(val)
+        for key, val in zip(["pos", "ID", "val"], [pos, ID, val]):
+            self.picked_vals[key].append(val)
 
     def _get_values_cleanup(self, m):
         # cleanup method for get_values callback

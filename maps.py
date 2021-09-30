@@ -1304,7 +1304,7 @@ class Maps(object):
 
         return coll
 
-    def add_callback(self, callback):
+    def add_callback(self, callback, **kwargs):
         """
         Attach a callback to the plot that will be executed if a pixel is double-clicked
 
@@ -1333,7 +1333,14 @@ class Maps(object):
 
             If a string is provided, it will be used to assign the associated function
             from the `m.cb` collection.
+        **kwargs :
+            kwargs passed to the callback-function
         """
+
+        assert not all(
+            i in kwargs for i in ["pos", "ID", "val"]
+        ), 'the names "pos", "ID", "val" cannot be used as keyword-arguments!'
+
         if isinstance(callback, str):
             assert hasattr(self.cb, callback), (
                 f"The function '{callback}' does not exist as a pre-defined callback."
@@ -1368,7 +1375,7 @@ class Maps(object):
                         val=self.figure.coll.get_array()[ind],
                     )
 
-                    callback(**clickdict)
+                    callback(**clickdict, **kwargs)
                 elif isinstance(event.artist, collections.PolyCollection):
                     clickdict = dict(
                         pos=self.figure.coll._Maps_positions[ind],
@@ -1376,7 +1383,7 @@ class Maps(object):
                         val=self.figure.coll.get_array()[ind],
                     )
 
-                    callback(**clickdict)
+                    callback(**clickdict, **kwargs)
             else:
                 if "annotate" in self._attached_cbs:
                     self._cb_hide_annotate()
@@ -1396,16 +1403,19 @@ class Maps(object):
             (or the name of the function)
         """
         if isinstance(callback, str):
-            if callback not in self._attached_cbs:
-                warnings.warn(
-                    f"The callback '{callback}' is not attached and can not"
-                    + " be removed. Attached callbacks are:\n    - "
-                    + "    - \n".join(list(self._attached_cbs))
-                )
+            name = callback
+        else:
+            name = callback.__name__
 
-        name = callback.__name__
+        if name not in self._attached_cbs:
+            warnings.warn(
+                f"The callback '{name}' is not attached and can not"
+                + " be removed. Attached callbacks are:\n    - "
+                + "    - \n".join(list(self._attached_cbs))
+            )
 
         self.figure.f.canvas.mpl_disconnect(self._attached_cbs[name])
+        del self._attached_cbs[name]
 
         # call cleanup methods on removal
         if hasattr(self.cb, f"_{name}_cleanup"):
