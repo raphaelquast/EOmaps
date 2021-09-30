@@ -2,7 +2,7 @@
 
 a general-purpose library to plot maps of large non-rectangular datasets.
 
-❗❗❗ this is a **work-in-progress** library that is subject to structural changes ❗❗❗  
+❗❗❗ this library is a **work-in-progress** and subject to structural changes ❗❗❗
 🚀  feel free to contribute!
 
 ### features
@@ -40,4 +40,3 @@ m.plot_map()
 m.figure.   # access to individual objects of the generated figure (f, ax, cb, gridspec etc.)
 
 ```
-
