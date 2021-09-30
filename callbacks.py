@@ -10,10 +10,14 @@ class callbacks(object):
     a collection of callback-functions
 
     to attach a callback, use:
-        >>> m.attach_callback(m.cb.annotate)
+        >>> m.add_callback(m.cb.annotate)
+        >>> # or
+        >>> m.add_callback("annotate")
 
     to remove an already attached callback, use:
         >>> m.remove_callback(m.cb.annotate)
+        >>> # or
+        >>> m.remove_callback("annotate")
 
     you can also define custom callback functions as follows:
 
@@ -23,7 +27,9 @@ class callbacks(object):
         >>>     print("the data-index of the clicked pixel", kwargs["ID"])
         >>>     print("data-value of the clicked pixel", kwargs["val"])
         >>>
-        >>> m.attach_callback(some_callback)
+        >>> m.add_callback(some_callback)
+    and remove them again via
+        >>> m.remove_callback(some_callback)
     """
 
     def __init__(self, m):
@@ -125,6 +131,11 @@ class callbacks(object):
             - x-axis represents pixel-coordinates
             - y-axis represents pixel-values
 
+        a new figure is started if the callback is removed and added again, e.g.
+
+            >>> m.remove_callback("scatter")
+            >>> m.add_callback("scatter")
+
         """
         if not hasattr(self, "_pick_f"):
             self._pick_f, self._pick_ax = plt.subplots()
@@ -150,6 +161,7 @@ class callbacks(object):
         self._pick_f.canvas.draw()
 
     def _scatter_cleanup(self, m):
+        # cleanup method for scatter callback
         if hasattr(m, "_pick_f"):
             del m._pick_f
         if hasattr(m, "_pick_ax"):
@@ -163,6 +175,8 @@ class callbacks(object):
             >>> m.picked_vals = dict(pos=[... center-position tuples in plot_crs ...],
                                      ID=[... the IDs in the dataframe...],
                                      val=[... the values ...])
+
+        removing the callback will also remove the associated value-dictionary!
         """
 
         if not hasattr(self, "picked_vals"):
@@ -171,3 +185,8 @@ class callbacks(object):
         for key, val in kwargs.items():
             if key in ["pos", "ID", "val"]:
                 self.picked_vals[key].append(val)
+
+    def _get_values_cleanup(self, m):
+        # cleanup method for get_values callback
+        if hasattr(m, "picked_vals"):
+            del m.picked_vals
