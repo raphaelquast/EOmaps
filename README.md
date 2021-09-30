@@ -3,7 +3,7 @@
 
 a general-purpose library to plot maps of large non-rectangular datasets.
 
-❗❗❗ this library is a **work-in-progress** and subject to structural changes ❗❗❗
+❗❗❗ this library is a **work-in-progress** and subject to structural changes ❗❗❗  
 🚀  feel free to contribute!
 
 ### features
