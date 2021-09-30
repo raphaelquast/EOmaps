@@ -210,13 +210,12 @@ class callbacks(object):
             self.figure.f.canvas.mpl_disconnect(self.draw_cid)
             del self.draw_cid
 
-    def scatter(
-        self, ID=None, pos=None, val=None, x_index="pos", precision=4, **kwargs
-    ):
+    def plot(self, ID=None, pos=None, val=None, x_index="pos", precision=4, **kwargs):
         """
-        a callback-function to generate a dynamically updated scatterplot
+        a callback-function to generate a dynamically updated plot of the
+        values
 
-            - x-axis represents pixel-coordinates
+            - x-axis represents pixel-coordinates (or IDs)
             - y-axis represents pixel-values
 
         a new figure is started if the callback is removed and added again, e.g.
@@ -255,6 +254,12 @@ class callbacks(object):
             self._pick_ax.tick_params(axis="x", rotation=90)
             self._pick_ax.set_ylabel(self.data_specs["parameter"])
 
+            # call the cleanup function if the figure is closed
+            def on_close(event):
+                self.cb._scatter_cleanup(self)
+
+            self._pick_f.canvas.mpl_connect("close_event", on_close)
+
         # crs = self._get_crs(self.plot_specs["plot_epsg"])
         # _pick_xlabel, _pick_ylabel = [crs.axis_info[0].abbrev, crs.axis_info[1].abbrev]
         _pick_xlabel, _pick_ylabel = [
@@ -289,6 +294,8 @@ class callbacks(object):
             del m._pick_f
         if hasattr(m, "_pick_ax"):
             del m._pick_ax
+        if hasattr(m, "_pick_l"):
+            del m._pick_l
 
     def get_values(self, ID=None, pos=None, val=None):
         """
