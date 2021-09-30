@@ -10,7 +10,7 @@ jobs:
         # set operating systems to test
         os: [ubuntu-latest]
         # set python versions to test
-        python-version: ['3.7', '3.8', '3.9']
+        python-version: ['3.7']
 
     name: test_Maps ${{ matrix.os }}  ${{ matrix.python-version }}
     steps:

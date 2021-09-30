@@ -16,7 +16,7 @@ jobs:
       # Sets up python3
       - uses: actions/setup-python@v2
         with:
-          python-version: 3.8
+          python-version: 3.7
 
       - name: Upgrade pip, install setuptools, wheel and twine
         run: |
