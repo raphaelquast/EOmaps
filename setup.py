@@ -1,7 +1,7 @@
 # -*- coding: UTF-8 -*-
 
 """
-This file is part of Maps.
+This file is part of EOmaps.
 For COPYING and LICENSE details, please refer to the LICENSE file
 """
 
@@ -10,11 +10,11 @@ from setuptools import setup, find_packages
 # from setuptools import find_packages
 
 setup(
-    name="mapit",
+    name="EOmaps",
     version=0.1,
     description="a general-purpose library to plot and analyze large geographical datasets.",
     packages=find_packages(),
-    package_dir={"mapit": "mapit"},
+    package_dir={"eomaps": "eomaps"},
     include_package_data=False,
     author="Raphael Quast",
     author_email="raphael.quast@geo.tuwien.ac.at",

@@ -2,7 +2,7 @@ import unittest
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
-from mapit import MapIt
+from eomaps import Maps
 
 
 class TestBasicPlotting(unittest.TestCase):
@@ -15,7 +15,7 @@ class TestBasicPlotting(unittest.TestCase):
         self.data = pd.DataFrame(dict(x=x, y=y, value=np.random.normal(0, 1, len(x))))
 
     def test_simple_map(self):
-        m = MapIt()
+        m = Maps()
         m.data = self.data
         m.set_data_specs(xcoord="x", ycoord="y", in_crs=3857)
         m.set_plot_specs(plot_epsg=4326)
@@ -24,7 +24,7 @@ class TestBasicPlotting(unittest.TestCase):
         plt.close(m.figure.f)
 
     def test_simple_rectangles(self):
-        m = MapIt()
+        m = Maps()
         m.data = self.data
         m.set_data_specs(xcoord="x", ycoord="y", in_crs=3857)
         m.set_plot_specs(plot_epsg=4326, shape="rectangles")
@@ -33,7 +33,7 @@ class TestBasicPlotting(unittest.TestCase):
         plt.close(m.figure.f)
 
     def test_add_callbacks(self):
-        m = MapIt()
+        m = Maps()
         m.data = self.data
         m.set_data_specs(xcoord="x", ycoord="y", in_crs=3857)
         m.set_plot_specs(plot_epsg=3857, shape="rectangles")
@@ -58,7 +58,7 @@ class TestBasicPlotting(unittest.TestCase):
         plt.close(m.figure.f)
 
     def test_add_overlay(self):
-        m = MapIt()
+        m = Maps()
         m.data = self.data
         m.set_data_specs(xcoord="x", ycoord="y", in_crs=3857)
         m.set_plot_specs(plot_epsg=3857, shape="rectangles")
@@ -73,7 +73,7 @@ class TestBasicPlotting(unittest.TestCase):
         plt.close(m.figure.f)
 
     def test_add_discrete_layer(self):
-        m = MapIt()
+        m = Maps()
         m.data = self.data
         m.set_data_specs(xcoord="x", ycoord="y", in_crs=3857)
         m.set_plot_specs(plot_epsg=3857, shape="rectangles")
