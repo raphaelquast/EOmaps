@@ -11,7 +11,7 @@ from setuptools import setup, find_packages
 
 setup(
     name="mapit",
-    version=0.0,
+    version=0.1,
     description="a general-purpose library to plot and analyze large geographical datasets.",
     packages=find_packages(),
     package_dir={"mapit": "mapit"},

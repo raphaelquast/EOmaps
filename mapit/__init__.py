@@ -1,4 +1,4 @@
-__version__ = "0.0"
+__version__ = "0.1"
 __author__ = "Raphael Quast"
 
 from .mapit import MapIt

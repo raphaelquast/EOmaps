@@ -4,8 +4,6 @@ on:
    # trigger only on release
    release:
      types: [published]
-   push:
-     branches: [dev]
 
    # to trigger workflow manually from actions-tab
    workflow_dispatch:
@@ -35,8 +33,8 @@ jobs:
         env:
           TWINE_USERNAME: __token__
           # use the following line for deployment on pypi
-          #TWINE_PASSWORD: ${{ secrets.PYPI_API_TOKEN }}
+          TWINE_PASSWORD: ${{ secrets.PYPI_API_TOKEN }}
 
           # use the following lines for testing:
-          TWINE_PASSWORD: ${{ secrets.TEST_PYPI_API_TOKEN }}
-          TWINE_REPOSITORY: testpypi
+          #TWINE_PASSWORD: ${{ secrets.TEST_PYPI_API_TOKEN }}
+          #TWINE_REPOSITORY: testpypi
