@@ -156,6 +156,11 @@ class callbacks(object):
             # cache the background before the first annotation is drawn
             self.background = self.figure.f.canvas.copy_from_bbox(self.figure.f.bbox)
 
+            # attach draw_event that handles blitting
+            self.draw_cid = self.figure.f.canvas.mpl_connect(
+                "draw_event", self._grab_background
+            )
+
         # to hide the annotation, Maps._cb_hide_annotate() is called when an empty
         # area is clicked!
         # crs = self._get_crs(self.plot_specs["plot_epsg"])
@@ -195,6 +200,15 @@ class callbacks(object):
         # use blitting instead of f.canvas.draw() to speed up annotation generation
         # in case a large collection is plotted
         self._blit(self.annotation)
+
+    def _annotate_cleanup(self):
+        if hasattr(self, "background"):
+            # delete cached background
+            del self.background
+        # remove draw_event callback
+        if hasattr(self, "draw_cid"):
+            self.figure.f.canvas.mpl_disconnect(self.draw_cid)
+            del self.draw_cid
 
     def scatter(
         self, ID=None, pos=None, val=None, x_index="pos", precision=4, **kwargs

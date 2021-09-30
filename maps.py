@@ -338,11 +338,6 @@ class Maps(object):
             data=self.data, **self.plot_specs, **self.data_specs, f_gridspec=f_gridspec
         )
 
-        # attach draw_event that handles blitting
-        self.draw_cid = self.figure.f.canvas.mpl_connect(
-            "draw_event", self._grab_background
-        )
-
     def _spatial_plot(
         self,
         data,
@@ -1442,8 +1437,7 @@ class Maps(object):
 
     def _grab_background(self, event=None):
         """
-        When the figure is resized, hide the points, draw everything,
-        and update the background.
+        When the figure is resized, draw everything, and update the background.
         """
         annotation_visible = False
         if hasattr(self, "annotation"):
