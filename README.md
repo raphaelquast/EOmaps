@@ -1,4 +1,4 @@
-[![codecov](https://codecov.io/gh/raphaelquast/MapIt/branch/master/graph/badge.svg?token=25M85P7MJG)](https://codecov.io/gh/raphaelquast/MapIt)
+[![codecov](https://codecov.io/gh/raphaelquast/MapIt/branch/dev/graph/badge.svg?token=25M85P7MJG)](https://codecov.io/gh/raphaelquast/MapIt)
 # MapIt
 
 a general-purpose library to plot maps of large non-rectangular datasets.
