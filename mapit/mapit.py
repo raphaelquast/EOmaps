@@ -1,6 +1,7 @@
 """a collection of helper-functions to generate map-plots"""
 
 from functools import partial, lru_cache
+import warnings
 
 import numpy as np
 import pandas as pd
@@ -38,7 +39,7 @@ class _Maps_plot(object):
             setattr(self, key, val)
 
 
-class Maps(object):
+class MapIt(object):
     """
     A class to perform reading an plotting of spatial maps
 
@@ -57,7 +58,7 @@ class Maps(object):
         self.orientation = orientation
 
         # default data specs
-        self.data_specs = dict(
+        self._data_specs = dict(
             parameter=None,
             xcoord="lon",
             ycoord="lat",
@@ -65,13 +66,13 @@ class Maps(object):
         )
 
         # default plot specs
-        self.plot_specs = dict(
+        self._plot_specs = dict(
             label=None,
             title=None,
             cmap=plt.cm.viridis.copy(),
             plot_epsg=4326,
             radius_crs="in",
-            radius=None,
+            radius="estimate",
             histbins=256,
             tick_precision=2,
             vmin=None,
@@ -85,12 +86,16 @@ class Maps(object):
         )
 
         # default classify specs
-        self.classify_specs = dict()
+        self._classify_specs = dict()
 
-        self.cb = callbacks(self)
         self._attached_cbs = dict()  # dict to memorize attached callbacks
 
-    def copy(self, **kwargs):
+    def copy(
+        self,
+        data_specs=None,
+        plot_specs=None,
+        classify_specs=None,
+    ):
         """
         create a copy of the class that inherits all specifications
         from the parent class (already loaded data is not copied!)
@@ -99,27 +104,74 @@ class Maps(object):
 
         Parameters
         ----------
-        **kwargs :
-            kwargs passed to the initialization of the new class
-            (e.g. overriding the specifications of the parent class).
+        data_specs, plot_specs, classify_specs : dict, optional
+            Dictionaries that can be used to directly override the specifications of the
+            parent class. The default is None.
 
         Returns
         -------
-        copy_cls : maps.Maps object
+        copy_cls : mapit.MapIt object
             a new Maps class.
         """
-
         initdict = dict()
         initdict["data_specs"] = {**self.data_specs}
         initdict["plot_specs"] = {**self.plot_specs}
         initdict["classify_specs"] = {**self.classify_specs}
 
-        # create a new class
-        cls = self.__class__
-        copy_cls = cls.__new__(cls)
+        if data_specs:
+            assert isinstance(data_specs, dict), "'data_specs' must be a dict"
+            initdict["data_specs"].update(data_specs)
 
-        copy_cls.__dict__.update(initdict)
+        if plot_specs:
+            assert isinstance(plot_specs, dict), "'plot_specs' must be a dict"
+            initdict["plot_specs"].update(plot_specs)
+
+        if classify_specs:
+            assert isinstance(classify_specs, dict), "'classify_specs' must be a dict"
+            initdict["classify_specs"].update(classify_specs)
+
+        # create a new class
+        copy_cls = MapIt()
+
+        copy_cls.set_data_specs(**initdict["data_specs"])
+        copy_cls.set_plot_specs(**initdict["plot_specs"])
+        copy_cls.set_classify_specs(**initdict["classify_specs"])
+
         return copy_cls
+
+    @property
+    @lru_cache()
+    def cb(self):
+        """
+        accessor to pre-defined callback functions
+        """
+        return callbacks(self)
+
+    @property
+    def data_specs(self):
+        return self._data_specs
+
+    @data_specs.setter
+    def data_specs(self, val):
+        raise AttributeError("use 'm.set_data_specs' to set data-specifications!")
+
+    @property
+    def plot_specs(self):
+        return self._plot_specs
+
+    @plot_specs.setter
+    def plot_specs(self, val):
+        raise AttributeError("use 'm.set_plot_specs' to set plot-specifications!")
+
+    @property
+    def classify_specs(self):
+        return self._classify_specs
+
+    @classify_specs.setter
+    def classify_specs(self, val):
+        raise AttributeError(
+            "use 'm.set_classify_specs' to set classification-specifications!"
+        )
 
     def set_data_specs(self, **kwargs):
         """
@@ -153,8 +205,8 @@ class Maps(object):
         """
 
         for key, val in kwargs.items():
-            if key in self.data_specs:
-                self.data_specs[key] = val
+            if key in self._data_specs:
+                self._data_specs[key] = val
             else:
                 print(f'"{key}" is not a valid data_specs parameter!')
 
@@ -179,10 +231,10 @@ class Maps(object):
         radius_crs : str, optional
             Indicator if the radius is specified in data-crs units (e.g. "in")-
             or in plot-crs units (e.g. "out"). The default is "in".
-        radius : float, optional
+        radius : str, float or tuple, optional
             The radius of the patches in the crs defined via "radius_crs".
-            If None, the radius will be automatically determined from the x-y coordinate
-            separation of the data. The default is None.
+            If "estimate", the radius will be automatically determined from the
+            x-y coordinate separation of the data. The default is "estimate".
         histbins : int, optional
             The number of histogram-bins to use for the colorbar. The default is 256.
         tick_precision : int, optional
@@ -214,9 +266,9 @@ class Maps(object):
         for key, val in kwargs.items():
             if key in self.plot_specs:
                 if key == "cmap":
-                    self.plot_specs[key] = plt.get_cmap(val)
+                    self._plot_specs[key] = plt.get_cmap(val)
                 else:
-                    self.plot_specs[key] = val
+                    self._plot_specs[key] = val
             else:
                 print(f'"{key}" is not a valid plot_specs parameter!')
 
@@ -252,7 +304,7 @@ class Maps(object):
             kwargs passed to the call to the respective mapclassify classifier
         """
         for key, val in kwargs.items():
-            self.classify_specs[key] = val
+            self._classify_specs[key] = val
 
     def set_orientation(self, orientation="horizontal"):
         """
@@ -268,8 +320,8 @@ class Maps(object):
 
     def plot_map(self, f_gridspec=None):
         """
-        Actually generate the map-plot
-        (you must set the data first!)
+        Actually generate the map-plot based on the data provided as `m.data` and the
+        specifications defined in "data_specs", "plot_specs" and "classify_specs".
 
         Parameters
         ----------
@@ -295,7 +347,7 @@ class Maps(object):
         label=None,
         title="",
         cmap="viridis",
-        radius=None,
+        radius="estimate",
         radius_crs="in",
         in_crs=4326,
         plot_epsg=4326,
@@ -329,10 +381,11 @@ class Maps(object):
             A title for the plot. The default is ''.
         cmap : str or a matplotlib.Colormap, optional
             a matplotlib colormap name or instance. The default is 'viridis'.
-        radius : float, list or tuple
+        radius : str, float, list or tuple
             the radius (if list or tuple the ellipse-half-widths) of the points
-            in units of the "in_crs". If None, the mean difference of the
-            provided coordinates will be used
+            in units of the "in_crs". If "estimate", the mean difference of the
+            provided coordinates will be used.
+            The default is "estimate"
         radius_crs : str or crs
             the crs in which the radius is defined
             if 'in': "in_crs" will be used
@@ -381,11 +434,15 @@ class Maps(object):
             a dict containing all objects required to update the plot
         """
 
+        if parameter is None:
+            parameter = next(i for i in data.keys() if i not in [xcoord, ycoord])
+            self.set_data_specs(parameter=parameter)
+
         if alpha < 1:
             cmap = cmap_alpha(cmap, alpha)
 
         # ---------------------- prepare the data
-        parameter, ids, z_data, x0, y0, w, h, theta = self._prepare_data(
+        props = self._prepare_data(
             data=data,
             in_crs=in_crs,
             plot_epsg=plot_epsg,
@@ -403,13 +460,13 @@ class Maps(object):
             title = parameter
 
         if vmin is None:
-            vmin = np.nanmin(z_data)
+            vmin = np.nanmin(props["z_data"])
         if vmax is None:
-            vmax = np.nanmax(z_data)
+            vmax = np.nanmax(props["z_data"])
 
         # ---------------------- classify the data
         cbcmap, norm, bins, classified = self._classify_data(
-            z_data=z_data,
+            z_data=props["z_data"],
             cmap=cmap,
             histbins=histbins,
             vmin=vmin,
@@ -424,8 +481,8 @@ class Maps(object):
             add_colorbar=add_colorbar,
         )
 
-        ax.set_xlim(x0.min(), x0.max())
-        ax.set_ylim(y0.min(), y0.max())
+        ax.set_xlim(props["x0"].min(), props["x0"].max())
+        ax.set_ylim(props["y0"].min(), props["y0"].max())
         ax.set_title(title)
 
         # ax.set_extent((x0.min(), x0.max(), y0.min(), y0.max()))
@@ -434,17 +491,11 @@ class Maps(object):
         # ------------- plot the data
         coll = self._add_collection(
             ax=ax,
-            z_data=z_data,
-            x0=x0,
-            y0=y0,
-            w=w,
-            h=h,
-            theta=theta,
+            props=props,
             cmap=cbcmap,
             vmin=vmin,
             vmax=vmax,
             norm=norm,
-            ids=ids,
             shape=shape,
         )
 
@@ -458,7 +509,7 @@ class Maps(object):
             cb = self._add_colorbar(
                 cb_ax=cb_ax,
                 cb_plot_ax=cb_plot_ax,
-                z_data=z_data,
+                z_data=props["z_data"],
                 label=label,
                 bins=bins,
                 histbins=histbins,
@@ -480,16 +531,25 @@ class Maps(object):
 
         # ------------- add a picker that will be used by the callbacks
         # use a cKDTree based picking to speed up picks for large collections
-        tree = cKDTree(np.stack([x0, y0], axis=1))
-        maxdist = np.max([w.max(), h.max()])
+        tree = cKDTree(np.stack([props["x0"], props["y0"]], axis=1))
+        maxdist = np.max([np.max(props["w"]), np.max(props["h"])])
 
         def picker(artist, event):
             if event.dblclick:
-                dist, index = tree.query((event.xdata, event.ydata))
-                if dist < maxdist:
-                    return True, dict(ind=index)
-                else:
-                    return True, dict(ind=None)
+                double_click = True
+            else:
+                double_click = False
+
+            dist, index = tree.query((event.xdata, event.ydata))
+            if dist < maxdist:
+                return True, dict(
+                    ind=index, double_click=double_click, mouse_button=event.button
+                )
+            else:
+                return True, dict(
+                    ind=None, double_click=double_click, mouse_button=event.button
+                )
+
             return False, None
 
         coll.set_picker(picker)
@@ -516,112 +576,233 @@ class Maps(object):
 
     def _prepare_data(
         self,
-        data,
-        in_crs,
-        plot_epsg,
-        radius=None,
-        radius_crs="in",
-        cpos="c",
+        data=None,
+        in_crs=None,
+        plot_epsg=None,
+        radius="estimate",
+        radius_crs=None,
+        cpos=None,
         parameter=None,
         xcoord=None,
         ycoord=None,
+        shape=None,
     ):
 
-        if parameter is None:
-            parameter = next(i for i in data.keys() if i not in [xcoord, ycoord])
-            self.set_data_specs(parameter=parameter)
+        # get specifications
 
-        assert isinstance(parameter, str), (
-            "you must proivide a single string" + "as parameter name!"
-        )
+        if data is None:
+            data = self.data
+        if xcoord is None:
+            xcoord = self.data_specs["xcoord"]
+        if ycoord is None:
+            ycoord = self.data_specs["ycoord"]
 
-        z_data = data[parameter].ravel()
-        ids = data.index.values.ravel()
+        if in_crs is None:
+            in_crs = self.data_specs["in_crs"]
+        if plot_epsg is None:
+            plot_epsg = self.plot_specs["plot_epsg"]
 
-        # ------ project circles
+        if radius is None:
+            radius = self.plot_specs["radius"]
+        if radius_crs is None:
+            radius_crs = self.plot_specs["radius_crs"]
+        if cpos is None:
+            cpos = "c"
+        if shape is None:
+            shape = self.plot_specs["shape"]
+
+        xorig = data[xcoord].values
+        yorig = data[ycoord].values
+
+        z_data = data[parameter].values
+        ids = data.index.values
+
+        # get coordinate transformation
         transformer = Transformer.from_crs(
             CRS.from_user_input(in_crs), CRS.from_user_input(plot_epsg), always_xy=True
         )
-        xorig, yorig = (data[xcoord].ravel(), data[ycoord].ravel())
 
-        # transform center-points
-        x0, y0 = transformer.transform(xorig, yorig)
+        if shape == "ellipses":
+            # transform center-points
+            x0, y0 = transformer.transform(xorig, yorig)
 
-        if radius is None:
+            if radius == "estimate":
+                if radius_crs == "in":
+                    radiusx = np.abs(np.diff(np.unique(xorig)).mean()) / 2.0
+                    radiusy = np.abs(np.diff(np.unique(yorig)).mean()) / 2.0
+                elif radius_crs == "out":
+                    radiusx = np.abs(np.diff(np.unique(x0)).mean()) / 2.0
+                    radiusy = np.abs(np.diff(np.unique(y0)).mean()) / 2.0
+            elif isinstance(radius, (list, tuple)):
+                radiusx, radiusy = radius
+            else:
+                radiusx = radius
+                radiusy = radius
+
             if radius_crs == "in":
-                radiusx = np.abs(np.diff(np.unique(xorig)).mean()) / 2.0
-                radiusy = np.abs(np.diff(np.unique(yorig)).mean()) / 2.0
+                # fix position of pixel-center
+                if cpos == "c":
+                    pass
+                elif cpos == "ll":
+                    xorig += radiusx
+                    yorig += radiusy
+                elif cpos == "ul":
+                    xorig += radiusx
+                    yorig -= radiusy
+                elif cpos == "lr":
+                    xorig += radiusx
+                    yorig -= radiusy
+                elif cpos == "ur":
+                    xorig -= radiusx
+                    yorig -= radiusx
+
+            # transform corner-points
+            if radius_crs == "in":
+                x3, y3 = transformer.transform(xorig + radiusx, yorig)
+                x4, y4 = transformer.transform(xorig, yorig + radiusy)
             elif radius_crs == "out":
-                radiusx = np.abs(np.diff(np.unique(x0)).mean()) / 2.0
-                radiusy = np.abs(np.diff(np.unique(y0)).mean()) / 2.0
-        elif isinstance(radius, (list, tuple)):
-            radiusx, radiusy = radius
-        else:
-            radiusx = radius
-            radiusy = radius
+                x3, y3 = x0 + radiusx, y0
+                x4, y4 = x0, y0 + radiusy
+            else:
+                radius_t = Transformer.from_crs(
+                    CRS.from_user_input(in_crs),
+                    CRS.from_user_input(radius_crs),
+                    always_xy=True,
+                )
+                radius_t_p = Transformer.from_crs(
+                    CRS.from_user_input(radius_crs),
+                    CRS.from_user_input(plot_epsg),
+                    always_xy=True,
+                )
 
-        if radius_crs == "in":
-            # fix position of pixel-center
-            if cpos == "c":
-                pass
-            elif cpos == "ll":
-                xorig += radiusx
-                yorig += radiusy
-            elif cpos == "ul":
-                xorig += radiusx
-                yorig -= radiusy
-            elif cpos == "lr":
-                xorig += radiusx
-                yorig -= radiusy
-            elif cpos == "ur":
-                xorig -= radiusx
-                yorig -= radiusx
+                x0r, y0r = radius_t.transform(xorig, yorig)
+                x3, y3 = radius_t_p.transform(x0r + radiusx, y0r)
+                x4, y4 = radius_t_p.transform(x0r, y0r + radiusy)
 
-        # transform corner-points
-        if radius_crs == "in":
-            x3, y3 = transformer.transform(xorig + radiusx, yorig)
-            x4, y4 = transformer.transform(xorig, yorig + radiusy)
-        elif radius_crs == "out":
-            x3, y3 = x0 + radiusx, y0
-            x4, y4 = x0, y0 + radiusy
-        else:
-            radius_t = Transformer.from_crs(
-                CRS.from_user_input(in_crs),
-                CRS.from_user_input(radius_crs),
-                always_xy=True,
+            w = np.abs(x3 - x0)
+            h = np.abs(y4 - y0)
+
+            theta = np.rad2deg(np.arcsin(np.abs(y3 - y0) / w))
+
+            if radius_crs == "out":
+                # fix position of pixel-center
+                if cpos == "c":
+                    pass
+                elif cpos == "ll":
+                    x0 += radiusx
+                    y0 += radiusy
+                elif cpos == "ul":
+                    x0 += radiusx
+                    y0 -= radiusy
+                elif cpos == "lr":
+                    x0 += radiusx
+                    y0 -= radiusy
+                elif cpos == "ur":
+                    x0 -= radiusx
+                    y0 -= radiusx
+
+            props = dict(x0=x0, y0=y0, w=w, h=h, theta=theta, ids=ids, z_data=z_data)
+        elif shape == "rectangles":
+            # transform center-points
+            x0, y0 = transformer.transform(xorig, yorig)
+
+            if radius == "estimate":
+                if radius_crs == "in":
+                    radiusx = np.abs(np.diff(np.unique(xorig)).mean()) / 2.0
+                    radiusy = np.abs(np.diff(np.unique(yorig)).mean()) / 2.0
+                elif radius_crs == "out":
+                    radiusx = np.abs(np.diff(np.unique(x0)).mean()) / 2.0
+                    radiusy = np.abs(np.diff(np.unique(y0)).mean()) / 2.0
+            elif isinstance(radius, (list, tuple)):
+                radiusx, radiusy = radius
+            else:
+                radiusx = radius
+                radiusy = radius
+
+            if radius_crs == "in":
+                # fix position of pixel-center
+                if cpos == "c":
+                    pass
+                elif cpos == "ll":
+                    xorig += radiusx
+                    yorig += radiusy
+                elif cpos == "ul":
+                    xorig += radiusx
+                    yorig -= radiusy
+                elif cpos == "lr":
+                    xorig += radiusx
+                    yorig -= radiusy
+                elif cpos == "ur":
+                    xorig -= radiusx
+                    yorig -= radiusx
+
+            # transform corner-points
+            if radius_crs == "in":
+                # top right
+                p0 = transformer.transform(xorig + radiusx, yorig + radiusy)
+                # top left
+                p1 = transformer.transform(xorig - radiusx, yorig + radiusy)
+                # bottom left
+                p2 = transformer.transform(xorig - radiusx, yorig - radiusy)
+                # bottom right
+                p3 = transformer.transform(xorig + radiusx, yorig - radiusy)
+
+            elif radius_crs == "out":
+                p0 = xorig + radiusx, yorig + radiusy
+                p1 = xorig - radiusx, yorig + radiusy
+                p2 = xorig - radiusx, yorig - radiusy
+                p3 = xorig + radiusx, yorig - radiusy
+            else:
+                radius_t = Transformer.from_crs(
+                    CRS.from_user_input(in_crs),
+                    CRS.from_user_input(radius_crs),
+                    always_xy=True,
+                )
+                radius_t_p = Transformer.from_crs(
+                    CRS.from_user_input(radius_crs),
+                    CRS.from_user_input(plot_epsg),
+                    always_xy=True,
+                )
+
+                x0r, y0r = radius_t.transform(xorig, yorig)
+
+                # top right
+                p0 = radius_t_p.transform(x0r + radiusx, y0r + radiusy)
+                # top left
+                p1 = radius_t_p.transform(x0r - radiusx, y0r + radiusy)
+                # bottom left
+                p2 = radius_t_p.transform(x0r - radiusx, y0r - radiusy)
+                # bottom right
+                p3 = radius_t_p.transform(x0r + radiusx, y0r - radiusy)
+
+            if radius_crs == "out":
+                # fix position of pixel-center
+                if cpos == "c":
+                    pass
+                elif cpos == "ll":
+                    x0 += radiusx
+                    y0 += radiusy
+                elif cpos == "ul":
+                    x0 += radiusx
+                    y0 -= radiusy
+                elif cpos == "lr":
+                    x0 += radiusx
+                    y0 -= radiusy
+                elif cpos == "ur":
+                    x0 -= radiusx
+                    y0 -= radiusx
+
+            # also attach max w & h (used for the kd-tree)
+            props = dict(
+                verts=np.array(list(zip(*[np.array(i).T for i in (p0, p1, p2, p3)]))),
+                x0=x0,
+                y0=y0,
+                ids=ids,
+                z_data=z_data,
+                w=(p0[0] - p1[0]).max(),
+                h=(p0[1] - p3[1]).max(),
             )
-            radius_t_p = Transformer.from_crs(
-                CRS.from_user_input(radius_crs),
-                CRS.from_user_input(plot_epsg),
-                always_xy=True,
-            )
-
-            x0r, y0r = radius_t.transform(xorig, yorig)
-            x3, y3 = radius_t_p.transform(x0r + radiusx, y0r)
-            x4, y4 = radius_t_p.transform(x0r, y0r + radiusy)
-
-        w = np.abs(x3 - x0)
-        h = np.abs(y4 - y0)
-        theta = np.rad2deg(np.arcsin(np.abs(y3 - y0) / w))
-
-        if radius_crs == "out":
-            # fix position of pixel-center
-            if cpos == "c":
-                pass
-            elif cpos == "ll":
-                x0 += radiusx
-                y0 += radiusy
-            elif cpos == "ul":
-                x0 += radiusx
-                y0 -= radiusy
-            elif cpos == "lr":
-                x0 += radiusx
-                y0 -= radiusy
-            elif cpos == "ur":
-                x0 -= radiusx
-                y0 -= radiusx
-
-        return parameter, ids, z_data, x0, y0, w, h, theta
+        return props
 
     def _classify_data(self, z_data, cmap, histbins, vmin, vmax, classify_specs=None):
         if isinstance(cmap, str):
@@ -756,76 +937,34 @@ class Maps(object):
     def _add_collection(
         self,
         ax,
-        z_data,
-        x0,
-        y0,
-        w,
-        h,
-        theta,
+        props,
         cmap,
         vmin,
         vmax,
         norm,
-        ids,
         color=None,
         shape="ellipses",
     ):
+        z_data = props["z_data"]
+        ids = props["ids"]
 
         if shape == "ellipses":
             coll = collections.EllipseCollection(
-                2 * w,
-                2 * h,
-                theta,
-                offsets=list(zip(x0, y0)),
+                2 * props["w"],
+                2 * props["h"],
+                props["theta"],
+                offsets=list(zip(props["x0"], props["y0"])),
                 units="x",
                 transOffset=ax.transData,
             )
 
         if shape == "rectangles":
-            # rectangles are just the bounding-boxes of the ellipses...
-            # TODO make proper rectangles!
-
-            # for the equations, see https://stackoverflow.com/a/61664630/9703451
-            theta = -np.deg2rad(theta)
-
-            # top right
-            p0 = np.array(
-                [
-                    x0 + w * np.cos(theta) - h * np.sin(theta),
-                    y0 + w * np.sin(theta) + h * np.cos(theta),
-                ]
-            ).T
-            # top left
-            p1 = np.array(
-                [
-                    x0 - w * np.cos(theta) - h * np.sin(theta),
-                    y0 - w * np.sin(theta) + h * np.cos(theta),
-                ]
-            ).T
-            # bottom left
-            p2 = np.array(
-                [
-                    x0 - w * np.cos(theta) + h * np.sin(theta),
-                    y0 - w * np.sin(theta) - h * np.cos(theta),
-                ]
-            ).T
-            # bottom right
-            p3 = np.array(
-                [
-                    x0 + w * np.cos(theta) + h * np.sin(theta),
-                    y0 + w * np.sin(theta) - h * np.cos(theta),
-                ]
-            ).T
-
-            verts = np.array(list(zip(p0, p1, p2, p3)))
-
             coll = collections.PolyCollection(
-                verts=verts,
+                verts=props["verts"],
                 transOffset=ax.transData,
             )
-
             # add centroid positions (used by the picker in self._spatial_plot)
-            coll._Maps_positions = list(zip(x0, y0))
+            coll._Maps_positions = list(zip(props["x0"], props["y0"]))
 
         if color is not None:
             coll.set_color(color)
@@ -1101,8 +1240,6 @@ class Maps(object):
         overlay_df.crs = CRS.from_epsg(4326)
         overlay_df.to_crs(self.plot_specs["plot_epsg"], inplace=True)
 
-        import warnings
-
         with warnings.catch_warnings():
             warnings.filterwarnings("ignore", category=UserWarning)
             # ignore the UserWarning that area is proabably inexact when using
@@ -1133,7 +1270,7 @@ class Maps(object):
         vmin=None,
         vmax=None,
         color=None,
-        radius=None,
+        radius="estimate",
         radius_crs="in",
         in_crs=4326,
         cpos="c",
@@ -1163,9 +1300,9 @@ class Maps(object):
         color : matplotlib color, optional
             alternative to specifying cmap & norm, use a uniform color for
             all points.
-        radius : float, list or tuple
+        radius : str, float, list or tuple
             the radius (if list or tuple the ellipse-half-widths) of the points
-            in units of the "in_crs". If None, the mean difference of the
+            in units of the "in_crs". If "estimate", the mean difference of the
             provided coordinates will be used
         radius_crs : str or crs
             the crs in which the radius is defined
@@ -1183,12 +1320,15 @@ class Maps(object):
             if False, no legend will be added.
             If a dict is provided, it will be used as kwargs for plt.legend()
             The default is True.
+        shape : str
+            the shapes to plot (either "ellipses" or "rectangles")
         """
 
-        ax = self.updatedict["ax"]
+        if parameter is None:
+            parameter = next(i for i in data.keys() if i not in [xcoord, ycoord])
 
         # ---------------------- prepare the data
-        parameter, ids, z_data, x0, y0, w, h, theta = self._prepare_data(
+        props = self._prepare_data(
             data=data,
             in_crs=in_crs,
             plot_epsg=self.plot_specs["plot_epsg"],
@@ -1198,22 +1338,17 @@ class Maps(object):
             parameter=parameter,
             xcoord=xcoord,
             ycoord=ycoord,
+            shape=shape,
         )
 
         # ------------- plot the data
         coll = self._add_collection(
-            ax=ax,
-            z_data=z_data,
-            x0=x0,
-            y0=y0,
-            w=w,
-            h=h,
-            theta=theta,
+            ax=self.figure.ax,
+            props=props,
             cmap=cmap,
             vmin=vmin,
             vmax=vmax,
             norm=norm,
-            ids=ids,
             color=color,
             shape=shape,
         )
@@ -1230,7 +1365,7 @@ class Maps(object):
             except TypeError:
                 pass
 
-            uniquevals = pd.unique(z_data)
+            uniquevals = pd.unique(props["z_data"])
             if len(uniquevals) > 20:
                 print("warnings, more than 20 entries... skipping legend generation")
             else:
@@ -1245,26 +1380,39 @@ class Maps(object):
                         labels = [label_dict[val] for val in uniquevals]
                     else:
                         labels = [str(val) for val in uniquevals]
-                _ = ax.legend(proxies, labels, **legkwargs)
+                _ = self.figure.ax.legend(proxies, labels, **legkwargs)
 
         return coll
 
-    def attach_callback(self, callback):
+    def add_callback(self, callback, double_click=True, mouse_button=1, **kwargs):
         """
-        attach a callback to the plot that will be executed if a pixel is double-clicked
+        Attach a callback to the plot that will be executed if a pixel is double-clicked
 
-        A list of pre-defined callbacks is available at `m.cb...`
+        A list of pre-defined callbacks (accessible via `m.cb`) or customly defined
+        functions can be used.
 
-            >>> m.attach_callback(m.cb.annotate)
-            >>> m.attach_callback(m.cb.scatter)
+            >>> m.add_callback(m.cb.annotate)
+            >>> m.add_callback("scatter")
             >>> # to remove the callback again, call:
-            >>> m.remove_callback(m.cb.scatter)
+            >>> m.remove_callback("scatter")
 
         Parameters
         ----------
-        callback : callable
-            the callback-function to attach. Use either a function of the
-            `m.cb` collection or a custom function with the following call-signature:
+        double_click : bool
+            Indicator if the callback should be executed on double-click (True)
+            or on single-click events (False)
+        mouse_button : int
+            The mouse-button to use for executing the callback:
+
+                - LEFT = 1
+                - MIDDLE = 2
+                - RIGHT = 3
+                - BACK = 8
+                - FORWARD = 9
+
+        callback : callable or str
+            The callback-function to attach. Use either a function of the `m.cb`
+            collection or a custom function with the following call-signature:
 
                 >>> def some_callback(self, **kwargs):
                 >>>     print("hello world")
@@ -1273,15 +1421,33 @@ class Maps(object):
                 >>>     print("data-value of the clicked pixel", kwargs["val"])
                 >>>     print("the plot-crs is:", self.plot_specs["plot_epsg"])
                 >>>
-                >>> m.attach_callback(some_callback)
+                >>> m.add_callback(some_callback)
 
+            If a string is provided, it will be used to assign the associated function
+            from the `m.cb` collection.
+        **kwargs :
+            kwargs passed to the callback-function
         """
+
+        assert not all(
+            i in kwargs for i in ["pos", "ID", "val", "double_click", "mouse_button"]
+        ), 'the names "pos", "ID", "val" cannot be used as keyword-arguments!'
+
+        if isinstance(callback, str):
+            assert hasattr(self.cb, callback), (
+                f"The function '{callback}' does not exist as a pre-defined callback."
+                + " Use one of:\n    - "
+                + "\n    - ".join(
+                    [i for i in self.cb.__dir__() if not i.startswith("_")]
+                )
+            )
+            callback = getattr(self.cb, callback)
 
         assert (
             callback.__name__ not in self._attached_cbs
         ), f"the callback '{callback.__name__}' is already attached to the plot!"
 
-        # re-bind the callback methods to the Maps object
+        # re-bind the callback methods to the MapIt object
         # in case custom functions are used
         if hasattr(callback, "__func__"):
             callback = callback.__func__.__get__(self)
@@ -1292,36 +1458,61 @@ class Maps(object):
 
         # ------------- add a callback
         def onpick(event):
-            ind = event.ind
-            if ind is not None:
-                if isinstance(event.artist, collections.EllipseCollection):
-                    clickdict = dict(
-                        pos=self.figure.coll.get_offsets()[ind],
-                        ID=self.figure.coll.get_urls()[ind],
-                        val=self.figure.coll.get_array()[ind],
-                    )
+            print(event.double_click, event.mouse_button)
 
-                    callback(**clickdict)
-                elif isinstance(event.artist, collections.PolyCollection):
-                    clickdict = dict(
-                        pos=self.figure.coll._Maps_positions[ind],
-                        ID=self.figure.coll.get_urls()[ind],
-                        val=self.figure.coll.get_array()[ind],
-                    )
+            if (event.double_click == double_click) and (
+                event.mouse_button == mouse_button
+            ):
+                ind = event.ind
+                if ind is not None:
+                    if isinstance(event.artist, collections.EllipseCollection):
+                        clickdict = dict(
+                            pos=self.figure.coll.get_offsets()[ind],
+                            ID=self.figure.coll.get_urls()[ind],
+                            val=self.figure.coll.get_array()[ind],
+                        )
 
-                    callback(**clickdict)
-            else:
-                if "cb_annotate" in self._attached_cbs:
-                    self._cb_hide_annotate()
+                        callback(**clickdict, **kwargs)
+                    elif isinstance(event.artist, collections.PolyCollection):
+                        clickdict = dict(
+                            pos=self.figure.coll._Maps_positions[ind],
+                            ID=self.figure.coll.get_urls()[ind],
+                            val=self.figure.coll.get_array()[ind],
+                        )
+
+                        callback(**clickdict, **kwargs)
+                else:
+                    if "annotate" in self._attached_cbs:
+                        self._cb_hide_annotate()
 
         self._attached_cbs[callback.__name__] = self.figure.f.canvas.mpl_connect(
             "pick_event", onpick
         )
 
     def remove_callback(self, callback):
-        name = callback.__name__
+        """
+        remove an attached callback from the figure
+
+        Parameters
+        ----------
+        callback : callable or string
+            either the callback-function that should be removed from the figure
+            (or the name of the function)
+        """
+        if isinstance(callback, str):
+            name = callback
+        else:
+            name = callback.__name__
+
+        if name not in self._attached_cbs:
+            warnings.warn(
+                f"The callback '{name}' is not attached and can not"
+                + " be removed. Attached callbacks are:\n    - "
+                + "    - \n".join(list(self._attached_cbs))
+            )
 
         self.figure.f.canvas.mpl_disconnect(self._attached_cbs[name])
+        del self._attached_cbs[name]
 
         # call cleanup methods on removal
         if hasattr(self.cb, f"_{name}_cleanup"):
@@ -1335,38 +1526,49 @@ class Maps(object):
         # a function to hide the annotation of an empty area is clicked
         if hasattr(self, "annotation"):
             self.annotation.set_visible(False)
-            self.updatedict["f"].canvas.draw_idle()
+            self._blit()
 
     # implement blitting
     # https://stackoverflow.com/a/29284318/9703451
-    def safe_draw(self):
+    def _safe_draw(self):
         """Temporarily disconnect the draw_event callback to avoid recursion"""
         canvas = self.figure.f.canvas
         canvas.mpl_disconnect(self.draw_cid)
-        canvas.draw()
-        self.draw_cid = canvas.mpl_connect("draw_event", self.grab_background)
 
-    def grab_background(self, event=None):
+        canvas.draw()
+        self.draw_cid = canvas.mpl_connect("draw_event", self._grab_background)
+
+    def _grab_background(self, event=None):
         """
-        When the figure is resized, hide the points, draw everything,
-        and update the background.
+        When the figure is resized, draw everything, and update the background.
         """
+        annotation_visible = False
         if hasattr(self, "annotation"):
-            self.annotation.set_visible(False)
-        self.safe_draw()
+            if self.annotation.get_visible():
+                annotation_visible = True
+                self.annotation.set_visible(False)
+        self._safe_draw()
 
         # With most backends (e.g. TkAgg), we could grab (and refresh, in
         # self.blit) self.ax.bbox instead of self.fig.bbox, but Qt4Agg, and
         # some others, requires us to update the _full_ canvas, instead.
         self.background = self.figure.f.canvas.copy_from_bbox(self.figure.f.bbox)
+        if annotation_visible:
+            self.annotation.set_visible(True)
+            self._blit(self.annotation)
+        else:
+            self._blit()
 
-        self.annotation.set_visible(True)
-        self.blit()
-
-    def blit(self):
+    def _blit(self, artist=None):
         """
         Efficiently update the figure, without needing to redraw the
         "background" artists.
+
+        Parameters
+        ----------
+        artist : the matplotlib artist to draw on top of the background
         """
         self.figure.f.canvas.restore_region(self.background)
+        if artist is not None:
+            self.figure.ax.draw_artist(artist)
         self.figure.f.canvas.blit(self.figure.f.bbox)

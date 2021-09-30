@@ -1,8 +1,9 @@
-# maps
+[![codecov](https://codecov.io/gh/raphaelquast/MapIt/branch/dev/graph/badge.svg?token=25M85P7MJG)](https://codecov.io/gh/raphaelquast/MapIt)
+# MapIt
 
 a general-purpose library to plot maps of large non-rectangular datasets.
 
-❗❗❗ this is a **work-in-progress** library that is subject to structural changes ❗❗❗  
+❗❗❗ this library is a **work-in-progress** and subject to structural changes ❗❗❗  
 🚀  feel free to contribute!
 
 ### features
@@ -12,21 +13,15 @@ a general-purpose library to plot maps of large non-rectangular datasets.
 - add overlays to the plots (NaturalEarth features, geo-dataframes, etc.)
 - get a nice colorbar with a colored histogram on top
 
-### ⚙ dependencies
-**TODO** put this in a proper `setup.py`
-
-```
-numpy, pandas, geopandas, matplotlib, cartopy >= 0.20.0, descartes, mapclassify, pyproj
-```
 
 # basic usage
 
 - check out the example-notebook: 🛸 [A_basic_map.ipynb](https://github.com/raphaelquast/maps/blob/dev/examples/A_basic_map.ipynb) 🛸
 
 ```python
-from maps import Maps
+from mapit import MapIt
 
-m = Maps()
+m = MapIt()
 
 m.data = "... a pandas-dataframe with coordinates and data-values ..."
 
@@ -37,7 +32,10 @@ m.set_classify_specs("... automatic classification of the data va mapclassify ..
 # plot the map
 m.plot_map()
 
+m.add_callback(...)
+m.add_discrete_layer(...)
+m.add_overlay(...)
+
 m.figure.   # access to individual objects of the generated figure (f, ax, cb, gridspec etc.)
 
 ```
-
