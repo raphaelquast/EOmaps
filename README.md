@@ -37,6 +37,10 @@ m.set_classify_specs("... automatic classification of the data va mapclassify ..
 # plot the map
 m.plot_map()
 
+m.add_callback(...)
+m.add_discrete_layer(...)
+m.add_overlay(...)
+
 m.figure.   # access to individual objects of the generated figure (f, ax, cb, gridspec etc.)
 
 ```
