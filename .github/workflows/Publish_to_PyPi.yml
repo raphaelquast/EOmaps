@@ -3,7 +3,7 @@ name: Upload to PyPI
 on:
    # trigger only on release
    release:
-     types: [published]
+     types: [push]#[published]
    # to trigger workflow manually from actions-tab
    workflow_dispatch:
 
