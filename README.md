@@ -1,4 +1,5 @@
 [![codecov](https://codecov.io/gh/raphaelquast/EOmaps/branch/dev/graph/badge.svg?token=25M85P7MJG)](https://codecov.io/gh/raphaelquast/MapIt)
+[![pypi](https://img.shields.io/pypi/v/eomaps)](https://pypi.org/project/eomaps/)
 # EOmaps
 
 a general-purpose library to plot maps of large non-rectangular datasets.
@@ -7,14 +8,16 @@ a general-purpose library to plot maps of large non-rectangular datasets.
 🚀  feel free to contribute!
 
 ### features
-- plot data-points as ellipses or rectangles with actual geographical dimensions
-- reproject data
-- interact with the dataset via "callback-functions"
+- reproject & plot datasets as ellipses or rectangles with actual geographical dimensions
+- interact with the database underlying the plot via "callback-functions"
 - add overlays to the plots (NaturalEarth features, geo-dataframes, etc.)
 - get a nice colorbar with a colored histogram on top
 
+## install
 
-# basic usage
+a simple `pip install eomaps` should do the trick
+
+## basic usage
 
 - check out the example-notebook: 🛸 [A_basic_map.ipynb](https://github.com/raphaelquast/maps/blob/dev/examples/A_basic_map.ipynb) 🛸
 
