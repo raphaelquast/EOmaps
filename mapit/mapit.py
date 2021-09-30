@@ -39,7 +39,7 @@ class _Maps_plot(object):
             setattr(self, key, val)
 
 
-class Maps(object):
+class MapIt(object):
     """
     A class to perform reading an plotting of spatial maps
 
@@ -110,7 +110,7 @@ class Maps(object):
 
         Returns
         -------
-        copy_cls : maps.Maps object
+        copy_cls : mapit.MapIt object
             a new Maps class.
         """
         initdict = dict()
@@ -131,7 +131,7 @@ class Maps(object):
             initdict["classify_specs"].update(classify_specs)
 
         # create a new class
-        copy_cls = Maps()
+        copy_cls = MapIt()
 
         copy_cls.set_data_specs(**initdict["data_specs"])
         copy_cls.set_plot_specs(**initdict["plot_specs"])
@@ -1446,7 +1446,7 @@ class Maps(object):
             callback.__name__ not in self._attached_cbs
         ), f"the callback '{callback.__name__}' is already attached to the plot!"
 
-        # re-bind the callback methods to the Maps object
+        # re-bind the callback methods to the MapIt object
         # in case custom functions are used
         if hasattr(callback, "__func__"):
             callback = callback.__func__.__get__(self)
