@@ -34,7 +34,7 @@ jobs:
         # do this to ensure proper activation of conda environment
         shell: bash -l {0}
         run: |
-          python -m pytest --cov=maps --cov-report=xml
+          python -m pytest --cov=mapit --cov-report=xml
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v1
         with:
