@@ -4,8 +4,8 @@ on:
    # trigger only on release
    release:
      types: [published]
-     push:
-       branches: [dev]
+   push:
+     branches: [dev]
 
    # to trigger workflow manually from actions-tab
    workflow_dispatch:
