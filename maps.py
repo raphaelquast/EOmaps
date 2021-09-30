@@ -1,6 +1,7 @@
 """a collection of helper-functions to generate map-plots"""
 
 from functools import partial, lru_cache
+import warnings
 
 import numpy as np
 import pandas as pd
@@ -57,7 +58,7 @@ class Maps(object):
         self.orientation = orientation
 
         # default data specs
-        self.data_specs = dict(
+        self._data_specs = dict(
             parameter=None,
             xcoord="lon",
             ycoord="lat",
@@ -65,7 +66,7 @@ class Maps(object):
         )
 
         # default plot specs
-        self.plot_specs = dict(
+        self._plot_specs = dict(
             label=None,
             title=None,
             cmap=plt.cm.viridis.copy(),
@@ -85,12 +86,16 @@ class Maps(object):
         )
 
         # default classify specs
-        self.classify_specs = dict()
+        self._classify_specs = dict()
 
-        self.cb = callbacks(self)
         self._attached_cbs = dict()  # dict to memorize attached callbacks
 
-    def copy(self, **kwargs):
+    def copy(
+        self,
+        data_specs=None,
+        plot_specs=None,
+        classify_specs=None,
+    ):
         """
         create a copy of the class that inherits all specifications
         from the parent class (already loaded data is not copied!)
@@ -99,27 +104,74 @@ class Maps(object):
 
         Parameters
         ----------
-        **kwargs :
-            kwargs passed to the initialization of the new class
-            (e.g. overriding the specifications of the parent class).
+        data_specs, plot_specs, classify_specs : dict, optional
+            Dictionaries that can be used to directly override the specifications of the
+            parent class. The default is None.
 
         Returns
         -------
         copy_cls : maps.Maps object
             a new Maps class.
         """
-
         initdict = dict()
         initdict["data_specs"] = {**self.data_specs}
         initdict["plot_specs"] = {**self.plot_specs}
         initdict["classify_specs"] = {**self.classify_specs}
 
-        # create a new class
-        cls = self.__class__
-        copy_cls = cls.__new__(cls)
+        if data_specs:
+            assert isinstance(data_specs, dict), "'data_specs' must be a dict"
+            initdict["data_specs"].update(data_specs)
 
-        copy_cls.__dict__.update(initdict)
+        if plot_specs:
+            assert isinstance(plot_specs, dict), "'plot_specs' must be a dict"
+            initdict["plot_specs"].update(plot_specs)
+
+        if classify_specs:
+            assert isinstance(classify_specs, dict), "'classify_specs' must be a dict"
+            initdict["classify_specs"].update(classify_specs)
+
+        # create a new class
+        copy_cls = Maps()
+
+        copy_cls.set_data_specs(**initdict["data_specs"])
+        copy_cls.set_plot_specs(**initdict["plot_specs"])
+        copy_cls.set_classify_specs(**initdict["classify_specs"])
+
         return copy_cls
+
+    @property
+    @lru_cache()
+    def cb(self):
+        """
+        accessor to pre-defined callback functions
+        """
+        return callbacks(self)
+
+    @property
+    def data_specs(self):
+        return self._data_specs
+
+    @data_specs.setter
+    def data_specs(self, val):
+        raise AttributeError("use 'm.set_data_specs' to set data-specifications!")
+
+    @property
+    def plot_specs(self):
+        return self._plot_specs
+
+    @plot_specs.setter
+    def plot_specs(self, val):
+        raise AttributeError("use 'm.set_plot_specs' to set plot-specifications!")
+
+    @property
+    def classify_specs(self):
+        return self._classify_specs
+
+    @classify_specs.setter
+    def classify_specs(self, val):
+        raise AttributeError(
+            "use 'm.set_classify_specs' to set classification-specifications!"
+        )
 
     def set_data_specs(self, **kwargs):
         """
@@ -153,8 +205,8 @@ class Maps(object):
         """
 
         for key, val in kwargs.items():
-            if key in self.data_specs:
-                self.data_specs[key] = val
+            if key in self._data_specs:
+                self._data_specs[key] = val
             else:
                 print(f'"{key}" is not a valid data_specs parameter!')
 
@@ -214,9 +266,9 @@ class Maps(object):
         for key, val in kwargs.items():
             if key in self.plot_specs:
                 if key == "cmap":
-                    self.plot_specs[key] = plt.get_cmap(val)
+                    self._plot_specs[key] = plt.get_cmap(val)
                 else:
-                    self.plot_specs[key] = val
+                    self._plot_specs[key] = val
             else:
                 print(f'"{key}" is not a valid plot_specs parameter!')
 
@@ -252,7 +304,7 @@ class Maps(object):
             kwargs passed to the call to the respective mapclassify classifier
         """
         for key, val in kwargs.items():
-            self.classify_specs[key] = val
+            self._classify_specs[key] = val
 
     def set_orientation(self, orientation="horizontal"):
         """
@@ -268,8 +320,8 @@ class Maps(object):
 
     def plot_map(self, f_gridspec=None):
         """
-        Actually generate the map-plot
-        (you must set the data first!)
+        Actually generate the map-plot based on the data provided as `m.data` and the
+        specifications defined in "data_specs", "plot_specs" and "classify_specs".
 
         Parameters
         ----------
@@ -1106,8 +1158,6 @@ class Maps(object):
         overlay_df.crs = CRS.from_epsg(4326)
         overlay_df.to_crs(self.plot_specs["plot_epsg"], inplace=True)
 
-        import warnings
-
         with warnings.catch_warnings():
             warnings.filterwarnings("ignore", category=UserWarning)
             # ignore the UserWarning that area is proabably inexact when using
@@ -1254,22 +1304,23 @@ class Maps(object):
 
         return coll
 
-    def attach_callback(self, callback):
+    def add_callback(self, callback):
         """
-        attach a callback to the plot that will be executed if a pixel is double-clicked
+        Attach a callback to the plot that will be executed if a pixel is double-clicked
 
-        A list of pre-defined callbacks is available at `m.cb...`
+        A list of pre-defined callbacks (accessible via `m.cb`) or customly defined
+        functions can be used.
 
-            >>> m.attach_callback(m.cb.annotate)
-            >>> m.attach_callback(m.cb.scatter)
+            >>> m.add_callback(m.cb.annotate)
+            >>> m.add_callback("scatter")
             >>> # to remove the callback again, call:
-            >>> m.remove_callback(m.cb.scatter)
+            >>> m.remove_callback("scatter")
 
         Parameters
         ----------
-        callback : callable
-            the callback-function to attach. Use either a function of the
-            `m.cb` collection or a custom function with the following call-signature:
+        callback : callable or str
+            The callback-function to attach. Use either a function of the `m.cb`
+            collection or a custom function with the following call-signature:
 
                 >>> def some_callback(self, **kwargs):
                 >>>     print("hello world")
@@ -1278,9 +1329,20 @@ class Maps(object):
                 >>>     print("data-value of the clicked pixel", kwargs["val"])
                 >>>     print("the plot-crs is:", self.plot_specs["plot_epsg"])
                 >>>
-                >>> m.attach_callback(some_callback)
+                >>> m.add_callback(some_callback)
 
+            If a string is provided, it will be used to assign the associated function
+            from the `m.cb` collection.
         """
+        if isinstance(callback, str):
+            assert hasattr(self.cb, callback), (
+                f"The function '{callback}' does not exist as a pre-defined callback."
+                + " Use one of:\n    - "
+                + "\n    - ".join(
+                    [i for i in self.cb.__dir__() if not i.startswith("_")]
+                )
+            )
+            callback = getattr(self.cb, callback)
 
         assert (
             callback.__name__ not in self._attached_cbs
@@ -1324,6 +1386,23 @@ class Maps(object):
         )
 
     def remove_callback(self, callback):
+        """
+        remove an attached callback from the figure
+
+        Parameters
+        ----------
+        callback : callable or string
+            either the callback-function that should be removed from the figure
+            (or the name of the function)
+        """
+        if isinstance(callback, str):
+            if callback not in self._attached_cbs:
+                warnings.warn(
+                    f"The callback '{callback}' is not attached and can not"
+                    + " be removed. Attached callbacks are:\n    - "
+                    + "    - \n".join(list(self._attached_cbs))
+                )
+
         name = callback.__name__
 
         self.figure.f.canvas.mpl_disconnect(self._attached_cbs[name])
@@ -1341,8 +1420,6 @@ class Maps(object):
         if hasattr(self, "annotation"):
             self.annotation.set_visible(False)
             self._blit()
-            print("aaaaa")
-            # self.updatedict["f"].canvas.draw_idle()
 
     # implement blitting
     # https://stackoverflow.com/a/29284318/9703451
