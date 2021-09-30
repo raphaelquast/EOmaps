@@ -1324,7 +1324,8 @@ class MapIt(object):
             the shapes to plot (either "ellipses" or "rectangles")
         """
 
-        ax = self.updatedict["ax"]
+        if parameter is None:
+            parameter = next(i for i in data.keys() if i not in [xcoord, ycoord])
 
         # ---------------------- prepare the data
         props = self._prepare_data(
@@ -1342,7 +1343,7 @@ class MapIt(object):
 
         # ------------- plot the data
         coll = self._add_collection(
-            ax=ax,
+            ax=self.figure.ax,
             props=props,
             cmap=cmap,
             vmin=vmin,
@@ -1379,7 +1380,7 @@ class MapIt(object):
                         labels = [label_dict[val] for val in uniquevals]
                     else:
                         labels = [str(val) for val in uniquevals]
-                _ = ax.legend(proxies, labels, **legkwargs)
+                _ = self.figure.ax.legend(proxies, labels, **legkwargs)
 
         return coll
 
