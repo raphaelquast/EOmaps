@@ -12,12 +12,6 @@ a general-purpose library to plot maps of large non-rectangular datasets.
 - add overlays to the plots (NaturalEarth features, geo-dataframes, etc.)
 - get a nice colorbar with a colored histogram on top
 
-### ⚙ dependencies
-**TODO** put this in a proper `setup.py`
-
-```
-numpy, pandas, geopandas, matplotlib, cartopy >= 0.20.0, descartes, mapclassify, pyproj
-```
 
 # basic usage
 

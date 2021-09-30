@@ -6,6 +6,7 @@ repos:
     -   id: check-merge-conflict
     -   id: end-of-file-fixer
     -   id: trailing-whitespace
+        args: ["--markdown-linebreak-ext=md"]
     -   id: mixed-line-ending
 -   repo: https://github.com/psf/black
     rev: 21.9b0
