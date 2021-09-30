@@ -1,4 +1,4 @@
-# maps
+# MapIt
 
 a general-purpose library to plot maps of large non-rectangular datasets.
 
@@ -24,9 +24,9 @@ numpy, pandas, geopandas, matplotlib, cartopy >= 0.20.0, descartes, mapclassify,
 - check out the example-notebook: 🛸 [A_basic_map.ipynb](https://github.com/raphaelquast/maps/blob/dev/examples/A_basic_map.ipynb) 🛸
 
 ```python
-from maps import Maps
+from mapit import MapIt
 
-m = Maps()
+m = MapIt()
 
 m.data = "... a pandas-dataframe with coordinates and data-values ..."
 
