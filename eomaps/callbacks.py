@@ -233,15 +233,16 @@ class callbacks(object):
             printstr += f"{self.m.data_specs['parameter']} = {val}"
 
         self.annotation.set_text(printstr)
-        # self.annotation.get_bbox_patch().set_alpha(0.75)
 
         # use blitting instead of f.canvas.draw() to speed up annotation generation
         # in case a large collection is plotted
-        self.m._blit(self.annotation)
 
         if permanent:
+            # no need to blit because _grab_background() draws the annotation!
             self.m._grab_background(redraw=False)
             del self.annotation
+        else:
+            self.m._blit(self.annotation)
 
     def _annotate_cleanup(self):
         if hasattr(self.m, "background"):
