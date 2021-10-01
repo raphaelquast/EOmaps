@@ -310,6 +310,7 @@ class Maps(object):
     def set_orientation(self, orientation="horizontal"):
         """
         set the orientation of the plot
+        (must be called before m.plot_map() !)
 
         Parameters
         ----------

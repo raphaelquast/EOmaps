@@ -32,6 +32,18 @@ class TestBasicPlotting(unittest.TestCase):
 
         plt.close(m.figure.f)
 
+    def test_classification(self):
+        m = Maps()
+        m.data = self.data
+        m.set_data_specs(xcoord="x", ycoord="y", in_crs=3857)
+        m.set_plot_specs(plot_epsg=4326, shape="rectangles")
+
+        m.set_classify_specs(scheme="Quantiles", k=5)
+
+        m.plot_map()
+
+        plt.close(m.figure.f)
+
     def test_add_callbacks(self):
         m = Maps()
         m.data = self.data
