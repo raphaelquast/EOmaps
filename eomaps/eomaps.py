@@ -1285,6 +1285,8 @@ class Maps(object):
         shape="ellipses",
     ):
         """
+        add another layer of pixels
+
         Parameters
         ----------
         data : pandas.DataFrame
@@ -1534,6 +1536,8 @@ class Maps(object):
             A tuple of the position of the pixel provided in "xy_crs".
             If None, xy must be provided in the coordinate-system of the plot!
             The default is None
+        xy_crs : any
+            the identifier of the coordinate-system for the xy-coordinates
         radius : float or None, optional
             The radius of the marker. If None, it will be evaluated based
             on the pixel-spacing of the provided dataset
@@ -1578,6 +1582,79 @@ class Maps(object):
 
         # add marker
         self.cb.mark(ID=ID, pos=xy, radius=radius, shape=shape, buffer=buffer, **kwargs)
+
+    def add_annotation(
+        self,
+        ID=None,
+        xy=None,
+        xy_crs=None,
+        text=None,
+        **kwargs,
+    ):
+        """
+        add an annotation to the plot
+
+        Parameters
+        ----------
+        ID : any
+            The index-value of the pixel in m.data.
+        xy : tuple
+            A tuple of the position of the pixel provided in "xy_crs".
+            If None, xy must be provided in the coordinate-system of the plot!
+            The default is None
+        xy_crs : any
+            the identifier of the coordinate-system for the xy-coordinates
+        text : callable or str, optional
+            if str: the string to print
+            if callable: A function that returns the string that should be
+            printed in the annotation with the following call-signature:
+
+                >>> def text(m, ID, val, pos):
+                >>>     # m   ... the Maps object
+                >>>     # ID  ... the ID
+                >>>     # pos ... the position
+                >>>     # val ... the value
+                >>>
+                >>>     return "the string to print"
+
+            The default is None.
+
+        **kwargs
+            kwargs passed to m.cb.annotate
+        Returns
+        -------
+        None.
+
+        """
+        if ID is not None:
+            assert xy is None, "You can only provide 'ID' or 'pos' not both!"
+
+            xy = self.data.loc[ID][
+                [self.data_specs["xcoord"], self.data_specs["ycoord"]]
+            ].values
+            xy_crs = self.data_specs["in_crs"]
+
+        if xy is not None:
+
+            if xy_crs is not None:
+                # get coordinate transformation
+                transformer = Transformer.from_crs(
+                    CRS.from_user_input(xy_crs),
+                    CRS.from_user_input(self.plot_specs["plot_epsg"]),
+                    always_xy=True,
+                )
+                # transform coordinates
+                xy = transformer.transform(*xy)
+
+        # add marker
+        self.cb.annotate(
+            ID=ID,
+            pos=xy,
+            val=None if ID is None else self.data.loc[ID][self.data_specs["parameter"]],
+            permanent=True,
+            text=text,
+            **kwargs,
+        )
 
     def remove_callback(self, callback):
         """

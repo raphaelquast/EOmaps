@@ -8,7 +8,7 @@ from eomaps import Maps
 class TestBasicPlotting(unittest.TestCase):
     def setUp(self):
         x, y = np.meshgrid(
-            np.linspace(-19000000, 19000000, 100), np.linspace(-19000000, 19000000, 100)
+            np.linspace(-19000000, 19000000, 20), np.linspace(-19000000, 19000000, 20)
         )
         x, y = x.ravel(), y.ravel()
 
@@ -83,5 +83,47 @@ class TestBasicPlotting(unittest.TestCase):
         coll = m.add_discrete_layer(self.data, "value", "x", "y", in_crs=3857)
         coll.set_facecolor("none")
         coll.set_edgecolor("r")
+
+        plt.close(m.figure.f)
+
+    def test_add_annotate(self):
+        m = Maps()
+        m.data = self.data
+        m.set_data_specs(xcoord="x", ycoord="y", in_crs=3857)
+        m.set_plot_specs(plot_epsg=4326, shape="rectangles")
+
+        m.plot_map()
+
+        m.add_annotation(ID=m.data["value"].idxmax(), fontsize=15, text="adsf")
+
+        def customtext(m, ID, val, pos):
+            return f"{m.data_specs}\n {val}\n {pos}\n {ID}"
+
+        m.add_annotation(ID=m.data["value"].idxmin(), text=customtext)
+
+        m.add_annotation(
+            xy=(m.data.x[0], m.data.y[0]), xy_crs=3857, fontsize=15, text="adsf"
+        )
+
+        plt.close(m.figure.f)
+
+    def test_add_marker(self):
+        m = Maps()
+        m.data = self.data
+        m.set_data_specs(xcoord="x", ycoord="y", in_crs=3857)
+        m.set_plot_specs(plot_epsg=3857, shape="rectangles")
+
+        m.plot_map()
+
+        m.add_marker(20, facecolor=[1, 0, 0, 0.5], edgecolor="r")
+        m.add_marker(250, facecolor=[1, 0, 0, 0.5], edgecolor="r", radius=5000000)
+        m.add_marker(250, facecolor="b", edgecolor="m", linewidth=3, buffer=3)
+
+        m.add_marker(
+            xy=(m.data.x[100], m.data.y[100]),
+            xy_crs=3857,
+            facecolor="none",
+            edgecolor="r",
+        )
 
         plt.close(m.figure.f)

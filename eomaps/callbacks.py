@@ -245,8 +245,12 @@ class callbacks(object):
 
             printstr = (
                 f"{xlabel} = {x}\n{ylabel} = {y}\n"
-                + f"ID = {ID}\n"
-                + f"{self.m.data_specs['parameter']} = {val}"
+                + (f"ID = {ID}\n" if ID is not None else "")
+                + (
+                    f"{self.m.data_specs['parameter']} = {val}"
+                    if val is not None
+                    else ""
+                )
             )
         elif isinstance(text, str):
             printstr = text
