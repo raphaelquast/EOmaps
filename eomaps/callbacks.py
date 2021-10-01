@@ -35,9 +35,11 @@ class callbacks(object):
         self.m = m
 
     def __repr__(self):
-        return "available callbacks:\n    - " + "\n    - ".join(
-            [i for i in self.__dir__() if not i.startswith("_")]
-        )
+        return "available callbacks:\n    - " + "\n    - ".join(self.cb_list)
+
+    @property
+    def cb_list(self):
+        return ["load", "print_to_console", "annotate", "plot", "get_values", "mark"]
 
     def load(
         self,

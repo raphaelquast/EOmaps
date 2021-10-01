@@ -1441,9 +1441,7 @@ class Maps(object):
             assert hasattr(self.cb, callback), (
                 f"The function '{callback}' does not exist as a pre-defined callback."
                 + " Use one of:\n    - "
-                + "\n    - ".join(
-                    [i for i in self.cb.__dir__() if not i.startswith("_")]
-                )
+                + "\n    - ".join(self.cb.cb_list)
             )
             callback = getattr(self.cb, callback)
         elif callable(callback):
@@ -1467,7 +1465,7 @@ class Maps(object):
         # if multiple assignments are properly handled
         multi_cb_functions = ["mark"]
 
-        no_multi_cb = [key for key in callbacks.__dict__ if not key.startswith("_")]
+        no_multi_cb = [*self.cb.cb_list]
         for i in multi_cb_functions:
             no_multi_cb.pop(no_multi_cb.index(i))
 

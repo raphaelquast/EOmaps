@@ -42,7 +42,7 @@ class TestBasicPlotting(unittest.TestCase):
 
         # attach all callbacks
         double_click, mouse_button = True, 1
-        for n, cb in enumerate([i for i in m.cb.__dir__() if not i.startswith("_")]):
+        for n, cb in enumerate(m.cb.cb_list):
             if n == 1:
                 double_click = False
             if n == 2:
