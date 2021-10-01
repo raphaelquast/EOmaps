@@ -1252,10 +1252,6 @@ class Maps(object):
         if maskshp is not None:
             overlay_df = gpd.overlay(overlay_df[["geometry"]], maskshp)
 
-        import pdb
-
-        pdb.set_trace()
-
         _ = overlay_df.plot(ax=ax, aspect=ax.get_aspect(), **styledict)
 
         if legend is True:
