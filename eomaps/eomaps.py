@@ -90,6 +90,8 @@ class Maps(object):
 
         self._attached_cbs = dict()  # dict to memorize attached callbacks
 
+        self._cb = callbacks(self)
+
     def copy(
         self,
         data_specs=None,
@@ -140,12 +142,11 @@ class Maps(object):
         return copy_cls
 
     @property
-    @lru_cache()
     def cb(self):
         """
         accessor to pre-defined callback functions
         """
-        return callbacks(self)
+        return self._cb
 
     @property
     def data_specs(self):
@@ -1445,15 +1446,13 @@ class Maps(object):
                 )
             )
             callback = getattr(self.cb, callback)
-
-        # re-bind the callback methods to the eomaps.Maps object
-        # in case custom functions are used
-        if hasattr(callback, "__func__"):
-            callback = callback.__func__.__get__(self)
-        else:
-            newcb = partial(callback, self=self)
-            newcb.__name__ = callback.__name__
-            callback = newcb
+        elif callable(callback):
+            # re-bind the callback methods to the eomaps.Maps.cb object
+            # in case custom functions are used
+            if hasattr(callback, "__func__"):
+                callback = callback.__func__.__get__(self.cb)
+            else:
+                callback = callback.__get__(self.cb)
 
         # add mouse-button assignment as suffix to the name (with __ separator)
         # TODO document this!
@@ -1589,38 +1588,45 @@ class Maps(object):
 
     def _cb_hide_annotate(self):
         # a function to hide the annotation of an empty area is clicked
-        if hasattr(self, "annotation"):
-            self.annotation.set_visible(False)
+        if hasattr(self.cb, "annotation"):
+            self.cb.annotation.set_visible(False)
             self._blit()
 
-    # implement blitting
-    # https://stackoverflow.com/a/29284318/9703451
+    # implement blitting (see https://stackoverflow.com/a/29284318/9703451)
     def _safe_draw(self):
         """Temporarily disconnect the draw_event callback to avoid recursion"""
         canvas = self.figure.f.canvas
-        canvas.mpl_disconnect(self.draw_cid)
+        if hasattr(self, "draw_cid"):
+            canvas.mpl_disconnect(self.draw_cid)
 
-        canvas.draw()
-        self.draw_cid = canvas.mpl_connect("draw_event", self._grab_background)
+            canvas.draw()
+            self.draw_cid = canvas.mpl_connect("draw_event", self._grab_background)
+        else:
+            canvas.draw()
 
-    def _grab_background(self, event=None):
+    def _grab_background(self, event=None, redraw=True):
         """
         When the figure is resized, draw everything, and update the background.
         """
+        # hide annotations from the background
         annotation_visible = False
-        if hasattr(self, "annotation"):
-            if self.annotation.get_visible():
+        if hasattr(self.cb, "annotation"):
+            if self.cb.annotation.get_visible():
                 annotation_visible = True
-                self.annotation.set_visible(False)
-        self._safe_draw()
+                self.cb.annotation.set_visible(False)
+
+        if redraw:
+            self._safe_draw()
 
         # With most backends (e.g. TkAgg), we could grab (and refresh, in
         # self.blit) self.ax.bbox instead of self.fig.bbox, but Qt4Agg, and
         # some others, requires us to update the _full_ canvas, instead.
         self.background = self.figure.f.canvas.copy_from_bbox(self.figure.f.bbox)
+
+        # re-draw annotations
         if annotation_visible:
-            self.annotation.set_visible(True)
-            self._blit(self.annotation)
+            self.cb.annotation.set_visible(True)
+            self._blit(self.cb.annotation)
         else:
             self._blit()
 
