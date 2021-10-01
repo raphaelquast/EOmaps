@@ -1,6 +1,6 @@
 """a collection of helper-functions to generate map-plots"""
 
-from functools import partial, lru_cache
+from functools import partial, lru_cache, wraps
 import warnings
 
 import numpy as np
@@ -1467,7 +1467,7 @@ class Maps(object):
         # TODO support multiple assignments for callbacks
         # make sure multiple callbacks of the same funciton are only assigned
         # if multiple assignments are properly handled
-        multi_cb_functions = ["mark"]
+        multi_cb_functions = ["mark", "annotate"]
 
         no_multi_cb = [*self.cb.cb_list]
         for i in multi_cb_functions:
@@ -1513,6 +1513,72 @@ class Maps(object):
 
         return cid
 
+    def add_marker(
+        self,
+        ID=None,
+        xy=None,
+        xy_crs=None,
+        radius=None,
+        shape="circle",
+        buffer=1,
+        **kwargs,
+    ):
+        """
+        add a marker to the plot
+
+        Parameters
+        ----------
+        ID : any
+            The index-value of the pixel in m.data.
+        xy : tuple
+            A tuple of the position of the pixel provided in "xy_crs".
+            If None, xy must be provided in the coordinate-system of the plot!
+            The default is None
+        radius : float or None, optional
+            The radius of the marker. If None, it will be evaluated based
+            on the pixel-spacing of the provided dataset
+            The default is None.
+        shape : str, optional
+            Indicator which shape to draw. Currently supported shapes are:
+                - circle
+                - ellipse
+                - rectangle
+
+            The default is "circle".
+        buffer : float, optional
+            A factor to scale the size of the shape. The default is 1.
+        **kwargs :
+            kwargs passed to the matplotlib patch.
+            (e.g. `facecolor`, `edgecolor`, `linewidth`, `alpha` etc.)
+
+        Returns
+        -------
+        None.
+
+        """
+        if ID is not None:
+            assert xy is None, "You can only provide 'ID' or 'pos' not both!"
+
+            xy = self.data.loc[ID][
+                [self.data_specs["xcoord"], self.data_specs["ycoord"]]
+            ].values
+            xy_crs = self.data_specs["in_crs"]
+
+        if xy is not None:
+
+            if xy_crs is not None:
+                # get coordinate transformation
+                transformer = Transformer.from_crs(
+                    CRS.from_user_input(xy_crs),
+                    CRS.from_user_input(self.plot_specs["plot_epsg"]),
+                    always_xy=True,
+                )
+                # transform coordinates
+                xy = transformer.transform(*xy)
+
+        # add marker
+        self.cb.mark(ID=ID, pos=xy, radius=radius, shape=shape, buffer=buffer, **kwargs)
+
     def remove_callback(self, callback):
         """
         remove an attached callback from the figure
@@ -1552,7 +1618,7 @@ class Maps(object):
                 names = [callback]
                 if names[0] not in self._attached_cbs:
                     warnings.warn(
-                        f"The callback '{name}' is not attached and can not"
+                        f"The callback '{names[0]}' is not attached and can not"
                         + " be removed. Attached callbacks are:\n    - "
                         + "    - \n".join(list(self._attached_cbs))
                     )
@@ -1645,3 +1711,7 @@ class Maps(object):
         if artist is not None:
             self.figure.ax.draw_artist(artist)
         self.figure.f.canvas.blit(self.figure.f.bbox)
+
+    @wraps(plt.savefig)
+    def savefig(self, **kwargs):
+        self.figure.f.savefig(**kwargs)
