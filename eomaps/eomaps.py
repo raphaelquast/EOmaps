@@ -1458,8 +1458,6 @@ class Maps(object):
 
         # ------------- add a callback
         def onpick(event):
-            print(event.double_click, event.mouse_button)
-
             if (event.double_click == double_click) and (
                 event.mouse_button == mouse_button
             ):
