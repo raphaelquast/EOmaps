@@ -90,6 +90,8 @@ class Maps(object):
 
         self._attached_cbs = dict()  # dict to memorize attached callbacks
 
+        self._cb = callbacks(self)
+
     def copy(
         self,
         data_specs=None,
@@ -140,12 +142,11 @@ class Maps(object):
         return copy_cls
 
     @property
-    @lru_cache()
     def cb(self):
         """
         accessor to pre-defined callback functions
         """
-        return callbacks(self)
+        return self._cb
 
     @property
     def data_specs(self):
@@ -448,7 +449,7 @@ class Maps(object):
             plot_epsg=plot_epsg,
             radius=radius,
             radius_crs=radius_crs,
-            cpos="c",
+            cpos=cpos,
             parameter=parameter,
             xcoord=xcoord,
             ycoord=ycoord,
@@ -554,7 +555,10 @@ class Maps(object):
 
         coll.set_picker(picker)
 
-        self.updatedict = dict(
+        # trigger drawing the figure
+        f.canvas.draw()
+
+        self.figure = _Maps_plot(
             f=f,
             gridspec=gs,
             colorbar_gs=cbgs,
@@ -571,8 +575,6 @@ class Maps(object):
             label=label,
             tick_precision=tick_precision,
         )
-
-        self.figure = _Maps_plot(**self.updatedict)
 
     def _prepare_data(
         self,
@@ -607,7 +609,7 @@ class Maps(object):
         if radius_crs is None:
             radius_crs = self.plot_specs["radius_crs"]
         if cpos is None:
-            cpos = "c"
+            cpos = cpos
         if shape is None:
             shape = self.plot_specs["shape"]
 
@@ -802,6 +804,9 @@ class Maps(object):
                 w=(p0[0] - p1[0]).max(),
                 h=(p0[1] - p3[1]).max(),
             )
+
+        self._props = props
+
         return props
 
     def _classify_data(self, z_data, cmap, histbins, vmin, vmax, classify_specs=None):
@@ -1169,7 +1174,9 @@ class Maps(object):
         **kwargs :
             all kwargs are passed to `gdf.plot(**kwargs)`
         """
-        ax = self.updatedict["ax"]
+        assert hasattr(self, "figure"), "you must call .plot_map() first!"
+
+        ax = self.figure.ax
 
         defaultargs = dict(facecolor="none", edgecolor="k", lw=1.5)
         defaultargs.update(kwargs)
@@ -1221,9 +1228,9 @@ class Maps(object):
         if legendlabel is None:
             legendlabel = dataspec.get("name", "overlay")
 
-        assert hasattr(self, "updatedict"), "you must call .plot_map() first!"
+        assert hasattr(self, "figure"), "you must call .plot_map() first!"
 
-        ax = self.updatedict["ax"]
+        ax = self.figure.ax
 
         if not all([i in dataspec for i in ["resolution", "category", "name"]]):
             assert False, (
@@ -1323,6 +1330,7 @@ class Maps(object):
         shape : str
             the shapes to plot (either "ellipses" or "rectangles")
         """
+        assert hasattr(self, "figure"), "you must call .plot_map() first!"
 
         if parameter is None:
             parameter = next(i for i in data.keys() if i not in [xcoord, ycoord])
@@ -1437,29 +1445,44 @@ class Maps(object):
             assert hasattr(self.cb, callback), (
                 f"The function '{callback}' does not exist as a pre-defined callback."
                 + " Use one of:\n    - "
-                + "\n    - ".join(
-                    [i for i in self.cb.__dir__() if not i.startswith("_")]
-                )
+                + "\n    - ".join(self.cb.cb_list)
             )
             callback = getattr(self.cb, callback)
+        elif callable(callback):
+            # re-bind the callback methods to the eomaps.Maps.cb object
+            # in case custom functions are used
+            if hasattr(callback, "__func__"):
+                callback = callback.__func__.__get__(self.cb)
+            else:
+                callback = callback.__get__(self.cb)
+
+        # add mouse-button assignment as suffix to the name (with __ separator)
+        # TODO document this!
+        cbname = callback.__name__ + f"__{double_click}_{mouse_button}"
 
         assert (
-            callback.__name__ not in self._attached_cbs
-        ), f"the callback '{callback.__name__}' is already attached to the plot!"
+            cbname not in self._attached_cbs
+        ), f"the callback '{cbname}' is already attached to the plot!"
 
-        # re-bind the callback methods to the eomaps.Maps object
-        # in case custom functions are used
-        if hasattr(callback, "__func__"):
-            callback = callback.__func__.__get__(self)
-        else:
-            newcb = partial(callback, self=self)
-            newcb.__name__ = callback.__name__
-            callback = newcb
+        # TODO support multiple assignments for callbacks
+        # make sure multiple callbacks of the same funciton are only assigned
+        # if multiple assignments are properly handled
+        multi_cb_functions = ["mark"]
+
+        no_multi_cb = [*self.cb.cb_list]
+        for i in multi_cb_functions:
+            no_multi_cb.pop(no_multi_cb.index(i))
+
+        if callback.__name__ in no_multi_cb:
+            assert callback.__name__ not in [
+                i.split("__")[0] for i in self._attached_cbs
+            ], (
+                "Multiple assignments of the callback"
+                + f" '{callback.__name__}' are not (yet) supported..."
+            )
 
         # ------------- add a callback
         def onpick(event):
-            print(event.double_click, event.mouse_button)
-
             if (event.double_click == double_click) and (
                 event.mouse_button == mouse_button
             ):
@@ -1482,12 +1505,13 @@ class Maps(object):
 
                         callback(**clickdict, **kwargs)
                 else:
-                    if "annotate" in self._attached_cbs:
+                    if "annotate" in [i.split("__")[0] for i in self._attached_cbs]:
                         self._cb_hide_annotate()
 
-        self._attached_cbs[callback.__name__] = self.figure.f.canvas.mpl_connect(
-            "pick_event", onpick
-        )
+        cid = self.figure.f.canvas.mpl_connect("pick_event", onpick)
+        self._attached_cbs[cbname] = cid
+
+        return cid
 
     def remove_callback(self, callback):
         """
@@ -1495,28 +1519,70 @@ class Maps(object):
 
         Parameters
         ----------
-        callback : callable or string
+        callback : int, str or callable
+            if int: the identification-number of the callback to remove
+                    (the number is returned by `cid = m.add_callback()`)
+            if str: the name of the callback to remove
+                    (format: `<function_name>__<double_click>_<mouse_button>`)
+            if callable: the `__name__` property of the callback is used to
+                         remove ANY callback that references the corresponding
+                         function
+
             either the callback-function that should be removed from the figure
             (or the name of the function)
         """
-        if isinstance(callback, str):
-            name = callback
+
+        if isinstance(callback, int):
+            self.figure.f.canvas.mpl_disconnect(callback)
+            name = dict(zip(self._attached_cbs.values(), self._attached_cbs.keys()))[
+                callback
+            ]
+            del self._attached_cbs[name]
+
+            # call cleanup methods on removal
+            fname = name.split("__")[0]
+            if hasattr(self.cb, f"_{fname}_cleanup"):
+                getattr(self.cb, f"_{fname}_cleanup")(self)
+
+            print(f"Removed the callback: '{name}'.")
+
         else:
-            name = callback.__name__
 
-        if name not in self._attached_cbs:
-            warnings.warn(
-                f"The callback '{name}' is not attached and can not"
-                + " be removed. Attached callbacks are:\n    - "
-                + "    - \n".join(list(self._attached_cbs))
-            )
+            if isinstance(callback, str):
+                names = [callback]
+                if names[0] not in self._attached_cbs:
+                    warnings.warn(
+                        f"The callback '{name}' is not attached and can not"
+                        + " be removed. Attached callbacks are:\n    - "
+                        + "    - \n".join(list(self._attached_cbs))
+                    )
+                    return
 
-        self.figure.f.canvas.mpl_disconnect(self._attached_cbs[name])
-        del self._attached_cbs[name]
+            elif callable(callback):
+                # identify all callbacks that relate to the provided function
+                names = [
+                    key
+                    for key in self._attached_cbs
+                    if key.split("__")[0] == callback.__name__
+                ]
+                if len(names) == 0:
+                    warnings.warn(
+                        f"The callback '{callback.__name__}' is not attached"
+                        + "and can not be removed. Attached callbacks are:"
+                        + "\n    - "
+                        + "    - \n".join(list(self._attached_cbs))
+                    )
 
-        # call cleanup methods on removal
-        if hasattr(self.cb, f"_{name}_cleanup"):
-            getattr(self.cb, f"_{name}_cleanup")(self)
+            for name in names:
+                self.figure.f.canvas.mpl_disconnect(self._attached_cbs[name])
+                del self._attached_cbs[name]
+
+                # call cleanup methods on removal
+                fname = name.split("__")[0]
+                if hasattr(self.cb, f"_{fname}_cleanup"):
+                    getattr(self.cb, f"_{fname}_cleanup")(self)
+
+                print(f"Removed the callback: '{name}'.")
 
     @lru_cache()
     def _get_crs(self, crs):
@@ -1524,38 +1590,45 @@ class Maps(object):
 
     def _cb_hide_annotate(self):
         # a function to hide the annotation of an empty area is clicked
-        if hasattr(self, "annotation"):
-            self.annotation.set_visible(False)
-            self._blit()
+        if hasattr(self.cb, "annotation"):
+            self.cb.annotation.set_visible(False)
+            self._blit(self.cb.annotation)
 
-    # implement blitting
-    # https://stackoverflow.com/a/29284318/9703451
+    # implement blitting (see https://stackoverflow.com/a/29284318/9703451)
     def _safe_draw(self):
         """Temporarily disconnect the draw_event callback to avoid recursion"""
         canvas = self.figure.f.canvas
-        canvas.mpl_disconnect(self.draw_cid)
+        if hasattr(self, "draw_cid"):
+            canvas.mpl_disconnect(self.draw_cid)
 
-        canvas.draw()
-        self.draw_cid = canvas.mpl_connect("draw_event", self._grab_background)
+            canvas.draw()
+            self.draw_cid = canvas.mpl_connect("draw_event", self._grab_background)
+        else:
+            canvas.draw()
 
-    def _grab_background(self, event=None):
+    def _grab_background(self, event=None, redraw=True):
         """
         When the figure is resized, draw everything, and update the background.
         """
+        # hide annotations from the background
         annotation_visible = False
-        if hasattr(self, "annotation"):
-            if self.annotation.get_visible():
+        if hasattr(self.cb, "annotation"):
+            if self.cb.annotation.get_visible():
                 annotation_visible = True
-                self.annotation.set_visible(False)
-        self._safe_draw()
+                self.cb.annotation.set_visible(False)
+
+        if redraw:
+            self._safe_draw()
 
         # With most backends (e.g. TkAgg), we could grab (and refresh, in
         # self.blit) self.ax.bbox instead of self.fig.bbox, but Qt4Agg, and
         # some others, requires us to update the _full_ canvas, instead.
         self.background = self.figure.f.canvas.copy_from_bbox(self.figure.f.bbox)
+
+        # re-draw annotations
         if annotation_visible:
-            self.annotation.set_visible(True)
-            self._blit(self.annotation)
+            self.cb.annotation.set_visible(True)
+            self._blit(self.cb.annotation)
         else:
             self._blit()
 

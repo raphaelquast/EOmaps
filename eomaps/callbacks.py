@@ -1,8 +1,7 @@
 import numpy as np
-from matplotlib import cm, collections
 import matplotlib.pyplot as plt
-from pyproj import CRS
 from collections import defaultdict
+from matplotlib.patches import Circle, Ellipse, Rectangle
 
 
 class callbacks(object):
@@ -33,13 +32,14 @@ class callbacks(object):
     """
 
     def __init__(self, m):
-        pass
-        # self = m
+        self.m = m
 
     def __repr__(self):
-        return "available callbacks:\n    - " + "\n    - ".join(
-            [i for i in self.__dir__() if not i.startswith("_")]
-        )
+        return "available callbacks:\n    - " + "\n    - ".join(self.cb_list)
+
+    @property
+    def cb_list(self):
+        return ["load", "print_to_console", "annotate", "plot", "get_values", "mark"]
 
     def load(
         self,
@@ -54,9 +54,7 @@ class callbacks(object):
         A callback-function that can be used to load objects from a given
         database.
 
-        The returned object is accessible via `m.picked_object`.
-
-        Note: `m.picked_object` will be replaced on each pick-event!
+        The returned object(s) are accessible via `m.cb.picked_object`.
 
         Parameters
         ----------
@@ -74,7 +72,7 @@ class callbacks(object):
             If callable: A callable that will be executed on the database with the
                          following call-signature: `load_method(database, ID)`
         load_multiple : bool
-            True: A single-object is returned, replacing `m.picked_object` on each pick.
+            True: A single-object is returned, replacing `m.cb.picked_object` on each pick.
             False: A list of objects is returned that is extended with each pick.
         """
 
@@ -98,9 +96,9 @@ class callbacks(object):
         else:
             self.picked_object = pick
 
-    def _load_cleanup(self, m):
-        if hasattr(m, "picked_object"):
-            del m.picked_object
+    def _load_cleanup(self):
+        if hasattr(self, "picked_object"):
+            del self.picked_object
 
     def print_to_console(self, ID=None, pos=None, val=None):
         """
@@ -118,7 +116,7 @@ class callbacks(object):
         """
         # crs = self._get_crs(self.plot_specs["plot_epsg"])
         # xlabel, ylabel = [crs.axis_info[0].abbrev, crs.axis_info[1].abbrev]
-        xlabel, ylabel = [i.name for i in self.figure.ax.projection.axis_info[:2]]
+        xlabel, ylabel = [i.name for i in self.m.figure.ax.projection.axis_info[:2]]
 
         printstr = ""
         x, y = [np.format_float_positional(i, trim="-", precision=4) for i in pos]
@@ -131,7 +129,17 @@ class callbacks(object):
 
         print(printstr)
 
-    def annotate(self, ID=None, pos=None, val=None, pos_precision=4, val_precision=4):
+    def annotate(
+        self,
+        ID=None,
+        pos=None,
+        val=None,
+        pos_precision=4,
+        val_precision=4,
+        permanent=False,
+        val_fmt=None,
+        **kwargs,
+    ):
         """
         a callback-function to annotate basic properties from the fit on double-click
         use as:    spatial_plot(... , callback=cb_annotate)
@@ -148,36 +156,63 @@ class callbacks(object):
             The floating-point precision of the coordinates.
             The default is 4.
         val_precision : int
-            The floating-point precision of the parameter-values.
-            The default is 4.
+            The floating-point precision of the parameter-values (only used if
+            "val_fmt=None"). The default is 4.
+        permanent : bool
+            Indicator if the annotation should be temporary (False) or
+            permanent (True). The default is False
+        val_fmt : callable, optional
+            A callabel that is used to transform the value into the desired
+            output of the following form:
+
+                >>> def val_fmt(m, val):
+                >>>     # m   ... the Maps object
+                >>>     # val ... the value
+                >>>     return f"{val:.2f}"
+
+            The default is None
+
+        **kwargs
+            kwargs passed to matplotlib.pyplot.annotate(). The default is:
+
+            >>> dict(xytext=(20, 20),
+            >>>      textcoords="offset points",
+            >>>      bbox=dict(boxstyle="round", fc="w"),
+            >>>      arrowprops=dict(arrowstyle="->"))
+            >>>     )
+
         """
 
-        if not hasattr(self, "background"):
+        if not hasattr(self.m, "background"):
             # cache the background before the first annotation is drawn
-            self.background = self.figure.f.canvas.copy_from_bbox(self.figure.f.bbox)
+            # in case there is no cached background yet
+            self.m._grab_background(redraw=False)
 
+        if not hasattr(self.m, "draw_cid"):
             # attach draw_event that handles blitting
-            self.draw_cid = self.figure.f.canvas.mpl_connect(
-                "draw_event", self._grab_background
+            self.m.draw_cid = self.m.figure.f.canvas.mpl_connect(
+                "draw_event", self.m._grab_background
             )
 
         # to hide the annotation, Maps._cb_hide_annotate() is called when an empty
         # area is clicked!
         # crs = self._get_crs(self.plot_specs["plot_epsg"])
         # xlabel, ylabel = [crs.axis_info[0].abbrev, crs.axis_info[1].abbrev]
-        xlabel, ylabel = [i.abbrev for i in self.figure.ax.projection.axis_info[:2]]
+        xlabel, ylabel = [i.abbrev for i in self.m.figure.ax.projection.axis_info[:2]]
 
-        ax = self.figure.ax
+        ax = self.m.figure.ax
+
+        styledict = dict(
+            xytext=(20, 20),
+            textcoords="offset points",
+            bbox=dict(boxstyle="round", fc="w"),
+            arrowprops=dict(arrowstyle="->"),
+        )
+
+        styledict.update(**kwargs)
 
         if not hasattr(self, "annotation"):
-            self.annotation = ax.annotate(
-                "",
-                xy=pos,
-                xytext=(20, 20),
-                textcoords="offset points",
-                bbox=dict(boxstyle="round", fc="w"),
-                arrowprops=dict(arrowstyle="->"),
-            )
+            self.annotation = ax.annotate("", xy=pos, **styledict)
 
         self.annotation.set_visible(True)
         self.annotation.xy = pos
@@ -190,25 +225,32 @@ class callbacks(object):
         printstr += f"{xlabel} = {x}\n{ylabel} = {y}\n"
         printstr += f"ID = {ID}\n"
 
-        if isinstance(val, (int, float)):
-            val = np.format_float_positional(val, trim="-", precision=val_precision)
-        printstr += f"{self.data_specs['parameter']} = {val}"
+        if val_fmt is not None:
+            printstr += val_fmt(self.m, val)
+        else:
+            if isinstance(val, (int, float)):
+                val = np.format_float_positional(val, trim="-", precision=val_precision)
+            printstr += f"{self.m.data_specs['parameter']} = {val}"
 
         self.annotation.set_text(printstr)
-        self.annotation.get_bbox_patch().set_alpha(0.75)
+        # self.annotation.get_bbox_patch().set_alpha(0.75)
 
         # use blitting instead of f.canvas.draw() to speed up annotation generation
         # in case a large collection is plotted
-        self._blit(self.annotation)
+        self.m._blit(self.annotation)
+
+        if permanent:
+            self.m._grab_background(redraw=False)
+            del self.annotation
 
     def _annotate_cleanup(self):
-        if hasattr(self, "background"):
+        if hasattr(self.m, "background"):
             # delete cached background
-            del self.background
+            del self.m.background
         # remove draw_event callback
-        if hasattr(self, "draw_cid"):
-            self.figure.f.canvas.mpl_disconnect(self.draw_cid)
-            del self.draw_cid
+        if hasattr(self.m, "draw_cid"):
+            self.m.figure.f.canvas.mpl_disconnect(self.m.draw_cid)
+            del self.m.draw_cid
 
     def plot(self, ID=None, pos=None, val=None, x_index="pos", precision=4, **kwargs):
         """
@@ -252,18 +294,18 @@ class callbacks(object):
         if not hasattr(self, "_pick_f"):
             self._pick_f, self._pick_ax = plt.subplots()
             self._pick_ax.tick_params(axis="x", rotation=90)
-            self._pick_ax.set_ylabel(self.data_specs["parameter"])
+            self._pick_ax.set_ylabel(self.m.data_specs["parameter"])
 
             # call the cleanup function if the figure is closed
             def on_close(event):
-                self.cb._scatter_cleanup(self)
+                self._scatter_cleanup()
 
             self._pick_f.canvas.mpl_connect("close_event", on_close)
 
         # crs = self._get_crs(self.plot_specs["plot_epsg"])
         # _pick_xlabel, _pick_ylabel = [crs.axis_info[0].abbrev, crs.axis_info[1].abbrev]
         _pick_xlabel, _pick_ylabel = [
-            i.abbrev for i in self.figure.ax.projection.axis_info[:2]
+            i.abbrev for i in self.m.figure.ax.projection.axis_info[:2]
         ]
 
         if x_index == "pos":
@@ -288,23 +330,25 @@ class callbacks(object):
         self._pick_f.canvas.draw()
         self._pick_f.tight_layout()
 
-    def _scatter_cleanup(self, m):
+    def _scatter_cleanup(self):
         # cleanup method for scatter callback
-        if hasattr(m, "_pick_f"):
-            del m._pick_f
-        if hasattr(m, "_pick_ax"):
-            del m._pick_ax
-        if hasattr(m, "_pick_l"):
-            del m._pick_l
+        if hasattr(self, "_pick_f"):
+            del self._pick_f
+        if hasattr(self, "_pick_ax"):
+            del self._pick_ax
+        if hasattr(self, "_pick_l"):
+            del self._pick_l
 
     def get_values(self, ID=None, pos=None, val=None):
         """
         a callback-function that successively collects return-values in a dict
-        that can be accessed via "m.picked_vals", with the following structure:
+        accessible via "m.cb.picked_vals", with the following structure:
 
-            >>> m.picked_vals = dict(pos=[... center-position tuples in plot_crs ...],
-                                     ID=[... the IDs in the dataframe...],
-                                     val=[... the values ...])
+            >>> m.cb.picked_vals = dict(
+            >>>     pos=[... center-position tuples in plot_crs ...],
+            >>>     ID=[... the corresponding IDs in the dataframe...],
+            >>>     val=[... the corresponding values ...]
+            >>> )
 
         removing the callback will also remove the associated value-dictionary!
 
@@ -324,7 +368,109 @@ class callbacks(object):
         for key, val in zip(["pos", "ID", "val"], [pos, ID, val]):
             self.picked_vals[key].append(val)
 
-    def _get_values_cleanup(self, m):
+    def _get_values_cleanup(self):
         # cleanup method for get_values callback
-        if hasattr(m, "picked_vals"):
-            del m.picked_vals
+        if hasattr(self, "picked_vals"):
+            del self.picked_vals
+
+    def mark(
+        self,
+        ID=None,
+        pos=None,
+        val=None,
+        radius=None,
+        shape="circle",
+        buffer=1,
+        **kwargs,
+    ):
+        """
+        A callback to draw indicators over double-clicked pixels.
+
+        Removing the callback will remove ALL markers that have been
+        added to the map.
+
+        The added patches are accessible via `m.cb._pick_markers`
+
+        Parameters
+        ----------
+        ID : any
+            The index-value of the pixel in the data.
+        pos : tuple
+            A tuple of the position of the pixel in plot-coordinates.
+        val : int or float
+            The parameter-value of the pixel.
+        radius : float or None, optional
+            The radius of the marker. If None, it will be evaluated based
+            on the pixel-spacing of the provided dataset
+            The default is None.
+        shape : str, optional
+            Indicator which shape to draw. Currently supported shapes are:
+                - circle
+                - ellipse
+
+            The default is "circle".
+        buffer : float, optional
+            A factor to scale the size of the shape. The default is 1.
+        **kwargs :
+            kwargs passed to the matplotlib patch.
+            (e.g. `facecolor`, `edgecolor`, `linewidth`, `alpha` etc.)
+        """
+
+        if not hasattr(self.m, "background"):
+            # cache the background before the first annotation is drawn
+            # in case there is no cached background yet
+            self.m._grab_background(redraw=False)
+
+        if not hasattr(self.m, "draw_cid"):
+            # attach draw_event that handles blitting
+            self.m.draw_cid = self.m.figure.f.canvas.mpl_connect(
+                "draw_event", self.m._grab_background
+            )
+
+        if not hasattr(self, "_pick_markers"):
+            self._pick_markers = []
+
+        if shape == "circle":
+            if radius is None:
+                radiusx = np.abs(np.diff(np.unique(self.m._props["x0"])).mean()) / 2.0
+                radiusy = np.abs(np.diff(np.unique(self.m._props["y0"])).mean()) / 2.0
+            p = Circle(pos, np.sqrt(radiusx ** 2 + radiusy ** 2) * buffer, **kwargs)
+        elif shape == "ellipse":
+            radiusx = np.abs(np.diff(np.unique(self.m._props["x0"])).mean()) / 2.0
+            radiusy = np.abs(np.diff(np.unique(self.m._props["y0"])).mean()) / 2.0
+
+            p = Ellipse(
+                pos,
+                np.mean(radiusx) * 2 * buffer,
+                np.mean(radiusy) * 2 * buffer,
+                **kwargs,
+            )
+        elif shape == "rectangle":
+            radiusx = np.abs(np.diff(np.unique(self.m._props["x0"])).mean()) / 2.0
+            radiusy = np.abs(np.diff(np.unique(self.m._props["y0"])).mean()) / 2.0
+
+            p = Rectangle(
+                [pos[0] - radiusx * buffer, pos[1] - radiusy * buffer],
+                np.mean(radiusx) * 2 * buffer,
+                np.mean(radiusy) * 2 * buffer,
+                **kwargs,
+            )
+
+        artist = self.m.figure.ax.add_patch(p)
+
+        self._pick_markers.append(artist)
+
+        # first draw the marker, then cache the new background
+        self.m._blit(artist)
+        self.m._grab_background(redraw=False)
+
+    def _mark_cleanup(self):
+        if hasattr(self, "_pick_markers"):
+            while len(self._pick_markers) > 0:
+                self._pick_markers.pop(0).remove()
+            del self._pick_markers
+
+        # remove draw_event callback
+        if hasattr(self.m, "draw_cid"):
+            self.m.figure.f.canvas.mpl_disconnect(self.m.draw_cid)
+            del self.m.draw_cid
