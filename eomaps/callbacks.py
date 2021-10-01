@@ -1,8 +1,7 @@
 import numpy as np
-from matplotlib import cm, collections
 import matplotlib.pyplot as plt
-from pyproj import CRS
 from collections import defaultdict
+from matplotlib.patches import Circle, Ellipse
 
 
 class callbacks(object):
@@ -328,3 +327,89 @@ class callbacks(object):
         # cleanup method for get_values callback
         if hasattr(m, "picked_vals"):
             del m.picked_vals
+
+    def mark(
+        self,
+        ID=None,
+        pos=None,
+        val=None,
+        radius=None,
+        shape="circle",
+        buffer=1,
+        **kwargs,
+    ):
+        """
+        A callback to draw indicators over double-clicked pixels.
+
+        Removing the callback will remove ALL markers that have been
+        added to the map.
+
+        The added patches are accessible via `m._picked_markers`
+
+        Parameters
+        ----------
+        ID : any
+            The index-value of the pixel in the data.
+        pos : tuple
+            A tuple of the position of the pixel in plot-coordinates.
+        val : int or float
+            The parameter-value of the pixel.
+        radius : float or None, optional
+            The radius of the marker. If None, it will be evaluated based
+            on the pixel-spacing of the provided dataset
+            The default is None.
+        shape : str, optional
+            Indicator which shape to draw. Currently supported shapes are:
+                - circle
+                - ellipse
+
+            The default is "circle".
+        buffer : float, optional
+            A factor to scale the size of the shape. The default is 1.
+        **kwargs :
+            kwargs passed to the matplotlib patch.
+            (e.g. `facecolor`, `edgecolor`, `linewidth`, `alpha` etc.)
+        """
+        if not hasattr(self, "_pick_markers"):
+            self._pick_markers = []
+
+        if not hasattr(self, "background"):
+            # attach draw_event that handles blitting
+            self.draw_cid = self.figure.f.canvas.mpl_connect(
+                "draw_event", self._grab_background
+            )
+
+        # always fetch the background so that makers remain visible
+        self.background = self.figure.f.canvas.copy_from_bbox(self.figure.f.bbox)
+
+        if shape == "circle":
+            if radius is None:
+                radiusx = np.abs(np.diff(np.unique(self._props["x0"])).mean()) / 2.0
+                radiusy = np.abs(np.diff(np.unique(self._props["y0"])).mean()) / 2.0
+            p = Circle(pos, np.sqrt(radiusx ** 2 + radiusy ** 2) * buffer, **kwargs)
+        if shape == "ellipse":
+            radiusx = np.abs(np.diff(np.unique(self._props["x0"])).mean()) / 2.0
+            radiusy = np.abs(np.diff(np.unique(self._props["y0"])).mean()) / 2.0
+
+            p = Ellipse(
+                pos,
+                np.mean(radiusx) * 2 * buffer,
+                np.mean(radiusy) * 2 * buffer,
+                **kwargs,
+            )
+
+        artist = self.figure.ax.add_patch(p)
+
+        self._pick_markers.append(artist)
+        self._blit(artist)
+
+    def _mark_cleanup(self, m):
+        if hasattr(m, "_pick_markers"):
+            while len(m._pick_markers) > 0:
+                m._pick_markers.pop(0).remove()
+            del m._pick_markers
+
+        # remove draw_event callback
+        if hasattr(self, "draw_cid"):
+            self.figure.f.canvas.mpl_disconnect(self.draw_cid)
+            del self.draw_cid

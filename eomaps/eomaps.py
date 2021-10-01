@@ -802,6 +802,9 @@ class Maps(object):
                 w=(p0[0] - p1[0]).max(),
                 h=(p0[1] - p3[1]).max(),
             )
+
+        self._props = props
+
         return props
 
     def _classify_data(self, z_data, cmap, histbins, vmin, vmax, classify_specs=None):
@@ -1249,6 +1252,10 @@ class Maps(object):
         if maskshp is not None:
             overlay_df = gpd.overlay(overlay_df[["geometry"]], maskshp)
 
+        import pdb
+
+        pdb.set_trace()
+
         _ = overlay_df.plot(ax=ax, aspect=ax.get_aspect(), **styledict)
 
         if legend is True:
@@ -1443,10 +1450,6 @@ class Maps(object):
             )
             callback = getattr(self.cb, callback)
 
-        assert (
-            callback.__name__ not in self._attached_cbs
-        ), f"the callback '{callback.__name__}' is already attached to the plot!"
-
         # re-bind the callback methods to the eomaps.Maps object
         # in case custom functions are used
         if hasattr(callback, "__func__"):
@@ -1455,6 +1458,31 @@ class Maps(object):
             newcb = partial(callback, self=self)
             newcb.__name__ = callback.__name__
             callback = newcb
+
+        # add mouse-button assignment as suffix to the name (with __ separator)
+        # TODO document this!
+        cbname = callback.__name__ + f"__{double_click}_{mouse_button}"
+
+        assert (
+            cbname not in self._attached_cbs
+        ), f"the callback '{cbname}' is already attached to the plot!"
+
+        # TODO support multiple assignments for callbacks
+        # make sure multiple callbacks of the same funciton are only assigned
+        # if multiple assignments are properly handled
+        multi_cb_functions = ["mark"]
+
+        no_multi_cb = [key for key in callbacks.__dict__ if not key.startswith("_")]
+        for i in multi_cb_functions:
+            no_multi_cb.pop(no_multi_cb.index(i))
+
+        if callback.__name__ in no_multi_cb:
+            assert callback.__name__ not in [
+                i.split("__")[0] for i in self._attached_cbs
+            ], (
+                "Multiple assignments of the callback"
+                + f" '{callback.__name__}' are not (yet) supported..."
+            )
 
         # ------------- add a callback
         def onpick(event):
@@ -1483,9 +1511,10 @@ class Maps(object):
                     if "annotate" in self._attached_cbs:
                         self._cb_hide_annotate()
 
-        self._attached_cbs[callback.__name__] = self.figure.f.canvas.mpl_connect(
-            "pick_event", onpick
-        )
+        cid = self.figure.f.canvas.mpl_connect("pick_event", onpick)
+        self._attached_cbs[cbname] = cid
+
+        return cid
 
     def remove_callback(self, callback):
         """
@@ -1493,28 +1522,70 @@ class Maps(object):
 
         Parameters
         ----------
-        callback : callable or string
+        callback : int, str or callable
+            if int: the identification-number of the callback to remove
+                    (the number is returned by `cid = m.add_callback()`)
+            if str: the name of the callback to remove
+                    (format: `<function_name>__<double_click>_<mouse_button>`)
+            if callable: the `__name__` property of the callback is used to
+                         remove ANY callback that references the corresponding
+                         function
+
             either the callback-function that should be removed from the figure
             (or the name of the function)
         """
-        if isinstance(callback, str):
-            name = callback
+
+        if isinstance(callback, int):
+            self.figure.f.canvas.mpl_disconnect(callback)
+            name = dict(zip(self._attached_cbs.values(), self._attached_cbs.keys()))[
+                callback
+            ]
+            del self._attached_cbs[name]
+
+            # call cleanup methods on removal
+            fname = name.split("__")[0]
+            if hasattr(self.cb, f"_{fname}_cleanup"):
+                getattr(self.cb, f"_{fname}_cleanup")(self)
+
+            print(f"Removed the callback: '{name}'.")
+
         else:
-            name = callback.__name__
 
-        if name not in self._attached_cbs:
-            warnings.warn(
-                f"The callback '{name}' is not attached and can not"
-                + " be removed. Attached callbacks are:\n    - "
-                + "    - \n".join(list(self._attached_cbs))
-            )
+            if isinstance(callback, str):
+                names = [callback]
+                if names[0] not in self._attached_cbs:
+                    warnings.warn(
+                        f"The callback '{name}' is not attached and can not"
+                        + " be removed. Attached callbacks are:\n    - "
+                        + "    - \n".join(list(self._attached_cbs))
+                    )
+                    return
 
-        self.figure.f.canvas.mpl_disconnect(self._attached_cbs[name])
-        del self._attached_cbs[name]
+            elif callable(callback):
+                # identify all callbacks that relate to the provided function
+                names = [
+                    key
+                    for key in self._attached_cbs
+                    if key.split("__")[0] == callback.__name__
+                ]
+                if len(names) == 0:
+                    warnings.warn(
+                        f"The callback '{callback.__name__}' is not attached"
+                        + "and can not be removed. Attached callbacks are:"
+                        + "\n    - "
+                        + "    - \n".join(list(self._attached_cbs))
+                    )
 
-        # call cleanup methods on removal
-        if hasattr(self.cb, f"_{name}_cleanup"):
-            getattr(self.cb, f"_{name}_cleanup")(self)
+            for name in names:
+                self.figure.f.canvas.mpl_disconnect(self._attached_cbs[name])
+                del self._attached_cbs[name]
+
+                # call cleanup methods on removal
+                fname = name.split("__")[0]
+                if hasattr(self.cb, f"_{fname}_cleanup"):
+                    getattr(self.cb, f"_{fname}_cleanup")(self)
+
+                print(f"Removed the callback: '{name}'.")
 
     @lru_cache()
     def _get_crs(self, crs):
