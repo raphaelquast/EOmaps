@@ -125,7 +125,7 @@ class callbacks(object):
 
         if isinstance(val, (int, float)):
             val = np.format_float_positional(val, trim="-", precision=4)
-        printstr += f"{self.data_specs['parameter']} = {val}"
+        printstr += f"{self.m.data_specs['parameter']} = {val}"
 
         print(printstr)
 

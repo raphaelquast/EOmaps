@@ -77,7 +77,28 @@ class TestBasicPlotting(unittest.TestCase):
 
             m.add_callback(cb, double_click=double_click, mouse_button=mouse_button)
 
-        # TODO how to check if callbacks actually work in a unittest?
+        plt.close(m.figure.f)
+
+    def test_callbacks(self):
+
+        m = Maps()
+        m.data = self.data
+        m.set_data_specs(xcoord="x", ycoord="y", in_crs=3857)
+        m.set_plot_specs(plot_epsg=3857, shape="rectangles")
+
+        m.plot_map()
+
+        # test all callbacks
+        for n, cb in enumerate(m.cb.cb_list):
+
+            kwargs = dict(ID=1, pos=(1, 2), val=3.365734)
+            if cb == "load":
+                kwargs["database"] = pd.DataFrame([1, 2, 3, 4])
+                kwargs["load_method"] = "xs"
+            callback = getattr(m.cb, cb)
+            callback = callback.__func__.__get__(m.cb)
+            callback(**kwargs)
+
         plt.close(m.figure.f)
 
     def test_add_overlay(self):
