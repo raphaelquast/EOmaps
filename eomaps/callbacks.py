@@ -137,6 +137,7 @@ class callbacks(object):
         pos_precision=4,
         val_precision=4,
         permanent=False,
+        val_fmt=None,
         **kwargs,
     ):
         """
@@ -155,11 +156,22 @@ class callbacks(object):
             The floating-point precision of the coordinates.
             The default is 4.
         val_precision : int
-            The floating-point precision of the parameter-values.
-            The default is 4.
+            The floating-point precision of the parameter-values (only used if
+            "val_fmt=None"). The default is 4.
         permanent : bool
             Indicator if the annotation should be temporary (False) or
             permanent (True). The default is False
+        val_fmt : callable, optional
+            A callabel that is used to transform the value into the desired
+            output of the following form:
+
+                >>> def val_fmt(m, val):
+                >>>     # m   ... the Maps object
+                >>>     # val ... the value
+                >>>     return f"{val:.2f}"
+
+            The default is None
+
         **kwargs
             kwargs passed to matplotlib.pyplot.annotate(). The default is:
 
@@ -213,9 +225,12 @@ class callbacks(object):
         printstr += f"{xlabel} = {x}\n{ylabel} = {y}\n"
         printstr += f"ID = {ID}\n"
 
-        if isinstance(val, (int, float)):
-            val = np.format_float_positional(val, trim="-", precision=val_precision)
-        printstr += f"{self.m.data_specs['parameter']} = {val}"
+        if val_fmt is not None:
+            printstr += val_fmt(self.m, val)
+        else:
+            if isinstance(val, (int, float)):
+                val = np.format_float_positional(val, trim="-", precision=val_precision)
+            printstr += f"{self.m.data_specs['parameter']} = {val}"
 
         self.annotation.set_text(printstr)
         # self.annotation.get_bbox_patch().set_alpha(0.75)

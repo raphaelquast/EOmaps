@@ -449,7 +449,7 @@ class Maps(object):
             plot_epsg=plot_epsg,
             radius=radius,
             radius_crs=radius_crs,
-            cpos="c",
+            cpos=cpos,
             parameter=parameter,
             xcoord=xcoord,
             ycoord=ycoord,
@@ -555,7 +555,10 @@ class Maps(object):
 
         coll.set_picker(picker)
 
-        self.updatedict = dict(
+        # trigger drawing the figure
+        f.canvas.draw()
+
+        self.figure = _Maps_plot(
             f=f,
             gridspec=gs,
             colorbar_gs=cbgs,
@@ -572,8 +575,6 @@ class Maps(object):
             label=label,
             tick_precision=tick_precision,
         )
-
-        self.figure = _Maps_plot(**self.updatedict)
 
     def _prepare_data(
         self,
@@ -608,7 +609,7 @@ class Maps(object):
         if radius_crs is None:
             radius_crs = self.plot_specs["radius_crs"]
         if cpos is None:
-            cpos = "c"
+            cpos = cpos
         if shape is None:
             shape = self.plot_specs["shape"]
 
@@ -1173,7 +1174,9 @@ class Maps(object):
         **kwargs :
             all kwargs are passed to `gdf.plot(**kwargs)`
         """
-        ax = self.updatedict["ax"]
+        assert hasattr(self, "figure"), "you must call .plot_map() first!"
+
+        ax = self.figure.ax
 
         defaultargs = dict(facecolor="none", edgecolor="k", lw=1.5)
         defaultargs.update(kwargs)
@@ -1225,9 +1228,9 @@ class Maps(object):
         if legendlabel is None:
             legendlabel = dataspec.get("name", "overlay")
 
-        assert hasattr(self, "updatedict"), "you must call .plot_map() first!"
+        assert hasattr(self, "figure"), "you must call .plot_map() first!"
 
-        ax = self.updatedict["ax"]
+        ax = self.figure.ax
 
         if not all([i in dataspec for i in ["resolution", "category", "name"]]):
             assert False, (
@@ -1327,6 +1330,7 @@ class Maps(object):
         shape : str
             the shapes to plot (either "ellipses" or "rectangles")
         """
+        assert hasattr(self, "figure"), "you must call .plot_map() first!"
 
         if parameter is None:
             parameter = next(i for i in data.keys() if i not in [xcoord, ycoord])
@@ -1501,7 +1505,7 @@ class Maps(object):
 
                         callback(**clickdict, **kwargs)
                 else:
-                    if "annotate" in self._attached_cbs:
+                    if "annotate" in [i.split("__")[0] for i in self._attached_cbs]:
                         self._cb_hide_annotate()
 
         cid = self.figure.f.canvas.mpl_connect("pick_event", onpick)
@@ -1588,7 +1592,7 @@ class Maps(object):
         # a function to hide the annotation of an empty area is clicked
         if hasattr(self.cb, "annotation"):
             self.cb.annotation.set_visible(False)
-            self._blit()
+            self._blit(self.cb.annotation)
 
     # implement blitting (see https://stackoverflow.com/a/29284318/9703451)
     def _safe_draw(self):
