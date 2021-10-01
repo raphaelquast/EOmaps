@@ -32,6 +32,17 @@ class TestBasicPlotting(unittest.TestCase):
 
         plt.close(m.figure.f)
 
+    def test_alpha_and_splitbins(self):
+        m = Maps()
+        m.data = self.data
+        m.set_data_specs(xcoord="x", ycoord="y", in_crs=3857)
+        m.set_plot_specs(plot_epsg=4326, shape="rectangles", alpha=0.4)
+        m.set_classify_specs(scheme="Percentiles", pct=[0.1, 0.2])
+
+        m.plot_map()
+
+        plt.close(m.figure.f)
+
     def test_classification(self):
         m = Maps()
         m.data = self.data
