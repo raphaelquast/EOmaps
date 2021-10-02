@@ -2,9 +2,8 @@
 [![pypi](https://img.shields.io/pypi/v/eomaps)](https://pypi.org/project/eomaps/)
 # EOmaps
 
-a general-purpose library to plot maps of large non-rectangular datasets.
+A general-purpose library to plot interactive maps of geographical datasets.
 
-❗❗❗ this library is a **work-in-progress** and subject to structural changes ❗❗❗  
 🚀  feel free to contribute!
 
 ### features
@@ -22,23 +21,58 @@ a simple `pip install eomaps` should do the trick
 - check out the example-notebook: 🛸 [A_basic_map.ipynb](https://github.com/raphaelquast/maps/blob/dev/examples/A_basic_map.ipynb) 🛸
 
 ```python
+import pandas as pd
 from eomaps import Maps
 
+# initialize Maps object
 m = Maps()
 
-m.data = "... a pandas-dataframe with coordinates and data-values ..."
+# set the data
+m.data = pd.DataFrame(dict(lat=[...], lon=[...], value=[...]))
+m.set_data_specs(xcoord="lat", ycoord="lon", parameter="value", in_crs=4326)
 
-m.set_data_specs("... data specifications ...")
-m.set_plot_specs("... variables that control the appearance of the plot ...")
-m.set_classify_specs("... automatic classification of the data va mapclassify ...")
+# set the appearance of the plot
+m.set_plot_specs(plot_epsg=4326, shape="rectangles")
+m.set_classify_specs(scheme="Quantiles", k=5)
 
 # plot the map
 m.plot_map()
 
-m.add_callback(...)
-m.add_discrete_layer(...)
-m.add_overlay(...)
+m.add_callback(...)        # attach a callback-function
+m.add_discrete_layer(...)  # plot additional data-layers
+m.add_gdf(...)             # plot geo-dataframes
 
-m.figure.   # access to individual objects of the generated figure (f, ax, cb, gridspec etc.)
+m.add_overlay(...)         # add overlay-layers
 
+m.add_annotation(...)      # add annotations
+m.add_marker(...)          # add markers
+
+# access individual objects of the generated figure
+# (f, ax, cb, gridspec etc.)
+m.figure.<...>
+
+
+# save the figure
+m.savefig("oooh_what_a_nice_figure.png", dpi=300)  
 ```
+
+
+### callbacks
+(e.g. execute functions when clicking on the map)
+- `"annotate"`: add annotations to the map
+- `"mark"`: add markers to the map
+- `"plot"`: generate a plot of the picked values
+- `"print_to_console"`: print pixel-info to the console
+- `"get_values"`: save the picked values to a dict
+- `"load"`: load objects from a collection
+- ... or use a custom function
+
+    ```python
+    def some_callback(self, **kwargs):
+        print("hello world")
+        print("the position of the clicked pixel", kwargs["pos"])
+        print("the data-index of the clicked pixel", kwargs["ID"])
+        print("data-value of the clicked pixel", kwargs["val"])
+        self.m  # access to the Maps object
+    m.add_callback(some_callback)
+    ```
