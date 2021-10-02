@@ -1724,7 +1724,7 @@ class Maps(object):
                 # call cleanup methods on removal
                 fname = name.split("__")[0]
                 if hasattr(self.cb, f"_{fname}_cleanup"):
-                    getattr(self.cb, f"_{fname}_cleanup")(self)
+                    getattr(self.cb, f"_{fname}_cleanup")()
 
                 print(f"Removed the callback: '{name}'.")
 

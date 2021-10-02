@@ -32,6 +32,44 @@ class TestBasicPlotting(unittest.TestCase):
 
         plt.close(m.figure.f)
 
+    def test_simple_map2(self):
+        m = Maps()
+        m.data = self.data
+
+        for cpos in ["ul", "ur", "ll", "lr", "c"]:
+            m.set_data_specs(xcoord="x", ycoord="y", in_crs=3857)
+            m.set_plot_specs(
+                plot_epsg=4326,
+                title="asdf",
+                label="bsdf",
+                radius=1,
+                radius_crs="out",
+                histbins=100,
+                density=True,
+                cpos=cpos,
+            )
+            m.plot_map()
+
+            plt.close(m.figure.f)
+
+    def test_simple_map(self):
+        m = Maps()
+        m.data = self.data
+        m.set_data_specs(xcoord="x", ycoord="y", in_crs=3857)
+        m.set_plot_specs(
+            plot_epsg=4326,
+            title="asdf",
+            label="bsdf",
+            radius=1,
+            radius_crs="out",
+            histbins=100,
+            density=True,
+            cpos="ur",
+        )
+        m.plot_map()
+
+        plt.close(m.figure.f)
+
     def test_alpha_and_splitbins(self):
         m = Maps()
         m.data = self.data
@@ -76,6 +114,8 @@ class TestBasicPlotting(unittest.TestCase):
                 mouse_button = 2
 
             m.add_callback(cb, double_click=double_click, mouse_button=mouse_button)
+
+            m.remove_callback(f"{cb}__{double_click}_{mouse_button}")
 
         plt.close(m.figure.f)
 
