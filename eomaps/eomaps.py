@@ -599,6 +599,8 @@ class Maps(object):
             xcoord = self.data_specs["xcoord"]
         if ycoord is None:
             ycoord = self.data_specs["ycoord"]
+        if parameter is None:
+            parameter = self.data_specs["parameter"]
 
         if in_crs is None:
             in_crs = self.data_specs["in_crs"]
@@ -805,7 +807,11 @@ class Maps(object):
                 w=(p0[0] - p1[0]).max(),
                 h=(p0[1] - p3[1]).max(),
             )
-
+        else:
+            raise TypeError(
+                f"'{shape}' is not a valid shape, use one of:\n"
+                + "    - 'ellipses'\n    - 'rectangles'"
+            )
         self._props = props
 
         return props

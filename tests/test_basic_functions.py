@@ -114,8 +114,11 @@ class TestBasicPlotting(unittest.TestCase):
                 mouse_button = 2
 
             m.add_callback(cb, double_click=double_click, mouse_button=mouse_button)
-
+            self.assertTrue(
+                list(m._attached_cbs) == [f"{cb}__{double_click}_{mouse_button}"]
+            )
             m.remove_callback(f"{cb}__{double_click}_{mouse_button}")
+            self.assertTrue(len(m._attached_cbs) == 0)
 
         plt.close(m.figure.f)
 
@@ -224,3 +227,21 @@ class TestBasicPlotting(unittest.TestCase):
         m.data_specs == m2.data_specs
         m.data_specs == m2.plot_specs
         m.classify_specs == m2.classify_specs
+
+    def test_prepare_data(self):
+        m = Maps()
+        m.data = self.data
+        m.set_data_specs(xcoord="x", ycoord="y", in_crs=3857, parameter="value")
+        data = m._prepare_data()
+        self.assertTrue(
+            sorted(list(data.keys()))
+            == sorted(["x0", "y0", "w", "h", "theta", "ids", "z_data"])
+        )
+
+        m.set_data_specs(xcoord="x", ycoord="y", in_crs=3857, parameter="value")
+        m.set_plot_specs(shape="rectangles")
+        data = m._prepare_data()
+        self.assertTrue(
+            sorted(list(data.keys()))
+            == sorted(["verts", "x0", "y0", "ids", "z_data", "w", "h"])
+        )
