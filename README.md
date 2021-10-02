@@ -44,6 +44,31 @@ m.add_overlay(...)         # add overlay-layers
 m.add_annotation(...)      # add annotations
 m.add_marker(...)          # add markers
 
-m.figure.   # access to individual objects of the generated figure (f, ax, cb, gridspec etc.)
 
+m.savefig(...)             # save the figure
+
+# access individual objects of the generated figure
+# (f, ax, cb, gridspec etc.)
+m.figure.<...>
 ```
+
+
+### callbacks
+execute functions when clicking on the map:
+- `"annotate"`: add annotations to the map
+- `"mark"`: add marker to the map
+- `"plot"`: generate a plot of the picked values
+- `"print_to_console"`: print pixel-info to the console
+- `"get_values"`: save the picked values to a dict
+- `"load"`: load objects from a collection
+- ... or use a custom function
+
+    ```python
+    def some_callback(self, **kwargs):
+        print("hello world")
+        print("the position of the clicked pixel", kwargs["pos"])
+        print("the data-index of the clicked pixel", kwargs["ID"])
+        print("data-value of the clicked pixel", kwargs["val"])
+        self.m  # access to the Maps object
+    m.add_callback(some_callback)
+    ```
