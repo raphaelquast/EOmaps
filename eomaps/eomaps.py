@@ -1188,7 +1188,9 @@ class Maps(object):
         defaultargs = dict(facecolor="none", edgecolor="k", lw=1.5)
         defaultargs.update(kwargs)
 
-        gdf.plot(ax=ax, aspect=ax.get_aspect(), **defaultargs)
+        gdf.to_crs(epsg=self.plot_specs["plot_epsg"]).plot(
+            ax=ax, aspect=ax.get_aspect(), **defaultargs
+        )
 
     def add_overlay(
         self,
