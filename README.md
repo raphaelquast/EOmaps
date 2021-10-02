@@ -2,9 +2,8 @@
 [![pypi](https://img.shields.io/pypi/v/eomaps)](https://pypi.org/project/eomaps/)
 # EOmaps
 
-a general-purpose library to plot maps of large non-rectangular datasets.
+A general-purpose library to plot interactive maps of geographical datasets.
 
-❗❗❗ this library is a **work-in-progress** and subject to structural changes ❗❗❗  
 🚀  feel free to contribute!
 
 ### features
