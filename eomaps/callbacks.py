@@ -125,7 +125,7 @@ class callbacks(object):
 
         if isinstance(val, (int, float)):
             val = np.format_float_positional(val, trim="-", precision=4)
-        printstr += f"{self.data_specs['parameter']} = {val}"
+        printstr += f"{self.m.data_specs['parameter']} = {val}"
 
         print(printstr)
 
@@ -137,12 +137,15 @@ class callbacks(object):
         pos_precision=4,
         val_precision=4,
         permanent=False,
-        val_fmt=None,
+        text=None,
         **kwargs,
     ):
         """
-        a callback-function to annotate basic properties from the fit on double-click
-        use as:    spatial_plot(... , callback=cb_annotate)
+        a callback-function to annotate basic properties from the fit on
+        double-click, use as:    spatial_plot(... , callback=cb_annotate)
+
+        if permanent = True, the generated annotations are accessible via
+        `m.permanent_annotations`
 
         Parameters
         ----------
@@ -161,16 +164,20 @@ class callbacks(object):
         permanent : bool
             Indicator if the annotation should be temporary (False) or
             permanent (True). The default is False
-        val_fmt : callable, optional
-            A callabel that is used to transform the value into the desired
-            output of the following form:
+        text : callable or str, optional
+            if str: the string to print
+            if callable: A function that returns the string that should be
+            printed in the annotation with the following call-signature:
 
-                >>> def val_fmt(m, val):
+                >>> def text(m, ID, val, pos):
                 >>>     # m   ... the Maps object
+                >>>     # ID  ... the ID
+                >>>     # pos ... the position
                 >>>     # val ... the value
-                >>>     return f"{val:.2f}"
+                >>>
+                >>>     return "the string to print"
 
-            The default is None
+            The default is None.
 
         **kwargs
             kwargs passed to matplotlib.pyplot.annotate(). The default is:
@@ -202,46 +209,74 @@ class callbacks(object):
 
         ax = self.m.figure.ax
 
-        styledict = dict(
-            xytext=(20, 20),
-            textcoords="offset points",
-            bbox=dict(boxstyle="round", fc="w"),
-            arrowprops=dict(arrowstyle="->"),
-        )
-
-        styledict.update(**kwargs)
-
-        if not hasattr(self, "annotation"):
-            self.annotation = ax.annotate("", xy=pos, **styledict)
-
-        self.annotation.set_visible(True)
-        self.annotation.xy = pos
-
-        printstr = ""
-        x, y = [
-            np.format_float_positional(i, trim="-", precision=pos_precision)
-            for i in pos
-        ]
-        printstr += f"{xlabel} = {x}\n{ylabel} = {y}\n"
-        printstr += f"ID = {ID}\n"
-
-        if val_fmt is not None:
-            printstr += val_fmt(self.m, val)
+        if hasattr(self, "annotation") and not permanent:
+            # re-use the attached annotation
+            annotation = self.annotation
         else:
+            # create a new annotation
+            styledict = dict(
+                xytext=(20, 20),
+                textcoords="offset points",
+                bbox=dict(boxstyle="round", fc="w"),
+                arrowprops=dict(arrowstyle="->"),
+            )
+
+            styledict.update(**kwargs)
+            annotation = ax.annotate("", xy=pos, **styledict)
+
+            if not permanent:
+                self.annotation = annotation
+            else:
+                if not hasattr(self, "permanent_annotations"):
+                    self.permanent_annotations = [annotation]
+                else:
+                    self.permanent_annotations.append(annotation)
+
+        annotation.set_visible(True)
+        annotation.xy = pos
+
+        if text is None:
+            x, y = [
+                np.format_float_positional(i, trim="-", precision=pos_precision)
+                for i in pos
+            ]
             if isinstance(val, (int, float)):
                 val = np.format_float_positional(val, trim="-", precision=val_precision)
-            printstr += f"{self.m.data_specs['parameter']} = {val}"
 
-        self.annotation.set_text(printstr)
-        # self.annotation.get_bbox_patch().set_alpha(0.75)
+            printstr = (
+                f"{xlabel} = {x}\n{ylabel} = {y}\n"
+                + (f"ID = {ID}\n" if ID is not None else "")
+                + (
+                    f"{self.m.data_specs['parameter']} = {val}"
+                    if val is not None
+                    else ""
+                )
+            )
+        elif isinstance(text, str):
+            printstr = text
+        elif callable(text):
+            printstr = text(self.m, ID, val, pos)
+
+        annotation.set_text(printstr)
 
         # use blitting instead of f.canvas.draw() to speed up annotation generation
         # in case a large collection is plotted
-        self.m._blit(self.annotation)
 
         if permanent:
+            # no need to blit because _grab_background() draws the annotation!
+            self.m._blit(annotation)
             self.m._grab_background(redraw=False)
-            del self.annotation
+        else:
+            self.m._blit(annotation)
+
+    def clear_annotations(self):
+        """
+        remove all permanent annotations from the plot
+        """
+        if hasattr(self, "permanent_annotations"):
+            while len(self.permanent_annotations) > 0:
+                ann = self.permanent_annotations.pop(0)
+                ann.remove()
 
     def _annotate_cleanup(self):
         if hasattr(self.m, "background"):
@@ -251,6 +286,10 @@ class callbacks(object):
         if hasattr(self.m, "draw_cid"):
             self.m.figure.f.canvas.mpl_disconnect(self.m.draw_cid)
             del self.m.draw_cid
+        # remove draw_event callback
+        if hasattr(self, "annotation"):
+            self.annotation.set_visible(False)
+            del self.annotation
 
     def plot(self, ID=None, pos=None, val=None, x_index="pos", precision=4, **kwargs):
         """
@@ -407,6 +446,7 @@ class callbacks(object):
             Indicator which shape to draw. Currently supported shapes are:
                 - circle
                 - ellipse
+                - rectangle
 
             The default is "circle".
         buffer : float, optional
@@ -430,15 +470,18 @@ class callbacks(object):
         if not hasattr(self, "_pick_markers"):
             self._pick_markers = []
 
-        if shape == "circle":
-            if radius is None:
-                radiusx = np.abs(np.diff(np.unique(self.m._props["x0"])).mean()) / 2.0
-                radiusy = np.abs(np.diff(np.unique(self.m._props["y0"])).mean()) / 2.0
-            p = Circle(pos, np.sqrt(radiusx ** 2 + radiusy ** 2) * buffer, **kwargs)
-        elif shape == "ellipse":
+        if radius is None:
             radiusx = np.abs(np.diff(np.unique(self.m._props["x0"])).mean()) / 2.0
             radiusy = np.abs(np.diff(np.unique(self.m._props["y0"])).mean()) / 2.0
+        else:
+            if isinstance(radius, (list, tuple)):
+                radiusx, radiusy = radius
+            else:
+                radiusx = radiusy = radius
 
+        if shape == "circle":
+            p = Circle(pos, np.sqrt(radiusx ** 2 + radiusy ** 2) * buffer, **kwargs)
+        elif shape == "ellipse":
             p = Ellipse(
                 pos,
                 np.mean(radiusx) * 2 * buffer,
@@ -446,9 +489,6 @@ class callbacks(object):
                 **kwargs,
             )
         elif shape == "rectangle":
-            radiusx = np.abs(np.diff(np.unique(self.m._props["x0"])).mean()) / 2.0
-            radiusy = np.abs(np.diff(np.unique(self.m._props["y0"])).mean()) / 2.0
-
             p = Rectangle(
                 [pos[0] - radiusx * buffer, pos[1] - radiusy * buffer],
                 np.mean(radiusx) * 2 * buffer,

@@ -1,6 +1,6 @@
 """a collection of helper-functions to generate map-plots"""
 
-from functools import partial, lru_cache
+from functools import partial, lru_cache, wraps
 import warnings
 
 import numpy as np
@@ -310,6 +310,7 @@ class Maps(object):
     def set_orientation(self, orientation="horizontal"):
         """
         set the orientation of the plot
+        (must be called before m.plot_map() !)
 
         Parameters
         ----------
@@ -598,6 +599,8 @@ class Maps(object):
             xcoord = self.data_specs["xcoord"]
         if ycoord is None:
             ycoord = self.data_specs["ycoord"]
+        if parameter is None:
+            parameter = self.data_specs["parameter"]
 
         if in_crs is None:
             in_crs = self.data_specs["in_crs"]
@@ -804,7 +807,11 @@ class Maps(object):
                 w=(p0[0] - p1[0]).max(),
                 h=(p0[1] - p3[1]).max(),
             )
-
+        else:
+            raise TypeError(
+                f"'{shape}' is not a valid shape, use one of:\n"
+                + "    - 'ellipses'\n    - 'rectangles'"
+            )
         self._props = props
 
         return props
@@ -1285,6 +1292,8 @@ class Maps(object):
         shape="ellipses",
     ):
         """
+        add another layer of pixels
+
         Parameters
         ----------
         data : pandas.DataFrame
@@ -1467,7 +1476,7 @@ class Maps(object):
         # TODO support multiple assignments for callbacks
         # make sure multiple callbacks of the same funciton are only assigned
         # if multiple assignments are properly handled
-        multi_cb_functions = ["mark"]
+        multi_cb_functions = ["mark", "annotate"]
 
         no_multi_cb = [*self.cb.cb_list]
         for i in multi_cb_functions:
@@ -1513,6 +1522,147 @@ class Maps(object):
 
         return cid
 
+    def add_marker(
+        self,
+        ID=None,
+        xy=None,
+        xy_crs=None,
+        radius=None,
+        shape="circle",
+        buffer=1,
+        **kwargs,
+    ):
+        """
+        add a marker to the plot
+
+        Parameters
+        ----------
+        ID : any
+            The index-value of the pixel in m.data.
+        xy : tuple
+            A tuple of the position of the pixel provided in "xy_crs".
+            If None, xy must be provided in the coordinate-system of the plot!
+            The default is None
+        xy_crs : any
+            the identifier of the coordinate-system for the xy-coordinates
+        radius : float or None, optional
+            The radius of the marker. If None, it will be evaluated based
+            on the pixel-spacing of the provided dataset
+            The default is None.
+        shape : str, optional
+            Indicator which shape to draw. Currently supported shapes are:
+                - circle
+                - ellipse
+                - rectangle
+
+            The default is "circle".
+        buffer : float, optional
+            A factor to scale the size of the shape. The default is 1.
+        **kwargs :
+            kwargs passed to the matplotlib patch.
+            (e.g. `facecolor`, `edgecolor`, `linewidth`, `alpha` etc.)
+
+        Returns
+        -------
+        None.
+
+        """
+        if ID is not None:
+            assert xy is None, "You can only provide 'ID' or 'pos' not both!"
+
+            xy = self.data.loc[ID][
+                [self.data_specs["xcoord"], self.data_specs["ycoord"]]
+            ].values
+            xy_crs = self.data_specs["in_crs"]
+
+        if xy is not None:
+
+            if xy_crs is not None:
+                # get coordinate transformation
+                transformer = Transformer.from_crs(
+                    CRS.from_user_input(xy_crs),
+                    CRS.from_user_input(self.plot_specs["plot_epsg"]),
+                    always_xy=True,
+                )
+                # transform coordinates
+                xy = transformer.transform(*xy)
+
+        # add marker
+        self.cb.mark(ID=ID, pos=xy, radius=radius, shape=shape, buffer=buffer, **kwargs)
+
+    def add_annotation(
+        self,
+        ID=None,
+        xy=None,
+        xy_crs=None,
+        text=None,
+        **kwargs,
+    ):
+        """
+        add an annotation to the plot
+
+        Parameters
+        ----------
+        ID : any
+            The index-value of the pixel in m.data.
+        xy : tuple
+            A tuple of the position of the pixel provided in "xy_crs".
+            If None, xy must be provided in the coordinate-system of the plot!
+            The default is None
+        xy_crs : any
+            the identifier of the coordinate-system for the xy-coordinates
+        text : callable or str, optional
+            if str: the string to print
+            if callable: A function that returns the string that should be
+            printed in the annotation with the following call-signature:
+
+                >>> def text(m, ID, val, pos):
+                >>>     # m   ... the Maps object
+                >>>     # ID  ... the ID
+                >>>     # pos ... the position
+                >>>     # val ... the value
+                >>>
+                >>>     return "the string to print"
+
+            The default is None.
+
+        **kwargs
+            kwargs passed to m.cb.annotate
+        Returns
+        -------
+        None.
+
+        """
+        if ID is not None:
+            assert xy is None, "You can only provide 'ID' or 'pos' not both!"
+
+            xy = self.data.loc[ID][
+                [self.data_specs["xcoord"], self.data_specs["ycoord"]]
+            ].values
+            xy_crs = self.data_specs["in_crs"]
+
+        if xy is not None:
+
+            if xy_crs is not None:
+                # get coordinate transformation
+                transformer = Transformer.from_crs(
+                    CRS.from_user_input(xy_crs),
+                    CRS.from_user_input(self.plot_specs["plot_epsg"]),
+                    always_xy=True,
+                )
+                # transform coordinates
+                xy = transformer.transform(*xy)
+
+        # add marker
+        self.cb.annotate(
+            ID=ID,
+            pos=xy,
+            val=None if ID is None else self.data.loc[ID][self.data_specs["parameter"]],
+            permanent=True,
+            text=text,
+            **kwargs,
+        )
+
     def remove_callback(self, callback):
         """
         remove an attached callback from the figure
@@ -1552,7 +1702,7 @@ class Maps(object):
                 names = [callback]
                 if names[0] not in self._attached_cbs:
                     warnings.warn(
-                        f"The callback '{name}' is not attached and can not"
+                        f"The callback '{names[0]}' is not attached and can not"
                         + " be removed. Attached callbacks are:\n    - "
                         + "    - \n".join(list(self._attached_cbs))
                     )
@@ -1580,7 +1730,7 @@ class Maps(object):
                 # call cleanup methods on removal
                 fname = name.split("__")[0]
                 if hasattr(self.cb, f"_{fname}_cleanup"):
-                    getattr(self.cb, f"_{fname}_cleanup")(self)
+                    getattr(self.cb, f"_{fname}_cleanup")()
 
                 print(f"Removed the callback: '{name}'.")
 
@@ -1645,3 +1795,7 @@ class Maps(object):
         if artist is not None:
             self.figure.ax.draw_artist(artist)
         self.figure.f.canvas.blit(self.figure.f.bbox)
+
+    @wraps(plt.savefig)
+    def savefig(self, **kwargs):
+        self.figure.f.savefig(**kwargs)
