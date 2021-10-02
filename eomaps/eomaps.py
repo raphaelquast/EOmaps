@@ -1799,5 +1799,5 @@ class Maps(object):
         self.figure.f.canvas.blit(self.figure.f.bbox)
 
     @wraps(plt.savefig)
-    def savefig(self, **kwargs):
-        self.figure.f.savefig(**kwargs)
+    def savefig(self, *args, **kwargs):
+        self.figure.f.savefig(*args, **kwargs)
