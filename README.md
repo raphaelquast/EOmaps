@@ -22,15 +22,19 @@ a simple `pip install eomaps` should do the trick
 - check out the example-notebook: 🛸 [A_basic_map.ipynb](https://github.com/raphaelquast/maps/blob/dev/examples/A_basic_map.ipynb) 🛸
 
 ```python
+import pandas as pd
 from eomaps import Maps
 
+# initialize Maps object
 m = Maps()
 
-m.data = "... a pandas-dataframe with coordinates and data-values ..."
+# set the data
+m.data = pd.DataFrame(dict(lat=[...], lon=[...], value=[...]))
+m.set_data_specs(xcoord="lat", ycoord="lon", parameter="value", in_crs=4326)
 
-m.set_data_specs("... data specifications ...")
-m.set_plot_specs("... variables that control the appearance of the plot ...")
-m.set_classify_specs("... automatic classification of the data va mapclassify ...")
+# set the appearance of the plot
+m.set_plot_specs(plot_epsg=4326, shape="rectangles")
+m.set_classify_specs(scheme="Quantiles", k=5)
 
 # plot the map
 m.plot_map()
@@ -44,17 +48,18 @@ m.add_overlay(...)         # add overlay-layers
 m.add_annotation(...)      # add annotations
 m.add_marker(...)          # add markers
 
-
-m.savefig(...)             # save the figure
-
 # access individual objects of the generated figure
 # (f, ax, cb, gridspec etc.)
 m.figure.<...>
+
+
+# save the figure
+m.savefig("oooh_what_a_nice_figure.png", dpi=300)  
 ```
 
 
 ### callbacks
-execute functions when clicking on the map:
+(e.g. execute functions when clicking on the map)
 - `"annotate"`: add annotations to the map
 - `"mark"`: add marker to the map
 - `"plot"`: generate a plot of the picked values
