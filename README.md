@@ -61,7 +61,7 @@ m.savefig("oooh_what_a_nice_figure.png", dpi=300)
 ### callbacks
 (e.g. execute functions when clicking on the map)
 - `"annotate"`: add annotations to the map
-- `"mark"`: add marker to the map
+- `"mark"`: add markers to the map
 - `"plot"`: generate a plot of the picked values
 - `"print_to_console"`: print pixel-info to the console
 - `"get_values"`: save the picked values to a dict
