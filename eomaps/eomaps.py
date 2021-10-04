@@ -12,9 +12,11 @@ from pyproj import CRS, Transformer
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 from matplotlib import cm, collections
+from matplotlib.tri import Triangulation, TriMesh
 from matplotlib.colors import LinearSegmentedColormap
 from matplotlib.gridspec import GridSpec, GridSpecFromSubplotSpec, SubplotSpec
 from matplotlib.patches import Patch
+
 
 from cartopy import crs as ccrs
 from cartopy import feature as cfeature
@@ -82,7 +84,7 @@ class Maps(object):
             add_colorbar=True,
             coastlines=True,
             density=False,
-            shape="ellipses",
+            shape="trimesh_rectangles",
         )
 
         # default classify specs
@@ -260,8 +262,16 @@ class Maps(object):
             probability-density (True) or the number of counts per bin (False)
             The default is False.
         shape : str, optional
-            Indicator if "rectangles" or "ellipses" should be potted
-            The default is "ellipses".
+            Indicator how the data-points should be plotted
+                - "ellipses": plot projected ellipses
+                - "rectangles": plot projected rectangles
+                  Useful if pixel-boundaries should be visible.
+                  (Note: polygons will have a visible boundary even if the
+                   linewidth is set to 0!)
+                - "trimesh_rectangles": rectangles but drawn with a
+                  TriMesh collection so that there are no boundaries between
+                  the pixels. (e.g. useful for contourplots)
+            The default is "trimesh_rectangles".
         """
 
         for key, val in kwargs.items():
@@ -437,7 +447,10 @@ class Maps(object):
             or the probability density (True)
             The default is False.
         shape : str
-            the shapes to plot (either "ellipses" or "rectangles")
+            the shapes to plot
+                - ellipses
+                - rectangles
+                - trimesh_rectangles
         Returns
         -------
         dict :
@@ -815,6 +828,130 @@ class Maps(object):
                 w=(p0[0] - p1[0]).max(),
                 h=(p0[1] - p3[1]).max(),
             )
+
+        elif shape == "trimesh_rectangles":
+            # transform center-points
+            x0, y0 = transformer.transform(xorig, yorig)
+
+            if radius == "estimate":
+                if radius_crs == "in":
+                    radiusx = np.abs(np.diff(np.unique(xorig)).mean()) / 2.0
+                    radiusy = np.abs(np.diff(np.unique(yorig)).mean()) / 2.0
+                elif radius_crs == "out":
+                    radiusx = np.abs(np.diff(np.unique(x0)).mean()) / 2.0
+                    radiusy = np.abs(np.diff(np.unique(y0)).mean()) / 2.0
+            elif isinstance(radius, (list, tuple)):
+                radiusx, radiusy = radius
+            else:
+                radiusx = radius
+                radiusy = radius
+
+            if radius_crs == "in":
+                # fix position of pixel-center
+                if cpos == "c":
+                    pass
+                elif cpos == "ll":
+                    xorig += radiusx
+                    yorig += radiusy
+                elif cpos == "ul":
+                    xorig += radiusx
+                    yorig -= radiusy
+                elif cpos == "lr":
+                    xorig += radiusx
+                    yorig -= radiusy
+                elif cpos == "ur":
+                    xorig -= radiusx
+                    yorig -= radiusx
+
+            # transform corner-points
+            if radius_crs == "in":
+                # top right
+                p0 = transformer.transform(xorig + radiusx, yorig + radiusy)
+                # top left
+                p1 = transformer.transform(xorig - radiusx, yorig + radiusy)
+                # bottom left
+                p2 = transformer.transform(xorig - radiusx, yorig - radiusy)
+                # bottom right
+                p3 = transformer.transform(xorig + radiusx, yorig - radiusy)
+
+            elif radius_crs == "out":
+                p0 = xorig + radiusx, yorig + radiusy
+                p1 = xorig - radiusx, yorig + radiusy
+                p2 = xorig - radiusx, yorig - radiusy
+                p3 = xorig + radiusx, yorig - radiusy
+            else:
+                radius_t = Transformer.from_crs(
+                    CRS.from_user_input(in_crs),
+                    CRS.from_user_input(radius_crs),
+                    always_xy=True,
+                )
+                radius_t_p = Transformer.from_crs(
+                    CRS.from_user_input(radius_crs),
+                    CRS.from_user_input(plot_epsg),
+                    always_xy=True,
+                )
+
+                x0r, y0r = radius_t.transform(xorig, yorig)
+
+                # top right
+                p0 = radius_t_p.transform(x0r + radiusx, y0r + radiusy)
+                # top left
+                p1 = radius_t_p.transform(x0r - radiusx, y0r + radiusy)
+                # bottom left
+                p2 = radius_t_p.transform(x0r - radiusx, y0r - radiusy)
+                # bottom right
+                p3 = radius_t_p.transform(x0r + radiusx, y0r - radiusy)
+
+            if radius_crs == "out":
+                # fix position of pixel-center
+                if cpos == "c":
+                    pass
+                elif cpos == "ll":
+                    x0 += radiusx
+                    y0 += radiusy
+                elif cpos == "ul":
+                    x0 += radiusx
+                    y0 -= radiusy
+                elif cpos == "lr":
+                    x0 += radiusx
+                    y0 -= radiusy
+                elif cpos == "ur":
+                    x0 -= radiusx
+                    y0 -= radiusx
+
+            verts = np.array(list(zip(*[np.array(i).T for i in (p0, p1, p2, p3)])))
+            x = np.vstack(
+                [verts[:, 2][:, 0], verts[:, 3][:, 0], verts[:, 1][:, 0]]
+            ).T.ravel()
+            y = np.vstack(
+                [verts[:, 2][:, 1], verts[:, 3][:, 1], verts[:, 1][:, 1]]
+            ).T.ravel()
+
+            x2 = np.vstack(
+                [verts[:, 3][:, 0], verts[:, 0][:, 0], verts[:, 1][:, 0]]
+            ).T.ravel()
+            y2 = np.vstack(
+                [verts[:, 3][:, 1], verts[:, 0][:, 1], verts[:, 1][:, 1]]
+            ).T.ravel()
+
+            x = np.append(x, x2)
+            y = np.append(y, y2)
+
+            tri = Triangulation(
+                x, y, triangles=np.array(range(len(x))).reshape((len(x) // 3, 3))
+            )
+
+            # also attach max w & h (used for the kd-tree)
+            props = dict(
+                tri=tri,
+                x0=x0,
+                y0=y0,
+                ids=ids,
+                z_data=z_data,
+                w=(p0[0] - p1[0]).max(),
+                h=(p0[1] - p3[1]).max(),
+            )
+
         else:
             raise TypeError(
                 f"'{shape}' is not a valid shape, use one of:\n"
@@ -978,7 +1115,17 @@ class Maps(object):
                 transOffset=ax.transData,
             )
 
-        if shape == "rectangles":
+            if color is not None:
+                coll.set_color(color)
+            else:
+                coll.set_array(np.ma.masked_invalid(z_data))
+                coll.set_cmap(cmap)
+                coll.set_clim(vmin, vmax)
+                coll.set_norm(norm)
+            # coll.set_urls(ids)
+            ax.add_collection(coll)
+
+        elif shape == "rectangles":
             coll = collections.PolyCollection(
                 verts=props["verts"],
                 transOffset=ax.transData,
@@ -986,18 +1133,36 @@ class Maps(object):
             # add centroid positions (used by the picker in self._spatial_plot)
             coll._Maps_positions = list(zip(props["x0"], props["y0"]))
 
-        if color is not None:
-            coll.set_color(color)
-        else:
-            coll.set_array(np.ma.masked_invalid(z_data))
-            coll.set_cmap(cmap)
-            coll.set_clim(vmin, vmax)
-            coll.set_norm(norm)
-        coll.set_urls(ids)
+            if color is not None:
+                coll.set_color(color)
+            else:
+                coll.set_array(np.ma.masked_invalid(z_data))
+                coll.set_cmap(cmap)
+                coll.set_clim(vmin, vmax)
+                coll.set_norm(norm)
+            # coll.set_urls(ids)
+            ax.add_collection(coll)
 
-        # coll.set_facecolor(cbcmap(z_data))    # do this to properly treat nan-values
-        # coll.set_edgecolor('none')
-        ax.add_collection(coll)
+        elif shape == "trimesh_rectangles":
+            coll = TriMesh(props["tri"])
+            # add centroid positions (used by the picker in self._spatial_plot)
+            coll._Maps_positions = list(zip(props["x0"], props["y0"]))
+
+            if color is not None:
+                coll.set_color(color)
+            else:
+                z = np.ma.masked_invalid(z_data)
+                # tri-contour meshes need 3 values for each triangle
+                z = np.broadcast_to(z, (3, len(z))).T
+                # we plot 2 triangles per rectangle
+                z = np.broadcast_to(z, (2, *z.shape))
+
+                coll.set_array(z.ravel())
+                coll.set_cmap(cmap)
+                coll.set_clim(vmin, vmax)
+                coll.set_norm(norm)
+            # coll.set_urls(np.repeat(ids, 3, axis=0))
+            ax.add_collection(coll)
 
         return coll
 
@@ -1507,22 +1672,22 @@ class Maps(object):
             ):
                 ind = event.ind
                 if ind is not None:
-                    if isinstance(event.artist, collections.EllipseCollection):
+                    if isinstance(
+                        event.artist,
+                        (
+                            collections.EllipseCollection,
+                            collections.PolyCollection,
+                            collections.TriMesh,
+                        ),
+                    ):
                         clickdict = dict(
-                            pos=self.figure.coll.get_offsets()[ind],
-                            ID=self.figure.coll.get_urls()[ind],
-                            val=self.figure.coll.get_array()[ind],
+                            pos=(self._props["x0"][ind], self._props["y0"][ind]),
+                            ID=self._props["ids"][ind],
+                            val=self._props["z_data"][ind],
                         )
 
-                        callback(**clickdict, **kwargs)
-                    elif isinstance(event.artist, collections.PolyCollection):
-                        clickdict = dict(
-                            pos=self.figure.coll._Maps_positions[ind],
-                            ID=self.figure.coll.get_urls()[ind],
-                            val=self.figure.coll.get_array()[ind],
-                        )
+                    callback(**clickdict, **kwargs)
 
-                        callback(**clickdict, **kwargs)
                 else:
                     if "annotate" in [i.split("__")[0] for i in self._attached_cbs]:
                         self._cb_hide_annotate()
@@ -1707,7 +1872,6 @@ class Maps(object):
             print(f"Removed the callback: '{name}'.")
 
         else:
-
             if isinstance(callback, str):
                 names = [callback]
                 if names[0] not in self._attached_cbs:
