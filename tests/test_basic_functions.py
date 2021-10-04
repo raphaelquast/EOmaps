@@ -232,6 +232,7 @@ class TestBasicPlotting(unittest.TestCase):
         m = Maps()
         m.data = self.data
         m.set_data_specs(xcoord="x", ycoord="y", in_crs=3857, parameter="value")
+        m.set_plot_specs(shape="ellipses")
         data = m._prepare_data()
         self.assertTrue(
             sorted(list(data.keys()))
@@ -244,4 +245,12 @@ class TestBasicPlotting(unittest.TestCase):
         self.assertTrue(
             sorted(list(data.keys()))
             == sorted(["verts", "x0", "y0", "ids", "z_data", "w", "h"])
+        )
+
+        m.set_data_specs(xcoord="x", ycoord="y", in_crs=3857, parameter="value")
+        m.set_plot_specs(shape="trimesh_rectangles")
+        data = m._prepare_data()
+        self.assertTrue(
+            sorted(list(data.keys()))
+            == sorted(["tri", "x0", "y0", "ids", "z_data", "w", "h"])
         )
