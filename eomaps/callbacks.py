@@ -46,6 +46,7 @@ class callbacks(object):
         ID=None,
         pos=None,
         val=None,
+        ind=None,
         database=None,
         load_method="load_fit",
         load_multiple=False,
@@ -59,11 +60,13 @@ class callbacks(object):
         Parameters
         ----------
         ID : any
-            The index-value of the pixel in the data.
+            The index-value of the pixel in the dataframe.
         pos : tuple
             A tuple of the position of the pixel in plot-coordinates.
         val : int or float
             The parameter-value of the pixel.
+        ind : int
+            The index of the clicked pixel
         database : any
             The database object to use for loading the object
         load_method : str or callable
@@ -100,7 +103,7 @@ class callbacks(object):
         if hasattr(self, "picked_object"):
             del self.picked_object
 
-    def print_to_console(self, ID=None, pos=None, val=None):
+    def print_to_console(self, ID=None, pos=None, val=None, ind=None):
         """
         a callback-function that prints details on the clicked pixel to the
         console
@@ -113,6 +116,8 @@ class callbacks(object):
             A tuple of the position of the pixel in plot-coordinates.
         val : int or float
             The parameter-value of the pixel.
+        ind : int
+            The index of the clicked pixel
         """
         # crs = self._get_crs(self.plot_specs["plot_epsg"])
         # xlabel, ylabel = [crs.axis_info[0].abbrev, crs.axis_info[1].abbrev]
@@ -134,6 +139,7 @@ class callbacks(object):
         ID=None,
         pos=None,
         val=None,
+        ind=None,
         pos_precision=4,
         val_precision=4,
         permanent=False,
@@ -155,6 +161,8 @@ class callbacks(object):
             A tuple of the position of the pixel in plot-coordinates.
         val : int or float
             The parameter-value of the pixel.
+        ind : int
+            The index of the clicked pixel
         pos_precision : int
             The floating-point precision of the coordinates.
             The default is 4.
@@ -263,7 +271,6 @@ class callbacks(object):
         # in case a large collection is plotted
 
         if permanent:
-            # no need to blit because _grab_background() draws the annotation!
             self.m._blit(annotation)
             self.m._grab_background(redraw=False)
         else:
@@ -291,7 +298,16 @@ class callbacks(object):
             self.annotation.set_visible(False)
             del self.annotation
 
-    def plot(self, ID=None, pos=None, val=None, x_index="pos", precision=4, **kwargs):
+    def plot(
+        self,
+        ID=None,
+        pos=None,
+        val=None,
+        ind=None,
+        x_index="pos",
+        precision=4,
+        **kwargs,
+    ):
         """
         a callback-function to generate a dynamically updated plot of the
         values
@@ -313,6 +329,8 @@ class callbacks(object):
             A tuple of the position of the pixel in plot-coordinates.
         val : int or float
             The parameter-value of the pixel.
+        ind : int
+            The index of the clicked pixel
         x_index : str
             Indicator how the x-axis is labelled
 
@@ -378,7 +396,7 @@ class callbacks(object):
         if hasattr(self, "_pick_l"):
             del self._pick_l
 
-    def get_values(self, ID=None, pos=None, val=None):
+    def get_values(self, ID=None, pos=None, val=None, ind=None):
         """
         a callback-function that successively collects return-values in a dict
         accessible via "m.cb.picked_vals", with the following structure:
@@ -399,6 +417,8 @@ class callbacks(object):
             A tuple of the position of the pixel in plot-coordinates.
         val : int or float
             The parameter-value of the pixel.
+        ind : int
+            The index of the clicked pixel
         """
 
         if not hasattr(self, "picked_vals"):
@@ -417,9 +437,11 @@ class callbacks(object):
         ID=None,
         pos=None,
         val=None,
-        radius=None,
+        ind=None,
+        radius="pixel",
         shape="circle",
         buffer=1,
+        permanent=True,
         **kwargs,
     ):
         """
@@ -430,6 +452,11 @@ class callbacks(object):
 
         The added patches are accessible via `m.cb._pick_markers`
 
+        Note: If radius="pixel", the shape is determined from the
+              center plus/minus the width & height of the corresponding pixel.
+              For highly distorted projections this can lead to a "shift"
+              of the shape since the shape is then no longer properly centered.
+
         Parameters
         ----------
         ID : any
@@ -438,9 +465,14 @@ class callbacks(object):
             A tuple of the position of the pixel in plot-coordinates.
         val : int or float
             The parameter-value of the pixel.
-        radius : float or None, optional
-            The radius of the marker. If None, it will be evaluated based
-            on the pixel-spacing of the provided dataset
+        ind : int
+            The index of the clicked pixel
+        radius : float, string or None, optional
+            The radius of the marker.
+            If None, it will be evaluated based on the pixel-spacing of the
+            provided dataset
+            If "pixel" the pixel dimensions of the clicked pixel are used
+
             The default is None.
         shape : str, optional
             Indicator which shape to draw. Currently supported shapes are:
@@ -451,6 +483,10 @@ class callbacks(object):
             The default is "circle".
         buffer : float, optional
             A factor to scale the size of the shape. The default is 1.
+        permanent : bool, optional
+            Indicator if the shapes should be permanent (True) or removed
+            on each new double-click (False)
+            TODO: permanent=False not yet implemented!
         **kwargs :
             kwargs passed to the matplotlib patch.
             (e.g. `facecolor`, `edgecolor`, `linewidth`, `alpha` etc.)
@@ -473,6 +509,9 @@ class callbacks(object):
         if radius is None:
             radiusx = np.abs(np.diff(np.unique(self.m._props["x0"])).mean()) / 2.0
             radiusy = np.abs(np.diff(np.unique(self.m._props["y0"])).mean()) / 2.0
+        elif radius == "pixel":
+            radiusx = self.m._props["w"][ind] / 2
+            radiusy = self.m._props["h"][ind] / 2
         else:
             if isinstance(radius, (list, tuple)):
                 radiusx, radiusy = radius
@@ -484,25 +523,31 @@ class callbacks(object):
         elif shape == "ellipse":
             p = Ellipse(
                 pos,
-                np.mean(radiusx) * 2 * buffer,
-                np.mean(radiusy) * 2 * buffer,
+                radiusx * 2 * buffer,
+                radiusy * 2 * buffer,
                 **kwargs,
             )
         elif shape == "rectangle":
             p = Rectangle(
                 [pos[0] - radiusx * buffer, pos[1] - radiusy * buffer],
-                np.mean(radiusx) * 2 * buffer,
-                np.mean(radiusy) * 2 * buffer,
+                radiusx * 2 * buffer,
+                radiusy * 2 * buffer,
                 **kwargs,
             )
+        else:
+            raise TypeError(f"{shape} is not a valid marker-shape")
 
         artist = self.m.figure.ax.add_patch(p)
 
         self._pick_markers.append(artist)
 
-        # first draw the marker, then cache the new background
-        self.m._blit(artist)
-        self.m._grab_background(redraw=False)
+        if permanent:
+            # first draw the marker, then cache the new background
+            self.m._blit(artist)
+            self.m._grab_background(redraw=False)
+
+        if not permanent:
+            raise NotImplementedError("non-permanent markers not yet implemented!")
 
     def _mark_cleanup(self):
         if hasattr(self, "_pick_markers"):

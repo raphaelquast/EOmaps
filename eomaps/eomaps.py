@@ -782,8 +782,8 @@ class Maps(object):
                 y0=y0,
                 ids=ids,
                 z_data=z_data,
-                w=(p0[0] - p1[0]).max(),
-                h=(p0[1] - p3[1]).max(),
+                w=(p0[0] - p1[0]),
+                h=(p0[1] - p3[1]),
             )
 
         elif shape == "trimesh_rectangles":
@@ -855,8 +855,8 @@ class Maps(object):
                 y0=y0,
                 ids=ids,
                 z_data=z_data,
-                w=(p0[0] - p1[0]).max(),
-                h=(p0[1] - p3[1]).max(),
+                w=(p0[0] - p1[0]),
+                h=(p0[1] - p3[1]),
             )
 
         else:
@@ -1590,6 +1590,7 @@ class Maps(object):
                             pos=(self._props["x0"][ind], self._props["y0"][ind]),
                             ID=self._props["ids"][ind],
                             val=self._props["z_data"][ind],
+                            ind=ind,
                         )
 
                     callback(**clickdict, **kwargs)
