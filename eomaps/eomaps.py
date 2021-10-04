@@ -340,6 +340,14 @@ class Maps(object):
             data=self.data, **self.plot_specs, **self.data_specs, f_gridspec=f_gridspec
         )
 
+        # call the cleanup function if the figure is closed
+        # to ensure callbacks are removed
+        def on_close(event):
+            while len(self._attached_cbs) > 0:
+                self.remove_callback(list(self._attached_cbs)[-1])
+
+        self.figure.f.canvas.mpl_connect("close_event", on_close)
+
     def _spatial_plot(
         self,
         data,
