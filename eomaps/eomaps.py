@@ -84,7 +84,7 @@ class Maps(object):
             add_colorbar=True,
             coastlines=True,
             density=False,
-            shape="trimesh_rectangles",
+            shape="rectangles",
         )
 
         # default classify specs
