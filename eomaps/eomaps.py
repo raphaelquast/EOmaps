@@ -477,6 +477,9 @@ class Maps(object):
             ycoord=ycoord,
         )
 
+        # remember props for later use
+        self._props = props
+
         if label is None:
             label = parameter
         if title is None:
@@ -613,7 +616,6 @@ class Maps(object):
     ):
 
         # get specifications
-
         if data is None:
             data = self.data
         if xcoord is None:
@@ -633,7 +635,7 @@ class Maps(object):
         if radius_crs is None:
             radius_crs = self.plot_specs["radius_crs"]
         if cpos is None:
-            cpos = cpos
+            cpos = self.plot_specs["cpos"]
         if shape is None:
             shape = self.plot_specs["shape"]
 
@@ -645,43 +647,65 @@ class Maps(object):
 
         # get coordinate transformation
         transformer = Transformer.from_crs(
-            CRS.from_user_input(in_crs), CRS.from_user_input(plot_epsg), always_xy=True
+            CRS.from_user_input(in_crs),
+            CRS.from_user_input(plot_epsg),
+            always_xy=True,
         )
 
+        # estimate radius if provided in "in_crs"
+        if (radius == "estimate") and (radius_crs == "in"):
+            radiusx = np.abs(np.diff(np.unique(xorig)).mean()) / 2.0
+            radiusy = np.abs(np.diff(np.unique(yorig)).mean()) / 2.0
+        # ... or get manually specified radius
+        elif isinstance(radius, (list, tuple)):
+            radiusx, radiusy = radius
+        else:
+            radiusx = radius
+            radiusy = radius
+
+        # fix position of pixel-center if radius is in "in_crs"
+        if radius_crs == "in":
+            if cpos == "c":
+                pass
+            elif cpos == "ll":
+                xorig += radiusx
+                yorig += radiusy
+            elif cpos == "ul":
+                xorig += radiusx
+                yorig -= radiusy
+            elif cpos == "lr":
+                xorig -= radiusx
+                yorig += radiusy
+            elif cpos == "ur":
+                xorig -= radiusx
+                yorig -= radiusx
+
+        # transform center-points
+        x0, y0 = transformer.transform(xorig, yorig)
+
+        # estimate radius if provided in "plot_epsg"
+        if (radius == "estimate") and (radius_crs == "out"):
+            radiusx = np.abs(np.diff(np.unique(x0)).mean()) / 2.0
+            radiusy = np.abs(np.diff(np.unique(y0)).mean()) / 2.0
+
+        # fix position of pixel-center if radius is in "plot_epsg"
+        if radius_crs == "out":
+            if cpos == "c":
+                pass
+            elif cpos == "ll":
+                x0 += radiusx
+                y0 += radiusy
+            elif cpos == "ul":
+                x0 += radiusx
+                y0 -= radiusy
+            elif cpos == "lr":
+                x0 -= radiusx
+                y0 += radiusy
+            elif cpos == "ur":
+                x0 -= radiusx
+                y0 -= radiusx
+
         if shape == "ellipses":
-            # transform center-points
-            x0, y0 = transformer.transform(xorig, yorig)
-
-            if radius == "estimate":
-                if radius_crs == "in":
-                    radiusx = np.abs(np.diff(np.unique(xorig)).mean()) / 2.0
-                    radiusy = np.abs(np.diff(np.unique(yorig)).mean()) / 2.0
-                elif radius_crs == "out":
-                    radiusx = np.abs(np.diff(np.unique(x0)).mean()) / 2.0
-                    radiusy = np.abs(np.diff(np.unique(y0)).mean()) / 2.0
-            elif isinstance(radius, (list, tuple)):
-                radiusx, radiusy = radius
-            else:
-                radiusx = radius
-                radiusy = radius
-
-            if radius_crs == "in":
-                # fix position of pixel-center
-                if cpos == "c":
-                    pass
-                elif cpos == "ll":
-                    xorig += radiusx
-                    yorig += radiusy
-                elif cpos == "ul":
-                    xorig += radiusx
-                    yorig -= radiusy
-                elif cpos == "lr":
-                    xorig += radiusx
-                    yorig -= radiusy
-                elif cpos == "ur":
-                    xorig -= radiusx
-                    yorig -= radiusx
-
             # transform corner-points
             if radius_crs == "in":
                 x3, y3 = transformer.transform(xorig + radiusx, yorig)
@@ -710,58 +734,8 @@ class Maps(object):
 
             theta = np.rad2deg(np.arcsin(np.abs(y3 - y0) / w))
 
-            if radius_crs == "out":
-                # fix position of pixel-center
-                if cpos == "c":
-                    pass
-                elif cpos == "ll":
-                    x0 += radiusx
-                    y0 += radiusy
-                elif cpos == "ul":
-                    x0 += radiusx
-                    y0 -= radiusy
-                elif cpos == "lr":
-                    x0 += radiusx
-                    y0 -= radiusy
-                elif cpos == "ur":
-                    x0 -= radiusx
-                    y0 -= radiusx
-
             props = dict(x0=x0, y0=y0, w=w, h=h, theta=theta, ids=ids, z_data=z_data)
         elif shape == "rectangles":
-            # transform center-points
-            x0, y0 = transformer.transform(xorig, yorig)
-
-            if radius == "estimate":
-                if radius_crs == "in":
-                    radiusx = np.abs(np.diff(np.unique(xorig)).mean()) / 2.0
-                    radiusy = np.abs(np.diff(np.unique(yorig)).mean()) / 2.0
-                elif radius_crs == "out":
-                    radiusx = np.abs(np.diff(np.unique(x0)).mean()) / 2.0
-                    radiusy = np.abs(np.diff(np.unique(y0)).mean()) / 2.0
-            elif isinstance(radius, (list, tuple)):
-                radiusx, radiusy = radius
-            else:
-                radiusx = radius
-                radiusy = radius
-
-            if radius_crs == "in":
-                # fix position of pixel-center
-                if cpos == "c":
-                    pass
-                elif cpos == "ll":
-                    xorig += radiusx
-                    yorig += radiusy
-                elif cpos == "ul":
-                    xorig += radiusx
-                    yorig -= radiusy
-                elif cpos == "lr":
-                    xorig += radiusx
-                    yorig -= radiusy
-                elif cpos == "ur":
-                    xorig -= radiusx
-                    yorig -= radiusx
-
             # transform corner-points
             if radius_crs == "in":
                 # top right
@@ -800,23 +774,6 @@ class Maps(object):
                 p2 = radius_t_p.transform(x0r - radiusx, y0r - radiusy)
                 # bottom right
                 p3 = radius_t_p.transform(x0r + radiusx, y0r - radiusy)
-
-            if radius_crs == "out":
-                # fix position of pixel-center
-                if cpos == "c":
-                    pass
-                elif cpos == "ll":
-                    x0 += radiusx
-                    y0 += radiusy
-                elif cpos == "ul":
-                    x0 += radiusx
-                    y0 -= radiusy
-                elif cpos == "lr":
-                    x0 += radiusx
-                    y0 -= radiusy
-                elif cpos == "ur":
-                    x0 -= radiusx
-                    y0 -= radiusx
 
             # also attach max w & h (used for the kd-tree)
             props = dict(
@@ -830,39 +787,6 @@ class Maps(object):
             )
 
         elif shape == "trimesh_rectangles":
-            # transform center-points
-            x0, y0 = transformer.transform(xorig, yorig)
-
-            if radius == "estimate":
-                if radius_crs == "in":
-                    radiusx = np.abs(np.diff(np.unique(xorig)).mean()) / 2.0
-                    radiusy = np.abs(np.diff(np.unique(yorig)).mean()) / 2.0
-                elif radius_crs == "out":
-                    radiusx = np.abs(np.diff(np.unique(x0)).mean()) / 2.0
-                    radiusy = np.abs(np.diff(np.unique(y0)).mean()) / 2.0
-            elif isinstance(radius, (list, tuple)):
-                radiusx, radiusy = radius
-            else:
-                radiusx = radius
-                radiusy = radius
-
-            if radius_crs == "in":
-                # fix position of pixel-center
-                if cpos == "c":
-                    pass
-                elif cpos == "ll":
-                    xorig += radiusx
-                    yorig += radiusy
-                elif cpos == "ul":
-                    xorig += radiusx
-                    yorig -= radiusy
-                elif cpos == "lr":
-                    xorig += radiusx
-                    yorig -= radiusy
-                elif cpos == "ur":
-                    xorig -= radiusx
-                    yorig -= radiusx
-
             # transform corner-points
             if radius_crs == "in":
                 # top right
@@ -901,23 +825,6 @@ class Maps(object):
                 p2 = radius_t_p.transform(x0r - radiusx, y0r - radiusy)
                 # bottom right
                 p3 = radius_t_p.transform(x0r + radiusx, y0r - radiusy)
-
-            if radius_crs == "out":
-                # fix position of pixel-center
-                if cpos == "c":
-                    pass
-                elif cpos == "ll":
-                    x0 += radiusx
-                    y0 += radiusy
-                elif cpos == "ul":
-                    x0 += radiusx
-                    y0 -= radiusy
-                elif cpos == "lr":
-                    x0 += radiusx
-                    y0 -= radiusy
-                elif cpos == "ur":
-                    x0 -= radiusx
-                    y0 -= radiusx
 
             verts = np.array(list(zip(*[np.array(i).T for i in (p0, p1, p2, p3)])))
             x = np.vstack(
@@ -957,7 +864,6 @@ class Maps(object):
                 f"'{shape}' is not a valid shape, use one of:\n"
                 + "    - 'ellipses'\n    - 'rectangles'"
             )
-        self._props = props
 
         return props
 
@@ -1149,7 +1055,7 @@ class Maps(object):
             coll._Maps_positions = list(zip(props["x0"], props["y0"]))
 
             if color is not None:
-                coll.set_color(color)
+                coll.set_facecolors([color] * (len(props["x0"])) * 6)
             else:
                 z = np.ma.masked_invalid(z_data)
                 # tri-contour meshes need 3 values for each triangle
@@ -1460,9 +1366,9 @@ class Maps(object):
         vmax=None,
         color=None,
         radius="estimate",
-        radius_crs="in",
-        in_crs=4326,
-        cpos="c",
+        radius_crs=None,
+        in_crs=None,
+        cpos=None,
         legend_kwargs=True,
         shape="ellipses",
     ):
