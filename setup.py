@@ -11,8 +11,8 @@ from setuptools import setup, find_packages
 
 setup(
     name="EOmaps",
-    version="0.1.2",
-    description="a general-purpose library to plot and analyze large geographical datasets.",
+    version="0.1.3",
+    description="A general-purpose library to generate interactive plots of geographical datasets.",
     packages=find_packages(),
     package_dir={"eomaps": "eomaps"},
     include_package_data=False,
@@ -24,7 +24,7 @@ setup(
     url="https://github.com/raphaelquast/maps",
     long_description=(
         "A python module to quickly generate interactive "
-        + "plots of large geographical datasets."
+        + "plots of geographical datasets."
     ),
     install_requires=[
         "numpy",
@@ -35,6 +35,7 @@ setup(
         "descartes",
         "mapclassify",
         "pyproj",
+        "pyepsg",
     ],
     keywords=["visualization", "plotting", "maps", "geographical data"],
     # See https://pypi.python.org/pypi?%3Aaction=list_classifiers

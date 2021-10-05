@@ -51,6 +51,8 @@ class TestBasicPlotting(unittest.TestCase):
             m.plot_map()
 
             plt.close(m.figure.f)
+            if hasattr(m, "figure"):
+                del m.figure  # do this explicitly since it does not work with unittests
 
     def test_simple_map(self):
         m = Maps()
@@ -134,7 +136,7 @@ class TestBasicPlotting(unittest.TestCase):
         # test all callbacks
         for n, cb in enumerate(m.cb.cb_list):
 
-            kwargs = dict(ID=1, pos=(1, 2), val=3.365734)
+            kwargs = dict(ID=1, pos=(1, 2), val=3.365734, ind=None)
             if cb == "load":
                 kwargs["database"] = pd.DataFrame([1, 2, 3, 4])
                 kwargs["load_method"] = "xs"
@@ -183,8 +185,8 @@ class TestBasicPlotting(unittest.TestCase):
 
         m.add_annotation(ID=m.data["value"].idxmax(), fontsize=15, text="adsf")
 
-        def customtext(m, ID, val, pos):
-            return f"{m.data_specs}\n {val}\n {pos}\n {ID}"
+        def customtext(m, ID, val, pos, ind):
+            return f"{m.data_specs}\n {val}\n {pos}\n {ID} \n {ind}"
 
         m.add_annotation(ID=m.data["value"].idxmin(), text=customtext)
 
@@ -213,6 +215,24 @@ class TestBasicPlotting(unittest.TestCase):
             edgecolor="r",
         )
 
+        with self.assertRaises(TypeError):
+            m.add_marker(
+                xy=(m.data.x[100], m.data.y[100]),
+                xy_crs=3857,
+                facecolor="none",
+                edgecolor="r",
+                radius="pixel",
+            )
+
+        for shape in ["circle", "ellipse", "rectangle"]:
+            m.add_marker(
+                85,
+                facecolor="none",
+                edgecolor="r",
+                radius="pixel",
+                shape=shape,
+            )
+
         plt.close(m.figure.f)
 
     def test_copy(self):
@@ -228,10 +248,20 @@ class TestBasicPlotting(unittest.TestCase):
         m.data_specs == m2.plot_specs
         m.classify_specs == m2.classify_specs
 
+        m3 = m.copy(copy_data=True)
+
+        m.data_specs == m3.data_specs
+        m.data_specs == m3.plot_specs
+        m.classify_specs == m3.classify_specs
+        m.data == m3.data
+        m3.plot_map()
+        plt.close(m3.figure.f)
+
     def test_prepare_data(self):
         m = Maps()
         m.data = self.data
         m.set_data_specs(xcoord="x", ycoord="y", in_crs=3857, parameter="value")
+        m.set_plot_specs(shape="ellipses")
         data = m._prepare_data()
         self.assertTrue(
             sorted(list(data.keys()))
@@ -244,4 +274,12 @@ class TestBasicPlotting(unittest.TestCase):
         self.assertTrue(
             sorted(list(data.keys()))
             == sorted(["verts", "x0", "y0", "ids", "z_data", "w", "h"])
+        )
+
+        m.set_data_specs(xcoord="x", ycoord="y", in_crs=3857, parameter="value")
+        m.set_plot_specs(shape="trimesh_rectangles")
+        data = m._prepare_data()
+        self.assertTrue(
+            sorted(list(data.keys()))
+            == sorted(["tri", "x0", "y0", "ids", "z_data", "w", "h"])
         )

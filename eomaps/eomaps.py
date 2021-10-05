@@ -2,19 +2,27 @@
 
 from functools import partial, lru_cache, wraps
 import warnings
+import copy
 
 import numpy as np
 import pandas as pd
-import geopandas as gpd
+
+try:
+    import geopandas as gpd
+except:
+    print("geopandas could not be imported... 'add_overlay' not working!")
+    pass
 from scipy.spatial import cKDTree
 from pyproj import CRS, Transformer
 
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 from matplotlib import cm, collections
+from matplotlib.tri import Triangulation, TriMesh
 from matplotlib.colors import LinearSegmentedColormap
 from matplotlib.gridspec import GridSpec, GridSpecFromSubplotSpec, SubplotSpec
 from matplotlib.patches import Patch
+
 
 from cartopy import crs as ccrs
 from cartopy import feature as cfeature
@@ -97,12 +105,14 @@ class Maps(object):
         data_specs=None,
         plot_specs=None,
         classify_specs=None,
+        copy_data=False,
     ):
         """
-        create a copy of the class that inherits all specifications
-        from the parent class (already loaded data is not copied!)
+        create a (deep)copy of the class that inherits all specifications
+        from the parent class.
+        Already loaded data is only copied if `copy_data=True`!
 
-        -> useful to quickly create plots with similar configuration but different data
+        -> useful to quickly create plots with similar configurations
 
         Parameters
         ----------
@@ -116,9 +126,15 @@ class Maps(object):
             a new Maps class.
         """
         initdict = dict()
-        initdict["data_specs"] = {**self.data_specs}
-        initdict["plot_specs"] = {**self.plot_specs}
-        initdict["classify_specs"] = {**self.classify_specs}
+        initdict["data_specs"] = {
+            key: copy.deepcopy(val) for key, val in self.data_specs.items()
+        }
+        initdict["plot_specs"] = {
+            key: copy.deepcopy(val) for key, val in self.plot_specs.items()
+        }
+        initdict["classify_specs"] = {
+            key: copy.deepcopy(val) for key, val in self.classify_specs.items()
+        }
 
         if data_specs:
             assert isinstance(data_specs, dict), "'data_specs' must be a dict"
@@ -138,6 +154,9 @@ class Maps(object):
         copy_cls.set_data_specs(**initdict["data_specs"])
         copy_cls.set_plot_specs(**initdict["plot_specs"])
         copy_cls.set_classify_specs(**initdict["classify_specs"])
+
+        if copy_data:
+            copy_cls.data = self.data.copy(deep=True)
 
         return copy_cls
 
@@ -260,8 +279,16 @@ class Maps(object):
             probability-density (True) or the number of counts per bin (False)
             The default is False.
         shape : str, optional
-            Indicator if "rectangles" or "ellipses" should be potted
-            The default is "ellipses".
+            Indicator how the data-points should be plotted
+                - "ellipses": plot projected ellipses
+                - "rectangles": plot projected rectangles
+                  Useful if pixel-boundaries should be visible.
+                  (Note: polygons will have a visible boundary even if the
+                   linewidth is set to 0!)
+                - "trimesh_rectangles": rectangles but drawn with a
+                  TriMesh collection so that there are no boundaries between
+                  the pixels. (e.g. useful for contourplots)
+            The default is "trimesh_rectangles".
         """
 
         for key, val in kwargs.items():
@@ -333,12 +360,31 @@ class Maps(object):
             The instances must be provided as:  [matplotlib.figure, matplotlib.GridSpec]
             The default is None in which case a new figure is created.
         """
+
+        assert not hasattr(self, "figure"), (
+            "There is already an open figure! "
+            + "Either close it before creating a new one or call "
+            + "`m2 = m.copy()` to copy the Maps object and then use `m2.plot_map()"
+        )
+
         if not hasattr(self, "data"):
             print("you must set the data first!")
 
         self._spatial_plot(
             data=self.data, **self.plot_specs, **self.data_specs, f_gridspec=f_gridspec
         )
+
+        # call the cleanup function if the figure is closed
+        # to ensure callbacks are removed
+        def on_close(event):
+            while len(self._attached_cbs) > 0:
+                self.remove_callback(list(self._attached_cbs)[-1])
+
+            # remove all figure properties
+            if hasattr(self, "figure"):
+                del self.figure
+
+        self.figure.f.canvas.mpl_connect("close_event", on_close)
 
     def _spatial_plot(
         self,
@@ -429,7 +475,10 @@ class Maps(object):
             or the probability density (True)
             The default is False.
         shape : str
-            the shapes to plot (either "ellipses" or "rectangles")
+            the shapes to plot
+                - ellipses
+                - rectangles
+                - trimesh_rectangles
         Returns
         -------
         dict :
@@ -455,6 +504,9 @@ class Maps(object):
             xcoord=xcoord,
             ycoord=ycoord,
         )
+
+        # remember props for later use
+        self._props = props
 
         if label is None:
             label = parameter
@@ -592,7 +644,6 @@ class Maps(object):
     ):
 
         # get specifications
-
         if data is None:
             data = self.data
         if xcoord is None:
@@ -612,7 +663,7 @@ class Maps(object):
         if radius_crs is None:
             radius_crs = self.plot_specs["radius_crs"]
         if cpos is None:
-            cpos = cpos
+            cpos = self.plot_specs["cpos"]
         if shape is None:
             shape = self.plot_specs["shape"]
 
@@ -624,43 +675,65 @@ class Maps(object):
 
         # get coordinate transformation
         transformer = Transformer.from_crs(
-            CRS.from_user_input(in_crs), CRS.from_user_input(plot_epsg), always_xy=True
+            CRS.from_user_input(in_crs),
+            CRS.from_user_input(plot_epsg),
+            always_xy=True,
         )
 
+        # estimate radius if provided in "in_crs"
+        if (radius == "estimate") and (radius_crs == "in"):
+            radiusx = np.abs(np.diff(np.unique(xorig)).mean()) / 2.0
+            radiusy = np.abs(np.diff(np.unique(yorig)).mean()) / 2.0
+        # ... or get manually specified radius
+        elif isinstance(radius, (list, tuple)):
+            radiusx, radiusy = radius
+        else:
+            radiusx = radius
+            radiusy = radius
+
+        # fix position of pixel-center if radius is in "in_crs"
+        if radius_crs == "in":
+            if cpos == "c":
+                pass
+            elif cpos == "ll":
+                xorig += radiusx
+                yorig += radiusy
+            elif cpos == "ul":
+                xorig += radiusx
+                yorig -= radiusy
+            elif cpos == "lr":
+                xorig -= radiusx
+                yorig += radiusy
+            elif cpos == "ur":
+                xorig -= radiusx
+                yorig -= radiusx
+
+        # transform center-points
+        x0, y0 = transformer.transform(xorig, yorig)
+
+        # estimate radius if provided in "plot_epsg"
+        if (radius == "estimate") and (radius_crs == "out"):
+            radiusx = np.abs(np.diff(np.unique(x0)).mean()) / 2.0
+            radiusy = np.abs(np.diff(np.unique(y0)).mean()) / 2.0
+
+        # fix position of pixel-center if radius is in "plot_epsg"
+        if radius_crs == "out":
+            if cpos == "c":
+                pass
+            elif cpos == "ll":
+                x0 += radiusx
+                y0 += radiusy
+            elif cpos == "ul":
+                x0 += radiusx
+                y0 -= radiusy
+            elif cpos == "lr":
+                x0 -= radiusx
+                y0 += radiusy
+            elif cpos == "ur":
+                x0 -= radiusx
+                y0 -= radiusx
+
         if shape == "ellipses":
-            # transform center-points
-            x0, y0 = transformer.transform(xorig, yorig)
-
-            if radius == "estimate":
-                if radius_crs == "in":
-                    radiusx = np.abs(np.diff(np.unique(xorig)).mean()) / 2.0
-                    radiusy = np.abs(np.diff(np.unique(yorig)).mean()) / 2.0
-                elif radius_crs == "out":
-                    radiusx = np.abs(np.diff(np.unique(x0)).mean()) / 2.0
-                    radiusy = np.abs(np.diff(np.unique(y0)).mean()) / 2.0
-            elif isinstance(radius, (list, tuple)):
-                radiusx, radiusy = radius
-            else:
-                radiusx = radius
-                radiusy = radius
-
-            if radius_crs == "in":
-                # fix position of pixel-center
-                if cpos == "c":
-                    pass
-                elif cpos == "ll":
-                    xorig += radiusx
-                    yorig += radiusy
-                elif cpos == "ul":
-                    xorig += radiusx
-                    yorig -= radiusy
-                elif cpos == "lr":
-                    xorig += radiusx
-                    yorig -= radiusy
-                elif cpos == "ur":
-                    xorig -= radiusx
-                    yorig -= radiusx
-
             # transform corner-points
             if radius_crs == "in":
                 x3, y3 = transformer.transform(xorig + radiusx, yorig)
@@ -689,58 +762,8 @@ class Maps(object):
 
             theta = np.rad2deg(np.arcsin(np.abs(y3 - y0) / w))
 
-            if radius_crs == "out":
-                # fix position of pixel-center
-                if cpos == "c":
-                    pass
-                elif cpos == "ll":
-                    x0 += radiusx
-                    y0 += radiusy
-                elif cpos == "ul":
-                    x0 += radiusx
-                    y0 -= radiusy
-                elif cpos == "lr":
-                    x0 += radiusx
-                    y0 -= radiusy
-                elif cpos == "ur":
-                    x0 -= radiusx
-                    y0 -= radiusx
-
             props = dict(x0=x0, y0=y0, w=w, h=h, theta=theta, ids=ids, z_data=z_data)
         elif shape == "rectangles":
-            # transform center-points
-            x0, y0 = transformer.transform(xorig, yorig)
-
-            if radius == "estimate":
-                if radius_crs == "in":
-                    radiusx = np.abs(np.diff(np.unique(xorig)).mean()) / 2.0
-                    radiusy = np.abs(np.diff(np.unique(yorig)).mean()) / 2.0
-                elif radius_crs == "out":
-                    radiusx = np.abs(np.diff(np.unique(x0)).mean()) / 2.0
-                    radiusy = np.abs(np.diff(np.unique(y0)).mean()) / 2.0
-            elif isinstance(radius, (list, tuple)):
-                radiusx, radiusy = radius
-            else:
-                radiusx = radius
-                radiusy = radius
-
-            if radius_crs == "in":
-                # fix position of pixel-center
-                if cpos == "c":
-                    pass
-                elif cpos == "ll":
-                    xorig += radiusx
-                    yorig += radiusy
-                elif cpos == "ul":
-                    xorig += radiusx
-                    yorig -= radiusy
-                elif cpos == "lr":
-                    xorig += radiusx
-                    yorig -= radiusy
-                elif cpos == "ur":
-                    xorig -= radiusx
-                    yorig -= radiusx
-
             # transform corner-points
             if radius_crs == "in":
                 # top right
@@ -780,23 +803,6 @@ class Maps(object):
                 # bottom right
                 p3 = radius_t_p.transform(x0r + radiusx, y0r - radiusy)
 
-            if radius_crs == "out":
-                # fix position of pixel-center
-                if cpos == "c":
-                    pass
-                elif cpos == "ll":
-                    x0 += radiusx
-                    y0 += radiusy
-                elif cpos == "ul":
-                    x0 += radiusx
-                    y0 -= radiusy
-                elif cpos == "lr":
-                    x0 += radiusx
-                    y0 -= radiusy
-                elif cpos == "ur":
-                    x0 -= radiusx
-                    y0 -= radiusx
-
             # also attach max w & h (used for the kd-tree)
             props = dict(
                 verts=np.array(list(zip(*[np.array(i).T for i in (p0, p1, p2, p3)]))),
@@ -804,15 +810,88 @@ class Maps(object):
                 y0=y0,
                 ids=ids,
                 z_data=z_data,
-                w=(p0[0] - p1[0]).max(),
-                h=(p0[1] - p3[1]).max(),
+                w=(p0[0] - p1[0]),
+                h=(p0[1] - p3[1]),
             )
+
+        elif shape == "trimesh_rectangles":
+            # transform corner-points
+            if radius_crs == "in":
+                # top right
+                p0 = transformer.transform(xorig + radiusx, yorig + radiusy)
+                # top left
+                p1 = transformer.transform(xorig - radiusx, yorig + radiusy)
+                # bottom left
+                p2 = transformer.transform(xorig - radiusx, yorig - radiusy)
+                # bottom right
+                p3 = transformer.transform(xorig + radiusx, yorig - radiusy)
+
+            elif radius_crs == "out":
+                p0 = xorig + radiusx, yorig + radiusy
+                p1 = xorig - radiusx, yorig + radiusy
+                p2 = xorig - radiusx, yorig - radiusy
+                p3 = xorig + radiusx, yorig - radiusy
+            else:
+                radius_t = Transformer.from_crs(
+                    CRS.from_user_input(in_crs),
+                    CRS.from_user_input(radius_crs),
+                    always_xy=True,
+                )
+                radius_t_p = Transformer.from_crs(
+                    CRS.from_user_input(radius_crs),
+                    CRS.from_user_input(plot_epsg),
+                    always_xy=True,
+                )
+
+                x0r, y0r = radius_t.transform(xorig, yorig)
+
+                # top right
+                p0 = radius_t_p.transform(x0r + radiusx, y0r + radiusy)
+                # top left
+                p1 = radius_t_p.transform(x0r - radiusx, y0r + radiusy)
+                # bottom left
+                p2 = radius_t_p.transform(x0r - radiusx, y0r - radiusy)
+                # bottom right
+                p3 = radius_t_p.transform(x0r + radiusx, y0r - radiusy)
+
+            verts = np.array(list(zip(*[np.array(i).T for i in (p0, p1, p2, p3)])))
+            x = np.vstack(
+                [verts[:, 2][:, 0], verts[:, 3][:, 0], verts[:, 1][:, 0]]
+            ).T.ravel()
+            y = np.vstack(
+                [verts[:, 2][:, 1], verts[:, 3][:, 1], verts[:, 1][:, 1]]
+            ).T.ravel()
+
+            x2 = np.vstack(
+                [verts[:, 3][:, 0], verts[:, 0][:, 0], verts[:, 1][:, 0]]
+            ).T.ravel()
+            y2 = np.vstack(
+                [verts[:, 3][:, 1], verts[:, 0][:, 1], verts[:, 1][:, 1]]
+            ).T.ravel()
+
+            x = np.append(x, x2)
+            y = np.append(y, y2)
+
+            tri = Triangulation(
+                x, y, triangles=np.array(range(len(x))).reshape((len(x) // 3, 3))
+            )
+
+            # also attach max w & h (used for the kd-tree)
+            props = dict(
+                tri=tri,
+                x0=x0,
+                y0=y0,
+                ids=ids,
+                z_data=z_data,
+                w=(p0[0] - p1[0]),
+                h=(p0[1] - p3[1]),
+            )
+
         else:
             raise TypeError(
                 f"'{shape}' is not a valid shape, use one of:\n"
-                + "    - 'ellipses'\n    - 'rectangles'"
+                + "    - 'ellipses'\n    - 'rectangles'\n    - 'trimesh_rectangles'"
             )
-        self._props = props
 
         return props
 
@@ -970,7 +1049,17 @@ class Maps(object):
                 transOffset=ax.transData,
             )
 
-        if shape == "rectangles":
+            if color is not None:
+                coll.set_color(color)
+            else:
+                coll.set_array(np.ma.masked_invalid(z_data))
+                coll.set_cmap(cmap)
+                coll.set_clim(vmin, vmax)
+                coll.set_norm(norm)
+            # coll.set_urls(ids)
+            ax.add_collection(coll)
+
+        elif shape == "rectangles":
             coll = collections.PolyCollection(
                 verts=props["verts"],
                 transOffset=ax.transData,
@@ -978,18 +1067,36 @@ class Maps(object):
             # add centroid positions (used by the picker in self._spatial_plot)
             coll._Maps_positions = list(zip(props["x0"], props["y0"]))
 
-        if color is not None:
-            coll.set_color(color)
-        else:
-            coll.set_array(np.ma.masked_invalid(z_data))
-            coll.set_cmap(cmap)
-            coll.set_clim(vmin, vmax)
-            coll.set_norm(norm)
-        coll.set_urls(ids)
+            if color is not None:
+                coll.set_color(color)
+            else:
+                coll.set_array(np.ma.masked_invalid(z_data))
+                coll.set_cmap(cmap)
+                coll.set_clim(vmin, vmax)
+                coll.set_norm(norm)
+            # coll.set_urls(ids)
+            ax.add_collection(coll)
 
-        # coll.set_facecolor(cbcmap(z_data))    # do this to properly treat nan-values
-        # coll.set_edgecolor('none')
-        ax.add_collection(coll)
+        elif shape == "trimesh_rectangles":
+            coll = TriMesh(props["tri"])
+            # add centroid positions (used by the picker in self._spatial_plot)
+            coll._Maps_positions = list(zip(props["x0"], props["y0"]))
+
+            if color is not None:
+                coll.set_facecolors([color] * (len(props["x0"])) * 6)
+            else:
+                z = np.ma.masked_invalid(z_data)
+                # tri-contour meshes need 3 values for each triangle
+                z = np.broadcast_to(z, (3, len(z))).T
+                # we plot 2 triangles per rectangle
+                z = np.broadcast_to(z, (2, *z.shape))
+
+                coll.set_array(z.ravel())
+                coll.set_cmap(cmap)
+                coll.set_clim(vmin, vmax)
+                coll.set_norm(norm)
+            # coll.set_urls(np.repeat(ids, 3, axis=0))
+            ax.add_collection(coll)
 
         return coll
 
@@ -1287,9 +1394,9 @@ class Maps(object):
         vmax=None,
         color=None,
         radius="estimate",
-        radius_crs="in",
-        in_crs=4326,
-        cpos="c",
+        radius_crs=None,
+        in_crs=None,
+        cpos=None,
         legend_kwargs=True,
         shape="ellipses",
     ):
@@ -1499,22 +1606,23 @@ class Maps(object):
             ):
                 ind = event.ind
                 if ind is not None:
-                    if isinstance(event.artist, collections.EllipseCollection):
+                    if isinstance(
+                        event.artist,
+                        (
+                            collections.EllipseCollection,
+                            collections.PolyCollection,
+                            collections.TriMesh,
+                        ),
+                    ):
                         clickdict = dict(
-                            pos=self.figure.coll.get_offsets()[ind],
-                            ID=self.figure.coll.get_urls()[ind],
-                            val=self.figure.coll.get_array()[ind],
+                            pos=(self._props["x0"][ind], self._props["y0"][ind]),
+                            ID=self._props["ids"][ind],
+                            val=self._props["z_data"][ind],
+                            ind=ind,
                         )
 
-                        callback(**clickdict, **kwargs)
-                    elif isinstance(event.artist, collections.PolyCollection):
-                        clickdict = dict(
-                            pos=self.figure.coll._Maps_positions[ind],
-                            ID=self.figure.coll.get_urls()[ind],
-                            val=self.figure.coll.get_array()[ind],
-                        )
+                    callback(**clickdict, **kwargs)
 
-                        callback(**clickdict, **kwargs)
                 else:
                     if "annotate" in [i.split("__")[0] for i in self._attached_cbs]:
                         self._cb_hide_annotate()
@@ -1577,8 +1685,10 @@ class Maps(object):
             ].values
             xy_crs = self.data_specs["in_crs"]
 
-        if xy is not None:
+            ind = self.data.index.get_loc(ID)
 
+        if xy is not None:
+            ind = None
             if xy_crs is not None:
                 # get coordinate transformation
                 transformer = Transformer.from_crs(
@@ -1590,7 +1700,9 @@ class Maps(object):
                 xy = transformer.transform(*xy)
 
         # add marker
-        self.cb.mark(ID=ID, pos=xy, radius=radius, shape=shape, buffer=buffer, **kwargs)
+        self.cb.mark(
+            ID=ID, pos=xy, radius=radius, ind=ind, shape=shape, buffer=buffer, **kwargs
+        )
 
     def add_annotation(
         self,
@@ -1660,6 +1772,7 @@ class Maps(object):
             ID=ID,
             pos=xy,
             val=None if ID is None else self.data.loc[ID][self.data_specs["parameter"]],
+            ind=None if ID is None else self.data.index.get_loc(ID),
             permanent=True,
             text=text,
             **kwargs,
@@ -1699,7 +1812,6 @@ class Maps(object):
             print(f"Removed the callback: '{name}'.")
 
         else:
-
             if isinstance(callback, str):
                 names = [callback]
                 if names[0] not in self._attached_cbs:
