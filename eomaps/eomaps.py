@@ -885,7 +885,7 @@ class Maps(object):
         else:
             raise TypeError(
                 f"'{shape}' is not a valid shape, use one of:\n"
-                + "    - 'ellipses'\n    - 'rectangles'"
+                + "    - 'ellipses'\n    - 'rectangles'\n    - 'trimesh_rectangles'"
             )
 
         return props
