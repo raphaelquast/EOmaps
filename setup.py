@@ -11,7 +11,7 @@ from setuptools import setup, find_packages
 
 setup(
     name="EOmaps",
-    version="0.1.2",
+    version="0.1.3",
     description="a general-purpose library to plot and analyze large geographical datasets.",
     packages=find_packages(),
     package_dir={"eomaps": "eomaps"},
