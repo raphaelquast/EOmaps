@@ -134,7 +134,7 @@ class TestBasicPlotting(unittest.TestCase):
         # test all callbacks
         for n, cb in enumerate(m.cb.cb_list):
 
-            kwargs = dict(ID=1, pos=(1, 2), val=3.365734)
+            kwargs = dict(ID=1, pos=(1, 2), val=3.365734, ind=None)
             if cb == "load":
                 kwargs["database"] = pd.DataFrame([1, 2, 3, 4])
                 kwargs["load_method"] = "xs"
@@ -183,8 +183,8 @@ class TestBasicPlotting(unittest.TestCase):
 
         m.add_annotation(ID=m.data["value"].idxmax(), fontsize=15, text="adsf")
 
-        def customtext(m, ID, val, pos):
-            return f"{m.data_specs}\n {val}\n {pos}\n {ID}"
+        def customtext(m, ID, val, pos, ind):
+            return f"{m.data_specs}\n {val}\n {pos}\n {ID} \n {ind}"
 
         m.add_annotation(ID=m.data["value"].idxmin(), text=customtext)
 
@@ -212,6 +212,24 @@ class TestBasicPlotting(unittest.TestCase):
             facecolor="none",
             edgecolor="r",
         )
+
+        with self.assertRaises(TypeError):
+            m.add_marker(
+                xy=(m.data.x[100], m.data.y[100]),
+                xy_crs=3857,
+                facecolor="none",
+                edgecolor="r",
+                radius="pixel",
+            )
+
+        for shape in ["circle", "ellipse", "rectangle"]:
+            m.add_marker(
+                85,
+                facecolor="none",
+                edgecolor="r",
+                radius="pixel",
+                shape=shape,
+            )
 
         plt.close(m.figure.f)
 

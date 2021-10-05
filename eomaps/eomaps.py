@@ -1657,8 +1657,10 @@ class Maps(object):
             ].values
             xy_crs = self.data_specs["in_crs"]
 
-        if xy is not None:
+            ind = self.data.index.get_loc(ID)
 
+        if xy is not None:
+            ind = None
             if xy_crs is not None:
                 # get coordinate transformation
                 transformer = Transformer.from_crs(
@@ -1670,7 +1672,9 @@ class Maps(object):
                 xy = transformer.transform(*xy)
 
         # add marker
-        self.cb.mark(ID=ID, pos=xy, radius=radius, shape=shape, buffer=buffer, **kwargs)
+        self.cb.mark(
+            ID=ID, pos=xy, radius=radius, ind=ind, shape=shape, buffer=buffer, **kwargs
+        )
 
     def add_annotation(
         self,
@@ -1740,6 +1744,7 @@ class Maps(object):
             ID=ID,
             pos=xy,
             val=None if ID is None else self.data.loc[ID][self.data_specs["parameter"]],
+            ind=None if ID is None else self.data.index.get_loc(ID),
             permanent=True,
             text=text,
             **kwargs,

@@ -177,11 +177,12 @@ class callbacks(object):
             if callable: A function that returns the string that should be
             printed in the annotation with the following call-signature:
 
-                >>> def text(m, ID, val, pos):
+                >>> def text(m, ID, val, pos, ind):
                 >>>     # m   ... the Maps object
-                >>>     # ID  ... the ID
+                >>>     # ID  ... the ID in the dataframe
                 >>>     # pos ... the position
                 >>>     # val ... the value
+                >>>     # ind ... the index
                 >>>
                 >>>     return "the string to print"
 
@@ -263,7 +264,7 @@ class callbacks(object):
         elif isinstance(text, str):
             printstr = text
         elif callable(text):
-            printstr = text(self.m, ID, val, pos)
+            printstr = text(self.m, ID, val, pos, ind)
 
         annotation.set_text(printstr)
 
@@ -510,8 +511,13 @@ class callbacks(object):
             radiusx = np.abs(np.diff(np.unique(self.m._props["x0"])).mean()) / 2.0
             radiusy = np.abs(np.diff(np.unique(self.m._props["y0"])).mean()) / 2.0
         elif radius == "pixel":
-            radiusx = self.m._props["w"][ind] / 2
-            radiusy = self.m._props["h"][ind] / 2
+            if ID is not None:
+                if ind is None:
+                    ind = self.m.data.index.get_loc(ID)
+                radiusx = self.m._props["w"][ind] / 2
+                radiusy = self.m._props["h"][ind] / 2
+            else:
+                raise TypeError("you must provide eiter the ID or an explicit radius!")
         else:
             if isinstance(radius, (list, tuple)):
                 radiusx, radiusy = radius
