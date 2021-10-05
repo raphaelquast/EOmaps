@@ -121,7 +121,9 @@ class callbacks(object):
         """
         # crs = self._get_crs(self.plot_specs["plot_epsg"])
         # xlabel, ylabel = [crs.axis_info[0].abbrev, crs.axis_info[1].abbrev]
-        xlabel, ylabel = [i.name for i in self.m.figure.ax.projection.axis_info[:2]]
+        # xlabel, ylabel = [i.name for i in self.m.figure.ax.projection.axis_info[:2]]
+        xlabel = self.m.data_specs["xcoord"]
+        ylabel = self.m.data_specs["ycoord"]
 
         printstr = ""
         x, y = [np.format_float_positional(i, trim="-", precision=4) for i in pos]
@@ -214,7 +216,9 @@ class callbacks(object):
         # area is clicked!
         # crs = self._get_crs(self.plot_specs["plot_epsg"])
         # xlabel, ylabel = [crs.axis_info[0].abbrev, crs.axis_info[1].abbrev]
-        xlabel, ylabel = [i.abbrev for i in self.m.figure.ax.projection.axis_info[:2]]
+        # xlabel, ylabel = [i.abbrev for i in self.m.figure.ax.projection.axis_info[:2]]
+        xlabel = self.m.data_specs["xcoord"]
+        ylabel = self.m.data_specs["ycoord"]
 
         ax = self.m.figure.ax
 
@@ -362,9 +366,8 @@ class callbacks(object):
 
         # crs = self._get_crs(self.plot_specs["plot_epsg"])
         # _pick_xlabel, _pick_ylabel = [crs.axis_info[0].abbrev, crs.axis_info[1].abbrev]
-        _pick_xlabel, _pick_ylabel = [
-            i.abbrev for i in self.m.figure.ax.projection.axis_info[:2]
-        ]
+        _pick_xlabel = self.m.data_specs["xcoord"]
+        _pick_ylabel = self.m.data_specs["ycoord"]
 
         if x_index == "pos":
             x, y = [

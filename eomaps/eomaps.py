@@ -6,7 +6,12 @@ import copy
 
 import numpy as np
 import pandas as pd
-import geopandas as gpd
+
+try:
+    import geopandas as gpd
+except:
+    print("geopandas could not be imported... 'add_overlay' not working!")
+    pass
 from scipy.spatial import cKDTree
 from pyproj import CRS, Transformer
 
