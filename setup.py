@@ -35,6 +35,7 @@ setup(
         "descartes",
         "mapclassify",
         "pyproj",
+        "pyepsg",
     ],
     keywords=["visualization", "plotting", "maps", "geographical data"],
     # See https://pypi.python.org/pypi?%3Aaction=list_classifiers
