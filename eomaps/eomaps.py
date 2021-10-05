@@ -2,6 +2,7 @@
 
 from functools import partial, lru_cache, wraps
 import warnings
+import copy
 
 import numpy as np
 import pandas as pd
@@ -99,12 +100,14 @@ class Maps(object):
         data_specs=None,
         plot_specs=None,
         classify_specs=None,
+        copy_data=False,
     ):
         """
-        create a copy of the class that inherits all specifications
-        from the parent class (already loaded data is not copied!)
+        create a (deep)copy of the class that inherits all specifications
+        from the parent class.
+        Already loaded data is only copied if `copy_data=True`!
 
-        -> useful to quickly create plots with similar configuration but different data
+        -> useful to quickly create plots with similar configurations
 
         Parameters
         ----------
@@ -118,9 +121,15 @@ class Maps(object):
             a new Maps class.
         """
         initdict = dict()
-        initdict["data_specs"] = {**self.data_specs}
-        initdict["plot_specs"] = {**self.plot_specs}
-        initdict["classify_specs"] = {**self.classify_specs}
+        initdict["data_specs"] = {
+            key: copy.deepcopy(val) for key, val in self.data_specs.items()
+        }
+        initdict["plot_specs"] = {
+            key: copy.deepcopy(val) for key, val in self.plot_specs.items()
+        }
+        initdict["classify_specs"] = {
+            key: copy.deepcopy(val) for key, val in self.classify_specs.items()
+        }
 
         if data_specs:
             assert isinstance(data_specs, dict), "'data_specs' must be a dict"
@@ -140,6 +149,9 @@ class Maps(object):
         copy_cls.set_data_specs(**initdict["data_specs"])
         copy_cls.set_plot_specs(**initdict["plot_specs"])
         copy_cls.set_classify_specs(**initdict["classify_specs"])
+
+        if copy_data:
+            copy_cls.data = self.data.copy(deep=True)
 
         return copy_cls
 
@@ -343,6 +355,13 @@ class Maps(object):
             The instances must be provided as:  [matplotlib.figure, matplotlib.GridSpec]
             The default is None in which case a new figure is created.
         """
+
+        assert not hasattr(self, "figure"), (
+            "There is already an open figure! "
+            + "Either close it before creating a new one or call "
+            + "`m2 = m.copy()` to copy the Maps object and then use `m2.plot_map()"
+        )
+
         if not hasattr(self, "data"):
             print("you must set the data first!")
 
@@ -355,6 +374,10 @@ class Maps(object):
         def on_close(event):
             while len(self._attached_cbs) > 0:
                 self.remove_callback(list(self._attached_cbs)[-1])
+
+            # remove all figure properties
+            if hasattr(self, "figure"):
+                del self.figure
 
         self.figure.f.canvas.mpl_connect("close_event", on_close)
 
