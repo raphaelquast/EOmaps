@@ -249,8 +249,12 @@ class Maps(object):
         plot_epsg : in, optional
             The epsg-code of the projection to use for plotting. The default is 4326.
         radius_crs : str, optional
-            Indicator if the radius is specified in data-crs units (e.g. "in")-
-            or in plot-crs units (e.g. "out"). The default is "in".
+            The coordinate-system in which the radius is provided.
+                - "in" : the crs of the input-dataframe (e.g. "in_crs")
+                - "out" : the crs used for plotting (e.g. "plot_epsg")
+                - a crs specification (e.g. epsg-code, wkt string etc.) that
+                  should be used to estimate the pixel-dimensions
+            The default is "in".
         radius : str, float or tuple, optional
             The radius of the patches in the crs defined via "radius_crs".
             If "estimate", the radius will be automatically determined from the
@@ -629,6 +633,24 @@ class Maps(object):
             tick_precision=tick_precision,
         )
 
+    def _set_cpos(self, x, y, radiusx, radiusy, cpos):
+        if cpos == "c":
+            pass
+        elif cpos == "ll":
+            x += radiusx
+            y += radiusy
+        elif cpos == "ul":
+            x += radiusx
+            y -= radiusy
+        elif cpos == "lr":
+            x -= radiusx
+            y += radiusy
+        elif cpos == "ur":
+            x -= radiusx
+            y -= radiusx
+
+        return x, y
+
     def _prepare_data(
         self,
         data=None,
@@ -680,58 +702,63 @@ class Maps(object):
             always_xy=True,
         )
 
-        # estimate radius if provided in "in_crs"
-        if (radius == "estimate") and (radius_crs == "in"):
-            radiusx = np.abs(np.diff(np.unique(xorig)).mean()) / 2.0
-            radiusy = np.abs(np.diff(np.unique(yorig)).mean()) / 2.0
-        # ... or get manually specified radius
-        elif isinstance(radius, (list, tuple)):
+        # get manually specified radius (e.g. if radius != "estimate")
+        if isinstance(radius, (list, tuple)):
             radiusx, radiusy = radius
         else:
             radiusx = radius
             radiusy = radius
 
-        # fix position of pixel-center if radius is in "in_crs"
         if radius_crs == "in":
-            if cpos == "c":
-                pass
-            elif cpos == "ll":
-                xorig += radiusx
-                yorig += radiusy
-            elif cpos == "ul":
-                xorig += radiusx
-                yorig -= radiusy
-            elif cpos == "lr":
-                xorig -= radiusx
-                yorig += radiusy
-            elif cpos == "ur":
-                xorig -= radiusx
-                yorig -= radiusx
+            if radius == "estimate":
+                radiusx = np.abs(np.diff(np.unique(xorig)).mean()) / 2.0
+                radiusy = np.abs(np.diff(np.unique(yorig)).mean()) / 2.0
 
-        # transform center-points
-        x0, y0 = transformer.transform(xorig, yorig)
+            # fix position of pixel-center if radius is in "in_crs"
+            # (must be done before transforming the coordinates!)
+            xorig, yorig = self._set_cpos(xorig, yorig, radiusx, radiusy, cpos)
 
-        # estimate radius if provided in "plot_epsg"
-        if (radius == "estimate") and (radius_crs == "out"):
-            radiusx = np.abs(np.diff(np.unique(x0)).mean()) / 2.0
-            radiusy = np.abs(np.diff(np.unique(y0)).mean()) / 2.0
+            # transform center-points
+            x0, y0 = transformer.transform(xorig, yorig)
 
-        # fix position of pixel-center if radius is in "plot_epsg"
         if radius_crs == "out":
-            if cpos == "c":
-                pass
-            elif cpos == "ll":
-                x0 += radiusx
-                y0 += radiusy
-            elif cpos == "ul":
-                x0 += radiusx
-                y0 -= radiusy
-            elif cpos == "lr":
-                x0 -= radiusx
-                y0 += radiusy
-            elif cpos == "ur":
-                x0 -= radiusx
-                y0 -= radiusx
+            # transform center-points
+            x0, y0 = transformer.transform(xorig, yorig)
+
+            # estimate radius if provided in "plot_epsg"
+            if radius == "estimate":
+                radiusx = np.abs(np.diff(np.unique(x0)).mean()) / 2.0
+                radiusy = np.abs(np.diff(np.unique(y0)).mean()) / 2.0
+
+            # fix position of pixel-center if radius is in "plot_epsg"
+            x0, y0 = self._set_cpos(x0, y0, radiusx, radiusy, cpos)
+
+        if radius_crs not in ["in", "out"]:
+            # transform from in-crs to radius-crs
+            radius_t = Transformer.from_crs(
+                CRS.from_user_input(in_crs),
+                CRS.from_user_input(radius_crs),
+                always_xy=True,
+            )
+            # transform from radius-crs to plot-crs
+            radius_t_p = Transformer.from_crs(
+                CRS.from_user_input(radius_crs),
+                CRS.from_user_input(plot_epsg),
+                always_xy=True,
+            )
+
+            # get center-coordinates in radius-crs
+            x0r, y0r = radius_t.transform(xorig, yorig)
+
+            if radius == "estimate":
+                radiusx = np.abs(np.diff(np.unique(x0r)).mean()) / 2.0
+                radiusy = np.abs(np.diff(np.unique(y0r)).mean()) / 2.0
+
+            # fix position of pixel-center if radius is in own crs
+            x0r, y0r = self._set_cpos(x0r, y0r, radiusx, radiusy, cpos)
+            # get new center-positions in plot-coordinates
+            # transform center-points
+            x0, y0 = radius_t_p.transform(x0r, y0r)
 
         if shape == "ellipses":
             # transform corner-points
@@ -742,18 +769,7 @@ class Maps(object):
                 x3, y3 = x0 + radiusx, y0
                 x4, y4 = x0, y0 + radiusy
             else:
-                radius_t = Transformer.from_crs(
-                    CRS.from_user_input(in_crs),
-                    CRS.from_user_input(radius_crs),
-                    always_xy=True,
-                )
-                radius_t_p = Transformer.from_crs(
-                    CRS.from_user_input(radius_crs),
-                    CRS.from_user_input(plot_epsg),
-                    always_xy=True,
-                )
-
-                x0r, y0r = radius_t.transform(xorig, yorig)
+                # get corner-points in plot-crs
                 x3, y3 = radius_t_p.transform(x0r + radiusx, y0r)
                 x4, y4 = radius_t_p.transform(x0r, y0r + radiusy)
 
@@ -776,24 +792,11 @@ class Maps(object):
                 p3 = transformer.transform(xorig + radiusx, yorig - radiusy)
 
             elif radius_crs == "out":
-                p0 = xorig + radiusx, yorig + radiusy
-                p1 = xorig - radiusx, yorig + radiusy
-                p2 = xorig - radiusx, yorig - radiusy
-                p3 = xorig + radiusx, yorig - radiusy
+                p0 = x0 + radiusx, y0 + radiusy
+                p1 = x0 - radiusx, y0 + radiusy
+                p2 = x0 - radiusx, y0 - radiusy
+                p3 = x0 + radiusx, y0 - radiusy
             else:
-                radius_t = Transformer.from_crs(
-                    CRS.from_user_input(in_crs),
-                    CRS.from_user_input(radius_crs),
-                    always_xy=True,
-                )
-                radius_t_p = Transformer.from_crs(
-                    CRS.from_user_input(radius_crs),
-                    CRS.from_user_input(plot_epsg),
-                    always_xy=True,
-                )
-
-                x0r, y0r = radius_t.transform(xorig, yorig)
-
                 # top right
                 p0 = radius_t_p.transform(x0r + radiusx, y0r + radiusy)
                 # top left
@@ -827,24 +830,11 @@ class Maps(object):
                 p3 = transformer.transform(xorig + radiusx, yorig - radiusy)
 
             elif radius_crs == "out":
-                p0 = xorig + radiusx, yorig + radiusy
-                p1 = xorig - radiusx, yorig + radiusy
-                p2 = xorig - radiusx, yorig - radiusy
-                p3 = xorig + radiusx, yorig - radiusy
+                p0 = x0 + radiusx, y0 + radiusy
+                p1 = x0 - radiusx, y0 + radiusy
+                p2 = x0 - radiusx, y0 - radiusy
+                p3 = x0 + radiusx, y0 - radiusy
             else:
-                radius_t = Transformer.from_crs(
-                    CRS.from_user_input(in_crs),
-                    CRS.from_user_input(radius_crs),
-                    always_xy=True,
-                )
-                radius_t_p = Transformer.from_crs(
-                    CRS.from_user_input(radius_crs),
-                    CRS.from_user_input(plot_epsg),
-                    always_xy=True,
-                )
-
-                x0r, y0r = radius_t.transform(xorig, yorig)
-
                 # top right
                 p0 = radius_t_p.transform(x0r + radiusx, y0r + radiusy)
                 # top left
