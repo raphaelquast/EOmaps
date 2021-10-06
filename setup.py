@@ -4,14 +4,14 @@
 This file is part of EOmaps.
 For COPYING and LICENSE details, please refer to the LICENSE file
 """
-
+from pathlib import Path
 from setuptools import setup, find_packages
 
-# from setuptools import find_packages
+version = (Path(__file__).parent / "VERSION").read_text().strip()
 
 setup(
     name="EOmaps",
-    version="0.1.3",
+    version=version,
     description="A general-purpose library to generate interactive plots of geographical datasets.",
     packages=find_packages(),
     package_dir={"eomaps": "eomaps"},
