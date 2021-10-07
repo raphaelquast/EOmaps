@@ -1612,7 +1612,7 @@ class Maps(object):
                             ind=ind,
                         )
 
-                    callback(**clickdict, **kwargs)
+                        callback(**clickdict, **kwargs)
 
                 else:
                     if "annotate" in [i.split("__")[0] for i in self._attached_cbs]:
