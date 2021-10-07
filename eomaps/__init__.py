@@ -1,6 +1,9 @@
-from pathlib import Path
+from pkg_resources import get_distribution, DistributionNotFound
 
-__version__ = (Path(__file__).parents[1] / "VERSION").read_text().strip()
+try:
+    __version__ = get_distribution(__name__).version
+except DistributionNotFound:
+    pass
 
 __author__ = "Raphael Quast"
 
