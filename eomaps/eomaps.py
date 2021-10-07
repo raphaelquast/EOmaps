@@ -634,20 +634,21 @@ class Maps(object):
         )
 
     def _set_cpos(self, x, y, radiusx, radiusy, cpos):
+        # use x = x + ...   instead of x +=  to allow casting from int to float
         if cpos == "c":
             pass
         elif cpos == "ll":
-            x += radiusx
-            y += radiusy
+            x = x + radiusx
+            y = y + radiusy
         elif cpos == "ul":
-            x += radiusx
-            y -= radiusy
+            x = x + radiusx
+            y = y - radiusy
         elif cpos == "lr":
-            x -= radiusx
-            y += radiusy
+            x = x - radiusx
+            y = y + radiusy
         elif cpos == "ur":
-            x -= radiusx
-            y -= radiusx
+            x = x - radiusx
+            y = y - radiusx
 
         return x, y
 
@@ -1611,7 +1612,7 @@ class Maps(object):
                             ind=ind,
                         )
 
-                    callback(**clickdict, **kwargs)
+                        callback(**clickdict, **kwargs)
 
                 else:
                     if "annotate" in [i.split("__")[0] for i in self._attached_cbs]:

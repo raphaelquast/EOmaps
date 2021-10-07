@@ -7,7 +7,7 @@ For COPYING and LICENSE details, please refer to the LICENSE file
 from pathlib import Path
 from setuptools import setup, find_packages
 
-version = (Path(__file__).parent / "VERSION").read_text().strip()
+version = "0.1.5"
 
 setup(
     name="EOmaps",
@@ -15,7 +15,7 @@ setup(
     description="A general-purpose library to generate interactive plots of geographical datasets.",
     packages=find_packages(),
     package_dir={"eomaps": "eomaps"},
-    include_package_data=False,
+    # include_package_data=True,
     author="Raphael Quast",
     author_email="raphael.quast@geo.tuwien.ac.at",
     maintainer="Raphael Quast",
