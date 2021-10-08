@@ -265,7 +265,9 @@ class TestBasicPlotting(unittest.TestCase):
         data = m._prepare_data()
         self.assertTrue(
             sorted(list(data.keys()))
-            == sorted(["x0", "y0", "w", "h", "theta", "ids", "z_data"])
+            == sorted(
+                ["x0", "y0", "w", "h", "theta", "ids", "z_data", "p0", "p1", "p2", "p3"]
+            )
         )
 
         m.set_data_specs(xcoord="x", ycoord="y", in_crs=3857, parameter="value")
@@ -273,7 +275,22 @@ class TestBasicPlotting(unittest.TestCase):
         data = m._prepare_data()
         self.assertTrue(
             sorted(list(data.keys()))
-            == sorted(["verts", "x0", "y0", "ids", "z_data", "w", "h"])
+            == sorted(
+                [
+                    "verts",
+                    "x0",
+                    "y0",
+                    "ids",
+                    "z_data",
+                    "w",
+                    "h",
+                    "p0",
+                    "p1",
+                    "p2",
+                    "p3",
+                    "theta",
+                ]
+            )
         )
 
         m.set_data_specs(xcoord="x", ycoord="y", in_crs=3857, parameter="value")
@@ -281,5 +298,20 @@ class TestBasicPlotting(unittest.TestCase):
         data = m._prepare_data()
         self.assertTrue(
             sorted(list(data.keys()))
-            == sorted(["tri", "x0", "y0", "ids", "z_data", "w", "h"])
+            == sorted(
+                [
+                    "tri",
+                    "x0",
+                    "y0",
+                    "ids",
+                    "z_data",
+                    "w",
+                    "h",
+                    "p0",
+                    "p1",
+                    "p2",
+                    "p3",
+                    "theta",
+                ]
+            )
         )
