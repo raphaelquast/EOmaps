@@ -705,6 +705,7 @@ class Maps(object):
         xcoord=None,
         ycoord=None,
         shape=None,
+        buffer=None,
     ):
 
         # get specifications
@@ -747,15 +748,21 @@ class Maps(object):
         # get manually specified radius (e.g. if radius != "estimate")
         if isinstance(radius, (list, tuple)):
             radiusx, radiusy = radius
+            # save radius for later use
+            self._radius = (radiusx, radiusy)
         else:
             radiusx = radius
             radiusy = radius
+            self._radius = (radiusx, radiusy)
 
         if radius_crs == "in":
             if radius == "estimate":
                 radiusx = np.abs(np.diff(np.unique(xorig)).mean()) / 2.0
                 radiusy = np.abs(np.diff(np.unique(yorig)).mean()) / 2.0
-
+                self._radius = (radiusx, radiusy)
+            if buffer is not None:
+                radiusx = radiusx * buffer
+                radiusy = radiusy * buffer
             # fix position of pixel-center if radius is in "in_crs"
             # (must be done before transforming the coordinates!)
             xorig, yorig = self._set_cpos(xorig, yorig, radiusx, radiusy, cpos)
@@ -771,6 +778,10 @@ class Maps(object):
             if radius == "estimate":
                 radiusx = np.abs(np.diff(np.unique(x0)).mean()) / 2.0
                 radiusy = np.abs(np.diff(np.unique(y0)).mean()) / 2.0
+                self._radius = (radiusx, radiusy)
+            if buffer is not None:
+                radiusx = radiusx * buffer
+                radiusy = radiusy * buffer
 
             # fix position of pixel-center if radius is in "plot_epsg"
             x0, y0 = self._set_cpos(x0, y0, radiusx, radiusy, cpos)
@@ -795,6 +806,10 @@ class Maps(object):
             if radius == "estimate":
                 radiusx = np.abs(np.diff(np.unique(x0r)).mean()) / 2.0
                 radiusy = np.abs(np.diff(np.unique(y0r)).mean()) / 2.0
+                self._radius = (radiusx, radiusy)
+            if buffer is not None:
+                radiusx = radiusx * buffer
+                radiusy = radiusy * buffer
 
             # fix position of pixel-center if radius is in own crs
             x0r, y0r = self._set_cpos(x0r, y0r, radiusx, radiusy, cpos)
@@ -802,90 +817,81 @@ class Maps(object):
             # transform center-points
             x0, y0 = radius_t_p.transform(x0r, y0r)
 
+        # transform corner-points
+        if radius_crs == "in":
+            # top right
+            p0 = transformer.transform(xorig + radiusx, yorig + radiusy)
+            # top left
+            p1 = transformer.transform(xorig - radiusx, yorig + radiusy)
+            # bottom left
+            p2 = transformer.transform(xorig - radiusx, yorig - radiusy)
+            # bottom right
+            p3 = transformer.transform(xorig + radiusx, yorig - radiusy)
+
+        elif radius_crs == "out":
+            p0 = x0 + radiusx, y0 + radiusy
+            p1 = x0 - radiusx, y0 + radiusy
+            p2 = x0 - radiusx, y0 - radiusy
+            p3 = x0 + radiusx, y0 - radiusy
+        else:
+            # top right
+            p0 = radius_t_p.transform(x0r + radiusx, y0r + radiusy)
+            # top left
+            p1 = radius_t_p.transform(x0r - radiusx, y0r + radiusy)
+            # bottom left
+            p2 = radius_t_p.transform(x0r - radiusx, y0r - radiusy)
+            # bottom right
+            p3 = radius_t_p.transform(x0r + radiusx, y0r - radiusy)
+
+        # transform mid-points
+        if radius_crs == "in":
+            x3, y3 = transformer.transform(xorig + radiusx, yorig)
+            x4, y4 = transformer.transform(xorig, yorig + radiusy)
+        elif radius_crs == "out":
+            x3, y3 = x0 + radiusx, y0
+            x4, y4 = x0, y0 + radiusy
+        else:
+            # get corner-points in plot-crs
+            x3, y3 = radius_t_p.transform(x0r + radiusx, y0r)
+            x4, y4 = radius_t_p.transform(x0r, y0r + radiusy)
+
+        # calculate width and height based on mid-points
+        w = np.abs(x3 - x0)
+        h = np.abs(y4 - y0)
+        # calculate rotation angle based on mid-point
+        theta = np.sign(y3 - y0) * np.rad2deg(np.arcsin(np.abs(y3 - y0) / w))
+
         if shape == "ellipses":
-            # transform corner-points
-            if radius_crs == "in":
-                x3, y3 = transformer.transform(xorig + radiusx, yorig)
-                x4, y4 = transformer.transform(xorig, yorig + radiusy)
-            elif radius_crs == "out":
-                x3, y3 = x0 + radiusx, y0
-                x4, y4 = x0, y0 + radiusy
-            else:
-                # get corner-points in plot-crs
-                x3, y3 = radius_t_p.transform(x0r + radiusx, y0r)
-                x4, y4 = radius_t_p.transform(x0r, y0r + radiusy)
-
-            w = np.abs(x3 - x0)
-            h = np.abs(y4 - y0)
-
-            theta = np.sign(y3 - y0) * np.rad2deg(np.arcsin(np.abs(y3 - y0) / w))
-
-            props = dict(x0=x0, y0=y0, w=w, h=h, theta=theta, ids=ids, z_data=z_data)
+            props = dict(
+                x0=x0,
+                y0=y0,
+                w=w,
+                h=h,
+                theta=theta,
+                ids=ids,
+                z_data=z_data,
+                p0=p0,
+                p1=p1,
+                p2=p2,
+                p3=p3,
+            )
         elif shape == "rectangles":
-            # transform corner-points
-            if radius_crs == "in":
-                # top right
-                p0 = transformer.transform(xorig + radiusx, yorig + radiusy)
-                # top left
-                p1 = transformer.transform(xorig - radiusx, yorig + radiusy)
-                # bottom left
-                p2 = transformer.transform(xorig - radiusx, yorig - radiusy)
-                # bottom right
-                p3 = transformer.transform(xorig + radiusx, yorig - radiusy)
-
-            elif radius_crs == "out":
-                p0 = x0 + radiusx, y0 + radiusy
-                p1 = x0 - radiusx, y0 + radiusy
-                p2 = x0 - radiusx, y0 - radiusy
-                p3 = x0 + radiusx, y0 - radiusy
-            else:
-                # top right
-                p0 = radius_t_p.transform(x0r + radiusx, y0r + radiusy)
-                # top left
-                p1 = radius_t_p.transform(x0r - radiusx, y0r + radiusy)
-                # bottom left
-                p2 = radius_t_p.transform(x0r - radiusx, y0r - radiusy)
-                # bottom right
-                p3 = radius_t_p.transform(x0r + radiusx, y0r - radiusy)
-
-            # also attach max w & h (used for the kd-tree)
             props = dict(
                 verts=np.array(list(zip(*[np.array(i).T for i in (p0, p1, p2, p3)]))),
                 x0=x0,
                 y0=y0,
                 ids=ids,
                 z_data=z_data,
-                w=(p0[0] - p1[0]),
-                h=(p0[1] - p3[1]),
+                w=w,
+                h=h,
+                theta=theta,
+                p0=p0,
+                p1=p1,
+                p2=p2,
+                p3=p3,
             )
 
         elif shape == "trimesh_rectangles":
-            # transform corner-points
-            if radius_crs == "in":
-                # top right
-                p0 = transformer.transform(xorig + radiusx, yorig + radiusy)
-                # top left
-                p1 = transformer.transform(xorig - radiusx, yorig + radiusy)
-                # bottom left
-                p2 = transformer.transform(xorig - radiusx, yorig - radiusy)
-                # bottom right
-                p3 = transformer.transform(xorig + radiusx, yorig - radiusy)
-
-            elif radius_crs == "out":
-                p0 = x0 + radiusx, y0 + radiusy
-                p1 = x0 - radiusx, y0 + radiusy
-                p2 = x0 - radiusx, y0 - radiusy
-                p3 = x0 + radiusx, y0 - radiusy
-            else:
-                # top right
-                p0 = radius_t_p.transform(x0r + radiusx, y0r + radiusy)
-                # top left
-                p1 = radius_t_p.transform(x0r - radiusx, y0r + radiusy)
-                # bottom left
-                p2 = radius_t_p.transform(x0r - radiusx, y0r - radiusy)
-                # bottom right
-                p3 = radius_t_p.transform(x0r + radiusx, y0r - radiusy)
-
             verts = np.array(list(zip(*[np.array(i).T for i in (p0, p1, p2, p3)])))
             x = np.vstack(
                 [verts[:, 2][:, 0], verts[:, 3][:, 0], verts[:, 1][:, 0]]
@@ -915,8 +921,13 @@ class Maps(object):
                 y0=y0,
                 ids=ids,
                 z_data=z_data,
-                w=(p0[0] - p1[0]),
-                h=(p0[1] - p3[1]),
+                w=w,
+                h=h,
+                theta=theta,
+                p0=p0,
+                p1=p1,
+                p2=p2,
+                p3=p3,
             )
 
         else:

@@ -1,7 +1,8 @@
 import numpy as np
 import matplotlib.pyplot as plt
 from collections import defaultdict
-from matplotlib.patches import Circle, Ellipse, Rectangle
+from matplotlib.patches import Circle, Ellipse, Rectangle, Polygon
+from pyproj import CRS, Transformer
 
 
 class callbacks(object):
@@ -505,6 +506,7 @@ class callbacks(object):
         if permanent and not hasattr(self, "permanent_markers"):
             self.permanent_markers = []
 
+        theta = 0
         if radius is None:
             radiusx = np.abs(np.diff(np.unique(self.m._props["x0"])).mean()) / 2.0
             radiusy = np.abs(np.diff(np.unique(self.m._props["y0"])).mean()) / 2.0
@@ -514,6 +516,9 @@ class callbacks(object):
                     ind = self.m.data.index.get_loc(ID)
                 radiusx = self.m._props["w"][ind] / 2
                 radiusy = self.m._props["h"][ind] / 2
+
+                theta = self.m._props["theta"][ind]
+
             else:
                 raise TypeError("you must provide eiter the ID or an explicit radius!")
         else:
@@ -529,15 +534,31 @@ class callbacks(object):
                 pos,
                 radiusx * 2 * buffer,
                 radiusy * 2 * buffer,
+                theta,
                 **kwargs,
             )
         elif shape == "rectangle":
-            p = Rectangle(
-                [pos[0] - radiusx * buffer, pos[1] - radiusy * buffer],
-                radiusx * 2 * buffer,
-                radiusy * 2 * buffer,
-                **kwargs,
-            )
+            if radius == "pixel":
+
+                d = self.m._prepare_data(
+                    data=self.m.data.loc[[ID]],
+                    shape="rectangles",
+                    buffer=buffer,
+                    radius=self.m._radius,
+                )
+
+                p = Polygon(
+                    d["verts"][0],
+                    **kwargs,
+                )
+            else:
+                p = Rectangle(
+                    [pos[0] - radiusx * buffer, pos[1] - radiusy * buffer],
+                    radiusx * 2 * buffer,
+                    radiusy * 2 * buffer,
+                    theta,
+                    **kwargs,
+                )
         else:
             raise TypeError(f"{shape} is not a valid marker-shape")
 
