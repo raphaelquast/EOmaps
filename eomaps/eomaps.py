@@ -57,6 +57,34 @@ class _Maps_plot(object):
         for key, val in kwargs.items():
             setattr(self, key, val)
 
+    # @wraps(plt.Axes.set_position)
+    def set_colorbar_position(self, pos):
+        """
+        a wrapper to set the position of the colorbar and the histogram at
+        the same time
+
+        Parameters
+        ----------
+        pos : list    [left, bottom, width, height]
+              in relative units [0,1] (with respect to the figure)
+        """
+
+        # get the desired height-ratio
+        hratio = self.cb_gridspec.get_height_ratios()
+        hratio = hratio[0] / hratio[1]
+
+        hcb = pos[3] / (1 + hratio)
+        hp = hratio * hcb
+
+        if self.ax_cb is not None:
+            self.ax_cb.set_position(
+                [pos[0], pos[1], pos[2], hcb],
+            )
+        if self.ax_cb_plot is not None:
+            self.ax_cb_plot.set_position(
+                [pos[0], pos[1] + hcb, pos[2], hp],
+            )
+
 
 class Maps(object):
     """
