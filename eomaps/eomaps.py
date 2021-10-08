@@ -790,7 +790,7 @@ class Maps(object):
             w = np.abs(x3 - x0)
             h = np.abs(y4 - y0)
 
-            theta = np.rad2deg(np.arcsin(np.abs(y3 - y0) / w))
+            theta = np.sign(y3 - y0) * np.rad2deg(np.arcsin(np.abs(y3 - y0) / w))
 
             props = dict(x0=x0, y0=y0, w=w, h=h, theta=theta, ids=ids, z_data=z_data)
         elif shape == "rectangles":
