@@ -39,10 +39,21 @@ except ImportError:
 
 
 class _Maps_plot(object):
+    """
+    A container for accessing objects of the generated figure
+
+        - f : the matplotlib figure
+        - ax : the geo-axes used for plotting the map
+        - ax_cb : the axis of the colorbar
+        - ax_cb_plot : the axis used to plot the histogram on top of the colorbar
+        - cb : the matplotlib colorbar-instance
+        - gridspec : the matplotlib GridSpec instance
+        - cb_gridspec : the GridSpecFromSubplotSpec for the colorbar and the histogram
+        - coll : the collection representing the data on the map
+
+    """
+
     def __init__(self, **kwargs):
-        """
-        a container for accessing the figure objects
-        """
         for key, val in kwargs.items():
             setattr(self, key, val)
 
