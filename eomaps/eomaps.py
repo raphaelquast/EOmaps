@@ -1617,7 +1617,6 @@ class Maps(object):
                         callback(**clickdict, **kwargs)
 
                 else:
-                    print(f"{callback.__name__}_temporary_cleanup")
                     if hasattr(self.cb, f"_{callback.__name__}_temporary_cleanup"):
                         getattr(self.cb, f"_{callback.__name__}_temporary_cleanup")()
 
