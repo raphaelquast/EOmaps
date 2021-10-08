@@ -119,9 +119,7 @@ class callbacks(object):
         ind : int
             The index of the clicked pixel
         """
-        # crs = self._get_crs(self.plot_specs["plot_epsg"])
-        # xlabel, ylabel = [crs.axis_info[0].abbrev, crs.axis_info[1].abbrev]
-        # xlabel, ylabel = [i.name for i in self.m.figure.ax.projection.axis_info[:2]]
+
         xlabel = self.m.data_specs["xcoord"]
         ylabel = self.m.data_specs["ycoord"]
 
@@ -152,8 +150,8 @@ class callbacks(object):
         a callback-function to annotate basic properties from the fit on
         double-click, use as:    spatial_plot(... , callback=cb_annotate)
 
-        if permanent = True, the generated annotations are accessible via
-        `m.permanent_annotations`
+        if permanent = True, the generated annotations are stored in a list
+        which is accessible via `m.cb.permanent_annotations`
 
         Parameters
         ----------
@@ -201,29 +199,13 @@ class callbacks(object):
 
         """
 
-        if not hasattr(self.m, "background"):
-            # cache the background before the first annotation is drawn
-            # in case there is no cached background yet
-            self.m._grab_background(redraw=False)
-
-        if not hasattr(self.m, "draw_cid"):
-            # attach draw_event that handles blitting
-            self.m.draw_cid = self.m.figure.f.canvas.mpl_connect(
-                "draw_event", self.m._grab_background
-            )
-
-        # to hide the annotation, Maps._cb_hide_annotate() is called when an empty
-        # area is clicked!
-        # crs = self._get_crs(self.plot_specs["plot_epsg"])
-        # xlabel, ylabel = [crs.axis_info[0].abbrev, crs.axis_info[1].abbrev]
-        # xlabel, ylabel = [i.abbrev for i in self.m.figure.ax.projection.axis_info[:2]]
         xlabel = self.m.data_specs["xcoord"]
         ylabel = self.m.data_specs["ycoord"]
 
         ax = self.m.figure.ax
 
         if hasattr(self, "annotation") and not permanent:
-            # re-use the attached annotation
+            # re-use the existing annotation if possible
             annotation = self.annotation
         else:
             # create a new annotation
@@ -237,13 +219,19 @@ class callbacks(object):
             styledict.update(**kwargs)
             annotation = ax.annotate("", xy=pos, **styledict)
 
+            # set annotation to "animated" (e.g. use blitting)
+            annotation.set_animated(True)
+
             if not permanent:
+                # save the annotation for re-use
                 self.annotation = annotation
             else:
                 if not hasattr(self, "permanent_annotations"):
                     self.permanent_annotations = [annotation]
                 else:
                     self.permanent_annotations.append(annotation)
+
+            self.m.BM.add_artist(annotation)
 
         annotation.set_visible(True)
         annotation.xy = pos
@@ -272,36 +260,26 @@ class callbacks(object):
 
         annotation.set_text(printstr)
 
-        # use blitting instead of f.canvas.draw() to speed up annotation generation
-        # in case a large collection is plotted
-
-        if permanent:
-            self.m._blit(annotation)
-            self.m._grab_background(redraw=False)
-        else:
-            self.m._blit(annotation)
+        self.m.BM.update()
 
     def clear_annotations(self):
         """
-        remove all permanent annotations from the plot
+        remove all temporary and permanent annotations from the plot
         """
         if hasattr(self, "permanent_annotations"):
             while len(self.permanent_annotations) > 0:
                 ann = self.permanent_annotations.pop(0)
+                self.m.BM.remove_artist(ann)
                 ann.remove()
-
-    def _annotate_cleanup(self):
-        if hasattr(self.m, "background"):
-            # delete cached background
-            del self.m.background
-        # remove draw_event callback
-        if hasattr(self.m, "draw_cid"):
-            self.m.figure.f.canvas.mpl_disconnect(self.m.draw_cid)
-            del self.m.draw_cid
-        # remove draw_event callback
         if hasattr(self, "annotation"):
             self.annotation.set_visible(False)
+            self.m.BM.remove_artist(self.annotation)
             del self.annotation
+
+        self.m.BM.update()
+
+    def _annotate_cleanup(self):
+        self.clear_annotations()
 
     def plot(
         self,
@@ -364,8 +342,6 @@ class callbacks(object):
 
             self._pick_f.canvas.mpl_connect("close_event", on_close)
 
-        # crs = self._get_crs(self.plot_specs["plot_epsg"])
-        # _pick_xlabel, _pick_ylabel = [crs.axis_info[0].abbrev, crs.axis_info[1].abbrev]
         _pick_xlabel = self.m.data_specs["xcoord"]
         _pick_ylabel = self.m.data_specs["ycoord"]
 
@@ -490,25 +466,19 @@ class callbacks(object):
         permanent : bool, optional
             Indicator if the shapes should be permanent (True) or removed
             on each new double-click (False)
-            TODO: permanent=False not yet implemented!
         **kwargs :
             kwargs passed to the matplotlib patch.
             (e.g. `facecolor`, `edgecolor`, `linewidth`, `alpha` etc.)
         """
 
-        if not hasattr(self.m, "background"):
-            # cache the background before the first annotation is drawn
-            # in case there is no cached background yet
-            self.m._grab_background(redraw=False)
+        if hasattr(self, "marker") and not permanent:
+            # remove existing marker
+            self.marker.set_visible(False)
+            self.m.BM.remove_artist(self.marker)
+            del self.marker
 
-        if not hasattr(self.m, "draw_cid"):
-            # attach draw_event that handles blitting
-            self.m.draw_cid = self.m.figure.f.canvas.mpl_connect(
-                "draw_event", self.m._grab_background
-            )
-
-        if not hasattr(self, "_pick_markers"):
-            self._pick_markers = []
+        if permanent and not hasattr(self, "permanent_markers"):
+            self.permanent_markers = []
 
         if radius is None:
             radiusx = np.abs(np.diff(np.unique(self.m._props["x0"])).mean()) / 2.0
@@ -546,25 +516,41 @@ class callbacks(object):
         else:
             raise TypeError(f"{shape} is not a valid marker-shape")
 
-        artist = self.m.figure.ax.add_patch(p)
-
-        self._pick_markers.append(artist)
+        marker = self.m.figure.ax.add_patch(p)
 
         if permanent:
-            # first draw the marker, then cache the new background
-            self.m._blit(artist)
-            self.m._grab_background(redraw=False)
+            self.permanent_markers.append(marker)
+        else:
+            self.marker = marker
 
-        if not permanent:
-            raise NotImplementedError("non-permanent markers not yet implemented!")
+        self.m.BM.add_artist(marker)
+        self.m.BM.update()
+
+    def clear_markers(self):
+        """
+        remove all temporary and permanent annotations from the plot
+        """
+        if hasattr(self, "permanent_markers"):
+            while len(self.permanent_markers) > 0:
+                marker = self.permanent_markers.pop(0)
+                self.m.BM.remove_artist(marker)
+                marker.remove()
+            del self.permanent_markers
+        if hasattr(self, "marker"):
+            self.marker.set_visible(False)
+            self.m.BM.remove_artist(self.marker)
+            del self.marker
+
+        self.m.BM.update()
 
     def _mark_cleanup(self):
-        if hasattr(self, "_pick_markers"):
-            while len(self._pick_markers) > 0:
-                self._pick_markers.pop(0).remove()
-            del self._pick_markers
+        self.clear_markers()
 
-        # remove draw_event callback
-        if hasattr(self.m, "draw_cid"):
-            self.m.figure.f.canvas.mpl_disconnect(self.m.draw_cid)
-            del self.m.draw_cid
+    def _hide_temporary_artists(self):
+        # a function to hide the annotation of an empty area is clicked
+        if hasattr(self.cb, "annotation"):
+            self.annotation.set_visible(False)
+        if hasattr(self.cb, "marker"):
+            self.marker.set_visible(False)
+
+        self.m.BM.update()

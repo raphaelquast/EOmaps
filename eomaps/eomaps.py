@@ -28,7 +28,7 @@ from cartopy import crs as ccrs
 from cartopy import feature as cfeature
 from cartopy.io import shapereader
 
-from .helpers import pairwise, cmap_alpha
+from .helpers import pairwise, cmap_alpha, BlitManager
 from .callbacks import callbacks
 
 
@@ -389,6 +389,8 @@ class Maps(object):
                 del self.figure
 
         self.figure.f.canvas.mpl_connect("close_event", on_close)
+
+        self.BM = BlitManager(self.figure.f.canvas)
 
     def _spatial_plot(
         self,
@@ -1615,8 +1617,7 @@ class Maps(object):
                         callback(**clickdict, **kwargs)
 
                 else:
-                    if "annotate" in [i.split("__")[0] for i in self._attached_cbs]:
-                        self._cb_hide_annotate()
+                    self.cb._hide_temporary_artists()
 
         cid = self.figure.f.canvas.mpl_connect("pick_event", onpick)
         self._attached_cbs[cbname] = cid
@@ -1838,68 +1839,6 @@ class Maps(object):
                     getattr(self.cb, f"_{fname}_cleanup")()
 
                 print(f"Removed the callback: '{name}'.")
-
-    @lru_cache()
-    def _get_crs(self, crs):
-        return CRS.from_user_input(crs)
-
-    def _cb_hide_annotate(self):
-        # a function to hide the annotation of an empty area is clicked
-        if hasattr(self.cb, "annotation"):
-            self.cb.annotation.set_visible(False)
-            self._blit(self.cb.annotation)
-
-    # implement blitting (see https://stackoverflow.com/a/29284318/9703451)
-    def _safe_draw(self):
-        """Temporarily disconnect the draw_event callback to avoid recursion"""
-        canvas = self.figure.f.canvas
-        if hasattr(self, "draw_cid"):
-            canvas.mpl_disconnect(self.draw_cid)
-
-            canvas.draw()
-            self.draw_cid = canvas.mpl_connect("draw_event", self._grab_background)
-        else:
-            canvas.draw()
-
-    def _grab_background(self, event=None, redraw=True):
-        """
-        When the figure is resized, draw everything, and update the background.
-        """
-        # hide annotations from the background
-        annotation_visible = False
-        if hasattr(self.cb, "annotation"):
-            if self.cb.annotation.get_visible():
-                annotation_visible = True
-                self.cb.annotation.set_visible(False)
-
-        if redraw:
-            self._safe_draw()
-
-        # With most backends (e.g. TkAgg), we could grab (and refresh, in
-        # self.blit) self.ax.bbox instead of self.fig.bbox, but Qt4Agg, and
-        # some others, requires us to update the _full_ canvas, instead.
-        self.background = self.figure.f.canvas.copy_from_bbox(self.figure.f.bbox)
-
-        # re-draw annotations
-        if annotation_visible:
-            self.cb.annotation.set_visible(True)
-            self._blit(self.cb.annotation)
-        else:
-            self._blit()
-
-    def _blit(self, artist=None):
-        """
-        Efficiently update the figure, without needing to redraw the
-        "background" artists.
-
-        Parameters
-        ----------
-        artist : the matplotlib artist to draw on top of the background
-        """
-        self.figure.f.canvas.restore_region(self.background)
-        if artist is not None:
-            self.figure.ax.draw_artist(artist)
-        self.figure.f.canvas.blit(self.figure.f.bbox)
 
     @wraps(plt.savefig)
     def savefig(self, *args, **kwargs):
