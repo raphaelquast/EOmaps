@@ -14,8 +14,22 @@ A general-purpose library to plot interactive maps of geographical datasets.
 - get a nice colorbar with a colored histogram on top
 
 ## install
+The recommended way to install EOmaps with conda + pip:
 
-a simple `pip install eomaps` should do the trick
+1. (only if you're on WINDOWS)  
+   due to an issue with libspatialindex.dll for the conda-forge build of rtree, install rtree from default channel  
+   [(corresponding issue on rtree-feedstock)](https://github.com/conda-forge/rtree-feedstock/issues/31)
+   ```
+   conda install "rtree>=0.9.7"
+   ```
+2. install remaining dependencies from `conda-forge` channel
+   ```
+   conda install -c conda-forge numpy pandas geopandas "matplotlib>=3.0" "cartopy>=0.20.0" descartes mapclassify pyproj pyepsg
+   ```
+3. install EOmaps from pip
+   ```
+   pip install eomaps
+   ```
 
 ## basic usage
 
