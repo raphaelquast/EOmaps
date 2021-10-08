@@ -1617,7 +1617,9 @@ class Maps(object):
                         callback(**clickdict, **kwargs)
 
                 else:
-                    self.cb._hide_temporary_artists()
+                    print(f"{callback.__name__}_temporary_cleanup")
+                    if hasattr(self.cb, f"_{callback.__name__}_temporary_cleanup"):
+                        getattr(self.cb, f"_{callback.__name__}_temporary_cleanup")()
 
         cid = self.figure.f.canvas.mpl_connect("pick_event", onpick)
         self._attached_cbs[cbname] = cid

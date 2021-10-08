@@ -281,6 +281,11 @@ class callbacks(object):
     def _annotate_cleanup(self):
         self.clear_annotations()
 
+    def _annotate_temporary_cleanup(self):
+        if hasattr(self, "annotation"):
+            self.annotation.set_visible(False)
+        self.m.BM.update()
+
     def plot(
         self,
         ID=None,
@@ -546,11 +551,16 @@ class callbacks(object):
     def _mark_cleanup(self):
         self.clear_markers()
 
+    def _mark_temporary_cleanup(self):
+        if hasattr(self, "marker"):
+            self.marker.set_visible(False)
+        self.m.BM.update()
+
     def _hide_temporary_artists(self):
         # a function to hide the annotation of an empty area is clicked
-        if hasattr(self.cb, "annotation"):
+        if hasattr(self, "annotation"):
             self.annotation.set_visible(False)
-        if hasattr(self.cb, "marker"):
+        if hasattr(self, "marker"):
             self.marker.set_visible(False)
 
         self.m.BM.update()
