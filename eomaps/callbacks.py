@@ -31,6 +31,14 @@ class callbacks(object):
         >>> m.remove_callback(some_callback)
     """
 
+    # the naming-convention of the functions is as follows:
+    #
+    # _<NAME>_cleanup : a function that is executed if the callback
+    #                   is removed from the plot
+    #
+    # _<NAME>_nopick_callback : a function that is executed if an empty area
+    #                           is clicked within the plot
+
     def __init__(self, m):
         self.m = m
 
@@ -39,7 +47,16 @@ class callbacks(object):
 
     @property
     def cb_list(self):
-        return ["load", "print_to_console", "annotate", "plot", "get_values", "mark"]
+        return [
+            "annotate",
+            "mark",
+            "plot",
+            "print_to_console",
+            "get_values",
+            "load",
+            "clear_annotations",
+            "clear_markers",
+        ]
 
     def load(
         self,
@@ -262,26 +279,29 @@ class callbacks(object):
 
         self.m.BM.update()
 
-    def clear_annotations(self):
+    def clear_annotations(self, remove_permanent=True, remove_temporary=True, **kwargs):
         """
         remove all temporary and permanent annotations from the plot
         """
-        if hasattr(self, "permanent_annotations"):
+        if remove_permanent and hasattr(self, "permanent_annotations"):
             while len(self.permanent_annotations) > 0:
                 ann = self.permanent_annotations.pop(0)
                 self.m.BM.remove_artist(ann)
                 ann.remove()
-        if hasattr(self, "annotation"):
+        if remove_temporary and hasattr(self, "annotation"):
             self.annotation.set_visible(False)
             self.m.BM.remove_artist(self.annotation)
             del self.annotation
 
         self.m.BM.update()
 
+    def _clear_annotations_nopick_callback(self):
+        self.clear_annotations()
+
     def _annotate_cleanup(self):
         self.clear_annotations()
 
-    def _annotate_temporary_cleanup(self):
+    def _annotate_nopick_callback(self):
         if hasattr(self, "annotation"):
             self.annotation.set_visible(False)
         self.m.BM.update()
@@ -531,36 +551,30 @@ class callbacks(object):
         self.m.BM.add_artist(marker)
         self.m.BM.update()
 
-    def clear_markers(self):
+    def clear_markers(self, remove_permanent=True, remove_temporary=True, **kwargs):
         """
         remove all temporary and permanent annotations from the plot
         """
-        if hasattr(self, "permanent_markers"):
+        if remove_permanent and hasattr(self, "permanent_markers"):
             while len(self.permanent_markers) > 0:
                 marker = self.permanent_markers.pop(0)
                 self.m.BM.remove_artist(marker)
                 marker.remove()
             del self.permanent_markers
-        if hasattr(self, "marker"):
+        if remove_temporary and hasattr(self, "marker"):
             self.marker.set_visible(False)
             self.m.BM.remove_artist(self.marker)
             del self.marker
 
         self.m.BM.update()
 
+    def _clear_markers_nopick_callback(self):
+        self.clear_markers()
+
     def _mark_cleanup(self):
         self.clear_markers()
 
-    def _mark_temporary_cleanup(self):
+    def _mark_nopick_callback(self):
         if hasattr(self, "marker"):
             self.marker.set_visible(False)
-        self.m.BM.update()
-
-    def _hide_temporary_artists(self):
-        # a function to hide the annotation of an empty area is clicked
-        if hasattr(self, "annotation"):
-            self.annotation.set_visible(False)
-        if hasattr(self, "marker"):
-            self.marker.set_visible(False)
-
         self.m.BM.update()

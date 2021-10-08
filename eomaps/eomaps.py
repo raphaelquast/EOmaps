@@ -1503,20 +1503,45 @@ class Maps(object):
 
         return coll
 
-    def add_callback(self, callback, double_click=True, mouse_button=1, **kwargs):
+    def add_callback(self, callback, double_click=False, mouse_button=1, **kwargs):
         """
-        Attach a callback to the plot that will be executed if a pixel is double-clicked
+        Attach a callback to the plot that will be executed if a pixel is clicked
 
         A list of pre-defined callbacks (accessible via `m.cb`) or customly defined
         functions can be used.
 
-            >>> m.add_callback(m.cb.annotate)
-            >>> m.add_callback("scatter")
+            >>> # to add a pre-defined callback use:
+            >>> cid = m.add_callback("annotate", <kwargs passed to m.cb.annotate>)
             >>> # to remove the callback again, call:
-            >>> m.remove_callback("scatter")
+            >>> m.remove_callback(cid)
 
         Parameters
         ----------
+        callback : callable or str
+            The callback-function to attach.
+
+            If a string is provided, it will be used to assign the associated function
+            from the `m.cb` collection:
+                - "annotate" : add annotations to the clicked pixel
+                - "mark" : add markers to the clicked pixel
+                - "plot" : dynamically update a plot with the clicked values
+                - "print_to_console" : print info of the clicked pixel to the console
+                - "get_values" : save properties of the clicked pixel to a dict
+                - "load" : use the ID of the clicked pixel to load data
+                - "clear_annotations" : clear all existing annotations
+                - "clear_markers" : clear all existing markers
+
+            You can also define a custom function with the following call-signature:
+
+                >>> def some_callback(self, **kwargs):
+                >>>     print("hello world")
+                >>>     print("the position of the clicked pixel", kwargs["pos"])
+                >>>     print("the data-index of the clicked pixel", kwargs["ID"])
+                >>>     print("data-value of the clicked pixel", kwargs["val"])
+                >>>     print("the plot-crs is:", self.plot_specs["plot_epsg"])
+                >>>
+                >>> m.add_callback(some_callback)
+
         double_click : bool
             Indicator if the callback should be executed on double-click (True)
             or on single-click events (False)
@@ -1528,24 +1553,10 @@ class Maps(object):
                 - RIGHT = 3
                 - BACK = 8
                 - FORWARD = 9
-
-        callback : callable or str
-            The callback-function to attach. Use either a function of the `m.cb`
-            collection or a custom function with the following call-signature:
-
-                >>> def some_callback(self, **kwargs):
-                >>>     print("hello world")
-                >>>     print("the position of the clicked pixel", kwargs["pos"])
-                >>>     print("the data-index of the clicked pixel", kwargs["ID"])
-                >>>     print("data-value of the clicked pixel", kwargs["val"])
-                >>>     print("the plot-crs is:", self.plot_specs["plot_epsg"])
-                >>>
-                >>> m.add_callback(some_callback)
-
-            If a string is provided, it will be used to assign the associated function
-            from the `m.cb` collection.
         **kwargs :
             kwargs passed to the callback-function
+            For documentation of the individual functions check the docs in `m.cb`
+
         """
 
         assert not all(
@@ -1580,9 +1591,7 @@ class Maps(object):
         # if multiple assignments are properly handled
         multi_cb_functions = ["mark", "annotate"]
 
-        no_multi_cb = [*self.cb.cb_list]
-        for i in multi_cb_functions:
-            no_multi_cb.pop(no_multi_cb.index(i))
+        no_multi_cb = [i for i in self.cb.cb_list if i not in multi_cb_functions]
 
         if callback.__name__ in no_multi_cb:
             assert callback.__name__ not in [
@@ -1617,8 +1626,8 @@ class Maps(object):
                         callback(**clickdict, **kwargs)
 
                 else:
-                    if hasattr(self.cb, f"_{callback.__name__}_temporary_cleanup"):
-                        getattr(self.cb, f"_{callback.__name__}_temporary_cleanup")()
+                    if hasattr(self.cb, f"_{callback.__name__}_nopick_callback"):
+                        getattr(self.cb, f"_{callback.__name__}_nopick_callback")()
 
         cid = self.figure.f.canvas.mpl_connect("pick_event", onpick)
         self._attached_cbs[cbname] = cid
