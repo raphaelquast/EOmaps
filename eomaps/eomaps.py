@@ -270,8 +270,12 @@ class Maps(object):
             The radius of the patches in the crs defined via "radius_crs".
             If "estimate", the radius will be automatically determined from the
             x-y coordinate separation of the data. The default is "estimate".
-        histbins : int, optional
-            The number of histogram-bins to use for the colorbar. The default is 256.
+        histbins : int, list, tuple, array or "bins", optional
+            If int: The number of histogram-bins to use for the colorbar.
+            If list, tuple or numpy-array: the bins to use
+            If "bins": use the bins obtained from the classification
+                       (ONLY possible if a classification scheme is used!)
+            The default is 256.
         tick_precision : int, optional
             The precision of the tick-labels in the colorbar. The default is 2.
         vmin, vmax : float, optional
@@ -534,6 +538,9 @@ class Maps(object):
             vmin = np.nanmin(props["z_data"])
         if vmax is None:
             vmax = np.nanmax(props["z_data"])
+
+        # clip the data to properly account for vmin and vmax
+        props["z_data"] = props["z_data"].clip(vmin, vmax)
 
         # ---------------------- classify the data
         cbcmap, norm, bins, classified = self._classify_data(
@@ -893,6 +900,7 @@ class Maps(object):
         return props
 
     def _classify_data(self, z_data, cmap, histbins, vmin, vmax, classify_specs=None):
+
         if isinstance(cmap, str):
             cmap = plt.get_cmap(cmap)
 
@@ -912,9 +920,20 @@ class Maps(object):
             if isinstance(histbins, int):
                 nbins = histbins
                 bins = None
-            else:
+            elif isinstance(histbins, (list, tuple, np.ndarray)):
                 nbins = len(histbins)
                 bins = histbins
+            else:
+                if isinstance(histbins, str) and histbins == "bins":
+                    raise TypeError(
+                        "using histbins='bins' is only valid"
+                        + "if you classify the data!"
+                    )
+                else:
+                    raise TypeError(
+                        "you can only provide integers, lists "
+                        + "tuples or numpy-arrays as histbins!"
+                    )
             colors = cmap(np.linspace(0, 1, nbins))
             norm = mpl.colors.Normalize(vmin, vmax)
 
@@ -1134,7 +1153,7 @@ class Maps(object):
         hist_vals, hist_bins, init_hist = cb_plot_ax.hist(
             z_data,
             orientation=self.orientation,
-            bins=histbins,
+            bins=bins if (classified and histbins == "bins") else histbins,
             color="k",
             align="mid",
             # range=(norm.vmin, norm.vmax),
@@ -1234,6 +1253,9 @@ class Maps(object):
             cb_plot_ax.plot(
                 [1, 1], [0, 1], "k--", alpha=0.5, transform=cb_plot_ax.transAxes
             )
+            # make sure lower x-limit is 0
+            cb_plot_ax.set_xlim(0)
+
         elif self.orientation == "vertical":
             cb_plot_ax.tick_params(
                 left=False,
@@ -1249,6 +1271,8 @@ class Maps(object):
             cb_plot_ax.plot(
                 [0, 1], [0, 0], "k--", alpha=0.5, transform=cb_plot_ax.transAxes
             )
+            # make sure lower y-limit is 0
+            cb_plot_ax.set_ylim(0)
 
         cb.outline.set_visible(False)
 
