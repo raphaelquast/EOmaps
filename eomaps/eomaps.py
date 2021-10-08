@@ -631,19 +631,12 @@ class Maps(object):
         self.figure = _Maps_plot(
             f=f,
             gridspec=gs,
-            colorbar_gs=cbgs,
             ax=ax,
             ax_cb=cb_ax,
             ax_cb_plot=cb_plot_ax,
             cb=cb,
+            cb_gridspec=cbgs,
             coll=coll,
-            cmap=cmap,
-            vmin=vmin,
-            vmax=vmax,
-            histbins=histbins,
-            title=title,
-            label=label,
-            tick_precision=tick_precision,
         )
 
     def _set_cpos(self, x, y, radiusx, radiusy, cpos):
