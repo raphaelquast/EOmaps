@@ -266,7 +266,20 @@ class TestBasicPlotting(unittest.TestCase):
         self.assertTrue(
             sorted(list(data.keys()))
             == sorted(
-                ["x0", "y0", "w", "h", "theta", "ids", "z_data", "p0", "p1", "p2", "p3"]
+                [
+                    "x0",
+                    "y0",
+                    "w",
+                    "h",
+                    "theta",
+                    "ids",
+                    "z_data",
+                    "p0",
+                    "p1",
+                    "p2",
+                    "p3",
+                    "radius",
+                ]
             )
         )
 
@@ -289,6 +302,7 @@ class TestBasicPlotting(unittest.TestCase):
                     "p2",
                     "p3",
                     "theta",
+                    "radius",
                 ]
             )
         )
@@ -312,6 +326,7 @@ class TestBasicPlotting(unittest.TestCase):
                     "p2",
                     "p3",
                     "theta",
+                    "radius",
                 ]
             )
         )
