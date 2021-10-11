@@ -3,6 +3,7 @@ from itertools import tee
 
 import numpy as np
 from matplotlib.colors import LinearSegmentedColormap, ListedColormap
+from collections import defaultdict
 
 
 def pairwise(iterable, pairs=2):
@@ -68,7 +69,9 @@ class BlitManager:
         """
         self.canvas = canvas
         self._bg = None
-        self._artists = []
+        self._layers = defaultdict(list)
+
+        self._static_artists = dict()
 
         for a in animated_artists:
             self.add_artist(a)
@@ -84,7 +87,7 @@ class BlitManager:
         self._bg = cv.copy_from_bbox(cv.figure.bbox)
         self._draw_animated()
 
-    def add_artist(self, art):
+    def add_artist(self, art, layer=0):
         """
         Add an artist to be managed.
 
@@ -95,27 +98,33 @@ class BlitManager:
             The artist to be added.  Will be set to 'animated' (just
             to be safe).  *art* must be in the figure associated with
             the canvas this class is managing.
-
+        bottom : bool
+            Indicator if the artist should be added on top(False) or bottom(True)
         """
         if art.figure != self.canvas.figure:
             raise RuntimeError
         art.set_animated(True)
-        if art in self._artists:
+        if art in self._layers[layer]:
             print("artist already added")
         else:
-            self._artists.append(art)
+            self._layers[layer].append(art)
 
-    def remove_artist(self, art):
-        if art in self._artists:
-            self._artists.remove(art)
+    def remove_artist(self, art, layer=None):
+        if layer is None:
+            for key, val in self._layers.items():
+                if art in val:
+                    val.remove(art)
         else:
-            print("artist", art, "not attached to the blitmanager!")
+            if art in self._layers[layer]:
+                self._layers[layer].remove(art)
 
     def _draw_animated(self):
-        """Draw all of the animated artists."""
+        """Draw all artists from all layers."""
         fig = self.canvas.figure
-        for a in self._artists:
-            fig.draw_artist(a)
+
+        for l in sorted(list(self._layers)):
+            for a in self._layers[l]:
+                fig.draw_artist(a)
 
     def update(self):
         """Update the screen with animated artists."""

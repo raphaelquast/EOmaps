@@ -1,6 +1,7 @@
 """a collection of helper-functions to generate map-plots"""
 
 from functools import partial, lru_cache, wraps
+from collections import defaultdict
 import warnings
 import copy
 
@@ -749,17 +750,14 @@ class Maps(object):
         if isinstance(radius, (list, tuple)):
             radiusx, radiusy = radius
             # save radius for later use
-            self._radius = (radiusx, radiusy)
         else:
             radiusx = radius
             radiusy = radius
-            self._radius = (radiusx, radiusy)
 
         if radius_crs == "in":
             if radius == "estimate":
                 radiusx = np.abs(np.diff(np.unique(xorig)).mean()) / 2.0
                 radiusy = np.abs(np.diff(np.unique(yorig)).mean()) / 2.0
-                self._radius = (radiusx, radiusy)
             if buffer is not None:
                 radiusx = radiusx * buffer
                 radiusy = radiusy * buffer
@@ -778,7 +776,6 @@ class Maps(object):
             if radius == "estimate":
                 radiusx = np.abs(np.diff(np.unique(x0)).mean()) / 2.0
                 radiusy = np.abs(np.diff(np.unique(y0)).mean()) / 2.0
-                self._radius = (radiusx, radiusy)
             if buffer is not None:
                 radiusx = radiusx * buffer
                 radiusy = radiusy * buffer
@@ -806,7 +803,6 @@ class Maps(object):
             if radius == "estimate":
                 radiusx = np.abs(np.diff(np.unique(x0r)).mean()) / 2.0
                 radiusy = np.abs(np.diff(np.unique(y0r)).mean()) / 2.0
-                self._radius = (radiusx, radiusy)
             if buffer is not None:
                 radiusx = radiusx * buffer
                 radiusy = radiusy * buffer
@@ -861,34 +857,26 @@ class Maps(object):
         # calculate rotation angle based on mid-point
         theta = np.sign(y3 - y0) * np.rad2deg(np.arcsin(np.abs(y3 - y0) / w))
 
+        props = dict(
+            x0=x0,
+            y0=y0,
+            w=w,
+            h=h,
+            theta=theta,
+            ids=ids,
+            z_data=z_data,
+            p0=p0,
+            p1=p1,
+            p2=p2,
+            p3=p3,
+            radius=(radiusx, radiusy),
+        )
+
         if shape == "ellipses":
-            props = dict(
-                x0=x0,
-                y0=y0,
-                w=w,
-                h=h,
-                theta=theta,
-                ids=ids,
-                z_data=z_data,
-                p0=p0,
-                p1=p1,
-                p2=p2,
-                p3=p3,
-            )
+            pass
         elif shape == "rectangles":
-            props = dict(
-                verts=np.array(list(zip(*[np.array(i).T for i in (p0, p1, p2, p3)]))),
-                x0=x0,
-                y0=y0,
-                ids=ids,
-                z_data=z_data,
-                w=w,
-                h=h,
-                theta=theta,
-                p0=p0,
-                p1=p1,
-                p2=p2,
-                p3=p3,
+            props["verts"] = np.array(
+                list(zip(*[np.array(i).T for i in (p0, p1, p2, p3)]))
             )
 
         elif shape == "trimesh_rectangles":
@@ -914,21 +902,7 @@ class Maps(object):
                 x, y, triangles=np.array(range(len(x))).reshape((len(x) // 3, 3))
             )
 
-            # also attach max w & h (used for the kd-tree)
-            props = dict(
-                tri=tri,
-                x0=x0,
-                y0=y0,
-                ids=ids,
-                z_data=z_data,
-                w=w,
-                h=h,
-                theta=theta,
-                p0=p0,
-                p1=p1,
-                p2=p2,
-                p3=p3,
-            )
+            props["tri"] = tri
 
         else:
             raise TypeError(
@@ -1364,8 +1338,7 @@ class Maps(object):
         dataspec,
         styledict=None,
         legend=True,
-        legendlabel=None,
-        legend_loc="upper right",
+        legend_kwargs=None,
         maskshp=None,
     ):
         """
@@ -1373,6 +1346,11 @@ class Maps(object):
         map. (you must call `plot_map()`first!)
         Check `cartopy.shapereader.natural_earth` for details on how to specify
         layer properties.
+
+        to change the appearance and position of the map (or to add it to the
+        plot at a later stage) use
+
+            >>> m.add_overlay_legend()
 
         Parameters
         ----------
@@ -1391,18 +1369,16 @@ class Maps(object):
             The default is None in which case the following setting will be used:
             (facecolor='none', edgecolor='k', alpha=.5, lw=0.25)
         legend : bool, optional
-            indicator if a legend should be added or not. The default is True.
-        legendlabel : str, optional
-            The label of the legend. If None, the name specified in dataspec is used.
-            The default is None.
-        legend_loc : str, optional
-            the position of the legend. The default is 'upper right'.
+            indicator if a legend should be added or not.
+            The default is True.
+        legend_kwargs : dict, optional
+            kwargs passed to matplotlib.pyplot.legend()
+            (ONLY if legend = True!).
         maskshp : gpd.GeoDataFrame
             a geopandas.GeoDataFrame that will be used as a mask for overlay
             (does not work with line-geometries!)
         """
-        if legendlabel is None:
-            legendlabel = dataspec.get("name", "overlay")
+        label = dataspec.get("name", "overlay")
 
         assert hasattr(self, "figure"), "you must call .plot_map() first!"
 
@@ -1432,14 +1408,87 @@ class Maps(object):
         if maskshp is not None:
             overlay_df = gpd.overlay(overlay_df[["geometry"]], maskshp)
 
-        _ = overlay_df.plot(ax=ax, aspect=ax.get_aspect(), **styledict)
+        _ = overlay_df.plot(ax=ax, aspect=ax.get_aspect(), label=label, **styledict)
+
+        # save legend patches in case a legend should be created
+        if not hasattr(self, "_overlay_legend"):
+            self._overlay_legend = defaultdict(list)
+
+        self._overlay_legend["handles"].append(mpl.patches.Patch(**styledict))
+        self._overlay_legend["labels"].append(label)
 
         if legend is True:
-            ax.legend(
-                handles=[mpl.patches.Patch(**styledict)],
-                labels=[legendlabel],
-                loc=legend_loc,
-            )
+            if legend_kwargs is None:
+                legend_kwargs = dict(loc="upper center")
+            self.add_overlay_legend(**legend_kwargs)
+
+    def add_overlay_legend(self, update_hl=None, sort_order=None, **kwargs):
+        """
+        Add a legend for the attached overlays to the map
+        (existing legend will be replaced if you call this function!)
+
+        Parameters
+        ----------
+        update_hl : dict, optional
+            a dict that can be used to replace the existing handles and labels
+            of the legend. The signature is:
+
+            >>> update_hl = {overlay-name : [handle, label]}
+
+            If "handle" or "label" is None, the pre-defined values are used
+
+            >>> m.add_overlay(dataspec={"name" : "some_overlay"})
+            >>> m.add_overlay_legend(loc="upper left",
+            >>>    handles_labels={"some_overlay" : [plt.Line2D([], [], c="b")
+            >>>                                      "A much nicer Label"]})
+
+            >>> # use the following if you want to keep the existing handle:
+            >>> m.add_overlay_legend(
+            >>>    handles_labels={"some_overlay" : [None, "A much nicer Label"]})
+        sort_order : list, optional
+            a list of integers (starting from 0) or strings (the overlay-names)
+            that will be used to determine the order of the legend-entries.
+            The default is None.
+
+            >>> sort_order = [2, 1, 0, ...]
+            >>> sort_order = ["overlay-name1", "overlay-name2", ...]
+
+        **kwargs :
+            kwargs passed to matplotlib.pyplot.legend().
+        """
+        handles = [*self._overlay_legend["handles"]]
+        labels = [*self._overlay_legend["labels"]]
+
+        if update_hl is not None:
+            for key, val in update_hl.items():
+                h, l = val
+                if key in labels:
+                    idx = labels.index(key)
+                    if h is not None:
+                        handles[idx] = h
+                    if l is not None:
+                        labels[idx] = l
+                else:
+                    warnings.warn(
+                        f"there is no overlay with the name {key}"
+                        + "... legend-handle can't be replaced..."
+                    )
+
+        if sort_order is not None:
+            if all(isinstance(i, str) for i in sort_order):
+                sort_order = [
+                    self._overlay_legend["labels"].index(i) for i in sort_order
+                ]
+            elif all(isinstance(i, int) for i in sort_order):
+                pass
+            else:
+                TypeError("sort-order must be a list of overlay-names or integers!")
+
+        _ = self.figure.ax.legend(
+            handles=handles if sort_order is None else [handles[i] for i in sort_order],
+            labels=labels if sort_order is None else [labels[i] for i in sort_order],
+            **kwargs,
+        )
 
     def add_discrete_layer(
         self,
@@ -1459,6 +1508,7 @@ class Maps(object):
         cpos=None,
         legend_kwargs=True,
         shape="ellipses",
+        layer=None,
     ):
         """
         add another layer of pixels
@@ -1507,6 +1557,20 @@ class Maps(object):
             The default is True.
         shape : str
             the shapes to plot (either "ellipses" or "rectangles")
+        layer : int or None
+            the layer-index used for drawing the additional layer
+            The default layers are:
+                0: background
+                1: overlays
+                10 : annotations
+                20 : legends
+
+            if provided, the artist will be re-drawn on the specific
+            layer each time a callback-function triggers!
+
+            The default is None in which case the layer is added as a
+            "static-background" layer
+
         """
         assert hasattr(self, "figure"), "you must call .plot_map() first!"
 
@@ -1538,6 +1602,9 @@ class Maps(object):
             color=color,
             shape=shape,
         )
+
+        if layer is not None:
+            self.BM.add_artist(coll, layer=layer)
 
         if isinstance(cmap, str):
             cmap = coll.cmap
@@ -1645,28 +1712,28 @@ class Maps(object):
             else:
                 callback = callback.__get__(self.cb)
 
-        # add mouse-button assignment as suffix to the name (with __ separator)
-        # TODO document this!
-        cbname = callback.__name__ + f"__{double_click}_{mouse_button}"
-
-        assert (
-            cbname not in self._attached_cbs
-        ), f"the callback '{cbname}' is already attached to the plot!"
-
         # TODO support multiple assignments for callbacks
         # make sure multiple callbacks of the same funciton are only assigned
         # if multiple assignments are properly handled
         multi_cb_functions = ["mark", "annotate"]
 
         no_multi_cb = [i for i in self.cb.cb_list if i not in multi_cb_functions]
+        cb_names = [i.split("__")[0] for i in self._attached_cbs]
+
+        # add mouse-button assignment as suffix to the name (with __ separator)
+        cbname = callback.__name__ + f"__{double_click}_{mouse_button}"
 
         if callback.__name__ in no_multi_cb:
-            assert callback.__name__ not in [
-                i.split("__")[0] for i in self._attached_cbs
-            ], (
+            assert callback.__name__ not in cb_names, (
                 "Multiple assignments of the callback"
                 + f" '{callback.__name__}' are not (yet) supported..."
             )
+
+        else:
+            ncb = cb_names.count(callback.__name__)
+            # make the name unique if the same callback is attached multiple times
+            if ncb > 0:
+                cbname += f"_[{ncb}]"
 
         # ------------- add a callback
         def onpick(event):
@@ -1808,6 +1875,13 @@ class Maps(object):
                 >>>     return "the string to print"
 
             The default is None.
+        layer : int
+            the layer-level to draw the annotation on
+
+            The default layers are:
+                0  : background (will NOT be re-drawn)
+                10 : annotations & markers
+                20 : legends
 
         **kwargs
             kwargs passed to m.cb.annotate
@@ -1876,7 +1950,7 @@ class Maps(object):
             # call cleanup methods on removal
             fname = name.split("__")[0]
             if hasattr(self.cb, f"_{fname}_cleanup"):
-                getattr(self.cb, f"_{fname}_cleanup")(self)
+                getattr(self.cb, f"_{fname}_cleanup")()
 
             print(f"Removed the callback: '{name}'.")
 

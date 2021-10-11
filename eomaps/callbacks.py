@@ -1,4 +1,5 @@
 import numpy as np
+from pandas import DataFrame
 import matplotlib.pyplot as plt
 from collections import defaultdict
 from matplotlib.patches import Circle, Ellipse, Rectangle, Polygon
@@ -162,6 +163,7 @@ class callbacks(object):
         val_precision=4,
         permanent=False,
         text=None,
+        layer=10,
         **kwargs,
     ):
         """
@@ -205,7 +207,10 @@ class callbacks(object):
                 >>>     return "the string to print"
 
             The default is None.
-
+        layer : int
+            The layer-level on which to draw the artist.
+            (First layer 0 is drawn, then layer 1 on top then layer 2 etc...)
+            The default is 10.
         **kwargs
             kwargs passed to matplotlib.pyplot.annotate(). The default is:
 
@@ -237,9 +242,6 @@ class callbacks(object):
             styledict.update(**kwargs)
             annotation = ax.annotate("", xy=pos, **styledict)
 
-            # set annotation to "animated" (e.g. use blitting)
-            annotation.set_animated(True)
-
             if not permanent:
                 # save the annotation for re-use
                 self.annotation = annotation
@@ -249,7 +251,8 @@ class callbacks(object):
                 else:
                     self.permanent_annotations.append(annotation)
 
-            self.m.BM.add_artist(annotation)
+            if layer is not None:
+                self.m.BM.add_artist(annotation, layer=layer)
 
         annotation.set_visible(True)
         annotation.xy = pos
@@ -257,13 +260,18 @@ class callbacks(object):
         if text is None:
             x, y = [
                 np.format_float_positional(i, trim="-", precision=pos_precision)
+                for i in self.m.data.loc[ID][[xlabel, ylabel]]
+            ]
+            x0, y0 = [
+                np.format_float_positional(i, trim="-", precision=pos_precision)
                 for i in pos
             ]
             if isinstance(val, (int, float)):
                 val = np.format_float_positional(val, trim="-", precision=val_precision)
 
             printstr = (
-                f"{xlabel} = {x}\n{ylabel} = {y}\n"
+                f"{xlabel} = {x} ({x0})\n"
+                + f"{ylabel} = {y} ({y0})\n"
                 + (f"ID = {ID}\n" if ID is not None else "")
                 + (
                     f"{self.m.data_specs['parameter']} = {val}"
@@ -445,9 +453,11 @@ class callbacks(object):
         val=None,
         ind=None,
         radius="pixel",
+        radius_crs="in",
         shape="circle",
         buffer=1,
         permanent=True,
+        layer=10,
         **kwargs,
     ):
         """
@@ -480,6 +490,11 @@ class callbacks(object):
             If "pixel" the pixel dimensions of the clicked pixel are used
 
             The default is None.
+        radius_crs : any
+            The crs specification in which the radius is provided.
+            The default is "in" (e.g. the crs of the input-data).
+            (only relevant if radius is NOT specified as "pixel")
+
         shape : str, optional
             Indicator which shape to draw. Currently supported shapes are:
                 - circle
@@ -492,10 +507,82 @@ class callbacks(object):
         permanent : bool, optional
             Indicator if the shapes should be permanent (True) or removed
             on each new double-click (False)
+        layer : int
+            The layer-level on which to draw the artist.
+            (First layer 0 is drawn, then layer 1 on top then layer 2 etc...)
+            The default is 10.
         **kwargs :
             kwargs passed to the matplotlib patch.
             (e.g. `facecolor`, `edgecolor`, `linewidth`, `alpha` etc.)
         """
+
+        if radius_crs == "in":
+            radius_crs = self.m.data_specs["in_crs"]
+        elif radius_crs == "out":
+            radius_crs = self.m.plot_specs["plot_epsg"]
+
+        if ID is not None:
+            if ind is None:
+                ind = self.m.data.index.get_loc(ID)
+
+        if radius == "pixel":
+            d = self.m._prepare_data(
+                data=DataFrame(
+                    dict(
+                        x=[self.m._props["x0"][ind]],
+                        y=[self.m._props["y0"][ind]],
+                        z=[self.m._props["z_data"][ind]],
+                    )
+                ),
+                # data=self.m.data.loc[[ID]],
+                xcoord="x",
+                ycoord="y",
+                parameter="z",
+                in_crs=self.m.plot_specs["plot_epsg"],
+                radius_crs=self.m.data_specs["in_crs"],
+                shape="rectangles",
+                buffer=buffer,
+                radius=self.m._props["radius"],
+            )
+            radiusx = self.m._props["w"][ind]
+            radiusy = self.m._props["h"][ind]
+            theta = self.m._props["theta"][ind]
+
+        elif isinstance(radius, (int, float, list, tuple)):
+            theta = 0
+            if isinstance(radius, (list, tuple)):
+                radiusx, radiusy = radius
+            else:
+                radiusx = radiusy = radius
+
+            # transform the radius if radius_crs is not None
+            if radius_crs is not None:
+                d = self.m._prepare_data(
+                    data=DataFrame(
+                        dict(
+                            x=[self.m._props["x0"][ind]],
+                            y=[self.m._props["y0"][ind]],
+                            z=[self.m._props["z_data"][ind]],
+                        )
+                    ),
+                    # data=self.m.data.loc[[ID]],
+                    xcoord="x",
+                    ycoord="y",
+                    parameter="z",
+                    in_crs=self.m.plot_specs["plot_epsg"],
+                    radius_crs=radius_crs,
+                    shape="rectangles",
+                    buffer=buffer,
+                    radius=(radiusx, radiusy),
+                )
+
+                radiusx = d["w"][0]
+                radiusy = d["h"][0]
+                theta = d["theta"][0]
+
+        else:
+            radiusx, radiusy = self.m._props["radius"]
+            theta = self.m._props["theta"][ind]
 
         if hasattr(self, "marker") and not permanent:
             # remove existing marker
@@ -505,27 +592,6 @@ class callbacks(object):
 
         if permanent and not hasattr(self, "permanent_markers"):
             self.permanent_markers = []
-
-        theta = 0
-        if radius is None:
-            radiusx = np.abs(np.diff(np.unique(self.m._props["x0"])).mean()) / 2.0
-            radiusy = np.abs(np.diff(np.unique(self.m._props["y0"])).mean()) / 2.0
-        elif radius == "pixel":
-            if ID is not None:
-                if ind is None:
-                    ind = self.m.data.index.get_loc(ID)
-                radiusx = self.m._props["w"][ind] / 2
-                radiusy = self.m._props["h"][ind] / 2
-
-                theta = self.m._props["theta"][ind]
-
-            else:
-                raise TypeError("you must provide eiter the ID or an explicit radius!")
-        else:
-            if isinstance(radius, (list, tuple)):
-                radiusx, radiusy = radius
-            else:
-                radiusx = radiusy = radius
 
         if shape == "circle":
             p = Circle(pos, np.sqrt(radiusx ** 2 + radiusy ** 2) * buffer, **kwargs)
@@ -539,14 +605,6 @@ class callbacks(object):
             )
         elif shape == "rectangle":
             if radius == "pixel":
-
-                d = self.m._prepare_data(
-                    data=self.m.data.loc[[ID]],
-                    shape="rectangles",
-                    buffer=buffer,
-                    radius=self.m._radius,
-                )
-
                 p = Polygon(
                     d["verts"][0],
                     **kwargs,
@@ -569,7 +627,9 @@ class callbacks(object):
         else:
             self.marker = marker
 
-        self.m.BM.add_artist(marker)
+        if layer is not None:
+            self.m.BM.add_artist(marker, layer)
+
         self.m.BM.update()
 
     def clear_markers(self, remove_permanent=True, remove_temporary=True, **kwargs):
