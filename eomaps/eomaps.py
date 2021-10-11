@@ -1508,7 +1508,7 @@ class Maps(object):
         cpos=None,
         legend_kwargs=True,
         shape="ellipses",
-        layer=None,
+        dynamic_layer_idx=None,
     ):
         """
         add another layer of pixels
@@ -1557,16 +1557,17 @@ class Maps(object):
             The default is True.
         shape : str
             the shapes to plot (either "ellipses" or "rectangles")
-        layer : int or None
-            the layer-index used for drawing the additional layer
-            The default layers are:
+        dynamic_layer_idx : int or None
+
+            If a "dynamic_layer_idx" is specified, the collection will only
+            be drawn if `m.BM.update()` is called!
+            This can be used to speed up drawing in case the collection is
+            changed via a callback-function.
+
+            The layer-index can be any number... the default values are:
                 0: background
                 1: overlays
                 10 : annotations
-                20 : legends
-
-            if provided, the artist will be re-drawn on the specific
-            layer each time a callback-function triggers!
 
             The default is None in which case the layer is added as a
             "static-background" layer
@@ -1603,8 +1604,9 @@ class Maps(object):
             shape=shape,
         )
 
-        if layer is not None:
-            self.BM.add_artist(coll, layer=layer)
+        if dynamic_layer_idx is not None:
+            # make this collection a "temporary layer"
+            self.BM.add_artist(coll, layer=dynamic_layer_idx)
 
         if isinstance(cmap, str):
             cmap = coll.cmap
@@ -1878,13 +1880,6 @@ class Maps(object):
                 >>>     return "the string to print"
 
             The default is None.
-        layer : int
-            the layer-level to draw the annotation on
-
-            The default layers are:
-                0  : background (will NOT be re-drawn)
-                10 : annotations & markers
-                20 : legends
 
         **kwargs
             kwargs passed to m.cb.annotate
