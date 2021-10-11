@@ -158,6 +158,19 @@ class TestBasicPlotting(unittest.TestCase):
             dataspec=dict(resolution="10m", category="cultural", name="urban_areas"),
             styledict=dict(facecolor="r"),
         )
+        m.add_overlay(
+            dataspec=dict(resolution="10m", category="physical", name="lakes"),
+            styledict=dict(facecolor="b"),
+        )
+
+        m.add_overlay_legend(
+            loc="upper center",
+            update_hl={
+                "lakes": [None, "asdf"],
+                "urban_areas": [plt.Line2D([], [], c="r"), "bsdf"],
+            },
+            sort_order=["lakes", "urban_areas"],
+        )
 
         plt.close(m.figure.f)
 
@@ -206,16 +219,20 @@ class TestBasicPlotting(unittest.TestCase):
 
         m.add_marker(20, facecolor=[1, 0, 0, 0.5], edgecolor="r")
         m.add_marker(250, facecolor=[1, 0, 0, 0.5], edgecolor="r", radius=5000000)
-        m.add_marker(250, facecolor="b", edgecolor="m", linewidth=3, buffer=3)
+        m.add_marker(
+            250, facecolor="b", edgecolor="m", linewidth=3, buffer=3, alpha=0.5
+        )
+        m.add_marker(250, fc="none", ec="k", ls="--", radius=35, radius_crs=4326)
 
         m.add_marker(
-            xy=(m.data.x[100], m.data.y[100]),
+            xy=(-14000000, -8500000),
             xy_crs=3857,
             facecolor="none",
             edgecolor="r",
         )
 
         with self.assertRaises(TypeError):
+            # it's not possible to use radius="pixel" and xy
             m.add_marker(
                 xy=(m.data.x[100], m.data.y[100]),
                 xy_crs=3857,

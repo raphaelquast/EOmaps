@@ -1439,12 +1439,12 @@ class Maps(object):
 
             >>> m.add_overlay(dataspec={"name" : "some_overlay"})
             >>> m.add_overlay_legend(loc="upper left",
-            >>>    handles_labels={"some_overlay" : [plt.Line2D([], [], c="b")
-            >>>                                      "A much nicer Label"]})
+            >>>    update_hl={"some_overlay" : [plt.Line2D([], [], c="b")
+            >>>                                 "A much nicer Label"]})
 
             >>> # use the following if you want to keep the existing handle:
             >>> m.add_overlay_legend(
-            >>>    handles_labels={"some_overlay" : [None, "A much nicer Label"]})
+            >>>    update_hl={"some_overlay" : [None, "A much nicer Label"]})
         sort_order : list, optional
             a list of integers (starting from 0) or strings (the overlay-names)
             that will be used to determine the order of the legend-entries.
@@ -1822,6 +1822,9 @@ class Maps(object):
             xy_crs = self.data_specs["in_crs"]
 
             ind = self.data.index.get_loc(ID)
+        else:
+            if isinstance(radius, str):
+                raise TypeError(f"I don't know what to do with radius='{radius}'")
 
         if xy is not None:
             ind = None
