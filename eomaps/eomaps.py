@@ -710,7 +710,6 @@ class Maps(object):
         shape=None,
         buffer=None,
     ):
-
         # get specifications
         if data is None:
             data = self.data
@@ -885,17 +884,17 @@ class Maps(object):
             verts = np.array(list(zip(*[np.array(i).T for i in (p0, p1, p2, p3)])))
             x = np.vstack(
                 [verts[:, 2][:, 0], verts[:, 3][:, 0], verts[:, 1][:, 0]]
-            ).T.ravel()
+            ).T.flat
             y = np.vstack(
                 [verts[:, 2][:, 1], verts[:, 3][:, 1], verts[:, 1][:, 1]]
-            ).T.ravel()
+            ).T.flat
 
             x2 = np.vstack(
                 [verts[:, 3][:, 0], verts[:, 0][:, 0], verts[:, 1][:, 0]]
-            ).T.ravel()
+            ).T.flat
             y2 = np.vstack(
                 [verts[:, 3][:, 1], verts[:, 0][:, 1], verts[:, 1][:, 1]]
-            ).T.ravel()
+            ).T.flat
 
             x = np.append(x, x2)
             y = np.append(y, y2)
