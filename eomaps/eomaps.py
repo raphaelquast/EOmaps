@@ -348,7 +348,7 @@ class Maps(object):
             else:
                 print(f'"{key}" is not a valid plot_specs parameter!')
 
-    def set_classify_specs(self, **kwargs):
+    def set_classify_specs(self, scheme=None, **kwargs):
         """
         Set classification specifications for the data
         (classification is performed by the `mapclassify` module)
@@ -379,6 +379,7 @@ class Maps(object):
         **kwargs :
             kwargs passed to the call to the respective mapclassify classifier
         """
+        self._classify_specs = dict(scheme=scheme.strip())
         for key, val in kwargs.items():
             self._classify_specs[key] = val
 
@@ -405,7 +406,8 @@ class Maps(object):
         f_gridspec : list, optional
             If provided, the figure and gridspec instances will be used to initialize
             the plot as a sub-plot to an already existing plot.
-            The instances must be provided as:  [matplotlib.figure, matplotlib.GridSpec]
+            The instances must be provided as:
+                [matplotlib.figure, matplotlib.GridSpec]
             The default is None in which case a new figure is created.
         """
 
@@ -967,23 +969,32 @@ class Maps(object):
 
         if f_gridspec is None:
             f = plt.figure(figsize=(12, 8))
+            gs_main = None
             gs_func = GridSpec
         else:
-            f = f_gridspec[0]
-            gs_func = partial(GridSpecFromSubplotSpec, subplot_spec=f_gridspec[1])
+            f, gs_main = f_gridspec
+            gs_func = partial(GridSpecFromSubplotSpec, subplot_spec=gs_main)
 
         if self.orientation == "horizontal":
             # gridspec for the plot
-            gs = gs_func(
-                nrows=1,
-                ncols=2,
-                width_ratios=[0.75, 0.15],
-                left=0.01,
-                right=0.91,
-                bottom=0.02,
-                top=0.92,
-                wspace=0.02,
-            )
+            if gs_main:
+                gs = gs_func(
+                    nrows=1,
+                    ncols=2,
+                    width_ratios=[0.75, 0.15],
+                    wspace=0.02,
+                )
+            else:
+                gs = gs_func(
+                    nrows=1,
+                    ncols=2,
+                    width_ratios=[0.75, 0.15],
+                    left=0.01,
+                    right=0.91,
+                    bottom=0.02,
+                    top=0.92,
+                    wspace=0.02,
+                )
             # sub-gridspec
             cbgs = GridSpecFromSubplotSpec(
                 nrows=1,
@@ -994,17 +1005,26 @@ class Maps(object):
                 width_ratios=[0.9, 0.1],
             )
         elif self.orientation == "vertical":
-            # gridspec for the plot
-            gs = gs_func(
-                nrows=2,
-                ncols=1,
-                height_ratios=[0.75, 0.15],
-                left=0.05,
-                right=0.95,
-                bottom=0.07,
-                top=0.92,
-                hspace=0.02,
-            )
+            if gs_main:
+                # gridspec for the plot
+                gs = gs_func(
+                    nrows=2,
+                    ncols=1,
+                    height_ratios=[0.75, 0.15],
+                    hspace=0.02,
+                )
+            else:
+                # gridspec for the plot
+                gs = gs_func(
+                    nrows=2,
+                    ncols=1,
+                    height_ratios=[0.75, 0.15],
+                    left=0.05,
+                    right=0.95,
+                    bottom=0.07,
+                    top=0.92,
+                    hspace=0.02,
+                )
             # sub-gridspec
             cbgs = GridSpecFromSubplotSpec(
                 nrows=2,
