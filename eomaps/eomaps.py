@@ -650,8 +650,6 @@ class Maps(object):
         f.canvas.draw_idle()
 
         # ------------- add a picker that will be used by the callbacks
-        # use a cKDTree based picking to speed up picks for large collections
-        tree = cKDTree(np.stack([props["x0"], props["y0"]], axis=1))
 
         if shape.startswith("delauney_triangulation"):
             # set an infinite search-distance if triangulations are used
@@ -668,7 +666,8 @@ class Maps(object):
             else:
                 double_click = False
 
-            dist, index = tree.query((event.xdata, event.ydata))
+            # use a cKDTree based picking to speed up picks for large collections
+            dist, index = self.tree.query((event.xdata, event.ydata))
 
             # always set the point as invalid if it is outside of the bounds
             # (for plots like delauney-triangulations that do not require a radius)
@@ -895,6 +894,9 @@ class Maps(object):
         # calculate rotation angle based on mid-point
         theta = np.sign(y3 - y0) * np.rad2deg(np.arcsin(np.abs(y3 - y0) / w))
 
+        # use a cKDTree based picking to speed up picks for large collections
+        self.tree = cKDTree(np.stack([x0, y0], axis=1))
+
         props = dict(
             x0=x0,
             y0=y0,
@@ -951,6 +953,20 @@ class Maps(object):
 
             tri = Triangulation(d.points[:, 0], d.points[:, 1], d.simplices)
             props["tri"] = tri
+
+
+            x = tri.x[tri.triangles]
+            y = tri.y[tri.triangles]
+            n = self.tree.query(np.column_stack((x.mean(axis=1),
+                                                 y.mean(axis=1))), 3)[1]
+            n2 = self.tree.query(np.column_stack((x.flat,
+                                                  y.flat)),
+                                 1)[1].reshape(n.shape)
+            n.sort(axis=1)
+            n2.sort(axis=1)
+            mask = ~np.equal(n, n2).all(axis=1)
+
+            tri.set_mask(mask)
         else:
             raise TypeError(
                 f"'{shape}' is not a valid shape, use one of:\n"
