@@ -336,6 +336,14 @@ class Maps(object):
                 - "trimesh_rectangles": rectangles but drawn with a
                   TriMesh collection so that there are no boundaries between
                   the pixels. (e.g. useful for contourplots)
+                  NOTE: setting edge- and facecolors afterwards is not possible!
+                - "delauney_triangulation": plot a delauney-triangulation
+                  for the given set of data. (e.g. a dense triangulation of
+                  irregularly spaced points)
+                  NOTE: setting edge- and facecolors afterwards is not possible!
+                - "delauney_triangulation_flat": same as the normal delauney-
+                  triangulation, but plotted as a polygon-collection so that
+                  edgecolors etc. can be set.
             The default is "trimesh_rectangles".
         """
 
@@ -644,15 +652,33 @@ class Maps(object):
         # ------------- add a picker that will be used by the callbacks
         # use a cKDTree based picking to speed up picks for large collections
         tree = cKDTree(np.stack([props["x0"], props["y0"]], axis=1))
-        maxdist = np.max([np.max(props["w"]), np.max(props["h"])])
+
+        if shape.startswith("delauney_triangulation"):
+            # set an infinite search-distance if triangulations are used
+            maxdist = np.inf
+        else:
+            maxdist = np.max([np.max(props["w"]), np.max(props["h"])]) * 2
 
         def picker(artist, event):
+            if event.inaxes != self.figure.ax:
+                return False, None
+
             if event.dblclick:
                 double_click = True
             else:
                 double_click = False
 
             dist, index = tree.query((event.xdata, event.ydata))
+
+            # always set the point as invalid if it is outside of the bounds
+            # (for plots like delauney-triangulations that do not require a radius)
+            bounds = self._bounds
+            if not (
+                (bounds[0] < event.xdata < bounds[2])
+                and (bounds[1] < event.ydata < bounds[3])
+            ):
+                dist = np.inf
+
             if dist < maxdist:
                 return True, dict(
                     ind=index, double_click=double_click, mouse_button=event.button
@@ -675,6 +701,16 @@ class Maps(object):
             cb=cb,
             cb_gridspec=cbgs,
             coll=coll,
+        )
+
+    @property
+    @lru_cache()
+    def _bounds(self):
+        return (
+            self._props["x0"].min(),
+            self._props["y0"].min(),
+            self._props["x0"].max(),
+            self._props["y0"].max(),
         )
 
     def _set_cpos(self, x, y, radiusx, radiusy, cpos):
@@ -905,11 +941,23 @@ class Maps(object):
             )
 
             props["tri"] = tri
+        elif shape.startswith("delauney_triangulation"):
+            try:
+                from scipy.spatial import Delaunay
+            except ImportError:
+                raise ImportError("'scipy' is required for 'delauney_triangulation'!")
 
+            d = Delaunay(np.column_stack((x0, y0)), qhull_options="QJ")
+
+            tri = Triangulation(d.points[:, 0], d.points[:, 1], d.simplices)
+            props["tri"] = tri
         else:
             raise TypeError(
                 f"'{shape}' is not a valid shape, use one of:\n"
-                + "    - 'ellipses'\n    - 'rectangles'\n    - 'trimesh_rectangles'"
+                + "    - 'ellipses'\n"
+                + "    - 'rectangles'\n"
+                + "    - 'trimesh_rectangles'\n"
+                + "    - 'delauney_triangulation'"
             )
 
         return props
@@ -1144,6 +1192,51 @@ class Maps(object):
                 coll.set_cmap(cmap)
                 coll.set_clim(vmin, vmax)
                 coll.set_norm(norm)
+            # coll.set_urls(np.repeat(ids, 3, axis=0))
+            ax.add_collection(coll)
+        elif shape.startswith("delauney_triangulation"):
+            if shape.endswith("_flat"):
+                shading = "flat"
+            else:
+                shading = "gouraud"
+            if shading == "gouraud":
+                coll = TriMesh(props["tri"])
+
+                if color is not None:
+                    coll.set_facecolors([color] * (len(props["x0"])) * 6)
+                else:
+                    z = np.ma.masked_invalid(z_data)
+                    # tri-contour meshes need 3 values for each triangle
+                    z = np.tile(z, 3)
+
+                    coll.set_array(z.ravel())
+                    coll.set_cmap(cmap)
+                    coll.set_clim(vmin, vmax)
+                    coll.set_norm(norm)
+
+            else:
+                tri = props["tri"]
+                # Vertices of triangles.
+                maskedTris = tri.get_masked_triangles()
+                verts = np.stack((tri.x[maskedTris], tri.y[maskedTris]), axis=-1)
+
+                coll = collections.PolyCollection(verts, transOffset=ax.transData)
+                if color is not None:
+                    coll.set_color(color)
+                else:
+                    z = np.ma.masked_invalid(z_data)
+                    # tri-contour meshes need 3 values for each triangle
+                    z = np.tile(z, 3)
+                    z = z[maskedTris].mean(axis=1)
+
+                    coll.set_array(z)
+                    coll.set_cmap(cmap)
+                    coll.set_clim(vmin, vmax)
+                    coll.set_norm(norm)
+
+            # add centroid positions (used by the picker in self._spatial_plot)
+            coll._Maps_positions = list(zip(props["x0"], props["y0"]))
+
             # coll.set_urls(np.repeat(ids, 3, axis=0))
             ax.add_collection(coll)
 
