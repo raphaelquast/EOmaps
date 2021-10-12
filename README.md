@@ -5,13 +5,14 @@
 
 A general-purpose library to plot interactive maps of geographical datasets.
 
-🚀  feel free to contribute!
+### basic features:
+🌍 reproject & plot irregular datasets as ellipses or rectangles with actual geographical dimensions  
+🌎 interact with the plot via "callback-functions"  
+🌏 add overlays to the plots (NaturalEarth features, geo-dataframes, etc.)  
+🌍 get a nice colorbar with a colored histogram on top  
 
-### features
-- reproject & plot datasets as ellipses or rectangles with actual geographical dimensions
-- interact with the database underlying the plot via "callback-functions"
-- add overlays to the plots (NaturalEarth features, geo-dataframes, etc.)
-- get a nice colorbar with a colored histogram on top
+- check out the example-notebook: 🛸 [EOmaps_examples.ipynb](https://github.com/raphaelquast/maps/blob/dev/examples/EOmaps_examples.ipynb) 🛸
+
 
 ## install
 The recommended way to install EOmaps with conda + pip:
@@ -32,9 +33,6 @@ The recommended way to install EOmaps with conda + pip:
    ```
 
 ## basic usage
-
-- check out the example-notebook: 🛸 [A_basic_map.ipynb](https://github.com/raphaelquast/maps/blob/dev/examples/EOmaps_examples.ipynb) 🛸
-
 ```python
 import pandas as pd
 from eomaps import Maps
@@ -59,13 +57,11 @@ m.add_gdf(...)             # plot geo-dataframes
 
 m.add_overlay(...)         # add overlay-layers
 
-m.add_annotation(...)      # add annotations
-m.add_marker(...)          # add markers
+m.add_annotation(...)      # add static annotations
+m.add_marker(...)          # add static markers
 
 # access individual objects of the generated figure
-# (f, ax, cb, gridspec etc.)
 m.figure.<...>
-
 
 # save the figure
 m.savefig("oooh_what_a_nice_figure.png", dpi=300)  
