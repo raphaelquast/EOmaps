@@ -4,15 +4,14 @@
 This file is part of EOmaps.
 For COPYING and LICENSE details, please refer to the LICENSE file
 """
-from pathlib import Path
 from setuptools import setup, find_packages
 
-version = "0.1.5"
+version = "0.1.6"
 
 setup(
     name="EOmaps",
     version=version,
-    description="A general-purpose library to generate interactive plots of geographical datasets.",
+    description="A general-purpose library to generate interactive maps of geographical datasets.",
     packages=find_packages(),
     package_dir={"eomaps": "eomaps"},
     # include_package_data=True,
@@ -24,7 +23,7 @@ setup(
     url="https://github.com/raphaelquast/maps",
     long_description=(
         "A python module to quickly generate interactive "
-        + "plots of geographical datasets."
+        + "maps of geographical datasets."
     ),
     install_requires=[
         "numpy",
