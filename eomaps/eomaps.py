@@ -438,6 +438,9 @@ class Maps(object):
 
         self.BM = BlitManager(self.figure.f.canvas)
 
+        # trigger drawing the figure
+        self.figure.f.canvas.draw()
+
     def _spatial_plot(
         self,
         data,
@@ -662,9 +665,6 @@ class Maps(object):
             return False, None
 
         coll.set_picker(picker)
-
-        # trigger drawing the figure
-        f.canvas.draw()
 
         self.figure = _Maps_plot(
             f=f,
