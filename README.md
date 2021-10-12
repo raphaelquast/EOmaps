@@ -33,7 +33,7 @@ The recommended way to install EOmaps with conda + pip:
 
 ## basic usage
 
-- check out the example-notebook: 🛸 [A_basic_map.ipynb](https://github.com/raphaelquast/maps/blob/dev/examples/A_basic_map.ipynb) 🛸
+- check out the example-notebook: 🛸 [A_basic_map.ipynb](https://github.com/raphaelquast/maps/blob/dev/examples/EOmaps_examples.ipynb) 🛸
 
 ```python
 import pandas as pd

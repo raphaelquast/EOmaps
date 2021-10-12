@@ -1,7 +1,9 @@
 import numpy as np
+from pandas import DataFrame
 import matplotlib.pyplot as plt
 from collections import defaultdict
-from matplotlib.patches import Circle, Ellipse, Rectangle
+from matplotlib.patches import Circle, Ellipse, Rectangle, Polygon
+from pyproj import CRS, Transformer
 
 
 class callbacks(object):
@@ -31,6 +33,14 @@ class callbacks(object):
         >>> m.remove_callback(some_callback)
     """
 
+    # the naming-convention of the functions is as follows:
+    #
+    # _<NAME>_cleanup : a function that is executed if the callback
+    #                   is removed from the plot
+    #
+    # _<NAME>_nopick_callback : a function that is executed if an empty area
+    #                           is clicked within the plot
+
     def __init__(self, m):
         self.m = m
 
@@ -39,7 +49,16 @@ class callbacks(object):
 
     @property
     def cb_list(self):
-        return ["load", "print_to_console", "annotate", "plot", "get_values", "mark"]
+        return [
+            "annotate",
+            "mark",
+            "plot",
+            "print_to_console",
+            "get_values",
+            "load",
+            "clear_annotations",
+            "clear_markers",
+        ]
 
     def load(
         self,
@@ -119,9 +138,7 @@ class callbacks(object):
         ind : int
             The index of the clicked pixel
         """
-        # crs = self._get_crs(self.plot_specs["plot_epsg"])
-        # xlabel, ylabel = [crs.axis_info[0].abbrev, crs.axis_info[1].abbrev]
-        # xlabel, ylabel = [i.name for i in self.m.figure.ax.projection.axis_info[:2]]
+
         xlabel = self.m.data_specs["xcoord"]
         ylabel = self.m.data_specs["ycoord"]
 
@@ -146,14 +163,15 @@ class callbacks(object):
         val_precision=4,
         permanent=False,
         text=None,
+        layer=10,
         **kwargs,
     ):
         """
         a callback-function to annotate basic properties from the fit on
         double-click, use as:    spatial_plot(... , callback=cb_annotate)
 
-        if permanent = True, the generated annotations are accessible via
-        `m.permanent_annotations`
+        if permanent = True, the generated annotations are stored in a list
+        which is accessible via `m.cb.permanent_annotations`
 
         Parameters
         ----------
@@ -189,7 +207,10 @@ class callbacks(object):
                 >>>     return "the string to print"
 
             The default is None.
-
+        layer : int
+            The layer-level on which to draw the artist.
+            (First layer 0 is drawn, then layer 1 on top then layer 2 etc...)
+            The default is 10.
         **kwargs
             kwargs passed to matplotlib.pyplot.annotate(). The default is:
 
@@ -201,29 +222,13 @@ class callbacks(object):
 
         """
 
-        if not hasattr(self.m, "background"):
-            # cache the background before the first annotation is drawn
-            # in case there is no cached background yet
-            self.m._grab_background(redraw=False)
-
-        if not hasattr(self.m, "draw_cid"):
-            # attach draw_event that handles blitting
-            self.m.draw_cid = self.m.figure.f.canvas.mpl_connect(
-                "draw_event", self.m._grab_background
-            )
-
-        # to hide the annotation, Maps._cb_hide_annotate() is called when an empty
-        # area is clicked!
-        # crs = self._get_crs(self.plot_specs["plot_epsg"])
-        # xlabel, ylabel = [crs.axis_info[0].abbrev, crs.axis_info[1].abbrev]
-        # xlabel, ylabel = [i.abbrev for i in self.m.figure.ax.projection.axis_info[:2]]
         xlabel = self.m.data_specs["xcoord"]
         ylabel = self.m.data_specs["ycoord"]
 
         ax = self.m.figure.ax
 
         if hasattr(self, "annotation") and not permanent:
-            # re-use the attached annotation
+            # re-use the existing annotation if possible
             annotation = self.annotation
         else:
             # create a new annotation
@@ -238,6 +243,7 @@ class callbacks(object):
             annotation = ax.annotate("", xy=pos, **styledict)
 
             if not permanent:
+                # save the annotation for re-use
                 self.annotation = annotation
             else:
                 if not hasattr(self, "permanent_annotations"):
@@ -245,11 +251,18 @@ class callbacks(object):
                 else:
                     self.permanent_annotations.append(annotation)
 
+            if layer is not None:
+                self.m.BM.add_artist(annotation, layer=layer)
+
         annotation.set_visible(True)
         annotation.xy = pos
 
         if text is None:
             x, y = [
+                np.format_float_positional(i, trim="-", precision=pos_precision)
+                for i in self.m.data.loc[ID][[xlabel, ylabel]]
+            ]
+            x0, y0 = [
                 np.format_float_positional(i, trim="-", precision=pos_precision)
                 for i in pos
             ]
@@ -257,7 +270,8 @@ class callbacks(object):
                 val = np.format_float_positional(val, trim="-", precision=val_precision)
 
             printstr = (
-                f"{xlabel} = {x}\n{ylabel} = {y}\n"
+                f"{xlabel} = {x} ({x0})\n"
+                + f"{ylabel} = {y} ({y0})\n"
                 + (f"ID = {ID}\n" if ID is not None else "")
                 + (
                     f"{self.m.data_specs['parameter']} = {val}"
@@ -272,36 +286,34 @@ class callbacks(object):
 
         annotation.set_text(printstr)
 
-        # use blitting instead of f.canvas.draw() to speed up annotation generation
-        # in case a large collection is plotted
+        self.m.BM.update()
 
-        if permanent:
-            self.m._blit(annotation)
-            self.m._grab_background(redraw=False)
-        else:
-            self.m._blit(annotation)
-
-    def clear_annotations(self):
+    def clear_annotations(self, remove_permanent=True, remove_temporary=True, **kwargs):
         """
-        remove all permanent annotations from the plot
+        remove all temporary and permanent annotations from the plot
         """
-        if hasattr(self, "permanent_annotations"):
+        if remove_permanent and hasattr(self, "permanent_annotations"):
             while len(self.permanent_annotations) > 0:
                 ann = self.permanent_annotations.pop(0)
+                self.m.BM.remove_artist(ann)
                 ann.remove()
+        if remove_temporary and hasattr(self, "annotation"):
+            self.annotation.set_visible(False)
+            self.m.BM.remove_artist(self.annotation)
+            del self.annotation
+
+        self.m.BM.update()
+
+    def _clear_annotations_nopick_callback(self):
+        self.clear_annotations()
 
     def _annotate_cleanup(self):
-        if hasattr(self.m, "background"):
-            # delete cached background
-            del self.m.background
-        # remove draw_event callback
-        if hasattr(self.m, "draw_cid"):
-            self.m.figure.f.canvas.mpl_disconnect(self.m.draw_cid)
-            del self.m.draw_cid
-        # remove draw_event callback
+        self.clear_annotations()
+
+    def _annotate_nopick_callback(self):
         if hasattr(self, "annotation"):
             self.annotation.set_visible(False)
-            del self.annotation
+        self.m.BM.update()
 
     def plot(
         self,
@@ -364,8 +376,6 @@ class callbacks(object):
 
             self._pick_f.canvas.mpl_connect("close_event", on_close)
 
-        # crs = self._get_crs(self.plot_specs["plot_epsg"])
-        # _pick_xlabel, _pick_ylabel = [crs.axis_info[0].abbrev, crs.axis_info[1].abbrev]
         _pick_xlabel = self.m.data_specs["xcoord"]
         _pick_ylabel = self.m.data_specs["ycoord"]
 
@@ -443,9 +453,11 @@ class callbacks(object):
         val=None,
         ind=None,
         radius="pixel",
+        radius_crs="in",
         shape="circle",
         buffer=1,
         permanent=True,
+        layer=10,
         **kwargs,
     ):
         """
@@ -478,6 +490,11 @@ class callbacks(object):
             If "pixel" the pixel dimensions of the clicked pixel are used
 
             The default is None.
+        radius_crs : any
+            The crs specification in which the radius is provided.
+            The default is "in" (e.g. the crs of the input-data).
+            (only relevant if radius is NOT specified as "pixel")
+
         shape : str, optional
             Indicator which shape to draw. Currently supported shapes are:
                 - circle
@@ -490,42 +507,91 @@ class callbacks(object):
         permanent : bool, optional
             Indicator if the shapes should be permanent (True) or removed
             on each new double-click (False)
-            TODO: permanent=False not yet implemented!
+        layer : int
+            The layer-level on which to draw the artist.
+            (First layer 0 is drawn, then layer 1 on top then layer 2 etc...)
+            The default is 10.
         **kwargs :
             kwargs passed to the matplotlib patch.
             (e.g. `facecolor`, `edgecolor`, `linewidth`, `alpha` etc.)
         """
 
-        if not hasattr(self.m, "background"):
-            # cache the background before the first annotation is drawn
-            # in case there is no cached background yet
-            self.m._grab_background(redraw=False)
+        if radius_crs == "in":
+            radius_crs = self.m.data_specs["in_crs"]
+        elif radius_crs == "out":
+            radius_crs = self.m.plot_specs["plot_epsg"]
 
-        if not hasattr(self.m, "draw_cid"):
-            # attach draw_event that handles blitting
-            self.m.draw_cid = self.m.figure.f.canvas.mpl_connect(
-                "draw_event", self.m._grab_background
+        if ID is not None:
+            if ind is None:
+                ind = self.m.data.index.get_loc(ID)
+
+        if radius == "pixel":
+            d = self.m._prepare_data(
+                data=DataFrame(
+                    dict(
+                        x=[self.m._props["x0"][ind]],
+                        y=[self.m._props["y0"][ind]],
+                        z=[self.m._props["z_data"][ind]],
+                    )
+                ),
+                # data=self.m.data.loc[[ID]],
+                xcoord="x",
+                ycoord="y",
+                parameter="z",
+                in_crs=self.m.plot_specs["plot_epsg"],
+                radius_crs=self.m.data_specs["in_crs"],
+                shape="rectangles",
+                buffer=buffer,
+                radius=self.m._props["radius"],
             )
+            radiusx = self.m._props["w"][ind]
+            radiusy = self.m._props["h"][ind]
+            theta = self.m._props["theta"][ind]
 
-        if not hasattr(self, "_pick_markers"):
-            self._pick_markers = []
-
-        if radius is None:
-            radiusx = np.abs(np.diff(np.unique(self.m._props["x0"])).mean()) / 2.0
-            radiusy = np.abs(np.diff(np.unique(self.m._props["y0"])).mean()) / 2.0
-        elif radius == "pixel":
-            if ID is not None:
-                if ind is None:
-                    ind = self.m.data.index.get_loc(ID)
-                radiusx = self.m._props["w"][ind] / 2
-                radiusy = self.m._props["h"][ind] / 2
-            else:
-                raise TypeError("you must provide eiter the ID or an explicit radius!")
-        else:
+        elif isinstance(radius, (int, float, list, tuple)):
+            theta = 0
             if isinstance(radius, (list, tuple)):
                 radiusx, radiusy = radius
             else:
                 radiusx = radiusy = radius
+
+            # transform the radius if radius_crs is not None
+            if radius_crs is not None:
+                d = self.m._prepare_data(
+                    data=DataFrame(
+                        dict(
+                            x=[self.m._props["x0"][ind]],
+                            y=[self.m._props["y0"][ind]],
+                            z=[self.m._props["z_data"][ind]],
+                        )
+                    ),
+                    # data=self.m.data.loc[[ID]],
+                    xcoord="x",
+                    ycoord="y",
+                    parameter="z",
+                    in_crs=self.m.plot_specs["plot_epsg"],
+                    radius_crs=radius_crs,
+                    shape="rectangles",
+                    buffer=buffer,
+                    radius=(radiusx, radiusy),
+                )
+
+                radiusx = d["w"][0]
+                radiusy = d["h"][0]
+                theta = d["theta"][0]
+
+        else:
+            radiusx, radiusy = self.m._props["radius"]
+            theta = self.m._props["theta"][ind]
+
+        if hasattr(self, "marker") and not permanent:
+            # remove existing marker
+            self.marker.set_visible(False)
+            self.m.BM.remove_artist(self.marker)
+            del self.marker
+
+        if permanent and not hasattr(self, "permanent_markers"):
+            self.permanent_markers = []
 
         if shape == "circle":
             p = Circle(pos, np.sqrt(radiusx ** 2 + radiusy ** 2) * buffer, **kwargs)
@@ -534,37 +600,62 @@ class callbacks(object):
                 pos,
                 radiusx * 2 * buffer,
                 radiusy * 2 * buffer,
+                theta,
                 **kwargs,
             )
         elif shape == "rectangle":
-            p = Rectangle(
-                [pos[0] - radiusx * buffer, pos[1] - radiusy * buffer],
-                radiusx * 2 * buffer,
-                radiusy * 2 * buffer,
-                **kwargs,
-            )
+            if radius == "pixel":
+                p = Polygon(
+                    d["verts"][0],
+                    **kwargs,
+                )
+            else:
+                p = Rectangle(
+                    [pos[0] - radiusx * buffer, pos[1] - radiusy * buffer],
+                    radiusx * 2 * buffer,
+                    radiusy * 2 * buffer,
+                    theta,
+                    **kwargs,
+                )
         else:
             raise TypeError(f"{shape} is not a valid marker-shape")
 
-        artist = self.m.figure.ax.add_patch(p)
-
-        self._pick_markers.append(artist)
+        marker = self.m.figure.ax.add_patch(p)
 
         if permanent:
-            # first draw the marker, then cache the new background
-            self.m._blit(artist)
-            self.m._grab_background(redraw=False)
+            self.permanent_markers.append(marker)
+        else:
+            self.marker = marker
 
-        if not permanent:
-            raise NotImplementedError("non-permanent markers not yet implemented!")
+        if layer is not None:
+            self.m.BM.add_artist(marker, layer)
+
+        self.m.BM.update()
+
+    def clear_markers(self, remove_permanent=True, remove_temporary=True, **kwargs):
+        """
+        remove all temporary and permanent annotations from the plot
+        """
+        if remove_permanent and hasattr(self, "permanent_markers"):
+            while len(self.permanent_markers) > 0:
+                marker = self.permanent_markers.pop(0)
+                self.m.BM.remove_artist(marker)
+                marker.remove()
+            del self.permanent_markers
+        if remove_temporary and hasattr(self, "marker"):
+            self.marker.set_visible(False)
+            self.m.BM.remove_artist(self.marker)
+            del self.marker
+
+        self.m.BM.update()
+
+    def _clear_markers_nopick_callback(self):
+        self.clear_markers()
 
     def _mark_cleanup(self):
-        if hasattr(self, "_pick_markers"):
-            while len(self._pick_markers) > 0:
-                self._pick_markers.pop(0).remove()
-            del self._pick_markers
+        self.clear_markers()
 
-        # remove draw_event callback
-        if hasattr(self.m, "draw_cid"):
-            self.m.figure.f.canvas.mpl_disconnect(self.m.draw_cid)
-            del self.m.draw_cid
+    def _mark_nopick_callback(self):
+        if hasattr(self, "marker"):
+            self.marker.set_visible(False)
+        self.m.BM.update()
