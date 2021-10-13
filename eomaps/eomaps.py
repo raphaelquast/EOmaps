@@ -344,6 +344,15 @@ class Maps(object):
                 - "delauney_triangulation_flat": same as the normal delauney-
                   triangulation, but plotted as a polygon-collection so that
                   edgecolors etc. can be set.
+                - "delauney_triangulation_masked" (or "_flat_masked"):
+                  same as "delauney_triangulation" but all triangles that
+                  exhibit side-lengths longer than (2 x radius) are masked
+
+                  This is particularly useful to triangulate concave areas
+                  that are densely sampled.
+                  -> you can use the radius as a parameter for the max.
+                     interpolation-distance!
+
             The default is "trimesh_rectangles".
         """
 
@@ -677,7 +686,7 @@ class Maps(object):
                 and (bounds[1] < event.ydata < bounds[3])
             ):
                 dist = np.inf
-
+            print(event.xdata, event.ydata, dist, index)
             if dist < maxdist:
                 return True, dict(
                     ind=index, double_click=double_click, mouse_button=event.button
@@ -894,7 +903,8 @@ class Maps(object):
         theta = np.sign(y3 - y0) * np.rad2deg(np.arcsin(np.abs(y3 - y0) / w))
 
         # use a cKDTree based picking to speed up picks for large collections
-        self.tree = cKDTree(np.stack([x0, y0], axis=1))
+        if not hasattr(self, "figure"):
+            self.tree = cKDTree(np.stack([x0, y0], axis=1))
 
         props = dict(
             x0=x0,
@@ -943,6 +953,16 @@ class Maps(object):
 
             props["tri"] = tri
         elif shape.startswith("delauney_triangulation"):
+            assert (
+                shape == "delauney_triangulation"
+                or shape == "delauney_triangulation_masked"
+                or shape == "delauney_triangulation_flat"
+                or shape == "delauney_triangulation_flat_masked"
+            ), (
+                f"the provided delauney-shape suffix '{shape}'"
+                + " is not valid ...use one of"
+                + " '_masked', '_flat' or ' _flat_masked'"
+            )
             try:
                 from scipy.spatial import Delaunay
             except ImportError:
@@ -953,26 +973,32 @@ class Maps(object):
             tri = Triangulation(d.points[:, 0], d.points[:, 1], d.simplices)
             props["tri"] = tri
 
+            if shape.endswith("_masked"):
 
-            x = tri.x[tri.triangles]
-            y = tri.y[tri.triangles]
-            n = self.tree.query(np.column_stack((x.mean(axis=1),
-                                                 y.mean(axis=1))), 3)[1]
-            n2 = self.tree.query(np.column_stack((x.flat,
-                                                  y.flat)),
-                                 1)[1].reshape(n.shape)
-            n.sort(axis=1)
-            n2.sort(axis=1)
-            mask = ~np.equal(n, n2).all(axis=1)
+                if radius_crs == "in":
+                    x = xorig[tri.triangles]
+                    y = yorig[tri.triangles]
+                elif radius_crs == "out":
+                    x = x0[tri.triangles]
+                    y = y0[tri.triangles]
+                else:
+                    x = x0r[tri.triangles]
+                    y = y0r[tri.triangles]
 
-            tri.set_mask(mask)
+                maxdist = np.mean(2 * np.sqrt(radiusx ** 2 + radiusy ** 2))
+                l0 = np.sqrt((x[:, 0] - x[:, 1]) ** 2 + (y[:, 0] - y[:, 1]) ** 2)
+                l1 = np.sqrt((x[:, 0] - x[:, 2]) ** 2 + (y[:, 0] - y[:, 2]) ** 2)
+                l2 = np.sqrt((x[:, 1] - x[:, 2]) ** 2 + (y[:, 1] - y[:, 2]) ** 2)
+                mask = (l0 > maxdist) | (l1 > maxdist) | (l2 > maxdist)
+
+                tri.set_mask(mask)
         else:
             raise TypeError(
                 f"'{shape}' is not a valid shape, use one of:\n"
                 + "    - 'ellipses'\n"
                 + "    - 'rectangles'\n"
                 + "    - 'trimesh_rectangles'\n"
-                + "    - 'delauney_triangulation'"
+                + "    - 'delauney_triangulation(_flat)(_masked)'"
             )
 
         return props
@@ -1210,7 +1236,7 @@ class Maps(object):
             # coll.set_urls(np.repeat(ids, 3, axis=0))
             ax.add_collection(coll)
         elif shape.startswith("delauney_triangulation"):
-            if shape.endswith("_flat"):
+            if shape.endswith("_flat") or shape.endswith("_flat_masked"):
                 shading = "flat"
             else:
                 shading = "gouraud"
