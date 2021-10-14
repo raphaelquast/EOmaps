@@ -98,6 +98,17 @@ class Maps(object):
         or below the map ("vertical"). The default is "vertical"
     """
 
+    _shapes = [
+        "ellipses",
+        "rectangles",
+        "trimesh_rectangles",
+        "delauney_triangulation",
+        "delauney_triangulation_flat",
+        "delauney_triangulation_masked",
+        "delauney_triangulation_flat_masked",
+        "Voroni",
+    ]
+
     def __init__(
         self,
         orientation="vertical",
@@ -974,7 +985,6 @@ class Maps(object):
             props["tri"] = tri
 
             if shape.endswith("_masked"):
-
                 if radius_crs == "in":
                     x = xorig[tri.triangles]
                     y = yorig[tri.triangles]
@@ -985,12 +995,15 @@ class Maps(object):
                     x = x0r[tri.triangles]
                     y = y0r[tri.triangles]
 
-                maxdist = 2 * np.mean(np.sqrt(radiusx ** 2 + radiusy ** 2))
+                maxdist = 4 * np.mean(np.sqrt(radiusx ** 2 + radiusy ** 2))
 
                 verts = np.stack((x, y), axis=2)
                 cpos = verts.mean(axis=1)[:, None]
                 cdist = np.sqrt(np.sum((verts - cpos) ** 2, axis=2))
-                mask = np.any(cdist > maxdist, axis=1)
+
+                mask = np.logical_or(
+                    np.any(cdist > maxdist * 2, axis=1), cdist.mean(axis=1) > maxdist
+                )
 
                 tri.set_mask(mask)
         elif shape == "Voroni":
