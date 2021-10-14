@@ -993,6 +993,45 @@ class Maps(object):
                 mask = np.any(cdist > maxdist, axis=1)
 
                 tri.set_mask(mask)
+        elif shape == "Voroni":
+            try:
+                from scipy.spatial import Voronoi
+                from itertools import zip_longest
+            except ImportError:
+                raise ImportError("'scipy' is required for 'Voroni'!")
+
+            maxdist = 2 * np.mean(np.sqrt(radiusx ** 2 + radiusy ** 2))
+
+            xy = np.column_stack((x0, y0))
+            vor = Voronoi(xy)
+
+            rect_regions = np.array(list(zip_longest(*vor.regions, fillvalue=-2))).T
+            # (use -2 instead of None to make np.take work as expected)
+
+            rect_regions = rect_regions[vor.point_region]
+            # exclude all points at infinity
+            mask = np.all(np.not_equal(rect_regions, -1), axis=1)
+            # get the mask for the artificially added vertices
+            rect_mask = rect_regions == -2
+
+            x = np.ma.masked_array(
+                np.take(vor.vertices[:, 0], rect_regions), mask=rect_mask
+            )
+            y = np.ma.masked_array(
+                np.take(vor.vertices[:, 1], rect_regions), mask=rect_mask
+            )
+            rect_verts = np.ma.stack((x, y)).swapaxes(0, 1).swapaxes(1, 2)
+
+            # exclude any polygon whose defining point is farther away than maxdist
+            cdist = np.sqrt(np.sum((rect_verts - vor.points[:, None]) ** 2, axis=2))
+            polymask = np.all(cdist < maxdist, axis=1)
+            mask = np.logical_and(mask, polymask)
+
+            verts = list(i.compressed().reshape(-1, 2) for i in rect_verts[mask])
+            props["verts"] = verts
+
+            # remember masked points
+            self._voroni_mask = mask
         else:
             raise TypeError(
                 f"'{shape}' is not a valid shape, use one of:\n"
@@ -1210,6 +1249,23 @@ class Maps(object):
                 coll.set_color(color)
             else:
                 coll.set_array(np.ma.masked_invalid(z_data))
+                coll.set_cmap(cmap)
+                coll.set_clim(vmin, vmax)
+                coll.set_norm(norm)
+            # coll.set_urls(ids)
+            ax.add_collection(coll)
+        elif shape == "Voroni":
+            coll = collections.PolyCollection(
+                verts=props["verts"],
+                transOffset=ax.transData,
+            )
+            # add centroid positions (used by the picker in self._spatial_plot)
+            coll._Maps_positions = list(zip(props["x0"], props["y0"]))
+
+            if color is not None:
+                coll.set_color(color)
+            else:
+                coll.set_array(np.ma.masked_invalid(z_data)[self._voroni_mask])
                 coll.set_cmap(cmap)
                 coll.set_clim(vmin, vmax)
                 coll.set_norm(norm)
