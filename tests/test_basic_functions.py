@@ -32,7 +32,7 @@ class TestBasicPlotting(unittest.TestCase):
             m.set_plot_specs(plot_epsg=4326, shape=shape)
             m.plot_map()
 
-        plt.close(m.figure.f)
+            plt.close(m.figure.f)
 
     def test_simple_map2(self):
         m = Maps()
