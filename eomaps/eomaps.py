@@ -985,11 +985,12 @@ class Maps(object):
                     x = x0r[tri.triangles]
                     y = y0r[tri.triangles]
 
-                maxdist = np.mean(2 * np.sqrt(radiusx ** 2 + radiusy ** 2))
-                l0 = np.sqrt((x[:, 0] - x[:, 1]) ** 2 + (y[:, 0] - y[:, 1]) ** 2)
-                l1 = np.sqrt((x[:, 0] - x[:, 2]) ** 2 + (y[:, 0] - y[:, 2]) ** 2)
-                l2 = np.sqrt((x[:, 1] - x[:, 2]) ** 2 + (y[:, 1] - y[:, 2]) ** 2)
-                mask = (l0 > maxdist) | (l1 > maxdist) | (l2 > maxdist)
+                maxdist = 2 * np.mean(np.sqrt(radiusx ** 2 + radiusy ** 2))
+
+                verts = np.stack((x, y), axis=2)
+                cpos = verts.mean(axis=1)[:, None]
+                cdist = np.sqrt(np.sum((verts - cpos) ** 2, axis=2))
+                mask = np.any(cdist > maxdist, axis=1)
 
                 tri.set_mask(mask)
         else:
