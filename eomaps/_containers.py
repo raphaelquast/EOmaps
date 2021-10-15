@@ -1,7 +1,10 @@
 from textwrap import dedent, indent, fill
 from warnings import warn
 from operator import attrgetter
+from inspect import signature, _empty
+from types import SimpleNamespace
 from matplotlib.pyplot import get_cmap
+import mapclassify
 
 
 class data_specs(object):
@@ -45,7 +48,14 @@ class data_specs(object):
 
             for i in key:
                 assert i in self.keys(), f"{i} is not a valid data-specs key!"
-            item = dict(zip(key, attrgetter(*key)(self)))
+            if len(key) == 0:
+                item = dict()
+            else:
+                key = list(key)
+                if len(key) == 1:
+                    item = {key[0]: getattr(self, key[0])}
+                else:
+                    item = dict(zip(key, attrgetter(*key)(self)))
         else:
             if key == "crs":
                 key = "in_crs"
@@ -122,11 +132,11 @@ class data_specs(object):
                         for i in self.data.keys()
                         if i not in [self.xcoord, self.ycoord]
                     )
-                    print(f"Parameter was set to: '{self.parameter}'")
+                    print(f"EOmaps: Parameter was set to: '{self.parameter}'")
 
                 except Exception:
                     warn(
-                        "Parameter-name could not be identified!"
+                        "EOmaps: Parameter-name could not be identified!"
                         + "\nCheck the data-specs!"
                     )
         return self._parameter
@@ -229,7 +239,14 @@ class plot_specs(object):
         if isinstance(key, (list, tuple)):
             for i in key:
                 assert i in self.keys(), f"{i} is not a valid data-specs key!"
-            item = dict(zip(key, attrgetter(*key)(self)))
+            if len(key) == 0:
+                item = dict()
+            else:
+                key = list(key)
+                if len(key) == 1:
+                    item = {key[0]: getattr(self, key[0])}
+                else:
+                    item = dict(zip(key, attrgetter(*key)(self)))
         else:
             assert key in self.keys(), f"{key} is not a valid data-specs key!"
             item = getattr(self, key)
@@ -260,3 +277,121 @@ class plot_specs(object):
     @cmap.setter
     def cmap(self, val):
         self._cmap = get_cmap(val)
+
+
+class classify_specs(object):
+    """
+    a container for accessing the data classification specifications
+
+    SCHEMES : accessor Namespace for the available classification-schemes
+
+    """
+
+    def __init__(self, m):
+        self._defaults = dict()
+
+        self._keys = set()
+        self._m = m
+        self.scheme = None
+
+    def __repr__(self):
+        txt = f"# scheme: {self.scheme}\n" + "\n".join(
+            f"# {key}: {indent(fill(self[key].__repr__(), 60),  ' '*(len(key) + 4)).strip()}"
+            for key in list(self.keys())
+        )
+        return txt
+
+    def __getitem__(self, key):
+        if isinstance(key, (list, tuple, set)):
+            if len(key) == 0:
+                item = dict()
+            else:
+                key = list(key)
+                if len(key) == 1:
+                    item = {key[0]: getattr(self, key[0])}
+                else:
+                    item = dict(zip(key, attrgetter(*key)(self)))
+        else:
+            item = getattr(self, key)
+        return item
+
+    def __setitem__(self, key, val):
+        return setattr(self, key, val)
+
+    def __setattr__(self, key, val):
+        if not key.startswith("_") and key != "scheme":
+            assert self.scheme is not None, "please specify the scheme first!"
+            assert key in self._defaults, (
+                f"The key is not a valid argument of the '{self.scheme}' classification!"
+                + f" ...possible parameters are: {self._defaults}"
+            )
+
+            self._keys.add(key)
+
+        super().__setattr__(key, val)
+
+    def keys(self):
+        return self._keys
+
+    def items(self):
+        return self[self.keys()]
+
+    @property
+    def scheme(self):
+        return self._scheme
+
+    @scheme.setter
+    def scheme(self, val):
+        s = self._get_default_args()
+        if len(self._keys) > 0:
+            print(f"EOmaps: classification has been reset to '{val}{s}'")
+        self._keys = set()
+        self._scheme = val
+        for key, val in self._defaults.items():
+            if val != _empty:
+                setattr(self, key, val)
+
+    def _get_default_args(self):
+        if hasattr(self, "_scheme") and self._scheme is not None:
+            assert self._scheme in mapclassify.CLASSIFIERS, (
+                f"the classification-scheme '{self._scheme}' is not valid... "
+                + " use one of:"
+                + ", ".join(mapclassify.CLASSIFIERS)
+            )
+            s = signature(getattr(mapclassify, self._scheme))
+            self._defaults = {
+                key: val.default for key, val in s.parameters.items() if str(key) != "y"
+            }
+        else:
+            self._defaults = dict()
+            s = None
+        return s
+
+    def _set_scheme_and_args(self, scheme, **kwargs):
+        reset = False
+        if len(self._keys) > 0:
+            reset = True
+            self._keys = set()
+
+        self._scheme = scheme
+        _ = self._get_default_args()
+        for key, val in kwargs.items():
+            setattr(self, key, val)
+
+        args = (
+            "("
+            + ", ".join([f"{key}={self[key]}" for key, val in self._defaults.items()])
+            + ")"
+        )
+
+        if reset:
+            print(f"EOmaps: classification has been reset to '{scheme}{args}'")
+
+    @property
+    def SCHEMES(self):
+        """
+        accessor for possible classification schemes
+        """
+        return SimpleNamespace(
+            **dict(zip(mapclassify.CLASSIFIERS, mapclassify.CLASSIFIERS))
+        )

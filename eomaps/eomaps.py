@@ -32,7 +32,7 @@ from cartopy.io import shapereader
 from .helpers import pairwise, cmap_alpha, BlitManager
 from .callbacks import callbacks
 from ._shapes import shapes
-from ._containers import data_specs, plot_specs, map_objects
+from ._containers import data_specs, plot_specs, map_objects, classify_specs
 
 try:
     import mapclassify
@@ -88,7 +88,7 @@ class Maps(object):
         )
 
         # default classify specs
-        self._classify_specs = dict()
+        self.classify_specs = classify_specs(self)
 
         self._attached_cbs = dict()  # dict to memorize attached callbacks
 
@@ -180,16 +180,6 @@ class Maps(object):
     def data(self, val):
         # for downward-compatibility
         self.data_specs.data = val
-
-    @property
-    def classify_specs(self):
-        return self._classify_specs
-
-    @classify_specs.setter
-    def classify_specs(self, val):
-        raise AttributeError(
-            "use 'm.set_classify_specs' to set classification-specifications!"
-        )
 
     def set_data_specs(self, **kwargs):
         """
@@ -327,8 +317,10 @@ class Maps(object):
 
         Parameters
         ----------
-        scheme : str, optional
+        scheme : str
             The classification scheme to use.
+            (the list is accessible via m.classify_specs.SCHEMES)
+
             E.g. one of:
             [ "scheme" (**kwargs)  ]
 
@@ -351,9 +343,7 @@ class Maps(object):
         **kwargs :
             kwargs passed to the call to the respective mapclassify classifier
         """
-        self._classify_specs = dict(scheme=scheme.strip())
-        for key, val in kwargs.items():
-            self._classify_specs[key] = val
+        self.classify_specs._set_scheme_and_args(scheme, **kwargs)
 
     def _attach_picker(self, coll=None, maxdist=None):
         if coll is None:
@@ -643,9 +633,9 @@ class Maps(object):
             cmap = plt.get_cmap(cmap)
 
         # evaluate classification
-        if classify_specs is not None and len(classify_specs) > 0:
-            scheme = classify_specs["scheme"]
-            args = {key: val for key, val in classify_specs.items() if key != "scheme"}
+        if classify_specs is not None and classify_specs.scheme is not None:
+            scheme = classify_specs.scheme
+            args = classify_specs.items()
 
             classified = True
             mapc = getattr(mapclassify, scheme)(z_data[~np.isnan(z_data)], **args)
@@ -1194,15 +1184,15 @@ class Maps(object):
         self,
         data,
         parameter=None,
-        xcoord="x",
-        ycoord="y",
+        xcoord=None,
+        ycoord=None,
         label_dict=None,
-        cmap="viridis",
+        cmap=None,
         norm=None,
         vmin=None,
         vmax=None,
         color=None,
-        radius="estimate",
+        radius=None,
         radius_crs=None,
         in_crs=None,
         cpos=None,
