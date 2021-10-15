@@ -8,7 +8,7 @@ from eomaps import Maps
 class TestBasicPlotting(unittest.TestCase):
     def setUp(self):
         x, y = np.meshgrid(
-            np.linspace(-19000000, 19000000, 20), np.linspace(-19000000, 19000000, 20)
+            np.linspace(-19000000, 19000000, 50), np.linspace(-19000000, 19000000, 50)
         )
         x, y = x.ravel(), y.ravel()
 
@@ -23,14 +23,16 @@ class TestBasicPlotting(unittest.TestCase):
 
         plt.close(m.figure.f)
 
-    def test_simple_rectangles(self):
-        m = Maps()
-        m.data = self.data
-        m.set_data_specs(xcoord="x", ycoord="y", in_crs=3857)
-        m.set_plot_specs(plot_epsg=4326, shape="rectangles")
-        m.plot_map()
+    def test_simple_plot_shapes(self):
+        usedata = self.data.sample(500)
+        for shape in Maps._shapes:
+            m = Maps()
+            m.data = usedata
+            m.set_data_specs(xcoord="x", ycoord="y", in_crs=3857)
+            m.set_plot_specs(plot_epsg=4326, shape=shape)
+            m.plot_map()
 
-        plt.close(m.figure.f)
+            plt.close(m.figure.f)
 
     def test_simple_map2(self):
         m = Maps()
