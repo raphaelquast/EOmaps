@@ -1,5 +1,6 @@
 from textwrap import dedent, indent, fill
 from warnings import warn
+from operator import attrgetter
 
 
 class data_specs(object):
@@ -33,8 +34,14 @@ class data_specs(object):
         return dedent(txt)
 
     def __getitem__(self, key):
-        assert key in self.keys(), f"{key} is not a valid data-specs key!"
-        return getattr(self, key)
+        if isinstance(key, (list, tuple)):
+            for i in key:
+                assert i in self.keys(), f"{key} is not a valid data-specs key!"
+            item = attrgetter(*key)(self)
+        else:
+            assert key in self.keys(), f"{key} is not a valid data-specs key!"
+            item = getattr(self, key)
+        return item
 
     def __setitem__(self, key, val):
         assert key in self.keys(), f"{key} is not a valid data-specs key!"
@@ -108,3 +115,71 @@ class data_specs(object):
                         + "\nCheck the data-specs!"
                     )
         return self._parameter
+
+
+class map_objects(object):
+    """
+    A container for accessing objects of the generated figure
+
+        - f : the matplotlib figure
+        - ax : the geo-axes used for plotting the map
+        - ax_cb : the axis of the colorbar
+        - ax_cb_plot : the axis used to plot the histogram on top of the colorbar
+        - cb : the matplotlib colorbar-instance
+        - gridspec : the matplotlib GridSpec instance
+        - cb_gridspec : the GridSpecFromSubplotSpec for the colorbar and the histogram
+        - coll : the collection representing the data on the map
+
+    """
+
+    def __init__(
+        self,
+        f=None,
+        ax=None,
+        ax_cb=None,
+        ax_cb_plot=None,
+        cb=None,
+        gridspec=None,
+        cb_gridspec=None,
+        coll=None,
+    ):
+
+        self.f = f
+        self.ax = ax
+        self.ax_cb = ax_cb
+        self.ax_cb_plot = ax_cb_plot
+        self.gridspec = gridspec
+        self.cb_gridspec = cb_gridspec
+        self.coll = coll
+
+    def set_items(self, **kwargs):
+        for key, val in kwargs.items():
+            setattr(self, key, val)
+
+    # @wraps(plt.Axes.set_position)
+    def set_colorbar_position(self, pos):
+        """
+        a wrapper to set the position of the colorbar and the histogram at
+        the same time
+
+        Parameters
+        ----------
+        pos : list    [left, bottom, width, height]
+              in relative units [0,1] (with respect to the figure)
+        """
+
+        # get the desired height-ratio
+        hratio = self.cb_gridspec.get_height_ratios()
+        hratio = hratio[0] / hratio[1]
+
+        hcb = pos[3] / (1 + hratio)
+        hp = hratio * hcb
+
+        if self.ax_cb is not None:
+            self.ax_cb.set_position(
+                [pos[0], pos[1], pos[2], hcb],
+            )
+        if self.ax_cb_plot is not None:
+            self.ax_cb_plot.set_position(
+                [pos[0], pos[1] + hcb, pos[2], hp],
+            )

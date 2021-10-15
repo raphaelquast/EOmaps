@@ -140,8 +140,8 @@ class callbacks(object):
             The index of the clicked pixel
         """
 
-        xlabel = self.m.specs.xcoord
-        ylabel = self.m.specs.ycoord
+        xlabel = self.m.data_specs.xcoord
+        ylabel = self.m.data_specs.ycoord
 
         printstr = ""
         x, y = [np.format_float_positional(i, trim="-", precision=4) for i in pos]
@@ -150,7 +150,7 @@ class callbacks(object):
 
         if isinstance(val, (int, float)):
             val = np.format_float_positional(val, trim="-", precision=4)
-        printstr += f"{self.m.specs.parameter} = {val}"
+        printstr += f"{self.m.data_specs.parameter} = {val}"
 
         print(printstr)
 
@@ -223,8 +223,8 @@ class callbacks(object):
 
         """
 
-        xlabel = self.m.specs.xcoord
-        ylabel = self.m.specs.ycoord
+        xlabel = self.m.data_specs.xcoord
+        ylabel = self.m.data_specs.ycoord
 
         ax = self.m.figure.ax
 
@@ -274,7 +274,7 @@ class callbacks(object):
                 f"{xlabel} = {x} ({x0})\n"
                 + f"{ylabel} = {y} ({y0})\n"
                 + (f"ID = {ID}\n" if ID is not None else "")
-                + (f"{self.m.specs.parameter} = {val}" if val is not None else "")
+                + (f"{self.m.data_specs.parameter} = {val}" if val is not None else "")
             )
         elif isinstance(text, str):
             printstr = text
@@ -365,7 +365,7 @@ class callbacks(object):
         if not hasattr(self, "_pick_f"):
             self._pick_f, self._pick_ax = plt.subplots()
             self._pick_ax.tick_params(axis="x", rotation=90)
-            self._pick_ax.set_ylabel(self.m.specs.parameter)
+            self._pick_ax.set_ylabel(self.m.data_specs.parameter)
 
             # call the cleanup function if the figure is closed
             def on_close(event):
@@ -373,8 +373,8 @@ class callbacks(object):
 
             self._pick_f.canvas.mpl_connect("close_event", on_close)
 
-        _pick_xlabel = self.m.specs.xcoord
-        _pick_ylabel = self.m.specs.ycoord
+        _pick_xlabel = self.m.data_specs.xcoord
+        _pick_ylabel = self.m.data_specs.ycoord
 
         if x_index == "pos":
             x, y = [
@@ -514,7 +514,7 @@ class callbacks(object):
         """
 
         if radius_crs == "in":
-            radius_crs = self.m.specs.crs
+            radius_crs = self.m.data_specs.crs
         elif radius_crs == "out":
             radius_crs = self.m.plot_specs["plot_epsg"]
 
@@ -536,7 +536,7 @@ class callbacks(object):
                 ycoord="y",
                 parameter="z",
                 in_crs=self.m.plot_specs["plot_epsg"],
-                radius_crs=self.m.specs.crs,
+                radius_crs=self.m.data_specs.crs,
                 shape="rectangles",
                 buffer=buffer,
                 radius=self.m._props["radius"],

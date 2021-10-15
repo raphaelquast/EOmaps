@@ -32,60 +32,12 @@ from cartopy.io import shapereader
 from .helpers import pairwise, cmap_alpha, BlitManager
 from .callbacks import callbacks
 from ._shapes import shapes
-from ._containers import data_specs
+from ._containers import data_specs, map_objects
 
 try:
     import mapclassify
 except ImportError:
     print("No module named 'mapclassify'... classification will not work!")
-
-
-class _Maps_plot(object):
-    """
-    A container for accessing objects of the generated figure
-
-        - f : the matplotlib figure
-        - ax : the geo-axes used for plotting the map
-        - ax_cb : the axis of the colorbar
-        - ax_cb_plot : the axis used to plot the histogram on top of the colorbar
-        - cb : the matplotlib colorbar-instance
-        - gridspec : the matplotlib GridSpec instance
-        - cb_gridspec : the GridSpecFromSubplotSpec for the colorbar and the histogram
-        - coll : the collection representing the data on the map
-
-    """
-
-    def __init__(self, **kwargs):
-        for key, val in kwargs.items():
-            setattr(self, key, val)
-
-    # @wraps(plt.Axes.set_position)
-    def set_colorbar_position(self, pos):
-        """
-        a wrapper to set the position of the colorbar and the histogram at
-        the same time
-
-        Parameters
-        ----------
-        pos : list    [left, bottom, width, height]
-              in relative units [0,1] (with respect to the figure)
-        """
-
-        # get the desired height-ratio
-        hratio = self.cb_gridspec.get_height_ratios()
-        hratio = hratio[0] / hratio[1]
-
-        hcb = pos[3] / (1 + hratio)
-        hp = hratio * hcb
-
-        if self.ax_cb is not None:
-            self.ax_cb.set_position(
-                [pos[0], pos[1], pos[2], hcb],
-            )
-        if self.ax_cb_plot is not None:
-            self.ax_cb_plot.set_position(
-                [pos[0], pos[1] + hcb, pos[2], hp],
-            )
 
 
 class Maps(object):
@@ -146,12 +98,14 @@ class Maps(object):
         self._shapes = shapes(self)
 
         self._data_mask = slice(None)
-        self.specs = data_specs(
+        self.data_specs = data_specs(
             self,
             xcoord="lon",
             ycoord="lat",
             crs=4326,
         )
+
+        self.figure = map_objects()
 
     # TODO re-implement copying
     # def copy(
@@ -222,23 +176,13 @@ class Maps(object):
         return self._cb
 
     @property
-    def data_specs(self):
-
-        return dict(
-            parameter=self.specs.parameter,
-            xcoord=self.specs.xcoord,
-            ycoord=self.specs.ycoord,
-            in_crs=self.specs.crs,
-        )
-
-    @property
     def data(self):
-        return self.specs.data
+        return self.data_specs.data
 
     @data.setter
     def data(self, val):
         # for downward-compatibility
-        self.specs.data = val
+        self.data_specs.data = val
 
     @property
     def plot_specs(self):
@@ -292,16 +236,16 @@ class Maps(object):
             The default is 4326 (e.g. lon/lat projection)
         """
 
-        self.specs.data = data
-        self.specs.parameter = parameter
-        self.specs.xcoord = xcoord
-        self.specs.ycoord = ycoord
-        self.specs.crs = crs
+        self.data_specs.data = data
+        self.data_specs.parameter = parameter
+        self.data_specs.xcoord = xcoord
+        self.data_specs.ycoord = ycoord
+        self.data_specs.crs = crs
 
     def set_data_specs(self, **kwargs):
         """
         Use this function to update multiple data-specs in one go
-        (alternatively you can set data-properties via `m.specs.<...> = <...>`)
+        (alternatively you can set data-properties via `m.data_specs.<...> = <...>`)
 
         Parameters
         ----------
@@ -331,7 +275,7 @@ class Maps(object):
         """
 
         for key, val in kwargs.items():
-            self.specs[key] = val
+            self.data_specs[key] = val
 
     def set_plot_specs(self, **kwargs):
         """
@@ -491,7 +435,7 @@ class Maps(object):
             The default is None in which case a new figure is created.
         """
 
-        assert not hasattr(self, "figure"), (
+        assert self.figure.ax is None, (
             "There is already an open figure! "
             + "Either close it before creating a new one or call "
             + "`m2 = m.copy()` to copy the Maps object and then use `m2.plot_map()"
@@ -500,7 +444,7 @@ class Maps(object):
         if not hasattr(self, "data"):
             print("you must set the data first!")
 
-        self._spatial_plot(**self.specs, **self.plot_specs, f_gridspec=f_gridspec)
+        self._spatial_plot(**self.data_specs, **self.plot_specs, f_gridspec=f_gridspec)
 
         # call the cleanup function if the figure is closed
         # to ensure callbacks are removed
@@ -667,6 +611,15 @@ class Maps(object):
             add_colorbar=add_colorbar,
         )
 
+        self.figure.set_items(
+            f=f,
+            gridspec=gs,
+            ax=ax,
+            ax_cb=cb_ax,
+            ax_cb_plot=cb_plot_ax,
+            cb_gridspec=cbgs,
+        )
+
         ax.set_xlim(props["x0"].min(), props["x0"].max())
         ax.set_ylim(props["y0"].min(), props["y0"].max())
         ax.set_title(title)
@@ -684,6 +637,8 @@ class Maps(object):
             norm=norm,
             shape=shape,
         )
+
+        self.figure.coll = coll
 
         # add coastlines and ocean-coloring
         if coastlines is True:
@@ -713,6 +668,8 @@ class Maps(object):
         else:
             cb = None
 
+        self.figure.cb = cb
+
         f.canvas.draw_idle()
 
         if shape.startswith("delauney_triangulation"):
@@ -722,17 +679,6 @@ class Maps(object):
             maxdist = np.max([np.max(props["w"]), np.max(props["h"])]) * 2
         # ------------- add a picker that will be used by the callbacks
         self._attach_picker(coll, maxdist)
-
-        self.figure = _Maps_plot(
-            f=f,
-            gridspec=gs,
-            ax=ax,
-            ax_cb=cb_ax,
-            ax_cb_plot=cb_plot_ax,
-            cb=cb,
-            cb_gridspec=cbgs,
-            coll=coll,
-        )
 
     def _attach_picker(self, coll, maxdist):
         def picker(artist, event):
@@ -814,15 +760,15 @@ class Maps(object):
     ):
         # get specifications
         if data is None:
-            data = self.specs.data
+            data = self.data_specs.data
         if xcoord is None:
-            xcoord = self.specs.xcoord
+            xcoord = self.data_specs.xcoord
         if ycoord is None:
-            ycoord = self.specs.ycoord
+            ycoord = self.data_specs.ycoord
         if parameter is None:
-            parameter = self.specs.parameter
+            parameter = self.data_specs.parameter
         if in_crs is None:
-            in_crs = self.specs.crs
+            in_crs = self.data_specs.crs
 
         if plot_epsg is None:
             plot_epsg = self.plot_specs["plot_epsg"]
@@ -1152,15 +1098,15 @@ class Maps(object):
         shape="ellipses",
     ):
 
-        args = dict(array=props["z_data"])
+        args = dict(array=props["z_data"], cmap=cmap, norm=norm, color=color)
 
         if shape.startswith("delauney_triangulation"):
             shape = "delauney_triangulation"
             args["masked"] = True if "masked" in shape else False
             args["flat"] = True if "flat" in shape else False
 
-        coll = getattr(self._shapes, shape)(self._props, **args)
-
+        coll = getattr(self._shapes, shape)(props, **args)
+        coll.set_clim(vmin, vmax)
         ax.add_collection(coll)
 
         return coll
@@ -1854,8 +1800,10 @@ class Maps(object):
         if ID is not None:
             assert xy is None, "You can only provide 'ID' or 'pos' not both!"
 
-            xy = self.data.loc[ID][[self.specs.xcoord, self.specs.ycoord]].values
-            xy_crs = self.specs.crs
+            xy = self.data.loc[ID][
+                [self.data_specs.xcoord, self.data_specs.ycoord]
+            ].values
+            xy_crs = self.data_specs.crs
 
             ind = self.data.index.get_loc(ID)
         else:
@@ -1925,8 +1873,10 @@ class Maps(object):
         if ID is not None:
             assert xy is None, "You can only provide 'ID' or 'pos' not both!"
 
-            xy = self.data.loc[ID][[self.specs.xcoord, self.specs.ycoord]].values
-            xy_crs = self.specs.crs
+            xy = self.data.loc[ID][
+                [self.data_specs.xcoord, self.data_specs.ycoord]
+            ].values
+            xy_crs = self.data_specs.crs
 
         if xy is not None:
 
@@ -1944,7 +1894,7 @@ class Maps(object):
         self.cb.annotate(
             ID=ID,
             pos=xy,
-            val=None if ID is None else self.data.loc[ID][self.specs.parameter],
+            val=None if ID is None else self.data.loc[ID][self.data_specs.parameter],
             ind=None if ID is None else self.data.index.get_loc(ID),
             permanent=True,
             text=text,
@@ -2026,6 +1976,7 @@ class Maps(object):
         self.figure.f.savefig(*args, **kwargs)
 
     def addplot(self, shape, **kwargs):
+
         coll = getattr(self._shapes, shape)(
             props=self._prepare_data(), array=self._props["z_data"], **kwargs
         )
