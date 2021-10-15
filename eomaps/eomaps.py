@@ -453,8 +453,7 @@ class Maps(object):
                 self.remove_callback(list(self._attached_cbs)[-1])
 
             # remove all figure properties
-            if hasattr(self, "figure"):
-                del self.figure
+            self.figure = self.figure.reinit()
 
         self.figure.f.canvas.mpl_connect("close_event", on_close)
 

@@ -53,8 +53,7 @@ class TestBasicPlotting(unittest.TestCase):
             m.plot_map()
 
             plt.close(m.figure.f)
-            if hasattr(m, "figure"):
-                del m.figure  # do this explicitly since it does not work with unittests
+            # m.figure.reinit()  # do this explicitly since it does not work with unittests
 
     def test_simple_map(self):
         m = Maps()
