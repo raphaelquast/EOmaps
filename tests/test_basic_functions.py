@@ -255,28 +255,27 @@ class TestBasicPlotting(unittest.TestCase):
 
         plt.close(m.figure.f)
 
-    # TODO re-implement test once copy is re-implemented
-    # def test_copy(self):
-    #     m = Maps()
-    #     m.data = self.data
-    #     m.set_data_specs(xcoord="x", ycoord="y", in_crs=3857)
-    #     m.set_plot_specs(plot_epsg=3857, shape="rectangles")
-    #     m.set_classify_specs(scheme="Quantiles", k=5)
+    def test_copy(self):
+        m = Maps()
+        m.data = self.data
+        m.set_data_specs(xcoord="x", ycoord="y", in_crs=3857)
+        m.set_plot_specs(plot_epsg=3857, shape="rectangles")
+        m.set_classify_specs(scheme="Quantiles", k=5)
 
-    #     m2 = m.copy()
+        m2 = m.copy()
 
-    #     m.data_specs == m2.data_specs
-    #     m.data_specs == m2.plot_specs
-    #     m.classify_specs == m2.classify_specs
+        m.data_specs == m2.data_specs
+        m.data_specs == m2.plot_specs
+        m.classify_specs == m2.classify_specs
 
-    #     m3 = m.copy(copy_data=True)
+        m3 = m.copy(copy_data=True)
 
-    #     m.data_specs == m3.data_specs
-    #     m.data_specs == m3.plot_specs
-    #     m.classify_specs == m3.classify_specs
-    #     m.data == m3.data
-    #     m3.plot_map()
-    #     plt.close(m3.figure.f)
+        m.data_specs == m3.data_specs
+        m.data_specs == m3.plot_specs
+        m.classify_specs == m3.classify_specs
+        m.data == m3.data
+        m3.plot_map()
+        plt.close(m3.figure.f)
 
     def test_prepare_data(self):
         m = Maps()

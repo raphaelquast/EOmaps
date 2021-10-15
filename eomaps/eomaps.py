@@ -104,66 +104,65 @@ class Maps(object):
 
         self.figure = map_objects()
 
-    # TODO re-implement copying
-    # def copy(
-    #     self,
-    #     data_specs=None,
-    #     plot_specs=None,
-    #     classify_specs=None,
-    #     copy_data=False,
-    # ):
-    #     """
-    #     create a (deep)copy of the class that inherits all specifications
-    #     from the parent class.
-    #     Already loaded data is only copied if `copy_data=True`!
+    def copy(
+        self,
+        data_specs=None,
+        plot_specs=None,
+        classify_specs=None,
+        copy_data=False,
+    ):
+        """
+        create a (deep)copy of the class that inherits all specifications
+        from the parent class.
+        Already loaded data is only copied if `copy_data=True`!
 
-    #     -> useful to quickly create plots with similar configurations
+        -> useful to quickly create plots with similar configurations
 
-    #     Parameters
-    #     ----------
-    #     data_specs, plot_specs, classify_specs : dict, optional
-    #         Dictionaries that can be used to directly override the specifications of the
-    #         parent class. The default is None.
+        Parameters
+        ----------
+        data_specs, plot_specs, classify_specs : dict, optional
+            Dictionaries that can be used to directly override the specifications of the
+            parent class. The default is None.
 
-    #     Returns
-    #     -------
-    #     copy_cls : eomaps.Maps object
-    #         a new Maps class.
-    #     """
-    #     initdict = dict()
-    #     initdict["data_specs"] = {
-    #         key: copy.deepcopy(val) for key, val in self.data_specs.items()
-    #     }
-    #     initdict["plot_specs"] = {
-    #         key: copy.deepcopy(val) for key, val in self.plot_specs.items()
-    #     }
-    #     initdict["classify_specs"] = {
-    #         key: copy.deepcopy(val) for key, val in self.classify_specs.items()
-    #     }
+        Returns
+        -------
+        copy_cls : eomaps.Maps object
+            a new Maps class.
+        """
+        initdict = dict()
+        initdict["data_specs"] = {
+            key: copy.deepcopy(val) for key, val in self.data_specs.items()
+        }
+        initdict["plot_specs"] = {
+            key: copy.deepcopy(val) for key, val in self.plot_specs.items()
+        }
+        initdict["classify_specs"] = {
+            key: copy.deepcopy(val) for key, val in self.classify_specs.items()
+        }
 
-    #     if data_specs:
-    #         assert isinstance(data_specs, dict), "'data_specs' must be a dict"
-    #         initdict["data_specs"].update(data_specs)
+        if data_specs:
+            assert isinstance(data_specs, dict), "'data_specs' must be a dict"
+            initdict["data_specs"].update(data_specs)
 
-    #     if plot_specs:
-    #         assert isinstance(plot_specs, dict), "'plot_specs' must be a dict"
-    #         initdict["plot_specs"].update(plot_specs)
+        if plot_specs:
+            assert isinstance(plot_specs, dict), "'plot_specs' must be a dict"
+            initdict["plot_specs"].update(plot_specs)
 
-    #     if classify_specs:
-    #         assert isinstance(classify_specs, dict), "'classify_specs' must be a dict"
-    #         initdict["classify_specs"].update(classify_specs)
+        if classify_specs:
+            assert isinstance(classify_specs, dict), "'classify_specs' must be a dict"
+            initdict["classify_specs"].update(classify_specs)
 
-    #     # create a new class
-    #     copy_cls = Maps()
+        # create a new class
+        copy_cls = Maps()
 
-    #     copy_cls.set_data_specs(**initdict["data_specs"])
-    #     copy_cls.set_plot_specs(**initdict["plot_specs"])
-    #     copy_cls.set_classify_specs(**initdict["classify_specs"])
+        copy_cls.set_data_specs(**initdict["data_specs"])
+        copy_cls.set_plot_specs(**initdict["plot_specs"])
+        copy_cls.set_classify_specs(**initdict["classify_specs"])
 
-    #     if copy_data:
-    #         copy_cls.data = self.data.copy(deep=True)
+        if copy_data:
+            copy_cls.data = self.data.copy(deep=True)
 
-    #     return copy_cls
+        return copy_cls
 
     @property
     def cb(self):
