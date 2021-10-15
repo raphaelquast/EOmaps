@@ -254,27 +254,28 @@ class TestBasicPlotting(unittest.TestCase):
 
         plt.close(m.figure.f)
 
-    def test_copy(self):
-        m = Maps()
-        m.data = self.data
-        m.set_data_specs(xcoord="x", ycoord="y", in_crs=3857)
-        m.set_plot_specs(plot_epsg=3857, shape="rectangles")
-        m.set_classify_specs(scheme="Quantiles", k=5)
+    # TODO re-implement test once copy is re-implemented
+    # def test_copy(self):
+    #     m = Maps()
+    #     m.data = self.data
+    #     m.set_data_specs(xcoord="x", ycoord="y", in_crs=3857)
+    #     m.set_plot_specs(plot_epsg=3857, shape="rectangles")
+    #     m.set_classify_specs(scheme="Quantiles", k=5)
 
-        m2 = m.copy()
+    #     m2 = m.copy()
 
-        m.data_specs == m2.data_specs
-        m.data_specs == m2.plot_specs
-        m.classify_specs == m2.classify_specs
+    #     m.data_specs == m2.data_specs
+    #     m.data_specs == m2.plot_specs
+    #     m.classify_specs == m2.classify_specs
 
-        m3 = m.copy(copy_data=True)
+    #     m3 = m.copy(copy_data=True)
 
-        m.data_specs == m3.data_specs
-        m.data_specs == m3.plot_specs
-        m.classify_specs == m3.classify_specs
-        m.data == m3.data
-        m3.plot_map()
-        plt.close(m3.figure.f)
+    #     m.data_specs == m3.data_specs
+    #     m.data_specs == m3.plot_specs
+    #     m.classify_specs == m3.classify_specs
+    #     m.data == m3.data
+    #     m3.plot_map()
+    #     plt.close(m3.figure.f)
 
     def test_prepare_data(self):
         m = Maps()
@@ -297,54 +298,6 @@ class TestBasicPlotting(unittest.TestCase):
                     "p1",
                     "p2",
                     "p3",
-                    "radius",
-                ]
-            )
-        )
-
-        m.set_data_specs(xcoord="x", ycoord="y", in_crs=3857, parameter="value")
-        m.set_plot_specs(shape="rectangles")
-        data = m._prepare_data()
-        self.assertTrue(
-            sorted(list(data.keys()))
-            == sorted(
-                [
-                    "verts",
-                    "x0",
-                    "y0",
-                    "ids",
-                    "z_data",
-                    "w",
-                    "h",
-                    "p0",
-                    "p1",
-                    "p2",
-                    "p3",
-                    "theta",
-                    "radius",
-                ]
-            )
-        )
-
-        m.set_data_specs(xcoord="x", ycoord="y", in_crs=3857, parameter="value")
-        m.set_plot_specs(shape="trimesh_rectangles")
-        data = m._prepare_data()
-        self.assertTrue(
-            sorted(list(data.keys()))
-            == sorted(
-                [
-                    "tri",
-                    "x0",
-                    "y0",
-                    "ids",
-                    "z_data",
-                    "w",
-                    "h",
-                    "p0",
-                    "p1",
-                    "p2",
-                    "p3",
-                    "theta",
                     "radius",
                 ]
             )

@@ -31,7 +31,8 @@ from cartopy.io import shapereader
 
 from .helpers import pairwise, cmap_alpha, BlitManager
 from .callbacks import callbacks
-
+from ._shapes import shapes
+from ._containers import data_specs
 
 try:
     import mapclassify
@@ -106,7 +107,7 @@ class Maps(object):
         "delauney_triangulation_flat",
         "delauney_triangulation_masked",
         "delauney_triangulation_flat_masked",
-        "Voroni",
+        "voroni",
     ]
 
     def __init__(
@@ -115,14 +116,6 @@ class Maps(object):
     ):
 
         self.orientation = orientation
-
-        # default data specs
-        self._data_specs = dict(
-            parameter=None,
-            xcoord="lon",
-            ycoord="lat",
-            in_crs=4326,
-        )
 
         # default plot specs
         self._plot_specs = dict(
@@ -150,66 +143,76 @@ class Maps(object):
         self._attached_cbs = dict()  # dict to memorize attached callbacks
 
         self._cb = callbacks(self)
+        self._shapes = shapes(self)
 
-    def copy(
-        self,
-        data_specs=None,
-        plot_specs=None,
-        classify_specs=None,
-        copy_data=False,
-    ):
-        """
-        create a (deep)copy of the class that inherits all specifications
-        from the parent class.
-        Already loaded data is only copied if `copy_data=True`!
+        self._data_mask = slice(None)
+        self.specs = data_specs(
+            self,
+            xcoord="lon",
+            ycoord="lat",
+            crs=4326,
+        )
 
-        -> useful to quickly create plots with similar configurations
+    # TODO re-implement copying
+    # def copy(
+    #     self,
+    #     data_specs=None,
+    #     plot_specs=None,
+    #     classify_specs=None,
+    #     copy_data=False,
+    # ):
+    #     """
+    #     create a (deep)copy of the class that inherits all specifications
+    #     from the parent class.
+    #     Already loaded data is only copied if `copy_data=True`!
 
-        Parameters
-        ----------
-        data_specs, plot_specs, classify_specs : dict, optional
-            Dictionaries that can be used to directly override the specifications of the
-            parent class. The default is None.
+    #     -> useful to quickly create plots with similar configurations
 
-        Returns
-        -------
-        copy_cls : eomaps.Maps object
-            a new Maps class.
-        """
-        initdict = dict()
-        initdict["data_specs"] = {
-            key: copy.deepcopy(val) for key, val in self.data_specs.items()
-        }
-        initdict["plot_specs"] = {
-            key: copy.deepcopy(val) for key, val in self.plot_specs.items()
-        }
-        initdict["classify_specs"] = {
-            key: copy.deepcopy(val) for key, val in self.classify_specs.items()
-        }
+    #     Parameters
+    #     ----------
+    #     data_specs, plot_specs, classify_specs : dict, optional
+    #         Dictionaries that can be used to directly override the specifications of the
+    #         parent class. The default is None.
 
-        if data_specs:
-            assert isinstance(data_specs, dict), "'data_specs' must be a dict"
-            initdict["data_specs"].update(data_specs)
+    #     Returns
+    #     -------
+    #     copy_cls : eomaps.Maps object
+    #         a new Maps class.
+    #     """
+    #     initdict = dict()
+    #     initdict["data_specs"] = {
+    #         key: copy.deepcopy(val) for key, val in self.data_specs.items()
+    #     }
+    #     initdict["plot_specs"] = {
+    #         key: copy.deepcopy(val) for key, val in self.plot_specs.items()
+    #     }
+    #     initdict["classify_specs"] = {
+    #         key: copy.deepcopy(val) for key, val in self.classify_specs.items()
+    #     }
 
-        if plot_specs:
-            assert isinstance(plot_specs, dict), "'plot_specs' must be a dict"
-            initdict["plot_specs"].update(plot_specs)
+    #     if data_specs:
+    #         assert isinstance(data_specs, dict), "'data_specs' must be a dict"
+    #         initdict["data_specs"].update(data_specs)
 
-        if classify_specs:
-            assert isinstance(classify_specs, dict), "'classify_specs' must be a dict"
-            initdict["classify_specs"].update(classify_specs)
+    #     if plot_specs:
+    #         assert isinstance(plot_specs, dict), "'plot_specs' must be a dict"
+    #         initdict["plot_specs"].update(plot_specs)
 
-        # create a new class
-        copy_cls = Maps()
+    #     if classify_specs:
+    #         assert isinstance(classify_specs, dict), "'classify_specs' must be a dict"
+    #         initdict["classify_specs"].update(classify_specs)
 
-        copy_cls.set_data_specs(**initdict["data_specs"])
-        copy_cls.set_plot_specs(**initdict["plot_specs"])
-        copy_cls.set_classify_specs(**initdict["classify_specs"])
+    #     # create a new class
+    #     copy_cls = Maps()
 
-        if copy_data:
-            copy_cls.data = self.data.copy(deep=True)
+    #     copy_cls.set_data_specs(**initdict["data_specs"])
+    #     copy_cls.set_plot_specs(**initdict["plot_specs"])
+    #     copy_cls.set_classify_specs(**initdict["classify_specs"])
 
-        return copy_cls
+    #     if copy_data:
+    #         copy_cls.data = self.data.copy(deep=True)
+
+    #     return copy_cls
 
     @property
     def cb(self):
@@ -220,11 +223,22 @@ class Maps(object):
 
     @property
     def data_specs(self):
-        return self._data_specs
 
-    @data_specs.setter
-    def data_specs(self, val):
-        raise AttributeError("use 'm.set_data_specs' to set data-specifications!")
+        return dict(
+            parameter=self.specs.parameter,
+            xcoord=self.specs.xcoord,
+            ycoord=self.specs.ycoord,
+            in_crs=self.specs.crs,
+        )
+
+    @property
+    def data(self):
+        return self.specs.data
+
+    @data.setter
+    def data(self, val):
+        # for downward-compatibility
+        self.specs.data = val
 
     @property
     def plot_specs(self):
@@ -244,9 +258,50 @@ class Maps(object):
             "use 'm.set_classify_specs' to set classification-specifications!"
         )
 
+    def set_data(self, data, parameter=None, xcoord=None, ycoord=None, crs=None):
+        """
+        Use this function to set all data-specifications in one go
+        (alternatively you can use `m.data.<...> = <...>`  )
+
+        Parameters
+        ----------
+        data : pandas.DataFrame
+            The dataset to use. It must contain the columns specified via
+            "xcoord", "ycoord" and "parameter".
+        parameter : str, optional
+            The name of the parameter to use. If None, the first variable in the
+            provided dataframe will be used. The default is None.
+        xcoord, ycoord : str, optional
+            The name of the x- and y-coordinate as provided in the dataframe.
+            The default is "lon" and "lat".
+        in_crs : int, dict or str
+            The coordinate-system identifier.
+            Can be any input usable with `pyproj.CRS.from_user_input`:
+
+                - PROJ string
+                - Dictionary of PROJ parameters
+                - PROJ keyword arguments for parameters
+                - JSON string with PROJ parameters
+                - CRS WKT string
+                - An authority string [i.e. 'epsg:4326']
+                - An EPSG integer code [i.e. 4326]
+                - A tuple of ("auth_name": "auth_code") [i.e ('epsg', '4326')]
+                - An object with a `to_wkt` method.
+                - A :class:`pyproj.crs.CRS` class
+
+            The default is 4326 (e.g. lon/lat projection)
+        """
+
+        self.specs.data = data
+        self.specs.parameter = parameter
+        self.specs.xcoord = xcoord
+        self.specs.ycoord = ycoord
+        self.specs.crs = crs
+
     def set_data_specs(self, **kwargs):
         """
-        Use this function to update the data-specs
+        Use this function to update multiple data-specs in one go
+        (alternatively you can set data-properties via `m.specs.<...> = <...>`)
 
         Parameters
         ----------
@@ -276,10 +331,7 @@ class Maps(object):
         """
 
         for key, val in kwargs.items():
-            if key in self._data_specs:
-                self._data_specs[key] = val
-            else:
-                print(f'"{key}" is not a valid data_specs parameter!')
+            self.specs[key] = val
 
     def set_plot_specs(self, **kwargs):
         """
@@ -448,9 +500,7 @@ class Maps(object):
         if not hasattr(self, "data"):
             print("you must set the data first!")
 
-        self._spatial_plot(
-            data=self.data, **self.plot_specs, **self.data_specs, f_gridspec=f_gridspec
-        )
+        self._spatial_plot(**self.specs, **self.plot_specs, f_gridspec=f_gridspec)
 
         # call the cleanup function if the figure is closed
         # to ensure callbacks are removed
@@ -567,10 +617,6 @@ class Maps(object):
         dict :
             a dict containing all objects required to update the plot
         """
-
-        if parameter is None:
-            parameter = next(i for i in data.keys() if i not in [xcoord, ycoord])
-            self.set_data_specs(parameter=parameter)
 
         if alpha < 1:
             cmap = cmap_alpha(cmap, alpha)
@@ -757,7 +803,7 @@ class Maps(object):
         data=None,
         in_crs=None,
         plot_epsg=None,
-        radius="estimate",
+        radius=None,
         radius_crs=None,
         cpos=None,
         parameter=None,
@@ -768,16 +814,16 @@ class Maps(object):
     ):
         # get specifications
         if data is None:
-            data = self.data
+            data = self.specs.data
         if xcoord is None:
-            xcoord = self.data_specs["xcoord"]
+            xcoord = self.specs.xcoord
         if ycoord is None:
-            ycoord = self.data_specs["ycoord"]
+            ycoord = self.specs.ycoord
         if parameter is None:
-            parameter = self.data_specs["parameter"]
-
+            parameter = self.specs.parameter
         if in_crs is None:
-            in_crs = self.data_specs["in_crs"]
+            in_crs = self.specs.crs
+
         if plot_epsg is None:
             plot_epsg = self.plot_specs["plot_epsg"]
 
@@ -932,129 +978,6 @@ class Maps(object):
             p3=p3,
             radius=(radiusx, radiusy),
         )
-
-        if shape == "ellipses":
-            pass
-        elif shape == "rectangles":
-            props["verts"] = np.array(
-                list(zip(*[np.array(i).T for i in (p0, p1, p2, p3)]))
-            )
-
-        elif shape == "trimesh_rectangles":
-            verts = np.array(list(zip(*[np.array(i).T for i in (p0, p1, p2, p3)])))
-            x = np.vstack(
-                [verts[:, 2][:, 0], verts[:, 3][:, 0], verts[:, 1][:, 0]]
-            ).T.flat
-            y = np.vstack(
-                [verts[:, 2][:, 1], verts[:, 3][:, 1], verts[:, 1][:, 1]]
-            ).T.flat
-
-            x2 = np.vstack(
-                [verts[:, 3][:, 0], verts[:, 0][:, 0], verts[:, 1][:, 0]]
-            ).T.flat
-            y2 = np.vstack(
-                [verts[:, 3][:, 1], verts[:, 0][:, 1], verts[:, 1][:, 1]]
-            ).T.flat
-
-            x = np.append(x, x2)
-            y = np.append(y, y2)
-
-            tri = Triangulation(
-                x, y, triangles=np.array(range(len(x))).reshape((len(x) // 3, 3))
-            )
-
-            props["tri"] = tri
-        elif shape.startswith("delauney_triangulation"):
-            assert (
-                shape == "delauney_triangulation"
-                or shape == "delauney_triangulation_masked"
-                or shape == "delauney_triangulation_flat"
-                or shape == "delauney_triangulation_flat_masked"
-            ), (
-                f"the provided delauney-shape suffix '{shape}'"
-                + " is not valid ...use one of"
-                + " '_masked', '_flat' or ' _flat_masked'"
-            )
-            try:
-                from scipy.spatial import Delaunay
-            except ImportError:
-                raise ImportError("'scipy' is required for 'delauney_triangulation'!")
-
-            d = Delaunay(np.column_stack((x0, y0)), qhull_options="QJ")
-
-            tri = Triangulation(d.points[:, 0], d.points[:, 1], d.simplices)
-            props["tri"] = tri
-
-            if shape.endswith("_masked"):
-                if radius_crs == "in":
-                    x = xorig[tri.triangles]
-                    y = yorig[tri.triangles]
-                elif radius_crs == "out":
-                    x = x0[tri.triangles]
-                    y = y0[tri.triangles]
-                else:
-                    x = x0r[tri.triangles]
-                    y = y0r[tri.triangles]
-
-                maxdist = 4 * np.mean(np.sqrt(radiusx ** 2 + radiusy ** 2))
-
-                verts = np.stack((x, y), axis=2)
-                cpos = verts.mean(axis=1)[:, None]
-                cdist = np.sqrt(np.sum((verts - cpos) ** 2, axis=2))
-
-                mask = np.logical_or(
-                    np.any(cdist > maxdist * 2, axis=1), cdist.mean(axis=1) > maxdist
-                )
-
-                tri.set_mask(mask)
-        elif shape == "Voroni":
-            try:
-                from scipy.spatial import Voronoi
-                from itertools import zip_longest
-            except ImportError:
-                raise ImportError("'scipy' is required for 'Voroni'!")
-
-            maxdist = 2 * np.mean(np.sqrt(radiusx ** 2 + radiusy ** 2))
-
-            xy = np.column_stack((x0, y0))
-            vor = Voronoi(xy)
-
-            rect_regions = np.array(list(zip_longest(*vor.regions, fillvalue=-2))).T
-            # (use -2 instead of None to make np.take work as expected)
-
-            rect_regions = rect_regions[vor.point_region]
-            # exclude all points at infinity
-            mask = np.all(np.not_equal(rect_regions, -1), axis=1)
-            # get the mask for the artificially added vertices
-            rect_mask = rect_regions == -2
-
-            x = np.ma.masked_array(
-                np.take(vor.vertices[:, 0], rect_regions), mask=rect_mask
-            )
-            y = np.ma.masked_array(
-                np.take(vor.vertices[:, 1], rect_regions), mask=rect_mask
-            )
-            rect_verts = np.ma.stack((x, y)).swapaxes(0, 1).swapaxes(1, 2)
-
-            # exclude any polygon whose defining point is farther away than maxdist
-            cdist = np.sqrt(np.sum((rect_verts - vor.points[:, None]) ** 2, axis=2))
-            polymask = np.all(cdist < maxdist, axis=1)
-            mask = np.logical_and(mask, polymask)
-
-            verts = list(i.compressed().reshape(-1, 2) for i in rect_verts[mask])
-            props["verts"] = verts
-
-            # remember masked points
-            self._voroni_mask = mask
-        else:
-            raise TypeError(
-                f"'{shape}' is not a valid shape, use one of:\n"
-                + "    - 'ellipses'\n"
-                + "    - 'rectangles'\n"
-                + "    - 'trimesh_rectangles'\n"
-                + "    - 'delauney_triangulation(_flat)(_masked)'"
-            )
-
         return props
 
     def _classify_data(self, z_data, cmap, histbins, vmin, vmax, classify_specs=None):
@@ -1228,129 +1151,17 @@ class Maps(object):
         color=None,
         shape="ellipses",
     ):
-        z_data = props["z_data"]
-        ids = props["ids"]
 
-        if shape == "ellipses":
-            coll = collections.EllipseCollection(
-                2 * props["w"],
-                2 * props["h"],
-                props["theta"],
-                offsets=list(zip(props["x0"], props["y0"])),
-                units="x",
-                transOffset=ax.transData,
-            )
+        args = dict(array=props["z_data"])
 
-            if color is not None:
-                coll.set_color(color)
-            else:
-                coll.set_array(np.ma.masked_invalid(z_data))
-                coll.set_cmap(cmap)
-                coll.set_clim(vmin, vmax)
-                coll.set_norm(norm)
-            # coll.set_urls(ids)
-            ax.add_collection(coll)
+        if shape.startswith("delauney_triangulation"):
+            shape = "delauney_triangulation"
+            args["masked"] = True if "masked" in shape else False
+            args["flat"] = True if "flat" in shape else False
 
-        elif shape == "rectangles":
-            coll = collections.PolyCollection(
-                verts=props["verts"],
-                transOffset=ax.transData,
-            )
-            # add centroid positions (used by the picker in self._spatial_plot)
-            coll._Maps_positions = list(zip(props["x0"], props["y0"]))
+        coll = getattr(self._shapes, shape)(self._props, **args)
 
-            if color is not None:
-                coll.set_color(color)
-            else:
-                coll.set_array(np.ma.masked_invalid(z_data))
-                coll.set_cmap(cmap)
-                coll.set_clim(vmin, vmax)
-                coll.set_norm(norm)
-            # coll.set_urls(ids)
-            ax.add_collection(coll)
-        elif shape == "Voroni":
-            coll = collections.PolyCollection(
-                verts=props["verts"],
-                transOffset=ax.transData,
-            )
-            # add centroid positions (used by the picker in self._spatial_plot)
-            coll._Maps_positions = list(zip(props["x0"], props["y0"]))
-
-            if color is not None:
-                coll.set_color(color)
-            else:
-                coll.set_array(np.ma.masked_invalid(z_data)[self._voroni_mask])
-                coll.set_cmap(cmap)
-                coll.set_clim(vmin, vmax)
-                coll.set_norm(norm)
-            # coll.set_urls(ids)
-            ax.add_collection(coll)
-
-        elif shape == "trimesh_rectangles":
-            coll = TriMesh(props["tri"])
-            # add centroid positions (used by the picker in self._spatial_plot)
-            coll._Maps_positions = list(zip(props["x0"], props["y0"]))
-
-            if color is not None:
-                coll.set_facecolors([color] * (len(props["x0"])) * 6)
-            else:
-                z = np.ma.masked_invalid(z_data)
-                # tri-contour meshes need 3 values for each triangle
-                z = np.broadcast_to(z, (3, len(z))).T
-                # we plot 2 triangles per rectangle
-                z = np.broadcast_to(z, (2, *z.shape))
-
-                coll.set_array(z.ravel())
-                coll.set_cmap(cmap)
-                coll.set_clim(vmin, vmax)
-                coll.set_norm(norm)
-            # coll.set_urls(np.repeat(ids, 3, axis=0))
-            ax.add_collection(coll)
-        elif shape.startswith("delauney_triangulation"):
-            if shape.endswith("_flat") or shape.endswith("_flat_masked"):
-                shading = "flat"
-            else:
-                shading = "gouraud"
-            if shading == "gouraud":
-                coll = TriMesh(props["tri"])
-
-                if color is not None:
-                    coll.set_facecolors([color] * (len(props["x0"])) * 6)
-                else:
-                    z = np.ma.masked_invalid(z_data)
-                    # tri-contour meshes need 3 values for each triangle
-                    z = np.tile(z, 3)
-
-                    coll.set_array(z.ravel())
-                    coll.set_cmap(cmap)
-                    coll.set_clim(vmin, vmax)
-                    coll.set_norm(norm)
-
-            else:
-                tri = props["tri"]
-                # Vertices of triangles.
-                maskedTris = tri.get_masked_triangles()
-                verts = np.stack((tri.x[maskedTris], tri.y[maskedTris]), axis=-1)
-
-                coll = collections.PolyCollection(verts, transOffset=ax.transData)
-                if color is not None:
-                    coll.set_color(color)
-                else:
-                    z = np.ma.masked_invalid(z_data)
-                    # tri-contour meshes need 3 values for each triangle
-                    z = np.tile(z, 3)
-                    z = z[maskedTris].mean(axis=1)
-
-                    coll.set_array(z)
-                    coll.set_cmap(cmap)
-                    coll.set_clim(vmin, vmax)
-                    coll.set_norm(norm)
-
-            # add centroid positions (used by the picker in self._spatial_plot)
-            coll._Maps_positions = list(zip(props["x0"], props["y0"]))
-
-            # coll.set_urls(np.repeat(ids, 3, axis=0))
-            ax.add_collection(coll)
+        ax.add_collection(coll)
 
         return coll
 
@@ -2043,10 +1854,8 @@ class Maps(object):
         if ID is not None:
             assert xy is None, "You can only provide 'ID' or 'pos' not both!"
 
-            xy = self.data.loc[ID][
-                [self.data_specs["xcoord"], self.data_specs["ycoord"]]
-            ].values
-            xy_crs = self.data_specs["in_crs"]
+            xy = self.data.loc[ID][[self.specs.xcoord, self.specs.ycoord]].values
+            xy_crs = self.specs.crs
 
             ind = self.data.index.get_loc(ID)
         else:
@@ -2116,10 +1925,8 @@ class Maps(object):
         if ID is not None:
             assert xy is None, "You can only provide 'ID' or 'pos' not both!"
 
-            xy = self.data.loc[ID][
-                [self.data_specs["xcoord"], self.data_specs["ycoord"]]
-            ].values
-            xy_crs = self.data_specs["in_crs"]
+            xy = self.data.loc[ID][[self.specs.xcoord, self.specs.ycoord]].values
+            xy_crs = self.specs.crs
 
         if xy is not None:
 
@@ -2137,7 +1944,7 @@ class Maps(object):
         self.cb.annotate(
             ID=ID,
             pos=xy,
-            val=None if ID is None else self.data.loc[ID][self.data_specs["parameter"]],
+            val=None if ID is None else self.data.loc[ID][self.specs.parameter],
             ind=None if ID is None else self.data.index.get_loc(ID),
             permanent=True,
             text=text,
@@ -2217,3 +2024,9 @@ class Maps(object):
     @wraps(plt.savefig)
     def savefig(self, *args, **kwargs):
         self.figure.f.savefig(*args, **kwargs)
+
+    def addplot(self, shape, **kwargs):
+        coll = getattr(self._shapes, shape)(
+            props=self._prepare_data(), array=self._props["z_data"], **kwargs
+        )
+        self.figure.ax.add_collection(coll)
