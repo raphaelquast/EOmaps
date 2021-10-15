@@ -709,7 +709,7 @@ class Maps(object):
                 and (bounds[1] < event.ydata < bounds[3])
             ):
                 dist = np.inf
-            print(event.xdata, event.ydata, dist, index)
+
             if dist < maxdist:
                 return True, dict(
                     ind=index, double_click=double_click, mouse_button=event.button
