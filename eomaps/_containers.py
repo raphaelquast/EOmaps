@@ -55,6 +55,9 @@ class data_specs(object):
     def keys(self):
         return ("parameter", "xcoord", "ycoord", "in_crs", "data")
 
+    def items(self):
+        return self[self.keys()].items()
+
     @property
     def data(self):
         return self._data
