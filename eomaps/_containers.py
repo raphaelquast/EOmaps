@@ -54,6 +54,8 @@ class data_specs(object):
         return item
 
     def __setitem__(self, key, val):
+        if key == "crs":
+            key = "in_crs"
         assert key in self.keys(), f"{key} is not a valid data-specs key!"
         return setattr(self, key, val)
 
