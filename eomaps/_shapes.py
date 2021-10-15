@@ -17,8 +17,9 @@ class shapes(object):
             2 * props["h"],
             props["theta"],
             offsets=list(zip(props["x0"], props["y0"])),
+            transOffset=self.m.figure.ax.transData,
             units="x",
-            **kwargs
+            **kwargs,
         )
 
         return coll
@@ -41,7 +42,11 @@ class shapes(object):
         if props is None:
             props = self.m._props
 
-        coll = PolyCollection(verts=self._get_rectangle_verts(props), **kwargs)
+        coll = PolyCollection(
+            verts=self._get_rectangle_verts(props),
+            transOffset=self.m.figure.ax.transData,
+            **kwargs,
+        )
 
         return coll
 
@@ -101,7 +106,12 @@ class shapes(object):
         if array is not None:
             array = array[mask]
 
-        coll = PolyCollection(verts=verts, array=array, **kwargs)
+        coll = PolyCollection(
+            verts=verts,
+            array=array,
+            transOffset=self.m.figure.ax.transData,
+            **kwargs,
+        )
 
         return coll
 
@@ -141,7 +151,11 @@ class shapes(object):
 
         tri = self._get_trimesh_rectangle_triangulation(props)
 
-        coll = TriMesh(tri, **kwargs)
+        coll = TriMesh(
+            tri,
+            transOffset=self.m.figure.ax.transData,
+            **kwargs,
+        )
 
         if color is not None:
             coll.set_facecolors([color] * (len(props["x0"])) * 6)
@@ -207,13 +221,21 @@ class shapes(object):
         tri = self._get_delauney_triangulation(props, masked)
 
         if flat == False:
-            coll = TriMesh(tri, **kwargs)
+            coll = TriMesh(
+                tri,
+                transOffset=self.m.figure.ax.transData,
+                **kwargs,
+            )
         else:
             # Vertices of triangles.
             maskedTris = tri.get_masked_triangles()
             verts = np.stack((tri.x[maskedTris], tri.y[maskedTris]), axis=-1)
 
-            coll = PolyCollection(verts=verts, **kwargs)
+            coll = PolyCollection(
+                verts=verts,
+                transOffset=self.m.figure.ax.transData,
+                **kwargs,
+            )
 
         if color is not None:
             coll.set_facecolors([color] * (len(props["x0"])) * 6)
