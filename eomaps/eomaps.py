@@ -669,14 +669,26 @@ class Maps(object):
 
         f.canvas.draw_idle()
 
-        # ------------- add a picker that will be used by the callbacks
-
         if shape.startswith("delauney_triangulation"):
             # set an infinite search-distance if triangulations are used
             maxdist = np.inf
         else:
             maxdist = np.max([np.max(props["w"]), np.max(props["h"])]) * 2
+        # ------------- add a picker that will be used by the callbacks
+        self._attach_picker(coll, maxdist)
 
+        self.figure = _Maps_plot(
+            f=f,
+            gridspec=gs,
+            ax=ax,
+            ax_cb=cb_ax,
+            ax_cb_plot=cb_plot_ax,
+            cb=cb,
+            cb_gridspec=cbgs,
+            coll=coll,
+        )
+
+    def _attach_picker(self, coll, maxdist):
         def picker(artist, event):
             if event.inaxes != self.figure.ax:
                 return False, None
@@ -710,17 +722,6 @@ class Maps(object):
             return False, None
 
         coll.set_picker(picker)
-
-        self.figure = _Maps_plot(
-            f=f,
-            gridspec=gs,
-            ax=ax,
-            ax_cb=cb_ax,
-            ax_cb_plot=cb_plot_ax,
-            cb=cb,
-            cb_gridspec=cbgs,
-            coll=coll,
-        )
 
     @property
     @lru_cache()
