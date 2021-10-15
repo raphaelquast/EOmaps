@@ -132,13 +132,13 @@ class Maps(object):
         """
         initdict = dict()
         initdict["data_specs"] = {
-            key: copy.deepcopy(val) for key, val in self.data_specs.items()
+            key: copy.deepcopy(val) for key, val in self.data_specs
         }
         initdict["plot_specs"] = {
-            key: copy.deepcopy(val) for key, val in self.plot_specs.items()
+            key: copy.deepcopy(val) for key, val in self.plot_specs
         }
         initdict["classify_specs"] = {
-            key: copy.deepcopy(val) for key, val in self.classify_specs.items()
+            key: copy.deepcopy(val) for key, val in self.classify_specs
         }
 
         if data_specs:
@@ -158,7 +158,9 @@ class Maps(object):
 
         copy_cls.set_data_specs(**initdict["data_specs"])
         copy_cls.set_plot_specs(**initdict["plot_specs"])
-        copy_cls.set_classify_specs(**initdict["classify_specs"])
+        copy_cls.set_classify_specs(
+            self.classify_specs.scheme, **initdict["classify_specs"]
+        )
 
         if copy_data:
             copy_cls.data = self.data.copy(deep=True)
@@ -634,11 +636,10 @@ class Maps(object):
 
         # evaluate classification
         if classify_specs is not None and classify_specs.scheme is not None:
-            scheme = classify_specs.scheme
-            args = classify_specs.items()
-
             classified = True
-            mapc = getattr(mapclassify, scheme)(z_data[~np.isnan(z_data)], **args)
+            mapc = getattr(mapclassify, classify_specs.scheme)(
+                z_data[~np.isnan(z_data)], **classify_specs
+            )
             bins = np.unique([mapc.y.min(), *mapc.bins])
             nbins = len(bins)
             norm = mpl.colors.BoundaryNorm(bins, nbins)

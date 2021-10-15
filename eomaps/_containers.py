@@ -69,11 +69,11 @@ class data_specs(object):
         assert key in self.keys(), f"{key} is not a valid data-specs key!"
         return setattr(self, key, val)
 
+    def __iter__(self):
+        return iter(self[self.keys()].items())
+
     def keys(self):
         return ("parameter", "xcoord", "ycoord", "in_crs", "data")
-
-    def items(self):
-        return self[self.keys()].items()
 
     @property
     def data(self):
@@ -256,15 +256,15 @@ class plot_specs(object):
         assert key in self.keys(), f"{key} is not a valid data-specs key!"
         return setattr(self, key, val)
 
+    def __iter__(self):
+        return iter(self[self.keys()].items())
+
     def keys(self):
         # fmt: off
         return ('label', 'title', 'cmap', 'plot_epsg', 'radius_crs', 'radius',
                 'histbins', 'tick_precision', 'vmin', 'vmax', 'cpos', 'alpha',
                 'add_colorbar', 'coastlines', 'density', 'shape')
         # fmt: on
-
-    def items(self):
-        return self[self.keys()].items()
 
     @property
     def cmap(self):
@@ -330,11 +330,11 @@ class classify_specs(object):
 
         super().__setattr__(key, val)
 
+    def __iter__(self):
+        return iter(self[self.keys()].items())
+
     def keys(self):
         return self._keys
-
-    def items(self):
-        return self[self.keys()]
 
     @property
     def scheme(self):
@@ -342,11 +342,11 @@ class classify_specs(object):
 
     @scheme.setter
     def scheme(self, val):
+        self._scheme = val
+        self._keys = set()
         s = self._get_default_args()
         if len(self._keys) > 0:
             print(f"EOmaps: classification has been reset to '{val}{s}'")
-        self._keys = set()
-        self._scheme = val
         for key, val in self._defaults.items():
             if val != _empty:
                 setattr(self, key, val)
