@@ -1,9 +1,14 @@
 from textwrap import dedent, indent, fill
 from warnings import warn
 from operator import attrgetter
+from matplotlib.pyplot import get_cmap
 
 
 class data_specs(object):
+    """
+    a container for accessing the data-properties
+    """
+
     def __init__(
         self,
         m,
@@ -22,13 +27,13 @@ class data_specs(object):
 
     def __repr__(self):
         txt = f"""\
-              ## parameter = {self.parameter}
-              ## coordinates = ({self.xcoord}, {self.ycoord})
-              ## crs: {indent(fill(self.crs.__repr__(), 50),
-                              "                       ").strip()}
+              # parameter = {self.parameter}
+              # coordinates = ({self.xcoord}, {self.ycoord})
+              # crs: {indent(fill(self.crs.__repr__(), 60),
+                              "                      ").strip()}
 
-              ## data:\
-              {indent(self.data.__repr__(), "              ")}
+              # data:\
+              {indent(self.data.__repr__(), "                ")}
               """
 
         return dedent(txt)
@@ -195,3 +200,61 @@ class map_objects(object):
             self.ax_cb_plot.set_position(
                 [pos[0], pos[1] + hcb, pos[2], hp],
             )
+
+
+class plot_specs(object):
+    """
+    a container for accessing the plot specifications
+    """
+
+    def __init__(self, m, **kwargs):
+        self._m = m
+
+        for key in kwargs:
+            assert key in self.keys(), f"'{key}' is not a valid data-specs key"
+
+        for key in self.keys():
+            setattr(self, key, kwargs.get(key, None))
+
+    def __repr__(self):
+        txt = "\n".join(
+            f"# {key}: {indent(fill(self[key].__repr__(), 60),  ' '*(len(key) + 4)).strip()}"
+            for key in self.keys()
+        )
+        return txt
+
+    def __getitem__(self, key):
+        if isinstance(key, (list, tuple)):
+            for i in key:
+                assert i in self.keys(), f"{i} is not a valid data-specs key!"
+            item = dict(zip(key, attrgetter(*key)(self)))
+        else:
+            assert key in self.keys(), f"{key} is not a valid data-specs key!"
+            item = getattr(self, key)
+        return item
+
+    def __setitem__(self, key, val):
+        assert key in self.keys(), f"{key} is not a valid data-specs key!"
+        return setattr(self, key, val)
+
+    def keys(self):
+        # fmt: off
+        return ('label', 'title', 'cmap', 'plot_epsg', 'radius_crs', 'radius',
+                'histbins', 'tick_precision', 'vmin', 'vmax', 'cpos', 'alpha',
+                'add_colorbar', 'coastlines', 'density', 'shape')
+        # fmt: on
+
+    def items(self):
+        return self[self.keys()].items()
+
+    @property
+    def cmap(self):
+        return self._cmap
+
+    @cmap.getter
+    def cmap(self):
+        return self._cmap
+
+    @cmap.setter
+    def cmap(self, val):
+        self._cmap = get_cmap(val)

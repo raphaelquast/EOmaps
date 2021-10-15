@@ -32,7 +32,7 @@ from cartopy.io import shapereader
 from .helpers import pairwise, cmap_alpha, BlitManager
 from .callbacks import callbacks
 from ._shapes import shapes
-from ._containers import data_specs, map_objects
+from ._containers import data_specs, plot_specs, map_objects
 
 try:
     import mapclassify
@@ -67,7 +67,8 @@ class Maps(object):
         self._orientation = "vertical"
 
         # default plot specs
-        self._plot_specs = dict(
+        self.plot_specs = plot_specs(
+            self,
             label=None,
             title=None,
             cmap=plt.cm.viridis.copy(),
@@ -181,14 +182,6 @@ class Maps(object):
         self.data_specs.data = val
 
     @property
-    def plot_specs(self):
-        return self._plot_specs
-
-    @plot_specs.setter
-    def plot_specs(self, val):
-        raise AttributeError("use 'm.set_plot_specs' to set plot-specifications!")
-
-    @property
     def classify_specs(self):
         return self._classify_specs
 
@@ -198,50 +191,12 @@ class Maps(object):
             "use 'm.set_classify_specs' to set classification-specifications!"
         )
 
-    def set_data(self, data, parameter=None, xcoord=None, ycoord=None, crs=None):
-        """
-        Use this function to set all data-specifications in one go
-        (alternatively you can use `m.data.<...> = <...>`  )
-
-        Parameters
-        ----------
-        data : pandas.DataFrame
-            The dataset to use. It must contain the columns specified via
-            "xcoord", "ycoord" and "parameter".
-        parameter : str, optional
-            The name of the parameter to use. If None, the first variable in the
-            provided dataframe will be used. The default is None.
-        xcoord, ycoord : str, optional
-            The name of the x- and y-coordinate as provided in the dataframe.
-            The default is "lon" and "lat".
-        in_crs : int, dict or str
-            The coordinate-system identifier.
-            Can be any input usable with `pyproj.CRS.from_user_input`:
-
-                - PROJ string
-                - Dictionary of PROJ parameters
-                - PROJ keyword arguments for parameters
-                - JSON string with PROJ parameters
-                - CRS WKT string
-                - An authority string [i.e. 'epsg:4326']
-                - An EPSG integer code [i.e. 4326]
-                - A tuple of ("auth_name": "auth_code") [i.e ('epsg', '4326')]
-                - An object with a `to_wkt` method.
-                - A :class:`pyproj.crs.CRS` class
-
-            The default is 4326 (e.g. lon/lat projection)
-        """
-
-        self.data_specs.data = data
-        self.data_specs.parameter = parameter
-        self.data_specs.xcoord = xcoord
-        self.data_specs.ycoord = ycoord
-        self.data_specs.crs = crs
-
     def set_data_specs(self, **kwargs):
         """
         Use this function to update multiple data-specs in one go
-        (alternatively you can set data-properties via `m.data_specs.<...> = <...>`)
+        Alternatively you can set the data-specifications via
+
+            >>> m.data_specs.<...> = <...>`
 
         Parameters
         ----------
@@ -273,9 +228,12 @@ class Maps(object):
         for key, val in kwargs.items():
             self.data_specs[key] = val
 
+    set_data = set_data_specs
+
     def set_plot_specs(self, **kwargs):
         """
-        Use this function to update the plot-specs
+        Use this function to update multiple plot-specs in one go
+        (alternatively you can set data-properties via `m.plot_specs.<...> = <...>`)
 
         Parameters
         ----------
@@ -360,13 +318,7 @@ class Maps(object):
         """
 
         for key, val in kwargs.items():
-            if key in self.plot_specs:
-                if key == "cmap":
-                    self._plot_specs[key] = plt.get_cmap(val)
-                else:
-                    self._plot_specs[key] = val
-            else:
-                print(f'"{key}" is not a valid plot_specs parameter!')
+            self.plot_specs[key] = val
 
     def set_classify_specs(self, scheme=None, **kwargs):
         """
@@ -1795,14 +1747,15 @@ class Maps(object):
             Indicator if coastlines should be added or not.
             The default is True
         """
+
+        assert self.figure.ax is None, (
+            "There is already an open figure! "
+            + "Either close it before creating a new one or call "
+            + "`m2 = m.copy()` to copy the Maps object and then use `m2.plot_map()"
+        )
+
         try:
             self._orientation = orientation
-
-            assert self.figure.ax is None, (
-                "There is already an open figure! "
-                + "Either close it before creating a new one or call "
-                + "`m2 = m.copy()` to copy the Maps object and then use `m2.plot_map()"
-            )
 
             if not hasattr(self, "data"):
                 print("you must set the data first!")
