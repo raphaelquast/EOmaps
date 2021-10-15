@@ -62,12 +62,9 @@ class Maps(object):
         "voroni",
     ]
 
-    def __init__(
-        self,
-        orientation="vertical",
-    ):
+    def __init__(self):
 
-        self.orientation = orientation
+        self._orientation = "vertical"
 
         # default plot specs
         self._plot_specs = dict(
@@ -407,279 +404,18 @@ class Maps(object):
         for key, val in kwargs.items():
             self._classify_specs[key] = val
 
-    def set_orientation(self, orientation="horizontal"):
-        """
-        set the orientation of the plot
-        (must be called before m.plot_map() !)
+    def _attach_picker(self, coll=None, maxdist=None):
+        if coll is None:
+            coll = self.figure.coll
+        if maxdist is None:
+            if self.plot_specs["shape"].startswith("delauney_triangulation"):
+                # set an infinite search-distance if triangulations are used
+                maxdist = np.inf
+            else:
+                maxdist = (
+                    np.max([np.max(self._props["w"]), np.max(self._props["h"])]) * 2
+                )
 
-        Parameters
-        ----------
-        orientation : str
-            the orientation to use (either "horizontal" or "vertical").
-            The default is "horizontal".
-        """
-        self.orientation = orientation
-
-    def plot_map(self, f_gridspec=None):
-        """
-        Actually generate the map-plot based on the data provided as `m.data` and the
-        specifications defined in "data_specs", "plot_specs" and "classify_specs".
-
-        Parameters
-        ----------
-        f_gridspec : list, optional
-            If provided, the figure and gridspec instances will be used to initialize
-            the plot as a sub-plot to an already existing plot.
-            The instances must be provided as:
-                [matplotlib.figure, matplotlib.GridSpec]
-            The default is None in which case a new figure is created.
-        """
-
-        assert self.figure.ax is None, (
-            "There is already an open figure! "
-            + "Either close it before creating a new one or call "
-            + "`m2 = m.copy()` to copy the Maps object and then use `m2.plot_map()"
-        )
-
-        if not hasattr(self, "data"):
-            print("you must set the data first!")
-
-        self._spatial_plot(**self.data_specs, **self.plot_specs, f_gridspec=f_gridspec)
-
-        # call the cleanup function if the figure is closed
-        # to ensure callbacks are removed
-        def on_close(event):
-            while len(self._attached_cbs) > 0:
-                self.remove_callback(list(self._attached_cbs)[-1])
-
-            # remove all figure properties
-            self.figure = self.figure.reinit()
-
-        self.figure.f.canvas.mpl_connect("close_event", on_close)
-
-        self.BM = BlitManager(self.figure.f.canvas)
-
-        # trigger drawing the figure
-        self.figure.f.canvas.draw()
-
-    def _spatial_plot(
-        self,
-        data,
-        parameter=None,
-        xcoord="x",
-        ycoord="y",
-        label=None,
-        title="",
-        cmap="viridis",
-        radius="estimate",
-        radius_crs="in",
-        in_crs=4326,
-        plot_epsg=4326,
-        histbins=256,
-        tick_precision=2,
-        vmin=None,
-        vmax=None,
-        cpos="c",
-        f_gridspec=None,
-        alpha=1,
-        add_colorbar=True,
-        coastlines=True,
-        density=False,
-        shape="ellipses",
-    ):
-        """
-        A fast way to genereate a plot of "projected circles" of datapoints.
-
-        Parameters
-        ----------
-        data : pandas.DataFrame
-            a pandas DataFrame with column-names as specified via the parameters
-            "parameter", "xcoord" and "ycoord".
-        parameter : str, optional
-            The name of the parameter-column to use.
-            The default is None in which case the first column that is not
-            one of the values specified in "xcoord" or "ycoord" is used.
-        label : str, optional
-            A label for the colorbar. The default is 'data'.
-        title : str, optional
-            A title for the plot. The default is ''.
-        cmap : str or a matplotlib.Colormap, optional
-            a matplotlib colormap name or instance. The default is 'viridis'.
-        radius : str, float, list or tuple
-            the radius (if list or tuple the ellipse-half-widths) of the points
-            in units of the "in_crs". If "estimate", the mean difference of the
-            provided coordinates will be used.
-            The default is "estimate"
-        radius_crs : str or crs
-            the crs in which the radius is defined
-            if 'in': "in_crs" will be used
-            if 'out': "plot_epsg" will be used
-            else the input is interpreted via pyproj.CRS.from_user_input()
-        in_crs : int, dict or str, optional
-            CRS descriptor ( interpreted by pyproj.CRS.from_user_input() )
-            that is used to identify the CRS of the input-coordinates
-            (e.g. "xcoord", "ycoord"). The default is 4326.
-        plot_epsg : int, optional
-            The epsg-code of the projection that is used to generate the plot.
-            The default is 4326.
-        histbins : int, optional
-            The number of histogram bins. The default is 256.
-        xcoord, ycoord : str, optional
-            The name of the coordinate-columns. The default is 'x' and 'y'.
-        tick_precision : int,
-            The number of digits (after the comma) to print as colorbar tick-labels
-            The default is 2.
-        vmin, vmax : float, optional
-            min- and max- values of the colorbar.
-            The default is None in which case the whole data-range will be used.
-        scheme : str, optional
-            The name of a classification scheme of the "mapclassify" module.
-            The default is None.
-        cpos : str
-            the position of the coordinate
-            (one of 'c', 'll', 'lr', 'ul', 'ur')
-        f_gridspec : [matplotlib.figure, matplotlib.Gridspec]
-            if provided, the gridspec is used instead of generating a new
-            figure. provide as: [figure, gridspec]
-        alpha : float
-            global transparency value
-        add_colorbar : bool
-            indicator if a colorbar (with histogram) should be plotted or not
-            The default is True.
-        density : bool
-            indicator if the colorbar-histogram should show the value-count (False)
-            or the probability density (True)
-            The default is False.
-        shape : str
-            the shapes to plot
-                - ellipses
-                - rectangles
-                - trimesh_rectangles
-        Returns
-        -------
-        dict :
-            a dict containing all objects required to update the plot
-        """
-
-        if alpha < 1:
-            cmap = cmap_alpha(cmap, alpha)
-
-        # ---------------------- prepare the data
-        props = self._prepare_data(
-            data=data,
-            in_crs=in_crs,
-            plot_epsg=plot_epsg,
-            radius=radius,
-            radius_crs=radius_crs,
-            cpos=cpos,
-            parameter=parameter,
-            xcoord=xcoord,
-            ycoord=ycoord,
-        )
-
-        # remember props for later use
-        self._props = props
-
-        if label is None:
-            label = parameter
-        if title is None:
-            title = parameter
-
-        if vmin is None:
-            vmin = np.nanmin(props["z_data"])
-        if vmax is None:
-            vmax = np.nanmax(props["z_data"])
-
-        # clip the data to properly account for vmin and vmax
-        props["z_data"] = props["z_data"].clip(vmin, vmax)
-
-        # ---------------------- classify the data
-        cbcmap, norm, bins, classified = self._classify_data(
-            z_data=props["z_data"],
-            cmap=cmap,
-            histbins=histbins,
-            vmin=vmin,
-            vmax=vmax,
-            classify_specs=self.classify_specs,
-        )
-
-        # ------------- initialize figure
-        f, gs, cbgs, ax, cb_ax, cb_plot_ax = self._init_figure(
-            f_gridspec=f_gridspec,
-            plot_epsg=plot_epsg,
-            add_colorbar=add_colorbar,
-        )
-
-        self.figure.set_items(
-            f=f,
-            gridspec=gs,
-            ax=ax,
-            ax_cb=cb_ax,
-            ax_cb_plot=cb_plot_ax,
-            cb_gridspec=cbgs,
-        )
-
-        ax.set_xlim(props["x0"].min(), props["x0"].max())
-        ax.set_ylim(props["y0"].min(), props["y0"].max())
-        ax.set_title(title)
-
-        # ax.set_extent((x0.min(), x0.max(), y0.min(), y0.max()))
-        # -------------------------------
-
-        # ------------- plot the data
-        coll = self._add_collection(
-            ax=ax,
-            props=props,
-            cmap=cbcmap,
-            vmin=vmin,
-            vmax=vmax,
-            norm=norm,
-            shape=shape,
-        )
-
-        self.figure.coll = coll
-
-        # add coastlines and ocean-coloring
-        if coastlines is True:
-            ax.coastlines()
-            ax.add_feature(cfeature.OCEAN)
-
-        if add_colorbar:
-            # ------------- add a colorbar with a histogram
-            cb = self._add_colorbar(
-                cb_ax=cb_ax,
-                cb_plot_ax=cb_plot_ax,
-                z_data=props["z_data"],
-                label=label,
-                bins=bins,
-                histbins=histbins,
-                cmap=cbcmap,
-                norm=norm,
-                classified=classified,
-                vmin=vmin,
-                vmax=vmax,
-                tick_precision=tick_precision,
-                density=density,
-            )
-
-            # save colorbar instance for later use
-            f._rt1_used_colorbar = cb
-        else:
-            cb = None
-
-        self.figure.cb = cb
-
-        f.canvas.draw_idle()
-
-        if shape.startswith("delauney_triangulation"):
-            # set an infinite search-distance if triangulations are used
-            maxdist = np.inf
-        else:
-            maxdist = np.max([np.max(props["w"]), np.max(props["h"])]) * 2
-        # ------------- add a picker that will be used by the callbacks
-        self._attach_picker(coll, maxdist)
-
-    def _attach_picker(self, coll, maxdist):
         def picker(artist, event):
             if event.inaxes != self.figure.ax:
                 return False, None
@@ -906,7 +642,7 @@ class Maps(object):
         theta = np.sign(y3 - y0) * np.rad2deg(np.arcsin(np.abs(y3 - y0) / w))
 
         # use a cKDTree based picking to speed up picks for large collections
-        if not hasattr(self, "figure"):
+        if not self.figure.f is not None:
             self.tree = cKDTree(np.stack([x0, y0], axis=1))
 
         props = dict(
@@ -925,7 +661,32 @@ class Maps(object):
         )
         return props
 
-    def _classify_data(self, z_data, cmap, histbins, vmin, vmax, classify_specs=None):
+    def _classify_data(
+        self,
+        z_data=None,
+        cmap=None,
+        histbins=None,
+        vmin=None,
+        vmax=None,
+        classify_specs=None,
+    ):
+
+        if z_data is None:
+            z_data = self._props["z_data"]
+        if cmap is None:
+            cmap = self.plot_specs["cmap"]
+        if self.plot_specs["alpha"] < 1:
+            cmap = cmap_alpha(
+                cmap,
+                self.plot_specs["alpha"],
+            )
+
+        if histbins is None:
+            histbins = self.plot_specs["histbins"]
+        if vmin is None:
+            vmin = self.plot_specs["vmin"]
+        if vmax is None:
+            vmax = self.plot_specs["vmax"]
 
         if isinstance(cmap, str):
             cmap = plt.get_cmap(cmap)
@@ -986,7 +747,7 @@ class Maps(object):
             f, gs_main = f_gridspec
             gs_func = partial(GridSpecFromSubplotSpec, subplot_spec=gs_main)
 
-        if self.orientation == "horizontal":
+        if self._orientation == "horizontal":
             # gridspec for the plot
             if gs_main:
                 gs = gs_func(
@@ -1015,7 +776,7 @@ class Maps(object):
                 wspace=0,
                 width_ratios=[0.9, 0.1],
             )
-        elif self.orientation == "vertical":
+        elif self._orientation == "vertical":
             if gs_main:
                 # gridspec for the plot
                 gs = gs_func(
@@ -1048,7 +809,11 @@ class Maps(object):
 
         return f, gs, cbgs
 
-    def _init_figure(self, f_gridspec=None, plot_epsg=4326, add_colorbar=True):
+    def _init_figure(self, f_gridspec=None, plot_epsg=None, add_colorbar=True):
+
+        if plot_epsg is None:
+            plot_epsg = self.plot_specs["plot_epsg"]
+
         if f_gridspec is None or isinstance(f_gridspec[1], SubplotSpec):
             f, gs, cbgs = self._init_fig_grid(f_gridspec=f_gridspec)
 
@@ -1062,28 +827,29 @@ class Maps(object):
                     gs[0], projection=cartopy_proj, aspect="equal", adjustable="datalim"
                 )
                 # axes for histogram
-                cb_plot_ax = f.add_subplot(cbgs[0], frameon=False, label="cb_plot_ax")
-                cb_plot_ax.tick_params(rotation=90, axis="x")
+                ax_cb_plot = f.add_subplot(cbgs[0], frameon=False, label="ax_cb_plot")
+                ax_cb_plot.tick_params(rotation=90, axis="x")
                 # axes for colorbar
-                cb_ax = f.add_subplot(cbgs[1], label="cb_ax")
+                ax_cb = f.add_subplot(cbgs[1], label="ax_cb")
                 # join colorbar and histogram axes
-                if self.orientation == "horizontal":
-                    cb_plot_ax.get_shared_y_axes().join(cb_plot_ax, cb_ax)
-                elif self.orientation == "vertical":
-                    cb_plot_ax.get_shared_x_axes().join(cb_plot_ax, cb_ax)
+                if self._orientation == "horizontal":
+                    ax_cb_plot.get_shared_y_axes().join(ax_cb_plot, ax_cb)
+                elif self._orientation == "vertical":
+                    ax_cb_plot.get_shared_x_axes().join(ax_cb_plot, ax_cb)
             else:
                 ax = f.add_subplot(
                     gs[:], projection=cartopy_proj, aspect="equal", adjustable="datalim"
                 )
-                cb_ax, cb_plot_ax = None, None
+                gs.update(left=0.01, right=0.99, bottom=0.01, top=0.95)
+                ax_cb, ax_cb_plot = None, None
 
         else:
             f = f_gridspec[0]
             ax = f_gridspec[1]
             gs, cbgs = None, None
-            cb_ax, cb_plot_ax = None, None
+            ax_cb, ax_cb_plot = None, None
 
-        return f, gs, cbgs, ax, cb_ax, cb_plot_ax
+        return f, gs, cbgs, ax, ax_cb, ax_cb_plot
 
     def _add_collection(
         self,
@@ -1112,9 +878,9 @@ class Maps(object):
 
     def _add_colorbar(
         self,
-        cb_ax,
-        cb_plot_ax,
-        z_data,
+        ax_cb=None,
+        ax_cb_plot=None,
+        z_data=None,
         label="",
         bins=None,
         histbins=256,
@@ -1127,16 +893,39 @@ class Maps(object):
         density=False,
     ):
 
-        if self.orientation == "horizontal":
+        if ax_cb is None:
+            ax_cb = self.figure.ax_cb
+        if ax_cb_plot is None:
+            ax_cb_plot = self.figure.ax_cb_plot
+        if z_data is None:
+            z_data = self._props["z_data"]
+        if label is None:
+            label = self.plot_specs["parameter"]
+        if cmap is None:
+            cmap = self.plot_specs["cmap"]
+        if vmin is None:
+            vmin = self.plot_specs["vmin"]
+            if vmin is None:
+                vmin = np.nanmin(self._props["z_data"])
+        if vmax is None:
+            vmax = self.plot_specs["vmax"]
+            if vmax is None:
+                vmax = np.nanmax(self._props["z_data"])
+        if tick_precision is None:
+            tick_precision = self.plot_specs["tick_precision"]
+        if density is None:
+            density = self.plot_specs["density"]
+
+        if self._orientation == "horizontal":
             cb_orientation = "vertical"
-        elif self.orientation == "vertical":
+        elif self._orientation == "vertical":
             cb_orientation = "horizontal"
 
         n_cmap = cm.ScalarMappable(cmap=cmap, norm=norm)
         n_cmap.set_array(np.ma.masked_invalid(z_data))
         cb = plt.colorbar(
             n_cmap,
-            cax=cb_ax,
+            cax=ax_cb,
             label=label,
             extend="both",
             spacing="proportional",
@@ -1144,9 +933,9 @@ class Maps(object):
         )
 
         # plot the histogram
-        hist_vals, hist_bins, init_hist = cb_plot_ax.hist(
+        hist_vals, hist_bins, init_hist = ax_cb_plot.hist(
             z_data,
-            orientation=self.orientation,
+            orientation=self._orientation,
             bins=bins if (classified and histbins == "bins") else histbins,
             color="k",
             align="mid",
@@ -1155,15 +944,15 @@ class Maps(object):
         )
 
         # color the histogram
-        for patch in list(cb_plot_ax.patches):
+        for patch in list(ax_cb_plot.patches):
             # the list is important!! since otherwise we change ax.patches
             # as we iterate over it... which is not a good idea...
-            if self.orientation == "horizontal":
+            if self._orientation == "horizontal":
                 minval = np.atleast_1d(patch.get_y())[0]
                 width = patch.get_width()
                 height = patch.get_height()
                 maxval = minval + height
-            elif self.orientation == "vertical":
+            elif self._orientation == "vertical":
                 minval = np.atleast_1d(patch.get_x())[0]
                 width = patch.get_width()
                 height = patch.get_height()
@@ -1181,14 +970,14 @@ class Maps(object):
                     # add first and last patch
                     # (note b0 = b1 if only 1 split is performed!)
                     b0 = splitbins[0]
-                    if self.orientation == "horizontal":
+                    if self._orientation == "horizontal":
                         p0 = mpl.patches.Rectangle(
                             (0, minval),
                             width,
                             (b0 - minval),
                             facecolor=cmap(norm(minval)),
                         )
-                    elif self.orientation == "vertical":
+                    elif self._orientation == "vertical":
                         p0 = mpl.patches.Rectangle(
                             (minval, 0),
                             (b0 - minval),
@@ -1197,17 +986,17 @@ class Maps(object):
                         )
 
                     b1 = splitbins[-1]
-                    if self.orientation == "horizontal":
+                    if self._orientation == "horizontal":
                         p1 = mpl.patches.Rectangle(
                             (0, b1), width, (maxval - b1), facecolor=cmap(norm(maxval))
                         )
-                    elif self.orientation == "vertical":
+                    elif self._orientation == "vertical":
                         p1 = mpl.patches.Rectangle(
                             (b1, 0), (maxval - b1), height, facecolor=cmap(norm(maxval))
                         )
 
-                    cb_plot_ax.add_patch(p0)
-                    cb_plot_ax.add_patch(p1)
+                    ax_cb_plot.add_patch(p0)
+                    ax_cb_plot.add_patch(p1)
 
                     # add in-between patches
                     if len(splitbins > 1):
@@ -1216,24 +1005,24 @@ class Maps(object):
                                 (0, b0), width, (b1 - b0), facecolor=cmap(norm(b0))
                             )
 
-                            if self.orientation == "horizontal":
+                            if self._orientation == "horizontal":
                                 pi = mpl.patches.Rectangle(
                                     (0, b0), width, (b1 - b0), facecolor=cmap(norm(b0))
                                 )
-                            elif self.orientation == "vertical":
+                            elif self._orientation == "vertical":
                                 pi = mpl.patches.Rectangle(
                                     (b0, 0), (b1 - b0), height, facecolor=cmap(norm(b0))
                                 )
 
-                            cb_plot_ax.add_patch(pi)
+                            ax_cb_plot.add_patch(pi)
                 else:
                     patch.set_facecolor(cmap(norm((minval + maxval) / 2)))
 
         # setup appearance of histogram
-        if self.orientation == "horizontal":
-            cb_plot_ax.invert_xaxis()
+        if self._orientation == "horizontal":
+            ax_cb_plot.invert_xaxis()
 
-            cb_plot_ax.tick_params(
+            ax_cb_plot.tick_params(
                 left=False,
                 labelleft=False,
                 bottom=False,
@@ -1241,17 +1030,17 @@ class Maps(object):
                 labelbottom=False,
                 labeltop=True,
             )
-            cb_plot_ax.xaxis.set_major_locator(plt.MaxNLocator(5))
-            cb_plot_ax.grid(axis="x", dashes=[5, 5], c="k", alpha=0.5)
+            ax_cb_plot.xaxis.set_major_locator(plt.MaxNLocator(5))
+            ax_cb_plot.grid(axis="x", dashes=[5, 5], c="k", alpha=0.5)
             # add a line that indicates 0 histogram level
-            cb_plot_ax.plot(
-                [1, 1], [0, 1], "k--", alpha=0.5, transform=cb_plot_ax.transAxes
+            ax_cb_plot.plot(
+                [1, 1], [0, 1], "k--", alpha=0.5, transform=ax_cb_plot.transAxes
             )
             # make sure lower x-limit is 0
-            cb_plot_ax.set_xlim(0)
+            ax_cb_plot.set_xlim(0)
 
-        elif self.orientation == "vertical":
-            cb_plot_ax.tick_params(
+        elif self._orientation == "vertical":
+            ax_cb_plot.tick_params(
                 left=False,
                 labelleft=True,
                 bottom=False,
@@ -1259,14 +1048,14 @@ class Maps(object):
                 labelbottom=False,
                 labeltop=False,
             )
-            cb_plot_ax.yaxis.set_major_locator(plt.MaxNLocator(5))
-            cb_plot_ax.grid(axis="y", dashes=[5, 5], c="k", alpha=0.5)
+            ax_cb_plot.yaxis.set_major_locator(plt.MaxNLocator(5))
+            ax_cb_plot.grid(axis="y", dashes=[5, 5], c="k", alpha=0.5)
             # add a line that indicates 0 histogram level
-            cb_plot_ax.plot(
-                [0, 1], [0, 0], "k--", alpha=0.5, transform=cb_plot_ax.transAxes
+            ax_cb_plot.plot(
+                [0, 1], [0, 0], "k--", alpha=0.5, transform=ax_cb_plot.transAxes
             )
             # make sure lower y-limit is 0
-            cb_plot_ax.set_ylim(0)
+            ax_cb_plot.set_ylim(0)
 
         cb.outline.set_visible(False)
 
@@ -1274,9 +1063,9 @@ class Maps(object):
         if classified:
             cb.set_ticks([i for i in bins if i >= vmin and i <= vmax])
 
-            if self.orientation == "vertical":
+            if self._orientation == "vertical":
                 labelsetfunc = "set_xticklabels"
-            elif self.orientation == "horizontal":
+            elif self._orientation == "horizontal":
                 labelsetfunc = "set_yticklabels"
 
             getattr(cb.ax, labelsetfunc)(
@@ -1980,3 +1769,130 @@ class Maps(object):
             props=self._prepare_data(), array=self._props["z_data"], **kwargs
         )
         self.figure.ax.add_collection(coll)
+
+    def plot_map(
+        self, f_gridspec=None, colorbar=True, coastlines=True, orientation="vertical"
+    ):
+        """
+        Actually generate the map-plot based on the data provided as `m.data` and the
+        specifications defined in "data_specs", "plot_specs" and "classify_specs".
+
+        Parameters
+        ----------
+        f_gridspec : list, optional
+            If provided, the figure and gridspec instances will be used to initialize
+            the plot as a sub-plot to an already existing plot.
+            The instances must be provided as:
+                [matplotlib.figure, matplotlib.GridSpec]
+            The default is None in which case a new figure is created.
+        colorbar : bool
+            Indicator if a colorbar should be added or not.
+            The default is True
+        coastlines : bool
+            Indicator if coastlines should be added or not.
+            The default is True
+        """
+        try:
+            self._orientation = orientation
+
+            assert self.figure.ax is None, (
+                "There is already an open figure! "
+                + "Either close it before creating a new one or call "
+                + "`m2 = m.copy()` to copy the Maps object and then use `m2.plot_map()"
+            )
+
+            if not hasattr(self, "data"):
+                print("you must set the data first!")
+
+            # ---------------------- prepare the data
+            props = self._prepare_data()
+            # remember props for later use
+            self._props = props
+
+            title = self.plot_specs["title"]
+            if title is None:
+                title = self.data_specs.parameter
+            vmin = self.plot_specs["vmin"]
+            if self.plot_specs["vmin"] is None:
+                vmin = np.nanmin(props["z_data"])
+            vmax = self.plot_specs["vmax"]
+            if self.plot_specs["vmax"] is None:
+                vmax = np.nanmax(props["z_data"])
+
+            # clip the data to properly account for vmin and vmax
+            props["z_data"] = props["z_data"].clip(vmin, vmax)
+
+            # ---------------------- classify the data
+            cbcmap, norm, bins, classified = self._classify_data(
+                vmin=vmin,
+                vmax=vmax,
+                classify_specs=self.classify_specs,
+            )
+
+            # ------------- initialize figure
+            f, gs, cbgs, ax, ax_cb, ax_cb_plot = self._init_figure(
+                f_gridspec=f_gridspec,
+                add_colorbar=colorbar,
+            )
+
+            self.figure.set_items(
+                f=f,
+                gridspec=gs,
+                ax=ax,
+                ax_cb=ax_cb,
+                ax_cb_plot=ax_cb_plot,
+                cb_gridspec=cbgs,
+            )
+
+            ax.set_xlim(props["x0"].min(), props["x0"].max())
+            ax.set_ylim(props["y0"].min(), props["y0"].max())
+            ax.set_title(title)
+
+            shape = self.plot_specs["shape"]
+            args = dict(array=props["z_data"], cmap=cbcmap, norm=norm)
+            if shape.startswith("delauney_triangulation"):
+                shape = "delauney_triangulation"
+                args["masked"] = True if "masked" in shape else False
+                args["flat"] = True if "flat" in shape else False
+            coll = getattr(self._shapes, shape)(props, **args)
+            coll.set_clim(vmin, vmax)
+            ax.add_collection(coll)
+
+            self.figure.coll = coll
+
+            # add coastlines and ocean-coloring
+            if coastlines is True:
+                ax.coastlines()
+                ax.add_feature(cfeature.OCEAN)
+
+            if colorbar:
+                # ------------- add a colorbar with a histogram
+                cb = self._add_colorbar(
+                    bins=bins,
+                    cmap=cbcmap,
+                    norm=norm,
+                    classified=classified,
+                )
+                self.figure.cb = cb
+
+            # ------------- add a picker that will be used by the callbacks
+            self._attach_picker()
+
+            # attach a cleanup function if the figure is closed
+            # to ensure callbacks are removed and the container is reinitialized
+            def on_close(event):
+                while len(self._attached_cbs) > 0:
+                    self.remove_callback(list(self._attached_cbs)[-1])
+
+                # remove all figure properties
+                self.figure = self.figure.reinit()
+
+            self.figure.f.canvas.mpl_connect("close_event", on_close)
+
+            self.BM = BlitManager(self.figure.f.canvas)
+
+            # trigger drawing the figure
+            self.figure.f.canvas.draw()
+        except Exception as ex:
+            self.figure = self.figure.reinit()
+            raise ex
