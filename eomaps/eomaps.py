@@ -802,31 +802,6 @@ class Maps(object):
 
         return f, gs, cbgs, ax, ax_cb, ax_cb_plot
 
-    def _add_collection(
-        self,
-        ax,
-        props,
-        cmap,
-        vmin,
-        vmax,
-        norm,
-        color=None,
-        shape="ellipses",
-    ):
-
-        args = dict(array=props["z_data"], cmap=cmap, norm=norm, color=color)
-
-        if shape.startswith("delauney_triangulation"):
-            shape = "delauney_triangulation"
-            args["masked"] = True if "masked" in shape else False
-            args["flat"] = True if "flat" in shape else False
-
-        coll = getattr(self._shapes, shape)(props, **args)
-        coll.set_clim(vmin, vmax)
-        ax.add_collection(coll)
-
-        return coll
-
     def _add_colorbar(
         self,
         ax_cb=None,
@@ -1234,6 +1209,7 @@ class Maps(object):
         legend_kwargs=True,
         shape="ellipses",
         dynamic_layer_idx=None,
+        **kwargs,
     ):
         """
         add another layer of pixels
@@ -1296,9 +1272,16 @@ class Maps(object):
 
             The default is None in which case the layer is added as a
             "static-background" layer
-
+        **kwargs
+            kwargs passed to the initialization of the maptlotlib collection
+            (dependent on the used plot-shape!)
         """
-        assert hasattr(self, "figure"), "you must call .plot_map() first!"
+        assert self.figure.f is not None, "you must call .plot_map() first!"
+
+        for key in ("cmap", "array", "norm"):
+            assert (
+                key not in kwargs
+            ), f"The key '{key}' is assigned internally by EOmaps!"
 
         if parameter is None:
             parameter = next(i for i in data.keys() if i not in [xcoord, ycoord])
@@ -1318,16 +1301,21 @@ class Maps(object):
         )
 
         # ------------- plot the data
-        coll = self._add_collection(
-            ax=self.figure.ax,
-            props=props,
-            cmap=cmap,
-            vmin=vmin,
-            vmax=vmax,
-            norm=norm,
-            color=color,
-            shape=shape,
-        )
+        if color:
+            args = dict(array=None, cmap=None, norm=None, color=color, **kwargs)
+        else:
+            args = dict(
+                array=props["z_data"], cmap=cmap, norm=norm, color=None, **kwargs
+            )
+
+        if shape.startswith("delauney_triangulation"):
+            shape = "delauney_triangulation"
+            args["masked"] = True if "masked" in shape else False
+            args["flat"] = True if "flat" in shape else False
+
+        coll = getattr(self._shapes, shape)(props, **args)
+        coll.set_clim(vmin, vmax)
+        self.figure.ax.add_collection(coll)
 
         if dynamic_layer_idx is not None:
             # make this collection a "temporary layer"
@@ -1718,15 +1706,13 @@ class Maps(object):
     def savefig(self, *args, **kwargs):
         self.figure.f.savefig(*args, **kwargs)
 
-    def addplot(self, shape, **kwargs):
-
-        coll = getattr(self._shapes, shape)(
-            props=self._prepare_data(), array=self._props["z_data"], **kwargs
-        )
-        self.figure.ax.add_collection(coll)
-
     def plot_map(
-        self, f_gridspec=None, colorbar=True, coastlines=True, orientation="vertical"
+        self,
+        f_gridspec=None,
+        colorbar=True,
+        coastlines=True,
+        orientation="vertical",
+        **kwargs,
     ):
         """
         Actually generate the map-plot based on the data provided as `m.data` and the
@@ -1746,6 +1732,9 @@ class Maps(object):
         coastlines : bool
             Indicator if coastlines should be added or not.
             The default is True
+        **kwargs
+            kwargs passed to the initialization of the matpltolib collection
+            (dependent on the plot-shape)
         """
 
         assert self.figure.ax is None, (
@@ -1753,6 +1742,11 @@ class Maps(object):
             + "Either close it before creating a new one or call "
             + "`m2 = m.copy()` to copy the Maps object and then use `m2.plot_map()"
         )
+
+        for key in ("cmap", "array", "norm"):
+            assert (
+                key not in kwargs
+            ), f"The key '{key}' is assigned internally by EOmaps!"
 
         try:
             self._orientation = orientation
@@ -1805,7 +1799,12 @@ class Maps(object):
             ax.set_title(title)
 
             shape = self.plot_specs["shape"]
-            args = dict(array=props["z_data"], cmap=cbcmap, norm=norm)
+
+            if "color" in kwargs and kwargs["color"] is not None:
+                args = dict(array=None, cmap=None, norm=None, **kwargs)
+            else:
+                args = dict(array=props["z_data"], cmap=cbcmap, norm=norm, **kwargs)
+
             if shape.startswith("delauney_triangulation"):
                 shape = "delauney_triangulation"
                 args["masked"] = True if "masked" in shape else False
