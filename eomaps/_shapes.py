@@ -170,8 +170,7 @@ class shapes(object):
 
         return coll
 
-    @staticmethod
-    def _get_delauney_triangulation(props, masked):
+    def _get_delauney_triangulation(self, props, masked):
         # prepare data
         try:
             from scipy.spatial import Delaunay
@@ -183,15 +182,21 @@ class shapes(object):
         tri = Triangulation(d.points[:, 0], d.points[:, 1], d.simplices)
 
         if masked:
+            radius_crs = self.m.plot_specs["radius_crs"]
+            radiusx, radiusy = self.m._props["radius"]
+
             if radius_crs == "in":
-                x = xorig[tri.triangles]
-                y = yorig[tri.triangles]
+                x = self.data[self.data_specs.xcoord].values[tri.triangles]
+                y = self.data[self.data_specs.xcoord].values[tri.triangles]
             elif radius_crs == "out":
-                x = x0[tri.triangles]
-                y = y0[tri.triangles]
+                x = self.m._props["x0"][tri.triangles]
+                y = self.m._props["y0"][tri.triangles]
             else:
-                x = x0r[tri.triangles]
-                y = y0r[tri.triangles]
+                raise NotImplementedError(
+                    "masking works only with radius_crs != 'in' or 'out'"
+                )
+                # x = x0r[tri.triangles]
+                # y = y0r[tri.triangles]
 
             maxdist = 4 * np.mean(np.sqrt(radiusx ** 2 + radiusy ** 2))
 
@@ -212,7 +217,6 @@ class shapes(object):
             props = self.m._props
 
         radiusx, radiusy = props["radius"]
-        radius_crs = self.m.plot_specs["radius_crs"]
 
         # special treatment of color and array inputs to distribute the values
         color = kwargs.pop("color", None)
