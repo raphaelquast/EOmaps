@@ -883,7 +883,7 @@ class Maps(object):
         z_data=None,
         label="",
         bins=None,
-        histbins=256,
+        histbins=None,
         cmap="viridis",
         norm=None,
         classified=False,
@@ -897,10 +897,14 @@ class Maps(object):
             ax_cb = self.figure.ax_cb
         if ax_cb_plot is None:
             ax_cb_plot = self.figure.ax_cb_plot
+
         if z_data is None:
             z_data = self._props["z_data"]
+
         if label is None:
             label = self.plot_specs["parameter"]
+        if histbins is None:
+            histbins = self.plot_specs["histbins"]
         if cmap is None:
             cmap = self.plot_specs["cmap"]
         if vmin is None:
