@@ -375,6 +375,8 @@ class classify_specs(object):
 
         self._scheme = scheme
         _ = self._get_default_args()
+        for key, val in self._defaults.items():
+            setattr(self, key, val)
         for key, val in kwargs.items():
             setattr(self, key, val)
 
