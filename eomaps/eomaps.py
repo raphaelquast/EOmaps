@@ -1729,11 +1729,12 @@ class Maps(object):
             (dependent on the plot-shape)
         """
 
-        assert self.figure.ax is None, (
-            "There is already an open figure! "
-            + "Either close it before creating a new one or call "
-            + "`m2 = m.copy()` to copy the Maps object and then use `m2.plot_map()"
-        )
+        if self.figure.ax is None:
+            warnings.warn(
+                "There is already an open figure! "
+                + "Either close it before creating a new one or call "
+                + "`m2 = m.copy()` to copy the Maps object and then use `m2.plot_map()"
+            )
 
         for key in ("cmap", "array", "norm"):
             assert (
