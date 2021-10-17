@@ -782,7 +782,8 @@ class Maps(object):
                 ax = f.add_subplot(
                     gs[:], projection=cartopy_proj, aspect="equal", adjustable="datalim"
                 )
-                gs.update(left=0.01, right=0.99, bottom=0.01, top=0.95)
+                if hasattr(gs, "update"):
+                    gs.update(left=0.01, right=0.99, bottom=0.01, top=0.95)
                 ax_cb, ax_cb_plot = None, None
 
         else:
