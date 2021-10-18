@@ -483,8 +483,8 @@ class Maps(object):
 
         if radius_crs == "in":
             if radius == "estimate":
-                radiusx = np.abs(np.diff(np.unique(xorig)).mean()) / 2.0
-                radiusy = np.abs(np.diff(np.unique(yorig)).mean()) / 2.0
+                radiusx = np.median(np.abs(np.diff(np.unique(xorig)))) / 2.0
+                radiusy = np.median(np.abs(np.diff(np.unique(yorig)))) / 2.0
             if buffer is not None:
                 radiusx = radiusx * buffer
                 radiusy = radiusy * buffer
@@ -502,8 +502,8 @@ class Maps(object):
 
             # estimate radius if provided in "plot_epsg"
             if radius == "estimate":
-                radiusx = np.abs(np.diff(np.unique(x0)).mean()) / 2.0
-                radiusy = np.abs(np.diff(np.unique(y0)).mean()) / 2.0
+                radiusx = np.median(np.abs(np.diff(np.unique(x0)))) / 2.0
+                radiusy = np.median(np.abs(np.diff(np.unique(y0)))) / 2.0
             if buffer is not None:
                 radiusx = radiusx * buffer
                 radiusy = radiusy * buffer
@@ -530,8 +530,8 @@ class Maps(object):
             x0r, y0r = radius_t.transform(xorig, yorig)
 
             if radius == "estimate":
-                radiusx = np.abs(np.diff(np.unique(x0r)).mean()) / 2.0
-                radiusy = np.abs(np.diff(np.unique(y0r)).mean()) / 2.0
+                radiusx = np.median(np.abs(np.diff(np.unique(x0r)))) / 2.0
+                radiusy = np.median(np.abs(np.diff(np.unique(y0r)))) / 2.0
             if buffer is not None:
                 radiusx = radiusx * buffer
                 radiusy = radiusy * buffer
