@@ -289,6 +289,8 @@ class TestBasicPlotting(unittest.TestCase):
                 [
                     "x0",
                     "y0",
+                    "x0r",
+                    "y0r",
                     "w",
                     "h",
                     "theta",

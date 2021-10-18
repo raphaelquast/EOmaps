@@ -491,6 +491,7 @@ class Maps(object):
             # fix position of pixel-center if radius is in "in_crs"
             # (must be done before transforming the coordinates!)
             xorig, yorig = self._set_cpos(xorig, yorig, radiusx, radiusy, cpos)
+            x0r, y0r = xorig, yorig
 
             # transform center-points
             x0, y0 = transformer.transform(xorig, yorig)
@@ -509,6 +510,7 @@ class Maps(object):
 
             # fix position of pixel-center if radius is in "plot_epsg"
             x0, y0 = self._set_cpos(x0, y0, radiusx, radiusy, cpos)
+            x0r, y0r = x0, y0
 
         if radius_crs not in ["in", "out"]:
             # transform from in-crs to radius-crs
@@ -591,6 +593,8 @@ class Maps(object):
         props = dict(
             x0=x0,
             y0=y0,
+            x0r=x0r,
+            y0r=y0r,
             w=w,
             h=h,
             theta=theta,
@@ -1799,9 +1803,10 @@ class Maps(object):
                 args = dict(array=props["z_data"], cmap=cbcmap, norm=norm, **kwargs)
 
             if shape.startswith("delauney_triangulation"):
-                shape = "delauney_triangulation"
                 args["masked"] = True if "masked" in shape else False
                 args["flat"] = True if "flat" in shape else False
+                shape = "delauney_triangulation"
+
             coll = getattr(self._shapes, shape)(props, **args)
             coll.set_clim(vmin, vmax)
             ax.add_collection(coll)

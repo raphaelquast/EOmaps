@@ -51,7 +51,7 @@ class shapes(object):
         return coll
 
     @staticmethod
-    def _get_voroni_verts_and_mask(props, masked=False):
+    def _get_voroni_verts_and_mask(props, masked=True):
         radiusx, radiusy = props["radius"]
 
         try:
@@ -64,7 +64,6 @@ class shapes(object):
 
         xy = np.column_stack((props["x0"], props["y0"]))
         vor = Voronoi(xy)
-
         rect_regions = np.array(list(zip_longest(*vor.regions, fillvalue=-2))).T
         # (use -2 instead of None to make np.take work as expected)
 
@@ -182,31 +181,22 @@ class shapes(object):
         tri = Triangulation(d.points[:, 0], d.points[:, 1], d.simplices)
 
         if masked:
-            radius_crs = self.m.plot_specs["radius_crs"]
             radiusx, radiusy = self.m._props["radius"]
-
-            if radius_crs == "in":
-                x = self.data[self.data_specs.xcoord].values[tri.triangles]
-                y = self.data[self.data_specs.xcoord].values[tri.triangles]
-            elif radius_crs == "out":
-                x = self.m._props["x0"][tri.triangles]
-                y = self.m._props["y0"][tri.triangles]
-            else:
-                raise NotImplementedError(
-                    "masking works only with radius_crs != 'in' or 'out'"
-                )
-                # x = x0r[tri.triangles]
-                # y = y0r[tri.triangles]
+            x = self.m._props["x0r"][tri.triangles]
+            y = self.m._props["y0r"][tri.triangles]
 
             maxdist = 4 * np.mean(np.sqrt(radiusx ** 2 + radiusy ** 2))
 
-            verts = np.stack((x, y), axis=2)
-            cpos = verts.mean(axis=1)[:, None]
-            cdist = np.sqrt(np.sum((verts - cpos) ** 2, axis=2))
-
-            mask = np.logical_or(
-                np.any(cdist > maxdist * 2, axis=1), cdist.mean(axis=1) > maxdist
+            # get individual triangle side-lengths
+            l = np.array(
+                [
+                    np.sqrt(((x[:, i] - x[:, j]) ** 2) + ((y[:, i] - y[:, j]) ** 2))
+                    for i, j in ((0, 1), (0, 2), (1, 2))
+                ]
             )
+
+            # mask any triangle whose side-length exceeds maxdist
+            mask = np.any(l > maxdist, axis=0)
 
             tri.set_mask(mask)
 
@@ -247,6 +237,10 @@ class shapes(object):
             z = np.ma.masked_invalid(array)
             # tri-contour meshes need 3 values for each triangle
             z = np.tile(z, 3)
-            coll.set_array(z.ravel())
+            if flat:
+                z = z[maskedTris].mean(axis=1)
+                coll.set_array(z.ravel())
+            else:
+                coll.set_array(array)
 
         return coll
