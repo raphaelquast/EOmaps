@@ -490,10 +490,12 @@ class callbacks(object):
             The index-value of the pixel in the data.
         pos : tuple
             A tuple of the position of the pixel in plot-coordinates.
+            (ONLY relevant if ID is NOT provided!)
         val : int or float
             The parameter-value of the pixel.
         ind : int
             The index of the clicked pixel
+            (ONLY relevant if ID is NOT provided!)
         radius : float, string or None, optional
             The radius of the marker.
             If None, it will be evaluated based on the pixel-spacing of the
@@ -529,9 +531,7 @@ class callbacks(object):
         if ID is not None:
             if ind is None:
                 ind = self.m.data.index.get_loc(ID)
-        if pos is not None:
-            assert ind is None, "you cannot provide both pos and ind"
-        else:
+
             pos = (self.m._props["x0"][ind], self.m._props["y0"][ind])
 
         if radius == "pixel":
