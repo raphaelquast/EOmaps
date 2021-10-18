@@ -13,6 +13,7 @@ A general-purpose library to plot interactive maps of geographical datasets.
 
 - check out the example-notebook: 🛸 [EOmaps_examples.ipynb](https://github.com/raphaelquast/maps/blob/dev/examples/EOmaps_examples.ipynb) 🛸
 
+![alt text](https://github.com/raphaelquast/EOmaps/blob/dev/examples/plotshapes.png?raw=true)
 
 ## install
 The recommended way to install EOmaps with conda + pip:
