@@ -1530,19 +1530,12 @@ class Maps(object):
         """
         if ID is not None:
             assert xy is None, "You can only provide 'ID' or 'pos' not both!"
-
-            xy = self.data.loc[ID][
-                [self.data_specs.xcoord, self.data_specs.ycoord]
-            ].values
-            xy_crs = self.data_specs.crs
-
-            ind = self.data.index.get_loc(ID)
         else:
             if isinstance(radius, str):
                 raise TypeError(f"I don't know what to do with radius='{radius}'")
 
         if xy is not None:
-            ind = None
+            ID = None
             if xy_crs is not None:
                 # get coordinate transformation
                 transformer = Transformer.from_crs(
@@ -1555,7 +1548,7 @@ class Maps(object):
 
         # add marker
         self.cb.mark(
-            ID=ID, pos=xy, radius=radius, ind=ind, shape=shape, buffer=buffer, **kwargs
+            ID=ID, pos=xy, radius=radius, ind=None, shape=shape, buffer=buffer, **kwargs
         )
 
     def add_annotation(
