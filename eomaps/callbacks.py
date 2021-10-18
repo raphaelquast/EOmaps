@@ -526,15 +526,11 @@ class callbacks(object):
             kwargs passed to the matplotlib patch.
             (e.g. `facecolor`, `edgecolor`, `linewidth`, `alpha` etc.)
         """
-
         if ID is not None:
             if ind is None:
                 ind = self.m.data.index.get_loc(ID)
         if pos is not None:
             assert ind is None, "you cannot provide both pos and ind"
-            assert isinstance(
-                radius, (int, float, list, tuple)
-            ), "if pos is provided, radius must be specified explicitly!"
         else:
             pos = (self.m._props["x0"][ind], self.m._props["y0"][ind])
 
@@ -544,12 +540,14 @@ class callbacks(object):
             radiusy = d["h"][0]
             theta = d["theta"][0]
 
-        elif isinstance(radius, (int, float, list, tuple)):
+        elif isinstance(radius, (int, float, list, tuple)) or radius is None:
             theta = 0
             if isinstance(radius, (list, tuple)):
                 radiusx, radiusy = radius
-            else:
+            elif isinstance(radius, (int, float)):
                 radiusx = radiusy = radius
+            else:
+                radiusx, radiusy = self.m._props["radius"]
 
             # transform the radius if radius_crs is not None
             if radius_crs is not None:
@@ -575,10 +573,6 @@ class callbacks(object):
                 radiusx = d["w"][0]
                 radiusy = d["h"][0]
                 theta = d["theta"][0]
-
-        else:
-            radiusx, radiusy = self.m._props["radius"]
-            theta = self.m._props["theta"][ind]
 
         if hasattr(self, "marker") and not permanent:
             # remove existing marker
