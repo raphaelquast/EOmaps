@@ -38,16 +38,18 @@ The recommended way to install EOmaps with conda + pip:
 import pandas as pd
 from eomaps import Maps
 
+# the data you want to plot
+data = pd.DataFrame(dict(lat=[...], lon=[...], value=[...]))
+
 # initialize Maps object
 m = Maps()
 
 # set the data
-m.data = pd.DataFrame(dict(lat=[...], lon=[...], value=[...]))
-m.set_data_specs(xcoord="lon", ycoord="lat", parameter="value", in_crs=4326)
+m.set_data(data, xcoord="lon", ycoord="lat", parameter="value", crs=4326)
 
 # set the appearance of the plot
 m.set_plot_specs(plot_epsg=4326, shape="rectangles")
-m.set_classify_specs(scheme="Quantiles", k=5)
+m.set_classify_specs(scheme=m.classify_specs.SCHEMES.Quantiles, k=5)
 
 # plot the map
 m.plot_map()
