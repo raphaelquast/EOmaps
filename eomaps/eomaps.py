@@ -645,6 +645,23 @@ class Maps(object):
         # evaluate classification
         if classify_specs is not None and classify_specs.scheme is not None:
             classified = True
+
+            if classify_specs.scheme == "UserDefined" and hasattr(
+                classify_specs, "bins"
+            ):
+                classifybins = np.array(classify_specs.bins)
+                binmask = (classifybins > np.nanmin(z_data)) & (
+                    classifybins < np.nanmax(z_data)
+                )
+                if np.any(binmask):
+                    classifybins = classifybins[binmask]
+                    warnings.warn(
+                        "EOmaps: classification bins outside of value-range..."
+                        + " bins have been updated!"
+                    )
+
+                    classify_specs.bins = classifybins
+
             mapc = getattr(mapclassify, classify_specs.scheme)(
                 z_data[~np.isnan(z_data)], **classify_specs
             )
