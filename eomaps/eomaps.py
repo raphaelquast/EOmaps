@@ -984,7 +984,7 @@ class Maps(object):
                 [1, 1], [0, 1], "k--", alpha=0.5, transform=ax_cb_plot.transAxes
             )
             # make sure lower x-limit is 0
-            ax_cb_plot.set_xlim(0)
+            ax_cb_plot.set_xlim(None, 0)
 
         elif self._orientation == "vertical":
             ax_cb_plot.tick_params(
