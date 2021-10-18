@@ -443,6 +443,20 @@ class callbacks(object):
         if hasattr(self, "picked_vals"):
             del self.picked_vals
 
+    def _get_pixel_props(self, ind):
+        p = dict()
+        for key, val in self.m._props.items():
+            if key in ["p0", "p1", "p2", "p3"]:
+                p[key] = (
+                    np.take(val[0], np.atleast_1d(ind)),
+                    np.take(val[1], np.atleast_1d(ind)),
+                )
+            elif key == "radius":
+                p[key] = val
+            else:
+                p[key] = np.take(val, np.atleast_1d(ind))
+        return p
+
     def mark(
         self,
         ID=None,
@@ -451,7 +465,7 @@ class callbacks(object):
         ind=None,
         radius="pixel",
         radius_crs="in",
-        shape="circle",
+        shape="ellipse",
         buffer=1,
         permanent=True,
         layer=10,
@@ -498,7 +512,7 @@ class callbacks(object):
                 - ellipse
                 - rectangle
 
-            The default is "circle".
+            The default is "ellipse".
         buffer : float, optional
             A factor to scale the size of the shape. The default is 1.
         permanent : bool, optional
@@ -513,37 +527,22 @@ class callbacks(object):
             (e.g. `facecolor`, `edgecolor`, `linewidth`, `alpha` etc.)
         """
 
-        if radius_crs == "in":
-            radius_crs = self.m.data_specs.crs
-        elif radius_crs == "out":
-            radius_crs = self.m.plot_specs["plot_epsg"]
-
         if ID is not None:
             if ind is None:
                 ind = self.m.data.index.get_loc(ID)
+        if pos is not None:
+            assert ind is None, "you cannot provide both pos and ind"
+            assert isinstance(
+                radius, (int, float, list, tuple)
+            ), "if pos is provided, radius must be specified explicitly!"
+        else:
+            pos = (self.m._props["x0"][ind], self.m._props["y0"][ind])
 
         if radius == "pixel":
-            d = self.m._prepare_data(
-                data=DataFrame(
-                    dict(
-                        x=[self.m._props["x0"][ind]],
-                        y=[self.m._props["y0"][ind]],
-                        z=[self.m._props["z_data"][ind]],
-                    )
-                ),
-                # data=self.m.data.loc[[ID]],
-                xcoord="x",
-                ycoord="y",
-                parameter="z",
-                in_crs=self.m.plot_specs["plot_epsg"],
-                radius_crs=self.m.data_specs.crs,
-                shape="rectangles",
-                buffer=buffer,
-                radius=self.m._props["radius"],
-            )
-            radiusx = self.m._props["w"][ind]
-            radiusy = self.m._props["h"][ind]
-            theta = self.m._props["theta"][ind]
+            d = self._get_pixel_props(ind)
+            radiusx = d["w"][0]
+            radiusy = d["h"][0]
+            theta = d["theta"][0]
 
         elif isinstance(radius, (int, float, list, tuple)):
             theta = 0
@@ -557,9 +556,9 @@ class callbacks(object):
                 d = self.m._prepare_data(
                     data=DataFrame(
                         dict(
-                            x=[self.m._props["x0"][ind]],
-                            y=[self.m._props["y0"][ind]],
-                            z=[self.m._props["z_data"][ind]],
+                            x=[pos[0]],
+                            y=[pos[1]],
+                            z=[0],
                         )
                     ),
                     # data=self.m.data.loc[[ID]],

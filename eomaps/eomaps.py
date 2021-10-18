@@ -422,6 +422,10 @@ class Maps(object):
 
         return x, y
 
+    @property
+    def crs_plot(self):
+        return CRS.from_user_input(self.plot_specs.plot_epsg)
+
     def _prepare_data(
         self,
         data=None,
@@ -468,8 +472,8 @@ class Maps(object):
 
         # get coordinate transformation
         transformer = Transformer.from_crs(
-            CRS.from_user_input(in_crs),
-            CRS.from_user_input(plot_epsg),
+            CRS.from_user_input(self.data_specs.crs),
+            self.crs_plot,
             always_xy=True,
         )
 
@@ -522,7 +526,7 @@ class Maps(object):
             # transform from radius-crs to plot-crs
             radius_t_p = Transformer.from_crs(
                 CRS.from_user_input(radius_crs),
-                CRS.from_user_input(plot_epsg),
+                self.crs_plot,
                 always_xy=True,
             )
 
@@ -1093,7 +1097,7 @@ class Maps(object):
 
         overlay_df = gpd.read_file(shp_fn)
         overlay_df.crs = CRS.from_epsg(4326)
-        overlay_df.to_crs(self.plot_specs["plot_epsg"], inplace=True)
+        overlay_df.to_crs(self.crs_plot, inplace=True)
 
         with warnings.catch_warnings():
             warnings.filterwarnings("ignore", category=UserWarning)
@@ -1485,7 +1489,7 @@ class Maps(object):
         xy=None,
         xy_crs=None,
         radius=None,
-        shape="circle",
+        shape="ellipse",
         buffer=1,
         **kwargs,
     ):
@@ -1543,7 +1547,7 @@ class Maps(object):
                 # get coordinate transformation
                 transformer = Transformer.from_crs(
                     CRS.from_user_input(xy_crs),
-                    CRS.from_user_input(self.plot_specs["plot_epsg"]),
+                    self.crs_plot,
                     always_xy=True,
                 )
                 # transform coordinates
@@ -1611,7 +1615,7 @@ class Maps(object):
                 # get coordinate transformation
                 transformer = Transformer.from_crs(
                     CRS.from_user_input(xy_crs),
-                    CRS.from_user_input(self.plot_specs["plot_epsg"]),
+                    self.crs_plot,
                     always_xy=True,
                 )
                 # transform coordinates
@@ -1842,7 +1846,8 @@ class Maps(object):
 
             self.figure.f.canvas.mpl_connect("close_event", on_close)
 
-            self.BM = BlitManager(self.figure.f.canvas)
+            if not hasattr(self, "BM"):
+                self.BM = BlitManager(self.figure.f.canvas)
 
             # trigger drawing the figure
             self.figure.f.canvas.draw()
