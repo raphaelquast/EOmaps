@@ -72,7 +72,7 @@ class Maps(object):
             label=None,
             title=None,
             cmap=plt.cm.viridis.copy(),
-            plot_epsg=4326,
+            plot_crs=4326,
             radius_crs="in",
             radius="estimate",
             histbins=256,
@@ -104,6 +104,8 @@ class Maps(object):
         )
 
         self.figure = map_objects()
+
+        self.crs_list = ccrs
 
     def copy(
         self,
@@ -239,12 +241,17 @@ class Maps(object):
             The default is None.
         cmap : str or matplotlib.colormap, optional
             The colormap to use. The default is "viridis".
-        plot_epsg : in, optional
-            The epsg-code of the projection to use for plotting. The default is 4326.
+        plot_crs : int or cartopy-projection, optional
+            The projection to use for plotting.
+            If int, it is identified as an epsg-code
+            Otherwise you can specify any projection supported by cartopy.
+            A list for easy-accses is available as `m.crs_list`
+
+            The default is 4326.
         radius_crs : str, optional
             The coordinate-system in which the radius is provided.
                 - "in" : the crs of the input-dataframe (e.g. "in_crs")
-                - "out" : the crs used for plotting (e.g. "plot_epsg")
+                - "out" : the crs used for plotting (e.g. "plot_crs")
                 - a crs specification (e.g. epsg-code, wkt string etc.) that
                   should be used to estimate the pixel-dimensions
             The default is "in".
@@ -424,13 +431,16 @@ class Maps(object):
 
     @property
     def crs_plot(self):
-        return CRS.from_user_input(self.plot_specs.plot_epsg)
+        plotcrs = self.plot_specs.plot_crs
+        if not isinstance(plotcrs, int):
+            plotcrs = plotcrs.to_wkt()
+        return CRS.from_user_input(self.plot_specs.plot_crs)
 
     def _prepare_data(
         self,
         data=None,
         in_crs=None,
-        plot_epsg=None,
+        plot_crs=None,
         radius=None,
         radius_crs=None,
         cpos=None,
@@ -452,8 +462,8 @@ class Maps(object):
         if in_crs is None:
             in_crs = self.data_specs.crs
 
-        if plot_epsg is None:
-            plot_epsg = self.plot_specs["plot_epsg"]
+        if plot_crs is None:
+            plot_crs = self.plot_specs["plot_crs"]
 
         if radius is None:
             radius = self.plot_specs["radius"]
@@ -504,7 +514,7 @@ class Maps(object):
             # transform center-points
             x0, y0 = transformer.transform(xorig, yorig)
 
-            # estimate radius if provided in "plot_epsg"
+            # estimate radius if provided in "plot_crs"
             if radius == "estimate":
                 radiusx = np.median(np.abs(np.diff(np.unique(x0)))) / 2.0
                 radiusy = np.median(np.abs(np.diff(np.unique(y0)))) / 2.0
@@ -512,7 +522,7 @@ class Maps(object):
                 radiusx = radiusx * buffer
                 radiusy = radiusy * buffer
 
-            # fix position of pixel-center if radius is in "plot_epsg"
+            # fix position of pixel-center if radius is in "plot_crs"
             x0, y0 = self._set_cpos(x0, y0, radiusx, radiusy, cpos)
             x0r, y0r = x0, y0
 
@@ -776,18 +786,20 @@ class Maps(object):
 
         return f, gs, cbgs
 
-    def _init_figure(self, f_gridspec=None, plot_epsg=None, add_colorbar=True):
+    def _init_figure(self, f_gridspec=None, plot_crs=None, add_colorbar=True):
 
-        if plot_epsg is None:
-            plot_epsg = self.plot_specs["plot_epsg"]
+        if plot_crs is None:
+            plot_crs = self.plot_specs["plot_crs"]
 
         if f_gridspec is None or isinstance(f_gridspec[1], SubplotSpec):
             f, gs, cbgs = self._init_fig_grid(f_gridspec=f_gridspec)
 
-            if plot_epsg == 4326:
+            if plot_crs == 4326:
                 cartopy_proj = ccrs.PlateCarree()
+            elif isinstance(plot_crs, int):
+                cartopy_proj = ccrs.epsg(plot_crs)
             else:
-                cartopy_proj = ccrs.epsg(plot_epsg)
+                cartopy_proj = plot_crs
 
             if add_colorbar:
                 ax = f.add_subplot(
@@ -1046,7 +1058,7 @@ class Maps(object):
         defaultargs = dict(facecolor="none", edgecolor="k", lw=1.5)
         defaultargs.update(kwargs)
 
-        gdf.to_crs(epsg=self.plot_specs["plot_epsg"]).plot(
+        gdf.to_crs(epsg=self.plot_specs["plot_crs"]).plot(
             ax=ax, aspect=ax.get_aspect(), **defaultargs
         )
 
@@ -1260,7 +1272,7 @@ class Maps(object):
         radius_crs : str or crs
             the crs in which the radius is defined
             if 'in': "in_crs" will be used
-            if 'out': "plot_epsg" will be used
+            if 'out': "plot_crs" will be used
             else the input is interpreted via pyproj.CRS.from_user_input()
         in_crs : int, dict or str, optional
             CRS descriptor ( interpreted by pyproj.CRS.from_user_input() )
@@ -1307,7 +1319,7 @@ class Maps(object):
         props = self._prepare_data(
             data=data,
             in_crs=in_crs,
-            plot_epsg=self.plot_specs["plot_epsg"],
+            plot_crs=self.plot_specs["plot_crs"],
             radius=radius,
             radius_crs=radius_crs,
             cpos=cpos,
@@ -1404,7 +1416,7 @@ class Maps(object):
                 >>>     print("the position of the clicked pixel", kwargs["pos"])
                 >>>     print("the data-index of the clicked pixel", kwargs["ID"])
                 >>>     print("data-value of the clicked pixel", kwargs["val"])
-                >>>     print("the plot-crs is:", self.plot_specs["plot_epsg"])
+                >>>     print("the plot-crs is:", self.plot_specs["plot_crs"])
                 >>>
                 >>> m.add_callback(some_callback)
 
@@ -1790,6 +1802,11 @@ class Maps(object):
                 classify_specs=self.classify_specs,
             )
 
+            self.classify_specs._cbcmap = cbcmap
+            self.classify_specs._norm = norm
+            self.classify_specs._bins = bins
+            self.classify_specs._classified = classified
+
             # ------------- initialize figure
             f, gs, cbgs, ax, ax_cb, ax_cb_plot = self._init_figure(
                 f_gridspec=f_gridspec,
@@ -1805,8 +1822,11 @@ class Maps(object):
                 cb_gridspec=cbgs,
             )
 
-            ax.set_xlim(props["x0"].min(), props["x0"].max())
-            ax.set_ylim(props["y0"].min(), props["y0"].max())
+            try:
+                ax.set_xlim(props["x0"].min(), props["x0"].max())
+                ax.set_ylim(props["y0"].min(), props["y0"].max())
+            except:
+                print("limits could not be set")
             ax.set_title(title)
 
             shape = self.plot_specs["shape"]

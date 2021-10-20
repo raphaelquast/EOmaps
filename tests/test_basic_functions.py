@@ -18,7 +18,7 @@ class TestBasicPlotting(unittest.TestCase):
         m = Maps()
         m.data = self.data
         m.set_data_specs(xcoord="x", ycoord="y", in_crs=3857)
-        m.set_plot_specs(plot_epsg=4326)
+        m.set_plot_specs(plot_crs=4326)
         m.plot_map()
 
         plt.close(m.figure.f)
@@ -29,7 +29,7 @@ class TestBasicPlotting(unittest.TestCase):
             m = Maps()
             m.data = usedata
             m.set_data_specs(xcoord="x", ycoord="y", in_crs=3857)
-            m.set_plot_specs(plot_epsg=4326, shape=shape)
+            m.set_plot_specs(plot_crs=4326, shape=shape)
             m.plot_map()
 
             plt.close(m.figure.f)
@@ -41,7 +41,7 @@ class TestBasicPlotting(unittest.TestCase):
         for cpos in ["ul", "ur", "ll", "lr", "c"]:
             m.set_data_specs(xcoord="x", ycoord="y", in_crs=3857)
             m.set_plot_specs(
-                plot_epsg=4326,
+                plot_crs=4326,
                 title="asdf",
                 label="bsdf",
                 radius=1,
@@ -62,7 +62,7 @@ class TestBasicPlotting(unittest.TestCase):
         m.data = self.data
         m.set_data_specs(xcoord="x", ycoord="y", in_crs=3857)
         m.set_plot_specs(
-            plot_epsg=4326,
+            plot_crs=4326,
             title="asdf",
             label="bsdf",
             radius=1,
@@ -79,7 +79,7 @@ class TestBasicPlotting(unittest.TestCase):
         m = Maps()
         m.data = self.data
         m.set_data_specs(xcoord="x", ycoord="y", in_crs=3857)
-        m.set_plot_specs(plot_epsg=4326, shape="rectangles", alpha=0.4)
+        m.set_plot_specs(plot_crs=4326, shape="rectangles", alpha=0.4)
         m.set_classify_specs(scheme="Percentiles", pct=[0.1, 0.2])
 
         m.plot_map()
@@ -90,7 +90,7 @@ class TestBasicPlotting(unittest.TestCase):
         m = Maps()
         m.data = self.data
         m.set_data_specs(xcoord="x", ycoord="y", in_crs=3857)
-        m.set_plot_specs(plot_epsg=4326, shape="rectangles")
+        m.set_plot_specs(plot_crs=4326, shape="rectangles")
 
         m.set_classify_specs(scheme="Quantiles", k=5)
 
@@ -102,7 +102,7 @@ class TestBasicPlotting(unittest.TestCase):
         m = Maps()
         m.data = self.data
         m.set_data_specs(xcoord="x", ycoord="y", in_crs=3857)
-        m.set_plot_specs(plot_epsg=3857, shape="rectangles")
+        m.set_plot_specs(plot_crs=3857, shape="rectangles")
 
         m.plot_map()
 
@@ -132,7 +132,7 @@ class TestBasicPlotting(unittest.TestCase):
         m = Maps()
         m.data = self.data
         m.set_data_specs(xcoord="x", ycoord="y", in_crs=3857)
-        m.set_plot_specs(plot_epsg=3857, shape="rectangles")
+        m.set_plot_specs(plot_crs=3857, shape="rectangles")
 
         m.plot_map()
 
@@ -153,7 +153,7 @@ class TestBasicPlotting(unittest.TestCase):
         m = Maps()
         m.data = self.data
         m.set_data_specs(xcoord="x", ycoord="y", in_crs=3857)
-        m.set_plot_specs(plot_epsg=3857, shape="rectangles")
+        m.set_plot_specs(plot_crs=3857, shape="rectangles")
 
         m.plot_map()
 
@@ -181,7 +181,7 @@ class TestBasicPlotting(unittest.TestCase):
         m = Maps()
         m.data = self.data
         m.set_data_specs(xcoord="x", ycoord="y", in_crs=3857)
-        m.set_plot_specs(plot_epsg=3857, shape="rectangles")
+        m.set_plot_specs(plot_crs=3857, shape="rectangles")
 
         m.plot_map()
 
@@ -195,7 +195,7 @@ class TestBasicPlotting(unittest.TestCase):
         m = Maps()
         m.data = self.data
         m.set_data_specs(xcoord="x", ycoord="y", in_crs=3857)
-        m.set_plot_specs(plot_epsg=4326, shape="rectangles")
+        m.set_plot_specs(plot_crs=4326, shape="rectangles")
 
         m.plot_map()
 
@@ -216,7 +216,7 @@ class TestBasicPlotting(unittest.TestCase):
         m = Maps()
         m.data = self.data
         m.set_data_specs(xcoord="x", ycoord="y", in_crs=3857)
-        m.set_plot_specs(plot_epsg=3857, shape="rectangles")
+        m.set_plot_specs(plot_crs=3857, shape="rectangles")
 
         m.plot_map()
 
@@ -259,7 +259,7 @@ class TestBasicPlotting(unittest.TestCase):
         m = Maps()
         m.data = self.data
         m.set_data_specs(xcoord="x", ycoord="y", in_crs=3857)
-        m.set_plot_specs(plot_epsg=3857, shape="rectangles")
+        m.set_plot_specs(plot_crs=3857, shape="rectangles")
         m.set_classify_specs(scheme="Quantiles", k=5)
 
         m2 = m.copy()

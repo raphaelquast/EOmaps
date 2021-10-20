@@ -563,7 +563,7 @@ class callbacks(object):
                     xcoord="x",
                     ycoord="y",
                     parameter="z",
-                    in_crs=self.m.plot_specs["plot_epsg"],
+                    in_crs=self.m.plot_specs["plot_crs"],
                     radius_crs=radius_crs,
                     shape="rectangles",
                     buffer=buffer,
