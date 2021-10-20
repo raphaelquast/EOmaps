@@ -5,15 +5,24 @@
 
 A general-purpose library to plot interactive maps of geographical datasets.
 
-### basic features:
-🌍 reproject & plot irregular datasets as ellipses or rectangles with actual geographical dimensions  
-🌎 interact with the plot via "callback-functions"  
+The primary purpose is 2-fold:
+1. ease the pain of creating plots of irregularly sampled geographical datasets
+   - provided as 1D DataFrames and usable with large amounts of data (>1M datapoints)
+   - specify pixel-dimensions in actual geographical units  
+2. provide an easy-to-use way to turn the plot into a clickable data-analysis widget
+   - pick datapoints, add markers/annotations, create plots, execute custom functions etc.
+
+... additional features:  
+🌍 plot the data in almost any crs you like  
 🌏 add overlays to the plots (NaturalEarth features, geo-dataframes, etc.)  
-🌍 get a nice colorbar with a colored histogram on top  
+🌎 get a nice colorbar with a colored histogram on top  
 
 - check out the example-notebook: 🛸 [EOmaps_examples.ipynb](https://github.com/raphaelquast/maps/blob/dev/examples/EOmaps_examples.ipynb) 🛸
 
+## choose how to represent your data
 ![alt text](https://github.com/raphaelquast/EOmaps/blob/dev/examples/plotshapes.png?raw=true)
+## use the full power of cartopy to display your data
+![alt text](https://github.com/raphaelquast/EOmaps/blob/dev/examples/projections.png?raw=true)
 
 ## install
 The recommended way to install EOmaps with conda + pip:
