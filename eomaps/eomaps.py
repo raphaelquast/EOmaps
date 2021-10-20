@@ -1759,7 +1759,7 @@ class Maps(object):
             (dependent on the plot-shape)
         """
 
-        if self.figure.ax is None:
+        if self.figure.ax is not None:
             warnings.warn(
                 "There is already an open figure! "
                 + "Either close it before creating a new one or call "
