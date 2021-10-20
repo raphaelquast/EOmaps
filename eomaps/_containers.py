@@ -64,13 +64,27 @@ class data_specs(object):
         return item
 
     def __setitem__(self, key, val):
-        if key == "crs":
-            key = "in_crs"
-        assert key in self.keys(), f"{key} is not a valid data-specs key!"
+        key = self._sanitize_keys(key)
         return setattr(self, key, val)
+
+    def __setattr__(self, key, val):
+        key = self._sanitize_keys(key)
+        super().__setattr__(key, val)
 
     def __iter__(self):
         return iter(self[self.keys()].items())
+
+    def _sanitize_keys(self, key):
+        # pass any keys starting with _
+        if key.startswith("_"):
+            return key
+
+        if key == "crs":
+            key = "in_crs"
+
+        assert key in self.keys(), f"{key} is not a valid data-specs key!"
+
+        return key
 
     def keys(self):
         return ("parameter", "xcoord", "ycoord", "in_crs", "data")
@@ -199,10 +213,14 @@ class map_objects(object):
 
         # get the desired height-ratio
         hratio = self.cb_gridspec.get_height_ratios()
-        hratio = hratio[0] / hratio[1]
+        wratio = self.cb_gridspec.get_width_ratios()
+        if len(hratio) == 2:
+            ratio = hratio[0] / hratio[1]
+        if len(wratio) == 2:
+            ratio = wratio[0] / wratio[1]
 
-        hcb = pos[3] / (1 + hratio)
-        hp = hratio * hcb
+        hcb = pos[3] / (1 + ratio)
+        hp = ratio * hcb
 
         if self.ax_cb is not None:
             self.ax_cb.set_position(
@@ -253,11 +271,34 @@ class plot_specs(object):
         return item
 
     def __setitem__(self, key, val):
-        assert key in self.keys(), f"{key} is not a valid data-specs key!"
+        key = self._sanitize_keys(key)
         return setattr(self, key, val)
+
+    def __setattr__(self, key, val):
+        key = self._sanitize_keys(key)
+
+        super().__setattr__(key, val)
 
     def __iter__(self):
         return iter(self[self.keys()].items())
+
+    def _sanitize_keys(self, key):
+        # pass any keys starting with _
+        if key.startswith("_"):
+            return key
+
+        if key == "plot_epsg":
+            warn(
+                "EOmaps: the plot-spec 'plot_epsg' has been depreciated... "
+                + "try to use 'crs' or 'plot_crs' instead!"
+            )
+            key = "plot_crs"
+        elif key == "crs":
+            key = "plot_crs"
+
+        assert key in self.keys(), f"{key} is not a valid data-specs key!"
+
+        return key
 
     def keys(self):
         # fmt: off
