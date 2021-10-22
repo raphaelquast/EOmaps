@@ -2,13 +2,103 @@ from matplotlib.collections import EllipseCollection, PolyCollection
 from matplotlib.tri import TriMesh, Triangulation
 import numpy as np
 
+from pyproj import CRS, Transformer
+
 
 class shapes(object):
     def __init__(self, m):
         self.m = m
         pass
 
-    def ellipses(self, props=None, **kwargs):
+    def calc_geod_circle_points(self, lon, lat, radius, n=20, start_angle=0):
+        """
+        calculate geodeti circle points
+
+        Parameters
+        ----------
+        lon : array-like
+            the longitudes
+        lat : array-like
+            the latitudes
+        radius : float
+            the radius in meters
+        n : int, optional
+            the number of points to calculate.
+            The default is 10.
+        start_angle : int, optional
+            the starting angle for the points in radians
+
+        Returns
+        -------
+        lons : array-like
+            the longitudes of the geodetic circle points.
+        lats : TYPE
+            the latitudes of the geodetic circle points.
+
+        """
+        size = lon.size
+        geod = self.m.crs_plot.get_geod()
+
+        lons, lats, back_azim = geod.fwd(
+            np.broadcast_to(lon.ravel(), (n, size)),
+            np.broadcast_to(lat.ravel(), (n, size)),
+            np.linspace([start_angle] * n, [360 - start_angle] * n, size),
+            np.full((n, size), radius),
+            radians=False,
+        )
+
+        return lons, lats
+
+    def ellipses(self, props=None, n_points=20, **kwargs):
+        # transform from in-crs to lon/lat
+        radius_t = Transformer.from_crs(
+            CRS.from_user_input(self.m.data_specs.crs),
+            CRS.from_epsg(4326),
+            always_xy=True,
+        )
+        # transform from lon/lat to the plot_crs
+        plot_t = Transformer.from_crs(
+            CRS.from_epsg(4326),
+            CRS.from_user_input(self.m.plot_specs.plot_crs),
+            always_xy=True,
+        )
+
+        lon, lat = radius_t.transform(
+            *self.m.data[[self.m.data_specs.xcoord, self.m.data_specs.ycoord]].values.T
+        )
+        # calculate some points on the geodesic circle
+        lons, lats = self.calc_geod_circle_points(
+            lon, lat, self.m.plot_specs.radius, n=n_points
+        )
+
+        xs, ys = plot_t.transform(lons, lats)
+
+        # mask very distorted points and points that have a very large size
+        w, h = (xs.max(axis=0) - xs.min(axis=0)), (ys.max(axis=0) - ys.min(axis=0))
+        mask = (
+            ((w / h) < 10)
+            & (w < self.m.plot_specs.radius * 50)
+            & (h < self.m.plot_specs.radius * 50)
+        )
+        mask = np.broadcast_to(mask[:, None].T, lons.shape)
+
+        verts = np.stack((xs, ys)).T
+        verts = np.ma.masked_array(
+            verts,
+            ~np.isfinite(verts)
+            | np.broadcast_to(~mask[:, None].T.swapaxes(1, 2), verts.shape),
+        )
+        self.m._mask = verts.mask
+        verts = list(
+            i.compressed().reshape(-1, 2) for i in verts if len(i.compressed()) > 2
+        )
+
+        self.m._verts = verts
+
+        coll = PolyCollection(verts, transOffset=self.m.figure.ax.transData, **kwargs)
+        return coll
+
+    def ellipses_OLD(self, props=None, **kwargs):
         if props is None:
             props = self.m._props
 

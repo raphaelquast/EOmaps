@@ -367,13 +367,15 @@ class Maps(object):
                 )
 
         def picker(artist, event):
-            if event.inaxes != self.figure.ax:
-                return False, None
-
             if event.dblclick:
                 double_click = True
             else:
                 double_click = False
+
+            if event.inaxes != self.figure.ax:
+                return True, dict(
+                    ind=None, double_click=double_click, mouse_button=event.button
+                )
 
             # use a cKDTree based picking to speed up picks for large collections
             dist, index = self.tree.query((event.xdata, event.ydata))
@@ -480,7 +482,7 @@ class Maps(object):
         z_data = data[parameter].values
         ids = data.index.values
 
-        # get coordinate transformation
+        # get coordinate transformation from in_crs to plot_crs
         transformer = Transformer.from_crs(
             CRS.from_user_input(self.data_specs.crs),
             self.crs_plot,
@@ -509,8 +511,7 @@ class Maps(object):
 
             # transform center-points
             x0, y0 = transformer.transform(xorig, yorig)
-
-        if radius_crs == "out":
+        elif radius_crs == "out":
             # transform center-points
             x0, y0 = transformer.transform(xorig, yorig)
 
@@ -526,7 +527,8 @@ class Maps(object):
             x0, y0 = self._set_cpos(x0, y0, radiusx, radiusy, cpos)
             x0r, y0r = x0, y0
 
-        if radius_crs not in ["in", "out"]:
+        else:
+            radius_crs = 4326
             # transform from in-crs to radius-crs
             radius_t = Transformer.from_crs(
                 CRS.from_user_input(in_crs),
@@ -582,27 +584,96 @@ class Maps(object):
             # bottom right
             p3 = radius_t_p.transform(x0r + radiusx, y0r - radiusy)
 
+        mask = True
         # transform mid-points
         if radius_crs == "in":
             x3, y3 = transformer.transform(xorig + radiusx, yorig)
             x4, y4 = transformer.transform(xorig, yorig + radiusy)
+            w = np.abs(x3 - x0)
+            h = np.abs(y4 - y0)
+
         elif radius_crs == "out":
             x3, y3 = x0 + radiusx, y0
             x4, y4 = x0, y0 + radiusy
+            w = np.abs(x3 - x0)
+            h = np.abs(y4 - y0)
         else:
-            # get corner-points in plot-crs
-            x3, y3 = radius_t_p.transform(x0r + radiusx, y0r)
-            x4, y4 = radius_t_p.transform(x0r, y0r + radiusy)
+            rcs = CRS.from_user_input(4326)
 
-        # calculate width and height based on mid-points
-        w = np.abs(x3 - x0)
-        h = np.abs(y4 - y0)
+            # transform from in-crs to radius-crs
+            radius_t = Transformer.from_crs(
+                CRS.from_user_input(in_crs),
+                rcs,
+                always_xy=True,
+            )
+
+            geod = self.crs_plot.get_geod()
+
+            x3, y3, bazx = geod.fwd(
+                *radius_t.transform(xorig, yorig),
+                np.full_like(x0, 90),
+                np.full_like(x0, radiusx),
+            )
+            x3b, y3b, bazx = geod.fwd(
+                *radius_t.transform(xorig, yorig),
+                np.full_like(x0, bazx),
+                np.full_like(x0, radiusx),
+            )
+
+            x4, y4, bazy = geod.fwd(
+                *radius_t.transform(xorig, yorig),
+                np.full_like(x0, 0),
+                np.full_like(x0, radiusy),
+            )
+            x4b, y4b, bazy = geod.fwd(
+                *radius_t.transform(xorig, yorig),
+                np.full_like(x0, bazy),
+                np.full_like(x0, radiusy),
+            )
+
+            # transform from radius-crs to plot-crs
+            radius_t_p = Transformer.from_crs(
+                rcs,
+                self.crs_plot,
+                always_xy=True,
+            )
+
+            if self.crs_plot.axis_info[0].unit_name == "metre":
+                print("transforming...")
+                x3, y3 = radius_t_p.transform(x3, y3)
+                x3b, y3b = radius_t_p.transform(x3b, y3b)
+                x4, y4 = radius_t_p.transform(x4, y4)
+                x4b, y4b = radius_t_p.transform(x4b, y4b)
+
+                # w = geod.inv(x3, y3, x3b, y3b)[2]/2
+                # h = geod.inv(x4, y4, x4b, y4b)[2]/2
+
+            theta = np.full_like(y3, 0)
+            m0 = np.abs(y3 - y3b) < np.abs(x3 - x3b)
+
+            theta[m0] = -(
+                np.sign(y3 - y3b)
+                * np.rad2deg(np.arcsin(np.abs(y3 - y3b) / np.abs(x3 - x3b)))
+            )[m0]
+            theta[~m0] = -(
+                np.sign(y3 - y3b)
+                * np.rad2deg(np.arcsin(1 / (np.abs(y3 - y3b) / (np.abs(x3 - x3b)))))
+            )[~m0]
+
+            w = np.abs(x3 - x3b) / 2  # * np.cos(theta)
+            h = np.abs(y4 - y4b) / 2  # / np.cos(theta)
+
+            mask = np.isfinite(w) & np.isfinite(h)
+            mask = (x3 > x3b) & (y4 > y4b)
+
+        # theta = np.sign(y3 - y0) * np.rad2deg(np.arcsin(np.abs(y3 - y0) / w))
+
+        # mask all infinite points
+        mask = mask & np.isfinite(w) & np.isfinite(h) & np.isfinite(theta)
+        mask = mask & np.isfinite(x0) & np.isfinite(y0)
+
         # calculate rotation angle based on mid-point
-        theta = np.sign(y3 - y0) * np.rad2deg(np.arcsin(np.abs(y3 - y0) / w))
-
-        # use a cKDTree based picking to speed up picks for large collections
-        if not self.figure.f is not None:
-            self.tree = cKDTree(np.stack([x0, y0], axis=1))
+        # theta = np.sign(y3 - y0) * np.rad2deg(np.arcsin(np.abs(y3 - y0) / w))
 
         props = dict(
             x0=x0,
@@ -620,6 +691,31 @@ class Maps(object):
             p3=p3,
             radius=(radiusx, radiusy),
         )
+
+        if self._maskit:
+            # mask = np.any(np.isfinite(p0) & np.isfinite(p1) & np.isfinite(p2) & np.isfinite(p3),
+            #               axis=0)
+            props = props = dict(
+                x0=x0[mask],
+                y0=y0[mask],
+                x0r=x0r[mask],
+                y0r=y0r[mask],
+                w=w[mask],
+                h=h[mask],
+                theta=theta[mask],
+                ids=ids[mask],
+                z_data=z_data[mask],
+                p0=[i[mask] for i in p0],
+                p1=[i[mask] for i in p1],
+                p2=[i[mask] for i in p2],
+                p3=[i[mask] for i in p3],
+                radius=(radiusx, radiusy),
+            )
+
+        # use a cKDTree based picking to speed up picks for large collections
+        if not self.figure.f is not None:
+            self.tree = cKDTree(np.stack([props["x0"], props["y0"]], axis=1))
+
         return props
 
     def _classify_data(
@@ -1822,11 +1918,12 @@ class Maps(object):
                 cb_gridspec=cbgs,
             )
 
-            try:
-                ax.set_xlim(props["x0"].min(), props["x0"].max())
-                ax.set_ylim(props["y0"].min(), props["y0"].max())
-            except:
-                print("limits could not be set")
+            # try:
+            #     ax.set_xlim(props["x0"].min(), props["x0"].max())
+            #     ax.set_ylim(props["y0"].min(), props["y0"].max())
+            # except:
+            #     print("limits could not be set")
+
             ax.set_title(title)
 
             shape = self.plot_specs["shape"]
@@ -1844,6 +1941,7 @@ class Maps(object):
             coll = getattr(self._shapes, shape)(props, **args)
             coll.set_clim(vmin, vmax)
             ax.add_collection(coll)
+            ax.autoscale()
 
             self.figure.coll = coll
 
@@ -1863,7 +1961,7 @@ class Maps(object):
                 self.figure.cb = cb
 
             # ------------- add a picker that will be used by the callbacks
-            self._attach_picker()
+            self._attach_picker(maxdist=np.inf)
 
             # attach a cleanup function if the figure is closed
             # to ensure callbacks are removed and the container is reinitialized
