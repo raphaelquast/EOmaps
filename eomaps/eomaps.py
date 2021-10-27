@@ -1,9 +1,10 @@
 """a collection of helper-functions to generate map-plots"""
 
-from functools import partial, lru_cache, wraps
+from functools import partial, lru_cache, wraps, update_wrapper
 from collections import defaultdict
 import warnings
 import copy
+from types import SimpleNamespace
 
 import numpy as np
 import pandas as pd
@@ -32,7 +33,13 @@ from cartopy.io import shapereader
 from .helpers import pairwise, cmap_alpha, BlitManager
 from .callbacks import callbacks
 from ._shapes import shapes
-from ._containers import data_specs, plot_specs, map_objects, classify_specs
+from ._containers import (
+    data_specs,
+    plot_specs,
+    map_objects,
+    classify_specs,
+    cb_container,
+)
 
 try:
     import mapclassify
@@ -62,6 +69,8 @@ class Maps(object):
         "voroni",
     ]
 
+    crs_list = ccrs
+
     def __init__(self):
 
         self._orientation = "vertical"
@@ -80,6 +89,7 @@ class Maps(object):
             vmin=None,
             vmax=None,
             cpos="c",
+            cpos_radius=None,
             alpha=1,
             add_colorbar=True,
             coastlines=True,
@@ -92,7 +102,6 @@ class Maps(object):
 
         self._attached_cbs = dict()  # dict to memorize attached callbacks
 
-        self._cb = callbacks(self)
         self._shapes = shapes(self)
 
         self._data_mask = slice(None)
@@ -105,7 +114,7 @@ class Maps(object):
 
         self.figure = map_objects()
 
-        self.crs_list = ccrs
+        self.cb = cb_container(self)
 
     def copy(
         self,
@@ -168,13 +177,6 @@ class Maps(object):
             copy_cls.data = self.data.copy(deep=True)
 
         return copy_cls
-
-    @property
-    def cb(self):
-        """
-        accessor to pre-defined callback functions
-        """
-        return self._cb
 
     @property
     def data(self):
@@ -358,13 +360,7 @@ class Maps(object):
         if coll is None:
             coll = self.figure.coll
         if maxdist is None:
-            if self.plot_specs["shape"].startswith("delauney_triangulation"):
-                # set an infinite search-distance if triangulations are used
-                maxdist = np.inf
-            else:
-                maxdist = (
-                    np.max([np.max(self._props["w"]), np.max(self._props["h"])]) * 2
-                )
+            maxdist = np.inf
 
         def picker(artist, event):
             if event.dblclick:
@@ -433,10 +429,34 @@ class Maps(object):
 
     @property
     def crs_plot(self):
-        plotcrs = self.plot_specs.plot_crs
-        if not isinstance(plotcrs, int):
-            plotcrs = plotcrs.to_wkt()
-        return CRS.from_user_input(self.plot_specs.plot_crs)
+        return self.get_crs("plot")
+
+    def get_crs(self, crs):
+        """
+        get the pyproj CRS instance of a given crs specification
+
+        Parameters
+        ----------
+        crs : "in", "out" or a crs definition
+            the crs to return
+            if "in" : the crs defined in m.data_specs.crs
+            if "out" or "plot" : the crs defined in m.plot_specs.plot_crs
+
+        Returns
+        -------
+        crs : pyproj.CRS
+            the pyproj CRS instance
+
+        """
+        if crs == "in":
+            crs = self.data_specs.crs
+        elif crs == "out" or crs == "plot":
+            crs = self.plot_specs.plot_crs
+
+        if not isinstance(crs, CRS):
+            crs = CRS.from_user_input(crs)
+
+        return crs
 
     def _prepare_data(
         self,
@@ -446,12 +466,14 @@ class Maps(object):
         radius=None,
         radius_crs=None,
         cpos=None,
+        cpos_radius=None,
         parameter=None,
         xcoord=None,
         ycoord=None,
         shape=None,
         buffer=None,
     ):
+
         # get specifications
         if data is None:
             data = self.data_specs.data
@@ -463,258 +485,82 @@ class Maps(object):
             parameter = self.data_specs.parameter
         if in_crs is None:
             in_crs = self.data_specs.crs
-
-        if plot_crs is None:
-            plot_crs = self.plot_specs["plot_crs"]
-
         if radius is None:
-            radius = self.plot_specs["radius"]
+            radius = self.plot_specs.radius
         if radius_crs is None:
-            radius_crs = self.plot_specs["radius_crs"]
+            radius_crs = self.plot_specs.radius_crs
         if cpos is None:
-            cpos = self.plot_specs["cpos"]
+            cpos = self.plot_specs.cpos
+        if cpos_radius is None:
+            cpos_radius = self.plot_specs.cpos_radius
+
         if shape is None:
-            shape = self.plot_specs["shape"]
+            shape = self.plot_specs.shape
 
-        xorig = data[xcoord].values
-        yorig = data[ycoord].values
-
-        z_data = data[parameter].values
-        ids = data.index.values
+        props = dict()
 
         # get coordinate transformation from in_crs to plot_crs
         transformer = Transformer.from_crs(
-            CRS.from_user_input(self.data_specs.crs),
+            self.get_crs(in_crs),
             self.crs_plot,
             always_xy=True,
         )
 
-        # get manually specified radius (e.g. if radius != "estimate")
-        if isinstance(radius, (list, tuple)):
-            radiusx, radiusy = radius
-            # save radius for later use
-        else:
-            radiusx = radius
-            radiusy = radius
+        # get the data-coordinates
+        xorig = data[xcoord].values
+        yorig = data[ycoord].values
+        # get the data-values
+        z_data = data[parameter].values
+        # get the index-values
+        ids = data.index.values
 
-        if radius_crs == "in":
-            if radius == "estimate":
+        if cpos is not None and cpos != "c":
+            # fix position of pixel-center in the input-crs
+            assert (
+                cpos_radius is not None
+            ), "you must specify a 'cpos_radius if 'cpos' is not 'c'"
+            if isinstance(cpos_radius, (list, tuple)):
+                rx, ry = cpos_radius
+            else:
+                rx = ry = cpos_radius
+
+            xorig, yorig = self._set_cpos(xorig, yorig, rx, ry, cpos)
+
+        props["xorig"] = xorig
+        props["yorig"] = yorig
+        props["ids"] = ids
+        props["z_data"] = z_data
+
+        # transform center-points to the plot_crs
+        props["x0"], props["y0"] = transformer.transform(xorig, yorig)
+
+        # get the radius for plotting
+        if radius == "estimate":
+            if radius_crs == "in":
                 radiusx = np.median(np.abs(np.diff(np.unique(xorig)))) / 2.0
                 radiusy = np.median(np.abs(np.diff(np.unique(yorig)))) / 2.0
-            if buffer is not None:
-                radiusx = radiusx * buffer
-                radiusy = radiusy * buffer
-            # fix position of pixel-center if radius is in "in_crs"
-            # (must be done before transforming the coordinates!)
-            xorig, yorig = self._set_cpos(xorig, yorig, radiusx, radiusy, cpos)
-            x0r, y0r = xorig, yorig
-
-            # transform center-points
-            x0, y0 = transformer.transform(xorig, yorig)
-        elif radius_crs == "out":
-            # transform center-points
-            x0, y0 = transformer.transform(xorig, yorig)
-
-            # estimate radius if provided in "plot_crs"
-            if radius == "estimate":
-                radiusx = np.median(np.abs(np.diff(np.unique(x0)))) / 2.0
-                radiusy = np.median(np.abs(np.diff(np.unique(y0)))) / 2.0
-            if buffer is not None:
-                radiusx = radiusx * buffer
-                radiusy = radiusy * buffer
-
-            # fix position of pixel-center if radius is in "plot_crs"
-            x0, y0 = self._set_cpos(x0, y0, radiusx, radiusy, cpos)
-            x0r, y0r = x0, y0
-
+            elif radius_crs == "out":
+                radiusx = np.median(np.abs(np.diff(np.unique(props["x0"])))) / 2.0
+                radiusy = np.median(np.abs(np.diff(np.unique(props["y0"])))) / 2.0
+            else:
+                raise AssertionError(
+                    "radius can only be estimated if radius_crs is 'in' or 'out'!"
+                )
         else:
-            radius_crs = 4326
-            # transform from in-crs to radius-crs
-            radius_t = Transformer.from_crs(
-                CRS.from_user_input(in_crs),
-                CRS.from_user_input(radius_crs),
-                always_xy=True,
-            )
-            # transform from radius-crs to plot-crs
-            radius_t_p = Transformer.from_crs(
-                CRS.from_user_input(radius_crs),
-                self.crs_plot,
-                always_xy=True,
-            )
+            # get manually specified radius (e.g. if radius != "estimate")
+            if isinstance(radius, (list, tuple)):
+                radiusx, radiusy = radius
+            elif isinstance(radius, (int, float)):
+                radiusx = radius
+                radiusy = radius
 
-            # get center-coordinates in radius-crs
-            x0r, y0r = radius_t.transform(xorig, yorig)
+        if buffer is not None:
+            radiusx = radiusx * buffer
+            radiusy = radiusy * buffer
 
-            if radius == "estimate":
-                radiusx = np.median(np.abs(np.diff(np.unique(x0r)))) / 2.0
-                radiusy = np.median(np.abs(np.diff(np.unique(y0r)))) / 2.0
-            if buffer is not None:
-                radiusx = radiusx * buffer
-                radiusy = radiusy * buffer
+        props["radius"] = (radiusx, radiusy)
 
-            # fix position of pixel-center if radius is in own crs
-            x0r, y0r = self._set_cpos(x0r, y0r, radiusx, radiusy, cpos)
-            # get new center-positions in plot-coordinates
-            # transform center-points
-            x0, y0 = radius_t_p.transform(x0r, y0r)
-
-        # transform corner-points
-        if radius_crs == "in":
-            # top right
-            p0 = transformer.transform(xorig + radiusx, yorig + radiusy)
-            # top left
-            p1 = transformer.transform(xorig - radiusx, yorig + radiusy)
-            # bottom left
-            p2 = transformer.transform(xorig - radiusx, yorig - radiusy)
-            # bottom right
-            p3 = transformer.transform(xorig + radiusx, yorig - radiusy)
-
-        elif radius_crs == "out":
-            p0 = x0 + radiusx, y0 + radiusy
-            p1 = x0 - radiusx, y0 + radiusy
-            p2 = x0 - radiusx, y0 - radiusy
-            p3 = x0 + radiusx, y0 - radiusy
-        else:
-            # top right
-            p0 = radius_t_p.transform(x0r + radiusx, y0r + radiusy)
-            # top left
-            p1 = radius_t_p.transform(x0r - radiusx, y0r + radiusy)
-            # bottom left
-            p2 = radius_t_p.transform(x0r - radiusx, y0r - radiusy)
-            # bottom right
-            p3 = radius_t_p.transform(x0r + radiusx, y0r - radiusy)
-
-        mask = True
-        # transform mid-points
-        if radius_crs == "in":
-            x3, y3 = transformer.transform(xorig + radiusx, yorig)
-            x4, y4 = transformer.transform(xorig, yorig + radiusy)
-            w = np.abs(x3 - x0)
-            h = np.abs(y4 - y0)
-
-        elif radius_crs == "out":
-            x3, y3 = x0 + radiusx, y0
-            x4, y4 = x0, y0 + radiusy
-            w = np.abs(x3 - x0)
-            h = np.abs(y4 - y0)
-        else:
-            rcs = CRS.from_user_input(4326)
-
-            # transform from in-crs to radius-crs
-            radius_t = Transformer.from_crs(
-                CRS.from_user_input(in_crs),
-                rcs,
-                always_xy=True,
-            )
-
-            geod = self.crs_plot.get_geod()
-
-            x3, y3, bazx = geod.fwd(
-                *radius_t.transform(xorig, yorig),
-                np.full_like(x0, 90),
-                np.full_like(x0, radiusx),
-            )
-            x3b, y3b, bazx = geod.fwd(
-                *radius_t.transform(xorig, yorig),
-                np.full_like(x0, bazx),
-                np.full_like(x0, radiusx),
-            )
-
-            x4, y4, bazy = geod.fwd(
-                *radius_t.transform(xorig, yorig),
-                np.full_like(x0, 0),
-                np.full_like(x0, radiusy),
-            )
-            x4b, y4b, bazy = geod.fwd(
-                *radius_t.transform(xorig, yorig),
-                np.full_like(x0, bazy),
-                np.full_like(x0, radiusy),
-            )
-
-            # transform from radius-crs to plot-crs
-            radius_t_p = Transformer.from_crs(
-                rcs,
-                self.crs_plot,
-                always_xy=True,
-            )
-
-            if self.crs_plot.axis_info[0].unit_name == "metre":
-                print("transforming...")
-                x3, y3 = radius_t_p.transform(x3, y3)
-                x3b, y3b = radius_t_p.transform(x3b, y3b)
-                x4, y4 = radius_t_p.transform(x4, y4)
-                x4b, y4b = radius_t_p.transform(x4b, y4b)
-
-                # w = geod.inv(x3, y3, x3b, y3b)[2]/2
-                # h = geod.inv(x4, y4, x4b, y4b)[2]/2
-
-            theta = np.full_like(y3, 0)
-            m0 = np.abs(y3 - y3b) < np.abs(x3 - x3b)
-
-            theta[m0] = -(
-                np.sign(y3 - y3b)
-                * np.rad2deg(np.arcsin(np.abs(y3 - y3b) / np.abs(x3 - x3b)))
-            )[m0]
-            theta[~m0] = -(
-                np.sign(y3 - y3b)
-                * np.rad2deg(np.arcsin(1 / (np.abs(y3 - y3b) / (np.abs(x3 - x3b)))))
-            )[~m0]
-
-            w = np.abs(x3 - x3b) / 2  # * np.cos(theta)
-            h = np.abs(y4 - y4b) / 2  # / np.cos(theta)
-
-            mask = np.isfinite(w) & np.isfinite(h)
-            mask = (x3 > x3b) & (y4 > y4b)
-
-        # theta = np.sign(y3 - y0) * np.rad2deg(np.arcsin(np.abs(y3 - y0) / w))
-
-        # mask all infinite points
-        mask = mask & np.isfinite(w) & np.isfinite(h) & np.isfinite(theta)
-        mask = mask & np.isfinite(x0) & np.isfinite(y0)
-
-        # calculate rotation angle based on mid-point
-        # theta = np.sign(y3 - y0) * np.rad2deg(np.arcsin(np.abs(y3 - y0) / w))
-
-        props = dict(
-            x0=x0,
-            y0=y0,
-            x0r=x0r,
-            y0r=y0r,
-            w=w,
-            h=h,
-            theta=theta,
-            ids=ids,
-            z_data=z_data,
-            p0=p0,
-            p1=p1,
-            p2=p2,
-            p3=p3,
-            radius=(radiusx, radiusy),
-        )
-
-        if self._maskit:
-            # mask = np.any(np.isfinite(p0) & np.isfinite(p1) & np.isfinite(p2) & np.isfinite(p3),
-            #               axis=0)
-            props = props = dict(
-                x0=x0[mask],
-                y0=y0[mask],
-                x0r=x0r[mask],
-                y0r=y0r[mask],
-                w=w[mask],
-                h=h[mask],
-                theta=theta[mask],
-                ids=ids[mask],
-                z_data=z_data[mask],
-                p0=[i[mask] for i in p0],
-                p1=[i[mask] for i in p1],
-                p2=[i[mask] for i in p2],
-                p3=[i[mask] for i in p3],
-                radius=(radiusx, radiusy),
-            )
-
-        # use a cKDTree based picking to speed up picks for large collections
-        if not self.figure.f is not None:
-            self.tree = cKDTree(np.stack([props["x0"], props["y0"]], axis=1))
+        props["mask"] = np.isfinite(props["x0"]) & np.isfinite(props["y0"])
 
         return props
 
@@ -1438,7 +1284,8 @@ class Maps(object):
             args["masked"] = True if "masked" in shape else False
             args["flat"] = True if "flat" in shape else False
 
-        coll = getattr(self._shapes, shape)(props, **args)
+        coll = self._get_coll(shape, props, args)
+
         coll.set_clim(vmin, vmax)
         self.figure.ax.add_collection(coll)
 
@@ -1477,143 +1324,12 @@ class Maps(object):
 
         return coll
 
-    def add_callback(self, callback, double_click=False, mouse_button=1, **kwargs):
-        """
-        Attach a callback to the plot that will be executed if a pixel is clicked
-
-        A list of pre-defined callbacks (accessible via `m.cb`) or customly defined
-        functions can be used.
-
-            >>> # to add a pre-defined callback use:
-            >>> cid = m.add_callback("annotate", <kwargs passed to m.cb.annotate>)
-            >>> # to remove the callback again, call:
-            >>> m.remove_callback(cid)
-
-        Parameters
-        ----------
-        callback : callable or str
-            The callback-function to attach.
-
-            If a string is provided, it will be used to assign the associated function
-            from the `m.cb` collection:
-                - "annotate" : add annotations to the clicked pixel
-                - "mark" : add markers to the clicked pixel
-                - "plot" : dynamically update a plot with the clicked values
-                - "print_to_console" : print info of the clicked pixel to the console
-                - "get_values" : save properties of the clicked pixel to a dict
-                - "load" : use the ID of the clicked pixel to load data
-                - "clear_annotations" : clear all existing annotations
-                - "clear_markers" : clear all existing markers
-
-            You can also define a custom function with the following call-signature:
-
-                >>> def some_callback(self, **kwargs):
-                >>>     print("hello world")
-                >>>     print("the position of the clicked pixel", kwargs["pos"])
-                >>>     print("the data-index of the clicked pixel", kwargs["ID"])
-                >>>     print("data-value of the clicked pixel", kwargs["val"])
-                >>>     print("the plot-crs is:", self.plot_specs["plot_crs"])
-                >>>
-                >>> m.add_callback(some_callback)
-
-        double_click : bool
-            Indicator if the callback should be executed on double-click (True)
-            or on single-click events (False)
-        mouse_button : int
-            The mouse-button to use for executing the callback:
-
-                - LEFT = 1
-                - MIDDLE = 2
-                - RIGHT = 3
-                - BACK = 8
-                - FORWARD = 9
-        **kwargs :
-            kwargs passed to the callback-function
-            For documentation of the individual functions check the docs in `m.cb`
-
-        """
-
-        assert not all(
-            i in kwargs for i in ["pos", "ID", "val", "double_click", "mouse_button"]
-        ), 'the names "pos", "ID", "val" cannot be used as keyword-arguments!'
-
-        if isinstance(callback, str):
-            assert hasattr(self.cb, callback), (
-                f"The function '{callback}' does not exist as a pre-defined callback."
-                + " Use one of:\n    - "
-                + "\n    - ".join(self.cb.cb_list)
-            )
-            callback = getattr(self.cb, callback)
-        elif callable(callback):
-            # re-bind the callback methods to the eomaps.Maps.cb object
-            # in case custom functions are used
-            if hasattr(callback, "__func__"):
-                callback = callback.__func__.__get__(self.cb)
-            else:
-                callback = callback.__get__(self.cb)
-
-        # TODO support multiple assignments for callbacks
-        # make sure multiple callbacks of the same funciton are only assigned
-        # if multiple assignments are properly handled
-        multi_cb_functions = ["mark", "annotate"]
-
-        no_multi_cb = [i for i in self.cb.cb_list if i not in multi_cb_functions]
-        cb_names = [i.split("__")[0] for i in self._attached_cbs]
-
-        # add mouse-button assignment as suffix to the name (with __ separator)
-        cbname = callback.__name__ + f"__{double_click}_{mouse_button}"
-
-        if callback.__name__ in no_multi_cb:
-            assert callback.__name__ not in cb_names, (
-                "Multiple assignments of the callback"
-                + f" '{callback.__name__}' are not (yet) supported..."
-            )
-
-        else:
-            ncb = cb_names.count(callback.__name__)
-            # make the name unique if the same callback is attached multiple times
-            if ncb > 0:
-                cbname += f"_[{ncb}]"
-
-        # ------------- add a callback
-        def onpick(event):
-            if (event.double_click == double_click) and (
-                event.mouse_button == mouse_button
-            ):
-                ind = event.ind
-                if ind is not None:
-                    if isinstance(
-                        event.artist,
-                        (
-                            collections.EllipseCollection,
-                            collections.PolyCollection,
-                            collections.TriMesh,
-                        ),
-                    ):
-                        clickdict = dict(
-                            pos=(self._props["x0"][ind], self._props["y0"][ind]),
-                            ID=self._props["ids"][ind],
-                            val=self._props["z_data"][ind],
-                            ind=ind,
-                        )
-
-                        callback(**clickdict, **kwargs)
-
-                else:
-                    if hasattr(self.cb, f"_{callback.__name__}_nopick_callback"):
-                        getattr(self.cb, f"_{callback.__name__}_nopick_callback")()
-
-        cid = self.figure.f.canvas.mpl_connect("pick_event", onpick)
-        self._attached_cbs[cbname] = cid
-
-        return cid
-
     def add_marker(
         self,
         ID=None,
         xy=None,
         xy_crs=None,
-        radius=None,
+        radius="pixel",
         shape="ellipse",
         buffer=1,
         **kwargs,
@@ -1631,10 +1347,11 @@ class Maps(object):
             The default is None
         xy_crs : any
             the identifier of the coordinate-system for the xy-coordinates
-        radius : float or None, optional
-            The radius of the marker. If None, it will be evaluated based
-            on the pixel-spacing of the provided dataset
-            The default is None.
+        radius : float or "pixel", optional
+            The radius of the marker.
+            If "pixel", it will represent the dimensions of the selected pixel.
+            The default is "pixel"
+
         shape : str, optional
             Indicator which shape to draw. Currently supported shapes are:
                 - circle
@@ -1656,7 +1373,7 @@ class Maps(object):
         if ID is not None:
             assert xy is None, "You can only provide 'ID' or 'pos' not both!"
         else:
-            if isinstance(radius, str):
+            if isinstance(radius, str) and radius != "pixel":
                 raise TypeError(f"I don't know what to do with radius='{radius}'")
 
         if xy is not None:
@@ -1664,7 +1381,7 @@ class Maps(object):
             if xy_crs is not None:
                 # get coordinate transformation
                 transformer = Transformer.from_crs(
-                    CRS.from_user_input(xy_crs),
+                    self.get_crs(xy_crs),
                     self.crs_plot,
                     always_xy=True,
                 )
@@ -1672,7 +1389,7 @@ class Maps(object):
                 xy = transformer.transform(*xy)
 
         # add marker
-        self.cb.mark(
+        self.cb._cb.mark(
             ID=ID, pos=xy, radius=radius, ind=None, shape=shape, buffer=buffer, **kwargs
         )
 
@@ -1740,7 +1457,7 @@ class Maps(object):
                 xy = transformer.transform(*xy)
 
         # add marker
-        self.cb.annotate(
+        self.cb._cb.annotate(
             ID=ID,
             pos=xy,
             val=None if ID is None else self.data.loc[ID][self.data_specs.parameter],
@@ -1750,79 +1467,73 @@ class Maps(object):
             **kwargs,
         )
 
-    def remove_callback(self, callback):
-        """
-        remove an attached callback from the figure
-
-        Parameters
-        ----------
-        callback : int, str or callable
-            if int: the identification-number of the callback to remove
-                    (the number is returned by `cid = m.add_callback()`)
-            if str: the name of the callback to remove
-                    (format: `<function_name>__<double_click>_<mouse_button>`)
-            if callable: the `__name__` property of the callback is used to
-                         remove ANY callback that references the corresponding
-                         function
-
-            either the callback-function that should be removed from the figure
-            (or the name of the function)
-        """
-
-        if isinstance(callback, int):
-            self.figure.f.canvas.mpl_disconnect(callback)
-            name = dict(zip(self._attached_cbs.values(), self._attached_cbs.keys()))[
-                callback
-            ]
-            del self._attached_cbs[name]
-
-            # call cleanup methods on removal
-            fname = name.split("__")[0]
-            if hasattr(self.cb, f"_{fname}_cleanup"):
-                getattr(self.cb, f"_{fname}_cleanup")()
-
-            print(f"Removed the callback: '{name}'.")
-
-        else:
-            if isinstance(callback, str):
-                names = [callback]
-                if names[0] not in self._attached_cbs:
-                    warnings.warn(
-                        f"The callback '{names[0]}' is not attached and can not"
-                        + " be removed. Attached callbacks are:\n    - "
-                        + "    - \n".join(list(self._attached_cbs))
-                    )
-                    return
-
-            elif callable(callback):
-                # identify all callbacks that relate to the provided function
-                names = [
-                    key
-                    for key in self._attached_cbs
-                    if key.split("__")[0] == callback.__name__
-                ]
-                if len(names) == 0:
-                    warnings.warn(
-                        f"The callback '{callback.__name__}' is not attached"
-                        + "and can not be removed. Attached callbacks are:"
-                        + "\n    - "
-                        + "    - \n".join(list(self._attached_cbs))
-                    )
-
-            for name in names:
-                self.figure.f.canvas.mpl_disconnect(self._attached_cbs[name])
-                del self._attached_cbs[name]
-
-                # call cleanup methods on removal
-                fname = name.split("__")[0]
-                if hasattr(self.cb, f"_{fname}_cleanup"):
-                    getattr(self.cb, f"_{fname}_cleanup")()
-
-                print(f"Removed the callback: '{name}'.")
-
     @wraps(plt.savefig)
     def savefig(self, *args, **kwargs):
         self.figure.f.savefig(*args, **kwargs)
+
+    def _get_coll(self, shape, props, args):
+
+        if shape.startswith("delauney_triangulation"):
+            args["masked"] = True if "masked" in shape else False
+            args["flat"] = True if "flat" in shape else False
+            shape = "delauney_triangulation"
+
+        if shape == "geod_circles":
+            coll = self._shapes.geod_circles(
+                props["xorig"],
+                props["yorig"],
+                self.data_specs.crs,
+                np.mean(props["radius"]),
+                n=20,
+                **args,
+            )
+        elif shape == "ellipses":
+            coll = self._shapes.ellipses(
+                props["xorig"],
+                props["yorig"],
+                self.data_specs.crs,
+                props["radius"],
+                self.plot_specs.radius_crs,
+                n=20,
+                **args,
+            )
+        elif shape == "rectangles":
+            coll = self._shapes.rectangles(
+                props["xorig"],
+                props["yorig"],
+                self.data_specs.crs,
+                props["radius"],
+                self.plot_specs.radius_crs,
+                **args,
+            )
+        elif shape == "voroni":
+            coll = self._shapes.voroni(
+                props["xorig"],
+                props["yorig"],
+                self.data_specs.crs,
+                props["radius"],
+                **args,
+            )
+        elif shape == "trimesh_rectangles":
+            coll = self._shapes.trimesh_rectangles(
+                props["xorig"],
+                props["yorig"],
+                self.data_specs.crs,
+                props["radius"],
+                self.plot_specs.radius_crs,
+                **args,
+            )
+        elif shape == "delauney_triangulation":
+            coll = self._shapes.delauney_triangulation(
+                props["xorig"],
+                props["yorig"],
+                self.data_specs.crs,
+                props["radius"],
+                self.plot_specs.radius_crs,
+                **args,
+            )
+
+        return coll
 
     def plot_map(
         self,
@@ -1875,6 +1586,10 @@ class Maps(object):
 
             # ---------------------- prepare the data
             props = self._prepare_data()
+
+            # use a cKDTree based picking to speed up picks for large collections
+            self.tree = cKDTree(np.stack([props["x0"], props["y0"]], axis=1))
+
             # remember props for later use
             self._props = props
 
@@ -1918,12 +1633,6 @@ class Maps(object):
                 cb_gridspec=cbgs,
             )
 
-            # try:
-            #     ax.set_xlim(props["x0"].min(), props["x0"].max())
-            #     ax.set_ylim(props["y0"].min(), props["y0"].max())
-            # except:
-            #     print("limits could not be set")
-
             ax.set_title(title)
 
             shape = self.plot_specs["shape"]
@@ -1933,12 +1642,8 @@ class Maps(object):
             else:
                 args = dict(array=props["z_data"], cmap=cbcmap, norm=norm, **kwargs)
 
-            if shape.startswith("delauney_triangulation"):
-                args["masked"] = True if "masked" in shape else False
-                args["flat"] = True if "flat" in shape else False
-                shape = "delauney_triangulation"
+            coll = self._get_coll(shape, props, args)
 
-            coll = getattr(self._shapes, shape)(props, **args)
             coll.set_clim(vmin, vmax)
             ax.add_collection(coll)
             ax.autoscale()
@@ -1967,15 +1672,15 @@ class Maps(object):
             # to ensure callbacks are removed and the container is reinitialized
             def on_close(event):
                 while len(self._attached_cbs) > 0:
-                    self.remove_callback(list(self._attached_cbs)[-1])
+                    self.cb.remove(list(self._attached_cbs)[-1])
 
                 # remove all figure properties
                 self.figure = self.figure.reinit()
 
             self.figure.f.canvas.mpl_connect("close_event", on_close)
 
-            if not hasattr(self, "BM"):
-                self.BM = BlitManager(self.figure.f.canvas)
+            # set the blit-manager
+            self.BM = BlitManager(self.figure.f.canvas)
 
             # trigger drawing the figure
             self.figure.f.canvas.draw()

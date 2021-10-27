@@ -42,24 +42,33 @@ class callbacks(object):
     # _<NAME>_nopick_callback : a function that is executed if an empty area
     #                           is clicked within the plot
 
+    # ID : any
+    #     The index-value of the pixel in the data.
+    # pos : tuple
+    #     A tuple of the position of the pixel in plot-coordinates.
+    #     (ONLY relevant if ID is NOT provided!)
+    # val : int or float
+    #     The parameter-value of the pixel.
+    # ind : int
+    #     The index of the clicked pixel
+    #     (ONLY relevant if ID is NOT provided!)
+
+    _cb_list = [
+        "annotate",
+        "mark",
+        "plot",
+        "print_to_console",
+        "get_values",
+        "load",
+        "clear_annotations",
+        "clear_markers",
+    ]
+
     def __init__(self, m):
         self.m = m
 
     def __repr__(self):
-        return "available callbacks:\n    - " + "\n    - ".join(self.cb_list)
-
-    @property
-    def cb_list(self):
-        return [
-            "annotate",
-            "mark",
-            "plot",
-            "print_to_console",
-            "get_values",
-            "load",
-            "clear_annotations",
-            "clear_markers",
-        ]
+        return "available callbacks:\n    - " + "\n    - ".join(self._cb_list)
 
     def load(
         self,
@@ -79,14 +88,6 @@ class callbacks(object):
 
         Parameters
         ----------
-        ID : any
-            The index-value of the pixel in the dataframe.
-        pos : tuple
-            A tuple of the position of the pixel in plot-coordinates.
-        val : int or float
-            The parameter-value of the pixel.
-        ind : int
-            The index of the clicked pixel
         database : any
             The database object to use for loading the object
         load_method : str or callable
@@ -130,14 +131,6 @@ class callbacks(object):
 
         Parameters
         ----------
-        ID : any
-            The index-value of the pixel in the data.
-        pos : tuple
-            A tuple of the position of the pixel in plot-coordinates.
-        val : int or float
-            The parameter-value of the pixel.
-        ind : int
-            The index of the clicked pixel
         """
 
         xlabel = self.m.data_specs.xcoord
@@ -176,14 +169,6 @@ class callbacks(object):
 
         Parameters
         ----------
-        ID : any
-            The index-value of the pixel in the data.
-        pos : tuple
-            A tuple of the position of the pixel in plot-coordinates.
-        val : int or float
-            The parameter-value of the pixel.
-        ind : int
-            The index of the clicked pixel
         pos_precision : int
             The floating-point precision of the coordinates.
             The default is 4.
@@ -337,14 +322,6 @@ class callbacks(object):
 
         Parameters
         ----------
-        ID : any
-            The index-value of the pixel in the data.
-        pos : tuple
-            A tuple of the position of the pixel in plot-coordinates.
-        val : int or float
-            The parameter-value of the pixel.
-        ind : int
-            The index of the clicked pixel
         x_index : str
             Indicator how the x-axis is labelled
 
@@ -419,17 +396,6 @@ class callbacks(object):
             >>> )
 
         removing the callback will also remove the associated value-dictionary!
-
-        Parameters
-        ----------
-        ID : any
-            The index-value of the pixel in the data.
-        pos : tuple
-            A tuple of the position of the pixel in plot-coordinates.
-        val : int or float
-            The parameter-value of the pixel.
-        ind : int
-            The index of the clicked pixel
         """
 
         if not hasattr(self, "picked_vals"):
@@ -446,6 +412,8 @@ class callbacks(object):
     def _get_pixel_props(self, ind):
         p = dict()
         for key, val in self.m._props.items():
+            if key == "mask":
+                continue
             if key in ["p0", "p1", "p2", "p3"]:
                 p[key] = (
                     np.take(val[0], np.atleast_1d(ind)),
@@ -479,23 +447,8 @@ class callbacks(object):
 
         The added patches are accessible via `m.cb._pick_markers`
 
-        Note: If radius="pixel", the shape is determined from the
-              center plus/minus the width & height of the corresponding pixel.
-              For highly distorted projections this can lead to a "shift"
-              of the shape since the shape is then no longer properly centered.
-
         Parameters
         ----------
-        ID : any
-            The index-value of the pixel in the data.
-        pos : tuple
-            A tuple of the position of the pixel in plot-coordinates.
-            (ONLY relevant if ID is NOT provided!)
-        val : int or float
-            The parameter-value of the pixel.
-        ind : int
-            The index of the clicked pixel
-            (ONLY relevant if ID is NOT provided!)
         radius : float, string or None, optional
             The radius of the marker.
             If None, it will be evaluated based on the pixel-spacing of the
@@ -510,7 +463,6 @@ class callbacks(object):
 
         shape : str, optional
             Indicator which shape to draw. Currently supported shapes are:
-                - circle
                 - ellipse
                 - rectangle
 
@@ -530,49 +482,47 @@ class callbacks(object):
         """
         if ID is not None:
             if ind is None:
-                ind = self.m.data.index.get_loc(ID)
+                # ind = self.m.data.index.get_loc(ID)
+                ind = np.flatnonzero(np.isin(self.m._props["ids"], ID))
 
-            pos = (self.m._props["x0"][ind], self.m._props["y0"][ind])
-
+            pos = (self.m._props["xorig"][ind], self.m._props["yorig"][ind])
         if radius == "pixel":
-            d = self._get_pixel_props(ind)
-            radiusx = d["w"][0]
-            radiusy = d["h"][0]
-            theta = d["theta"][0]
+            radius = self.m._props["radius"]
 
-        elif isinstance(radius, (int, float, list, tuple)) or radius is None:
-            theta = 0
-            if isinstance(radius, (list, tuple)):
-                radiusx, radiusy = radius
-            elif isinstance(radius, (int, float)):
-                radiusx = radiusy = radius
-            else:
-                radiusx, radiusy = self.m._props["radius"]
+        # get manually specified radius (e.g. if radius != "estimate")
+        if isinstance(radius, (list, tuple)):
+            radius = [i * buffer for i in radius]
+        elif isinstance(radius, (int, float)):
+            radius = [radius * buffer] * 2
 
-            # transform the radius if radius_crs is not None
-            if radius_crs is not None:
-                d = self.m._prepare_data(
-                    data=DataFrame(
-                        dict(
-                            x=[pos[0]],
-                            y=[pos[1]],
-                            z=[0],
-                        )
-                    ),
-                    # data=self.m.data.loc[[ID]],
-                    xcoord="x",
-                    ycoord="y",
-                    parameter="z",
-                    in_crs=self.m.plot_specs["plot_crs"],
-                    radius_crs=radius_crs,
-                    shape="rectangles",
-                    buffer=buffer,
-                    radius=(radiusx, radiusy),
-                )
-
-                radiusx = d["w"][0]
-                radiusy = d["h"][0]
-                theta = d["theta"][0]
+        if shape == "geod_circle":
+            coll = self.m._shapes.geod_circles(
+                np.atleast_1d(pos[0]),
+                np.atleast_1d(pos[1]),
+                "in",
+                np.mean(radius),
+                n=20,
+                **kwargs,
+            )
+        elif shape == "ellipse":
+            coll = self.m._shapes.ellipses(
+                np.atleast_1d(pos[0]),
+                np.atleast_1d(pos[1]),
+                "in",
+                radius,
+                radius_crs,
+                n=20,
+                **kwargs,
+            )
+        elif shape == "rectangle":
+            coll = self.m._shapes.rectangles(
+                np.atleast_1d(pos[0]),
+                np.atleast_1d(pos[1]),
+                "in",
+                radius,
+                radius_crs,
+                **kwargs,
+            )
 
         if hasattr(self, "marker") and not permanent:
             # remove existing marker
@@ -583,34 +533,7 @@ class callbacks(object):
         if permanent and not hasattr(self, "permanent_markers"):
             self.permanent_markers = []
 
-        if shape == "circle":
-            p = Circle(pos, np.sqrt(radiusx ** 2 + radiusy ** 2) * buffer, **kwargs)
-        elif shape == "ellipse":
-            p = Ellipse(
-                pos,
-                radiusx * 2 * buffer,
-                radiusy * 2 * buffer,
-                theta,
-                **kwargs,
-            )
-        elif shape == "rectangle":
-            if radius == "pixel":
-                p = Polygon(
-                    shapes._get_rectangle_verts(d)[0],
-                    **kwargs,
-                )
-            else:
-                p = Rectangle(
-                    [pos[0] - radiusx * buffer, pos[1] - radiusy * buffer],
-                    radiusx * 2 * buffer,
-                    radiusy * 2 * buffer,
-                    theta,
-                    **kwargs,
-                )
-        else:
-            raise TypeError(f"{shape} is not a valid marker-shape")
-
-        marker = self.m.figure.ax.add_patch(p)
+        marker = self.m.figure.ax.add_collection(coll)
 
         if permanent:
             self.permanent_markers.append(marker)
