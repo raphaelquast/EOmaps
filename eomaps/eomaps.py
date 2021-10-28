@@ -468,7 +468,6 @@ class Maps(object):
         parameter=None,
         xcoord=None,
         ycoord=None,
-        shape=None,
         buffer=None,
     ):
 
@@ -491,9 +490,6 @@ class Maps(object):
             cpos = self.plot_specs.cpos
         if cpos_radius is None:
             cpos_radius = self.plot_specs.cpos_radius
-
-        if shape is None:
-            shape = self.plot_specs.shape
 
         props = dict()
 
@@ -1266,7 +1262,6 @@ class Maps(object):
             parameter=parameter,
             xcoord=xcoord,
             ycoord=ycoord,
-            shape=shape,
         )
 
         # ------------- plot the data
