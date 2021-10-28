@@ -1282,7 +1282,7 @@ class Maps(object):
             args["masked"] = True if "masked" in shape else False
             args["flat"] = True if "flat" in shape else False
 
-        coll = self._get_coll(shape, props, args)
+        coll = self._get_coll(shape, props, args, in_crs=in_crs, radius_crs=radius_crs)
 
         coll.set_clim(vmin, vmax)
         self.figure.ax.add_collection(coll)
@@ -1473,7 +1473,11 @@ class Maps(object):
     def savefig(self, *args, **kwargs):
         self.figure.f.savefig(*args, **kwargs)
 
-    def _get_coll(self, shape, props, args):
+    def _get_coll(self, shape, props, args, in_crs=None, radius_crs=None):
+        if in_crs is None:
+            in_crs = self.data_specs.crs
+        if radius_crs is None:
+            radius_crs = self.plot_specs.radius_crs
 
         if shape.startswith("delauney_triangulation"):
             args["masked"] = True if "masked" in shape else False
@@ -1484,7 +1488,7 @@ class Maps(object):
             coll = self._shapes.geod_circles(
                 props["xorig"],
                 props["yorig"],
-                self.data_specs.crs,
+                in_crs,
                 np.mean(props["radius"]),
                 n=20,
                 **args,
@@ -1493,9 +1497,9 @@ class Maps(object):
             coll = self._shapes.ellipses(
                 props["xorig"],
                 props["yorig"],
-                self.data_specs.crs,
+                in_crs,
                 props["radius"],
-                self.plot_specs.radius_crs,
+                radius_crs,
                 n=20,
                 **args,
             )
@@ -1503,16 +1507,16 @@ class Maps(object):
             coll = self._shapes.rectangles(
                 props["xorig"],
                 props["yorig"],
-                self.data_specs.crs,
+                in_crs,
                 props["radius"],
-                self.plot_specs.radius_crs,
+                radius_crs,
                 **args,
             )
         elif shape == "voroni":
             coll = self._shapes.voroni(
                 props["xorig"],
                 props["yorig"],
-                self.data_specs.crs,
+                in_crs,
                 props["radius"],
                 **args,
             )
@@ -1520,18 +1524,18 @@ class Maps(object):
             coll = self._shapes.trimesh_rectangles(
                 props["xorig"],
                 props["yorig"],
-                self.data_specs.crs,
+                in_crs,
                 props["radius"],
-                self.plot_specs.radius_crs,
+                radius_crs,
                 **args,
             )
         elif shape == "delauney_triangulation":
             coll = self._shapes.delauney_triangulation(
                 props["xorig"],
                 props["yorig"],
-                self.data_specs.crs,
+                in_crs,
                 props["radius"],
-                self.plot_specs.radius_crs,
+                radius_crs,
                 **args,
             )
 

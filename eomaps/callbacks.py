@@ -515,6 +515,8 @@ class callbacks(object):
                 radius_crs,
                 **kwargs,
             )
+        else:
+            raise TypeError(f"EOmaps: '{shape}' is not a valid marker-shape")
 
         if hasattr(self, "marker") and not permanent:
             # remove existing marker
