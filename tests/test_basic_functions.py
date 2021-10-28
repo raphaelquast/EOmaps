@@ -12,7 +12,7 @@ class TestBasicPlotting(unittest.TestCase):
         )
         x, y = x.ravel(), y.ravel()
 
-        self.data = pd.DataFrame(dict(x=x, y=y, value=np.random.normal(0, 1, len(x))))
+        self.data = pd.DataFrame(dict(x=x, y=y, value=y - x))
 
     def test_simple_map(self):
         m = Maps()
@@ -34,7 +34,7 @@ class TestBasicPlotting(unittest.TestCase):
 
             plt.close(m.figure.f)
 
-    def test_simple_map2(self):
+    def test_cpos(self):
         m = Maps()
         m.data = self.data
 
@@ -46,6 +46,7 @@ class TestBasicPlotting(unittest.TestCase):
                 label="bsdf",
                 radius=1,
                 radius_crs="out",
+                cpos_radius=2,
                 histbins=100,
                 density=True,
                 cpos=cpos,
@@ -70,6 +71,7 @@ class TestBasicPlotting(unittest.TestCase):
             histbins=100,
             density=True,
             cpos="ur",
+            cpos_radius=1,
         )
         m.plot_map()
 
@@ -108,7 +110,7 @@ class TestBasicPlotting(unittest.TestCase):
 
         # attach all callbacks
         double_click, mouse_button = True, 1
-        for n, cb in enumerate(m.cb.cb_list):
+        for n, cb in enumerate(m.cb._cb._cb_list):
             if n == 1:
                 double_click = False
             if n == 2:
@@ -118,12 +120,14 @@ class TestBasicPlotting(unittest.TestCase):
             if n == 2:
                 mouse_button = 2
 
-            m.add_callback(cb, double_click=double_click, mouse_button=mouse_button)
+            cbID = m.cb.attach(cb, double_click=double_click, mouse_button=mouse_button)
             self.assertTrue(
-                list(m._attached_cbs) == [f"{cb}__{double_click}_{mouse_button}"]
+                cbID
+                == f"{cb}_0__{'double' if double_click else 'single'}__{mouse_button}"
             )
-            m.remove_callback(f"{cb}__{double_click}_{mouse_button}")
-            self.assertTrue(len(m._attached_cbs) == 0)
+            self.assertTrue(len(m.cb.get.attached_callbacks) == 1)
+            m.cb.remove(cbID)
+            self.assertTrue(len(m.cb.get.attached_callbacks) == 0)
 
         plt.close(m.figure.f)
 
@@ -137,16 +141,14 @@ class TestBasicPlotting(unittest.TestCase):
         m.plot_map()
 
         # test all callbacks
-        for n, cb in enumerate(m.cb.cb_list):
-
+        for n, cb in enumerate(m.cb._cb._cb_list):
             kwargs = dict(ID=1, pos=(1, 2), val=3.365734, ind=None)
             if cb == "load":
                 kwargs["database"] = pd.DataFrame([1, 2, 3, 4])
                 kwargs["load_method"] = "xs"
-            callback = getattr(m.cb, cb)
-            callback = callback.__func__.__get__(m.cb)
-            callback(**kwargs)
 
+            callback = getattr(m.cb._cb, cb)
+            callback(**kwargs)
         plt.close(m.figure.f)
 
     def test_add_overlay(self):
@@ -185,9 +187,28 @@ class TestBasicPlotting(unittest.TestCase):
 
         m.plot_map()
 
-        coll = m.add_discrete_layer(self.data, "value", "x", "y", in_crs=3857)
-        coll.set_facecolor("none")
-        coll.set_edgecolor("r")
+        coll = m.add_discrete_layer(
+            m.data.sample(1000),
+            shape="ellipses",
+            fc="none",
+            ec="y",
+            **m.data_specs[["parameter", "xcoord", "ycoord", "crs"]],
+        )
+        coll = m.add_discrete_layer(
+            m.data.sample(1000),
+            shape="rectangles",
+            fc="none",
+            ec="b",
+            **m.data_specs[["parameter", "xcoord", "ycoord", "crs"]],
+        )
+        coll = m.add_discrete_layer(
+            m.data.sample(1000),
+            shape="geod_circles",
+            fc="none",
+            ec="r",
+            radius=100000,
+            **m.data_specs[["parameter", "xcoord", "ycoord", "crs"]],
+        )
 
         plt.close(m.figure.f)
 
@@ -216,41 +237,83 @@ class TestBasicPlotting(unittest.TestCase):
         m = Maps()
         m.data = self.data
         m.set_data_specs(xcoord="x", ycoord="y", in_crs=3857)
-        m.set_plot_specs(plot_crs=3857, shape="rectangles")
+        m.set_plot_specs(
+            plot_crs=Maps.crs_list.Orthographic(
+                central_latitude=45, central_longitude=45
+            ),
+            shape="ellipses",
+        )
 
         m.plot_map()
 
-        m.add_marker(20, facecolor=[1, 0, 0, 0.5], edgecolor="r")
-        m.add_marker(250, facecolor=[1, 0, 0, 0.5], edgecolor="r", radius=5000000)
         m.add_marker(
-            250, facecolor="b", edgecolor="m", linewidth=3, buffer=3, alpha=0.5
+            np.arange(1810, 1840, 1),
+            facecolor=[1, 0, 0, 0.5],
+            edgecolor="r",
+            shape="ellipse",
         )
-        m.add_marker(250, fc="none", ec="k", ls="--", radius=35, radius_crs=4326)
+        m.add_marker(
+            np.arange(1710, 1740, 1),
+            facecolor=[1, 0, 0, 0.5],
+            edgecolor="r",
+            shape="rectangle",
+        )
 
         m.add_marker(
-            xy=(-14000000, -8500000),
+            np.arange(1410, 1440, 1),
+            facecolor=[1, 0, 0, 0.5],
+            edgecolor="r",
+            radius=50000,
+            radius_crs="in",
+        )
+
+        m.add_marker(
+            1630,
+            facecolor=[1, 0, 0, 0.5],
+            edgecolor="r",
+            radius=2500000,
+            shape="rectangle",
+        )
+        m.add_marker(
+            1630, facecolor="none", edgecolor="k", linewidth=3, buffer=3, linestyle="--"
+        )
+
+        for r in [5, 10, 15, 20]:
+            m.add_marker(
+                1635, fc="none", ec="y", ls="--", radius=r, radius_crs=4326, lw=2
+            )
+
+        for r in np.linspace(10000, 1000000, 10):
+            m.add_marker(
+                1635, fc="none", ec="b", ls="--", radius=r, lw=2, shape="geod_circle"
+            )
+
+        for x in np.linspace(5000000, 6000000, 10):
+            m.add_marker(
+                xy=(x, 4000000),
+                xy_crs="out",
+                facecolor="none",
+                edgecolor="r",
+                radius=1000000,
+                radius_crs="out",
+            )
+
+        m.add_marker(
+            xy=(5040816, 4265306), facecolor="none", edgecolor="c", radius=800000, lw=5
+        )
+
+        m.add_marker(
+            xy=(m.data.x[10], m.data.y[10]),
             xy_crs=3857,
             facecolor="none",
             edgecolor="r",
+            radius="pixel",
+            buffer=5,
         )
 
-        with self.assertRaises(TypeError):
-            # it's not possible to use radius="pixel" and xy
+        for shape in ["ellipse", "rectangle"]:
             m.add_marker(
-                xy=(m.data.x[100], m.data.y[100]),
-                xy_crs=3857,
-                facecolor="none",
-                edgecolor="r",
-                radius="pixel",
-            )
-
-        for shape in ["circle", "ellipse", "rectangle"]:
-            m.add_marker(
-                85,
-                facecolor="none",
-                edgecolor="r",
-                radius="pixel",
-                shape=shape,
+                1232, facecolor="none", edgecolor="r", radius="pixel", shape=shape, lw=2
             )
 
         plt.close(m.figure.f)
@@ -283,24 +346,3 @@ class TestBasicPlotting(unittest.TestCase):
         m.set_data_specs(xcoord="x", ycoord="y", in_crs=3857, parameter="value")
         m.set_plot_specs(shape="ellipses")
         data = m._prepare_data()
-        self.assertTrue(
-            sorted(list(data.keys()))
-            == sorted(
-                [
-                    "x0",
-                    "y0",
-                    "x0r",
-                    "y0r",
-                    "w",
-                    "h",
-                    "theta",
-                    "ids",
-                    "z_data",
-                    "p0",
-                    "p1",
-                    "p2",
-                    "p3",
-                    "radius",
-                ]
-            )
-        )
