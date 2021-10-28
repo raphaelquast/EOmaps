@@ -464,11 +464,10 @@ class cb_container(object):
 
         self.get = self._get(self)
         self.attach = self._attach(self)
-        # self.remove = self._m.remove_callback
 
     def __repr__(self):
         txt = "Attached callbacks:\n    " + "\n    ".join(
-            f"{val} : {key}" for key, val in self._m._attached_cbs.items()
+            f"{val} : {key}" for key, val in self.get.attached_callbacks
         )
         return txt
 
@@ -581,6 +580,10 @@ class cb_container(object):
             self.m = parent._m
             self.cb = parent._cb
 
+            from collections import defaultdict
+
+            self.cbs = defaultdict(lambda: defaultdict(dict))
+
         @property
         def picked_object(self):
             if hasattr(self.cb, "picked_object"):
@@ -613,74 +616,13 @@ class cb_container(object):
 
         @property
         def attached_callbacks(self):
-            return self.m._attached_cbs
+            cbs = []
+            for ds, dsdict in self.cbs.items():
+                for b, bdict in dsdict.items():
+                    for name in bdict.keys():
+                        cbs.append(f"{name}__{ds}__{b}")
 
-    def remove(self, callback):
-        """
-        remove an attached callback from the figure
-
-        Parameters
-        ----------
-        callback : int, str or callable
-            if int: the identification-number of the callback to remove
-                    you can get the number by executing `m.cb` or via
-                    `m.cb.get.attached_callbacks
-            if str: the name of the callback to remove
-                    (format: `<function_name>__<double_click>_<mouse_button>_[<count>]`)
-            if callable: the `__name__` property of the callback is used to
-                         remove ANY callback that references the corresponding
-                         function
-
-            either the callback-function that should be removed from the figure
-            (or the name of the function)
-        """
-
-        cbs = self.get.attached_callbacks
-
-        if isinstance(callback, int):
-            self._m.figure.f.canvas.mpl_disconnect(callback)
-            name = dict(zip(cbs.values(), cbs.keys()))[callback]
-            del cbs[name]
-
-            # call cleanup methods on removal
-            fname = name.split("__")[0]
-            if hasattr(self._cb, f"_{fname}_cleanup"):
-                getattr(self._cb, f"_{fname}_cleanup")()
-
-            print(f"Removed the callback: '{name}'.")
-
-        else:
-            if isinstance(callback, str):
-                names = [callback]
-                if names[0] not in cbs:
-                    warn(
-                        f"The callback '{names[0]}' is not attached and can not"
-                        + " be removed. Attached callbacks are:\n    - "
-                        + "    - \n".join(list(cbs))
-                    )
-                    return
-
-            elif callable(callback):
-                # identify all callbacks that relate to the provided function
-                names = [key for key in cbs if key.split("__")[0] == callback.__name__]
-                if len(names) == 0:
-                    warn(
-                        f"The callback '{callback.__name__}' is not attached"
-                        + "and can not be removed. Attached callbacks are:"
-                        + "\n    - "
-                        + "    - \n".join(list(cbs))
-                    )
-
-            for name in names:
-                self._m.figure.f.canvas.mpl_disconnect(cbs[name])
-                del cbs[name]
-
-                # call cleanup methods on removal
-                fname = name.split("__")[0]
-                if hasattr(self._cb, f"_{fname}_cleanup"):
-                    getattr(self._cb, f"_{fname}_cleanup")()
-
-                print(f"Removed the callback: '{name}'.")
+            return cbs
 
     def _add_callback(self, callback, double_click=False, mouse_button=1, **kwargs):
         """
@@ -736,6 +678,12 @@ class cb_container(object):
             kwargs passed to the callback-function
             For documentation of the individual functions check the docs in `m.cb`
 
+        Returns
+        -------
+        cbname : str
+            the identification string of the callback
+            (to remove the callback, use `m.cb.remove(cbname)`)
+
         """
 
         assert not all(
@@ -753,62 +701,107 @@ class cb_container(object):
             # re-bind the callback methods to the eomaps.Maps.cb object
             # in case custom functions are used
             if hasattr(callback, "__func__"):
-                callback = callback.__func__.__get__(self._cb)
+                callback = callback.__func__.__get__(self._m)
             else:
-                callback = callback.__get__(self._cb)
+                callback = callback.__get__(self._m)
 
-        # TODO support multiple assignments for callbacks
         # make sure multiple callbacks of the same funciton are only assigned
         # if multiple assignments are properly handled
         multi_cb_functions = ["mark", "annotate"]
 
-        no_multi_cb = [i for i in callbacks._cb_list if i not in multi_cb_functions]
-        cb_names = [i.split("__")[0] for i in self.get.attached_callbacks]
+        if double_click:
+            d = self.get.cbs["double"][mouse_button]
+        else:
+            d = self.get.cbs["single"][mouse_button]
 
-        # add mouse-button assignment as suffix to the name (with __ separator)
-        cbname = callback.__name__ + f"__{double_click}_{mouse_button}"
+        # get a unique name for the callback
+        ncb = [int(i.rsplit("_", 1)[1]) for i in d if i.startswith(callback.__name__)]
+        cbkey = callback.__name__ + f"_{max(ncb) + 1 if len(ncb) > 0 else 0}"
 
-        if callback.__name__ in no_multi_cb:
-            assert callback.__name__ not in cb_names, (
+        if callback.__name__ not in multi_cb_functions:
+            assert len(ncb) == 0, (
                 "Multiple assignments of the callback"
                 + f" '{callback.__name__}' are not (yet) supported..."
             )
 
-        else:
-            ncb = cb_names.count(callback.__name__)
-            # make the name unique if the same callback is attached multiple times
-            if ncb > 0:
-                cbname += f"_[{ncb}]"
+        d[cbkey] = partial(callback, **kwargs)
 
+        # add mouse-button assignment as suffix to the name (with __ separator)
+        cbname = cbkey + f"__{'double' if double_click else 'single'}__{mouse_button}"
+
+        return cbname
+
+    def _get_clickdict(self, event):
+        ind = event.ind
+        if ind is not None:
+            if isinstance(
+                event.artist,
+                (
+                    EllipseCollection,
+                    PolyCollection,
+                    TriMesh,
+                ),
+            ):
+                clickdict = dict(
+                    pos=(self._m._props["x0"][ind], self._m._props["y0"][ind]),
+                    ID=self._m._props["ids"][ind],
+                    val=self._m._props["z_data"][ind],
+                    ind=ind,
+                )
+
+                return clickdict
+
+    def _add_pick_callback(self):
         # ------------- add a callback
         def onpick(event):
-            if (event.double_click == double_click) and (
-                event.mouse_button == mouse_button
-            ):
-                ind = event.ind
-                if ind is not None:
-                    if isinstance(
-                        event.artist,
-                        (
-                            EllipseCollection,
-                            PolyCollection,
-                            TriMesh,
-                        ),
-                    ):
-                        clickdict = dict(
-                            pos=(self._m._props["x0"][ind], self._m._props["y0"][ind]),
-                            ID=self._m._props["ids"][ind],
-                            val=self._m._props["z_data"][ind],
-                            ind=ind,
-                        )
+            clickdict = self._get_clickdict(event)
 
-                        callback(**clickdict, **kwargs)
+            if event.double_click:
+                cbs = self.get.cbs["double"]
+            else:
+                cbs = self.get.cbs["single"]
 
-                else:
-                    if hasattr(self._cb, f"_{callback.__name__}_nopick_callback"):
-                        getattr(self._cb, f"_{callback.__name__}_nopick_callback")()
+            if event.mouse_button in cbs:
+                for key, cb in cbs[event.mouse_button].items():
+                    if clickdict is not None:
+                        cb(**clickdict)
+                    else:
+                        if hasattr(self._cb, f"_{key.split('__')[0]}_nopick_callback"):
+                            getattr(
+                                self._cb, f"_{key.split('__')[0]}_nopick_callback"
+                            )()
 
-        cid = self._m.figure.f.canvas.mpl_connect("pick_event", onpick)
-        self.get.attached_callbacks[cbname] = cid
+            self._m.BM.update()
+            # self._m.figure.f.canvas.draw_idle()
 
-        return cid
+        self._m.figure.f.canvas.mpl_connect("pick_event", onpick)
+
+    def remove(self, ID=None):
+        """
+        remove an attached callback from the figure
+
+        Parameters
+        ----------
+        callback : int, str or tuple
+            if str: the name of the callback to remove
+                    (`<function_name>_<count>__<double/single>__<button_ID>`)
+        """
+        if ID is not None:
+            name, ds, b = ID.split("__")
+
+        dsdict = self.get.cbs.get(ds, None)
+        if dsdict is not None:
+            bdict = dsdict.get(int(b))
+        else:
+            return
+
+        if bdict is not None:
+            if name in bdict:
+                del bdict[name]
+
+                # call cleanup methods on removal
+                fname = name.rsplit("_", 1)[0]
+                if hasattr(self._cb, f"_{fname}_cleanup"):
+                    getattr(self._cb, f"_{fname}_cleanup")()
+
+                print(f"Removed the callback: '{ID}'.")

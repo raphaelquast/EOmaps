@@ -67,9 +67,6 @@ class callbacks(object):
     def __init__(self, m):
         self.m = m
 
-    def __repr__(self):
-        return "available callbacks:\n    - " + "\n    - ".join(self._cb_list)
-
     def load(
         self,
         ID=None,
@@ -268,8 +265,6 @@ class callbacks(object):
 
         annotation.set_text(printstr)
 
-        self.m.BM.update()
-
     def clear_annotations(self, remove_permanent=True, remove_temporary=True, **kwargs):
         """
         remove all temporary and permanent annotations from the plot
@@ -284,8 +279,6 @@ class callbacks(object):
             self.m.BM.remove_artist(self.annotation)
             del self.annotation
 
-        self.m.BM.update()
-
     def _clear_annotations_nopick_callback(self):
         self.clear_annotations()
 
@@ -295,7 +288,6 @@ class callbacks(object):
     def _annotate_nopick_callback(self):
         if hasattr(self, "annotation"):
             self.annotation.set_visible(False)
-        self.m.BM.update()
 
     def plot(
         self,
@@ -543,8 +535,6 @@ class callbacks(object):
         if layer is not None:
             self.m.BM.add_artist(marker, layer)
 
-        self.m.BM.update()
-
     def clear_markers(self, remove_permanent=True, remove_temporary=True, **kwargs):
         """
         remove all temporary and permanent annotations from the plot
@@ -560,8 +550,6 @@ class callbacks(object):
             self.m.BM.remove_artist(self.marker)
             del self.marker
 
-        self.m.BM.update()
-
     def _clear_markers_nopick_callback(self):
         self.clear_markers()
 
@@ -571,4 +559,3 @@ class callbacks(object):
     def _mark_nopick_callback(self):
         if hasattr(self, "marker"):
             self.marker.set_visible(False)
-        self.m.BM.update()

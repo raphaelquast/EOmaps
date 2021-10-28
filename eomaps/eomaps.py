@@ -100,8 +100,6 @@ class Maps(object):
         # default classify specs
         self.classify_specs = classify_specs(self)
 
-        self._attached_cbs = dict()  # dict to memorize attached callbacks
-
         self._shapes = shapes(self)
 
         self._data_mask = slice(None)
@@ -1393,6 +1391,8 @@ class Maps(object):
             ID=ID, pos=xy, radius=radius, ind=None, shape=shape, buffer=buffer, **kwargs
         )
 
+        self.BM.update()
+
     def add_annotation(
         self,
         ID=None,
@@ -1466,6 +1466,8 @@ class Maps(object):
             text=text,
             **kwargs,
         )
+
+        self.BM.update()
 
     @wraps(plt.savefig)
     def savefig(self, *args, **kwargs):
@@ -1646,7 +1648,6 @@ class Maps(object):
 
             coll.set_clim(vmin, vmax)
             ax.add_collection(coll)
-            ax.autoscale()
 
             self.figure.coll = coll
 
@@ -1668,11 +1669,14 @@ class Maps(object):
             # ------------- add a picker that will be used by the callbacks
             self._attach_picker(maxdist=np.inf)
 
+            # attach the pick-callback that executes the callbacks
+            self.cb._add_pick_callback()
+
             # attach a cleanup function if the figure is closed
             # to ensure callbacks are removed and the container is reinitialized
             def on_close(event):
-                while len(self._attached_cbs) > 0:
-                    self.cb.remove(list(self._attached_cbs)[-1])
+                for key in self.cb.get.attached_callbacks:
+                    self.cb.remove(key)
 
                 # remove all figure properties
                 self.figure = self.figure.reinit()
@@ -1682,8 +1686,14 @@ class Maps(object):
             # set the blit-manager
             self.BM = BlitManager(self.figure.f.canvas)
 
-            # trigger drawing the figure
+            # get the extent of the added collection
+            b = self.figure.coll.get_datalim(ax.transData)
+            # set the axis-extent
+            ax.set_extent((b.xmin, b.xmax, b.ymin, b.ymax), crs=ax.projection)
+
+            # draw the figure
             self.figure.f.canvas.draw()
+
         except Exception as ex:
             self.figure = self.figure.reinit()
             raise ex

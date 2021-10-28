@@ -120,12 +120,13 @@ class TestBasicPlotting(unittest.TestCase):
             if n == 2:
                 mouse_button = 2
 
-            m.cb.attach(cb, double_click=double_click, mouse_button=mouse_button)
+            cbID = m.cb.attach(cb, double_click=double_click, mouse_button=mouse_button)
             self.assertTrue(
-                list(m.cb.get.attached_callbacks)
-                == [f"{cb}__{double_click}_{mouse_button}"]
+                cbID
+                == f"{cb}_0__{'double' if double_click else 'single'}__{mouse_button}"
             )
-            m.cb.remove(f"{cb}__{double_click}_{mouse_button}")
+            self.assertTrue(len(m.cb.get.attached_callbacks) == 1)
+            m.cb.remove(cbID)
             self.assertTrue(len(m.cb.get.attached_callbacks) == 0)
 
         plt.close(m.figure.f)

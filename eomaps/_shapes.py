@@ -77,6 +77,7 @@ class shapes(object):
         xs, ys : array-like
             the coordinates of the ellipse points.
         """
+
         a = np.broadcast_to(a[:, None], (x0.size, n))
         b = np.broadcast_to(b[:, None], (x0.size, n))
 
@@ -189,7 +190,12 @@ class shapes(object):
             theta = np.arctan(d[1] / d[0]) - (np.pi / 2)
 
             xs, ys = self.calc_ellipse_points(
-                x, y, np.full_like(x, rx), np.full_like(x, ry), theta, n=n
+                x,
+                y,
+                np.full_like(x, rx, dtype=float),
+                np.full_like(x, ry, dtype=float),
+                theta,
+                n=n,
             )
             xs, ys = np.ma.masked_invalid((xs, ys), copy=False)
             xs, ys = np.ma.masked_invalid(t_in_plot.transform(xs, ys), copy=False)
@@ -201,20 +207,25 @@ class shapes(object):
             d = np.ma.masked_invalid(pl) - np.ma.masked_invalid(pr)
             theta = np.arctan(d[1] / d[0]) - (np.pi / 2)
             xs, ys = self.calc_ellipse_points(
-                p[0], p[1], np.full_like(x, rx), np.full_like(x, ry), theta, n=n
+                p[0],
+                p[1],
+                np.full_like(x, rx, dtype=float),
+                np.full_like(x, ry, dtype=float),
+                theta,
+                n=n,
             )
 
             xs, ys = np.ma.masked_invalid((xs, ys), copy=False)
             xs, ys = np.ma.masked_invalid(t_radius_plot.transform(xs, ys), copy=False)
 
         # get the mask for invalid, very distorted or very large shapes
-        dx = xs.max(axis=1) - xs.min(axis=1)
-        dy = ys.max(axis=1) - ys.min(axis=1)
+        dx = np.abs(xs.max(axis=1) - xs.min(axis=1))
+        dy = np.abs(ys.max(axis=1) - ys.min(axis=1))
         mask = (
             ~xs.mask.any(axis=1)
             & ~ys.mask.any(axis=1)
-            & (dx < (np.ma.median(dx) * 10))
-            & (dy < (np.ma.median(dy) * 10))
+            & (dx <= (np.ma.median(dx) * 10))
+            & (dy <= (np.ma.median(dy) * 10))
             & np.isfinite(theta)
         )
 
@@ -222,6 +233,7 @@ class shapes(object):
 
     def ellipses(self, x, y, crs, radius, radius_crs, n, **kwargs):
         xs, ys, mask = self._get_ellipse_points(x, y, crs, radius, radius_crs, n=n)
+
         # special treatment of array input to properly mask values
         array = kwargs.pop("array", None)
         if array is not None:
