@@ -175,7 +175,7 @@ class Maps(object):
         """
         # create a new class
         copy_cls = Maps()
-        if connect_to_parent is True:
+        if connect is True:
             copy_cls.connect(self)
 
         copy_cls.set_data_specs(
@@ -194,7 +194,7 @@ class Maps(object):
         elif copy_data == "share":
             copy_cls.data = self.data
 
-        if connect_to_parent is True:
+        if connect is True:
             copy_cls.BM = self.BM
 
         return copy_cls
@@ -1656,7 +1656,7 @@ class Maps(object):
             warnings.warn(
                 "EOmaps: callbacks are not yet supported on multiple axes."
                 + "For multiple interactive axes, use "
-                + "`m2 = m.copy(connect_to_parent=True)` to copy and connect the Maps"
+                + "`m2 = m.copy(connect=True)` to copy and connect the Maps"
                 + " object and then use `m2.plot_map(...) to plot additional data"
             )
 
