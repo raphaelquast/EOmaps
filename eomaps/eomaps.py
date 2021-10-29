@@ -1778,7 +1778,8 @@ class Maps(object):
             if self.parent is None:
                 self.BM = BlitManager(self.figure.f.canvas)
 
-            if not hasattr(self, "_extent_set"):
+            # only set the extent once for each axes
+            if not hasattr(self.figure.ax, "_EOmaps_extent_set"):
                 # get the extent of the added collection
                 b = self.figure.coll.get_datalim(ax.transData)
 
@@ -1795,7 +1796,7 @@ class Maps(object):
                 #                min(b.ymax, ymax),
                 #                ), crs=ax.projection)
 
-                self._extent_set = True
+                self.figure.ax._EOmaps_extent_set = True
 
             # draw the figure
             self.figure.f.canvas.draw()
