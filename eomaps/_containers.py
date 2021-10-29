@@ -458,7 +458,7 @@ class cb_container(object):
 
     """
 
-    def __init__(self, m):
+    def __init__(self, m, parent=None):
         self._m = m
         self._cb = callbacks(m)
 
@@ -754,7 +754,11 @@ class cb_container(object):
     def _add_pick_callback(self):
         # ------------- add a callback
         def onpick(event):
-            clickdict = self._get_clickdict(event)
+            self.event = event
+            if event.artist != self._m.figure.coll:
+                return
+            else:
+                clickdict = self._get_clickdict(event)
 
             if event.double_click:
                 cbs = self.get.cbs["double"]
@@ -766,13 +770,14 @@ class cb_container(object):
                     if clickdict is not None:
                         cb(**clickdict)
                     else:
-                        if hasattr(self._cb, f"_{key.split('__')[0]}_nopick_callback"):
+                        if hasattr(
+                            self._cb, f"_{key.rsplit('_', 1)[0]}_nopick_callback"
+                        ):
                             getattr(
-                                self._cb, f"_{key.split('__')[0]}_nopick_callback"
+                                self._cb, f"_{key.rsplit('_', 1)[0]}_nopick_callback"
                             )()
 
             self._m.BM.update()
-            # self._m.figure.f.canvas.draw_idle()
 
         self._m.figure.f.canvas.mpl_connect("pick_event", onpick)
 
