@@ -72,6 +72,7 @@ class Maps(object):
     crs_list = ccrs
 
     def __init__(self):
+        self.parent = None
         self._orientation = "vertical"
 
         # default plot specs
@@ -139,7 +140,7 @@ class Maps(object):
         copy_data_specs=True,
         copy_plot_specs=True,
         copy_classify_specs=True,
-        connect_to_parent=False,
+        connect=False,
     ):
         """
         create a (deep)copy of the class that inherits all specifications
@@ -150,7 +151,7 @@ class Maps(object):
 
         Parameters
         ----------
-        connect_to_parent : bool
+        connect : bool
             Indicator if the Maps-object should be connected to the parent Maps object.
             -> useful to add additional interactive layers to the plot
 
