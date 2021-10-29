@@ -327,18 +327,60 @@ class TestBasicPlotting(unittest.TestCase):
 
         m2 = m.copy()
 
-        m.data_specs == m2.data_specs
-        m.data_specs == m2.plot_specs
-        m.classify_specs == m2.classify_specs
+        self.assertTrue(
+            m.data_specs[["xcoord", "ycoord", "parameter", "crs"]]
+            == m2.data_specs[["xcoord", "ycoord", "parameter", "crs"]]
+        )
+        self.assertTrue(
+            all(
+                [
+                    [i == j]
+                    for i, j in zip(m.plot_specs, m2.plot_specs)
+                    if i[0] != "cmap"
+                ]
+            )
+        )
+        self.assertTrue([*m.classify_specs] == [*m2.classify_specs])
+        self.assertTrue(m2.data == None)
 
         m3 = m.copy(copy_data=True)
 
-        m.data_specs == m3.data_specs
-        m.data_specs == m3.plot_specs
-        m.classify_specs == m3.classify_specs
-        m.data == m3.data
+        self.assertTrue(
+            m.data_specs[["xcoord", "ycoord", "parameter", "crs"]]
+            == m3.data_specs[["xcoord", "ycoord", "parameter", "crs"]]
+        )
+        self.assertTrue(
+            all(
+                [
+                    [i == j]
+                    for i, j in zip(m.plot_specs, m3.plot_specs)
+                    if i[0] != "cmap"
+                ]
+            )
+        )
+        self.assertTrue([*m.classify_specs] == [*m3.classify_specs])
+        self.assertFalse(m3.data is m.data)
+        self.assertTrue(m3.data.equals(m.data))
+
         m3.plot_map()
         plt.close(m3.figure.f)
+
+        m4 = m.copy(copy_data="share")
+        self.assertTrue(m4.data is m.data)
+
+    def test_connect(self):
+        m = Maps()
+        m.data = self.data
+        m.set_data_specs(xcoord="x", ycoord="y", in_crs=3857)
+        m.set_plot_specs(plot_crs=3857, shape="rectangles")
+        m.set_classify_specs(scheme="Quantiles", k=5)
+        m.plot_map()
+
+        # plot on the same axes
+        m2 = m.copy(connect=True, copy_data="share")
+        m2.plot_map(gs_ax=m.figure.ax, facecolor="none", edgecolor="r")
+
+        plt.close(m.figure.f)
 
     def test_prepare_data(self):
         m = Maps()

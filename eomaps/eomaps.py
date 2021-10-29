@@ -163,6 +163,7 @@ class Maps(object):
         copy_data : bool or str
             if True: the dataset will be copied
             if "share": the dataset will be shared
+                        (changes will be shared between the Maps objects!!!)
             if False: no data will be assigned
 
         copy_data_specs, copy_plot_specs, copy_classify_specs : bool, optional
@@ -175,19 +176,27 @@ class Maps(object):
         """
         # create a new class
         copy_cls = Maps()
+
         if connect is True:
             copy_cls.connect(self)
 
-        copy_cls.set_data_specs(
-            **{key: copy.deepcopy(val) for key, val in self.data_specs if key != "data"}
-        )
-        copy_cls.set_plot_specs(
-            **{key: copy.deepcopy(val) for key, val in self.plot_specs}
-        )
-        copy_cls.set_classify_specs(
-            scheme=self.classify_specs.scheme,
-            **{key: copy.deepcopy(val) for key, val in self.classify_specs},
-        )
+        if copy_data_specs:
+            copy_cls.set_data_specs(
+                **{
+                    key: copy.deepcopy(val)
+                    for key, val in self.data_specs
+                    if key != "data"
+                }
+            )
+        if copy_plot_specs:
+            copy_cls.set_plot_specs(
+                **{key: copy.deepcopy(val) for key, val in self.plot_specs}
+            )
+        if copy_classify_specs:
+            copy_cls.set_classify_specs(
+                scheme=self.classify_specs.scheme,
+                **{key: copy.deepcopy(val) for key, val in self.classify_specs},
+            )
 
         if copy_data is True:
             copy_cls.data = self.data.copy(deep=True)
