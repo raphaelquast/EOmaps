@@ -1,10 +1,9 @@
 """a collection of helper-functions to generate map-plots"""
 
-from functools import partial, lru_cache, wraps, update_wrapper
+from functools import partial, lru_cache, wraps
 from collections import defaultdict
 import warnings
 import copy
-from types import SimpleNamespace
 
 import numpy as np
 import pandas as pd
@@ -19,8 +18,7 @@ from pyproj import CRS, Transformer
 
 import matplotlib as mpl
 import matplotlib.pyplot as plt
-from matplotlib import cm, collections
-from matplotlib.tri import Triangulation, TriMesh
+from matplotlib import cm
 from matplotlib.colors import LinearSegmentedColormap
 from matplotlib.gridspec import GridSpec, GridSpecFromSubplotSpec, SubplotSpec
 from matplotlib.patches import Patch
@@ -31,8 +29,8 @@ from cartopy import feature as cfeature
 from cartopy.io import shapereader
 
 from .helpers import pairwise, cmap_alpha, BlitManager
-from .callbacks import callbacks
 from ._shapes import shapes
+
 from ._containers import (
     data_specs,
     plot_specs,
@@ -58,17 +56,6 @@ class Maps(object):
         or below the map ("vertical"). The default is "vertical"
     """
 
-    _shapes = [
-        "ellipses",
-        "rectangles",
-        "trimesh_rectangles",
-        "delauney_triangulation",
-        "delauney_triangulation_flat",
-        "delauney_triangulation_masked",
-        "delauney_triangulation_flat_masked",
-        "voroni",
-    ]
-
     crs_list = ccrs
 
     def __init__(self):
@@ -82,8 +69,6 @@ class Maps(object):
             title=None,
             cmap=plt.cm.viridis.copy(),
             plot_crs=4326,
-            radius_crs="in",
-            radius="estimate",
             histbins=256,
             tick_precision=2,
             vmin=None,
@@ -94,13 +79,15 @@ class Maps(object):
             add_colorbar=True,
             coastlines=True,
             density=False,
-            shape="ellipses",
         )
 
         # default classify specs
         self.classify_specs = classify_specs(self)
 
-        self._shapes = shapes(self)
+        # self._shapes = shapes(self)
+        self.set_shape = shapes(self)
+
+        self.set_shape.ellipses()
 
         self._data_mask = slice(None)
         self.data_specs = data_specs(
@@ -280,17 +267,6 @@ class Maps(object):
             A list for easy-accses is available as `m.crs_list`
 
             The default is 4326.
-        radius_crs : str, optional
-            The coordinate-system in which the radius is provided.
-                - "in" : the crs of the input-dataframe (e.g. "in_crs")
-                - "out" : the crs used for plotting (e.g. "plot_crs")
-                - a crs specification (e.g. epsg-code, wkt string etc.) that
-                  should be used to estimate the pixel-dimensions
-            The default is "in".
-        radius : str, float or tuple, optional
-            The radius of the patches in the crs defined via "radius_crs".
-            If "estimate", the radius will be automatically determined from the
-            x-y coordinate separation of the data. The default is "estimate".
         histbins : int, list, tuple, array or "bins", optional
             If int: The number of histogram-bins to use for the colorbar.
             If list, tuple or numpy-array: the bins to use
@@ -318,34 +294,6 @@ class Maps(object):
             Indicator if the y-axis of the histogram should represent the
             probability-density (True) or the number of counts per bin (False)
             The default is False.
-        shape : str, optional
-            Indicator how the data-points should be plotted
-                - "ellipses": plot projected ellipses
-                - "rectangles": plot projected rectangles
-                  Useful if pixel-boundaries should be visible.
-                  (Note: polygons will have a visible boundary even if the
-                   linewidth is set to 0!)
-                - "trimesh_rectangles": rectangles but drawn with a
-                  TriMesh collection so that there are no boundaries between
-                  the pixels. (e.g. useful for contourplots)
-                  NOTE: setting edge- and facecolors afterwards is not possible!
-                - "delauney_triangulation": plot a delauney-triangulation
-                  for the given set of data. (e.g. a dense triangulation of
-                  irregularly spaced points)
-                  NOTE: setting edge- and facecolors afterwards is not possible!
-                - "delauney_triangulation_flat": same as the normal delauney-
-                  triangulation, but plotted as a polygon-collection so that
-                  edgecolors etc. can be set.
-                - "delauney_triangulation_masked" (or "_flat_masked"):
-                  same as "delauney_triangulation" but all triangles that
-                  exhibit side-lengths longer than (2 x radius) are masked
-
-                  This is particularly useful to triangulate concave areas
-                  that are densely sampled.
-                  -> you can use the radius as a parameter for the max.
-                     interpolation-distance!
-
-            The default is "trimesh_rectangles".
         """
 
         for key, val in kwargs.items():
@@ -421,24 +369,6 @@ class Maps(object):
                 return True, dict(
                     ind=None, double_click=double_click, mouse_button=event.button
                 )
-
-            # # always set the point as invalid if it is outside of the bounds
-            # # (for plots like delauney-triangulations that do not require a radius)
-            # bounds = self._bounds
-            # if not (
-            #     (bounds[0] < event.xdata < bounds[2])
-            #     and (bounds[1] < event.ydata < bounds[3])
-            # ):
-            #     dist = np.inf
-
-            # if dist < maxdist:
-            #     return True, dict(
-            #         ind=index, double_click=double_click, mouse_button=event.button
-            #     )
-            # else:
-            #     return True, dict(
-            #         ind=None, double_click=double_click, mouse_button=event.button
-            #     )
 
             return False, None
 
@@ -528,10 +458,6 @@ class Maps(object):
             parameter = self.data_specs.parameter
         if in_crs is None:
             in_crs = self.data_specs.crs
-        if radius is None:
-            radius = self.plot_specs.radius
-        if radius_crs is None:
-            radius_crs = self.plot_specs.radius_crs
         if cpos is None:
             cpos = self.plot_specs.cpos
         if cpos_radius is None:
@@ -573,32 +499,6 @@ class Maps(object):
 
         # transform center-points to the plot_crs
         props["x0"], props["y0"] = transformer.transform(xorig, yorig)
-
-        # get the radius for plotting
-        if radius == "estimate":
-            if radius_crs == "in":
-                radiusx = np.median(np.abs(np.diff(np.unique(xorig)))) / 2.0
-                radiusy = np.median(np.abs(np.diff(np.unique(yorig)))) / 2.0
-            elif radius_crs == "out":
-                radiusx = np.median(np.abs(np.diff(np.unique(props["x0"])))) / 2.0
-                radiusy = np.median(np.abs(np.diff(np.unique(props["y0"])))) / 2.0
-            else:
-                raise AssertionError(
-                    "radius can only be estimated if radius_crs is 'in' or 'out'!"
-                )
-        else:
-            # get manually specified radius (e.g. if radius != "estimate")
-            if isinstance(radius, (list, tuple)):
-                radiusx, radiusy = radius
-            elif isinstance(radius, (int, float)):
-                radiusx = radius
-                radiusy = radius
-
-        if buffer is not None:
-            radiusx = radiusx * buffer
-            radiusy = radiusy * buffer
-
-        props["radius"] = (radiusx, radiusy)
 
         props["mask"] = np.isfinite(props["x0"]) & np.isfinite(props["y0"])
 
@@ -1199,167 +1099,167 @@ class Maps(object):
             **kwargs,
         )
 
-    def add_discrete_layer(
-        self,
-        data,
-        parameter=None,
-        xcoord=None,
-        ycoord=None,
-        label_dict=None,
-        cmap=None,
-        norm=None,
-        vmin=None,
-        vmax=None,
-        color=None,
-        radius=None,
-        radius_crs=None,
-        in_crs=None,
-        cpos=None,
-        legend_kwargs=True,
-        shape="ellipses",
-        dynamic_layer_idx=None,
-        **kwargs,
-    ):
-        """
-        add an additional layer of data
+    # def add_discrete_layer(
+    #     self,
+    #     data,
+    #     parameter=None,
+    #     xcoord=None,
+    #     ycoord=None,
+    #     label_dict=None,
+    #     cmap=None,
+    #     norm=None,
+    #     vmin=None,
+    #     vmax=None,
+    #     color=None,
+    #     radius=None,
+    #     radius_crs=None,
+    #     in_crs=None,
+    #     cpos=None,
+    #     legend_kwargs=True,
+    #     shape="ellipses",
+    #     dynamic_layer_idx=None,
+    #     **kwargs,
+    # ):
+    #     """
+    #     add an additional layer of data
 
-        Parameters
-        ----------
-        data : pandas.DataFrame
-            a pandas DataFrame with column-names as specified via the parameters
-            "parameter", "xcoord" and "ycoord".
-        parameter : str, optional
-            The name of the parameter-column to use.
-            The default is None in which case the first column that is not
-            one of the values specified in "xcoord" or "ycoord" is used.
-        xcoord, ycoord : str, optional
-            The name of the coordinate-columns. The default is 'x' and 'y'.
-        label_dict : dict, optional
-            a dict that contains label-entries for each unique value encountered
-            in the data. The default is None.
-        cmap : str or a matplotlib.Colormap, optional
-            a matplotlib colormap name or instance. The default is 'viridis'.
-        norm : matplotlib.colors norm, optional
-            a matplotlib Norm instance to be used alongside the colormap.
-            The default is None.
-        color : matplotlib color, optional
-            alternative to specifying cmap & norm, use a uniform color for
-            all points.
-        radius : str, float, list or tuple
-            the radius (if list or tuple the ellipse-half-widths) of the points
-            in units of the "in_crs". If "estimate", the mean difference of the
-            provided coordinates will be used
-        radius_crs : str or crs
-            the crs in which the radius is defined
-            if 'in': "in_crs" will be used
-            if 'out': "plot_crs" will be used
-            else the input is interpreted via pyproj.CRS.from_user_input()
-        in_crs : int, dict or str, optional
-            CRS descriptor ( interpreted by pyproj.CRS.from_user_input() )
-            that is used to identify the CRS of the input-coordinates
-            (e.g. "xcoord", "ycoord"). The default is 4326.
-        cpos : str
-            the position of the coordinate
-            (one of 'c', 'll', 'lr', 'ul', 'ur')
-        legend_kwargs : dict or bool, optional
-            if False, no legend will be added.
-            If a dict is provided, it will be used as kwargs for plt.legend()
-            The default is True.
-        shape : str
-            the shapes to plot (either "ellipses" or "rectangles")
-        dynamic_layer_idx : int or None
+    #     Parameters
+    #     ----------
+    #     data : pandas.DataFrame
+    #         a pandas DataFrame with column-names as specified via the parameters
+    #         "parameter", "xcoord" and "ycoord".
+    #     parameter : str, optional
+    #         The name of the parameter-column to use.
+    #         The default is None in which case the first column that is not
+    #         one of the values specified in "xcoord" or "ycoord" is used.
+    #     xcoord, ycoord : str, optional
+    #         The name of the coordinate-columns. The default is 'x' and 'y'.
+    #     label_dict : dict, optional
+    #         a dict that contains label-entries for each unique value encountered
+    #         in the data. The default is None.
+    #     cmap : str or a matplotlib.Colormap, optional
+    #         a matplotlib colormap name or instance. The default is 'viridis'.
+    #     norm : matplotlib.colors norm, optional
+    #         a matplotlib Norm instance to be used alongside the colormap.
+    #         The default is None.
+    #     color : matplotlib color, optional
+    #         alternative to specifying cmap & norm, use a uniform color for
+    #         all points.
+    #     radius : str, float, list or tuple
+    #         the radius (if list or tuple the ellipse-half-widths) of the points
+    #         in units of the "in_crs". If "estimate", the mean difference of the
+    #         provided coordinates will be used
+    #     radius_crs : str or crs
+    #         the crs in which the radius is defined
+    #         if 'in': "in_crs" will be used
+    #         if 'out': "plot_crs" will be used
+    #         else the input is interpreted via pyproj.CRS.from_user_input()
+    #     in_crs : int, dict or str, optional
+    #         CRS descriptor ( interpreted by pyproj.CRS.from_user_input() )
+    #         that is used to identify the CRS of the input-coordinates
+    #         (e.g. "xcoord", "ycoord"). The default is 4326.
+    #     cpos : str
+    #         the position of the coordinate
+    #         (one of 'c', 'll', 'lr', 'ul', 'ur')
+    #     legend_kwargs : dict or bool, optional
+    #         if False, no legend will be added.
+    #         If a dict is provided, it will be used as kwargs for plt.legend()
+    #         The default is True.
+    #     shape : str
+    #         the shapes to plot (either "ellipses" or "rectangles")
+    #     dynamic_layer_idx : int or None
 
-            If a "dynamic_layer_idx" is specified, the collection will only
-            be drawn if `m.BM.update()` is called!
-            This can be used to speed up drawing in case the collection is
-            changed via a callback-function.
+    #         If a "dynamic_layer_idx" is specified, the collection will only
+    #         be drawn if `m.BM.update()` is called!
+    #         This can be used to speed up drawing in case the collection is
+    #         changed via a callback-function.
 
-            The layer-index can be any number... the default values are:
-                0: background
-                1: overlays
-                10 : annotations
+    #         The layer-index can be any number... the default values are:
+    #             0: background
+    #             1: overlays
+    #             10 : annotations
 
-            The default is None in which case the layer is added as a
-            "static-background" layer
-        **kwargs
-            kwargs passed to the initialization of the maptlotlib collection
-            (dependent on the used plot-shape!)
-        """
-        assert self.figure.f is not None, "you must call .plot_map() first!"
+    #         The default is None in which case the layer is added as a
+    #         "static-background" layer
+    #     **kwargs
+    #         kwargs passed to the initialization of the maptlotlib collection
+    #         (dependent on the used plot-shape!)
+    #     """
+    #     assert self.figure.f is not None, "you must call .plot_map() first!"
 
-        for key in ("cmap", "array", "norm"):
-            assert (
-                key not in kwargs
-            ), f"The key '{key}' is assigned internally by EOmaps!"
+    #     for key in ("cmap", "array", "norm"):
+    #         assert (
+    #             key not in kwargs
+    #         ), f"The key '{key}' is assigned internally by EOmaps!"
 
-        if parameter is None:
-            parameter = next(i for i in data.keys() if i not in [xcoord, ycoord])
+    #     if parameter is None:
+    #         parameter = next(i for i in data.keys() if i not in [xcoord, ycoord])
 
-        # ---------------------- prepare the data
-        props = self._prepare_data(
-            data=data,
-            in_crs=in_crs,
-            plot_crs=self.plot_specs["plot_crs"],
-            radius=radius,
-            radius_crs=radius_crs,
-            cpos=cpos,
-            parameter=parameter,
-            xcoord=xcoord,
-            ycoord=ycoord,
-        )
+    #     # ---------------------- prepare the data
+    #     props = self._prepare_data(
+    #         data=data,
+    #         in_crs=in_crs,
+    #         plot_crs=self.plot_specs["plot_crs"],
+    #         radius=radius,
+    #         radius_crs=radius_crs,
+    #         cpos=cpos,
+    #         parameter=parameter,
+    #         xcoord=xcoord,
+    #         ycoord=ycoord,
+    #     )
 
-        # ------------- plot the data
-        if color:
-            args = dict(array=None, cmap=None, norm=None, color=color, **kwargs)
-        else:
-            args = dict(
-                array=props["z_data"], cmap=cmap, norm=norm, color=None, **kwargs
-            )
+    #     # ------------- plot the data
+    #     if color:
+    #         args = dict(array=None, cmap=None, norm=None, color=color, **kwargs)
+    #     else:
+    #         args = dict(
+    #             array=props["z_data"], cmap=cmap, norm=norm, color=None, **kwargs
+    #         )
 
-        if shape.startswith("delauney_triangulation"):
-            shape = "delauney_triangulation"
-            args["masked"] = True if "masked" in shape else False
-            args["flat"] = True if "flat" in shape else False
+    #     if shape.startswith("delauney_triangulation"):
+    #         shape = "delauney_triangulation"
+    #         args["masked"] = True if "masked" in shape else False
+    #         args["flat"] = True if "flat" in shape else False
 
-        coll = self._get_coll(shape, props, args, in_crs=in_crs, radius_crs=radius_crs)
+    #     coll = self._get_coll(shape, props, args, in_crs=in_crs, radius_crs=radius_crs)
 
-        coll.set_clim(vmin, vmax)
-        self.figure.ax.add_collection(coll)
+    #     coll.set_clim(vmin, vmax)
+    #     self.figure.ax.add_collection(coll)
 
-        if dynamic_layer_idx is not None:
-            # make this collection a "temporary layer"
-            self.BM.add_artist(coll, layer=dynamic_layer_idx)
+    #     if dynamic_layer_idx is not None:
+    #         # make this collection a "temporary layer"
+    #         self.BM.add_artist(coll, layer=dynamic_layer_idx)
 
-        if isinstance(cmap, str):
-            cmap = coll.cmap
-        if norm is None:
-            norm = coll.norm
+    #     if isinstance(cmap, str):
+    #         cmap = coll.cmap
+    #     if norm is None:
+    #         norm = coll.norm
 
-        if legend_kwargs is True or isinstance(legend_kwargs, dict):
-            legkwargs = dict(loc="upper right")
-            try:
-                legkwargs.update(legend_kwargs)
-            except TypeError:
-                pass
+    #     if legend_kwargs is True or isinstance(legend_kwargs, dict):
+    #         legkwargs = dict(loc="upper right")
+    #         try:
+    #             legkwargs.update(legend_kwargs)
+    #         except TypeError:
+    #             pass
 
-            uniquevals = pd.unique(props["z_data"])
-            if len(uniquevals) > 20:
-                print("warnings, more than 20 entries... skipping legend generation")
-            else:
-                if color:
-                    proxies = [Patch(color=color)]
-                    labels = [
-                        label_dict.get("label", "overlay") if label_dict else "overlay"
-                    ]
-                else:
-                    proxies = [Patch(color=cmap(norm(val))) for val in uniquevals]
-                    if label_dict:
-                        labels = [label_dict[val] for val in uniquevals]
-                    else:
-                        labels = [str(val) for val in uniquevals]
-                _ = self.figure.ax.legend(proxies, labels, **legkwargs)
+    #         uniquevals = pd.unique(props["z_data"])
+    #         if len(uniquevals) > 20:
+    #             print("warnings, more than 20 entries... skipping legend generation")
+    #         else:
+    #             if color:
+    #                 proxies = [Patch(color=color)]
+    #                 labels = [
+    #                     label_dict.get("label", "overlay") if label_dict else "overlay"
+    #                 ]
+    #             else:
+    #                 proxies = [Patch(color=cmap(norm(val))) for val in uniquevals]
+    #                 if label_dict:
+    #                     labels = [label_dict[val] for val in uniquevals]
+    #                 else:
+    #                     labels = [str(val) for val in uniquevals]
+    #             _ = self.figure.ax.legend(proxies, labels, **legkwargs)
 
-        return coll
+    #     return coll
 
     def add_marker(
         self,
@@ -1511,74 +1411,6 @@ class Maps(object):
     @wraps(plt.savefig)
     def savefig(self, *args, **kwargs):
         self.figure.f.savefig(*args, **kwargs)
-
-    def _get_coll(self, shape, props, args, in_crs=None, radius_crs=None):
-        if in_crs is None:
-            in_crs = self.data_specs.crs
-        if radius_crs is None:
-            radius_crs = self.plot_specs.radius_crs
-
-        if shape.startswith("delauney_triangulation"):
-            args["masked"] = True if "masked" in shape else False
-            args["flat"] = True if "flat" in shape else False
-            shape = "delauney_triangulation"
-
-        if shape == "geod_circles":
-            coll = self._shapes.geod_circles(
-                props["xorig"],
-                props["yorig"],
-                in_crs,
-                np.mean(props["radius"]),
-                n=20,
-                **args,
-            )
-        elif shape == "ellipses":
-            coll = self._shapes.ellipses(
-                props["xorig"],
-                props["yorig"],
-                in_crs,
-                props["radius"],
-                radius_crs,
-                n=20,
-                **args,
-            )
-        elif shape == "rectangles":
-            coll = self._shapes.rectangles(
-                props["xorig"],
-                props["yorig"],
-                in_crs,
-                props["radius"],
-                radius_crs,
-                **args,
-            )
-        elif shape == "voroni":
-            coll = self._shapes.voroni(
-                props["xorig"],
-                props["yorig"],
-                in_crs,
-                props["radius"],
-                **args,
-            )
-        elif shape == "trimesh_rectangles":
-            coll = self._shapes.trimesh_rectangles(
-                props["xorig"],
-                props["yorig"],
-                in_crs,
-                props["radius"],
-                radius_crs,
-                **args,
-            )
-        elif shape == "delauney_triangulation":
-            coll = self._shapes.delauney_triangulation(
-                props["xorig"],
-                props["yorig"],
-                in_crs,
-                props["radius"],
-                radius_crs,
-                **args,
-            )
-
-        return coll
 
     def plot_map(
         self,
@@ -1738,7 +1570,8 @@ class Maps(object):
             else:
                 args = dict(array=props["z_data"], cmap=cbcmap, norm=norm, **kwargs)
 
-            coll = self._get_coll(shape, props, args)
+            # coll = self._get_coll(shape, props, args)
+            coll = self.shape.get_coll(props["xorig"], props["yorig"], "in", **args)
 
             coll.set_clim(vmin, vmax)
             ax.add_collection(coll)
@@ -1795,15 +1628,9 @@ class Maps(object):
                 ymin, ymax = ax.projection.y_limits
                 xmin, xmax = ax.projection.x_limits
 
+                # set the axis-extent
                 ax.set_xlim(max(b.xmin, xmin), min(b.xmax, xmax))
                 ax.set_ylim(max(b.ymin, ymin), min(b.ymax, ymax))
-
-                # # set the axis-extent
-                # ax.set_extent((max(b.xmin, xmin),
-                #                min(b.xmax, xmax),
-                #                max(b.ymin, ymin),
-                #                min(b.ymax, ymax),
-                #                ), crs=ax.projection)
 
                 self.figure.ax._EOmaps_extent_set = True
 

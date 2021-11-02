@@ -2,7 +2,9 @@ import unittest
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
+from matplotlib.gridspec import GridSpec
 from eomaps import Maps
+from eomaps._shapes import shapes
 
 
 class TestBasicPlotting(unittest.TestCase):
@@ -25,14 +27,74 @@ class TestBasicPlotting(unittest.TestCase):
 
     def test_simple_plot_shapes(self):
         usedata = self.data.sample(500)
-        for shape in Maps._shapes:
-            m = Maps()
-            m.data = usedata
-            m.set_data_specs(xcoord="x", ycoord="y", in_crs=3857)
-            m.set_plot_specs(plot_crs=4326, shape=shape)
-            m.plot_map()
 
-            plt.close(m.figure.f)
+        m = Maps()
+        m.data = usedata
+        m.set_data_specs(xcoord="x", ycoord="y", in_crs=3857)
+        m.set_plot_specs(crs=4326)
+
+        # rectangles
+        m.set_shape.geod_circles(radius=100000)
+        m.plot_map()
+
+        plt.close("all")
+
+        # rectangles
+        m.set_shape.rectangles()
+        m.plot_map()
+
+        m.set_shape.rectangles(radius=1, radius_crs=4326)
+        m.plot_map()
+
+        m.set_shape.rectangles(radius=(1, 2), radius_crs="out")
+        m.plot_map()
+
+        plt.close("all")
+
+        # trimesh rectangles
+        m.set_shape.trimesh_rectangles()
+        m.plot_map()
+
+        m.set_shape.trimesh_rectangles(radius=1, radius_crs=4326)
+        m.plot_map()
+
+        plt.close("all")
+
+        # ellipses
+        m.set_shape.ellipses()
+        m.plot_map()
+
+        m.set_shape.ellipses(radius=1, radius_crs=4326)
+        m.plot_map()
+
+        plt.close("all")
+
+        # delauney
+        m.set_shape.delauney_triangulation(flat=True)
+        m.plot_map()
+
+        m.set_shape.delauney_triangulation(flat=False)
+        m.plot_map()
+
+        m.set_shape.delauney_triangulation(masked=False)
+        m.plot_map()
+
+        plt.close("all")
+
+        # voroni
+        m.set_shape.voroni_diagram(masked=False)
+        m.plot_map()
+
+        m.set_shape.voroni_diagram(masked=True)
+        m.plot_map()
+
+        m.set_shape.delauney_triangulation(flat=False)
+        m.plot_map()
+
+        m.set_shape.delauney_triangulation(masked=False)
+        m.plot_map()
+
+        plt.close("all")
 
     def test_cpos(self):
         m = Maps()
@@ -44,8 +106,6 @@ class TestBasicPlotting(unittest.TestCase):
                 plot_crs=4326,
                 title="asdf",
                 label="bsdf",
-                radius=1,
-                radius_crs="out",
                 cpos_radius=2,
                 histbins=100,
                 density=True,
@@ -66,8 +126,6 @@ class TestBasicPlotting(unittest.TestCase):
             plot_crs=4326,
             title="asdf",
             label="bsdf",
-            radius=1,
-            radius_crs="out",
             histbins=100,
             density=True,
             cpos="ur",
@@ -179,38 +237,38 @@ class TestBasicPlotting(unittest.TestCase):
 
         plt.close(m.figure.f)
 
-    def test_add_discrete_layer(self):
-        m = Maps()
-        m.data = self.data
-        m.set_data_specs(xcoord="x", ycoord="y", in_crs=3857)
-        m.set_plot_specs(plot_crs=3857, shape="rectangles")
+    # def test_add_discrete_layer(self):
+    #     m = Maps()
+    #     m.data = self.data
+    #     m.set_data_specs(xcoord="x", ycoord="y", in_crs=3857)
+    #     m.set_plot_specs(plot_crs=3857, shape="rectangles")
 
-        m.plot_map()
+    #     m.plot_map()
 
-        coll = m.add_discrete_layer(
-            m.data.sample(1000),
-            shape="ellipses",
-            fc="none",
-            ec="y",
-            **m.data_specs[["parameter", "xcoord", "ycoord", "crs"]],
-        )
-        coll = m.add_discrete_layer(
-            m.data.sample(1000),
-            shape="rectangles",
-            fc="none",
-            ec="b",
-            **m.data_specs[["parameter", "xcoord", "ycoord", "crs"]],
-        )
-        coll = m.add_discrete_layer(
-            m.data.sample(1000),
-            shape="geod_circles",
-            fc="none",
-            ec="r",
-            radius=100000,
-            **m.data_specs[["parameter", "xcoord", "ycoord", "crs"]],
-        )
+    #     coll = m.add_discrete_layer(
+    #         m.data.sample(1000),
+    #         shape="ellipses",
+    #         fc="none",
+    #         ec="y",
+    #         **m.data_specs[["parameter", "xcoord", "ycoord", "crs"]],
+    #     )
+    #     coll = m.add_discrete_layer(
+    #         m.data.sample(1000),
+    #         shape="rectangles",
+    #         fc="none",
+    #         ec="b",
+    #         **m.data_specs[["parameter", "xcoord", "ycoord", "crs"]],
+    #     )
+    #     coll = m.add_discrete_layer(
+    #         m.data.sample(1000),
+    #         shape="geod_circles",
+    #         fc="none",
+    #         ec="r",
+    #         radius=100000,
+    #         **m.data_specs[["parameter", "xcoord", "ycoord", "crs"]],
+    #     )
 
-        plt.close(m.figure.f)
+    #     plt.close(m.figure.f)
 
     def test_add_annotate(self):
         m = Maps()
@@ -388,3 +446,97 @@ class TestBasicPlotting(unittest.TestCase):
         m.set_data_specs(xcoord="x", ycoord="y", in_crs=3857, parameter="value")
         m.set_plot_specs(shape="ellipses")
         data = m._prepare_data()
+
+    def test_a_complex_figure(self):
+        # %%
+        lon, lat = np.linspace(-180, 180, 500), np.linspace(-90, 90, 500)
+        lon, lat = np.meshgrid(lon, lat)
+
+        df = pd.DataFrame(
+            dict(lon=lon.flat, lat=lat.flat, data=(lon ** 2 + lat ** 2).flat)
+        )
+
+        gridspec = GridSpec(3, 4)
+
+        m = Maps()
+        m._maskit = False
+        m.set_data(data=df.sample(10000), xcoord="lon", ycoord="lat", crs=4326)
+
+        crss = iter(
+            (
+                m.crs_list.Stereographic(),
+                m.crs_list.Sinusoidal(),
+                m.crs_list.Mercator(),
+                #
+                m.crs_list.EckertI(),
+                m.crs_list.EckertII(),
+                m.crs_list.EckertIII(),
+                #
+                m.crs_list.EckertIV(),
+                m.crs_list.EckertV(),
+                m.crs_list.Mollweide(),
+                #
+                m.crs_list.Orthographic(central_longitude=45, central_latitude=45),
+                m.crs_list.AlbersEqualArea(),
+                m.crs_list.LambertCylindrical(),
+            )
+        )
+
+        for i, gs, title in zip(
+            (
+                ["ellipses", dict(radius=1.0, radius_crs="in")],
+                ["ellipses", dict(radius=100000, radius_crs="out")],
+                ["geod_circles", dict(radius=100000)],
+                #
+                ["rectangles", dict(radius=1.5, radius_crs="in")],
+                ["rectangles", dict(radius=100000, radius_crs="out")],
+                ["trimesh_rectangles", dict(radius=1.5, radius_crs="in")],
+                #
+                ["trimesh_rectangles", dict(radius=100000, radius_crs="out")],
+                ["voroni_diagram", dict(mask_radius=100000)],
+                ["voroni_diagram", dict(masked=False)],
+                #
+                [
+                    "delauney_triangulation",
+                    dict(mask_radius=(100000, 100000), mask_radius_crs="in"),
+                ],
+                [
+                    "delauney_triangulation",
+                    dict(mask_radius=100000, mask_radius_crs="out"),
+                ],
+                ["delauney_triangulation", dict(masked=False)],
+            ),
+            list(gridspec),
+            (
+                "in_ellipses",
+                "out_ellipses",
+                "geod_circles",
+                "in_rectangles",
+                "out_rectangles",
+                "in_trimesh_rectangles",
+                "out_trimesh_rectangles",
+                "voroni",
+                "voroni_unmasked",
+                "delauney_flat",
+                "delauney",
+                "delauney_unmasked",
+            ),
+        ):
+            print(title)
+            if hasattr(m, "BM"):
+                m2 = m.copy(copy_data="share", connect=True)
+
+                m2.plot_specs.title = title
+                getattr(m2.set_shape, i[0])(**i[1])
+                m2.plot_specs.plot_crs = next(crss)
+
+                m2.plot_map(edgecolor="none", gs_ax=gs, colorbar=True, pick_distance=5)
+                m2.cb.attach.annotate()
+            else:
+                m.plot_specs.title = title
+                getattr(m.set_shape, i[0])(**i[1])
+
+                m.plot_map(edgecolor="none", gs_ax=gs, colorbar=True)
+                m.cb.attach.annotate()
+        m.figure.f.tight_layout()
+        plt.close(m.figure.f)

@@ -4,7 +4,6 @@ import matplotlib.pyplot as plt
 from collections import defaultdict
 from matplotlib.patches import Circle, Ellipse, Rectangle, Polygon
 from pyproj import CRS, Transformer
-from ._shapes import shapes
 
 
 class callbacks(object):
@@ -479,7 +478,7 @@ class callbacks(object):
 
             pos = (self.m._props["xorig"][ind], self.m._props["yorig"][ind])
         if radius == "pixel":
-            radius = self.m._props["radius"]
+            radius = self.m.shape.radius
 
         # get manually specified radius (e.g. if radius != "estimate")
         if isinstance(radius, (list, tuple)):
@@ -487,36 +486,22 @@ class callbacks(object):
         elif isinstance(radius, (int, float)):
             radius = [radius * buffer] * 2
 
-        if shape == "geod_circle":
-            coll = self.m._shapes.geod_circles(
-                np.atleast_1d(pos[0]),
-                np.atleast_1d(pos[1]),
-                "in",
-                np.mean(radius),
-                n=20,
-                **kwargs,
+        if shape == "geod_circle" or shape == "geod_circles":
+            shp = self.m.set_shape._get("geod_circles", radius=radius, n=20)
+        elif shape == "ellipse" or shape == "ellipses":
+            shp = self.m.set_shape._get(
+                "ellipses", radius=radius, radius_crs=radius_crs, n=20
             )
-        elif shape == "ellipse":
-            coll = self.m._shapes.ellipses(
-                np.atleast_1d(pos[0]),
-                np.atleast_1d(pos[1]),
-                "in",
-                radius,
-                radius_crs,
-                n=20,
-                **kwargs,
-            )
-        elif shape == "rectangle":
-            coll = self.m._shapes.rectangles(
-                np.atleast_1d(pos[0]),
-                np.atleast_1d(pos[1]),
-                "in",
-                radius,
-                radius_crs,
-                **kwargs,
+        elif shape == "rectangle" or shape == "rectangles":
+            shp = self.m.set_shape._get(
+                "rectangles", radius=radius, radius_crs=radius_crs
             )
         else:
             raise TypeError(f"EOmaps: '{shape}' is not a valid marker-shape")
+
+        coll = shp.get_coll(
+            np.atleast_1d(pos[0]), np.atleast_1d(pos[1]), "in", **kwargs
+        )
 
         if hasattr(self, "marker") and not permanent:
             # remove existing marker
