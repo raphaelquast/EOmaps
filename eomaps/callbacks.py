@@ -4,6 +4,7 @@ import matplotlib.pyplot as plt
 from collections import defaultdict
 from matplotlib.patches import Circle, Ellipse, Rectangle, Polygon
 from pyproj import CRS, Transformer
+import warnings
 
 
 class callbacks(object):
@@ -41,24 +42,30 @@ class callbacks(object):
     # _<NAME>_nopick_callback : a function that is executed if an empty area
     #                           is clicked within the plot
 
+    # ID : any
+    #     The index-value of the pixel in the data.
+    # pos : tuple
+    #     A tuple of the position of the pixel in plot-coordinates.
+    #     (ONLY relevant if ID is NOT provided!)
+    # val : int or float
+    #     The parameter-value of the pixel.
+    # ind : int
+    #     The index of the clicked pixel
+    #     (ONLY relevant if ID is NOT provided!)
+
+    _cb_list = [
+        "annotate",
+        "mark",
+        "plot",
+        "print_to_console",
+        "get_values",
+        "load",
+        "clear_annotations",
+        "clear_markers",
+    ]
+
     def __init__(self, m):
         self.m = m
-
-    def __repr__(self):
-        return "available callbacks:\n    - " + "\n    - ".join(self.cb_list)
-
-    @property
-    def cb_list(self):
-        return [
-            "annotate",
-            "mark",
-            "plot",
-            "print_to_console",
-            "get_values",
-            "load",
-            "clear_annotations",
-            "clear_markers",
-        ]
 
     def load(
         self,
@@ -78,14 +85,6 @@ class callbacks(object):
 
         Parameters
         ----------
-        ID : any
-            The index-value of the pixel in the dataframe.
-        pos : tuple
-            A tuple of the position of the pixel in plot-coordinates.
-        val : int or float
-            The parameter-value of the pixel.
-        ind : int
-            The index of the clicked pixel
         database : any
             The database object to use for loading the object
         load_method : str or callable
@@ -129,18 +128,10 @@ class callbacks(object):
 
         Parameters
         ----------
-        ID : any
-            The index-value of the pixel in the data.
-        pos : tuple
-            A tuple of the position of the pixel in plot-coordinates.
-        val : int or float
-            The parameter-value of the pixel.
-        ind : int
-            The index of the clicked pixel
         """
 
-        xlabel = self.m.data_specs["xcoord"]
-        ylabel = self.m.data_specs["ycoord"]
+        xlabel = self.m.data_specs.xcoord
+        ylabel = self.m.data_specs.ycoord
 
         printstr = ""
         x, y = [np.format_float_positional(i, trim="-", precision=4) for i in pos]
@@ -149,7 +140,7 @@ class callbacks(object):
 
         if isinstance(val, (int, float)):
             val = np.format_float_positional(val, trim="-", precision=4)
-        printstr += f"{self.m.data_specs['parameter']} = {val}"
+        printstr += f"{self.m.data_specs.parameter} = {val}"
 
         print(printstr)
 
@@ -175,14 +166,6 @@ class callbacks(object):
 
         Parameters
         ----------
-        ID : any
-            The index-value of the pixel in the data.
-        pos : tuple
-            A tuple of the position of the pixel in plot-coordinates.
-        val : int or float
-            The parameter-value of the pixel.
-        ind : int
-            The index of the clicked pixel
         pos_precision : int
             The floating-point precision of the coordinates.
             The default is 4.
@@ -222,8 +205,8 @@ class callbacks(object):
 
         """
 
-        xlabel = self.m.data_specs["xcoord"]
-        ylabel = self.m.data_specs["ycoord"]
+        xlabel = self.m.data_specs.xcoord
+        ylabel = self.m.data_specs.ycoord
 
         ax = self.m.figure.ax
 
@@ -273,11 +256,7 @@ class callbacks(object):
                 f"{xlabel} = {x} ({x0})\n"
                 + f"{ylabel} = {y} ({y0})\n"
                 + (f"ID = {ID}\n" if ID is not None else "")
-                + (
-                    f"{self.m.data_specs['parameter']} = {val}"
-                    if val is not None
-                    else ""
-                )
+                + (f"{self.m.data_specs.parameter} = {val}" if val is not None else "")
             )
         elif isinstance(text, str):
             printstr = text
@@ -285,8 +264,6 @@ class callbacks(object):
             printstr = text(self.m, ID, val, pos, ind)
 
         annotation.set_text(printstr)
-
-        self.m.BM.update()
 
     def clear_annotations(self, remove_permanent=True, remove_temporary=True, **kwargs):
         """
@@ -302,8 +279,6 @@ class callbacks(object):
             self.m.BM.remove_artist(self.annotation)
             del self.annotation
 
-        self.m.BM.update()
-
     def _clear_annotations_nopick_callback(self):
         self.clear_annotations()
 
@@ -313,7 +288,6 @@ class callbacks(object):
     def _annotate_nopick_callback(self):
         if hasattr(self, "annotation"):
             self.annotation.set_visible(False)
-        self.m.BM.update()
 
     def plot(
         self,
@@ -340,14 +314,6 @@ class callbacks(object):
 
         Parameters
         ----------
-        ID : any
-            The index-value of the pixel in the data.
-        pos : tuple
-            A tuple of the position of the pixel in plot-coordinates.
-        val : int or float
-            The parameter-value of the pixel.
-        ind : int
-            The index of the clicked pixel
         x_index : str
             Indicator how the x-axis is labelled
 
@@ -368,7 +334,7 @@ class callbacks(object):
         if not hasattr(self, "_pick_f"):
             self._pick_f, self._pick_ax = plt.subplots()
             self._pick_ax.tick_params(axis="x", rotation=90)
-            self._pick_ax.set_ylabel(self.m.data_specs["parameter"])
+            self._pick_ax.set_ylabel(self.m.data_specs.parameter)
 
             # call the cleanup function if the figure is closed
             def on_close(event):
@@ -376,8 +342,8 @@ class callbacks(object):
 
             self._pick_f.canvas.mpl_connect("close_event", on_close)
 
-        _pick_xlabel = self.m.data_specs["xcoord"]
-        _pick_ylabel = self.m.data_specs["ycoord"]
+        _pick_xlabel = self.m.data_specs.xcoord
+        _pick_ylabel = self.m.data_specs.ycoord
 
         if x_index == "pos":
             x, y = [
@@ -422,17 +388,6 @@ class callbacks(object):
             >>> )
 
         removing the callback will also remove the associated value-dictionary!
-
-        Parameters
-        ----------
-        ID : any
-            The index-value of the pixel in the data.
-        pos : tuple
-            A tuple of the position of the pixel in plot-coordinates.
-        val : int or float
-            The parameter-value of the pixel.
-        ind : int
-            The index of the clicked pixel
         """
 
         if not hasattr(self, "picked_vals"):
@@ -454,7 +409,7 @@ class callbacks(object):
         ind=None,
         radius="pixel",
         radius_crs="in",
-        shape="circle",
+        shape="ellipses",
         buffer=1,
         permanent=True,
         layer=10,
@@ -468,21 +423,8 @@ class callbacks(object):
 
         The added patches are accessible via `m.cb._pick_markers`
 
-        Note: If radius="pixel", the shape is determined from the
-              center plus/minus the width & height of the corresponding pixel.
-              For highly distorted projections this can lead to a "shift"
-              of the shape since the shape is then no longer properly centered.
-
         Parameters
         ----------
-        ID : any
-            The index-value of the pixel in the data.
-        pos : tuple
-            A tuple of the position of the pixel in plot-coordinates.
-        val : int or float
-            The parameter-value of the pixel.
-        ind : int
-            The index of the clicked pixel
         radius : float, string or None, optional
             The radius of the marker.
             If None, it will be evaluated based on the pixel-spacing of the
@@ -497,11 +439,11 @@ class callbacks(object):
 
         shape : str, optional
             Indicator which shape to draw. Currently supported shapes are:
-                - circle
-                - ellipse
-                - rectangle
+                - ellipses
+                - rectangles
+                - geod_circles
 
-            The default is "circle".
+            The default is "ellipse".
         buffer : float, optional
             A factor to scale the size of the shape. The default is 1.
         permanent : bool, optional
@@ -515,74 +457,52 @@ class callbacks(object):
             kwargs passed to the matplotlib patch.
             (e.g. `facecolor`, `edgecolor`, `linewidth`, `alpha` etc.)
         """
-
-        if radius_crs == "in":
-            radius_crs = self.m.data_specs["in_crs"]
-        elif radius_crs == "out":
-            radius_crs = self.m.plot_specs["plot_epsg"]
-
         if ID is not None:
             if ind is None:
-                ind = self.m.data.index.get_loc(ID)
+                # ind = self.m.data.index.get_loc(ID)
+                ind = np.flatnonzero(np.isin(self.m._props["ids"], ID))
 
+            pos = (self.m._props["xorig"][ind], self.m._props["yorig"][ind])
         if radius == "pixel":
-            d = self.m._prepare_data(
-                data=DataFrame(
-                    dict(
-                        x=[self.m._props["x0"][ind]],
-                        y=[self.m._props["y0"][ind]],
-                        z=[self.m._props["z_data"][ind]],
-                    )
-                ),
-                # data=self.m.data.loc[[ID]],
-                xcoord="x",
-                ycoord="y",
-                parameter="z",
-                in_crs=self.m.plot_specs["plot_epsg"],
-                radius_crs=self.m.data_specs["in_crs"],
-                shape="rectangles",
-                buffer=buffer,
-                radius=self.m._props["radius"],
-            )
-            radiusx = self.m._props["w"][ind]
-            radiusy = self.m._props["h"][ind]
-            theta = self.m._props["theta"][ind]
+            radius = self.m.shape.radius
 
-        elif isinstance(radius, (int, float, list, tuple)):
-            theta = 0
-            if isinstance(radius, (list, tuple)):
-                radiusx, radiusy = radius
-            else:
-                radiusx = radiusy = radius
+        # get manually specified radius (e.g. if radius != "estimate")
+        if isinstance(radius, (list, tuple)):
+            radius = [i * buffer for i in radius]
+        elif isinstance(radius, (int, float)):
+            radius = radius * buffer
 
-            # transform the radius if radius_crs is not None
-            if radius_crs is not None:
-                d = self.m._prepare_data(
-                    data=DataFrame(
-                        dict(
-                            x=[self.m._props["x0"][ind]],
-                            y=[self.m._props["y0"][ind]],
-                            z=[self.m._props["z_data"][ind]],
-                        )
-                    ),
-                    # data=self.m.data.loc[[ID]],
-                    xcoord="x",
-                    ycoord="y",
-                    parameter="z",
-                    in_crs=self.m.plot_specs["plot_epsg"],
-                    radius_crs=radius_crs,
-                    shape="rectangles",
-                    buffer=buffer,
-                    radius=(radiusx, radiusy),
+        if self.m.shape.name == "geod_circles":
+            if shape != "geod_circles" and radius == "pixel":
+                warnings.warn(
+                    "EOmaps: Only `geod_circles` markers are possible"
+                    + "if you use radius='pixel' after plotting `geod_circles`"
+                    + "Specify an explicit radius to use other shapes!"
                 )
+                shape = "geod_circles"
 
-                radiusx = d["w"][0]
-                radiusy = d["h"][0]
-                theta = d["theta"][0]
+        elif self.m.shape.name in ["voroni_diagram", "delaunay_triangulation"]:
+            assert radius != "pixel", (
+                "EOmaps: Using `radius='pixel' is not possible"
+                + "if the plot-shape was '{self.m.shape.name}'."
+            )
 
+        if shape == "geod_circles":
+            shp = self.m.set_shape._get("geod_circles", radius=radius, n=20)
+        elif shape == "ellipses":
+            shp = self.m.set_shape._get(
+                "ellipses", radius=radius, radius_crs=radius_crs, n=20
+            )
+        elif shape == "rectangles":
+            shp = self.m.set_shape._get(
+                "rectangles", radius=radius, radius_crs=radius_crs, mesh=False
+            )
         else:
-            radiusx, radiusy = self.m._props["radius"]
-            theta = self.m._props["theta"][ind]
+            raise TypeError(f"EOmaps: '{shape}' is not a valid marker-shape")
+
+        coll = shp.get_coll(
+            np.atleast_1d(pos[0]), np.atleast_1d(pos[1]), "in", **kwargs
+        )
 
         if hasattr(self, "marker") and not permanent:
             # remove existing marker
@@ -593,34 +513,7 @@ class callbacks(object):
         if permanent and not hasattr(self, "permanent_markers"):
             self.permanent_markers = []
 
-        if shape == "circle":
-            p = Circle(pos, np.sqrt(radiusx ** 2 + radiusy ** 2) * buffer, **kwargs)
-        elif shape == "ellipse":
-            p = Ellipse(
-                pos,
-                radiusx * 2 * buffer,
-                radiusy * 2 * buffer,
-                theta,
-                **kwargs,
-            )
-        elif shape == "rectangle":
-            if radius == "pixel":
-                p = Polygon(
-                    d["verts"][0],
-                    **kwargs,
-                )
-            else:
-                p = Rectangle(
-                    [pos[0] - radiusx * buffer, pos[1] - radiusy * buffer],
-                    radiusx * 2 * buffer,
-                    radiusy * 2 * buffer,
-                    theta,
-                    **kwargs,
-                )
-        else:
-            raise TypeError(f"{shape} is not a valid marker-shape")
-
-        marker = self.m.figure.ax.add_patch(p)
+        marker = self.m.figure.ax.add_collection(coll)
 
         if permanent:
             self.permanent_markers.append(marker)
@@ -629,8 +522,6 @@ class callbacks(object):
 
         if layer is not None:
             self.m.BM.add_artist(marker, layer)
-
-        self.m.BM.update()
 
     def clear_markers(self, remove_permanent=True, remove_temporary=True, **kwargs):
         """
@@ -647,8 +538,6 @@ class callbacks(object):
             self.m.BM.remove_artist(self.marker)
             del self.marker
 
-        self.m.BM.update()
-
     def _clear_markers_nopick_callback(self):
         self.clear_markers()
 
@@ -658,4 +547,3 @@ class callbacks(object):
     def _mark_nopick_callback(self):
         if hasattr(self, "marker"):
             self.marker.set_visible(False)
-        self.m.BM.update()

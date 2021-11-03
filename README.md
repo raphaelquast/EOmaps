@@ -5,14 +5,19 @@
 
 A general-purpose library to plot interactive maps of geographical datasets.
 
-### basic features:
-🌍 reproject & plot irregular datasets as ellipses or rectangles with actual geographical dimensions  
-🌎 interact with the plot via "callback-functions"  
-🌏 add overlays to the plots (NaturalEarth features, geo-dataframes, etc.)  
-🌍 get a nice colorbar with a colored histogram on top  
+#### 🌍 Get a simple interface to plot large (>1M datapoints) irregularly sampled geographical datasets  
+- Represent your data as shapes with actual geographic dimensions  
+- Reproject the map to any cartopy-projection
+- Add overlays to the maps (NaturalEarth features, geo-dataframes, etc.)  
+- Get a nice colorbar with a colored histogram on top  
 
-- check out the example-notebook: 🛸 [EOmaps_examples.ipynb](https://github.com/raphaelquast/maps/blob/dev/examples/EOmaps_examples.ipynb) 🛸
+#### 🌎 Easily turn the plot into a clickable data-analysis widget  
+- pick datapoints, add markers/annotations, create plots, execute custom functions etc.
 
+
+#### 🛸 check out the example-notebook:  [EOmaps_examples](https://github.com/raphaelquast/maps/blob/dev/examples/EOmaps_examples.ipynb) 🛸
+
+![EOmaps example image](https://github.com/raphaelquast/EOmaps/blob/dev/examples/example_image.png?raw=true)
 
 ## install
 The recommended way to install EOmaps with conda + pip:
@@ -37,53 +42,52 @@ The recommended way to install EOmaps with conda + pip:
 import pandas as pd
 from eomaps import Maps
 
+# the data you want to plot
+data = pd.DataFrame(dict(lat=[...], lon=[...], value=[...]))
+
 # initialize Maps object
 m = Maps()
 
 # set the data
-m.data = pd.DataFrame(dict(lat=[...], lon=[...], value=[...]))
-m.set_data_specs(xcoord="lon", ycoord="lat", parameter="value", in_crs=4326)
+m.set_data(data=data, xcoord="lon", ycoord="lat", parameter="value", crs=4326)
 
 # set the appearance of the plot
-m.set_plot_specs(plot_epsg=4326, shape="rectangles")
-m.set_classify_specs(scheme="Quantiles", k=5)
+m.set_plot_specs(plot_epsg=4326, cmap="viridis")
+# set the shapes that you want to assign to the data-points
+m.set_shape.geod_circles(radius=10000)
+
+# (optionally) classify the data
+m.set_classify_specs(scheme=m.classify_specs.SCHEMES.Quantiles, k=5)
 
 # plot the map
 m.plot_map()
-
-m.add_callback(...)        # attach a callback-function
-m.add_discrete_layer(...)  # plot additional data-layers
-m.add_gdf(...)             # plot geo-dataframes
-
-m.add_overlay(...)         # add overlay-layers
+```
+#### attach callback functions to interact with the plot
+```python
+m.cb.attach.annotate()
+m.cb.attach.mark(facecolor="r", edgecolor="g", shape="rectangles", radius=1, radius_crs=4326)
+m.cb.attach(<... a custom function ...>)
+```
+#### add additional layers and overlays
+```python
+m.add_gdf(...)             # add geo-dataframes
+m.add_overlay(...)         # add overlay-layers from NaturalEarth
 
 m.add_annotation(...)      # add static annotations
 m.add_marker(...)          # add static markers
-
-# access individual objects of the generated figure
-m.figure.<...>
-
-# save the figure
+```
+#### save the figure
+```python
 m.savefig("oooh_what_a_nice_figure.png", dpi=300)  
 ```
-
-
-### callbacks
-(e.g. execute functions when clicking on the map)
-- `"annotate"`: add annotations to the map
-- `"mark"`: add markers to the map
-- `"plot"`: generate a plot of the picked values
-- `"print_to_console"`: print pixel-info to the console
-- `"get_values"`: save the picked values to a dict
-- `"load"`: load objects from a collection
-- ... or use a custom function
-
-    ```python
-    def some_callback(self, **kwargs):
-        print("hello world")
-        print("the position of the clicked pixel", kwargs["pos"])
-        print("the data-index of the clicked pixel", kwargs["ID"])
-        print("data-value of the clicked pixel", kwargs["val"])
-        self.m  # access to the Maps object
-    m.add_callback(some_callback)
-    ```
+## advanced usage
+#### connect Maps-objects to get multiple interactive layers of data!
+```python
+m2 = Maps()
+m2.connect(m)       # connect the maps-objects
+m2.set_data(...)
+m2.set_shape(...)
+...
+m2.plot_map()       # plot another layer of data
+m2.cb.attach.annotate()
+```
