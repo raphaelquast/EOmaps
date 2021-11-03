@@ -355,7 +355,7 @@ class plot_specs(object):
         # fmt: off
         return ('label', 'title', 'cmap', 'plot_crs', 'histbins', 'tick_precision',
                 'vmin', 'vmax', 'cpos', 'cpos_radius', 'alpha', 'add_colorbar',
-                'coastlines', 'density', 'shape')
+                'coastlines', 'density')
         # fmt: on
 
     @property

@@ -140,7 +140,8 @@ class TestBasicPlotting(unittest.TestCase):
         m = Maps()
         m.data = self.data
         m.set_data_specs(xcoord="x", ycoord="y", in_crs=3857)
-        m.set_plot_specs(plot_crs=4326, shape="rectangles", alpha=0.4)
+        m.set_plot_specs(plot_crs=4326, alpha=0.4)
+        m.set_shape.rectangles()
         m.set_classify_specs(scheme="Percentiles", pct=[0.1, 0.2])
 
         m.plot_map()
@@ -151,7 +152,8 @@ class TestBasicPlotting(unittest.TestCase):
         m = Maps()
         m.data = self.data
         m.set_data_specs(xcoord="x", ycoord="y", in_crs=3857)
-        m.set_plot_specs(plot_crs=4326, shape="rectangles")
+        m.set_plot_specs(plot_crs=4326)
+        m.set_shape.rectangles(radius=1, radius_crs="out")
 
         m.set_classify_specs(scheme="Quantiles", k=5)
 
@@ -163,7 +165,8 @@ class TestBasicPlotting(unittest.TestCase):
         m = Maps()
         m.data = self.data
         m.set_data_specs(xcoord="x", ycoord="y", in_crs=3857)
-        m.set_plot_specs(plot_crs=3857, shape="rectangles")
+        m.set_plot_specs(plot_crs=3857)
+        m.set_shape.ellipses(radius=200000)
 
         m.plot_map()
 
@@ -195,7 +198,7 @@ class TestBasicPlotting(unittest.TestCase):
         m = Maps()
         m.data = self.data
         m.set_data_specs(xcoord="x", ycoord="y", in_crs=3857)
-        m.set_plot_specs(plot_crs=3857, shape="rectangles")
+        m.set_plot_specs(plot_crs=3857)
 
         m.plot_map()
 
@@ -214,7 +217,8 @@ class TestBasicPlotting(unittest.TestCase):
         m = Maps()
         m.data = self.data
         m.set_data_specs(xcoord="x", ycoord="y", in_crs=3857)
-        m.set_plot_specs(plot_crs=3857, shape="rectangles")
+        m.set_plot_specs(plot_crs=3857)
+        m.set_shape.rectangles(mesh=True)
 
         m.plot_map()
 
@@ -238,44 +242,11 @@ class TestBasicPlotting(unittest.TestCase):
 
         plt.close(m.figure.f)
 
-    # def test_add_discrete_layer(self):
-    #     m = Maps()
-    #     m.data = self.data
-    #     m.set_data_specs(xcoord="x", ycoord="y", in_crs=3857)
-    #     m.set_plot_specs(plot_crs=3857, shape="rectangles")
-
-    #     m.plot_map()
-
-    #     coll = m.add_discrete_layer(
-    #         m.data.sample(1000),
-    #         shape="ellipses",
-    #         fc="none",
-    #         ec="y",
-    #         **m.data_specs[["parameter", "xcoord", "ycoord", "crs"]],
-    #     )
-    #     coll = m.add_discrete_layer(
-    #         m.data.sample(1000),
-    #         shape="rectangles",
-    #         fc="none",
-    #         ec="b",
-    #         **m.data_specs[["parameter", "xcoord", "ycoord", "crs"]],
-    #     )
-    #     coll = m.add_discrete_layer(
-    #         m.data.sample(1000),
-    #         shape="geod_circles",
-    #         fc="none",
-    #         ec="r",
-    #         radius=100000,
-    #         **m.data_specs[["parameter", "xcoord", "ycoord", "crs"]],
-    #     )
-
-    #     plt.close(m.figure.f)
-
     def test_add_annotate(self):
         m = Maps()
         m.data = self.data
         m.set_data_specs(xcoord="x", ycoord="y", in_crs=3857)
-        m.set_plot_specs(plot_crs=4326, shape="rectangles")
+        m.set_plot_specs(plot_crs=4326)
 
         m.plot_map()
 
@@ -296,13 +267,9 @@ class TestBasicPlotting(unittest.TestCase):
         m = Maps()
         m.data = self.data
         m.set_data_specs(xcoord="x", ycoord="y", in_crs=3857)
-        m.set_plot_specs(
-            plot_crs=Maps.crs_list.Orthographic(
-                central_latitude=45, central_longitude=45
-            ),
-            shape="ellipses",
+        m.plot_specs.crs = Maps.crs_list.Orthographic(
+            central_latitude=45, central_longitude=45
         )
-
         m.plot_map()
 
         m.add_marker(
@@ -390,7 +357,8 @@ class TestBasicPlotting(unittest.TestCase):
         m = Maps()
         m.data = self.data
         m.set_data_specs(xcoord="x", ycoord="y", in_crs=3857)
-        m.set_plot_specs(plot_crs=3857, shape="rectangles")
+        m.set_plot_specs(plot_crs=3857)
+
         m.set_classify_specs(scheme="Quantiles", k=5)
 
         m2 = m.copy()
@@ -440,12 +408,14 @@ class TestBasicPlotting(unittest.TestCase):
         m = Maps()
         m.data = self.data
         m.set_data_specs(xcoord="x", ycoord="y", in_crs=3857)
-        m.set_plot_specs(plot_crs=3857, shape="rectangles")
+        m.set_plot_specs(plot_crs=3857)
+        m.set_shape.rectangles()
         m.set_classify_specs(scheme="Quantiles", k=5)
         m.plot_map()
 
         # plot on the same axes
         m2 = m.copy(connect=True, copy_data="share")
+        m2.set_shape.ellipses()
         m2.plot_map(gs_ax=m.figure.ax, facecolor="none", edgecolor="r")
 
         plt.close(m.figure.f)
@@ -454,7 +424,6 @@ class TestBasicPlotting(unittest.TestCase):
         m = Maps()
         m.data = self.data
         m.set_data_specs(xcoord="x", ycoord="y", in_crs=3857, parameter="value")
-        m.set_plot_specs(shape="ellipses")
         data = m._prepare_data()
 
     def test_add_colorbar(self):

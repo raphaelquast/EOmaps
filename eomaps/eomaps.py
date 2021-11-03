@@ -1422,8 +1422,6 @@ class Maps(object):
 
             ax.set_title(title)
 
-            shape = self.plot_specs["shape"]
-
             # don't pass the array if explicit facecolors are set
             if (
                 ("color" in kwargs and kwargs["color"] is not None)
