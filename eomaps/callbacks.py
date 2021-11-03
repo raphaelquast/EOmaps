@@ -465,6 +465,12 @@ class callbacks(object):
             pos = (self.m._props["xorig"][ind], self.m._props["yorig"][ind])
         if radius == "pixel":
             pixelQ = True
+            if not hasattr(self.m.shape, "radius"):
+                print(
+                    "EOmaps: You cannot attach markers with 'radius=pixel'"
+                    + "if the shape {self.m.shape.name} is used for plotting!"
+                )
+                return
             radius = self.m.shape.radius
         else:
             pixelQ = False
