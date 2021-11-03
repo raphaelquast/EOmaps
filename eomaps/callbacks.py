@@ -4,6 +4,7 @@ import matplotlib.pyplot as plt
 from collections import defaultdict
 from matplotlib.patches import Circle, Ellipse, Rectangle, Polygon
 from pyproj import CRS, Transformer
+import warnings
 
 
 class callbacks(object):
@@ -424,7 +425,7 @@ class callbacks(object):
         ind=None,
         radius="pixel",
         radius_crs="in",
-        shape="ellipse",
+        shape="ellipses",
         buffer=1,
         permanent=True,
         layer=10,
@@ -454,8 +455,9 @@ class callbacks(object):
 
         shape : str, optional
             Indicator which shape to draw. Currently supported shapes are:
-                - ellipse
-                - rectangle
+                - ellipses
+                - rectangles
+                - geod_circles
 
             The default is "ellipse".
         buffer : float, optional
@@ -484,17 +486,32 @@ class callbacks(object):
         if isinstance(radius, (list, tuple)):
             radius = [i * buffer for i in radius]
         elif isinstance(radius, (int, float)):
-            radius = [radius * buffer] * 2
+            radius = radius * buffer
 
-        if shape == "geod_circle" or shape == "geod_circles":
+        if self.m.shape.name == "geod_circles":
+            if shape != "geod_circles" and radius == "pixel":
+                warnings.warn(
+                    "EOmaps: Only `geod_circles` markers are possible"
+                    + "if you use radius='pixel' after plotting `geod_circles`"
+                    + "Specify an explicit radius to use other shapes!"
+                )
+                shape = "geod_circles"
+
+        elif self.m.shape.name in ["voroni_diagram", "delauney_triangulation"]:
+            assert radius != "pixel", (
+                "EOmaps: Using `radius='pixel' is not possible"
+                + "if the plot-shape was '{self.m.shape.name}'."
+            )
+
+        if shape == "geod_circles":
             shp = self.m.set_shape._get("geod_circles", radius=radius, n=20)
-        elif shape == "ellipse" or shape == "ellipses":
+        elif shape == "ellipses":
             shp = self.m.set_shape._get(
                 "ellipses", radius=radius, radius_crs=radius_crs, n=20
             )
-        elif shape == "rectangle" or shape == "rectangles":
+        elif shape == "rectangles":
             shp = self.m.set_shape._get(
-                "rectangles", radius=radius, radius_crs=radius_crs
+                "rectangles", radius=radius, radius_crs=radius_crs, mesh=False
             )
         else:
             raise TypeError(f"EOmaps: '{shape}' is not a valid marker-shape")

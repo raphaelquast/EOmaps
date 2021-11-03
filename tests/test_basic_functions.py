@@ -49,13 +49,14 @@ class TestBasicPlotting(unittest.TestCase):
         m.set_shape.rectangles(radius=(1, 2), radius_crs="out")
         m.plot_map()
 
-        plt.close("all")
-
-        # trimesh rectangles
-        m.set_shape.trimesh_rectangles()
+        # rectangles
+        m.set_shape.rectangles(mesh=True)
         m.plot_map()
 
-        m.set_shape.trimesh_rectangles(radius=1, radius_crs=4326)
+        m.set_shape.rectangles(radius=1, radius_crs=4326, mesh=True)
+        m.plot_map()
+
+        m.set_shape.rectangles(radius=(1, 2), radius_crs="out", mesh=True)
         m.plot_map()
 
         plt.close("all")
@@ -308,13 +309,22 @@ class TestBasicPlotting(unittest.TestCase):
             np.arange(1810, 1840, 1),
             facecolor=[1, 0, 0, 0.5],
             edgecolor="r",
-            shape="ellipse",
+            shape="ellipses",
         )
+
+        m.add_marker(
+            np.arange(1810, 1840, 1),
+            facecolor="none",
+            edgecolor="k",
+            shape="geod_circles",
+            radius=300000,
+        )
+
         m.add_marker(
             np.arange(1710, 1740, 1),
             facecolor=[1, 0, 0, 0.5],
             edgecolor="r",
-            shape="rectangle",
+            shape="rectangles",
         )
 
         m.add_marker(
@@ -330,7 +340,7 @@ class TestBasicPlotting(unittest.TestCase):
             facecolor=[1, 0, 0, 0.5],
             edgecolor="r",
             radius=2500000,
-            shape="rectangle",
+            shape="rectangles",
         )
         m.add_marker(
             1630, facecolor="none", edgecolor="k", linewidth=3, buffer=3, linestyle="--"
@@ -343,7 +353,7 @@ class TestBasicPlotting(unittest.TestCase):
 
         for r in np.linspace(10000, 1000000, 10):
             m.add_marker(
-                1635, fc="none", ec="b", ls="--", radius=r, lw=2, shape="geod_circle"
+                1635, fc="none", ec="b", ls="--", radius=r, lw=2, shape="geod_circles"
             )
 
         for x in np.linspace(5000000, 6000000, 10):
@@ -369,7 +379,7 @@ class TestBasicPlotting(unittest.TestCase):
             buffer=5,
         )
 
-        for shape in ["ellipse", "rectangle"]:
+        for shape in ["ellipses", "rectangles"]:
             m.add_marker(
                 1232, facecolor="none", edgecolor="r", radius="pixel", shape=shape, lw=2
             )
@@ -490,9 +500,9 @@ class TestBasicPlotting(unittest.TestCase):
                 #
                 ["rectangles", dict(radius=1.5, radius_crs="in")],
                 ["rectangles", dict(radius=100000, radius_crs="out")],
-                ["trimesh_rectangles", dict(radius=1.5, radius_crs="in")],
+                ["rectangles", dict(radius=1.5, radius_crs="in", mesh=True)],
                 #
-                ["trimesh_rectangles", dict(radius=100000, radius_crs="out")],
+                ["rectangles", dict(radius=100000, radius_crs="out", mesh=True)],
                 ["voroni_diagram", dict(mask_radius=100000)],
                 ["voroni_diagram", dict(masked=False)],
                 #
@@ -539,4 +549,5 @@ class TestBasicPlotting(unittest.TestCase):
                 m.plot_map(edgecolor="none", gs_ax=gs, colorbar=True)
                 m.cb.attach.annotate()
         m.figure.f.tight_layout()
+        # %%
         plt.close(m.figure.f)

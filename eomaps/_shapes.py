@@ -18,10 +18,9 @@ class shapes(object):
 
         - Projected rectangles
 
-        >>> m.set_shape.rectangles(radius, radius_crs)
-        >>> m.set_shape.trimesh_rectangles(radius, radius_crs)
+        >>> m.set_shape.rectangles(radius, radius_crs, mesh)
 
-        - Geodetic circles
+        - Projected geodetic circles
 
         >>> m.set_shape.geod_circles(radius)
 
@@ -41,7 +40,6 @@ class shapes(object):
         "rectangles",
         "voroni_diagram",
         "delauney_triangulation",
-        "trimesh_rectangles",
     ]
 
     def __init__(self, m):
@@ -91,6 +89,8 @@ class shapes(object):
         return (radiusx, radiusy)
 
     class _geod_circles(object):
+        name = "geod_circles"
+
         def __init__(self, m):
             self._m = m
 
@@ -250,6 +250,8 @@ class shapes(object):
             return coll
 
     class _ellipses(object):
+        name = "ellipses"
+
         def __init__(self, m):
             self._m = m
 
@@ -432,10 +434,12 @@ class shapes(object):
             return coll
 
     class _rectangles(object):
+        name = "rectangles"
+
         def __init__(self, m):
             self._m = m
 
-        def __call__(self, radius="estimate", radius_crs="in"):
+        def __call__(self, radius="estimate", radius_crs="in", mesh=False):
             """
             Draw projected rectangles with dimensions defined in units of a given crs.
 
@@ -448,6 +452,13 @@ class shapes(object):
             radius_crs : crs-specification, optional
                 The crs in which the dimensions are defined.
                 The default is "in".
+            mesh : bool
+                Indicator if polygons (False) or a triangular mesh (True)
+                should be plotted.
+
+                Using polygons allows setting edgecolors, using a triangular mesh
+                does NOT allow setting edgecolors but it has the advantage that
+                boundaries between neighbouring rectangles are not visible.
 
             Returns
             -------
@@ -455,8 +466,8 @@ class shapes(object):
 
             """
             self._radius = radius
-
             self.radius_crs = radius_crs
+            self.mesh = mesh
 
             self._m.shape = self
 
@@ -556,7 +567,7 @@ class shapes(object):
             )
             return verts, mask
 
-        def get_coll(self, x, y, crs, **kwargs):
+        def _get_polygon_coll(self, x, y, crs, **kwargs):
             verts, mask = self._get_rectangle_verts(
                 x, y, crs, self.radius, self.radius_crs
             )
@@ -575,7 +586,84 @@ class shapes(object):
 
             return coll
 
+        def _get_trimesh_rectangle_triangulation(
+            self, x, y, crs, radius, radius_crs="in"
+        ):
+
+            verts, mask = self._get_rectangle_verts(x, y, crs, radius, radius_crs)
+
+            x = np.vstack(
+                [verts[:, 2][:, 0], verts[:, 3][:, 0], verts[:, 1][:, 0]]
+            ).T.flat
+            y = np.vstack(
+                [verts[:, 2][:, 1], verts[:, 3][:, 1], verts[:, 1][:, 1]]
+            ).T.flat
+
+            x2 = np.vstack(
+                [verts[:, 3][:, 0], verts[:, 0][:, 0], verts[:, 1][:, 0]]
+            ).T.flat
+            y2 = np.vstack(
+                [verts[:, 3][:, 1], verts[:, 0][:, 1], verts[:, 1][:, 1]]
+            ).T.flat
+
+            x = np.append(x, x2)
+            y = np.append(y, y2)
+
+            tri = Triangulation(
+                x, y, triangles=np.array(range(len(x))).reshape((len(x) // 3, 3))
+            )
+            return tri, mask
+
+        def _get_trimesh_coll(self, x, y, crs, **kwargs):
+            # special treatment of color and array inputs to distribute the values
+            color = kwargs.pop("color", None)
+            fc = kwargs.pop("fc", None)
+            facecolor = kwargs.pop("facecolor", None)
+            facecolors = kwargs.pop("facecolors", None)
+
+            array = kwargs.pop("array", None)
+
+            tri, mask = self._get_trimesh_rectangle_triangulation(
+                x, y, crs, self.radius, self.radius_crs
+            )
+
+            coll = TriMesh(
+                tri,
+                transOffset=self._m.figure.ax.transData,
+                **kwargs,
+            )
+
+            # special treatment of color input to properly distribute values
+            if color is not None:
+                coll.set_facecolors([color] * (len(x)) * 6)
+            elif facecolor is not None:
+                coll.set_facecolors([facecolor] * (len(x)) * 6)
+            elif facecolors is not None:
+                coll.set_facecolors([facecolors] * (len(x)) * 6)
+            elif fc is not None:
+                coll.set_facecolors([fc] * (len(x)) * 6)
+            else:
+                # special treatment of array input to properly mask values
+                if array is not None:
+                    array = array[mask]
+
+                    # tri-contour meshes need 3 values for each triangle
+                    array = np.broadcast_to(array, (3, len(array))).T
+                    # we plot 2 triangles per rectangle
+                    array = np.broadcast_to(array, (2, *array.shape))
+                    coll.set_array(array.ravel())
+
+            return coll
+
+        def get_coll(self, x, y, crs, **kwargs):
+            if self.mesh is True:
+                return self._get_trimesh_coll(x, y, crs, **kwargs)
+            else:
+                return self._get_polygon_coll(x, y, crs, **kwargs)
+
     class _voroni_diagram(object):
+        name = "voroni_diagram"
+
         def __init__(self, m):
             self._m = m
 
@@ -691,112 +779,115 @@ class shapes(object):
 
             return coll
 
-    class _trimesh_rectangles(_rectangles):
-        def __init__(self, m):
-            self._m = m
+    # class _trimesh_rectangles(_rectangles):
+    #     name = "trimesh_rectangles"
+    #     def __init__(self, m):
+    #         self._m = m
 
-        def __call__(self, radius="estimate", radius_crs="in"):
-            """
-            Draw a triangular mesh of rectangles with dimensions defined in units of a given crs.
-            (similar to rectangles but boundaries between neighbouring rectangles are not visible)
+    #     def __call__(self, radius="estimate", radius_crs="in"):
+    #         """
+    #         Draw a triangular mesh of rectangles with dimensions defined in units of a given crs.
+    #         (similar to rectangles but boundaries between neighbouring rectangles are not visible)
 
-            Parameters
-            ----------
-            radius : tuple or str, optional
-                a tuple representing the radius in x- and y- direction.
-                The default is "estimate" in which case the radius is attempted
-                to be estimated from the input-coordinates.
-            radius_crs : crs-specification, optional
-                The crs in which the dimensions are defined.
-                The default is "in".
+    #         Parameters
+    #         ----------
+    #         radius : tuple or str, optional
+    #             a tuple representing the radius in x- and y- direction.
+    #             The default is "estimate" in which case the radius is attempted
+    #             to be estimated from the input-coordinates.
+    #         radius_crs : crs-specification, optional
+    #             The crs in which the dimensions are defined.
+    #             The default is "in".
 
-            Returns
-            -------
-            None.
+    #         Returns
+    #         -------
+    #         None.
 
-            """
+    #         """
 
-            self._radius = radius
+    #         self._radius = radius
 
-            self.radius_crs = radius_crs
+    #         self.radius_crs = radius_crs
 
-            self._m.shape = self
+    #         self._m.shape = self
 
-        @property
-        def radius(self):
-            return shapes._get_radius(self._m, self._radius, self.radius_crs)
+    #     @property
+    #     def radius(self):
+    #         return shapes._get_radius(self._m, self._radius, self.radius_crs)
 
-        @radius.setter
-        def radius(self, val):
-            self._radius = val
+    #     @radius.setter
+    #     def radius(self, val):
+    #         self._radius = val
 
-        def __repr__(self):
-            try:
-                s = f"trimesh_rectangles(radius={self.radius}, radius_crs={self.radius_crs})"
-            except AttributeError:
-                s = "trimesh_rectangles(radius, radius_crs)"
-            return s
+    #     def __repr__(self):
+    #         try:
+    #             s = f"trimesh_rectangles(radius={self.radius}, radius_crs={self.radius_crs})"
+    #         except AttributeError:
+    #             s = "trimesh_rectangles(radius, radius_crs)"
+    #         return s
 
-        def _get_trimesh_rectangle_triangulation(
-            self, x, y, crs, radius, radius_crs="in"
-        ):
+    #     def _get_trimesh_rectangle_triangulation(
+    #         self, x, y, crs, radius, radius_crs="in"
+    #     ):
 
-            verts, mask = self._get_rectangle_verts(x, y, crs, radius, radius_crs)
+    #         verts, mask = self._get_rectangle_verts(x, y, crs, radius, radius_crs)
 
-            x = np.vstack(
-                [verts[:, 2][:, 0], verts[:, 3][:, 0], verts[:, 1][:, 0]]
-            ).T.flat
-            y = np.vstack(
-                [verts[:, 2][:, 1], verts[:, 3][:, 1], verts[:, 1][:, 1]]
-            ).T.flat
+    #         x = np.vstack(
+    #             [verts[:, 2][:, 0], verts[:, 3][:, 0], verts[:, 1][:, 0]]
+    #         ).T.flat
+    #         y = np.vstack(
+    #             [verts[:, 2][:, 1], verts[:, 3][:, 1], verts[:, 1][:, 1]]
+    #         ).T.flat
 
-            x2 = np.vstack(
-                [verts[:, 3][:, 0], verts[:, 0][:, 0], verts[:, 1][:, 0]]
-            ).T.flat
-            y2 = np.vstack(
-                [verts[:, 3][:, 1], verts[:, 0][:, 1], verts[:, 1][:, 1]]
-            ).T.flat
+    #         x2 = np.vstack(
+    #             [verts[:, 3][:, 0], verts[:, 0][:, 0], verts[:, 1][:, 0]]
+    #         ).T.flat
+    #         y2 = np.vstack(
+    #             [verts[:, 3][:, 1], verts[:, 0][:, 1], verts[:, 1][:, 1]]
+    #         ).T.flat
 
-            x = np.append(x, x2)
-            y = np.append(y, y2)
+    #         x = np.append(x, x2)
+    #         y = np.append(y, y2)
 
-            tri = Triangulation(
-                x, y, triangles=np.array(range(len(x))).reshape((len(x) // 3, 3))
-            )
-            return tri, mask
+    #         tri = Triangulation(
+    #             x, y, triangles=np.array(range(len(x))).reshape((len(x) // 3, 3))
+    #         )
+    #         return tri, mask
 
-        def get_coll(self, x, y, crs, **kwargs):
-            # special treatment of color and array inputs to distribute the values
-            color = kwargs.pop("color", None)
-            array = kwargs.pop("array", None)
+    #     def get_coll(self, x, y, crs, **kwargs):
+    #         # special treatment of color and array inputs to distribute the values
+    #         color = kwargs.pop("color", None)
+    #         array = kwargs.pop("array", None)
 
-            tri, mask = self._get_trimesh_rectangle_triangulation(
-                x, y, crs, self.radius, self.radius_crs
-            )
+    #         tri, mask = self._get_trimesh_rectangle_triangulation(
+    #             x, y, crs, self.radius, self.radius_crs
+    #         )
 
-            coll = TriMesh(
-                tri,
-                transOffset=self._m.figure.ax.transData,
-                **kwargs,
-            )
+    #         coll = TriMesh(
+    #             tri,
+    #             transOffset=self._m.figure.ax.transData,
+    #             **kwargs,
+    #         )
 
-            # special treatment of color input to properly distribute values
-            if color is not None:
-                coll.set_facecolors([color] * (len(x)) * 6)
-            else:
-                # special treatment of array input to properly mask values
-                if array is not None:
-                    array = array[mask]
+    #         # special treatment of color input to properly distribute values
+    #         if color is not None:
+    #             coll.set_facecolors([color] * (len(x)) * 6)
+    #         else:
+    #             # special treatment of array input to properly mask values
+    #             if array is not None:
+    #                 array = array[mask]
 
-                    # tri-contour meshes need 3 values for each triangle
-                    array = np.broadcast_to(array, (3, len(array))).T
-                    # we plot 2 triangles per rectangle
-                    array = np.broadcast_to(array, (2, *array.shape))
-                    coll.set_array(array.ravel())
+    #                 # tri-contour meshes need 3 values for each triangle
+    #                 array = np.broadcast_to(array, (3, len(array))).T
+    #                 # we plot 2 triangles per rectangle
+    #                 array = np.broadcast_to(array, (2, *array.shape))
+    #                 coll.set_array(array.ravel())
 
-            return coll
+    #         return coll
 
     class _delauney_triangulation(object):
+        name = "delauney_triangulation"
+
         def __init__(self, m):
             self._m = m
 

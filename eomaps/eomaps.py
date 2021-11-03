@@ -103,14 +103,17 @@ class Maps(object):
 
     def connect(self, parent):
         """
-        Connect the Maps-object to a "parent" Maps object
+        Connect 2 Maps-objects to add additional (interactive) layers of data
+        on the same axes (or on multiple axes on the same figure).
 
-        This is useful if you want to add additional (interactive) layers of data
-        Connecting 2 Maps objects has the following effects on the child-object:
+        Connecting a Maps object has the following effects on the child-object:
             - The plot_crs is shared with the parent Maps object
-            - The figure is shared with the parent Maps object
+            - The figure-object is shared with the parent Maps object
+            - The plot-axes is shared with the parent Maps object and NO
+              additional colorabar is plotted
 
-            - The child-Maps object does not plot colorbars
+              - you can override this behaviour if you provide an explicit axes or
+                gridspec via `m.plot_map(gs_ax=<...>)`
 
         Parameters
         ----------
@@ -1267,7 +1270,7 @@ class Maps(object):
         xy=None,
         xy_crs=None,
         radius="pixel",
-        shape="ellipse",
+        shape="ellipses",
         buffer=1,
         **kwargs,
     ):
@@ -1291,9 +1294,9 @@ class Maps(object):
 
         shape : str, optional
             Indicator which shape to draw. Currently supported shapes are:
-                - circle
-                - ellipse
-                - rectangle
+                - geod_circles
+                - ellipses
+                - rectangles
 
             The default is "circle".
         buffer : float, optional
@@ -1429,8 +1432,10 @@ class Maps(object):
         Parameters
         ----------
         f : matplotlib.Figure
-            the matplotlib figure instance to use
+            The matplotlib figure instance to use.
             If None, a new figure will be created (accessible via m.figure.f)
+
+            Connected maps-objects will always share the same figure!
             The default is None
         gs_ax : matplotlib.axes or matplotlib.gridspec.SubplotSpec, optional
             Explicitly specify the axes (or GridSpec) for plotting.
@@ -1485,18 +1490,23 @@ class Maps(object):
         """
 
         if self.parent is not None:
-            assert f is None, "You cannot set the figure for a connected Maps-object"
+            assert f is None, "Connected maps-objects always share the same figure!"
             self.figure.f = self.parent.figure.f
+            # if no axes is provided for a connected maps-object, use the
+            # axes of the parent maps object
+            if gs_ax is None:
+                gs_ax = self.parent.figure.ax
+
         else:
             if f is None:
                 self.figure.f = plt.figure(figsize=(12, 8))
             else:
                 self.figure.f = f
 
-        if self.figure.ax is not None:
+        if self.figure.ax is not None and self.parent is None:
             warnings.warn(
-                "EOmaps: callbacks are not yet supported on multiple axes."
-                + "For multiple interactive axes, use "
+                "EOmaps: For multiple interactive Maps the instances must be connected!"
+                + " Use `m2.connect(m)` to connect an existing Maps-object or "
                 + "`m2 = m.copy(connect=True)` to copy and connect the Maps"
                 + " object and then use `m2.plot_map(...) to plot additional data"
             )
@@ -1565,7 +1575,12 @@ class Maps(object):
 
             shape = self.plot_specs["shape"]
 
-            if "color" in kwargs and kwargs["color"] is not None:
+            # don't pass the array if explicit facecolors are set
+            if (
+                ("color" in kwargs and kwargs["color"] is not None)
+                or ("facecolor" in kwargs and kwargs["facecolor"] is not None)
+                or ("fc" in kwargs and kwargs["fc"] is not None)
+            ):
                 args = dict(array=None, cmap=None, norm=None, **kwargs)
             else:
                 args = dict(array=props["z_data"], cmap=cbcmap, norm=norm, **kwargs)
@@ -1595,10 +1610,11 @@ class Maps(object):
                     )
                     self.figure.cb = cb
                 else:
-                    warnings.warn(
-                        "EOmaps: Adding a colorbar is not supported if "
-                        + "you provide an explicit axes via gs_ax."
-                    )
+                    if self.parent is None:
+                        warnings.warn(
+                            "EOmaps: Adding a colorbars is not supported if "
+                            + "you provide an explicit axes via gs_ax"
+                        )
             # ------------- add a picker that will be used by the callbacks
             self._attach_picker(maxdist=pick_distance)
 
