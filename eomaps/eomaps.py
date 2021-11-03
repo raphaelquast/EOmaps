@@ -89,7 +89,6 @@ class Maps(object):
 
         self.set_shape.ellipses()
 
-        self._data_mask = slice(None)
         self.data_specs = data_specs(
             self,
             xcoord="lon",
@@ -356,7 +355,6 @@ class Maps(object):
 
             # use a cKDTree based picking to speed up picks for large collections
             dist, index = self.tree.query((event.xdata, event.ydata))
-
             # set max. distance in pixel-coordinates for picking
             p1 = np.array([event.x, event.y])
             p2 = self.figure.ax.transData.transform(
@@ -1264,7 +1262,7 @@ class Maps(object):
         colorbar=True,
         coastlines=True,
         orientation="vertical",
-        pick_distance=10,
+        pick_distance=50,
         dynamic_layer_idx=None,
         **kwargs,
     ):
@@ -1591,3 +1589,39 @@ class Maps(object):
             ax_cb_plot.get_shared_x_axes().join(ax_cb_plot, ax_cb)
 
         return [cbgs, ax_cb, ax_cb_plot, orientation, cb]
+
+    def indicate_masked_points(self, radius=1.0, **kwargs):
+        """
+        Add circles to the map that indicate masked points.
+        (e.g. points resulting in very distorted shapes etc.)
+
+        Parameters
+        ----------
+        radius : float, optional
+            The readius to use for plotting the indicators for the masked
+            points. The unit of the radius is map-pixels! The default is 1.
+        **kwargs :
+            additional kwargs passed to `m.plot_map(**kwargs)`.
+
+        Returns
+        -------
+        m : eomaps.Maps
+            A (connected) copy of the maps-object with the data set to the masked pixels.
+        **kwargs
+            additional kwargs passed to `m.plot_map(**kwargs)`
+        """
+
+        data = self.data[~self._data_mask]
+
+        if len(data) == 0:
+            print("EOmaps: There are no masked points to indicate!")
+            return
+
+        m = self.copy(connect=True)
+        m.data = data
+
+        t = self.figure.ax.transData.inverted()
+        r = t.transform((100 + radius, 100 + radius)) - t.transform((100, 100))
+        m.set_shape.ellipses(radius_crs="out", radius=r)
+        m.plot_map(**kwargs)
+        return m
