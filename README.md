@@ -5,24 +5,19 @@
 
 A general-purpose library to plot interactive maps of geographical datasets.
 
-The primary purpose is 2-fold:
-1. ease the pain of creating plots of irregularly sampled geographical datasets
-   - provided as 1D DataFrames and usable with large amounts of data (>1M datapoints)
-   - specify pixel-dimensions in actual geographical units  
-2. provide an easy-to-use way to turn the plot into a clickable data-analysis widget
-   - pick datapoints, add markers/annotations, create plots, execute custom functions etc.
+#### 🌍 Get a simple interface to plot large (>1M datapoints) irregularly sampled geographical datasets  
+- Represent your data as shapes with actual geographic dimensions    
+- Reproject the map to any cartopy-projection
+- Add overlays to the maps (NaturalEarth features, geo-dataframes, etc.)  
+- Get a nice colorbar with a colored histogram on top  
 
-... additional features:  
-🌍 plot the data in almost any crs you like  
-🌏 add overlays to the plots (NaturalEarth features, geo-dataframes, etc.)  
-🌎 get a nice colorbar with a colored histogram on top  
+#### 🌎 Easily turn the plot into a clickable data-analysis widget   
+- pick datapoints, add markers/annotations, create plots, execute custom functions etc.
 
-- check out the example-notebook: 🛸 [EOmaps_examples.ipynb](https://github.com/raphaelquast/maps/blob/dev/examples/EOmaps_examples.ipynb) 🛸
 
-## choose how to represent your data
-![alt text](https://github.com/raphaelquast/EOmaps/blob/dev/examples/plotshapes.png?raw=true)
-## use the full power of cartopy to display your data
-![alt text](https://github.com/raphaelquast/EOmaps/blob/dev/examples/projections.png?raw=true)
+#### 🛸 check out the example-notebook:  [EOmaps_examples](https://github.com/raphaelquast/maps/blob/dev/examples/EOmaps_examples.ipynb) 🛸
+
+![EOmaps example image](https://github.com/raphaelquast/EOmaps/blob/dev/examples/example_image.png?raw=true)
 
 ## install
 The recommended way to install EOmaps with conda + pip:
@@ -83,7 +78,6 @@ m.add_marker(...)          # add static markers
 ```
 #### save the figure
 ```python
-# save the figure
 m.savefig("oooh_what_a_nice_figure.png", dpi=300)  
 ```
 ## advanced usage
