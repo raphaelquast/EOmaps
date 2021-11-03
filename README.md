@@ -6,12 +6,12 @@
 A general-purpose library to plot interactive maps of geographical datasets.
 
 #### 🌍 Get a simple interface to plot large (>1M datapoints) irregularly sampled geographical datasets  
-- Represent your data as shapes with actual geographic dimensions    
+- Represent your data as shapes with actual geographic dimensions  
 - Reproject the map to any cartopy-projection
 - Add overlays to the maps (NaturalEarth features, geo-dataframes, etc.)  
 - Get a nice colorbar with a colored histogram on top  
 
-#### 🌎 Easily turn the plot into a clickable data-analysis widget   
+#### 🌎 Easily turn the plot into a clickable data-analysis widget  
 - pick datapoints, add markers/annotations, create plots, execute custom functions etc.
 
 
