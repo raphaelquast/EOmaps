@@ -401,22 +401,6 @@ class callbacks(object):
         if hasattr(self, "picked_vals"):
             del self.picked_vals
 
-    def _get_pixel_props(self, ind):
-        p = dict()
-        for key, val in self.m._props.items():
-            if key == "mask":
-                continue
-            if key in ["p0", "p1", "p2", "p3"]:
-                p[key] = (
-                    np.take(val[0], np.atleast_1d(ind)),
-                    np.take(val[1], np.atleast_1d(ind)),
-                )
-            elif key == "radius":
-                p[key] = val
-            else:
-                p[key] = np.take(val, np.atleast_1d(ind))
-        return p
-
     def mark(
         self,
         ID=None,
