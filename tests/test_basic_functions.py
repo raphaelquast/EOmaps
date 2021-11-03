@@ -70,14 +70,14 @@ class TestBasicPlotting(unittest.TestCase):
 
         plt.close("all")
 
-        # delauney
-        m.set_shape.delauney_triangulation(flat=True)
+        # delaunay
+        m.set_shape.delaunay_triangulation(flat=True)
         m.plot_map()
 
-        m.set_shape.delauney_triangulation(flat=False)
+        m.set_shape.delaunay_triangulation(flat=False)
         m.plot_map()
 
-        m.set_shape.delauney_triangulation(masked=False)
+        m.set_shape.delaunay_triangulation(masked=False)
         m.plot_map()
 
         plt.close("all")
@@ -89,10 +89,10 @@ class TestBasicPlotting(unittest.TestCase):
         m.set_shape.voroni_diagram(masked=True)
         m.plot_map()
 
-        m.set_shape.delauney_triangulation(flat=False)
+        m.set_shape.delaunay_triangulation(flat=False)
         m.plot_map()
 
-        m.set_shape.delauney_triangulation(masked=False)
+        m.set_shape.delaunay_triangulation(masked=False)
         m.plot_map()
 
         plt.close("all")
@@ -526,14 +526,14 @@ class TestBasicPlotting(unittest.TestCase):
                 ["voroni_diagram", dict(masked=False)],
                 #
                 [
-                    "delauney_triangulation",
+                    "delaunay_triangulation",
                     dict(mask_radius=(100000, 100000), mask_radius_crs="in"),
                 ],
                 [
-                    "delauney_triangulation",
+                    "delaunay_triangulation",
                     dict(mask_radius=100000, mask_radius_crs="out"),
                 ],
-                ["delauney_triangulation", dict(masked=False)],
+                ["delaunay_triangulation", dict(masked=False)],
             ),
             list(gridspec),
             (
@@ -546,9 +546,9 @@ class TestBasicPlotting(unittest.TestCase):
                 "out_trimesh_rectangles",
                 "voroni",
                 "voroni_unmasked",
-                "delauney_flat",
-                "delauney",
-                "delauney_unmasked",
+                "delaunay_flat",
+                "delaunay",
+                "delaunay_unmasked",
             ),
         ):
             print(title)

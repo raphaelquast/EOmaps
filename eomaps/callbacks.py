@@ -481,7 +481,7 @@ class callbacks(object):
                 )
                 shape = "geod_circles"
 
-        elif self.m.shape.name in ["voroni_diagram", "delauney_triangulation"]:
+        elif self.m.shape.name in ["voroni_diagram", "delaunay_triangulation"]:
             assert radius != "pixel", (
                 "EOmaps: Using `radius='pixel' is not possible"
                 + "if the plot-shape was '{self.m.shape.name}'."

@@ -28,9 +28,9 @@ class shapes(object):
 
         >>> m.set_shape.voroni_diagram(masked, mask_radius)
 
-        - Delauney triangulation
+        - Delaunay triangulation
 
-        >>> m.set_shape.delauney_diagram(masked, mask_radius, mask_radius_crs, flat)
+        >>> m.set_shape.delaunay_diagram(masked, mask_radius, mask_radius_crs, flat)
 
     """
 
@@ -39,7 +39,7 @@ class shapes(object):
         "ellipses",
         "rectangles",
         "voroni_diagram",
-        "delauney_triangulation",
+        "delaunay_triangulation",
     ]
 
     def __init__(self, m):
@@ -885,8 +885,8 @@ class shapes(object):
 
     #         return coll
 
-    class _delauney_triangulation(object):
-        name = "delauney_triangulation"
+    class _delaunay_triangulation(object):
+        name = "delaunay_triangulation"
 
         def __init__(self, m):
             self._m = m
@@ -919,11 +919,11 @@ class shapes(object):
         def __repr__(self):
             try:
                 s = (
-                    f"delauney_triangulation(mask_radius={self.mask_radius}, "
+                    f"delaunay_triangulation(mask_radius={self.mask_radius}, "
                     + "mask_radius_crs={self.mask_radius_crs}, masked={masked}, flat={flat})"
                 )
             except AttributeError:
-                s = "delauney_triangulation(mask_radius, mask_radius_crs, masked, flat)"
+                s = "delaunay_triangulation(mask_radius, mask_radius_crs, masked, flat)"
             return s
 
         @property
@@ -934,14 +934,14 @@ class shapes(object):
         def mask_radius(self, val):
             self._mask_radius = val
 
-        def _get_delauney_triangulation(
+        def _get_delaunay_triangulation(
             self, x, y, crs, radius, radius_crs="out", masked=True
         ):
             # prepare data
             try:
                 from scipy.spatial import Delaunay
             except ImportError:
-                raise ImportError("'scipy' is required for 'delauney_triangulation'!")
+                raise ImportError("'scipy' is required for 'delaunay_triangulation'!")
 
             # transform from crs to the plot_crs
             t_in_plot = Transformer.from_crs(
@@ -990,7 +990,7 @@ class shapes(object):
                 else:
                     assert (
                         False
-                    ), f"the radius_crs '{radius_crs}' is not supported for delauney-masking"
+                    ), f"the radius_crs '{radius_crs}' is not supported for delaunay-masking"
                 # mask any triangle whose side-length exceeds maxdist
                 mask = np.any(l > maxdist, axis=0)
                 tri.set_mask(mask)
@@ -1003,7 +1003,7 @@ class shapes(object):
             color = kwargs.pop("color", None)
             array = kwargs.pop("array", None)
 
-            tri, datamask = self._get_delauney_triangulation(
+            tri, datamask = self._get_delaunay_triangulation(
                 x, y, crs, self.mask_radius, self.mask_radius_crs, self.masked
             )
 
