@@ -36,6 +36,7 @@ class TestBasicPlotting(unittest.TestCase):
         # rectangles
         m.set_shape.geod_circles(radius=100000)
         m.plot_map()
+        m.indicate_masked_points()
 
         plt.close("all")
 
@@ -73,27 +74,26 @@ class TestBasicPlotting(unittest.TestCase):
         # delaunay
         m.set_shape.delaunay_triangulation(flat=True)
         m.plot_map()
+        m.indicate_masked_points(5)
 
         m.set_shape.delaunay_triangulation(flat=False)
         m.plot_map()
+        m.indicate_masked_points(5)
 
         m.set_shape.delaunay_triangulation(masked=False)
         m.plot_map()
+        m.indicate_masked_points(5)
 
         plt.close("all")
 
         # voroni
         m.set_shape.voroni_diagram(masked=False)
         m.plot_map()
+        m.indicate_masked_points(5, ec="k")
 
-        m.set_shape.voroni_diagram(masked=True)
+        m.set_shape.voroni_diagram(masked=True, mask_radius=5)
         m.plot_map()
-
-        m.set_shape.delaunay_triangulation(flat=False)
-        m.plot_map()
-
-        m.set_shape.delaunay_triangulation(masked=False)
-        m.plot_map()
+        m.indicate_masked_points(5, ec="k")
 
         plt.close("all")
 
