@@ -512,7 +512,7 @@ class cb_container(object):
 
     def __repr__(self):
         txt = "Attached callbacks:\n    " + "\n    ".join(
-            f"{val} : {key}" for key, val in self.get.attached_callbacks
+            f"{key}" for key in self.get.attached_callbacks
         )
         return txt
 
