@@ -464,7 +464,10 @@ class callbacks(object):
 
             pos = (self.m._props["xorig"][ind], self.m._props["yorig"][ind])
         if radius == "pixel":
+            pixelQ = True
             radius = self.m.shape.radius
+        else:
+            pixelQ = False
 
         # get manually specified radius (e.g. if radius != "estimate")
         if isinstance(radius, (list, tuple)):
@@ -473,7 +476,7 @@ class callbacks(object):
             radius = radius * buffer
 
         if self.m.shape.name == "geod_circles":
-            if shape != "geod_circles" and radius == "pixel":
+            if shape != "geod_circles" and pixelQ:
                 warnings.warn(
                     "EOmaps: Only `geod_circles` markers are possible"
                     + "if you use radius='pixel' after plotting `geod_circles`"
