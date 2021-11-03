@@ -457,6 +457,23 @@ class TestBasicPlotting(unittest.TestCase):
         m.set_plot_specs(shape="ellipses")
         data = m._prepare_data()
 
+    def test_add_colorbar(self):
+        gs = GridSpec(2, 2)
+
+        m = Maps()
+        m.set_data_specs(data=self.data, xcoord="x", ycoord="y", in_crs=3857)
+        m.set_plot_specs(histbins=5)
+        m.plot_map(gs_ax=gs[0, 0], colorbar=False)
+        cb1 = m.add_colorbar(gs[1, 0], orientation="horizontal")
+        cb2 = m.add_colorbar(gs[0, 1], orientation="vertical")
+
+        cb3 = m.add_colorbar(
+            gs[1, 1], orientation="horizontal", density=True, label="naseawas"
+        )
+        m.figure.set_colorbar_position(cb=cb1, ratio=10)
+        m.figure.set_colorbar_position(cb=cb2, ratio=20)
+        m.figure.set_colorbar_position((0.625, 0.25, 0.2, 0.1), cb=cb3)
+
     def test_a_complex_figure(self):
         # %%
         lon, lat = np.linspace(-180, 180, 500), np.linspace(-90, 90, 500)

@@ -187,6 +187,7 @@ class map_objects(object):
         gridspec=None,
         cb_gridspec=None,
         coll=None,
+        orientation=None,
     ):
 
         self.f = f
@@ -196,6 +197,7 @@ class map_objects(object):
         self.gridspec = gridspec
         self.cb_gridspec = cb_gridspec
         self.coll = coll
+        self._orientation = orientation
 
     def set_items(self, **kwargs):
         for key, val in kwargs.items():
@@ -206,7 +208,7 @@ class map_objects(object):
         return cls(**kwargs)
 
     # @wraps(plt.Axes.set_position)
-    def set_colorbar_position(self, pos):
+    def set_colorbar_position(self, pos=None, ratio=None, cb=None):
         """
         a wrapper to set the position of the colorbar and the histogram at
         the same time
@@ -214,27 +216,68 @@ class map_objects(object):
         Parameters
         ----------
         pos : list    [left, bottom, width, height]
-              in relative units [0,1] (with respect to the figure)
+            The bounding-box of the colorbar & histogram in relative
+            units [0,1] (with respect to the figure)
+            If None the current position is maintained.
+        ratio : float, optional
+            The ratio between the size of the colorbar and the size of the histogram.
+            'ratio=10' means that the histogram is 10 times as large as the colorbar!
+            The default is None in which case the current ratio is maintained.
+        cb : list, optional
+            The colorbar-objects (as returned by `m.add_colorbar()`)
+            If None, the existing colorbar will be used.
         """
 
-        # get the desired height-ratio
-        hratio = self.cb_gridspec.get_height_ratios()
-        wratio = self.cb_gridspec.get_width_ratios()
-        if len(hratio) == 2:
-            ratio = hratio[0] / hratio[1]
-        if len(wratio) == 2:
-            ratio = wratio[0] / wratio[1]
+        if cb is None:
+            cb_gridspec, ax_cb, ax_cb_plot, orientation = [
+                self.cb_gridspec,
+                self.ax_cb,
+                self.ax_cb_plot,
+                self._orientation,
+            ]
+        else:
+            cb_gridspec, ax_cb, ax_cb_plot, orientation, _ = cb
 
-        hcb = pos[3] / (1 + ratio)
-        hp = ratio * hcb
+        if orientation == "horizontal":
+            if pos is None:
+                pcb = ax_cb.get_position()
+                pcbp = ax_cb_plot.get_position()
 
-        if self.ax_cb is not None:
-            self.ax_cb.set_position(
+                pos = [pcb.x0, pcb.y0, pcb.width, pcb.height + pcbp.height]
+
+            if ratio is None:
+                hratio = cb_gridspec.get_height_ratios()
+                ratio = hratio[0] / hratio[1]
+
+            hcb = pos[3] / (1 + ratio)
+            hp = ratio * hcb
+
+            ax_cb.set_position(
                 [pos[0], pos[1], pos[2], hcb],
             )
-        if self.ax_cb_plot is not None:
-            self.ax_cb_plot.set_position(
+            ax_cb_plot.set_position(
                 [pos[0], pos[1] + hcb, pos[2], hp],
+            )
+
+        elif orientation == "vertical":
+            if pos is None:
+                pcb = ax_cb.get_position()
+                pcbp = ax_cb_plot.get_position()
+
+                pos = [pcbp.x0, pcbp.y0, pcb.width + pcbp.width, pcb.height]
+
+            if ratio is None:
+                wratio = cb_gridspec.get_width_ratios()
+                ratio = wratio[0] / wratio[1]
+
+            wcb = pos[2] / (1 + ratio)
+            wp = ratio * wcb
+
+            ax_cb.set_position(
+                [pos[0] + wp, pos[1], wcb, pos[3]],
+            )
+            ax_cb_plot.set_position(
+                [pos[0], pos[1], wp, pos[3]],
             )
 
 
@@ -262,7 +305,7 @@ class plot_specs(object):
     def __getitem__(self, key):
         if isinstance(key, (list, tuple)):
             for i in key:
-                assert i in self.keys(), f"{i} is not a valid data-specs key!"
+                assert i in self.keys(), f"{i} is not a valid plot-specs key!"
             if len(key) == 0:
                 item = dict()
             else:
@@ -272,7 +315,7 @@ class plot_specs(object):
                 else:
                     item = dict(zip(key, attrgetter(*key)(self)))
         else:
-            assert key in self.keys(), f"{key} is not a valid data-specs key!"
+            assert key in self.keys(), f"'{key}' is not a valid plot-specs key!"
             item = getattr(self, key)
         return item
 
@@ -302,7 +345,7 @@ class plot_specs(object):
         elif key == "crs":
             key = "plot_crs"
 
-        assert key in self.keys(), f"{key} is not a valid data-specs key!"
+        assert key in self.keys(), f"{key} is not a valid plot-specs key!"
 
         return key
 

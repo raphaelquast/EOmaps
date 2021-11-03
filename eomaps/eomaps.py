@@ -729,6 +729,7 @@ class Maps(object):
         vmax=None,
         tick_precision=3,
         density=False,
+        orientation=None,
     ):
 
         if ax_cb is None:
@@ -740,7 +741,7 @@ class Maps(object):
             z_data = self._props["z_data"]
 
         if label is None:
-            label = self.plot_specs["parameter"]
+            label = self.data_specs["parameter"]
         if histbins is None:
             histbins = self.plot_specs["histbins"]
         if cmap is None:
@@ -758,9 +759,12 @@ class Maps(object):
         if density is None:
             density = self.plot_specs["density"]
 
-        if self._orientation == "horizontal":
+        if orientation is None:
+            orientation = self._orientation
+
+        if orientation == "horizontal":
             cb_orientation = "vertical"
-        elif self._orientation == "vertical":
+        elif orientation == "vertical":
             cb_orientation = "horizontal"
 
         n_cmap = cm.ScalarMappable(cmap=cmap, norm=norm)
@@ -777,7 +781,7 @@ class Maps(object):
         # plot the histogram
         hist_vals, hist_bins, init_hist = ax_cb_plot.hist(
             z_data,
-            orientation=self._orientation,
+            orientation=orientation,
             bins=bins if (classified and histbins == "bins") else histbins,
             color="k",
             align="mid",
@@ -789,12 +793,12 @@ class Maps(object):
         for patch in list(ax_cb_plot.patches):
             # the list is important!! since otherwise we change ax.patches
             # as we iterate over it... which is not a good idea...
-            if self._orientation == "horizontal":
+            if orientation == "horizontal":
                 minval = np.atleast_1d(patch.get_y())[0]
                 width = patch.get_width()
                 height = patch.get_height()
                 maxval = minval + height
-            elif self._orientation == "vertical":
+            elif orientation == "vertical":
                 minval = np.atleast_1d(patch.get_x())[0]
                 width = patch.get_width()
                 height = patch.get_height()
@@ -812,14 +816,14 @@ class Maps(object):
                     # add first and last patch
                     # (note b0 = b1 if only 1 split is performed!)
                     b0 = splitbins[0]
-                    if self._orientation == "horizontal":
+                    if orientation == "horizontal":
                         p0 = mpl.patches.Rectangle(
                             (0, minval),
                             width,
                             (b0 - minval),
                             facecolor=cmap(norm(minval)),
                         )
-                    elif self._orientation == "vertical":
+                    elif orientation == "vertical":
                         p0 = mpl.patches.Rectangle(
                             (minval, 0),
                             (b0 - minval),
@@ -828,11 +832,11 @@ class Maps(object):
                         )
 
                     b1 = splitbins[-1]
-                    if self._orientation == "horizontal":
+                    if orientation == "horizontal":
                         p1 = mpl.patches.Rectangle(
                             (0, b1), width, (maxval - b1), facecolor=cmap(norm(maxval))
                         )
-                    elif self._orientation == "vertical":
+                    elif orientation == "vertical":
                         p1 = mpl.patches.Rectangle(
                             (b1, 0), (maxval - b1), height, facecolor=cmap(norm(maxval))
                         )
@@ -847,11 +851,11 @@ class Maps(object):
                                 (0, b0), width, (b1 - b0), facecolor=cmap(norm(b0))
                             )
 
-                            if self._orientation == "horizontal":
+                            if orientation == "horizontal":
                                 pi = mpl.patches.Rectangle(
                                     (0, b0), width, (b1 - b0), facecolor=cmap(norm(b0))
                                 )
-                            elif self._orientation == "vertical":
+                            elif orientation == "vertical":
                                 pi = mpl.patches.Rectangle(
                                     (b0, 0), (b1 - b0), height, facecolor=cmap(norm(b0))
                                 )
@@ -861,7 +865,7 @@ class Maps(object):
                     patch.set_facecolor(cmap(norm((minval + maxval) / 2)))
 
         # setup appearance of histogram
-        if self._orientation == "horizontal":
+        if orientation == "horizontal":
             ax_cb_plot.invert_xaxis()
 
             ax_cb_plot.tick_params(
@@ -881,7 +885,7 @@ class Maps(object):
             # make sure lower x-limit is 0
             ax_cb_plot.set_xlim(None, 0)
 
-        elif self._orientation == "vertical":
+        elif orientation == "vertical":
             ax_cb_plot.tick_params(
                 left=False,
                 labelleft=True,
@@ -905,9 +909,9 @@ class Maps(object):
         if classified:
             cb.set_ticks([i for i in bins if i >= vmin and i <= vmax])
 
-            if self._orientation == "vertical":
+            if orientation == "vertical":
                 labelsetfunc = "set_xticklabels"
-            elif self._orientation == "horizontal":
+            elif orientation == "horizontal":
                 labelsetfunc = "set_yticklabels"
 
             getattr(cb.ax, labelsetfunc)(
@@ -1569,6 +1573,7 @@ class Maps(object):
                 ax_cb=ax_cb,
                 ax_cb_plot=ax_cb_plot,
                 cb_gridspec=cbgs,
+                orientation=self._orientation,
             )
 
             ax.set_title(title)
@@ -1656,3 +1661,88 @@ class Maps(object):
         except Exception as ex:
             self.figure = self.figure.reinit()
             raise ex
+
+    def add_colorbar(
+        self,
+        gs,
+        orientation="horizontal",
+        label=None,
+        density=None,
+        tick_precision=None,
+    ):
+        """
+        Manually add a colorbar to an existing figure.
+        (NOTE: the preferred way is to use `plot_map(colorbar=True)` instead!)
+
+        To change the position of the colorbar, use:
+
+            >>> cb = m.add_colorbar(gs)
+            >>> m.figure.set_colorbar_position(pos, cb=cb)
+
+        Parameters
+        ----------
+        gs : matpltolib.gridspec.GridSpec
+            the gridspec to derive the colorbar-axes from.
+        orientation : str
+            The orientation of the colorbar ("horizontal" or "vertical")
+            The default is "horizontal"
+        """
+
+        # "_add_colorbar" orientation is opposite to the colorbar-orientation
+        if orientation == "horizontal":
+            cb_orientation = "vertical"
+        elif orientation == "vertical":
+            cb_orientation = "horizontal"
+
+        if cb_orientation == "horizontal":
+            # sub-gridspec
+            cbgs = GridSpecFromSubplotSpec(
+                nrows=1,
+                ncols=2,
+                subplot_spec=gs,
+                hspace=0,
+                wspace=0,
+                width_ratios=[0.9, 0.1],
+            )
+        elif cb_orientation == "vertical":
+            # sub-gridspec
+            cbgs = GridSpecFromSubplotSpec(
+                nrows=2,
+                ncols=1,
+                subplot_spec=gs,
+                hspace=0,
+                wspace=0,
+                height_ratios=[0.9, 0.1],
+            )
+
+        ax_cb = self.figure.f.add_subplot(
+            cbgs[1],
+            frameon=False,
+            label="ax_cb",
+        )
+        ax_cb_plot = self.figure.f.add_subplot(
+            cbgs[0],
+            frameon=False,
+            label="ax_cb_plot",
+        )
+
+        cb = self._add_colorbar(
+            ax_cb=ax_cb,
+            ax_cb_plot=ax_cb_plot,
+            bins=self.classify_specs._bins,
+            cmap=self.classify_specs._cbcmap,
+            norm=self.classify_specs._norm,
+            classified=self.classify_specs._classified,
+            orientation=cb_orientation,
+            label=label,
+            density=density,
+            tick_precision=tick_precision,
+        )
+
+        # join colorbar and histogram axes
+        if cb_orientation == "horizontal":
+            ax_cb_plot.get_shared_y_axes().join(ax_cb_plot, ax_cb)
+        elif cb_orientation == "vertical":
+            ax_cb_plot.get_shared_x_axes().join(ax_cb_plot, ax_cb)
+
+        return [cbgs, ax_cb, ax_cb_plot, orientation, cb]
