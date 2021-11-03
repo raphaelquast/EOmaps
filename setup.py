@@ -6,7 +6,7 @@ For COPYING and LICENSE details, please refer to the LICENSE file
 """
 from setuptools import setup, find_packages
 
-version = "0.1.6"
+version = "1.0"
 
 setup(
     name="EOmaps",
