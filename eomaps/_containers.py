@@ -197,7 +197,7 @@ class map_objects(object):
         self.gridspec = gridspec
         self.cb_gridspec = cb_gridspec
         self.coll = coll
-        self._orientation = orientation
+        self.orientation = orientation
 
     def set_items(self, **kwargs):
         for key, val in kwargs.items():
@@ -233,7 +233,7 @@ class map_objects(object):
                 self.cb_gridspec,
                 self.ax_cb,
                 self.ax_cb_plot,
-                self._orientation,
+                "vertical" if self.orientation == "horizontal" else "horizontal",
             ]
         else:
             cb_gridspec, ax_cb, ax_cb_plot, orientation, _ = cb
@@ -279,6 +279,8 @@ class map_objects(object):
             ax_cb_plot.set_position(
                 [pos[0], pos[1], wp, pos[3]],
             )
+        else:
+            raise TypeError(f"EOmaps: '{orientation}' is not a valid orientation")
 
 
 class plot_specs(object):

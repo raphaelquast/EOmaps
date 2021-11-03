@@ -1427,6 +1427,7 @@ class Maps(object):
         coastlines=True,
         orientation="vertical",
         pick_distance=10,
+        dynamic_layer_idx=None,
         **kwargs,
     ):
         """
@@ -1488,6 +1489,10 @@ class Maps(object):
             (The distance is evaluated between the clicked pixel and the center of the
              closest data-point)
             The default is 10.
+        dynamic_layer_idx : int
+            A layer-index in case the collection is intended to be updated
+            dynamically.
+            The default is None.
         **kwargs
             kwargs passed to the initialization of the matpltolib collection
             (dependent on the plot-shape) [linewidth, edgecolor, facecolor, ...]
@@ -1502,10 +1507,11 @@ class Maps(object):
                 gs_ax = self.parent.figure.ax
 
         else:
-            if f is None:
-                self.figure.f = plt.figure(figsize=(12, 8))
-            else:
-                self.figure.f = f
+            if self.figure.f is None:
+                if f is None:
+                    self.figure.f = plt.figure(figsize=(12, 8))
+                else:
+                    self.figure.f = f
 
         if self.figure.ax is not None and self.parent is None:
             warnings.warn(
@@ -1597,6 +1603,9 @@ class Maps(object):
             ax.add_collection(coll)
 
             self.figure.coll = coll
+
+            if dynamic_layer_idx is not None:
+                self.BM.add_artist(coll, layer=dynamic_layer_idx)
 
             # add coastlines and ocean-coloring
             if coastlines is True:

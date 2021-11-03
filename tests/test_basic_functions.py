@@ -463,7 +463,7 @@ class TestBasicPlotting(unittest.TestCase):
         m = Maps()
         m.set_data_specs(data=self.data, xcoord="x", ycoord="y", in_crs=3857)
         m.set_plot_specs(histbins=5)
-        m.plot_map(gs_ax=gs[0, 0], colorbar=False)
+        m.plot_map(gs_ax=gs[0, 0], colorbar=True)
         cb1 = m.add_colorbar(gs[1, 0], orientation="horizontal")
         cb2 = m.add_colorbar(gs[0, 1], orientation="vertical")
 
@@ -473,6 +473,8 @@ class TestBasicPlotting(unittest.TestCase):
         m.figure.set_colorbar_position(cb=cb1, ratio=10)
         m.figure.set_colorbar_position(cb=cb2, ratio=20)
         m.figure.set_colorbar_position((0.625, 0.25, 0.2, 0.1), cb=cb3)
+
+        m.figure.set_colorbar_position((0.625, 0.25, 0.2, 0.1))
 
     def test_a_complex_figure(self):
         # %%
