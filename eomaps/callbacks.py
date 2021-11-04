@@ -412,6 +412,7 @@ class callbacks(object):
         shape="ellipses",
         buffer=1,
         permanent=True,
+        n=20,
         layer=10,
         **kwargs,
     ):
@@ -449,6 +450,9 @@ class callbacks(object):
         permanent : bool, optional
             Indicator if the shapes should be permanent (True) or removed
             on each new double-click (False)
+        n : int
+            The number of points to calculate for the shape.
+            The default is 20.
         layer : int
             The layer-level on which to draw the artist.
             (First layer 0 is drawn, then layer 1 on top then layer 2 etc...)
@@ -497,14 +501,14 @@ class callbacks(object):
             )
 
         if shape == "geod_circles":
-            shp = self.m.set_shape._get("geod_circles", radius=radius, n=20)
+            shp = self.m.set_shape._get("geod_circles", radius=radius, n=n)
         elif shape == "ellipses":
             shp = self.m.set_shape._get(
-                "ellipses", radius=radius, radius_crs=radius_crs, n=20
+                "ellipses", radius=radius, radius_crs=radius_crs, n=n
             )
         elif shape == "rectangles":
             shp = self.m.set_shape._get(
-                "rectangles", radius=radius, radius_crs=radius_crs, mesh=False
+                "rectangles", radius=radius, radius_crs=radius_crs, mesh=False, n=n
             )
         else:
             raise TypeError(f"EOmaps: '{shape}' is not a valid marker-shape")
