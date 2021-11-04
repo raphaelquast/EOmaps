@@ -4,6 +4,7 @@ import numpy as np
 
 from pyproj import CRS, Transformer
 from functools import update_wrapper, partial
+import warnings
 
 
 class shapes(object):
@@ -30,7 +31,7 @@ class shapes(object):
 
         - Delaunay triangulation
 
-        >>> m.set_shape.delaunay_diagram(masked, mask_radius, mask_radius_crs, flat)
+        >>> m.set_shape.delaunay_triangulation(masked, mask_radius, mask_radius_crs, flat)
 
     """
 
@@ -443,7 +444,7 @@ class shapes(object):
         def __init__(self, m):
             self._m = m
 
-        def __call__(self, radius="estimate", radius_crs="in", mesh=False):
+        def __call__(self, radius="estimate", radius_crs="in", mesh=False, n=10):
             """
             Draw projected rectangles with dimensions defined in units of a given crs.
 
@@ -463,7 +464,12 @@ class shapes(object):
                 Using polygons allows setting edgecolors, using a triangular mesh
                 does NOT allow setting edgecolors but it has the advantage that
                 boundaries between neighbouring rectangles are not visible.
-
+                Only n=1 is currently supported!
+            n : int
+                The number of intermediate points to calculate on the rectangle
+                edges (e.g. to plot "curved" rectangles in projected crs)
+                Use n=1 to get actual rectangles!
+                The default is 10
             Returns
             -------
             None.
@@ -473,6 +479,14 @@ class shapes(object):
             self.radius_crs = radius_crs
             self.mesh = mesh
 
+            if mesh is True:
+                if n > 1:
+                    warnings.warn(
+                        "EOmaps: rectangles with 'mesh=True' only supports n=1"
+                    )
+                self.n = 1
+            else:
+                self.n = n
             self._m.shape = self
 
         @property
@@ -491,57 +505,51 @@ class shapes(object):
 
             return s
 
-        def _get_rectangle_verts(self, x, y, crs, radius, radius_crs="in"):
-
+        def _get_rectangle_verts(self, x, y, crs, radius, radius_crs="in", n=4):
             in_crs = self._m.get_crs(crs)
-            r_crs = self._m.get_crs(radius_crs)
-
-            # transform from crs to the plot_crs
-            t_in_plot = Transformer.from_crs(
-                in_crs,
-                self._m.crs_plot,
-                always_xy=True,
-            )
-            # transform from crs to the radius_crs
-            t_in_radius = Transformer.from_crs(
-                in_crs,
-                r_crs,
-                always_xy=True,
-            )
-            # transform from crs to the radius_crs
-            t_radius_plot = Transformer.from_crs(
-                r_crs,
-                self._m.crs_plot,
-                always_xy=True,
-            )
 
             [rx, ry] = radius
             # transform corner-points
             if radius_crs == crs:
+                in_crs = self._m.get_crs(crs)
+                # transform from crs to the plot_crs
+                t = Transformer.from_crs(
+                    in_crs,
+                    self._m.crs_plot,
+                    always_xy=True,
+                )
+
                 # make sure we do not transform out of bounds (if possible)
-                if r_crs.area_of_use is not None:
+                if in_crs.area_of_use is not None:
                     transformer = Transformer.from_crs(
-                        r_crs.geodetic_crs, r_crs, always_xy=True
+                        in_crs.geodetic_crs, in_crs, always_xy=True
                     )
                     xmin, ymin, xmax, ymax = transformer.transform_bounds(
-                        *r_crs.area_of_use.bounds
+                        *in_crs.area_of_use.bounds
                     )
 
                     clipx = partial(np.clip, a_min=xmin, a_max=xmax)
                     clipy = partial(np.clip, a_min=ymin, a_max=ymax)
                 else:
                     clipx, clipy = lambda x: x, lambda y: y
-
-                # top right
-                p0 = t_in_plot.transform(clipx(x + rx), clipy(y + ry))
-                # top left
-                p1 = t_in_plot.transform(clipx(x - rx), clipy(y + ry))
-                # bottom left
-                p2 = t_in_plot.transform(clipx(x - rx), clipy(y - ry))
-                # bottom right
-                p3 = t_in_plot.transform(clipx(x + rx), clipy(y - ry))
+                p = x, y
 
             else:
+                r_crs = self._m.get_crs(radius_crs)
+
+                # transform from crs to the radius_crs
+                t_in_radius = Transformer.from_crs(
+                    in_crs,
+                    r_crs,
+                    always_xy=True,
+                )
+                # transform from radius_crs to the plot_crs
+                t = Transformer.from_crs(
+                    r_crs,
+                    self._m.crs_plot,
+                    always_xy=True,
+                )
+
                 # make sure we do not transform out of bounds (if possible)
                 if r_crs.area_of_use is not None:
                     transformer = Transformer.from_crs(
@@ -558,54 +566,46 @@ class shapes(object):
 
                 p = t_in_radius.transform(x, y)
 
-                # top right
-                p0 = t_radius_plot.transform(clipx(p[0] + rx), clipy(p[1] + ry))
-                # top left
-                p1 = t_radius_plot.transform(clipx(p[0] - rx), clipy(p[1] + ry))
-                # bottom left
-                p2 = t_radius_plot.transform(clipx(p[0] - rx), clipy(p[1] - ry))
-                # bottom right
-                p3 = t_radius_plot.transform(clipx(p[0] + rx), clipy(p[1] - ry))
-
-            mask = np.all(
-                [np.isfinite(i).all(axis=0) for i in [p0, p1, p2, p3]], axis=0
-            )
-
-            # get the mask for invalid, very distorted or very large shapes
-            dx = p0[0][mask] - p1[0][mask]
-            dy = p0[1][mask] - p3[1][mask]
-
-            # mask[mask] = mask[mask] & (dx > 0)
-
-            dx = np.abs(dx)
-            dy = np.abs(dy)
-
-            mask[mask] = (
-                mask[mask]
-                & (dx < (np.nanmedian(dx) * 50))
-                & (dy < (np.nanmedian(dy) * 50))
-            )
-
-            verts = np.array(
-                list(
-                    zip(
-                        *[
-                            np.array(i).T
-                            for i in (
-                                [i[mask] for i in p0],
-                                [i[mask] for i in p1],
-                                [i[mask] for i in p2],
-                                [i[mask] for i in p3],
-                            )
-                        ]
-                    )
+            px = np.column_stack(
+                (
+                    clipx(np.linspace(p[0] - rx, p[0] + rx, n)).T.flat,
+                    clipx(np.repeat([p[0] + rx], n, axis=0)).T.flat,
+                    clipx(np.linspace(p[0] + rx, p[0] - rx, n)).T.flat,
+                    clipx(np.repeat([p[0] - rx], n)).T.flat,
                 )
             )
+            py = np.column_stack(
+                (
+                    clipy(np.repeat([p[1] + ry], n, axis=0)).T.flat,
+                    clipy(np.linspace(p[1] + ry, p[1] - ry, n)).T.flat,
+                    clipy(np.repeat([p[1] - ry], n, axis=0)).T.flat,
+                    clipy(np.linspace(p[1] - ry, p[1] + ry, n)).T.flat,
+                )
+            )
+
+            px, py = t.transform(px, py)
+
+            px = (
+                np.ma.masked_invalid(np.split(px, len(x)))
+                .swapaxes(1, 2)
+                .reshape(len(x), -1)
+            )
+            py = (
+                np.ma.masked_invalid(np.split(py, len(x)))
+                .swapaxes(1, 2)
+                .reshape(len(x), -1)
+            )
+
+            verts = np.ma.stack((px.T, py.T), axis=0).T
+            mask = np.count_nonzero(~verts.mask.any(axis=2), axis=1) >= 4
+
+            verts = [i[~i.mask.any(axis=1)] for i in verts[mask]]
+
             return verts, mask
 
         def _get_polygon_coll(self, x, y, crs, **kwargs):
             verts, mask = self._get_rectangle_verts(
-                x, y, crs, self.radius, self.radius_crs
+                x, y, crs, self.radius, self.radius_crs, self.n
             )
 
             # remember masked points
@@ -626,10 +626,17 @@ class shapes(object):
             return coll
 
         def _get_trimesh_rectangle_triangulation(
-            self, x, y, crs, radius, radius_crs="in"
+            self,
+            x,
+            y,
+            crs,
+            radius,
+            radius_crs,
+            n,
         ):
 
-            verts, mask = self._get_rectangle_verts(x, y, crs, radius, radius_crs)
+            verts, mask = self._get_rectangle_verts(x, y, crs, radius, radius_crs, n)
+            verts = np.array(verts)
 
             x = np.vstack(
                 [verts[:, 2][:, 0], verts[:, 3][:, 0], verts[:, 1][:, 0]]
@@ -663,7 +670,7 @@ class shapes(object):
             array = kwargs.pop("array", None)
 
             tri, mask = self._get_trimesh_rectangle_triangulation(
-                x, y, crs, self.radius, self.radius_crs
+                x, y, crs, self.radius, self.radius_crs, self.n
             )
 
             # remember masked points
