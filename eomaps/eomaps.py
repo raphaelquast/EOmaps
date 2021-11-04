@@ -37,6 +37,7 @@ from ._containers import (
     map_objects,
     classify_specs,
     cb_container,
+    wmts_container,
 )
 
 try:
@@ -99,6 +100,11 @@ class Maps(object):
         self.figure = map_objects()
 
         self.cb = cb_container(self)
+
+    @property
+    @lru_cache()
+    def add_wmts(self):
+        return wmts_container(self)
 
     def connect(self, parent):
         """

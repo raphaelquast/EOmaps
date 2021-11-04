@@ -7,7 +7,7 @@ from matplotlib.pyplot import get_cmap
 from matplotlib.collections import PolyCollection, EllipseCollection, TriMesh
 
 import mapclassify
-from functools import update_wrapper, partial
+from functools import update_wrapper, partial, lru_cache
 
 from .callbacks import callbacks
 from warnings import warn
@@ -855,3 +855,165 @@ class cb_container(object):
                     getattr(self._cb, f"_{fname}_cleanup")()
 
                 print(f"Removed the callback: '{ID}'.")
+
+
+try:
+    from owslib.wmts import WebMapTileService
+
+    _wmtsQ = True
+except ImportError:
+    _wmtsQ = False
+
+
+class _wmts_layer(object):
+    def __init__(self, m, wmts, layer):
+        self._m = m
+        self.layer = layer
+        self.wmts = wmts
+        pass
+
+    def __call__(self, **kwargs):
+        self._m.figure.ax.add_wmts(self.wmts, self.layer, wmts_kwargs=kwargs)
+
+
+class _wmts_collection(object):
+    def __init__(self, m):
+        self._m = m
+
+    def __getitem__(self, key):
+        return self.add_layer.__dict__[key]
+
+    def __repr__(self):
+        if hasattr(self, "info"):
+            return self.info
+        else:
+            return object.__repr__(self)
+
+    @property
+    @lru_cache()
+    def layers(self):
+        """
+        get a list of all available layers
+        """
+        return list(self.add_layer.__dict__)
+
+    def findlayer(self, name):
+        """
+        A convenience function to return any layer-name that contains the
+        provided "name"-string (the search is NOT case-sensitive!)
+
+        Parameters
+        ----------
+        name : str
+            the string to search for in the layers.
+
+        Returns
+        -------
+        list
+            A list of all available layers that contain the provided string.
+
+        """
+        return [i for i in self.layers if name.lower() in i.lower()]
+
+    @property
+    @lru_cache()
+    def wmts(self):
+        return WebMapTileService(self._url)
+
+    @property
+    @lru_cache()
+    def add_layer(self):
+        return SimpleNamespace(
+            **{
+                key: _wmts_layer(self._m, self.wmts, key)
+                for key in self.wmts.contents.keys()
+            }
+        )
+
+
+class wmts_container(object):
+    """
+    A collection of open-access WMTS services that can be added to the maps
+
+    For details and licensing check the docstrings and the links to the providers!
+
+    layers can be added in 2 ways (either with . access or with [] access):
+        >>> m.add_wmts.<COLLECTION>.add_layer.<LAYER-NAME>(**kwargs)
+        >>> m.add_wmts.<COLLECTION>[<LAYER-NAME>](**kwargs)
+
+    ### usage-examples:
+
+    - add NASA's BlueMarble background layer
+
+        >>> m.add_wmts.NASA_GIBS.add_layer.BlueMarble_NextGeneration()
+
+        additional kwargs can simply be passed to the layer-call:
+
+        >>> m.add_wmts.NASA_GIBS["AIRS_L3_Surface_Air_Temperature_Daily_Day"
+                                 ](time='2020-02-05')
+
+    - add ESA's WorldCover landcover-classification layer
+
+        >>> m.add_wmts.ESA_WorldCover.add_layer.WORLDCOVER_2020_MAP()
+
+
+    """
+
+    def __init__(self, m):
+        if not _wmtsQ:
+            warn("EOmaps: adding WMTS layers requires 'owslib'")
+            self.missing_requirements = "install `owslib`"
+            return
+
+        self.NASA_GIBS = self._NASA_GIBS(m)
+        self.ESA_WorldCover = self._ESA_WorldCover(m)
+
+    class _NASA_GIBS(_wmts_collection):
+        """
+        NASA Global Imagery Browse Services (GIBS)
+            https://wiki.earthdata.nasa.gov/display/GIBS/
+
+        LICENSE-info (without any warranty for correctness!!)
+            (check: https://earthdata.nasa.gov/eosdis/science-system-description/eosdis-components/gibs)
+
+            NASA supports an open data policy. We ask that users who make use of
+            GIBS in their clients or when referencing it in written or oral
+            presentations to add the following acknowledgment:
+
+            We acknowledge the use of imagery provided by services from NASA's
+            Global Imagery Browse Services (GIBS), part of NASA's Earth Observing
+            System Data and Information System (EOSDIS).
+
+        """
+
+        def __init__(self, *args, **kwargs):
+            super().__init__(*args, **kwargs)
+            self.info = (
+                "NASA Global Imagery Browse Services (GIBS)\n"
+                + "https://wiki.earthdata.nasa.gov/display/GIBS/"
+            )
+            self._url = "https://gibs.earthdata.nasa.gov/wmts/epsg4326/all/1.0.0/WMTSCapabilities.xml"
+
+    class _ESA_WorldCover(_wmts_collection):
+        """
+        ESA Worldwide land cover mapping
+            https://esa-worldcover.org/en
+
+        LICENSE-info (without any warranty for correctness!!)
+            (check: https://esa-worldcover.org/en/data-access for full details)
+
+            The ESA WorldCover product is provided free of charge,
+            without restriction of use. For the full license information see the
+            Creative Commons Attribution 4.0 International License.
+
+            Publications, models and data products that make use of these
+            datasets must include proper acknowledgement, including citing the
+            datasets and the journal article as in the following citation.
+        """
+
+        def __init__(self, *args, **kwargs):
+            super().__init__(*args, **kwargs)
+            self.infod = (
+                "ESA Worldwide land cover mapping\n" + "https://esa-worldcover.org/en"
+            )
+            self._url = "https://services.terrascope.be/wmts/v2"
