@@ -873,7 +873,12 @@ class _wmts_layer(object):
         pass
 
     def __call__(self, **kwargs):
-        self._m.figure.ax.add_wmts(self.wmts, self.layer, wmts_kwargs=kwargs)
+        self._m.figure.ax.add_wmts(
+            self.wmts,
+            self.layer,
+            wmts_kwargs=kwargs,
+            # interpolation="spline36"
+        )
 
 
 class _wmts_collection(object):
@@ -967,6 +972,7 @@ class wmts_container(object):
 
         self.NASA_GIBS = self._NASA_GIBS(m)
         self.ESA_WorldCover = self._ESA_WorldCover(m)
+        self.AT_basemap = self._AT_basemap(m)
 
     class _NASA_GIBS(_wmts_collection):
         """
@@ -1013,7 +1019,25 @@ class wmts_container(object):
 
         def __init__(self, *args, **kwargs):
             super().__init__(*args, **kwargs)
-            self.infod = (
+            self.info = (
                 "ESA Worldwide land cover mapping\n" + "https://esa-worldcover.org/en"
             )
             self._url = "https://services.terrascope.be/wmts/v2"
+
+    class _AT_basemap(_wmts_collection):
+        """
+        Verwaltungsgrundkarte von Österreich
+            https://basemap.at/
+
+        LICENSE-info (without any warranty for correctness!!)
+            (check: https://basemap.at/#lizenz for full details)
+
+            basemap.at ist gemäß der Open Government Data Österreich Lizenz
+            CC-BY 4.0 sowohl für private als auch kommerzielle Zwecke frei
+            sowie entgeltfrei nutzbar.
+        """
+
+        def __init__(self, *args, **kwargs):
+            super().__init__(*args, **kwargs)
+            self.info = "Basemap for Austria\n" + "https://basemap.at/"
+            self._url = "http://maps.wien.gv.at/basemap/1.0.0/WMTSCapabilities.xml"
