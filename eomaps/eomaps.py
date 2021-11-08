@@ -37,6 +37,7 @@ from ._containers import (
     map_objects,
     classify_specs,
     cb_container,
+    wms_container,
     wmts_container,
 )
 
@@ -105,6 +106,11 @@ class Maps(object):
     @lru_cache()
     def add_wmts(self):
         return wmts_container(self)
+
+    @property
+    @lru_cache()
+    def add_wms(self):
+        return wms_container(self)
 
     def connect(self, parent):
         """
