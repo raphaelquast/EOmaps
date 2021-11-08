@@ -10,7 +10,9 @@ import mapclassify
 from functools import update_wrapper, partial, lru_cache
 
 from .callbacks import callbacks
-from warnings import warn
+from warnings import warn, filterwarnings, catch_warnings
+from collections import defaultdict
+import re
 
 
 class data_specs(object):
@@ -859,6 +861,9 @@ class cb_container(object):
 
 try:
     from owslib.wmts import WebMapTileService
+    from owslib.wms import WebMapService
+    import requests
+    from urllib3.exceptions import InsecureRequestWarning
 
     _wmtsQ = True
 except ImportError:
@@ -872,18 +877,46 @@ class _wmts_layer(object):
         self.wmts = wmts
         pass
 
-    def __call__(self, **kwargs):
-        self._m.figure.ax.add_wmts(
-            self.wmts,
-            self.layer,
-            wmts_kwargs=kwargs,
-            # interpolation="spline36"
+    def __call__(self, layer=None, **kwargs):
+        print(f"EOmaps: ... adding wmts-layer: {self.layer}")
+        art = self._m.figure.ax.add_wmts(
+            self.wmts, self.layer, wmts_kwargs=kwargs, interpolation="spline36"
         )
+        if layer is not None:
+            self._m.BM.add_bg_artist(art, layer)
 
 
-class _wmts_collection(object):
-    def __init__(self, m):
+class _wms_layer(object):
+    def __init__(self, m, wms, layer):
         self._m = m
+        self.layer = layer
+        self.wms = wms
+        pass
+
+    def __call__(self, layer=None, **kwargs):
+        print(f"EOmaps: ... adding wmts-layer: {self.layer}")
+        art = self._m.figure.ax.add_wms(
+            self.wms, self.layer, wms_kwargs=kwargs, interpolation="spline36"
+        )
+        if layer is not None:
+            self._m.BM.add_bg_artist(art, layer)
+
+
+def _sanitize(s):
+    # taken from https://stackoverflow.com/a/3303361/9703451
+
+    # Remove leading characters until we find a letter or underscore
+    s = re.sub("^[^a-zA-Z_]+", "", s)
+
+    # replace invalid characters with an underscore
+    s = re.sub("[^0-9a-zA-Z_]", "_", s)
+    return s
+
+
+class _WebServiec_collection(object):
+    def __init__(self, m, service_type="wmts"):
+        self._m = m
+        self._service_type = service_type
 
     def __getitem__(self, key):
         return self.add_layer.__dict__[key]
@@ -920,20 +953,201 @@ class _wmts_collection(object):
         """
         return [i for i in self.layers if name.lower() in i.lower()]
 
-    @property
-    @lru_cache()
-    def wmts(self):
-        return WebMapTileService(self._url)
+    @staticmethod
+    def _get_wmts(url):
+        return WebMapTileService(url)
+
+    @staticmethod
+    def _get_wms(url):
+        return WebMapService(url)
 
     @property
     @lru_cache()
     def add_layer(self):
-        return SimpleNamespace(
-            **{
-                key: _wmts_layer(self._m, self.wmts, key)
-                for key in self.wmts.contents.keys()
-            }
+        if self._service_type == "wmts":
+            wmts = self._get_wmts(self._url)
+            layers = dict()
+            for key in wmts.contents.keys():
+                layers[_sanitize(key)] = _wmts_layer(self._m, wmts, key)
+
+        elif self._service_type == "wms":
+            wms = self._get_wms(self._url)
+            layers = dict()
+            for key in wms.contents.keys():
+                layers[_sanitize(key)] = _wms_layer(self._m, wms, key)
+
+        return SimpleNamespace(**layers)
+
+
+class _multi_WebServiec_collection(_WebServiec_collection):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+    @property
+    @lru_cache()
+    def add_layer(self):
+
+        if self._service_type == "wmts":
+            print("EOmaps: fetching layers...")
+            layers = dict()
+            for key, url in self._urls.items():
+                wmts = self._get_wmts(url)
+                layer_names = list(wmts.contents.keys())
+                if len(layer_names) > 1:
+                    warn(f"there are multiple sub-layers for '{key}'")
+                for lname in layer_names:
+                    layers[_sanitize(key) + f"__{lname}"] = _wmts_layer(
+                        self._m, wmts, lname
+                    )
+
+        elif self._service_type == "wms":
+            print("EOmaps: fetching layers...")
+            layers = dict()
+            for key, url in self._urls.items():
+                wms = self._get_wms(url)
+                layer_names = list(wms.contents.keys())
+                if len(layer_names) > 1:
+                    warn(f"there are multiple sub-layers for '{key}'")
+                for lname in layer_names:
+                    layers[_sanitize(key) + f"__{lname}"] = _wms_layer(
+                        self._m, wms, lname
+                    )
+
+        return SimpleNamespace(**layers)
+
+
+class wms_container(object):
+    """
+    A collection of open-access WMS services that can be added to the maps
+
+    For details and licensing check the docstrings and the links to the providers!
+
+    All usage is the same as `add_wmts`
+
+    layers can be added in 2 ways (either with . access or with [] access):
+        >>> m.add_wmts.<COLLECTION>.add_layer.<LAYER-NAME>(**kwargs)
+        >>> m.add_wmts.<COLLECTION>[<LAYER-NAME>](**kwargs)
+    """
+
+    def __init__(self, m):
+        self._m = m
+
+        if not _wmtsQ:
+            warn("EOmaps: adding WMS layers requires 'owslib'")
+            self.missing_requirements = "install `owslib`"
+            return
+
+        services = [
+            (key, key.replace("_WMS_", "", 1))
+            for key in self.__dir__()
+            if key.startswith("_WMS_")
+        ]
+
+        for (service, name) in services:
+            try:
+                setattr(self, service[1:], getattr(self, service)(m, "wms"))
+            except:
+                warn(f"EOmaps: The wmts-service {service} could not be connected.")
+
+    class _WMS_S2GM_AT_DE_SVN_SK(_WebServiec_collection):
+        """
+        https://land.copernicus.eu/imagery-in-situ/global-image-mosaics/
+        """
+
+        def __init__(self, *args, **kwargs):
+            super().__init__(*args, **kwargs)
+            self._url = "https://s2gm-wms.brockmann-consult.de/cgi-bin/qgis_mapserv.fcgi?MAP=/home/qgis/projects/s2gm-wms_mosaics_vrt.qgs&service=WMS&request=GetCapabilities&version=1.1.1"
+
+    @property
+    @lru_cache()
+    def EEA_Image_REST(self):
+        API = REST_API_services(
+            m=self._m,
+            url="https://image.discomap.eea.europa.eu/arcgis/rest/services",
+            name="EEA_REST",
+            service_type="wms",
         )
+        API.fetch_services()
+
+        return API
+
+    @property
+    @lru_cache()
+    def EEA_Land_REST(self):
+        API = REST_API_services(
+            m=self._m,
+            url="https://land.discomap.eea.europa.eu/arcgis/rest/services",
+            name="EEA_REST",
+            service_type="wms",
+        )
+        API.fetch_services()
+
+        return API
+
+    @property
+    @lru_cache()
+    def EEA_Climate_REST(self):
+        API = REST_API_services(
+            m=self._m,
+            url="https://climate.discomap.eea.europa.eu/arcgis/rest/services",
+            name="EEA_REST",
+            service_type="wms",
+        )
+        API.fetch_services()
+
+        return API
+
+    @property
+    @lru_cache()
+    def EEA_Bio_REST(self):
+        API = REST_API_services(
+            m=self._m,
+            url="https://bio.discomap.eea.europa.eu/arcgis/rest/services",
+            name="EEA_REST",
+            service_type="wms",
+        )
+        API.fetch_services()
+
+        return API
+
+    @property
+    @lru_cache()
+    def EEA_Copernicus_REST(self):
+        API = REST_API_services(
+            m=self._m,
+            url="https://copernicus.discomap.eea.europa.eu/arcgis/rest/services",
+            name="EEA_REST",
+            service_type="wms",
+        )
+        API.fetch_services()
+
+        return API
+
+    @property
+    @lru_cache()
+    def EEA_Water_REST(self):
+        API = REST_API_services(
+            m=self._m,
+            url="https://water.discomap.eea.europa.eu/arcgis/rest/services",
+            name="EEA_REST",
+            service_type="wms",
+        )
+        API.fetch_services()
+
+        return API
+
+    @property
+    @lru_cache()
+    def EEA_SOER_REST(self):
+        API = REST_API_services(
+            m=self._m,
+            url="https://soer.discomap.eea.europa.eu/arcgis/rest/services",
+            name="EEA_REST",
+            service_type="wms",
+        )
+        API.fetch_services()
+
+        return API
 
 
 class wmts_container(object):
@@ -970,11 +1184,21 @@ class wmts_container(object):
             self.missing_requirements = "install `owslib`"
             return
 
-        self.NASA_GIBS = self._NASA_GIBS(m)
-        self.ESA_WorldCover = self._ESA_WorldCover(m)
-        self.AT_basemap = self._AT_basemap(m)
+        self._m = m
 
-    class _NASA_GIBS(_wmts_collection):
+        services = [
+            (key, key.replace("_WMTS_", "", 1))
+            for key in self.__dir__()
+            if key.startswith("_WMTS_")
+        ]
+
+        for (service, name) in services:
+            try:
+                setattr(self, name, getattr(self, service)(m, "wmts"))
+            except:
+                warn(f"EOmaps: The wmts-service {service} could not be connected.")
+
+    class _WMTS_NASA_GIBS(_WebServiec_collection):
         """
         NASA Global Imagery Browse Services (GIBS)
             https://wiki.earthdata.nasa.gov/display/GIBS/
@@ -1000,7 +1224,7 @@ class wmts_container(object):
             )
             self._url = "https://gibs.earthdata.nasa.gov/wmts/epsg4326/all/1.0.0/WMTSCapabilities.xml"
 
-    class _ESA_WorldCover(_wmts_collection):
+    class _WMTS_ESA_WorldCover(_WebServiec_collection):
         """
         ESA Worldwide land cover mapping
             https://esa-worldcover.org/en
@@ -1024,7 +1248,7 @@ class wmts_container(object):
             )
             self._url = "https://services.terrascope.be/wmts/v2"
 
-    class _AT_basemap(_wmts_collection):
+    class _WMTS_AT_basemap(_WebServiec_collection):
         """
         Verwaltungsgrundkarte von Österreich
             https://basemap.at/
@@ -1041,3 +1265,211 @@ class wmts_container(object):
             super().__init__(*args, **kwargs)
             self.info = "Basemap for Austria\n" + "https://basemap.at/"
             self._url = "http://maps.wien.gv.at/basemap/1.0.0/WMTSCapabilities.xml"
+
+    class _WMTS_AT_Wien_basemap(_WebServiec_collection):
+        """ """
+
+        def __init__(self, *args, **kwargs):
+            super().__init__(*args, **kwargs)
+            self._url = "http://maps.wien.gv.at/wmts/1.0.0/WMTSCapabilities.xml"
+
+    class _WMTS_Copernicus(_WebServiec_collection):
+        """
+        https://land.copernicus.eu/global/access
+        """
+
+        def __init__(self, *args, **kwargs):
+            super().__init__(*args, **kwargs)
+
+            import cartopy.io.ogc_clients as ogcc
+            from cartopy import crs as ccrs
+
+            ogcc.METERS_PER_UNIT["urn:ogc:def:crs:EPSG:6.3:3857"] = 1
+            ogcc._URN_TO_CRS["urn:ogc:def:crs:EPSG:6.3:3857"] = ccrs.GOOGLE_MERCATOR
+
+            self._url = "https://viewer.globalland.vgt.vito.be/mapcache/wmts?service=wmts&request=GetCapabilities"
+
+    @property
+    @lru_cache()
+    def ArcGIS_REST(self):
+        """
+        Interface to the ERSI ArcGIS REST Services Directory
+
+            http://services.arcgisonline.com/arcgis/rest/services
+
+            For licensing etc. check the individual layer-descriptions in
+            the link above.
+
+        """
+        API = REST_API_services(
+            m=self._m,
+            url="http://server.arcgisonline.com/arcgis/rest/services",
+            name="EEA_REST",
+            service_type="wmts",
+        )
+        API.fetch_services()
+
+        return API
+
+
+class REST_API_services:
+    def __init__(self, m, url, name, service_type="wmts"):
+        self._m = m
+        self._REST_url = url
+        self._name = name
+        self._service_type = service_type
+
+    def fetch_services(self):
+        print(f"EOmaps: ... fetching services for '{self._name}'")
+        self._REST_API = _REST_API(self._REST_url)
+
+        for foldername, services in self._REST_API._structure.items():
+            setattr(
+                self,
+                foldername,
+                _multi_REST_WMSservice(
+                    m=self._m,
+                    services=services,
+                    service_type=self._service_type,
+                    url=self._REST_url,
+                ),
+            )
+        print("EOmaps: done!")
+
+
+class _REST_WMSservice(_WebServiec_collection):
+    def __init__(self, service, s_name, s_type, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._service = service
+        self._s_name = s_name
+        self._s_type = s_type
+
+        self._layers = None
+
+    @property
+    def _url(self):
+        print(self._s_name)
+        url = "/".join([self._service, self._s_name, self._s_type])
+
+        if self._service_type == "wms":
+            if requests.get(url + "/WMS").status_code == 200:
+                # use_service = "WMS"
+                suffix = "/WMSServer?request=GetCapabilities&service=WMS"
+                url = url.replace("/rest/", "/") + suffix
+            else:
+                url = None
+        elif self._service_type == "wmts":
+            if requests.get(url + "/WMTS").status_code == 200:
+                # use_service = "WMTS"
+                suffix = "/WMTS/1.0.0/WMTSCapabilities.xml"
+                url = url + suffix
+            else:
+                url = None
+        return url
+
+    def _fetch_layers(self):
+        self._layers = dict()
+        url = self._url
+        if url is not None:
+            if self._service_type == "wms":
+                wms = self._get_wms(url)
+                layer_names = list(wms.contents.keys())
+                for lname in layer_names:
+                    self._layers["layer_" + str(lname)] = _wms_layer(
+                        self._m, wms, lname
+                    )
+            elif self._service_type == "wmts":
+                wmts = self._get_wmts(url)
+                layer_names = list(wmts.contents.keys())
+                for lname in layer_names:
+                    self._layers["layer_" + str(lname)] = _wmts_layer(
+                        self._m, wmts, lname
+                    )
+
+    @property
+    @lru_cache()
+    def add_layer(self):
+        self._fetch_layers()
+        return SimpleNamespace(**self._layers)
+
+
+class _multi_REST_WMSservice:
+    def __init__(self, m, services, service_type, url, *args, **kwargs):
+        self._m = m
+        self._services = services
+        self._service_type = service_type
+        self._url = url
+
+        self._fetch_services()
+
+    @lru_cache()
+    def _fetch_services(self):
+        layers = dict()
+        for (s_name, s_type) in self._services:
+            wms_layer = _REST_WMSservice(
+                m=self._m,
+                service=self._url,
+                s_name=s_name,
+                s_type=s_type,
+                service_type=self._service_type,
+            )
+
+            setattr(self, _sanitize(s_name), wms_layer)
+            # setattr(self, _sanitize(s_name), partial(self._get_wms_layer,
+            #                                           s_name=s_name,
+            #                                           s_type=s_type))
+
+
+class _REST_API:
+    # adapted from https://gis.stackexchange.com/a/113213
+    def __init__(self, url):
+        self._url = url
+        self._structure = self._get_structure(self._url)
+        pass
+
+    def _post(self, service, _params={"f": "pjson"}, ret_json=True):
+        """Post Request to REST Endpoint
+
+        Required:
+        service -- full path to REST endpoint of service
+
+        Optional:
+        _params -- parameters for posting a request
+        ret_json -- return the response as JSON.  Default is True.
+        """
+        r = requests.post(service, params=_params, verify=False)
+
+        # make sure return
+        if r.status_code != 200:
+            raise NameError(
+                '"{0}" service not found!\n{1}'.format(service, r.raise_for_status())
+            )
+        else:
+            if ret_json:
+                return r.json()
+            else:
+                return r
+
+    def _get_structure(self, service):
+        """returns a list of all services
+
+        Optional:
+        service -- full path to a rest service
+        """
+
+        with catch_warnings():
+            filterwarnings("ignore", category=InsecureRequestWarning)
+
+            all_services = defaultdict(list)
+            r = self._post(service)
+            # parse all services that are not inside a folder
+            for s in r["services"]:
+                all_services["SERVICES"].append((s["name"], s["type"]))
+            for s in r["folders"]:
+                new = "/".join([service, s])
+                endpt = self._post(new)
+
+                for serv in endpt["services"]:
+                    if str(serv["type"]) == "MapServer":
+                        all_services[s].append((serv["name"], serv["type"]))
+        return all_services
