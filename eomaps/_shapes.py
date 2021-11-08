@@ -125,8 +125,14 @@ class shapes(object):
         @radius.setter
         def radius(self, val):
             if not isinstance(val, (int, float)):
-                print("geod_circles only support a number as radius... using the mean")
-                val = np.mean(val)
+                print("EOmaps: geod_circles only support a number as radius!")
+                if isinstance(val[0], (int, float)):
+                    print("EOmaps: ... using the mean")
+                    val = np.mean(val)
+                else:
+                    raise TypeError(
+                        f"EOmaps: '{val}' is not a valid radius for 'geod_circles'!"
+                    )
 
             self._radius = val
 
