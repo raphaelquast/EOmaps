@@ -1262,7 +1262,7 @@ class Maps(object):
         if ocean:
             ocean = self.figure.ax.add_feature(cfeature.OCEAN, **ocean_kwargs)
             self.BM.add_bg_artist(ocean, layer=self.layer)
-        if coastlines:
+        if coast:
             self.BM.add_bg_artist(coastlines, layer=self.layer)
 
         if layer is not None:
