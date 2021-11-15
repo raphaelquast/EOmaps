@@ -7,4 +7,4 @@ except DistributionNotFound:
 
 __author__ = "Raphael Quast"
 
-from .eomaps import Maps
+from .eomaps import Maps, MapsGrid

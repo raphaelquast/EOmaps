@@ -5,8 +5,13 @@ This file is part of EOmaps.
 For COPYING and LICENSE details, please refer to the LICENSE file
 """
 from setuptools import setup, find_packages
+from pathlib import Path
 
-version = "1.0.2"
+# add the README as long-description
+this_directory = Path(__file__).parent
+long_description = (this_directory / "README.md").read_text()
+
+version = "1.1.0"
 
 setup(
     name="EOmaps",
@@ -21,10 +26,7 @@ setup(
     maintainer_email="raphael.quast@geo.tuwien.ac.at",
     license="GNU General Public License v3 or later (GPLv3+)",
     url="https://github.com/raphaelquast/maps",
-    long_description=(
-        "A python module to quickly generate interactive "
-        + "maps of geographical datasets."
-    ),
+    long_description=long_description,
     install_requires=[
         "numpy",
         "pandas",

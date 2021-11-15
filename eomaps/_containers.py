@@ -3,16 +3,151 @@ from warnings import warn
 from operator import attrgetter
 from inspect import signature, _empty
 from types import SimpleNamespace
+from functools import update_wrapper, partial, lru_cache
+from collections import defaultdict
+
+import numpy as np
+import matplotlib.pyplot as plt
 from matplotlib.pyplot import get_cmap
 from matplotlib.collections import PolyCollection, EllipseCollection, TriMesh
-
+from matplotlib.gridspec import SubplotSpec
 import mapclassify
-from functools import update_wrapper, partial, lru_cache
 
-from .callbacks import callbacks
-from warnings import warn, filterwarnings, catch_warnings
-from collections import defaultdict
-import re
+# from .callbacks import callbacks
+from .helpers import draggable_axes
+from ._webmap import _import_OK
+
+if _import_OK:
+    from ._webmap import (
+        _WebServiec_collection,
+        REST_API_services,
+        _S1GBM,
+    )
+
+
+class map_objects(object):
+    """
+    A container for accessing objects of the generated figure
+
+        - f : the matplotlib figure
+        - ax : the geo-axes used for plotting the map
+        - ax_cb : the axis of the colorbar
+        - ax_cb_plot : the axis used to plot the histogram on top of the colorbar
+        - cb : the matplotlib colorbar-instance
+        - gridspec : the matplotlib GridSpec instance
+        - cb_gridspec : the GridSpecFromSubplotSpec for the colorbar and the histogram
+        - coll : the collection representing the data on the map
+
+    """
+
+    def __init__(
+        self,
+        m=None,
+    ):
+        self._m = m
+
+    # self.coll is assigned in "m.plot_map()"
+
+    @property
+    def f(self):
+        if self._m.parent._f is None:
+            self._m.parent._BM = None  # reset the blit-manager
+            self._m.parent._f = plt.figure(figsize=(12, 8))
+            plt.draw()
+
+        return self._m.parent._f
+
+    @property
+    def ax(self):
+        ax = self._m._ax
+        if isinstance(ax, SubplotSpec):
+            ax = None
+        return ax
+
+    @property
+    def ax_cb(self):
+        return getattr(self._m, "_ax_cb", None)
+
+    @property
+    def ax_cb_plot(self):
+        return getattr(self._m, "_ax_cb_plot", None)
+
+    @property
+    def gridspec(self):
+        return getattr(self._m, "_gridspec", None)
+
+    @property
+    def cb_gridspec(self):
+        return getattr(self._m, "_cb_gridspec", None)
+
+    # @wraps(plt.Axes.set_position)
+    def set_colorbar_position(self, pos=None, ratio=None, cb=None):
+        """
+        a wrapper to set the position of the colorbar and the histogram at
+        the same time
+
+        Parameters
+        ----------
+        pos : list    [left, bottom, width, height]
+            The bounding-box of the colorbar & histogram in relative
+            units [0,1] (with respect to the figure)
+            If None the current position is maintained.
+        ratio : float, optional
+            The ratio between the size of the colorbar and the size of the histogram.
+            'ratio=10' means that the histogram is 10 times as large as the colorbar!
+            The default is None in which case the current ratio is maintained.
+        cb : list, optional
+            The colorbar-objects (as returned by `m.add_colorbar()`)
+            If None, the existing colorbar will be used.
+        """
+
+        if cb is None:
+            _, ax_cb, ax_cb_plot, orientation = [
+                self.cb_gridspec,
+                self.ax_cb,
+                self.ax_cb_plot,
+                "vertical" if self._m._orientation == "horizontal" else "horizontal",
+            ]
+        else:
+            _, ax_cb, ax_cb_plot, orientation, _ = cb
+
+        if orientation == "horizontal":
+            pcb = ax_cb.get_position()
+            pcbp = ax_cb_plot.get_position()
+            if pos is None:
+                pos = [pcb.x0, pcb.y0, pcb.width, pcb.height + pcbp.height]
+            if ratio is None:
+                ratio = pcbp.height / pcb.height
+
+            hcb = pos[3] / (1 + ratio)
+            hp = ratio * hcb
+
+            ax_cb.set_position(
+                [pos[0], pos[1], pos[2], hcb],
+            )
+            ax_cb_plot.set_position(
+                [pos[0], pos[1] + hcb, pos[2], hp],
+            )
+
+        elif orientation == "vertical":
+            pcb = ax_cb.get_position()
+            pcbp = ax_cb_plot.get_position()
+            if pos is None:
+                pos = [pcbp.x0, pcbp.y0, pcb.width + pcbp.width, pcb.height]
+            if ratio is None:
+                ratio = pcbp.width / pcb.width
+
+            wcb = pos[2] / (1 + ratio)
+            wp = ratio * wcb
+
+            ax_cb.set_position(
+                [pos[0] + wp, pos[1], wcb, pos[3]],
+            )
+            ax_cb_plot.set_position(
+                [pos[0], pos[1], wp, pos[3]],
+            )
+        else:
+            raise TypeError(f"EOmaps: '{orientation}' is not a valid orientation")
 
 
 class data_specs(object):
@@ -24,17 +159,17 @@ class data_specs(object):
         self,
         m,
         data=None,
-        xcoord=None,
-        ycoord=None,
-        crs=None,
+        xcoord="lon",
+        ycoord="lat",
+        crs=4326,
         parameter=None,
     ):
         self._m = m
-        self._data = None
-        self._xcoord = None
-        self._ycoord = None
-        self._crs = None
-        self._parameter = None
+        self.data = data
+        self.xcoord = xcoord
+        self.ycoord = ycoord
+        self.crs = crs
+        self.parameter = parameter
 
     def __repr__(self):
         txt = f"""\
@@ -162,127 +297,6 @@ class data_specs(object):
                         + "\nCheck the data-specs!"
                     )
         return self._parameter
-
-
-class map_objects(object):
-    """
-    A container for accessing objects of the generated figure
-
-        - f : the matplotlib figure
-        - ax : the geo-axes used for plotting the map
-        - ax_cb : the axis of the colorbar
-        - ax_cb_plot : the axis used to plot the histogram on top of the colorbar
-        - cb : the matplotlib colorbar-instance
-        - gridspec : the matplotlib GridSpec instance
-        - cb_gridspec : the GridSpecFromSubplotSpec for the colorbar and the histogram
-        - coll : the collection representing the data on the map
-
-    """
-
-    def __init__(
-        self,
-        f=None,
-        ax=None,
-        ax_cb=None,
-        ax_cb_plot=None,
-        cb=None,
-        gridspec=None,
-        cb_gridspec=None,
-        coll=None,
-        orientation=None,
-    ):
-
-        self.f = f
-        self.ax = ax
-        self.ax_cb = ax_cb
-        self.ax_cb_plot = ax_cb_plot
-        self.gridspec = gridspec
-        self.cb_gridspec = cb_gridspec
-        self.coll = coll
-        self.orientation = orientation
-
-    def set_items(self, **kwargs):
-        for key, val in kwargs.items():
-            setattr(self, key, val)
-
-    @classmethod
-    def reinit(cls, **kwargs):
-        return cls(**kwargs)
-
-    # @wraps(plt.Axes.set_position)
-    def set_colorbar_position(self, pos=None, ratio=None, cb=None):
-        """
-        a wrapper to set the position of the colorbar and the histogram at
-        the same time
-
-        Parameters
-        ----------
-        pos : list    [left, bottom, width, height]
-            The bounding-box of the colorbar & histogram in relative
-            units [0,1] (with respect to the figure)
-            If None the current position is maintained.
-        ratio : float, optional
-            The ratio between the size of the colorbar and the size of the histogram.
-            'ratio=10' means that the histogram is 10 times as large as the colorbar!
-            The default is None in which case the current ratio is maintained.
-        cb : list, optional
-            The colorbar-objects (as returned by `m.add_colorbar()`)
-            If None, the existing colorbar will be used.
-        """
-
-        if cb is None:
-            cb_gridspec, ax_cb, ax_cb_plot, orientation = [
-                self.cb_gridspec,
-                self.ax_cb,
-                self.ax_cb_plot,
-                "vertical" if self.orientation == "horizontal" else "horizontal",
-            ]
-        else:
-            cb_gridspec, ax_cb, ax_cb_plot, orientation, _ = cb
-
-        if orientation == "horizontal":
-            if pos is None:
-                pcb = ax_cb.get_position()
-                pcbp = ax_cb_plot.get_position()
-
-                pos = [pcb.x0, pcb.y0, pcb.width, pcb.height + pcbp.height]
-
-            if ratio is None:
-                hratio = cb_gridspec.get_height_ratios()
-                ratio = hratio[0] / hratio[1]
-
-            hcb = pos[3] / (1 + ratio)
-            hp = ratio * hcb
-
-            ax_cb.set_position(
-                [pos[0], pos[1], pos[2], hcb],
-            )
-            ax_cb_plot.set_position(
-                [pos[0], pos[1] + hcb, pos[2], hp],
-            )
-
-        elif orientation == "vertical":
-            if pos is None:
-                pcb = ax_cb.get_position()
-                pcbp = ax_cb_plot.get_position()
-
-                pos = [pcbp.x0, pcbp.y0, pcb.width + pcbp.width, pcb.height]
-
-            if ratio is None:
-                wratio = cb_gridspec.get_width_ratios()
-                ratio = wratio[0] / wratio[1]
-
-            wcb = pos[2] / (1 + ratio)
-            wp = ratio * wcb
-
-            ax_cb.set_position(
-                [pos[0] + wp, pos[1], wcb, pos[3]],
-            )
-            ax_cb_plot.set_position(
-                [pos[0], pos[1], wp, pos[3]],
-            )
-        else:
-            raise TypeError(f"EOmaps: '{orientation}' is not a valid orientation")
 
 
 class plot_specs(object):
@@ -493,983 +507,716 @@ class classify_specs(object):
         )
 
 
-class cb_container(object):
-    """
-    A container for attaching callbacks and accessing return-objects.
+# avoid defining containers if import is not OK
+if not _import_OK:
+    wms_container = None
+    wmts_container = None
 
-    attach : accessor for callbacks.
-        Executing the functions will attach the associated callback to the map!
+else:
 
-    get : accessor for return-objects
-        A container to provide easy-access to the return-values of the callbacks.
-
-    """
-
-    def __init__(self, m, parent=None):
-        self._m = m
-        self._cb = callbacks(m)
-
-        self.get = self._get(self)
-        self.attach = self._attach(self)
-
-    def __repr__(self):
-        txt = "Attached callbacks:\n    " + "\n    ".join(
-            f"{key}" for key in self.get.attached_callbacks
-        )
-        return txt
-
-    class _attach:
+    class wms_container(object):
         """
-        Attach custom or pre-defined callbacks to the map.
+        A collection of open-access WMS services that can be added to the maps
 
-        Each callback takes 2 additional keyword-arguments:
+        For details and licensing check the docstrings and the links to the providers!
 
-        double_click : bool
-            Indicator if the callback should be executed on double-click (True)
-            or on single-click events (False). The default is False
-        mouse_button : int
-            The mouse-button to use for executing the callback:
+        All usage is the same as `add_wmts`
 
-                - LEFT = 1
-                - MIDDLE = 2
-                - RIGHT = 3
-                - BACK = 8
-                - FORWARD = 9
-
-            The default is 1
-
-        For additional keyword-arguments check the doc of the callback-functions!
-
-        Examples:
-        ---------
-        Get a (temporary) annotation on a LEFT-double-click:
-
-            >>> m.cb.attach.annotate(double_click=True, mouse_button=1, permanent=False)
-        Permanently color LEFT-clicked pixels red with a black border:
-
-            >>> m.cb.attach.mark(facecolor="r", edgecolor="k", permanent=True)
-        Attach a customly defined callback
-
-            >>> def some_callback(self, asdf, **kwargs):
-            >>>     print("hello world")
-            >>>     print("the position of the clicked pixel", kwargs["pos"])
-            >>>     print("the data-index of the clicked pixel", kwargs["ID"])
-            >>>     print("data-value of the clicked pixel", kwargs["val"])
-            >>>     print("the plot-crs is:", self.plot_specs["plot_crs"])
-
-            >>> m.cb.attach(some_callback, double_click=False, mouse_button=1, asdf=1)
-
-
+        layers can be added in 2 ways (either with . access or with [] access):
+            >>> m.add_wmts.<COLLECTION>.add_layer.<LAYER-NAME>(**kwargs)
+            >>> m.add_wmts.<COLLECTION>[<LAYER-NAME>](**kwargs)
         """
 
-        def __init__(self, parent):
-            self.parent = parent
+        def __init__(self, m):
+            self._m = m
 
-            # attach all existing pre-defined callbacks
-            for cb in callbacks._cb_list:
-                setattr(
-                    self,
-                    cb,
-                    update_wrapper(
-                        partial(self.parent._add_callback, callback=cb),
-                        getattr(self.parent._cb, cb),
-                    ),
-                )
+            services = [
+                (key, key.replace("_WMS_", "", 1))
+                for key in self.__dir__()
+                if key.startswith("_WMS_")
+            ]
 
-            self.custom = self.parent._add_callback
+            for (service, name) in services:
+                try:
+                    setattr(self, name, getattr(self, service)(m, "wms"))
+                except:
+                    warn(f"EOmaps: The wmts-service {service} could not be connected.")
 
-        def __call__(self, f, double_click=False, mouse_button=1, **kwargs):
+        @property
+        @lru_cache()
+        def ISRIC_SoilGrids(self):
+            # make this a property to avoid fetching layers on
+            # initialization of Maps-objects
             """
-            add a custom callback-function to the map
+            Interface to the ISRIC SoilGrids database
+            https://www.isric.org/explore/soilgrids/faq-soilgrids
+
+            ...
+            SoilGrids is a system for global digital soil mapping that makes
+            use of global soil profile information and covariate data to model
+            the spatial distribution of soil properties across the globe.
+            SoilGrids is a collections of soil property maps for the world
+            produced using machine learning at 250 m resolution.
+            ...
+
+            LICENSE-info (without any warranty for correctness!!)
+
+            check: https://www.isric.org/about/data-policy
+
+            """
+            print("EOmaps: fetching IRIS layers...")
+            return self._ISRIC(self._m)
+
+        class _ISRIC:
+            # since this is not an ArcGIS REST API it needs some special treatment...
+            def __init__(self, m, service_type="wms"):
+                import requests
+                import json
+
+                self._m = m
+                self._service_type = service_type
+                layers = requests.get(
+                    "https://rest.isric.org/soilgrids/v2.0/properties/layers"
+                )
+                self._layers = json.loads(layers.content.decode())["layers"]
+
+                for i in self._layers:
+                    name = i["property"]
+                    setattr(
+                        self, name, _WebServiec_collection(self._m, service_type="wms")
+                    )
+                    getattr(
+                        self, name
+                    )._url = f"https://maps.isric.org/mapserv?map=/map/{name}.map"
+
+        class _WMS_ESA_WorldCover(_WebServiec_collection):
+            """
+            ESA Worldwide land cover mapping
+                https://esa-worldcover.org/en
+
+            LICENSE-info (without any warranty for correctness!!)
+                (check: https://esa-worldcover.org/en/data-access for full details)
+
+                The ESA WorldCover product is provided free of charge,
+                without restriction of use. For the full license information see the
+                Creative Commons Attribution 4.0 International License.
+
+                Publications, models and data products that make use of these
+                datasets must include proper acknowledgement, including citing the
+                datasets and the journal article as in the following citation.
+            """
+
+            def __init__(self, *args, **kwargs):
+                super().__init__(*args, **kwargs)
+                self._url = "https://services.terrascope.be/wms/v2"
+
+        class _WMS_NASA_GIBS:
+            """
+            NASA Global Imagery Browse Services (GIBS)
+                https://wiki.earthdata.nasa.gov/display/GIBS/
+
+            LICENSE-info (without any warranty for correctness!!)
+                (check: https://earthdata.nasa.gov/eosdis/science-system-description/eosdis-components/gibs)
+
+                NASA supports an open data policy. We ask that users who make use of
+                GIBS in their clients or when referencing it in written or oral
+                presentations to add the following acknowledgment:
+
+                We acknowledge the use of imagery provided by services from NASA's
+                Global Imagery Browse Services (GIBS), part of NASA's Earth Observing
+                System Data and Information System (EOSDIS).
+            """
+
+            def __init__(self, m, service_type):
+                self._m = m
+                self._service_type = service_type
+
+                services = [
+                    (key, key.replace("_WMS_", "", 1))
+                    for key in self.__dir__()
+                    if key.startswith("_WMS_")
+                ]
+
+                for (service, name) in services:
+                    try:
+                        setattr(self, name, getattr(self, service)(m, "wms"))
+                    except:
+                        warn(
+                            f"EOmaps: The wmts-service {service} could not be connected."
+                        )
+
+            class _WMS_EPSG_4326(_WebServiec_collection):
+                """
+                NASA Global Imagery Browse Services (GIBS)
+                    https://wiki.earthdata.nasa.gov/display/GIBS/
+                """
+
+                def __init__(self, *args, **kwargs):
+                    super().__init__(*args, **kwargs)
+                    self._url = "https://gibs.earthdata.nasa.gov/wms/epsg4326/best/wms.cgi?SERVICE=WMS&REQUEST=GetCapabilities&VERSION=1.1.1"
+
+            class _WMS_EPSG_3857(_WebServiec_collection):
+                """
+                NASA Global Imagery Browse Services (GIBS)
+                    https://wiki.earthdata.nasa.gov/display/GIBS/
+                """
+
+                def __init__(self, *args, **kwargs):
+                    super().__init__(*args, **kwargs)
+                    self._url = "https://gibs.earthdata.nasa.gov/wms/epsg3857/best/wms.cgi?SERVICE=WMS&REQUEST=GetCapabilities&VERSION=1.1.1"
+
+            class _WMS_EPSG_3413(_WebServiec_collection):
+                """
+                NASA Global Imagery Browse Services (GIBS)
+                    https://wiki.earthdata.nasa.gov/display/GIBS/
+                """
+
+                def __init__(self, *args, **kwargs):
+                    super().__init__(*args, **kwargs)
+                    self._url = "https://gibs.earthdata.nasa.gov/wms/epsg3413/best/wms.cgi?SERVICE=WMS&REQUEST=GetCapabilities&VERSION=1.1.1"
+
+            class _WMS_EPSG_3031(_WebServiec_collection):
+                """
+                NASA Global Imagery Browse Services (GIBS)
+                    https://wiki.earthdata.nasa.gov/display/GIBS/
+                """
+
+                def __init__(self, *args, **kwargs):
+                    super().__init__(*args, **kwargs)
+                    self._url = "https://gibs.earthdata.nasa.gov/wms/epsg3031/best/wms.cgi?SERVICE=WMS&REQUEST=GetCapabilities&VERSION=1.1.1"
+
+        class _WMS_OpenStreetMap:
+            """
+            (global) OpenStreetMap WMS layers
+
+            https://wiki.openstreetmap.org/wiki/WMS
+            """
+
+            def __init__(self, m, service_type):
+                self._m = m
+                self._service_type = service_type
+
+                services = [
+                    (key, key.replace("_WMS_", "", 1))
+                    for key in self.__dir__()
+                    if key.startswith("_WMS_")
+                ]
+
+                for (service, name) in services:
+                    try:
+                        setattr(self, name, getattr(self, service)(m, "wms"))
+                    except:
+                        warn(
+                            f"EOmaps: The wmts-service {service} could not be connected."
+                        )
+
+            class _WMS_OSM_terrestis(_WebServiec_collection):
+                """
+                Free (global) Open Streetmap WMS services hosted by Terrestris
+                https://www.terrestris.de/en/openstreetmap-wms/
+                """
+
+                def __init__(self, *args, **kwargs):
+                    super().__init__(*args, **kwargs)
+                    self._url = "https://ows.terrestris.de/osm/service?SERVICE=WMS&VERSION=1.1.1&REQUEST=GetCapabilities"
+
+            class _WMS_OSM_mundialis(_WebServiec_collection):
+                """
+                Free (global) Open Streetmap WMS services hosted by Mundialis
+                https://www.mundialis.de/en/ows-mundialis/
+                """
+
+                def __init__(self, *args, **kwargs):
+                    super().__init__(*args, **kwargs)
+                    self._url = "http://ows.mundialis.de/services/service?"
+
+        class _WMS_Copernicus(_WebServiec_collection):
+            """
+            Access to the EU Copernicus WMS services
+
+            The Copernicus Global Land Service (CGLS) is a component of the
+            Land Monitoring Core Service (LMCS) of Copernicus, the European
+            flagship programme on Earth Observation.
+
+            https://land.copernicus.eu/global/access
+            """
+
+            def __init__(self, *args, **kwargs):
+                super().__init__(*args, **kwargs)
+
+                import cartopy.io.ogc_clients as ogcc
+                from cartopy import crs as ccrs
+
+                ogcc.METERS_PER_UNIT["urn:ogc:def:crs:EPSG:6.3:3857"] = 1
+                ogcc._URN_TO_CRS["urn:ogc:def:crs:EPSG:6.3:3857"] = ccrs.GOOGLE_MERCATOR
+
+                self._url = "https://viewer.globalland.vgt.vito.be/mapcache/wms?service=wmts&request=GetCapabilities"
+
+        class _WMS_EEA_DiscoMap:
+            """
+            A wide range of environmental data for Europe from the
+            European Environment Agency covering thematic areas such as air,
+            water, climate change, biodiversity, land and noise.
+
+            https://discomap.eea.europa.eu/Index/
+
+            LICENSE-info (without any warranty for correctness!!)
+            EEA standard re-use policy: Unless otherwise indicated, reuse of
+            content on the EEA website for commercial or non-commercial
+            purposes is permitted free of charge, provided that the source is
+            acknowledged.
+
+            """
+
+            def __init__(self, m, service_type):
+                self._m = m
+                self._service_type = service_type
+                pass
+
+            @property
+            @lru_cache()
+            def Image(self):
+                """
+                European Environment Agency discomap Image collection
+                https://discomap.eea.europa.eu/Index/
+                """
+                API = REST_API_services(
+                    m=self._m,
+                    url="https://image.discomap.eea.europa.eu/arcgis/rest/services",
+                    name="EEA_REST_Image",
+                    service_type=self._service_type,
+                )
+                API.fetch_services()
+
+                return API
+
+            @property
+            @lru_cache()
+            def Land(self):
+                """
+                European Environment Agency discomap Land collection
+                https://discomap.eea.europa.eu/Index/
+                """
+                API = REST_API_services(
+                    m=self._m,
+                    url="https://land.discomap.eea.europa.eu/arcgis/rest/services",
+                    name="EEA_REST_Land",
+                    service_type=self._service_type,
+                )
+                API.fetch_services()
+
+                return API
+
+            @property
+            @lru_cache()
+            def Climate(self):
+                """
+                European Environment Agency discomap Climate collection
+                https://discomap.eea.europa.eu/Index/
+                """
+                API = REST_API_services(
+                    m=self._m,
+                    url="https://climate.discomap.eea.europa.eu/arcgis/rest/services",
+                    name="EEA_REST_Climate",
+                    service_type=self._service_type,
+                )
+                API.fetch_services()
+
+                return API
+
+            @property
+            @lru_cache()
+            def Bio(self):
+                """
+                European Environment Agency discomap Bio collection
+                https://discomap.eea.europa.eu/Index/
+                """
+                API = REST_API_services(
+                    m=self._m,
+                    url="https://bio.discomap.eea.europa.eu/arcgis/rest/services",
+                    name="EEA_REST_Bio",
+                    service_type=self._service_type,
+                )
+                API.fetch_services()
+
+                return API
+
+            @property
+            @lru_cache()
+            def Copernicus(self):
+                """
+                European Environment Agency discomap Copernicus collection
+                https://discomap.eea.europa.eu/Index/
+                """
+                API = REST_API_services(
+                    m=self._m,
+                    url="https://copernicus.discomap.eea.europa.eu/arcgis/rest/services",
+                    name="EEA_REST_Copernicus",
+                    service_type=self._service_type,
+                )
+                API.fetch_services()
+
+                return API
+
+            @property
+            @lru_cache()
+            def Water(self):
+                """
+                European Environment Agency discomap Water collection
+                https://discomap.eea.europa.eu/Index/
+                """
+                API = REST_API_services(
+                    m=self._m,
+                    url="https://water.discomap.eea.europa.eu/arcgis/rest/services",
+                    name="EEA_REST_Water",
+                    service_type=self._service_type,
+                )
+                API.fetch_services()
+
+                return API
+
+            @property
+            @lru_cache()
+            def SOER(self):
+                """
+                European Environment Agency discomap SOER collection
+                https://discomap.eea.europa.eu/Index/
+                """
+                API = REST_API_services(
+                    m=self._m,
+                    url="https://soer.discomap.eea.europa.eu/arcgis/rest/services",
+                    name="EEA_REST_SOER",
+                    service_type=self._service_type,
+                )
+                API.fetch_services()
+
+                return API
+
+            @property
+            @lru_cache()
+            def MARATLAS(self):
+                """
+                European Environment Agency discomap MARATLAS collection
+                https://discomap.eea.europa.eu/Index/
+                """
+                API = REST_API_services(
+                    m=self._m,
+                    url="https://maratlas.discomap.eea.europa.eu/arcgis/rest/services",
+                    name="EEA_REST_SOER",
+                    service_type=self._service_type,
+                )
+                API.fetch_services()
+
+                return API
+
+            @property
+            @lru_cache()
+            def MARINE(self):
+                """
+                European Environment Agency discomap MARINE collection
+                https://discomap.eea.europa.eu/Index/
+                """
+                API = REST_API_services(
+                    m=self._m,
+                    url="https://marine.discomap.eea.europa.eu/arcgis/rest/services",
+                    name="EEA_REST_SOER",
+                    service_type=self._service_type,
+                )
+                API.fetch_services()
+
+                return API
+
+        class _WMS_S1GBM:
+            """
+            Sentinel-1 Global Backscatter Model
+
+            Citation:
+                B. Bauer-Marschallinger, et.al (2021): The Sentinel-1 Global Backscatter Model (S1GBM) -
+                Mapping Earth's Land Surface with C-Band Microwaves (1.0) [Data set]. TU Wien.
+
+            - https://researchdata.tuwien.ac.at/records/n2d1v-gqb91
+            - https://s1map.eodc.eu/
+
+
+            With this dataset publication, we open up a new perspective on
+            Earth's land surface, providing a normalised microwave backscatter
+            map from spaceborne Synthetic Aperture Radar (SAR) observations.
+            The Sentinel-1 Global Backscatter Model (S1GBM) describes Earth
+            for the period 2016-17 by the mean C-band radar cross section
+            in VV- and VH-polarization at a 10 m sampling, giving a
+            high-quality impression on surface- structures and -patterns.
+
+            https://s1map.eodc.eu/
+            """
+
+            def __init__(self, m, service_type):
+                self._m = m
+                self._service_type = service_type
+
+            @property
+            @lru_cache()
+            def add_layer(self):
+
+                self._S1GBM_vv = _S1GBM(self._m, pol="vv")
+                self._S1GBM_vh = _S1GBM(self._m, pol="vh")
+                return SimpleNamespace(vv=self._S1GBM_vv, vh=self._S1GBM_vh)
+
+        def get_service(self, url, rest_API=False):
+            """
+            Get a object that can be used to add WMS services based on a
+            GetCapabilities-link or a link to a ArcGIS REST API
+
+            Examples (WMS):
+            - Copernicus Global Land Mosaics for Austria, Germany and Slovenia
+              from Sentinel-2
+
+              - https://land.copernicus.eu/imagery-in-situ/global-image-mosaics/
+              >>> "https://s2gm-wms.brockmann-consult.de/cgi-bin/qgis_mapserv.fcgi?MAP=/home/qgis/projects/s2gm-wms_mosaics_vrt.qgs&service=WMS&request=GetCapabilities&version=1.1.1"
+            - Web Map Services of the city of Vienna (Austria)
+
+              - https://www.data.gv.at/katalog/dataset/stadt-wien_webmapservicewmsgeoserverwien
+              >>> "https://data.wien.gv.at/daten/geo?version=1.3.0&service=WMS&request=GetCapabilities"
+
+            Examples (rest_API):
+            - Interface to the ArcGIS REST Services Directory for the
+              Austrian Federal Institute of Geology (Geologische Bundesanstalt)
+              - https://www.geologie.ac.at/services/web-services
+              >>> "https://gisgba.geologie.ac.at/arcgis/rest/services"
 
             Parameters
             ----------
-            f : callable
-                the function to attach to the map.
-                The call-signature is:
-
-                >>> def some_callback(self, **kwargs):
-                >>>     print("hello world")
-                >>>     print("the position of the clicked pixel", kwargs["pos"])
-                >>>     print("the data-index of the clicked pixel", kwargs["ID"])
-                >>>     print("data-value of the clicked pixel", kwargs["val"])
-                >>>     print("the plot-crs is:", self.plot_specs["plot_crs"])
-                >>>
-                >>> m.cb.attach.custom(some_callback)
-
-
-            double_click : bool
-                Indicator if the callback should be executed on double-click (True)
-                or on single-click events (False)
-            mouse_button : int
-                The mouse-button to use for executing the callback:
-
-                    - LEFT = 1
-                    - MIDDLE = 2
-                    - RIGHT = 3
-                    - BACK = 8
-                    - FORWARD = 9
-            **kwargs :
-                kwargs passed to the callback-function
-                For documentation of the individual functions check the docs in `m.cb`
-
+            url : str
+                The service-url
+            rest_API : bool, optional
+                Indicator if a GetCapabilities link (True) or a link to a
+                rest-API is provided (False). The default is False
 
             Returns
             -------
-            cid : int
-                the ID of the attached callback
+            service : _WebServiec_collection
+                An object that behaves just like `m.add_wms.<service>`
+                and provides easy-access to available WMS layers
 
             """
-            return self.parent._add_callback(f, double_click, mouse_button, **kwargs)
 
-    class _get:
-        def __init__(self, parent):
-            self.m = parent._m
-            self.cb = parent._cb
-
-            from collections import defaultdict
-
-            self.cbs = defaultdict(lambda: defaultdict(dict))
-
-        @property
-        def picked_object(self):
-            if hasattr(self.cb, "picked_object"):
-                return self.cb.picked_object
-            else:
-                print("EOmaps: attach the 'load' callback first!")
-
-        @property
-        def picked_vals(self):
-            if hasattr(self.cb, "picked_vals"):
-                return self.cb.picked_vals
-            else:
-                print("EOmaps: attach the 'get_vals' callback first!")
-
-        @property
-        def permanent_markers(self):
-            if hasattr(self.cb, "permanent_markers"):
-                return self.cb.permanent_markers
-            else:
-                print("EOmaps: attach the 'mark' callback with 'permanent=True' first!")
-
-        @property
-        def marker(self):
-            if hasattr(self.cb, "marker"):
-                return self.cb.marker
-            else:
-                print(
-                    "EOmaps: attach the 'mark' callback with 'permanent=False' first!"
-                )
-
-        @property
-        def attached_callbacks(self):
-            cbs = []
-            for ds, dsdict in self.cbs.items():
-                for b, bdict in dsdict.items():
-                    for name in bdict.keys():
-                        cbs.append(f"{name}__{ds}__{b}")
-
-            return cbs
-
-    def _add_callback(self, callback, double_click=False, mouse_button=1, **kwargs):
-        """
-        Attach a callback to the plot that will be executed if a pixel is clicked
-
-        A list of pre-defined callbacks (accessible via `m.cb`) or customly defined
-        functions can be used.
-
-            >>> # to add a pre-defined callback use:
-            >>> cid = m._add_callback("annotate", <kwargs passed to m.cb.annotate>)
-            >>> # to remove the callback again, call:
-            >>> m.remove_callback(cid)
-
-        Parameters
-        ----------
-        callback : callable or str
-            The callback-function to attach.
-
-            If a string is provided, it will be used to assign the associated function
-            from the `m.cb` collection:
-                - "annotate" : add annotations to the clicked pixel
-                - "mark" : add markers to the clicked pixel
-                - "plot" : dynamically update a plot with the clicked values
-                - "print_to_console" : print info of the clicked pixel to the console
-                - "get_values" : save properties of the clicked pixel to a dict
-                - "load" : use the ID of the clicked pixel to load data
-                - "clear_annotations" : clear all existing annotations
-                - "clear_markers" : clear all existing markers
-
-            You can also define a custom function with the following call-signature:
-                >>> def some_callback(self, asdf, **kwargs):
-                >>>     print("hello world")
-                >>>     print("the position of the clicked pixel", kwargs["pos"])
-                >>>     print("the data-index of the clicked pixel", kwargs["ID"])
-                >>>     print("data-value of the clicked pixel", kwargs["val"])
-                >>>     print("the plot-crs is:", self.m.plot_specs["plot_crs"])
-                >>>     print("asdf is:", asdf)
-
-                >>> m.cb.attach(some_callback, double_click=False, mouse_button=1, asdf=1)
-
-        double_click : bool
-            Indicator if the callback should be executed on double-click (True)
-            or on single-click events (False)
-        mouse_button : int
-            The mouse-button to use for executing the callback:
-
-                - LEFT = 1
-                - MIDDLE = 2
-                - RIGHT = 3
-                - BACK = 8
-                - FORWARD = 9
-        **kwargs :
-            kwargs passed to the callback-function
-            For documentation of the individual functions check the docs in `m.cb`
-
-        Returns
-        -------
-        cbname : str
-            the identification string of the callback
-            (to remove the callback, use `m.cb.remove(cbname)`)
-
-        """
-
-        assert not all(
-            i in kwargs for i in ["pos", "ID", "val", "double_click", "mouse_button"]
-        ), 'the names "pos", "ID", "val" cannot be used as keyword-arguments!'
-
-        if isinstance(callback, str):
-            assert hasattr(self._cb, callback), (
-                f"The function '{callback}' does not exist as a pre-defined callback."
-                + " Use one of:\n    - "
-                + "\n    - ".join(callbacks._cb_list)
-            )
-            callback = getattr(self._cb, callback)
-        elif callable(callback):
-            # re-bind the callback methods to the eomaps.Maps.cb object
-            # in case custom functions are used
-            if hasattr(callback, "__func__"):
-                callback = callback.__func__.__get__(self._m)
-            else:
-                callback = callback.__get__(self._m)
-
-        # make sure multiple callbacks of the same funciton are only assigned
-        # if multiple assignments are properly handled
-        multi_cb_functions = ["mark", "annotate"]
-
-        if double_click:
-            d = self.get.cbs["double"][mouse_button]
-        else:
-            d = self.get.cbs["single"][mouse_button]
-
-        # get a unique name for the callback
-        ncb = [int(i.rsplit("_", 1)[1]) for i in d if i.startswith(callback.__name__)]
-        cbkey = callback.__name__ + f"_{max(ncb) + 1 if len(ncb) > 0 else 0}"
-
-        if callback.__name__ not in multi_cb_functions:
-            assert len(ncb) == 0, (
-                "Multiple assignments of the callback"
-                + f" '{callback.__name__}' are not (yet) supported..."
-            )
-
-        d[cbkey] = partial(callback, **kwargs)
-
-        # add mouse-button assignment as suffix to the name (with __ separator)
-        cbname = cbkey + f"__{'double' if double_click else 'single'}__{mouse_button}"
-
-        return cbname
-
-    def _get_clickdict(self, event):
-        ind = event.ind
-        if ind is not None:
-            if isinstance(
-                event.artist,
-                (
-                    EllipseCollection,
-                    PolyCollection,
-                    TriMesh,
-                ),
-            ):
-                clickdict = dict(
-                    pos=(self._m._props["x0"][ind], self._m._props["y0"][ind]),
-                    ID=self._m._props["ids"][ind],
-                    val=self._m._props["z_data"][ind],
-                    ind=ind,
-                )
-
-                return clickdict
-
-    def _add_pick_callback(self):
-        # ------------- add a callback
-        def onpick(event):
-            self.event = event
-            if event.artist != self._m.figure.coll:
-                return
-            else:
-                clickdict = self._get_clickdict(event)
-
-            if event.double_click:
-                cbs = self.get.cbs["double"]
-            else:
-                cbs = self.get.cbs["single"]
-
-            if event.mouse_button in cbs:
-                for key, cb in cbs[event.mouse_button].items():
-                    if clickdict is not None:
-                        cb(**clickdict)
-                    else:
-                        if hasattr(
-                            self._cb, f"_{key.rsplit('_', 1)[0]}_nopick_callback"
-                        ):
-                            getattr(
-                                self._cb, f"_{key.rsplit('_', 1)[0]}_nopick_callback"
-                            )()
-
-            self._m.BM.update()
-
-        self._m.figure.f.canvas.mpl_connect("pick_event", onpick)
-
-    def remove(self, ID=None):
-        """
-        remove an attached callback from the figure
-
-        Parameters
-        ----------
-        callback : int, str or tuple
-            if str: the name of the callback to remove
-                    (`<function_name>_<count>__<double/single>__<button_ID>`)
-        """
-        if ID is not None:
-            name, ds, b = ID.split("__")
-
-        dsdict = self.get.cbs.get(ds, None)
-        if dsdict is not None:
-            bdict = dsdict.get(int(b))
-        else:
-            return
-
-        if bdict is not None:
-            if name in bdict:
-                del bdict[name]
-
-                # call cleanup methods on removal
-                fname = name.rsplit("_", 1)[0]
-                if hasattr(self._cb, f"_{fname}_cleanup"):
-                    getattr(self._cb, f"_{fname}_cleanup")()
-
-                print(f"Removed the callback: '{ID}'.")
-
-
-try:
-    from owslib.wmts import WebMapTileService
-    from owslib.wms import WebMapService
-    import requests
-    from urllib3.exceptions import InsecureRequestWarning
-
-    _wmtsQ = True
-except ImportError:
-    _wmtsQ = False
-
-
-class _wmts_layer(object):
-    def __init__(self, m, wmts, layer):
-        self._m = m
-        self.layer = layer
-        self.wmts = wmts
-        pass
-
-    def __call__(self, layer=None, **kwargs):
-        print(f"EOmaps: ... adding wmts-layer: {self.layer}")
-        art = self._m.figure.ax.add_wmts(
-            self.wmts, self.layer, wmts_kwargs=kwargs, interpolation="spline36"
-        )
-        if layer is not None:
-            self._m.BM.add_bg_artist(art, layer)
-
-
-class _wms_layer(object):
-    def __init__(self, m, wms, layer):
-        self._m = m
-        self.layer = layer
-        self.wms = wms
-        pass
-
-    def __call__(self, layer=None, **kwargs):
-        print(f"EOmaps: ... adding wmts-layer: {self.layer}")
-        art = self._m.figure.ax.add_wms(
-            self.wms, self.layer, wms_kwargs=kwargs, interpolation="spline36"
-        )
-        if layer is not None:
-            self._m.BM.add_bg_artist(art, layer)
-
-
-def _sanitize(s):
-    # taken from https://stackoverflow.com/a/3303361/9703451
-
-    # Remove leading characters until we find a letter or underscore
-    s = re.sub("^[^a-zA-Z_]+", "", s)
-
-    # replace invalid characters with an underscore
-    s = re.sub("[^0-9a-zA-Z_]", "_", s)
-    return s
-
-
-class _WebServiec_collection(object):
-    def __init__(self, m, service_type="wmts"):
-        self._m = m
-        self._service_type = service_type
-
-    def __getitem__(self, key):
-        return self.add_layer.__dict__[key]
-
-    def __repr__(self):
-        if hasattr(self, "info"):
-            return self.info
-        else:
-            return object.__repr__(self)
-
-    @property
-    @lru_cache()
-    def layers(self):
-        """
-        get a list of all available layers
-        """
-        return list(self.add_layer.__dict__)
-
-    def findlayer(self, name):
-        """
-        A convenience function to return any layer-name that contains the
-        provided "name"-string (the search is NOT case-sensitive!)
-
-        Parameters
-        ----------
-        name : str
-            the string to search for in the layers.
-
-        Returns
-        -------
-        list
-            A list of all available layers that contain the provided string.
-
-        """
-        return [i for i in self.layers if name.lower() in i.lower()]
-
-    @staticmethod
-    def _get_wmts(url):
-        return WebMapTileService(url)
-
-    @staticmethod
-    def _get_wms(url):
-        return WebMapService(url)
-
-    @property
-    @lru_cache()
-    def add_layer(self):
-        if self._service_type == "wmts":
-            wmts = self._get_wmts(self._url)
-            layers = dict()
-            for key in wmts.contents.keys():
-                layers[_sanitize(key)] = _wmts_layer(self._m, wmts, key)
-
-        elif self._service_type == "wms":
-            wms = self._get_wms(self._url)
-            layers = dict()
-            for key in wms.contents.keys():
-                layers[_sanitize(key)] = _wms_layer(self._m, wms, key)
-
-        return SimpleNamespace(**layers)
-
-
-class _multi_WebServiec_collection(_WebServiec_collection):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-
-    @property
-    @lru_cache()
-    def add_layer(self):
-
-        if self._service_type == "wmts":
-            print("EOmaps: fetching layers...")
-            layers = dict()
-            for key, url in self._urls.items():
-                wmts = self._get_wmts(url)
-                layer_names = list(wmts.contents.keys())
-                if len(layer_names) > 1:
-                    warn(f"there are multiple sub-layers for '{key}'")
-                for lname in layer_names:
-                    layers[_sanitize(key) + f"__{lname}"] = _wmts_layer(
-                        self._m, wmts, lname
-                    )
-
-        elif self._service_type == "wms":
-            print("EOmaps: fetching layers...")
-            layers = dict()
-            for key, url in self._urls.items():
-                wms = self._get_wms(url)
-                layer_names = list(wms.contents.keys())
-                if len(layer_names) > 1:
-                    warn(f"there are multiple sub-layers for '{key}'")
-                for lname in layer_names:
-                    layers[_sanitize(key) + f"__{lname}"] = _wms_layer(
-                        self._m, wms, lname
-                    )
-
-        return SimpleNamespace(**layers)
-
-
-class wms_container(object):
-    """
-    A collection of open-access WMS services that can be added to the maps
-
-    For details and licensing check the docstrings and the links to the providers!
-
-    All usage is the same as `add_wmts`
-
-    layers can be added in 2 ways (either with . access or with [] access):
-        >>> m.add_wmts.<COLLECTION>.add_layer.<LAYER-NAME>(**kwargs)
-        >>> m.add_wmts.<COLLECTION>[<LAYER-NAME>](**kwargs)
-    """
-
-    def __init__(self, m):
-        self._m = m
-
-        if not _wmtsQ:
-            warn("EOmaps: adding WMS layers requires 'owslib'")
-            self.missing_requirements = "install `owslib`"
-            return
-
-        services = [
-            (key, key.replace("_WMS_", "", 1))
-            for key in self.__dir__()
-            if key.startswith("_WMS_")
-        ]
-
-        for (service, name) in services:
-            try:
-                setattr(self, service[1:], getattr(self, service)(m, "wms"))
-            except:
-                warn(f"EOmaps: The wmts-service {service} could not be connected.")
-
-    class _WMS_S2GM_AT_DE_SVN_SK(_WebServiec_collection):
-        """
-        https://land.copernicus.eu/imagery-in-situ/global-image-mosaics/
-        """
-
-        def __init__(self, *args, **kwargs):
-            super().__init__(*args, **kwargs)
-            self._url = "https://s2gm-wms.brockmann-consult.de/cgi-bin/qgis_mapserv.fcgi?MAP=/home/qgis/projects/s2gm-wms_mosaics_vrt.qgs&service=WMS&request=GetCapabilities&version=1.1.1"
-
-    @property
-    @lru_cache()
-    def EEA_Image_REST(self):
-        API = REST_API_services(
-            m=self._m,
-            url="https://image.discomap.eea.europa.eu/arcgis/rest/services",
-            name="EEA_REST",
-            service_type="wms",
-        )
-        API.fetch_services()
-
-        return API
-
-    @property
-    @lru_cache()
-    def EEA_Land_REST(self):
-        API = REST_API_services(
-            m=self._m,
-            url="https://land.discomap.eea.europa.eu/arcgis/rest/services",
-            name="EEA_REST",
-            service_type="wms",
-        )
-        API.fetch_services()
-
-        return API
-
-    @property
-    @lru_cache()
-    def EEA_Climate_REST(self):
-        API = REST_API_services(
-            m=self._m,
-            url="https://climate.discomap.eea.europa.eu/arcgis/rest/services",
-            name="EEA_REST",
-            service_type="wms",
-        )
-        API.fetch_services()
-
-        return API
-
-    @property
-    @lru_cache()
-    def EEA_Bio_REST(self):
-        API = REST_API_services(
-            m=self._m,
-            url="https://bio.discomap.eea.europa.eu/arcgis/rest/services",
-            name="EEA_REST",
-            service_type="wms",
-        )
-        API.fetch_services()
-
-        return API
-
-    @property
-    @lru_cache()
-    def EEA_Copernicus_REST(self):
-        API = REST_API_services(
-            m=self._m,
-            url="https://copernicus.discomap.eea.europa.eu/arcgis/rest/services",
-            name="EEA_REST",
-            service_type="wms",
-        )
-        API.fetch_services()
-
-        return API
-
-    @property
-    @lru_cache()
-    def EEA_Water_REST(self):
-        API = REST_API_services(
-            m=self._m,
-            url="https://water.discomap.eea.europa.eu/arcgis/rest/services",
-            name="EEA_REST",
-            service_type="wms",
-        )
-        API.fetch_services()
-
-        return API
-
-    @property
-    @lru_cache()
-    def EEA_SOER_REST(self):
-        API = REST_API_services(
-            m=self._m,
-            url="https://soer.discomap.eea.europa.eu/arcgis/rest/services",
-            name="EEA_REST",
-            service_type="wms",
-        )
-        API.fetch_services()
-
-        return API
-
-
-class wmts_container(object):
-    """
-    A collection of open-access WMTS services that can be added to the maps
-
-    For details and licensing check the docstrings and the links to the providers!
-
-    layers can be added in 2 ways (either with . access or with [] access):
-        >>> m.add_wmts.<COLLECTION>.add_layer.<LAYER-NAME>(**kwargs)
-        >>> m.add_wmts.<COLLECTION>[<LAYER-NAME>](**kwargs)
-
-    ### usage-examples:
-
-    - add NASA's BlueMarble background layer
-
-        >>> m.add_wmts.NASA_GIBS.add_layer.BlueMarble_NextGeneration()
-
-        additional kwargs can simply be passed to the layer-call:
-
-        >>> m.add_wmts.NASA_GIBS["AIRS_L3_Surface_Air_Temperature_Daily_Day"
-                                 ](time='2020-02-05')
-
-    - add ESA's WorldCover landcover-classification layer
-
-        >>> m.add_wmts.ESA_WorldCover.add_layer.WORLDCOVER_2020_MAP()
-
-
-    """
-
-    def __init__(self, m):
-        if not _wmtsQ:
-            warn("EOmaps: adding WMTS layers requires 'owslib'")
-            self.missing_requirements = "install `owslib`"
-            return
-
-        self._m = m
-
-        services = [
-            (key, key.replace("_WMTS_", "", 1))
-            for key in self.__dir__()
-            if key.startswith("_WMTS_")
-        ]
-
-        for (service, name) in services:
-            try:
-                setattr(self, name, getattr(self, service)(m, "wmts"))
-            except:
-                warn(f"EOmaps: The wmts-service {service} could not be connected.")
-
-    class _WMTS_NASA_GIBS(_WebServiec_collection):
-        """
-        NASA Global Imagery Browse Services (GIBS)
-            https://wiki.earthdata.nasa.gov/display/GIBS/
-
-        LICENSE-info (without any warranty for correctness!!)
-            (check: https://earthdata.nasa.gov/eosdis/science-system-description/eosdis-components/gibs)
-
-            NASA supports an open data policy. We ask that users who make use of
-            GIBS in their clients or when referencing it in written or oral
-            presentations to add the following acknowledgment:
-
-            We acknowledge the use of imagery provided by services from NASA's
-            Global Imagery Browse Services (GIBS), part of NASA's Earth Observing
-            System Data and Information System (EOSDIS).
-
-        """
-
-        def __init__(self, *args, **kwargs):
-            super().__init__(*args, **kwargs)
-            self.info = (
-                "NASA Global Imagery Browse Services (GIBS)\n"
-                + "https://wiki.earthdata.nasa.gov/display/GIBS/"
-            )
-            self._url = "https://gibs.earthdata.nasa.gov/wmts/epsg4326/all/1.0.0/WMTSCapabilities.xml"
-
-    class _WMTS_ESA_WorldCover(_WebServiec_collection):
-        """
-        ESA Worldwide land cover mapping
-            https://esa-worldcover.org/en
-
-        LICENSE-info (without any warranty for correctness!!)
-            (check: https://esa-worldcover.org/en/data-access for full details)
-
-            The ESA WorldCover product is provided free of charge,
-            without restriction of use. For the full license information see the
-            Creative Commons Attribution 4.0 International License.
-
-            Publications, models and data products that make use of these
-            datasets must include proper acknowledgement, including citing the
-            datasets and the journal article as in the following citation.
-        """
-
-        def __init__(self, *args, **kwargs):
-            super().__init__(*args, **kwargs)
-            self.info = (
-                "ESA Worldwide land cover mapping\n" + "https://esa-worldcover.org/en"
-            )
-            self._url = "https://services.terrascope.be/wmts/v2"
-
-    class _WMTS_AT_basemap(_WebServiec_collection):
-        """
-        Verwaltungsgrundkarte von Österreich
-            https://basemap.at/
-
-        LICENSE-info (without any warranty for correctness!!)
-            (check: https://basemap.at/#lizenz for full details)
-
-            basemap.at ist gemäß der Open Government Data Österreich Lizenz
-            CC-BY 4.0 sowohl für private als auch kommerzielle Zwecke frei
-            sowie entgeltfrei nutzbar.
-        """
-
-        def __init__(self, *args, **kwargs):
-            super().__init__(*args, **kwargs)
-            self.info = "Basemap for Austria\n" + "https://basemap.at/"
-            self._url = "http://maps.wien.gv.at/basemap/1.0.0/WMTSCapabilities.xml"
-
-    class _WMTS_AT_Wien_basemap(_WebServiec_collection):
-        """ """
-
-        def __init__(self, *args, **kwargs):
-            super().__init__(*args, **kwargs)
-            self._url = "http://maps.wien.gv.at/wmts/1.0.0/WMTSCapabilities.xml"
-
-    class _WMTS_Copernicus(_WebServiec_collection):
-        """
-        https://land.copernicus.eu/global/access
-        """
-
-        def __init__(self, *args, **kwargs):
-            super().__init__(*args, **kwargs)
-
-            import cartopy.io.ogc_clients as ogcc
-            from cartopy import crs as ccrs
-
-            ogcc.METERS_PER_UNIT["urn:ogc:def:crs:EPSG:6.3:3857"] = 1
-            ogcc._URN_TO_CRS["urn:ogc:def:crs:EPSG:6.3:3857"] = ccrs.GOOGLE_MERCATOR
-
-            self._url = "https://viewer.globalland.vgt.vito.be/mapcache/wmts?service=wmts&request=GetCapabilities"
-
-    @property
-    @lru_cache()
-    def ArcGIS_REST(self):
-        """
-        Interface to the ERSI ArcGIS REST Services Directory
-
-            http://services.arcgisonline.com/arcgis/rest/services
-
-            For licensing etc. check the individual layer-descriptions in
-            the link above.
-
-        """
-        API = REST_API_services(
-            m=self._m,
-            url="http://server.arcgisonline.com/arcgis/rest/services",
-            name="EEA_REST",
-            service_type="wmts",
-        )
-        API.fetch_services()
-
-        return API
-
-
-class REST_API_services:
-    def __init__(self, m, url, name, service_type="wmts"):
-        self._m = m
-        self._REST_url = url
-        self._name = name
-        self._service_type = service_type
-
-    def fetch_services(self):
-        print(f"EOmaps: ... fetching services for '{self._name}'")
-        self._REST_API = _REST_API(self._REST_url)
-
-        for foldername, services in self._REST_API._structure.items():
-            setattr(
-                self,
-                foldername,
-                _multi_REST_WMSservice(
+            if rest_API:
+                service = REST_API_services(
                     m=self._m,
-                    services=services,
-                    service_type=self._service_type,
-                    url=self._REST_url,
-                ),
-            )
-        print("EOmaps: done!")
-
-
-class _REST_WMSservice(_WebServiec_collection):
-    def __init__(self, service, s_name, s_type, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self._service = service
-        self._s_name = s_name
-        self._s_type = s_type
-
-        self._layers = None
-
-    @property
-    def _url(self):
-        print(self._s_name)
-        url = "/".join([self._service, self._s_name, self._s_type])
-
-        if self._service_type == "wms":
-            if requests.get(url + "/WMS").status_code == 200:
-                # use_service = "WMS"
-                suffix = "/WMSServer?request=GetCapabilities&service=WMS"
-                url = url.replace("/rest/", "/") + suffix
+                    url=url,
+                    name="custom_service",
+                    service_type="wms",
+                )
+                service.fetch_services()
             else:
-                url = None
-        elif self._service_type == "wmts":
-            if requests.get(url + "/WMTS").status_code == 200:
-                # use_service = "WMTS"
-                suffix = "/WMTS/1.0.0/WMTSCapabilities.xml"
-                url = url + suffix
-            else:
-                url = None
-        return url
+                service = _WebServiec_collection(self._m, service_type="wms", url=url)
 
-    def _fetch_layers(self):
-        self._layers = dict()
-        url = self._url
-        if url is not None:
-            if self._service_type == "wms":
-                wms = self._get_wms(url)
-                layer_names = list(wms.contents.keys())
-                for lname in layer_names:
-                    self._layers["layer_" + str(lname)] = _wms_layer(
-                        self._m, wms, lname
-                    )
-            elif self._service_type == "wmts":
-                wmts = self._get_wmts(url)
-                layer_names = list(wmts.contents.keys())
-                for lname in layer_names:
-                    self._layers["layer_" + str(lname)] = _wmts_layer(
-                        self._m, wmts, lname
-                    )
+            return service
 
-    @property
-    @lru_cache()
-    def add_layer(self):
-        self._fetch_layers()
-        return SimpleNamespace(**self._layers)
+    class wmts_container(object):
+        """
+        A collection of open-access WMTS services that can be added to the maps
 
+        For details and licensing check the docstrings and the links to the providers!
 
-class _multi_REST_WMSservice:
-    def __init__(self, m, services, service_type, url, *args, **kwargs):
-        self._m = m
-        self._services = services
-        self._service_type = service_type
-        self._url = url
+        layers can be added in 2 ways (either with . access or with [] access):
+            >>> m.add_wmts.<COLLECTION>.add_layer.<LAYER-NAME>(**kwargs)
+            >>> m.add_wmts.<COLLECTION>[<LAYER-NAME>](**kwargs)
 
-        self._fetch_services()
+        ### usage-examples:
 
-    @lru_cache()
-    def _fetch_services(self):
-        layers = dict()
-        for (s_name, s_type) in self._services:
-            wms_layer = _REST_WMSservice(
+        - add NASA's BlueMarble background layer
+
+            >>> m.add_wmts.NASA_GIBS.add_layer.BlueMarble_NextGeneration()
+
+            additional kwargs can simply be passed to the layer-call:
+
+            >>> m.add_wmts.NASA_GIBS["AIRS_L3_Surface_Air_Temperature_Daily_Day"
+                                     ](time='2020-02-05')
+
+        - add ESA's WorldCover landcover-classification layer
+
+            >>> m.add_wmts.ESA_WorldCover.add_layer.WORLDCOVER_2020_MAP()
+        """
+
+        def __init__(self, m):
+            self._m = m
+
+            services = [
+                (key, key.replace("_WMTS_", "", 1))
+                for key in self.__dir__()
+                if key.startswith("_WMTS_")
+            ]
+
+            for (service, name) in services:
+                try:
+                    setattr(self, name, getattr(self, service)(m, "wmts"))
+                except:
+                    warn(f"EOmaps: The wmts-service {service} could not be connected.")
+
+        class _WMTS_NASA_GIBS(_WebServiec_collection):
+            """
+            NASA Global Imagery Browse Services (GIBS)
+                https://wiki.earthdata.nasa.gov/display/GIBS/
+
+            LICENSE-info (without any warranty for correctness!!)
+                (check: https://earthdata.nasa.gov/eosdis/science-system-description/eosdis-components/gibs)
+
+                NASA supports an open data policy. We ask that users who make use of
+                GIBS in their clients or when referencing it in written or oral
+                presentations to add the following acknowledgment:
+
+                We acknowledge the use of imagery provided by services from NASA's
+                Global Imagery Browse Services (GIBS), part of NASA's Earth Observing
+                System Data and Information System (EOSDIS).
+            """
+
+            def __init__(self, *args, **kwargs):
+                super().__init__(*args, **kwargs)
+                self.info = (
+                    "NASA Global Imagery Browse Services (GIBS)\n"
+                    + "https://wiki.earthdata.nasa.gov/display/GIBS/"
+                )
+                self._url = "https://gibs.earthdata.nasa.gov/wmts/epsg4326/all/1.0.0/WMTSCapabilities.xml"
+
+        class _WMTS_ESA_WorldCover(_WebServiec_collection):
+            """
+            ESA Worldwide land cover mapping
+                https://esa-worldcover.org/en
+
+            LICENSE-info (without any warranty for correctness!!)
+                (check: https://esa-worldcover.org/en/data-access for full details)
+
+                The ESA WorldCover product is provided free of charge,
+                without restriction of use. For the full license information see the
+                Creative Commons Attribution 4.0 International License.
+
+                Publications, models and data products that make use of these
+                datasets must include proper acknowledgement, including citing the
+                datasets and the journal article as in the following citation.
+            """
+
+            def __init__(self, *args, **kwargs):
+                super().__init__(*args, **kwargs)
+                self.info = (
+                    "ESA Worldwide land cover mapping\n"
+                    + "https://esa-worldcover.org/en"
+                )
+                self._url = "https://services.terrascope.be/wmts/v2"
+
+        class _WMTS_Copernicus(_WebServiec_collection):
+            """
+            Access to the EU Copernicus WMTS services
+
+            The Copernicus Global Land Service (CGLS) is a component of the
+            Land Monitoring Core Service (LMCS) of Copernicus, the European
+            flagship programme on Earth Observation.
+
+            https://land.copernicus.eu/global/access
+            """
+
+            def __init__(self, *args, **kwargs):
+                super().__init__(*args, **kwargs)
+
+                import cartopy.io.ogc_clients as ogcc
+                from cartopy import crs as ccrs
+
+                ogcc.METERS_PER_UNIT["urn:ogc:def:crs:EPSG:6.3:3857"] = 1
+                ogcc._URN_TO_CRS["urn:ogc:def:crs:EPSG:6.3:3857"] = ccrs.GOOGLE_MERCATOR
+
+                self._url = "https://viewer.globalland.vgt.vito.be/mapcache/wmts?service=wmts&request=GetCapabilities"
+
+        class _WMTS_AT_basemap(_WebServiec_collection):
+            """
+            Verwaltungsgrundkarte von Österreich (Basemap for Austria)
+                https://basemap.at/
+
+            LICENSE-info (without any warranty for correctness!!)
+                (check: https://basemap.at/#lizenz for full details)
+
+                basemap.at ist gemäß der Open Government Data Österreich Lizenz
+                CC-BY 4.0 sowohl für private als auch kommerzielle Zwecke frei
+                sowie entgeltfrei nutzbar.
+            """
+
+            def __init__(self, *args, **kwargs):
+                super().__init__(*args, **kwargs)
+                self.info = "Basemap for Austria\n" + "https://basemap.at/"
+                self._url = "http://maps.wien.gv.at/basemap/1.0.0/WMTSCapabilities.xml"
+
+        class _WMTS_AT_Wien_basemap(_WebServiec_collection):
+            """
+            Verwaltungsgrundkarte von Wien (Basemaps for the city of Vienna)
+                https://www.data.gv.at/katalog/dataset/stadt-wien_webmaptileservicewmtswien
+
+            LICENSE-info (without any warranty for correctness!!)
+                (check: the link above for full details)
+
+                CC-BY 4.0
+            """
+
+            def __init__(self, *args, **kwargs):
+                super().__init__(*args, **kwargs)
+                self.info = "Basemap for Vienna (Austria)\n" + "https://www.wien.gv.at"
+                self._url = "http://maps.wien.gv.at/wmts/1.0.0/WMTSCapabilities.xml"
+
+        @property
+        @lru_cache()
+        def ESRI_ArcGIS(self):
+            """
+            Interface to the ERSI ArcGIS REST Services Directory
+
+                http://services.arcgisonline.com/arcgis/rest/services
+
+                For licensing etc. check the individual layer-descriptions in
+                the link above.
+
+            """
+            API = REST_API_services(
                 m=self._m,
-                service=self._url,
-                s_name=s_name,
-                s_type=s_type,
-                service_type=self._service_type,
+                url="http://server.arcgisonline.com/arcgis/rest/services",
+                name="EEA_REST",
+                service_type="wmts",
             )
+            API.fetch_services()
 
-            setattr(self, _sanitize(s_name), wms_layer)
-            # setattr(self, _sanitize(s_name), partial(self._get_wms_layer,
-            #                                           s_name=s_name,
-            #                                           s_type=s_type))
+            return API
+
+        def get_service(self, url, rest_API=False):
+            """
+            Get a object that can be used to add WMTS services based on a
+            GetCapabilities-link or a link to a ArcGIS REST API
+
+            Examples (WMTS):
+            - WMTS service for NASA GIBS datasets
+
+              >>> https://gibs.earthdata.nasa.gov/wmts/epsg4326/all/1.0.0/WMTSCapabilities.xml
 
 
-class _REST_API:
-    # adapted from https://gis.stackexchange.com/a/113213
-    def __init__(self, url):
-        self._url = url
-        self._structure = self._get_structure(self._url)
-        pass
+            Parameters
+            ----------
+            url : str
+                The service-url
+            rest_API : bool, optional
+                Indicator if a GetCapabilities link (True) or a link to a
+                rest-API is provided (False). The default is False
 
-    def _post(self, service, _params={"f": "pjson"}, ret_json=True):
-        """Post Request to REST Endpoint
+            Returns
+            -------
+            service : _WebServiec_collection
+                An object that behaves just like `m.add_wmts.<service>`
+                and provides easy-access to available WMTS layers
 
-        Required:
-        service -- full path to REST endpoint of service
+            """
 
-        Optional:
-        _params -- parameters for posting a request
-        ret_json -- return the response as JSON.  Default is True.
-        """
-        r = requests.post(service, params=_params, verify=False)
-
-        # make sure return
-        if r.status_code != 200:
-            raise NameError(
-                '"{0}" service not found!\n{1}'.format(service, r.raise_for_status())
-            )
-        else:
-            if ret_json:
-                return r.json()
+            if rest_API:
+                service = REST_API_services(
+                    m=self._m,
+                    url=url,
+                    name="custom_service",
+                    service_type="wmts",
+                )
+                service.fetch_services()
             else:
-                return r
+                service = _WebServiec_collection(self._m, service_type="wmts", url=url)
 
-    def _get_structure(self, service):
-        """returns a list of all services
-
-        Optional:
-        service -- full path to a rest service
-        """
-
-        with catch_warnings():
-            filterwarnings("ignore", category=InsecureRequestWarning)
-
-            all_services = defaultdict(list)
-            r = self._post(service)
-            # parse all services that are not inside a folder
-            for s in r["services"]:
-                all_services["SERVICES"].append((s["name"], s["type"]))
-            for s in r["folders"]:
-                new = "/".join([service, s])
-                endpt = self._post(new)
-
-                for serv in endpt["services"]:
-                    if str(serv["type"]) == "MapServer":
-                        all_services[s].append((serv["name"], serv["type"]))
-        return all_services
+            return service

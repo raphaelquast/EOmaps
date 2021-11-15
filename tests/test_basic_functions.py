@@ -3,7 +3,7 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.gridspec import GridSpec
-from eomaps import Maps
+from eomaps import Maps, MapsGrid
 from eomaps._shapes import shapes
 
 
@@ -35,14 +35,17 @@ class TestBasicPlotting(unittest.TestCase):
 
         # rectangles
         m.set_shape.geod_circles(radius=100000)
-        m.plot_map()
+        m.plot_map(coastlines=False)
         m.indicate_masked_points()
+
+        m.add_coastlines(coast=dict(color="r"), ocean=dict(fc="g"))
 
         plt.close("all")
 
         # rectangles
         m.set_shape.rectangles()
-        m.plot_map()
+        m.plot_map(coastlines=False)
+        m.add_coastlines(coast=False, ocean=dict(fc="g"))
 
         m.set_shape.rectangles(radius=1, radius_crs=4326)
         m.plot_map()
@@ -115,9 +118,6 @@ class TestBasicPlotting(unittest.TestCase):
             m.plot_map()
 
             plt.close(m.figure.f)
-            m.figure = (
-                m.figure.reinit()
-            )  # do this explicitly since it does not work with unittests
 
     def test_simple_map(self):
         m = Maps()
@@ -163,33 +163,69 @@ class TestBasicPlotting(unittest.TestCase):
 
     def test_add_callbacks(self):
         m = Maps()
-        m.data = self.data
+        m.data = self.data.sample(10)
         m.set_data_specs(xcoord="x", ycoord="y", in_crs=3857)
         m.set_plot_specs(plot_crs=3857)
         m.set_shape.ellipses(radius=200000)
 
         m.plot_map()
 
-        # attach all callbacks
+        # attach all pick callbacks
         double_click, mouse_button = True, 1
-        for n, cb in enumerate(m.cb._cb._cb_list):
-            if n == 1:
-                double_click = False
-            if n == 2:
-                double_click = False
+        for n, cb in enumerate(m.cb.pick._cb_list):
             if n == 1:
                 mouse_button = 1
+                double_click = False
             if n == 2:
                 mouse_button = 2
+                double_click = False
 
-            cbID = m.cb.attach(cb, double_click=double_click, mouse_button=mouse_button)
+            cbID = m.cb.pick.attach(cb, double_click=double_click, button=mouse_button)
+
             self.assertTrue(
                 cbID
                 == f"{cb}_0__{'double' if double_click else 'single'}__{mouse_button}"
             )
-            self.assertTrue(len(m.cb.get.attached_callbacks) == 1)
-            m.cb.remove(cbID)
-            self.assertTrue(len(m.cb.get.attached_callbacks) == 0)
+            self.assertTrue(len(m.cb.pick.get.attached_callbacks) == 1)
+            m.cb.pick.remove(cbID)
+            self.assertTrue(len(m.cb.pick.get.attached_callbacks) == 0)
+
+        # attach all click callbacks
+        double_click, mouse_button = True, 1
+        for n, cb in enumerate(m.cb.click._cb_list):
+            if n == 1:
+                mouse_button = 1
+                double_click = False
+            if n == 2:
+                mouse_button = 2
+                double_click = False
+
+            cbID = m.cb.click.attach(cb, double_click=double_click, button=mouse_button)
+
+            self.assertTrue(
+                cbID
+                == f"{cb}_0__{'double' if double_click else 'single'}__{mouse_button}"
+            )
+            self.assertTrue(len(m.cb.click.get.attached_callbacks) == 1)
+            m.cb.click.remove(cbID)
+            self.assertTrue(len(m.cb.click.get.attached_callbacks) == 0)
+
+        # attach all keypress callbacks
+        double_click, mouse_button = True, 1
+        for n, cb in enumerate(m.cb.keypress._cb_list):
+            if n == 1:
+                key = "x"
+            if n == 2:
+                key = "y"
+            else:
+                key = "z"
+
+            cbID = m.cb.keypress.attach(cb, key=key)
+
+            self.assertTrue(cbID == f"{cb}_0__{key}")
+            self.assertTrue(len(m.cb.keypress.get.attached_callbacks) == 1)
+            m.cb.keypress.remove(cbID)
+            self.assertTrue(len(m.cb.keypress.get.attached_callbacks) == 0)
 
         plt.close(m.figure.f)
 
@@ -199,18 +235,31 @@ class TestBasicPlotting(unittest.TestCase):
         m.data = self.data
         m.set_data_specs(xcoord="x", ycoord="y", in_crs=3857)
         m.set_plot_specs(plot_crs=3857)
-
+        m.add_coastlines(layer=1)
         m.plot_map()
 
-        # test all callbacks
-        for n, cb in enumerate(m.cb._cb._cb_list):
+        # test all pick callbacks
+        for n, cb in enumerate(m.cb.pick._cb_list):
             kwargs = dict(ID=1, pos=(1, 2), val=3.365734, ind=None)
             if cb == "load":
                 kwargs["database"] = pd.DataFrame([1, 2, 3, 4])
                 kwargs["load_method"] = "xs"
 
-            callback = getattr(m.cb._cb, cb)
+            callback = getattr(m.cb.pick._cb, cb)
             callback(**kwargs)
+
+        # test all click callbacks
+        for n, cb in enumerate(m.cb.click._cb_list):
+            kwargs = dict(ID=1, pos=(1, 2), val=3.365734, ind=None)
+            callback = getattr(m.cb.click._cb, cb)
+            callback(**kwargs)
+
+        # test all keypress callbacks
+        for n, cb in enumerate(m.cb.keypress._cb_list):
+            kwargs = dict(key="x")
+            callback = getattr(m.cb.keypress._cb, cb)
+            callback(**kwargs)
+
         plt.close(m.figure.f)
 
     def test_add_overlay(self):
@@ -414,9 +463,9 @@ class TestBasicPlotting(unittest.TestCase):
         m.plot_map()
 
         # plot on the same axes
-        m2 = m.copy(connect=True, copy_data="share")
+        m2 = m.copy(connect=True, copy_data="share", gs_ax=m.figure.ax)
         m2.set_shape.ellipses()
-        m2.plot_map(gs_ax=m.figure.ax, facecolor="none", edgecolor="r")
+        m2.plot_map(facecolor="none", edgecolor="r")
 
         plt.close(m.figure.f)
 
@@ -429,10 +478,10 @@ class TestBasicPlotting(unittest.TestCase):
     def test_add_colorbar(self):
         gs = GridSpec(2, 2)
 
-        m = Maps()
+        m = Maps(gs_ax=gs[0, 0])
         m.set_data_specs(data=self.data, xcoord="x", ycoord="y", in_crs=3857)
         m.set_plot_specs(histbins=5)
-        m.plot_map(gs_ax=gs[0, 0], colorbar=True)
+        m.plot_map(colorbar=True)
         cb1 = m.add_colorbar(gs[1, 0], orientation="horizontal")
         cb2 = m.add_colorbar(gs[0, 1], orientation="vertical")
 
@@ -454,11 +503,12 @@ class TestBasicPlotting(unittest.TestCase):
             dict(lon=lon.flat, lat=lat.flat, data=(lon ** 2 + lat ** 2).flat)
         )
 
-        gridspec = GridSpec(3, 4)
-
-        m = Maps()
-        m._maskit = False
-        m.set_data(data=df.sample(10000), xcoord="lon", ycoord="lat", crs=4326)
+        mgrid = MapsGrid(3, 4)
+        mgrid.parent.set_data(
+            data=df.sample(1000), xcoord="lon", ycoord="lat", crs=4326
+        )
+        for m in mgrid.children:
+            m.set_data(**mgrid.parent.data_specs)
 
         crss = iter(
             (
@@ -480,7 +530,7 @@ class TestBasicPlotting(unittest.TestCase):
             )
         )
 
-        for i, gs, title in zip(
+        for i, m, title in zip(
             (
                 ["ellipses", dict(radius=1.0, radius_crs="in")],
                 ["ellipses", dict(radius=100000, radius_crs="out")],
@@ -504,7 +554,7 @@ class TestBasicPlotting(unittest.TestCase):
                 ],
                 ["delaunay_triangulation", dict(masked=False)],
             ),
-            list(gridspec),
+            list(mgrid),
             (
                 "in_ellipses",
                 "out_ellipses",
@@ -520,22 +570,20 @@ class TestBasicPlotting(unittest.TestCase):
                 "delaunay_unmasked",
             ),
         ):
+
             print(title)
-            if hasattr(m, "BM"):
-                m2 = m.copy(copy_data="share", connect=True)
 
-                m2.plot_specs.title = title
-                getattr(m2.set_shape, i[0])(**i[1])
-                m2.plot_specs.plot_crs = next(crss)
+            m.plot_specs.title = title
+            getattr(m.set_shape, i[0])(**i[1])
+            m.plot_specs.plot_crs = next(crss)
 
-                m2.plot_map(edgecolor="none", gs_ax=gs, colorbar=True, pick_distance=5)
-                m2.cb.attach.annotate()
-            else:
-                m.plot_specs.title = title
-                getattr(m.set_shape, i[0])(**i[1])
+            m.plot_map(
+                edgecolor="none", colorbar=True, coastlines=True, pick_distance=5
+            )
+            m.cb.click.attach.annotate()
 
-                m.plot_map(edgecolor="none", gs_ax=gs, colorbar=True)
-                m.cb.attach.annotate()
+        mgrid.parent.cb.click.share_events(*mgrid.children)
+
         m.figure.f.tight_layout()
         # %%
         plt.close(m.figure.f)
