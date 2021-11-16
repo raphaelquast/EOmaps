@@ -5,6 +5,7 @@ import numpy as np
 from matplotlib.colors import LinearSegmentedColormap, ListedColormap
 from collections import defaultdict
 from matplotlib.transforms import Bbox
+import matplotlib.pyplot as plt
 
 
 def pairwise(iterable, pairs=2):
@@ -601,8 +602,11 @@ class BlitManager:
 
         self._after_update_actions = []
         self._after_restore_actions = []
-
         self._bg_layer = 0
+
+        self._artists_to_clear = defaultdict(list)
+
+        self._refetch_bg = True
 
     @property
     def canvas(self):
@@ -615,8 +619,6 @@ class BlitManager:
     @bg_layer.setter
     def bg_layer(self, val):
         self._bg_layer = val
-        self.fetch_bg()
-        self.update()
 
     def fetch_bg(self, layer=None, bbox=None):
         cv = self.canvas
@@ -627,11 +629,11 @@ class BlitManager:
             bbox = cv.figure.bbox
 
         # make all artists of the corresponding layer visible
-        for art in self._bg_artists[self.bg_layer]:
+        for art in self._bg_artists[layer]:
             art.set_visible(True)
 
         for l in self._bg_artists:
-            if l != self.bg_layer:
+            if l != layer:
                 # make all artists of the corresponding layer visible
                 for art in self._bg_artists[l]:
                     art.set_visible(False)
@@ -642,7 +644,8 @@ class BlitManager:
         cv.draw()
         self.cid = cv.mpl_connect("draw_event", self.on_draw)
 
-        self._bg_layers[self.bg_layer] = cv.copy_from_bbox(bbox)
+        self._bg_layers[layer] = cv.copy_from_bbox(bbox)
+        self._refetch_bg = False
 
     def on_draw(self, event):
         """Callback to register with 'draw_event'."""
@@ -650,10 +653,16 @@ class BlitManager:
         if event is not None:
             if event.canvas != cv:
                 raise RuntimeError
-
-        self._bg_layers = dict()
-        self.fetch_bg(self.bg_layer)
-        self._draw_animated()
+        try:
+            # reset all background-layers and re-fetch the default one
+            if self._refetch_bg:
+                self._bg_layers = dict()
+                self.fetch_bg(self.bg_layer)
+                # do an update but don't clear temporary artists!
+                # (they are cleared on clicks only)
+            self.update(clear=False, blit=False)
+        except Exception:
+            pass
 
     def add_artist(self, art, layer=0):
         """
@@ -750,7 +759,22 @@ class BlitManager:
                 for a in artists:
                     fig.draw_artist(a)
 
-    def update(self, layers=None, bbox_bounds=None, bg_layer=None, artists=None):
+    def _clear_temp_artists(self, method):
+        while len(self._artists_to_clear[method]) > 0:
+            art = self._artists_to_clear[method].pop(-1)
+            art.set_visible(False)
+            self.remove_artist(art)
+            art.remove()
+
+    def update(
+        self,
+        layers=None,
+        bbox_bounds=None,
+        bg_layer=None,
+        artists=None,
+        clear="click",
+        blit=True,
+    ):
         """
         Update the screen with animated artists.
 
@@ -777,27 +801,28 @@ class BlitManager:
         # paranoia in case we missed the draw event,
         if bg_layer not in self._bg_layers or self._bg_layers[bg_layer] is None:
             self.on_draw(None)
-
         else:
+            if clear:
+                self._clear_temp_artists(clear)
+
             # restore the background
             cv.restore_region(self._bg_layers[bg_layer])
-
             while len(self._after_restore_actions) > 0:
                 action = self._after_restore_actions.pop(0)
                 action()
 
             # draw all of the animated artists
             self._draw_animated(layers=layers, artists=artists)
+            if blit:
+                if bbox_bounds is not None:
 
-            if bbox_bounds is not None:
+                    class bbox:
+                        bounds = bbox_bounds
 
-                class bbox:
-                    bounds = bbox_bounds
-
-                cv.blit(bbox)
-            else:
-                # update the GUI state
-                cv.blit(fig.bbox)
+                    cv.blit(bbox)
+                else:
+                    # update the GUI state
+                    cv.blit(fig.bbox)
 
             # execute all actions registered to be called after blitting
             while len(self._after_update_actions) > 0:
@@ -822,11 +847,9 @@ class BlitManager:
             x0, y0, w, h = bbox_bounds
 
             if layer not in self._bg_layers:
-                initial_bg = self.bg_layer
                 # fetch the required background layer
-                self.bg_layer = layer
-                # go back to the previous layer
-                self.bg_layer = initial_bg
+                self.fetch_bg(layer)
+                self.canvas.restore_region(self._bg_layers[self.bg_layer])
 
             # restore the region of interest
             self.canvas.restore_region(

@@ -757,6 +757,7 @@ class keypress_callbacks:
 
     def switch_layer(self, layer=1, key="1"):
         self._m.BM.bg_layer = layer
+        self._m.BM.fetch_bg()
 
 
 class dynamic_callbacks:

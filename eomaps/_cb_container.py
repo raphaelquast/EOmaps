@@ -119,8 +119,7 @@ class _cb_container(object):
     def _clear_temporary_artists(self):
         while len(self._temporary_artists) > 0:
             art = self._temporary_artists.pop(-1)
-            art.set_visible(False)
-            self._m.BM.remove_artist(art)
+            self._m.BM._artists_to_clear[self._method].append(art)
 
     def _sort_cbs(self, cbs):
         if not cbs:
@@ -522,7 +521,7 @@ class cb_click_container(_click_container):
                     obj._fwd_cb(event)
                     m.BM._after_update_actions.append(obj._clear_temporary_artists)
 
-            self._m.BM.update()
+            self._m.BM.update(clear=self._method)
 
         def movecb(event):
             # ignore callbacks while dragging axes
@@ -544,7 +543,7 @@ class cb_click_container(_click_container):
                     obj._fwd_cb(event)
                     m.BM._after_update_actions.append(obj._clear_temporary_artists)
 
-            self._m.BM.update()
+            self._m.BM.update(clear=self._method)
 
         # ------------- add a callback
         self._cid_button_press_event = self._m.figure.f.canvas.mpl_connect(
@@ -656,6 +655,8 @@ class cb_pick_container(_click_container):
                 cb = bcbs[key]
                 if clickdict is not None:
                     cb(**clickdict)
+
+            self._m.BM.update(clear=self._method, blit=False)
 
     def _add_pick_callback(self):
         # only attach pick-callbacks if there is a collection available!

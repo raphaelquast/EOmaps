@@ -213,7 +213,6 @@ class Maps(object):
         self._init_ax = gs_ax
 
     def _set_axes(self):
-        print("setting axes", self.plot_specs.plot_crs)
         if self._ax is None or isinstance(self._ax, SubplotSpec):
             f, gs, cbgs, ax, ax_cb, ax_cb_plot = self._init_figure(
                 gs_ax=self._ax,
@@ -229,7 +228,22 @@ class Maps(object):
             # initialize the callbacks
             self.cb._init_cbs()
 
-            _ = self._draggable_axes
+            def lims_change(*args, **kwargs):
+                self.BM._refetch_bg = True
+
+            self.figure.ax.callbacks.connect("xlim_changed", lims_change)
+            self.figure.ax.callbacks.connect("ylim_changed", lims_change)
+
+            if self.parent is self:
+                _ = self._draggable_axes
+
+                if plt.get_backend() == "module://ipympl.backend_nbagg":
+                    warnings.warn(
+                        "EOmaps disables matplotlib's interactive mode (e.g. 'plt.ioff()') "
+                        + "when using the 'ipympl' backend to avoid recursions during callbacks!"
+                    )
+                    plt.ioff()
+                    plt.show()
 
     def _reset_axes(self):
 
@@ -1601,6 +1615,7 @@ class Maps(object):
         coastlines=True,
         pick_distance=100,
         layer=0,
+        dynamic=False,
         **kwargs,
     ):
         """
@@ -1721,7 +1736,6 @@ class Maps(object):
                 self.BM.add_bg_artist(ocean, layer=self.layer)
                 self.BM.add_bg_artist(coastlines, layer=self.layer)
 
-            self.BM.add_bg_artist(coll, self.layer)
             self.figure.coll = coll
 
             if colorbar:
@@ -1744,6 +1758,11 @@ class Maps(object):
                             + "you provide an explicit axes via gs_ax"
                         )
 
+            if dynamic is True:
+                self.BM.add_artist(coll, self.layer)
+            else:
+                self.BM.add_bg_artist(coll, self.layer)
+
             # ------------- add a picker that will be used by the callbacks
             self._attach_picker()
 
@@ -1751,19 +1770,14 @@ class Maps(object):
                 # attach the pick-callback that execute the callbacks
                 self.cb.pick._init_cbs()
 
-            # only set the extent once for each axes
-            if not hasattr(self.figure.ax, "_EOmaps_extent_set"):
-                # get the extent of the added collection
-                b = self.figure.coll.get_datalim(ax.transData)
-
-                ymin, ymax = ax.projection.y_limits
-                xmin, xmax = ax.projection.x_limits
-
-                # set the axis-extent
-                ax.set_xlim(max(b.xmin, xmin), min(b.xmax, xmax))
-                ax.set_ylim(max(b.ymin, ymin), min(b.ymax, ymax))
-
-                self.figure.ax._EOmaps_extent_set = True
+            # set the image extent
+            # get the extent of the added collection
+            b = self.figure.coll.get_datalim(ax.transData)
+            ymin, ymax = ax.projection.y_limits
+            xmin, xmax = ax.projection.x_limits
+            # set the axis-extent
+            ax.set_xlim(max(b.xmin, xmin), min(b.xmax, xmax))
+            ax.set_ylim(max(b.ymin, ymin), min(b.ymax, ymax))
 
             self.figure.f.canvas.draw()
 
