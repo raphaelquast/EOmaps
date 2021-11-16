@@ -5,6 +5,7 @@ import matplotlib.pyplot as plt
 from matplotlib.gridspec import GridSpec
 from eomaps import Maps, MapsGrid
 from eomaps._shapes import shapes
+from types import SimpleNamespace
 
 
 class TestBasicPlotting(unittest.TestCase):
@@ -248,11 +249,46 @@ class TestBasicPlotting(unittest.TestCase):
             callback = getattr(m.cb.pick._cb, cb)
             callback(**kwargs)
 
+            dummyevent = SimpleNamespace(
+                artist=m.figure.coll,
+                dblclick=False,
+                button=1,
+            )
+            dummymouseevent = SimpleNamespace(
+                inaxes=m.figure.ax,
+                dblclick=dummyevent.dblclick,
+                button=dummyevent.button,
+                xdata=m.data.iloc[0]["x"],
+                ydata=m.data.iloc[0]["x"],
+                x=123,
+                y=123,
+            )
+
+            pick = m._pick_pixel(None, dummymouseevent)
+            if pick[1] is not None:
+                dummyevent.ind = pick[1]["ind"]
+                if "dist" in pick[1]:
+                    dummyevent.dist = pick[1]["dist"]
+            else:
+                dummyevent.ind = None
+                dummyevent.dist = None
+
+            m.cb.pick._onpick(dummyevent)
+
         # test all click callbacks
         for n, cb in enumerate(m.cb.click._cb_list):
             kwargs = dict(ID=1, pos=(1, 2), val=3.365734, ind=None)
             callback = getattr(m.cb.click._cb, cb)
             callback(**kwargs)
+
+            dummyevent = SimpleNamespace(
+                inaxes=m.figure.ax,
+                dblclick=True,
+                button=1,
+                xdata=123456,
+                ydata=123456,
+            )
+            m.cb.click._fwd_cb(dummyevent)
 
         # test all keypress callbacks
         for n, cb in enumerate(m.cb.keypress._cb_list):
@@ -474,6 +510,19 @@ class TestBasicPlotting(unittest.TestCase):
         m.data = self.data
         m.set_data_specs(xcoord="x", ycoord="y", in_crs=3857, parameter="value")
         data = m._prepare_data()
+
+    def test_draggable_axes(self):
+
+        mgrid = MapsGrid(2, 2)
+        for m in mgrid:
+            m.plot_map(colorbar=False)
+        mgrid.parent._draggable_axes._make_draggable()
+        mgrid.parent._draggable_axes._undo_draggable()
+
+        m = Maps(orientation="horizontal")
+        m.plot_map()
+        m._draggable_axes._make_draggable()
+        m._draggable_axes._undo_draggable()
 
     def test_add_colorbar(self):
         gs = GridSpec(2, 2)
