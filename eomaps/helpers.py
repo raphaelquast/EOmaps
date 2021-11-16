@@ -775,6 +775,7 @@ class BlitManager:
             art.set_visible(False)
             self.remove_artist(art)
             art.remove()
+        del self._artists_to_clear[method]
 
     def update(
         self,

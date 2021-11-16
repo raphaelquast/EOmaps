@@ -1517,6 +1517,8 @@ class Maps(object):
         marker = self.cb.click._cb.mark(
             ID=ID, pos=xy, radius=radius, ind=None, shape=shape, buffer=buffer, **kwargs
         )
+        self.BM.update()
+
         return marker
 
     def add_annotation(
@@ -1602,8 +1604,8 @@ class Maps(object):
             text=text,
             **kwargs,
         )
-
-        self.BM.update()
+        if self.parent is self:
+            self.BM.update()
 
     @wraps(plt.savefig)
     def savefig(self, *args, **kwargs):

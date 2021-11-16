@@ -523,7 +523,8 @@ class cb_click_container(_click_container):
                     obj._fwd_cb(event)
                     m.BM._after_update_actions.append(obj._clear_temporary_artists)
 
-            self._m.BM.update(clear=self._method)
+            if self._m is self._m.parent:
+                self._m.BM.update(clear=self._method)
 
         def movecb(event):
             # ignore callbacks while dragging axes
@@ -546,18 +547,19 @@ class cb_click_container(_click_container):
                     obj._onclick(event)
                     obj._fwd_cb(event)
                     m.BM._after_update_actions.append(obj._clear_temporary_artists)
+            if self._m is self._m.parent:
+                self._m.BM.update(clear=self._method)
 
-            self._m.BM.update(clear=self._method)
-
-        # ------------- add a callback
-        self._cid_button_press_event = self._m.figure.f.canvas.mpl_connect(
-            "button_press_event", clickcb
-        )
-
-        # for click-callbacks, allow motion-detection
-        self._cid_motion_event = self._m.figure.f.canvas.mpl_connect(
-            "motion_notify_event", movecb
-        )
+        if self._cid_button_press_event is None:
+            # ------------- add a callback
+            self._cid_button_press_event = self._m.figure.f.canvas.mpl_connect(
+                "button_press_event", clickcb
+            )
+        if self._cid_motion_event is None:
+            # for click-callbacks, allow motion-detection
+            self._cid_motion_event = self._m.figure.f.canvas.mpl_connect(
+                "motion_notify_event", movecb
+            )
 
     def _fwd_cb(self, event):
         if event.inaxes != self._m.figure.ax:
@@ -661,8 +663,8 @@ class cb_pick_container(_click_container):
                 cb = bcbs[key]
                 if clickdict is not None:
                     cb(**clickdict)
-
-            self._m.BM.update(clear=self._method, blit=False)
+            if self._m is self._m.parent:
+                self._m.BM.update(clear=self._method, blit=False)
 
     def _add_pick_callback(self):
         # only attach pick-callbacks if there is a collection available!
@@ -690,8 +692,11 @@ class cb_pick_container(_click_container):
             # don't update since updates are performed within the click-callbacks
             # self._m.BM.update()
 
-        # ------------- add a callback
-        self._cid_pick_event = self._m.figure.f.canvas.mpl_connect("pick_event", pickcb)
+        if self._cid_pick_event is None:
+            # ------------- add a callback
+            self._cid_pick_event = self._m.figure.f.canvas.mpl_connect(
+                "pick_event", pickcb
+            )
 
     def _fwd_cb(self, event):
         if event.mouseevent.inaxes != self._m.figure.ax:
@@ -768,9 +773,10 @@ class keypress_container(_cb_container):
                 for name, cb in self.get.cbs[event.key].items():
                     cb(key=event.key)
 
-        self._cid_keypress_event = self._m.figure.f.canvas.mpl_connect(
-            "key_press_event", _onpress
-        )
+        if self._m is self._m.parent:
+            self._cid_keypress_event = self._m.figure.f.canvas.mpl_connect(
+                "key_press_event", _onpress
+            )
 
     class _attach:
         """
