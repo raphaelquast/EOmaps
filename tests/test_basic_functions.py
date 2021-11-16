@@ -241,7 +241,11 @@ class TestBasicPlotting(unittest.TestCase):
 
         class dummytoolbar:
             mode = "asdf"
-            _wait_cursor_for_draw_cm = False
+
+            def _wait_cursor_for_draw_cm(*args, **kwargs):
+                return False
+
+        m.figure.f.canvas.toolbar = dummytoolbar
 
         # test all pick callbacks
         for n, cb in enumerate(m.cb.pick._cb_list):
