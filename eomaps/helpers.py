@@ -61,7 +61,7 @@ class draggable_axes:
         self.cb_modifier = cb_modifier
 
         self.m = m
-        self.f = self.m.figure.f
+        self.f = self.m.parent.figure.f
 
         self._ax_picked = None
         self._m_picked = None
@@ -75,8 +75,6 @@ class draggable_axes:
         self._reattach_pick_cb = False
 
         self.f.canvas.mpl_connect("key_press_event", self.cb_key_press)
-
-        # self._frameon = self.get_frameon()
 
         self._annotations = []
         self._hiddenax = []
@@ -129,7 +127,8 @@ class draggable_axes:
             for ax in self.all_axes
         ]
 
-    def get_frameon(self):
+    @property
+    def _frameon(self):
         return [i.get_frame_on() for i in self.all_axes]
 
     @property
@@ -523,19 +522,21 @@ class draggable_axes:
         for ax, frameQ, spine_vis in zip(
             self.all_axes, self._frameon, self._spines_visible
         ):
+            print(ax)
+            self.m.BM.remove_bg_artist(ax)
+
             ax.set_frame_on(frameQ)
             for key, spine in ax.spines.items():
                 spine.set_visible(spine_vis[key])
                 spine.set_edgecolor("k")
                 spine.set_linewidth(0.5)
 
-            self.m.BM.remove_bg_artist(ax)
-
             while len(self.cids) > 0:
                 cid = self.cids.pop(-1)
                 self.f.canvas.mpl_disconnect(cid)
 
         self.clear_annotations()
+        self.m.BM.fetch_bg()
         self.f.canvas.draw()
 
     def _make_draggable(self):
@@ -546,7 +547,6 @@ class draggable_axes:
 
         self._modifier_pressed = True
         print("EOmaps: Making axis draggable")
-        self._frameon = self.get_frameon()
 
         for ax in self.all_axes:
             ax.set_frame_on(True)
