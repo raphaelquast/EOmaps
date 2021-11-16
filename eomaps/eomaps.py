@@ -95,7 +95,7 @@ def MapsGrid(r=2, c=2, **kwargs):
                 mij = Maps(gs_ax=gs[0, 0])
                 mg.parent = mij
             else:
-                mij = Maps(gs_ax=gs[i, j])
+                mij = Maps(f=mg.parent.figure.f, gs_ax=gs[i, j])
                 mij.connect(mg.parent)
 
             mg._axes.append(mij)
@@ -1674,6 +1674,13 @@ class Maps(object):
 
             ax.set_title(title)
 
+            # add coastlines and ocean-coloring
+            if coastlines is True:
+                coastlines = ax.coastlines()
+                ocean = ax.add_feature(cfeature.OCEAN)
+                self.BM.add_bg_artist(ocean, layer=self.layer)
+                self.BM.add_bg_artist(coastlines, layer=self.layer)
+
             if self.data is None:
                 return
 
@@ -1728,13 +1735,6 @@ class Maps(object):
             coll.set_clim(vmin, vmax)
 
             ax.add_collection(coll)
-
-            # add coastlines and ocean-coloring
-            if coastlines is True:
-                coastlines = ax.coastlines()
-                ocean = ax.add_feature(cfeature.OCEAN)
-                self.BM.add_bg_artist(ocean, layer=self.layer)
-                self.BM.add_bg_artist(coastlines, layer=self.layer)
 
             self.figure.coll = coll
 
