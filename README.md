@@ -8,9 +8,9 @@ A general-purpose library to plot interactive maps of geographical datasets.
 #### 🌍 A simple interface to plot geographical datasets  
 - An ordinary `pandas.DataFrame` is all you need as input!
   - plots of large (>1M datapoints) irregularly sampled datasets are generated in a few seconds!
-- Represent your data as shapes with actual geographic dimensions 
+- Represent your data as shapes with actual geographic dimensions
 - Reproject the map to any cartopy-projection
-- Add annotations, overlays, WebMap-layers etc. to the maps 
+- Add annotations, overlays, WebMap-layers etc. to the maps
 - Get a nice colorbar with a colored histogram on top  
 
 #### 🌎 Easily turn the plot into a clickable data-analysis widget  
