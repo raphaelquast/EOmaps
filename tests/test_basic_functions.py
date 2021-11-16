@@ -239,6 +239,10 @@ class TestBasicPlotting(unittest.TestCase):
         m.add_coastlines(layer=1)
         m.plot_map()
 
+        class dummytoolbar:
+            mode = "asdf"
+            _wait_cursor_for_draw_cm = False
+
         # test all pick callbacks
         for n, cb in enumerate(m.cb.pick._cb_list):
             kwargs = dict(ID=1, pos=(1, 2), val=3.365734, ind=None)
