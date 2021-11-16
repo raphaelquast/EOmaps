@@ -498,7 +498,7 @@ class _click_callbacks(object):
             self.mark(
                 pos=((x0m + x1m) / 2, (y0m + y1m) / 2),
                 radius_crs="out",
-                layer=999,
+                layer=1,
                 shape="rectangles",
                 radius=(w / 2, h / 2),
                 permanent=False,
@@ -550,7 +550,7 @@ class _click_callbacks(object):
             self.mark(
                 pos=pos,
                 radius_crs="out",
-                layer=999,
+                layer=1,
                 shape="rectangles",
                 radius=(w / 2, h / 2),
                 permanent=False,
