@@ -1,3 +1,7 @@
+import matplotlib as mpl
+
+mpl.rcParams["toolbar"] = "None"
+
 import unittest
 import pandas as pd
 import numpy as np
@@ -238,14 +242,6 @@ class TestBasicPlotting(unittest.TestCase):
         m.set_plot_specs(plot_crs=3857)
         m.add_coastlines(layer=1)
         m.plot_map()
-
-        class dummytoolbar:
-            mode = "asdf"
-
-            def _wait_cursor_for_draw_cm(*args, **kwargs):
-                return False
-
-        m.figure.f.canvas.toolbar = dummytoolbar
 
         # test all pick callbacks
         for n, cb in enumerate(m.cb.pick._cb_list):

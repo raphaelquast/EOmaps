@@ -145,7 +145,10 @@ class _WebMap_layer:
                 if not self._legend_picked:
                     return
 
-                if self._m.figure.f.canvas.toolbar.mode != "":
+                if (
+                    hasattr(self.f.canvas, "toolbar")
+                    and self._m.figure.f.canvas.toolbar.mode != ""
+                ):
                     return
                 if not event.button:
                     legax.set_frame_on(False)

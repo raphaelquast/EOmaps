@@ -509,7 +509,9 @@ class cb_click_container(_click_container):
             if self._m._draggable_axes._modifier_pressed:
                 return
             # don't execute callbacks if a toolbar-action is active
-            if self._m.figure.f.canvas.toolbar.mode != "":
+            if (
+                self._m.figure.f.canvas.toolbar is not None
+            ) and self._m.figure.f.canvas.toolbar.mode != "":
                 return
 
             # execute onclick on the parent and all its children
@@ -528,7 +530,9 @@ class cb_click_container(_click_container):
             if self._m._draggable_axes._modifier_pressed:
                 return
             # don't execute callbacks if a toolbar-action is active
-            if self._m.figure.f.canvas.toolbar.mode != "":
+            if (
+                self._m.figure.f.canvas.toolbar is not None
+            ) and self._m.figure.f.canvas.toolbar.mode != "":
                 return
 
             # only execute movecb if a mouse-button is holded down
@@ -633,7 +637,9 @@ class cb_pick_container(_click_container):
 
     def _onpick(self, event):
         # don't execute callbacks if a toolbar-action is active
-        if self._m.figure.f.canvas.toolbar.mode != "":
+        if (
+            self._m.figure.f.canvas.toolbar is not None
+        ) and self._m.figure.f.canvas.toolbar.mode != "":
             return
 
         self._event = event
@@ -670,7 +676,9 @@ class cb_pick_container(_click_container):
             if self._m._draggable_axes._modifier_pressed:
                 return
             # don't execute callbacks if a toolbar-action is active
-            if self._m.figure.f.canvas.toolbar.mode != "":
+            if (
+                self._m.figure.f.canvas.toolbar is not None
+            ) and self._m.figure.f.canvas.toolbar.mode != "":
                 return
 
             # execute onclick on the parent and all its children

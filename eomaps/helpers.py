@@ -152,7 +152,9 @@ class draggable_axes:
     def cb_move_with_key(self, event):
         if not self._modifier_pressed:
             return
-        if self.f.canvas.toolbar.mode != "":
+        if (
+            self.figure.f.canvas.toolbar is not None
+        ) and self.f.canvas.toolbar.mode != "":
             return False
         if self._ax_picked is None:
             return
@@ -294,7 +296,9 @@ class draggable_axes:
         self.m.BM.update(artists=self._ax_picked + self._annotations)
 
     def cb_move(self, event):
-        if self.f.canvas.toolbar.mode != "":
+        if (
+            self.figure.f.canvas.toolbar is not None
+        ) and self.f.canvas.toolbar.mode != "":
             return False
         if self.modifier is not None:
             if not self._modifier_pressed:
@@ -366,7 +370,9 @@ class draggable_axes:
 
         if not self._modifier_pressed:
             return
-        if self.f.canvas.toolbar.mode != "":
+        if (
+            self.figure.f.canvas.toolbar is not None
+        ) and self.f.canvas.toolbar.mode != "":
             return False
 
         eventax = event.inaxes
@@ -452,7 +458,9 @@ class draggable_axes:
         )
 
     def cb_scroll(self, event):
-        if self.f.canvas.toolbar.mode != "":
+        if (
+            self.figure.f.canvas.toolbar is not None
+        ) and self.f.canvas.toolbar.mode != "":
             return False
         if self.modifier is not None:
             if not self._modifier_pressed:
@@ -506,7 +514,9 @@ class draggable_axes:
         self.m.BM.update(artists=self._ax_picked + self._annotations)
 
     def cb_key_press(self, event):
-        if self.f.canvas.toolbar.mode != "":
+        if (
+            self.figure.f.canvas.toolbar is not None
+        ) and self.f.canvas.toolbar.mode != "":
             return False
 
         if event.key == self.modifier:
