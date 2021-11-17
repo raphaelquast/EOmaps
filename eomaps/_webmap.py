@@ -3,7 +3,6 @@ from warnings import warn, filterwarnings, catch_warnings
 from types import SimpleNamespace
 from collections import defaultdict
 import re
-from textwrap import indent, dedent, wrap
 
 from PIL import Image
 from io import BytesIO
@@ -11,6 +10,8 @@ from pprint import PrettyPrinter
 
 from cartopy.io.img_tiles import GoogleWTS
 import numpy as np
+
+from pyproj import CRS, Transformer
 
 try:
     from owslib.wmts import WebMapTileService
@@ -203,12 +204,15 @@ class _WebMap_layer:
             return legax
 
     def set_extent_to_bbox(self):
-        (x0, y0, x1, y1) = self.wms_layer.boundingBoxWGS84
-
-        from pyproj import CRS, Transformer
+        bbox = getattr(self.wms_layer, "boundingBox", None)
+        if bbox is None:
+            (x0, y0, x1, y1) = getattr(self.wms_layer, "boundingBoxWGS84", None)
+            crs = 4326
+        else:
+            (x0, y0, x1, y1, crs) = bbox
 
         transformer = Transformer.from_crs(
-            CRS.from_user_input(4326),
+            CRS.from_user_input(crs),
             self._m.crs_plot,
             always_xy=True,
         )

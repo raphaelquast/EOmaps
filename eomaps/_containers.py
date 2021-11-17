@@ -3,7 +3,7 @@ from warnings import warn
 from operator import attrgetter
 from inspect import signature, _empty
 from types import SimpleNamespace
-from functools import update_wrapper, partial, lru_cache
+from functools import update_wrapper, partial, lru_cache, wraps
 from collections import defaultdict
 
 import numpy as np
@@ -530,18 +530,6 @@ else:
         def __init__(self, m):
             self._m = m
 
-            services = [
-                (key, key.replace("_WMS_", "", 1))
-                for key in self.__dir__()
-                if key.startswith("_WMS_")
-            ]
-
-            for (service, name) in services:
-                try:
-                    setattr(self, name, getattr(self, service)(m, "wms"))
-                except:
-                    warn(f"EOmaps: The wmts-service {service} could not be connected.")
-
         @property
         @lru_cache()
         def ISRIC_SoilGrids(self):
@@ -589,28 +577,38 @@ else:
                         self, name
                     )._url = f"https://maps.isric.org/mapserv?map=/map/{name}.map"
 
-        class _WMS_ESA_WorldCover(_WebServiec_collection):
-            """
-            ESA Worldwide land cover mapping
-                https://esa-worldcover.org/en
+        @property
+        @lru_cache()
+        def ESA_WorldCover(self):
+            WMS = _WebServiec_collection(
+                m=self._m,
+                service_type="wms",
+                url="https://services.terrascope.be/wms/v2",
+            )
+            WMS.__doc__ = """
+                ESA Worldwide land cover mapping
+                    https://esa-worldcover.org/en
 
-            LICENSE-info (without any warranty for correctness!!)
-                (check: https://esa-worldcover.org/en/data-access for full details)
+                LICENSE-info (without any warranty for correctness!!)
+                    (check: https://esa-worldcover.org/en/data-access for full details)
 
-                The ESA WorldCover product is provided free of charge,
-                without restriction of use. For the full license information see the
-                Creative Commons Attribution 4.0 International License.
+                    The ESA WorldCover product is provided free of charge,
+                    without restriction of use. For the full license information see the
+                    Creative Commons Attribution 4.0 International License.
 
-                Publications, models and data products that make use of these
-                datasets must include proper acknowledgement, including citing the
-                datasets and the journal article as in the following citation.
-            """
+                    Publications, models and data products that make use of these
+                    datasets must include proper acknowledgement, including citing the
+                    datasets and the journal article as in the following citation.
+                """
+            return WMS
 
-            def __init__(self, *args, **kwargs):
-                super().__init__(*args, **kwargs)
-                self._url = "https://services.terrascope.be/wms/v2"
+        @property
+        @lru_cache()
+        def NASA_GIBS(self):
+            WMS = self._NASA_GIBS(self._m)
+            return WMS
 
-        class _WMS_NASA_GIBS:
+        class _NASA_GIBS:
             """
             NASA Global Imagery Browse Services (GIBS)
                 https://wiki.earthdata.nasa.gov/display/GIBS/
@@ -627,132 +625,104 @@ else:
                 System Data and Information System (EOSDIS).
             """
 
-            def __init__(self, m, service_type):
+            def __init__(self, m):
                 self._m = m
-                self._service_type = service_type
 
-                services = [
-                    (key, key.replace("_WMS_", "", 1))
-                    for key in self.__dir__()
-                    if key.startswith("_WMS_")
-                ]
+            @property
+            @lru_cache()
+            def EPSG_4326(self):
+                WMS = _WebServiec_collection(
+                    m=self._m,
+                    service_type="wms",
+                    url="https://gibs.earthdata.nasa.gov/wms/epsg4326/best/wms.cgi?SERVICE=WMS&REQUEST=GetCapabilities&VERSION=1.1.1",
+                )
+                WMS.__doc__ = type(self).__doc__
+                return WMS
 
-                for (service, name) in services:
-                    try:
-                        setattr(self, name, getattr(self, service)(m, "wms"))
-                    except:
-                        warn(
-                            f"EOmaps: The wmts-service {service} could not be connected."
-                        )
+            @property
+            @lru_cache()
+            def EPSG_3857(self):
+                WMS = _WebServiec_collection(
+                    m=self._m,
+                    service_type="wms",
+                    url="https://gibs.earthdata.nasa.gov/wms/epsg3857/best/wms.cgi?SERVICE=WMS&REQUEST=GetCapabilities&VERSION=1.1.1",
+                )
+                WMS.__doc__ = type(self).__doc__
+                return WMS
 
-            class _WMS_EPSG_4326(_WebServiec_collection):
-                """
-                NASA Global Imagery Browse Services (GIBS)
-                    https://wiki.earthdata.nasa.gov/display/GIBS/
-                """
+            @property
+            @lru_cache()
+            def EPSG_3413(self):
+                WMS = _WebServiec_collection(
+                    m=self._m,
+                    service_type="wms",
+                    url="https://gibs.earthdata.nasa.gov/wms/epsg3413/best/wms.cgi?SERVICE=WMS&REQUEST=GetCapabilities&VERSION=1.1.1",
+                )
+                WMS.__doc__ = type(self).__doc__
+                return WMS
 
-                def __init__(self, *args, **kwargs):
-                    super().__init__(*args, **kwargs)
-                    self._url = "https://gibs.earthdata.nasa.gov/wms/epsg4326/best/wms.cgi?SERVICE=WMS&REQUEST=GetCapabilities&VERSION=1.1.1"
+            @property
+            @lru_cache()
+            def EPSG_3031(self):
+                WMS = _WebServiec_collection(
+                    m=self._m,
+                    service_type="wms",
+                    url="https://gibs.earthdata.nasa.gov/wms/epsg3031/best/wms.cgi?SERVICE=WMS&REQUEST=GetCapabilities&VERSION=1.1.1",
+                )
+                WMS.__doc__ = type(self).__doc__
+                return WMS
 
-            class _WMS_EPSG_3857(_WebServiec_collection):
-                """
-                NASA Global Imagery Browse Services (GIBS)
-                    https://wiki.earthdata.nasa.gov/display/GIBS/
-                """
+        @property
+        def OpenStreetMap(self):
+            WMS = self._OpenStreetMap(self._m)
+            return WMS
 
-                def __init__(self, *args, **kwargs):
-                    super().__init__(*args, **kwargs)
-                    self._url = "https://gibs.earthdata.nasa.gov/wms/epsg3857/best/wms.cgi?SERVICE=WMS&REQUEST=GetCapabilities&VERSION=1.1.1"
-
-            class _WMS_EPSG_3413(_WebServiec_collection):
-                """
-                NASA Global Imagery Browse Services (GIBS)
-                    https://wiki.earthdata.nasa.gov/display/GIBS/
-                """
-
-                def __init__(self, *args, **kwargs):
-                    super().__init__(*args, **kwargs)
-                    self._url = "https://gibs.earthdata.nasa.gov/wms/epsg3413/best/wms.cgi?SERVICE=WMS&REQUEST=GetCapabilities&VERSION=1.1.1"
-
-            class _WMS_EPSG_3031(_WebServiec_collection):
-                """
-                NASA Global Imagery Browse Services (GIBS)
-                    https://wiki.earthdata.nasa.gov/display/GIBS/
-                """
-
-                def __init__(self, *args, **kwargs):
-                    super().__init__(*args, **kwargs)
-                    self._url = "https://gibs.earthdata.nasa.gov/wms/epsg3031/best/wms.cgi?SERVICE=WMS&REQUEST=GetCapabilities&VERSION=1.1.1"
-
-        class _WMS_OpenStreetMap:
+        class _OpenStreetMap:
             """
-            (global) OpenStreetMap WMS layers
+            (global) OpenStreetMap WebMap layers
 
             https://wiki.openstreetmap.org/wiki/WMS
             """
 
-            def __init__(self, m, service_type):
+            def __init__(self, m):
                 self._m = m
-                self._service_type = service_type
 
-                services = [
-                    (key, key.replace("_WMS_", "", 1))
-                    for key in self.__dir__()
-                    if key.startswith("_WMS_")
-                ]
+            @property
+            @lru_cache()
+            def OSM_terrestis(self):
+                WMS = _WebServiec_collection(
+                    m=self._m,
+                    service_type="wms",
+                    url="https://ows.terrestris.de/osm/service?SERVICE=WMS&VERSION=1.1.1&REQUEST=GetCapabilities",
+                )
+                WMS.__doc__ = (
+                    type(self).__doc__
+                    + "\n ... hosted by Terrestris"
+                    + "\n https://www.terrestris.de/en/openstreetmap-wms/"
+                )
+                return WMS
 
-                for (service, name) in services:
-                    try:
-                        setattr(self, name, getattr(self, service)(m, "wms"))
-                    except:
-                        warn(
-                            f"EOmaps: The wmts-service {service} could not be connected."
-                        )
+            @property
+            @lru_cache()
+            def OSM_mundialis(self):
+                WMS = _WebServiec_collection(
+                    m=self._m,
+                    service_type="wms",
+                    url="http://ows.mundialis.de/services/service?",
+                )
+                WMS.__doc__ = (
+                    type(self).__doc__
+                    + "\n ... hosted by Mundialis"
+                    + "\n https://www.mundialis.de/en/ows-mundialis/"
+                )
+                return WMS
 
-            class _WMS_OSM_terrestis(_WebServiec_collection):
-                """
-                Free (global) Open Streetmap WMS services hosted by Terrestris
-                https://www.terrestris.de/en/openstreetmap-wms/
-                """
+        @property
+        @lru_cache()
+        def EEA_DiscoMap(self):
+            return self._EEA_DiscoMap(self)
 
-                def __init__(self, *args, **kwargs):
-                    super().__init__(*args, **kwargs)
-                    self._url = "https://ows.terrestris.de/osm/service?SERVICE=WMS&VERSION=1.1.1&REQUEST=GetCapabilities"
-
-            class _WMS_OSM_mundialis(_WebServiec_collection):
-                """
-                Free (global) Open Streetmap WMS services hosted by Mundialis
-                https://www.mundialis.de/en/ows-mundialis/
-                """
-
-                def __init__(self, *args, **kwargs):
-                    super().__init__(*args, **kwargs)
-                    self._url = "http://ows.mundialis.de/services/service?"
-
-        class _WMS_Copernicus(_WebServiec_collection):
-            """
-            Access to the EU Copernicus WMS services
-
-            The Copernicus Global Land Service (CGLS) is a component of the
-            Land Monitoring Core Service (LMCS) of Copernicus, the European
-            flagship programme on Earth Observation.
-
-            https://land.copernicus.eu/global/access
-            """
-
-            def __init__(self, *args, **kwargs):
-                super().__init__(*args, **kwargs)
-
-                import cartopy.io.ogc_clients as ogcc
-                from cartopy import crs as ccrs
-
-                ogcc.METERS_PER_UNIT["urn:ogc:def:crs:EPSG:6.3:3857"] = 1
-                ogcc._URN_TO_CRS["urn:ogc:def:crs:EPSG:6.3:3857"] = ccrs.GOOGLE_MERCATOR
-
-                self._url = "https://viewer.globalland.vgt.vito.be/mapcache/wms?service=wmts&request=GetCapabilities"
-
-        class _WMS_EEA_DiscoMap:
+        class _EEA_DiscoMap:
             """
             A wide range of environmental data for Europe from the
             European Environment Agency covering thematic areas such as air,
@@ -768,10 +738,8 @@ else:
 
             """
 
-            def __init__(self, m, service_type):
+            def __init__(self, m):
                 self._m = m
-                self._service_type = service_type
-                pass
 
             @property
             @lru_cache()
@@ -784,10 +752,10 @@ else:
                     m=self._m,
                     url="https://image.discomap.eea.europa.eu/arcgis/rest/services",
                     name="EEA_REST_Image",
-                    service_type=self._service_type,
+                    service_type="wms",
                 )
+                API.__doc__ = type(self).__doc__ + "... access to the 'Image' subfolder"
                 API.fetch_services()
-
                 return API
 
             @property
@@ -801,8 +769,9 @@ else:
                     m=self._m,
                     url="https://land.discomap.eea.europa.eu/arcgis/rest/services",
                     name="EEA_REST_Land",
-                    service_type=self._service_type,
+                    service_type="wms",
                 )
+                API.__doc__ = type(self).__doc__ + "... access to the 'Land' subfolder"
                 API.fetch_services()
 
                 return API
@@ -818,7 +787,10 @@ else:
                     m=self._m,
                     url="https://climate.discomap.eea.europa.eu/arcgis/rest/services",
                     name="EEA_REST_Climate",
-                    service_type=self._service_type,
+                    service_type="wms",
+                )
+                API.__doc__ = (
+                    type(self).__doc__ + "... access to the 'Climate' subfolder"
                 )
                 API.fetch_services()
 
@@ -835,8 +807,9 @@ else:
                     m=self._m,
                     url="https://bio.discomap.eea.europa.eu/arcgis/rest/services",
                     name="EEA_REST_Bio",
-                    service_type=self._service_type,
+                    service_type="wms",
                 )
+                API.__doc__ = type(self).__doc__ + "... access to the 'Bio' subfolder"
                 API.fetch_services()
 
                 return API
@@ -852,7 +825,10 @@ else:
                     m=self._m,
                     url="https://copernicus.discomap.eea.europa.eu/arcgis/rest/services",
                     name="EEA_REST_Copernicus",
-                    service_type=self._service_type,
+                    service_type="wms",
+                )
+                API.__doc__ = (
+                    type(self).__doc__ + "... access to the 'Copernicus' subfolder"
                 )
                 API.fetch_services()
 
@@ -869,8 +845,9 @@ else:
                     m=self._m,
                     url="https://water.discomap.eea.europa.eu/arcgis/rest/services",
                     name="EEA_REST_Water",
-                    service_type=self._service_type,
+                    service_type="wms",
                 )
+                API.__doc__ = type(self).__doc__ + "... access to the 'Water' subfolder"
                 API.fetch_services()
 
                 return API
@@ -886,8 +863,9 @@ else:
                     m=self._m,
                     url="https://soer.discomap.eea.europa.eu/arcgis/rest/services",
                     name="EEA_REST_SOER",
-                    service_type=self._service_type,
+                    service_type="wms",
                 )
+                API.__doc__ = type(self).__doc__ + "... access to the 'SOER' subfolder"
                 API.fetch_services()
 
                 return API
@@ -903,7 +881,10 @@ else:
                     m=self._m,
                     url="https://maratlas.discomap.eea.europa.eu/arcgis/rest/services",
                     name="EEA_REST_SOER",
-                    service_type=self._service_type,
+                    service_type="wms",
+                )
+                API.__doc__ = (
+                    type(self).__doc__ + "... access to the 'MARATLAS' subfolder"
                 )
                 API.fetch_services()
 
@@ -920,7 +901,10 @@ else:
                     m=self._m,
                     url="https://marine.discomap.eea.europa.eu/arcgis/rest/services",
                     name="EEA_REST_SOER",
-                    service_type=self._service_type,
+                    service_type="wms",
+                )
+                API.__doc__ = (
+                    type(self).__doc__ + "... access to the 'MARINE' subfolder"
                 )
                 API.fetch_services()
 
@@ -1041,123 +1025,55 @@ else:
         def __init__(self, m):
             self._m = m
 
-            services = [
-                (key, key.replace("_WMTS_", "", 1))
-                for key in self.__dir__()
-                if key.startswith("_WMTS_")
-            ]
+        @property
+        @lru_cache()
+        def NASA_GIBS(self):
+            WMTS = _WebServiec_collection(
+                m=self._m,
+                service_type="wmts",
+                url="https://gibs.earthdata.nasa.gov/wmts/epsg4326/all/1.0.0/WMTSCapabilities.xml",
+            )
+            WMTS.__doc__ = """
+                NASA Global Imagery Browse Services (GIBS)
+                    https://wiki.earthdata.nasa.gov/display/GIBS/
 
-            for (service, name) in services:
-                try:
-                    setattr(self, name, getattr(self, service)(m, "wmts"))
-                except:
-                    warn(f"EOmaps: The wmts-service {service} could not be connected.")
+                LICENSE-info (without any warranty for correctness!!)
+                    (check: https://earthdata.nasa.gov/eosdis/science-system-description/eosdis-components/gibs)
 
-        class _WMTS_NASA_GIBS(_WebServiec_collection):
-            """
-            NASA Global Imagery Browse Services (GIBS)
-                https://wiki.earthdata.nasa.gov/display/GIBS/
+                    NASA supports an open data policy. We ask that users who make use of
+                    GIBS in their clients or when referencing it in written or oral
+                    presentations to add the following acknowledgment:
 
-            LICENSE-info (without any warranty for correctness!!)
-                (check: https://earthdata.nasa.gov/eosdis/science-system-description/eosdis-components/gibs)
+                    We acknowledge the use of imagery provided by services from NASA's
+                    Global Imagery Browse Services (GIBS), part of NASA's Earth Observing
+                    System Data and Information System (EOSDIS).
+                """
+            return WMTS
 
-                NASA supports an open data policy. We ask that users who make use of
-                GIBS in their clients or when referencing it in written or oral
-                presentations to add the following acknowledgment:
+        @property
+        @lru_cache()
+        def ESA_WorldCover(self):
+            WMTS = _WebServiec_collection(
+                m=self._m,
+                service_type="wmts",
+                url="https://services.terrascope.be/wmts/v2",
+            )
+            WMTS.__doc__ = """
+                ESA Worldwide land cover mapping
+                    https://esa-worldcover.org/en
 
-                We acknowledge the use of imagery provided by services from NASA's
-                Global Imagery Browse Services (GIBS), part of NASA's Earth Observing
-                System Data and Information System (EOSDIS).
-            """
+                LICENSE-info (without any warranty for correctness!!)
+                    (check: https://esa-worldcover.org/en/data-access for full details)
 
-            def __init__(self, *args, **kwargs):
-                super().__init__(*args, **kwargs)
-                self.info = (
-                    "NASA Global Imagery Browse Services (GIBS)\n"
-                    + "https://wiki.earthdata.nasa.gov/display/GIBS/"
-                )
-                self._url = "https://gibs.earthdata.nasa.gov/wmts/epsg4326/all/1.0.0/WMTSCapabilities.xml"
+                    The ESA WorldCover product is provided free of charge,
+                    without restriction of use. For the full license information see the
+                    Creative Commons Attribution 4.0 International License.
 
-        class _WMTS_ESA_WorldCover(_WebServiec_collection):
-            """
-            ESA Worldwide land cover mapping
-                https://esa-worldcover.org/en
-
-            LICENSE-info (without any warranty for correctness!!)
-                (check: https://esa-worldcover.org/en/data-access for full details)
-
-                The ESA WorldCover product is provided free of charge,
-                without restriction of use. For the full license information see the
-                Creative Commons Attribution 4.0 International License.
-
-                Publications, models and data products that make use of these
-                datasets must include proper acknowledgement, including citing the
-                datasets and the journal article as in the following citation.
-            """
-
-            def __init__(self, *args, **kwargs):
-                super().__init__(*args, **kwargs)
-                self.info = (
-                    "ESA Worldwide land cover mapping\n"
-                    + "https://esa-worldcover.org/en"
-                )
-                self._url = "https://services.terrascope.be/wmts/v2"
-
-        class _WMTS_Copernicus(_WebServiec_collection):
-            """
-            Access to the EU Copernicus WMTS services
-
-            The Copernicus Global Land Service (CGLS) is a component of the
-            Land Monitoring Core Service (LMCS) of Copernicus, the European
-            flagship programme on Earth Observation.
-
-            https://land.copernicus.eu/global/access
-            """
-
-            def __init__(self, *args, **kwargs):
-                super().__init__(*args, **kwargs)
-
-                import cartopy.io.ogc_clients as ogcc
-                from cartopy import crs as ccrs
-
-                ogcc.METERS_PER_UNIT["urn:ogc:def:crs:EPSG:6.3:3857"] = 1
-                ogcc._URN_TO_CRS["urn:ogc:def:crs:EPSG:6.3:3857"] = ccrs.GOOGLE_MERCATOR
-
-                self._url = "https://viewer.globalland.vgt.vito.be/mapcache/wmts?service=wmts&request=GetCapabilities"
-
-        class _WMTS_AT_basemap(_WebServiec_collection):
-            """
-            Verwaltungsgrundkarte von Österreich (Basemap for Austria)
-                https://basemap.at/
-
-            LICENSE-info (without any warranty for correctness!!)
-                (check: https://basemap.at/#lizenz for full details)
-
-                basemap.at ist gemäß der Open Government Data Österreich Lizenz
-                CC-BY 4.0 sowohl für private als auch kommerzielle Zwecke frei
-                sowie entgeltfrei nutzbar.
-            """
-
-            def __init__(self, *args, **kwargs):
-                super().__init__(*args, **kwargs)
-                self.info = "Basemap for Austria\n" + "https://basemap.at/"
-                self._url = "http://maps.wien.gv.at/basemap/1.0.0/WMTSCapabilities.xml"
-
-        class _WMTS_AT_Wien_basemap(_WebServiec_collection):
-            """
-            Verwaltungsgrundkarte von Wien (Basemaps for the city of Vienna)
-                https://www.data.gv.at/katalog/dataset/stadt-wien_webmaptileservicewmtswien
-
-            LICENSE-info (without any warranty for correctness!!)
-                (check: the link above for full details)
-
-                CC-BY 4.0
-            """
-
-            def __init__(self, *args, **kwargs):
-                super().__init__(*args, **kwargs)
-                self.info = "Basemap for Vienna (Austria)\n" + "https://www.wien.gv.at"
-                self._url = "http://maps.wien.gv.at/wmts/1.0.0/WMTSCapabilities.xml"
+                    Publications, models and data products that make use of these
+                    datasets must include proper acknowledgement, including citing the
+                    datasets and the journal article as in the following citation.
+                """
+            return WMTS
 
         @property
         @lru_cache()
@@ -1180,6 +1096,65 @@ else:
             API.fetch_services()
 
             return API
+
+        @property
+        @lru_cache()
+        def Austria(self):
+            return self._Austria(self._m)
+
+        class _Austria:
+            """
+            Services specific to Austria.
+            (They ONLY work if the extent is set to a location inside Austria!)
+
+                - AT_basemap: Basemaps for whole of austria
+                - Wien: Basemaps for the city of Vienna
+
+            """
+
+            def __init__(self, m):
+                self._m = m
+
+            @property
+            @lru_cache()
+            def AT_basemap(self):
+                WMTS = _WebServiec_collection(
+                    m=self._m,
+                    service_type="wmts",
+                    url="http://maps.wien.gv.at/basemap/1.0.0/WMTSCapabilities.xml",
+                )
+                WMTS.__doc__ = """
+                    Verwaltungsgrundkarte von Österreich (Basemap for Austria)
+                        https://basemap.at/
+
+                    LICENSE-info (without any warranty for correctness!!)
+                        (check: https://basemap.at/#lizenz for full details)
+
+                        basemap.at ist gemäß der Open Government Data Österreich Lizenz
+                        CC-BY 4.0 sowohl für private als auch kommerzielle Zwecke frei
+                        sowie entgeltfrei nutzbar.
+                    """
+                return WMTS
+
+            @property
+            @lru_cache()
+            def Wien_basemap(self):
+                WMTS = _WebServiec_collection(
+                    m=self._m,
+                    service_type="wmts",
+                    url="http://maps.wien.gv.at/wmts/1.0.0/WMTSCapabilities.xml",
+                )
+                WMTS.__doc__ = """
+                    Verwaltungsgrundkarte von Wien (Basemaps for the city of Vienna)
+                        - https://www.wien.gv.at
+                        - https://www.data.gv.at/katalog/dataset/stadt-wien_webmaptileservicewmtswien
+
+                    LICENSE-info (without any warranty for correctness!!)
+                        (check: the link above for full details)
+
+                        CC-BY 4.0
+                    """
+                return WMTS
 
         def get_service(self, url, rest_API=False):
             """
