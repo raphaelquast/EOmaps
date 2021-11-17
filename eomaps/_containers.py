@@ -913,9 +913,9 @@ else:
         @property
         @lru_cache()
         def S1GBM(self):
-            return self._S1GBM(self._m)
+            return self._S1GBM_layers(self._m)
 
-        class _S1GBM:
+        class _S1GBM_layers:
             """
             Sentinel-1 Global Backscatter Model
 
