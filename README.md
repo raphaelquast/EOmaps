@@ -84,6 +84,8 @@ m.cb.keypress.attach.switch_layer(layer=1, key="a")
 ```
 #### add additional layers and overlays
 ```python
+m.add_wms(...)             # add WebMapService layers
+m.add_wms(...)             # add WebMapTileService layers
 m.add_gdf(...)             # add geo-dataframes
 m.add_overlay(...)         # add overlay-layers from NaturalEarth
 
