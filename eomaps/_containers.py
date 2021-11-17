@@ -720,7 +720,7 @@ else:
         @property
         @lru_cache()
         def EEA_DiscoMap(self):
-            return self._EEA_DiscoMap(self)
+            return self._EEA_DiscoMap(self._m)
 
         class _EEA_DiscoMap:
             """
@@ -913,7 +913,7 @@ else:
         @property
         @lru_cache()
         def S1GBM(self):
-            return self._S1GBM(self)
+            return self._S1GBM(self._m)
 
         class _S1GBM:
             """
