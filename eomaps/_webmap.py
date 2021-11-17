@@ -86,7 +86,7 @@ class _WebMap_layer:
             import xmltodict
         except ImportError:
             raise ImportError("EOmaps: get_dimensions() requires `xmltodict`!")
-        xmlstr = self._wmts.getServiceXML()
+        xmlstr = self._wms.getServiceXML()
         xmldict = xmltodict.parse(xmlstr)
         try:
             return xmldict["Capabilities"]["Contents"]["Layer"][
@@ -97,8 +97,21 @@ class _WebMap_layer:
 
     def fetch_legend(self, style="default"):
         try:
-            legend = requests.get(self.wms_layer.styles["default"]["legend"])
-            img = Image.open(BytesIO(legend.content))
+            url = self.wms_layer.styles["default"]["legend"]
+            legend = requests.get(url)
+
+            if url.endswith(".svg"):
+                try:
+                    import cairosvg
+
+                    img = cairosvg.svg2png(legend.content)
+
+                except ImportError:
+                    warn("EOmaps: the legend is '.svg'... please install 'cairosvg'")
+            else:
+                img = legend.content
+
+            img = Image.open(BytesIO(img))
         except Exception:
             warn("EOmaps: could not fetch the legend")
             img = None
@@ -147,7 +160,7 @@ class _WebMap_layer:
                     return
 
                 if (
-                    hasattr(self.f.canvas, "toolbar")
+                    hasattr(self._m.figure.f.canvas, "toolbar")
                     and self._m.figure.f.canvas.toolbar.mode != ""
                 ):
                     return
@@ -201,6 +214,7 @@ class _WebMap_layer:
             self._m.figure.f.canvas.mpl_connect("button_release_event", cb_release)
             self._m.figure.f.canvas.mpl_connect("motion_notify_event", cb_move)
 
+            self._m.BM.update()
             return legax
 
     def set_extent_to_bbox(self):
