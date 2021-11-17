@@ -911,9 +911,8 @@ else:
                 return API
 
         @property
-        @lru_cache()
         def S1GBM(self):
-            return self._S1GBM_layers(self._m)
+            return SimpleNamespace(add_layer=self._S1GBM_layers(self._m))
 
         class _S1GBM_layers:
             """
@@ -940,18 +939,22 @@ else:
 
             def __init__(self, m):
                 self._m = m
+                # make sure axes are set
+                self._m._set_axes()
 
             @property
             @lru_cache()
-            def add_layer(self):
+            def vv(self):
+                WMS = _S1GBM(self._m, pol="vv")
+                WMS.__doc__ = "## Polarization: VV \n" + type(self).__doc__
+                return WMS
 
-                self._S1GBM_vv = _S1GBM(self._m, pol="vv")
-                self._S1GBM_vv.__doc__ = "## Polarization: VV \n" + type(self).__doc__
-
-                self._S1GBM_vh = _S1GBM(self._m, pol="vh")
-                self._S1GBM_vh.__doc__ = "## Polarization: VH \n" + type(self).__doc__
-
-                return SimpleNamespace(vv=self._S1GBM_vv, vh=self._S1GBM_vh)
+            @property
+            @lru_cache()
+            def vh(self):
+                WMS = _S1GBM(self._m, pol="vh")
+                WMS.__doc__ = "## Polarization: VH \n" + type(self).__doc__
+                return WMS
 
         def get_service(self, url, rest_API=False):
             """
