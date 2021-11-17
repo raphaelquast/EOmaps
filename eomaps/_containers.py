@@ -910,7 +910,12 @@ else:
 
                 return API
 
-        class _WMS_S1GBM:
+        @property
+        @lru_cache()
+        def S1GBM(self):
+            return self._S1GBM(self)
+
+        class _S1GBM:
             """
             Sentinel-1 Global Backscatter Model
 
@@ -933,16 +938,19 @@ else:
             https://s1map.eodc.eu/
             """
 
-            def __init__(self, m, service_type):
+            def __init__(self, m):
                 self._m = m
-                self._service_type = service_type
 
             @property
             @lru_cache()
             def add_layer(self):
 
                 self._S1GBM_vv = _S1GBM(self._m, pol="vv")
+                self._S1GBM_vv.__doc__ = "## Polarization: VV \n" + type(self).__doc__
+
                 self._S1GBM_vh = _S1GBM(self._m, pol="vh")
+                self._S1GBM_vh.__doc__ = "## Polarization: VH \n" + type(self).__doc__
+
                 return SimpleNamespace(vv=self._S1GBM_vv, vh=self._S1GBM_vh)
 
         def get_service(self, url, rest_API=False):
