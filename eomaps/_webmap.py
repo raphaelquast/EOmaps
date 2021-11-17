@@ -603,12 +603,13 @@ class _S1GBM:
                 "draw_event", self.ondraw
             )
             # TODO do this only once on the grandparent!
-            self._m.figure.f.canvas.toolbar.release_zoom = self.zoom_decorator(
-                self._m.figure.f.canvas.toolbar.release_zoom
-            )
-            self._m.figure.f.canvas.toolbar.release_pan = self.zoom_decorator(
-                self._m.figure.f.canvas.toolbar.release_pan
-            )
+            if self._m.figure.f.canvas.toolbar is not None:
+                self._m.figure.f.canvas.toolbar.release_zoom = self.zoom_decorator(
+                    self._m.figure.f.canvas.toolbar.release_zoom
+                )
+                self._m.figure.f.canvas.toolbar.release_pan = self.zoom_decorator(
+                    self._m.figure.f.canvas.toolbar.release_pan
+                )
 
         self._layer = layer
 
