@@ -3,6 +3,12 @@ import sys, os
 
 sys.path.insert(0, os.path.abspath(".." + os.sep + ".."))
 sys.path.insert(0, os.path.abspath(".."))
+
+
+def setup(app):
+    app.add_css_file("_static/custom_css.css")
+
+
 import mock
 
 MOCK_MODULES = [
@@ -72,7 +78,7 @@ epub_show_urls = "footnote"
 
 
 templates_path = ["_templates"]
-
+html_static_path = ["_static"]
 
 # Napoleon settings
 napoleon_numpy_docstring = True
