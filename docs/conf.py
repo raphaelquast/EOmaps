@@ -2,6 +2,24 @@
 import sys, os
 
 sys.path.insert(0, os.path.abspath("..") + os.sep)
+
+autodoc_mock_imports = [
+    "rtree",
+    "numpy",
+    "pandas",
+    "geopandas",
+    "matplotlib",
+    "cartopy",
+    "descartes",
+    "mapclassify",
+    "pyproj",
+    "pyepsg",
+    "owslib",
+    "requests",
+    "xmltodict",
+    "cairosvg",
+]
+
 # -- Project information
 
 project = "EOmaps"
