@@ -23,6 +23,8 @@ MOCK_MODULES = [
     "cairosvg",
 ]
 
+import eomaps  # to run __init__.py
+
 for mod_name in MOCK_MODULES:
     sys.modules[mod_name] = mock.Mock()
 
