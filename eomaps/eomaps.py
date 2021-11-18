@@ -199,7 +199,7 @@ class Maps(object):
             crs=4326,
         )
 
-        self.cb = cb_container(self)
+        # self.cb = cb_container(self)
 
         self._axpicker = None
 
@@ -212,7 +212,7 @@ class Maps(object):
     @property
     @lru_cache()
     @wraps(cb_container)
-    def cb_container(self):
+    def cb(self):
         return cb_container(self)
 
     @property

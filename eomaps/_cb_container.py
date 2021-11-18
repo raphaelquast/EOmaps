@@ -6,93 +6,11 @@ from eomaps.callbacks import (
 )
 from types import SimpleNamespace
 
-from functools import update_wrapper, partial
+from functools import update_wrapper, partial, wraps, lru_cache
 from collections import defaultdict
 import matplotlib.pyplot as plt
 
 from pyproj import Transformer
-
-
-class cb_container:
-    """
-    A container for attaching callbacks and accessing return-objects.
-
-    - **click** : Execute functions when clicking on the map
-
-    - **pick** : Execute functions when you "pick" a pixel on the  map
-      - only available if a dataset has been plotted via `m.plot_map()`
-
-    - **keypress** : Execute functions if you press a key on the keyboard
-
-    - **dynamic** : Execute functions on events (e.g. zoom)
-
-    """
-
-    def __init__(self, m):
-        self._m = m
-
-        self.click = cb_click_container(
-            m=m,
-            cb_cls=click_callbacks,
-            method="click",
-        )
-        self.pick = cb_pick_container(
-            m=m,
-            cb_cls=pick_callbacks,
-            method="pick",
-        )
-        self.keypress = keypress_container(
-            m=m,
-            cb_cls=keypress_callbacks,
-            method="keypress",
-        )
-        self.dynamic = dynamic_callbacks(m=m)
-
-        self._methods = ["click", "keypress"]
-
-    def _init_cbs(self):
-        for method in self._methods:
-            obj = getattr(self, method)
-            obj._init_cbs()
-
-        self._cid_onclose = self._m.figure.f.canvas.mpl_connect(
-            "close_event", self._on_close
-        )
-
-        self._remove_default_keymaps()
-
-    @staticmethod
-    def _remove_default_keymaps():
-        # unattach default keymaps to avoid interaction with keypress events
-        assignments = dict()
-        assignments["keymap.back"] = ["c", "left"]
-        assignments["keymap.forward"] = ["v", "right"]
-        assignments["keymap.grid"] = ["g"]
-        assignments["keymap.grid_minor"] = ["G"]
-        assignments["keymap.home"] = ["h", "r"]
-        assignments["keymap.pan"] = ["p"]
-        assignments["keymap.quit"] = ["q"]
-        assignments["keymap.save"] = ["s"]
-        assignments["keymap.xscale"] = ["k", "L"]
-        assignments["keymap.yscale"] = ["l"]
-
-        for key, val in assignments.items():
-            for v in val:
-                try:
-                    plt.rcParams[key].remove(v)
-                except Exception:
-                    pass
-
-    # attach a cleanup function if the figure is closed
-    # to ensure callbacks are removed and the container is reinitialized
-    def _on_close(self, event):
-        for method in self._methods:
-            obj = getattr(self, method)
-            for key in obj.get.attached_callbacks:
-                obj.remove(key)
-
-        self._m._reset_axes()
-        # remove all figure properties
 
 
 class _cb_container(object):
@@ -943,3 +861,122 @@ class keypress_container(_cb_container):
         cbdict[cbkey] = partial(callback, **kwargs)
 
         return cbkey + f"__{key}"
+
+
+class cb_container:
+    """
+    A container for attaching callbacks and accessing return-objects.
+
+    - **click** : Execute functions when clicking on the map
+
+    - **pick** : Execute functions when you "pick" a pixel on the  map
+      - only available if a dataset has been plotted via `m.plot_map()`
+
+    - **keypress** : Execute functions if you press a key on the keyboard
+
+    - **dynamic** : Execute functions on events (e.g. zoom)
+
+    """
+
+    def __init__(self, m):
+        self._m = m
+
+        # self.click = cb_click_container(
+        #     m=m,
+        #     cb_cls=click_callbacks,
+        #     method="click",
+        # )
+        # self.pick = cb_pick_container(
+        #     m=m,
+        #     cb_cls=pick_callbacks,
+        #     method="pick",
+        # )
+        # self.keypress = keypress_container(
+        #     m=m,
+        #     cb_cls=keypress_callbacks,
+        #     method="keypress",
+        # )
+
+        # self.dynamic = dynamic_callbacks(m=m)
+
+        self._methods = ["click", "keypress"]
+
+    @property
+    @lru_cache()
+    @wraps(cb_click_container)
+    def click(self):
+        return cb_click_container(
+            m=self._m,
+            cb_cls=click_callbacks,
+            method="click",
+        )
+
+    @property
+    @lru_cache()
+    @wraps(cb_pick_container)
+    def pick(self):
+        return cb_pick_container(
+            m=self._m,
+            cb_cls=pick_callbacks,
+            method="click",
+        )
+
+    @property
+    @lru_cache()
+    @wraps(keypress_container)
+    def keypress(self):
+        return keypress_container(
+            m=self._m,
+            cb_cls=keypress_callbacks,
+            method="click",
+        )
+
+    @property
+    @lru_cache()
+    @wraps(dynamic_callbacks)
+    def dynamic(self):
+        return dynamic_callbacks(m=self._m)
+
+    def _init_cbs(self):
+        for method in self._methods:
+            obj = getattr(self, method)
+            obj._init_cbs()
+
+        self._cid_onclose = self._m.figure.f.canvas.mpl_connect(
+            "close_event", self._on_close
+        )
+
+        self._remove_default_keymaps()
+
+    @staticmethod
+    def _remove_default_keymaps():
+        # unattach default keymaps to avoid interaction with keypress events
+        assignments = dict()
+        assignments["keymap.back"] = ["c", "left"]
+        assignments["keymap.forward"] = ["v", "right"]
+        assignments["keymap.grid"] = ["g"]
+        assignments["keymap.grid_minor"] = ["G"]
+        assignments["keymap.home"] = ["h", "r"]
+        assignments["keymap.pan"] = ["p"]
+        assignments["keymap.quit"] = ["q"]
+        assignments["keymap.save"] = ["s"]
+        assignments["keymap.xscale"] = ["k", "L"]
+        assignments["keymap.yscale"] = ["l"]
+
+        for key, val in assignments.items():
+            for v in val:
+                try:
+                    plt.rcParams[key].remove(v)
+                except Exception:
+                    pass
+
+    # attach a cleanup function if the figure is closed
+    # to ensure callbacks are removed and the container is reinitialized
+    def _on_close(self, event):
+        for method in self._methods:
+            obj = getattr(self, method)
+            for key in obj.get.attached_callbacks:
+                obj.remove(key)
+
+        self._m._reset_axes()
+        # remove all figure properties
