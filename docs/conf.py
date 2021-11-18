@@ -18,6 +18,7 @@ MOCK_MODULES = [
     "pyepsg",
     "owslib",
     "requests",
+    "requests.exceptions",
     "xmltodict",
     "cairosvg",
 ]
