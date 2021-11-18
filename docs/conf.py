@@ -3,8 +3,9 @@ import sys, os
 
 sys.path.insert(0, os.path.abspath(".." + os.sep + ".."))
 sys.path.insert(0, os.path.abspath(".."))
+import mock
 
-autodoc_mock_imports = [
+MOCK_MODULES = [
     "rtree",
     "numpy",
     "pandas",
@@ -20,6 +21,10 @@ autodoc_mock_imports = [
     "xmltodict",
     "cairosvg",
 ]
+
+for mod_name in MOCK_MODULES:
+    sys.modules[mod_name] = mock.Mock()
+
 
 # -- Project information
 
