@@ -1,7 +1,8 @@
 # Configuration file for the Sphinx documentation builder.
 import sys, os
 
-sys.path.insert(0, os.path.abspath("..") + os.sep)
+sys.path.insert(0, os.path.abspath(".." + os.sep + ".."))
+sys.path.insert(0, os.path.abspath(".."))
 
 autodoc_mock_imports = [
     "rtree",
