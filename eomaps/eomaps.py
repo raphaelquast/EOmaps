@@ -106,7 +106,7 @@ def MapsGrid(r=2, c=2, **kwargs):
 
 class Maps(object):
     """
-    A class to perform reading an plotting of spatial maps
+    The base-class for generating plots with EOmaps
 
     Note: if you want to plot a grid of maps, checkout `MapsGrid`!
 
@@ -115,8 +115,10 @@ class Maps(object):
     f : matplotlib.Figure
         The matplotlib figure instance to use. (Only useful if you want to
         add a map to an already existing figure!)
+
           - If None, a new figure will be created (accessible via m.figure.f)
           - Connected maps-objects will always share the same figure!
+
         The default is None
     gs_ax : matplotlib.axes or matplotlib.gridspec.SubplotSpec, optional
         Explicitly specify the axes (or GridSpec) for plotting.
@@ -188,9 +190,6 @@ class Maps(object):
         # default classify specs
         self.classify_specs = classify_specs(self)
 
-        # self._shapes = shapes(self)
-        self.set_shape = shapes(self)
-
         self.set_shape.ellipses()
 
         self.data_specs = data_specs(
@@ -199,8 +198,6 @@ class Maps(object):
             ycoord="lat",
             crs=4326,
         )
-
-        self.figure = map_objects(m=self)
 
         self.cb = cb_container(self)
 
@@ -211,6 +208,24 @@ class Maps(object):
         self._orientation = orientation
         self._ax = gs_ax
         self._init_ax = gs_ax
+
+    @property
+    @lru_cache()
+    @wraps(cb_container)
+    def cb_container(self):
+        return cb_container(self)
+
+    @property
+    @lru_cache()
+    @wraps(shapes)
+    def set_shape(self):
+        return shapes(self)
+
+    @property
+    @lru_cache()
+    @wraps(map_objects)
+    def figure(self):
+        return map_objects(self)
 
     def _set_axes(self):
         if self._ax is None or isinstance(self._ax, SubplotSpec):
@@ -263,6 +278,7 @@ class Maps(object):
 
     @property
     def BM(self):
+        """The Blit-Manager used to dynamically update the plots"""
         if self.parent._BM is None:
             self.parent._BM = BlitManager(self)
         return self.parent._BM
@@ -279,6 +295,7 @@ class Maps(object):
     if wmts_container is not None:
 
         @property
+        @wraps(wmts_container)
         @lru_cache()
         def add_wmts(self):
             return wmts_container(self)
@@ -286,6 +303,7 @@ class Maps(object):
     if wms_container is not None:
 
         @property
+        @wraps(wms_container)
         @lru_cache()
         def add_wms(self):
             return wms_container(self)
@@ -295,6 +313,10 @@ class Maps(object):
 
     @property
     def parent(self):
+        """
+        The parent-object to which this Maps-object is connected to.
+        If None, `self` is returned!
+        """
         if self._parent is None:
             return self
         else:
@@ -395,7 +417,7 @@ class Maps(object):
         **kwargs,
     ):
         """
-        create a (deep)copy of the class that inherits all specifications
+        create a (deep)copy of the Maps object that inherits all specifications
         from the parent class.
         Already loaded data is only copied if `copy_data=True`!
 
@@ -671,6 +693,9 @@ class Maps(object):
 
     @property
     def crs_plot(self):
+        """
+        The crs used for plotting. (A shortcut for `m.get_crs("plot")`)
+        """
         return self.get_crs("plot")
 
     @property
