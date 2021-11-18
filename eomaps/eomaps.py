@@ -1634,6 +1634,11 @@ class Maps(object):
 
     @wraps(plt.savefig)
     def savefig(self, *args, **kwargs):
+
+        # clear all cached background layers before saving to make sure they
+        # are re-drawn with the correct dpi-settings
+        self.BM._bg_layers = dict()
+
         self.figure.f.savefig(*args, **kwargs)
 
     def plot_map(
