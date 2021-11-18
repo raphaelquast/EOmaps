@@ -6,7 +6,7 @@ sys.path.insert(0, os.path.abspath(".."))
 
 
 def setup(app):
-    app.add_css_file("_static/custom_css.css")
+    app.add_css_file("custom_css.css")
 
 
 import mock
