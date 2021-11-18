@@ -11,7 +11,7 @@
 dataset via ``m.set_data_specs()`` - call ``m.plot_map`` to generate the
 map!
 
-.. code:: python
+.. code-block:: python
 
     from eomaps import Maps
     import pandas as pd
@@ -44,7 +44,7 @@ map!
    module
 -  add individual callback functions to each subplot
 
-.. code:: python
+.. code-block:: python
 
     from eomaps import Maps
     import pandas as pd
@@ -117,7 +117,7 @@ map!
    -  ``gridspec``, ``cb_gridspec`` : the matplotlib GridSpec instances
       used internally
 
-.. code:: python
+.. code-block:: python
 
 	from eomaps import Maps
     import pandas as pd
@@ -195,7 +195,7 @@ map!
 
    -  … but you can also define a custom one!
 
-.. code:: python
+.. code-block:: python
 
     from eomaps import Maps
     import pandas as pd
@@ -316,7 +316,7 @@ markers
 … generation of the plot might take a bit longer since overlays might
 need to be downloaded first!
 
-.. code:: python
+.. code-block:: python
 
     from eomaps import Maps
     import pandas as pd
