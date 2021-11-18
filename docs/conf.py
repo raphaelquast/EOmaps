@@ -8,6 +8,7 @@ import mock
 MOCK_MODULES = [
     "rtree",
     "numpy",
+    "scipy",
     "pandas",
     "geopandas",
     "matplotlib",

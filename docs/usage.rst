@@ -24,7 +24,7 @@ The recommended way to install EOmaps with `conda` and `pip`:
 
     .. code-block:: console
 
-       conda install -c conda-forge numpy pandas geopandas "matplotlib>=3.0" "cartopy>=0.20.0" descartes mapclassify pyproj pyepsg
+       conda install -c conda-forge numpy scipy pandas geopandas "matplotlib>=3.0" "cartopy>=0.20.0" descartes mapclassify pyproj pyepsg
 
 
   1.1 For WebMap capabilities (e.g. WMS or WMTS services) you need some more:
@@ -56,6 +56,7 @@ Here's a yaml-file that you can use to install all you need in one go:
       - python=3.7
       - default::rtree
       - numpy
+      - scipy
       - pandas
       - geopandas
       - matplotlib>=3.0
