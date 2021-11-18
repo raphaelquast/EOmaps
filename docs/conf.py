@@ -9,6 +9,7 @@ MOCK_MODULES = [
     "rtree",
     "numpy",
     "scipy",
+    "scipy.spatial",
     "pandas",
     "geopandas",
     "matplotlib",
