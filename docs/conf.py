@@ -13,6 +13,7 @@ MOCK_MODULES = [
     "pandas",
     "geopandas",
     "matplotlib",
+    "matplotlib.pyplot",
     "cartopy",
     "descartes",
     "mapclassify",
