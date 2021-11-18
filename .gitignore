@@ -2,4 +2,4 @@ __pycache__
 examples/.ipynb_checkpoints
 _additional
 docs/build
-docs/source/generated
+docs/generated
