@@ -402,6 +402,7 @@ class Maps(object):
                 "EOmaps: joining axis-limits is only possible for "
                 + "axes with the same projection!"
             )
+            return
 
         self.figure.ax._EOmaps_joined_action = False
         m.figure.ax._EOmaps_joined_action = False
