@@ -13,5 +13,5 @@ Contents
 .. toctree::
 
    usage
-   api
    EOmaps_examples
+   api
