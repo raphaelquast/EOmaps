@@ -78,9 +78,6 @@ Here are the 3 basic steps to visualize your data:
 
     # --------- initialize a grid of Maps objects
     mg = MapsGrid(1, 3)
-    mg.share_click_events()
-    mg.share_pick_events()
-
 
     # --------- set specs for the first axes
     mg.m_0_0.set_data_specs(data=data, xcoord="lon", ycoord="lat", in_crs=4326)
@@ -108,20 +105,20 @@ Here are the 3 basic steps to visualize your data:
 
     # add some callbacks to indicate the clicked data-point
     for m in mg:
-        m.cb.pick.attach.mark(fc="r", ec="none", buffer=1, permanent=False, shape=m.shape.name)
-        m.cb.pick.attach.mark(fc="none", ec="r", lw=1, buffer=5, permanent=False, shape=m.shape.name)
-        m.cb.pick.attach.mark(fc="none", ec="k", lw=2, buffer=10, permanent=False, shape=m.shape.name)
+        m.cb.pick.attach.mark(fc="r", ec="none", buffer=1, permanent=True, shape=m.shape.name)
+        m.cb.pick.attach.mark(fc="none", ec="r", lw=1, buffer=5, permanent=True, shape=m.shape.name)
 
         m.cb.click.attach.mark(fc="none", ec="k", lw=2, buffer=10, permanent=False, shape=m.shape.name)
 
-
-
-    mg.m_0_1.cb.pick.attach.annotate(layer=11, text="you clicked here!")
+    mg.m_0_1.cb.pick.attach.annotate(layer=11, text="the closest point is here!")
     # put it on a layer > 10 (the default for markers) so that it appears above the markers
 
+    # share click & pick-events between the maps
+    mg.share_click_events()
+    mg.share_pick_events()
 
 
-.. image:: _static/fig2.png
+.. image:: _static/fig2.gif
 
 
 
