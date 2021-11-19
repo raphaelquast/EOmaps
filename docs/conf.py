@@ -60,18 +60,10 @@ extensions = [
     "sphinx.ext.doctest",
     "sphinx.ext.autodoc",
     "sphinx.ext.autosummary",
-    #'sphinx.ext.intersphinx',
     "sphinx.ext.napoleon",
+    "sphinx_copybutton",
 ]
 
-# autodoc_default_options = {
-#     'members': True,
-#     'autoclass_content': 'class',
-#     'member-order': 'bysource',
-#     'special-members': '__init__',
-#     'undoc-members': True,
-#     'exclude-members': '__weakref__',
-# }
 
 # -- Options for EPUB output
 epub_show_urls = "footnote"
@@ -79,6 +71,9 @@ epub_show_urls = "footnote"
 
 templates_path = ["_templates"]
 html_static_path = ["_static"]
+
+html_theme = "sphinx_rtd_theme"
+
 
 # Napoleon settings
 napoleon_numpy_docstring = True
