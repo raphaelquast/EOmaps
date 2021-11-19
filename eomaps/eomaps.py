@@ -86,6 +86,37 @@ def MapsGrid(r=2, c=2, **kwargs):
         def f(self):
             return self.parent.figure.f
 
+        def set_plot_specs(self, **kwargs):
+            for m in self:
+                m.set_plot_specs(**kwargs)
+
+        def set_data_specs(self, **kwargs):
+            for m in self:
+                m.set_plot_specs(**kwargs)
+
+        def set_classify_specs(self, scheme=None, **kwargs):
+            for m in self:
+                m.set_plot_specs(scheme=scheme, **kwargs)
+
+        def share_click_events(self):
+            """
+            share click events between all Maps objects of the grid
+            """
+            self.parent.cb.click.share_events(*self.children)
+
+        def share_pick_events(self):
+            """
+            share pick events between all Maps objects of the grid
+            """
+            self.parent.cb.pick.share_events(*self.children)
+
+        def join_limits(self):
+            """
+            join axis limits between all Maps objects of the grid
+            (only possible if all maps share the same crs!)
+            """
+            self.parent.join_limits(*self.children)
+
     mg = MapsGrid()
     gs = GridSpec(nrows=r, ncols=c)
 
@@ -99,7 +130,7 @@ def MapsGrid(r=2, c=2, **kwargs):
                 mij.connect(mg.parent)
 
             mg._axes.append(mij)
-            setattr(mg, f"ax_{i}_{j}", mij)
+            setattr(mg, f"m_{i}_{j}", mij)
 
     return mg
 
