@@ -514,6 +514,64 @@ class Maps(object):
 
         return copy_cls
 
+    def copy_from(
+        self,
+        m,
+        copy_data=False,
+        copy_data_specs=True,
+        copy_plot_specs=True,
+        copy_classify_specs=True,
+        **kwargs,
+    ):
+        """
+        (deep)copy specifications from another Maps-object.
+        Already loaded data is only copied if `copy_data=True`!
+
+        -> useful to quickly create plots with similar configurations
+
+        Parameters
+        ----------
+        copy_data : bool or str
+            Indicator if the actual dataset should be copied as well
+            (`copy_data_specs=True` only copies the specs and NOT the dataset!)
+
+            - if True: the dataset will be copied
+            - if "share": the dataset will be shared
+              (changes will be shared between the Maps objects!!!)
+            - if False: no data will be assigned
+
+        copy_data_specs, copy_plot_specs, copy_classify_specs : bool, optional
+            Indicator which properties should be copied
+
+        """
+
+        if copy_data_specs:
+            self.set_data_specs(
+                **{
+                    key: copy.deepcopy(val)
+                    for key, val in m.data_specs
+                    if key != "data"
+                }
+            )
+
+        if copy_data is True:
+            self.data = m.data.copy(deep=True)
+        elif copy_data == "share":
+            self.data = m.data
+
+        if copy_plot_specs:
+            self.set_plot_specs(
+                **{key: copy.deepcopy(val) for key, val in m.plot_specs}
+            )
+
+            getattr(self.set_shape, m.shape.name)(**m.shape._initargs)
+
+        if copy_classify_specs:
+            self.set_classify_specs(
+                scheme=m.classify_specs.scheme,
+                **{key: copy.deepcopy(val) for key, val in m.classify_specs},
+            )
+
     @property
     def data(self):
         return self.data_specs.data
@@ -665,7 +723,6 @@ class Maps(object):
         # use a cKDTree based picking to speed up picks for large collections
         dist, index = self.tree.query((event.xdata, event.ydata))
         # set max. distance in pixel-coordinates for picking
-        p1 = np.array([event.x, event.y])
 
         # do this to make sure that we calculate the distance in the right axes!
         # (necessary for connected pick-callbacks)
