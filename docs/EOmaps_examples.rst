@@ -1,101 +1,123 @@
-🌐 EOmaps
-=========
+🌐 EOmaps examples
+==================
 
-… a collection of examples that show how to create beautiful interactive maps
+... a collection of examples that show how to create beautiful interactive maps.
 
 🐣 Quickly visualize your data
-==============================
+------------------------------
 
-3 steps to visualize your data: - set the data, e.g.:
-``m.data = <a pandas-DataFrame>`` - set the specifications of the
-dataset via ``m.set_data_specs()`` - call ``m.plot_map`` to generate the
-map!
+Here are the 3 basic steps to visualize your data:
+
+    1. Initialize a Maps-object with ``m = Maps()``
+
+    2. set the data and its specifications via
+
+      .. code-block:: python
+
+        m.set_data_specs(
+            m.data = "a pandas-DataFrame holding the data & coordinates"
+            parameter = "the DataFrame-column you want to plot",
+            xcord = "the name of the DataFrame-column representing the x-coordinates"
+            ycord = "the name of the DataFrame-column representing the y-coordinates"
+            crs = "the coordinate-system of the x- and y- coordinates"
+        )
+
+    3. call ``m.plot_map()`` to generate the map!
 
 .. code-block:: python
 
     from eomaps import Maps
     import pandas as pd
     import numpy as np
-    import matplotlib.pyplot as plt
 
     # create some data
-    lon, lat = np.mgrid[-20:40, 30:60]
-    data = pd.DataFrame(dict(lon=lon.flat, lat=lat.flat, data_variable=np.sqrt(lon**2 + lat**2).flat))
+    lon, lat = np.meshgrid(np.arange(-20, 40, .25), np.arange(30, 60, .25))
+    data = pd.DataFrame(dict(lon=lon.flat,
+                             lat=lat.flat,
+                             data_variable=np.sqrt(lon**2 + lat**2).flat
+                             )
+                        ).sample(15000)
 
-    # --------- initialize a Maps object
     m = Maps()
-    # --------- set the data-specifications
-    m.set_data(data = data, parameter="data_variable", xcoord="lon", ycoord="lat", in_crs=4326)
-    # --------- plot the map
+    m.set_data(data = data,
+               parameter="data_variable",
+               xcoord="lon",
+               ycoord="lat",
+               in_crs=4326)
+
     m.plot_map()
-    # --------- save the image as png, jpg, pdf etc.
-    # m.savefig("filepath/file.png", dpi=150)
+    m.cb.pick.attach.annotate()  # add a basic annotation (on left-click)
 
+.. image:: _static/fig1.gif
 
-.. image:: _static/fig1.png
+.. raw:: html
+
+   <hr>
 
 
 🌍 Data-classification and multiple Maps in one figure
-================================================================
+------------------------------------------------------
 
--  create grids of maps by passing a ``GridSpec`` specification to
-   ``m.plot_map()``
--  classify your data via classifiers provided by the ``mapclassify``
-   module
--  add individual callback functions to each subplot
+-  create grids of maps via ``MapsGrid`` specification to
+-  classify your data via classifiers provided by the ``mapclassify`` module
+-  add individual callback functions to each subplot and connect events
 
 .. code-block:: python
 
-    from eomaps import Maps
+    from eomaps import MapsGrid, Maps
     import pandas as pd
     import numpy as np
-    import matplotlib.pyplot as plt
-    from matplotlib.gridspec import GridSpec
 
     # create some data
-    lon, lat = np.mgrid[-20:40, 40:70]
-    data = pd.DataFrame(dict(lon=lon.flat, lat=lat.flat, data_variable=np.sqrt(lon**2 + lat**2).flat))
+    lon, lat = np.meshgrid(np.arange(-20, 40, .5), np.arange(30, 60, .5))
+    data = pd.DataFrame(dict(lon=lon.flat,
+                             lat=lat.flat,
+                             data_variable=np.sqrt(lon**2 + lat**2).flat
+                             )
+                        ).sample(4000)
 
-    # --------- initialize a figure and a plot-grid
-    f = plt.figure(figsize=(14, 5))
-    f.canvas.show_header=False
-    gs = GridSpec(1, 4, width_ratios=[1, 1, 1, 2])
-
-    # --------- create some random plot on the right axis
-    ax = f.add_subplot(gs[-1])
-    ax.set_title("a random plot")
-    ax.plot(data.data_variable)
+    # --------- initialize a grid of Maps objects
+    mg = MapsGrid(1, 3)
+    mg.share_click_events()
+    mg.share_pick_events()
 
 
-    m = Maps(f=f, gs_ax=gs[0])
-    # set the data-specifications (same as the default)
-    m.set_data_specs(data=data, xcoord="lon", ycoord="lat", in_crs=4326)
-    # --------- plot a map on the first axes
-    m.set_plot_specs(crs=4326, add_colorbar=True, title="epsg=4326")
-    m.set_classify_specs(scheme="EqualInterval", k=10)
-    m.plot_map()
-    m.figure.ax_cb.tick_params(rotation=90, labelsize=8)
-    m.cb.pick.attach.mark(fc="r", buffer=5)
+    # --------- set specs for the first axes
+    mg.m_0_0.set_data_specs(data=data, xcoord="lon", ycoord="lat", in_crs=4326)
+    mg.m_0_0.set_plot_specs(crs=4326, title="epsg=4326")
+    mg.m_0_0.set_classify_specs(scheme="EqualInterval", k=10)
 
-    # --------- plot a map on the second axes
-    m2 = m.copy(connect=True, copy_data="share", f=f, gs_ax=gs[1])
-    m2.set_plot_specs(crs=m.crs_list.Stereographic(), add_colorbar=True, title="Stereographic")
-    m2.set_shape.rectangles()
-    m2.set_classify_specs(scheme="Quantiles", k=4)
-    m2.plot_map()
-    m2.figure.ax_cb.tick_params(rotation=90, labelsize=8)
-    m2.cb.pick.attach.mark(fc="g", buffer=5)
+    # --------- set specs for the second axes
+    mg.m_0_1.copy_from(mg.m_0_0, copy_data="share")
+    mg.m_0_1.set_plot_specs(crs=Maps.crs_list.Stereographic(), title="Stereographic")
+    mg.m_0_1.set_shape.rectangles()
+    mg.m_0_1.set_classify_specs(scheme="Quantiles", k=4)
 
-    # --------- plot a map on the third axes
-    m3 = m.copy(connect=True, copy_data="share", f=f, gs_ax=gs[2])
-    m3.set_plot_specs(crs=3035, add_colorbar=True, title="epsg=3035")
-    m3.set_classify_specs(scheme="StdMean", multiples=[-1, -.75, -.5, -.25, .25, .5, .75, 1])
-    m3.plot_map()
-    m3.figure.ax_cb.tick_params(rotation=90, labelsize=8)
-    m3.cb.pick.attach.mark(fc="b", buffer=5)
-    # --------- make some more room at the bottom of the figure
-    gs.update(bottom=0.15, left=0.05, right=.99)
-    f.set_figheight(5)
+    # --------- set specs for the third axes
+    mg.m_0_2.copy_from(mg.m_0_0, copy_data="share")
+    mg.m_0_2.set_plot_specs(crs=3035, title="epsg=3035")
+    mg.m_0_2.set_classify_specs(scheme="StdMean", multiples=[-1, -.75, -.5, -.25, .25, .5, .75, 1])
+
+    for m in mg:
+        m.plot_map()
+        m.figure.ax_cb.tick_params(rotation=90, labelsize=8)
+
+    # --------- set figsize and use a "tight_layout"
+    mg.f.set_figheight(5)
+    mg.f.tight_layout()
+
+    # add some callbacks to indicate the clicked data-point
+    for m in mg:
+        m.cb.pick.attach.mark(fc="r", ec="none", buffer=1, permanent=False, shape=m.shape.name)
+        m.cb.pick.attach.mark(fc="none", ec="r", lw=1, buffer=5, permanent=False, shape=m.shape.name)
+        m.cb.pick.attach.mark(fc="none", ec="k", lw=2, buffer=10, permanent=False, shape=m.shape.name)
+
+        m.cb.click.attach.mark(fc="none", ec="k", lw=2, buffer=10, permanent=False, shape=m.shape.name)
+
+
+
+    mg.m_0_1.cb.pick.attach.annotate(layer=11, text="you clicked here!")
+    # put it on a layer > 10 (the default for markers) so that it appears above the markers
 
 
 
@@ -104,7 +126,7 @@ map!
 
 
 🗺 Customize the appearance of the plot
-=======================================
+---------------------------------------
 
 -  use ``m.set_plot_specs()`` to set the general appearance of the plot
 -  after creating the plot, you can access individual objects via
@@ -182,7 +204,7 @@ map!
 
 
 🛸 Turn your plot into a powerful data-analysis tool
-====================================================
+----------------------------------------------------
 
 -  **callback functions** can easily be attached to the plot to turn it
    into an interactive plot-widget!
@@ -307,7 +329,7 @@ map!
 
 
 🌲 🏡🌳 Add overlays and indicators
-===================================
+-----------------------------------
 
 … an a bit more advanced example - use “connected” Maps-objects to get
 multiple interactive data-layers - add fancy static annotations and

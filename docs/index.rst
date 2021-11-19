@@ -5,6 +5,8 @@ EOmaps
 
 Welcome to the documentation for EOmaps!
 
+Checkout the Examples! :doc:`EOmaps_examples`.
+
 Contents
 --------
 
@@ -12,4 +14,4 @@ Contents
 
    usage
    api
-   examples
+   EOmaps_examples
