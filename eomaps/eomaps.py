@@ -658,7 +658,13 @@ class Maps(object):
         cpos : str, optional
             Indicator if the provided x-y coordinates correspond to the center ("c"),
             upper-left ("ul"), lower-left ("ll") etc.  of the pixel.
+            If any value other than "c" is provided, a "cpos_radius" must be set!
             The default is "c".
+        cpos_radius : int or tuple, optional
+            The pixel-radius (in the input-crs) that will be used to set the
+            center-position of the provided data.
+            If a number is provided, the pixels are treated as squares.
+            If a tuple (rx, ry) is provided, the pixels are treated as rectangles.
         alpha : int, optional
             Set the transparency of the plot (0-1)
             The default is 1.
@@ -2021,7 +2027,7 @@ class Maps(object):
             print("EOmaps: There are no masked points to indicate!")
             return
 
-        m = self.copy(connect=True)
+        m = self.copy(connect=True, gs_ax=self.figure.ax)
         m.data = data
 
         t = self.figure.ax.transData.inverted()
