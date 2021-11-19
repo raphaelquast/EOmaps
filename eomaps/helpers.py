@@ -658,8 +658,11 @@ class BlitManager:
             if self._refetch_bg:
                 self._bg_layers = dict()
                 self.fetch_bg(self.bg_layer)
-                # do an update but don't clear temporary artists!
-                # (they are cleared on clicks only)
+            else:
+                self.fetch_bg(self.bg_layer)
+
+            # do an update but don't clear temporary artists!
+            # (they are cleared on clicks only)
             self.update(clear=False, blit=False)
         except Exception:
             pass
