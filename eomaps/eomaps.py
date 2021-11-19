@@ -1132,7 +1132,7 @@ class Maps(object):
             z_data = self._props["z_data"]
 
         if label is None:
-            label = self.data_specs["parameter"]
+            label = self.plot_specs["label"]
         if histbins is None:
             histbins = self.plot_specs["histbins"]
         if cmap is None:
