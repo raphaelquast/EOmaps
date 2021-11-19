@@ -29,10 +29,32 @@ class _cb_container(object):
         self._fwd_cbs = dict()
 
         self._method = method
+        self._event = None
 
     def _getobj(self, m):
         """get the equivalent callback container on anoter maps object"""
         return getattr(m.cb, self._method)
+
+    @property
+    def objs(self):
+        """
+        get the callback-container objects associated with the axes that
+        the event belonged to
+        """
+        # Note: it is possible that more than 1 Maps objects are
+        # assigned to the same axis!
+        objs = []
+        if self._event is not None:
+            if hasattr(self._event, "mouseevent"):
+                event = self._event.mouseevent
+            else:
+                event = self._event
+
+            for m in [*self._m._children, self._m.parent]:
+                if event.inaxes is m.figure.ax:
+                    objs.append(self._getobj(m))
+
+        return objs
 
     def _clear_temporary_artists(self):
         while len(self._temporary_artists) > 0:
@@ -406,7 +428,6 @@ class cb_click_container(_click_container):
         return clickdict
 
     def _onclick(self, event):
-        self._event = event
         clickdict = self._get_clickdict(event)
 
         if event.dblclick:
@@ -423,6 +444,8 @@ class cb_click_container(_click_container):
 
     def _add_click_callback(self):
         def clickcb(event):
+            self._event = event
+
             # ignore callbacks while dragging axes
             if self._m._draggable_axes._modifier_pressed:
                 return
@@ -432,19 +455,19 @@ class cb_click_container(_click_container):
             ) and self._m.figure.f.canvas.toolbar.mode != "":
                 return
 
-            # execute onclick on the parent and all its children
-            # (_add_click_callback() is only called on the parent object!)
-            for m in [self._m, *self._m._children]:
-                if event.inaxes == m.figure.ax:
-                    obj = self._getobj(m)
-                    obj._onclick(event)
-                    obj._fwd_cb(event)
-                    m.BM._after_update_actions.append(obj._clear_temporary_artists)
+            # execute onclick on the maps object that belongs to the clicked axis
+            # and forward the event to all forwarded maps-objects
+            for obj in self.objs:
+                obj._onclick(event)
+                obj._m.BM._after_update_actions.append(obj._clear_temporary_artists)
+                # forward callbacks to the connected maps-objects
+                obj._fwd_cb(event)
 
-            if self._m is self._m.parent:
-                self._m.BM.update(clear=self._method)
+            self._m.parent.BM.update(clear=self._method)
 
         def movecb(event):
+            self._event = event
+
             # ignore callbacks while dragging axes
             if self._m._draggable_axes._modifier_pressed:
                 return
@@ -459,14 +482,15 @@ class cb_click_container(_click_container):
             if not event.button:  # or (event.inaxes != self._m.figure.ax):
                 return
 
-            for m in [self._m, *self._m._children]:
-                if event.inaxes == m.figure.ax:
-                    obj = self._getobj(m)
-                    obj._onclick(event)
-                    obj._fwd_cb(event)
-                    m.BM._after_update_actions.append(obj._clear_temporary_artists)
-            if self._m is self._m.parent:
-                self._m.BM.update(clear=self._method)
+            # execute onclick on the maps object that belongs to the clicked axis
+            # and forward the event to all forwarded maps-objects
+            for obj in self.objs:
+                obj._onclick(event)
+                obj._m.BM._after_update_actions.append(obj._clear_temporary_artists)
+                # forward callbacks to the connected maps-objects
+                obj._fwd_cb(event)
+
+            self._m.parent.BM.update(clear=self._method)
 
         if self._cid_button_press_event is None:
             # ------------- add a callback
@@ -487,8 +511,8 @@ class cb_click_container(_click_container):
             obj = self._getobj(m)
 
             transformer = Transformer.from_crs(
-                m.crs_plot,
                 self._m.crs_plot,
+                m.crs_plot,
                 always_xy=True,
             )
 
@@ -562,7 +586,6 @@ class cb_pick_container(_click_container):
         ) and self._m.figure.f.canvas.toolbar.mode != "":
             return
 
-        self._event = event
         if event.artist != self._m.figure.coll:
             return
         else:
@@ -581,8 +604,6 @@ class cb_pick_container(_click_container):
                 cb = bcbs[key]
                 if clickdict is not None:
                     cb(**clickdict)
-            if self._m is self._m.parent:
-                self._m.BM.update(clear=self._method, blit=False)
 
     def _add_pick_callback(self):
         # only attach pick-callbacks if there is a collection available!
@@ -592,6 +613,8 @@ class cb_pick_container(_click_container):
         # execute onpick on the parent and all its children
         # (_add_pick_callback() is only called on the parent object!)
         def pickcb(event):
+            self._event = event
+
             # ignore callbacks while dragging axes
             if self._m._draggable_axes._modifier_pressed:
                 return
@@ -601,14 +624,15 @@ class cb_pick_container(_click_container):
             ) and self._m.figure.f.canvas.toolbar.mode != "":
                 return
 
-            # execute onclick on the parent and all its children
-            for m in [self._m, *self._m._children]:
-                obj = self._getobj(m)
+            # execute "_onpick" on the maps-object that belongs to the clicked axes
+            # and forward the event to all forwarded maps-objects
+            for obj in self.objs:
                 obj._onpick(event)
+                obj._m.BM._after_update_actions.append(obj._clear_temporary_artists)
+                # forward callbacks to the connected maps-objects
                 obj._fwd_cb(event)
-                self._m.BM._after_update_actions.append(obj._clear_temporary_artists)
-            # don't update since updates are performed within the click-callbacks
-            # self._m.BM.update()
+
+            self._m.parent.BM.update(clear=self._method)
 
         if self._cid_pick_event is None:
             # ------------- add a callback
@@ -623,11 +647,16 @@ class cb_pick_container(_click_container):
         for key, m in self._fwd_cbs.items():
             obj = self._getobj(m)
 
-            # TODO do we need correct xdata & ydata coords in here?
-            # # transform the coordinates of the clicked location
-            # xdata, ydata = m.crs_plot.transform_point(event.xdata,
-            #                                           event.ydata,
-            #                                           self._m.crs_plot)
+            transformer = Transformer.from_crs(
+                self._m.crs_plot,
+                m.crs_plot,
+                always_xy=True,
+            )
+
+            # transform the coordinates of the clicked location
+            xdata, ydata = transformer.transform(
+                event.mouseevent.xdata, event.mouseevent.ydata
+            )
 
             dummyevent = SimpleNamespace(
                 artist=m.figure.coll,
@@ -638,10 +667,10 @@ class cb_pick_container(_click_container):
                 inaxes=m.figure.ax,
                 dblclick=event.dblclick,
                 button=event.button,
-                xdata=event.mouseevent.xdata,
-                ydata=event.mouseevent.ydata,
-                x=event.mouseevent.x,
-                y=event.mouseevent.y,
+                xdata=xdata,
+                ydata=ydata,
+                # x=event.mouseevent.x,
+                # y=event.mouseevent.y,
             )
 
             pick = m._pick_pixel(None, dummymouseevent)
@@ -654,6 +683,7 @@ class cb_pick_container(_click_container):
                 dummyevent.dist = None
 
             obj._onpick(dummyevent)
+            m.BM._after_update_actions.append(obj._clear_temporary_artists)
 
 
 class keypress_container(_cb_container):
@@ -918,7 +948,7 @@ class cb_container:
         return cb_pick_container(
             m=self._m,
             cb_cls=pick_callbacks,
-            method="click",
+            method="pick",
         )
 
     @property
@@ -928,7 +958,7 @@ class cb_container:
         return keypress_container(
             m=self._m,
             cb_cls=keypress_callbacks,
-            method="click",
+            method="keypress",
         )
 
     @property
