@@ -1109,7 +1109,7 @@ class Maps(object):
         ax_cb=None,
         ax_cb_plot=None,
         z_data=None,
-        label="",
+        label=None,
         bins=None,
         histbins=None,
         cmap="viridis",
@@ -1388,12 +1388,13 @@ class Maps(object):
             coastlines = self.figure.ax.add_feature(cfeature.COASTLINE, **coast_kwargs)
         if ocean:
             ocean = self.figure.ax.add_feature(cfeature.OCEAN, **ocean_kwargs)
-            self.BM.add_bg_artist(ocean, layer=self.layer)
-        if coast:
-            self.BM.add_bg_artist(coastlines, layer=self.layer)
 
-        if layer is not None:
-            self.BM.add_bg_artist(coastlines, layer=layer)
+            if layer is not None:
+                self.BM.add_bg_artist(ocean, layer=layer)
+
+        if coast:
+            if layer is not None:
+                self.BM.add_bg_artist(coastlines, layer=layer)
 
     def add_overlay(
         self,
@@ -1630,7 +1631,7 @@ class Maps(object):
         marker = self.cb.click._cb.mark(
             ID=ID, pos=xy, radius=radius, ind=None, shape=shape, buffer=buffer, **kwargs
         )
-        self.BM.update()
+        self.BM.update(clear=False)
 
         return marker
 
@@ -1717,8 +1718,7 @@ class Maps(object):
             text=text,
             **kwargs,
         )
-        if self.parent is self:
-            self.BM.update()
+        self.BM.update(clear=False)
 
     @wraps(plt.savefig)
     def savefig(self, *args, **kwargs):
@@ -1779,7 +1779,7 @@ class Maps(object):
         self._pick_distance = pick_distance
 
         if "dynamic_layer_idx" in kwargs:
-            self.layer = kwargs.pop("dynamic_layer_idx")
+            layer = kwargs.pop("dynamic_layer_idx")
             warnings.warn("EOmaps: 'dynamic_layer_idx' is depreciated... use 'layer'!")
 
         for key in ("cmap", "array", "norm"):
@@ -1788,24 +1788,27 @@ class Maps(object):
             ), f"The key '{key}' is assigned internally by EOmaps!"
 
         try:
-            title = self.plot_specs["title"]
-            if title is None:
-                title = self.data_specs.parameter
+            if layer is None:
+                layer = self.layer
 
-            ax.set_title(title)
+            # remove previously fetched backgrounds for the used layer
+            if layer in self.BM._bg_layers:
+                del self.BM._bg_layers[layer]
+            self.BM._refetch_bg = True
+
+            title = self.plot_specs["title"]
+            if title is not None:
+                ax.set_title(title)
 
             # add coastlines and ocean-coloring
             if coastlines is True:
                 coastlines = ax.coastlines()
                 ocean = ax.add_feature(cfeature.OCEAN)
-                self.BM.add_bg_artist(ocean, layer=self.layer)
-                self.BM.add_bg_artist(coastlines, layer=self.layer)
+                self.BM.add_bg_artist(ocean, layer=layer)
+                self.BM.add_bg_artist(coastlines, layer=layer)
 
             if self.data is None:
                 return
-
-            if not hasattr(self, "data"):
-                print("you must set the data first!")
 
             # ---------------------- prepare the data
             props = self._prepare_data()
@@ -1879,9 +1882,9 @@ class Maps(object):
                         )
 
             if dynamic is True:
-                self.BM.add_artist(coll, self.layer)
+                self.BM.add_artist(coll, layer)
             else:
-                self.BM.add_bg_artist(coll, self.layer)
+                self.BM.add_bg_artist(coll, layer)
 
             # ------------- add a picker that will be used by the callbacks
             self._attach_picker()
@@ -1900,9 +1903,9 @@ class Maps(object):
             ax.set_ylim(max(b.ymin, ymin), min(b.ymax, ymax))
 
             self.figure.f.canvas.draw()
+            self.BM.update(clear=False)
 
         except Exception as ex:
-            # self.figure = self.figure._reinit(self)
             raise ex
 
     def add_colorbar(
