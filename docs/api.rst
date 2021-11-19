@@ -1,8 +1,8 @@
-API
-===
+⚙ API
+=====
 
-Initialize Maps objects
------------------------
+🔸 Initialize Maps objects
+--------------------------
 
 .. autosummary::
     :toctree: generated
@@ -13,8 +13,8 @@ Initialize Maps objects
     eomaps.MapsGrid
 
 
-Set specifications
-------------------
+🔸 Set specifications
+---------------------
 
 .. autosummary::
     :toctree: generated
@@ -36,8 +36,8 @@ You can also get/set the specs with:
     eomaps.Maps.classify_specs.<...name...>
 
 
-Plot the map and save it
-------------------------
+🔸 Plot the map and save it
+---------------------------
 
 .. autosummary::
     :toctree: generated
@@ -49,8 +49,8 @@ Plot the map and save it
     eomaps.Maps.figure
 
 
-Add layers and objects
-----------------------
+🔸 Add layers and objects
+-------------------------
 
 .. autosummary::
     :toctree: generated
@@ -67,7 +67,7 @@ Add layers and objects
     eomaps.Maps.add_annotation
     eomaps.Maps.add_colorbar
 
-Connect Maps objects
+🔸 Connect Maps objects
 -----------------------
 
 .. autosummary::
@@ -78,8 +78,8 @@ Connect Maps objects
     eomaps.Maps.join_limits
 
 
-Miscellaneous
--------------
+🔸 Miscellaneous
+----------------
 
 .. autosummary::
     :toctree: generated
@@ -93,9 +93,8 @@ Miscellaneous
     eomaps.Maps.crs_plot
     eomaps.Maps.layer
 
-Add Callbacks
--------------
-
+🔸 Add Callbacks
+----------------
 
 .. autosummary::
     :toctree: generated

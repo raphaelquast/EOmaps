@@ -1,13 +1,13 @@
-Usage
+🌳 Usage
 =====
 
 .. _installation:
 
 
-Installation
+🐛 Installation
 ############
 
-Manual installation
+🐜 Manual installation
 -------------------
 
 The recommended way to install EOmaps with `conda` and `pip`:
@@ -40,7 +40,7 @@ The recommended way to install EOmaps with `conda` and `pip`:
        pip install eomaps
 
 
-From .yml file
+🐞 From .yml file
 --------------
 
 Here's a yaml-file that you can use to install all you need in one go:
