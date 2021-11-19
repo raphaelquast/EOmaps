@@ -135,65 +135,64 @@ Here are the 3 basic steps to visualize your data:
 
 .. code-block:: python
 
-from eomaps import Maps
-import pandas as pd
-import numpy as np
+    from eomaps import Maps
+    import pandas as pd
+    import numpy as np
 
-# create some data
-lon, lat = np.meshgrid(np.arange(-30, 60, .25), np.arange(30, 60, .3))
-data = pd.DataFrame(dict(lon=lon.flat,
-                         lat=lat.flat,
-                         data_variable=np.sqrt(lon**2 + lat**2).flat
-                         )
-                    ).sample(12000)
+    # create some data
+    lon, lat = np.meshgrid(np.arange(-30, 60, .25), np.arange(30, 60, .3))
+    data = pd.DataFrame(dict(lon=lon.flat,
+                             lat=lat.flat,
+                             data_variable=np.sqrt(lon**2 + lat**2).flat
+                             )
+                        ).sample(3000)
 
-# ---------initialize a Maps object and set the data
-m = Maps()
-m.set_data(data=data, xcoord="lon", ycoord="lat", in_crs=4326)
+    # ---------initialize a Maps object and set the data
+    m = Maps()
+    m.set_data(data=data, xcoord="lon", ycoord="lat", in_crs=4326)
 
-# --------- set the appearance of the plot
-m.set_plot_specs(
-    label="some parameter",      # set the label of the colorbar
-    title="What a nice figure",  # set the title of the figure
-    cmap="RdYlBu",               # set the colormap
-    crs=3857,                    # plot the map in a pseudo-mercator projection
-    histbins="bins",             # use the histogram-bins as set by the classification scheme
-    vmin=35,                     # set all values below vmin to vmin
-    vmax=60,                     # set all values above vmax to vmax
-    cpos="c",                    # the pixel-coordinates represent the "center-position"
-    alpha=.75,                   # add some transparency
-    add_colorbar=True,           # print the colorbar + histogram
-    coastlines=True,             # add coastlines provided by NaturalEarth
-    density=True,                # make the histogram values represent the "probability-density"
-)
+    # --------- set the appearance of the plot
+    m.set_plot_specs(
+        label="some parameter",      # set the label of the colorbar
+        title="What a nice figure",  # set the title of the figure
+        cmap="RdYlBu",               # set the colormap
+        crs=3857,                    # plot the map in a pseudo-mercator projection
+        histbins="bins",             # use the histogram-bins as set by the classification scheme
+        vmin=35,                     # set all values below vmin to vmin
+        vmax=60,                     # set all values above vmax to vmax
+        cpos="c",                    # the pixel-coordinates represent the "center-position"
+        alpha=.75,                   # add some transparency
+        add_colorbar=True,           # print the colorbar + histogram
+        coastlines=True,             # add coastlines provided by NaturalEarth
+        density=True,                # make the histogram values represent the "probability-density"
+    )
 
-m.set_shape.delaunay_triangulation(mask_radius=1, mask_radius_crs="in")
+    m.set_shape.geod_circles(radius=30000)
 
-# --------- set the classification scheme that should be applied to the data
-m.set_classify_specs(scheme="UserDefined", bins=[35, 36, 37, 38,
-                                                 45, 46, 47, 48,
-                                                 55, 56, 57, 58])
+    # --------- set the classification scheme that should be applied to the data
+    m.set_classify_specs(scheme="UserDefined", bins=[35, 36, 37, 38,
+                                                     45, 46, 47, 48,
+                                                     55, 56, 57, 58])
 
-# plot the map with some additional arguments passed to the polygons
-m.plot_map(edgecolor="k", linewidth=0.5)
+    # plot the map with some additional arguments passed to the polygons
+    m.plot_map(edgecolor="k", linewidth=0.5)
 
-# ------------------ set the size and position of the figure and its axes
-# change width & height
-m.figure.f.set_figwidth(10)
-m.figure.f.set_figheight(5)
-# change the height-ratio between the colorbar and the map
-m.figure.gridspec.set_height_ratios([.5, .25])
-# adjust the padding
-m.figure.gridspec.update(bottom=0.05, top=.95, left=0.05, right=.95, hspace=-0.2)
+    # ------------------ set the size and position of the figure and its axes
+    # change width & height
+    m.figure.f.set_figwidth(9)
+    m.figure.f.set_figheight(5)
 
-# --------- customize the appearance of the colorbar
-# change the height-ratio between the colorbar and the histogram
-m.figure.cb_gridspec.set_height_ratios([1, .0001])
-# manually position the colorbar anywhere on the figure
-m.figure.set_colorbar_position(pos=[0.125, 0.08 , .75, .15], ratio=999)
-# add a y-label to the histogram
-_ = m.figure.ax_cb_plot.set_ylabel("The Y label")
-m.indicate_masked_points(color="r")
+    # adjust the padding
+    m.figure.gridspec.update(bottom=0.1, top=.95, left=0.075, right=.95, hspace=0.2)
+    # add a y-label to the histogram
+    _ = m.figure.ax_cb_plot.set_ylabel("The Y label")
+
+    # --------- customize the appearance of the colorbar
+    # change the height-ratio between the colorbar and the histogram
+    m.figure.cb_gridspec.set_height_ratios([1, .0001])
+    # manually position the colorbar anywhere on the figure
+    m.figure.set_colorbar_position(pos=[0.125, 0.1 , .83, .15], ratio=999)
+
 
 .. image:: _static/fig3.png
 
@@ -209,7 +208,8 @@ m.indicate_masked_points(color="r")
 
       -  ``annotate`` (and ``clear_annotations``)
       -  ``mark`` (and ``clear_markers``)
-      -  ``plot``, ``print_to_console``, ``get_values``, ``load``
+      -  ``peek_layer`` (and ``switch_layer``)
+      -  ``plot``, ``print_to_console``, ``get_values``, ``load``...
 
    -  … but you can also define a custom one!
 
@@ -218,7 +218,6 @@ m.indicate_masked_points(color="r")
     from eomaps import Maps
     import pandas as pd
     import numpy as np
-    import matplotlib.pyplot as plt
 
     # create some data
     #lon, lat = np.mgrid[-20:40, 30:60]
@@ -314,13 +313,12 @@ m.indicate_masked_points(color="r")
                          verticalalignment="top",
                          color="k", fontweight="bold")
 
-    def showtxt(m, ID, val, pos, ind):
-        return f"{pos[0]:.2f} / {pos[1]:.2f}"
-    m1.cb.click.attach.annotate(xytext=(-100, -50), text=showtxt)
+    m1.cb.click.attach.mark(fc="r", ec="none", radius=10000, shape="geod_circles", permanent=False)
+    m1.cb.click.attach.mark(fc="none", ec="r", radius=50000, shape="geod_circles", permanent=False)
 
 
 
-.. image:: _static/fig4.png
+.. image:: _static/fig4.gif
 
 
 
@@ -436,4 +434,4 @@ need to be downloaded first!
                      arrowprops=dict(arrowstyle="fancy", facecolor="w", connectionstyle="arc3,rad=0.35"))
 
 
-.. image:: _static/fig5.png
+.. image:: _static/fig5.gif
