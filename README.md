@@ -1,9 +1,12 @@
 [![tests](https://github.com/raphaelquast/EOmaps/actions/workflows/testMaps.yml/badge.svg?branch=master)](https://github.com/raphaelquast/EOmaps/actions/workflows/testMaps.yml)
 [![codecov](https://codecov.io/gh/raphaelquast/EOmaps/branch/dev/graph/badge.svg?token=25M85P7MJG)](https://codecov.io/gh/raphaelquast/EOmaps)
 [![pypi](https://img.shields.io/pypi/v/eomaps)](https://pypi.org/project/eomaps/)
+[![Documentation Status](https://readthedocs.org/projects/eomaps/badge/?version=latest)](https://eomaps.readthedocs.io/en/latest/?badge=latest)
 # EOmaps
 
 A general-purpose library to plot interactive maps of geographical datasets.
+
+
 
 #### 🌍 A simple interface to plot geographical datasets  
 - An ordinary `pandas.DataFrame` is all you need as input!
@@ -25,9 +28,8 @@ A general-purpose library to plot interactive maps of geographical datasets.
     (either gradually from the edges or as a rectangle around the clicked pixel)
   - ... or define your own function and attach it to the plot!
 
-#### 🛸 check out the example-notebook:  [EOmaps_examples](https://github.com/raphaelquast/maps/blob/dev/examples/EOmaps_examples.ipynb) 🛸
+#### 🛸 check out the [docs](https://eomaps.readthedocs.io) for more details and examples! 🛸
 
-![EOmaps example image](https://github.com/raphaelquast/EOmaps/blob/dev/examples/example_image.png?raw=true)
 
 ## install
 The recommended way to install EOmaps with conda + pip:
