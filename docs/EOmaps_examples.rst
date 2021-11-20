@@ -8,13 +8,13 @@
 🐣 Quickly visualize your data
 ------------------------------
 
-Here are the 3 basic steps you need to visualize your data:
+There are 3 basic steps required to visualize your data:
 
-    1. Initialize a Maps-object with ``m = Maps()``
+1. Initialize a Maps-object with ``m = Maps()``
 
-    2. set the data and its specifications via
+2. Set the data and its specifications via
 
-      .. code-block:: python
+    .. code-block:: python
 
         m.set_data_specs(
             m.data = "a pandas-DataFrame holding the data & coordinates"
@@ -24,7 +24,7 @@ Here are the 3 basic steps you need to visualize your data:
             crs = "the coordinate-system of the x- and y- coordinates"
         )
 
-    3. call ``m.plot_map()`` to generate the map!
+3. Call ``m.plot_map()`` to generate the map!
 
 |toggleStart|
 
@@ -34,13 +34,11 @@ Here are the 3 basic steps you need to visualize your data:
     import pandas as pd
     import numpy as np
 
-    # create some data
+    # ----------- create some example-data
     lon, lat = np.meshgrid(np.arange(-20, 40, .25), np.arange(30, 60, .25))
-    data = pd.DataFrame(dict(lon=lon.flat,
-                             lat=lat.flat,
-                             data_variable=np.sqrt(lon**2 + lat**2).flat
-                             )
-                        ).sample(15000)
+    data = pd.DataFrame(dict(lon=lon.flat, lat=lat.flat, data_variable=np.sqrt(lon**2 + lat**2).flat))
+    data = data.sample(15000) # take 15000 random datapoints from the dataset
+    # ------------------------------------
 
     m = Maps()
     m.set_data(data = data,
@@ -50,7 +48,7 @@ Here are the 3 basic steps you need to visualize your data:
                in_crs=4326)
 
     m.plot_map()
-    m.cb.pick.attach.annotate()  # add a basic annotation (on left-click)
+    m.cb.pick.attach.annotate()  # attach a basic pick-annotation (on left-click)
 
 |toggleEnd|
 
@@ -64,9 +62,13 @@ Here are the 3 basic steps you need to visualize your data:
 🌍 Data-classification and multiple Maps in one figure
 ------------------------------------------------------
 
--  create grids of maps via ``MapsGrid`` specification to
--  classify your data via classifiers provided by the ``mapclassify`` module
--  add individual callback functions to each subplot and connect events
+-  Create grids of maps via ``MapsGrid``
+-  | Classify your data via ``m.set_classify_specs(scheme, **kwargs)``
+   | (using classifiers provided by the ``mapclassify`` module)
+-  | Add individual callback functions to each subplot via
+   | ``m.cb.click.attach``, ``m.cb.pick.attach``
+-  | Share events between Maps-objects of the MapsGrid via
+   | ``mg.share_click_events()`` and ``mg.share_pick_events()``
 
 
 |toggleStart|
@@ -77,16 +79,13 @@ Here are the 3 basic steps you need to visualize your data:
     import pandas as pd
     import numpy as np
 
-    # create some data
+    # ----------- create some example-data
     lon, lat = np.meshgrid(np.arange(-20, 40, .5), np.arange(30, 60, .5))
-    data = pd.DataFrame(dict(lon=lon.flat,
-                             lat=lat.flat,
-                             data_variable=np.sqrt(lon**2 + lat**2).flat
-                             )
-                        ).sample(4000)
+    data = pd.DataFrame(dict(lon=lon.flat, lat=lat.flat, data_variable=np.sqrt(lon**2 + lat**2).flat))
+    data = data.sample(4000) # take 4000 random datapoints from the dataset
+    # ------------------------------------
 
-    # --------- initialize a grid of Maps objects
-    mg = MapsGrid(1, 3)
+    mg = MapsGrid(1, 3)  # initialize a grid of Maps objects
 
     # --------- set specs for the first axes
     mg.m_0_0.set_data_specs(data=data, xcoord="lon", ycoord="lat", in_crs=4326)
@@ -104,6 +103,7 @@ Here are the 3 basic steps you need to visualize your data:
     mg.m_0_2.set_plot_specs(crs=3035, title="epsg=3035")
     mg.m_0_2.set_classify_specs(scheme="StdMean", multiples=[-1, -.75, -.5, -.25, .25, .5, .75, 1])
 
+    # --------- plot all maps and rotate the ticks of the colorbar
     for m in mg:
         m.plot_map()
         m.figure.ax_cb.tick_params(rotation=90, labelsize=8)
@@ -112,17 +112,18 @@ Here are the 3 basic steps you need to visualize your data:
     mg.f.set_figheight(5)
     mg.f.tight_layout()
 
-    # add some callbacks to indicate the clicked data-point
+    # --------- add some callbacks to indicate the clicked data-point to all maps
     for m in mg:
         m.cb.pick.attach.mark(fc="r", ec="none", buffer=1, permanent=True, shape=m.shape.name)
         m.cb.pick.attach.mark(fc="none", ec="r", lw=1, buffer=5, permanent=True, shape=m.shape.name)
 
         m.cb.click.attach.mark(fc="none", ec="k", lw=2, buffer=10, permanent=False, shape=m.shape.name)
 
+    # add a specific annotation-callback to the second map
+    # (put it on a layer > 10 (the default for markers) so that it appears above the markers)
     mg.m_0_1.cb.pick.attach.annotate(layer=11, text="the closest point is here!")
-    # put it on a layer > 10 (the default for markers) so that it appears above the markers
 
-    # share click & pick-events between the maps
+    # share click & pick-events between all Maps-objects of the MapsGrid
     mg.share_click_events()
     mg.share_pick_events()
 
@@ -138,10 +139,10 @@ Here are the 3 basic steps you need to visualize your data:
 -  use ``m.set_plot_specs()`` to set the general appearance of the plot
 -  after creating the plot, you can access individual objects via ``m.figure.<...>`` … most importantly:
 
-   -  ``coll`` : the collection representing the data on the map
    -  ``f`` : the matplotlib figure
    -  ``ax``, ``ax_cb``, ``ax_cb_plot`` : the axes used for plotting the map, colorbar and histogram
    -  ``gridspec``, ``cb_gridspec`` : the matplotlib GridSpec instances for the plot and the colorbar
+   -  ``coll`` : the collection representing the data on the map
 
 |toggleStart|
 
@@ -151,15 +152,12 @@ Here are the 3 basic steps you need to visualize your data:
     import pandas as pd
     import numpy as np
 
-    # create some data
+    # ----------- create some example-data
     lon, lat = np.meshgrid(np.arange(-30, 60, .25), np.arange(30, 60, .3))
-    data = pd.DataFrame(dict(lon=lon.flat,
-                             lat=lat.flat,
-                             data_variable=np.sqrt(lon**2 + lat**2).flat
-                             )
-                        ).sample(3000)
+    data = pd.DataFrame(dict(lon=lon.flat, lat=lat.flat, data_variable=np.sqrt(lon**2 + lat**2).flat))
+    data = data.sample(3000) # take 3000 random datapoints from the dataset
+    # ------------------------------------
 
-    # ---------initialize a Maps object and set the data
     m = Maps()
     m.set_data(data=data, xcoord="lon", ycoord="lat", in_crs=4326)
 
@@ -168,42 +166,31 @@ Here are the 3 basic steps you need to visualize your data:
         label="some parameter",      # set the label of the colorbar
         title="What a nice figure",  # set the title of the figure
         cmap="RdYlBu",               # set the colormap
-        crs=3857,                    # plot the map in a pseudo-mercator projection
+        crs=3857,                    # plot the map in a pseudo-mercator (epsg3857) projection
         histbins="bins",             # use the histogram-bins as set by the classification scheme
         vmin=35,                     # set all values below vmin to vmin
         vmax=60,                     # set all values above vmax to vmax
         cpos="c",                    # the pixel-coordinates represent the "center-position"
+        cpos_radius=None,             # radius (in in_crs) to shift the center-position if "cpos" is not "c"
         alpha=.75,                   # add some transparency
-        add_colorbar=True,           # print the colorbar + histogram
-        coastlines=True,             # add coastlines provided by NaturalEarth
         density=True,                # make the histogram values represent the "probability-density"
     )
 
-    m.set_shape.geod_circles(radius=30000)
+    m.set_shape.geod_circles(radius=30000)  # plot geodesic-circles with 30 km radius
 
-    # --------- set the classification scheme that should be applied to the data
-    m.set_classify_specs(scheme="UserDefined", bins=[35, 36, 37, 38,
-                                                     45, 46, 47, 48,
-                                                     55, 56, 57, 58])
+    # set the classification scheme that should be applied to the data
+    m.set_classify_specs(scheme="UserDefined",
+                         bins=[35, 36, 37, 38, 45, 46, 47, 48, 55, 56, 57, 58])
 
-    # plot the map with some additional arguments passed to the polygons
-    m.plot_map(edgecolor="k", linewidth=0.5)
+    m.plot_map(edgecolor="k", linewidth=0.5) # pass some additional arguments to the plotted collection
 
-    # ------------------ set the size and position of the figure and its axes
-    # change width & height
-    m.figure.f.set_figwidth(9)
-    m.figure.f.set_figheight(5)
+    # ------------------ change the appearance of the figure
+    m.figure.f.set_figwidth(9)    # set figure width
+    m.figure.f.set_figheight(5)   # set figure height
+    _ = m.figure.ax_cb_plot.set_ylabel("The Y label")    # add a y-label to the histogram
 
-    # adjust the padding
-    m.figure.gridspec.update(bottom=0.1, top=.95, left=0.075, right=.95, hspace=0.2)
-    # add a y-label to the histogram
-    _ = m.figure.ax_cb_plot.set_ylabel("The Y label")
-
-    # --------- customize the appearance of the colorbar
-    # change the height-ratio between the colorbar and the histogram
-    m.figure.cb_gridspec.set_height_ratios([1, .0001])
-    # manually position the colorbar anywhere on the figure
-    m.figure.set_colorbar_position(pos=[0.125, 0.1 , .83, .15], ratio=999)
+    m.figure.gridspec.update(bottom=0.1, top=.95, left=0.075, right=.95, hspace=0.2)  # adjust the padding
+    m.figure.set_colorbar_position(pos=[0.125, 0.1 , .83, .15], ratio=999) # manually re-position the colorbar
 
 |toggleEnd|
 
@@ -214,17 +201,19 @@ Here are the 3 basic steps you need to visualize your data:
 🛸 Turn your plot into a powerful data-analysis tool
 ----------------------------------------------------
 
--  **callback functions** can easily be attached to the plot to turn it
+-  **Callback functions** can easily be attached to the plot to turn it
    into an interactive plot-widget!
 
-   -  there’s a nice list of (customizeable) pre-defined callbacks:
+   - | there’s a nice list of (customizeable) pre-defined callbacks accessible via:
+     | ``m.cb.click``, ``m.cb.pick``, ``m.cb.keypress`` and ``m.cb.dynamic``
 
-      -  ``annotate`` (and ``clear_annotations``)
-      -  ``mark`` (and ``clear_markers``)
-      -  ``peek_layer`` (and ``switch_layer``)
-      -  ``plot``, ``print_to_console``, ``get_values``, ``load``...
+      -  use ``annotate`` (and ``clear_annotations``) to create text-annotations
+      -  use ``mark`` (and ``clear_markers``) to add markers
+      -  use ``peek_layer`` (and ``switch_layer``) to compare multiple layers of data
+      -  ... and many more: ``plot``, ``print_to_console``, ``get_values``, ``load`` ...
 
-   -  … but you can also define a custom one!
+   -  | ... but you can also define a custom one and connect it via
+      | ``m.cb.click.attach(<my custom function>)`` (works also with ``pick`` and ``keypress``)!
 
 |toggleStart|
 

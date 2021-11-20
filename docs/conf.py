@@ -35,6 +35,8 @@ MOCK_MODULES = [
     "owslib",
     "owslib.wmts",
     "owslib.wms",
+    "PIL",
+    "Image",
     "urllib3.exceptions",
     "requests",
     "requests.exceptions",
