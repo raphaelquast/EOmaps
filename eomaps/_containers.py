@@ -370,8 +370,7 @@ class plot_specs(object):
     def keys(self):
         # fmt: off
         return ('label', 'title', 'cmap', 'plot_crs', 'histbins', 'tick_precision',
-                'vmin', 'vmax', 'cpos', 'cpos_radius', 'alpha', 'add_colorbar',
-                'coastlines', 'density')
+                'vmin', 'vmax', 'cpos', 'cpos_radius', 'alpha', 'density')
         # fmt: on
 
     @property

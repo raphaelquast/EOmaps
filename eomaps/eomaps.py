@@ -213,8 +213,6 @@ class Maps(object):
             cpos="c",
             cpos_radius=None,
             alpha=1,
-            add_colorbar=True,
-            coastlines=True,
             density=False,
         )
 
@@ -668,12 +666,6 @@ class Maps(object):
         alpha : int, optional
             Set the transparency of the plot (0-1)
             The default is 1.
-        add_colorbar : bool, optional
-            Indicator if a colorbar with a histogram should be added to the plot or not.
-            The default is True.
-        coastlines : bool, optional
-            Indicator if simple coastlines and ocean-colorings should be added
-            The default is True.
         density : bool, optional
             Indicator if the y-axis of the histogram should represent the
             probability-density (True) or the number of counts per bin (False)
