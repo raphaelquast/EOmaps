@@ -1,3 +1,5 @@
+.. include:: substitutions.rst
+
 🌐 EOmaps examples
 ==================
 
@@ -6,7 +8,7 @@
 🐣 Quickly visualize your data
 ------------------------------
 
-Here are the 3 basic steps to visualize your data:
+Here are the 3 basic steps you need to visualize your data:
 
     1. Initialize a Maps-object with ``m = Maps()``
 
@@ -23,6 +25,8 @@ Here are the 3 basic steps to visualize your data:
         )
 
     3. call ``m.plot_map()`` to generate the map!
+
+|toggleStart|
 
 .. code-block:: python
 
@@ -48,6 +52,8 @@ Here are the 3 basic steps to visualize your data:
     m.plot_map()
     m.cb.pick.attach.annotate()  # add a basic annotation (on left-click)
 
+|toggleEnd|
+
 .. image:: _static/fig1.gif
 
 .. raw:: html
@@ -61,6 +67,9 @@ Here are the 3 basic steps to visualize your data:
 -  create grids of maps via ``MapsGrid`` specification to
 -  classify your data via classifiers provided by the ``mapclassify`` module
 -  add individual callback functions to each subplot and connect events
+
+
+|toggleStart|
 
 .. code-block:: python
 
@@ -117,6 +126,7 @@ Here are the 3 basic steps to visualize your data:
     mg.share_click_events()
     mg.share_pick_events()
 
+|toggleEnd|
 
 .. image:: _static/fig2.gif
 
@@ -132,6 +142,8 @@ Here are the 3 basic steps to visualize your data:
    -  ``f`` : the matplotlib figure
    -  ``ax``, ``ax_cb``, ``ax_cb_plot`` : the axes used for plotting the map, colorbar and histogram
    -  ``gridspec``, ``cb_gridspec`` : the matplotlib GridSpec instances for the plot and the colorbar
+
+|toggleStart|
 
 .. code-block:: python
 
@@ -193,6 +205,7 @@ Here are the 3 basic steps to visualize your data:
     # manually position the colorbar anywhere on the figure
     m.figure.set_colorbar_position(pos=[0.125, 0.1 , .83, .15], ratio=999)
 
+|toggleEnd|
 
 .. image:: _static/fig3.png
 
@@ -212,6 +225,8 @@ Here are the 3 basic steps to visualize your data:
       -  ``plot``, ``print_to_console``, ``get_values``, ``load``...
 
    -  … but you can also define a custom one!
+
+|toggleStart|
 
 .. code-block:: python
 
@@ -316,7 +331,7 @@ Here are the 3 basic steps to visualize your data:
     m1.cb.click.attach.mark(fc="r", ec="none", radius=10000, shape="geod_circles", permanent=False)
     m1.cb.click.attach.mark(fc="none", ec="r", radius=50000, shape="geod_circles", permanent=False)
 
-
+|toggleEnd|
 
 .. image:: _static/fig4.gif
 
@@ -331,6 +346,8 @@ markers
 
 … generation of the plot might take a bit longer since overlays might
 need to be downloaded first!
+
+|toggleStart|
 
 .. code-block:: python
 
@@ -433,5 +450,6 @@ need to be downloaded first!
                      xytext=(-80, 100), textcoords="offset points", bbox=dict(boxstyle="round", fc="w", ec="k"), horizontalalignment="left",
                      arrowprops=dict(arrowstyle="fancy", facecolor="w", connectionstyle="arc3,rad=0.35"))
 
+|toggleEnd|
 
 .. image:: _static/fig5.gif
