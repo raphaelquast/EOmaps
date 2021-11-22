@@ -632,7 +632,9 @@ class cb_pick_container(_click_container):
                 # forward callbacks to the connected maps-objects
                 obj._fwd_cb(event)
 
-            self._m.parent.BM.update(clear=self._method)
+            # self._m.parent.BM.update(clear=self._method)
+            # don't update here... the click-callback will take care of it!
+            self._m.parent.BM._clear_temp_artists(self._method)
 
         if self._cid_pick_event is None:
             # ------------- add a callback
