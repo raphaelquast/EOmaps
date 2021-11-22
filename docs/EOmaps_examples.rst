@@ -329,12 +329,11 @@ There are 3 basic steps required to visualize your data:
 🌲 🏡🌳 Add overlays and indicators
 -----------------------------------
 
-… and finally, here's an a bit more advanced example
-
+| … and finally, here's an a bit more advanced example
+| (… plot-generation might take a bit longer since overlays need to be downloaded first!)
 - with overlays add fancy static annotations / markers
 - ...and “connected” Maps-objects to get multiple interactive data-layers!
 
-… generation of the plot might take a bit longer since overlays might need to be downloaded first!
 
 |toggleStart|
 
