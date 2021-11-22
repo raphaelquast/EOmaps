@@ -11,19 +11,7 @@
 There are 3 basic steps required to visualize your data:
 
 1. Initialize a Maps-object with ``m = Maps()``
-
-2. Set the data and its specifications via
-
-    .. code-block:: python
-
-        m.set_data_specs(
-            m.data = "a pandas-DataFrame holding the data & coordinates"
-            parameter = "the DataFrame-column you want to plot",
-            xcord = "the name of the DataFrame-column representing the x-coordinates"
-            ycord = "the name of the DataFrame-column representing the y-coordinates"
-            crs = "the coordinate-system of the x- and y- coordinates"
-        )
-
+2. Set the data and its specifications via ``m.set_data`` (or ``m.set_data_specs``)
 3. Call ``m.plot_map()`` to generate the map!
 
 |toggleStart|
@@ -41,11 +29,11 @@ There are 3 basic steps required to visualize your data:
     # ------------------------------------
 
     m = Maps()
-    m.set_data(data = data,
-               parameter="data_variable",
-               xcoord="lon",
-               ycoord="lat",
-               in_crs=4326)
+    m.set_data(data = data,               # a pandas-DataFrame holding the data & coordinates
+               parameter="data_variable", # the DataFrame-column you want to plot
+               xcoord="lon",              # the name of the DataFrame-column representing the x-coordinates
+               ycoord="lat",              # the name of the DataFrame-column representing the y-coordinates
+               crs=4326)                  # the coordinate-system of the x- and y- coordinates
 
     m.plot_map()
     m.cb.pick.attach.annotate()  # attach a basic pick-annotation (on left-click)

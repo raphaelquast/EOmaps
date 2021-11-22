@@ -4,6 +4,7 @@ from functools import partial, lru_cache, wraps
 from collections import defaultdict
 import warnings
 import copy
+from types import SimpleNamespace
 
 import numpy as np
 
@@ -92,11 +93,11 @@ def MapsGrid(r=2, c=2, **kwargs):
 
         def set_data_specs(self, **kwargs):
             for m in self:
-                m.set_plot_specs(**kwargs)
+                m.set_data_specs(**kwargs)
 
         def set_classify_specs(self, scheme=None, **kwargs):
             for m in self:
-                m.set_plot_specs(scheme=scheme, **kwargs)
+                m.set_classify_specs(scheme=scheme, **kwargs)
 
         def share_click_events(self):
             """
@@ -190,6 +191,10 @@ class Maps(object):
     """
 
     crs_list = ccrs
+
+    CLASSIFIERS = SimpleNamespace(
+        **dict(zip(mapclassify.CLASSIFIERS, mapclassify.CLASSIFIERS))
+    )
 
     def __init__(self, layer=0, f=None, gs_ax=None, orientation="vertical"):
         self._parent = None
