@@ -191,11 +191,28 @@ class Maps(object):
     """
 
     crs_list = ccrs
-
     CRS = ccrs
-    CLASSIFIERS = SimpleNamespace(
-        **dict(zip(mapclassify.CLASSIFIERS, mapclassify.CLASSIFIERS))
+
+    # mapclassify.CLASSIFIERS
+    _classifiers = (
+        "BoxPlot",
+        "EqualInterval",
+        "FisherJenks",
+        "FisherJenksSampled",
+        "HeadTailBreaks",
+        "JenksCaspall",
+        "JenksCaspallForced",
+        "JenksCaspallSampled",
+        "MaxP",
+        "MaximumBreaks",
+        "NaturalBreaks",
+        "Quantiles",
+        "Percentiles",
+        "StdMean",
+        "UserDefined",
     )
+
+    CLASSIFIERS = SimpleNamespace(**dict(zip(_classifiers, _classifiers)))
 
     def __init__(self, layer=0, f=None, gs_ax=None, orientation="vertical"):
         self._parent = None
