@@ -621,14 +621,13 @@ class _S1GBM:
             self._event_attached = self._m.figure.f.canvas.mpl_connect(
                 "draw_event", self.ondraw
             )
-            # TODO do this only once on the grandparent!
-            if self._m.figure.f.canvas.toolbar is not None:
-                self._m.figure.f.canvas.toolbar.release_zoom = self.zoom_decorator(
-                    self._m.figure.f.canvas.toolbar.release_zoom
-                )
-                self._m.figure.f.canvas.toolbar.release_pan = self.zoom_decorator(
-                    self._m.figure.f.canvas.toolbar.release_pan
-                )
+            toolbar = self._m.figure.f.canvas.toolbar
+
+            if toolbar is not None and not hasattr(toolbar, "_EOmaps_decorated"):
+                toolbar.release_zoom = self.zoom_decorator(toolbar.release_zoom)
+                toolbar.release_pan = self.zoom_decorator(toolbar.release_pan)
+                toolbar._update_view = self.update_decorator(toolbar._update_view)
+                toolbar._EOmaps_decorated = True
 
         if layer is None:
             self._layer = self._m.layer
@@ -668,8 +667,15 @@ class _S1GBM:
     def zoom_decorator(self, f):
         def newzoom(event):
             ret = f(event)
-
             self.redraw()
             return ret
 
         return newzoom
+
+    def update_decorator(self, f):
+        def newupdate():
+            ret = f()
+            self.redraw()
+            return ret
+
+        return newupdate
