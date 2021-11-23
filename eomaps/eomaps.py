@@ -389,9 +389,10 @@ class Maps(object):
     @parent.setter
     def parent(self, parent):
         assert self._parent is None, "EOmaps: There is already a parent Maps object!"
-        self._parent = parent
-        # add the child to the topmost parent-object
-        self.parent._add_child(self)
+        if parent not in [self, None]:
+            self._parent = parent
+            # add the child to the topmost parent-object
+            self.parent._add_child(self)
 
     def join_limits(self, *args):
         """
