@@ -87,7 +87,7 @@ m = Maps()
 ...
 m.plot_map()
 
-m2 = Maps(parent=m) # use the same axes to get multiple interactive data-layers
+m2 = Maps(parent=m) # connect Maps to get multiple interactive data-layers
 m2.set_data(...)
 m2.set_shape(...)
 ...
