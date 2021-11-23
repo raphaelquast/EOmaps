@@ -6,48 +6,27 @@
 
 A general-purpose library to plot interactive maps of geographical datasets.
 
-
-
-#### 🌍 A simple interface to plot geographical datasets  
-- An ordinary `pandas.DataFrame` is all you need as input!
+#### 🌍 A simple interface to visualize geographical datasets  
+- A `pandas.DataFrame` is all you need as input!
   - plots of large (>1M datapoints) irregularly sampled datasets are generated in a few seconds!
-- Represent your data as shapes with actual geographic dimensions
-- Reproject the map to any cartopy-projection
-- Add annotations, overlays, WebMap-layers etc. to the maps
-- Get a nice colorbar with a colored histogram on top  
+- Represent your data as shapes with actual geographic dimensions and re-project it to any crs supported by `cartopy`
+- Add annotations, overlays, WebMap-layers etc. to the maps and get a nice colorbar with a colored histogram on top  
 
-#### 🌎 Easily turn the plot into a clickable data-analysis widget  
-- Add functions that are executed if you
-  - `m.cb.click`: click anywhere on the map
-  - `m.cb.pick`: "pick" a pixel of a previously plotted dataset
-  - `m.cb.keypress`: press a key on the keyboard
-- Many pre-defined functions for common tasks are available!
-  - `annotate`: add an annotation to indicate the location and value of the clicked pixel
-  - `mark`: add a markers (ellipses, rectangles, geodetic_circles etc.) at the location of the clicked pixel
-  - `peek-layer`: click on the map to show another layer of data  
-    (either gradually from the edges or as a rectangle around the clicked pixel)
-  - ... or define your own function and attach it to the plot!
+#### 🌎 Easily turn the plot into a powerful data-analysis widget  
+- Add "callbacks" to interact with your data
+   - Many pre-defined functions for common tasks are available!
+      - display coordinates, values or IDs of clicked pixels, add markers, compare data-layers etc.
+   - ... or define your own function and attach it to the plot!
+- Connect multiple interactive maps to analyze relations between datasets
 
-#### 🛸 check out the [docs](https://eomaps.readthedocs.io) for more details and examples! 🛸
+#### 🛸 check out the [documentation](https://eomaps.readthedocs.io) for more details and [examples](https://eomaps.readthedocs.io/en/latest/EOmaps_examples.html)! 🛸
 
 
 ## install
-The recommended way to install EOmaps with conda + pip:
 
-1. (only if you're on WINDOWS)  
-   due to an issue with libspatialindex.dll for the conda-forge build of rtree, install rtree from default channel  
-   [(corresponding issue on rtree-feedstock)](https://github.com/conda-forge/rtree-feedstock/issues/31)
-   ```
-   conda install "rtree>=0.9.7"
-   ```
-2. install remaining dependencies from `conda-forge` channel
-   ```
-   conda install -c conda-forge numpy pandas geopandas "matplotlib>=3.0" "cartopy>=0.20.0" descartes mapclassify pyproj pyepsg
-   ```
-3. install EOmaps from pip
-   ```
-   pip install eomaps
-   ```
+Installing EOmaps can be done via `conda` and `pip`.
+To make sure all dependencies are correctly installed, please have a look at the [🛸 installation instructions 🛸](https://eomaps.readthedocs.io/en/latest/usage.html#installation) in the documentation.
+
 
 ## basic usage
 ```python

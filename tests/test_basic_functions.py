@@ -356,7 +356,7 @@ class TestBasicPlotting(unittest.TestCase):
         m = Maps()
         m.data = self.data
         m.set_data_specs(xcoord="x", ycoord="y", in_crs=3857)
-        m.plot_specs.crs = Maps.crs_list.Orthographic(
+        m.plot_specs.crs = Maps.CRS.Orthographic(
             central_latitude=45, central_longitude=45
         )
         m.plot_map()
@@ -558,28 +558,28 @@ class TestBasicPlotting(unittest.TestCase):
 
         mgrid = MapsGrid(3, 4)
         mgrid.parent.set_data(
-            data=df.sample(1000), xcoord="lon", ycoord="lat", crs=4326
+            data=df.sample(2000), xcoord="lon", ycoord="lat", crs=4326
         )
         for m in mgrid.children:
             m.set_data(**mgrid.parent.data_specs)
 
         crss = iter(
             (
-                m.crs_list.Stereographic(),
-                m.crs_list.Sinusoidal(),
-                m.crs_list.Mercator(),
+                m.CRS.Stereographic(),
+                m.CRS.Sinusoidal(),
+                m.CRS.Mercator(),
                 #
-                m.crs_list.EckertI(),
-                m.crs_list.EckertII(),
-                m.crs_list.EckertIII(),
+                m.CRS.EckertI(),
+                m.CRS.EckertII(),
+                m.CRS.EckertIII(),
                 #
-                m.crs_list.EckertIV(),
-                m.crs_list.EckertV(),
-                m.crs_list.Mollweide(),
+                m.CRS.EckertIV(),
+                m.CRS.EckertV(),
+                m.CRS.Mollweide(),
                 #
-                m.crs_list.Orthographic(central_longitude=45, central_latitude=45),
-                m.crs_list.AlbersEqualArea(),
-                m.crs_list.LambertCylindrical(),
+                m.CRS.Orthographic(central_longitude=45, central_latitude=45),
+                m.CRS.AlbersEqualArea(),
+                m.CRS.LambertCylindrical(),
             )
         )
 
@@ -594,7 +594,7 @@ class TestBasicPlotting(unittest.TestCase):
                 ["rectangles", dict(radius=1.5, radius_crs="in", mesh=True)],
                 #
                 ["rectangles", dict(radius=100000, radius_crs="out", mesh=True)],
-                ["voroni_diagram", dict(mask_radius=100000)],
+                ["voroni_diagram", dict(mask_radius=200000)],
                 ["voroni_diagram", dict(masked=False)],
                 #
                 [

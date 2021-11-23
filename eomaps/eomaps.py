@@ -192,6 +192,7 @@ class Maps(object):
 
     crs_list = ccrs
 
+    CRS = ccrs
     CLASSIFIERS = SimpleNamespace(
         **dict(zip(mapclassify.CLASSIFIERS, mapclassify.CLASSIFIERS))
     )

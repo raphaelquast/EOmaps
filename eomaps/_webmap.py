@@ -635,7 +635,7 @@ class _S1GBM:
 
     def redraw(self):
         # get and remember the extent
-        extent = self._m.figure.ax.get_extent(crs=self._m.crs_list.GOOGLE_MERCATOR)
+        extent = self._m.figure.ax.get_extent(crs=self._m.CRS.GOOGLE_MERCATOR)
         if self._S1GBM is not None:
             self._m.BM.remove_bg_artist(self._S1GBM)
             self._S1GBM.remove()
