@@ -86,7 +86,8 @@ You can also get/set the specs with:
     :nosignatures:
 
     eomaps.Maps.get_crs
-    eomaps.Maps.crs_list
+    eomaps.Maps.CRS
+    eomaps.Maps.CLASSIFIERS
     eomaps.Maps.indicate_masked_points
     eomaps.Maps.parent
     eomaps.Maps.BM

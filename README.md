@@ -6,13 +6,13 @@
 
 A general-purpose library to plot interactive maps of geographical datasets.
 
-#### 🌍 A simple interface to visualize geographical datasets  
+#### 🌍 Simple interface to visualize geographical datasets  
 - A `pandas.DataFrame` is all you need as input!
   - plots of large (>1M datapoints) irregularly sampled datasets are generated in a few seconds!
 - Represent your data as shapes with actual geographic dimensions and re-project it to any crs supported by `cartopy`
 - Add annotations, overlays, WebMap-layers etc. to the maps and get a nice colorbar with a colored histogram on top  
 
-#### 🌎 Easily turn the plot into a powerful data-analysis widget  
+#### 🌎 Easily turn your maps into powerful interactive data-analysis widgets
 - Add "callbacks" to interact with your data
    - Many pre-defined functions for common tasks are available!
       - display coordinates, values or IDs of clicked pixels, add markers, compare data-layers etc.
@@ -38,17 +38,14 @@ data = pd.DataFrame(dict(lat=[...], lon=[...], value=[...]))
 
 # initialize Maps object
 m = Maps()
-
 # set the data
 m.set_data(data=data, xcoord="lon", ycoord="lat", parameter="value", crs=4326)
-
-# set the appearance of the plot
-m.set_plot_specs(crs=4326, cmap="viridis")
 # set the shapes that you want to use to represent the data-points
 m.set_shape.geod_circles(radius=10000) # (e.g. geodetic circles with 10km radius)
-
+# set the appearance of the plot
+m.set_plot_specs(crs=Maps.CRS, cmap="viridis")
 # (optionally) classify the data
-m.set_classify_specs(scheme=m.classify_specs.SCHEMES.Quantiles, k=5)
+m.set_classify_specs(scheme=Maps.CLASSIFIERS.Quantiles, k=5)
 
 # plot the map
 m.plot_map()
