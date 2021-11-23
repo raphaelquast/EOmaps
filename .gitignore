@@ -1,3 +1,8 @@
 __pycache__
 examples/.ipynb_checkpoints
 _additional
+docs/build
+docs/_build
+docs/debug.log
+docs/.vscode
+docs/generated

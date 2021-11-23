@@ -4,9 +4,9 @@ from functools import partial, lru_cache, wraps
 from collections import defaultdict
 import warnings
 import copy
+from types import SimpleNamespace
 
 import numpy as np
-import pandas as pd
 
 try:
     import geopandas as gpd
@@ -21,14 +21,13 @@ import matplotlib.pyplot as plt
 from matplotlib import cm
 from matplotlib.colors import LinearSegmentedColormap
 from matplotlib.gridspec import GridSpec, GridSpecFromSubplotSpec, SubplotSpec
-from matplotlib.patches import Patch
 
 
 from cartopy import crs as ccrs
 from cartopy import feature as cfeature
 from cartopy.io import shapereader
 
-from .helpers import pairwise, cmap_alpha, BlitManager
+from .helpers import pairwise, cmap_alpha, BlitManager, draggable_axes
 from ._shapes import shapes
 
 from ._containers import (
@@ -36,8 +35,13 @@ from ._containers import (
     plot_specs,
     map_objects,
     classify_specs,
-    cb_container,
+    # cb_container,
+    wms_container,
+    wmts_container,
 )
+
+from ._cb_container import cb_container
+
 
 try:
     import mapclassify
@@ -45,22 +49,200 @@ except ImportError:
     print("No module named 'mapclassify'... classification will not work!")
 
 
-class Maps(object):
+def MapsGrid(r=2, c=2):
     """
-    A class to perform reading an plotting of spatial maps
+    Initialize a grid of Maps objects
 
     Parameters
     ----------
+    r : int, optional
+        the number of rows. The default is 2.
+    c : int, optional
+        the number of columns. The default is 2.
+
+    Returns
+    -------
+    eomaps.MapsGrid
+        Accessor to the Maps objects "ax_{row}_{column}".
+
+    """
+
+    class MapsGrid:
+        def __init__(self):
+            self._axes = []
+
+        def __iter__(self):
+            return iter(self._axes)
+
+        def __getitem__(self, key):
+            return getattr(self, f"ax_{key[0]}_{key[1]}")
+
+        @property
+        def children(self):
+            return [i for i in self if i is not self.parent]
+
+        @property
+        def f(self):
+            return self.parent.figure.f
+
+        def set_plot_specs(self, **kwargs):
+            for m in self:
+                m.set_plot_specs(**kwargs)
+
+        def set_data_specs(self, **kwargs):
+            for m in self:
+                m.set_data_specs(**kwargs)
+
+        def set_classify_specs(self, scheme=None, **kwargs):
+            for m in self:
+                m.set_classify_specs(scheme=scheme, **kwargs)
+
+        def share_click_events(self):
+            """
+            share click events between all Maps objects of the grid
+            """
+            self.parent.cb.click.share_events(*self.children)
+
+        def share_pick_events(self):
+            """
+            share pick events between all Maps objects of the grid
+            """
+            self.parent.cb.pick.share_events(*self.children)
+
+        def join_limits(self):
+            """
+            join axis limits between all Maps objects of the grid
+            (only possible if all maps share the same crs!)
+            """
+            self.parent.join_limits(*self.children)
+
+    mg = MapsGrid()
+    gs = GridSpec(nrows=r, ncols=c)
+
+    for i in range(r):
+        for j in range(c):
+            if i == 0 and j == 0:
+                mij = Maps(gs_ax=gs[0, 0])
+                mg.parent = mij
+            else:
+                mij = Maps(parent=mg.parent, gs_ax=gs[i, j])
+
+            mg._axes.append(mij)
+            setattr(mg, f"m_{i}_{j}", mij)
+
+    return mg
+
+
+class Maps(object):
+    """
+    The base-class for generating plots with EOmaps
+
+    Note: if you want to plot a grid of maps, checkout `MapsGrid`!
+
+    Parameters
+    ----------
+    parent : eomaps.Maps
+        The parent Maps-object to use.
+        Any maps-objects that share the same figure must be connected
+        to allow shared interactivity!
+
+        By default, also the axis used for plotting is shared between connected
+        Maps-objects, but this can be overridden if you explicitly specify
+        either a GridSpec or an Axis via `gs_ax`.
+
+        >>> m1 = Maps()
+        >>> m2 = Maps(parent=m1)
+
     orientation : str, optional
-        Indicator if the colorbar should be plotted right of the map ("horizontal")
-        or below the map ("vertical"). The default is "vertical"
+        Indicator if the colorbar should be plotted right of the map
+        ("horizontal") or below the map ("vertical"). The default is "vertical"
+
+    f : matplotlib.Figure, optional
+        Explicitly specify the matplotlib figure instance to use.
+        (ONLY useful if you want to add a map to an already existing figure!)
+
+          - If None, a new figure will be created (accessible via m.figure.f)
+          - Connected maps-objects will always share the same figure! You do
+            NOT need to specify it (just provide the parent and you're fine)!
+
+        The default is None
+    gs_ax : matplotlib.axes or matplotlib.gridspec.SubplotSpec, optional
+        Explicitly specify the axes (or GridSpec) for plotting.
+
+        Possible values are:
+
+        * None:
+            Initialize a new axes (the default)
+            (if a parent is provided, use the axis of the parent object)
+        * `matplotilb.gridspec.SubplotSpec`:
+            Use the SubplotSpec for initializing the axes.
+            The SubplotSpec will be divided accordingly in case a colorbar
+            is plotted.
+
+                >>> import matplotlib.pyplot as plt
+                >>> from matplotlib.gridspec import GridSpec
+                >>> f = plt.figure()
+                >>> gs = GridSpec(2,2)
+                >>> m = Maps()
+                >>> ...
+                >>> m.plot_map(f_gs=gs[0,0])
+
+        * `matplotilb.axes`:
+            Directly use the provided figure and axes instances for plotting.
+            The axes MUST be a geo-axes with `m.plot_specs.crs_plot`
+            projection. NO colorbar and NO histogram will be plotted.
+
+                >>> import matplotlib.pyplot as plt
+                >>> f = plt.figure()
+                >>> m = Maps()
+                >>> ...
+                >>> ax = f.add_subplot(projection=m.crs_plot)
+                >>> m.plot_map(ax_gs=ax)
     """
 
     crs_list = ccrs
+    CRS = ccrs
 
-    def __init__(self):
-        self.parent = None
+    # mapclassify.CLASSIFIERS
+    _classifiers = (
+        "BoxPlot",
+        "EqualInterval",
+        "FisherJenks",
+        "FisherJenksSampled",
+        "HeadTailBreaks",
+        "JenksCaspall",
+        "JenksCaspallForced",
+        "JenksCaspallSampled",
+        "MaxP",
+        "MaximumBreaks",
+        "NaturalBreaks",
+        "Quantiles",
+        "Percentiles",
+        "StdMean",
+        "UserDefined",
+    )
+
+    CLASSIFIERS = SimpleNamespace(**dict(zip(_classifiers, _classifiers)))
+
+    def __init__(
+        self, parent=None, layer=0, orientation="vertical", f=None, gs_ax=None
+    ):
+
+        if parent is not None:
+            assert (
+                f is None
+            ), "You cannot specify the figure for connected Maps-objects!"
+
+            if gs_ax is None:
+                gs_ax = parent.figure.ax
+
+        self._BM = None
+        self._parent = None
+        self._children = []
+
+        self.parent = parent  # invoke the setter!
         self._orientation = "vertical"
+        self.layer = layer
 
         # default plot specs
         self.plot_specs = plot_specs(
@@ -76,16 +258,11 @@ class Maps(object):
             cpos="c",
             cpos_radius=None,
             alpha=1,
-            add_colorbar=True,
-            coastlines=True,
             density=False,
         )
 
         # default classify specs
         self.classify_specs = classify_specs(self)
-
-        # self._shapes = shapes(self)
-        self.set_shape = shapes(self)
 
         self.set_shape.ellipses()
 
@@ -96,32 +273,192 @@ class Maps(object):
             crs=4326,
         )
 
-        self.figure = map_objects()
+        self._axpicker = None
 
-        self.cb = cb_container(self)
+        self._f = None
 
-    def connect(self, parent):
+        self._orientation = orientation
+        self._ax = gs_ax
+        self._init_ax = gs_ax
+
+    @property
+    @lru_cache()
+    @wraps(cb_container)
+    def cb(self):
+        return cb_container(self)
+
+    @property
+    @lru_cache()
+    @wraps(shapes)
+    def set_shape(self):
+        return shapes(self)
+
+    @property
+    @lru_cache()
+    @wraps(map_objects)
+    def figure(self):
+        return map_objects(self)
+
+    def _set_axes(self):
+        if self._ax is None or isinstance(self._ax, SubplotSpec):
+            f, gs, cbgs, ax, ax_cb, ax_cb_plot = self._init_figure(
+                gs_ax=self._ax,
+                add_colorbar=getattr(self, "cbQ", False),
+            )
+
+            self._ax = ax
+            self._ax_cb = ax_cb
+            self._ax_cb_plot = ax_cb_plot
+            self._gridspec = gs
+            self._cb_gridspec = cbgs
+
+            # initialize the callbacks
+            self.cb._init_cbs()
+
+            def lims_change(*args, **kwargs):
+                self.BM._refetch_bg = True
+
+            self.figure.ax.callbacks.connect("xlim_changed", lims_change)
+            self.figure.ax.callbacks.connect("ylim_changed", lims_change)
+
+            if self.parent is self:
+                _ = self._draggable_axes
+
+                if plt.get_backend() == "module://ipympl.backend_nbagg":
+                    warnings.warn(
+                        "EOmaps disables matplotlib's interactive mode (e.g. 'plt.ioff()') "
+                        + "when using the 'ipympl' backend to avoid recursions during callbacks!"
+                    )
+                    plt.ioff()
+                    plt.show()
+
+    # def _reset_axes(self):
+    #     print("resetting")
+    #     for m in [self.parent, *self.parent._children]:
+    #         m._f = None
+    #         m._ax = m._init_ax
+    #         m._ax_cb = None
+    #         m._ax_cb_plot = None
+    #         m._gridspec = None
+    #         m._cb_gridspec = None
+
+    #     # # reset the Blit-Manager
+    #     self.parent._BM = None
+
+    #     # reset the draggable-axes class on next call
+    #     self.parent._axpicker = None
+
+    @property
+    def BM(self):
+        """The Blit-Manager used to dynamically update the plots"""
+        if self.parent._BM is None:
+            self.parent._BM = BlitManager(self)
+        return self.parent._BM
+
+    @property
+    def _draggable_axes(self):
+        if self.parent._axpicker is None:
+            # make the axes draggable
+            self.parent._axpicker = draggable_axes(self.parent, modifier="alt+d")
+            return self.parent._axpicker
+
+        return self.parent._axpicker
+
+    if wmts_container is not None:
+
+        @property
+        @wraps(wmts_container)
+        @lru_cache()
+        def add_wmts(self):
+            return wmts_container(self)
+
+    if wms_container is not None:
+
+        @property
+        @wraps(wms_container)
+        @lru_cache()
+        def add_wms(self):
+            return wms_container(self)
+
+    def _add_child(self, m):
+        self.parent._children.append(m)
+
+    @property
+    def parent(self):
         """
-        Connect 2 Maps-objects to add additional (interactive) layers of data
-        on the same axes (or on multiple axes on the same figure).
+        The parent-object to which this Maps-object is connected to.
+        If None, `self` is returned!
+        """
+        if self._parent is None:
+            return self
+        else:
+            return self._parent
 
-        Connecting a Maps object has the following effects on the child-object:
-            - The plot_crs is shared with the parent Maps object
-            - The figure-object is shared with the parent Maps object
-            - The plot-axes is shared with the parent Maps object and NO
-              additional colorabar is plotted
+    @parent.setter
+    def parent(self, parent):
+        assert self._parent is None, "EOmaps: There is already a parent Maps object!"
+        self._parent = parent
+        if parent not in [self, None]:
+            # add the child to the topmost parent-object
+            self.parent._add_child(self)
 
-              - you can override this behaviour if you provide an explicit axes or
-                gridspec via `m.plot_map(gs_ax=<...>)`
+    def join_limits(self, *args):
+        """
+        Join the x- and y- limits of the axes (e.g. on zoom)
 
         Parameters
         ----------
-        parent : eomaps.Maps
-            the parent maps-object
+        *args :
+            the axes to join.
         """
 
-        self.parent = parent
-        self.BM = parent.BM
+        for m in args:
+            m._set_axes()
+            if m is not self:
+                self._join_axis_limits(m)
+
+    def _join_axis_limits(self, m):
+        if self.figure.ax.projection != m.figure.ax.projection:
+            warnings.warn(
+                "EOmaps: joining axis-limits is only possible for "
+                + "axes with the same projection!"
+            )
+            return
+
+        self.figure.ax._EOmaps_joined_action = False
+        m.figure.ax._EOmaps_joined_action = False
+
+        # Declare and register callbacks
+        def child_xlims_change(event_ax):
+            if event_ax._EOmaps_joined_action is not m.figure.ax:
+                m.figure.ax._EOmaps_joined_action = event_ax
+                m.figure.ax.set_xlim(event_ax.get_xlim())
+            event_ax._EOmaps_joined_action = False
+
+        def child_ylims_change(event_ax):
+            if event_ax._EOmaps_joined_action is not m.figure.ax:
+                m.figure.ax._EOmaps_joined_action = event_ax
+                m.figure.ax.set_ylim(event_ax.get_ylim())
+            event_ax._EOmaps_joined_action = False
+
+        def parent_xlims_change(event_ax):
+            if event_ax._EOmaps_joined_action is not self.figure.ax:
+                self.figure.ax._EOmaps_joined_action = event_ax
+                self.figure.ax.set_xlim(event_ax.get_xlim())
+            event_ax._EOmaps_joined_action = False
+
+        def parent_ylims_change(event_ax):
+            if event_ax._EOmaps_joined_action is not self.figure.ax:
+                self.figure.ax._EOmaps_joined_action = event_ax
+                self.figure.ax.set_ylim(event_ax.get_ylim())
+
+            event_ax._EOmaps_joined_action = False
+
+        self.figure.ax.callbacks.connect("xlim_changed", child_xlims_change)
+        self.figure.ax.callbacks.connect("ylim_changed", child_ylims_change)
+
+        m.figure.ax.callbacks.connect("xlim_changed", parent_xlims_change)
+        m.figure.ax.callbacks.connect("ylim_changed", parent_ylims_change)
 
     def copy(
         self,
@@ -130,9 +467,10 @@ class Maps(object):
         copy_plot_specs=True,
         copy_classify_specs=True,
         connect=False,
+        **kwargs,
     ):
         """
-        create a (deep)copy of the class that inherits all specifications
+        create a (deep)copy of the Maps object that inherits all specifications
         from the parent class.
         Already loaded data is only copied if `copy_data=True`!
 
@@ -141,33 +479,37 @@ class Maps(object):
         Parameters
         ----------
         connect : bool
-            Indicator if the Maps-object should be connected to the parent Maps object.
+            Indicator if the copy should be connected to the parent Maps object.
             -> useful to add additional interactive layers to the plot
 
-            - the plot-axes is shared
-            - colorbar- and histogram axes are NOT shared
-              (e.g. NO additional colorbar is plotted)
-            -
+            - This is the same as using:
+                >>> m_copy = m.copy()
+                >>> m_copy.parent = m
 
         copy_data : bool or str
-            if True: the dataset will be copied
-            if "share": the dataset will be shared
-                        (changes will be shared between the Maps objects!!!)
-            if False: no data will be assigned
+            - if True: the dataset will be copied
+            - if "share": the dataset will be shared
+              (changes will be shared between the Maps objects!!!)
+            - if False: no data will be assigned
 
         copy_data_specs, copy_plot_specs, copy_classify_specs : bool, optional
             Indicator which properties should be copied
-
+        **kwargs :
+            Additional kwargs passed to `m = Maps(**kwargs)`
+            (e.g. f, gs_ax, orientation, layer)
         Returns
         -------
         copy_cls : eomaps.Maps object
             a new Maps class.
         """
-        # create a new class
-        copy_cls = Maps()
-
         if connect is True:
-            copy_cls.connect(self)
+            assert (
+                "parent" not in kwargs
+            ), "EOmaps: parent is set automatically if you use 'connect=True'"
+            kwargs["parent"] = self
+
+        # create a new class
+        copy_cls = Maps(**kwargs)
 
         if copy_data_specs:
             copy_cls.set_data_specs(
@@ -181,6 +523,9 @@ class Maps(object):
             copy_cls.set_plot_specs(
                 **{key: copy.deepcopy(val) for key, val in self.plot_specs}
             )
+
+            getattr(copy_cls.set_shape, self.shape.name)(**self.shape._initargs)
+
         if copy_classify_specs:
             copy_cls.set_classify_specs(
                 scheme=self.classify_specs.scheme,
@@ -192,10 +537,65 @@ class Maps(object):
         elif copy_data == "share":
             copy_cls.data = self.data
 
-        if connect is True:
-            copy_cls.BM = self.BM
-
         return copy_cls
+
+    def copy_from(
+        self,
+        m,
+        copy_data=False,
+        copy_data_specs=True,
+        copy_plot_specs=True,
+        copy_classify_specs=True,
+        **kwargs,
+    ):
+        """
+        (deep)copy specifications from another Maps-object.
+        Already loaded data is only copied if `copy_data=True`!
+
+        -> useful to quickly create plots with similar configurations
+
+        Parameters
+        ----------
+        copy_data : bool or str
+            Indicator if the actual dataset should be copied as well
+            (`copy_data_specs=True` only copies the specs and NOT the dataset!)
+
+            - if True: the dataset will be copied
+            - if "share": the dataset will be shared
+              (changes will be shared between the Maps objects!!!)
+            - if False: no data will be assigned
+
+        copy_data_specs, copy_plot_specs, copy_classify_specs : bool, optional
+            Indicator which properties should be copied
+
+        """
+
+        if copy_data_specs:
+            self.set_data_specs(
+                **{
+                    key: copy.deepcopy(val)
+                    for key, val in m.data_specs
+                    if key != "data"
+                }
+            )
+
+        if copy_data is True:
+            self.data = m.data.copy(deep=True)
+        elif copy_data == "share":
+            self.data = m.data
+
+        if copy_plot_specs:
+            self.set_plot_specs(
+                **{key: copy.deepcopy(val) for key, val in m.plot_specs}
+            )
+
+            getattr(self.set_shape, m.shape.name)(**m.shape._initargs)
+
+        if copy_classify_specs:
+            self.set_classify_specs(
+                scheme=m.classify_specs.scheme,
+                **{key: copy.deepcopy(val) for key, val in m.classify_specs},
+            )
 
     @property
     def data(self):
@@ -282,16 +682,16 @@ class Maps(object):
         cpos : str, optional
             Indicator if the provided x-y coordinates correspond to the center ("c"),
             upper-left ("ul"), lower-left ("ll") etc.  of the pixel.
+            If any value other than "c" is provided, a "cpos_radius" must be set!
             The default is "c".
+        cpos_radius : int or tuple, optional
+            The pixel-radius (in the input-crs) that will be used to set the
+            center-position of the provided data.
+            If a number is provided, the pixels are treated as squares.
+            If a tuple (rx, ry) is provided, the pixels are treated as rectangles.
         alpha : int, optional
             Set the transparency of the plot (0-1)
             The default is 1.
-        add_colorbar : bool, optional
-            Indicator if a colorbar with a histogram should be added to the plot or not.
-            The default is True.
-        coastlines : bool, optional
-            Indicator if simple coastlines and ocean-colorings should be added
-            The default is True.
         density : bool, optional
             Indicator if the y-axis of the histogram should represent the
             probability-density (True) or the number of counts per bin (False)
@@ -336,44 +736,46 @@ class Maps(object):
         """
         self.classify_specs._set_scheme_and_args(scheme, **kwargs)
 
-    def _attach_picker(self, coll=None, maxdist=None):
-        if coll is None:
-            coll = self.figure.coll
-        if maxdist is None:
+    def _pick_pixel(self, artist, event):
+        if self._pick_distance is None:
             maxdist = np.inf
+        else:
+            maxdist = self._pick_distance
 
-        def picker(artist, event):
-            if event.dblclick:
-                double_click = True
-            else:
-                double_click = False
+        if (event.inaxes != self.figure.ax) or not hasattr(self, "tree"):
+            return True, dict(ind=None, dblclick=event.dblclick, button=event.button)
 
-            if event.inaxes != self.figure.ax:
-                return True, dict(
-                    ind=None, double_click=double_click, mouse_button=event.button
-                )
+        # use a cKDTree based picking to speed up picks for large collections
+        dist, index = self.tree.query((event.xdata, event.ydata))
+        # set max. distance in pixel-coordinates for picking
 
-            # use a cKDTree based picking to speed up picks for large collections
-            dist, index = self.tree.query((event.xdata, event.ydata))
-            # set max. distance in pixel-coordinates for picking
-            p1 = np.array([event.x, event.y])
-            p2 = self.figure.ax.transData.transform(
-                (self._props["x0"][index], self._props["y0"][index])
+        # do this to make sure that we calculate the distance in the right axes!
+        # (necessary for connected pick-callbacks)
+        # for the axes of the original click, this is equal to (event.x, event.y)
+        p1 = self.figure.ax.transData.transform((event.xdata, event.ydata))
+
+        p2 = self.figure.ax.transData.transform(
+            (self._props["x0"][index], self._props["y0"][index])
+        )
+        pdist = np.sqrt(np.sum((p1 - p2) ** 2))
+        # print(dist, index, pdist, maxdist, pdist < maxdist, index)
+
+        if pdist < maxdist:
+            self._pick = True, dict(
+                ind=index, dblclick=event.dblclick, button=event.button, dist=dist
             )
-            pdist = np.sqrt(np.sum((p1 - p2) ** 2))
+            return True, dict(
+                ind=index, dblclick=event.dblclick, button=event.button, dist=dist
+            )
+        else:
+            return True, dict(
+                ind=None, dblclick=event.dblclick, button=event.button, dist=dist
+            )
 
-            if pdist < maxdist:
-                return True, dict(
-                    ind=index, double_click=double_click, mouse_button=event.button
-                )
-            else:
-                return True, dict(
-                    ind=None, double_click=double_click, mouse_button=event.button
-                )
+        return False, None
 
-            return False, None
-
-        coll.set_picker(picker)
+    def _attach_picker(self):
+        self.figure.coll.set_picker(self._pick_pixel)
 
     @property
     @lru_cache()
@@ -404,7 +806,21 @@ class Maps(object):
 
     @property
     def crs_plot(self):
+        """
+        The crs used for plotting. (A shortcut for `m.get_crs("plot")`)
+        """
         return self.get_crs("plot")
+
+    @property
+    @lru_cache()
+    def _transf_plot_to_lonlat(self):
+        # get coordinate transformation from in_crs to plot_crs
+        transformer = Transformer.from_crs(
+            self.crs_plot,
+            self.get_crs(4326),
+            always_xy=True,
+        )
+        return transformer
 
     def get_crs(self, crs):
         """
@@ -685,21 +1101,22 @@ class Maps(object):
 
             if add_colorbar:
                 ax = f.add_subplot(
-                    gs[0], projection=cartopy_proj, aspect="equal", adjustable="datalim"
+                    gs[0], projection=cartopy_proj, aspect="equal", adjustable="box"
                 )
                 # axes for histogram
                 ax_cb_plot = f.add_subplot(cbgs[0], frameon=False, label="ax_cb_plot")
-                ax_cb_plot.tick_params(rotation=90, axis="x")
                 # axes for colorbar
                 ax_cb = f.add_subplot(cbgs[1], label="ax_cb")
                 # join colorbar and histogram axes
                 if self._orientation == "horizontal":
                     ax_cb_plot.get_shared_y_axes().join(ax_cb_plot, ax_cb)
+                    ax_cb_plot.tick_params(rotation=90, axis="x")
+
                 elif self._orientation == "vertical":
                     ax_cb_plot.get_shared_x_axes().join(ax_cb_plot, ax_cb)
             else:
                 ax = f.add_subplot(
-                    gs[:], projection=cartopy_proj, aspect="equal", adjustable="datalim"
+                    gs[:], projection=cartopy_proj, aspect="equal", adjustable="box"
                 )
                 if hasattr(gs, "update"):
                     gs.update(left=0.01, right=0.99, bottom=0.01, top=0.95)
@@ -717,7 +1134,7 @@ class Maps(object):
         ax_cb=None,
         ax_cb_plot=None,
         z_data=None,
-        label="",
+        label=None,
         bins=None,
         histbins=None,
         cmap="viridis",
@@ -739,7 +1156,7 @@ class Maps(object):
             z_data = self._props["z_data"]
 
         if label is None:
-            label = self.data_specs["parameter"]
+            label = self.plot_specs["label"]
         if histbins is None:
             histbins = self.plot_specs["histbins"]
         if cmap is None:
@@ -871,8 +1288,8 @@ class Maps(object):
                 labelleft=False,
                 bottom=False,
                 top=False,
-                labelbottom=False,
-                labeltop=True,
+                labelbottom=True,
+                labeltop=False,
             )
             ax_cb_plot.xaxis.set_major_locator(plt.MaxNLocator(5))
             ax_cb_plot.grid(axis="x", dashes=[5, 5], c="k", alpha=0.5)
@@ -922,6 +1339,12 @@ class Maps(object):
         else:
             cb.set_ticks(cb.get_ticks())
 
+        # format position of scientific exponent for colorbar ticks
+        if cb_orientation == "vertical":
+            ot = ax_cb.yaxis.get_offset_text()
+            ot.set_horizontalalignment("center")
+            ot.set_position((1, 0))
+
         return cb
 
     def add_gdf(self, gdf, **kwargs):
@@ -936,7 +1359,7 @@ class Maps(object):
         **kwargs :
             all kwargs are passed to `gdf.plot(**kwargs)`
         """
-        assert hasattr(self, "figure"), "you must call .plot_map() first!"
+        self._set_axes()
 
         ax = self.figure.ax
 
@@ -947,6 +1370,60 @@ class Maps(object):
             ax=ax, aspect=ax.get_aspect(), **defaultargs
         )
 
+    def add_coastlines(self, layer=None, coast=True, ocean=True):
+        """
+        add coastlines and ocean-coloring to the plot
+        (similar to m.plot_map(coastlinse=True) but with more options)
+
+        Parameters
+        ----------
+        layer : int, optional
+            the background-layer to use. The default is None.
+        coast : bool or dict, optional
+            Indicator if coastlines should be added.
+            If a dict is provided, it is used as kwargs to style the coastlines
+            The default is True.
+        ocean : TYPE, optional
+            Indicator if ocean-coloring should be added.
+            If a dict is provided, it is used as kwargs to style the ocean-polygon
+            The default is True.
+
+        Examples
+        --------
+
+            >>> m.add_coastlines(coast=dict(ec="r"), ocean=dict(fc="g"))
+            >>> m.add_coastlines(coast=False, ocean=dict(fc="b"))
+        """
+        if layer is None:
+            layer = self.layer
+
+        if coast:
+            if coast is True:
+                coast_kwargs = dict()
+            else:
+                assert isinstance(coast, dict), "coast must be eiter True or a dict!"
+                coast_kwargs = coast
+
+        if ocean:
+            if ocean is True:
+                ocean_kwargs = dict()
+            else:
+                assert isinstance(ocean, dict), "ocean must be eiter True or a dict!"
+                ocean_kwargs = ocean
+
+        self._set_axes()
+        if coast:
+            coastlines = self.figure.ax.add_feature(cfeature.COASTLINE, **coast_kwargs)
+        if ocean:
+            ocean = self.figure.ax.add_feature(cfeature.OCEAN, **ocean_kwargs)
+
+            if layer is not None:
+                self.BM.add_bg_artist(ocean, layer=layer)
+
+        if coast:
+            if layer is not None:
+                self.BM.add_bg_artist(coastlines, layer=layer)
+
     def add_overlay(
         self,
         dataspec,
@@ -954,6 +1431,7 @@ class Maps(object):
         legend=True,
         legend_kwargs=None,
         maskshp=None,
+        layer=None,
     ):
         """
         A convenience function to add layers from NaturalEarth to an already generated
@@ -972,16 +1450,16 @@ class Maps(object):
             the data-specification used to load the data via
             cartopy.shapereader.natural_earth(**dataspec)
 
-            - (resolution='10m', category='cultural', name='urban_areas')
-            - (resolution='10m', category='cultural', name='admin_0_countries')
-            - (resolution='10m', category='physical', name='rivers_lake_centerlines')
-            - (resolution='10m', category='physical', name='lakes')
-            - etc.
+            >>> dataspec=(resolution='10m', category='cultural', name='urban_areas')
+            >>> dataspec=(resolution='10m', category='cultural', name='admin_0_countries')
+            >>> dataspec=(resolution='10m', category='physical', name='rivers_lake_centerlines')
+            >>> dataspec=(resolution='10m', category='physical', name='lakes')
 
         styledict : dict, optional
             a dict with style-kwargs used for plotting.
             The default is None in which case the following setting will be used:
-            (facecolor='none', edgecolor='k', alpha=.5, lw=0.25)
+
+            >>> styledict=(facecolor='none', edgecolor='k', alpha=.5, lw=0.25)
         legend : bool, optional
             indicator if a legend should be added or not.
             The default is True.
@@ -992,11 +1470,10 @@ class Maps(object):
             a geopandas.GeoDataFrame that will be used as a mask for overlay
             (does not work with line-geometries!)
         """
-        label = dataspec.get("name", "overlay")
-
-        assert hasattr(self, "figure"), "you must call .plot_map() first!"
-
+        self._set_axes()
         ax = self.figure.ax
+
+        label = dataspec.get("name", "overlay")
 
         if not all([i in dataspec for i in ["resolution", "category", "name"]]):
             assert False, (
@@ -1022,7 +1499,12 @@ class Maps(object):
         if maskshp is not None:
             overlay_df = gpd.overlay(overlay_df[["geometry"]], maskshp)
 
-        _ = overlay_df.plot(ax=ax, aspect=ax.get_aspect(), label=label, **styledict)
+        artist = overlay_df.plot(
+            ax=ax, aspect=ax.get_aspect(), label=label, **styledict
+        )
+
+        if layer is not None:
+            self.BM.add_artist(artist, layer)
 
         # save legend patches in case a legend should be created
         if not hasattr(self, "_overlay_legend"):
@@ -1070,6 +1552,7 @@ class Maps(object):
         **kwargs :
             kwargs passed to matplotlib.pyplot.legend().
         """
+
         handles = [*self._overlay_legend["handles"]]
         labels = [*self._overlay_legend["labels"]]
 
@@ -1145,11 +1628,15 @@ class Maps(object):
             kwargs passed to the matplotlib patch.
             (e.g. `facecolor`, `edgecolor`, `linewidth`, `alpha` etc.)
 
-        Returns
-        -------
-        None.
+        Examples
+        --------
 
+            >>> m.add_marker(ID=1, buffer=5)
+            >>> m.add_marker(ID=1, radius=2, radius_crs=4326, shape="rectangles")
+            >>> m.add_marker(xy=(45, 35), xy_crs=4326, radius=20000, shape="geod_circles")
         """
+        self._set_axes()
+
         if ID is not None:
             assert xy is None, "You can only provide 'ID' or 'pos' not both!"
         else:
@@ -1169,11 +1656,12 @@ class Maps(object):
                 xy = transformer.transform(*xy)
 
         # add marker
-        self.cb._cb.mark(
+        marker = self.cb.click._cb.mark(
             ID=ID, pos=xy, radius=radius, ind=None, shape=shape, buffer=buffer, **kwargs
         )
+        self.BM.update(clear=False)
 
-        self.BM.update()
+        return marker
 
     def add_annotation(
         self,
@@ -1213,11 +1701,21 @@ class Maps(object):
 
         **kwargs
             kwargs passed to m.cb.annotate
-        Returns
-        -------
-        None.
+
+        Examples
+        --------
+
+            >>> m.add_annotation(ID=1)
+            >>> m.add_annotation(xy=(45, 35), xy_crs=4326)
+            >>> m.add_annotation(ID=1, text="some text")
+
+            >>> def addtxt(m, ID, val, pos):
+            >>>     return f"The ID {ID} at position {pos} has a value of {val}"
+            >>> m.add_annotation(ID=1, text=addtxt)
 
         """
+        self._set_axes()
+
         if ID is not None:
             assert xy is None, "You can only provide 'ID' or 'pos' not both!"
 
@@ -1239,7 +1737,7 @@ class Maps(object):
                 xy = transformer.transform(*xy)
 
         # add marker
-        self.cb._cb.annotate(
+        self.cb.click._cb.annotate(
             ID=ID,
             pos=xy,
             val=None if ID is None else self.data.loc[ID][self.data_specs.parameter],
@@ -1248,74 +1746,42 @@ class Maps(object):
             text=text,
             **kwargs,
         )
-
-        self.BM.update()
+        self.BM.update(clear=False)
 
     @wraps(plt.savefig)
     def savefig(self, *args, **kwargs):
+
+        # clear all cached background layers before saving to make sure they
+        # are re-drawn with the correct dpi-settings
+        self.BM._bg_layers = dict()
+
         self.figure.f.savefig(*args, **kwargs)
 
     def plot_map(
         self,
-        f=None,
-        gs_ax=None,
         colorbar=True,
         coastlines=True,
-        orientation="vertical",
-        pick_distance=50,
-        dynamic_layer_idx=None,
+        pick_distance=100,
+        layer=None,
+        dynamic=False,
         **kwargs,
     ):
         """
         Actually generate the map-plot based on the data provided as `m.data` and the
         specifications defined in "data_specs", "plot_specs" and "classify_specs".
 
+        NOTE:
+            Each call to plot_map will replace the collection used for picking!
+            (only the last collection remains interactive on multiple calls to `m.plot_map()`)
+
+            If you need multiple responsive datasets, use connected maps-objects instead!
+            (e.g. `m2 = Maps(parent=m)` or have a look at `MapsGrid`)
+
         Parameters
         ----------
-        f : matplotlib.Figure
-            The matplotlib figure instance to use.
-            If None, a new figure will be created (accessible via m.figure.f)
-
-            Connected maps-objects will always share the same figure!
-            The default is None
-        gs_ax : matplotlib.axes or matplotlib.gridspec.SubplotSpec, optional
-            Explicitly specify the axes (or GridSpec) for plotting.
-
-            Possible values are:
-
-            * None:
-                Initialize a new axes (the default)
-            * `matplotilb.gridspec.SubplotSpec`:
-                Use the SubplotSpec for initializing the axes.
-                The SubplotSpec will be divided accordingly in case a colorbar
-                is plotted.
-
-                    >>> import matplotlib.pyplot as plt
-                    >>> from matplotlib.gridspec import GridSpec
-                    >>> f = plt.figure()
-                    >>> gs = GridSpec(2,2)
-                    >>> m = Maps()
-                    >>> ...
-                    >>> m.plot_map(f_gs=gs[0,0])
-
-            * `matplotilb.axes`:
-                Directly use the provided figure and axes instances for plotting.
-                The axes MUST be a geo-axes with `m.plot_specs.crs_plot`
-                projection. NO colorbar and NO histogram will be plotted.
-
-                    >>> import matplotlib.pyplot as plt
-                    >>> f = plt.figure()
-                    >>> m = Maps()
-                    >>> ...
-                    >>> ax = f.add_subplot(projection=m.crs_plot)
-                    >>> m.plot_map(ax_gs=ax)
-
-            NOTE:
-                Attaching callbacks to multiple axes is not yet supported. (only the
-                last axes remains interactive on multiple calls to `m.plot_map()`)
-
         colorbar : bool
             Indicator if a colorbar should be added or not.
+            (ONLY relevant for the first time a dataset is plotted!)
             The default is True
         coastlines : bool
             Indicator if coastlines and a light-blue ocean shading should be added.
@@ -1325,7 +1791,7 @@ class Maps(object):
             (The distance is evaluated between the clicked pixel and the center of the
              closest data-point)
             The default is 10.
-        dynamic_layer_idx : int
+        layer : int
             A layer-index in case the collection is intended to be updated
             dynamically.
             The default is None.
@@ -1333,29 +1799,16 @@ class Maps(object):
             kwargs passed to the initialization of the matpltolib collection
             (dependent on the plot-shape) [linewidth, edgecolor, facecolor, ...]
         """
+        self.cbQ = colorbar
 
-        if self.parent is not None:
-            assert f is None, "Connected maps-objects always share the same figure!"
-            self.figure.f = self.parent.figure.f
-            # if no axes is provided for a connected maps-object, use the
-            # axes of the parent maps object
-            if gs_ax is None:
-                gs_ax = self.parent.figure.ax
+        self._set_axes()
+        ax = self.figure.ax
 
-        else:
-            if self.figure.f is None:
-                if f is None:
-                    self.figure.f = plt.figure(figsize=(12, 8))
-                else:
-                    self.figure.f = f
+        self._pick_distance = pick_distance
 
-        if self.figure.ax is not None and self.parent is None:
-            warnings.warn(
-                "EOmaps: For multiple interactive Maps the instances must be connected!"
-                + " Use `m2.connect(m)` to connect an existing Maps-object or "
-                + "`m2 = m.copy(connect=True)` to copy and connect the Maps"
-                + " object and then use `m2.plot_map(...) to plot additional data"
-            )
+        if "dynamic_layer_idx" in kwargs:
+            layer = kwargs.pop("dynamic_layer_idx")
+            warnings.warn("EOmaps: 'dynamic_layer_idx' is depreciated... use 'layer'!")
 
         for key in ("cmap", "array", "norm"):
             assert (
@@ -1363,10 +1816,27 @@ class Maps(object):
             ), f"The key '{key}' is assigned internally by EOmaps!"
 
         try:
-            self._orientation = orientation
+            if layer is None:
+                layer = self.layer
 
-            if not hasattr(self, "data"):
-                print("you must set the data first!")
+            # remove previously fetched backgrounds for the used layer
+            if layer in self.BM._bg_layers:
+                del self.BM._bg_layers[layer]
+            self.BM._refetch_bg = True
+
+            title = self.plot_specs["title"]
+            if title is not None:
+                ax.set_title(title)
+
+            # add coastlines and ocean-coloring
+            if coastlines is True:
+                coastlines = ax.coastlines()
+                ocean = ax.add_feature(cfeature.OCEAN)
+                self.BM.add_bg_artist(ocean, layer=layer)
+                self.BM.add_bg_artist(coastlines, layer=layer)
+
+            if self.data is None:
+                return
 
             # ---------------------- prepare the data
             props = self._prepare_data()
@@ -1377,9 +1847,6 @@ class Maps(object):
             # remember props for later use
             self._props = props
 
-            title = self.plot_specs["title"]
-            if title is None:
-                title = self.data_specs.parameter
             vmin = self.plot_specs["vmin"]
             if self.plot_specs["vmin"] is None:
                 vmin = np.nanmin(props["z_data"])
@@ -1402,23 +1869,7 @@ class Maps(object):
             self.classify_specs._bins = bins
             self.classify_specs._classified = classified
 
-            # ------------- initialize figure
-            f, gs, cbgs, ax, ax_cb, ax_cb_plot = self._init_figure(
-                gs_ax=gs_ax,
-                add_colorbar=colorbar,
-            )
-
-            self.figure.set_items(
-                f=f,
-                gridspec=gs,
-                ax=ax,
-                ax_cb=ax_cb,
-                ax_cb_plot=ax_cb_plot,
-                cb_gridspec=cbgs,
-                orientation=self._orientation,
-            )
-
-            ax.set_title(title)
+            # ------------- plot the data
 
             # don't pass the array if explicit facecolors are set
             if (
@@ -1430,24 +1881,18 @@ class Maps(object):
             else:
                 args = dict(array=props["z_data"], cmap=cbcmap, norm=norm, **kwargs)
 
-            # coll = self._get_coll(shape, props, args)
             coll = self.shape.get_coll(props["xorig"], props["yorig"], "in", **args)
 
             coll.set_clim(vmin, vmax)
+
             ax.add_collection(coll)
 
             self.figure.coll = coll
 
-            if dynamic_layer_idx is not None:
-                self.BM.add_artist(coll, layer=dynamic_layer_idx)
-
-            # add coastlines and ocean-coloring
-            if coastlines is True:
-                ax.coastlines()
-                ax.add_feature(cfeature.OCEAN)
-
             if colorbar:
-                if (ax_cb is not None) and (ax_cb_plot is not None):
+                if (self.figure.ax_cb is not None) and (
+                    self.figure.ax_cb_plot is not None
+                ):
 
                     # ------------- add a colorbar with a histogram
                     cb = self._add_colorbar(
@@ -1458,51 +1903,38 @@ class Maps(object):
                     )
                     self.figure.cb = cb
                 else:
-                    if self.parent is None:
+                    if self.parent is self:
                         warnings.warn(
                             "EOmaps: Adding a colorbars is not supported if "
                             + "you provide an explicit axes via gs_ax"
                         )
+
+            if dynamic is True:
+                self.BM.add_artist(coll, layer)
+            else:
+                self.BM.add_bg_artist(coll, layer)
+
             # ------------- add a picker that will be used by the callbacks
-            self._attach_picker(maxdist=pick_distance)
+            self._attach_picker()
 
-            # attach the pick-callback that executes the callbacks
-            self.cb._add_pick_callback()
+            if self.parent is self:
+                # attach the pick-callback that execute the callbacks
+                self.cb.pick._init_cbs()
 
-            # attach a cleanup function if the figure is closed
-            # to ensure callbacks are removed and the container is reinitialized
-            def on_close(event):
-                for key in self.cb.get.attached_callbacks:
-                    self.cb.remove(key)
+            # set the image extent
+            # get the extent of the added collection
+            b = self.figure.coll.get_datalim(ax.transData)
+            ymin, ymax = ax.projection.y_limits
+            xmin, xmax = ax.projection.x_limits
+            # set the axis-extent
+            ax.set_xlim(max(b.xmin, xmin), min(b.xmax, xmax))
+            ax.set_ylim(max(b.ymin, ymin), min(b.ymax, ymax))
 
-                # remove all figure properties
-                self.figure = self.figure.reinit()
-
-            self.figure.f.canvas.mpl_connect("close_event", on_close)
-
-            # set the blit-manager
-            if self.parent is None:
-                self.BM = BlitManager(self.figure.f.canvas)
-
-            # only set the extent once for each axes
-            if not hasattr(self.figure.ax, "_EOmaps_extent_set"):
-                # get the extent of the added collection
-                b = self.figure.coll.get_datalim(ax.transData)
-
-                ymin, ymax = ax.projection.y_limits
-                xmin, xmax = ax.projection.x_limits
-
-                # set the axis-extent
-                ax.set_xlim(max(b.xmin, xmin), min(b.xmax, xmax))
-                ax.set_ylim(max(b.ymin, ymin), min(b.ymax, ymax))
-
-                self.figure.ax._EOmaps_extent_set = True
-
-            # draw the figure
-            self.figure.f.canvas.draw()
+            # self.figure.f.canvas.draw()
+            if dynamic is True:
+                self.BM.update(clear=False)
 
         except Exception as ex:
-            self.figure = self.figure.reinit()
             raise ex
 
     def add_colorbar(
@@ -1617,7 +2049,7 @@ class Maps(object):
             print("EOmaps: There are no masked points to indicate!")
             return
 
-        m = self.copy(connect=True)
+        m = self.copy(connect=True, gs_ax=self.figure.ax)
         m.data = data
 
         t = self.figure.ax.transData.inverted()

@@ -114,9 +114,14 @@ class shapes(object):
 
             """
             self.radius = radius
+
             self.n = n
 
             self._m.shape = self
+
+        @property
+        def _initargs(self):
+            return dict(radius=self._radius, n=self.n)
 
         @property
         def radius(self):
@@ -125,8 +130,14 @@ class shapes(object):
         @radius.setter
         def radius(self, val):
             if not isinstance(val, (int, float)):
-                print("geod_circles only support a number as radius... using the mean")
-                val = np.mean(val)
+                print("EOmaps: geod_circles only support a number as radius!")
+                if isinstance(val[0], (int, float)):
+                    print("EOmaps: ... using the mean")
+                    val = np.mean(val)
+                else:
+                    raise TypeError(
+                        f"EOmaps: '{val}' is not a valid radius for 'geod_circles'!"
+                    )
 
             self._radius = val
 
@@ -286,6 +297,10 @@ class shapes(object):
             self.n = n
 
             self._m.shape = self
+
+        @property
+        def _initargs(self):
+            return dict(radius=self._radius, radius_crs=self.radius_crs, n=self.n)
 
         @property
         def radius(self):
@@ -488,6 +503,15 @@ class shapes(object):
             else:
                 self.n = n
             self._m.shape = self
+
+        @property
+        def _initargs(self):
+            return dict(
+                radius=self._radius,
+                radius_crs=self.radius_crs,
+                n=self.n,
+                mesh=self.mesh,
+            )
 
         @property
         def radius(self):
@@ -738,6 +762,10 @@ class shapes(object):
 
             self._m.shape = self
 
+        @property
+        def _initargs(self):
+            return dict(mask_radius=self.mask_radius, masked=self.masked)
+
         def __repr__(self):
             try:
                 s = f"voroni_diagram(mask_radius={self.mask_radius}, masked={self.masked})"
@@ -967,6 +995,15 @@ class shapes(object):
             self.flat = flat
 
             self._m.shape = self
+
+        @property
+        def _initargs(self):
+            return dict(
+                mask_radius=self.mask_radius,
+                masked=self.masked,
+                mask_radius_crs=self.mask_radius_crs,
+                flat=self.flat,
+            )
 
         def __repr__(self):
             try:
