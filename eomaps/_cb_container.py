@@ -374,8 +374,8 @@ class _click_container(_cb_container):
 
         if callback.__name__ not in multi_cb_functions:
             assert len(ncb) == 0, (
-                "Multiple assignments of the callback"
-                + f" '{callback.__name__}' are not (yet) supported..."
+                f"Multiple assignments of the callback '{callback.__name__}' using "
+                + "the same button is not (yet) supported... use a different button!"
             )
 
         d[cbkey] = partial(callback, **kwargs)
