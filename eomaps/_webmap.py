@@ -623,11 +623,10 @@ class _S1GBM:
             )
             toolbar = self._m.figure.f.canvas.toolbar
 
-            if toolbar is not None and not hasattr(toolbar, "_EOmaps_decorated"):
+            if toolbar is not None:
                 toolbar.release_zoom = self.zoom_decorator(toolbar.release_zoom)
                 toolbar.release_pan = self.zoom_decorator(toolbar.release_pan)
                 toolbar._update_view = self.update_decorator(toolbar._update_view)
-                toolbar._EOmaps_decorated = True
 
         if layer is None:
             self._layer = self._m.layer
