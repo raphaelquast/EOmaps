@@ -11,7 +11,8 @@
   - plots of large (>1M datapoints) irregularly sampled datasets are generated in a few seconds!
   - Represent your data as shapes with actual geographic dimensions
   - Re-project the data to any crs supported by `cartopy`
-- Add annotations, overlays, WebMap-layers etc. to the maps and get a nice colorbar with a colored histogram on top  
+- Add annotations, overlays, WebMap-layers etc. to the maps
+- ... and get a nice colorbar with a colored histogram on top!
 
 #### 🌎 Turn your maps into powerful interactive data-analysis widgets
 - Add "callbacks" to interact with your data
@@ -86,7 +87,7 @@ m = Maps()
 ...
 m.plot_map()
 
-m2 = Maps(parent=m, gs_ax=m.figure.ax) # use the same axes to get multiple interactive data-layers
+m2 = Maps(parent=m) # use the same axes to get multiple interactive data-layers
 m2.set_data(...)
 m2.set_shape(...)
 ...
