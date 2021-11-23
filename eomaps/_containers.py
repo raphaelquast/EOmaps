@@ -912,9 +912,13 @@ else:
 
         @property
         def S1GBM(self):
-            return SimpleNamespace(
+            ret = SimpleNamespace(
                 add_layer=self._S1GBM_layers(self._m), layers=["vv", "vh"]
             )
+
+            ret.__doc__ = self._S1GBM_layers.__doc__
+
+            return ret
 
         class _S1GBM_layers:
             """
