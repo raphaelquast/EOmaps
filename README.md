@@ -24,6 +24,9 @@
 #### 🛸 check out the [documentation](https://eomaps.readthedocs.io) for more details and [examples](https://eomaps.readthedocs.io/en/latest/EOmaps_examples.html)! 🛸
 
 
+![EOmaps example image](https://github.com/raphaelquast/EOmaps/blob/dev/docs/_static/fig2.gif?raw=true)
+
+
 ## install
 
 Installing EOmaps can be done via `pip`. To make sure all dependencies are correctly installed, please have a look at the [🛸 installation instructions 🛸](https://eomaps.readthedocs.io/en/latest/usage.html#installation) in the documentation.
