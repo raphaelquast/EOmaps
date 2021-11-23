@@ -50,6 +50,7 @@ class map_objects(object):
 
     @property
     def f(self):
+        # always return the figure of the parent object
         if self._m.parent._f is None:
             self._m.parent._BM = None  # reset the blit-manager
             self._m.parent._f = plt.figure(figsize=(12, 8))

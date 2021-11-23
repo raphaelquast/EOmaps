@@ -4,7 +4,7 @@
 [![Documentation Status](https://readthedocs.org/projects/eomaps/badge/?version=latest)](https://eomaps.readthedocs.io/en/latest/?badge=latest)
 # EOmaps
 
-A general-purpose library to plot interactive maps of geographical datasets.
+### A library to create interactive maps of geographical datasets.
 
 #### 🌍 Simple interface to visualize geographical datasets  
 - A `pandas.DataFrame` is all you need as input!
@@ -12,11 +12,11 @@ A general-purpose library to plot interactive maps of geographical datasets.
 - Represent your data as shapes with actual geographic dimensions and re-project it to any crs supported by `cartopy`
 - Add annotations, overlays, WebMap-layers etc. to the maps and get a nice colorbar with a colored histogram on top  
 
-#### 🌎 Easily turn your maps into powerful interactive data-analysis widgets
+#### 🌎 Turn your maps into powerful interactive data-analysis widgets
 - Add "callbacks" to interact with your data
    - Many pre-defined functions for common tasks are available!
       - display coordinates, values or IDs of clicked pixels, add markers, compare data-layers etc.
-   - ... or define your own function and attach it to the plot!
+      - ... or define your own function and attach it to the plot!
 - Connect multiple interactive maps to analyze relations between datasets
 
 #### 🛸 check out the [documentation](https://eomaps.readthedocs.io) for more details and [examples](https://eomaps.readthedocs.io/en/latest/EOmaps_examples.html)! 🛸
@@ -24,8 +24,7 @@ A general-purpose library to plot interactive maps of geographical datasets.
 
 ## install
 
-Installing EOmaps can be done via `conda` and `pip`.
-To make sure all dependencies are correctly installed, please have a look at the [🛸 installation instructions 🛸](https://eomaps.readthedocs.io/en/latest/usage.html#installation) in the documentation.
+Installing EOmaps can be done via `pip`. To make sure all dependencies are correctly installed, please have a look at the [🛸 installation instructions 🛸](https://eomaps.readthedocs.io/en/latest/usage.html#installation) in the documentation.
 
 
 ## basic usage

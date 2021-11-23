@@ -913,24 +913,6 @@ class cb_container:
     def __init__(self, m):
         self._m = m
 
-        # self.click = cb_click_container(
-        #     m=m,
-        #     cb_cls=click_callbacks,
-        #     method="click",
-        # )
-        # self.pick = cb_pick_container(
-        #     m=m,
-        #     cb_cls=pick_callbacks,
-        #     method="pick",
-        # )
-        # self.keypress = keypress_container(
-        #     m=m,
-        #     cb_cls=keypress_callbacks,
-        #     method="keypress",
-        # )
-
-        # self.dynamic = dynamic_callbacks(m=m)
-
         self._methods = ["click", "keypress"]
 
     @property
@@ -974,9 +956,10 @@ class cb_container:
             obj = getattr(self, method)
             obj._init_cbs()
 
-        self._cid_onclose = self._m.figure.f.canvas.mpl_connect(
-            "close_event", self._on_close
-        )
+        # if not hasattr(self, "_cid_onclose"):
+        #     self._cid_onclose = self._m.figure.f.canvas.mpl_connect(
+        #         "close_event", self._on_close
+        #     )
 
         self._remove_default_keymaps()
 
@@ -1002,13 +985,14 @@ class cb_container:
                 except Exception:
                     pass
 
-    # attach a cleanup function if the figure is closed
-    # to ensure callbacks are removed and the container is reinitialized
-    def _on_close(self, event):
-        for method in self._methods:
-            obj = getattr(self, method)
-            for key in obj.get.attached_callbacks:
-                obj.remove(key)
+    # TODO can we re-initialize a closed figure incl. callbacks?
+    # # attach a cleanup function if the figure is closed
+    # # to ensure callbacks are removed and the container is reinitialized
+    # def _on_close(self, event):
+    #     for method in self._methods:
+    #         obj = getattr(self, method)
 
-        self._m._reset_axes()
-        # remove all figure properties
+    #         for key in obj.get.attached_callbacks:
+    #             obj.remove(key)
+    #     # remove all figure properties
+    #     self._m._reset_axes()

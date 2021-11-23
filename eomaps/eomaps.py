@@ -49,7 +49,7 @@ except ImportError:
     print("No module named 'mapclassify'... classification will not work!")
 
 
-def MapsGrid(r=2, c=2, **kwargs):
+def MapsGrid(r=2, c=2):
     """
     Initialize a grid of Maps objects
 
@@ -59,8 +59,6 @@ def MapsGrid(r=2, c=2, **kwargs):
         the number of rows. The default is 2.
     c : int, optional
         the number of columns. The default is 2.
-    **kwargs :
-        kwargs passed to `m.connect(**kwargs)`.
 
     Returns
     -------
@@ -127,8 +125,7 @@ def MapsGrid(r=2, c=2, **kwargs):
                 mij = Maps(gs_ax=gs[0, 0])
                 mg.parent = mij
             else:
-                mij = Maps(f=mg.parent.figure.f, gs_ax=gs[i, j])
-                mij.connect(mg.parent)
+                mij = Maps(parent=mg.parent, gs_ax=gs[i, j])
 
             mg._axes.append(mij)
             setattr(mg, f"m_{i}_{j}", mij)
@@ -144,12 +141,25 @@ class Maps(object):
 
     Parameters
     ----------
-    f : matplotlib.Figure
-        The matplotlib figure instance to use. (Only useful if you want to
-        add a map to an already existing figure!)
+    parent : eomaps.Maps
+        The parent Maps-object to use.
+        Any maps-objects that share the same figure must be connected
+        to allow shared interactivity!
+
+        >>> m1 = Maps()
+        >>> m2 = Maps(parent=m1)
+
+    orientation : str, optional
+        Indicator if the colorbar should be plotted right of the map
+        ("horizontal") or below the map ("vertical"). The default is "vertical"
+
+    f : matplotlib.Figure, optional
+        Explicitly specify the matplotlib figure instance to use.
+        (ONLY useful if you want to add a map to an already existing figure!)
 
           - If None, a new figure will be created (accessible via m.figure.f)
-          - Connected maps-objects will always share the same figure!
+          - Connected maps-objects will always share the same figure! You do
+            NOT need to specify it (just provide the parent and you're fine)!
 
         The default is None
     gs_ax : matplotlib.axes or matplotlib.gridspec.SubplotSpec, optional
@@ -183,11 +193,6 @@ class Maps(object):
                 >>> ...
                 >>> ax = f.add_subplot(projection=m.crs_plot)
                 >>> m.plot_map(ax_gs=ax)
-
-    orientation : str, optional
-        Indicator if the colorbar should be plotted right of the map ("horizontal")
-        or below the map ("vertical"). The default is "vertical"
-
     """
 
     crs_list = ccrs
@@ -214,13 +219,22 @@ class Maps(object):
 
     CLASSIFIERS = SimpleNamespace(**dict(zip(_classifiers, _classifiers)))
 
-    def __init__(self, layer=0, f=None, gs_ax=None, orientation="vertical"):
-        self._parent = None
-        self._children = []
-        self._orientation = "vertical"
-        self.layer = layer
+    def __init__(
+        self, parent=None, layer=0, orientation="vertical", f=None, gs_ax=None
+    ):
+
+        if parent is not None:
+            assert (
+                f is None
+            ), "You cannot specify the figure for connected Maps-objects!"
 
         self._BM = None
+        self._parent = None
+        self._children = []
+
+        self.parent = parent  # invoke the setter!
+        self._orientation = "vertical"
+        self.layer = layer
 
         # default plot specs
         self.plot_specs = plot_specs(
@@ -251,11 +265,9 @@ class Maps(object):
             crs=4326,
         )
 
-        # self.cb = cb_container(self)
-
         self._axpicker = None
 
-        self._f = f
+        self._f = None
 
         self._orientation = orientation
         self._ax = gs_ax
@@ -312,21 +324,21 @@ class Maps(object):
                     plt.ioff()
                     plt.show()
 
-    def _reset_axes(self):
+    # def _reset_axes(self):
+    #     print("resetting")
+    #     for m in [self.parent, *self.parent._children]:
+    #         m._f = None
+    #         m._ax = m._init_ax
+    #         m._ax_cb = None
+    #         m._ax_cb_plot = None
+    #         m._gridspec = None
+    #         m._cb_gridspec = None
 
-        for m in [self.parent, *self.parent._children]:
+    #     # # reset the Blit-Manager
+    #     self.parent._BM = None
 
-            m._f = None
-            m._ax = m._init_ax
-            m._ax_cb = None
-            m._ax_cb_plot = None
-            m._gridspec = None
-            m._cb_gridspec = None
-
-        # reset the draggable-axes class on next call
-        self.parent._axpicker = None
-        # reset the Blit-Manager
-        self.parent._BM = None
+    #     # reset the draggable-axes class on next call
+    #     self.parent._axpicker = None
 
     @property
     def BM(self):
@@ -378,27 +390,6 @@ class Maps(object):
     def parent(self, parent):
         assert self._parent is None, "EOmaps: There is already a parent Maps object!"
         self._parent = parent
-
-    def connect(self, parent):
-        """
-        Connect 2 Maps-objects to add additional (interactive) layers of data
-        on the same axes (or on multiple axes on the same figure).
-
-        Connecting a Maps object has the following effects on the child-object:
-            - The plot_crs is shared with the parent Maps object
-            - The figure-object is shared with the parent Maps object
-            - The plot-axes is shared with the parent Maps object and NO
-              additional colorabar is plotted
-
-              - you can override this behaviour if you provide an explicit axes or
-                gridspec via `m.plot_map(gs_ax=<...>)`
-
-        Parameters
-        ----------
-        parent : eomaps.Maps
-            the parent maps-object
-        """
-        self.parent = parent.parent
         # add the child to the topmost parent-object
         self.parent._add_child(self)
 
@@ -479,13 +470,12 @@ class Maps(object):
         Parameters
         ----------
         connect : bool
-            Indicator if the Maps-object should be connected to the parent Maps object.
+            Indicator if the copy should be connected to the parent Maps object.
             -> useful to add additional interactive layers to the plot
 
-            - the plot-axes is shared
-            - colorbar- and histogram axes are NOT shared
-              (e.g. NO additional colorbar is plotted)
-            -
+            - This is the same as using:
+                >>> m_copy = m.copy()
+                >>> m_copy.parent = m
 
         copy_data : bool or str
             - if True: the dataset will be copied
@@ -503,10 +493,14 @@ class Maps(object):
         copy_cls : eomaps.Maps object
             a new Maps class.
         """
+        if connect is True:
+            assert (
+                "parent" not in kwargs
+            ), "EOmaps: parent is set automatically if you use 'connect=True'"
+            kwargs["parent"] = self
+
         # create a new class
         copy_cls = Maps(**kwargs)
-        if connect is True:
-            copy_cls.connect(self)
 
         if copy_data_specs:
             copy_cls.set_data_specs(
@@ -1391,6 +1385,9 @@ class Maps(object):
             >>> m.add_coastlines(coast=dict(ec="r"), ocean=dict(fc="g"))
             >>> m.add_coastlines(coast=False, ocean=dict(fc="b"))
         """
+        if layer is None:
+            layer = self.layer
+
         if coast:
             if coast is True:
                 coast_kwargs = dict()
@@ -1756,7 +1753,7 @@ class Maps(object):
         colorbar=True,
         coastlines=True,
         pick_distance=100,
-        layer=0,
+        layer=None,
         dynamic=False,
         **kwargs,
     ):
@@ -1769,7 +1766,7 @@ class Maps(object):
             (only the last collection remains interactive on multiple calls to `m.plot_map()`)
 
             If you need multiple responsive datasets, use connected maps-objects instead!
-            (see `m.connect` and `MapsGrid`)
+            (e.g. `m2 = Maps(parent=m)` or have a look at `MapsGrid`)
 
         Parameters
         ----------
