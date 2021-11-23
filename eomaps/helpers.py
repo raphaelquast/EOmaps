@@ -113,23 +113,26 @@ class draggable_axes:
         return [self.m.parent, *self.m.parent._children]
 
     @property
+    def maxes(self):
+        return [m.figure.ax for m in self.ms]
+
+    @property
     def axes(self):
         # get all axes (and child-axes)
-        return [i.figure.ax for i in self.ms if i.figure.ax is not None]
+        # return [i.figure.ax for i in self.ms if i.figure.ax is not None]
+        cbaxes = [i for cb in self.cbs for i in cb]
+        return [i for i in self.all_axes if i not in cbaxes]
 
     @property
     def all_axes(self):
-        return self.axes + [ax for caxes in self.cbs for ax in caxes if ax is not None]
+        return self.f.axes
+        # return self.axes + [ax for caxes in self.cbs for ax in caxes if ax is not None]
 
     def get_spines_visible(self):
         return [
             {key: val.get_visible() for key, val in ax.spines.items()}
             for ax in self.all_axes
         ]
-
-    @property
-    def _frameon(self):
-        return [i.get_frame_on() for i in self.all_axes]
 
     @property
     def cbs(self):
@@ -146,7 +149,6 @@ class draggable_axes:
                 cbs.append(cbis)
             else:
                 cbs.append((None, None))
-
         return cbs
 
     def cb_move_with_key(self, event):
@@ -372,12 +374,11 @@ class draggable_axes:
         eventax = event.inaxes
 
         if eventax not in self.all_axes:
-            # TODO this does not work
+            # TODO this needs some update...
             # check if we clicked on a hidden ax, and if so make it visible again
             hidden_ax, hidden_ann = None, None
             for ax, ann in zip(self._hiddenax, self._annotations):
                 bbox = ax.bbox
-                print(event.x, event.y, bbox.x0, bbox.x1)
                 if (
                     (event.x > bbox.x0)
                     & (event.x < bbox.x1)
@@ -416,12 +417,18 @@ class draggable_axes:
             )
             return
 
+        _m_picked = False
+        _cb_picked = False
+        _ax_picked = [eventax]
+
         if eventax in self.axes:
             _ax_picked = [eventax]
-            _m_picked = self.ms[self.axes.index(eventax)]
+            if eventax in self.maxes:
+                _m_picked = self.ms[self.maxes.index(eventax)]
+            else:
+                _m_picked = None
             _cb_picked = False
         else:
-
             # check if we picked a colorbar
             for i, cbi in enumerate(self.cbs):
                 if eventax in cbi:
@@ -430,6 +437,7 @@ class draggable_axes:
                         _m_picked = self.ms[i]
                         _ax_picked = cbi
                     break
+
         if self._m_picked is _m_picked and self._cb_picked == _cb_picked:
             return
 
@@ -522,8 +530,6 @@ class draggable_axes:
         for ax, frameQ, spine_vis in zip(
             self.all_axes, self._frameon, self._spines_visible
         ):
-            print(ax)
-            self.m.BM.remove_bg_artist(ax)
 
             ax.set_frame_on(frameQ)
             for key, spine in ax.spines.items():
@@ -544,6 +550,7 @@ class draggable_axes:
 
         # remember which spines were visible before
         self._spines_visible = self.get_spines_visible()
+        self._frameon = [i.get_frame_on() for i in self.all_axes]
 
         self._modifier_pressed = True
         print("EOmaps: Making axis draggable")
@@ -811,12 +818,14 @@ class BlitManager:
 
             # restore the background
             cv.restore_region(self._bg_layers[bg_layer])
+            # draw all of the animated artists
+
             while len(self._after_restore_actions) > 0:
                 action = self._after_restore_actions.pop(0)
                 action()
 
-            # draw all of the animated artists
             self._draw_animated(layers=layers, artists=artists)
+
             if blit:
                 if bbox_bounds is not None:
 
