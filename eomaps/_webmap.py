@@ -261,8 +261,10 @@ class _wmts_layer(_WebMap_layer):
         art = self._m.figure.ax.add_wmts(
             self._wms, self.name, wmts_kwargs=kwargs, interpolation="spline36"
         )
-        if layer is not None:
-            self._m.BM.add_bg_artist(art, layer)
+        if layer is None:
+            layer = self._m.layer
+
+        self._m.BM.add_bg_artist(art, layer)
 
 
 class _wms_layer(_WebMap_layer):
@@ -289,8 +291,11 @@ class _wms_layer(_WebMap_layer):
         art = self._m.figure.ax.add_wms(
             self._wms, self.name, wms_kwargs=kwargs, interpolation="spline36"
         )
-        if layer is not None:
-            self._m.BM.add_bg_artist(art, layer)
+
+        if layer is None:
+            layer = self._m.layer
+
+        self._m.BM.add_bg_artist(art, layer)
 
 
 def _sanitize(s):
@@ -625,7 +630,10 @@ class _S1GBM:
                     self._m.figure.f.canvas.toolbar.release_pan
                 )
 
-        self._layer = layer
+        if layer is None:
+            self._layer = self._m.layer
+        else:
+            self._layer = layer
 
         self._S1GBM_factory = self.S1GBM_tiles()
         self._S1GBM_factory.polarization = self.pol
@@ -649,12 +657,7 @@ class _S1GBM:
             img, extent=extent, origin=origin, transform=self._S1GBM_factory.crs
         )
 
-        if self._layer is not None:
-            self._m.BM.add_bg_artist(self._S1GBM, self._layer)
-        else:
-            # always put the images on a background-layer
-            self._layer = 0
-            self._m.BM.add_bg_artist(self._S1GBM, 0)
+        self._m.BM.add_bg_artist(self._S1GBM, self._layer)
 
     def ondraw(self, event):
         if self._event_attached is not None:
