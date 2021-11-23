@@ -5,18 +5,18 @@ This file is part of EOmaps.
 For COPYING and LICENSE details, please refer to the LICENSE file
 """
 from setuptools import setup, find_packages
-from pathlib import Path
 
+# from pathlib import Path
 # add the README as long-description
-this_directory = Path(__file__).parent
-long_description = (this_directory / "README.md").read_text()
+# this_directory = Path(__file__).parent
+# long_description = (this_directory / "README.md").read_text()
 
 version = "2.0"
 
 setup(
     name="EOmaps",
     version=version,
-    description="A general-purpose library to generate interactive maps of geographical datasets.",
+    description="A library to generate interactive maps of geographical datasets.",
     packages=find_packages(),
     package_dir={"eomaps": "eomaps"},
     # include_package_data=True,
@@ -26,7 +26,7 @@ setup(
     maintainer_email="raphael.quast@geo.tuwien.ac.at",
     license="GNU General Public License v3 or later (GPLv3+)",
     url="https://github.com/raphaelquast/maps",
-    long_description=long_description,
+    long_description="A library to generate interactive maps of geographical datasets",
     install_requires=[
         "numpy",
         "pandas",
