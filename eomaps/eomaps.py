@@ -146,6 +146,10 @@ class Maps(object):
         Any maps-objects that share the same figure must be connected
         to allow shared interactivity!
 
+        By default, also the axis used for plotting is shared between connected
+        Maps-objects, but this can be overridden if you explicitly specify
+        either a GridSpec or an Axis via `gs_ax`.
+
         >>> m1 = Maps()
         >>> m2 = Maps(parent=m1)
 
@@ -169,6 +173,7 @@ class Maps(object):
 
         * None:
             Initialize a new axes (the default)
+            (if a parent is provided, use the axis of the parent object)
         * `matplotilb.gridspec.SubplotSpec`:
             Use the SubplotSpec for initializing the axes.
             The SubplotSpec will be divided accordingly in case a colorbar
@@ -227,6 +232,9 @@ class Maps(object):
             assert (
                 f is None
             ), "You cannot specify the figure for connected Maps-objects!"
+
+            if gs_ax is None:
+                gs_ax = parent.figure.ax
 
         self._BM = None
         self._parent = None

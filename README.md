@@ -9,15 +9,16 @@
 #### 🌍 Simple interface to visualize geographical datasets  
 - A `pandas.DataFrame` is all you need as input!
   - plots of large (>1M datapoints) irregularly sampled datasets are generated in a few seconds!
-- Represent your data as shapes with actual geographic dimensions and re-project it to any crs supported by `cartopy`
+  - Represent your data as shapes with actual geographic dimensions
+  - Re-project the data to any crs supported by `cartopy`
 - Add annotations, overlays, WebMap-layers etc. to the maps and get a nice colorbar with a colored histogram on top  
 
 #### 🌎 Turn your maps into powerful interactive data-analysis widgets
 - Add "callbacks" to interact with your data
    - Many pre-defined functions for common tasks are available!
-      - display coordinates, values or IDs of clicked pixels, add markers, compare data-layers etc.
+      - display coordinates and values, add markers, compare data-layers etc.
       - ... or define your own function and attach it to the plot!
-- Connect multiple interactive maps to analyze relations between datasets
+- Maps objects can be interactively connected to analyze relations between datasets!
 
 #### 🛸 check out the [documentation](https://eomaps.readthedocs.io) for more details and [examples](https://eomaps.readthedocs.io/en/latest/EOmaps_examples.html)! 🛸
 
@@ -45,18 +46,23 @@ m.set_shape.geod_circles(radius=10000) # (e.g. geodetic circles with 10km radius
 m.set_plot_specs(crs=Maps.CRS, cmap="viridis")
 # (optionally) classify the data
 m.set_classify_specs(scheme=Maps.CLASSIFIERS.Quantiles, k=5)
-
 # plot the map
 m.plot_map()
 ```
 #### attach callback functions to interact with the plot
 ```python
+# get a nice annotation if you click on a datapoint
 m.cb.pick.attach.annotate()
+# draw a marker if you click on a datapoint
 m.cb.pick.attach.mark(facecolor="r", edgecolor="g", shape="rectangles", radius=1, radius_crs=4326)
 
-m.cb.click.attach.peek_layer(how="top", layer=1)
+# show the data-layer `1` in a inset-rectangle (size=20% width of the axes) if you click on the map
+m.cb.click.attach.peek_layer(how=0.2, layer=1)
+#attach some custom function to interact with the map
 m.cb.click.attach(<... a custom function ...>)
 
+# show the data-layer `1` if you press "a" on the keyboard and the layer `0` if you press "q"
+m.cb.keypress.attach.switch_layer(layer=0, key="q")
 m.cb.keypress.attach.switch_layer(layer=1, key="a")
 ```
 #### add additional layers and overlays
@@ -80,8 +86,7 @@ m = Maps()
 ...
 m.plot_map()
 
-m2 = Maps(gs_ax=m.figure.ax) # use the same axes
-m2.connect(m)                # connect the maps-objects for shared interactivity
+m2 = Maps(parent=m, gs_ax=m.figure.ax) # use the same axes to get multiple interactive data-layers
 m2.set_data(...)
 m2.set_shape(...)
 ...
