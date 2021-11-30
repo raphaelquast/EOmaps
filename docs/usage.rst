@@ -6,6 +6,8 @@
 
 🐛 Installation
 ############
+(To speed up the process... have a look at `(mamba) <https://github.com/mamba-org/mamba>`_ )
+
 
 🐜 Manual installation
 -------------------
