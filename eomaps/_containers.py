@@ -912,7 +912,13 @@ else:
 
         @property
         def S1GBM(self):
-            return SimpleNamespace(add_layer=self._S1GBM_layers(self._m))
+            ret = SimpleNamespace(
+                add_layer=self._S1GBM_layers(self._m), layers=["vv", "vh"]
+            )
+
+            ret.__doc__ = self._S1GBM_layers.__doc__
+
+            return ret
 
         class _S1GBM_layers:
             """
@@ -939,8 +945,6 @@ else:
 
             def __init__(self, m):
                 self._m = m
-                # make sure axes are set
-                self._m._set_axes()
 
             @property
             @lru_cache()

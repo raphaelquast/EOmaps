@@ -6,3 +6,4 @@ docs/_build
 docs/debug.log
 docs/.vscode
 docs/generated
+.spyproject

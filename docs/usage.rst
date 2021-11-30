@@ -6,6 +6,8 @@
 
 🐛 Installation
 ############
+(To speed up the process... have a look at `(mamba) <https://github.com/mamba-org/mamba>`_ )
+
 
 🐜 Manual installation
 -------------------
@@ -54,7 +56,7 @@ Here's a yaml-file that you can use to install all you need in one go:
 
     dependencies:
       - python=3.7
-      - default::rtree
+      - defaults::rtree
       - numpy
       - scipy
       - pandas
