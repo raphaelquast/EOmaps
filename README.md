@@ -2,37 +2,49 @@
 [![codecov](https://codecov.io/gh/raphaelquast/EOmaps/branch/dev/graph/badge.svg?token=25M85P7MJG)](https://codecov.io/gh/raphaelquast/EOmaps)
 [![pypi](https://img.shields.io/pypi/v/eomaps)](https://pypi.org/project/eomaps/)
 [![Documentation Status](https://readthedocs.org/projects/eomaps/badge/?version=latest)](https://eomaps.readthedocs.io/en/latest/?badge=latest)
+<a href="https://www.buymeacoffee.com/raphaelquast" target="_blank"><img src="https://www.buymeacoffee.com/assets/img/custom_images/yellow_img.png" alt="Buy Me A Coffee" align="right" style="height: 33px !important;width: 139px !important;" ></a>
+
+
 # EOmaps
 
-### A library to create interactive maps of geographical datasets.
+### ... a library to create interactive maps of geographical datasets
 
-#### 🌍 Simple interface to visualize geographical datasets  
-- A `pandas.DataFrame` is all you need as input!
+<ol type="none">
+  <li>🌍 A simple interface to visualize geographical datasets ... a pandas DataFrame is all you need!</li>
+  <ul type="none">
+    <li>⬥ applicable also for large datasets with ~ 1M datapoints!  </li>
+  </ul>
+  <li>🌎 Quickly turn your maps into powerful interactive data-analysis widgets!</li>
+  <ul type="none">
+    <li>⬥ compare multiple data-layers, WebMaps etc. with only a few lines of code! </li>
+    <li>⬥ use callback functions to interact with the data (or an underlying database) </li>
+  </ul>
+</ol>
+
+
+#### 🛸 checkout the [documentation](https://eomaps.readthedocs.io>documentation) for more details and [examples](https://eomaps.readthedocs.io/en/latest/EOmaps_examples.html) 🛸
+
+## 🔨 installation
+
+Installing EOmaps can be done via `pip`.  
+However, to make sure all dependencies are correctly installed, make sure to have a look at the [installation instructions](https://eomaps.readthedocs.io/en/latest/usage.html#installation) in the documentation!
+
+<br/>
+
+<p align="center">
+<img src="https://github.com/raphaelquast/EOmaps/blob/dev/docs/_static/fig2.gif?raw=true" alt="EOmaps example image 1">
+<img src="https://github.com/raphaelquast/EOmaps/blob/dev/docs/_static/fig6.gif?raw=true" alt="EOmaps example image 2">
+</p>
+
+
+## 🌳 basic usage
+- A pandas DataFrame is all you need as input!
   - plots of large (>1M datapoints) irregularly sampled datasets are generated in a few seconds!
   - Represent your data as shapes with actual geographic dimensions
   - Re-project the data to any crs supported by `cartopy`
 - Add annotations, overlays, WebMap-layers etc. to the maps
 - ... and get a nice colorbar with a colored histogram on top!
 
-#### 🌎 Turn your maps into powerful interactive data-analysis widgets
-- Add "callbacks" to interact with your data
-   - Many pre-defined functions for common tasks are available!
-      - display coordinates and values, add markers, compare data-layers etc.
-      - ... or define your own function and attach it to the plot!
-- Maps objects can be interactively connected to analyze relations between datasets!
-
-#### 🛸 check out the [documentation](https://eomaps.readthedocs.io) for more details and [examples](https://eomaps.readthedocs.io/en/latest/EOmaps_examples.html)! 🛸
-
-
-![EOmaps example image](https://github.com/raphaelquast/EOmaps/blob/dev/docs/_static/fig2.gif?raw=true)
-
-
-## install
-
-Installing EOmaps can be done via `pip`. To make sure all dependencies are correctly installed, please have a look at the [🛸 installation instructions 🛸](https://eomaps.readthedocs.io/en/latest/usage.html#installation) in the documentation.
-
-
-## basic usage
 ```python
 import pandas as pd
 from eomaps import Maps
@@ -54,6 +66,12 @@ m.set_classify_specs(scheme=Maps.CLASSIFIERS.Quantiles, k=5)
 m.plot_map()
 ```
 #### attach callback functions to interact with the plot
+
+- Many pre-defined functions for common tasks are available!
+  - display coordinates and values, add markers, compare data-layers etc.
+  - ... or define your own function and attach it to the plot!
+- Maps objects can be interactively connected to analyze relations between datasets!
+
 ```python
 # get a nice annotation if you click on a datapoint
 m.cb.pick.attach.annotate()
@@ -97,7 +115,7 @@ m2.set_shape(...)
 m2.plot_map(layer=2)         # plot another layer of data
 m2.cb.attach.peek_layer(layer=2, how=0.25)
 ```
-#### plot map-grids
+#### plot grids of maps
 ```python
 from eomaps import MapsGrid
 mgrid = MapsGrid(2, 2, connect=True)
