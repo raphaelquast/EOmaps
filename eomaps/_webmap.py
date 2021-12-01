@@ -584,7 +584,7 @@ class _xyz_tile_service:
     general class for using x/y/z tile-service urls as WebMap layers
     """
 
-    def __init__(self, m, url):
+    def __init__(self, m, url, maxzoom=19):
         self._m = m
 
         self._redraw = True
@@ -595,6 +595,8 @@ class _xyz_tile_service:
         self._layer = 0
 
         self.url = url
+
+        self._maxzoom = maxzoom
 
     class TileFactory(GoogleWTS):
         def __init__(self, url, *args, **kwargs):
@@ -611,8 +613,8 @@ class _xyz_tile_service:
 
     # function to estimate a proper zoom-level
     @staticmethod
-    def getz(d):
-        z = int(np.clip(np.ceil(np.log2(4 / d * 40075016)), 1, 19))
+    def getz(d, zmax):
+        z = int(np.clip(np.ceil(np.log2(4 / d * 40075016)), 1, zmax))
         return z
 
     def __call__(self, layer=None, transparent=False, **kwargs):
@@ -655,7 +657,7 @@ class _xyz_tile_service:
 
         img, extent, origin = self._factory.image_for_domain(
             self._m.figure.ax._get_extent_geom(self._factory.crs),
-            self.getz(extent[1] - extent[0]),
+            self.getz(extent[1] - extent[0], self._maxzoom),
         )
         self._artist = self._m.figure.ax.imshow(
             img,

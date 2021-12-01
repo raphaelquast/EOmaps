@@ -804,7 +804,7 @@ else:
                     stamen_terrain_doc = (
                         """
                         Stamen Terrain
-                        -----------------
+                        --------------
                         Terrain maps with hill-shading and natural vegetation colors
                         provided by Stamen
                         """
@@ -1226,6 +1226,7 @@ else:
                 WMS = _xyz_tile_service(
                     self._m,
                     lambda x, y, z: f"https://s1map.eodc.eu/vv/{z}/{x}/{2**z-1-y}.png",
+                    13,
                 )
 
                 WMS.__doc__ = "Polarization: VV \n" + type(self).__doc__
@@ -1236,6 +1237,7 @@ else:
                 WMS = _xyz_tile_service(
                     self._m,
                     lambda x, y, z: f"https://s1map.eodc.eu/vh/{z}/{x}/{2**z-1-y}.png",
+                    13,
                 )
                 WMS.__doc__ = "Polarization: VH \n" + type(self).__doc__
                 return WMS
