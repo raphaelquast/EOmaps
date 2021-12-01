@@ -3,18 +3,13 @@ from warnings import warn
 from operator import attrgetter
 from inspect import signature, _empty
 from types import SimpleNamespace
-from functools import update_wrapper, partial, lru_cache, wraps
-from collections import defaultdict
+from functools import lru_cache
 
-import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.pyplot import get_cmap
-from matplotlib.collections import PolyCollection, EllipseCollection, TriMesh
 from matplotlib.gridspec import SubplotSpec
 import mapclassify
 
-# from .callbacks import callbacks
-from .helpers import draggable_axes
 from ._webmap import _import_OK
 
 if _import_OK:
