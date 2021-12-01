@@ -22,7 +22,7 @@
 </ol>
 
 
-#### 🛸 checkout the [documentation](https://eomaps.readthedocs.io>documentation) for more details and [examples](https://eomaps.readthedocs.io/en/latest/EOmaps_examples.html) 🛸
+#### 🛸 checkout the [documentation](https://eomaps.readthedocs.io/en/latest) for more details and [examples](https://eomaps.readthedocs.io/en/latest/EOmaps_examples.html) 🛸
 
 ## 🔨 installation
 
