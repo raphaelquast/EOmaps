@@ -704,6 +704,7 @@ else:
 
                     self.default.__doc__ = """
                         OpenStreetMap's standard tile layer
+                        -----------------------------------
                         https://www.openstreetmap.org/
 
                         LICENSE-info (without any warranty for correctness!!)
@@ -717,6 +718,7 @@ else:
 
                     self.default_german.__doc__ = """
                         German fork of OpenStreetMap's standard tile layer
+                        --------------------------------------------------
                         https://www.openstreetmap.de/
 
                         LICENSE-info (without any warranty for correctness!!)
@@ -725,38 +727,51 @@ else:
                         """
 
                     self.stamen_toner = _xyz_tile_service(
-                        self._m, "http://a.tile.stamen.com/toner/{z}/{x}/{y}.png"
+                        self._m,
+                        "https://stamen-tiles.a.ssl.fastly.net/toner/{z}/{x}/{y}.png",
                     )
-
-                    self.stamen_toner.__doc__ = """
-                        High-contrast B+W (black and white) maps provided by Stamen
-
-                        http://maps.stamen.com/
-
-                        LICENSE-info (without any warranty for correctness!!)
-                        -----------------------------------------------------
-
-                        Make sure to check http://maps.stamen.com/ for up-to-date
-                        license policies.
-
-                        Except otherwise noted, each of these map tile sets are
-                        © Stamen Design, under a Creative Commons Attribution
-                        (CC BY 3.0) license.
-
-                        We’d love to see these maps used around the web, so we’ve
-                        included some brief instructions to help you use them in
-                        the mapping system of your choice. These maps are available
-                        free of charge. If you use these tiles, you must use the
-                        attribution provided in the link above.
-                        """
+                    self.stamen_toner_lines = _xyz_tile_service(
+                        self._m,
+                        "https://stamen-tiles.a.ssl.fastly.net/toner-lines/{z}/{x}/{y}.png",
+                    )
+                    self.stamen_toner_background = _xyz_tile_service(
+                        self._m,
+                        "https://stamen-tiles.a.ssl.fastly.net/toner-background/{z}/{x}/{y}.png",
+                    )
+                    self.stamen_toner_lite = _xyz_tile_service(
+                        self._m,
+                        "https://stamen-tiles.a.ssl.fastly.net/toner-lite/{z}/{x}/{y}.png",
+                    )
+                    self.stamen_toner_hybrid = _xyz_tile_service(
+                        self._m,
+                        "https://stamen-tiles.a.ssl.fastly.net/toner-hybrid/{z}/{x}/{y}.png",
+                    )
+                    self.stamen_toner_labels = _xyz_tile_service(
+                        self._m,
+                        "https://stamen-tiles.a.ssl.fastly.net/toner-labels/{z}/{x}/{y}.png",
+                    )
 
                     self.stamen_watercolor = _xyz_tile_service(
                         self._m, "http://c.tile.stamen.com/watercolor/{z}/{x}/{y}.jpg"
                     )
 
-                    self.stamen_watercolor.__doc__ = """
-                        A maps-style rreminiscent of hand-drawn watercolor maps
-                        provided by Stamen
+                    self.stamen_terrain = _xyz_tile_service(
+                        self._m, "http://c.tile.stamen.com/terrain/{z}/{x}/{y}.jpg"
+                    )
+                    self.stamen_terrain_lines = _xyz_tile_service(
+                        self._m,
+                        "http://c.tile.stamen.com/terrain-lines/{z}/{x}/{y}.jpg",
+                    )
+                    self.stamen_terrain_labels = _xyz_tile_service(
+                        self._m,
+                        "http://c.tile.stamen.com/terrain-labels/{z}/{x}/{y}.jpg",
+                    )
+                    self.stamen_terrain_background = _xyz_tile_service(
+                        self._m,
+                        "http://c.tile.stamen.com/terrain-background/{z}/{x}/{y}.jpg",
+                    )
+
+                    stamen_doc = """
 
                         http://maps.stamen.com/
 
@@ -776,6 +791,49 @@ else:
                         free of charge. If you use these tiles, you must use the
                         attribution provided in the link above.
                         """
+
+                    stamen_toner_doc = (
+                        """
+                        Stamen Toner
+                        ------------
+                        High-contrast B+W (black and white) maps provided by Stamen
+                        """
+                        + stamen_doc
+                    )
+
+                    stamen_terrain_doc = (
+                        """
+                        Stamen Terrain
+                        -----------------
+                        Terrain maps with hill-shading and natural vegetation colors
+                        provided by Stamen
+                        """
+                        + stamen_doc
+                    )
+
+                    stamen_watercolor_doc = (
+                        """
+                        Stamen Watercolor
+                        -----------------
+                        A maps-style reminiscent of hand-drawn watercolor maps
+                        provided by Stamen
+                        """
+                        + stamen_doc
+                    )
+
+                    self.stamen_toner.__doc__ = stamen_toner_doc
+                    self.stamen_toner_lines.__doc__ = stamen_toner_doc
+                    self.stamen_toner_background.__doc__ = stamen_toner_doc
+                    self.stamen_toner_lite.__doc__ = stamen_toner_doc
+                    self.stamen_toner_hybrid.__doc__ = stamen_toner_doc
+                    self.stamen_toner_labels.__doc__ = stamen_toner_doc
+
+                    self.stamen_terrain.__doc__ = stamen_terrain_doc
+                    self.stamen_terrain_lines.__doc__ = stamen_terrain_doc
+                    self.stamen_terrain_labels.__doc__ = stamen_terrain_doc
+                    self.stamen_terrain_background.__doc__ = stamen_terrain_doc
+
+                    self.stamen_watercolor.__doc__ = stamen_watercolor_doc
 
             @property
             @lru_cache()

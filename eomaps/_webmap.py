@@ -615,9 +615,14 @@ class _xyz_tile_service:
         z = int(np.clip(np.ceil(np.log2(4 / d * 40075016)), 1, 19))
         return z
 
-    def __call__(self, layer=None, **kwargs):
+    def __call__(self, layer=None, transparent=False, **kwargs):
         self._m._set_axes()
         self.kwargs = kwargs
+
+        if transparent is True:
+            self.desired_tile_form = "RGBA"
+        else:
+            self.desired_tile_form = "RGB"
 
         if self._event_attached is None:
             self._event_attached = self._m.figure.f.canvas.mpl_connect(
@@ -635,7 +640,9 @@ class _xyz_tile_service:
         else:
             self._layer = layer
 
-        self._factory = self.TileFactory(self.url)
+        self._factory = self.TileFactory(
+            self.url, desired_tile_form=self.desired_tile_form
+        )
         self.redraw()
 
     def redraw(self):
