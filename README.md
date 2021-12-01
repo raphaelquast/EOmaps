@@ -59,7 +59,7 @@ m.set_data(data=data, xcoord="lon", ycoord="lat", parameter="value", crs=4326)
 # set the shapes that you want to use to represent the data-points
 m.set_shape.geod_circles(radius=10000) # (e.g. geodetic circles with 10km radius)
 # set the appearance of the plot
-m.set_plot_specs(crs=Maps.CRS, cmap="viridis")
+m.set_plot_specs(crs=Maps.CRS.Orthographic(), cmap="viridis")
 # (optionally) classify the data
 m.set_classify_specs(scheme=Maps.CLASSIFIERS.Quantiles, k=5)
 # plot the map
