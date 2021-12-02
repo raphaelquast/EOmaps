@@ -756,13 +756,33 @@ class keypress_callbacks:
         self._m = m
 
     def switch_layer(self, layer=1, key="1"):
+        """
+        Change the default layer of the map.
+
+        Use the keyboard events to set the default layer (e.g. the visible layer)
+        displayed in the plot.
+
+        Parameters
+        ----------
+        layer : int, optional
+            The layer to use. The default is 1.
+        key : str, optional
+            The key to use. Modifiers are indicated with a +, e.g. "alt+x".
+            The default is "1".
+        """
         self._m.BM.bg_layer = layer
         self._m.BM.fetch_bg()
 
 
 class dynamic_callbacks:
     """
-    EXPERIMENTAL FEATURE!!
+    Callbacks that are triggered by events in the map (e.g. draw, zoom, etc.).
+
+    Note
+    ----
+
+    This is still an experimental feature!
+
 
     A collection of callback functions that are executed on triggered events.
     (e.g. draw, zoom etc.)

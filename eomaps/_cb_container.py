@@ -392,10 +392,10 @@ class _click_container(_cb_container):
 
 class cb_click_container(_click_container):
     """
-    Accessor to callbacks that are executed if you click anywhere on the Map.
+    Callbacks that are executed if you click anywhere on the Map.
 
-    Methods:
-    --------
+    Methods
+    -------
 
     attach : accessor for callbacks.
         Executing the functions will attach the associated callback to the map!
@@ -538,13 +538,20 @@ class cb_click_container(_click_container):
 
 class cb_pick_container(_click_container):
     """
-    Accessor to callbacks that are executed if you click on (or close-to)
-    a data-point of a previously plotted collection (you must plot a dataset first!)
+    Callbacks that select the nearest datapoint if you click on the map.
+    (you must plot a dataset with `m.plot_map()` first!)
 
     The event will search for the closest data-point and execute the callback
     with the properties (e.g. position , ID, value) of the selected point.
 
-    Methods:
+    Note
+    ----
+
+    you can use the `pick_distance` kwarg in `m.plot_map(pick_distance=20)`
+    to specify the maximal distance (in pixels) that is used to identify the
+    closest datapoint
+
+    Methods
     --------
 
     attach : accessor for callbacks.
@@ -694,9 +701,10 @@ class cb_pick_container(_click_container):
 
 class keypress_container(_cb_container):
     """
-    Accessor to callbacks that are executed on keypress-events
+    Callbacks that are executed if you press a key on the keyboard.
 
-    Methods:
+    Methods
+    -------
 
     attach : accessor for callbacks.
         Executing the functions will attach the associated callback to the map!
@@ -901,7 +909,10 @@ class keypress_container(_cb_container):
 
 class cb_container:
     """
-    A container for attaching callbacks and accessing return-objects.
+    Accessor for attaching callbacks and accessing return-objects.
+
+    Methods
+    -------
 
     - **click** : Execute functions when clicking on the map
 

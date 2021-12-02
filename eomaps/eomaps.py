@@ -673,7 +673,8 @@ class Maps(object):
             If int: The number of histogram-bins to use for the colorbar.
             If list, tuple or numpy-array: the bins to use
             If "bins": use the bins obtained from the classification
-                       (ONLY possible if a classification scheme is used!)
+            (ONLY possible if a classification scheme is used!)
+
             The default is 256.
         tick_precision : int, optional
             The precision of the tick-labels in the colorbar. The default is 2.
@@ -710,10 +711,10 @@ class Maps(object):
         ----------
         scheme : str
             The classification scheme to use.
-            (the list is accessible via m.classify_specs.SCHEMES)
+            (the list is accessible via `m.classify_specs.SCHEMES`)
 
             E.g. one of:
-            [ "scheme" (**kwargs)  ]
+            [ "scheme" (\**kwargs)  ]
 
                 - BoxPlot (hinge)
                 - EqualInterval (k)
@@ -731,7 +732,7 @@ class Maps(object):
                 - StdMean (multiples)
                 - UserDefined (bins)
 
-        **kwargs :
+        \**kwargs :
             kwargs passed to the call to the respective mapclassify classifier
         """
         self.classify_specs._set_scheme_and_args(scheme, **kwargs)
@@ -1448,7 +1449,7 @@ class Maps(object):
         ----------
         dataspec : dict
             the data-specification used to load the data via
-            cartopy.shapereader.natural_earth(**dataspec)
+            cartopy.shapereader.natural_earth(\**dataspec)
 
             >>> dataspec=(resolution='10m', category='cultural', name='urban_areas')
             >>> dataspec=(resolution='10m', category='cultural', name='admin_0_countries')
@@ -1770,12 +1771,13 @@ class Maps(object):
         Actually generate the map-plot based on the data provided as `m.data` and the
         specifications defined in "data_specs", "plot_specs" and "classify_specs".
 
-        NOTE:
-            Each call to plot_map will replace the collection used for picking!
-            (only the last collection remains interactive on multiple calls to `m.plot_map()`)
+        NOTE
+        ----
+        Each call to plot_map will replace the collection used for picking!
+        (only the last collection remains interactive on multiple calls to `m.plot_map()`)
 
-            If you need multiple responsive datasets, use connected maps-objects instead!
-            (e.g. `m2 = Maps(parent=m)` or have a look at `MapsGrid`)
+        If you need multiple responsive datasets, use connected maps-objects instead!
+        (e.g. `m2 = Maps(parent=m)` or have a look at `MapsGrid`)
 
         Parameters
         ----------
@@ -1789,13 +1791,13 @@ class Maps(object):
         pick_distance : int
             The maximum distance (in pixels) to trigger callbacks.
             (The distance is evaluated between the clicked pixel and the center of the
-             closest data-point)
+            closest data-point)
             The default is 10.
         layer : int
             A layer-index in case the collection is intended to be updated
             dynamically.
             The default is None.
-        **kwargs
+        \**kwargs
             kwargs passed to the initialization of the matpltolib collection
             (dependent on the plot-shape) [linewidth, edgecolor, facecolor, ...]
         """

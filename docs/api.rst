@@ -84,34 +84,70 @@ You can also get/set the specs with:
     eomaps.Maps.crs_plot
     eomaps.Maps.join_limits
 
-🔸 Add Callbacks
-------------------
+
+
+
+🔸 Callbacks - make the map interactive!
+------------------------------------------
+
+Callbacks are used to execute functions when you click on the map.
+
+They can be attached to a map via:
+
+.. code-block:: python
+
+    m = Maps()
+    ...
+    m.cb.< METHOD >.attach.< CALLBACK >( **kwargs )
+
+`< METHOD >` defines the way how callbacks are executed.
+
+.. currentmodule:: eomaps._cb_container.cb_container
 
 .. autosummary::
     :toctree: generated
     :nosignatures:
+    :template: only_names_in_toc.rst
 
-    eomaps._cb_container.cb_container
-    eomaps._cb_container.cb_container.click
-    eomaps._cb_container.cb_container.pick
-    eomaps._cb_container.cb_container.keypress
-    eomaps._cb_container.cb_container.dynamic
+    click
+    pick
+    keypress
+    dynamic
 
 
-🔸 Pre-defined callbacks
---------------------------
+`< CALLBACK >` indicates the action you want to assign o the event.
+There are many pre-defined callbacks but it is also possible to define custom
+functions and attach them to the map via:
+
+.. code-block:: python
+
+    def some_callback(self, asdf, **kwargs):
+        print("hello world")
+        print("the position of the clicked pixel", kwargs["pos"])
+        print("the data-index of the nearest datapoint", kwargs["ID"])
+        print("data-value of the nearest datapoint", kwargs["val"])
+
+        # `self` points to the underlying Maps-object, so you can
+        # access all properties of the Maps object via:
+        print("the plot-crs is:", self.plot_specs["plot_crs"])
+        ...
+        ...
+
+    m.cb.pick.attach(some_callback, double_click=False, button=1, asdf=1)
+
+
+
+Pre-defined click & pick callbacks
+..................................
+
+Callbacks that can be used with both `m.cb.click` and `m.cb.pick`:
 
 .. currentmodule:: eomaps.callbacks._click_callbacks
 
-Click & pick callbacks
-......................
-
-Callback functions usable with both `m.cb.click` and `m.cb.pick`:
-
 .. autosummary::
     :toctree: generated
     :nosignatures:
-    :template: function_onlynames.rst
+    :template: only_names_in_toc.rst
 
     peek_layer
     annotate
@@ -121,35 +157,39 @@ Callback functions usable with both `m.cb.click` and `m.cb.pick`:
     get_values
     print_to_console
 
-Callbacks usable only with `m.cb.pick`:
+Callbacks that can be used only with `m.cb.pick`:
 
 .. autosummary::
     :toctree: generated
     :nosignatures:
-    :template: function_onlynames.rst
+    :template: only_names_in_toc.rst
 
     load
 
-Keypress callbacks
-..................
+Pre-defined keypress callbacks
+..............................
+
+Callbacks that can be used with `m.cb.keypress`
 
 .. currentmodule:: eomaps.callbacks.keypress_callbacks
 
 .. autosummary::
     :toctree: generated
     :nosignatures:
-    :template: function_onlynames.rst
+    :template: only_names_in_toc.rst
 
     switch_layer
 
-Dynamic callbacks
-..................
+Pre-defined dynamic callbacks
+.............................
+
+Callbacks that can be used with `m.cb.dynamic`
 
 .. currentmodule:: eomaps.callbacks.dynamic_callbacks
 
 .. autosummary::
     :toctree: generated
     :nosignatures:
-    :template: function_onlynames.rst
+    :template: only_names_in_toc.rst
 
     indicate_extent
