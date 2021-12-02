@@ -623,7 +623,6 @@ class _xyz_tile_service:
         transparent=False,
         alpha=1,
         interpolation="spline36",
-        regrid_shape=500,
         **kwargs,
     ):
         """
@@ -646,15 +645,13 @@ class _xyz_tile_service:
             The target resolution for warping images in case a re-projection is
             required (e.g. if you don't use the native projection of the WMS)
             changing this value will slow down re-projection but it can
-            provide a huge boost in image quality! The default is 500.
+            provide a huge boost in image quality! The default is 750.
         **kwargs :
             Additional kwargs passed to the cartopy-wrapper for
             matplotlib's `imshow`.
         """
         self._m._set_axes()
-        self.kwargs = dict(
-            interpolation=interpolation, regrid_shape=regrid_shape, alpha=alpha
-        )
+        self.kwargs = dict(interpolation=interpolation, alpha=alpha)
         self.kwargs.update(kwargs)
 
         if transparent is True:

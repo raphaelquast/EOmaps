@@ -199,7 +199,9 @@ class _click_container(_cb_container):
                 the ID of the attached callback
 
             """
-            return self._parent._add_callback(f, double_click, button, **kwargs)
+            return self._parent._add_callback(
+                callback=f, double_click=double_click, button=button, **kwargs
+            )
 
     class _get:
         def __init__(self, parent):
@@ -278,7 +280,9 @@ class _click_container(_cb_container):
 
                 print(f"Removed the {self._method} callback: '{ID}'.")
 
-    def _add_callback(self, callback, double_click=False, button=1, **kwargs):
+    def _add_callback(
+        self, *args, callback=None, double_click=False, button=1, **kwargs
+    ):
         """
         Attach a callback to the plot that will be executed if a pixel is clicked
 
@@ -378,7 +382,7 @@ class _click_container(_cb_container):
                 + "the same button is not (yet) supported... use a different button!"
             )
 
-        d[cbkey] = partial(callback, **kwargs)
+        d[cbkey] = partial(callback, *args, **kwargs)
 
         # add mouse-button assignment as suffix to the name (with __ separator)
         cbname = cbkey + f"__{'double' if double_click else 'single'}__{button}"
