@@ -1,8 +1,8 @@
 ⚙ API
-=====
+=======
 
 🔸 Initialize Maps objects
---------------------------
+----------------------------
 
 .. autosummary::
     :toctree: generated
@@ -14,7 +14,7 @@
 
 
 🔸 Set specifications
----------------------
+-----------------------
 
 .. autosummary::
     :toctree: generated
@@ -37,7 +37,7 @@ You can also get/set the specs with:
 
 
 🔸 Plot the map and save it
----------------------------
+-----------------------------
 
 .. autosummary::
     :toctree: generated
@@ -50,7 +50,7 @@ You can also get/set the specs with:
 
 
 🔸 Add layers and objects
--------------------------
+---------------------------
 
 .. autosummary::
     :toctree: generated
@@ -67,19 +67,9 @@ You can also get/set the specs with:
     eomaps.Maps.add_annotation
     eomaps.Maps.add_colorbar
 
-🔸 Connect Maps objects
------------------------
-
-.. autosummary::
-    :toctree: generated
-    :nosignatures:
-
-    eomaps.Maps.connect
-    eomaps.Maps.join_limits
-
 
 🔸 Miscellaneous
-----------------
+------------------
 
 .. autosummary::
     :toctree: generated
@@ -92,19 +82,74 @@ You can also get/set the specs with:
     eomaps.Maps.parent
     eomaps.Maps.BM
     eomaps.Maps.crs_plot
-    eomaps.Maps.layer
+    eomaps.Maps.join_limits
 
 🔸 Add Callbacks
-----------------
+------------------
 
 .. autosummary::
     :toctree: generated
     :nosignatures:
 
+    eomaps._cb_container.cb_container
+    eomaps._cb_container.cb_container.click
+    eomaps._cb_container.cb_container.pick
+    eomaps._cb_container.cb_container.keypress
+    eomaps._cb_container.cb_container.dynamic
 
-    eomaps.Maps.cb
-    eomaps.Maps.cb.click
-    eomaps.Maps.cb.pick
-    eomaps.Maps.cb.keypress
-    eomaps.Maps.cb.dynamic
-    eomaps.Maps.cb.data
+
+🔸 Pre-defined callbacks
+--------------------------
+
+.. currentmodule:: eomaps.callbacks._click_callbacks
+
+Click & pick callbacks
+......................
+
+Callback functions usable with both `m.cb.click` and `m.cb.pick`:
+
+.. autosummary::
+    :toctree: generated
+    :nosignatures:
+    :template: function_onlynames.rst
+
+    peek_layer
+    annotate
+    clear_annotations
+    mark
+    clear_markers
+    get_values
+    print_to_console
+
+Callbacks usable only with `m.cb.pick`:
+
+.. autosummary::
+    :toctree: generated
+    :nosignatures:
+    :template: function_onlynames.rst
+
+    load
+
+Keypress callbacks
+..................
+
+.. currentmodule:: eomaps.callbacks.keypress_callbacks
+
+.. autosummary::
+    :toctree: generated
+    :nosignatures:
+    :template: function_onlynames.rst
+
+    switch_layer
+
+Dynamic callbacks
+..................
+
+.. currentmodule:: eomaps.callbacks.dynamic_callbacks
+
+.. autosummary::
+    :toctree: generated
+    :nosignatures:
+    :template: function_onlynames.rst
+
+    indicate_extent
