@@ -617,9 +617,45 @@ class _xyz_tile_service:
         z = int(np.clip(np.ceil(np.log2(4 / d * 40075016)), 1, zmax))
         return z
 
-    def __call__(self, layer=None, transparent=False, **kwargs):
+    def __call__(
+        self,
+        layer=None,
+        transparent=False,
+        alpha=1,
+        interpolation="spline36",
+        regrid_shape=500,
+        **kwargs,
+    ):
+        """
+        Parameters
+        ----------
+        layer : int, optional
+            The layer to put the WMS images on. The default is None in which
+            case the default layer for the Maps-object is used.
+        transparent : bool, optional
+            Indicator if the WMS images should be read as RGB or RGBA
+            (e.g. with or without transparency). The default is False.
+        alpha : float, optional (passed to matplotlib imshow)
+            The alpha-transparency of the image.
+            NOTE: This changes the global transparency of the images... it does
+            not control whether the images include transparency! (check the
+            "transparent" kwarg)
+        interpolation : str, optional (passed to matplotlib imshow)
+            The interpolation-method to use. The default is "spline36".
+        regrid_shape : int, optional
+            The target resolution for warping images in case a re-projection is
+            required (e.g. if you don't use the native projection of the WMS)
+            changing this value will slow down re-projection but it can
+            provide a huge boost in image quality! The default is 500.
+        **kwargs :
+            Additional kwargs passed to the cartopy-wrapper for
+            matplotlib's `imshow`.
+        """
         self._m._set_axes()
-        self.kwargs = kwargs
+        self.kwargs = dict(
+            interpolation=interpolation, regrid_shape=regrid_shape, alpha=alpha
+        )
+        self.kwargs.update(kwargs)
 
         if transparent is True:
             self.desired_tile_form = "RGBA"

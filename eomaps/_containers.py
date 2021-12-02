@@ -20,6 +20,10 @@ if _import_OK:
     )
 
 
+def combdoc(*args):
+    return "\n".join(dedent(i) for i in args)
+
+
 class map_objects(object):
     """
     A container for accessing objects of the generated figure
@@ -696,22 +700,24 @@ else:
                     self.default = _xyz_tile_service(
                         self._m, "https://tile.openstreetmap.org/{z}/{x}/{y}.png"
                     )
-
-                    self.default.__doc__ = """
+                    self.default.__doc__ = combdoc(
+                        """
                         OpenStreetMap's standard tile layer
                         -----------------------------------
-                        https://www.openstreetmap.org/
+                            https://www.openstreetmap.org/
 
                         LICENSE-info (without any warranty for correctness!!)
                         -----------------------------------------------------
                             check: https://operations.osmfoundation.org/policies/tiles/
-                        """
+                        """,
+                        self.default.__call__.__doc__,
+                    )
 
                     self.default_german = _xyz_tile_service(
                         self._m, "https://tile.openstreetmap.de/{z}/{x}/{y}.png"
                     )
-
-                    self.default_german.__doc__ = """
+                    self.default_german.__doc__ = combdoc(
+                        """
                         German fork of OpenStreetMap's standard tile layer
                         --------------------------------------------------
                         https://www.openstreetmap.de/
@@ -719,7 +725,9 @@ else:
                         LICENSE-info (without any warranty for correctness!!)
                         -----------------------------------------------------
                             check: https://www.openstreetmap.de/germanstyle.html
-                        """
+                        """,
+                        self.default_german.__call__.__doc__,
+                    )
 
                     self.stamen_toner = _xyz_tile_service(
                         self._m,
@@ -787,33 +795,36 @@ else:
                         attribution provided in the link above.
                         """
 
-                    stamen_toner_doc = (
+                    stamen_toner_doc = combdoc(
                         """
                         Stamen Toner
                         ------------
                         High-contrast B+W (black and white) maps provided by Stamen
-                        """
-                        + stamen_doc
+                        """,
+                        stamen_doc,
+                        self.stamen_toner.__call__.__doc__,
                     )
 
-                    stamen_terrain_doc = (
+                    stamen_terrain_doc = combdoc(
                         """
                         Stamen Terrain
                         --------------
                         Terrain maps with hill-shading and natural vegetation colors
                         provided by Stamen
-                        """
-                        + stamen_doc
+                        """,
+                        stamen_doc,
+                        self.stamen_toner.__call__.__doc__,
                     )
 
-                    stamen_watercolor_doc = (
+                    stamen_watercolor_doc = combdoc(
                         """
                         Stamen Watercolor
                         -----------------
                         A maps-style reminiscent of hand-drawn watercolor maps
                         provided by Stamen
-                        """
-                        + stamen_doc
+                        """,
+                        stamen_doc,
+                        self.stamen_toner.__call__.__doc__,
                     )
 
                     self.stamen_toner.__doc__ = stamen_toner_doc
@@ -838,13 +849,14 @@ else:
                     service_type="wms",
                     url="https://ows.terrestris.de/osm/service?SERVICE=WMS&VERSION=1.1.1&REQUEST=GetCapabilities",
                 )
-                WMS.__doc__ = type(self).__doc__ + (
+                WMS.__doc__ = combdoc(
+                    type(self).__doc__,
                     """
                         LICENSE-info (without any warranty for correctness!!)
                         -----------------------------------------------------
                             ... this service is hosted by Terrestris... check:
                             https://www.terrestris.de/en/openstreetmap-wms/
-                        """
+                        """,
                 )
                 return WMS
 
@@ -856,13 +868,14 @@ else:
                     service_type="wms",
                     url="http://ows.mundialis.de/services/service?",
                 )
-                WMS.__doc__ = type(self).__doc__ + (
+                WMS.__doc__ = combdoc(
+                    type(self).__doc__,
                     """
-                        LICENSE-info (without any warranty for correctness!!)
-                        -----------------------------------------------------
-                            ... this service is hosted by Mundialis... check:
-                            https://www.mundialis.de/en/ows-mundialis/
-                        """
+                    LICENSE-info (without any warranty for correctness!!)
+                    -----------------------------------------------------
+                        ... this service is hosted by Mundialis... check:
+                        https://www.mundialis.de/en/ows-mundialis/
+                    """,
                 )
                 return WMS
 
@@ -908,7 +921,8 @@ else:
                     name="EEA_REST_Image",
                     service_type="wms",
                 )
-                API.__doc__ = type(self).__doc__ + (
+                API.__doc__ = combdoc(
+                    type(self).__doc__,
                     """
                         ... access to the 'Image' subfolder
 
@@ -920,7 +934,7 @@ else:
                         content on the EEA website for commercial or non-commercial
                         purposes is permitted free of charge, provided that the source is
                         acknowledged.
-                    """
+                    """,
                 )
 
                 API.fetch_services()
@@ -939,7 +953,8 @@ else:
                     name="EEA_REST_Land",
                     service_type="wms",
                 )
-                API.__doc__ = type(self).__doc__ + (
+                API.__doc__ = combdoc(
+                    type(self).__doc__,
                     """
                         ... access to the 'Land' subfolder
 
@@ -951,7 +966,7 @@ else:
                         content on the EEA website for commercial or non-commercial
                         purposes is permitted free of charge, provided that the source is
                         acknowledged.
-                    """
+                    """,
                 )
                 API.fetch_services()
 
@@ -970,7 +985,8 @@ else:
                     name="EEA_REST_Climate",
                     service_type="wms",
                 )
-                API.__doc__ = type(self).__doc__ + (
+                API.__doc__ = combdoc(
+                    type(self).__doc__,
                     """
                         ... access to the 'Climate' subfolder
 
@@ -982,7 +998,7 @@ else:
                         content on the EEA website for commercial or non-commercial
                         purposes is permitted free of charge, provided that the source is
                         acknowledged.
-                    """
+                    """,
                 )
                 API.fetch_services()
 
@@ -1001,7 +1017,8 @@ else:
                     name="EEA_REST_Bio",
                     service_type="wms",
                 )
-                API.__doc__ = type(self).__doc__ + (
+                API.__doc__ = combdoc(
+                    type(self).__doc__,
                     """
                         ... access to the 'Bio' subfolder
 
@@ -1013,7 +1030,7 @@ else:
                         content on the EEA website for commercial or non-commercial
                         purposes is permitted free of charge, provided that the source is
                         acknowledged.
-                    """
+                    """,
                 )
                 API.fetch_services()
 
@@ -1032,7 +1049,8 @@ else:
                     name="EEA_REST_Copernicus",
                     service_type="wms",
                 )
-                API.__doc__ = type(self).__doc__ + (
+                API.__doc__ = combdoc(
+                    type(self).__doc__,
                     """
                         ... access to the 'Copernicus' subfolder
 
@@ -1044,7 +1062,7 @@ else:
                         content on the EEA website for commercial or non-commercial
                         purposes is permitted free of charge, provided that the source is
                         acknowledged.
-                    """
+                    """,
                 )
                 API.fetch_services()
 
@@ -1063,7 +1081,8 @@ else:
                     name="EEA_REST_Water",
                     service_type="wms",
                 )
-                API.__doc__ = type(self).__doc__ + (
+                API.__doc__ = combdoc(
+                    type(self).__doc__,
                     """
                         ... access to the 'Water' subfolder
 
@@ -1075,7 +1094,7 @@ else:
                         content on the EEA website for commercial or non-commercial
                         purposes is permitted free of charge, provided that the source is
                         acknowledged.
-                    """
+                    """,
                 )
                 API.fetch_services()
 
@@ -1094,7 +1113,8 @@ else:
                     name="EEA_REST_SOER",
                     service_type="wms",
                 )
-                API.__doc__ = type(self).__doc__ + (
+                API.__doc__ = combdoc(
+                    type(self).__doc__,
                     """
                         ... access to the 'SOER' subfolder
 
@@ -1106,7 +1126,7 @@ else:
                         content on the EEA website for commercial or non-commercial
                         purposes is permitted free of charge, provided that the source is
                         acknowledged.
-                    """
+                    """,
                 )
                 API.fetch_services()
 
@@ -1125,7 +1145,8 @@ else:
                     name="EEA_REST_SOER",
                     service_type="wms",
                 )
-                API.__doc__ = type(self).__doc__ + (
+                API.__doc__ = combdoc(
+                    type(self).__doc__,
                     """
                         ... access to the 'MARATLAS' subfolder
 
@@ -1137,7 +1158,7 @@ else:
                         content on the EEA website for commercial or non-commercial
                         purposes is permitted free of charge, provided that the source is
                         acknowledged.
-                    """
+                    """,
                 )
                 API.fetch_services()
 
@@ -1156,7 +1177,8 @@ else:
                     name="EEA_REST_SOER",
                     service_type="wms",
                 )
-                API.__doc__ = type(self).__doc__ + (
+                API.__doc__ = combdoc(
+                    type(self).__doc__,
                     """
                         ... access to the 'MARINE' subfolder
 
@@ -1168,7 +1190,7 @@ else:
                         content on the EEA website for commercial or non-commercial
                         purposes is permitted free of charge, provided that the source is
                         acknowledged.
-                    """
+                    """,
                 )
                 API.fetch_services()
 
@@ -1224,7 +1246,7 @@ else:
                     13,
                 )
 
-                WMS.__doc__ = "Polarization: VV \n" + type(self).__doc__
+                WMS.__doc__ = combdoc("Polarization: VV", type(self).__doc__)
                 return WMS
 
             @property
@@ -1234,7 +1256,7 @@ else:
                     lambda x, y, z: f"https://s1map.eodc.eu/vh/{z}/{x}/{2**z-1-y}.png",
                     13,
                 )
-                WMS.__doc__ = "Polarization: VH \n" + type(self).__doc__
+                WMS.__doc__ = combdoc("Polarization: VH", type(self).__doc__)
                 return WMS
 
         def get_service(self, url, rest_API=False):
