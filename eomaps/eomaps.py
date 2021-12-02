@@ -49,7 +49,7 @@ except ImportError:
     print("No module named 'mapclassify'... classification will not work!")
 
 
-def MapsGrid(r=2, c=2):
+def MapsGrid(r=2, c=2, **kwargs):
     """
     Initialize a grid of Maps objects
 
@@ -59,7 +59,8 @@ def MapsGrid(r=2, c=2):
         the number of rows. The default is 2.
     c : int, optional
         the number of columns. The default is 2.
-
+    \**kwargs
+        additional keyword-arguments passed to `matplotlib.gridspec.GridSpec()`
     Returns
     -------
     eomaps.MapsGrid
@@ -117,7 +118,7 @@ def MapsGrid(r=2, c=2):
             self.parent.join_limits(*self.children)
 
     mg = MapsGrid()
-    gs = GridSpec(nrows=r, ncols=c)
+    gs = GridSpec(nrows=r, ncols=c, **kwargs)
 
     for i in range(r):
         for j in range(c):
@@ -411,7 +412,7 @@ class Maps(object):
         *args :
             the axes to join.
         """
-
+        self._set_axes()
         for m in args:
             m._set_axes()
             if m is not self:
