@@ -515,15 +515,28 @@ else:
 
     class wms_container(object):
         """
-        A collection of open-access WMS/WMTS services that can be added to the maps
+        A collection of open-access WebMap services that can be added to the maps
 
-        For details and licensing check the docstrings and the links to the providers!
+        Layers can be added in 2 ways (either with . access or with [] access):
+            >>> m.add_wms.< SERVICE > ... .add_layer.<LAYER-NAME>(**kwargs)
+            >>> m.add_wms.< SERVICE > ... [<LAYER-NAME>](**kwargs)
 
-        All usage is the same as `add_wmts`
+        Services might be nested directory structures!
+        The actual layer is always added via the `add_layer` directive.
 
-        layers can be added in 2 ways (either with . access or with [] access):
-            >>> m.add_wmts.<COLLECTION>.add_layer.<LAYER-NAME>(**kwargs)
-            >>> m.add_wmts.<COLLECTION>[<LAYER-NAME>](**kwargs)
+            >>> m.add_wms.<...>. ... .<...>.add_layer.<...>()
+
+        Some of the services dynamically fetch the structure via HTML-requests.
+        Therefore it can take a short moment before autocompletion is capable
+        of showing you the available options!
+        A list of available layers from a sub-folder can be fetched via:
+
+            >>> m.add_wms.<...>. ... .<...>.layers
+
+        Note
+        ----
+        Make sure to check the individual service-docstrings and the links to
+        the providers for licensing and terms-of-use!
         """
 
         def __init__(self, m):
