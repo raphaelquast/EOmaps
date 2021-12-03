@@ -277,6 +277,7 @@ WebMap services (TS/WMS/WMTS) can be attached to the map via:
 
         :code:`m.add_wms.<...>. ... .<...>.layers`
 
+Global WebMap services:
 
 .. currentmodule:: eomaps._containers.wms_container
 
@@ -292,7 +293,18 @@ WebMap services (TS/WMS/WMTS) can be attached to the map via:
     EEA_DiscoMap
     ESRI_ArcGIS
     S1GBM
-    Austria
+
+Services specific for Austria (Europa)
+
+.. currentmodule:: eomaps._containers
+
+.. autosummary::
+    :toctree: generated
+    :nosignatures:
+    :template: only_names_in_toc.rst
+
+    Austria.AT_basemap
+    Austria.Wien_basemap
 
 
 🏕 Adding additional features and overlays
