@@ -41,6 +41,7 @@ use:
 
 
 If you want to create multiple maps-objects with similar properties, use:
+(you can of course adjust the properties of the copied object afterwards!)
 
 .. code-block:: python
 
@@ -100,14 +101,8 @@ to classify the data are accessible via `Maps.CRS` and `Maps.CLASSIFIERS`:
 🗺 Plot the map and save it
 ...........................
 
-Maps based on WebMap layers can be directly generated via:
-
-.. code-block:: python
-
-    m = Maps()
-    m.add_wms.< WebMap service >.add_layer.< Layer Name >()
-
-If you want to plot a map based on a dataset, use:
+If you want to plot a map based on a dataset, first set the data and then
+call :code:`m.plot_map()`:
 
 .. code-block:: python
 
@@ -115,7 +110,16 @@ If you want to plot a map based on a dataset, use:
     m.set_data( < the data specifications > )
     m.plot_map()
 
+
+If you only want to add a WebMap layer, simply use:
+.. code-block:: python
+
+    m = Maps()
+    m.add_wms.< WebMap service >.add_layer.< Layer Name >()
+
+
 Once the map is generated, a snapshot of the map can be saved at any time by using:
+
 
 .. code-block:: python
 
