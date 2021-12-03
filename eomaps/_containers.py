@@ -515,7 +515,7 @@ else:
 
     class wms_container(object):
         """
-        A collection of open-access WMS services that can be added to the maps
+        A collection of open-access WMS/WMTS services that can be added to the maps
 
         For details and licensing check the docstrings and the links to the providers!
 
@@ -536,8 +536,7 @@ else:
             # initialization of Maps-objects
             """
             Interface to the ISRIC SoilGrids database
-            -----------------------------------------
-                https://www.isric.org/explore/soilgrids/faq-soilgrids
+            https://www.isric.org/explore/soilgrids/faq-soilgrids
 
             ...
             SoilGrids is a system for global digital soil mapping that makes
@@ -547,9 +546,11 @@ else:
             produced using machine learning at 250 m resolution.
             ...
 
-            LICENSE-info (without any warranty for correctness!!)
-            -----------------------------------------------------
-                check: https://www.isric.org/about/data-policy
+            Note
+            ----
+            **LICENSE-info (without any warranty for correctness!!)**
+
+            check: https://www.isric.org/about/data-policy
 
             """
             print("EOmaps: fetching IRIS layers...")
@@ -580,55 +581,59 @@ else:
         @property
         @lru_cache()
         def ESA_WorldCover(self):
+            """
+            ESA Worldwide land cover mapping
+            https://esa-worldcover.org/en
+
+            Note
+            ----
+            **LICENSE-info (without any warranty for correctness!!)**
+
+            (check: https://esa-worldcover.org/en/data-access for full details)
+
+            The ESA WorldCover product is provided free of charge,
+            without restriction of use. For the full license information see the
+            Creative Commons Attribution 4.0 International License.
+
+            Publications, models and data products that make use of these
+            datasets must include proper acknowledgement, including citing the
+            datasets and the journal article as in the following citation.
+            """
             WMS = _WebServiec_collection(
                 m=self._m,
                 service_type="wms",
                 url="https://services.terrascope.be/wms/v2",
             )
-            WMS.__doc__ = """
-                ESA Worldwide land cover mapping
-                --------------------------------
-                    https://esa-worldcover.org/en
-
-                LICENSE-info (without any warranty for correctness!!)
-                -----------------------------------------------------
-                    (check: https://esa-worldcover.org/en/data-access for full details)
-
-                    The ESA WorldCover product is provided free of charge,
-                    without restriction of use. For the full license information see the
-                    Creative Commons Attribution 4.0 International License.
-
-                    Publications, models and data products that make use of these
-                    datasets must include proper acknowledgement, including citing the
-                    datasets and the journal article as in the following citation.
-                """
+            WMS.__doc__ = type(self).ESA_WorldCover.__doc__
             return WMS
 
         @property
         @lru_cache()
         def NASA_GIBS(self):
+            """
+            NASA Global Imagery Browse Services (GIBS)
+            https://wiki.earthdata.nasa.gov/display/GIBS/
+
+            Note
+            ----
+            **LICENSE-info (without any warranty for correctness!!)**
+
+            (check: https://earthdata.nasa.gov/eosdis/science-system-description/eosdis-components/gibs)
+
+            NASA supports an open data policy. We ask that users who make use of
+            GIBS in their clients or when referencing it in written or oral
+            presentations to add the following acknowledgment:
+
+            We acknowledge the use of imagery provided by services from NASA's
+            Global Imagery Browse Services (GIBS), part of NASA's Earth Observing
+            System Data and Information System (EOSDIS).
+            """
             WMS = self._NASA_GIBS(self._m)
+            WMS.__doc__ = type(self).NASA_GIBS.__doc__
+
             return WMS
 
         class _NASA_GIBS:
-            """
-            NASA Global Imagery Browse Services (GIBS)
-            ------------------------------------------
-                https://wiki.earthdata.nasa.gov/display/GIBS/
-
-            LICENSE-info (without any warranty for correctness!!)
-            -----------------------------------------------------
-                (check: https://earthdata.nasa.gov/eosdis/science-system-description/eosdis-components/gibs)
-
-                NASA supports an open data policy. We ask that users who make use of
-                GIBS in their clients or when referencing it in written or oral
-                presentations to add the following acknowledgment:
-
-                We acknowledge the use of imagery provided by services from NASA's
-                Global Imagery Browse Services (GIBS), part of NASA's Earth Observing
-                System Data and Information System (EOSDIS).
-            """
-
             def __init__(self, m):
                 self._m = m
 
@@ -678,14 +683,51 @@ else:
 
         @property
         def OpenStreetMap(self):
+            """
+            (global) OpenStreetMap WebMap layers
+            https://wiki.openstreetmap.org/wiki/WMS
+
+            Available styles are:
+
+                - default: standard OSM layer
+                - default_german: standard OSM layer in german
+                - standard: standard OSM layer
+                - stamen_toner: Black and white style by stamen
+                    - stamen_toner_lines
+                    - stamen_toner_background
+                    - stamen_toner_lite
+                    - stamen_toner_hybrid
+                    - stamen_toner_labels
+                - stamen_watercolor: a watercolor-like style by stamen
+                - stamen_terrain: a terrain layer by stamen
+                    - stamen_terrain_lines
+                    - stamen_terrain_labels
+                    - stamen_terrain_background
+                - OSM_terrestis: Styles hosted as free WMS service by Terrestis
+                - OSM_mundialis: Styles hosted as free WMS service by Mundialis
+
+            Note
+            ----
+            **LICENSE-info (without any warranty for correctness!!)**
+
+            Make sure to check the usage-policies at
+            https://wiki.openstreetmap.org/wiki/WMS
+            """
+
             WMS = self._OpenStreetMap(self._m)
+            WMS.__doc__ = type(self)._OpenStreetMap.__doc__
             return WMS
 
         class _OpenStreetMap:
             """
             (global) OpenStreetMap WebMap layers
-            ------------------------------------
+            https://wiki.openstreetmap.org/wiki/WMS
 
+            Note
+            ----
+            **LICENSE-info (without any warranty for correctness!!)**
+
+            Make sure to check the usage-policies at
             https://wiki.openstreetmap.org/wiki/WMS
             """
 
@@ -703,12 +745,13 @@ else:
                     self.default.__doc__ = combdoc(
                         """
                         OpenStreetMap's standard tile layer
-                        -----------------------------------
-                            https://www.openstreetmap.org/
+                        https://www.openstreetmap.org/
 
-                        LICENSE-info (without any warranty for correctness!!)
-                        -----------------------------------------------------
-                            check: https://operations.osmfoundation.org/policies/tiles/
+                        Note
+                        ----
+                        **LICENSE-info (without any warranty for correctness!!)**
+
+                        check: https://operations.osmfoundation.org/policies/tiles/
                         """,
                         self.default.__call__.__doc__,
                     )
@@ -719,12 +762,13 @@ else:
                     self.default_german.__doc__ = combdoc(
                         """
                         German fork of OpenStreetMap's standard tile layer
-                        --------------------------------------------------
                         https://www.openstreetmap.de/
 
-                        LICENSE-info (without any warranty for correctness!!)
-                        -----------------------------------------------------
-                            check: https://www.openstreetmap.de/germanstyle.html
+                        Note
+                        ----
+                        **LICENSE-info (without any warranty for correctness!!)**
+
+                        check: https://www.openstreetmap.de/germanstyle.html
                         """,
                         self.default_german.__call__.__doc__,
                     )
@@ -778,8 +822,9 @@ else:
 
                         http://maps.stamen.com/
 
-                        LICENSE-info (without any warranty for correctness!!)
-                        -----------------------------------------------------
+                        Note
+                        ----
+                        **LICENSE-info (without any warranty for correctness!!)**
 
                         Make sure to check http://maps.stamen.com/ for up-to-date
                         license policies.
@@ -797,8 +842,8 @@ else:
 
                     stamen_toner_doc = combdoc(
                         """
-                        Stamen Toner
-                        ------------
+                        **Stamen Toner**
+
                         High-contrast B+W (black and white) maps provided by Stamen
                         """,
                         stamen_doc,
@@ -807,8 +852,8 @@ else:
 
                     stamen_terrain_doc = combdoc(
                         """
-                        Stamen Terrain
-                        --------------
+                        **Stamen Terrain**
+
                         Terrain maps with hill-shading and natural vegetation colors
                         provided by Stamen
                         """,
@@ -818,8 +863,8 @@ else:
 
                     stamen_watercolor_doc = combdoc(
                         """
-                        Stamen Watercolor
-                        -----------------
+                        **Stamen Watercolor**
+
                         A maps-style reminiscent of hand-drawn watercolor maps
                         provided by Stamen
                         """,
@@ -852,11 +897,13 @@ else:
                 WMS.__doc__ = combdoc(
                     type(self).__doc__,
                     """
-                        LICENSE-info (without any warranty for correctness!!)
-                        -----------------------------------------------------
-                            ... this service is hosted by Terrestris... check:
-                            https://www.terrestris.de/en/openstreetmap-wms/
-                        """,
+                    Note
+                    ----
+                    **LICENSE-info (without any warranty for correctness!!)**
+
+                    ... this service is hosted by Terrestris... check:
+                    https://www.terrestris.de/en/openstreetmap-wms/
+                    """,
                 )
                 return WMS
 
@@ -871,10 +918,12 @@ else:
                 WMS.__doc__ = combdoc(
                     type(self).__doc__,
                     """
-                    LICENSE-info (without any warranty for correctness!!)
-                    -----------------------------------------------------
-                        ... this service is hosted by Mundialis... check:
-                        https://www.mundialis.de/en/ows-mundialis/
+                    Note
+                    ----
+                    **LICENSE-info (without any warranty for correctness!!)**
+
+                    ... this service is hosted by Mundialis... check:
+                    https://www.mundialis.de/en/ows-mundialis/
                     """,
                 )
                 return WMS
@@ -882,27 +931,33 @@ else:
         @property
         @lru_cache()
         def EEA_DiscoMap(self):
-            return self._EEA_DiscoMap(self._m)
+            """
+            European Environment Agency Discomap services
+            https://discomap.eea.europa.eu/Index/
+
+            A wide range of environmental data for Europe from the
+            European Environment Agency covering thematic areas such as air,
+            water, climate change, biodiversity, land and noise.
+
+            Note
+            ----
+            **LICENSE-info (without any warranty for correctness!!)**
+
+            ... make sure to check the link above...
+
+            EEA standard re-use policy: Unless otherwise indicated, reuse of
+            content on the EEA website for commercial or non-commercial
+            purposes is permitted free of charge, provided that the source is
+            acknowledged.
+            """
+            WMS = self._EEA_DiscoMap(self._m)
+            WMS.__doc__ = type(self).EEA_DiscoMap.__doc__
+            return
 
         class _EEA_DiscoMap:
             """
-            European Environment Agency Discomap services
-            ---------------------------------------------
-                A wide range of environmental data for Europe from the
-                European Environment Agency covering thematic areas such as air,
-                water, climate change, biodiversity, land and noise.
-
-                https://discomap.eea.europa.eu/Index/
-
-            LICENSE-info (without any warranty for correctness!!)
-            -----------------------------------------------------
-                ... make sure to check the link above...
-
-                EEA standard re-use policy: Unless otherwise indicated, reuse of
-                content on the EEA website for commercial or non-commercial
-                purposes is permitted free of charge, provided that the source is
-                acknowledged.
-
+            European Environment Agency discomap Image collection
+            https://discomap.eea.europa.eu/Index/
             """
 
             def __init__(self, m):
@@ -924,16 +979,18 @@ else:
                 API.__doc__ = combdoc(
                     type(self).__doc__,
                     """
-                        ... access to the 'Image' subfolder
+                    ... access to the 'Image' subfolder
 
-                    LICENSE-info (without any warranty for correctness!!)
-                    -----------------------------------------------------
-                        ... make sure to check the link above...
+                    Note
+                    ----
+                    **LICENSE-info (without any warranty for correctness!!)**
 
-                        EEA standard re-use policy: Unless otherwise indicated, reuse of
-                        content on the EEA website for commercial or non-commercial
-                        purposes is permitted free of charge, provided that the source is
-                        acknowledged.
+                    ... make sure to check the link above...
+
+                    EEA standard re-use policy: Unless otherwise indicated, reuse of
+                    content on the EEA website for commercial or non-commercial
+                    purposes is permitted free of charge, provided that the source is
+                    acknowledged.
                     """,
                 )
 
@@ -956,16 +1013,18 @@ else:
                 API.__doc__ = combdoc(
                     type(self).__doc__,
                     """
-                        ... access to the 'Land' subfolder
+                    ... access to the 'Land' subfolder
 
-                    LICENSE-info (without any warranty for correctness!!)
-                    -----------------------------------------------------
-                        ... make sure to check the link above...
+                    Note
+                    ----
+                    **LICENSE-info (without any warranty for correctness!!)**
 
-                        EEA standard re-use policy: Unless otherwise indicated, reuse of
-                        content on the EEA website for commercial or non-commercial
-                        purposes is permitted free of charge, provided that the source is
-                        acknowledged.
+                    ... make sure to check the link above...
+
+                    EEA standard re-use policy: Unless otherwise indicated, reuse of
+                    content on the EEA website for commercial or non-commercial
+                    purposes is permitted free of charge, provided that the source is
+                    acknowledged.
                     """,
                 )
                 API.fetch_services()
@@ -988,16 +1047,18 @@ else:
                 API.__doc__ = combdoc(
                     type(self).__doc__,
                     """
-                        ... access to the 'Climate' subfolder
+                    ... access to the 'Climate' subfolder
 
-                    LICENSE-info (without any warranty for correctness!!)
-                    -----------------------------------------------------
-                        ... make sure to check the link above...
+                    Note
+                    ----
+                    **LICENSE-info (without any warranty for correctness!!)**
 
-                        EEA standard re-use policy: Unless otherwise indicated, reuse of
-                        content on the EEA website for commercial or non-commercial
-                        purposes is permitted free of charge, provided that the source is
-                        acknowledged.
+                    ... make sure to check the link above...
+
+                    EEA standard re-use policy: Unless otherwise indicated, reuse of
+                    content on the EEA website for commercial or non-commercial
+                    purposes is permitted free of charge, provided that the source is
+                    acknowledged.
                     """,
                 )
                 API.fetch_services()
@@ -1020,16 +1081,18 @@ else:
                 API.__doc__ = combdoc(
                     type(self).__doc__,
                     """
-                        ... access to the 'Bio' subfolder
+                    ... access to the 'Bio' subfolder
 
-                    LICENSE-info (without any warranty for correctness!!)
-                    -----------------------------------------------------
-                        ... make sure to check the link above...
+                    Note
+                    ----
+                    **LICENSE-info (without any warranty for correctness!!)**
 
-                        EEA standard re-use policy: Unless otherwise indicated, reuse of
-                        content on the EEA website for commercial or non-commercial
-                        purposes is permitted free of charge, provided that the source is
-                        acknowledged.
+                    ... make sure to check the link above...
+
+                    EEA standard re-use policy: Unless otherwise indicated, reuse of
+                    content on the EEA website for commercial or non-commercial
+                    purposes is permitted free of charge, provided that the source is
+                    acknowledged.
                     """,
                 )
                 API.fetch_services()
@@ -1052,16 +1115,18 @@ else:
                 API.__doc__ = combdoc(
                     type(self).__doc__,
                     """
-                        ... access to the 'Copernicus' subfolder
+                    ... access to the 'Copernicus' subfolder
 
-                    LICENSE-info (without any warranty for correctness!!)
-                    -----------------------------------------------------
-                        ... make sure to check the link above...
+                    Note
+                    ----
+                    **LICENSE-info (without any warranty for correctness!!)**
 
-                        EEA standard re-use policy: Unless otherwise indicated, reuse of
-                        content on the EEA website for commercial or non-commercial
-                        purposes is permitted free of charge, provided that the source is
-                        acknowledged.
+                    ... make sure to check the link above...
+
+                    EEA standard re-use policy: Unless otherwise indicated, reuse of
+                    content on the EEA website for commercial or non-commercial
+                    purposes is permitted free of charge, provided that the source is
+                    acknowledged.
                     """,
                 )
                 API.fetch_services()
@@ -1084,16 +1149,18 @@ else:
                 API.__doc__ = combdoc(
                     type(self).__doc__,
                     """
-                        ... access to the 'Water' subfolder
+                    ... access to the 'Water' subfolder
 
-                    LICENSE-info (without any warranty for correctness!!)
-                    -----------------------------------------------------
-                        ... make sure to check the link above...
+                    Note
+                    ----
+                    **LICENSE-info (without any warranty for correctness!!)**
 
-                        EEA standard re-use policy: Unless otherwise indicated, reuse of
-                        content on the EEA website for commercial or non-commercial
-                        purposes is permitted free of charge, provided that the source is
-                        acknowledged.
+                    ... make sure to check the link above...
+
+                    EEA standard re-use policy: Unless otherwise indicated, reuse of
+                    content on the EEA website for commercial or non-commercial
+                    purposes is permitted free of charge, provided that the source is
+                    acknowledged.
                     """,
                 )
                 API.fetch_services()
@@ -1116,16 +1183,18 @@ else:
                 API.__doc__ = combdoc(
                     type(self).__doc__,
                     """
-                        ... access to the 'SOER' subfolder
+                    ... access to the 'SOER' subfolder
 
-                    LICENSE-info (without any warranty for correctness!!)
-                    -----------------------------------------------------
-                        ... make sure to check the link above...
+                    Note
+                    ----
+                    **LICENSE-info (without any warranty for correctness!!)**
 
-                        EEA standard re-use policy: Unless otherwise indicated, reuse of
-                        content on the EEA website for commercial or non-commercial
-                        purposes is permitted free of charge, provided that the source is
-                        acknowledged.
+                    ... make sure to check the link above...
+
+                    EEA standard re-use policy: Unless otherwise indicated, reuse of
+                    content on the EEA website for commercial or non-commercial
+                    purposes is permitted free of charge, provided that the source is
+                    acknowledged.
                     """,
                 )
                 API.fetch_services()
@@ -1148,16 +1217,18 @@ else:
                 API.__doc__ = combdoc(
                     type(self).__doc__,
                     """
-                        ... access to the 'MARATLAS' subfolder
+                    ... access to the 'MARATLAS' subfolder
 
-                    LICENSE-info (without any warranty for correctness!!)
-                    -----------------------------------------------------
-                        ... make sure to check the link above...
+                    Note
+                    ----
+                    **LICENSE-info (without any warranty for correctness!!)**
 
-                        EEA standard re-use policy: Unless otherwise indicated, reuse of
-                        content on the EEA website for commercial or non-commercial
-                        purposes is permitted free of charge, provided that the source is
-                        acknowledged.
+                    ... make sure to check the link above...
+
+                    EEA standard re-use policy: Unless otherwise indicated, reuse of
+                    content on the EEA website for commercial or non-commercial
+                    purposes is permitted free of charge, provided that the source is
+                    acknowledged.
                     """,
                 )
                 API.fetch_services()
@@ -1180,16 +1251,18 @@ else:
                 API.__doc__ = combdoc(
                     type(self).__doc__,
                     """
-                        ... access to the 'MARINE' subfolder
+                    ... access to the 'MARINE' subfolder
 
-                    LICENSE-info (without any warranty for correctness!!)
-                    -----------------------------------------------------
-                        ... make sure to check the link above...
+                    Note
+                    ----
+                    **LICENSE-info (without any warranty for correctness!!)**
 
-                        EEA standard re-use policy: Unless otherwise indicated, reuse of
-                        content on the EEA website for commercial or non-commercial
-                        purposes is permitted free of charge, provided that the source is
-                        acknowledged.
+                    ... make sure to check the link above...
+
+                    EEA standard re-use policy: Unless otherwise indicated, reuse of
+                    content on the EEA website for commercial or non-commercial
+                    purposes is permitted free of charge, provided that the source is
+                    acknowledged.
                     """,
                 )
                 API.fetch_services()
@@ -1198,43 +1271,45 @@ else:
 
         @property
         def S1GBM(self):
+            """
+            Sentinel-1 Global Backscatter Model
+            https://researchdata.tuwien.ac.at/records/n2d1v-gqb91
+
+            A global C-band backscatter layer from Sentinel-1 in either
+            VV or VH polarization.
+
+            Note
+            ----
+            **LICENSE-info (without any warranty for correctness!!)**
+
+            Citation:
+                B. Bauer-Marschallinger, et.al (2021): The Sentinel-1 Global Backscatter Model (S1GBM) -
+                Mapping Earth's Land Surface with C-Band Microwaves (1.0) [Data set]. TU Wien.
+
+            - https://researchdata.tuwien.ac.at/records/n2d1v-gqb91
+            - https://s1map.eodc.eu/
+
+
+            With this dataset publication, we open up a new perspective on
+            Earth's land surface, providing a normalised microwave backscatter
+            map from spaceborne Synthetic Aperture Radar (SAR) observations.
+            The Sentinel-1 Global Backscatter Model (S1GBM) describes Earth
+            for the period 2016-17 by the mean C-band radar cross section
+            in VV- and VH-polarization at a 10 m sampling, giving a
+            high-quality impression on surface- structures and -patterns.
+
+            https://s1map.eodc.eu/
+            """
+
             ret = SimpleNamespace(
                 add_layer=self._S1GBM_layers(self._m), layers=["vv", "vh"]
             )
 
-            ret.__doc__ = self._S1GBM_layers.__doc__
+            ret.__doc__ = type(self).S1GBM.__doc__
 
             return ret
 
         class _S1GBM_layers:
-            """
-            Sentinel-1 Global Backscatter Model
-            -----------------------------------
-                A global C-band backscatter layer from Sentinel-1 in either
-                VV or VH polarization.
-
-            LICENSE-info (without any warranty for correctness!!)
-            -----------------------------------------------------
-
-                Citation:
-                    B. Bauer-Marschallinger, et.al (2021): The Sentinel-1 Global Backscatter Model (S1GBM) -
-                    Mapping Earth's Land Surface with C-Band Microwaves (1.0) [Data set]. TU Wien.
-
-                - https://researchdata.tuwien.ac.at/records/n2d1v-gqb91
-                - https://s1map.eodc.eu/
-
-
-                With this dataset publication, we open up a new perspective on
-                Earth's land surface, providing a normalised microwave backscatter
-                map from spaceborne Synthetic Aperture Radar (SAR) observations.
-                The Sentinel-1 Global Backscatter Model (S1GBM) describes Earth
-                for the period 2016-17 by the mean C-band radar cross section
-                in VV- and VH-polarization at a 10 m sampling, giving a
-                high-quality impression on surface- structures and -patterns.
-
-                https://s1map.eodc.eu/
-            """
-
             def __init__(self, m):
                 self._m = m
 
@@ -1259,10 +1334,100 @@ else:
                 WMS.__doc__ = combdoc("Polarization: VH", type(self).__doc__)
                 return WMS
 
-        def get_service(self, url, rest_API=False):
+        @property
+        @lru_cache()
+        def ESRI_ArcGIS(self):
             """
-            Get a object that can be used to add WMS services based on a
-            GetCapabilities-link or a link to a ArcGIS REST API
+            Interface to the ERSI ArcGIS REST Services Directory
+            http://services.arcgisonline.com/arcgis/rest/services
+
+            Note
+            ----
+            **LICENSE-info (without any warranty for correctness!!)**
+
+            For licensing etc. check the individual layer-descriptions at
+            http://services.arcgisonline.com/arcgis/rest/services
+
+            """
+            API = REST_API_services(
+                m=self._m,
+                url="http://server.arcgisonline.com/arcgis/rest/services",
+                name="EEA_REST",
+                service_type="wmts",
+            )
+            API.fetch_services()
+
+            return API
+
+        @property
+        @lru_cache()
+        def Austria(self):
+            """
+            Services specific to Austria (Europe).
+            (They ONLY work if the extent is set to a location inside Austria!)
+
+                - AT_basemap: Basemaps for whole of austria
+                - Wien: Basemaps for the city of Vienna
+            """
+            WMS = self._Austria(self._m)
+            WMS.__doc__ = type(self).Austria.__doc__
+            return WMS
+
+        class _Austria:
+            def __init__(self, m):
+                self._m = m
+
+            @property
+            @lru_cache()
+            def AT_basemap(self):
+                """
+                Basemap for Austria
+                https://basemap.at/
+
+                Note
+                ----
+                **LICENSE-info (without any warranty for correctness!!)**
+
+                (check: https://basemap.at/#lizenz for full details)
+
+                basemap.at ist gemäß der Open Government Data Österreich Lizenz
+                CC-BY 4.0 sowohl für private als auch kommerzielle Zwecke frei
+                sowie entgeltfrei nutzbar.
+                """
+                WMTS = _WebServiec_collection(
+                    m=self._m,
+                    service_type="wmts",
+                    url="http://maps.wien.gv.at/basemap/1.0.0/WMTSCapabilities.xml",
+                )
+                WMTS.__doc__ = type(self).AT_basemap.__doc__
+                return WMTS
+
+            @property
+            @lru_cache()
+            def Wien_basemap(self):
+                WMTS = _WebServiec_collection(
+                    m=self._m,
+                    service_type="wmts",
+                    url="http://maps.wien.gv.at/wmts/1.0.0/WMTSCapabilities.xml",
+                )
+                WMTS.__doc__ = """
+                    Basemaps for the city of Vienna (Austria)
+                    https://www.wien.gv.at
+
+                    Note
+                    ----
+                    **LICENSE-info (without any warranty for correctness!!)**
+
+                    check: https://www.data.gv.at/katalog/dataset/stadt-wien_webmaptileservicewmtswien
+
+                    Most services are under CC-BY 4.0
+                    """
+                return WMTS
+
+        def get_service(self, url, service="wms", rest_API=False):
+            """
+            Get a object that can be used to add WMS or WMTS services based on
+            a GetCapabilities-link or a link to a ArcGIS REST API
 
             Examples (WMS):
             - Copernicus Global Land Mosaics for Austria, Germany and Slovenia
@@ -1274,6 +1439,11 @@ else:
 
               - https://www.data.gv.at/katalog/dataset/stadt-wien_webmapservicewmsgeoserverwien
               >>> "https://data.wien.gv.at/daten/geo?version=1.3.0&service=WMS&request=GetCapabilities"
+
+            Examples (WMTS):
+            - WMTS service for NASA GIBS datasets
+
+              >>> https://gibs.earthdata.nasa.gov/wmts/epsg4326/all/1.0.0/WMTSCapabilities.xml
 
             Examples (rest_API):
             - Interface to the ArcGIS REST Services Directory for the
@@ -1302,7 +1472,7 @@ else:
                     m=self._m,
                     url=url,
                     name="custom_service",
-                    service_type="wms",
+                    service_type=service,
                 )
                 service.fetch_services()
             else:
@@ -1343,180 +1513,57 @@ else:
         @property
         @lru_cache()
         def NASA_GIBS(self):
+            """
+            NASA Global Imagery Browse Services (GIBS)
+            https://wiki.earthdata.nasa.gov/display/GIBS/
+
+            Note
+            ----
+            **LICENSE-info (without any warranty for correctness!!)**
+
+            (check: https://earthdata.nasa.gov/eosdis/science-system-description/eosdis-components/gibs)
+
+            NASA supports an open data policy. We ask that users who make use of
+            GIBS in their clients or when referencing it in written or oral
+            presentations to add the following acknowledgment:
+
+            We acknowledge the use of imagery provided by services from NASA's
+            Global Imagery Browse Services (GIBS), part of NASA's Earth Observing
+            System Data and Information System (EOSDIS).
+            """
             WMTS = _WebServiec_collection(
                 m=self._m,
                 service_type="wmts",
                 url="https://gibs.earthdata.nasa.gov/wmts/epsg4326/all/1.0.0/WMTSCapabilities.xml",
             )
-            WMTS.__doc__ = """
-                NASA Global Imagery Browse Services (GIBS)
-                -----------------------------------------------------
-                    https://wiki.earthdata.nasa.gov/display/GIBS/
-
-                LICENSE-info (without any warranty for correctness!!)
-                -----------------------------------------------------
-                    (check: https://earthdata.nasa.gov/eosdis/science-system-description/eosdis-components/gibs)
-
-                    NASA supports an open data policy. We ask that users who make use of
-                    GIBS in their clients or when referencing it in written or oral
-                    presentations to add the following acknowledgment:
-
-                    We acknowledge the use of imagery provided by services from NASA's
-                    Global Imagery Browse Services (GIBS), part of NASA's Earth Observing
-                    System Data and Information System (EOSDIS).
-                """
+            WMTS.__doc__ = type(self).NASA_GIBS.__doc__
             return WMTS
 
         @property
         @lru_cache()
         def ESA_WorldCover(self):
+            """
+            ESA Worldwide land cover mapping
+            https://esa-worldcover.org/en
+
+            Note
+            ----
+            **LICENSE-info (without any warranty for correctness!!)**
+
+            (check: https://esa-worldcover.org/en/data-access for full details)
+
+            The ESA WorldCover product is provided free of charge,
+            without restriction of use. For the full license information see the
+            Creative Commons Attribution 4.0 International License.
+
+            Publications, models and data products that make use of these
+            datasets must include proper acknowledgement, including citing the
+            datasets and the journal article as in the following citation.
+            """
             WMTS = _WebServiec_collection(
                 m=self._m,
                 service_type="wmts",
                 url="https://services.terrascope.be/wmts/v2",
             )
-            WMTS.__doc__ = """
-                ESA Worldwide land cover mapping
-                --------------------------------
-                    https://esa-worldcover.org/en
-
-                LICENSE-info (without any warranty for correctness!!)
-                -----------------------------------------------------
-                    (check: https://esa-worldcover.org/en/data-access for full details)
-
-                    The ESA WorldCover product is provided free of charge,
-                    without restriction of use. For the full license information see the
-                    Creative Commons Attribution 4.0 International License.
-
-                    Publications, models and data products that make use of these
-                    datasets must include proper acknowledgement, including citing the
-                    datasets and the journal article as in the following citation.
-                """
+            WMTS.__doc__ = type(self).ESA_WorldCover.__doc__
             return WMTS
-
-        @property
-        @lru_cache()
-        def ESRI_ArcGIS(self):
-            """
-            Interface to the ERSI ArcGIS REST Services Directory
-            ----------------------------------------------------
-                http://services.arcgisonline.com/arcgis/rest/services
-
-            LICENSE-info (without any warranty for correctness!!)
-            -----------------------------------------------------
-                For licensing etc. check the individual layer-descriptions in
-                the link above.
-
-            """
-            API = REST_API_services(
-                m=self._m,
-                url="http://server.arcgisonline.com/arcgis/rest/services",
-                name="EEA_REST",
-                service_type="wmts",
-            )
-            API.fetch_services()
-
-            return API
-
-        @property
-        @lru_cache()
-        def Austria(self):
-            return self._Austria(self._m)
-
-        class _Austria:
-            """
-            Services specific to Austria.
-            (They ONLY work if the extent is set to a location inside Austria!)
-
-                - AT_basemap: Basemaps for whole of austria
-                - Wien: Basemaps for the city of Vienna
-
-            """
-
-            def __init__(self, m):
-                self._m = m
-
-            @property
-            @lru_cache()
-            def AT_basemap(self):
-                WMTS = _WebServiec_collection(
-                    m=self._m,
-                    service_type="wmts",
-                    url="http://maps.wien.gv.at/basemap/1.0.0/WMTSCapabilities.xml",
-                )
-                WMTS.__doc__ = """
-                    Basemap for Austria
-                    -------------------
-                        https://basemap.at/
-
-                    LICENSE-info (without any warranty for correctness!!)
-                    -----------------------------------------------------
-                        (check: https://basemap.at/#lizenz for full details)
-
-                        basemap.at ist gemäß der Open Government Data Österreich Lizenz
-                        CC-BY 4.0 sowohl für private als auch kommerzielle Zwecke frei
-                        sowie entgeltfrei nutzbar.
-                    """
-                return WMTS
-
-            @property
-            @lru_cache()
-            def Wien_basemap(self):
-                WMTS = _WebServiec_collection(
-                    m=self._m,
-                    service_type="wmts",
-                    url="http://maps.wien.gv.at/wmts/1.0.0/WMTSCapabilities.xml",
-                )
-                WMTS.__doc__ = """
-                    Basemaps for the city of Vienna (Austria)
-                    -----------------------------------------
-                        - https://www.wien.gv.at
-                        - https://www.data.gv.at/katalog/dataset/stadt-wien_webmaptileservicewmtswien
-
-                    LICENSE-info (without any warranty for correctness!!)
-                    -----------------------------------------------------
-                        (check: the link above for full details)
-
-                        CC-BY 4.0
-                    """
-                return WMTS
-
-        def get_service(self, url, rest_API=False):
-            """
-            Get a object that can be used to add WMTS services based on a
-            GetCapabilities-link or a link to a ArcGIS REST API
-
-            Examples (WMTS):
-            - WMTS service for NASA GIBS datasets
-
-              >>> https://gibs.earthdata.nasa.gov/wmts/epsg4326/all/1.0.0/WMTSCapabilities.xml
-
-
-            Parameters
-            ----------
-            url : str
-                The service-url
-            rest_API : bool, optional
-                Indicator if a GetCapabilities link (True) or a link to a
-                rest-API is provided (False). The default is False
-
-            Returns
-            -------
-            service : _WebServiec_collection
-                An object that behaves just like `m.add_wmts.<service>`
-                and provides easy-access to available WMTS layers
-
-            """
-
-            if rest_API:
-                service = REST_API_services(
-                    m=self._m,
-                    url=url,
-                    name="custom_service",
-                    service_type="wmts",
-                )
-                service.fetch_services()
-            else:
-                service = _WebServiec_collection(self._m, service_type="wmts", url=url)
-
-            return service

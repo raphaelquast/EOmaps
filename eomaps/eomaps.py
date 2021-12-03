@@ -609,10 +609,12 @@ class Maps(object):
 
     def set_data_specs(self, **kwargs):
         """
+        Set the properties of the dataset you want to plot.
+
         Use this function to update multiple data-specs in one go
         Alternatively you can set the data-specifications via
 
-            >>> m.data_specs.<...> = <...>`
+            >>> m.data_specs.< property > = ...`
 
         Parameters
         ----------
@@ -648,8 +650,12 @@ class Maps(object):
 
     def set_plot_specs(self, **kwargs):
         """
-        Use this function to update multiple plot-specs in one go
-        (alternatively you can set data-properties via `m.plot_specs.<...> = <...>`)
+        Set the plot-specifications (title, label, colormap, crs, etc.)
+
+        Use this function to update multiple data-specs in one go
+        Alternatively you can set the data-specifications via
+
+            >>> m.data_specs.< property > = ...`
 
         Parameters
         ----------
@@ -705,7 +711,7 @@ class Maps(object):
 
     def set_classify_specs(self, scheme=None, **kwargs):
         """
-        Set classification specifications for the data
+        Set classification specifications for the data.
         (classification is performed by the `mapclassify` module)
 
         Parameters

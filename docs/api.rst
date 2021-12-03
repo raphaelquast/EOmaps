@@ -1,93 +1,213 @@
-⚙ API
-=======
+⚙ Usage
+=========
 
-🔸 Initialize Maps objects
+🚀 Initialize Maps objects
 ----------------------------
 
-.. autosummary::
-    :toctree: generated
-    :nosignatures:
-
-    eomaps.Maps
-    eomaps.Maps.copy
-    eomaps.MapsGrid
-
-
-🔸 Set specifications
------------------------
-
-.. autosummary::
-    :toctree: generated
-    :nosignatures:
-
-    eomaps.Maps.set_shape
-    eomaps.Maps.set_data
-    eomaps.Maps.set_data_specs
-    eomaps.Maps.set_plot_specs
-    eomaps.Maps.set_classify_specs
-
-
-You can also get/set the specs with:
+To initialize a new `Maps` object, simply use:
 
 .. code-block:: python
 
-    eomaps.Maps.data_specs.<...name...>
-    eomaps.Maps.plot_specs.<...name...>
-    eomaps.Maps.classify_specs.<...name...>
+    from eomaps import Maps
+    m = Maps( ... )
 
 
-🔸 Plot the map and save it
+To initialize a grid of `Maps` objects (e.g. a grid of maps in the same figure),
+use:
+
+.. code-block:: python
+
+    from eomaps import MapsGrid
+    mgrid = MapsGrid(r=2, c=2, ... )
+    # you can then access the individual Maps-objects via:
+    mgrid.m_0_0
+    mgrid.m_0_1
+    mgrid.m_1_0
+    mgrid.m_1_1
+
+
+.. currentmodule:: eomaps
+
+.. autosummary::
+    :toctree: generated
+    :nosignatures:
+    :template: only_names_in_toc.rst
+
+    Maps
+    MapsGrid
+
+
+If you want to create multiple maps-objects with similar properties, use:
+
+.. code-block:: python
+
+    from eomaps import Maps
+
+    m = Maps()
+    ...
+    m2 = m.copy()
+
+.. currentmodule:: eomaps
+
+.. autosummary::
+    :toctree: generated
+    :nosignatures:
+    :template: only_names_in_toc.rst
+
+    Maps.copy
+
+
+🌐 Set plot specifications
+----------------------------
+
+The appearance of the plot can be adjusted by setting the following properties
+of the Maps object:
+
+.. currentmodule:: eomaps.Maps
+
+.. autosummary::
+    :toctree: generated
+    :nosignatures:
+    :template: only_names_in_toc.rst
+
+    set_shape
+    set_data
+    set_plot_specs
+    set_classify_specs
+
+Alternatively, you can also get/set the properties with:
+
+.. code-block:: python
+
+    m = Maps()
+    m.data_specs.< property > = ...
+    m.plot_specs.< property > = ...
+    m.classify_specs.< property > = ...
+
+
+The CRS usable for plotting as well as available classifiers that can be used
+to classify the data are accessible via `Maps.CRS` and `Maps.CLASSIFIERS`:
+
+.. code-block:: python
+
+    m = Maps()
+    m.set_classify_specs(Maps.CLASSFIERS.Quantiles, k=5)
+    m.plot_specs.crs = Maps.CRS.Orthographic(central_latitude=45)
+
+
+🌍 Plot the map and save it
 -----------------------------
 
-.. autosummary::
-    :toctree: generated
-    :nosignatures:
+Maps based on WebMap layers can be directly generated via:
 
-    eomaps.Maps.plot_map
-    eomaps.Maps.savefig
+.. code-block:: python
 
-    eomaps.Maps.figure
+    m = Maps()
+    m.add_wms.< WebMap service >.add_layer.< Layer Name >()
 
+If you want to plot a map based on a dataset, use:
 
-🔸 Add layers and objects
----------------------------
+.. code-block:: python
 
-.. autosummary::
-    :toctree: generated
-    :nosignatures:
+    m = Maps()
+    m.set_data( < the data specifications > )
+    m.plot_map()
 
-    eomaps.Maps.add_wms
-    eomaps.Maps.add_wmts
-    eomaps.Maps.add_gdf
-    eomaps.Maps.add_overlay
-    eomaps.Maps.add_overlay_legend
-    eomaps.Maps.add_coastlines
+Once the map is generated, a snapshot of the map can be saved at any time by using:
 
-    eomaps.Maps.add_marker
-    eomaps.Maps.add_annotation
-    eomaps.Maps.add_colorbar
+.. code-block:: python
+
+    m.savefig( "snapshot1.png", dpi=300 )
 
 
-🔸 Miscellaneous
-------------------
+.. currentmodule:: eomaps.Maps
 
 .. autosummary::
     :toctree: generated
     :nosignatures:
+    :template: only_names_in_toc.rst
 
-    eomaps.Maps.get_crs
-    eomaps.Maps.CRS
-    eomaps.Maps.CLASSIFIERS
-    eomaps.Maps.indicate_masked_points
-    eomaps.Maps.parent
-    eomaps.Maps.BM
-    eomaps.Maps.crs_plot
-    eomaps.Maps.join_limits
+    plot_map
+    savefig
 
 
+🛰 Add WebMap service layers
+------------------------------
+
+WebMap services (TS/WMS/WMTS) can be attached to the map via:
+
+.. code-block:: python
+
+    m = Maps()
+    m.add_wms.attach.< SERVICE >.add_layer.< LAYER >( layer=1 )
+
+.. currentmodule:: eomaps.Maps
+
+.. autosummary::
+    :toctree: generated
+    :nosignatures:
+    :template: only_names_in_toc.rst
+
+    add_wms
+
+< SERVICE > specifies the WebMap service to add:
+Pre-defined interfaces to the following services exist:
+
+.. currentmodule:: eomaps._containers.wms_container
+
+.. autosummary::
+    :toctree: generated
+    :nosignatures:
+    :template: only_names_in_toc.rst
+
+    OpenStreetMap
+    ESA_WorldCover
+    NASA_GIBS
+    ISRIC_SoilGrids
+    EEA_DiscoMap
+    ESRI_ArcGIS
+    S1GBM
+    Austria
 
 
-🔸 Callbacks - make the map interactive!
+🏕 Add features and overlays
+------------------------------
+
+Static annotations and markers can be added to the map via:
+
+.. code-block:: python
+
+    m = Maps()
+    ...
+    m.add_annotation( ... )
+    m.add_marker( ... )
+
+.. currentmodule:: eomaps.Maps
+
+.. autosummary::
+    :toctree: generated
+    :nosignatures:
+    :template: only_names_in_toc.rst
+
+    add_marker
+    add_annotation
+
+Overlays from NaturalEarth and `geopandas.GeoDataFrames` can be added via:
+
+.. currentmodule:: eomaps.Maps
+
+.. autosummary::
+    :toctree: generated
+    :nosignatures:
+    :template: only_names_in_toc.rst
+
+    add_gdf
+    add_overlay
+    add_overlay_legend
+    add_coastlines
+
+
+🛸 Callbacks - make the map interactive!
 ------------------------------------------
 
 Callbacks are used to execute functions when you click on the map.
@@ -193,3 +313,22 @@ Callbacks that can be used with `m.cb.dynamic`
     :template: only_names_in_toc.rst
 
     indicate_extent
+
+
+🔸 Miscellaneous
+------------------
+some additional functions and properties that might come in handy:
+
+.. currentmodule:: eomaps.Maps
+
+.. autosummary::
+    :toctree: generated
+    :nosignatures:
+
+    join_limits
+    get_crs
+    indicate_masked_points
+    BM
+    parent
+    crs_plot
+    add_colorbar

@@ -5,14 +5,14 @@ EOmaps
 
 Welcome to the documentation for EOmaps!
 
-Checkout the Examples! :doc:`EOmaps_examples`.
+Checkout the :doc:`EOmaps_examples`!
 
 Contents
 --------
 
 .. toctree::
-   :maxdepth: 2
+   :maxdepth: 3
 
-   usage
-   EOmaps_examples
+   general
    api
+   EOmaps_examples

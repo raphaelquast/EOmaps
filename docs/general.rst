@@ -1,5 +1,5 @@
-🌳 Usage
-========
+🌳 General
+==========
 
 .. _installation:
 
