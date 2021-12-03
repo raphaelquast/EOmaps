@@ -16,7 +16,7 @@ version = "2.1.0"
 setup(
     name="EOmaps",
     version=version,
-    description="A library to generate interactive maps of geographical datasets.",
+    description="A library to create interactive maps of geographical datasets.",
     packages=find_packages(),
     package_dir={"eomaps": "eomaps"},
     # include_package_data=True,
@@ -54,4 +54,5 @@ setup(
         # ~ 'License :: OSI Approved :: MIT License',
         "Programming Language :: Python :: 3.7",
     ],
+    license_files=("LICENSE",),
 )
