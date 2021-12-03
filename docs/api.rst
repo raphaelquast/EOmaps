@@ -250,9 +250,14 @@ Callbacks that can be used with `m.cb.dynamic`
 
 WebMap services (TS/WMS/WMTS) can be attached to the map via:
 
+It is highly recommended to use the native crs of the WebMap service in order
+to avoid re-projecting the images (which degrades image quality and takes
+some time to finish...)
+
 .. code-block:: python
 
     m = Maps()
+    m.plot_specs.crs = Maps.CRS.GOOGLE_MERCATOR # (at best the native crs of the service!)
     m.add_wms.attach.< SERVICE > ... .add_layer.< LAYER >( layer=1 )
 
 .. currentmodule:: eomaps.Maps
@@ -266,7 +271,6 @@ WebMap services (TS/WMS/WMTS) can be attached to the map via:
 
 
 < SERVICE > hereby specifies the pre-defined WebMap service you want to add.
-
 
 .. note::
     Services might be nested directory structures!

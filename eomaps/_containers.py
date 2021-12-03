@@ -819,6 +819,27 @@ else:
                         self.default_german.__call__.__doc__,
                     )
 
+                    self.OpenTopoMap = _xyz_tile_service(
+                        m=self._m,
+                        url="https://c.tile.opentopomap.org/{z}/{x}/{y}.png",
+                        maxzoom=16,
+                    )
+                    self.OpenTopoMap.__doc__ = combdoc(
+                        """
+                        A project aiming at rendering topographic maps from OSM
+                        and SRTM data. The map style is similar to some official
+                        German or French topographic maps, such as TK50 or TOP 25.
+                        https://www.opentopomap.org/
+
+                        Note
+                        ----
+                        **LICENSE-info (without any warranty for correctness!!)**
+
+                        check: https://wiki.openstreetmap.org/wiki/OpenTopoMap
+                        """,
+                        self.default_german.__call__.__doc__,
+                    )
+
                     self.stamen_toner = _xyz_tile_service(
                         self._m,
                         "https://stamen-tiles.a.ssl.fastly.net/toner/{z}/{x}/{y}.png",
