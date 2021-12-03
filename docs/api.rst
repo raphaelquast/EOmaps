@@ -1,8 +1,11 @@
 ⚙ Usage
 =========
 
-🚀 Initialize Maps objects
-----------------------------
+🚀 Basics
+---------
+
+🌐 Initialization of Maps objects
+.................................
 
 To initialize a new `Maps` object, simply use:
 
@@ -56,9 +59,8 @@ If you want to create multiple maps-objects with similar properties, use:
 
     Maps.copy
 
-
-🌐 Set plot specifications
-----------------------------
+🌍 Set plot specifications
+..........................
 
 The appearance of the plot can be adjusted by setting the following properties
 of the Maps object:
@@ -95,8 +97,8 @@ to classify the data are accessible via `Maps.CRS` and `Maps.CLASSIFIERS`:
     m.plot_specs.crs = Maps.CRS.Orthographic(central_latitude=45)
 
 
-🌍 Plot the map and save it
------------------------------
+🗺 Plot the map and save it
+...........................
 
 Maps based on WebMap layers can be directly generated via:
 
@@ -131,84 +133,8 @@ Once the map is generated, a snapshot of the map can be saved at any time by usi
     savefig
 
 
-🛰 Add WebMap service layers
-------------------------------
-
-WebMap services (TS/WMS/WMTS) can be attached to the map via:
-
-.. code-block:: python
-
-    m = Maps()
-    m.add_wms.attach.< SERVICE >.add_layer.< LAYER >( layer=1 )
-
-.. currentmodule:: eomaps.Maps
-
-.. autosummary::
-    :toctree: generated
-    :nosignatures:
-    :template: only_names_in_toc.rst
-
-    add_wms
-
-< SERVICE > specifies the WebMap service to add:
-Pre-defined interfaces to the following services exist:
-
-.. currentmodule:: eomaps._containers.wms_container
-
-.. autosummary::
-    :toctree: generated
-    :nosignatures:
-    :template: only_names_in_toc.rst
-
-    OpenStreetMap
-    ESA_WorldCover
-    NASA_GIBS
-    ISRIC_SoilGrids
-    EEA_DiscoMap
-    ESRI_ArcGIS
-    S1GBM
-    Austria
-
-
-🏕 Add features and overlays
-------------------------------
-
-Static annotations and markers can be added to the map via:
-
-.. code-block:: python
-
-    m = Maps()
-    ...
-    m.add_annotation( ... )
-    m.add_marker( ... )
-
-.. currentmodule:: eomaps.Maps
-
-.. autosummary::
-    :toctree: generated
-    :nosignatures:
-    :template: only_names_in_toc.rst
-
-    add_marker
-    add_annotation
-
-Overlays from NaturalEarth and `geopandas.GeoDataFrames` can be added via:
-
-.. currentmodule:: eomaps.Maps
-
-.. autosummary::
-    :toctree: generated
-    :nosignatures:
-    :template: only_names_in_toc.rst
-
-    add_gdf
-    add_overlay
-    add_overlay_legend
-    add_coastlines
-
-
 🛸 Callbacks - make the map interactive!
-------------------------------------------
+----------------------------------------
 
 Callbacks are used to execute functions when you click on the map.
 
@@ -315,8 +241,100 @@ Callbacks that can be used with `m.cb.dynamic`
     indicate_extent
 
 
+🛰 How to add WebMap service layers
+-----------------------------------
+
+WebMap services (TS/WMS/WMTS) can be attached to the map via:
+
+.. code-block:: python
+
+    m = Maps()
+    m.add_wms.attach.< SERVICE > ... .add_layer.< LAYER >( layer=1 )
+
+.. currentmodule:: eomaps.Maps
+
+.. autosummary::
+    :toctree: generated
+    :nosignatures:
+    :template: only_names_in_toc.rst
+
+    add_wms
+
+
+< SERVICE > hereby specifies the pre-defined WebMap service you want to add.
+
+
+.. note::
+    Services might be nested directory structures!
+    The actual layer is always added via the `add_layer` directive.
+
+        :code:`m.add_wms.<...>. ... .<...>.add_layer.<...>()`
+
+    Some of the services dynamically fetch the structure via HTML-requests.
+    Therefore it can take a short moment before autocompletion is capable of
+    showing you the available options!
+    A list of available layers from a sub-folder can be fetched via:
+
+        :code:`m.add_wms.<...>. ... .<...>.layers`
+
+
+.. currentmodule:: eomaps._containers.wms_container
+
+.. autosummary::
+    :toctree: generated
+    :nosignatures:
+    :template: only_names_in_toc.rst
+
+    OpenStreetMap
+    ESA_WorldCover
+    NASA_GIBS
+    ISRIC_SoilGrids
+    EEA_DiscoMap
+    ESRI_ArcGIS
+    S1GBM
+    Austria
+
+
+🏕 Adding additional features and overlays
+------------------------------------------
+
+Static annotations and markers can be added to the map via:
+
+.. code-block:: python
+
+    m = Maps()
+    ...
+    m.add_annotation( ... )
+    m.add_marker( ... )
+
+.. currentmodule:: eomaps.Maps
+
+.. autosummary::
+    :toctree: generated
+    :nosignatures:
+    :template: only_names_in_toc.rst
+
+    add_marker
+    add_annotation
+
+Overlays from NaturalEarth and `geopandas.GeoDataFrames` can be added via:
+
+.. currentmodule:: eomaps.Maps
+
+.. autosummary::
+    :toctree: generated
+    :nosignatures:
+    :template: only_names_in_toc.rst
+
+    add_gdf
+    add_overlay
+    add_overlay_legend
+    add_coastlines
+
+
+
 🔸 Miscellaneous
-------------------
+----------------
 some additional functions and properties that might come in handy:
 
 .. currentmodule:: eomaps.Maps
