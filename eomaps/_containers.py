@@ -527,6 +527,7 @@ else:
         """
 
         def __init__(self, m):
+
             self._m = m
 
         @property
@@ -585,6 +586,14 @@ else:
             ESA Worldwide land cover mapping
             https://esa-worldcover.org/en
 
+            This service can be used both as WMS and WMTS service. The default
+            is to use WMS. You can change the preferred service-type on the
+            initialization of the Maps-object via:
+
+                >>> m = Maps(preferred_wms_service="wms")
+                or
+                >>> m = Maps(preferred_wms_service="wmts")
+
             Note
             ----
             **LICENSE-info (without any warranty for correctness!!)**
@@ -599,11 +608,19 @@ else:
             datasets must include proper acknowledgement, including citing the
             datasets and the journal article as in the following citation.
             """
-            WMS = _WebServiec_collection(
-                m=self._m,
-                service_type="wms",
-                url="https://services.terrascope.be/wms/v2",
-            )
+            if self._m._preferred_wms_service == "wms":
+                WMS = _WebServiec_collection(
+                    m=self._m,
+                    service_type="wms",
+                    url="https://services.terrascope.be/wms/v2",
+                )
+            elif self._m._preferred_wms_service == "wmts":
+                WMS = _WebServiec_collection(
+                    m=self._m,
+                    service_type="wmts",
+                    url="https://services.terrascope.be/wmts/v2",
+                )
+
             WMS.__doc__ = type(self).ESA_WorldCover.__doc__
             return WMS
 
@@ -613,6 +630,14 @@ else:
             """
             NASA Global Imagery Browse Services (GIBS)
             https://wiki.earthdata.nasa.gov/display/GIBS/
+
+            This service can be used both as WMS and WMTS service. The default
+            is to use WMS. You can change the preferred service-type on the
+            initialization of the Maps-object via:
+
+                >>> m = Maps(preferred_wms_service="wms")
+                or
+                >>> m = Maps(preferred_wms_service="wmts")
 
             Note
             ----
@@ -628,12 +653,20 @@ else:
             Global Imagery Browse Services (GIBS), part of NASA's Earth Observing
             System Data and Information System (EOSDIS).
             """
-            WMS = self._NASA_GIBS(self._m)
-            WMS.__doc__ = type(self).NASA_GIBS.__doc__
+            if self._m._preferred_wms_service == "wms":
+                WMS = self._NASA_GIBS(self._m)
+            elif self._m._preferred_wms_service == "wmts":
+                WMS = _WebServiec_collection(
+                    m=self._m,
+                    service_type="wmts",
+                    url="https://gibs.earthdata.nasa.gov/wmts/epsg4326/all/1.0.0/WMTSCapabilities.xml",
+                )
 
+            WMS.__doc__ = type(self).NASA_GIBS.__doc__
             return WMS
 
         class _NASA_GIBS:
+            # WMS links for NASA GIBS
             def __init__(self, m):
                 self._m = m
 
@@ -1424,7 +1457,7 @@ else:
                     """
                 return WMTS
 
-        def get_service(self, url, service="wms", rest_API=False):
+        def get_service(self, url, service_type="wms", rest_API=False):
             """
             Get a object that can be used to add WMS or WMTS services based on
             a GetCapabilities-link or a link to a ArcGIS REST API
@@ -1455,6 +1488,8 @@ else:
             ----------
             url : str
                 The service-url
+            service_type: str
+                The type of service (either "wms" or "wmts")
             rest_API : bool, optional
                 Indicator if a GetCapabilities link (True) or a link to a
                 rest-API is provided (False). The default is False
@@ -1472,98 +1507,10 @@ else:
                     m=self._m,
                     url=url,
                     name="custom_service",
-                    service_type=service,
+                    service_type=service_type,
                 )
                 service.fetch_services()
             else:
                 service = _WebServiec_collection(self._m, service_type="wms", url=url)
 
             return service
-
-    class wmts_container(object):
-        """
-        A collection of open-access WMTS services that can be added to the maps.
-
-        Make sure to consult and follow the usage-policies of the individual providers!
-        For details and licensing information check the docstrings.
-
-        layers can be added in 2 ways (either with . access or with [] access):
-            >>> m.add_wmts.<COLLECTION>.add_layer.<LAYER-NAME>(**kwargs)
-            >>> m.add_wmts.<COLLECTION>[<LAYER-NAME>](**kwargs)
-
-        ### usage-examples:
-
-        - add NASA's BlueMarble background layer
-
-            >>> m.add_wmts.NASA_GIBS.add_layer.BlueMarble_NextGeneration()
-
-            additional kwargs can simply be passed to the layer-call:
-
-            >>> m.add_wmts.NASA_GIBS["AIRS_L3_Surface_Air_Temperature_Daily_Day"
-                                     ](time='2020-02-05')
-
-        - add ESA's WorldCover landcover-classification layer
-
-            >>> m.add_wmts.ESA_WorldCover.add_layer.WORLDCOVER_2020_MAP()
-        """
-
-        def __init__(self, m):
-            self._m = m
-
-        @property
-        @lru_cache()
-        def NASA_GIBS(self):
-            """
-            NASA Global Imagery Browse Services (GIBS)
-            https://wiki.earthdata.nasa.gov/display/GIBS/
-
-            Note
-            ----
-            **LICENSE-info (without any warranty for correctness!!)**
-
-            (check: https://earthdata.nasa.gov/eosdis/science-system-description/eosdis-components/gibs)
-
-            NASA supports an open data policy. We ask that users who make use of
-            GIBS in their clients or when referencing it in written or oral
-            presentations to add the following acknowledgment:
-
-            We acknowledge the use of imagery provided by services from NASA's
-            Global Imagery Browse Services (GIBS), part of NASA's Earth Observing
-            System Data and Information System (EOSDIS).
-            """
-            WMTS = _WebServiec_collection(
-                m=self._m,
-                service_type="wmts",
-                url="https://gibs.earthdata.nasa.gov/wmts/epsg4326/all/1.0.0/WMTSCapabilities.xml",
-            )
-            WMTS.__doc__ = type(self).NASA_GIBS.__doc__
-            return WMTS
-
-        @property
-        @lru_cache()
-        def ESA_WorldCover(self):
-            """
-            ESA Worldwide land cover mapping
-            https://esa-worldcover.org/en
-
-            Note
-            ----
-            **LICENSE-info (without any warranty for correctness!!)**
-
-            (check: https://esa-worldcover.org/en/data-access for full details)
-
-            The ESA WorldCover product is provided free of charge,
-            without restriction of use. For the full license information see the
-            Creative Commons Attribution 4.0 International License.
-
-            Publications, models and data products that make use of these
-            datasets must include proper acknowledgement, including citing the
-            datasets and the journal article as in the following citation.
-            """
-            WMTS = _WebServiec_collection(
-                m=self._m,
-                service_type="wmts",
-                url="https://services.terrascope.be/wmts/v2",
-            )
-            WMTS.__doc__ = type(self).ESA_WorldCover.__doc__
-            return WMTS

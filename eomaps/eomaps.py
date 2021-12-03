@@ -37,7 +37,6 @@ from ._containers import (
     classify_specs,
     # cb_container,
     wms_container,
-    wmts_container,
 )
 
 from ._cb_container import cb_container
@@ -199,6 +198,10 @@ class Maps(object):
                 >>> ...
                 >>> ax = f.add_subplot(projection=m.crs_plot)
                 >>> m.plot_map(ax_gs=ax)
+    preferred_wms_service : str, optional
+        Set the preferred way for accessing WebMap services if both WMS and WMTS
+        capabilities are possible.
+        The default is "wms"
     """
 
     crs_list = ccrs
@@ -226,7 +229,13 @@ class Maps(object):
     CLASSIFIERS = SimpleNamespace(**dict(zip(_classifiers, _classifiers)))
 
     def __init__(
-        self, parent=None, layer=0, orientation="vertical", f=None, gs_ax=None
+        self,
+        parent=None,
+        layer=0,
+        orientation="vertical",
+        f=None,
+        gs_ax=None,
+        preferred_wms_service="wms",
     ):
 
         if parent is not None:
@@ -244,6 +253,13 @@ class Maps(object):
         self.parent = parent  # invoke the setter!
         self._orientation = "vertical"
         self.layer = layer
+
+        # preferred way of accessing WMS services (used in the WMS container)
+        assert preferred_wms_service in [
+            "wms",
+            "wmts",
+        ], "preferred_wms_service must be either 'wms' or 'wmts' !"
+        self._preferred_wms_service = preferred_wms_service
 
         # default plot specs
         self.plot_specs = plot_specs(
@@ -364,14 +380,6 @@ class Maps(object):
             return self.parent._axpicker
 
         return self.parent._axpicker
-
-    if wmts_container is not None:
-
-        @property
-        @wraps(wmts_container)
-        @lru_cache()
-        def add_wmts(self):
-            return wmts_container(self)
 
     if wms_container is not None:
 
