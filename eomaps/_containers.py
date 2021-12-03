@@ -989,7 +989,7 @@ else:
             ----
             **LICENSE-info (without any warranty for correctness!!)**
 
-            ... make sure to check the link above...
+            check: https://discomap.eea.europa.eu/
 
             EEA standard re-use policy: Unless otherwise indicated, reuse of
             content on the EEA website for commercial or non-commercial
@@ -1415,60 +1415,9 @@ else:
                 - AT_basemap: Basemaps for whole of austria
                 - Wien: Basemaps for the city of Vienna
             """
-            WMS = self._Austria(self._m)
+            WMS = Austria(self._m)
             WMS.__doc__ = type(self).Austria.__doc__
             return WMS
-
-        class _Austria:
-            def __init__(self, m):
-                self._m = m
-
-            @property
-            @lru_cache()
-            def AT_basemap(self):
-                """
-                Basemap for Austria
-                https://basemap.at/
-
-                Note
-                ----
-                **LICENSE-info (without any warranty for correctness!!)**
-
-                (check: https://basemap.at/#lizenz for full details)
-
-                basemap.at ist gemäß der Open Government Data Österreich Lizenz
-                CC-BY 4.0 sowohl für private als auch kommerzielle Zwecke frei
-                sowie entgeltfrei nutzbar.
-                """
-                WMTS = _WebServiec_collection(
-                    m=self._m,
-                    service_type="wmts",
-                    url="http://maps.wien.gv.at/basemap/1.0.0/WMTSCapabilities.xml",
-                )
-                WMTS.__doc__ = type(self).AT_basemap.__doc__
-                return WMTS
-
-            @property
-            @lru_cache()
-            def Wien_basemap(self):
-                WMTS = _WebServiec_collection(
-                    m=self._m,
-                    service_type="wmts",
-                    url="http://maps.wien.gv.at/wmts/1.0.0/WMTSCapabilities.xml",
-                )
-                WMTS.__doc__ = """
-                    Basemaps for the city of Vienna (Austria)
-                    https://www.wien.gv.at
-
-                    Note
-                    ----
-                    **LICENSE-info (without any warranty for correctness!!)**
-
-                    check: https://www.data.gv.at/katalog/dataset/stadt-wien_webmaptileservicewmtswien
-
-                    Most services are under CC-BY 4.0
-                    """
-                return WMTS
 
         def get_service(self, url, service_type="wms", rest_API=False):
             """
@@ -1527,3 +1476,56 @@ else:
                 service = _WebServiec_collection(self._m, service_type="wms", url=url)
 
             return service
+
+    class Austria:
+        # container for WebMap services specific to Austria
+        def __init__(self, m):
+            self._m = m
+
+        @property
+        @lru_cache()
+        def AT_basemap(self):
+            """
+            Basemap for Austria
+            https://basemap.at/
+
+            Note
+            ----
+            **LICENSE-info (without any warranty for correctness!!)**
+
+            (check: https://basemap.at/#lizenz for full details)
+
+            basemap.at ist gemäß der Open Government Data Österreich Lizenz
+            CC-BY 4.0 sowohl für private als auch kommerzielle Zwecke frei
+            sowie entgeltfrei nutzbar.
+            """
+            WMTS = _WebServiec_collection(
+                m=self._m,
+                service_type="wmts",
+                url="http://maps.wien.gv.at/basemap/1.0.0/WMTSCapabilities.xml",
+            )
+            WMTS.__doc__ = type(self).AT_basemap.__doc__
+            return WMTS
+
+        @property
+        @lru_cache()
+        def Wien_basemap(self):
+            """
+            Basemaps for the city of Vienna (Austria)
+            https://www.wien.gv.at
+
+            Note
+            ----
+            **LICENSE-info (without any warranty for correctness!!)**
+
+            check: https://www.data.gv.at/katalog/dataset/stadt-wien_webmaptileservicewmtswien
+
+            Most services are under CC-BY 4.0
+            """
+            WMTS = _WebServiec_collection(
+                m=self._m,
+                service_type="wmts",
+                url="http://maps.wien.gv.at/wmts/1.0.0/WMTSCapabilities.xml",
+            )
+            WMTS.__doc__ = type(self).Wien_basemap.__doc__
+            return WMTS
