@@ -22,12 +22,12 @@
 </ol>
 
 
-#### 🛸 checkout the [documentation](https://eomaps.readthedocs.io>documentation) for more details and [examples](https://eomaps.readthedocs.io/en/latest/EOmaps_examples.html) 🛸
+#### 🛸 checkout the [documentation](https://eomaps.readthedocs.io/en/latest) for more details and [examples](https://eomaps.readthedocs.io/en/latest/EOmaps_examples.html) 🛸
 
 ## 🔨 installation
 
 Installing EOmaps can be done via `pip`.  
-However, to make sure all dependencies are correctly installed, make sure to have a look at the [installation instructions](https://eomaps.readthedocs.io/en/latest/usage.html#installation) in the documentation!
+However, to make sure all dependencies are correctly installed, make sure to have a look at the [installation instructions](https://eomaps.readthedocs.io/en/latest/general.html#installation) in the documentation!
 
 <br/>
 
@@ -59,7 +59,7 @@ m.set_data(data=data, xcoord="lon", ycoord="lat", parameter="value", crs=4326)
 # set the shapes that you want to use to represent the data-points
 m.set_shape.geod_circles(radius=10000) # (e.g. geodetic circles with 10km radius)
 # set the appearance of the plot
-m.set_plot_specs(crs=Maps.CRS, cmap="viridis")
+m.set_plot_specs(crs=Maps.CRS.Orthographic(), cmap="viridis")
 # (optionally) classify the data
 m.set_classify_specs(scheme=Maps.CLASSIFIERS.Quantiles, k=5)
 # plot the map
