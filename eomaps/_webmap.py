@@ -579,43 +579,85 @@ class _REST_API(object):
         return all_services
 
 
-class _S1GBM:
+class _xyz_tile_service:
     """
-    A WebMap-like interface to the "Sentinel-1 Global Backscatter Model"
-
-    Citation:
-        B. Bauer-Marschallinger, et.al (2021): The Sentinel-1 Global Backscatter Model (S1GBM) -
-        Mapping Earth's Land Surface with C-Band Microwaves (1.0) [Data set]. TU Wien.
-
-    - https://researchdata.tuwien.ac.at/records/n2d1v-gqb91
-    - https://s1map.eodc.eu/
+    general class for using x/y/z tile-service urls as WebMap layers
     """
 
-    def __init__(self, m, pol="vv"):
+    def __init__(self, m, url, maxzoom=19):
         self._m = m
-        self.pol = pol
 
         self._redraw = True
-        self._S1GBM_factory = None
-        self._S1GBM_extent = None
-        self._S1GBM = None
+        self._factory = None
+        self._artist = None
 
         self._event_attached = None
         self._layer = 0
 
-    class S1GBM_tiles(GoogleWTS):
+        self.url = url
+
+        self._maxzoom = maxzoom
+
+    class TileFactory(GoogleWTS):
+        def __init__(self, url, *args, **kwargs):
+            super().__init__(*args, **kwargs)
+            self._url = url
+
         def _image_url(self, tile):
             x, y, z = tile
-            return f"https://s1map.eodc.eu/{self.polarization}/{z}/{x}/{2**z-1-y}.png"
+
+            if isinstance(self._url, str):
+                return self._url.format(x=x, y=y, z=z)
+            if callable(self._url):
+                return self._url(x=x, y=y, z=z)
 
     # function to estimate a proper zoom-level
     @staticmethod
-    def getz(d):
-        z = int(np.clip(np.ceil(np.log2(4 / d * 40075016)), 1, 13))
+    def getz(d, zmax):
+        z = int(np.clip(np.ceil(np.log2(4 / d * 40075016)), 1, zmax))
         return z
 
-    def __call__(self, layer=None):
+    def __call__(
+        self,
+        layer=None,
+        transparent=False,
+        alpha=1,
+        interpolation="spline36",
+        **kwargs,
+    ):
+        """
+        Parameters
+        ----------
+        layer : int, optional
+            The layer to put the WMS images on. The default is None in which
+            case the default layer for the Maps-object is used.
+        transparent : bool, optional
+            Indicator if the WMS images should be read as RGB or RGBA
+            (e.g. with or without transparency). The default is False.
+        alpha : float, optional (passed to matplotlib imshow)
+            The alpha-transparency of the image.
+            NOTE: This changes the global transparency of the images... it does
+            not control whether the images include transparency! (check the
+            "transparent" kwarg)
+        interpolation : str, optional (passed to matplotlib imshow)
+            The interpolation-method to use. The default is "spline36".
+        regrid_shape : int, optional
+            The target resolution for warping images in case a re-projection is
+            required (e.g. if you don't use the native projection of the WMS)
+            changing this value will slow down re-projection but it can
+            provide a huge boost in image quality! The default is 750.
+        **kwargs :
+            Additional kwargs passed to the cartopy-wrapper for
+            matplotlib's `imshow`.
+        """
         self._m._set_axes()
+        self.kwargs = dict(interpolation=interpolation, alpha=alpha)
+        self.kwargs.update(kwargs)
+
+        if transparent is True:
+            self.desired_tile_form = "RGBA"
+        else:
+            self.desired_tile_form = "RGB"
 
         if self._event_attached is None:
             self._event_attached = self._m.figure.f.canvas.mpl_connect(
@@ -633,29 +675,32 @@ class _S1GBM:
         else:
             self._layer = layer
 
-        self._S1GBM_factory = self.S1GBM_tiles()
-        self._S1GBM_factory.polarization = self.pol
+        self._factory = self.TileFactory(
+            self.url, desired_tile_form=self.desired_tile_form
+        )
         self.redraw()
-
-        # self._m.figure.f.canvas.draw()
 
     def redraw(self):
         # get and remember the extent
         extent = self._m.figure.ax.get_extent(crs=self._m.CRS.GOOGLE_MERCATOR)
-        if self._S1GBM is not None:
-            self._m.BM.remove_bg_artist(self._S1GBM)
-            self._S1GBM.remove()
-            self._S1GBM = None
+        if self._artist is not None:
+            self._m.BM.remove_bg_artist(self._artist)
+            self._artist.remove()
+            self._artist = None
 
-        img, extent, origin = self._S1GBM_factory.image_for_domain(
-            self._m.figure.ax._get_extent_geom(self._S1GBM_factory.crs),
-            self.getz(extent[1] - extent[0]),
+        img, extent, origin = self._factory.image_for_domain(
+            self._m.figure.ax._get_extent_geom(self._factory.crs),
+            self.getz(extent[1] - extent[0], self._maxzoom),
         )
-        self._S1GBM = self._m.figure.ax.imshow(
-            img, extent=extent, origin=origin, transform=self._S1GBM_factory.crs
+        self._artist = self._m.figure.ax.imshow(
+            img,
+            extent=extent,
+            origin=origin,
+            transform=self._factory.crs,
+            **self.kwargs,
         )
 
-        self._m.BM.add_bg_artist(self._S1GBM, self._layer)
+        self._m.BM.add_bg_artist(self._artist, self._layer)
 
     def ondraw(self, event):
         if self._event_attached is not None:

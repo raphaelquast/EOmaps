@@ -3,26 +3,25 @@ from warnings import warn
 from operator import attrgetter
 from inspect import signature, _empty
 from types import SimpleNamespace
-from functools import update_wrapper, partial, lru_cache, wraps
-from collections import defaultdict
+from functools import lru_cache
 
-import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.pyplot import get_cmap
-from matplotlib.collections import PolyCollection, EllipseCollection, TriMesh
 from matplotlib.gridspec import SubplotSpec
 import mapclassify
 
-# from .callbacks import callbacks
-from .helpers import draggable_axes
 from ._webmap import _import_OK
 
 if _import_OK:
     from ._webmap import (
         _WebServiec_collection,
         REST_API_services,
-        _S1GBM,
+        _xyz_tile_service,
     )
+
+
+def combdoc(*args):
+    return "\n".join(dedent(i) for i in args)
 
 
 class map_objects(object):
@@ -516,18 +515,32 @@ else:
 
     class wms_container(object):
         """
-        A collection of open-access WMS services that can be added to the maps
+        A collection of open-access WebMap services that can be added to the maps
 
-        For details and licensing check the docstrings and the links to the providers!
+        Layers can be added in 2 ways (either with . access or with [] access):
+            >>> m.add_wms.< SERVICE > ... .add_layer.<LAYER-NAME>(**kwargs)
+            >>> m.add_wms.< SERVICE > ... [<LAYER-NAME>](**kwargs)
 
-        All usage is the same as `add_wmts`
+        Services might be nested directory structures!
+        The actual layer is always added via the `add_layer` directive.
 
-        layers can be added in 2 ways (either with . access or with [] access):
-            >>> m.add_wmts.<COLLECTION>.add_layer.<LAYER-NAME>(**kwargs)
-            >>> m.add_wmts.<COLLECTION>[<LAYER-NAME>](**kwargs)
+            >>> m.add_wms.<...>. ... .<...>.add_layer.<...>()
+
+        Some of the services dynamically fetch the structure via HTML-requests.
+        Therefore it can take a short moment before autocompletion is capable
+        of showing you the available options!
+        A list of available layers from a sub-folder can be fetched via:
+
+            >>> m.add_wms.<...>. ... .<...>.layers
+
+        Note
+        ----
+        Make sure to check the individual service-docstrings and the links to
+        the providers for licensing and terms-of-use!
         """
 
         def __init__(self, m):
+
             self._m = m
 
         @property
@@ -547,7 +560,9 @@ else:
             produced using machine learning at 250 m resolution.
             ...
 
-            LICENSE-info (without any warranty for correctness!!)
+            Note
+            ----
+            **LICENSE-info (without any warranty for correctness!!)**
 
             check: https://www.isric.org/about/data-policy
 
@@ -580,51 +595,91 @@ else:
         @property
         @lru_cache()
         def ESA_WorldCover(self):
-            WMS = _WebServiec_collection(
-                m=self._m,
-                service_type="wms",
-                url="https://services.terrascope.be/wms/v2",
-            )
-            WMS.__doc__ = """
-                ESA Worldwide land cover mapping
-                    https://esa-worldcover.org/en
+            """
+            ESA Worldwide land cover mapping
+            https://esa-worldcover.org/en
 
-                LICENSE-info (without any warranty for correctness!!)
-                    (check: https://esa-worldcover.org/en/data-access for full details)
+            This service can be used both as WMS and WMTS service. The default
+            is to use WMS. You can change the preferred service-type on the
+            initialization of the Maps-object via:
 
-                    The ESA WorldCover product is provided free of charge,
-                    without restriction of use. For the full license information see the
-                    Creative Commons Attribution 4.0 International License.
+                >>> m = Maps(preferred_wms_service="wms")
+                or
+                >>> m = Maps(preferred_wms_service="wmts")
 
-                    Publications, models and data products that make use of these
-                    datasets must include proper acknowledgement, including citing the
-                    datasets and the journal article as in the following citation.
-                """
+            Note
+            ----
+            **LICENSE-info (without any warranty for correctness!!)**
+
+            (check: https://esa-worldcover.org/en/data-access for full details)
+
+            The ESA WorldCover product is provided free of charge,
+            without restriction of use. For the full license information see the
+            Creative Commons Attribution 4.0 International License.
+
+            Publications, models and data products that make use of these
+            datasets must include proper acknowledgement, including citing the
+            datasets and the journal article as in the following citation.
+            """
+            if self._m._preferred_wms_service == "wms":
+                WMS = _WebServiec_collection(
+                    m=self._m,
+                    service_type="wms",
+                    url="https://services.terrascope.be/wms/v2",
+                )
+            elif self._m._preferred_wms_service == "wmts":
+                WMS = _WebServiec_collection(
+                    m=self._m,
+                    service_type="wmts",
+                    url="https://services.terrascope.be/wmts/v2",
+                )
+
+            WMS.__doc__ = type(self).ESA_WorldCover.__doc__
             return WMS
 
         @property
         @lru_cache()
         def NASA_GIBS(self):
-            WMS = self._NASA_GIBS(self._m)
+            """
+            NASA Global Imagery Browse Services (GIBS)
+            https://wiki.earthdata.nasa.gov/display/GIBS/
+
+            This service can be used both as WMS and WMTS service. The default
+            is to use WMS. You can change the preferred service-type on the
+            initialization of the Maps-object via:
+
+                >>> m = Maps(preferred_wms_service="wms")
+                or
+                >>> m = Maps(preferred_wms_service="wmts")
+
+            Note
+            ----
+            **LICENSE-info (without any warranty for correctness!!)**
+
+            (check: https://earthdata.nasa.gov/eosdis/science-system-description/eosdis-components/gibs)
+
+            NASA supports an open data policy. We ask that users who make use of
+            GIBS in their clients or when referencing it in written or oral
+            presentations to add the following acknowledgment:
+
+            We acknowledge the use of imagery provided by services from NASA's
+            Global Imagery Browse Services (GIBS), part of NASA's Earth Observing
+            System Data and Information System (EOSDIS).
+            """
+            if self._m._preferred_wms_service == "wms":
+                WMS = self._NASA_GIBS(self._m)
+            elif self._m._preferred_wms_service == "wmts":
+                WMS = _WebServiec_collection(
+                    m=self._m,
+                    service_type="wmts",
+                    url="https://gibs.earthdata.nasa.gov/wmts/epsg4326/all/1.0.0/WMTSCapabilities.xml",
+                )
+
+            WMS.__doc__ = type(self).NASA_GIBS.__doc__
             return WMS
 
         class _NASA_GIBS:
-            """
-            NASA Global Imagery Browse Services (GIBS)
-                https://wiki.earthdata.nasa.gov/display/GIBS/
-
-            LICENSE-info (without any warranty for correctness!!)
-                (check: https://earthdata.nasa.gov/eosdis/science-system-description/eosdis-components/gibs)
-
-                NASA supports an open data policy. We ask that users who make use of
-                GIBS in their clients or when referencing it in written or oral
-                presentations to add the following acknowledgment:
-
-                We acknowledge the use of imagery provided by services from NASA's
-                Global Imagery Browse Services (GIBS), part of NASA's Earth Observing
-                System Data and Information System (EOSDIS).
-            """
-
+            # WMS links for NASA GIBS
             def __init__(self, m):
                 self._m = m
 
@@ -674,18 +729,229 @@ else:
 
         @property
         def OpenStreetMap(self):
+            """
+            (global) OpenStreetMap WebMap layers
+            https://wiki.openstreetmap.org/wiki/WMS
+
+            Available styles are:
+
+                - default: standard OSM layer
+                - default_german: standard OSM layer in german
+                - standard: standard OSM layer
+                - stamen_toner: Black and white style by stamen
+                    - stamen_toner_lines
+                    - stamen_toner_background
+                    - stamen_toner_lite
+                    - stamen_toner_hybrid
+                    - stamen_toner_labels
+                - stamen_watercolor: a watercolor-like style by stamen
+                - stamen_terrain: a terrain layer by stamen
+                    - stamen_terrain_lines
+                    - stamen_terrain_labels
+                    - stamen_terrain_background
+                - OSM_terrestis: Styles hosted as free WMS service by Terrestis
+                - OSM_mundialis: Styles hosted as free WMS service by Mundialis
+
+            Note
+            ----
+            **LICENSE-info (without any warranty for correctness!!)**
+
+            Make sure to check the usage-policies at
+            https://wiki.openstreetmap.org/wiki/WMS
+            """
+
             WMS = self._OpenStreetMap(self._m)
+            WMS.__doc__ = type(self)._OpenStreetMap.__doc__
             return WMS
 
         class _OpenStreetMap:
             """
             (global) OpenStreetMap WebMap layers
+            https://wiki.openstreetmap.org/wiki/WMS
 
+            Note
+            ----
+            **LICENSE-info (without any warranty for correctness!!)**
+
+            Make sure to check the usage-policies at
             https://wiki.openstreetmap.org/wiki/WMS
             """
 
             def __init__(self, m):
                 self._m = m
+                self.add_layer = self._OSM(self._m)
+
+            class _OSM:
+                def __init__(self, m):
+                    self._m = m
+
+                    self.default = _xyz_tile_service(
+                        self._m, "https://tile.openstreetmap.org/{z}/{x}/{y}.png"
+                    )
+                    self.default.__doc__ = combdoc(
+                        """
+                        OpenStreetMap's standard tile layer
+                        https://www.openstreetmap.org/
+
+                        Note
+                        ----
+                        **LICENSE-info (without any warranty for correctness!!)**
+
+                        check: https://operations.osmfoundation.org/policies/tiles/
+                        """,
+                        self.default.__call__.__doc__,
+                    )
+
+                    self.default_german = _xyz_tile_service(
+                        self._m, "https://tile.openstreetmap.de/{z}/{x}/{y}.png"
+                    )
+                    self.default_german.__doc__ = combdoc(
+                        """
+                        German fork of OpenStreetMap's standard tile layer
+                        https://www.openstreetmap.de/
+
+                        Note
+                        ----
+                        **LICENSE-info (without any warranty for correctness!!)**
+
+                        check: https://www.openstreetmap.de/germanstyle.html
+                        """,
+                        self.default_german.__call__.__doc__,
+                    )
+
+                    self.OpenTopoMap = _xyz_tile_service(
+                        m=self._m,
+                        url="https://c.tile.opentopomap.org/{z}/{x}/{y}.png",
+                        maxzoom=16,
+                    )
+                    self.OpenTopoMap.__doc__ = combdoc(
+                        """
+                        A project aiming at rendering topographic maps from OSM
+                        and SRTM data. The map style is similar to some official
+                        German or French topographic maps, such as TK50 or TOP 25.
+                        https://www.opentopomap.org/
+
+                        Note
+                        ----
+                        **LICENSE-info (without any warranty for correctness!!)**
+
+                        check: https://wiki.openstreetmap.org/wiki/OpenTopoMap
+                        """,
+                        self.default_german.__call__.__doc__,
+                    )
+
+                    self.stamen_toner = _xyz_tile_service(
+                        self._m,
+                        "https://stamen-tiles.a.ssl.fastly.net/toner/{z}/{x}/{y}.png",
+                    )
+                    self.stamen_toner_lines = _xyz_tile_service(
+                        self._m,
+                        "https://stamen-tiles.a.ssl.fastly.net/toner-lines/{z}/{x}/{y}.png",
+                    )
+                    self.stamen_toner_background = _xyz_tile_service(
+                        self._m,
+                        "https://stamen-tiles.a.ssl.fastly.net/toner-background/{z}/{x}/{y}.png",
+                    )
+                    self.stamen_toner_lite = _xyz_tile_service(
+                        self._m,
+                        "https://stamen-tiles.a.ssl.fastly.net/toner-lite/{z}/{x}/{y}.png",
+                    )
+                    self.stamen_toner_hybrid = _xyz_tile_service(
+                        self._m,
+                        "https://stamen-tiles.a.ssl.fastly.net/toner-hybrid/{z}/{x}/{y}.png",
+                    )
+                    self.stamen_toner_labels = _xyz_tile_service(
+                        self._m,
+                        "https://stamen-tiles.a.ssl.fastly.net/toner-labels/{z}/{x}/{y}.png",
+                    )
+
+                    self.stamen_watercolor = _xyz_tile_service(
+                        self._m, "http://c.tile.stamen.com/watercolor/{z}/{x}/{y}.jpg"
+                    )
+
+                    self.stamen_terrain = _xyz_tile_service(
+                        self._m, "http://c.tile.stamen.com/terrain/{z}/{x}/{y}.jpg"
+                    )
+                    self.stamen_terrain_lines = _xyz_tile_service(
+                        self._m,
+                        "http://c.tile.stamen.com/terrain-lines/{z}/{x}/{y}.jpg",
+                    )
+                    self.stamen_terrain_labels = _xyz_tile_service(
+                        self._m,
+                        "http://c.tile.stamen.com/terrain-labels/{z}/{x}/{y}.jpg",
+                    )
+                    self.stamen_terrain_background = _xyz_tile_service(
+                        self._m,
+                        "http://c.tile.stamen.com/terrain-background/{z}/{x}/{y}.jpg",
+                    )
+
+                    stamen_doc = """
+
+                        http://maps.stamen.com/
+
+                        Note
+                        ----
+                        **LICENSE-info (without any warranty for correctness!!)**
+
+                        Make sure to check http://maps.stamen.com/ for up-to-date
+                        license policies.
+
+                        Except otherwise noted, each of these map tile sets are
+                        © Stamen Design, under a Creative Commons Attribution
+                        (CC BY 3.0) license.
+
+                        We’d love to see these maps used around the web, so we’ve
+                        included some brief instructions to help you use them in
+                        the mapping system of your choice. These maps are available
+                        free of charge. If you use these tiles, you must use the
+                        attribution provided in the link above.
+                        """
+
+                    stamen_toner_doc = combdoc(
+                        """
+                        **Stamen Toner**
+
+                        High-contrast B+W (black and white) maps provided by Stamen
+                        """,
+                        stamen_doc,
+                        self.stamen_toner.__call__.__doc__,
+                    )
+
+                    stamen_terrain_doc = combdoc(
+                        """
+                        **Stamen Terrain**
+
+                        Terrain maps with hill-shading and natural vegetation colors
+                        provided by Stamen
+                        """,
+                        stamen_doc,
+                        self.stamen_toner.__call__.__doc__,
+                    )
+
+                    stamen_watercolor_doc = combdoc(
+                        """
+                        **Stamen Watercolor**
+
+                        A maps-style reminiscent of hand-drawn watercolor maps
+                        provided by Stamen
+                        """,
+                        stamen_doc,
+                        self.stamen_toner.__call__.__doc__,
+                    )
+
+                    self.stamen_toner.__doc__ = stamen_toner_doc
+                    self.stamen_toner_lines.__doc__ = stamen_toner_doc
+                    self.stamen_toner_background.__doc__ = stamen_toner_doc
+                    self.stamen_toner_lite.__doc__ = stamen_toner_doc
+                    self.stamen_toner_hybrid.__doc__ = stamen_toner_doc
+                    self.stamen_toner_labels.__doc__ = stamen_toner_doc
+
+                    self.stamen_terrain.__doc__ = stamen_terrain_doc
+                    self.stamen_terrain_lines.__doc__ = stamen_terrain_doc
+                    self.stamen_terrain_labels.__doc__ = stamen_terrain_doc
+                    self.stamen_terrain_background.__doc__ = stamen_terrain_doc
+
+                    self.stamen_watercolor.__doc__ = stamen_watercolor_doc
 
             @property
             @lru_cache()
@@ -695,10 +961,16 @@ else:
                     service_type="wms",
                     url="https://ows.terrestris.de/osm/service?SERVICE=WMS&VERSION=1.1.1&REQUEST=GetCapabilities",
                 )
-                WMS.__doc__ = (
-                    type(self).__doc__
-                    + "\n ... hosted by Terrestris"
-                    + "\n https://www.terrestris.de/en/openstreetmap-wms/"
+                WMS.__doc__ = combdoc(
+                    type(self).__doc__,
+                    """
+                    Note
+                    ----
+                    **LICENSE-info (without any warranty for correctness!!)**
+
+                    ... this service is hosted by Terrestris... check:
+                    https://www.terrestris.de/en/openstreetmap-wms/
+                    """,
                 )
                 return WMS
 
@@ -710,32 +982,49 @@ else:
                     service_type="wms",
                     url="http://ows.mundialis.de/services/service?",
                 )
-                WMS.__doc__ = (
-                    type(self).__doc__
-                    + "\n ... hosted by Mundialis"
-                    + "\n https://www.mundialis.de/en/ows-mundialis/"
+                WMS.__doc__ = combdoc(
+                    type(self).__doc__,
+                    """
+                    Note
+                    ----
+                    **LICENSE-info (without any warranty for correctness!!)**
+
+                    ... this service is hosted by Mundialis... check:
+                    https://www.mundialis.de/en/ows-mundialis/
+                    """,
                 )
                 return WMS
 
         @property
         @lru_cache()
         def EEA_DiscoMap(self):
-            return self._EEA_DiscoMap(self._m)
-
-        class _EEA_DiscoMap:
             """
+            European Environment Agency Discomap services
+            https://discomap.eea.europa.eu/Index/
+
             A wide range of environmental data for Europe from the
             European Environment Agency covering thematic areas such as air,
             water, climate change, biodiversity, land and noise.
 
-            https://discomap.eea.europa.eu/Index/
+            Note
+            ----
+            **LICENSE-info (without any warranty for correctness!!)**
 
-            LICENSE-info (without any warranty for correctness!!)
+            check: https://discomap.eea.europa.eu/
+
             EEA standard re-use policy: Unless otherwise indicated, reuse of
             content on the EEA website for commercial or non-commercial
             purposes is permitted free of charge, provided that the source is
             acknowledged.
+            """
+            WMS = self._EEA_DiscoMap(self._m)
+            WMS.__doc__ = type(self).EEA_DiscoMap.__doc__
+            return
 
+        class _EEA_DiscoMap:
+            """
+            European Environment Agency discomap Image collection
+            https://discomap.eea.europa.eu/Index/
             """
 
             def __init__(self, m):
@@ -754,7 +1043,24 @@ else:
                     name="EEA_REST_Image",
                     service_type="wms",
                 )
-                API.__doc__ = type(self).__doc__ + "... access to the 'Image' subfolder"
+                API.__doc__ = combdoc(
+                    type(self).__doc__,
+                    """
+                    ... access to the 'Image' subfolder
+
+                    Note
+                    ----
+                    **LICENSE-info (without any warranty for correctness!!)**
+
+                    ... make sure to check the link above...
+
+                    EEA standard re-use policy: Unless otherwise indicated, reuse of
+                    content on the EEA website for commercial or non-commercial
+                    purposes is permitted free of charge, provided that the source is
+                    acknowledged.
+                    """,
+                )
+
                 API.fetch_services()
                 return API
 
@@ -771,7 +1077,23 @@ else:
                     name="EEA_REST_Land",
                     service_type="wms",
                 )
-                API.__doc__ = type(self).__doc__ + "... access to the 'Land' subfolder"
+                API.__doc__ = combdoc(
+                    type(self).__doc__,
+                    """
+                    ... access to the 'Land' subfolder
+
+                    Note
+                    ----
+                    **LICENSE-info (without any warranty for correctness!!)**
+
+                    ... make sure to check the link above...
+
+                    EEA standard re-use policy: Unless otherwise indicated, reuse of
+                    content on the EEA website for commercial or non-commercial
+                    purposes is permitted free of charge, provided that the source is
+                    acknowledged.
+                    """,
+                )
                 API.fetch_services()
 
                 return API
@@ -789,8 +1111,22 @@ else:
                     name="EEA_REST_Climate",
                     service_type="wms",
                 )
-                API.__doc__ = (
-                    type(self).__doc__ + "... access to the 'Climate' subfolder"
+                API.__doc__ = combdoc(
+                    type(self).__doc__,
+                    """
+                    ... access to the 'Climate' subfolder
+
+                    Note
+                    ----
+                    **LICENSE-info (without any warranty for correctness!!)**
+
+                    ... make sure to check the link above...
+
+                    EEA standard re-use policy: Unless otherwise indicated, reuse of
+                    content on the EEA website for commercial or non-commercial
+                    purposes is permitted free of charge, provided that the source is
+                    acknowledged.
+                    """,
                 )
                 API.fetch_services()
 
@@ -809,7 +1145,23 @@ else:
                     name="EEA_REST_Bio",
                     service_type="wms",
                 )
-                API.__doc__ = type(self).__doc__ + "... access to the 'Bio' subfolder"
+                API.__doc__ = combdoc(
+                    type(self).__doc__,
+                    """
+                    ... access to the 'Bio' subfolder
+
+                    Note
+                    ----
+                    **LICENSE-info (without any warranty for correctness!!)**
+
+                    ... make sure to check the link above...
+
+                    EEA standard re-use policy: Unless otherwise indicated, reuse of
+                    content on the EEA website for commercial or non-commercial
+                    purposes is permitted free of charge, provided that the source is
+                    acknowledged.
+                    """,
+                )
                 API.fetch_services()
 
                 return API
@@ -827,8 +1179,22 @@ else:
                     name="EEA_REST_Copernicus",
                     service_type="wms",
                 )
-                API.__doc__ = (
-                    type(self).__doc__ + "... access to the 'Copernicus' subfolder"
+                API.__doc__ = combdoc(
+                    type(self).__doc__,
+                    """
+                    ... access to the 'Copernicus' subfolder
+
+                    Note
+                    ----
+                    **LICENSE-info (without any warranty for correctness!!)**
+
+                    ... make sure to check the link above...
+
+                    EEA standard re-use policy: Unless otherwise indicated, reuse of
+                    content on the EEA website for commercial or non-commercial
+                    purposes is permitted free of charge, provided that the source is
+                    acknowledged.
+                    """,
                 )
                 API.fetch_services()
 
@@ -847,7 +1213,23 @@ else:
                     name="EEA_REST_Water",
                     service_type="wms",
                 )
-                API.__doc__ = type(self).__doc__ + "... access to the 'Water' subfolder"
+                API.__doc__ = combdoc(
+                    type(self).__doc__,
+                    """
+                    ... access to the 'Water' subfolder
+
+                    Note
+                    ----
+                    **LICENSE-info (without any warranty for correctness!!)**
+
+                    ... make sure to check the link above...
+
+                    EEA standard re-use policy: Unless otherwise indicated, reuse of
+                    content on the EEA website for commercial or non-commercial
+                    purposes is permitted free of charge, provided that the source is
+                    acknowledged.
+                    """,
+                )
                 API.fetch_services()
 
                 return API
@@ -865,7 +1247,23 @@ else:
                     name="EEA_REST_SOER",
                     service_type="wms",
                 )
-                API.__doc__ = type(self).__doc__ + "... access to the 'SOER' subfolder"
+                API.__doc__ = combdoc(
+                    type(self).__doc__,
+                    """
+                    ... access to the 'SOER' subfolder
+
+                    Note
+                    ----
+                    **LICENSE-info (without any warranty for correctness!!)**
+
+                    ... make sure to check the link above...
+
+                    EEA standard re-use policy: Unless otherwise indicated, reuse of
+                    content on the EEA website for commercial or non-commercial
+                    purposes is permitted free of charge, provided that the source is
+                    acknowledged.
+                    """,
+                )
                 API.fetch_services()
 
                 return API
@@ -883,8 +1281,22 @@ else:
                     name="EEA_REST_SOER",
                     service_type="wms",
                 )
-                API.__doc__ = (
-                    type(self).__doc__ + "... access to the 'MARATLAS' subfolder"
+                API.__doc__ = combdoc(
+                    type(self).__doc__,
+                    """
+                    ... access to the 'MARATLAS' subfolder
+
+                    Note
+                    ----
+                    **LICENSE-info (without any warranty for correctness!!)**
+
+                    ... make sure to check the link above...
+
+                    EEA standard re-use policy: Unless otherwise indicated, reuse of
+                    content on the EEA website for commercial or non-commercial
+                    purposes is permitted free of charge, provided that the source is
+                    acknowledged.
+                    """,
                 )
                 API.fetch_services()
 
@@ -903,8 +1315,22 @@ else:
                     name="EEA_REST_SOER",
                     service_type="wms",
                 )
-                API.__doc__ = (
-                    type(self).__doc__ + "... access to the 'MARINE' subfolder"
+                API.__doc__ = combdoc(
+                    type(self).__doc__,
+                    """
+                    ... access to the 'MARINE' subfolder
+
+                    Note
+                    ----
+                    **LICENSE-info (without any warranty for correctness!!)**
+
+                    ... make sure to check the link above...
+
+                    EEA standard re-use policy: Unless otherwise indicated, reuse of
+                    content on the EEA website for commercial or non-commercial
+                    purposes is permitted free of charge, provided that the source is
+                    acknowledged.
+                    """,
                 )
                 API.fetch_services()
 
@@ -912,17 +1338,16 @@ else:
 
         @property
         def S1GBM(self):
-            ret = SimpleNamespace(
-                add_layer=self._S1GBM_layers(self._m), layers=["vv", "vh"]
-            )
-
-            ret.__doc__ = self._S1GBM_layers.__doc__
-
-            return ret
-
-        class _S1GBM_layers:
             """
             Sentinel-1 Global Backscatter Model
+            https://researchdata.tuwien.ac.at/records/n2d1v-gqb91
+
+            A global C-band backscatter layer from Sentinel-1 in either
+            VV or VH polarization.
+
+            Note
+            ----
+            **LICENSE-info (without any warranty for correctness!!)**
 
             Citation:
                 B. Bauer-Marschallinger, et.al (2021): The Sentinel-1 Global Backscatter Model (S1GBM) -
@@ -943,27 +1368,82 @@ else:
             https://s1map.eodc.eu/
             """
 
+            ret = SimpleNamespace(
+                add_layer=self._S1GBM_layers(self._m), layers=["vv", "vh"]
+            )
+
+            ret.__doc__ = type(self).S1GBM.__doc__
+
+            return ret
+
+        class _S1GBM_layers:
             def __init__(self, m):
                 self._m = m
 
             @property
-            @lru_cache()
             def vv(self):
-                WMS = _S1GBM(self._m, pol="vv")
-                WMS.__doc__ = "## Polarization: VV \n" + type(self).__doc__
+                WMS = _xyz_tile_service(
+                    self._m,
+                    lambda x, y, z: f"https://s1map.eodc.eu/vv/{z}/{x}/{2**z-1-y}.png",
+                    13,
+                )
+
+                WMS.__doc__ = combdoc("Polarization: VV", type(self).__doc__)
                 return WMS
 
             @property
-            @lru_cache()
             def vh(self):
-                WMS = _S1GBM(self._m, pol="vh")
-                WMS.__doc__ = "## Polarization: VH \n" + type(self).__doc__
+                WMS = _xyz_tile_service(
+                    self._m,
+                    lambda x, y, z: f"https://s1map.eodc.eu/vh/{z}/{x}/{2**z-1-y}.png",
+                    13,
+                )
+                WMS.__doc__ = combdoc("Polarization: VH", type(self).__doc__)
                 return WMS
 
-        def get_service(self, url, rest_API=False):
+        @property
+        @lru_cache()
+        def ESRI_ArcGIS(self):
             """
-            Get a object that can be used to add WMS services based on a
-            GetCapabilities-link or a link to a ArcGIS REST API
+            Interface to the ERSI ArcGIS REST Services Directory
+            http://services.arcgisonline.com/arcgis/rest/services
+
+            Note
+            ----
+            **LICENSE-info (without any warranty for correctness!!)**
+
+            For licensing etc. check the individual layer-descriptions at
+            http://services.arcgisonline.com/arcgis/rest/services
+
+            """
+            API = REST_API_services(
+                m=self._m,
+                url="http://server.arcgisonline.com/arcgis/rest/services",
+                name="EEA_REST",
+                service_type="wmts",
+            )
+            API.fetch_services()
+
+            return API
+
+        @property
+        @lru_cache()
+        def Austria(self):
+            """
+            Services specific to Austria (Europe).
+            (They ONLY work if the extent is set to a location inside Austria!)
+
+                - AT_basemap: Basemaps for whole of austria
+                - Wien: Basemaps for the city of Vienna
+            """
+            WMS = Austria(self._m)
+            WMS.__doc__ = type(self).Austria.__doc__
+            return WMS
+
+        def get_service(self, url, service_type="wms", rest_API=False):
+            """
+            Get a object that can be used to add WMS or WMTS services based on
+            a GetCapabilities-link or a link to a ArcGIS REST API
 
             Examples (WMS):
             - Copernicus Global Land Mosaics for Austria, Germany and Slovenia
@@ -976,6 +1456,11 @@ else:
               - https://www.data.gv.at/katalog/dataset/stadt-wien_webmapservicewmsgeoserverwien
               >>> "https://data.wien.gv.at/daten/geo?version=1.3.0&service=WMS&request=GetCapabilities"
 
+            Examples (WMTS):
+            - WMTS service for NASA GIBS datasets
+
+              >>> https://gibs.earthdata.nasa.gov/wmts/epsg4326/all/1.0.0/WMTSCapabilities.xml
+
             Examples (rest_API):
             - Interface to the ArcGIS REST Services Directory for the
               Austrian Federal Institute of Geology (Geologische Bundesanstalt)
@@ -986,6 +1471,8 @@ else:
             ----------
             url : str
                 The service-url
+            service_type: str
+                The type of service (either "wms" or "wmts")
             rest_API : bool, optional
                 Indicator if a GetCapabilities link (True) or a link to a
                 rest-API is provided (False). The default is False
@@ -1003,7 +1490,7 @@ else:
                     m=self._m,
                     url=url,
                     name="custom_service",
-                    service_type="wms",
+                    service_type=service_type,
                 )
                 service.fetch_services()
             else:
@@ -1011,202 +1498,55 @@ else:
 
             return service
 
-    class wmts_container(object):
-        """
-        A collection of open-access WMTS services that can be added to the maps
-
-        For details and licensing check the docstrings and the links to the providers!
-
-        layers can be added in 2 ways (either with . access or with [] access):
-            >>> m.add_wmts.<COLLECTION>.add_layer.<LAYER-NAME>(**kwargs)
-            >>> m.add_wmts.<COLLECTION>[<LAYER-NAME>](**kwargs)
-
-        ### usage-examples:
-
-        - add NASA's BlueMarble background layer
-
-            >>> m.add_wmts.NASA_GIBS.add_layer.BlueMarble_NextGeneration()
-
-            additional kwargs can simply be passed to the layer-call:
-
-            >>> m.add_wmts.NASA_GIBS["AIRS_L3_Surface_Air_Temperature_Daily_Day"
-                                     ](time='2020-02-05')
-
-        - add ESA's WorldCover landcover-classification layer
-
-            >>> m.add_wmts.ESA_WorldCover.add_layer.WORLDCOVER_2020_MAP()
-        """
-
+    class Austria:
+        # container for WebMap services specific to Austria
         def __init__(self, m):
             self._m = m
 
         @property
         @lru_cache()
-        def NASA_GIBS(self):
+        def AT_basemap(self):
+            """
+            Basemap for Austria
+            https://basemap.at/
+
+            Note
+            ----
+            **LICENSE-info (without any warranty for correctness!!)**
+
+            (check: https://basemap.at/#lizenz for full details)
+
+            basemap.at ist gemäß der Open Government Data Österreich Lizenz
+            CC-BY 4.0 sowohl für private als auch kommerzielle Zwecke frei
+            sowie entgeltfrei nutzbar.
+            """
             WMTS = _WebServiec_collection(
                 m=self._m,
                 service_type="wmts",
-                url="https://gibs.earthdata.nasa.gov/wmts/epsg4326/all/1.0.0/WMTSCapabilities.xml",
+                url="http://maps.wien.gv.at/basemap/1.0.0/WMTSCapabilities.xml",
             )
-            WMTS.__doc__ = """
-                NASA Global Imagery Browse Services (GIBS)
-                    https://wiki.earthdata.nasa.gov/display/GIBS/
-
-                LICENSE-info (without any warranty for correctness!!)
-                    (check: https://earthdata.nasa.gov/eosdis/science-system-description/eosdis-components/gibs)
-
-                    NASA supports an open data policy. We ask that users who make use of
-                    GIBS in their clients or when referencing it in written or oral
-                    presentations to add the following acknowledgment:
-
-                    We acknowledge the use of imagery provided by services from NASA's
-                    Global Imagery Browse Services (GIBS), part of NASA's Earth Observing
-                    System Data and Information System (EOSDIS).
-                """
+            WMTS.__doc__ = type(self).AT_basemap.__doc__
             return WMTS
 
         @property
         @lru_cache()
-        def ESA_WorldCover(self):
+        def Wien_basemap(self):
+            """
+            Basemaps for the city of Vienna (Austria)
+            https://www.wien.gv.at
+
+            Note
+            ----
+            **LICENSE-info (without any warranty for correctness!!)**
+
+            check: https://www.data.gv.at/katalog/dataset/stadt-wien_webmaptileservicewmtswien
+
+            Most services are under CC-BY 4.0
+            """
             WMTS = _WebServiec_collection(
                 m=self._m,
                 service_type="wmts",
-                url="https://services.terrascope.be/wmts/v2",
+                url="http://maps.wien.gv.at/wmts/1.0.0/WMTSCapabilities.xml",
             )
-            WMTS.__doc__ = """
-                ESA Worldwide land cover mapping
-                    https://esa-worldcover.org/en
-
-                LICENSE-info (without any warranty for correctness!!)
-                    (check: https://esa-worldcover.org/en/data-access for full details)
-
-                    The ESA WorldCover product is provided free of charge,
-                    without restriction of use. For the full license information see the
-                    Creative Commons Attribution 4.0 International License.
-
-                    Publications, models and data products that make use of these
-                    datasets must include proper acknowledgement, including citing the
-                    datasets and the journal article as in the following citation.
-                """
+            WMTS.__doc__ = type(self).Wien_basemap.__doc__
             return WMTS
-
-        @property
-        @lru_cache()
-        def ESRI_ArcGIS(self):
-            """
-            Interface to the ERSI ArcGIS REST Services Directory
-
-                http://services.arcgisonline.com/arcgis/rest/services
-
-                For licensing etc. check the individual layer-descriptions in
-                the link above.
-
-            """
-            API = REST_API_services(
-                m=self._m,
-                url="http://server.arcgisonline.com/arcgis/rest/services",
-                name="EEA_REST",
-                service_type="wmts",
-            )
-            API.fetch_services()
-
-            return API
-
-        @property
-        @lru_cache()
-        def Austria(self):
-            return self._Austria(self._m)
-
-        class _Austria:
-            """
-            Services specific to Austria.
-            (They ONLY work if the extent is set to a location inside Austria!)
-
-                - AT_basemap: Basemaps for whole of austria
-                - Wien: Basemaps for the city of Vienna
-
-            """
-
-            def __init__(self, m):
-                self._m = m
-
-            @property
-            @lru_cache()
-            def AT_basemap(self):
-                WMTS = _WebServiec_collection(
-                    m=self._m,
-                    service_type="wmts",
-                    url="http://maps.wien.gv.at/basemap/1.0.0/WMTSCapabilities.xml",
-                )
-                WMTS.__doc__ = """
-                    Verwaltungsgrundkarte von Österreich (Basemap for Austria)
-                        https://basemap.at/
-
-                    LICENSE-info (without any warranty for correctness!!)
-                        (check: https://basemap.at/#lizenz for full details)
-
-                        basemap.at ist gemäß der Open Government Data Österreich Lizenz
-                        CC-BY 4.0 sowohl für private als auch kommerzielle Zwecke frei
-                        sowie entgeltfrei nutzbar.
-                    """
-                return WMTS
-
-            @property
-            @lru_cache()
-            def Wien_basemap(self):
-                WMTS = _WebServiec_collection(
-                    m=self._m,
-                    service_type="wmts",
-                    url="http://maps.wien.gv.at/wmts/1.0.0/WMTSCapabilities.xml",
-                )
-                WMTS.__doc__ = """
-                    Verwaltungsgrundkarte von Wien (Basemaps for the city of Vienna)
-                        - https://www.wien.gv.at
-                        - https://www.data.gv.at/katalog/dataset/stadt-wien_webmaptileservicewmtswien
-
-                    LICENSE-info (without any warranty for correctness!!)
-                        (check: the link above for full details)
-
-                        CC-BY 4.0
-                    """
-                return WMTS
-
-        def get_service(self, url, rest_API=False):
-            """
-            Get a object that can be used to add WMTS services based on a
-            GetCapabilities-link or a link to a ArcGIS REST API
-
-            Examples (WMTS):
-            - WMTS service for NASA GIBS datasets
-
-              >>> https://gibs.earthdata.nasa.gov/wmts/epsg4326/all/1.0.0/WMTSCapabilities.xml
-
-
-            Parameters
-            ----------
-            url : str
-                The service-url
-            rest_API : bool, optional
-                Indicator if a GetCapabilities link (True) or a link to a
-                rest-API is provided (False). The default is False
-
-            Returns
-            -------
-            service : _WebServiec_collection
-                An object that behaves just like `m.add_wmts.<service>`
-                and provides easy-access to available WMTS layers
-
-            """
-
-            if rest_API:
-                service = REST_API_services(
-                    m=self._m,
-                    url=url,
-                    name="custom_service",
-                    service_type="wmts",
-                )
-                service.fetch_services()
-            else:
-                service = _WebServiec_collection(self._m, service_type="wmts", url=url)
-
-            return service

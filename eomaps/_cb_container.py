@@ -199,7 +199,9 @@ class _click_container(_cb_container):
                 the ID of the attached callback
 
             """
-            return self._parent._add_callback(f, double_click, button, **kwargs)
+            return self._parent._add_callback(
+                callback=f, double_click=double_click, button=button, **kwargs
+            )
 
     class _get:
         def __init__(self, parent):
@@ -278,7 +280,9 @@ class _click_container(_cb_container):
 
                 print(f"Removed the {self._method} callback: '{ID}'.")
 
-    def _add_callback(self, callback, double_click=False, button=1, **kwargs):
+    def _add_callback(
+        self, *args, callback=None, double_click=False, button=1, **kwargs
+    ):
         """
         Attach a callback to the plot that will be executed if a pixel is clicked
 
@@ -378,7 +382,7 @@ class _click_container(_cb_container):
                 + "the same button is not (yet) supported... use a different button!"
             )
 
-        d[cbkey] = partial(callback, **kwargs)
+        d[cbkey] = partial(callback, *args, **kwargs)
 
         # add mouse-button assignment as suffix to the name (with __ separator)
         cbname = cbkey + f"__{'double' if double_click else 'single'}__{button}"
@@ -388,10 +392,10 @@ class _click_container(_cb_container):
 
 class cb_click_container(_click_container):
     """
-    Accessor to callbacks that are executed if you click anywhere on the Map.
+    Callbacks that are executed if you click anywhere on the Map.
 
-    Methods:
-    --------
+    Methods
+    -------
 
     attach : accessor for callbacks.
         Executing the functions will attach the associated callback to the map!
@@ -534,13 +538,20 @@ class cb_click_container(_click_container):
 
 class cb_pick_container(_click_container):
     """
-    Accessor to callbacks that are executed if you click on (or close-to)
-    a data-point of a previously plotted collection (you must plot a dataset first!)
+    Callbacks that select the nearest datapoint if you click on the map.
+    (you must plot a dataset with `m.plot_map()` first!)
 
     The event will search for the closest data-point and execute the callback
     with the properties (e.g. position , ID, value) of the selected point.
 
-    Methods:
+    Note
+    ----
+
+    you can use the `pick_distance` kwarg in `m.plot_map(pick_distance=20)`
+    to specify the maximal distance (in pixels) that is used to identify the
+    closest datapoint
+
+    Methods
     --------
 
     attach : accessor for callbacks.
@@ -690,9 +701,10 @@ class cb_pick_container(_click_container):
 
 class keypress_container(_cb_container):
     """
-    Accessor to callbacks that are executed on keypress-events
+    Callbacks that are executed if you press a key on the keyboard.
 
-    Methods:
+    Methods
+    -------
 
     attach : accessor for callbacks.
         Executing the functions will attach the associated callback to the map!
@@ -897,7 +909,10 @@ class keypress_container(_cb_container):
 
 class cb_container:
     """
-    A container for attaching callbacks and accessing return-objects.
+    Accessor for attaching callbacks and accessing return-objects.
+
+    Methods
+    -------
 
     - **click** : Execute functions when clicking on the map
 

@@ -1,16 +1,16 @@
-🌳 Usage
-=====
+🌳 General
+==========
 
 .. _installation:
 
 
 🐛 Installation
-############
+###############
 (To speed up the process... have a look at `(mamba) <https://github.com/mamba-org/mamba>`_ )
 
 
 🐜 Manual installation
--------------------
+----------------------
 
 The recommended way to install EOmaps with `conda` and `pip`:
 
@@ -43,7 +43,7 @@ The recommended way to install EOmaps with `conda` and `pip`:
 
 
 🐞 From .yml file
---------------
+-----------------
 
 Here's a yaml-file that you can use to install all you need in one go:
 

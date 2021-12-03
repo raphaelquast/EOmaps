@@ -37,7 +37,6 @@ from ._containers import (
     classify_specs,
     # cb_container,
     wms_container,
-    wmts_container,
 )
 
 from ._cb_container import cb_container
@@ -49,7 +48,7 @@ except ImportError:
     print("No module named 'mapclassify'... classification will not work!")
 
 
-def MapsGrid(r=2, c=2):
+def MapsGrid(r=2, c=2, **kwargs):
     """
     Initialize a grid of Maps objects
 
@@ -59,7 +58,8 @@ def MapsGrid(r=2, c=2):
         the number of rows. The default is 2.
     c : int, optional
         the number of columns. The default is 2.
-
+    \**kwargs
+        additional keyword-arguments passed to `matplotlib.gridspec.GridSpec()`
     Returns
     -------
     eomaps.MapsGrid
@@ -117,7 +117,7 @@ def MapsGrid(r=2, c=2):
             self.parent.join_limits(*self.children)
 
     mg = MapsGrid()
-    gs = GridSpec(nrows=r, ncols=c)
+    gs = GridSpec(nrows=r, ncols=c, **kwargs)
 
     for i in range(r):
         for j in range(c):
@@ -198,6 +198,10 @@ class Maps(object):
                 >>> ...
                 >>> ax = f.add_subplot(projection=m.crs_plot)
                 >>> m.plot_map(ax_gs=ax)
+    preferred_wms_service : str, optional
+        Set the preferred way for accessing WebMap services if both WMS and WMTS
+        capabilities are possible.
+        The default is "wms"
     """
 
     crs_list = ccrs
@@ -225,7 +229,13 @@ class Maps(object):
     CLASSIFIERS = SimpleNamespace(**dict(zip(_classifiers, _classifiers)))
 
     def __init__(
-        self, parent=None, layer=0, orientation="vertical", f=None, gs_ax=None
+        self,
+        parent=None,
+        layer=0,
+        orientation="vertical",
+        f=None,
+        gs_ax=None,
+        preferred_wms_service="wms",
     ):
 
         if parent is not None:
@@ -243,6 +253,13 @@ class Maps(object):
         self.parent = parent  # invoke the setter!
         self._orientation = "vertical"
         self.layer = layer
+
+        # preferred way of accessing WMS services (used in the WMS container)
+        assert preferred_wms_service in [
+            "wms",
+            "wmts",
+        ], "preferred_wms_service must be either 'wms' or 'wmts' !"
+        self._preferred_wms_service = preferred_wms_service
 
         # default plot specs
         self.plot_specs = plot_specs(
@@ -364,14 +381,6 @@ class Maps(object):
 
         return self.parent._axpicker
 
-    if wmts_container is not None:
-
-        @property
-        @wraps(wmts_container)
-        @lru_cache()
-        def add_wmts(self):
-            return wmts_container(self)
-
     if wms_container is not None:
 
         @property
@@ -411,7 +420,7 @@ class Maps(object):
         *args :
             the axes to join.
         """
-
+        self._set_axes()
         for m in args:
             m._set_axes()
             if m is not self:
@@ -608,10 +617,12 @@ class Maps(object):
 
     def set_data_specs(self, **kwargs):
         """
+        Set the properties of the dataset you want to plot.
+
         Use this function to update multiple data-specs in one go
         Alternatively you can set the data-specifications via
 
-            >>> m.data_specs.<...> = <...>`
+            >>> m.data_specs.< property > = ...`
 
         Parameters
         ----------
@@ -647,8 +658,12 @@ class Maps(object):
 
     def set_plot_specs(self, **kwargs):
         """
-        Use this function to update multiple plot-specs in one go
-        (alternatively you can set data-properties via `m.plot_specs.<...> = <...>`)
+        Set the plot-specifications (title, label, colormap, crs, etc.)
+
+        Use this function to update multiple data-specs in one go
+        Alternatively you can set the data-specifications via
+
+            >>> m.data_specs.< property > = ...`
 
         Parameters
         ----------
@@ -673,7 +688,8 @@ class Maps(object):
             If int: The number of histogram-bins to use for the colorbar.
             If list, tuple or numpy-array: the bins to use
             If "bins": use the bins obtained from the classification
-                       (ONLY possible if a classification scheme is used!)
+            (ONLY possible if a classification scheme is used!)
+
             The default is 256.
         tick_precision : int, optional
             The precision of the tick-labels in the colorbar. The default is 2.
@@ -703,17 +719,17 @@ class Maps(object):
 
     def set_classify_specs(self, scheme=None, **kwargs):
         """
-        Set classification specifications for the data
+        Set classification specifications for the data.
         (classification is performed by the `mapclassify` module)
 
         Parameters
         ----------
         scheme : str
             The classification scheme to use.
-            (the list is accessible via m.classify_specs.SCHEMES)
+            (the list is accessible via `m.classify_specs.SCHEMES`)
 
             E.g. one of:
-            [ "scheme" (**kwargs)  ]
+            [ "scheme" (\**kwargs)  ]
 
                 - BoxPlot (hinge)
                 - EqualInterval (k)
@@ -731,7 +747,7 @@ class Maps(object):
                 - StdMean (multiples)
                 - UserDefined (bins)
 
-        **kwargs :
+        \**kwargs :
             kwargs passed to the call to the respective mapclassify classifier
         """
         self.classify_specs._set_scheme_and_args(scheme, **kwargs)
@@ -1448,7 +1464,7 @@ class Maps(object):
         ----------
         dataspec : dict
             the data-specification used to load the data via
-            cartopy.shapereader.natural_earth(**dataspec)
+            cartopy.shapereader.natural_earth(\**dataspec)
 
             >>> dataspec=(resolution='10m', category='cultural', name='urban_areas')
             >>> dataspec=(resolution='10m', category='cultural', name='admin_0_countries')
@@ -1770,12 +1786,13 @@ class Maps(object):
         Actually generate the map-plot based on the data provided as `m.data` and the
         specifications defined in "data_specs", "plot_specs" and "classify_specs".
 
-        NOTE:
-            Each call to plot_map will replace the collection used for picking!
-            (only the last collection remains interactive on multiple calls to `m.plot_map()`)
+        NOTE
+        ----
+        Each call to plot_map will replace the collection used for picking!
+        (only the last collection remains interactive on multiple calls to `m.plot_map()`)
 
-            If you need multiple responsive datasets, use connected maps-objects instead!
-            (e.g. `m2 = Maps(parent=m)` or have a look at `MapsGrid`)
+        If you need multiple responsive datasets, use connected maps-objects instead!
+        (e.g. `m2 = Maps(parent=m)` or have a look at `MapsGrid`)
 
         Parameters
         ----------
@@ -1789,13 +1806,13 @@ class Maps(object):
         pick_distance : int
             The maximum distance (in pixels) to trigger callbacks.
             (The distance is evaluated between the clicked pixel and the center of the
-             closest data-point)
+            closest data-point)
             The default is 10.
         layer : int
             A layer-index in case the collection is intended to be updated
             dynamically.
             The default is None.
-        **kwargs
+        \**kwargs
             kwargs passed to the initialization of the matpltolib collection
             (dependent on the plot-shape) [linewidth, edgecolor, facecolor, ...]
         """

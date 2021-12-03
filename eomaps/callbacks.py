@@ -9,14 +9,15 @@ class _click_callbacks(object):
     a collection of callback-functions
 
     to attach a callback, use:
-        >>> m.add_callback(m.cb.annotate)
-        >>> # or
-        >>> m.add_callback("annotate")
+        >>> cid = m.cb.click.attach.annotate(**kwargs)
+        or
+        >>> cid = m.cb.pick.attach.annotate(**kwargs)
 
     to remove an already attached callback, use:
-        >>> m.remove_callback(m.cb.annotate)
-        >>> # or
-        >>> m.remove_callback("annotate")
+        >>> m.cb.click.remove(cid)
+        or
+        >>> m.cb.pick.remove(cid)
+
 
     you can also define custom callback functions as follows:
 
@@ -25,10 +26,11 @@ class _click_callbacks(object):
         >>>     print("the position of the clicked pixel", kwargs["pos"])
         >>>     print("the data-index of the clicked pixel", kwargs["ID"])
         >>>     print("data-value of the clicked pixel", kwargs["val"])
-        >>>
-        >>> m.add_callback(some_callback)
-    and remove them again via
-        >>> m.remove_callback(some_callback)
+    and attach them via:
+        >>> cid = m.cb.click.attach(some_callback)
+        or
+        >>> cid = m.cb.click.attach(some_callback)
+    (... and remove them in the same way as pre-defined callbacks)
     """
 
     # the naming-convention of the functions is as follows:
@@ -69,14 +71,19 @@ class _click_callbacks(object):
         # (artists will be removed after each draw-event!)
         self._temporary_artists = temp_artists
 
-    def print_to_console(self, ID=None, pos=None, val=None, ind=None):
-        """
-        a callback-function that prints details on the clicked pixel to the
-        console
+    @staticmethod
+    def _popargs(kwargs):
+        # pop the default kwargs passed to each callback function
+        # (to avoid showing them as kwargs when called)
+        ID = kwargs.pop("ID", None)
+        pos = kwargs.pop("pos", None)
+        val = kwargs.pop("val", None)
+        ind = kwargs.pop("ind", None)
+        return ID, pos, val, ind
 
-        Parameters
-        ----------
-        """
+    def print_to_console(self, **kwargs):
+        """Print details on the clicked pixel to the console"""
+        ID, pos, val, ind = self._popargs(kwargs)
 
         xlabel = self.m.data_specs.xcoord
         ylabel = self.m.data_specs.ycoord
@@ -103,10 +110,6 @@ class _click_callbacks(object):
 
     def annotate(
         self,
-        ID=None,
-        pos=None,
-        val=None,
-        ind=None,
         pos_precision=4,
         val_precision=4,
         permanent=False,
@@ -115,11 +118,11 @@ class _click_callbacks(object):
         **kwargs,
     ):
         """
-        a callback-function to annotate basic properties from the fit on
-        double-click, use as:    spatial_plot(... , callback=cb_annotate)
+        Add a basic text-annotation to the plot at the position where the map
+        was clicked.
 
-        if permanent = True, the generated annotations are stored in a list
-        which is accessible via `m.cb.permanent_annotations`
+        If permanent = True, the generated annotations are stored in a list
+        which is accessible via `m.cb.[click/pick].get.permanent_annotations`
 
         Parameters
         ----------
@@ -161,6 +164,9 @@ class _click_callbacks(object):
             >>>     )
 
         """
+
+        ID, pos, val, ind = self._popargs(kwargs)
+
         xlabel = self.m.data_specs.xcoord
         ylabel = self.m.data_specs.ycoord
 
@@ -241,7 +247,7 @@ class _click_callbacks(object):
 
     def clear_annotations(self, **kwargs):
         """
-        remove all temporary and permanent annotations from the plot
+        Remove all temporary and permanent annotations from the plot
         """
         if hasattr(self, "permanent_annotations"):
             while len(self.permanent_annotations) > 0:
@@ -252,12 +258,15 @@ class _click_callbacks(object):
     def _annotate_cleanup(self):
         self.clear_annotations()
 
-    def get_values(self, ID=None, pos=None, val=None, ind=None):
+    def get_values(self, **kwargs):
         """
-        a callback-function that successively collects return-values in a dict
-        accessible via "m.cb.picked_vals", with the following structure:
+        Successively collect return-values in a dict accessible via
+        `m.cb.[click/pick].get.picked_vals`.
 
-            >>> m.cb.picked_vals = dict(
+        The structure of the picked_vals dict is as follows:
+        (lists are appended as you click on more pixels)
+
+            >>> dict(
             >>>     pos=[... center-position tuples in plot_crs ...],
             >>>     ID=[... the corresponding IDs in the dataframe...],
             >>>     val=[... the corresponding values ...]
@@ -265,6 +274,7 @@ class _click_callbacks(object):
 
         removing the callback will also remove the associated value-dictionary!
         """
+        ID, pos, val, ind = self._popargs(kwargs)
 
         if not hasattr(self, "picked_vals"):
             self.picked_vals = defaultdict(list)
@@ -279,10 +289,6 @@ class _click_callbacks(object):
 
     def mark(
         self,
-        ID=None,
-        pos=None,
-        val=None,
-        ind=None,
         radius="pixel",
         radius_crs="in",
         shape="ellipses",
@@ -293,12 +299,13 @@ class _click_callbacks(object):
         **kwargs,
     ):
         """
-        A callback to draw indicators over double-clicked pixels.
+        Draw markers at the location where the map was clicked.
+
+        If permanent = True, the generated annotations are stored in a list
+        which is accessible via `m.cb.[click/pick].get.permanent_markers`
 
         Removing the callback will remove ALL markers that have been
         added to the map.
-
-        The added patches are accessible via `m.cb._pick_markers`
 
         Parameters
         ----------
@@ -337,6 +344,9 @@ class _click_callbacks(object):
             kwargs passed to the matplotlib patch.
             (e.g. `facecolor`, `edgecolor`, `linewidth`, `alpha` etc.)
         """
+
+        ID, pos, val, ind = self._popargs(kwargs)
+
         if ID is not None:
             if ind is None:
                 # ind = self.m.data.index.get_loc(ID)
@@ -414,7 +424,7 @@ class _click_callbacks(object):
 
     def clear_markers(self, **kwargs):
         """
-        remove all temporary and permanent annotations from the plot
+        Remove all temporary and permanent annotations from the plot.
         """
         if hasattr(self, "permanent_markers"):
             while len(self.permanent_markers) > 0:
@@ -426,11 +436,9 @@ class _click_callbacks(object):
     def _mark_cleanup(self):
         self.clear_markers()
 
-    def peek_layer(
-        self, ID=None, pos=None, val=None, ind=None, layer=1, how="left", **kwargs
-    ):
+    def peek_layer(self, layer=1, how="left", **kwargs):
         """
-        Swipe layers or look at layers through a specified window.
+        Swipe between data- or WebMap layers or peek a layers through a rectangle.
 
         Parameters
         ----------
@@ -457,6 +465,8 @@ class _click_callbacks(object):
             the default is `(fc="none", ec="k", lw=1)`
 
         """
+        ID, pos, val, ind = self._popargs(kwargs)
+
         ax = self.m.figure.ax
 
         # default boundary args
@@ -564,20 +574,12 @@ class _click_callbacks(object):
         )
 
     def load(
-        self,
-        ID=None,
-        pos=None,
-        val=None,
-        ind=None,
-        database=None,
-        load_method="load_fit",
-        load_multiple=False,
+        self, database=None, load_method="load_fit", load_multiple=False, **kwargs
     ):
         """
-        A callback-function that can be used to load objects from a given
-        database.
+        Load objects from a given database using the ID of the picked pixel.
 
-        The returned object(s) are accessible via `m.cb.picked_object`.
+        The returned object(s) are accessible via `m.cb.pick.get.picked_object`.
 
         Parameters
         ----------
@@ -592,6 +594,7 @@ class _click_callbacks(object):
             True: A single-object is returned, replacing `m.cb.picked_object` on each pick.
             False: A list of objects is returned that is extended with each pick.
         """
+        ID, pos, val, ind = self._popargs(kwargs)
 
         assert database is not None, "you must provide a database object!"
 
@@ -619,16 +622,12 @@ class _click_callbacks(object):
 
     def plot(
         self,
-        ID=None,
-        pos=None,
-        val=None,
-        ind=None,
         x_index="pos",
         precision=4,
         **kwargs,
     ):
         """
-        a callback-function to generate a dynamically updated plot of the values
+        Generate a dynamically updated plot showing the values of the picked pixels.
 
             - x-axis represents pixel-coordinates (or IDs)
             - y-axis represents pixel-values
@@ -650,6 +649,7 @@ class _click_callbacks(object):
             kwargs forwarded to the call to `plt.plot([...], [...], **kwargs)`.
 
         """
+        ID, pos, val, ind = self._popargs(kwargs)
 
         style = dict(marker=".")
         style.update(**kwargs)
@@ -756,13 +756,33 @@ class keypress_callbacks:
         self._m = m
 
     def switch_layer(self, layer=1, key="1"):
+        """
+        Change the default layer of the map.
+
+        Use the keyboard events to set the default layer (e.g. the visible layer)
+        displayed in the plot.
+
+        Parameters
+        ----------
+        layer : int, optional
+            The layer to use. The default is 1.
+        key : str, optional
+            The key to use. Modifiers are indicated with a +, e.g. "alt+x".
+            The default is "1".
+        """
         self._m.BM.bg_layer = layer
         self._m.BM.fetch_bg()
 
 
 class dynamic_callbacks:
     """
-    EXPERIMENTAL FEATURE!!
+    Callbacks that are triggered by events in the map (e.g. draw, zoom, etc.).
+
+    Note
+    ----
+
+    This is still an experimental feature!
+
 
     A collection of callback functions that are executed on triggered events.
     (e.g. draw, zoom etc.)
