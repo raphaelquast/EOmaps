@@ -27,7 +27,7 @@
 ## 🔨 installation
 
 Installing EOmaps can be done via `pip`.  
-However, to make sure all dependencies are correctly installed, make sure to have a look at the [installation instructions](https://eomaps.readthedocs.io/en/latest/usage.html#installation) in the documentation!
+However, to make sure all dependencies are correctly installed, make sure to have a look at the [installation instructions](https://eomaps.readthedocs.io/en/latest/general.html#installation) in the documentation!
 
 <br/>
 
