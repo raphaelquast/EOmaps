@@ -2085,7 +2085,7 @@ class MapsGrid:
     @wraps(Maps.add_coastlines)
     def add_coastlines(self, *args, **kwargs):
         for m in self:
-            m.add_marker(*args, **kwargs)
+            m.add_coastlines(*args, **kwargs)
 
     def share_click_events(self):
         """
