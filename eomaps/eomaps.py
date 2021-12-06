@@ -2050,6 +2050,8 @@ class MapsGrid:
         for m in self:
             m.set_data_specs(**kwargs)
 
+    set_data = set_data_specs
+
     @wraps(Maps.set_classify_specs)
     def set_classify_specs(self, scheme=None, **kwargs):
         for m in self:
@@ -2079,6 +2081,11 @@ class MapsGrid:
     def add_overlay(self, *args, **kwargs):
         for m in self:
             m.add_wms(*args, **kwargs)
+
+    @wraps(Maps.add_coastlines)
+    def add_coastlines(self, *args, **kwargs):
+        for m in self:
+            m.add_marker(*args, **kwargs)
 
     def share_click_events(self):
         """
