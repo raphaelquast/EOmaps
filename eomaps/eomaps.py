@@ -48,91 +48,6 @@ except ImportError:
     print("No module named 'mapclassify'... classification will not work!")
 
 
-def MapsGrid(r=2, c=2, **kwargs):
-    """
-    Initialize a grid of Maps objects
-
-    Parameters
-    ----------
-    r : int, optional
-        the number of rows. The default is 2.
-    c : int, optional
-        the number of columns. The default is 2.
-    \**kwargs
-        additional keyword-arguments passed to `matplotlib.gridspec.GridSpec()`
-    Returns
-    -------
-    eomaps.MapsGrid
-        Accessor to the Maps objects "ax_{row}_{column}".
-
-    """
-
-    class MapsGrid:
-        def __init__(self):
-            self._axes = []
-
-        def __iter__(self):
-            return iter(self._axes)
-
-        def __getitem__(self, key):
-            return getattr(self, f"ax_{key[0]}_{key[1]}")
-
-        @property
-        def children(self):
-            return [i for i in self if i is not self.parent]
-
-        @property
-        def f(self):
-            return self.parent.figure.f
-
-        def set_plot_specs(self, **kwargs):
-            for m in self:
-                m.set_plot_specs(**kwargs)
-
-        def set_data_specs(self, **kwargs):
-            for m in self:
-                m.set_data_specs(**kwargs)
-
-        def set_classify_specs(self, scheme=None, **kwargs):
-            for m in self:
-                m.set_classify_specs(scheme=scheme, **kwargs)
-
-        def share_click_events(self):
-            """
-            share click events between all Maps objects of the grid
-            """
-            self.parent.cb.click.share_events(*self.children)
-
-        def share_pick_events(self):
-            """
-            share pick events between all Maps objects of the grid
-            """
-            self.parent.cb.pick.share_events(*self.children)
-
-        def join_limits(self):
-            """
-            join axis limits between all Maps objects of the grid
-            (only possible if all maps share the same crs!)
-            """
-            self.parent.join_limits(*self.children)
-
-    mg = MapsGrid()
-    gs = GridSpec(nrows=r, ncols=c, **kwargs)
-
-    for i in range(r):
-        for j in range(c):
-            if i == 0 and j == 0:
-                mij = Maps(gs_ax=gs[0, 0])
-                mg.parent = mij
-            else:
-                mij = Maps(parent=mg.parent, gs_ax=gs[i, j])
-
-            mg._axes.append(mij)
-            setattr(mg, f"m_{i}_{j}", mij)
-
-    return mg
-
-
 class Maps(object):
     """
     The base-class for generating plots with EOmaps
@@ -2074,3 +1989,112 @@ class Maps(object):
         m.set_shape.ellipses(radius_crs="out", radius=r)
         m.plot_map(**kwargs)
         return m
+
+
+class MapsGrid:
+    """
+    Initialize a grid of Maps objects
+
+    Parameters
+    ----------
+    r : int, optional
+        the number of rows. The default is 2.
+    c : int, optional
+        the number of columns. The default is 2.
+    \**kwargs
+        additional keyword-arguments passed to `matplotlib.gridspec.GridSpec()`
+    Returns
+    -------
+    eomaps.MapsGrid
+        Accessor to the Maps objects "ax_{row}_{column}".
+
+    """
+
+    def __init__(self, r=2, c=2, **kwargs):
+        self._axes = []
+
+        gs = GridSpec(nrows=r, ncols=c, **kwargs)
+
+        for i in range(r):
+            for j in range(c):
+                if i == 0 and j == 0:
+                    mij = Maps(gs_ax=gs[0, 0])
+                    self.parent = mij
+                else:
+                    mij = Maps(parent=self.parent, gs_ax=gs[i, j])
+
+                self._axes.append(mij)
+                setattr(self, f"m_{i}_{j}", mij)
+
+    def __iter__(self):
+        return iter(self._axes)
+
+    def __getitem__(self, key):
+        return getattr(self, f"ax_{key[0]}_{key[1]}")
+
+    @property
+    def children(self):
+        return [i for i in self if i is not self.parent]
+
+    @property
+    def f(self):
+        return self.parent.figure.f
+
+    @wraps(Maps.set_plot_specs)
+    def set_plot_specs(self, **kwargs):
+        for m in self:
+            m.set_plot_specs(**kwargs)
+
+    @wraps(Maps.set_data_specs)
+    def set_data_specs(self, **kwargs):
+        for m in self:
+            m.set_data_specs(**kwargs)
+
+    @wraps(Maps.set_classify_specs)
+    def set_classify_specs(self, scheme=None, **kwargs):
+        for m in self:
+            m.set_classify_specs(scheme=scheme, **kwargs)
+
+    @wraps(Maps.add_annotation)
+    def add_annotation(self, *args, **kwargs):
+        for m in self:
+            m.add_annotation(*args, **kwargs)
+
+    @wraps(Maps.add_marker)
+    def add_marker(self, *args, **kwargs):
+        for m in self:
+            m.add_marker(*args, **kwargs)
+
+    # @wraps(Maps.add_wms)
+    # def add_wms(self, *args, **kwargs):
+    #     for m in self:
+    #         m.add_wms(*args, **kwargs)
+
+    @wraps(Maps.add_gdf)
+    def add_gdf(self, *args, **kwargs):
+        for m in self:
+            m.add_wms(*args, **kwargs)
+
+    @wraps(Maps.add_overlay)
+    def add_overlay(self, *args, **kwargs):
+        for m in self:
+            m.add_wms(*args, **kwargs)
+
+    def share_click_events(self):
+        """
+        share click events between all Maps objects of the grid
+        """
+        self.parent.cb.click.share_events(*self.children)
+
+    def share_pick_events(self):
+        """
+        share pick events between all Maps objects of the grid
+        """
+        self.parent.cb.pick.share_events(*self.children)
+
+    def join_limits(self):
+        """
+        join axis limits between all Maps objects of the grid
+        (only possible if all maps share the same crs!)
+        """
+        self.parent.join_limits(*self.children)
