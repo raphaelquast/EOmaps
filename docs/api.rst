@@ -122,7 +122,7 @@ Once the map is generated, a snapshot of the map can be saved at any time by usi
 
 .. code-block:: python
 
-    m.savefig( "snapshot1.png", dpi=300 )
+    m.savefig( "snapshot1.png", dpi=300, ... )
 
 
 .. currentmodule:: eomaps.Maps
