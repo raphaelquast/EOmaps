@@ -3,15 +3,23 @@ channels:
   - conda-forge
 
 dependencies:
+  - rtree
   - numpy
+  - scipy
   - pandas
   - geopandas
-  - matplotlib
-  - cartopy
+  - matplotlib>=3.0
+  - cartopy>=0.20.0
   - descartes
   - mapclassify
   - pyproj
-
+  - pyepsg
+  # --------------for WebMaps
+  - owslib
+  - requests
+  - xmltodict
+  - cairosvg
+  # --------------for testing
   - coveralls
   - pytest
   - pytest-cov

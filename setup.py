@@ -9,14 +9,17 @@ from pathlib import Path
 
 # add the README as long-description
 this_directory = Path(__file__).parent
-long_description = (this_directory / "README.md").read_text()
+try:
+    long_description = (this_directory / "README.md").read_text()
+except Exception:
+    long_description = "A library to create interactive maps of geographical datasets."
 
-version = "2.1.0"
+version = "2.1.1"
 
 setup(
     name="EOmaps",
     version=version,
-    description="A library to generate interactive maps of geographical datasets.",
+    description="A library to create interactive maps of geographical datasets.",
     packages=find_packages(),
     package_dir={"eomaps": "eomaps"},
     # include_package_data=True,
@@ -30,14 +33,19 @@ setup(
     long_description_content_type="text/markdown",
     install_requires=[
         "numpy",
+        "scipy",
         "pandas",
-        "geopandas",
         "matplotlib>=3.0",
         "cartopy>=0.20.0",
         "descartes",
         "mapclassify",
         "pyproj",
         "pyepsg",
+        "geopandas",
+        "owslib",
+        "requests",
+        "xmltodict",
+        "cairosvg",
     ],
     keywords=["visualization", "plotting", "maps", "geographical data"],
     # See https://pypi.python.org/pypi?%3Aaction=list_classifiers
@@ -49,4 +57,5 @@ setup(
         # ~ 'License :: OSI Approved :: MIT License',
         "Programming Language :: Python :: 3.7",
     ],
+    license_files=("LICENSE",),
 )

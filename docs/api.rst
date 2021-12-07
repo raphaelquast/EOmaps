@@ -40,8 +40,7 @@ use:
     MapsGrid
 
 
-If you want to create multiple maps-objects with similar properties, use:
-(you can of course adjust the properties of the copied object afterwards!)
+To get a copy of a `Maps`-object with the same specifications, use:
 
 .. code-block:: python
 
@@ -49,7 +48,7 @@ If you want to create multiple maps-objects with similar properties, use:
 
     m = Maps()
     ...
-    m2 = m.copy()
+    m2 = m.copy(...)
 
 .. currentmodule:: eomaps
 
@@ -123,7 +122,7 @@ Once the map is generated, a snapshot of the map can be saved at any time by usi
 
 .. code-block:: python
 
-    m.savefig( "snapshot1.png", dpi=300 )
+    m.savefig( "snapshot1.png", dpi=300, ... )
 
 
 .. currentmodule:: eomaps.Maps

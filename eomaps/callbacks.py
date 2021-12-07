@@ -289,7 +289,7 @@ class _click_callbacks(object):
 
     def mark(
         self,
-        radius="pixel",
+        radius=None,
         radius_crs="in",
         shape="ellipses",
         buffer=1,
@@ -310,11 +310,10 @@ class _click_callbacks(object):
         Parameters
         ----------
         radius : float, string or None, optional
-            The radius of the marker.
-            If None, it will be evaluated based on the pixel-spacing of the
-            provided dataset
+            If float: The radius of the marker in units of the "radius_crs".
             If "pixel" the pixel dimensions of the clicked pixel are used
-
+            If None: The radius of the data used for plotting (if available),
+                     otherwise 1/10 of the width and height
             The default is None.
         radius_crs : any
             The crs specification in which the radius is provided.
@@ -344,6 +343,15 @@ class _click_callbacks(object):
             kwargs passed to the matplotlib patch.
             (e.g. `facecolor`, `edgecolor`, `linewidth`, `alpha` etc.)
         """
+        if radius is None:
+            if self.m.figure.coll is not None:
+                radius = "pixel"
+            else:
+                # make a dot with 1/20 of the widht & height of the figure
+                t = self.m.figure.ax.bbox.transformed(
+                    self.m.figure.ax.transData.inverted()
+                )
+                radius = (t.width / 10.0, t.height / 10.0)
 
         ID, pos, val, ind = self._popargs(kwargs)
 
@@ -362,7 +370,7 @@ class _click_callbacks(object):
             if not hasattr(self.m.shape, "radius"):
                 print(
                     "EOmaps: You cannot attach markers with 'radius=pixel'"
-                    + "if the shape {self.m.shape.name} is used for plotting!"
+                    + f"if the shape {self.m.shape.name} is used for plotting!"
                 )
                 return
             radius = self.m.shape.radius

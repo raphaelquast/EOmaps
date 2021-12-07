@@ -56,7 +56,7 @@ Here's a yaml-file that you can use to install all you need in one go:
 
     dependencies:
       - python=3.7
-      - defaults::rtree
+      - rtree
       - numpy
       - scipy
       - pandas

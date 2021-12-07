@@ -597,12 +597,17 @@ class cb_pick_container(_click_container):
         ) and self._m.figure.f.canvas.toolbar.mode != "":
             return
 
-        if event.artist != self._m.figure.coll:
-            return
+        if event.artist != self._m.figure.coll or event.artist is None:
+            clickdict = dict(
+                ID=event.ind if hasattr(event, "ind") else None,
+                pos=(event.mouseevent.xdata, event.mouseevent.ydata),
+                val=None,
+                ind=event.ind,
+            )
+            event = event.mouseevent
+            # return
         else:
             clickdict = self._get_pickdict(event)
-
-        clickdict = self._get_pickdict(event)
 
         if event.dblclick:
             cbs = self.get.cbs["double"]
@@ -616,36 +621,38 @@ class cb_pick_container(_click_container):
                 if clickdict is not None:
                     cb(**clickdict)
 
-    def _add_pick_callback(self):
+    def _add_pick_callback(self, pickcb=None):
         # only attach pick-callbacks if there is a collection available!
-        if self._m.figure.coll is None:
-            return
+        # if self._m.figure.coll is None:
+        #    return
         # ------------- add a callback
         # execute onpick on the parent and all its children
         # (_add_pick_callback() is only called on the parent object!)
-        def pickcb(event):
-            self._event = event
+        if pickcb is None:
 
-            # ignore callbacks while dragging axes
-            if self._m._draggable_axes._modifier_pressed:
-                return
-            # don't execute callbacks if a toolbar-action is active
-            if (
-                self._m.figure.f.canvas.toolbar is not None
-            ) and self._m.figure.f.canvas.toolbar.mode != "":
-                return
+            def pickcb(event):
+                self._event = event
 
-            # execute "_onpick" on the maps-object that belongs to the clicked axes
-            # and forward the event to all forwarded maps-objects
-            for obj in self.objs:
-                obj._onpick(event)
-                obj._m.BM._after_update_actions.append(obj._clear_temporary_artists)
-                # forward callbacks to the connected maps-objects
-                obj._fwd_cb(event)
+                # ignore callbacks while dragging axes
+                if self._m._draggable_axes._modifier_pressed:
+                    return
+                # don't execute callbacks if a toolbar-action is active
+                if (
+                    self._m.figure.f.canvas.toolbar is not None
+                ) and self._m.figure.f.canvas.toolbar.mode != "":
+                    return
 
-            # self._m.parent.BM.update(clear=self._method)
-            # don't update here... the click-callback will take care of it!
-            self._m.parent.BM._clear_temp_artists(self._method)
+                # execute "_onpick" on the maps-object that belongs to the clicked axes
+                # and forward the event to all forwarded maps-objects
+                for obj in self.objs:
+                    obj._onpick(event)
+                    obj._m.BM._after_update_actions.append(obj._clear_temporary_artists)
+                    # forward callbacks to the connected maps-objects
+                    obj._fwd_cb(event)
+
+                # self._m.parent.BM.update(clear=self._method)
+                # don't update here... the click-callback will take care of it!
+                self._m.parent.BM._clear_temp_artists(self._method)
 
         if self._cid_pick_event is None:
             # ------------- add a callback
@@ -671,11 +678,6 @@ class cb_pick_container(_click_container):
                 event.mouseevent.xdata, event.mouseevent.ydata
             )
 
-            dummyevent = SimpleNamespace(
-                artist=m.figure.coll,
-                dblclick=event.dblclick,
-                button=event.button,
-            )
             dummymouseevent = SimpleNamespace(
                 inaxes=m.figure.ax,
                 dblclick=event.dblclick,
@@ -685,8 +687,17 @@ class cb_pick_container(_click_container):
                 # x=event.mouseevent.x,
                 # y=event.mouseevent.y,
             )
+            dummyevent = SimpleNamespace(
+                artist=m.figure.coll,
+                dblclick=event.dblclick,
+                button=event.button,
+                inaxes=m.figure.ax,
+                xdata=xdata,
+                ydata=ydata,
+                mouseevent=dummymouseevent,
+            )
 
-            pick = m._pick_pixel(None, dummymouseevent)
+            pick = m._pick_pixel(None, event.mouseevent)
             if pick[1] is not None:
                 dummyevent.ind = pick[1]["ind"]
                 if "dist" in pick[1]:

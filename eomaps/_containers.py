@@ -45,7 +45,8 @@ class map_objects(object):
     ):
         self._m = m
 
-    # self.coll is assigned in "m.plot_map()"
+        self.coll = None
+        # self.coll is assigned in "m.plot_map()"
 
     @property
     def f(self):
