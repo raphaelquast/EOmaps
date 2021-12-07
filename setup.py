@@ -9,7 +9,10 @@ from pathlib import Path
 
 # add the README as long-description
 this_directory = Path(__file__).parent
-long_description = (this_directory / "README.md").read_text()
+try:
+    long_description = (this_directory / "README.md").read_text()
+except Exception:
+    long_description = "A library to create interactive maps of geographical datasets."
 
 version = "2.1.0"
 
