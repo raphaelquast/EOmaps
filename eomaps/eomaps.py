@@ -265,7 +265,7 @@ class Maps(object):
                         + "when using the 'ipympl' backend to avoid recursions during callbacks!"
                     )
                     plt.ioff()
-                    plt.show()
+            plt.show()
 
     # def _reset_axes(self):
     #     print("resetting")
