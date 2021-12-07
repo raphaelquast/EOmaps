@@ -213,6 +213,9 @@ class Maps(object):
         self._ax = gs_ax
         self._init_ax = gs_ax
 
+        # max. pick radius for pick-events
+        self._pick_distance = None
+
     @property
     @lru_cache()
     @wraps(cb_container)
@@ -705,8 +708,11 @@ class Maps(object):
 
         return False, None
 
-    def _attach_picker(self):
-        self.figure.coll.set_picker(self._pick_pixel)
+    def _attach_picker(self, picker=None):
+        if picker is None:
+            self.figure.coll.set_picker(self._pick_pixel)
+        else:
+            self.figure.ax.set_picker(picker)
 
     @property
     @lru_cache()
