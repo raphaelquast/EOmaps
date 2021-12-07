@@ -631,7 +631,6 @@ class cb_pick_container(_click_container):
         if pickcb is None:
 
             def pickcb(event):
-                print("asdf")
                 self._event = event
 
                 # ignore callbacks while dragging axes
