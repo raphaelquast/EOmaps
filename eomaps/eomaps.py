@@ -1529,7 +1529,7 @@ class Maps(object):
         ID=None,
         xy=None,
         xy_crs=None,
-        radius="pixel",
+        radius=None,
         shape="ellipses",
         buffer=1,
         **kwargs,
@@ -1548,9 +1548,12 @@ class Maps(object):
         xy_crs : any
             the identifier of the coordinate-system for the xy-coordinates
         radius : float or "pixel", optional
-            The radius of the marker.
-            If "pixel", it will represent the dimensions of the selected pixel.
-            The default is "pixel"
+            If float: The radius of the marker.
+            If "pixel": It will represent the dimensions of the selected pixel.
+                        (check the `buffer` kwarg!)
+
+            The default is None in which case "pixel" is used if a dataset is
+            present and otherwise a shape with 1/10 of the axis-size is plotted
 
         shape : str, optional
             Indicator which shape to draw. Currently supported shapes are:
