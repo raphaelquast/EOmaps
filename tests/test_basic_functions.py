@@ -518,6 +518,7 @@ class TestBasicPlotting(unittest.TestCase):
     def test_draggable_axes(self):
 
         mgrid = MapsGrid(2, 2)
+
         for m in mgrid:
             m.plot_map(colorbar=False)
         mgrid.parent._draggable_axes._make_draggable()
@@ -546,6 +547,25 @@ class TestBasicPlotting(unittest.TestCase):
         m.figure.set_colorbar_position((0.625, 0.25, 0.2, 0.1), cb=cb3)
 
         m.figure.set_colorbar_position((0.625, 0.25, 0.2, 0.1))
+
+    def test_MapsGrid(self):
+        mg = MapsGrid(2, 2)
+        mg.set_data(data=self.data, xcoord="x", ycoord="y", in_crs=3857)
+        mg.set_plot_specs(crs=4326, title="asdf", label="bsdf")
+        mg.set_classify_specs(scheme=Maps.CLASSIFIERS.EqualInterval, k=4)
+
+        for m in mg:
+            m.plot_map()
+
+        mg.add_annotation(ID=520)
+        mg.add_marker(ID=5, fc="r", radius=10, radius_crs=4326)
+
+        self.AssertTrue(mg.m_0_0 is mg[0, 0])
+        self.AssertTrue(mg.m_0_1 is mg[0, 1])
+        self.AssertTrue(mg.m_1_0 is mg[1, 0])
+        self.AssertTrue(mg.m_1_1 is mg[1, 1])
+
+        plt.close(mg.f)
 
     def test_a_complex_figure(self):
         # %%
