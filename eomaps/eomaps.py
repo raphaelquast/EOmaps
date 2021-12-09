@@ -2017,7 +2017,7 @@ class MapsGrid:
     Returns
     -------
     eomaps.MapsGrid
-        Accessor to the Maps objects "ax_{row}_{column}".
+        Accessor to the Maps objects "m_{row}_{column}".
 
     """
 
@@ -2041,7 +2041,7 @@ class MapsGrid:
         return iter(self._axes)
 
     def __getitem__(self, key):
-        return getattr(self, f"ax_{key[0]}_{key[1]}")
+        return getattr(self, f"m_{key[0]}_{key[1]}")
 
     @property
     def children(self):
