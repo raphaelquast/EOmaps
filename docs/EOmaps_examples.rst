@@ -74,20 +74,19 @@ There are 3 basic steps required to visualize your data:
     # ------------------------------------
 
     mg = MapsGrid(1, 3)  # initialize a grid of Maps objects
+    # set the data on ALL maps-objects of the grid
+    mg.set_data(data=data, xcoord="lon", ycoord="lat", in_crs=4326)
 
     # --------- set specs for the first axes
-    mg.m_0_0.set_data_specs(data=data, xcoord="lon", ycoord="lat", in_crs=4326)
     mg.m_0_0.set_plot_specs(crs=4326, title="epsg=4326")
     mg.m_0_0.set_classify_specs(scheme="EqualInterval", k=10)
 
     # --------- set specs for the second axes
-    mg.m_0_1.copy_from(mg.m_0_0, copy_data="share")
     mg.m_0_1.set_plot_specs(crs=Maps.crs_list.Stereographic(), title="Stereographic")
     mg.m_0_1.set_shape.rectangles()
     mg.m_0_1.set_classify_specs(scheme="Quantiles", k=4)
 
     # --------- set specs for the third axes
-    mg.m_0_2.copy_from(mg.m_0_0, copy_data="share")
     mg.m_0_2.set_plot_specs(crs=3035, title="epsg=3035")
     mg.m_0_2.set_classify_specs(scheme="StdMean", multiples=[-1, -.75, -.5, -.25, .25, .5, .75, 1])
 
