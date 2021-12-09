@@ -172,34 +172,8 @@ class _click_callbacks(object):
 
         ax = self.m.figure.ax
 
-        # create a new annotation
-        styledict = dict(
-            xytext=(20, 20),
-            textcoords="offset points",
-            bbox=dict(boxstyle="round", fc="w"),
-            arrowprops=dict(arrowstyle="->"),
-        )
-
-        styledict.update(**kwargs)
-        annotation = ax.annotate("", xy=pos, **styledict)
-
-        if not permanent:
-            # make the annotation temporary
-            self._temporary_artists.append(annotation)
-        else:
-            if not hasattr(self, "permanent_annotations"):
-                self.permanent_annotations = [annotation]
-            else:
-                self.permanent_annotations.append(annotation)
-
-        if layer is not None:
-            self.m.BM.add_artist(annotation, layer=layer)
-
-        annotation.set_visible(True)
-        annotation.xy = pos
-
         if text is None:
-            if ID is not None:
+            if ID is not None and self.m.data is not None:
                 x, y = [
                     np.format_float_positional(i, trim="-", precision=pos_precision)
                     for i in self.m.data.loc[ID][[xlabel, ylabel]]
@@ -237,13 +211,38 @@ class _click_callbacks(object):
                 printstr = (
                     f"x = {x}\n" + f"y = {y}\n" + f"lon = {lon}\n" + f"lat = {lat}"
                 )
-
         elif isinstance(text, str):
             printstr = text
         elif callable(text):
             printstr = text(self.m, ID, val, pos, ind)
 
-        annotation.set_text(printstr)
+        if printstr is not None:
+            # create a new annotation
+            styledict = dict(
+                xytext=(20, 20),
+                textcoords="offset points",
+                bbox=dict(boxstyle="round", fc="w"),
+                arrowprops=dict(arrowstyle="->"),
+            )
+
+            styledict.update(**kwargs)
+            annotation = ax.annotate("", xy=pos, **styledict)
+
+            if not permanent:
+                # make the annotation temporary
+                self._temporary_artists.append(annotation)
+            else:
+                if not hasattr(self, "permanent_annotations"):
+                    self.permanent_annotations = [annotation]
+                else:
+                    self.permanent_annotations.append(annotation)
+
+            if layer is not None:
+                self.m.BM.add_artist(annotation, layer=layer)
+
+            annotation.set_visible(True)
+            annotation.xy = pos
+            annotation.set_text(printstr)
 
     def clear_annotations(self, **kwargs):
         """
