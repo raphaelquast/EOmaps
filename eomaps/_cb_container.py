@@ -85,6 +85,21 @@ class _cb_container(object):
                 if m1 is not m2:
                     self._getobj(m1)._fwd_cbs[id(m2)] = m2
 
+    def add_temporary_artist(self, artist, layer=None):
+        """
+        make an artist temporary
+        (e.g. remove it at the next event)
+
+        Parameters
+        ----------
+        artist : matplotlib.artist
+            the artist to use
+        layer : int, optional
+            the layer to put the artist on. The default is None.
+        """
+        self._m.BM.add_artist(artist, layer=self._m.layer)
+        self._temporary_artists.append(artist)
+
 
 class _click_container(_cb_container):
     """
