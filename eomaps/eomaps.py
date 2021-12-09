@@ -713,8 +713,24 @@ class Maps(object):
 
         return False, None
 
-    def attach_picker(self, name=None, artist=None, picker=None):
+    def attach_picker(self, name, artist, picker=None):
+        """
+        Attach a custom picker to make additional collections that
+        have been added to the plot interactive.
 
+        Parameters
+        ----------
+        name : str, optional
+            a unique identifier that will be used to identify the picking
+            method.
+        artist : a matplotlib artist, optional
+            the artist that should become pickable.
+            (it must support `artist.set_picker()`)
+            The default is None.
+        picker : callable, optional
+            A callable that is used to perform the picking.
+            The default is None, in which case the default picker is used.
+        """
         if picker is None:
             picker = self._pick_pixel_default
 
