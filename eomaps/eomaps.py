@@ -216,6 +216,9 @@ class Maps(object):
         # max. pick radius for pick-events
         self._pick_distance = None
 
+        self._pick_artists = dict()
+        self._pick_funcs = dict()
+
     @property
     @lru_cache()
     @wraps(cb_container)
@@ -672,7 +675,7 @@ class Maps(object):
         """
         self.classify_specs._set_scheme_and_args(scheme, **kwargs)
 
-    def _pick_pixel(self, artist, event):
+    def _pick_pixel_default(self, artist, event):
         if self._pick_distance is None:
             maxdist = np.inf
         else:
@@ -710,11 +713,14 @@ class Maps(object):
 
         return False, None
 
-    def _attach_picker(self, picker=None):
+    def attach_picker(self, name=None, artist=None, picker=None):
+
         if picker is None:
-            self.figure.coll.set_picker(self._pick_pixel)
-        else:
-            self.figure.ax.set_picker(picker)
+            picker = self._pick_pixel_default
+
+        artist.set_picker(picker)
+        self._pick_artists[name] = artist
+        self._pick_funcs[name] = picker
 
     @property
     @lru_cache()
@@ -1830,6 +1836,9 @@ class Maps(object):
 
             self.figure.coll = coll
 
+            # attach the pick-callback that executes the callbacks
+            self.attach_picker("default", self.figure.coll, None)
+
             if colorbar:
                 if (self.figure.ax_cb is not None) and (
                     self.figure.ax_cb_plot is not None
@@ -1854,13 +1863,6 @@ class Maps(object):
                 self.BM.add_artist(coll, layer)
             else:
                 self.BM.add_bg_artist(coll, layer)
-
-            # ------------- add a picker that will be used by the callbacks
-            self._attach_picker()
-
-            if self.parent is self:
-                # attach the pick-callback that execute the callbacks
-                self.cb.pick._init_cbs()
 
             # set the image extent
             # get the extent of the added collection

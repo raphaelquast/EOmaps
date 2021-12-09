@@ -261,11 +261,20 @@ class _click_container(_cb_container):
                     (`<function_name>_<count>__<double/single>__<button_ID>`)
         """
         if ID is not None:
-            name, ds, b = ID.split("__")
+            s = ID.split("__")
+            if len(s) == 3:
+                name, ds, b = s
+            elif len(s) == 4:
+                # incorporate the used picker
+                name, picker, ds, b = s
+                ds = f"{picker}__{ds}"
 
         dsdict = self.get.cbs.get(ds, None)
         if dsdict is not None:
-            bdict = dsdict.get(int(b))
+            if int(b) in dsdict:
+                bdict = dsdict.get(int(b))
+            else:
+                return
         else:
             return
 
@@ -343,6 +352,12 @@ class _click_container(_cb_container):
             (to remove the callback, use `m.cb.remove(cbname)`)
 
         """
+        if self._method == "pick":
+            # check if we intend to use a custom picker
+            picker_name = kwargs.pop("picker_name", "default")
+            prefix = f"{picker_name}__"
+        else:
+            prefix = ""
 
         assert not all(
             i in kwargs for i in ["pos", "ID", "val", "double_click", "button"]
@@ -368,9 +383,11 @@ class _click_container(_cb_container):
         multi_cb_functions = ["mark", "annotate"]
 
         if double_click:
-            d = self.get.cbs["double"][button]
+            btn_key = prefix + "double"
         else:
-            d = self.get.cbs["single"][button]
+            btn_key = prefix + "single"
+
+        d = self.get.cbs[btn_key][button]
 
         # get a unique name for the callback
         ncb = [int(i.rsplit("_", 1)[1]) for i in d if i.startswith(callback.__name__)]
@@ -385,7 +402,7 @@ class _click_container(_cb_container):
         d[cbkey] = partial(callback, *args, **kwargs)
 
         # add mouse-button assignment as suffix to the name (with __ separator)
-        cbname = cbkey + f"__{'double' if double_click else 'single'}__{button}"
+        cbname = cbkey + f"__{btn_key}__{button}"
 
         return cbname
 
@@ -574,45 +591,43 @@ class cb_pick_container(_click_container):
 
     def _init_cbs(self):
         if self._m.parent is self._m:
-            if getattr(self._m.figure, "coll", None) is not None:
-                self._add_pick_callback()
+            self._add_pick_callback()
 
     def _get_pickdict(self, event):
         ind = event.ind
         if ind is not None:
-            if event.artist is self._m.figure.coll:
+            if self._m.figure.coll is not None and event.artist is self._m.figure.coll:
                 clickdict = dict(
                     pos=(self._m._props["x0"][ind], self._m._props["y0"][ind]),
                     ID=self._m._props["ids"][ind],
                     val=self._m._props["z_data"][ind],
                     ind=ind,
                 )
+            else:
+                clickdict = dict(
+                    ID=getattr(event, "ID", getattr(event, "ind", None)),
+                    pos=getattr(
+                        event, "pos", (event.mouseevent.xdata, event.mouseevent.ydata)
+                    ),
+                    val=getattr(event, "val", None),
+                    ind=getattr(event, "ind", None),
+                )
+            return clickdict
 
-                return clickdict
+    def _onpick(self, event, picker_name):
+        prefix = f"{picker_name}__" if picker_name is not None else ""
 
-    def _onpick(self, event):
         # don't execute callbacks if a toolbar-action is active
         if (
             self._m.figure.f.canvas.toolbar is not None
         ) and self._m.figure.f.canvas.toolbar.mode != "":
             return
 
-        if event.artist != self._m.figure.coll or event.artist is None:
-            clickdict = dict(
-                ID=event.ind if hasattr(event, "ind") else None,
-                pos=(event.mouseevent.xdata, event.mouseevent.ydata),
-                val=None,
-                ind=event.ind,
-            )
-            event = event.mouseevent
-            # return
-        else:
-            clickdict = self._get_pickdict(event)
-
+        clickdict = self._get_pickdict(event)
         if event.dblclick:
-            cbs = self.get.cbs["double"]
+            cbs = self.get.cbs[prefix + "double"]
         else:
-            cbs = self.get.cbs["single"]
+            cbs = self.get.cbs[prefix + "single"]
 
         if event.button in cbs:
             bcbs = cbs[event.button]
@@ -621,38 +636,51 @@ class cb_pick_container(_click_container):
                 if clickdict is not None:
                     cb(**clickdict)
 
-    def _add_pick_callback(self, pickcb=None):
+    @staticmethod
+    def _get_picker_name(m, event):
+        picker_name = next(
+            (k for k in m._pick_artists if m._pick_artists[k] == event.artist), None
+        )
+        return picker_name
+
+    def _add_pick_callback(self):
         # only attach pick-callbacks if there is a collection available!
         # if self._m.figure.coll is None:
         #    return
         # ------------- add a callback
         # execute onpick on the parent and all its children
         # (_add_pick_callback() is only called on the parent object!)
-        if pickcb is None:
 
-            def pickcb(event):
-                self._event = event
+        def pickcb(event):
+            self._event = event
+            # check if the artists has a custom picker assigned
 
-                # ignore callbacks while dragging axes
-                if self._m._draggable_axes._modifier_pressed:
-                    return
-                # don't execute callbacks if a toolbar-action is active
-                if (
-                    self._m.figure.f.canvas.toolbar is not None
-                ) and self._m.figure.f.canvas.toolbar.mode != "":
-                    return
+            # ignore callbacks while dragging axes
+            if self._m._draggable_axes._modifier_pressed:
+                return
+            # don't execute callbacks if a toolbar-action is active
+            if (
+                self._m.figure.f.canvas.toolbar is not None
+            ) and self._m.figure.f.canvas.toolbar.mode != "":
+                return
 
-                # execute "_onpick" on the maps-object that belongs to the clicked axes
-                # and forward the event to all forwarded maps-objects
-                for obj in self.objs:
-                    obj._onpick(event)
-                    obj._m.BM._after_update_actions.append(obj._clear_temporary_artists)
-                    # forward callbacks to the connected maps-objects
-                    obj._fwd_cb(event)
+            # execute "_onpick" on the maps-object that belongs to the clicked axes
+            # and forward the event to all forwarded maps-objects
 
-                # self._m.parent.BM.update(clear=self._method)
-                # don't update here... the click-callback will take care of it!
-                self._m.parent.BM._clear_temp_artists(self._method)
+            for m in [self._m.parent, *self._m.parent._children]:
+                picker_name = self._get_picker_name(m, event)
+                if picker_name is not None:
+                    break
+
+            for obj in self.objs:
+                obj._onpick(event, picker_name)
+                # forward callbacks to the connected maps-objects
+                obj._fwd_cb(event, picker_name)
+                obj._m.BM._after_update_actions.append(obj._clear_temporary_artists)
+
+            # self._m.parent.BM.update(clear=self._method)
+            # don't update here... the click-callback will take care of it!
+            self._m.parent.BM._clear_temp_artists(self._method)
 
         if self._cid_pick_event is None:
             # ------------- add a callback
@@ -660,7 +688,7 @@ class cb_pick_container(_click_container):
                 "pick_event", pickcb
             )
 
-    def _fwd_cb(self, event):
+    def _fwd_cb(self, event, picker_name):
         if event.mouseevent.inaxes != self._m.figure.ax:
             return
 
@@ -672,7 +700,6 @@ class cb_pick_container(_click_container):
                 m.crs_plot,
                 always_xy=True,
             )
-
             # transform the coordinates of the clicked location
             xdata, ydata = transformer.transform(
                 event.mouseevent.xdata, event.mouseevent.ydata
@@ -688,26 +715,30 @@ class cb_pick_container(_click_container):
                 # y=event.mouseevent.y,
             )
             dummyevent = SimpleNamespace(
-                artist=m.figure.coll,
+                artist=m._pick_artists.get(picker_name, None),  # event.artist,
                 dblclick=event.dblclick,
                 button=event.button,
                 inaxes=m.figure.ax,
                 xdata=xdata,
                 ydata=ydata,
                 mouseevent=dummymouseevent,
+                picker_name=picker_name,
             )
 
-            pick = m._pick_pixel(None, event.mouseevent)
-            if pick[1] is not None:
-                dummyevent.ind = pick[1]["ind"]
-                if "dist" in pick[1]:
-                    dummyevent.dist = pick[1]["dist"]
-            else:
-                dummyevent.ind = None
-                dummyevent.dist = None
+            if picker_name in m._pick_funcs:
+                func = m._pick_funcs[picker_name]
+                pick = func(None, dummymouseevent)
 
-            obj._onpick(dummyevent)
-            m.BM._after_update_actions.append(obj._clear_temporary_artists)
+                if pick[1] is not None:
+                    dummyevent.ind = pick[1].get("ind", None)
+                    if "dist" in pick[1]:
+                        dummyevent.dist = pick[1].get("dist", None)
+                else:
+                    dummyevent.ind = None
+                    dummyevent.dist = None
+
+                obj._onpick(dummyevent, picker_name)
+                m.BM._after_update_actions.append(obj._clear_temporary_artists)
 
 
 class keypress_container(_cb_container):
@@ -939,7 +970,7 @@ class cb_container:
     def __init__(self, m):
         self._m = m
 
-        self._methods = ["click", "keypress"]
+        self._methods = ["click", "pick", "keypress"]
 
     @property
     @lru_cache()

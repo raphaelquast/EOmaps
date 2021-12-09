@@ -189,7 +189,7 @@ class TestBasicPlotting(unittest.TestCase):
 
             self.assertTrue(
                 cbID
-                == f"{cb}_0__{'double' if double_click else 'single'}__{mouse_button}"
+                == f"{cb}_0__default__{'double' if double_click else 'single'}__{mouse_button}"
             )
             self.assertTrue(len(m.cb.pick.get.attached_callbacks) == 1)
             m.cb.pick.remove(cbID)
@@ -268,7 +268,7 @@ class TestBasicPlotting(unittest.TestCase):
                 y=123,
             )
 
-            pick = m._pick_pixel(None, dummymouseevent)
+            pick = m._pick_pixel_default(None, dummymouseevent)
             if pick[1] is not None:
                 dummyevent.ind = pick[1]["ind"]
                 if "dist" in pick[1]:
@@ -277,7 +277,7 @@ class TestBasicPlotting(unittest.TestCase):
                 dummyevent.ind = None
                 dummyevent.dist = None
 
-            m.cb.pick._onpick(dummyevent)
+            m.cb.pick._onpick(dummyevent, "default")
 
         # test all click callbacks
         for n, cb in enumerate(m.cb.click._cb_list):
