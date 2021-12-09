@@ -560,10 +560,10 @@ class TestBasicPlotting(unittest.TestCase):
         mg.add_annotation(ID=520)
         mg.add_marker(ID=5, fc="r", radius=10, radius_crs=4326)
 
-        self.AssertTrue(mg.m_0_0 is mg[0, 0])
-        self.AssertTrue(mg.m_0_1 is mg[0, 1])
-        self.AssertTrue(mg.m_1_0 is mg[1, 0])
-        self.AssertTrue(mg.m_1_1 is mg[1, 1])
+        self.assertTrue(mg.m_0_0 is mg[0, 0])
+        self.assertTrue(mg.m_0_1 is mg[0, 1])
+        self.assertTrue(mg.m_1_0 is mg[1, 0])
+        self.assertTrue(mg.m_1_1 is mg[1, 1])
 
         plt.close(mg.f)
 
