@@ -369,7 +369,7 @@ class _click_container(_cb_container):
         """
         if self._method == "pick":
             # check if we intend to use a custom picker
-            picker_name = kwargs.pop("picker_name", "default")
+            picker_name = kwargs.get("picker_name", "default")
             prefix = f"{picker_name}__"
         else:
             prefix = ""
@@ -682,6 +682,7 @@ class cb_pick_container(_click_container):
             # execute "_onpick" on the maps-object that belongs to the clicked axes
             # and forward the event to all forwarded maps-objects
 
+            # check to which picker the picked artist belongs to
             for m in [self._m.parent, *self._m.parent._children]:
                 picker_name = self._get_picker_name(m, event)
                 if picker_name is not None:

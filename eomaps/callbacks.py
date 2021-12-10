@@ -79,11 +79,13 @@ class _click_callbacks(object):
         pos = kwargs.pop("pos", None)
         val = kwargs.pop("val", None)
         ind = kwargs.pop("ind", None)
-        return ID, pos, val, ind
+        picker_name = kwargs.pop("picker_name", "default")
+
+        return ID, pos, val, ind, picker_name
 
     def print_to_console(self, **kwargs):
         """Print details on the clicked pixel to the console"""
-        ID, pos, val, ind = self._popargs(kwargs)
+        ID, pos, val, ind, picker_name = self._popargs(kwargs)
 
         xlabel = self.m.data_specs.xcoord
         ylabel = self.m.data_specs.ycoord
@@ -165,7 +167,7 @@ class _click_callbacks(object):
 
         """
 
-        ID, pos, val, ind = self._popargs(kwargs)
+        ID, pos, val, ind, picker_name = self._popargs(kwargs)
 
         xlabel = self.m.data_specs.xcoord
         ylabel = self.m.data_specs.ycoord
@@ -273,7 +275,7 @@ class _click_callbacks(object):
 
         removing the callback will also remove the associated value-dictionary!
         """
-        ID, pos, val, ind = self._popargs(kwargs)
+        ID, pos, val, ind, picker_name = self._popargs(kwargs)
 
         if not hasattr(self, "picked_vals"):
             self.picked_vals = defaultdict(list)
@@ -352,13 +354,12 @@ class _click_callbacks(object):
                 )
                 radius = (t.width / 10.0, t.height / 10.0)
 
-        ID, pos, val, ind = self._popargs(kwargs)
+        ID, pos, val, ind, picker_name = self._popargs(kwargs)
 
-        if ID is not None:
+        if ID is not None and picker_name == "default":
             if ind is None:
                 # ind = self.m.data.index.get_loc(ID)
                 ind = np.flatnonzero(np.isin(self.m._props["ids"], ID))
-
             pos = (self.m._props["xorig"][ind], self.m._props["yorig"][ind])
             pos_crs = "in"
         else:
@@ -472,7 +473,7 @@ class _click_callbacks(object):
             the default is `(fc="none", ec="k", lw=1)`
 
         """
-        ID, pos, val, ind = self._popargs(kwargs)
+        ID, pos, val, ind, picker_name = self._popargs(kwargs)
 
         ax = self.m.figure.ax
 
@@ -601,7 +602,7 @@ class _click_callbacks(object):
             True: A single-object is returned, replacing `m.cb.picked_object` on each pick.
             False: A list of objects is returned that is extended with each pick.
         """
-        ID, pos, val, ind = self._popargs(kwargs)
+        ID, pos, val, ind, picker_name = self._popargs(kwargs)
 
         assert database is not None, "you must provide a database object!"
 
@@ -656,7 +657,7 @@ class _click_callbacks(object):
             kwargs forwarded to the call to `plt.plot([...], [...], **kwargs)`.
 
         """
-        ID, pos, val, ind = self._popargs(kwargs)
+        ID, pos, val, ind, picker_name = self._popargs(kwargs)
 
         style = dict(marker=".")
         style.update(**kwargs)
