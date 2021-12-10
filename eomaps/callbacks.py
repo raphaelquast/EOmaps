@@ -349,7 +349,9 @@ class _click_callbacks(object):
 
         if shape is None:
             shape = (
-                self.shape.name if (self.shape.name in possible_shapes) else "ellipses"
+                self.m.shape.name
+                if (self.m.shape.name in possible_shapes)
+                else "ellipses"
             )
         else:
             assert (
