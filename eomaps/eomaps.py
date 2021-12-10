@@ -676,17 +676,22 @@ class Maps(object):
         self.classify_specs._set_scheme_and_args(scheme, **kwargs)
 
     def _pick_pixel_default(self, artist, event):
+        # set max. distance in pixel-coordinates for picking
         if self._pick_distance is None:
             maxdist = np.inf
         else:
             maxdist = self._pick_distance
 
         if (event.inaxes != self.figure.ax) or not hasattr(self, "tree"):
-            return True, dict(ind=None, dblclick=event.dblclick, button=event.button)
+            return False, dict(ind=None, dblclick=event.dblclick, button=event.button)
+
+        # make sure non-finite coordinates (resulting from projections in
+        # forwarded callbacks) don't lead to issues
+        if not np.isfinite((event.xdata, event.ydata)).all():
+            return False, dict(ind=None, dblclick=event.dblclick, button=event.button)
 
         # use a cKDTree based picking to speed up picks for large collections
         dist, index = self.tree.query((event.xdata, event.ydata))
-        # set max. distance in pixel-coordinates for picking
 
         # do this to make sure that we calculate the distance in the right axes!
         # (necessary for connected pick-callbacks)
@@ -697,7 +702,6 @@ class Maps(object):
             (self._props["x0"][index], self._props["y0"][index])
         )
         pdist = np.sqrt(np.sum((p1 - p2) ** 2))
-        # print(dist, index, pdist, maxdist, pdist < maxdist, index)
 
         if pdist < maxdist:
             self._pick = True, dict(
