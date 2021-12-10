@@ -292,7 +292,7 @@ class _click_callbacks(object):
         self,
         radius=None,
         radius_crs="in",
-        shape="ellipses",
+        shape=None,
         buffer=1,
         permanent=True,
         n=20,
@@ -327,7 +327,8 @@ class _click_callbacks(object):
                 - rectangles
                 - geod_circles
 
-            The default is "ellipse".
+            The default is None which defaults to the used shape for plotting
+            if possible and else "ellipses".
         buffer : float, optional
             A factor to scale the size of the shape. The default is 1.
         permanent : bool, optional
@@ -344,6 +345,17 @@ class _click_callbacks(object):
             kwargs passed to the matplotlib patch.
             (e.g. `facecolor`, `edgecolor`, `linewidth`, `alpha` etc.)
         """
+        possible_shapes = ["ellipses", "rectangles", "geod_circles"]
+
+        if shape is None:
+            shape = (
+                self.shape.name if (self.shape.name in possible_shapes) else "ellipses"
+            )
+        else:
+            assert (
+                shape in possible_shapes
+            ), f"'{shape}' is not a valid marker-shape... use one of {possible_shapes}"
+
         if radius is None:
             if self.m.figure.coll is not None:
                 radius = "pixel"
