@@ -213,12 +213,6 @@ class Maps(object):
         self._ax = gs_ax
         self._init_ax = gs_ax
 
-        # max. pick radius for pick-events
-        self._pick_distance = None
-
-        self._pick_artists = dict()
-        self._pick_funcs = dict()
-
     @property
     @lru_cache()
     @wraps(cb_container)
@@ -674,73 +668,6 @@ class Maps(object):
             kwargs passed to the call to the respective mapclassify classifier
         """
         self.classify_specs._set_scheme_and_args(scheme, **kwargs)
-
-    def _pick_pixel_default(self, artist, event):
-        # set max. distance in pixel-coordinates for picking
-        if self._pick_distance is None:
-            maxdist = np.inf
-        else:
-            maxdist = self._pick_distance
-
-        if (event.inaxes != self.figure.ax) or not hasattr(self, "tree"):
-            return False, dict(ind=None, dblclick=event.dblclick, button=event.button)
-
-        # make sure non-finite coordinates (resulting from projections in
-        # forwarded callbacks) don't lead to issues
-        if not np.isfinite((event.xdata, event.ydata)).all():
-            return False, dict(ind=None, dblclick=event.dblclick, button=event.button)
-
-        # use a cKDTree based picking to speed up picks for large collections
-        dist, index = self.tree.query((event.xdata, event.ydata))
-
-        # do this to make sure that we calculate the distance in the right axes!
-        # (necessary for connected pick-callbacks)
-        # for the axes of the original click, this is equal to (event.x, event.y)
-        p1 = self.figure.ax.transData.transform((event.xdata, event.ydata))
-
-        p2 = self.figure.ax.transData.transform(
-            (self._props["x0"][index], self._props["y0"][index])
-        )
-        pdist = np.sqrt(np.sum((p1 - p2) ** 2))
-
-        if pdist < maxdist:
-            self._pick = True, dict(
-                ind=index, dblclick=event.dblclick, button=event.button, dist=dist
-            )
-            return True, dict(
-                ind=index, dblclick=event.dblclick, button=event.button, dist=dist
-            )
-        else:
-            return True, dict(
-                ind=None, dblclick=event.dblclick, button=event.button, dist=dist
-            )
-
-        return False, None
-
-    def attach_picker(self, name, artist, picker=None):
-        """
-        Attach a custom picker to make additional collections that
-        have been added to the plot interactive.
-
-        Parameters
-        ----------
-        name : str, optional
-            a unique identifier that will be used to identify the picking
-            method.
-        artist : a matplotlib artist, optional
-            the artist that should become pickable.
-            (it must support `artist.set_picker()`)
-            The default is None.
-        picker : callable, optional
-            A callable that is used to perform the picking.
-            The default is None, in which case the default picker is used.
-        """
-        if picker is None:
-            picker = self._pick_pixel_default
-
-        artist.set_picker(picker)
-        self._pick_artists[name] = artist
-        self._pick_funcs[name] = picker
 
     @property
     @lru_cache()
@@ -1754,7 +1681,7 @@ class Maps(object):
             Indicator if coastlines and a light-blue ocean shading should be added.
             The default is True
         pick_distance : int
-            The maximum distance (in pixels) to trigger callbacks.
+            The maximum distance (in pixels) to trigger callbacks on the added collection.
             (The distance is evaluated between the clicked pixel and the center of the
             closest data-point)
             The default is 10.
@@ -1770,8 +1697,6 @@ class Maps(object):
 
         self._set_axes()
         ax = self.figure.ax
-
-        self._pick_distance = pick_distance
 
         if "dynamic_layer_idx" in kwargs:
             layer = kwargs.pop("dynamic_layer_idx")
@@ -1857,7 +1782,12 @@ class Maps(object):
             self.figure.coll = coll
 
             # attach the pick-callback that executes the callbacks
-            self.attach_picker("default", self.figure.coll, None)
+            # self.attach_picker("default", self.figure.coll, None)
+
+            # self.cb.add_picker("default", coll, None)
+            self.cb.pick._set_artist(coll)
+            self.cb.pick._init_cbs()
+            self.cb.pick._pick_distance = pick_distance
 
             if colorbar:
                 if (self.figure.ax_cb is not None) and (
@@ -2124,11 +2054,14 @@ class MapsGrid:
         """
         self.parent.cb.click.share_events(*self.children)
 
-    def share_pick_events(self):
+    def share_pick_events(self, name="default"):
         """
         share pick events between all Maps objects of the grid
         """
-        self.parent.cb.pick.share_events(*self.children)
+        if name == "default":
+            self.parent.cb.pick.share_events(*self.children)
+        else:
+            self.parent.cb.pick(name).share_events(*self.children)
 
     def join_limits(self):
         """
