@@ -38,7 +38,7 @@ class _cb_container(object):
         return getattr(m.cb, self._method, None)
 
     @property
-    def objs(self):
+    def _objs(self):
         """
         get the callback-container objects associated with the axes that
         the event belonged to
@@ -484,7 +484,7 @@ class cb_click_container(_click_container):
 
             # execute onclick on the maps object that belongs to the clicked axis
             # and forward the event to all forwarded maps-objects
-            for obj in self.objs:
+            for obj in self._objs:
                 obj._onclick(event)
                 obj._m.BM._after_update_actions.append(obj._clear_temporary_artists)
                 # forward callbacks to the connected maps-objects
@@ -511,7 +511,7 @@ class cb_click_container(_click_container):
 
             # execute onclick on the maps object that belongs to the clicked axis
             # and forward the event to all forwarded maps-objects
-            for obj in self.objs:
+            for obj in self._objs:
                 obj._onclick(event)
                 obj._m.BM._after_update_actions.append(obj._clear_temporary_artists)
                 # forward callbacks to the connected maps-objects
@@ -729,7 +729,7 @@ class cb_pick_container(_click_container):
             # execute "_onpick" on the maps-object that belongs to the clicked axes
             # and forward the event to all forwarded maps-objects
 
-            for obj in self.objs:
+            for obj in self._objs:
                 if event.artist is obj._artist:
                     obj._onpick(event)
                     # forward callbacks to the connected maps-objects
