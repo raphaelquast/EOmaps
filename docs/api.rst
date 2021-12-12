@@ -111,6 +111,7 @@ call :code:`m.plot_map()`:
 
 
 If you only want to add a WebMap layer, simply use:
+
 .. code-block:: python
 
     m = Maps()
