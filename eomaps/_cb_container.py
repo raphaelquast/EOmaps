@@ -1098,6 +1098,14 @@ class cb_container:
         picker : callable, optional
             A callable that is used to perform the picking.
             The default is None, in which case the default picker is used.
+            The call-signature is:
+
+            >>> def picker(artist, mouseevent):
+            >>>     # if the pick is NOT successful:
+            >>>     return False, dict()
+            >>>     ...
+            >>>     # if the pick is successful:
+            >>>     return True, dict(ID, pos, val, ind)
         """
 
         if picker is not None:
