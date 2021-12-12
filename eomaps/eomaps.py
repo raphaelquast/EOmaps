@@ -1317,7 +1317,6 @@ class Maps(object):
                             )
                             if query.any():
                                 inds = usegdf.index[query]
-                                print(inds)
                                 return True, dict(
                                     ind=inds[0],
                                     dblclick=mouseevent.dblclick,
