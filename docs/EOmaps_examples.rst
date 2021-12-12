@@ -501,10 +501,10 @@ The data displayed in the above gif is taken from:
 🛰 using geopandas - interactive shapes!
 ----------------------------------------
 
-It is possible to use geopandas.GeoDataFrames with EOmaps.
-    - to make a GeoDataFrame plot pickable, use `m.add_gdf(picker_name="MyPicker")`
-        - now you can assign callbacks via `m.cb.MyPicker.attach...` just as you
-          would do with the ordinary `click` or `pick` callbacks
+geopandas.GeoDataFrames can be used to assign callbacks with EOmaps.
+    - to make a GeoDataFrame pickable, first use ``m.add_gdf(picker_name="MyPicker")``
+        - now you can assign callbacks via ``m.cb.MyPicker.attach...`` just as you
+          would do with the ordinary ``m.cb.click`` or ``m.cb.pick`` callbacks
 
 .. Note::
     If the GeoDataFrame contains multiple different geometry types
