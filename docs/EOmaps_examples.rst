@@ -507,6 +507,11 @@ geopandas.GeoDataFrames can be used to assign callbacks with EOmaps.
           would do with the ordinary ``m.cb.click`` or ``m.cb.pick`` callbacks
 
 .. Note::
+    For large datasets that are visualized as simple rectangles, ellipses etc.
+    it is recommended to use EOmaps to visualize the data with ``m.plot_map()``
+    since the generation of the plot and the identification of the picked pixels
+    will be much faster!
+
     If the GeoDataFrame contains multiple different geometry types
     (e.g. Lines, Patches, etc.) a unique pick-collection will be assigned
     for each of the geometry types!
