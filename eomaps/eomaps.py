@@ -1239,7 +1239,7 @@ class Maps(object):
 
         return cb
 
-    def add_gdf(self, gdf, **kwargs):
+    def add_gdf(self, gdf, picker_name=None, pick_method="contains", **kwargs):
         """
         Overplot a `geopandas.GeoDataFrame` over the generated plot.
         (`plot_map()` must be called!)
@@ -1248,17 +1248,101 @@ class Maps(object):
         ----------
         gdf : geopandas.GeoDataFrame
             A GeoDataFrame that should be added to the plot.
-        **kwargs :
-            all kwargs are passed to `gdf.plot(**kwargs)`
+        picker_name : str or None
+            A unique name that is used to identify the pick-method.
+
+            If a `picker_name` is provided, a new pick-container will be
+            created that can be used to pick geometries of the GeoDataFrame.
+
+            The container can then be accessed via:
+                >>> m.cb.pick__<picker_name>
+                or
+                >>> m.cb.pick[picker_name]
+            and it can be used in the same way as `m.cb.pick...`
+
+        pick_method : str or callable
+            if str :
+                The operation that is executed on the GeoDataFrame to identify
+                the picked geometry
+            if callable :
+                A callable that is used to identify the picked geometry.
+                The call-signature is:
+
+                >>> def picker(artist, mouseevent):
+                >>>     # if the pick is NOT successful:
+                >>>     return False, dict()
+                >>>     ...
+                >>>     # if the pick is successful:
+                >>>     return True, dict(ID, pos, val, ind)
+            The default is "contains"
+        \**kwargs :
+            all remaining kwargs are passed to `gdf.plot(**kwargs)`
         """
+
         self._set_axes()
-
         ax = self.figure.ax
-
         defaultargs = dict(facecolor="none", edgecolor="k", lw=1.5)
         defaultargs.update(kwargs)
 
-        gdf.to_crs(self.crs_plot).plot(ax=ax, aspect=ax.get_aspect(), **defaultargs)
+        # transform data to the plot crs
+        usegdf = gdf.to_crs(self.crs_plot)
+
+        # plot gdf and identify newly added collections
+        # (geopandas always uses collections)
+        colls = [id(i) for i in self.figure.ax.collections]
+        usegdf.plot(ax=ax, aspect=ax.get_aspect(), **defaultargs)
+        newcolls = [i for i in self.figure.ax.collections if id(i) not in colls]
+        if len(newcolls) > 1:
+            prefixes = [
+                f"_{i.__class__.__name__.replace('Collection', '')}" for i in newcolls
+            ]
+            warnings.warn(
+                "EOmaps: Multiple geometry types encountered in `m.add_gdf`. "
+                + "The pick containers are re-named to"
+                + f"{[picker_name + prefix for prefix in prefixes]}"
+            )
+        else:
+            prefixes = [""]
+
+        if picker_name is not None:
+            if pick_method is not None:
+                if isinstance(pick_method, str):
+
+                    def picker(artist, mouseevent):
+                        try:
+                            query = getattr(usegdf, pick_method)(
+                                gpd.points_from_xy(
+                                    [mouseevent.xdata], [mouseevent.ydata]
+                                )[0]
+                            )
+                            if query.any():
+                                inds = usegdf.index[query]
+                                print(inds)
+                                return True, dict(
+                                    ind=inds[0],
+                                    dblclick=mouseevent.dblclick,
+                                    button=mouseevent.button,
+                                )
+                            else:
+                                return False, dict()
+                        except:
+                            return False, dict()
+
+                elif callable(pick_method):
+                    picker = pick_method
+                else:
+                    print(
+                        "EOmaps: I don't know what to do with the provided pick_method"
+                    )
+
+                # explode the GeoDataFrame to avoid picking multi-part geometries
+                usegdf = usegdf.explode(index_parts=False)
+                for art, prefix in zip(newcolls, prefixes):
+                    # make the newly added collection pickable
+                    self.cb.add_picker(picker_name + prefix, art, picker=picker)
+
+                    # attach the re-projected GeoDataFrame to the pick-container
+                    self.cb.pick[picker_name + prefix].data = usegdf
 
     def add_coastlines(self, layer=None, coast=True, ocean=True):
         """
@@ -1689,6 +1773,9 @@ class Maps(object):
             A layer-index in case the collection is intended to be updated
             dynamically.
             The default is None.
+        dynamic : bool
+            If True, the collection will be dynamically updated
+
         \**kwargs
             kwargs passed to the initialization of the matpltolib collection
             (dependent on the plot-shape) [linewidth, edgecolor, facecolor, ...]
@@ -2061,7 +2148,7 @@ class MapsGrid:
         if name == "default":
             self.parent.cb.pick.share_events(*self.children)
         else:
-            self.parent.cb.pick(name).share_events(*self.children)
+            self.parent.cb.pick[name].share_events(*self.children)
 
     def join_limits(self):
         """
