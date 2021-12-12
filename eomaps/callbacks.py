@@ -79,11 +79,13 @@ class _click_callbacks(object):
         pos = kwargs.pop("pos", None)
         val = kwargs.pop("val", None)
         ind = kwargs.pop("ind", None)
-        return ID, pos, val, ind
+        picker_name = kwargs.pop("picker_name", "default")
+
+        return ID, pos, val, ind, picker_name
 
     def print_to_console(self, **kwargs):
         """Print details on the clicked pixel to the console"""
-        ID, pos, val, ind = self._popargs(kwargs)
+        ID, pos, val, ind, picker_name = self._popargs(kwargs)
 
         xlabel = self.m.data_specs.xcoord
         ylabel = self.m.data_specs.ycoord
@@ -165,41 +167,15 @@ class _click_callbacks(object):
 
         """
 
-        ID, pos, val, ind = self._popargs(kwargs)
+        ID, pos, val, ind, picker_name = self._popargs(kwargs)
 
         xlabel = self.m.data_specs.xcoord
         ylabel = self.m.data_specs.ycoord
 
         ax = self.m.figure.ax
 
-        # create a new annotation
-        styledict = dict(
-            xytext=(20, 20),
-            textcoords="offset points",
-            bbox=dict(boxstyle="round", fc="w"),
-            arrowprops=dict(arrowstyle="->"),
-        )
-
-        styledict.update(**kwargs)
-        annotation = ax.annotate("", xy=pos, **styledict)
-
-        if not permanent:
-            # make the annotation temporary
-            self._temporary_artists.append(annotation)
-        else:
-            if not hasattr(self, "permanent_annotations"):
-                self.permanent_annotations = [annotation]
-            else:
-                self.permanent_annotations.append(annotation)
-
-        if layer is not None:
-            self.m.BM.add_artist(annotation, layer=layer)
-
-        annotation.set_visible(True)
-        annotation.xy = pos
-
         if text is None:
-            if ID is not None:
+            if ID is not None and self.m.data is not None:
                 x, y = [
                     np.format_float_positional(i, trim="-", precision=pos_precision)
                     for i in self.m.data.loc[ID][[xlabel, ylabel]]
@@ -237,13 +213,38 @@ class _click_callbacks(object):
                 printstr = (
                     f"x = {x}\n" + f"y = {y}\n" + f"lon = {lon}\n" + f"lat = {lat}"
                 )
-
         elif isinstance(text, str):
             printstr = text
         elif callable(text):
             printstr = text(self.m, ID, val, pos, ind)
 
-        annotation.set_text(printstr)
+        if printstr is not None:
+            # create a new annotation
+            styledict = dict(
+                xytext=(20, 20),
+                textcoords="offset points",
+                bbox=dict(boxstyle="round", fc="w"),
+                arrowprops=dict(arrowstyle="->"),
+            )
+
+            styledict.update(**kwargs)
+            annotation = ax.annotate("", xy=pos, **styledict)
+
+            if not permanent:
+                # make the annotation temporary
+                self._temporary_artists.append(annotation)
+            else:
+                if not hasattr(self, "permanent_annotations"):
+                    self.permanent_annotations = [annotation]
+                else:
+                    self.permanent_annotations.append(annotation)
+
+            if layer is not None:
+                self.m.BM.add_artist(annotation, layer=layer)
+
+            annotation.set_visible(True)
+            annotation.xy = pos
+            annotation.set_text(printstr)
 
     def clear_annotations(self, **kwargs):
         """
@@ -274,7 +275,7 @@ class _click_callbacks(object):
 
         removing the callback will also remove the associated value-dictionary!
         """
-        ID, pos, val, ind = self._popargs(kwargs)
+        ID, pos, val, ind, picker_name = self._popargs(kwargs)
 
         if not hasattr(self, "picked_vals"):
             self.picked_vals = defaultdict(list)
@@ -291,7 +292,7 @@ class _click_callbacks(object):
         self,
         radius=None,
         radius_crs="in",
-        shape="ellipses",
+        shape=None,
         buffer=1,
         permanent=True,
         n=20,
@@ -326,7 +327,8 @@ class _click_callbacks(object):
                 - rectangles
                 - geod_circles
 
-            The default is "ellipse".
+            The default is None which defaults to the used shape for plotting
+            if possible and else "ellipses".
         buffer : float, optional
             A factor to scale the size of the shape. The default is 1.
         permanent : bool, optional
@@ -343,6 +345,19 @@ class _click_callbacks(object):
             kwargs passed to the matplotlib patch.
             (e.g. `facecolor`, `edgecolor`, `linewidth`, `alpha` etc.)
         """
+        possible_shapes = ["ellipses", "rectangles", "geod_circles"]
+
+        if shape is None:
+            shape = (
+                self.m.shape.name
+                if (self.m.shape.name in possible_shapes)
+                else "ellipses"
+            )
+        else:
+            assert (
+                shape in possible_shapes
+            ), f"'{shape}' is not a valid marker-shape... use one of {possible_shapes}"
+
         if radius is None:
             if self.m.figure.coll is not None:
                 radius = "pixel"
@@ -353,13 +368,12 @@ class _click_callbacks(object):
                 )
                 radius = (t.width / 10.0, t.height / 10.0)
 
-        ID, pos, val, ind = self._popargs(kwargs)
+        ID, pos, val, ind, picker_name = self._popargs(kwargs)
 
-        if ID is not None:
+        if ID is not None and picker_name == "default":
             if ind is None:
                 # ind = self.m.data.index.get_loc(ID)
                 ind = np.flatnonzero(np.isin(self.m._props["ids"], ID))
-
             pos = (self.m._props["xorig"][ind], self.m._props["yorig"][ind])
             pos_crs = "in"
         else:
@@ -473,7 +487,7 @@ class _click_callbacks(object):
             the default is `(fc="none", ec="k", lw=1)`
 
         """
-        ID, pos, val, ind = self._popargs(kwargs)
+        ID, pos, val, ind, picker_name = self._popargs(kwargs)
 
         ax = self.m.figure.ax
 
@@ -602,7 +616,7 @@ class _click_callbacks(object):
             True: A single-object is returned, replacing `m.cb.picked_object` on each pick.
             False: A list of objects is returned that is extended with each pick.
         """
-        ID, pos, val, ind = self._popargs(kwargs)
+        ID, pos, val, ind, picker_name = self._popargs(kwargs)
 
         assert database is not None, "you must provide a database object!"
 
@@ -657,7 +671,7 @@ class _click_callbacks(object):
             kwargs forwarded to the call to `plt.plot([...], [...], **kwargs)`.
 
         """
-        ID, pos, val, ind = self._popargs(kwargs)
+        ID, pos, val, ind, picker_name = self._popargs(kwargs)
 
         style = dict(marker=".")
         style.update(**kwargs)

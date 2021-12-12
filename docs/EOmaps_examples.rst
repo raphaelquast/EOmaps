@@ -74,20 +74,19 @@ There are 3 basic steps required to visualize your data:
     # ------------------------------------
 
     mg = MapsGrid(1, 3)  # initialize a grid of Maps objects
+    # set the data on ALL maps-objects of the grid
+    mg.set_data(data=data, xcoord="lon", ycoord="lat", in_crs=4326)
 
     # --------- set specs for the first axes
-    mg.m_0_0.set_data_specs(data=data, xcoord="lon", ycoord="lat", in_crs=4326)
     mg.m_0_0.set_plot_specs(crs=4326, title="epsg=4326")
     mg.m_0_0.set_classify_specs(scheme="EqualInterval", k=10)
 
     # --------- set specs for the second axes
-    mg.m_0_1.copy_from(mg.m_0_0, copy_data="share")
     mg.m_0_1.set_plot_specs(crs=Maps.crs_list.Stereographic(), title="Stereographic")
     mg.m_0_1.set_shape.rectangles()
     mg.m_0_1.set_classify_specs(scheme="Quantiles", k=4)
 
     # --------- set specs for the third axes
-    mg.m_0_2.copy_from(mg.m_0_0, copy_data="share")
     mg.m_0_2.set_plot_specs(crs=3035, title="epsg=3035")
     mg.m_0_2.set_classify_specs(scheme="StdMean", multiples=[-1, -.75, -.5, -.25, .25, .5, .75, 1])
 
@@ -497,3 +496,107 @@ There are 3 basic steps required to visualize your data:
 The data displayed in the above gif is taken from:
     - Sentinel-1 Global Backscatter Model (https://researchdata.tuwien.ac.at/records/n2d1v-gqb91)
     - OpenStreetMap hosted by Mundialis (https://www.mundialis.de/en/ows-mundialis/)
+
+
+🛰 using geopandas - interactive shapes!
+----------------------------------------
+
+geopandas.GeoDataFrames can be used to assign callbacks with EOmaps.
+    - to make a GeoDataFrame pickable, first use ``m.add_gdf(picker_name="MyPicker")``
+        - now you can assign callbacks via ``m.cb.MyPicker.attach...`` just as you
+          would do with the ordinary ``m.cb.click`` or ``m.cb.pick`` callbacks
+
+.. Note::
+    For large datasets that are visualized as simple rectangles, ellipses etc.
+    it is recommended to use EOmaps to visualize the data with ``m.plot_map()``
+    since the generation of the plot and the identification of the picked pixels
+    will be much faster!
+
+    If the GeoDataFrame contains multiple different geometry types
+    (e.g. Lines, Patches, etc.) a unique pick-collection will be assigned
+    for each of the geometry types!
+
+|toggleStart|
+
+.. code-block:: python
+
+    from eomaps import Maps, MapsGrid
+    from cartopy.feature import shapereader
+    import geopandas as gpd
+    import pandas as pd
+    import numpy as np
+
+    # ----------- create some example-data
+    lon, lat = np.meshgrid(np.linspace(-180,180, 25), np.linspace(-90,90, 25))
+    data = pd.DataFrame(dict(lon=lon.flat, lat=lat.flat, data=np.sqrt(lon**2 + lat**2).flat))
+
+    # ----------- load some data from NaturalEarth and put in in a geopandas.GeoDataFrame
+    path = shapereader.natural_earth(resolution="10m",
+                                     category="cultural",
+                                     name="admin_0_countries")
+    r = shapereader.Reader(path)
+    gdf = gpd.GeoDataFrame(dict(name=[i.attributes["NAME_EN"] for i in r.records()]),
+                           geometry=[*r.geometries()],
+                           crs=4326)
+
+    # -----------  define a callback to color picked objects
+    def cb(self, ind, **kwargs):
+        if ind is not None:
+            # get the selected geometry and re-project it to the desired crs
+            geom = self.cb.pick["countries"].data.loc[[ind]].geometry
+            # add the geometry to the map
+            art = self.figure.ax.add_geometries(geom,
+                                                self.figure.ax.projection,
+                                                fc="r",
+                                                alpha=0.75)
+            # make the geometry temporary (e.g. remove it on the next pick event)
+            self.cb.pick["countries"].add_temporary_artist(art, layer=2)
+
+    # -----------  define a callback to get the name of the picked object
+    def txt(m, ID, val, pos, ind):
+        if ind is not None:
+            return(gdf.loc[ind]["name"])
+
+
+    # ----------- setup some maps objects and assign datasets and the plot-crs
+    mg = MapsGrid(1,2)
+    mg.m_0_0.set_data(data=data.sample(100), xcoord="lon", ycoord="lat", crs=4326)
+    mg.m_0_0.plot_specs.crs = 4326
+
+    mg.m_0_1.set_data(data=data, xcoord="lon", ycoord="lat", crs=4326)
+    mg.m_0_1.plot_specs.crs = Maps.CRS.Orthographic(45, 45)
+
+
+    for m in mg:
+        # plot a geopandas GeoDataFrame and attach some callbacks to it
+        m.add_gdf(gdf,
+                  picker_name="countries",
+                  fc="none",
+                  lw=0.5,
+                  zorder=10,
+                  )
+        m.cb.pick["countries"].attach(cb)
+        m.cb.pick["countries"].attach.annotate(text=txt)
+
+        # plot the attached dataset and attach callbacks to it
+        m.set_shape.rectangles(radius=3, radius_crs=4326)
+        m.plot_map(alpha=0.75, ec=(1,1,1,.5), pick_distance=25, coastlines=True)
+
+        m.cb.pick.attach.mark(permanent=False,
+                              shape="rectangles",
+                              fc="none",
+                              ec="b",
+                              lw=2,
+                              layer=1)
+
+    mg.share_pick_events()            # share default pick events
+    mg.share_pick_events("countries") # share the events of the "countries" picker
+    mg.f.set_figheight(6)
+    mg.f.tight_layout()
+
+|toggleEnd|
+
+.. image:: _static/fig7.gif
+
+The data displayed in the above gif is taken from:
+    - NaturalEarth (https://www.naturalearthdata.com/)

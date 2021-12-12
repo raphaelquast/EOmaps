@@ -21,7 +21,7 @@ if _import_OK:
 
 
 def combdoc(*args):
-    return "\n".join(dedent(i) for i in args)
+    return "\n".join(dedent(str(i)) for i in args)
 
 
 class map_objects(object):

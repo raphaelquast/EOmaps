@@ -213,9 +213,6 @@ class Maps(object):
         self._ax = gs_ax
         self._init_ax = gs_ax
 
-        # max. pick radius for pick-events
-        self._pick_distance = None
-
     @property
     @lru_cache()
     @wraps(cb_container)
@@ -671,50 +668,6 @@ class Maps(object):
             kwargs passed to the call to the respective mapclassify classifier
         """
         self.classify_specs._set_scheme_and_args(scheme, **kwargs)
-
-    def _pick_pixel(self, artist, event):
-        if self._pick_distance is None:
-            maxdist = np.inf
-        else:
-            maxdist = self._pick_distance
-
-        if (event.inaxes != self.figure.ax) or not hasattr(self, "tree"):
-            return True, dict(ind=None, dblclick=event.dblclick, button=event.button)
-
-        # use a cKDTree based picking to speed up picks for large collections
-        dist, index = self.tree.query((event.xdata, event.ydata))
-        # set max. distance in pixel-coordinates for picking
-
-        # do this to make sure that we calculate the distance in the right axes!
-        # (necessary for connected pick-callbacks)
-        # for the axes of the original click, this is equal to (event.x, event.y)
-        p1 = self.figure.ax.transData.transform((event.xdata, event.ydata))
-
-        p2 = self.figure.ax.transData.transform(
-            (self._props["x0"][index], self._props["y0"][index])
-        )
-        pdist = np.sqrt(np.sum((p1 - p2) ** 2))
-        # print(dist, index, pdist, maxdist, pdist < maxdist, index)
-
-        if pdist < maxdist:
-            self._pick = True, dict(
-                ind=index, dblclick=event.dblclick, button=event.button, dist=dist
-            )
-            return True, dict(
-                ind=index, dblclick=event.dblclick, button=event.button, dist=dist
-            )
-        else:
-            return True, dict(
-                ind=None, dblclick=event.dblclick, button=event.button, dist=dist
-            )
-
-        return False, None
-
-    def _attach_picker(self, picker=None):
-        if picker is None:
-            self.figure.coll.set_picker(self._pick_pixel)
-        else:
-            self.figure.ax.set_picker(picker)
 
     @property
     @lru_cache()
@@ -1286,7 +1239,7 @@ class Maps(object):
 
         return cb
 
-    def add_gdf(self, gdf, **kwargs):
+    def add_gdf(self, gdf, picker_name=None, pick_method="contains", **kwargs):
         """
         Overplot a `geopandas.GeoDataFrame` over the generated plot.
         (`plot_map()` must be called!)
@@ -1295,17 +1248,101 @@ class Maps(object):
         ----------
         gdf : geopandas.GeoDataFrame
             A GeoDataFrame that should be added to the plot.
-        **kwargs :
-            all kwargs are passed to `gdf.plot(**kwargs)`
+        picker_name : str or None
+            A unique name that is used to identify the pick-method.
+
+            If a `picker_name` is provided, a new pick-container will be
+            created that can be used to pick geometries of the GeoDataFrame.
+
+            The container can then be accessed via:
+                >>> m.cb.pick__<picker_name>
+                or
+                >>> m.cb.pick[picker_name]
+            and it can be used in the same way as `m.cb.pick...`
+
+        pick_method : str or callable
+            if str :
+                The operation that is executed on the GeoDataFrame to identify
+                the picked geometry
+            if callable :
+                A callable that is used to identify the picked geometry.
+                The call-signature is:
+
+                >>> def picker(artist, mouseevent):
+                >>>     # if the pick is NOT successful:
+                >>>     return False, dict()
+                >>>     ...
+                >>>     # if the pick is successful:
+                >>>     return True, dict(ID, pos, val, ind)
+            The default is "contains"
+        \**kwargs :
+            all remaining kwargs are passed to `gdf.plot(**kwargs)`
         """
+
         self._set_axes()
-
         ax = self.figure.ax
-
         defaultargs = dict(facecolor="none", edgecolor="k", lw=1.5)
         defaultargs.update(kwargs)
 
-        gdf.to_crs(self.crs_plot).plot(ax=ax, aspect=ax.get_aspect(), **defaultargs)
+        # transform data to the plot crs
+        usegdf = gdf.to_crs(self.crs_plot)
+
+        # plot gdf and identify newly added collections
+        # (geopandas always uses collections)
+        colls = [id(i) for i in self.figure.ax.collections]
+        usegdf.plot(ax=ax, aspect=ax.get_aspect(), **defaultargs)
+        newcolls = [i for i in self.figure.ax.collections if id(i) not in colls]
+        if len(newcolls) > 1:
+            prefixes = [
+                f"_{i.__class__.__name__.replace('Collection', '')}" for i in newcolls
+            ]
+            warnings.warn(
+                "EOmaps: Multiple geometry types encountered in `m.add_gdf`. "
+                + "The pick containers are re-named to"
+                + f"{[picker_name + prefix for prefix in prefixes]}"
+            )
+        else:
+            prefixes = [""]
+
+        if picker_name is not None:
+            if pick_method is not None:
+                if isinstance(pick_method, str):
+
+                    def picker(artist, mouseevent):
+                        try:
+                            query = getattr(usegdf, pick_method)(
+                                gpd.points_from_xy(
+                                    [mouseevent.xdata], [mouseevent.ydata]
+                                )[0]
+                            )
+                            if query.any():
+                                inds = usegdf.index[query]
+                                print(inds)
+                                return True, dict(
+                                    ind=inds[0],
+                                    dblclick=mouseevent.dblclick,
+                                    button=mouseevent.button,
+                                )
+                            else:
+                                return False, dict()
+                        except:
+                            return False, dict()
+
+                elif callable(pick_method):
+                    picker = pick_method
+                else:
+                    print(
+                        "EOmaps: I don't know what to do with the provided pick_method"
+                    )
+
+                # explode the GeoDataFrame to avoid picking multi-part geometries
+                usegdf = usegdf.explode(index_parts=False)
+                for art, prefix in zip(newcolls, prefixes):
+                    # make the newly added collection pickable
+                    self.cb.add_picker(picker_name + prefix, art, picker=picker)
+
+                    # attach the re-projected GeoDataFrame to the pick-container
+                    self.cb.pick[picker_name + prefix].data = usegdf
 
     def add_coastlines(self, layer=None, coast=True, ocean=True):
         """
@@ -1728,7 +1765,7 @@ class Maps(object):
             Indicator if coastlines and a light-blue ocean shading should be added.
             The default is True
         pick_distance : int
-            The maximum distance (in pixels) to trigger callbacks.
+            The maximum distance (in pixels) to trigger callbacks on the added collection.
             (The distance is evaluated between the clicked pixel and the center of the
             closest data-point)
             The default is 10.
@@ -1736,6 +1773,9 @@ class Maps(object):
             A layer-index in case the collection is intended to be updated
             dynamically.
             The default is None.
+        dynamic : bool
+            If True, the collection will be dynamically updated
+
         \**kwargs
             kwargs passed to the initialization of the matpltolib collection
             (dependent on the plot-shape) [linewidth, edgecolor, facecolor, ...]
@@ -1744,8 +1784,6 @@ class Maps(object):
 
         self._set_axes()
         ax = self.figure.ax
-
-        self._pick_distance = pick_distance
 
         if "dynamic_layer_idx" in kwargs:
             layer = kwargs.pop("dynamic_layer_idx")
@@ -1830,6 +1868,14 @@ class Maps(object):
 
             self.figure.coll = coll
 
+            # attach the pick-callback that executes the callbacks
+            # self.attach_picker("default", self.figure.coll, None)
+
+            # self.cb.add_picker("default", coll, None)
+            self.cb.pick._set_artist(coll)
+            self.cb.pick._init_cbs()
+            self.cb.pick._pick_distance = pick_distance
+
             if colorbar:
                 if (self.figure.ax_cb is not None) and (
                     self.figure.ax_cb_plot is not None
@@ -1854,13 +1900,6 @@ class Maps(object):
                 self.BM.add_artist(coll, layer)
             else:
                 self.BM.add_bg_artist(coll, layer)
-
-            # ------------- add a picker that will be used by the callbacks
-            self._attach_picker()
-
-            if self.parent is self:
-                # attach the pick-callback that execute the callbacks
-                self.cb.pick._init_cbs()
 
             # set the image extent
             # get the extent of the added collection
@@ -2015,7 +2054,7 @@ class MapsGrid:
     Returns
     -------
     eomaps.MapsGrid
-        Accessor to the Maps objects "ax_{row}_{column}".
+        Accessor to the Maps objects "m_{row}_{column}".
 
     """
 
@@ -2039,7 +2078,7 @@ class MapsGrid:
         return iter(self._axes)
 
     def __getitem__(self, key):
-        return getattr(self, f"ax_{key[0]}_{key[1]}")
+        return getattr(self, f"m_{key[0]}_{key[1]}")
 
     @property
     def children(self):
@@ -2102,11 +2141,14 @@ class MapsGrid:
         """
         self.parent.cb.click.share_events(*self.children)
 
-    def share_pick_events(self):
+    def share_pick_events(self, name="default"):
         """
         share pick events between all Maps objects of the grid
         """
-        self.parent.cb.pick.share_events(*self.children)
+        if name == "default":
+            self.parent.cb.pick.share_events(*self.children)
+        else:
+            self.parent.cb.pick[name].share_events(*self.children)
 
     def join_limits(self):
         """

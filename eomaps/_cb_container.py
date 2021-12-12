@@ -12,6 +12,8 @@ import matplotlib.pyplot as plt
 
 from pyproj import Transformer
 
+import numpy as np
+
 
 class _cb_container(object):
     """base-class for callback containers"""
@@ -33,10 +35,10 @@ class _cb_container(object):
 
     def _getobj(self, m):
         """get the equivalent callback container on anoter maps object"""
-        return getattr(m.cb, self._method)
+        return getattr(m.cb, self._method, None)
 
     @property
-    def objs(self):
+    def _objs(self):
         """
         get the callback-container objects associated with the axes that
         the event belonged to
@@ -50,10 +52,11 @@ class _cb_container(object):
             else:
                 event = self._event
 
-            for m in [*self._m._children, self._m.parent]:
+            for m in [*self._m.parent._children, self._m.parent]:
                 if event.inaxes is m.figure.ax:
-                    objs.append(self._getobj(m))
-
+                    obj = self._getobj(m)
+                    if obj is not None:
+                        objs.append(obj)
         return objs
 
     def _clear_temporary_artists(self):
@@ -84,6 +87,23 @@ class _cb_container(object):
             for m2 in (self._m, *args):
                 if m1 is not m2:
                     self._getobj(m1)._fwd_cbs[id(m2)] = m2
+
+    def add_temporary_artist(self, artist, layer=None):
+        """
+        make an artist temporary
+        (e.g. remove it from the map at the next event)
+
+        Parameters
+        ----------
+        artist : matplotlib.artist
+            the artist to use
+        layer : int, optional
+            the layer to put the artist on. The default is None.
+        """
+        if layer is None:
+            layer = self._m.layer
+        self._m.BM.add_artist(artist, layer=layer)
+        self._temporary_artists.append(artist)
 
 
 class _click_container(_cb_container):
@@ -199,6 +219,11 @@ class _click_container(_cb_container):
                 the ID of the attached callback
 
             """
+            if self._parent._method == "pick":
+                assert (
+                    self._parent._m.figure.coll is not None
+                ), "you can only attach pick-callbacks after calling `plot_map()`!"
+
             return self._parent._add_callback(
                 callback=f, double_click=double_click, button=button, **kwargs
             )
@@ -261,11 +286,15 @@ class _click_container(_cb_container):
                     (`<function_name>_<count>__<double/single>__<button_ID>`)
         """
         if ID is not None:
-            name, ds, b = ID.split("__")
+            s = ID.split("__")
+            name, ds, b = s
 
         dsdict = self.get.cbs.get(ds, None)
         if dsdict is not None:
-            bdict = dsdict.get(int(b))
+            if int(b) in dsdict:
+                bdict = dsdict.get(int(b))
+            else:
+                return
         else:
             return
 
@@ -343,6 +372,11 @@ class _click_container(_cb_container):
             (to remove the callback, use `m.cb.remove(cbname)`)
 
         """
+        if self._method == "pick":
+            assert self._m.figure.coll is not None, (
+                "you can only attach pick-callbacks after plotting a dataset!"
+                + "... use `m.plot_map()` first."
+            )
 
         assert not all(
             i in kwargs for i in ["pos", "ID", "val", "double_click", "button"]
@@ -368,9 +402,11 @@ class _click_container(_cb_container):
         multi_cb_functions = ["mark", "annotate"]
 
         if double_click:
-            d = self.get.cbs["double"][button]
+            btn_key = "double"
         else:
-            d = self.get.cbs["single"][button]
+            btn_key = "single"
+
+        d = self.get.cbs[btn_key][button]
 
         # get a unique name for the callback
         ncb = [int(i.rsplit("_", 1)[1]) for i in d if i.startswith(callback.__name__)]
@@ -385,7 +421,7 @@ class _click_container(_cb_container):
         d[cbkey] = partial(callback, *args, **kwargs)
 
         # add mouse-button assignment as suffix to the name (with __ separator)
-        cbname = cbkey + f"__{'double' if double_click else 'single'}__{button}"
+        cbname = cbkey + f"__{btn_key}__{button}"
 
         return cbname
 
@@ -461,7 +497,7 @@ class cb_click_container(_click_container):
 
             # execute onclick on the maps object that belongs to the clicked axis
             # and forward the event to all forwarded maps-objects
-            for obj in self.objs:
+            for obj in self._objs:
                 obj._onclick(event)
                 obj._m.BM._after_update_actions.append(obj._clear_temporary_artists)
                 # forward callbacks to the connected maps-objects
@@ -488,7 +524,7 @@ class cb_click_container(_click_container):
 
             # execute onclick on the maps object that belongs to the clicked axis
             # and forward the event to all forwarded maps-objects
-            for obj in self.objs:
+            for obj in self._objs:
                 obj._onclick(event)
                 obj._m.BM._after_update_actions.append(obj._clear_temporary_artists)
                 # forward callbacks to the connected maps-objects
@@ -513,6 +549,8 @@ class cb_click_container(_click_container):
 
         for key, m in self._fwd_cbs.items():
             obj = self._getobj(m)
+            if obj is None:
+                continue
 
             transformer = Transformer.from_crs(
                 self._m.crs_plot,
@@ -546,14 +584,12 @@ class cb_pick_container(_click_container):
 
     Note
     ----
-
-    you can use the `pick_distance` kwarg in `m.plot_map(pick_distance=20)`
-    to specify the maximal distance (in pixels) that is used to identify the
-    closest datapoint
+    you can set a treshold for the default picker via the `pick_distance`
+    `m.plot_map(pick_distance=20)` to specify the maximal distance (in pixels)
+    that is used to identify the closest datapoint
 
     Methods
     --------
-
     attach : accessor for callbacks.
         Executing the functions will attach the associated callback to the map!
 
@@ -568,52 +604,115 @@ class cb_pick_container(_click_container):
 
     """
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, picker_name="default", picker=None, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self._cid_pick_event = None
+        self._cid_pick_event = dict()
+        self._picker_name = picker_name
+        self._artist = None
+        self._pick_distance = np.inf
+
+        if picker is None:
+            self._picker = self._default_picker
+        else:
+            self._picker = picker
+
+    def __getitem__(self, name):
+        container_name = "pick__" + str(name)
+
+        if hasattr(self._m.cb, container_name):
+            return getattr(self._m.cb, container_name)
+        else:
+            print(
+                f"the picker {name} does not exist...", "use `m.cb.add_picker` first!"
+            )
+
+    def _set_artist(self, artist):
+        self._artist = artist
+        self._artist.set_picker(self._picker)
 
     def _init_cbs(self):
-        if self._m.parent is self._m:
-            if getattr(self._m.figure, "coll", None) is not None:
-                self._add_pick_callback()
+        # if self._m.parent is self._m:
+        self._add_pick_callback()
+
+    def _default_picker(self, artist, event):
+        ax = self._m.figure.ax
+
+        # set max. distance in pixel-coordinates for picking
+        if self._pick_distance is None:
+            maxdist = np.inf
+        else:
+            maxdist = self._pick_distance
+
+        if (event.inaxes != ax) or not hasattr(self._m, "tree"):
+            return False, dict(ind=None, dblclick=event.dblclick, button=event.button)
+
+        # make sure non-finite coordinates (resulting from projections in
+        # forwarded callbacks) don't lead to issues
+        if not np.isfinite((event.xdata, event.ydata)).all():
+            return False, dict(ind=None, dblclick=event.dblclick, button=event.button)
+
+        # use a cKDTree based picking to speed up picks for large collections
+        dist, index = self._m.tree.query((event.xdata, event.ydata))
+
+        # do this to make sure that we calculate the distance in the right axes!
+        # (necessary for connected pick-callbacks)
+        # for the axes of the original click, this is equal to (event.x, event.y)
+        p1 = ax.transData.transform((event.xdata, event.ydata))
+
+        p2 = ax.transData.transform(
+            (self._m._props["x0"][index], self._m._props["y0"][index])
+        )
+        pdist = np.sqrt(np.sum((p1 - p2) ** 2))
+
+        if pdist < maxdist:
+            return True, dict(
+                ind=index, dblclick=event.dblclick, button=event.button, dist=dist
+            )
+        else:
+            return True, dict(
+                ind=None, dblclick=event.dblclick, button=event.button, dist=dist
+            )
+
+        return False, None
 
     def _get_pickdict(self, event):
         ind = event.ind
         if ind is not None:
-            if event.artist is self._m.figure.coll:
+            if self._m.figure.coll is not None and event.artist is self._m.figure.coll:
                 clickdict = dict(
                     pos=(self._m._props["x0"][ind], self._m._props["y0"][ind]),
                     ID=self._m._props["ids"][ind],
                     val=self._m._props["z_data"][ind],
                     ind=ind,
+                    picker_name=self._picker_name,
                 )
-
-                return clickdict
+            else:
+                clickdict = dict(
+                    ID=getattr(event, "ID", getattr(event, "ind", None)),
+                    pos=getattr(
+                        event, "pos", (event.mouseevent.xdata, event.mouseevent.ydata)
+                    ),
+                    val=getattr(event, "val", None),
+                    ind=getattr(event, "ind", None),
+                    picker_name=self._picker_name,
+                )
+            return clickdict
 
     def _onpick(self, event):
+        if event.artist is not self._artist:
+            return
+
         # don't execute callbacks if a toolbar-action is active
         if (
             self._m.figure.f.canvas.toolbar is not None
         ) and self._m.figure.f.canvas.toolbar.mode != "":
             return
 
-        if event.artist != self._m.figure.coll or event.artist is None:
-            clickdict = dict(
-                ID=event.ind if hasattr(event, "ind") else None,
-                pos=(event.mouseevent.xdata, event.mouseevent.ydata),
-                val=None,
-                ind=event.ind,
-            )
-            event = event.mouseevent
-            # return
-        else:
-            clickdict = self._get_pickdict(event)
-
+        clickdict = self._get_pickdict(event)
         if event.dblclick:
             cbs = self.get.cbs["double"]
         else:
             cbs = self.get.cbs["single"]
-
         if event.button in cbs:
             bcbs = cbs[event.button]
             for key in self._sort_cbs(bcbs):
@@ -621,51 +720,51 @@ class cb_pick_container(_click_container):
                 if clickdict is not None:
                     cb(**clickdict)
 
-    def _add_pick_callback(self, pickcb=None):
-        # only attach pick-callbacks if there is a collection available!
-        # if self._m.figure.coll is None:
-        #    return
-        # ------------- add a callback
-        # execute onpick on the parent and all its children
-        # (_add_pick_callback() is only called on the parent object!)
-        if pickcb is None:
+    def _add_pick_callback(self):
+        # execute onpick and forward the event to all connected Maps-objects
 
-            def pickcb(event):
-                self._event = event
+        def pickcb(event):
+            if not self._artist is event.artist:
+                return
 
-                # ignore callbacks while dragging axes
-                if self._m._draggable_axes._modifier_pressed:
-                    return
-                # don't execute callbacks if a toolbar-action is active
-                if (
-                    self._m.figure.f.canvas.toolbar is not None
-                ) and self._m.figure.f.canvas.toolbar.mode != "":
-                    return
+            self._event = event
+            # check if the artists has a custom picker assigned
 
-                # execute "_onpick" on the maps-object that belongs to the clicked axes
-                # and forward the event to all forwarded maps-objects
-                for obj in self.objs:
-                    obj._onpick(event)
-                    obj._m.BM._after_update_actions.append(obj._clear_temporary_artists)
-                    # forward callbacks to the connected maps-objects
-                    obj._fwd_cb(event)
+            # ignore callbacks while dragging axes
+            if self._m._draggable_axes._modifier_pressed:
+                return
+            # don't execute callbacks if a toolbar-action is active
+            if (
+                self._m.figure.f.canvas.toolbar is not None
+            ) and self._m.figure.f.canvas.toolbar.mode != "":
+                return
 
-                # self._m.parent.BM.update(clear=self._method)
-                # don't update here... the click-callback will take care of it!
-                self._m.parent.BM._clear_temp_artists(self._method)
+            # execute "_onpick" on the maps-object that belongs to the clicked axes
+            # and forward the event to all forwarded maps-objects
+            self._onpick(event)
+            # forward callbacks to the connected maps-objects
+            self._fwd_cb(event, self._picker_name)
 
-        if self._cid_pick_event is None:
-            # ------------- add a callback
-            self._cid_pick_event = self._m.figure.f.canvas.mpl_connect(
+            self._m.BM._after_update_actions.append(self._clear_temporary_artists)
+            self._m.BM._clear_temp_artists(self._method)
+
+            # self._m.parent.BM.update(clear=self._method)
+            # don't update here... the click-callback will take care of it!
+
+        # attach the callbacks (only once per method!)
+        if self._method not in self._cid_pick_event:
+            self._cid_pick_event[self._method] = self._m.figure.f.canvas.mpl_connect(
                 "pick_event", pickcb
             )
 
-    def _fwd_cb(self, event):
+    def _fwd_cb(self, event, picker_name):
         if event.mouseevent.inaxes != self._m.figure.ax:
             return
 
         for key, m in self._fwd_cbs.items():
             obj = self._getobj(m)
+            if obj is None:
+                continue
 
             transformer = Transformer.from_crs(
                 self._m.crs_plot,
@@ -673,7 +772,8 @@ class cb_pick_container(_click_container):
                 always_xy=True,
             )
 
-            # transform the coordinates of the clicked location
+            # transform the coordinates of the clicked location to the
+            # crs of the map
             xdata, ydata = transformer.transform(
                 event.mouseevent.xdata, event.mouseevent.ydata
             )
@@ -688,20 +788,20 @@ class cb_pick_container(_click_container):
                 # y=event.mouseevent.y,
             )
             dummyevent = SimpleNamespace(
-                artist=m.figure.coll,
+                artist=obj._artist,
                 dblclick=event.dblclick,
                 button=event.button,
-                inaxes=m.figure.ax,
-                xdata=xdata,
-                ydata=ydata,
+                # inaxes=m.figure.ax,
                 mouseevent=dummymouseevent,
+                # picker_name=picker_name,
             )
 
-            pick = m._pick_pixel(None, event.mouseevent)
+            pick = obj._picker(obj._artist, dummymouseevent)
+
             if pick[1] is not None:
-                dummyevent.ind = pick[1]["ind"]
+                dummyevent.ind = pick[1].get("ind", None)
                 if "dist" in pick[1]:
-                    dummyevent.dist = pick[1]["dist"]
+                    dummyevent.dist = pick[1].get("dist", None)
             else:
                 dummyevent.ind = None
                 dummyevent.dist = None
@@ -731,7 +831,7 @@ class keypress_container(_cb_container):
 
     """
 
-    def __init__(self, m, cb_cls=None, method="pick"):
+    def __init__(self, m, cb_cls=None, method="keypress"):
         super().__init__(m, cb_cls, method)
 
     def _init_cbs(self):
@@ -976,6 +1076,59 @@ class cb_container:
     @wraps(dynamic_callbacks)
     def dynamic(self):
         return dynamic_callbacks(m=self._m)
+
+    def add_picker(self, name, artist, picker):
+        """
+        Attach a custom picker to an artist.
+
+        Once attached, callbacks can be assigned just like the default
+        click/pick callbacks via:
+
+            >>> m.cb.pick__<name>. ...
+
+        Parameters
+        ----------
+        name : str, optional
+            a unique identifier that will be used to identify the picking
+            method.
+        artist : a matplotlib artist, optional
+            the artist that should become pickable.
+            (it must support `artist.set_picker()`)
+            The default is None.
+        picker : callable, optional
+            A callable that is used to perform the picking.
+            The default is None, in which case the default picker is used.
+            The call-signature is:
+
+            >>> def picker(artist, mouseevent):
+            >>>     # if the pick is NOT successful:
+            >>>     return False, dict()
+            >>>     ...
+            >>>     # if the pick is successful:
+            >>>     return True, dict(ID, pos, val, ind)
+        """
+
+        if picker is not None:
+            assert name != "default", "'default' is not a valid picker name!"
+
+        # if it already exists, return the existing one
+        assert not hasattr(self._m.cb, name), "the picker '{name}' is already attached!"
+        new_pick = cb_pick_container(
+            m=self._m,
+            cb_cls=pick_callbacks,
+            method="pick" if name == "default" else "pick__" + str(name),
+            picker_name=name,
+            picker=picker,
+        )
+        new_pick.__doc__ == cb_pick_container.__doc__
+        new_pick._set_artist(artist)
+        new_pick._init_cbs()
+
+        # add the picker method to the accessible cbs
+        setattr(self._m.cb, new_pick._method, new_pick)
+        self._methods.append(new_pick._method)
+
+        return new_pick
 
     def _init_cbs(self):
         for method in self._methods:
