@@ -29,7 +29,7 @@
 
 ## 🔨 installation
 
-The to install EOmaps (and all its dependencies) via the `conda` package-manager, simply use:
+To install EOmaps (and all its dependencies) via the `conda` package-manager, simply use:
 
 ```python
 conda install -c conda-forge eomaps
