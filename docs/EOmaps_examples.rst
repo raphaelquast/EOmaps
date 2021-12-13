@@ -498,7 +498,7 @@ The data displayed in the above gif is taken from:
     - OpenStreetMap hosted by Mundialis (https://www.mundialis.de/en/ows-mundialis/)
 
 
-🛰 using geopandas - interactive shapes!
+🚀 using geopandas - interactive shapes!
 ----------------------------------------
 
 geopandas.GeoDataFrames can be used to assign callbacks with EOmaps.

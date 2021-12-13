@@ -6,78 +6,69 @@
 
 🐛 Installation
 ###############
-(To speed up the process... have a look at `(mamba) <https://github.com/mamba-org/mamba>`_ )
+
+🐜 Recommended way (via ``conda``)
+------------------------------
+(To speed up the process... have a look at `mamba <https://github.com/mamba-org/mamba>`_ )
+
+EOmaps is available via the ``conda-forge`` channel and can be installed via:
+
+  .. code-block:: console
+
+      conda install -c conda-forge eomaps
 
 
-🐜 Manual installation
-----------------------
-
-The recommended way to install EOmaps with `conda` and `pip`:
-
-0. | (only if you're on WINDOWS)
-   | due to an issue with libspatialindex.dll for the conda-forge build of rtree, install rtree from default channel
-     `(check the corresponding issue on rtree-feedstock) <https://github.com/conda-forge/rtree-feedstock/issues/31>`_
-
-    .. code-block:: console
-
-       conda install "rtree>=0.9.7"
-
-1. install required dependencies from `conda-forge` channel
-
-    .. code-block:: console
-
-       conda install -c conda-forge numpy scipy pandas geopandas "matplotlib>=3.0" "cartopy>=0.20.0" descartes mapclassify pyproj pyepsg
+This should make sure all required dependencies are correctly installed.
 
 
-  1.1 For WebMap capabilities (e.g. WMS or WMTS services) you need some more:
+.. admonition:: Note on using ``geopandas``
 
-      .. code-block:: console
-
-         conda install -c conda-forge owslib requests xmltodict cairosvg
-
-2. finally, install EOmaps from pip
-
-    .. code-block:: console
-
-       pip install eomaps
+    | `Geopandas <https://geopandas.org/en/stable/index.html>`_ is an optional dependency (only required for ``m.add_overlay()`` and ``m.add_gdf()``).
+    | To install geopandas, simply use: ``conda install -c conda-forge geopandas``
 
 
-🐞 From .yml file
------------------
+.. admonition:: Note on ``matplotlib`` backends
 
-Here's a yaml-file that you can use to install all you need in one go:
+  By default EOmaps requires only a minimal version of ``matplotlib`` that does not include bindings for
+  all available `matplotlib backends <https://matplotlib.org/stable/users/explain/backends.html?highlight=backend#backends>`_.
+
+  - To install all backends, explicitly use: ``conda install -c conda-forge matplotlib``
+  - For ``QtAgg``, just install the ``pyqt`` bindings via ``conda install -c conda-forge pyqt``
+
+
+
+🐞 Alternative way (via ``pip``)
+-----------------------------------
+EOmaps is also available via ``pip`` and can be installed using
+
+  .. code-block:: console
+
+     pip install eomaps
+
+
+However, it is not guaranteed that all dependencies are correctly resolved and some manual
+tweaking of the environment might be required to ensure that all packages work as expected.
+
+A list of the dependencies can be found below:
 
 .. code-block:: yaml
 
-    name: eomaps
-    channels:
-      - conda-forge
-      - defaults
-
     dependencies:
-      - python=3.7
+      - python >=3.7
       - rtree
       - numpy
       - scipy
       - pandas
-      - geopandas
-      - matplotlib>=3.0
-      - cartopy>=0.20.0
+      - matplotlib >=3.0
+      - cartopy >=0.20.0
       - descartes
       - mapclassify
       - pyproj
       - pyepsg
-      # --------------for WebMaps
+      # -------------- for WebMaps
       - owslib
       - requests
       - xmltodict
       - cairosvg
-      - pip
-      - pip :
-        - eomaps
-
-To install a fresh environment use:
-
-.. code-block:: console
-
-    conda env create -f <link to the above yml-file>
+      # -------------- optional
+      - geopandas
