@@ -253,19 +253,18 @@ class TestBasicPlotting(unittest.TestCase):
             callback = getattr(m.cb.pick._cb, cb)
             callback(**kwargs)
 
-            dummyevent = SimpleNamespace(
-                artist=m.figure.coll,
-                dblclick=False,
-                button=1,
-            )
             dummymouseevent = SimpleNamespace(
                 inaxes=m.figure.ax,
-                dblclick=dummyevent.dblclick,
-                button=dummyevent.button,
+                dblclick=False,
+                button=1,
                 xdata=m.data.iloc[0]["x"],
                 ydata=m.data.iloc[0]["x"],
                 x=123,
                 y=123,
+            )
+            dummyevent = SimpleNamespace(
+                artist=m.figure.coll,
+                mouseevent=dummymouseevent,
             )
 
             pick = m.cb.pick._picker(None, dummymouseevent)
@@ -285,13 +284,27 @@ class TestBasicPlotting(unittest.TestCase):
             callback = getattr(m.cb.click._cb, cb)
             callback(**kwargs)
 
-            dummyevent = SimpleNamespace(
+            dummymouseevent = SimpleNamespace(
                 inaxes=m.figure.ax,
                 dblclick=True,
                 button=1,
                 xdata=123456,
                 ydata=123456,
+                x=123,
+                y=123,
             )
+            dummyevent = SimpleNamespace(
+                artist=m.figure.coll,
+                mouseevent=dummymouseevent,
+            )
+
+            # dummyevent = SimpleNamespace(
+            #     inaxes=m.figure.ax,
+            #     dblclick=True,
+            #     button=1,
+            #     xdata=123456,
+            #     ydata=123456,
+            # )
             m.cb.click._fwd_cb(dummyevent)
 
         # test all keypress callbacks

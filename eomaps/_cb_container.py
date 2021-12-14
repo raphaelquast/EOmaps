@@ -546,7 +546,7 @@ class cb_click_container(_click_container):
             )
 
     def _fwd_cb(self, event):
-        if event.inaxes != self._m.figure.ax:
+        if event.mouseevent.inaxes != self._m.figure.ax:
             return
 
         for key, m in self._fwd_cbs.items():
@@ -570,6 +570,23 @@ class cb_click_container(_click_container):
                 xdata=xdata,
                 ydata=ydata,
             )
+
+            dummymouseevent = SimpleNamespace(
+                inaxes=m.figure.ax,
+                dblclick=event.dblclick,
+                button=event.button,
+                xdata=xdata,
+                ydata=ydata,
+                # x=event.mouseevent.x,
+                # y=event.mouseevent.y,
+            )
+            dummyevent = SimpleNamespace(
+                artist=obj._artist,
+                dblclick=event.dblclick,
+                button=event.button,
+                mouseevent=dummymouseevent,
+            )
+
             obj._onclick(dummyevent)
             # append clear-action again since it will already be executed
             # by the first click!
