@@ -275,7 +275,7 @@ class _click_container(_cb_container):
 
             return cbs
 
-    def remove(self, ID=None):
+    def remove(self, callback=None):
         """
         remove an attached callback from the figure
 
@@ -285,8 +285,8 @@ class _click_container(_cb_container):
             if str: the name of the callback to remove
                     (`<function_name>_<count>__<double/single>__<button_ID>`)
         """
-        if ID is not None:
-            s = ID.split("__")
+        if callback is not None:
+            s = callback.split("__")
             name, ds, b = s
 
         dsdict = self.get.cbs.get(ds, None)
@@ -294,8 +294,10 @@ class _click_container(_cb_container):
             if int(b) in dsdict:
                 bdict = dsdict.get(int(b))
             else:
+                print(f"EOmaps: there is no callback named {callback}")
                 return
         else:
+            print(f"EOmaps: there is no callback named {callback}")
             return
 
         if bdict is not None:
@@ -306,8 +308,8 @@ class _click_container(_cb_container):
                 fname = name.rsplit("_", 1)[0]
                 if hasattr(self._cb, f"_{fname}_cleanup"):
                     getattr(self._cb, f"_{fname}_cleanup")()
-
-                print(f"Removed the {self._method} callback: '{ID}'.")
+            else:
+                print(f"EOmaps: there is no callback named {callback}")
 
     def _add_callback(
         self, *args, callback=None, double_click=False, button=1, **kwargs
@@ -617,7 +619,11 @@ class cb_pick_container(_click_container):
             self._picker = picker
 
     def __getitem__(self, name):
-        container_name = "pick__" + str(name)
+        name = str(name)
+        if name.startswith("_"):
+            container_name = "_pick__" + name[1:]
+        else:
+            container_name = "pick__" + name
 
         if hasattr(self._m.cb, container_name):
             return getattr(self._m.cb, container_name)
@@ -709,12 +715,13 @@ class cb_pick_container(_click_container):
             return
 
         clickdict = self._get_pickdict(event)
-        if event.dblclick:
+        if event.mouseevent.dblclick:
             cbs = self.get.cbs["double"]
         else:
             cbs = self.get.cbs["single"]
-        if event.button in cbs:
-            bcbs = cbs[event.button]
+
+        if event.mouseevent.button in cbs:
+            bcbs = cbs[event.mouseevent.button]
             for key in self._sort_cbs(bcbs):
                 cb = bcbs[key]
                 if clickdict is not None:
@@ -931,7 +938,7 @@ class keypress_container(_cb_container):
 
             return cbs
 
-    def remove(self, ID=None):
+    def remove(self, callback=None):
         """
         remove an attached callback from the figure
 
@@ -941,8 +948,8 @@ class keypress_container(_cb_container):
             if str: the name of the callback to remove
                     (`<function_name>_<count>__<key>`)
         """
-        if ID is not None:
-            name, key = ID.split("__")
+        if callback is not None:
+            name, key = callback.split("__")
 
         cbs = self.get.cbs.get(key, None)
 
@@ -954,8 +961,10 @@ class keypress_container(_cb_container):
                 fname = name.rsplit("_", 1)[0]
                 if hasattr(self._cb, f"_{fname}_cleanup"):
                     getattr(self._cb, f"_{fname}_cleanup")()
-
-                print(f"Removed the {self._method} callback: '{ID}'.")
+            else:
+                print(f"EOmaps: there is no callback named {callback}")
+        else:
+            print(f"EOmaps: there is no callback named {callback}")
 
     def _add_callback(self, callback, key="x", **kwargs):
         """
@@ -1089,8 +1098,7 @@ class cb_container:
         Parameters
         ----------
         name : str, optional
-            a unique identifier that will be used to identify the picking
-            method.
+            a unique identifier that will be used to identify the pick method.
         artist : a matplotlib artist, optional
             the artist that should become pickable.
             (it must support `artist.set_picker()`)
@@ -1106,17 +1114,34 @@ class cb_container:
             >>>     ...
             >>>     # if the pick is successful:
             >>>     return True, dict(ID, pos, val, ind)
+
+        Note
+        ----
+        If the name starts with an underscore (e.g. "_MyPicker") then the
+        associated container will be accessible via `m._cb._pick__MyPicker`
+        or via `m.cb.pick["_MyPicker"]. (This is useful to setup pickers that
+        are only used internally)
         """
+        name = str(name)
 
         if picker is not None:
             assert name != "default", "'default' is not a valid picker name!"
 
         # if it already exists, return the existing one
         assert not hasattr(self._m.cb, name), "the picker '{name}' is already attached!"
+
+        if name == "default":
+            method = "pick"
+        else:
+            if name.startswith("_"):
+                method = "_pick__" + name[1:]
+            else:
+                method = "pick__" + name
+
         new_pick = cb_pick_container(
             m=self._m,
             cb_cls=pick_callbacks,
-            method="pick" if name == "default" else "pick__" + str(name),
+            method=method,
             picker_name=name,
             picker=picker,
         )
