@@ -574,6 +574,322 @@ class cb_click_container(_click_container):
             m.BM._after_update_actions.append(obj._clear_temporary_artists)
 
 
+class cb_move_container(_click_container):
+    """
+    Callbacks that are executed if you move with the mouse over the map.
+
+    Methods
+    -------
+
+    attach : accessor for callbacks.
+        Executing the functions will attach the associated callback to the map!
+
+    get : accessor for return-objects
+        A container to provide easy-access to the return-values of the callbacks.
+
+    remove : remove prviously added callbacks from the map
+
+    forward_events : forward events to connected maps-objects
+
+    share_events : share events between connected maps-objects (e.g. forward both ways)
+
+    """
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        self._cid_motion_event = None
+
+    def _init_cbs(self):
+        if self._m.parent is self._m:
+            self._add_move_callback()
+
+    class _attach:
+        """
+        Attach custom or pre-defined callbacks to the map.
+
+        Each callback-function takes 2 additional keyword-arguments:
+
+        double_click : bool
+            Indicator if the callback should be executed on double-click (True)
+            or on single-click events (False). The default is False
+        button : int
+            The mouse-button to use for executing the callback:
+
+                - LEFT = 1
+                - MIDDLE = 2
+                - RIGHT = 3
+                - BACK = 8
+                - FORWARD = 9
+
+            The default is 1
+
+        For additional keyword-arguments check the doc of the callback-functions!
+
+        Examples:
+        ---------
+        Get a (temporary) annotation on a LEFT-double-click:
+
+            >>> m.cb.click.attach.annotate(double_click=True, button=1, permanent=False)
+        Permanently color LEFT-clicked pixels red with a black border:
+
+            >>> m.cb.pick.attach.mark(facecolor="r", edgecolor="k", permanent=True)
+        Attach a customly defined callback
+
+            >>> def some_callback(self, asdf, **kwargs):
+            >>>     print("hello world")
+            >>>     print("the position of the clicked pixel", kwargs["pos"])
+            >>>     print("the data-index of the clicked pixel", kwargs["ID"])
+            >>>     print("data-value of the clicked pixel", kwargs["val"])
+            >>>     print("the plot-crs is:", self.plot_specs["plot_crs"])
+
+            >>> m.cb.pick.attach(some_callback, double_click=False, button=1, asdf=1)
+        """
+
+        def __init__(self, parent):
+            self._parent = parent
+
+            # attach pre-defined callbacks
+            for cb in self._parent._cb_list:
+                setattr(
+                    self,
+                    cb,
+                    update_wrapper(
+                        partial(self._parent._add_callback, callback=cb),
+                        getattr(self._parent._cb, cb),
+                    ),
+                )
+
+        def __call__(self, f, **kwargs):
+            """
+            add a custom callback-function to the map
+
+            Parameters
+            ----------
+            f : callable
+                the function to attach to the map.
+                The call-signature is:
+
+                >>> def some_callback(self, **kwargs):
+                >>>     print("hello world")
+                >>>     print("the position of the clicked pixel", kwargs["pos"])
+                >>>     print("the data-index of the clicked pixel", kwargs["ID"])
+                >>>     print("data-value of the clicked pixel", kwargs["val"])
+                >>>     print("the plot-crs is:", self.plot_specs["plot_crs"])
+                >>>
+                >>> m.cb.attach(some_callback)
+
+            **kwargs :
+                kwargs passed to the callback-function
+                For documentation of the individual functions check the docs in `m.cb`
+
+
+            Returns
+            -------
+            cid : int
+                the ID of the attached callback
+
+            """
+            if self._parent._method == "pick":
+                assert (
+                    self._parent._m.figure.coll is not None
+                ), "you can only attach pick-callbacks after calling `plot_map()`!"
+
+            return self._parent._add_callback(callback=f, **kwargs)
+
+    class _get:
+        def __init__(self, parent):
+            self.m = parent._m
+            self.cb = parent._cb
+
+            self.cbs = dict()
+
+        @property
+        def attached_callbacks(self):
+            return list(self.cbs)
+
+    def _add_callback(self, *args, callback=None, **kwargs):
+        """
+        Attach a callback to the plot that will be executed if a pixel is clicked
+
+        A list of pre-defined callbacks (accessible via `m.cb`) or customly defined
+        functions can be used.
+
+            >>> # to add a pre-defined callback use:
+            >>> cid = m._add_callback("annotate", <kwargs passed to m.cb.annotate>)
+            >>> # to remove the callback again, call:
+            >>> m.remove_callback(cid)
+
+        Parameters
+        ----------
+        callback : callable or str
+            The callback-function to attach.
+
+            If a string is provided, it will be used to assign the associated function
+            from the `m.cb` collection:
+                - "annotate" : add annotations to the clicked pixel
+                - "mark" : add markers to the clicked pixel
+                - "plot" : dynamically update a plot with the clicked values
+                - "print_to_console" : print info of the clicked pixel to the console
+                - "get_values" : save properties of the clicked pixel to a dict
+                - "load" : use the ID of the clicked pixel to load data
+                - "clear_annotations" : clear all existing annotations
+                - "clear_markers" : clear all existing markers
+
+            You can also define a custom function with the following call-signature:
+                >>> def some_callback(self, asdf, **kwargs):
+                >>>     print("hello world")
+                >>>     print("the position of the clicked pixel", kwargs["pos"])
+                >>>     print("the data-index of the clicked pixel", kwargs["ID"])
+                >>>     print("data-value of the clicked pixel", kwargs["val"])
+                >>>     print("the plot-crs is:", self.m.plot_specs["plot_crs"])
+                >>>     print("asdf is:", asdf)
+
+                >>> m.cb.attach(some_callback, double_click=False, button=1, asdf=1)
+
+        double_click : bool
+            Indicator if the callback should be executed on double-click (True)
+            or on single-click events (False)
+        button : int
+            The mouse-button to use for executing the callback:
+
+                - LEFT = 1
+                - MIDDLE = 2
+                - RIGHT = 3
+                - BACK = 8
+                - FORWARD = 9
+        **kwargs :
+            kwargs passed to the callback-function
+            For documentation of the individual functions check the docs in `m.cb`
+
+        Returns
+        -------
+        cbname : str
+            the identification string of the callback
+            (to remove the callback, use `m.cb.remove(cbname)`)
+
+        """
+
+        assert not all(
+            i in kwargs for i in ["pos", "ID", "val", "double_click", "button"]
+        ), 'the names "pos", "ID", "val" cannot be used as keyword-arguments!'
+
+        if isinstance(callback, str):
+            assert hasattr(self._cb, callback), (
+                f"The function '{callback}' does not exist as a pre-defined callback."
+                + " Use one of:\n    - "
+                + "\n    - ".join(self._cb_list)
+            )
+            callback = getattr(self._cb, callback)
+        elif callable(callback):
+            # re-bind the callback methods to the eomaps.Maps.cb object
+            # in case custom functions are used
+            if hasattr(callback, "__func__"):
+                callback = callback.__func__.__get__(self._m)
+            else:
+                callback = callback.__get__(self._m)
+
+        # make sure multiple callbacks of the same funciton are only assigned
+        # if multiple assignments are properly handled
+        multi_cb_functions = ["mark", "annotate"]
+
+        d = self.get.cbs
+
+        # get a unique name for the callback
+        ncb = [int(i.rsplit("_", 1)[1]) for i in d if i.startswith(callback.__name__)]
+        cbkey = callback.__name__ + f"_{max(ncb) + 1 if len(ncb) > 0 else 0}"
+
+        if callback.__name__ not in multi_cb_functions:
+            assert len(ncb) == 0, (
+                f"Multiple assignments of the callback '{callback.__name__}' using "
+                + "the same button is not (yet) supported... use a different button!"
+            )
+
+        d[cbkey] = partial(callback, *args, **kwargs)
+
+        # add mouse-button assignment as suffix to the name (with __ separator)
+        cbname = cbkey
+
+        return cbname
+
+    def _get_clickdict(self, event):
+        clickdict = dict(
+            pos=(event.xdata, event.ydata),
+            ID=None,
+            val=None,
+            ind=None,
+        )
+
+        return clickdict
+
+    def _onmove(self, event):
+        clickdict = self._get_clickdict(event)
+
+        for key in self._sort_cbs(self.get.cbs):
+            cb = self.get.cbs[key]
+            if clickdict is not None:
+                cb(**clickdict)
+
+    def _add_move_callback(self):
+        def movecb(event):
+            self._event = event
+
+            # ignore callbacks while dragging axes
+            if self._m._draggable_axes._modifier_pressed:
+                return
+            # don't execute callbacks if a toolbar-action is active
+            if (
+                self._m.figure.f.canvas.toolbar is not None
+            ) and self._m.figure.f.canvas.toolbar.mode != "":
+                return
+
+            # execute onclick on the maps object that belongs to the clicked axis
+            # and forward the event to all forwarded maps-objects
+            for obj in self._objs:
+                obj._onmove(event)
+                obj._m.BM._after_update_actions.append(obj._clear_temporary_artists)
+                # forward callbacks to the connected maps-objects
+                obj._fwd_cb(event)
+
+            self._m.parent.BM.update(clear=self._method)
+
+        if self._cid_motion_event is None:
+            # for click-callbacks, allow motion-detection
+            self._cid_motion_event = self._m.figure.f.canvas.mpl_connect(
+                "motion_notify_event", movecb
+            )
+
+    def _fwd_cb(self, event):
+        if event.inaxes != self._m.figure.ax:
+            return
+
+        for key, m in self._fwd_cbs.items():
+            obj = self._getobj(m)
+            if obj is None:
+                continue
+
+            transformer = Transformer.from_crs(
+                self._m.crs_plot,
+                m.crs_plot,
+                always_xy=True,
+            )
+
+            # transform the coordinates of the clicked location
+            xdata, ydata = transformer.transform(event.xdata, event.ydata)
+
+            dummyevent = SimpleNamespace(
+                inaxes=m.figure.ax,
+                dblclick=event.dblclick,
+                button=event.button,
+                xdata=xdata,
+                ydata=ydata,
+            )
+            obj._onmove(dummyevent)
+            # append clear-action again since it will already be executed
+            # by the first click!
+            m.BM._after_update_actions.append(obj._clear_temporary_artists)
+
+
 class cb_pick_container(_click_container):
     """
     Callbacks that select the nearest datapoint if you click on the map.
@@ -1039,7 +1355,7 @@ class cb_container:
     def __init__(self, m):
         self._m = m
 
-        self._methods = ["click", "keypress"]
+        self._methods = ["click", "move", "keypress"]
 
     @property
     @lru_cache()
@@ -1049,6 +1365,16 @@ class cb_container:
             m=self._m,
             cb_cls=click_callbacks,
             method="click",
+        )
+
+    @property
+    @lru_cache()
+    @wraps(cb_move_container)
+    def move(self):
+        return cb_move_container(
+            m=self._m,
+            cb_cls=click_callbacks,
+            method="move",
         )
 
     @property
