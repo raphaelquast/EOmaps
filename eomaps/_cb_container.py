@@ -546,7 +546,8 @@ class cb_click_container(_click_container):
             )
 
     def _fwd_cb(self, event):
-        if event.mouseevent.inaxes != self._m.figure.ax:
+        # click container are MouseEvents!
+        if event.inaxes != self._m.figure.ax:
             return
 
         for key, m in self._fwd_cbs.items():
@@ -782,6 +783,7 @@ class cb_pick_container(_click_container):
             )
 
     def _fwd_cb(self, event, picker_name):
+        # PickEvents have a .mouseevent property for the associated MouseEvent!
         if event.mouseevent.inaxes != self._m.figure.ax:
             return
 
