@@ -78,7 +78,9 @@ m.plot_map()
 ```
 ## 🌌 advanced usage
 [click to show] &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; 🛸 Checkout the [docs](https://eomaps.readthedocs.io/en/latest/api.html)! 🛸
+
 <details> 
+  
   <summary>🌍 Attach callback functions to interact with the plot</summary>
   
 - Many pre-defined functions for common tasks are available!
@@ -105,6 +107,7 @@ m.cb.keypress.attach.switch_layer(layer=1, key="a")
 </details>
 
 <details> 
+  
   <summary>🌕 Add additional layers and overlays</summary>
 
 - many pre-defined interfaces for WebMap servers exist
@@ -125,6 +128,7 @@ m.add_marker(...)          # add static markers
   </details>
 
 <details>
+  
   <summary>🪐 Save the figure</summary>
   
 ```python
@@ -133,6 +137,7 @@ m.savefig("oooh_what_a_nice_figure.png", dpi=300)
 </details>
   
 <details>
+  
   <summary>🌗 Connect Maps-objects to get multiple interactive layers of data</summary>
 
 ```python
@@ -150,6 +155,7 @@ m2.cb.attach.peek_layer(layer=2, how=0.25)
   </details> 
  
 <details> 
+  
   <summary>🌏 Plot grids of maps</summary>
   
 ```python
