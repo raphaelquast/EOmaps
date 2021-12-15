@@ -77,7 +77,7 @@ m.set_classify_specs(scheme=Maps.CLASSIFIERS.Quantiles, k=5)
 m.plot_map()
 ```
 ## 🌌 advanced usage
-🛸 Checkout the [docs](https://eomaps.readthedocs.io/en/latest/api.html)! 🛸
+[click to show] &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; 🛸 Checkout the [docs](https://eomaps.readthedocs.io/en/latest/api.html)! 🛸
 <details> 
   <summary>🌍 Attach callback functions to interact with the plot</summary>
   
