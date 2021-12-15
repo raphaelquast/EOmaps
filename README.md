@@ -53,7 +53,7 @@ For more information, have a look at the [installation instructions](https://eom
   - plots of large (>1M datapoints) irregularly sampled datasets are generated in a few seconds!
   - Represent your data as shapes with actual geographic dimensions (ellipses, rectangles, geodetic circles)
     - or use Voroni diagrams and Delaunay triangulations to get interpolated contour-plots
-  - Re-project the data to any crs supported by `cartopy`
+  - Re-project the data to any crs supported by <a href=https://scitools.org.uk/cartopy/docs/latest/reference/crs.html#coordinate-reference-systems-crs>cartopy</a>
   - ... and get a nice colorbar with a colored histogram on top!
 
 ```python
@@ -106,11 +106,16 @@ m.cb.keypress.attach.switch_layer(layer=1, key="a")
 
 <details> 
   <summary>🌕 Add additional layers and overlays</summary>
-  
+
+- many pre-defined interfaces for WebMap servers exist
+  - OpenStreetMap
+  - ESA WorldCover
+  - Nasa GIBS
+  - S1GBM
+  - ... and more!
 
 ```python
 m.add_wms(...)             # add WebMapService layers
-m.add_wms(...)             # add WebMapTileService layers
 m.add_gdf(...)             # add geo-dataframes
 m.add_overlay(...)         # add overlay-layers from NaturalEarth
 
