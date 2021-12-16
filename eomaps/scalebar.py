@@ -65,8 +65,8 @@ class ScaleBar:
             frame-patch. The default is None which translates to:
 
                 >>> dict(fc=".75", ec="k", lw=2)
-
         """
+
         self.m = m
         self.nscales = nscales
         self.scale = scale
@@ -75,6 +75,9 @@ class ScaleBar:
         self.frame_offsets = frame_offsets
         self.geod = self.m.crs_plot.get_geod()
         self.fontscale = fontscale
+
+        # the interval for the azimuth when using + and - keys
+        self.azimuth_interval = 1
 
         if patch_props is None:
             self.patch_props = dict(fc=".75", ec="k", lw=2)
@@ -92,7 +95,6 @@ class ScaleBar:
 
     def _get_pts(self, lon, lat, azim):
         interm_pts = 50
-        # get intermediate points
         pts = self.geod.fwd_intermediate(
             lon1=lon,
             lat1=lat,
@@ -110,6 +112,7 @@ class ScaleBar:
             if abs(lat1 - lat2) > 90:
                 continue
 
+            # get intermediate points
             p = self.geod.inv_intermediate(
                 lon1=lon1,
                 lat1=lat1,
@@ -287,7 +290,7 @@ class ScaleBar:
         self._lat = lat
         self._azim = azim
 
-    def make_pickable(self):
+    def _make_pickable(self):
         """
         Add callbacks to adjust the scalebar position manually
 
@@ -317,14 +320,14 @@ class ScaleBar:
         def cb_az_up(self, s, **kwargs):
             if not self.cb.pick[s._picker_name].is_picked:
                 return
-            s._azim += 1
+            s._azim += s.azimuth_interval
             s.set_position()
             s.m.BM.update(artists=s._artists.values())
 
         def cb_az_down(self, s, **kwargs):
             if not self.cb.pick[s._picker_name].is_picked:
                 return
-            s._azim -= 1
+            s._azim -= s.azimuth_interval
             s.set_position()
             s.m.BM.update(artists=s._artists.values())
 
@@ -446,26 +449,13 @@ class ScaleBar:
                 else:
                     self._artists["patch"].set_linewidth(2)
 
-    def get_position(self):
-        """
-        return the current position (and orientation) of the scalebar
-        (e.g. to obtain the position after manual re-positioning)
-
-        Returns
-        -------
-        list
-            a list corresponding to [longitude, latitude, azimuth].
-
-        """
-        return [self._lon, self._lat, self._azim]
-
     def _decorate_zooms(self):
         toolbar = self.m.figure.f.canvas.toolbar
 
         if toolbar is not None:
-            toolbar.release_zoom = self.zoom_decorator(toolbar.release_zoom)
-            toolbar.release_pan = self.zoom_decorator(toolbar.release_pan)
-            toolbar._update_view = self.update_decorator(toolbar._update_view)
+            toolbar.release_zoom = self._zoom_decorator(toolbar.release_zoom)
+            toolbar.release_pan = self._zoom_decorator(toolbar.release_pan)
+            toolbar._update_view = self._update_decorator(toolbar._update_view)
 
     def _setsize(self):
         # get the position in figure coordinates
@@ -480,7 +470,7 @@ class ScaleBar:
         )
         self.d = np.abs(xb[1] - yb[1])
 
-    def zoom_decorator(self, f):
+    def _zoom_decorator(self, f):
         def newzoom(event):
             ret = f(event)
             self._setsize()
@@ -493,7 +483,7 @@ class ScaleBar:
 
         return newzoom
 
-    def update_decorator(self, f):
+    def _update_decorator(self, f):
         def newupdate():
             ret = f()
             self._setsize()
@@ -505,3 +495,15 @@ class ScaleBar:
             return ret
 
         return newupdate
+
+    def get_position(self):
+        """
+        return the current position (and orientation) of the scalebar
+        (e.g. to obtain the position after manual re-positioning)
+
+        Returns
+        -------
+        list
+            a list corresponding to [longitude, latitude, azimuth].
+        """
+        return [self._lon, self._lat, self._azim]

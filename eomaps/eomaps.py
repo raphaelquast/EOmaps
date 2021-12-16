@@ -1735,7 +1735,7 @@ class Maps(object):
         width=5,
         colors=("k", "w"),
         frame_offsets=(1, 1),
-        fontscale=1,
+        fontscale=0.8,
         patch_props=None,
     ):
 
@@ -1761,7 +1761,7 @@ class Maps(object):
 
         self._scalebar = s._add_scalebar(lon, lat, azim)
 
-        s.make_pickable()
+        s._make_pickable()
 
     @wraps(plt.savefig)
     def savefig(self, *args, **kwargs):
