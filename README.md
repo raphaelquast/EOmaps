@@ -79,10 +79,10 @@ m.plot_map()
 ## 🌌 advanced usage
 [click to show] &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; 🛸 Checkout the [docs](https://eomaps.readthedocs.io/en/latest/api.html)! 🛸
 
-<details> 
-  
+<details>
+
   <summary>🌍 Attach callback functions to interact with the plot</summary>
-  
+
 - Many pre-defined functions for common tasks are available!
   - display coordinates and values, add markers, compare data-layers etc.
   - ... or define your own function and attach it to the plot!
@@ -103,11 +103,11 @@ m.cb.click.attach(<... a custom function ...>)
 m.cb.keypress.attach.switch_layer(layer=0, key="q")
 m.cb.keypress.attach.switch_layer(layer=1, key="a")
 ```
-  
+
 </details>
 
-<details> 
-  
+<details>
+
   <summary>🌕 Add additional layers and overlays</summary>
 
 - many pre-defined interfaces for WebMap servers exist
@@ -128,16 +128,16 @@ m.add_marker(...)          # add static markers
   </details>
 
 <details>
-  
+
   <summary>🪐 Save the figure</summary>
-  
+
 ```python
 m.savefig("oooh_what_a_nice_figure.png", dpi=300)  
 ```
 </details>
-  
+
 <details>
-  
+
   <summary>🌗 Connect Maps-objects to get multiple interactive layers of data</summary>
 
 ```python
@@ -152,12 +152,12 @@ m2.set_shape(...)
 m2.plot_map(layer=2)         # plot another layer of data
 m2.cb.attach.peek_layer(layer=2, how=0.25)
 ```
-  </details> 
- 
-<details> 
-  
+  </details>
+
+<details>
+
   <summary>🌏 Plot grids of maps</summary>
-  
+
 ```python
 from eomaps import MapsGrid
 mgrid = MapsGrid(2, 2, connect=True)

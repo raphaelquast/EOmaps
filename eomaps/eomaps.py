@@ -40,7 +40,7 @@ from ._containers import (
 )
 
 from ._cb_container import cb_container
-
+from .scalebar import ScaleBar
 
 try:
     import mapclassify
@@ -1723,6 +1723,45 @@ class Maps(object):
             **kwargs,
         )
         self.BM.update(clear=False)
+
+    @wraps(ScaleBar.__init__)
+    def add_scalebar(
+        self,
+        lon=None,
+        lat=None,
+        azim=90,
+        nscales=10,
+        scale=100000,
+        width=5,
+        colors=("k", "w"),
+        frame_offsets=(1, 1),
+        fontscale=1,
+        patch_props=None,
+    ):
+
+        self._set_axes()
+        print(lon, lat)
+
+        if lon is None and lat is None:
+            extent = self.figure.ax.get_extent()
+
+            lon, lat = self._transf_plot_to_lonlat.transform(
+                np.mean(extent[:2]), np.mean(extent[2:])
+            )
+        s = ScaleBar(
+            m=self,
+            nscales=nscales,
+            scale=scale,
+            width=width,
+            colors=colors,
+            frame_offsets=frame_offsets,
+            fontscale=fontscale,
+            patch_props=patch_props,
+        )
+
+        self._scalebar = s._add_scalebar(lon, lat, azim)
+
+        s.make_pickable()
 
     @wraps(plt.savefig)
     def savefig(self, *args, **kwargs):

@@ -414,11 +414,11 @@ class _click_container(_cb_container):
         ncb = [int(i.rsplit("_", 1)[1]) for i in d if i.startswith(callback.__name__)]
         cbkey = callback.__name__ + f"_{max(ncb) + 1 if len(ncb) > 0 else 0}"
 
-        if callback.__name__ not in multi_cb_functions:
-            assert len(ncb) == 0, (
-                f"Multiple assignments of the callback '{callback.__name__}' using "
-                + "the same button is not (yet) supported... use a different button!"
-            )
+        # if callback.__name__ not in multi_cb_functions:
+        #     assert len(ncb) == 0, (
+        #         f"Multiple assignments of the callback '{callback.__name__}' using "
+        #         + "the same button is not (yet) supported... use a different button!"
+        #     )
 
         d[cbkey] = partial(callback, *args, **kwargs)
 
