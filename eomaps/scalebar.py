@@ -1,9 +1,9 @@
-from pyproj import Transformer, CRS
 from .helpers import pairwise
+
 import numpy as np
+from pyproj import Transformer, CRS
 
 from matplotlib.collections import PolyCollection, LineCollection
-import matplotlib.patheffects as pe
 from matplotlib.textpath import TextPath
 from matplotlib.patches import PathPatch
 from matplotlib.transforms import Affine2D
