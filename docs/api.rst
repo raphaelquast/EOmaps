@@ -365,16 +365,19 @@ A scalebar can be added to a map via:
     # to remove it, use
     s.remove()
 
-The scalebar is a pickable object!
-Click on it with the LEFT mouse button to drag it around, and use the RIGHT
-mouse button to make it fixed again.
 
-If the scalebar is picked (indicated by a red border), you can use the following
-keys for additional adjustments:
+.. Note::
 
-- ``delte``: remove the scalebar from the plot
-- ``+``  and ``-``: rotate the scalebar
-- ``up/down`` and ``left/right``: adjust the size of the frame
+    The scalebar is a pickable object!
+    Click on it with the LEFT mouse button to drag it around, and use the RIGHT
+    mouse button to make it fixed again.
+
+    If the scalebar is picked (indicated by a red border), you can use the following
+    keys for additional adjustments:
+
+    - ``delte``: remove the scalebar from the plot
+    - ``+``  and ``-``: rotate the scalebar
+    - ``up/down`` and ``left/right``: adjust the size of the frame
 
 
 .. currentmodule:: eomaps.Maps
