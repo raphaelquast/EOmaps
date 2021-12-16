@@ -357,6 +357,15 @@ Overlays from NaturalEarth and `geopandas.GeoDataFrames` can be added via:
 
 A scalebar can be added to a map via:
 
+.. currentmodule:: eomaps.Maps
+
+.. autosummary::
+    :toctree: generated
+    :nosignatures:
+    :template: only_names_in_toc.rst
+
+    add_scalebar
+
 .. code-block:: python
 
     m = Maps()
@@ -378,16 +387,6 @@ A scalebar can be added to a map via:
     - ``delte``: remove the scalebar from the plot
     - ``+``  and ``-``: rotate the scalebar
     - ``up/down`` and ``left/right``: adjust the size of the frame
-
-
-.. currentmodule:: eomaps.Maps
-
-.. autosummary::
-    :toctree: generated
-    :nosignatures:
-    :template: only_names_in_toc.rst
-
-    add_scalebar
 
 
 The scalebar has the following useful methods assigned:
