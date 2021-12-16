@@ -1759,9 +1759,11 @@ class Maps(object):
             patch_props=patch_props,
         )
 
-        self._scalebar = s._add_scalebar(lon, lat, azim)
+        s._add_scalebar(lon, lat, azim)
 
         s._make_pickable()
+
+        return s
 
     @wraps(plt.savefig)
     def savefig(self, *args, **kwargs):

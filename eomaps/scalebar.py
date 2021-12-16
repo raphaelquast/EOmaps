@@ -210,8 +210,6 @@ class ScaleBar:
 
         self._decorate_zooms()
 
-        return self
-
     def _get_patch_verts(self, pts, lon, lat, ang):
         ot = 1.5 * self.d * self.frame_offsets[1]  # top offset
         ob = 0.5 * self.d * self.frame_offsets[0]  # right offset
@@ -317,6 +315,11 @@ class ScaleBar:
 
             s.set_position(lon, lat)
 
+        def cb_remove(self, s, **kwargs):
+            if not self.cb.pick[s._picker_name].is_picked:
+                return
+            s.remove()
+
         def cb_az_up(self, s, **kwargs):
             if not self.cb.pick[s._picker_name].is_picked:
                 return
@@ -361,7 +364,7 @@ class ScaleBar:
             s.m.BM.update(artists=s._artists.values())
 
         def addcbs(self, s, **kwargs):
-            self.cb.click._only.append(s._cid_remove.split("__", 1)[0])
+            self.cb.click._only.append(s._cid_remove_cbs.split("__", 1)[0])
 
             # make sure we pick always only one scalebar
             for i in s._existing_pickers:
@@ -389,6 +392,9 @@ class ScaleBar:
             if not hasattr(s, "_cid_patch_y_down"):
                 s._cid_down = self.cb.keypress.attach(cb_patch_y_down, key="down", s=s)
 
+            if not hasattr(s, "_cid_remove"):
+                s._cid_remove = self.cb.keypress.attach(cb_remove, key="delete", s=s)
+
             s._artists["patch"].set_edgecolor("r")
             s._artists["patch"].set_linewidth(2)
 
@@ -400,7 +406,7 @@ class ScaleBar:
         self.m.cb.add_picker(self._picker_name, self._artists["patch"], True)
         self._cid_pick = self.m.cb.pick[self._picker_name].attach(addcbs, s=self)
         # remove all callbacks (except the pick-callback) on right-click
-        self._cid_remove = self.m.cb.click.attach(rmcbs, s=self, button=3)
+        self._cid_remove_cbs = self.m.cb.click.attach(rmcbs, s=self, button=3)
 
         self.m.cb.pick[self._picker_name].scalebar = self
         self.m.cb.pick[self._picker_name].is_picked = False
@@ -507,3 +513,14 @@ class ScaleBar:
             a list corresponding to [longitude, latitude, azimuth].
         """
         return [self._lon, self._lat, self._azim]
+
+    def remove(self):
+        """
+        remove the scalebar from the map
+        """
+        self._remove_callbacks()
+        for a in self._artists.values():
+            self.m.BM.remove_artist(a)
+            a.remove()
+
+        self.m.BM.update()
