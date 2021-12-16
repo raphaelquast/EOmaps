@@ -20,6 +20,7 @@ class ScaleBar:
         frame_offsets=(1, 1),
         fontscale=1,
         patch_props=None,
+        font_props=None,
     ):
         """
         Add a scalebar to the map.
@@ -64,7 +65,13 @@ class ScaleBar:
             A dictionary that can be used to adjust the properties of the
             frame-patch. The default is None which translates to:
 
-                >>> dict(fc=".75", ec="k", lw=2)
+                >>> dict(fc=".75", ec="k", lw=1)
+        font_props : matplotlib.font_manager.FontProperties, optional
+            Provide alternative font-properties
+
+                >>> from matplotlib.font_manager import FontProperties
+                >>> fp = FontProperties(family="Helvetica", style="italic")
+
         """
 
         self.m = m
@@ -75,12 +82,13 @@ class ScaleBar:
         self.frame_offsets = frame_offsets
         self.geod = self.m.crs_plot.get_geod()
         self.fontscale = fontscale
+        self.font_props = font_props
 
         # the interval for the azimuth when using + and - keys
         self.azimuth_interval = 1
 
         if patch_props is None:
-            self.patch_props = dict(fc=".75", ec="k", lw=2)
+            self.patch_props = dict(fc=".75", ec="k", lw=1)
         else:
             self.patch_props = patch_props
 
@@ -141,11 +149,11 @@ class ScaleBar:
 
         return f"{self.scale} m"
 
-    def _add_scalebar(self, lon=45, lat=45, azim=90):
+    def _add_scalebar(self, lon, lat, azim):
         assert len(self._artists) == 0, "EOmaps: there is already a scalebar present!"
 
         # do this to make sure that the ax-transformations work as expected
-        self.m.BM.update(self._artists.values())
+        self.m.BM.update()
 
         self._lon = lon
         self._lat = lat
@@ -181,7 +189,9 @@ class ScaleBar:
         xt = xt - self.d * self.frame_offsets[1] * np.sin(ang) / 2
         yt = yt + self.d * self.frame_offsets[1] * np.cos(ang) / 2
 
-        tp = TextPath((0, 0), self._txt(), size=self.fontscale * self.d)
+        tp = TextPath(
+            (0, 0), self._txt(), size=self.fontscale * self.d, prop=self.font_props
+        )
         self._artists["text"] = self.m.figure.ax.add_artist(
             PathPatch(tp, color="black")
         )
@@ -207,7 +217,6 @@ class ScaleBar:
         self.m.BM.add_artist(self._artists["patch"], layer=0)
 
         self.m.BM.update(artists=self._artists.values())
-
         self._decorate_zooms()
 
     def _get_patch_verts(self, pts, lon, lat, ang):
@@ -453,7 +462,7 @@ class ScaleBar:
                     self._artists["patch"].set_linewidth(self.patch_props[prop])
                     break
                 else:
-                    self._artists["patch"].set_linewidth(2)
+                    self._artists["patch"].set_linewidth(1)
 
     def _decorate_zooms(self):
         toolbar = self.m.figure.f.canvas.toolbar

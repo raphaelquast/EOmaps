@@ -1729,7 +1729,7 @@ class Maps(object):
         self,
         lon=None,
         lat=None,
-        azim=90,
+        azim=91.0,
         nscales=10,
         scale=100000,
         width=5,
@@ -1737,6 +1737,7 @@ class Maps(object):
         frame_offsets=(1, 1),
         fontscale=0.8,
         patch_props=None,
+        font_props=None,
     ):
 
         self._set_axes()
@@ -1746,7 +1747,8 @@ class Maps(object):
             extent = self.figure.ax.get_extent()
 
             lon, lat = self._transf_plot_to_lonlat.transform(
-                np.mean(extent[:2]), np.mean(extent[2:])
+                np.mean(extent[:2]),
+                np.mean(extent[2:]),
             )
         s = ScaleBar(
             m=self,
@@ -1757,6 +1759,7 @@ class Maps(object):
             frame_offsets=frame_offsets,
             fontscale=fontscale,
             patch_props=patch_props,
+            font_props=font_props,
         )
 
         s._add_scalebar(lon, lat, azim)
