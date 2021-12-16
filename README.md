@@ -5,31 +5,34 @@
 [![Conda Version](https://img.shields.io/conda/vn/conda-forge/eomaps.svg)](https://anaconda.org/conda-forge/eomaps)
 &nbsp; &nbsp; &nbsp;
 [![Documentation Status](https://readthedocs.org/projects/eomaps/badge/?version=latest)](https://eomaps.readthedocs.io/en/latest/?badge=latest)
-<a href="https://www.buymeacoffee.com/raphaelquast" target="_blank"><img src="https://www.buymeacoffee.com/assets/img/custom_images/yellow_img.png" alt="Buy Me A Coffee" align="right" style="height: 33px !important;width: 139px !important;" ></a>
+<a href="https://www.buymeacoffee.com/raphaelquast" target="_blank"><img src="https://www.buymeacoffee.com/assets/img/custom_images/yellow_img.png" alt="Buy Me A Coffee" align="right" style="height: 25px !important;" ></a>
 
 
 # EOmaps
 
-### ... a library to create interactive maps of geographical datasets
+### A library to create interactive maps of geographical datasets
 
 <ol type="none">
-  <li>🌍 A simple interface to visualize geographical datasets ... a pandas DataFrame is all you need!</li>
+  <li>🌍 Simple interface to visualize geographical datasets</li>
   <ul type="none">
-    <li>⬥ applicable also for large datasets with ~ 1M datapoints!  </li>
+    <li>⬥ a <code>pandas.DataFrame</code> is all you need</li>
+    <li>⬥ usable also for large datasets with > 1M datapoints</li>
+    <li>⬥ add WebMap layers, annotations, markers with a single line of code</li>
   </ul>
-  <li>🌎 Quickly turn your maps into powerful interactive data-analysis widgets!</li>
+  <li>🌎 Quickly turn your maps into powerful interactive data-analysis widgets</li>
   <ul type="none">
-    <li>⬥ compare multiple data-layers, WebMaps etc. with only a few lines of code! </li>
     <li>⬥ use callback functions to interact with the data (or an underlying database) </li>
+    <li>⬥ compare multiple data-layers, WebMaps</li>
   </ul>
 </ol>
-
-
-#### 🛸 checkout the [documentation](https://eomaps.readthedocs.io/en/latest) for more details and [examples](https://eomaps.readthedocs.io/en/latest/EOmaps_examples.html) 🛸
+<br/>
+<p align="center">
+  🌲🌳 Checkout the <a href=https://eomaps.readthedocs.io/en/latest>documentation</a> for more details and <a href=https://eomaps.readthedocs.io/en/latest/EOmaps_examples.html>examples</a> 🌳🌲
+</p>
 
 ## 🔨 installation
 
-The to install EOmaps (and all its dependencies) via the `conda` package-manager, simply use:
+To install EOmaps (and all its dependencies) via the `conda` package-manager, simply use:
 
 ```python
 conda install -c conda-forge eomaps
@@ -39,21 +42,19 @@ For more information, have a look at the [installation instructions](https://eom
 
 ---------------
 
-<br/>
-
 <p align="center">
-<img src="https://github.com/raphaelquast/EOmaps/blob/dev/docs/_static/fig2.gif?raw=true" alt="EOmaps example image 1">
-<img src="https://github.com/raphaelquast/EOmaps/blob/dev/docs/_static/fig6.gif?raw=true" alt="EOmaps example image 2">
+<img src="https://github.com/raphaelquast/EOmaps/blob/dev/docs/_static/fig6.gif?raw=true" alt="EOmaps example image 2" width="49.25%"> <img src="https://github.com/raphaelquast/EOmaps/blob/dev/docs/_static/fig7.gif?raw=true" alt="EOmaps example image 3" width="45%">
+<img src="https://github.com/raphaelquast/EOmaps/blob/dev/docs/_static/fig2.gif?raw=true" alt="EOmaps example image 1" width="90%">
 </p>
 
 
-## 🌳 basic usage
+## 🌳 Basic usage
 - A pandas DataFrame is all you need as input!
   - plots of large (>1M datapoints) irregularly sampled datasets are generated in a few seconds!
-  - Represent your data as shapes with actual geographic dimensions
-  - Re-project the data to any crs supported by `cartopy`
-- Add annotations, overlays, WebMap-layers etc. to the maps
-- ... and get a nice colorbar with a colored histogram on top!
+  - Represent your data as shapes with actual geographic dimensions (ellipses, rectangles, geodetic circles)
+    - or use Voroni diagrams and Delaunay triangulations to get interpolated contour-plots
+  - Re-project the data to any crs supported by <a href=https://scitools.org.uk/cartopy/docs/latest/reference/crs.html#coordinate-reference-systems-crs>cartopy</a>
+  - ... and get a nice colorbar with a colored histogram on top!
 
 ```python
 import pandas as pd
@@ -75,8 +76,13 @@ m.set_classify_specs(scheme=Maps.CLASSIFIERS.Quantiles, k=5)
 # plot the map
 m.plot_map()
 ```
-#### attach callback functions to interact with the plot
+## 🌌 advanced usage
+[click to show] &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; 🛸 Checkout the [docs](https://eomaps.readthedocs.io/en/latest/api.html)! 🛸
 
+<details> 
+  
+  <summary>🌍 Attach callback functions to interact with the plot</summary>
+  
 - Many pre-defined functions for common tasks are available!
   - display coordinates and values, add markers, compare data-layers etc.
   - ... or define your own function and attach it to the plot!
@@ -97,22 +103,43 @@ m.cb.click.attach(<... a custom function ...>)
 m.cb.keypress.attach.switch_layer(layer=0, key="q")
 m.cb.keypress.attach.switch_layer(layer=1, key="a")
 ```
-#### add additional layers and overlays
+  
+</details>
+
+<details> 
+  
+  <summary>🌕 Add additional layers and overlays</summary>
+
+- many pre-defined interfaces for WebMap servers exist
+  - OpenStreetMap
+  - ESA WorldCover
+  - Nasa GIBS
+  - S1GBM
+  - ... and more!
+
 ```python
 m.add_wms(...)             # add WebMapService layers
-m.add_wms(...)             # add WebMapTileService layers
 m.add_gdf(...)             # add geo-dataframes
 m.add_overlay(...)         # add overlay-layers from NaturalEarth
 
 m.add_annotation(...)      # add static annotations
 m.add_marker(...)          # add static markers
 ```
-#### save the figure
+  </details>
+
+<details>
+  
+  <summary>🪐 Save the figure</summary>
+  
 ```python
 m.savefig("oooh_what_a_nice_figure.png", dpi=300)  
 ```
-## advanced usage
-#### connect Maps-objects to get multiple interactive layers of data!
+</details>
+  
+<details>
+  
+  <summary>🌗 Connect Maps-objects to get multiple interactive layers of data</summary>
+
 ```python
 m = Maps()
 ...
@@ -125,7 +152,12 @@ m2.set_shape(...)
 m2.plot_map(layer=2)         # plot another layer of data
 m2.cb.attach.peek_layer(layer=2, how=0.25)
 ```
-#### plot grids of maps
+  </details> 
+ 
+<details> 
+  
+  <summary>🌏 Plot grids of maps</summary>
+  
 ```python
 from eomaps import MapsGrid
 mgrid = MapsGrid(2, 2, connect=True)
@@ -140,3 +172,4 @@ mgrid.ax_1_1.plot_map()
 
 mgrid.parent.join_limits(*mgrid.children)   # join limits
 ```
+  </details>
