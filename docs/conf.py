@@ -28,6 +28,7 @@ MOCK_MODULES = [
     "matplotlib.textpath",
     "matplotlib.patches",
     "matplotlib.transforms",
+    "matplotlib.font_manager",
     "cartopy",
     "cartopy.io",
     "cartopy.io.img_tiles",
