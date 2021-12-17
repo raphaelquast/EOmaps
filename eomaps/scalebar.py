@@ -82,6 +82,7 @@ class ScaleBar:
               relative to the scalebar
             - "rotation" : the rotation angle of the labels (in degrees)
               relative to the curvature of the scalebar
+            - "color" : The color of the text
             - ... additional kwargs are passed to `matplotlib.font_manager.FontProperties`
               to set the used font-properties. Possible values are:
 
@@ -107,7 +108,7 @@ class ScaleBar:
         self._scale_props = dict(scale=scale, n=10, width=5, colors=("k", "w"))
         self._patch_props = dict(fc=".75", ec="k", lw=1, ls="-")
         self._patch_offsets = (1, 1, 1, 1)
-        self._label_props = dict(scale=1, rotation=0, every=2, offset=1)
+        self._label_props = dict(scale=1, rotation=0, every=2, offset=1, color="k")
 
         self.set_scale_props(scale=scale, **(scale_props if scale_props else {}))
         # set the label properties
@@ -229,7 +230,7 @@ class ScaleBar:
             self._m.BM.update()
 
     def set_label_props(
-        self, scale=None, rotation=None, every=None, offset=None, **kwargs
+        self, scale=None, rotation=None, every=None, offset=None, color=None, **kwargs
     ):
         """
         Set the properties of the labels (and update the plot accordingly)
@@ -246,6 +247,9 @@ class ScaleBar:
         offset : float, optional
             A scaling factor to adjust the offset of the labels relative to the
             scalebar. The default is 1.
+        color : str or tuple
+            The color of the text.
+            The default is "k" (e.g. black)
         \**kwargs :
             Additional kwargs are passed to `matplotlib.font_manager.FontProperties`
             to set the font specifications of the labels. Possible values are:
@@ -266,6 +270,8 @@ class ScaleBar:
             self._redraw_minitxt()
         if offset is not None:
             self._label_props["offset"] = offset
+        if color is not None:
+            self._label_props["color"] = color
 
         self._font_kwargs.update(
             **{key: kwargs.pop(key) for key in self._fontkeys if key in kwargs}
@@ -414,7 +420,7 @@ class ScaleBar:
             )
 
             self._artists[f"text_{i}"] = self._m.figure.ax.add_artist(
-                PathPatch(tp, color="black", lw=0)
+                PathPatch(tp, color=self._label_props["color"], lw=0)
             )
             self._artists[f"text_{i}"].set_transform(
                 Affine2D().rotate_around(
