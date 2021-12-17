@@ -14,7 +14,7 @@ try:
 except Exception:
     long_description = "A library to create interactive maps of geographical datasets."
 
-version = "2.2"
+version = "2.3"
 
 setup(
     name="EOmaps",
