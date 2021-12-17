@@ -525,16 +525,16 @@ class ScaleBar:
 
     def set_position(self, lon=None, lat=None, azim=None, update=True):
         """
-        set the position of the colorbar
+        Sset the position of the colorbar
 
         Parameters
         ----------
         lon : float, optional
-            the longitude of the starting-point. The default is None.
+            The longitude of the starting-point. The default is None.
         lat : float, optional
-            the latitude of the starting point. The default is None.
+            The latitude of the starting point. The default is None.
         azim : float, optional
-            the azimuth-direction in which to calculate the intermediate
+            The azimuth-direction in which to calculate the intermediate
             points for the scalebar. The default is None.
         update : bool
             Indicator if the plot should be updated or not
@@ -743,7 +743,7 @@ class ScaleBar:
 
     def get_position(self):
         """
-        return the current position (and orientation) of the scalebar
+        Return the current position (and orientation) of the scalebar
         (e.g. to obtain the position after manual re-positioning)
 
         Returns
@@ -755,7 +755,7 @@ class ScaleBar:
 
     def remove(self):
         """
-        remove the scalebar from the map
+        Remove the scalebar from the map
         """
         self._remove_callbacks()
         for a in self._artists.values():
