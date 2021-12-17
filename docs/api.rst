@@ -382,11 +382,12 @@ A scalebar can be added to a map via:
     mouse button to make it fixed again.
 
     If the scalebar is picked (indicated by a red border), you can use the following
-    keys for additional adjustments:
+    keys for adjusting some of the ScaleBar properties:
 
     - ``delte``: remove the scalebar from the plot
     - ``+``  and ``-``: rotate the scalebar
-    - ``up/down`` and ``left/right``: adjust the size of the frame
+    - ``up/down/left/right``: increase the size of the frame
+    - ``alt + up/down/left/right``: decrease the size of the frame
 
 
 The scalebar has the following useful methods assigned:
@@ -398,10 +399,14 @@ The scalebar has the following useful methods assigned:
     :nosignatures:
     :template: only_names_in_toc.rst
 
-    remove
+    set_scale_props
+    set_patch_props
+    set_label_props
     set_position
     get_position
-
+    remove
+    cb_offset_interval
+    cb_rotate_interval
 
 🔸 Miscellaneous
 ----------------

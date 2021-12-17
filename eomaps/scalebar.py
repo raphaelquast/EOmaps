@@ -7,20 +7,17 @@ from matplotlib.collections import PolyCollection, LineCollection
 from matplotlib.textpath import TextPath
 from matplotlib.patches import PathPatch
 from matplotlib.transforms import Affine2D
+from matplotlib.font_manager import FontProperties
 
 
 class ScaleBar:
     def __init__(
         self,
         m,
-        nscales=10,
         scale=10000,
-        width=5,
-        colors=("k", "w"),
-        frame_offsets=(1, 1),
-        fontscale=1,
+        scale_props=None,
         patch_props=None,
-        font_props=None,
+        label_props=None,
     ):
         """
         Add a scalebar to the map.
@@ -29,14 +26,17 @@ class ScaleBar:
 
         Note
         ----
-        You can click on the scalebar to dynamically adjust the position,
+        You can click on the scalebar to dynamically adjust its position,
         orientation and size!
 
-            - left-click on the scalebar to make it interactive
-            - right-click to make the scalebar static again
-            - drag the scalebar by "picking" it with the left mouse-button
-            - use "+" and "-" keys on your keyboard to rotate the scalebar
-
+            - < LEFT-click> on the scalebar to make the scalebar interactive
+            - drag the scalebar by "picking" it with the < LEFT > mouse-button
+            - use < + > and < - > keys on your keyboard to rotate the scalebar
+            - use <alt> + < + > and < - > keys to set the text-offset
+            - use the < arrow-keys > to increase the size of the frame
+            - use < alt > + < arrow-keys > to decrease the size of the frame
+            - use the < DELETE-key > to remove the scalebar from the plot
+            - < RIGHT-click> to make the scalebar fixed again
 
         Parameters
         ----------
@@ -46,72 +46,255 @@ class ScaleBar:
         azim : float
             The azimuth-direction (in degrees) in which the scalebar points.
             The default is 90.
-        nscales : int
-            The number of scales (e.g. line-segments) to draw.
         scale : float
             The length (in meters) of the line-segments
-        width : float
-            The width of the scalebar (in ordinary matpltolib linewidth-units)
-        colors : list, tuple, optional
-            A sequence of colors that will be repeated to color the individual
-            line-fragments of the scalebar. (you can provide more than 2 colors!)
-            The default is ("k", "w").
-        frame_offsets : tuple, optional
-            A tuple to adjust the top- and right offset of the frame-patch.
-            The default is (1, 1).
-        fontscale : float, optional
-            A factor to scale the fontsize. The default is 1.
+        scale_props : dict, optional
+            A dictionary that is used to set the properties of the scale.
+
+            - "n": (int) The number of scales (e.g. line-segments) to draw.
+            - "width": (float) The width of the scalebar
+            - "colors" (tuple): A sequence of colors that will be repeated to
+              color the individual line-fragments of the scalebar.
+              (you can provide more than 2 colors!)
+              The default is ("k", "w").
+
+            The default is:
+                >>> dict(n=10, width=5, colors=("k", "w"))
         patch_props : dict, optional
-            A dictionary that can be used to adjust the properties of the
-            frame-patch. The default is None which translates to:
+            A dictionary that is used to set the properties of the frame-patch.
 
+            - "offsets": A tuple that is used to adjust the offset of the
+              frame-patch. Individual values represent `(top, bottom, left, right)`
+              on a horizontally oriented scalebar.
+              The default is (1, 1, 1, 1).
+            - ... additional kwargs are passed to the PolygonPatch used to draw the
+              frame. Possible values are:
+
+             - "facecolor", "edgecolor", "linewidth", "linestyle", "alpha" ...
+
+            The default is:
                 >>> dict(fc=".75", ec="k", lw=1)
-        font_props : matplotlib.font_manager.FontProperties, optional
-            Provide alternative font-properties
+        label_props : dict, optional
+            A dictionary that is used to set the properties of the labels.
 
-                >>> from matplotlib.font_manager import FontProperties
-                >>> fp = FontProperties(family="Helvetica", style="italic")
+            - "scale": A scaling factor for the fontsize
+            - "offset" : A scaling factor to adjust the offset of the labels
+              relative to the scalebar
+            - "rotation" : the rotation angle of the labels (in degrees)
+              relative to the curvature of the scalebar
+            - ... additional kwargs are passed to `matplotlib.font_manager.FontProperties`
+              to set the used font-properties. Possible values are:
 
+              - "family", "style", "variant", "stretch", and "weight"
+
+              for example: `{family="Helvetica", style="italic"}`
+
+            The default is:
+                >>> dict(scale=1, offset=1, rotation=0)
         """
 
-        self.m = m
-        self.nscales = nscales
-        self.scale = scale
-        self.width = width
-        self.colors = colors
-        self.frame_offsets = frame_offsets
-        self.geod = self.m.crs_plot.get_geod()
-        self.fontscale = fontscale
-        self.font_props = font_props
+        self._m = m
 
-        # the interval for the azimuth when using + and - keys
-        self.azimuth_interval = 1
+        # number of intermediate points for evaluating the curvature
+        self._interm_pts = 20
 
-        if patch_props is None:
-            self.patch_props = dict(fc=".75", ec="k", lw=1)
-        else:
-            self.patch_props = patch_props
+        self._cb_offset_interval = 0.05
+        self._cb_rotate_inverval = 1
 
-        # transform from lon/lat to the plot_crs
-        self.plot_t = Transformer.from_crs(
+        self._fontkeys = ("family", "style", "variant", "stretch", "weight")
+        self._font_kwargs = dict()
+
+        self._scale_props = dict(scale=scale, n=10, width=5, colors=("k", "w"))
+        self._patch_props = dict(fc=".75", ec="k", lw=1, ls="-")
+        self._patch_offsets = (1, 1, 1, 1)
+        self._label_props = dict(scale=1, rotation=0, every=2, offset=1)
+
+        self.set_scale_props(scale=scale, **(scale_props if scale_props else {}))
+        # set the label properties
+        self.set_label_props(**(label_props if label_props else {}))
+        # set the patch properties
+        self.set_patch_props(**(patch_props if patch_props else {}))
+
+        # geod from plot_crs
+        self._geod = self._m.crs_plot.get_geod()
+        # Transformer from lon/lat to the plot_crs
+        self._t_plot = Transformer.from_crs(
             CRS.from_epsg(4326),
-            CRS.from_user_input(self.m.crs_plot),
+            CRS.from_user_input(self._m.crs_plot),
+            always_xy=True,
+        )
+        # Transformer from in-crs to lon/lat
+        self._t_lonlat = Transformer.from_crs(
+            CRS.from_user_input(self._m.crs_plot),
+            CRS.from_epsg(4326),
             always_xy=True,
         )
 
         self._artists = dict()
 
-    def _get_pts(self, lon, lat, azim):
-        interm_pts = 50
-        pts = self.geod.fwd_intermediate(
+    @property
+    def cb_rotate_interval(self):
+        """
+        Get/set the interval for the rotation when using the <+> and <->
+        keys on the keyboard to rotate the scalebar
+        """
+        return self._cb_rotate_inverval
+
+    @cb_rotate_interval.setter
+    def cb_rotate_interval(self, val):
+        self._cb_rotate_inverval = val
+
+    @property
+    def cb_offset_interval(self):
+        """
+        Get/set the interval for the text-offset when using the <alt> + <+>/<->
+        keyboard-shortcut to set the offset for the scalebar-labels.
+        """
+        return self._cb_offset_interval
+
+    @cb_offset_interval.setter
+    def cb_offset_interval(self, val):
+        self._cb_offset_interval = val
+
+    def set_scale_props(self, scale=None, n=None, width=None, colors=None):
+        """
+        Set the properties of the scalebar (and update the plot accordingly)
+
+        Parameters
+        ----------
+        scale  : float, optional
+            The length (in meters) of the individual line-segments.
+            The default is 10000.
+        n : int, optional
+            The number of scales (e.g. line-segments) to draw.
+            The default is 10.
+        width : float, optional
+            The width of the scalebar (in ordinary matplotlib linewidth units).
+            The default is 5.
+        colors : tuple, optional
+            A sequence of colors that will be repeated to color the individual
+            line-fragments of the scalebar. (you can provide more than 2 colors!)
+            The default is ("k", "w").
+        """
+        if scale is not None:
+            self._scale_props["scale"] = scale
+        if n is not None:
+            self._scale_props["n"] = n
+            self._redraw_minitxt()
+        if width is not None:
+            self._scale_props["width"] = width
+        if colors is not None:
+            self._scale_props["colors"] = colors
+
+        if hasattr(self, "_lon") and hasattr(self, "_lat"):
+            self.set_position()
+            self._m.BM.update()
+
+    def set_patch_props(self, offsets=None, **kwargs):
+        """
+        Set the properties of the frame (and update the plot accordingly)
+
+        Parameters
+        ----------
+        offsets : tuple, optional
+            A tuple that is used to adjust the offset of the frame-patch.
+            Individual values represent `(top, bottom, left, right)` on a
+            horizontally oriented scalebar. The default is (1, 1, 1, 1).
+        \**kwargs :
+            Additional kwargs are passed to the `matpltlotlib.Patches.PolygonPatch`
+            that is used to draw the frame.
+            The default is `{"fc": ".75", "ec": "k", "lw": 1, "ls": "-"}`
+
+            Possible values are:
+
+            - "facecolor", "edgecolor", "linewidth", "linestyle", "alpha" ...
+        """
+        if offsets is not None:
+            self._patch_offsets = offsets
+
+        for key, synonym in [
+            ["fc", "facecolor"],
+            ["ec", "edgecolor"],
+            ["lw", "linewidth"],
+            ["ls", "linestyle"],
+        ]:
+            self._patch_props[key] = kwargs.pop(
+                key, kwargs.pop(synonym, self._patch_props[key])
+            )
+
+        self._patch_props.update(kwargs)
+
+        if hasattr(self, "_lon") and hasattr(self, "_lat"):
+            self.set_position()
+            self._m.BM.update()
+
+    def set_label_props(
+        self, scale=None, rotation=None, every=None, offset=None, **kwargs
+    ):
+        """
+        Set the properties of the labels (and update the plot accordingly)
+
+        Parameters
+        ----------
+        scale : int, optional
+            A scaling factor for the fontsize of the labels. The default is 1.
+        rotation : float, optional
+            the rotation angle of the labels (in degrees) relative to the
+            curvature of the scalebar. The default is 0.
+        every : int, optional
+            DESCRIPTION. The default is 2.
+        offset : float, optional
+            A scaling factor to adjust the offset of the labels relative to the
+            scalebar. The default is 1.
+        \**kwargs :
+            Additional kwargs are passed to `matplotlib.font_manager.FontProperties`
+            to set the font specifications of the labels. Possible values are:
+
+              - "family", "style", "variant", "stretch", and "weight"
+
+            For example:
+                >>> dict(family="Helvetica", style="italic").
+
+        """
+
+        if scale is not None:
+            self._label_props["scale"] = scale
+        if rotation is not None:
+            self._label_props["rotation"] = rotation
+        if every is not None:
+            self._label_props["every"] = every
+            self._redraw_minitxt()
+        if offset is not None:
+            self._label_props["offset"] = offset
+
+        self._font_kwargs.update(
+            **{key: kwargs.pop(key) for key in self._fontkeys if key in kwargs}
+        )
+        self._font_props = FontProperties(**self._font_kwargs)
+
+        self._label_props.update(kwargs)
+
+        if hasattr(self, "_lon") and hasattr(self, "_lat"):
+            self.set_position()
+            self._m.BM.update()
+
+    def _get_base_pts(self, lon, lat, azim, npts=None):
+        if npts is None:
+            npts = self._scale_props["n"] + 1
+
+        pts = self._geod.fwd_intermediate(
             lon1=lon,
             lat1=lat,
             azi1=azim,
-            npts=(self.nscales + 1),
-            del_s=self.scale,
+            npts=npts,
+            del_s=self._scale_props["scale"],
             initial_idx=0,
             terminus_idx=0,
         )
+        return pts
+
+    def _get_pts(self, lon, lat, azim):
+        pts = self._get_base_pts(lon, lat, azim)
 
         lons, lats = [], []
         for [lon1, lon2], [lat1, lat2] in zip(pairwise(pts.lons), pairwise(pts.lats)):
@@ -121,12 +304,12 @@ class ScaleBar:
                 continue
 
             # get intermediate points
-            p = self.geod.inv_intermediate(
+            p = self._geod.inv_intermediate(
                 lon1=lon1,
                 lat1=lat1,
                 lon2=lon2,
                 lat2=lat2,
-                npts=interm_pts,
+                npts=self._interm_pts,
                 initial_idx=0,
                 terminus_idx=0,
             )
@@ -134,112 +317,207 @@ class ScaleBar:
             lats.append(p.lats)
 
         # transform points to plot-crs
-        pts_t = self.plot_t.transform(np.array(lons), np.array(lats))
+        pts_t = self._t_plot.transform(np.array(lons), np.array(lats))
         pts_t = np.stack(pts_t, axis=2)
 
         return pts_t
 
-    def _txt(self):
+    def _get_txt(self, n):
+        scale = self._scale_props["scale"]
+        # the text displayed above the scalebar
         units = {" cm": 0.01, " m": 1, " km": 1000, "k km": 1000000}
-
         for key, val in units.items():
-            x = self.scale * self.nscales / val
-            if self.scale * self.nscales / val < 1000:
+            x = scale * n / val
+            if scale * n / val < 1000:
                 return np.format_float_positional(x, trim="-", precision=3) + key
 
-        return f"{self.scale} m"
+        return f"{scale} m"
 
-    def _add_scalebar(self, lon, lat, azim):
-        assert len(self._artists) == 0, "EOmaps: there is already a scalebar present!"
+    def _txt(self):
+        return self._get_txt(self._scale_props["n"])
 
-        # do this to make sure that the ax-transformations work as expected
-        self.m.BM.update()
-
-        self._lon = lon
-        self._lat = lat
-        self._azim = azim
-
-        pts = self._get_pts(lon, lat, azim)
-
-        # estimate the rotation-angle for the text and the patch
-        try:
-            dx0, dy0 = pts[0][1] - pts[0][0]
-            ang = np.arctan2(dy0, dx0)
-            if not np.isfinite(ang):
-                ang = 0
-        except:
-            ang = 0
-
+    def _get_d(self):
+        # the base length used to define zhe size of the scalebar
         # get the position in figure coordinates
-        x, y = self.m.figure.ax.transData.transform(self.plot_t.transform(lon, lat))
+        x, y = self._m.figure.ax.transData.transform(
+            self._t_plot.transform(self._lon, self._lat)
+        )
 
-        self.d_fig = self.m.figure.ax.bbox.width / 100
+        d_fig = max(self._m.figure.ax.bbox.height, self._m.figure.ax.bbox.width) / 100
         # translate d_fig to data-coordinates
-        xb, yb = self.m.figure.ax.transData.inverted().transform(
-            ([x, y + self.d_fig], [x, y - self.d_fig])
+        xb, yb = self._m.figure.ax.transData.inverted().transform(
+            ([x, y + d_fig], [x, y - d_fig])
         )
-        self.d = np.abs(xb[1] - yb[1])
+        return np.abs(xb[1] - yb[1])
 
-        verts = self._get_patch_verts(pts, lon, lat, ang)
-        p = PolyCollection([verts], **self.patch_props)
-        self._artists["patch"] = self.m.figure.ax.add_artist(p)
+    def _get_patch_verts(self, pts, lon, lat, ang, d):
+        ot = 0.5 * d * self._patch_offsets[0]  # top offset
+        ob = 2.5 * d * self._patch_offsets[1]  # bottom offset
 
-        # get the base point for the text
-        xt, yt = self.plot_t.transform(lon, lat)
-        xt = xt - self.d * self.frame_offsets[1] * np.sin(ang) / 2
-        yt = yt + self.d * self.frame_offsets[1] * np.cos(ang) / 2
-
-        tp = TextPath(
-            (0, 0), self._txt(), size=self.fontscale * self.d, prop=self.font_props
-        )
-        self._artists["text"] = self.m.figure.ax.add_artist(
-            PathPatch(tp, color="black")
-        )
-
-        self._artists["text"].set_transform(
-            Affine2D().scale(self.fontscale)
-            + Affine2D().rotate(ang)
-            + Affine2D().translate(xt, yt)
-            + self.m.figure.ax.transData
-        )
-
-        coll = LineCollection(pts)
-
-        colors = np.tile(self.colors, int(np.ceil(len(pts) / len(self.colors))))[
-            : len(pts)
-        ]
-        coll.set_colors(colors)
-        coll.set_linewidth(self.width)
-        self._artists["scale"] = self.m.figure.ax.add_collection(coll, autolim=False)
-
-        self.m.BM.add_artist(self._artists["scale"], layer=1)
-        self.m.BM.add_artist(self._artists["text"], layer=1)
-        self.m.BM.add_artist(self._artists["patch"], layer=0)
-
-        self.m.BM.update(artists=self._artists.values())
-        self._decorate_zooms()
-
-    def _get_patch_verts(self, pts, lon, lat, ang):
-        ot = 1.5 * self.d * self.frame_offsets[1]  # top offset
-        ob = 0.5 * self.d * self.frame_offsets[0]  # right offset
-        o0 = 0.5 * self.d  # left & bottom offset
+        o_l = 0.5 * d * self._patch_offsets[2]  # left offset
+        o_r = 1.5 * d * self._patch_offsets[3]  # right offset
 
         dxy = np.gradient(pts.reshape((-1, 2)), axis=0)
         alpha = np.arctan2(dxy[:, 1], -dxy[:, 0])
         t = np.column_stack([np.sin(alpha), np.cos(alpha)])
 
         ptop = pts.reshape((-1, 2)) - ot * t
-        pbottom = pts.reshape((-1, 2)) + o0 * t
+        pbottom = pts.reshape((-1, 2)) + ob * t
 
-        ptop[0] += (o0 * np.cos(alpha[0]), -o0 * np.sin(alpha[0]))
-        pbottom[0] += (o0 * np.cos(alpha[0]), -o0 * np.sin(alpha[0]))
+        ptop[0] += (o_l * np.cos(alpha[0]), -o_l * np.sin(alpha[0]))
+        pbottom[0] += (o_l * np.cos(alpha[0]), -o_l * np.sin(alpha[0]))
 
-        ptop[-1] -= (ob * np.cos(alpha[-1]), -ob * np.sin(alpha[-1]))
-        pbottom[-1] -= (ob * np.cos(alpha[-1]), -ob * np.sin(alpha[-1]))
+        ptop[-1] -= (o_r * np.cos(alpha[-1]), -o_r * np.sin(alpha[-1]))
+        pbottom[-1] -= (o_r * np.cos(alpha[-1]), -o_r * np.sin(alpha[-1]))
 
         return np.vstack([ptop, pbottom[::-1]])
 
-    def set_position(self, lon=None, lat=None, azim=None):
+    def _get_ang(self, p0, p1):
+        # estimate the rotation-angle for the text
+        try:
+            dx0, dy0 = p1 - p0
+            ang = np.arctan2(dy0, dx0)
+            if not np.isfinite(ang):
+                ang = 0
+        except:
+            ang = 0
+        return ang
+
+    def _get_txt_coords(self, lon, lat, d, ang):
+        # get the base point for the text
+        xt, yt = self._t_plot.transform(lon, lat)
+        xt = xt - d * self._label_props["offset"] * np.sin(ang) / 2
+        yt = yt + d * self._label_props["offset"] * np.cos(ang) / 2
+        return xt, yt
+
+    def _set_minitxt(self, d, pts):
+
+        angs = np.arctan2(*np.array([p[0] - p[-1] for p in pts]).T[::-1])
+        angs = [*angs, angs[-1]]
+        pts = self._get_base_pts(
+            self._lon, self._lat, self._azim, npts=self._scale_props["n"] + 2
+        )
+
+        for i, (lon, lat, ang) in enumerate(zip(pts.lons, pts.lats, angs)):
+            if i % self._label_props["every"] != 0:
+                continue
+            if i == 0:
+                txt = "0"
+            else:
+                txt = self._get_txt(i)
+
+            xy = self._get_txt_coords(
+                lon, lat, self._label_props["scale"] * d * 1.5, ang
+            )
+            tp = TextPath(
+                xy, txt, size=self._label_props["scale"] * d / 2, prop=self._font_props
+            )
+
+            self._artists[f"text_{i}"] = self._m.figure.ax.add_artist(
+                PathPatch(tp, color="black", lw=0)
+            )
+            self._artists[f"text_{i}"].set_transform(
+                Affine2D().rotate_around(
+                    *xy, ang + np.pi / 2 + np.deg2rad(self._label_props["rotation"])
+                )
+                + self._m.figure.ax.transData
+            )
+            self._m.BM.add_artist(self._artists[f"text_{i}"], layer=1)
+
+    def _redraw_minitxt(self):
+        # don't redraw if we haven't drawn anything yet
+        if not hasattr(self, "_artists"):
+            return
+
+        for key in list(self._artists):
+            if key.startswith("text_"):
+                self._artists[key].remove()
+                self._m.BM.remove_artist(self._artists[key])
+                del self._artists[key]
+
+        pts = self._get_pts(self._lon, self._lat, self._azim)
+        d = self._get_d()
+        self._set_minitxt(d, pts)
+
+    def _update_minitxt(self, d, pts):
+        angs = np.arctan2(*np.array([p[0] - p[-1] for p in pts]).T[::-1])
+        angs = [*angs, angs[-1]]
+        pts = self._get_base_pts(
+            self._lon, self._lat, self._azim, npts=self._scale_props["n"] + 2
+        )
+
+        for i, (lon, lat, ang) in enumerate(zip(pts.lons, pts.lats, angs)):
+            if i % self._label_props["every"] != 0:
+                continue
+
+            if i == 0:
+                txt = "0"
+            else:
+                txt = self._get_txt(i)
+
+            xy = self._get_txt_coords(
+                lon, lat, self._label_props["scale"] * d * 1.5, ang
+            )
+
+            tp = PathPatch(
+                TextPath(
+                    xy,
+                    txt,
+                    size=self._label_props["scale"] * d / 2,
+                    prop=self._font_props,
+                ),
+                lw=0,
+            )
+            self._artists[f"text_{i}"].set_path(tp.get_path())
+            self._artists[f"text_{i}"].set_transform(
+                Affine2D().rotate_around(
+                    *xy, ang + np.pi / 2 + np.deg2rad(self._label_props["rotation"])
+                )
+                + self._m.figure.ax.transData
+            )
+
+    def _add_scalebar(self, lon, lat, azim):
+        assert len(self._artists) == 0, "EOmaps: there is already a scalebar present!"
+        # do this to make sure that the ax-transformations work as expected
+        self._m.BM.update()
+
+        self._lon = lon
+        self._lat = lat
+        self._azim = azim
+
+        pts = self._get_pts(lon, lat, azim)
+        d = self._get_d()
+        ang = self._get_ang(pts[0][0], pts[0][1])
+
+        # -------------- add the patch
+        verts = self._get_patch_verts(pts, lon, lat, ang, d)
+        p = PolyCollection([verts], **self._patch_props)
+        self._artists["patch"] = self._m.figure.ax.add_artist(p)
+
+        # -------------- add the labels
+        self._set_minitxt(d, pts)
+
+        # -------------- add the scalebar
+        coll = LineCollection(pts)
+        colors = np.tile(
+            self._scale_props["colors"],
+            int(np.ceil(len(pts) / len(self._scale_props["colors"]))),
+        )[: len(pts)]
+        coll.set_colors(colors)
+        coll.set_linewidth(self._scale_props["width"])
+        self._artists["scale"] = self._m.figure.ax.add_collection(coll, autolim=False)
+
+        # -------------- make all artists animated
+        self._m.BM.add_artist(self._artists["scale"], layer=1)
+        # self._m.BM.add_artist(self._artists["text"], layer=1)
+        self._m.BM.add_artist(self._artists["patch"], layer=0)
+
+        self._m.BM.update(artists=self._artists.values())
+
+        # make sure to update the artists on zoom
+        self._decorate_zooms()
+
+    def set_position(self, lon=None, lat=None, azim=None, update=True):
         """
         set the position of the colorbar
 
@@ -252,6 +530,9 @@ class ScaleBar:
         azim : float, optional
             the azimuth-direction in which to calculate the intermediate
             points for the scalebar. The default is None.
+        update : bool
+            Indicator if the plot should be updated or not
+            The default is True.
         """
         if lon is None:
             lon = self._lon
@@ -261,116 +542,83 @@ class ScaleBar:
             azim = self._azim
 
         pts = self._get_pts(lon, lat, azim)
-
-        # estimate the rotation-angle for the text
-        try:
-            dx0, dy0 = pts[0][1] - pts[0][0]
-            ang = np.arctan2(dy0, dx0)
-            if not np.isfinite(ang):
-                ang = 0
-        except:
-            ang = 0
+        d = self._get_d()
+        ang = self._get_ang(pts[0][0], pts[0][1])
 
         # don't use first and last scale (they are just used as placeholders)
         self._artists["scale"].set_verts(pts)
-        colors = np.tile(self.colors, int(np.ceil(len(pts) / len(self.colors))))[
-            : len(pts)
-        ]
+        colors = np.tile(
+            self._scale_props["colors"],
+            int(np.ceil(len(pts) / len(self._scale_props["colors"]))),
+        )[: len(pts)]
         self._artists["scale"].set_colors(colors)
 
-        # get the base point for the text
-        xt, yt = self.plot_t.transform(lon, lat)
-        xt = xt - self.d * self.frame_offsets[1] * np.sin(ang) / 2
-        yt = yt + self.d * self.frame_offsets[1] * np.cos(ang) / 2
-
-        self._artists["text"].set_transform(
-            Affine2D().scale(self.fontscale)
-            + Affine2D().rotate(ang)
-            + Affine2D().translate(xt, yt)
-            + self.m.figure.ax.transData
-        )
-
-        verts = self._get_patch_verts(pts, lon, lat, ang)
+        verts = self._get_patch_verts(pts, lon, lat, ang, d)
         self._artists["patch"].set_verts([verts])
+        self._artists["patch"].update(self._patch_props)
+
+        if self._m.cb.pick[self._picker_name].is_picked:
+            self._artists["patch"].set_edgecolor("r")
+            self._artists["patch"].set_linewidth(2)
+            self._artists["patch"].set_linestyle("-")
 
         self._lon = lon
         self._lat = lat
         self._azim = azim
 
+        # do this after setting _lon, _lat and _azim !
+        self._update_minitxt(d, pts)
+
+        if update:
+            self._m.BM.update()
+
     def _make_pickable(self):
         """
         Add callbacks to adjust the scalebar position manually
 
-            - LEFT-click on the scalebar with the mouse to pick it up
+            - <LEFT>-click on the scalebar with the mouse to pick it up
                 - hold down <LEFT> to drag the scalebar
             - use "+" and "-" keys to rotate the colorbar
-            - RIGHT-click on the scalebar to detach the callbacks again
+            - <RIGHT>-click on the scalebar to detach the callbacks again
               (e.g. make it non-interactive)
-
+            - use <ARROW-keys> to set the size of the patch
         """
 
-        def cb(self, s, pos, **kwargs):
+        def scb_move(self, s, pos, **kwargs):
             # s._artists["patch"].set_pickradius(150)
             # if not s._artists["patch"].contains(self.cb.click._event)[0]:
             #     return
+            lon, lat = s._t_lonlat.transform(*pos)
+            # don't update here... the click callback updates itself!
+            s.set_position(lon, lat, update=False)
 
-            # transform from in-crs to lon/lat
-            radius_t = Transformer.from_crs(
-                CRS.from_user_input(self.crs_plot),
-                CRS.from_epsg(4326),
-                always_xy=True,
-            )
-            lon, lat = radius_t.transform(*pos)
-
-            s.set_position(lon, lat)
-
-        def cb_remove(self, s, **kwargs):
+        def scb_remove(self, s, **kwargs):
             if not self.cb.pick[s._picker_name].is_picked:
                 return
             s.remove()
 
-        def cb_az_up(self, s, **kwargs):
+        def scb_az_ud(self, s, up=True, **kwargs):
             if not self.cb.pick[s._picker_name].is_picked:
                 return
-            s._azim += s.azimuth_interval
-            s.set_position()
-            s.m.BM.update(artists=s._artists.values())
-
-        def cb_az_down(self, s, **kwargs):
-            if not self.cb.pick[s._picker_name].is_picked:
-                return
-            s._azim -= s.azimuth_interval
-            s.set_position()
-            s.m.BM.update(artists=s._artists.values())
+            s._azim += s.cb_rotate_interval if up else -s.cb_rotate_interval
+            s.set_position(update=True)
 
         # ------------ callbacks to change frame with arrow-keys
-        def cb_patch_y_up(self, s, **kwargs):
+        def scb_patch_dim(self, s, udlr, add=True, **kwargs):
             if not self.cb.pick[s._picker_name].is_picked:
                 return
-            s.frame_offsets = (s.frame_offsets[0], s.frame_offsets[1] + 0.1)
-            s.set_position()
-            s.m.BM.update(artists=s._artists.values())
+            o = [*s._patch_offsets]
+            o[udlr] += 0.1 if add else -0.1
+            s.set_patch_props(offsets=o)
 
-        def cb_patch_y_down(self, s, **kwargs):
+        # ------------ callbacks to change the text offset with alt +-
+        def scb_txt_offset(self, s, add=True, **kwargs):
             if not self.cb.pick[s._picker_name].is_picked:
                 return
-            s.frame_offsets = (s.frame_offsets[0], s.frame_offsets[1] - 0.1)
-            s.set_position()
-            s.m.BM.update(artists=s._artists.values())
 
-        def cb_patch_x_up(self, s, **kwargs):
-            if not self.cb.pick[s._picker_name].is_picked:
-                return
-            s.frame_offsets = (s.frame_offsets[0] + 0.1, s.frame_offsets[1])
-            s.set_position()
-            s.m.BM.update(artists=s._artists.values())
-
-        def cb_patch_x_down(self, s, **kwargs):
-            if not self.cb.pick[s._picker_name].is_picked:
-                return
-            s.frame_offsets = (s.frame_offsets[0] - 0.1, s.frame_offsets[1])
-            s.set_position()
-            s.m.BM.update(artists=s._artists.values())
+            o = s._label_props["offset"]
+            o += s._cb_offset_interval if add else -s._cb_offset_interval
+            s.set_label_props(offset=o)
 
         def addcbs(self, s, **kwargs):
             self.cb.click._only.append(s._cid_remove_cbs.split("__", 1)[0])
@@ -384,115 +632,96 @@ class ScaleBar:
             self.cb.pick[s._picker_name].is_picked = True
 
             if not hasattr(s, "_cid_move"):
-                s._cid_move = self.cb.click.attach(cb, s=s)
+                s._cid_move = self.cb.click.attach(scb_move, s=s)
                 self.cb.click._only.append(s._cid_move.split("__", 1)[0])
 
             if not hasattr(s, "_cid_up"):
-                s._cid_up = self.cb.keypress.attach(cb_az_up, key="+", s=s)
+                s._cid_up = self.cb.keypress.attach(scb_az_ud, key="+", up=True, s=s)
             if not hasattr(s, "_cid_down"):
-                s._cid_down = self.cb.keypress.attach(cb_az_down, key="-", s=s)
+                s._cid_down = self.cb.keypress.attach(scb_az_ud, key="-", up=False, s=s)
 
-            if not hasattr(s, "_cid_patch_x_up"):
-                s._cid_up = self.cb.keypress.attach(cb_patch_x_up, key="right", s=s)
-            if not hasattr(s, "_cid_patch_y_up"):
-                s._cid_down = self.cb.keypress.attach(cb_patch_x_down, key="left", s=s)
-            if not hasattr(s, "_cid_patch_x_down"):
-                s._cid_up = self.cb.keypress.attach(cb_patch_y_up, key="up", s=s)
-            if not hasattr(s, "_cid_patch_y_down"):
-                s._cid_down = self.cb.keypress.attach(cb_patch_y_down, key="down", s=s)
+            if not hasattr(s, "_cid_txt_offset_up"):
+                s._cid_txt_offset_up = self.cb.keypress.attach(
+                    scb_txt_offset, key="alt++", add=True, s=s
+                )
+            if not hasattr(s, "_cid_txt_offset_down"):
+                s._cid_txt_offset_down = self.cb.keypress.attach(
+                    scb_txt_offset, key="alt+-", add=False, s=s
+                )
+
+            for key, udlr in zip(["up", "down", "left", "right"], range(4)):
+                if not hasattr(s, f"_cid_patch_dim_{key}_0"):
+                    setattr(
+                        s,
+                        f"_cid_patch_dim_{key}_0",
+                        self.cb.keypress.attach(
+                            scb_patch_dim, key=key, udlr=udlr, add=True, s=s
+                        ),
+                    )
+                if not hasattr(s, f"_cid_patch_dim_{key}_1"):
+                    setattr(
+                        s,
+                        f"_cid_patch_dim_{key}_1",
+                        self.cb.keypress.attach(
+                            scb_patch_dim, key="alt+" + key, udlr=udlr, add=False, s=s
+                        ),
+                    )
 
             if not hasattr(s, "_cid_remove"):
-                s._cid_remove = self.cb.keypress.attach(cb_remove, key="delete", s=s)
+                s._cid_remove = self.cb.keypress.attach(scb_remove, key="delete", s=s)
 
-            s._artists["patch"].set_edgecolor("r")
-            s._artists["patch"].set_linewidth(2)
-
-        def rmcbs(self, s, **kwargs):
+        def scb_unpick(self, s, **kwargs):
             s._remove_callbacks()
 
         self._picker_name = f"_scalebar{len(self._existing_pickers)}"
 
-        self.m.cb.add_picker(self._picker_name, self._artists["patch"], True)
-        self._cid_pick = self.m.cb.pick[self._picker_name].attach(addcbs, s=self)
+        self._m.cb.add_picker(self._picker_name, self._artists["patch"], True)
+        self._cid_pick = self._m.cb.pick[self._picker_name].attach(addcbs, s=self)
         # remove all callbacks (except the pick-callback) on right-click
-        self._cid_remove_cbs = self.m.cb.click.attach(rmcbs, s=self, button=3)
+        self._cid_remove_cbs = self._m.cb.click.attach(scb_unpick, s=self, button=3)
 
-        self.m.cb.pick[self._picker_name].scalebar = self
-        self.m.cb.pick[self._picker_name].is_picked = False
+        self._m.cb.pick[self._picker_name].scalebar = self
+        self._m.cb.pick[self._picker_name].is_picked = False
 
     @property
     def _existing_pickers(self):
-        return [i for i in self.m.cb.__dict__ if i.startswith("_pick__scalebar")]
+        return [i for i in self._m.cb.__dict__ if i.startswith("_pick__scalebar")]
 
     def _remove_callbacks(self, **kwargs):
         if hasattr(self, "_cid_move"):
-            self.m.cb.click.remove(self._cid_move)
+            self._m.cb.click.remove(self._cid_move)
             del self._cid_move
 
         if hasattr(self, "_cid_up"):
-            self.m.cb.keypress.remove(self._cid_up)
+            self._m.cb.keypress.remove(self._cid_up)
             del self._cid_up
         if hasattr(self, "_cid_down"):
-            self.m.cb.keypress.remove(self._cid_down)
+            self._m.cb.keypress.remove(self._cid_down)
             del self._cid_down
 
         if hasattr(self, "_cid_txt_up"):
-            self.m.cb.keypress.remove(self._cid_txt_up)
+            self._m.cb.keypress.remove(self._cid_txt_up)
             del self._cid_down
         if hasattr(self, "_cid_txt_down"):
-            self.m.cb.keypress.remove(self._cid_txt_down)
+            self._m.cb.keypress.remove(self._cid_txt_down)
             del self._cid_down
 
-        self.m.cb.pick[self._picker_name].is_picked = False
+        self._m.cb.pick[self._picker_name].is_picked = False
 
-        self.m.cb.click._only.clear()
-
-        # reset the edgecolor
-        for prop in ["ec", "edgecolor"]:
-            if prop in self.patch_props:
-                self._artists["patch"].set_edgecolor(self.patch_props[prop])
-                break
-            else:
-                self._artists["patch"].set_edgecolor("k")
-
-        # reset the linewidth
-        for prop in ["lw", "linewidth"]:
-            if prop in self.patch_props:
-                if self.patch_props[prop] == 0:
-                    self._artists["patch"].set_linewidth(self.patch_props[prop])
-                    break
-                else:
-                    self._artists["patch"].set_linewidth(1)
+        self._m.cb.click._only.clear()
+        self.set_position()
 
     def _decorate_zooms(self):
-        toolbar = self.m.figure.f.canvas.toolbar
+        toolbar = self._m.figure.f.canvas.toolbar
 
         if toolbar is not None:
             toolbar.release_zoom = self._zoom_decorator(toolbar.release_zoom)
             toolbar.release_pan = self._zoom_decorator(toolbar.release_pan)
             toolbar._update_view = self._update_decorator(toolbar._update_view)
 
-    def _setsize(self):
-        # get the position in figure coordinates
-        x, y = self.m.figure.ax.transData.transform(
-            self.plot_t.transform(self._lon, self._lat)
-        )
-
-        self.d_fig = self.m.figure.ax.bbox.width / 100
-        # translate d_fig to data-coordinates
-        xb, yb = self.m.figure.ax.transData.inverted().transform(
-            ([x, y + self.d_fig], [x, y - self.d_fig])
-        )
-        self.d = np.abs(xb[1] - yb[1])
-
     def _zoom_decorator(self, f):
         def newzoom(event):
             ret = f(event)
-            self._setsize()
-
-            tp = PathPatch(TextPath((0, 0), self._txt(), size=self.fontscale * self.d))
-            self._artists["text"].set_path(tp.get_path())
-
             self.set_position()
             return ret
 
@@ -501,11 +730,6 @@ class ScaleBar:
     def _update_decorator(self, f):
         def newupdate():
             ret = f()
-            self._setsize()
-
-            tp = PathPatch(TextPath((0, 0), self._txt(), size=self.fontscale * self.d))
-            self._artists["text"].set_path(tp.get_path())
-
             self.set_position()
             return ret
 
@@ -529,7 +753,7 @@ class ScaleBar:
         """
         self._remove_callbacks()
         for a in self._artists.values():
-            self.m.BM.remove_artist(a)
+            self._m.BM.remove_artist(a)
             a.remove()
 
-        self.m.BM.update()
+        self._m.BM.update()

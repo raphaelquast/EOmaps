@@ -1730,40 +1730,29 @@ class Maps(object):
         lon=None,
         lat=None,
         azim=91.0,
-        nscales=10,
-        scale=100000,
-        width=5,
-        colors=("k", "w"),
-        frame_offsets=(1, 1),
-        fontscale=0.8,
+        scale=10000,
+        scale_props=None,
         patch_props=None,
-        font_props=None,
+        label_props=None,
     ):
 
         self._set_axes()
-        print(lon, lat)
 
         if lon is None and lat is None:
             extent = self.figure.ax.get_extent()
-
             lon, lat = self._transf_plot_to_lonlat.transform(
                 np.mean(extent[:2]),
                 np.mean(extent[2:]),
             )
+
         s = ScaleBar(
             m=self,
-            nscales=nscales,
             scale=scale,
-            width=width,
-            colors=colors,
-            frame_offsets=frame_offsets,
-            fontscale=fontscale,
+            scale_props=scale_props,
             patch_props=patch_props,
-            font_props=font_props,
+            label_props=label_props,
         )
-
         s._add_scalebar(lon, lat, azim)
-
         s._make_pickable()
 
         return s

@@ -2,14 +2,17 @@ import matplotlib as mpl
 
 mpl.rcParams["toolbar"] = "None"
 
-import unittest
-import pandas as pd
-import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.gridspec import GridSpec
-from eomaps import Maps, MapsGrid
-from eomaps._shapes import shapes
+from matplotlib.font_manager import FontProperties
+
+import unittest
 from types import SimpleNamespace
+
+import pandas as pd
+import numpy as np
+
+from eomaps import Maps, MapsGrid
 
 
 class TestBasicPlotting(unittest.TestCase):
@@ -27,7 +30,22 @@ class TestBasicPlotting(unittest.TestCase):
         m.set_data_specs(xcoord="x", ycoord="y", in_crs=3857)
         m.set_plot_specs(plot_crs=4326)
         m.plot_map()
+        plt.close(m.figure.f)
 
+        # -------------------------------------
+
+        m = Maps()
+        m.set_data_specs(data=self.data, xcoord="x", ycoord="y", in_crs=3857)
+        m.set_plot_specs(
+            plot_crs=4326,
+            title="asdf",
+            label="bsdf",
+            histbins=100,
+            density=True,
+            cpos="ur",
+            cpos_radius=1,
+        )
+        m.plot_map()
         plt.close(m.figure.f)
 
     def test_simple_plot_shapes(self):
@@ -123,23 +141,6 @@ class TestBasicPlotting(unittest.TestCase):
             m.plot_map()
 
             plt.close(m.figure.f)
-
-    def test_simple_map(self):
-        m = Maps()
-        m.data = self.data
-        m.set_data_specs(xcoord="x", ycoord="y", in_crs=3857)
-        m.set_plot_specs(
-            plot_crs=4326,
-            title="asdf",
-            label="bsdf",
-            histbins=100,
-            density=True,
-            cpos="ur",
-            cpos_radius=1,
-        )
-        m.plot_map()
-
-        plt.close(m.figure.f)
 
     def test_alpha_and_splitbins(self):
         m = Maps()
@@ -565,6 +566,50 @@ class TestBasicPlotting(unittest.TestCase):
         self.assertTrue(mg.m_1_1 is mg[1, 1])
 
         plt.close(mg.f)
+
+    def test_ScaleBar(self):
+
+        m = Maps()
+        m.add_coastlines()
+
+        s = m.add_scalebar(scale=250000)
+        s.set_position(10, 20, 30)
+        s.set_label_props(every=2, scale=1.25, offset=0.5, weight="bold")
+        s.set_scale_props(n=6, colors=("k", "r"))
+        s.set_patch_props(offsets=(1, 1.5, 1, 0.75))
+
+        s1 = m.add_scalebar(
+            -31,
+            -50,
+            90,
+            scale=500000,
+            scale_props=dict(n=10, width=3, colors=("k", ".25", ".5", ".75", ".95")),
+            patch_props=dict(fc=(1, 1, 1, 1)),
+            label_props=dict(every=5, weight="bold", family="Calibri"),
+        )
+
+        s2 = m.add_scalebar(
+            -45,
+            45,
+            45,
+            scale=500000,
+            scale_props=dict(n=6, width=3, colors=("k", "r")),
+            patch_props=dict(fc="none", ec="r", lw=0.25, offsets=(1, 1, 1, 1)),
+            label_props=dict(rotation=45, weight="bold", family="Impact"),
+        )
+
+        s3 = m.add_scalebar(
+            78,
+            -60,
+            0,
+            scale=250000,
+            scale_props=dict(n=20, width=3, colors=("k", "w")),
+            patch_props=dict(fc="none", ec="none"),
+            label_props=dict(scale=1.5, weight="bold", family="Courier New"),
+        )
+
+        for si in [s, s1, s2, s3]:
+            si.remove()
 
     def test_a_complex_figure(self):
         # %%
