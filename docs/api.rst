@@ -315,8 +315,8 @@ Services specific for Austria (Europa)
     Austria.Wien_basemap
 
 
-🏕 Adding additional features and overlays
-------------------------------------------
+🏕 Additional features and overlays
+-----------------------------------
 
 Static annotations and markers can be added to the map via:
 
@@ -352,6 +352,61 @@ Overlays from NaturalEarth and `geopandas.GeoDataFrames` can be added via:
     add_coastlines
 
 
+📏 Scalebars
+------------
+
+A scalebar can be added to a map via:
+
+.. currentmodule:: eomaps.Maps
+
+.. autosummary::
+    :toctree: generated
+    :nosignatures:
+    :template: only_names_in_toc.rst
+
+    add_scalebar
+
+.. code-block:: python
+
+    m = Maps()
+    ...
+    s = m.add_scalebar( ... )
+    # to remove it, use
+    s.remove()
+
+
+.. Note::
+
+    The scalebar is a pickable object!
+    Click on it with the LEFT mouse button to drag it around, and use the RIGHT
+    mouse button to make it fixed again.
+
+    If the scalebar is picked (indicated by a red border), you can use the following
+    keys for adjusting some of the ScaleBar properties:
+
+    - ``delte``: remove the scalebar from the plot
+    - ``+``  and ``-``: rotate the scalebar
+    - ``up/down/left/right``: increase the size of the frame
+    - ``alt + up/down/left/right``: decrease the size of the frame
+
+
+The scalebar has the following useful methods assigned:
+
+.. currentmodule:: eomaps.scalebar.ScaleBar
+
+.. autosummary::
+    :toctree: generated
+    :nosignatures:
+    :template: only_names_in_toc.rst
+
+    set_scale_props
+    set_patch_props
+    set_label_props
+    set_position
+    get_position
+    remove
+    cb_offset_interval
+    cb_rotate_interval
 
 🔸 Miscellaneous
 ----------------
