@@ -1590,7 +1590,12 @@ class Maps(object):
 
             The default is None in which case "pixel" is used if a dataset is
             present and otherwise a shape with 1/10 of the axis-size is plotted
-
+        radius_crs : str or a crs-specification
+            The crs specification in which the radius is provided.
+            Either "in", "out", or a crs specification (e.g. an epsg-code,
+            a PROJ or wkt string ...)
+            The default is "in" (e.g. the crs specified via `m.data_specs.crs`).
+            (only relevant if radius is NOT specified as "pixel")
         shape : str, optional
             Indicator which shape to draw. Currently supported shapes are:
                 - geod_circles
