@@ -132,7 +132,7 @@ m.add_marker(...)          # add static markers
   <summary>🪐 Save the figure</summary>
 
 ```python
-m.savefig("oooh_what_a_nice_figure.png", dpi=300)  
+m.savefig("oooh_what_a_nice_figure.png", dpi=300)
 ```
 </details>
 
