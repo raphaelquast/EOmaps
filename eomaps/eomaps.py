@@ -221,7 +221,8 @@ class Maps(object):
         if not _gpd_OK:
             raise ImportError(
                 "EOmaps: You need to install geopandas first!\n"
-                + "... with conda, simply use:  'conda install -c conda-forge geopandas'"
+                + "... with conda, simply use:  "
+                + "'conda install -c conda-forge geopandas'"
             )
 
     @property
