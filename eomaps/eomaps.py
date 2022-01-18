@@ -14,7 +14,6 @@ try:
     _gpd_OK = True
 except ImportError:
     _gpd_OK = False
-    pass
 
 from scipy.spatial import cKDTree
 from pyproj import CRS, Transformer
@@ -217,7 +216,7 @@ class Maps(object):
         self._init_ax = gs_ax
 
     def _check_gpd(self):
-        # raise a warning if geopandas is not found
+        # raise an error if geopandas is not found
         # (execute this in any function that requires geopandas!)
         if not _gpd_OK:
             raise ImportError(

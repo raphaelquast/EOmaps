@@ -1182,11 +1182,6 @@ class cb_container:
             obj = getattr(self, method)
             obj._init_cbs()
 
-        # if not hasattr(self, "_cid_onclose"):
-        #     self._cid_onclose = self._m.figure.f.canvas.mpl_connect(
-        #         "close_event", self._on_close
-        #     )
-
         self._remove_default_keymaps()
 
     @staticmethod
@@ -1210,15 +1205,3 @@ class cb_container:
                     plt.rcParams[key].remove(v)
                 except Exception:
                     pass
-
-    # TODO can we re-initialize a closed figure incl. callbacks?
-    # # attach a cleanup function if the figure is closed
-    # # to ensure callbacks are removed and the container is reinitialized
-    # def _on_close(self, event):
-    #     for method in self._methods:
-    #         obj = getattr(self, method)
-
-    #         for key in obj.get.attached_callbacks:
-    #             obj.remove(key)
-    #     # remove all figure properties
-    #     self._m._reset_axes()
