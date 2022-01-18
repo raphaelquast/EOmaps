@@ -487,6 +487,10 @@ class cb_click_container(_click_container):
                 ):
                     cb(**clickdict)
 
+    def _reset_cids(self):
+        self._cid_button_press_event = None
+        self._cid_motion_event = None
+
     def _add_click_callback(self):
         def clickcb(event):
             self._event = event
@@ -748,6 +752,9 @@ class cb_pick_container(_click_container):
                 if clickdict is not None:
                     cb(**clickdict)
 
+    def _reset_cids(self):
+        self._cid_pick_event = dict()
+
     def _add_pick_callback(self):
         # execute onpick and forward the event to all connected Maps-objects
 
@@ -866,6 +873,9 @@ class keypress_container(_cb_container):
     def _init_cbs(self):
         if self._m.parent is self._m:
             self._initialize_callbacks()
+
+    def _reset_cids(self):
+        self._cid_keypress_event = None
 
     def _initialize_callbacks(self):
         def _onpress(event):
@@ -1183,6 +1193,14 @@ class cb_container:
             obj._init_cbs()
 
         self._remove_default_keymaps()
+
+    def _reset_cids(self):
+        # reset the callback functions (required to re-attach the callbacks
+        # in case the figure is closed and re-initialized)
+        for method in self._methods:
+            print("resetting cid for", method)
+            obj = getattr(self, method)
+            obj._reset_cids()
 
     @staticmethod
     def _remove_default_keymaps():
