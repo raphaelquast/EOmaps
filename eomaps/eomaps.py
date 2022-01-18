@@ -1,4 +1,4 @@
-"""a collection of helper-functions to generate map-plots"""
+"""A collection of helper-functions to generate map-plots."""
 
 from functools import partial, lru_cache, wraps
 from collections import defaultdict
@@ -50,7 +50,7 @@ except ImportError:
 
 class Maps(object):
     """
-    The base-class for generating plots with EOmaps
+    The base-class for generating plots with EOmaps.
 
     Note: if you want to plot a grid of maps, checkout `MapsGrid`!
 
@@ -1412,8 +1412,8 @@ class Maps(object):
         Check `cartopy.shapereader.natural_earth` for details on how to specify
         layer properties.
 
-        to change the appearance and position of the map (or to add it to the
-        plot at a later stage) use
+        To get more control of the position and appearance of the legend
+        (or to add it to the plot at a later stage) use `legend=False` and explicitly call
 
             >>> m.add_overlay_legend()
 
