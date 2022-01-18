@@ -37,6 +37,15 @@ def _sanitize(s):
     return s
 
 
+def _sanitize_no_invalid(s):
+    # taken from https://stackoverflow.com/a/3303361/9703451
+    s = str(s)
+
+    # replace invalid characters with an underscore
+    s = re.sub("[^0-9a-zA-Z_]", "_", s)
+    return s
+
+
 def cmap_alpha(cmap, alpha, interpolate=False):
     """
     add transparency to an existing colormap

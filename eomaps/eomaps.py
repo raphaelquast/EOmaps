@@ -29,7 +29,13 @@ from cartopy import crs as ccrs
 from cartopy import feature as cfeature
 from cartopy.io import shapereader
 
-from .helpers import pairwise, cmap_alpha, BlitManager, draggable_axes
+from .helpers import (
+    pairwise,
+    cmap_alpha,
+    BlitManager,
+    draggable_axes,
+    _sanitize_no_invalid,
+)
 from ._shapes import shapes
 
 from ._containers import (
@@ -2104,30 +2110,59 @@ class MapsGrid:
         the number of rows. The default is 2.
     c : int, optional
         the number of columns. The default is 2.
+    ax_inits : dict, optional
+        A dictionary that is used to initialize the axes from the GridSpec object
+
+        The keys of the dictionaries are used as names for the Maps-objects,
+        (accessible via `mgrid.m_<name>`) and the values are used to identify
+        the axes position from the gridspec object.
+
+        For example, to initialize a 2 by 2 grid with a large map on top
+        and 2 small maps on the bottom, you can use:
+
+            >>> ax_inits = dict(top = (0, slice(0, 2)),
+            >>>                 bottom_left=(1, 0),
+            >>>                 bottom_right=(1, 1))
+
+            >>> mg = MapsGrid(2, 2, ax_inits=ax_inits)
+            >>> mg.m_top.plot_map()
+            >>> mg.m_bottom_left.plot_map()
+            >>> mg.m_bottom_right.plot_map()
+
     \**kwargs
         additional keyword-arguments passed to `matplotlib.gridspec.GridSpec()`
     Returns
     -------
     eomaps.MapsGrid
         Accessor to the Maps objects "m_{row}_{column}".
-
     """
 
-    def __init__(self, r=2, c=2, **kwargs):
+    def __init__(self, r=2, c=2, ax_inits=None, **kwargs):
         self._axes = []
 
         gs = GridSpec(nrows=r, ncols=c, **kwargs)
+        if ax_inits is None:
+            for i in range(r):
+                for j in range(c):
+                    if i == 0 and j == 0:
+                        mij = Maps(gs_ax=gs[0, 0])
+                        self.parent = mij
+                    else:
+                        mij = Maps(parent=self.parent, gs_ax=gs[i, j])
 
-        for i in range(r):
-            for j in range(c):
-                if i == 0 and j == 0:
-                    mij = Maps(gs_ax=gs[0, 0])
-                    self.parent = mij
+                    self._axes.append(mij)
+                    setattr(self, f"m_{i}_{j}", mij)
+        else:
+            for i, [key, val] in enumerate(ax_inits.items()):
+                assert isinstance(val, tuple), "the values of ax_inits must be tuples!"
+                if i == 0:
+                    mi = Maps(gs_ax=gs[val])
+                    self.parent = mi
                 else:
-                    mij = Maps(parent=self.parent, gs_ax=gs[i, j])
+                    mi = Maps(parent=self.parent, gs_ax=gs[val])
 
-                self._axes.append(mij)
-                setattr(self, f"m_{i}_{j}", mij)
+                self._axes.append(mi)
+                setattr(self, f"m_{_sanitize_no_invalid(key)}", mi)
 
     def __iter__(self):
         return iter(self._axes)
