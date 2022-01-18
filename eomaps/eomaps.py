@@ -1831,6 +1831,9 @@ class Maps(object):
             kwargs passed to the initialization of the matpltolib collection
             (dependent on the plot-shape) [linewidth, edgecolor, facecolor, ...]
         """
+        if self.data is None and colorbar is True:
+            print("EOmaps: ...cannot add a colormap if no data is provided!")
+            colorbar = False
         self.cbQ = colorbar
 
         self._set_axes()
