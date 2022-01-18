@@ -10,9 +10,12 @@ import numpy as np
 
 try:
     import geopandas as gpd
-except:
-    print("geopandas could not be imported... 'add_overlay' not working!")
+
+    _gpd_OK = True
+except ImportError:
+    _gpd_OK = False
     pass
+
 from scipy.spatial import cKDTree
 from pyproj import CRS, Transformer
 
@@ -212,6 +215,15 @@ class Maps(object):
         self._orientation = orientation
         self._ax = gs_ax
         self._init_ax = gs_ax
+
+    def _check_gpd(self):
+        # raise a warning if geopandas is not found
+        # (execute this in any function that requires geopandas!)
+        if not _gpd_OK:
+            raise ImportError(
+                "EOmaps: You need to install geopandas first!\n"
+                + "... with conda, simply use:  'conda install -c conda-forge geopandas'"
+            )
 
     @property
     @lru_cache()
@@ -1278,6 +1290,7 @@ class Maps(object):
         \**kwargs :
             all remaining kwargs are passed to `gdf.plot(**kwargs)`
         """
+        self._check_gpd()
 
         self._set_axes()
         ax = self.figure.ax
@@ -1443,6 +1456,8 @@ class Maps(object):
             a geopandas.GeoDataFrame that will be used as a mask for overlay
             (does not work with line-geometries!)
         """
+        self._check_gpd()
+
         self._set_axes()
         ax = self.figure.ax
 
