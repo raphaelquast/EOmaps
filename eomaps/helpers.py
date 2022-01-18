@@ -1,16 +1,16 @@
-""" a collection of useful helper-functions """
+"""a collection of useful helper-functions."""
 from itertools import tee
+import re
 
 import numpy as np
 from matplotlib.colors import LinearSegmentedColormap, ListedColormap
 from collections import defaultdict
 from matplotlib.transforms import Bbox
-import matplotlib.pyplot as plt
 
 
 def pairwise(iterable, pairs=2):
     """
-    a generator to return n consecutive values from an iterable, e.g.:
+    a generator to return n consecutive values from an iterable.
 
         pairs = 2
         s -> (s0,s1), (s1,s2), (s2, s3), ...
@@ -24,6 +24,17 @@ def pairwise(iterable, pairs=2):
     for n, n_iter in enumerate(x[1:]):
         [next(n_iter, None) for i in range(n + 1)]
     return zip(*x)
+
+
+def _sanitize(s):
+    # taken from https://stackoverflow.com/a/3303361/9703451
+    s = str(s)
+    # Remove leading characters until we find a letter or underscore
+    s = re.sub("^[^a-zA-Z_]+", "", s)
+
+    # replace invalid characters with an underscore
+    s = re.sub("[^0-9a-zA-Z_]", "_", s)
+    return s
 
 
 def cmap_alpha(cmap, alpha, interpolate=False):
