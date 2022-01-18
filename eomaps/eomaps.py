@@ -282,23 +282,29 @@ class Maps(object):
                     plt.ioff()
                 else:
                     plt.ion()
+            else:
+                # make sure the parent Maps-object is initialized as well!
+                self.parent._set_axes()
             plt.show()
 
-    # def _reset_axes(self):
-    #     print("resetting")
-    #     for m in [self.parent, *self.parent._children]:
-    #         m._f = None
-    #         m._ax = m._init_ax
-    #         m._ax_cb = None
-    #         m._ax_cb_plot = None
-    #         m._gridspec = None
-    #         m._cb_gridspec = None
+    def _reset_axes(self):
+        # reset all objects connected to the figure (in case it is closed)
+        for m in [self.parent, *self.parent._children]:
+            m._f = None
+            m._ax = m._init_ax
+            m._ax_cb = None
+            m._ax_cb_plot = None
+            m._gridspec = None
+            m._cb_gridspec = None
 
-    #     # # reset the Blit-Manager
-    #     self.parent._BM = None
+            # reset all callbacks attached to the figure
+            m.cb._reset_cids()
 
-    #     # reset the draggable-axes class on next call
-    #     self.parent._axpicker = None
+        # reset the Blit-Manager
+        self.parent._BM = None
+
+        # reset the draggable-axes class on next call
+        self.parent._axpicker = None
 
     @property
     def BM(self):
@@ -1936,6 +1942,7 @@ class Maps(object):
             self.cb.pick._set_artist(coll)
             self.cb.pick._init_cbs()
             self.cb.pick._pick_distance = pick_distance
+            self.cb._methods.append("pick")
 
             if colorbar:
                 if (self.figure.ax_cb is not None) and (
