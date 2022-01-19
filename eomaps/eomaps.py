@@ -34,7 +34,6 @@ from .helpers import (
     cmap_alpha,
     BlitManager,
     draggable_axes,
-    _sanitize_no_invalid,
 )
 from ._shapes import shapes
 
@@ -75,6 +74,9 @@ class Maps(object):
 
         >>> m1 = Maps()
         >>> m2 = Maps(parent=m1)
+
+        Note: Instead of specifying explicit axes, you might want to have a
+        look at `eomaps.MapsGrid` objects!
 
     orientation : str, optional
         Indicator if the colorbar should be plotted right of the map
@@ -2117,65 +2119,180 @@ class MapsGrid:
         the number of rows. The default is 2.
     c : int, optional
         the number of columns. The default is 2.
-    ax_inits : dict, optional
-        A dictionary that is used to initialize the axes from the GridSpec object
+    m_inits, ax_inits : dict, optional
+        A dictionary that is used to initialize the Maps-objects (`m_inits`) and
+        ordinary matplotlib-axes (`ax_inits`) from the underlying GridSpec object
 
         The keys of the dictionaries are used as names for the Maps-objects,
-        (accessible via `mgrid.m_<name>`) and the values are used to identify
-        the axes position from the gridspec object.
+        (accessible via `mgrid.m_<name>` or `mgrid.ax_<name>`) and the values
+        are used to identify the axes position from the GridSpec object.
 
-        For example, to initialize a 2 by 2 grid with a large map on top
-        and 2 small maps on the bottom, you can use:
+        For example, to initialize a 2 by 2 grid with a large map on top,
+        a small maps on the bottom left and a normal plot on the bottom right, use:
 
-            >>> ax_inits = dict(top = (0, slice(0, 2)),
-            >>>                 bottom_left=(1, 0),
-            >>>                 bottom_right=(1, 1))
+            >>> m_inits = dict(top = (0, slice(0, 2)),
+            >>>                bottom_left=(1, 0))
+            >>> ax_inits = dict(bottom_right=(1, 1))
 
-            >>> mg = MapsGrid(2, 2, ax_inits=ax_inits)
+            >>> mg = MapsGrid(2, 2, m_inits=m_inits, ax_inits=ax_inits)
             >>> mg.m_top.plot_map()
             >>> mg.m_bottom_left.plot_map()
-            >>> mg.m_bottom_right.plot_map()
+            >>> mg.ax_bottom_right.plot([1,2,3])
+
+        Note: If either `m_inits` or `ax_inits` is provided, ONLY the specified
+        objects are initialized!
+
+        The default is None in which case a unique Maps-object will be created
+        for each grid-cell (accessible via `mgrid.m_<row>_<col>`)
 
     \**kwargs
         additional keyword-arguments passed to `matplotlib.gridspec.GridSpec()`
+
+    Attributes
+    ----------
+    f : matplotlib.figure
+        The matplotlib figure object
+    m_<identifier> : eomaps.Maps objects
+        The individual Maps-objects can be accessed via `mgrid.m_<identifier>`
+        The identifiers are hereby `<row>_<col>` or the keys of the `m_inits`
+        dictionary (if provided)
+    ax_<identifier> : matplotlib.axes
+        The individual (ordinary) matplotlib axes can be accessed via
+        `mgrid.ax_<identifier>`. The identifiers are hereby the keys of the
+        `ax_inits` dictionary (if provided).
+        Note: if `ax_inits` is not specified, NO ordinary axes will be created!
+
+    Methods
+    -------
+    join_limits :
+        join the axis-limits of maps that share the same projection
+    share_click_events :
+        share click-callback events between the Maps-objects
+    share_pick_events :
+        share pick-callback events between the Maps-objects
+    create_axes :
+        create a new (ordinary) matplotlib axes
+    add_<...> :
+        call the underlying `add_<...>` method on all Maps-objects of the grid
+    set_<...> :
+        set the corresponding property on all Maps-objects of the grid
+
     Returns
     -------
     eomaps.MapsGrid
         Accessor to the Maps objects "m_{row}_{column}".
+
+    Notes
+    -----
+
+    - To perform actions on all Maps-objects of the grid, simply iterate over
+      the MapsGrid object!
     """
 
-    def __init__(self, r=2, c=2, ax_inits=None, **kwargs):
-        self._axes = []
+    def __init__(self, r=2, c=2, m_inits=None, ax_inits=None, **kwargs):
+        self._Maps = []
 
-        gs = GridSpec(nrows=r, ncols=c, **kwargs)
-        if ax_inits is None:
+        self._gs = GridSpec(nrows=r, ncols=c, **kwargs)
+        if m_inits is None and ax_inits is None:
+            self._custom_init = False
             for i in range(r):
                 for j in range(c):
                     if i == 0 and j == 0:
-                        mij = Maps(gs_ax=gs[0, 0])
+                        mij = Maps(gs_ax=self._gs[0, 0])
                         self.parent = mij
                     else:
-                        mij = Maps(parent=self.parent, gs_ax=gs[i, j])
+                        mij = Maps(parent=self.parent, gs_ax=self._gs[i, j])
 
-                    self._axes.append(mij)
+                    self._Maps.append(mij)
                     setattr(self, f"m_{i}_{j}", mij)
         else:
-            for i, [key, val] in enumerate(ax_inits.items()):
-                assert isinstance(val, tuple), "the values of ax_inits must be tuples!"
-                if i == 0:
-                    mi = Maps(gs_ax=gs[val])
-                    self.parent = mi
-                else:
-                    mi = Maps(parent=self.parent, gs_ax=gs[val])
+            self._custom_init = True
+            if m_inits is not None:
+                for i, [key, val] in enumerate(m_inits.items()):
+                    assert isinstance(
+                        val, tuple
+                    ), "the values of m_inits must be tuples!"
+                    assert (
+                        key.isidentifier()
+                    ), f"the provided name {key} is not a valid identifier"
 
-                self._axes.append(mi)
-                setattr(self, f"m_{_sanitize_no_invalid(key)}", mi)
+                    if i == 0:
+                        mi = Maps(gs_ax=self._gs[val])
+                        self.parent = mi
+                    else:
+                        mi = Maps(parent=self.parent, gs_ax=self._gs[val])
+
+                    self._Maps.append(mi)
+                    setattr(self, f"m_{key}", mi)
+
+            if ax_inits is not None:
+                for key, val in ax_inits.items():
+                    assert isinstance(
+                        val, tuple
+                    ), "the values of ax_inits must be tuples!"
+                    assert (
+                        key.isidentifier()
+                    ), f"the provided name {key} is not a valid identifier"
+
+                    self.create_axes(val, name=key)
 
     def __iter__(self):
-        return iter(self._axes)
+        return iter(self._Maps)
 
     def __getitem__(self, key):
-        return getattr(self, f"m_{key[0]}_{key[1]}")
+        if self._custom_init is False:
+            return getattr(self, f"m_{key[0]}_{key[1]}")
+        else:
+            return getattr(self, key)
+
+    def create_axes(self, ax_init, name=None):
+        """
+        Create (and return) an ordinary matplotlib axes.
+
+        Note: If you intend to use both ordinary axes and Maps-objects, it is
+        recommended to use an explicit "ax_inits" dict in the initialization of
+        the MapsGrid object to avoid the creation of overlapping axes!
+
+        Parameters
+        ----------
+        ax_init : set
+            The GridSpec speciffications for the axis.
+            use `ax_inits = (<row>, <col>)` to get an axis in a given grid-cell
+            use `slice(<start>, <stop>)` for `<row>` or `<col>` to get an axis
+            that spans over multiple rows/columns.
+
+        Returns
+        -------
+        ax : matplotlib.axist
+            The matplotlib axis instance
+
+        Examples
+        --------
+
+        >>> ax_inits = dict(top = (0, slice(0, 2)),
+        >>>                 bottom_left=(1, 0))
+
+        >>> mg = MapsGrid(2, 2, ax_inits=ax_inits)
+        >>> mg.m_top.plot_map()
+        >>> mg.m_bottom_left.plot_map()
+
+        >>> mg.create_axes((1, 1), name="bottom_right")
+        >>> mg.ax_bottom_right.plot([1,2,3], [1,2,3])
+
+        """
+
+        if name is None:
+            # get all existing axes
+            axes = [key for key in self.__dict__ if key.startswith("ax_")]
+            name = str(len(axes))
+        else:
+            assert (
+                name.isidentifier()
+            ), f"the provided name {name} is not a valid identifier"
+
+        ax = self.f.add_subplot(self._gs[ax_init])
+        setattr(self, f"ax_{name}", ax)
+        return ax
 
     @property
     def children(self):
