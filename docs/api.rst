@@ -72,37 +72,31 @@ To initialize (and manage) a grid of ``Maps`` objects, you can use a ``MapsGrid`
     for m in mgrid:
         ...
 
-The initialization of the plot-axes is hereby based on matplotlib's `GridSpec <https://matplotlib.org/stable/api/_as_gen/matplotlib.gridspec.GridSpec.html>`_
-functionality. You can fully customize the names of the Maps-objects as well as the position and size of the created axes by providing a
-dictionary of specifications via the ``ax_inits`` argument. To initialize subplots that extend over multiple rows or columns, simply use a ``slice``.
-(All further keyword-arguments (``width_ratios, height_ratios, etc.``) are passed to the initialization of the GridSpec object.)
+❗ It is also possible to customize the positioning of the axes and **combine EOmaps plots with ordinary matplotlib axes** in one grid via the ``m_inits`` and ``ax_inits`` arguments!
+
+- if ``m_inits`` is provided, the specifications are used to initialize ``Maps`` objects (accessible via ``mgrid.m_<key>``)
+- if ``ax_inits`` is provided, the specifications are used to initialize ordinary matplotlib axes (accessible via ``mgrid.ax_<key>``)
+
+- To specify axes that span over multiple rows or columns, simply use ``slice(start, stop)``.
+- The initialization of the axes is based on matplotlib's `GridSpec <https://matplotlib.org/stable/api/_as_gen/matplotlib.gridspec.GridSpec.html>`_ functionality. All additional keyword-arguments (``width_ratios, height_ratios, etc.``) are passed to the initialization of the GridSpec object.
+
 
 .. code-block:: python
 
     from eomaps import MapsGrid
+
+    # initialize a grid with 2 Maps objects and 1 ordinary matplotlib axes
     mgrid = MapsGrid(2, 2,
-                     ax_inits=dict(top_row=(0, slice(0, 2)),
-                                   bottom_left=(1, 0)))
+                     m_inits=dict(top_row=(0, slice(0, 2)),
+                                  bottom_left=(1, 0)),
+                     ax_inits=dict(bottom_right=(1, 1)),
+                     width_ratios=(1, 2),
+                     height_ratios=(2, 1))
 
-    mgrid.m_top_row # A map that extends over the entire top-row of the grid
-    mgrid.m_bottom_left # A map in the bottom left corner of the grid
-    mgrid.m_bottom_right # A map in the bottom right corner of the grid
+    mgrid.m_top_row # a map extending over the entire top-row of the grid
+    mgrid.m_bottom_left # a map in the bottom left corner of the grid
 
-
-It is also possible to combine ``Maps`` objects with ordinary matplotlib axes in one grid by using ``mgrid.crate_axes``.
-
-.. code-block:: python
-
-    from eomaps import MapsGrid
-    mgrid = MapsGrid(2, 2,
-                     ax_inits=dict(top_row=(0, slice(0, 2)),
-                                   bottom_left=(1, 0)))
-
-    mgrid.m_top_row # A map that extends over the entire top-row of the grid
-    mgrid.m_bottom_left # A map in the bottom left corner of the grid
-
-    mgrid.create_axes((1, 1), name="bottom_right")
-    mgrid.ax_bottom_right # the ordinary matplotlib-axis in the bottom-right corner of the grid
+    mgrid.ax_bottom_right # an ordinary matplotlib axes in the bottom right corner of the grid
 
 
 .. currentmodule:: eomaps
@@ -113,6 +107,7 @@ It is also possible to combine ``Maps`` objects with ordinary matplotlib axes in
     :template: only_names_in_toc.rst
 
     MapsGrid
+    MapsGrid.create_axes
 
 
 🌍 Set plot specifications
