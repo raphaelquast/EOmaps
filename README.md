@@ -43,10 +43,12 @@ For more information, have a look at the [installation instructions](https://eom
 ---------------
 
 <p align="center">
-<img src="https://github.com/raphaelquast/EOmaps/blob/dev/docs/_static/fig6.gif?raw=true" alt="EOmaps example image 2" width="46%"> 
+<img src="https://github.com/raphaelquast/EOmaps/blob/dev/docs/_static/fig6.gif?raw=true" alt="EOmaps example image 2" width="46%">
 <img src="https://github.com/raphaelquast/EOmaps/blob/dev/docs/_static/fig2.gif?raw=true" alt="EOmaps example image 1" width="50%">
 <img src="https://github.com/raphaelquast/EOmaps/blob/dev/docs/_static/fig7.gif?raw=true" alt="EOmaps example image 3" width="48%">
 <img src="https://github.com/raphaelquast/EOmaps/blob/dev/docs/_static/fig8.gif?raw=true" alt="EOmaps example image 1" width="48%">
+<img src="https://github.com/raphaelquast/EOmaps/blob/dev/docs/_static/fig9.gif?raw=true" alt="EOmaps example image 1" width="48%">
+<img src="https://github.com/raphaelquast/EOmaps/blob/dev/docs/_static/fig4.gif?raw=true" alt="EOmaps example image 1" width="48%">
 </p>
 
 
@@ -134,7 +136,7 @@ m.add_marker(...)          # add static markers
   <summary>🪐 Save the figure</summary>
 
 ```python
-m.savefig("oooh_what_a_nice_figure.png", dpi=300)  
+m.savefig("oooh_what_a_nice_figure.png", dpi=300)
 ```
 </details>
 

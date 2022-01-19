@@ -1,4 +1,4 @@
-"""a collection of helper-functions to generate map-plots"""
+"""A collection of helper-functions to generate map-plots."""
 
 from functools import partial, lru_cache, wraps
 from collections import defaultdict
@@ -10,9 +10,11 @@ import numpy as np
 
 try:
     import geopandas as gpd
-except:
-    print("geopandas could not be imported... 'add_overlay' not working!")
-    pass
+
+    _gpd_OK = True
+except ImportError:
+    _gpd_OK = False
+
 from scipy.spatial import cKDTree
 from pyproj import CRS, Transformer
 
@@ -27,7 +29,12 @@ from cartopy import crs as ccrs
 from cartopy import feature as cfeature
 from cartopy.io import shapereader
 
-from .helpers import pairwise, cmap_alpha, BlitManager, draggable_axes
+from .helpers import (
+    pairwise,
+    cmap_alpha,
+    BlitManager,
+    draggable_axes,
+)
 from ._shapes import shapes
 
 from ._containers import (
@@ -50,7 +57,7 @@ except ImportError:
 
 class Maps(object):
     """
-    The base-class for generating plots with EOmaps
+    The base-class for generating plots with EOmaps.
 
     Note: if you want to plot a grid of maps, checkout `MapsGrid`!
 
@@ -67,6 +74,9 @@ class Maps(object):
 
         >>> m1 = Maps()
         >>> m2 = Maps(parent=m1)
+
+        Note: Instead of specifying explicit axes, you might want to have a
+        look at `eomaps.MapsGrid` objects!
 
     orientation : str, optional
         Indicator if the colorbar should be plotted right of the map
@@ -213,6 +223,16 @@ class Maps(object):
         self._ax = gs_ax
         self._init_ax = gs_ax
 
+    def _check_gpd(self):
+        # raise an error if geopandas is not found
+        # (execute this in any function that requires geopandas!)
+        if not _gpd_OK:
+            raise ImportError(
+                "EOmaps: You need to install geopandas first!\n"
+                + "... with conda, simply use:  "
+                + "'conda install -c conda-forge geopandas'"
+            )
+
     @property
     @lru_cache()
     @wraps(cb_container)
@@ -264,23 +284,29 @@ class Maps(object):
                     plt.ioff()
                 else:
                     plt.ion()
+            else:
+                # make sure the parent Maps-object is initialized as well!
+                self.parent._set_axes()
             plt.show()
 
-    # def _reset_axes(self):
-    #     print("resetting")
-    #     for m in [self.parent, *self.parent._children]:
-    #         m._f = None
-    #         m._ax = m._init_ax
-    #         m._ax_cb = None
-    #         m._ax_cb_plot = None
-    #         m._gridspec = None
-    #         m._cb_gridspec = None
+    def _reset_axes(self):
+        # reset all objects connected to the figure (in case it is closed)
+        for m in [self.parent, *self.parent._children]:
+            m._f = None
+            m._ax = m._init_ax
+            m._ax_cb = None
+            m._ax_cb_plot = None
+            m._gridspec = None
+            m._cb_gridspec = None
 
-    #     # # reset the Blit-Manager
-    #     self.parent._BM = None
+            # reset all callbacks attached to the figure
+            m.cb._reset_cids()
 
-    #     # reset the draggable-axes class on next call
-    #     self.parent._axpicker = None
+        # reset the Blit-Manager
+        self.parent._BM = None
+
+        # reset the draggable-axes class on next call
+        self.parent._axpicker = None
 
     @property
     def BM(self):
@@ -1080,7 +1106,7 @@ class Maps(object):
             n_cmap,
             cax=ax_cb,
             label=label,
-            extend="both",
+            extend="neither",
             spacing="proportional",
             orientation=cb_orientation,
         )
@@ -1278,6 +1304,7 @@ class Maps(object):
         \**kwargs :
             all remaining kwargs are passed to `gdf.plot(**kwargs)`
         """
+        self._check_gpd()
 
         self._set_axes()
         ax = self.figure.ax
@@ -1412,8 +1439,8 @@ class Maps(object):
         Check `cartopy.shapereader.natural_earth` for details on how to specify
         layer properties.
 
-        to change the appearance and position of the map (or to add it to the
-        plot at a later stage) use
+        To get more control of the position and appearance of the legend
+        (or to add it to the plot at a later stage) use `legend=False` and explicitly call
 
             >>> m.add_overlay_legend()
 
@@ -1443,6 +1470,8 @@ class Maps(object):
             a geopandas.GeoDataFrame that will be used as a mask for overlay
             (does not work with line-geometries!)
         """
+        self._check_gpd()
+
         self._set_axes()
         ax = self.figure.ax
 
@@ -1590,7 +1619,12 @@ class Maps(object):
 
             The default is None in which case "pixel" is used if a dataset is
             present and otherwise a shape with 1/10 of the axis-size is plotted
-
+        radius_crs : str or a crs-specification
+            The crs specification in which the radius is provided.
+            Either "in", "out", or a crs specification (e.g. an epsg-code,
+            a PROJ or wkt string ...)
+            The default is "in" (e.g. the crs specified via `m.data_specs.crs`).
+            (only relevant if radius is NOT specified as "pixel")
         shape : str, optional
             Indicator which shape to draw. Currently supported shapes are:
                 - geod_circles
@@ -1812,6 +1846,9 @@ class Maps(object):
             kwargs passed to the initialization of the matpltolib collection
             (dependent on the plot-shape) [linewidth, edgecolor, facecolor, ...]
         """
+        if self.data is None and colorbar is True:
+            print("EOmaps: ...cannot add a colormap if no data is provided!")
+            colorbar = False
         self.cbQ = colorbar
 
         self._set_axes()
@@ -1907,6 +1944,7 @@ class Maps(object):
             self.cb.pick._set_artist(coll)
             self.cb.pick._init_cbs()
             self.cb.pick._pick_distance = pick_distance
+            self.cb._methods.append("pick")
 
             if colorbar:
                 if (self.figure.ax_cb is not None) and (
@@ -2081,36 +2119,180 @@ class MapsGrid:
         the number of rows. The default is 2.
     c : int, optional
         the number of columns. The default is 2.
+    m_inits, ax_inits : dict, optional
+        A dictionary that is used to initialize the Maps-objects (`m_inits`) and
+        ordinary matplotlib-axes (`ax_inits`) from the underlying GridSpec object
+
+        The keys of the dictionaries are used as names for the Maps-objects,
+        (accessible via `mgrid.m_<name>` or `mgrid.ax_<name>`) and the values
+        are used to identify the axes position from the GridSpec object.
+
+        For example, to initialize a 2 by 2 grid with a large map on top,
+        a small maps on the bottom left and a normal plot on the bottom right, use:
+
+            >>> m_inits = dict(top = (0, slice(0, 2)),
+            >>>                bottom_left=(1, 0))
+            >>> ax_inits = dict(bottom_right=(1, 1))
+
+            >>> mg = MapsGrid(2, 2, m_inits=m_inits, ax_inits=ax_inits)
+            >>> mg.m_top.plot_map()
+            >>> mg.m_bottom_left.plot_map()
+            >>> mg.ax_bottom_right.plot([1,2,3])
+
+        Note: If either `m_inits` or `ax_inits` is provided, ONLY the specified
+        objects are initialized!
+
+        The default is None in which case a unique Maps-object will be created
+        for each grid-cell (accessible via `mgrid.m_<row>_<col>`)
+
     \**kwargs
         additional keyword-arguments passed to `matplotlib.gridspec.GridSpec()`
+
+    Attributes
+    ----------
+    f : matplotlib.figure
+        The matplotlib figure object
+    m_<identifier> : eomaps.Maps objects
+        The individual Maps-objects can be accessed via `mgrid.m_<identifier>`
+        The identifiers are hereby `<row>_<col>` or the keys of the `m_inits`
+        dictionary (if provided)
+    ax_<identifier> : matplotlib.axes
+        The individual (ordinary) matplotlib axes can be accessed via
+        `mgrid.ax_<identifier>`. The identifiers are hereby the keys of the
+        `ax_inits` dictionary (if provided).
+        Note: if `ax_inits` is not specified, NO ordinary axes will be created!
+
+    Methods
+    -------
+    join_limits :
+        join the axis-limits of maps that share the same projection
+    share_click_events :
+        share click-callback events between the Maps-objects
+    share_pick_events :
+        share pick-callback events between the Maps-objects
+    create_axes :
+        create a new (ordinary) matplotlib axes
+    add_<...> :
+        call the underlying `add_<...>` method on all Maps-objects of the grid
+    set_<...> :
+        set the corresponding property on all Maps-objects of the grid
+
     Returns
     -------
     eomaps.MapsGrid
         Accessor to the Maps objects "m_{row}_{column}".
 
+    Notes
+    -----
+
+    - To perform actions on all Maps-objects of the grid, simply iterate over
+      the MapsGrid object!
     """
 
-    def __init__(self, r=2, c=2, **kwargs):
-        self._axes = []
+    def __init__(self, r=2, c=2, m_inits=None, ax_inits=None, **kwargs):
+        self._Maps = []
 
-        gs = GridSpec(nrows=r, ncols=c, **kwargs)
+        self._gs = GridSpec(nrows=r, ncols=c, **kwargs)
+        if m_inits is None and ax_inits is None:
+            self._custom_init = False
+            for i in range(r):
+                for j in range(c):
+                    if i == 0 and j == 0:
+                        mij = Maps(gs_ax=self._gs[0, 0])
+                        self.parent = mij
+                    else:
+                        mij = Maps(parent=self.parent, gs_ax=self._gs[i, j])
 
-        for i in range(r):
-            for j in range(c):
-                if i == 0 and j == 0:
-                    mij = Maps(gs_ax=gs[0, 0])
-                    self.parent = mij
-                else:
-                    mij = Maps(parent=self.parent, gs_ax=gs[i, j])
+                    self._Maps.append(mij)
+                    setattr(self, f"m_{i}_{j}", mij)
+        else:
+            self._custom_init = True
+            if m_inits is not None:
+                for i, [key, val] in enumerate(m_inits.items()):
+                    assert isinstance(
+                        val, tuple
+                    ), "the values of m_inits must be tuples!"
+                    assert (
+                        key.isidentifier()
+                    ), f"the provided name {key} is not a valid identifier"
 
-                self._axes.append(mij)
-                setattr(self, f"m_{i}_{j}", mij)
+                    if i == 0:
+                        mi = Maps(gs_ax=self._gs[val])
+                        self.parent = mi
+                    else:
+                        mi = Maps(parent=self.parent, gs_ax=self._gs[val])
+
+                    self._Maps.append(mi)
+                    setattr(self, f"m_{key}", mi)
+
+            if ax_inits is not None:
+                for key, val in ax_inits.items():
+                    assert isinstance(
+                        val, tuple
+                    ), "the values of ax_inits must be tuples!"
+                    assert (
+                        key.isidentifier()
+                    ), f"the provided name {key} is not a valid identifier"
+
+                    self.create_axes(val, name=key)
 
     def __iter__(self):
-        return iter(self._axes)
+        return iter(self._Maps)
 
     def __getitem__(self, key):
-        return getattr(self, f"m_{key[0]}_{key[1]}")
+        if self._custom_init is False:
+            return getattr(self, f"m_{key[0]}_{key[1]}")
+        else:
+            return getattr(self, key)
+
+    def create_axes(self, ax_init, name=None):
+        """
+        Create (and return) an ordinary matplotlib axes.
+
+        Note: If you intend to use both ordinary axes and Maps-objects, it is
+        recommended to use an explicit "ax_inits" dict in the initialization of
+        the MapsGrid object to avoid the creation of overlapping axes!
+
+        Parameters
+        ----------
+        ax_init : set
+            The GridSpec speciffications for the axis.
+            use `ax_inits = (<row>, <col>)` to get an axis in a given grid-cell
+            use `slice(<start>, <stop>)` for `<row>` or `<col>` to get an axis
+            that spans over multiple rows/columns.
+
+        Returns
+        -------
+        ax : matplotlib.axist
+            The matplotlib axis instance
+
+        Examples
+        --------
+
+        >>> ax_inits = dict(top = (0, slice(0, 2)),
+        >>>                 bottom_left=(1, 0))
+
+        >>> mg = MapsGrid(2, 2, ax_inits=ax_inits)
+        >>> mg.m_top.plot_map()
+        >>> mg.m_bottom_left.plot_map()
+
+        >>> mg.create_axes((1, 1), name="bottom_right")
+        >>> mg.ax_bottom_right.plot([1,2,3], [1,2,3])
+
+        """
+
+        if name is None:
+            # get all existing axes
+            axes = [key for key in self.__dict__ if key.startswith("ax_")]
+            name = str(len(axes))
+        else:
+            assert (
+                name.isidentifier()
+            ), f"the provided name {name} is not a valid identifier"
+
+        ax = self.f.add_subplot(self._gs[ax_init])
+        setattr(self, f"ax_{name}", ax)
+        return ax
 
     @property
     def children(self):

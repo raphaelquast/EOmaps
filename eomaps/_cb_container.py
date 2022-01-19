@@ -487,6 +487,10 @@ class cb_click_container(_click_container):
                 ):
                     cb(**clickdict)
 
+    def _reset_cids(self):
+        self._cid_button_press_event = None
+        self._cid_motion_event = None
+
     def _add_click_callback(self):
         def clickcb(event):
             self._event = event
@@ -549,7 +553,7 @@ class cb_click_container(_click_container):
             )
 
     def _fwd_cb(self, event):
-        # click container are MouseEvents!
+        # click container events are MouseEvents!
         if event.inaxes != self._m.figure.ax:
             return
 
@@ -584,14 +588,8 @@ class cb_click_container(_click_container):
                 # x=event.mouseevent.x,
                 # y=event.mouseevent.y,
             )
-            dummyevent = SimpleNamespace(
-                artist=obj._artist,
-                dblclick=event.dblclick,
-                button=event.button,
-                mouseevent=dummymouseevent,
-            )
 
-            obj._onclick(dummyevent)
+            obj._onclick(dummymouseevent)
             # append clear-action again since it will already be executed
             # by the first click!
             m.BM._after_update_actions.append(obj._clear_temporary_artists)
@@ -748,6 +746,9 @@ class cb_pick_container(_click_container):
                 if clickdict is not None:
                     cb(**clickdict)
 
+    def _reset_cids(self):
+        self._cid_pick_event = dict()
+
     def _add_pick_callback(self):
         # execute onpick and forward the event to all connected Maps-objects
 
@@ -866,6 +867,9 @@ class keypress_container(_cb_container):
     def _init_cbs(self):
         if self._m.parent is self._m:
             self._initialize_callbacks()
+
+    def _reset_cids(self):
+        self._cid_keypress_event = None
 
     def _initialize_callbacks(self):
         def _onpress(event):
@@ -1182,12 +1186,15 @@ class cb_container:
             obj = getattr(self, method)
             obj._init_cbs()
 
-        # if not hasattr(self, "_cid_onclose"):
-        #     self._cid_onclose = self._m.figure.f.canvas.mpl_connect(
-        #         "close_event", self._on_close
-        #     )
-
         self._remove_default_keymaps()
+
+    def _reset_cids(self):
+        # reset the callback functions (required to re-attach the callbacks
+        # in case the figure is closed and re-initialized)
+        for method in self._methods:
+            print("resetting cid for", method)
+            obj = getattr(self, method)
+            obj._reset_cids()
 
     @staticmethod
     def _remove_default_keymaps():
@@ -1210,15 +1217,3 @@ class cb_container:
                     plt.rcParams[key].remove(v)
                 except Exception:
                     pass
-
-    # TODO can we re-initialize a closed figure incl. callbacks?
-    # # attach a cleanup function if the figure is closed
-    # # to ensure callbacks are removed and the container is reinitialized
-    # def _on_close(self, event):
-    #     for method in self._methods:
-    #         obj = getattr(self, method)
-
-    #         for key in obj.get.attached_callbacks:
-    #             obj.remove(key)
-    #     # remove all figure properties
-    #     self._m._reset_axes()

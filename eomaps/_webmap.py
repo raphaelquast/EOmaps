@@ -25,6 +25,8 @@ except ImportError:
     warn("EOmaps: adding WebMap services requires 'owslib'")
     _import_OK = False
 
+from .helpers import _sanitize
+
 
 class _WebMap_layer:
     # base class for adding methods to the _wms_layer- and wmts_layer objects
@@ -296,17 +298,6 @@ class _wms_layer(_WebMap_layer):
             layer = self._m.layer
 
         self._m.BM.add_bg_artist(art, layer)
-
-
-def _sanitize(s):
-    # taken from https://stackoverflow.com/a/3303361/9703451
-    s = str(s)
-    # Remove leading characters until we find a letter or underscore
-    s = re.sub("^[^a-zA-Z_]+", "", s)
-
-    # replace invalid characters with an underscore
-    s = re.sub("[^0-9a-zA-Z_]", "_", s)
-    return s
 
 
 class _WebServiec_collection(object):

@@ -45,8 +45,8 @@ class map_objects(object):
     ):
         self._m = m
 
-        self.coll = None
-        # self.coll is assigned in "m.plot_map()"
+        self.coll = None  # self.coll is assigned in "m.plot_map()"
+        self._figure_closed = False
 
     @property
     def f(self):
@@ -54,9 +54,21 @@ class map_objects(object):
         if self._m.parent._f is None:
             self._m.parent._BM = None  # reset the blit-manager
             self._m.parent._f = plt.figure(figsize=(12, 8))
+
+            # attach a callback that is executed when the figure is closed
+            # (to inform the user that the Maps-object needs to be re-created)
+            self._cid_onclose = self._m.parent._f.canvas.mpl_connect(
+                "close_event", self._on_close
+            )
+            self._figure_closed = False
             plt.draw()
 
         return self._m.parent._f
+
+    def _on_close(self, event):
+        # reset all objects connected to the figure to allow the re-initialization
+        # of a new figure object
+        self._m._reset_axes()
 
     @property
     def ax(self):
