@@ -1106,7 +1106,7 @@ class Maps(object):
             n_cmap,
             cax=ax_cb,
             label=label,
-            extend="both",
+            extend="neither",
             spacing="proportional",
             orientation=cb_orientation,
         )
