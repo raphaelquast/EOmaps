@@ -7,7 +7,7 @@
 🌐 Initialization of Maps objects
 .................................
 
-To initialize a new `Maps` object, simply use:
+To initialize a new ``Maps`` object, simply use:
 
 .. code-block:: python
 
@@ -15,32 +15,7 @@ To initialize a new `Maps` object, simply use:
     m = Maps( ... )
 
 
-To initialize a grid of `Maps` objects (e.g. a grid of maps in the same figure),
-use:
-
-.. code-block:: python
-
-    from eomaps import MapsGrid
-    mgrid = MapsGrid(r=2, c=2, ... )
-    # you can then access the individual Maps-objects via:
-    mgrid.m_0_0
-    mgrid.m_0_1
-    mgrid.m_1_0
-    mgrid.m_1_1
-
-
-.. currentmodule:: eomaps
-
-.. autosummary::
-    :toctree: generated
-    :nosignatures:
-    :template: only_names_in_toc.rst
-
-    Maps
-    MapsGrid
-
-
-To get a copy of a `Maps`-object with the same specifications, use:
+To copy an existing ``Maps``-object that shares selected specifications, use:
 
 .. code-block:: python
 
@@ -57,7 +32,57 @@ To get a copy of a `Maps`-object with the same specifications, use:
     :nosignatures:
     :template: only_names_in_toc.rst
 
+    Maps
     Maps.copy
+
+
+
+Multiple maps in one figure
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+To initialize (and manage) a grid of ``Maps`` objects, you can use a ``MapsGrid``:
+
+.. code-block:: python
+
+    from eomaps import MapsGrid
+    mgrid = MapsGrid(r=2, c=2, ... )
+    # you can then access the individual Maps-objects via:
+    mgrid.m_0_0
+    mgrid.m_0_1
+    mgrid.m_1_0
+    mgrid.m_1_1
+
+    # to perform actions on all Maps-objects, simply loop over the MapsGrid object
+    for m in mgrid:
+        ...
+
+The initialization of the plot-axes is hereby based on matplotlib's `GridSpec <https://matplotlib.org/stable/api/_as_gen/matplotlib.gridspec.GridSpec.html>`_
+functionality. You can fully customize the names of the Maps-objects as well as the position and size of the created axes by providing a
+dictionary of specifications via the ``ax_inits`` argument. To initialize subplots that extend over multiple rows or columns, simply use a ``slice``.
+(All further keyword-arguments (``width_ratios, height_ratios, etc.``) are passed to the initialization of the GridSpec object.)
+
+.. code-block:: python
+
+    from eomaps import MapsGrid
+    mgrid = MapsGrid(2, 2,
+                     ax_inits=dict(top_row=(0, slice(0, 2)),
+                                   bottom_left=(1, 0),
+                                   bottom_right=(1, 1)))
+
+    mgrid.m_top_row # A map that extends over the entire top-row of the grid
+    mgrid.m_bottom_left # A map in the bottom left corner of the grid
+    mgrid.m_bottom_right # A map in the bottom right corner of the grid
+
+
+.. currentmodule:: eomaps
+
+.. autosummary::
+    :toctree: generated
+    :nosignatures:
+    :template: only_names_in_toc.rst
+
+    MapsGrid
+
 
 🌍 Set plot specifications
 ..........................

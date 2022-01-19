@@ -20,7 +20,6 @@ EOmaps is available via the ``conda-forge`` channel and can be installed via:
 
 This should make sure all required dependencies are correctly installed.
 
-
 .. admonition:: Note on using ``geopandas``
 
     | `Geopandas <https://geopandas.org/en/stable/index.html>`_ is an optional dependency (only required for ``m.add_overlay()`` and ``m.add_gdf()``).
