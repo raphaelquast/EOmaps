@@ -553,7 +553,7 @@ class cb_click_container(_click_container):
             )
 
     def _fwd_cb(self, event):
-        # click container are MouseEvents!
+        # click container events are MouseEvents!
         if event.inaxes != self._m.figure.ax:
             return
 
@@ -588,14 +588,8 @@ class cb_click_container(_click_container):
                 # x=event.mouseevent.x,
                 # y=event.mouseevent.y,
             )
-            dummyevent = SimpleNamespace(
-                artist=obj._artist,
-                dblclick=event.dblclick,
-                button=event.button,
-                mouseevent=dummymouseevent,
-            )
 
-            obj._onclick(dummyevent)
+            obj._onclick(dummymouseevent)
             # append clear-action again since it will already be executed
             # by the first click!
             m.BM._after_update_actions.append(obj._clear_temporary_artists)
