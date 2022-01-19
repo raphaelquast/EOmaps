@@ -15,7 +15,7 @@ To initialize a new ``Maps`` object, simply use:
     m = Maps( ... )
 
 
-To copy an existing ``Maps``-object that shares selected specifications, use:
+To copy an existing ``Maps``-object (and share selected specifications), use:
 
 .. code-block:: python
 
@@ -24,6 +24,22 @@ To copy an existing ``Maps``-object that shares selected specifications, use:
     m = Maps()
     ...
     m2 = m.copy(...)
+
+To create a ``Maps``-object that represents an additional layer of an already existing map,
+use one of the following:
+(In this way, the newly created ``Maps`` object will share the same figure and plot-axis.)
+
+.. code-block:: python
+
+    from eomaps import Maps
+
+    m = Maps()
+    ...
+    m_layer1 = Maps(parent=m)
+    m_layer2 = m.copy(connect=True)
+
+
+
 
 .. currentmodule:: eomaps
 
@@ -37,8 +53,8 @@ To copy an existing ``Maps``-object that shares selected specifications, use:
 
 
 
-Multiple maps in one figure
-~~~~~~~~~~~~~~~~~~~~~~~~~~~
+𝄜 Multiple maps in one figure
+..............................
 
 To initialize (and manage) a grid of ``Maps`` objects, you can use a ``MapsGrid``:
 
@@ -66,12 +82,27 @@ dictionary of specifications via the ``ax_inits`` argument. To initialize subplo
     from eomaps import MapsGrid
     mgrid = MapsGrid(2, 2,
                      ax_inits=dict(top_row=(0, slice(0, 2)),
-                                   bottom_left=(1, 0),
-                                   bottom_right=(1, 1)))
+                                   bottom_left=(1, 0)))
 
     mgrid.m_top_row # A map that extends over the entire top-row of the grid
     mgrid.m_bottom_left # A map in the bottom left corner of the grid
     mgrid.m_bottom_right # A map in the bottom right corner of the grid
+
+
+It is also possible to combine ``Maps`` objects with ordinary matplotlib axes in one grid by using ``mgrid.crate_axes``.
+
+.. code-block:: python
+
+    from eomaps import MapsGrid
+    mgrid = MapsGrid(2, 2,
+                     ax_inits=dict(top_row=(0, slice(0, 2)),
+                                   bottom_left=(1, 0)))
+
+    mgrid.m_top_row # A map that extends over the entire top-row of the grid
+    mgrid.m_bottom_left # A map in the bottom left corner of the grid
+
+    mgrid.create_axes((1, 1), name="bottom_right")
+    mgrid.ax_bottom_right # the ordinary matplotlib-axis in the bottom-right corner of the grid
 
 
 .. currentmodule:: eomaps
