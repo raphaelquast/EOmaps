@@ -1960,11 +1960,10 @@ class Maps(object):
                     )
                     self.figure.cb = cb
                 else:
-                    if self.parent is self:
-                        warnings.warn(
-                            "EOmaps: Adding a colorbars is not supported if "
-                            + "you provide an explicit axes via gs_ax"
-                        )
+                    warnings.warn(
+                        "EOmaps: Colorbar could not be created... did "
+                        + "you call 'm.plot_map()' before adding other features?"
+                    )
 
             if dynamic is True:
                 self.BM.add_artist(coll, layer)
