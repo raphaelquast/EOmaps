@@ -671,8 +671,7 @@ class Maps(object):
             The classification scheme to use.
             (the list is accessible via `m.classify_specs.SCHEMES`)
 
-            E.g. one of:
-            [ "scheme" (\**kwargs)  ]
+            E.g. one of (possible kwargs in brackets):
 
                 - BoxPlot (hinge)
                 - EqualInterval (k)
@@ -690,8 +689,9 @@ class Maps(object):
                 - StdMean (multiples)
                 - UserDefined (bins)
 
-        \**kwargs :
+        kwargs :
             kwargs passed to the call to the respective mapclassify classifier
+            (dependent on the selected scheme... see above)
         """
         self.classify_specs._set_scheme_and_args(scheme, **kwargs)
 
@@ -1301,7 +1301,7 @@ class Maps(object):
                 >>>     # if the pick is successful:
                 >>>     return True, dict(ID, pos, val, ind)
             The default is "contains"
-        \**kwargs :
+        kwargs :
             all remaining kwargs are passed to `gdf.plot(**kwargs)`
         """
         self._check_gpd()
@@ -1448,7 +1448,7 @@ class Maps(object):
         ----------
         dataspec : dict
             the data-specification used to load the data via
-            cartopy.shapereader.natural_earth(\**dataspec)
+            cartopy.shapereader.natural_earth(... dataspecs ...)
 
             >>> dataspec=(resolution='10m', category='cultural', name='urban_areas')
             >>> dataspec=(resolution='10m', category='cultural', name='admin_0_countries')
@@ -1842,7 +1842,7 @@ class Maps(object):
         dynamic : bool
             If True, the collection will be dynamically updated
 
-        \**kwargs
+        kwargs
             kwargs passed to the initialization of the matpltolib collection
             (dependent on the plot-shape) [linewidth, edgecolor, facecolor, ...]
         """
@@ -2145,7 +2145,7 @@ class MapsGrid:
         The default is None in which case a unique Maps-object will be created
         for each grid-cell (accessible via `mgrid.m_<row>_<col>`)
 
-    \**kwargs
+    kwargs
         additional keyword-arguments passed to `matplotlib.gridspec.GridSpec()`
 
     Attributes
