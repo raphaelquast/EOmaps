@@ -52,6 +52,14 @@ mg.m_0_1.plot_specs.crs = Maps.CRS.Orthographic(45, 45)
 
 
 for m in mg:
+    # plot the attached dataset and attach callbacks to it
+    m.set_shape.rectangles(radius=3, radius_crs=4326)
+    m.plot_map(alpha=0.75, ec=(1, 1, 1, 0.5), pick_distance=25, colorbar=False)
+
+    m.cb.pick.attach.mark(
+        permanent=False, shape="rectangles", fc="none", ec="b", lw=2, layer=1
+    )
+
     # plot a geopandas GeoDataFrame and attach some callbacks to it
     m.add_gdf(
         gdf,
@@ -63,13 +71,6 @@ for m in mg:
     m.cb.pick["countries"].attach(cb)
     m.cb.pick["countries"].attach.annotate(text=txt)
 
-    # plot the attached dataset and attach callbacks to it
-    m.set_shape.rectangles(radius=3, radius_crs=4326)
-    m.plot_map(alpha=0.75, ec=(1, 1, 1, 0.5), pick_distance=25, coastlines=True)
-
-    m.cb.pick.attach.mark(
-        permanent=False, shape="rectangles", fc="none", ec="b", lw=2, layer=1
-    )
 
 mg.share_pick_events()  # share default pick events
 mg.share_pick_events("countries")  # share the events of the "countries" picker
