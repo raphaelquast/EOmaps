@@ -608,6 +608,40 @@ class TestBasicPlotting(unittest.TestCase):
             label_props=dict(scale=1.5, weight="bold", family="Courier New"),
         )
 
+        # ----------------- TEST interactivity
+        cv = m.figure.f.canvas
+        x, y = m.figure.ax.transData.transform(s3.get_position()[:2])
+        x1, y1 = (
+            (m.figure.f.bbox.x0 + m.figure.f.bbox.x1) / 2,
+            (m.figure.f.bbox.y0 + m.figure.f.bbox.y1) / 2,
+        )
+
+        # click on scalebar
+        cv.button_press_event(x, y, 1, False)
+
+        # move the scalebar
+        cv.motion_notify_event(x1, y1, False)
+
+        # increase bbox size
+        cv.key_press_event("left")
+        cv.key_press_event("right")
+        cv.key_press_event("up")
+        cv.key_press_event("down")
+
+        # deincrease bbox size
+        cv.key_press_event("alt+left")
+        cv.key_press_event("alt+right")
+        cv.key_press_event("alt+up")
+        cv.key_press_event("alt+down")
+
+        # rotate the scalebar
+        cv.key_press_event("+")
+        cv.key_press_event("-")
+
+        # adjust the padding between the ruler and the text
+        cv.key_press_event("alt+-")
+        cv.key_press_event("alt++")
+
         for si in [s, s1, s2, s3]:
             si.remove()
 
