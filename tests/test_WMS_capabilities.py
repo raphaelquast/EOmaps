@@ -37,6 +37,7 @@ class TestWMS(unittest.TestCase):
 
         m.plot_map(colormap=False)
         ESA_layer = m.add_wms.ESA_WorldCover.add_layer.WORLDCOVER_2020_MAP
+        ESA_layer.set_extent_to_bbox()
         ESA_layer.info
 
         ESA_layer()
@@ -47,12 +48,13 @@ class TestWMS(unittest.TestCase):
         m = Maps()
         m.plot_specs.crs = 4326
         m.plot_map(colormap=False)
-        m.figure.ax.set_extent((-130, 160, -50, 50))
 
         # use a layer that provides a legend
         NASA_layer = (
             m.add_wms.NASA_GIBS.EPSG_3857.add_layer.AIRS_L2_Cloud_Top_Height_Night
         )
+        NASA_layer.set_extent_to_bbox()
+
         NASA_layer.info
 
         NASA_layer(transparent=True)
