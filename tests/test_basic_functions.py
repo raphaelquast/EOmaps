@@ -300,7 +300,7 @@ class TestBasicPlotting(unittest.TestCase):
             callback = getattr(m.cb.keypress._cb, cb)
             callback(**kwargs)
 
-        plt.close(m.figure.f)
+        plt.close("all")
 
     def test_add_overlay(self):
         m = Maps()
@@ -567,6 +567,27 @@ class TestBasicPlotting(unittest.TestCase):
 
         plt.close(mg.f)
 
+    def test_MapsGrid2(self):
+        mg = MapsGrid(
+            2, 2, m_inits=dict(a=(0, slice(0, 2)), b=(1, 0)), ax_inits=dict(c=(1, 1))
+        )
+
+        mg.set_data(data=self.data, xcoord="x", ycoord="y", in_crs=3857)
+        mg.set_plot_specs(crs=4326, title="asdf", label="bsdf")
+        mg.set_classify_specs(scheme=Maps.CLASSIFIERS.EqualInterval, k=4)
+
+        for m in mg:
+            m.plot_map()
+
+        mg.add_annotation(ID=520)
+        mg.add_marker(ID=5, fc="r", radius=10, radius_crs=4326)
+
+        self.assertTrue(mg.m_a is mg["m_a"])
+        self.assertTrue(mg.m_b is mg["m_b"])
+        self.assertTrue(mg.ax_c is mg["ax_c"])
+
+        plt.close(mg.f)
+
     def test_ScaleBar(self):
 
         m = Maps()
@@ -607,6 +628,40 @@ class TestBasicPlotting(unittest.TestCase):
             patch_props=dict(fc="none", ec="none"),
             label_props=dict(scale=1.5, weight="bold", family="Courier New"),
         )
+
+        # ----------------- TEST interactivity
+        cv = m.figure.f.canvas
+        x, y = m.figure.ax.transData.transform(s3.get_position()[:2])
+        x1, y1 = (
+            (m.figure.f.bbox.x0 + m.figure.f.bbox.x1) / 2,
+            (m.figure.f.bbox.y0 + m.figure.f.bbox.y1) / 2,
+        )
+
+        # click on scalebar
+        cv.button_press_event(x, y, 1, False)
+
+        # move the scalebar
+        cv.motion_notify_event(x1, y1, False)
+
+        # increase bbox size
+        cv.key_press_event("left")
+        cv.key_press_event("right")
+        cv.key_press_event("up")
+        cv.key_press_event("down")
+
+        # deincrease bbox size
+        cv.key_press_event("alt+left")
+        cv.key_press_event("alt+right")
+        cv.key_press_event("alt+up")
+        cv.key_press_event("alt+down")
+
+        # rotate the scalebar
+        cv.key_press_event("+")
+        cv.key_press_event("-")
+
+        # adjust the padding between the ruler and the text
+        cv.key_press_event("alt+-")
+        cv.key_press_event("alt++")
 
         for si in [s, s1, s2, s3]:
             si.remove()
