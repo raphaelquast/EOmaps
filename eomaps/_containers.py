@@ -1032,7 +1032,7 @@ else:
             """
             WMS = self._EEA_DiscoMap(self._m)
             WMS.__doc__ = type(self).EEA_DiscoMap.__doc__
-            return
+            return WMS
 
         class _EEA_DiscoMap:
             """
