@@ -60,43 +60,6 @@ class _WebMap_layer:
 
         print(f"\n LEGEND available: {legQ}\n\n" + txt)
 
-    def get_dimension(self):
-        """
-        Get the "Dimension" attribute from the .xml describing the layer.
-
-        Useful to get the possible (and default) values for the NASA GIBS layer
-        which supports a custom time-dimension.
-
-
-            >>> add_layer = m.add_wmts.NASA_GIBS.add_layer.AIRS_L2_Cloud_Top_Height_Day
-            >>> add_layer.get_dimension()
-
-            >>> OrderedDict([('ows:Identifier', 'Time'),
-            >>>             ('ows:UOM', 'ISO8601'),
-            >>>              ('Default', '2020-09-23'),
-            >>>             ('Current', 'false'),
-            >>>             ('Value', '2020-01-16/2020-09-23/P1D')])
-
-            >>> add_layer(time='2020-01-16')
-
-        Returns
-        -------
-        dict : The "Dimension" tag of the corresponding layer
-
-        """
-        try:
-            import xmltodict
-        except ImportError:
-            raise ImportError("EOmaps: get_dimensions() requires `xmltodict`!")
-        xmlstr = self._wms.getServiceXML()
-        xmldict = xmltodict.parse(xmlstr)
-        try:
-            return xmldict["Capabilities"]["Contents"]["Layer"][
-                int(self.wms_layer.index)
-            ]["Dimension"]
-        except KeyError:
-            print("EOmaps: there's no Dimention key in the xml!")
-
     def fetch_legend(self, style="default"):
         try:
             url = self.wms_layer.styles["default"]["legend"]
