@@ -124,11 +124,14 @@ class _WebMap_layer:
                 if not self._legend_picked:
                     return
 
+                # only execute action if no toolbar action is active
                 if (
                     hasattr(self._m.figure.f.canvas, "toolbar")
+                    and self._m.figure.f.canvas.toolbar is not None
                     and self._m.figure.f.canvas.toolbar.mode != ""
                 ):
                     return
+
                 if not event.button:
                     legax.set_frame_on(False)
                     return
