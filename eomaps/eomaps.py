@@ -458,7 +458,7 @@ class Maps(object):
             assert (
                 "parent" not in kwargs
             ), "EOmaps: parent is set automatically if you use 'connect=True'"
-            kwargs["parent"] = self
+            kwargs["parent"] = self.parent
 
         # create a new class
         copy_cls = Maps(**kwargs)
