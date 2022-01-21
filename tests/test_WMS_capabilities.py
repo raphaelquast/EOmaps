@@ -44,6 +44,14 @@ class TestWMS(unittest.TestCase):
 
         plt.close(m.figure.f)
 
+    def test_ArcGIS_REST_API(self):
+        m = Maps()
+        m.add_coastlines(ocean=False)
+        m.plot_specs.crs = Maps.CRS.GOOGLE_MERCATOR
+        hillshade = m.add_wms.ESRI_ArcGIS.Elevation.Elevation_World_Hillshade
+        hillshade.add_layer.layer_Elevation_World_Hillshade()
+        plt.close(m.figure.f)
+
     def test_WMS_legend_capabilities_NASA_GIBS(self):
         m = Maps()
         m.plot_specs.crs = 4326
