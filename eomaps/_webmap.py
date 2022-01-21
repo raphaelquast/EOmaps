@@ -60,43 +60,6 @@ class _WebMap_layer:
 
         print(f"\n LEGEND available: {legQ}\n\n" + txt)
 
-    def get_dimension(self):
-        """
-        Get the "Dimension" attribute from the .xml describing the layer.
-
-        Useful to get the possible (and default) values for the NASA GIBS layer
-        which supports a custom time-dimension.
-
-
-            >>> add_layer = m.add_wmts.NASA_GIBS.add_layer.AIRS_L2_Cloud_Top_Height_Day
-            >>> add_layer.get_dimension()
-
-            >>> OrderedDict([('ows:Identifier', 'Time'),
-            >>>             ('ows:UOM', 'ISO8601'),
-            >>>              ('Default', '2020-09-23'),
-            >>>             ('Current', 'false'),
-            >>>             ('Value', '2020-01-16/2020-09-23/P1D')])
-
-            >>> add_layer(time='2020-01-16')
-
-        Returns
-        -------
-        dict : The "Dimension" tag of the corresponding layer
-
-        """
-        try:
-            import xmltodict
-        except ImportError:
-            raise ImportError("EOmaps: get_dimensions() requires `xmltodict`!")
-        xmlstr = self._wms.getServiceXML()
-        xmldict = xmltodict.parse(xmlstr)
-        try:
-            return xmldict["Capabilities"]["Contents"]["Layer"][
-                int(self.wms_layer.index)
-            ]["Dimension"]
-        except KeyError:
-            print("EOmaps: there's no Dimention key in the xml!")
-
     def fetch_legend(self, style="default"):
         try:
             url = self.wms_layer.styles["default"]["legend"]
@@ -161,11 +124,14 @@ class _WebMap_layer:
                 if not self._legend_picked:
                     return
 
+                # only execute action if no toolbar action is active
                 if (
                     hasattr(self._m.figure.f.canvas, "toolbar")
+                    and self._m.figure.f.canvas.toolbar is not None
                     and self._m.figure.f.canvas.toolbar.mode != ""
                 ):
                     return
+
                 if not event.button:
                     legax.set_frame_on(False)
                     return
@@ -364,43 +330,6 @@ class _WebServiec_collection(object):
             layers = dict()
             for key in wms.contents.keys():
                 layers[_sanitize(key)] = _wms_layer(self._m, wms, key)
-
-        return SimpleNamespace(**layers)
-
-
-class _multi_WebServiec_collection(_WebServiec_collection):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-
-    @property
-    @lru_cache()
-    def add_layer(self):
-
-        if self._service_type == "wmts":
-            print("EOmaps: fetching layers...")
-            layers = dict()
-            for key, url in self._urls.items():
-                wmts = self._get_wmts(url)
-                layer_names = list(wmts.contents.keys())
-                if len(layer_names) > 1:
-                    warn(f"there are multiple sub-layers for '{key}'")
-                for lname in layer_names:
-                    layers[_sanitize(key) + f"__{lname}"] = _wmts_layer(
-                        self._m, wmts, lname
-                    )
-
-        elif self._service_type == "wms":
-            print("EOmaps: fetching layers...")
-            layers = dict()
-            for key, url in self._urls.items():
-                wms = self._get_wms(url)
-                layer_names = list(wms.contents.keys())
-                if len(layer_names) > 1:
-                    warn(f"there are multiple sub-layers for '{key}'")
-                for lname in layer_names:
-                    layers[_sanitize(key) + f"__{lname}"] = _wms_layer(
-                        self._m, wms, lname
-                    )
 
         return SimpleNamespace(**layers)
 

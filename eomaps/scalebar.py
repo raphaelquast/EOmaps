@@ -201,7 +201,7 @@ class ScaleBar:
             A tuple that is used to adjust the offset of the frame-patch.
             Individual values represent `(top, bottom, left, right)` on a
             horizontally oriented scalebar. The default is (1, 1, 1, 1).
-        \**kwargs :
+        kwargs :
             Additional kwargs are passed to the `matpltlotlib.Patches.PolygonPatch`
             that is used to draw the frame.
             The default is `{"fc": ".75", "ec": "k", "lw": 1, "ls": "-"}`
@@ -250,7 +250,7 @@ class ScaleBar:
         color : str or tuple
             The color of the text.
             The default is "k" (e.g. black)
-        \**kwargs :
+        kwargs :
             Additional kwargs are passed to `matplotlib.font_manager.FontProperties`
             to set the font specifications of the labels. Possible values are:
 

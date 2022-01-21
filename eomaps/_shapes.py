@@ -258,7 +258,10 @@ class shapes(object):
                 array = array[vertmask]
 
             coll = PolyCollection(
-                verts, transOffset=self._m.figure.ax.transData, array=array, **kwargs
+                verts,
+                # transOffset=self._m.figure.ax.transData,
+                array=array,
+                **kwargs,
             )
             return coll
 
@@ -449,7 +452,10 @@ class shapes(object):
             verts = np.stack((xs[mask], ys[mask])).T.swapaxes(0, 1)
 
             coll = PolyCollection(
-                verts, transOffset=self._m.figure.ax.transData, array=array, **kwargs
+                verts,
+                # transOffset=self._m.figure.ax.transData,
+                array=array,
+                **kwargs,
             )
             return coll
 
@@ -642,7 +648,7 @@ class shapes(object):
 
             coll = PolyCollection(
                 verts=verts,
-                transOffset=self._m.figure.ax.transData,
+                # transOffset=self._m.figure.ax.transData,
                 array=array,
                 **kwargs,
             )
@@ -702,7 +708,7 @@ class shapes(object):
 
             coll = TriMesh(
                 tri,
-                transOffset=self._m.figure.ax.transData,
+                # transOffset=self._m.figure.ax.transData,
                 **kwargs,
             )
 
@@ -853,7 +859,7 @@ class shapes(object):
             coll = PolyCollection(
                 verts=verts,
                 array=array,
-                transOffset=self._m.figure.ax.transData,
+                # transOffset=self._m.figure.ax.transData,
                 **kwargs,
             )
 
@@ -1098,7 +1104,7 @@ class shapes(object):
             if self.flat == False:
                 coll = TriMesh(
                     tri,
-                    transOffset=self._m.figure.ax.transData,
+                    # transOffset=self._m.figure.ax.transData,
                     **kwargs,
                 )
             else:
@@ -1108,7 +1114,7 @@ class shapes(object):
 
                 coll = PolyCollection(
                     verts=verts,
-                    transOffset=self._m.figure.ax.transData,
+                    # transOffset=self._m.figure.ax.transData,
                     **kwargs,
                 )
 

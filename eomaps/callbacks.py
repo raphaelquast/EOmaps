@@ -833,12 +833,11 @@ class dynamic_callbacks:
         self._extent_marker = None
         self._last_extent = (1, 2, 1, 2)
 
-        def indicate(event):
-            if event.inaxes != m.figure.ax:
+        def indicate(event=None):
+            if event is not None and event.inaxes != m.figure.ax:
                 return
 
             try:
-
                 last_extent = m.figure.ax.get_extent()
                 if self._last_extent == last_extent:
                     return
@@ -867,6 +866,7 @@ class dynamic_callbacks:
                     permanent=True,
                     **args,
                 )
+                print("done")
             except:
                 warnings.warn("EOmaps: Extent could not be indicated.")
 
@@ -877,3 +877,5 @@ class dynamic_callbacks:
                 cid,
                 m.figure.f.canvas.mpl_connect("button_release_event", indicate),
             )
+
+        indicate()

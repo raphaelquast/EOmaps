@@ -1192,7 +1192,6 @@ class cb_container:
         # reset the callback functions (required to re-attach the callbacks
         # in case the figure is closed and re-initialized)
         for method in self._methods:
-            print("resetting cid for", method)
             obj = getattr(self, method)
             obj._reset_cids()
 
