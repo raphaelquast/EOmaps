@@ -567,6 +567,27 @@ class TestBasicPlotting(unittest.TestCase):
 
         plt.close(mg.f)
 
+    def test_MapsGrid2(self):
+        mg = MapsGrid(
+            2, 2, m_inits=dict(a=(0, slice(0, 2)), b=(1, 0)), ax_inits=dict(c=(1, 1))
+        )
+
+        mg.set_data(data=self.data, xcoord="x", ycoord="y", in_crs=3857)
+        mg.set_plot_specs(crs=4326, title="asdf", label="bsdf")
+        mg.set_classify_specs(scheme=Maps.CLASSIFIERS.EqualInterval, k=4)
+
+        for m in mg:
+            m.plot_map()
+
+        mg.add_annotation(ID=520)
+        mg.add_marker(ID=5, fc="r", radius=10, radius_crs=4326)
+
+        self.assertTrue(mg.m_a is mg["m_a"])
+        self.assertTrue(mg.m_b is mg["m_b"])
+        self.assertTrue(mg.ax_c is mg["ax_c"])
+
+        plt.close(mg.f)
+
     def test_ScaleBar(self):
 
         m = Maps()
