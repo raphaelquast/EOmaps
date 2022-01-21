@@ -611,68 +611,6 @@ class TestBasicPlotting(unittest.TestCase):
         for si in [s, s1, s2, s3]:
             si.remove()
 
-    def test_WMS_OSM(self):
-        m = Maps()
-        m.plot_specs.crs = Maps.CRS.GOOGLE_MERCATOR
-        m.add_wms.OpenStreetMap.add_layer.default()
-        plt.close(m.figure.f)
-
-    def test_WMS_S1GBM(self):
-        m = Maps()
-        m.plot_specs.crs = Maps.CRS.GOOGLE_MERCATOR
-        m.add_wms.S1GBM.add_layer.vv()
-        plt.close(m.figure.f)
-
-    def test_WMS_ESA_WorldCover(self):
-        m = Maps()
-        m.plot_specs.crs = Maps.CRS.GOOGLE_MERCATOR
-
-        m.plot_map(colormap=False)
-        ESA_layer = m.add_wms.ESA_WorldCover.add_layer.WORLDCOVER_2020_MAP
-        ESA_layer.info
-
-        ESA_layer()
-
-        plt.close(m.figure.f)
-
-    def test_WMS_legend_capabilities_NASA_GIBS(self):
-        m = Maps()
-        m.plot_specs.crs = 4326
-        m.plot_map(colormap=False)
-        m.figure.ax.set_extent((-130, 160, -50, 50))
-
-        # use a layer that provides a legend
-        NASA_layer = (
-            m.add_wms.NASA_GIBS.EPSG_3857.add_layer.AIRS_L2_Cloud_Top_Height_Night
-        )
-        NASA_layer.info
-
-        NASA_layer(transparent=True)
-        NASA_layer.add_legend()
-
-        legax = ax = m.figure.f.axes[-1]
-        leg_cpos = (
-            (legax.bbox.x0 + legax.bbox.x1) / 2,
-            (legax.bbox.y0 + legax.bbox.y1) / 2,
-        )
-
-        # pick up the the legend (e.g. click on it)
-        m.figure.f.canvas.button_press_event(*leg_cpos, 1, False)
-
-        # resize the legend
-        m.figure.f.canvas.scroll_event(*leg_cpos, 20, False)
-
-        # move the legend
-        m.figure.f.canvas.motion_notify_event(
-            (m.figure.ax.bbox.x0 + m.figure.ax.bbox.x1) / 2,
-            (m.figure.ax.bbox.y0 + m.figure.ax.bbox.y1) / 2,
-            None,
-        )
-
-        # release the legend
-        m.figure.f.canvas.button_press_event(0, 0, 1, False)
-        plt.close(m.figure.f)
-
     def test_a_complex_figure(self):
         # %%
         lon, lat = np.linspace(-180, 180, 500), np.linspace(-90, 90, 500)
