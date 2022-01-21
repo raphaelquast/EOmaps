@@ -334,43 +334,6 @@ class _WebServiec_collection(object):
         return SimpleNamespace(**layers)
 
 
-class _multi_WebServiec_collection(_WebServiec_collection):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-
-    @property
-    @lru_cache()
-    def add_layer(self):
-
-        if self._service_type == "wmts":
-            print("EOmaps: fetching layers...")
-            layers = dict()
-            for key, url in self._urls.items():
-                wmts = self._get_wmts(url)
-                layer_names = list(wmts.contents.keys())
-                if len(layer_names) > 1:
-                    warn(f"there are multiple sub-layers for '{key}'")
-                for lname in layer_names:
-                    layers[_sanitize(key) + f"__{lname}"] = _wmts_layer(
-                        self._m, wmts, lname
-                    )
-
-        elif self._service_type == "wms":
-            print("EOmaps: fetching layers...")
-            layers = dict()
-            for key, url in self._urls.items():
-                wms = self._get_wms(url)
-                layer_names = list(wms.contents.keys())
-                if len(layer_names) > 1:
-                    warn(f"there are multiple sub-layers for '{key}'")
-                for lname in layer_names:
-                    layers[_sanitize(key) + f"__{lname}"] = _wms_layer(
-                        self._m, wms, lname
-                    )
-
-        return SimpleNamespace(**layers)
-
-
 class REST_API_services:
     def __init__(self, m, url, name, service_type="wmts", _params={"f": "pjson"}):
         self._m = m
