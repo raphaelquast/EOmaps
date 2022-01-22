@@ -466,14 +466,18 @@ class _click_callbacks(object):
         ----------
         layer : int
             The layer-number you want to peek at.
-            (You must draw something on the layer first!)
+
+            Note:
+            You must draw something on the layer first! (Most EOmaps functions
+            that add features to a map support a `layer` argument that
+            lets you specify the layer at which the object is drawn.)
 
                 >>> m.plot_map(layer=1)
 
-        pos : TYPE
-            DESCRIPTION.
         how : str , float or tuple, optional
-            the peek-method.
+            The method you want to visualize the second layer.
+            (e.g. swipe from a side or display a rectangle)
+
                 - "left" (→), "right" (←), "top" (↓), "bottom" (↑):
                   swipe the layer at the mouse-position.
                 - if float, peek a square at the mouse-position, specified as
