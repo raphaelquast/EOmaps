@@ -113,6 +113,34 @@ class TestDraggableAxes(unittest.TestCase):
         # show histogram and colorbar again
         cv.key_press_event("ctrl+up")
         cv.key_press_event("ctrl+down")
-
         # release the mouse
         cv.button_release_event(0, 0, 1, False)
+
+        # ------ test re-showing axes on click
+        # click on bottom right histogram
+        x5 = (
+            mg.m_1_1.figure.ax_cb_plot.bbox.x1 + mg.m_1_1.figure.ax_cb_plot.bbox.x0
+        ) / 2
+        y5 = (
+            mg.m_1_1.figure.ax_cb_plot.bbox.y1 + mg.m_1_1.figure.ax_cb_plot.bbox.y0
+        ) / 2
+        cv.button_press_event(x5, y5, 1, False)
+
+        # hide histogram
+        cv.key_press_event("ctrl+up")
+        # click on the hidden histogram to make it visible again
+        cv.button_press_event(x5, y5, 1, False)
+
+        # click on bottom right colorbar
+        x6 = (mg.m_1_1.figure.ax_cb.bbox.x1 + mg.m_1_1.figure.ax_cb.bbox.x0) / 2
+        y6 = (mg.m_1_1.figure.ax_cb.bbox.y1 + mg.m_1_1.figure.ax_cb.bbox.y0) / 2
+        cv.button_press_event(x6, y6, 1, False)
+
+        # hide colorbar
+        cv.key_press_event("ctrl+down")
+        # click on the hidden colorbar to make it visible again
+        cv.button_press_event(x6, y6, 1, False)
+
+        # deactivate draggable axes
+        cv.key_press_event("alt+d")
+        cv.key_release_event("alt+d")
