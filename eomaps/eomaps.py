@@ -558,7 +558,7 @@ class Maps(object):
         # for downward-compatibility
         self.data_specs.data = val
 
-    def set_data_specs(self, **kwargs):
+    def set_data_specs(self, data=None, **kwargs):
         """
         Set the properties of the dataset you want to plot.
 
@@ -569,16 +569,18 @@ class Maps(object):
 
         Parameters
         ----------
+        data : pandas.DataFrame
+            A pandas.DataFrame containing the coordinates and data-values.
         parameter : str, optional
-            The name of the parameter to use. If None, the first variable in the
-            provided dataframe will be used.
+            The name of the DataFrame column that should be used as parameter.
+            If None, the first column (despite of xcoord and ycoord) will be used.
             The default is None.
         xcoord, ycoord : str, optional
-            The name of the x- and y-coordinate as provided in the dataframe.
+            The names of columns that contain the coordinates in the specified crs.
             The default is "lon" and "lat".
-        in_crs : int, dict or str
-            The coordinate-system identifier.
-            Can be any input usable with `pyproj.CRS.from_user_input`:
+        crs : int, dict or str
+            The coordinate-system of the provided coordinates.
+            Can be one of:
 
                 - PROJ string
                 - Dictionary of PROJ parameters
@@ -591,8 +593,12 @@ class Maps(object):
                 - An object with a `to_wkt` method.
                 - A :class:`pyproj.crs.CRS` class
 
-            The default is 4326 (e.g. lon/lat projection)
+            (see `pyproj.CRS.from_user_input` for more details)
+
+            The default is 4326 (e.g. geographic lon/lat crs)
         """
+        if data is not None:
+            self.data_specs.data = data
 
         for key, val in kwargs.items():
             self.data_specs[key] = val
