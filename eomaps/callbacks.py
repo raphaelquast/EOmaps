@@ -709,12 +709,10 @@ class _click_callbacks(object):
             self._pick_l.set_xdata(list(self._pick_l.get_xdata()) + [xindex])
             self._pick_l.set_ydata(list(self._pick_l.get_ydata()) + [val])
 
-        # self._pick_ax.autoscale()
         self._pick_ax.relim()
         self._pick_ax.autoscale_view(True, True, True)
-
-        self._pick_f.canvas.draw()
         self._pick_f.tight_layout()
+        self._pick_f.canvas.draw()
 
     def _plot_cleanup(self):
         # cleanup method for plot callback
