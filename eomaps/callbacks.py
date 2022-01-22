@@ -162,7 +162,7 @@ class _click_callbacks(object):
             >>> dict(xytext=(20, 20),
             >>>      textcoords="offset points",
             >>>      bbox=dict(boxstyle="round", fc="w"),
-            >>>      arrowprops=dict(arrowstyle="->"))
+            >>>      arrowprops=dict(arrowstyle="->")
             >>>     )
 
         """
