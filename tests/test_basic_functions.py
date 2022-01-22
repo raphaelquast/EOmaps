@@ -521,6 +521,19 @@ class TestBasicPlotting(unittest.TestCase):
 
         plt.close(m.figure.f)
 
+    def test_join_limits(self):
+        mg = MapsGrid(2, 1)
+        mg.set_data(data=self.data, xcoord="x", ycoord="y", in_crs=3857)
+        mg.set_plot_specs(plot_crs=3857)
+        for m in mg:
+            m.plot_map()
+
+        mg.join_limits()
+
+        mg.m_0_0.figure.ax.set_extent((-20, 20, 60, 80))
+
+        plt.close("all")
+
     def test_prepare_data(self):
         m = Maps()
         m.data = self.data
