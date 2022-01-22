@@ -343,6 +343,7 @@ class TestCallbacks(unittest.TestCase):
             return db.loc[ID].lon
 
         cid = m.cb.pick.attach.load(database=db, load_method=loadmethod)
+        self.click_ax_center(m)
 
         self.assertTrue(m.cb.pick.get.picked_object == self.data.loc[ID[0]].lon)
 
