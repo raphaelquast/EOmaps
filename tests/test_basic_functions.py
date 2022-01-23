@@ -4,10 +4,8 @@ mpl.rcParams["toolbar"] = "None"
 
 import matplotlib.pyplot as plt
 from matplotlib.gridspec import GridSpec
-from matplotlib.font_manager import FontProperties
 
 import unittest
-from types import SimpleNamespace
 
 import pandas as pd
 import numpy as np
@@ -234,85 +232,6 @@ class TestBasicPlotting(unittest.TestCase):
             self.assertTrue(len(m.cb.keypress.get.attached_callbacks) == 0)
 
         plt.close(m.figure.f)
-
-    def test_callbacks(self):
-
-        m = Maps()
-        m.data = self.data
-        m.set_data_specs(xcoord="x", ycoord="y", in_crs=3857)
-        m.set_plot_specs(plot_crs=3857)
-        m.add_coastlines(layer=1)
-        m.plot_map()
-
-        # test all pick callbacks
-        for n, cb in enumerate(m.cb.pick._cb_list):
-            kwargs = dict(ID=1, pos=(1, 2), val=3.365734, ind=None)
-            if cb == "load":
-                kwargs["database"] = pd.DataFrame([1, 2, 3, 4])
-                kwargs["load_method"] = "xs"
-
-            callback = getattr(m.cb.pick._cb, cb)
-            callback(**kwargs)
-
-            dummymouseevent = SimpleNamespace(
-                inaxes=m.figure.ax,
-                dblclick=False,
-                button=1,
-                xdata=m.data.iloc[0]["x"],
-                ydata=m.data.iloc[0]["x"],
-                x=123,
-                y=123,
-            )
-            dummyevent = SimpleNamespace(
-                artist=m.figure.coll,
-                mouseevent=dummymouseevent,
-            )
-
-            pick = m.cb.pick._picker(None, dummymouseevent)
-            if pick[1] is not None:
-                dummyevent.ind = pick[1]["ind"]
-                if "dist" in pick[1]:
-                    dummyevent.dist = pick[1]["dist"]
-            else:
-                dummyevent.ind = None
-                dummyevent.dist = None
-
-            m.cb.pick._onpick(dummyevent)
-
-        # test all click callbacks
-        for n, cb in enumerate(m.cb.click._cb_list):
-            kwargs = dict(ID=1, pos=(1, 2), val=3.365734, ind=None)
-            callback = getattr(m.cb.click._cb, cb)
-            callback(**kwargs)
-
-            dummyevent = SimpleNamespace(
-                inaxes=m.figure.ax,
-                dblclick=True,
-                button=1,
-                xdata=123456,
-                ydata=123456,
-            )
-            m.cb.click._fwd_cb(dummyevent)
-
-        # test all keypress callbacks
-        for n, cb in enumerate(m.cb.keypress._cb_list):
-            kwargs = dict(key="x")
-            callback = getattr(m.cb.keypress._cb, cb)
-            callback(**kwargs)
-
-        plt.close("all")
-
-        # test dynamic callbacks
-        mg = MapsGrid(2, 1)
-        mg.m_1_0.plot_specs.crs = Maps.CRS.Orthographic()
-
-        mg.m_0_0.add_coastlines()
-        mg.m_1_0.add_coastlines()
-
-        mg.m_0_0.figure.ax.set_extent((20, 40, 20, 40))
-        mg.m_1_0.figure.ax.set_extent((10, 140, 0, 60))
-
-        mg.m_1_0.cb.dynamic.indicate_extent(mg.m_0_0)
 
     def test_add_overlay(self):
         m = Maps()

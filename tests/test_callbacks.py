@@ -349,3 +349,41 @@ class TestCallbacks(unittest.TestCase):
 
         m.cb.pick.remove(cid)
         plt.close("all")
+
+    def test_switch_layer(self):
+        # ---------- test as CLICK callback
+        m = self.create_basic_map()
+
+        m2 = m.copy(connect=True, copy_data="share")
+
+        m2.plot_specs.cmap = "Reds"
+        m2.plot_map(layer=2)
+
+        cid0 = m.cb.keypress.attach.switch_layer(layer=0, key="0")
+        cid1 = m.cb.keypress.attach.switch_layer(layer=2, key="2")
+
+        m.figure.f.canvas.key_press_event("2")
+        m.figure.f.canvas.key_release_event("2")
+        m.BM._bg_layer == 2
+
+        m.figure.f.canvas.key_press_event("0")
+        m.figure.f.canvas.key_release_event("0")
+        m.BM._bg_layer == 0
+
+        m.cb.keypress.remove(cid0)
+        m.cb.keypress.remove(cid1)
+        plt.close("all")
+
+    def test_indicate_extent(self):
+        # test dynamic callbacks
+        mg = MapsGrid(2, 1)
+        mg.m_1_0.plot_specs.crs = Maps.CRS.Orthographic()
+
+        mg.m_0_0.add_coastlines()
+        mg.m_1_0.add_coastlines()
+
+        mg.m_0_0.figure.ax.set_extent((20, 40, 20, 40))
+        mg.m_1_0.figure.ax.set_extent((10, 140, 0, 60))
+
+        mg.m_1_0.cb.dynamic.indicate_extent(mg.m_0_0)
+        plt.close("all")
