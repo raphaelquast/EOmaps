@@ -9,6 +9,13 @@ from types import SimpleNamespace
 import numpy as np
 
 try:
+    import pandas as pd
+
+    _pd_OK = True
+except ImportError:
+    _pd_OK = False
+
+try:
     import geopandas as gpd
 
     _gpd_OK = True
@@ -569,15 +576,35 @@ class Maps(object):
 
         Parameters
         ----------
-        data : pandas.DataFrame
-            A pandas.DataFrame containing the coordinates and data-values.
-        parameter : str, optional
-            The name of the DataFrame column that should be used as parameter.
-            If None, the first column (despite of xcoord and ycoord) will be used.
-            The default is None.
+        data : array-like
+            The data of the Maps-object.
+            Accepted inputs are:
+
+            - a pandas.DataFrame with the coordinates and the data-values
+            - a pandas.Series with only the data-values
+            - a 1D or 2D numpy-array with the data-values
+            - a 1D list of data values
+
+
         xcoord, ycoord : str, optional
+            Specify the coordinates associated with the provided data.
+            Accepted inputs are:
+
+            - a string (corresponding to the column-names of the `pandas.DataFrame`)
+            - a pandas.Series
+            - a 1D or 2D numpy-array
+            - a 1D list
+
             The names of columns that contain the coordinates in the specified crs.
             The default is "lon" and "lat".
+        parameter : str, optional
+            ONLY relevant if a pandas.DataFrame that specifyes both the coordinates
+            and the data-values is provided as `data`!
+
+            The name of the column that should be used as parameter.
+
+            If None, the first column (despite of xcoord and ycoord) will be used.
+            The default is None.
         crs : int, dict or str
             The coordinate-system of the provided coordinates.
             Can be one of:
@@ -596,7 +623,27 @@ class Maps(object):
             (see `pyproj.CRS.from_user_input` for more details)
 
             The default is 4326 (e.g. geographic lon/lat crs)
+
+        Examples
+        --------
+
+        - using a single `pandas.DataFrame`
+        >>> data = pd.DataFrame(dict(lon=[...], lat=[...], a=[...], b=[...]))
+        >>> m.set_data(data, xcoord="lon", ycoord="lat", parameter="a", crs=4326)
+
+        - using individual `pandas.Series`
+        >>> lon, lat, vals = pd.Series([...]), pd.Series([...]), pd.Series([...])
+        >>> m.set_data(vals, xcoord=x, ycoord=y, crs=4326)
+
+        - using 1D lists
+        >>> lon, lat, vals = [...], [...], [...]
+        >>> m.set_data(vals, xcoord=lon, ycoord=lat, crs=4326)
+
+        - using 1D or 2D numpy.arrays
+        >>> lon, lat, vals = np.array([[...]]), np.array([[...]]), np.array([[...]])
+        >>> m.set_data(vals, xcoord=lon, ycoord=lat, crs=4326)
         """
+
         if data is not None:
             self.data_specs.data = data
 
@@ -773,6 +820,73 @@ class Maps(object):
 
         return crs
 
+    def _identify_data(self, data=None, xcoord=None, ycoord=None, parameter=None):
+        """
+        Identify the way how the data has been provided and convert to the
+        internal structure.
+        """
+
+        if data is None:
+            data = self.data_specs.data
+        if xcoord is None:
+            xcoord = self.data_specs.xcoord
+        if ycoord is None:
+            ycoord = self.data_specs.ycoord
+        if parameter is None:
+            parameter = self.data_specs.parameter
+
+        if data is not None:
+            if _pd_OK and isinstance(data, pd.DataFrame):
+                # get the data-values
+                z_data = data[parameter].values.ravel()
+                # get the index-values
+                ids = data.index.values.ravel()
+
+                if isinstance(xcoord, str) and isinstance(ycoord, str):
+                    # get the data-coordinates
+                    xorig = data[xcoord].values.ravel()
+                    yorig = data[ycoord].values.ravel()
+                else:
+                    assert isinstance(xcoord, (list, np.ndarray, pd.Series)), (
+                        "xcoord must be either a column-name, or explicit values "
+                        " specified as a list, a numpy-array or a pandas"
+                        + f" Series object if you provide the data as '{type(data)}'"
+                    )
+                    assert isinstance(ycoord, (list, np.ndarray, pd.Series)), (
+                        "ycoord must be either a column-name, or explicit values "
+                        " specified as a list, a numpy-array or a pandas"
+                        + f" Series object if you provide the data as '{type(data)}'"
+                    )
+
+                    xorig = np.asanyarray(xcoord).ravel()
+                    yorig = np.asanyarray(ycoord).ravel()
+
+            # check for explicit 1D value lists
+            types = (list, np.ndarray)
+            if _pd_OK:
+                types += (pd.Series,)
+
+            if isinstance(data, types):
+                # get the data-values
+                z_data = np.asanyarray(data).ravel()
+                # get the index-values
+                ids = np.arange(z_data.size)
+
+                assert isinstance(xcoord, types), (
+                    "xcoord must be either a list, a numpy-array or a pandas"
+                    + f" Series object if you provide the data as '{type(data)}'"
+                )
+                assert isinstance(ycoord, types), (
+                    "ycoord must be either a list, a numpy-array or a pandas"
+                    + f" Series object if you provide the data as '{type(data)}'"
+                )
+
+                # get the data-coordinates
+                xorig = np.asanyarray(xcoord).ravel()
+                yorig = np.asanyarray(ycoord).ravel()
+
+        return z_data, xorig, yorig, ids, parameter
+
     def _prepare_data(
         self,
         data=None,
@@ -788,15 +902,6 @@ class Maps(object):
         buffer=None,
     ):
 
-        # get specifications
-        if data is None:
-            data = self.data_specs.data
-        if xcoord is None:
-            xcoord = self.data_specs.xcoord
-        if ycoord is None:
-            ycoord = self.data_specs.ycoord
-        if parameter is None:
-            parameter = self.data_specs.parameter
         if in_crs is None:
             in_crs = self.data_specs.crs
         if cpos is None:
@@ -813,13 +918,10 @@ class Maps(object):
             always_xy=True,
         )
 
-        # get the data-coordinates
-        xorig = data[xcoord].values
-        yorig = data[ycoord].values
-        # get the data-values
-        z_data = data[parameter].values
-        # get the index-values
-        ids = data.index.values
+        # identify the provided data and get it in the internal format
+        z_data, xorig, yorig, ids, parameter = self._identify_data(
+            data=data, xcoord=xcoord, ycoord=ycoord, parameter=parameter
+        )
 
         if cpos is not None and cpos != "c":
             # fix position of pixel-center in the input-crs
@@ -1735,10 +1837,14 @@ class Maps(object):
         if ID is not None:
             assert xy is None, "You can only provide 'ID' or 'pos' not both!"
 
-            xy = self.data.loc[ID][
-                [self.data_specs.xcoord, self.data_specs.ycoord]
-            ].values
+            # get the index of the first occurance of the ID in the provided ids
+            ind = np.nonzero(self._props["ids"] == ID)[0][0]
+            xy = (self._props["xorig"][ind], self._props["yorig"][ind])
+            val = self._props["z_data"][ind]
+
             xy_crs = self.data_specs.crs
+        else:
+            val = None
 
         if xy is not None:
 
@@ -1756,7 +1862,7 @@ class Maps(object):
         self.cb.click._cb.annotate(
             ID=ID,
             pos=xy,
-            val=None if ID is None else self.data.loc[ID][self.data_specs.parameter],
+            val=val,
             ind=None if ID is None else self.data.index.get_loc(ID),
             permanent=True,
             text=text,

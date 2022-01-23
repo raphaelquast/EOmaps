@@ -703,3 +703,26 @@ class TestBasicPlotting(unittest.TestCase):
         m.figure.f.tight_layout()
         # %%
         plt.close(m.figure.f)
+
+    def test_alternative_inputs(self):
+        lon, lat = np.mgrid[20:40, 20:50]
+        vals = lon + lat
+
+        # 2D numpy array
+        m = Maps()
+        m.set_data(vals, xcoord=lon, ycoord=lat)
+        m.plot_map()
+
+        # 1D numpy array
+        m = Maps()
+        m.set_data(vals.ravel(), xcoord=lon.ravel(), ycoord=lat.ravel())
+        m.plot_map()
+
+        # 1D lists
+        m = Maps()
+        m.set_data(
+            vals.ravel().tolist(),
+            xcoord=lon.ravel().tolist(),
+            ycoord=lat.ravel().tolist(),
+        )
+        m.plot_map()

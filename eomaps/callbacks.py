@@ -168,9 +168,19 @@ class _click_callbacks(object):
         """
 
         ID, pos, val, ind, picker_name = self._popargs(kwargs)
+        if isinstance(self.m.data_specs.xcoord, str):
+            xlabel = self.m.data_specs.xcoord
+        else:
+            xlabel = "xcoord"
+        if isinstance(self.m.data_specs.ycoord, str):
+            ylabel = self.m.data_specs.ycoord
+        else:
+            ylabel = "ycoord"
 
-        xlabel = self.m.data_specs.xcoord
-        ylabel = self.m.data_specs.ycoord
+        if self.m.data_specs.parameter is None:
+            parameter = "value"
+        else:
+            parameter = self.m.data_specs.parameter
 
         ax = self.m.figure.ax
 
@@ -178,7 +188,7 @@ class _click_callbacks(object):
             if ID is not None and self.m.data is not None:
                 x, y = [
                     np.format_float_positional(i, trim="-", precision=pos_precision)
-                    for i in self.m.data.loc[ID][[xlabel, ylabel]]
+                    for i in (self.m._props["xorig"][ind], self.m._props["yorig"][ind])
                 ]
                 x0, y0 = [
                     np.format_float_positional(i, trim="-", precision=pos_precision)
@@ -193,11 +203,7 @@ class _click_callbacks(object):
                     f"{xlabel} = {x} ({x0})\n"
                     + f"{ylabel} = {y} ({y0})\n"
                     + (f"ID = {ID}\n" if ID is not None else "")
-                    + (
-                        f"{self.m.data_specs.parameter} = {val}"
-                        if val is not None
-                        else ""
-                    )
+                    + (f"{parameter} = {val}" if val is not None else "")
                 )
             else:
                 lon, lat = self.m._transf_plot_to_lonlat.transform(*pos)

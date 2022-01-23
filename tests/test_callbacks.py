@@ -12,17 +12,29 @@ from eomaps import Maps, MapsGrid
 
 class TestCallbacks(unittest.TestCase):
     def setUp(self):
-        lon, lat = np.meshgrid(np.linspace(-25, 25, 50), np.linspace(-50, 50, 50))
+        self.lon, self.lat = np.meshgrid(
+            np.linspace(-25, 25, 50), np.linspace(-50, 50, 50)
+        )
 
         self.data = pd.DataFrame(
-            dict(lon=lon.flat, lat=lat.flat, value=(lon + lat).flat)
+            dict(lon=self.lon.flat, lat=self.lat.flat, value=(self.lon + self.lat).flat)
         )
 
     def create_basic_map(self):
+        if not hasattr(self, "nfig"):
+            self.nfig = 0
+        self.nfig += 1
+
         m = Maps()
-        m.set_data(self.data)
+        # use either a pandas.DataFrame or a 2D numpy-array for testing
+        if self.nfig % 2 == 0:
+            m.set_data(self.data, xcoord="lon", ycoord="lat")
+        else:
+            m.set_data(self.lon + self.lat, xcoord=self.lon, ycoord=self.lat)
+
         m.plot_map()
         m.figure.f.canvas.draw()
+
         return m
 
     def get_ax_center(self, ax):

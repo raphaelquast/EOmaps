@@ -19,6 +19,13 @@ if _import_OK:
         _xyz_tile_service,
     )
 
+try:
+    import pandas as pd
+
+    _pd_OK = True
+except ImportError:
+    _pd_OK = False
+
 
 def combdoc(*args):
     return "\n".join(dedent(str(i)) for i in args)
@@ -289,7 +296,7 @@ class data_specs(object):
 
     @parameter.getter
     def parameter(self):
-        if self._parameter is None:
+        if _pd_OK and isinstance(self.data, pd.DataFrame) and self._parameter is None:
             if (
                 self.data is not None
                 and self.xcoord is not None
@@ -309,6 +316,7 @@ class data_specs(object):
                         "EOmaps: Parameter-name could not be identified!"
                         + "\nCheck the data-specs!"
                     )
+
         return self._parameter
 
 
