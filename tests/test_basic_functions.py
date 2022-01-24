@@ -705,7 +705,7 @@ class TestBasicPlotting(unittest.TestCase):
         m.add_feature.preset.countries()
         m.add_feature.preset.coastline()
 
-        plt.close(m.figure.f)
+        plt.close("all")
 
         # test providing custom args
         m = Maps()
@@ -714,5 +714,15 @@ class TestBasicPlotting(unittest.TestCase):
         countries(ec="k", fc=[i for i in plt.cm.viridis(areas / areas.max())])
 
         m.add_feature.physical_110m.ocean(fc="b")
+
+        plt.close("all")
+
+        # test MapsGrid functionality
+        mg = MapsGrid()
+
+        mg.add_feature.preset.ocean()
+        mg.add_feature.preset.land()
+        mg.add_feature.preset.countries()
+        mg.add_feature.preset.coastline()
 
         plt.close("all")

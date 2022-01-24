@@ -2236,6 +2236,11 @@ class MapsGrid:
     #     for m in self:
     #         m.add_wms(*args, **kwargs)
 
+    @property
+    @wraps(Maps.add_feature)
+    def add_feature(self):
+        return NaturalEarth_features(self)
+
     @wraps(Maps.add_gdf)
     def add_gdf(self, *args, **kwargs):
         for m in self:

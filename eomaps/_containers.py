@@ -668,13 +668,24 @@ class NaturalEarth_features:
             return f"NaturalEarth feature:  {f.scale} | {f.category} | {f.name}"
 
         def __call__(self, layer=0, **kwargs):
-            self.feature._kwargs.update(kwargs)
-            self._m._set_axes()
-            art = self._m.figure.ax.add_feature(self.feature)
+            from . import Maps, MapsGrid
 
-            self._m.BM.add_bg_artist(art, layer=layer)
+            if isinstance(self._m, Maps):
 
-            return art
+                self.feature._kwargs.update(kwargs)
+                self._m._set_axes()
+                art = self._m.figure.ax.add_feature(self.feature)
+
+                self._m.BM.add_bg_artist(art, layer=layer)
+
+            elif isinstance(self._m, MapsGrid):
+                print("mg")
+                for m in self._m:
+                    self.feature._kwargs.update(kwargs)
+                    m._set_axes()
+                    art = m.figure.ax.add_feature(self.feature)
+
+                    m.BM.add_bg_artist(art, layer=layer)
 
     class _presets:
         def __init__(self, m):
