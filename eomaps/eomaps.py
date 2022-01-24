@@ -565,7 +565,7 @@ class Maps(object):
         # for downward-compatibility
         self.data_specs.data = val
 
-    def set_data_specs(self, data=None, **kwargs):
+    def set_data_specs(self, data=None, xcoord=None, ycoord=None, crs=None, **kwargs):
         """
         Set the properties of the dataset you want to plot.
 
@@ -585,7 +585,6 @@ class Maps(object):
             - a 1D or 2D numpy-array with the data-values
             - a 1D list of data values
 
-
         xcoord, ycoord : str, optional
             Specify the coordinates associated with the provided data.
             Accepted inputs are:
@@ -597,14 +596,6 @@ class Maps(object):
 
             The names of columns that contain the coordinates in the specified crs.
             The default is "lon" and "lat".
-        parameter : str, optional
-            ONLY relevant if a pandas.DataFrame that specifyes both the coordinates
-            and the data-values is provided as `data`!
-
-            The name of the column that should be used as parameter.
-
-            If None, the first column (despite of xcoord and ycoord) will be used.
-            The default is None.
         crs : int, dict or str
             The coordinate-system of the provided coordinates.
             Can be one of:
@@ -623,6 +614,14 @@ class Maps(object):
             (see `pyproj.CRS.from_user_input` for more details)
 
             The default is 4326 (e.g. geographic lon/lat crs)
+        parameter : str, optional
+            ONLY relevant if a pandas.DataFrame that specifyes both the coordinates
+            and the data-values is provided as `data`!
+
+            The name of the column that should be used as parameter.
+
+            If None, the first column (despite of xcoord and ycoord) will be used.
+            The default is None.
 
         Examples
         --------
@@ -646,6 +645,15 @@ class Maps(object):
 
         if data is not None:
             self.data_specs.data = data
+
+        if xcoord is not None:
+            self.data_specs.xcoord = xcoord
+
+        if ycoord is not None:
+            self.data_specs.ycoord = ycoord
+
+        if crs is not None:
+            self.data_specs.crs = crs
 
         for key, val in kwargs.items():
             self.data_specs[key] = val
@@ -2361,8 +2369,8 @@ class MapsGrid:
         Create (and return) an ordinary matplotlib axes.
 
         Note: If you intend to use both ordinary axes and Maps-objects, it is
-        recommended to use an explicit "ax_inits" dict in the initialization of
-        the MapsGrid object to avoid the creation of overlapping axes!
+        recommended to use explicit "m_inits" and "ax_inits" dicts in the
+        initialization of the MapsGrid to avoid the creation of overlapping axes!
 
         Parameters
         ----------
