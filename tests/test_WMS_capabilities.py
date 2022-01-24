@@ -46,7 +46,7 @@ class TestWMS(unittest.TestCase):
 
     def test_ArcGIS_REST_API(self):
         m = Maps()
-        m.add_coastlines(ocean=False)
+        m.add_feature.preset.ocean(ec="k", zorder=100)
         m.plot_specs.crs = Maps.CRS.GOOGLE_MERCATOR
         hillshade = m.add_wms.ESRI_ArcGIS.Elevation.Elevation_World_Hillshade
         hillshade.add_layer.layer_Elevation_World_Hillshade()

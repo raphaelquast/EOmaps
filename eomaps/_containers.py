@@ -4,11 +4,15 @@ from operator import attrgetter
 from inspect import signature, _empty
 from types import SimpleNamespace
 from functools import lru_cache
+from pathlib import Path
+import json
 
 import matplotlib.pyplot as plt
 from matplotlib.pyplot import get_cmap
 from matplotlib.gridspec import SubplotSpec
 import mapclassify
+
+import cartopy.feature as cfeature
 
 from ._webmap import _import_OK
 
@@ -525,6 +529,222 @@ class classify_specs(object):
         return SimpleNamespace(
             **dict(zip(mapclassify.CLASSIFIERS, mapclassify.CLASSIFIERS))
         )
+
+
+class NaturalEarth_features:
+    """
+    Interface to the feature-layers provided by NaturalEarth
+
+    (see https://www.naturalearthdata.com)
+
+    The features are grouped into the categories "cultural" and "physical"
+    at 3 different scales:
+        - 1:10m : Large-scale data
+        - 1:50m : Medium-scale data
+        - 1:110m : Small-scale data
+
+    For available layers check the docstring of the individual categories.
+
+    >>> m.add_feature.cultural_10m.< feature-name >( ... style-kwargs ...)
+
+
+    Examples
+    --------
+
+    - add black (coarse resolution) coastlines
+    >>> m.add_feature.physical_110m.coastline(fc="none", ec="k")
+
+    - color all land red with 50% transparency
+    >>> m.add_feature.physical_110m.land(fc="r", alpha=0.5)
+
+    - color all countries with respect to their area
+    >>> countries = m.add_feature.cultural_10m.admin_0_countries
+    >>> areas = np.argsort([i.area for i in countries.feature.geometries()])
+    >>> countries(ec="k", fc= [i for i in plt.cm.viridis(areas / areas.max())])
+    """
+
+    def __init__(self, m):
+        self._m = m
+
+        with open(Path(__file__).parent / "NE_features.json", "r") as file:
+            features = json.load(file)
+
+        for scale, scale_items in features.items():
+            for category, category_items in scale_items.items():
+                ns = {
+                    name: self._feature(self._m, category, name, scale)
+                    for name in category_items
+                }
+
+                c = self._category(scale, category, **ns)
+                setattr(self, category + "_" + scale, c)
+
+    @property
+    def preset(self):
+        """
+        Access to commonly used NaturalEarth features with pre-defined styles.
+
+        - "coastline" - black coastlines
+        - "ocean" - blue ocean coloring
+        - "land" - beige land coloring
+        - "countries" - gray country boarder lines
+        """
+        return self._presets(self._m)
+
+    def __getitem__(self, key):
+        return getattr(self, key)
+
+    class _category:
+        def __init__(self, scale, category, **kwargs):
+
+            self._s = scale
+            self._c = category
+
+            for key, val in kwargs.items():
+                setattr(self, key, val)
+
+            self.__doc__ = combdoc(
+                NaturalEarth_features.__doc__,
+                "\nNotes\n-----\n Available NaturalEarth features for:   |   "
+                + scale
+                + "  "
+                + category
+                + "   |\n\n - "
+                + "\n - ".join(kwargs),
+            )
+
+        def __repr__(self):
+            return (
+                f"EOmaps interface for {self._s} {self._c} " + "NaturalEarth features"
+            )
+
+    class _feature:
+        def __init__(self, m, category, name, scale):
+            self._m = m
+
+            self.feature = cfeature.NaturalEarthFeature(
+                category=category, name=name, scale=scale
+            )
+
+            f = self.feature
+            self.__doc__ = dedent(
+                f"""
+                NaturalEarth feature:  {f.scale} | {f.category} | {f.name}
+
+                Call this class like a function to add it to the associated map.
+                Common style-keywords can be used to customize the appearance
+                of the added features.
+
+                - "facecolor" (or "fc")
+                - "edgecolor" (or "ec")
+                - "linewidth" (or "lw")
+                - "linestyle" (or "ls")
+                - "alpha", "hatch", "dashes", ...
+                - "zoder"
+
+                Parameters
+                ----------
+
+                layer : int, optional
+                    The EOmaps layer-number at which the feature is drawn.
+                    The default is None.
+
+                Examples
+                --------
+
+                >>> m = Maps()
+                >>> feature = m.add_feature.physical_10m.coastline
+                >>> feature(fc="none",
+                >>>         ec="k",
+                >>>         lw=.5,
+                >>>         ls="--",
+                >>>         )
+                """
+            )
+
+        def __repr__(self):
+            f = self.feature
+
+            return f"NaturalEarth feature:  {f.scale} | {f.category} | {f.name}"
+
+        def __call__(self, layer=0, **kwargs):
+            self.feature._kwargs.update(kwargs)
+            self._m._set_axes()
+            art = self._m.figure.ax.add_feature(self.feature)
+
+            self._m.BM.add_bg_artist(art, layer=layer)
+
+            return art
+
+    class _presets:
+        def __init__(self, m):
+            self._m = m
+
+        @property
+        def coastline(self):
+            return self.feature(
+                self._m, "physical", "coastline", fc="none", ec="k", zorder=0
+            )
+
+        @property
+        def ocean(self):
+            return self.feature(
+                self._m,
+                "physical",
+                "ocean",
+                fc=cfeature.COLORS["water"],
+                ec="none",
+                zorder=0,
+            )
+
+        @property
+        def land(self):
+            return self.feature(
+                self._m,
+                "physical",
+                "land",
+                fc=cfeature.COLORS["land"],
+                ec="none",
+                zorder=0,
+            )
+
+        @property
+        def countries(self):
+            return self.feature(
+                self._m,
+                "cultural",
+                "admin_0_countries",
+                fc="none",
+                ec=".5",
+                lw=0.5,
+                zorder=0,
+            )
+
+        class feature:
+            def __init__(self, m, category, name, **kwargs):
+                self._m = m
+                self.category = category
+                self.name = name
+
+                self.kwargs = kwargs
+
+                self.feature = getattr(
+                    getattr(self._m.add_feature, f"{self.category}_10m"), self.name
+                )
+
+                self.__doc__ = combdoc(f"PRESET using {kwargs} ", self.feature.__doc__)
+
+            def __call__(self, scale="50m", **kwargs):
+                k = dict(**self.kwargs)
+                k.update(kwargs)
+
+                self.feature = getattr(
+                    getattr(self._m.add_feature, f"{self.category}_{scale}"), self.name
+                )
+
+                self.__doc__ = self.feature.__doc__
+
+                return self.feature(**k)
 
 
 # avoid defining containers if import is not OK

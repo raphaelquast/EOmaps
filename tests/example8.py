@@ -3,7 +3,8 @@
 from eomaps import Maps
 
 m = Maps()
-m.add_coastlines()
+m.add_feature.preset.ocean(ec="k", scale="110m")
+
 
 s1 = m.add_scalebar(
     -11,

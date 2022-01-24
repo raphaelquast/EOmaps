@@ -51,6 +51,7 @@ from ._containers import (
     classify_specs,
     # cb_container,
     wms_container,
+    NaturalEarth_features,
 )
 
 from ._cb_container import cb_container
@@ -1381,6 +1382,10 @@ class Maps(object):
 
         return cb
 
+    @property
+    def add_feature(self):
+        return NaturalEarth_features(self)
+
     def add_gdf(self, gdf, picker_name=None, pick_method="contains", **kwargs):
         """
         Overplot a `geopandas.GeoDataFrame` over the generated plot.
@@ -1485,225 +1490,6 @@ class Maps(object):
 
                     # attach the re-projected GeoDataFrame to the pick-container
                     self.cb.pick[picker_name + prefix].data = usegdf
-
-    def add_coastlines(self, layer=None, coast=True, ocean=True):
-        """
-        add coastlines and ocean-coloring to the plot
-        (similar to m.plot_map(coastlinse=True) but with more options)
-
-        Parameters
-        ----------
-        layer : int, optional
-            the background-layer to use. The default is None.
-        coast : bool or dict, optional
-            Indicator if coastlines should be added.
-            If a dict is provided, it is used as kwargs to style the coastlines
-            The default is True.
-        ocean : TYPE, optional
-            Indicator if ocean-coloring should be added.
-            If a dict is provided, it is used as kwargs to style the ocean-polygon
-            The default is True.
-
-        Examples
-        --------
-
-            >>> m.add_coastlines(coast=dict(ec="r"), ocean=dict(fc="g"))
-            >>> m.add_coastlines(coast=False, ocean=dict(fc="b"))
-        """
-        if layer is None:
-            layer = self.layer
-
-        if coast:
-            if coast is True:
-                coast_kwargs = dict()
-            else:
-                assert isinstance(coast, dict), "coast must be eiter True or a dict!"
-                coast_kwargs = coast
-
-        if ocean:
-            if ocean is True:
-                ocean_kwargs = dict()
-            else:
-                assert isinstance(ocean, dict), "ocean must be eiter True or a dict!"
-                ocean_kwargs = ocean
-
-        self._set_axes()
-        if coast:
-            coastlines = self.figure.ax.add_feature(cfeature.COASTLINE, **coast_kwargs)
-        if ocean:
-            ocean = self.figure.ax.add_feature(cfeature.OCEAN, **ocean_kwargs)
-
-            if layer is not None:
-                self.BM.add_bg_artist(ocean, layer=layer)
-
-        if coast:
-            if layer is not None:
-                self.BM.add_bg_artist(coastlines, layer=layer)
-
-    def add_overlay(
-        self,
-        dataspec,
-        styledict=None,
-        legend=True,
-        legend_kwargs=None,
-        maskshp=None,
-        layer=None,
-    ):
-        """
-        A convenience function to add layers from NaturalEarth to an already generated
-        map. (you must call `plot_map()`first!)
-        Check `cartopy.shapereader.natural_earth` for details on how to specify
-        layer properties.
-
-        To get more control of the position and appearance of the legend
-        (or to add it to the plot at a later stage) use `legend=False` and explicitly call
-
-            >>> m.add_overlay_legend()
-
-        Parameters
-        ----------
-        dataspec : dict
-            the data-specification used to load the data via
-            cartopy.shapereader.natural_earth(... dataspecs ...)
-
-            >>> dataspec=(resolution='10m', category='cultural', name='urban_areas')
-            >>> dataspec=(resolution='10m', category='cultural', name='admin_0_countries')
-            >>> dataspec=(resolution='10m', category='physical', name='rivers_lake_centerlines')
-            >>> dataspec=(resolution='10m', category='physical', name='lakes')
-
-        styledict : dict, optional
-            a dict with style-kwargs used for plotting.
-            The default is None in which case the following setting will be used:
-
-            >>> styledict=(facecolor='none', edgecolor='k', alpha=.5, lw=0.25)
-        legend : bool, optional
-            indicator if a legend should be added or not.
-            The default is True.
-        legend_kwargs : dict, optional
-            kwargs passed to matplotlib.pyplot.legend()
-            (ONLY if legend = True!).
-        maskshp : gpd.GeoDataFrame
-            a geopandas.GeoDataFrame that will be used as a mask for overlay
-            (does not work with line-geometries!)
-        """
-        self._check_gpd()
-
-        self._set_axes()
-        ax = self.figure.ax
-
-        label = dataspec.get("name", "overlay")
-
-        if not all([i in dataspec for i in ["resolution", "category", "name"]]):
-            assert False, (
-                "the keys 'resolution', 'category' and 'name' must "
-                + "be provided in dataspec!"
-            )
-
-        if styledict is None:
-            styledict = dict(facecolor="none", edgecolor="k", alpha=0.5, lw=0.25)
-
-        shp_fn = shapereader.natural_earth(**dataspec)
-
-        overlay_df = gpd.read_file(shp_fn)
-        overlay_df.crs = CRS.from_epsg(4326)
-        overlay_df.to_crs(self.crs_plot, inplace=True)
-
-        with warnings.catch_warnings():
-            warnings.filterwarnings("ignore", category=UserWarning)
-            # ignore the UserWarning that area is proabably inexact when using
-            # projected coordinate-systems (we only care about > 0)
-            overlay_df = overlay_df[~np.isnan(overlay_df.area)]
-
-        if maskshp is not None:
-            overlay_df = gpd.overlay(overlay_df[["geometry"]], maskshp)
-
-        artist = overlay_df.plot(
-            ax=ax, aspect=ax.get_aspect(), label=label, **styledict
-        )
-
-        if layer is not None:
-            self.BM.add_artist(artist, layer)
-
-        # save legend patches in case a legend should be created
-        if not hasattr(self, "_overlay_legend"):
-            self._overlay_legend = defaultdict(list)
-
-        self._overlay_legend["handles"].append(mpl.patches.Patch(**styledict))
-        self._overlay_legend["labels"].append(label)
-
-        if legend is True:
-            if legend_kwargs is None:
-                legend_kwargs = dict(loc="upper center")
-            self.add_overlay_legend(**legend_kwargs)
-
-    def add_overlay_legend(self, update_hl=None, sort_order=None, **kwargs):
-        """
-        Add a legend for the attached overlays to the map
-        (existing legend will be replaced if you call this function!)
-
-        Parameters
-        ----------
-        update_hl : dict, optional
-            a dict that can be used to replace the existing handles and labels
-            of the legend. The signature is:
-
-            >>> update_hl = {overlay-name : [handle, label]}
-
-            If "handle" or "label" is None, the pre-defined values are used
-
-            >>> m.add_overlay(dataspec={"name" : "some_overlay"})
-            >>> m.add_overlay_legend(loc="upper left",
-            >>>    update_hl={"some_overlay" : [plt.Line2D([], [], c="b")
-            >>>                                 "A much nicer Label"]})
-
-            >>> # use the following if you want to keep the existing handle:
-            >>> m.add_overlay_legend(
-            >>>    update_hl={"some_overlay" : [None, "A much nicer Label"]})
-        sort_order : list, optional
-            a list of integers (starting from 0) or strings (the overlay-names)
-            that will be used to determine the order of the legend-entries.
-            The default is None.
-
-            >>> sort_order = [2, 1, 0, ...]
-            >>> sort_order = ["overlay-name1", "overlay-name2", ...]
-
-        **kwargs :
-            kwargs passed to matplotlib.pyplot.legend().
-        """
-
-        handles = [*self._overlay_legend["handles"]]
-        labels = [*self._overlay_legend["labels"]]
-
-        if update_hl is not None:
-            for key, val in update_hl.items():
-                h, l = val
-                if key in labels:
-                    idx = labels.index(key)
-                    if h is not None:
-                        handles[idx] = h
-                    if l is not None:
-                        labels[idx] = l
-                else:
-                    warnings.warn(
-                        f"there is no overlay with the name {key}"
-                        + "... legend-handle can't be replaced..."
-                    )
-
-        if sort_order is not None:
-            if all(isinstance(i, str) for i in sort_order):
-                sort_order = [
-                    self._overlay_legend["labels"].index(i) for i in sort_order
-                ]
-            elif all(isinstance(i, int) for i in sort_order):
-                pass
-            else:
-                TypeError("sort-order must be a list of overlay-names or integers!")
-
-        _ = self.figure.ax.legend(
-            handles=handles if sort_order is None else [handles[i] for i in sort_order],
-            labels=labels if sort_order is None else [labels[i] for i in sort_order],
-            **kwargs,
-        )
 
     def add_marker(
         self,
@@ -2456,17 +2242,7 @@ class MapsGrid:
     @wraps(Maps.add_gdf)
     def add_gdf(self, *args, **kwargs):
         for m in self:
-            m.add_wms(*args, **kwargs)
-
-    @wraps(Maps.add_overlay)
-    def add_overlay(self, *args, **kwargs):
-        for m in self:
-            m.add_wms(*args, **kwargs)
-
-    @wraps(Maps.add_coastlines)
-    def add_coastlines(self, *args, **kwargs):
-        for m in self:
-            m.add_coastlines(*args, **kwargs)
+            m.add_gdf(*args, **kwargs)
 
     def share_click_events(self):
         """

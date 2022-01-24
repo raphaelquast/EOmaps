@@ -391,8 +391,8 @@ class TestCallbacks(unittest.TestCase):
         mg = MapsGrid(2, 1)
         mg.m_1_0.plot_specs.crs = Maps.CRS.Orthographic()
 
-        mg.m_0_0.add_coastlines()
-        mg.m_1_0.add_coastlines()
+        mg.m_0_0.add_feature.preset.ocean(ec="k", scale="110m")
+        mg.m_1_0.add_feature.preset.ocean(ec="k", scale="110m")
 
         mg.m_0_0.figure.ax.set_extent((20, 40, 20, 40))
         mg.m_1_0.figure.ax.set_extent((10, 140, 0, 60))

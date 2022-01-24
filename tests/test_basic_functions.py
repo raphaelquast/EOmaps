@@ -59,14 +59,14 @@ class TestBasicPlotting(unittest.TestCase):
         m.plot_map(coastlines=False)
         m.indicate_masked_points()
 
-        m.add_coastlines(coast=dict(color="r"), ocean=dict(fc="g"))
+        m.add_feature.preset.ocean(ec="k", scale="110m")
 
         plt.close("all")
 
         # rectangles
         m.set_shape.rectangles()
         m.plot_map(coastlines=False)
-        m.add_coastlines(coast=False, ocean=dict(fc="g"))
+        m.add_feature.preset.ocean(ec="k", scale="110m")
 
         m.set_shape.rectangles(radius=1, radius_crs=4326)
         m.plot_map()
@@ -230,35 +230,6 @@ class TestBasicPlotting(unittest.TestCase):
             self.assertTrue(len(m.cb.keypress.get.attached_callbacks) == 1)
             m.cb.keypress.remove(cbID)
             self.assertTrue(len(m.cb.keypress.get.attached_callbacks) == 0)
-
-        plt.close(m.figure.f)
-
-    def test_add_overlay(self):
-        m = Maps()
-        m.data = self.data
-        m.set_data_specs(xcoord="x", ycoord="y", in_crs=3857)
-        m.set_plot_specs(plot_crs=3857)
-        m.set_shape.rectangles(mesh=True)
-
-        m.plot_map()
-
-        m.add_overlay(
-            dataspec=dict(resolution="10m", category="cultural", name="urban_areas"),
-            styledict=dict(facecolor="r"),
-        )
-        m.add_overlay(
-            dataspec=dict(resolution="10m", category="physical", name="lakes"),
-            styledict=dict(facecolor="b"),
-        )
-
-        m.add_overlay_legend(
-            loc="upper center",
-            update_hl={
-                "lakes": [None, "asdf"],
-                "urban_areas": [plt.Line2D([], [], c="r"), "bsdf"],
-            },
-            sort_order=["lakes", "urban_areas"],
-        )
 
         plt.close(m.figure.f)
 
@@ -535,7 +506,7 @@ class TestBasicPlotting(unittest.TestCase):
     def test_ScaleBar(self):
 
         m = Maps()
-        m.add_coastlines()
+        m.add_feature.preset.ocean(ec="k", scale="110m")
 
         s = m.add_scalebar(scale=250000)
         s.set_position(10, 20, 30)
