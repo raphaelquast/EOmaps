@@ -223,16 +223,20 @@ class _wmts_layer(_WebMap_layer):
             additional kwargs passed to the WebMap service request.
             (e.g. transparent=True, time='2020-02-05', etc.)
         """
-        self._m._set_axes()
+        from . import MapsGrid  # do this here to avoid circular imports!
 
-        print(f"EOmaps: Adding wmts-layer: {self.name}")
-        art = self._m.figure.ax.add_wmts(
-            self._wms, self.name, wmts_kwargs=kwargs, interpolation="spline36"
-        )
-        if layer is None:
-            layer = self._m.layer
+        for m in self._m if isinstance(self._m, MapsGrid) else [self._m]:
 
-        self._m.BM.add_bg_artist(art, layer)
+            m._set_axes()
+
+            print(f"EOmaps: Adding wmts-layer: {self.name}")
+            art = m.figure.ax.add_wmts(
+                self._wms, self.name, wmts_kwargs=kwargs, interpolation="spline36"
+            )
+            if layer is None:
+                layer = m.layer
+
+            m.BM.add_bg_artist(art, layer)
 
 
 class _wms_layer(_WebMap_layer):
@@ -254,16 +258,20 @@ class _wms_layer(_WebMap_layer):
             (e.g. transparent=True, time='2020-02-05', etc.)
         """
         print(f"EOmaps: ... adding wms-layer: {self.name}")
-        self._m._set_axes()
+        from . import MapsGrid  # do this here to avoid circular imports!
 
-        art = self._m.figure.ax.add_wms(
-            self._wms, self.name, wms_kwargs=kwargs, interpolation="spline36"
-        )
+        for m in self._m if isinstance(self._m, MapsGrid) else [self._m]:
 
-        if layer is None:
-            layer = self._m.layer
+            m._set_axes()
 
-        self._m.BM.add_bg_artist(art, layer)
+            art = m.figure.ax.add_wms(
+                self._wms, self.name, wms_kwargs=kwargs, interpolation="spline36"
+            )
+
+            if layer is None:
+                layer = m.layer
+
+            m.BM.add_bg_artist(art, layer)
 
 
 class _WebServiec_collection(object):
@@ -518,6 +526,9 @@ class _xyz_tile_service:
 
         self._maxzoom = maxzoom
 
+    def _reinit(self, m):
+        return _xyz_tile_service(m, self.url, self._maxzoom)
+
     class TileFactory(GoogleWTS):
         def __init__(self, url, *args, **kwargs):
             super().__init__(*args, **kwargs)
@@ -570,35 +581,43 @@ class _xyz_tile_service:
             Additional kwargs passed to the cartopy-wrapper for
             matplotlib's `imshow`.
         """
-        self._m._set_axes()
-        self.kwargs = dict(interpolation=interpolation, alpha=alpha)
-        self.kwargs.update(kwargs)
+        from . import MapsGrid  # do this here to avoid circular imports!
 
-        if transparent is True:
-            self.desired_tile_form = "RGBA"
+        if isinstance(self._m, MapsGrid):
+            for m in self._m:
+                self._reinit(m).__call__(
+                    layer, transparent, alpha, interpolation, **kwargs
+                )
         else:
-            self.desired_tile_form = "RGB"
+            self._m._set_axes()
+            self.kwargs = dict(interpolation=interpolation, alpha=alpha)
+            self.kwargs.update(kwargs)
 
-        if self._event_attached is None:
-            self._event_attached = self._m.figure.f.canvas.mpl_connect(
-                "draw_event", self.ondraw
+            if transparent is True:
+                self.desired_tile_form = "RGBA"
+            else:
+                self.desired_tile_form = "RGB"
+
+            if self._event_attached is None:
+                self._event_attached = self._m.figure.f.canvas.mpl_connect(
+                    "draw_event", self.ondraw
+                )
+                toolbar = self._m.figure.f.canvas.toolbar
+
+                if toolbar is not None:
+                    toolbar.release_zoom = self.zoom_decorator(toolbar.release_zoom)
+                    toolbar.release_pan = self.zoom_decorator(toolbar.release_pan)
+                    toolbar._update_view = self.update_decorator(toolbar._update_view)
+
+            if layer is None:
+                self._layer = self._m.layer
+            else:
+                self._layer = layer
+
+            self._factory = self.TileFactory(
+                self.url, desired_tile_form=self.desired_tile_form
             )
-            toolbar = self._m.figure.f.canvas.toolbar
-
-            if toolbar is not None:
-                toolbar.release_zoom = self.zoom_decorator(toolbar.release_zoom)
-                toolbar.release_pan = self.zoom_decorator(toolbar.release_pan)
-                toolbar._update_view = self.update_decorator(toolbar._update_view)
-
-        if layer is None:
-            self._layer = self._m.layer
-        else:
-            self._layer = layer
-
-        self._factory = self.TileFactory(
-            self.url, desired_tile_form=self.desired_tile_form
-        )
-        self.redraw()
+            self.redraw()
 
     def redraw(self):
         # get and remember the extent

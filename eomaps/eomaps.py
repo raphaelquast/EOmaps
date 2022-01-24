@@ -2231,10 +2231,11 @@ class MapsGrid:
         for m in self:
             m.add_marker(*args, **kwargs)
 
-    # @wraps(Maps.add_wms)
-    # def add_wms(self, *args, **kwargs):
-    #     for m in self:
-    #         m.add_wms(*args, **kwargs)
+    @property
+    @wraps(Maps.add_wms)
+    @lru_cache()
+    def add_wms(self):
+        return wms_container(self)
 
     @property
     @wraps(Maps.add_feature)

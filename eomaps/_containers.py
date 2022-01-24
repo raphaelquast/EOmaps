@@ -668,24 +668,14 @@ class NaturalEarth_features:
             return f"NaturalEarth feature:  {f.scale} | {f.category} | {f.name}"
 
         def __call__(self, layer=0, **kwargs):
-            from . import Maps, MapsGrid
+            from . import MapsGrid  # do this here to avoid circular imports!
 
-            if isinstance(self._m, Maps):
-
+            for m in self._m if isinstance(self._m, MapsGrid) else [self._m]:
                 self.feature._kwargs.update(kwargs)
-                self._m._set_axes()
-                art = self._m.figure.ax.add_feature(self.feature)
+                m._set_axes()
+                art = m.figure.ax.add_feature(self.feature)
 
-                self._m.BM.add_bg_artist(art, layer=layer)
-
-            elif isinstance(self._m, MapsGrid):
-                print("mg")
-                for m in self._m:
-                    self.feature._kwargs.update(kwargs)
-                    m._set_axes()
-                    art = m.figure.ax.add_feature(self.feature)
-
-                    m.BM.add_bg_artist(art, layer=layer)
+                m.BM.add_bg_artist(art, layer=layer)
 
     class _presets:
         def __init__(self, m):
@@ -873,13 +863,13 @@ else:
             datasets must include proper acknowledgement, including citing the
             datasets and the journal article as in the following citation.
             """
-            if self._m._preferred_wms_service == "wms":
+            if self._m.parent._preferred_wms_service == "wms":
                 WMS = _WebServiec_collection(
                     m=self._m,
                     service_type="wms",
                     url="https://services.terrascope.be/wms/v2",
                 )
-            elif self._m._preferred_wms_service == "wmts":
+            elif self._m.parent._preferred_wms_service == "wmts":
                 WMS = _WebServiec_collection(
                     m=self._m,
                     service_type="wmts",
