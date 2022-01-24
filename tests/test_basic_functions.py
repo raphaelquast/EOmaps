@@ -697,3 +697,22 @@ class TestBasicPlotting(unittest.TestCase):
             ycoord=lat.ravel().tolist(),
         )
         m.plot_map()
+
+    def test_add_feature(self):
+        m = Maps()
+        m.add_feature.preset.ocean()
+        m.add_feature.preset.land()
+        m.add_feature.preset.countries()
+        m.add_feature.preset.coastline()
+
+        plt.close(m.figure.f)
+
+        # test providing custom args
+        m = Maps()
+        countries = m.add_feature.cultural_110m.admin_0_countries
+        areas = np.argsort([i.area for i in countries.feature.geometries()])
+        countries(ec="k", fc=[i for i in plt.cm.viridis(areas / areas.max())])
+
+        m.add_feature.physical_110m.ocean(fc="b")
+
+        plt.close("all")

@@ -1784,7 +1784,7 @@ class Maps(object):
 
             # add coastlines and ocean-coloring
             if coastlines is True:
-                self.add_feature.preset.ocean(ec="k")
+                self.add_feature.preset.ocean(ec="k", layer=layer)
 
             if self.data is None:
                 return
