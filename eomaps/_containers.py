@@ -683,7 +683,7 @@ class NaturalEarth_features:
         @property
         def coastline(self):
             return self.feature(
-                self._m, "physical", "coastline", fc="none", ec="k", zorder=0
+                self._m, "physical", "coastline", fc="none", ec="k", zorder=100
             )
 
         @property
@@ -717,7 +717,7 @@ class NaturalEarth_features:
                 fc="none",
                 ec=".5",
                 lw=0.5,
-                zorder=0,
+                zorder=100,
             )
 
         class feature:
