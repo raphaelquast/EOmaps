@@ -1784,10 +1784,7 @@ class Maps(object):
 
             # add coastlines and ocean-coloring
             if coastlines is True:
-                coastlines = ax.coastlines()
-                ocean = ax.add_feature(cfeature.OCEAN)
-                self.BM.add_bg_artist(ocean, layer=layer)
-                self.BM.add_bg_artist(coastlines, layer=layer)
+                self.add_feature.preset.ocean(ec="k")
 
             if self.data is None:
                 return
