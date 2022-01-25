@@ -683,13 +683,13 @@ class NaturalEarth_features:
 
         @property
         def coastline(self):
-            return self.feature(
+            return self._feature(
                 self._m, "physical", "coastline", fc="none", ec="k", zorder=100
             )
 
         @property
         def ocean(self):
-            return self.feature(
+            return self._feature(
                 self._m,
                 "physical",
                 "ocean",
@@ -700,7 +700,7 @@ class NaturalEarth_features:
 
         @property
         def land(self):
-            return self.feature(
+            return self._feature(
                 self._m,
                 "physical",
                 "land",
@@ -711,7 +711,7 @@ class NaturalEarth_features:
 
         @property
         def countries(self):
-            return self.feature(
+            return self._feature(
                 self._m,
                 "cultural",
                 "admin_0_countries",
@@ -721,7 +721,7 @@ class NaturalEarth_features:
                 zorder=100,
             )
 
-        class feature:
+        class _feature:
             def __init__(self, m, category, name, **kwargs):
                 self._m = m
                 self.category = category
@@ -733,7 +733,17 @@ class NaturalEarth_features:
                     getattr(self._m.add_feature, f"{self.category}_10m"), self.name
                 )
 
-                self.__doc__ = combdoc(f"PRESET using {kwargs} ", self.feature.__doc__)
+                add_params = """
+                Other Parameters
+                ----------------
+                scale : str
+                    Set the scale of the feature preset ("10m", "50m" or "110m")
+                    The default is "50m"
+                """
+
+                self.__doc__ = combdoc(
+                    f"PRESET using {kwargs} ", self.feature.__doc__, add_params
+                )
 
             def __call__(self, scale="50m", **kwargs):
                 k = dict(**self.kwargs)
