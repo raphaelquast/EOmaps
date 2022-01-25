@@ -202,8 +202,8 @@ class _click_callbacks(object):
                 printstr = (
                     f"{xlabel} = {x} ({x0})\n"
                     + f"{ylabel} = {y} ({y0})\n"
-                    + (f"ID = {ID}\n" if ID is not None else "")
-                    + (f"{parameter} = {val}" if val is not None else "")
+                    + (f"ID = {ID}" if ID is not None else "")
+                    + (f"\n{parameter} = {val}" if val is not None else "")
                 )
             else:
                 lon, lat = self.m._transf_plot_to_lonlat.transform(*pos)
@@ -217,12 +217,17 @@ class _click_callbacks(object):
                 ]
 
                 printstr = (
-                    f"x = {x}\n" + f"y = {y}\n" + f"lon = {lon}\n" + f"lat = {lat}"
+                    f"x = {x}\n"
+                    + f"y = {y}\n"
+                    + f"lon = {lon}\n"
+                    + f"lat = {lat}"
+                    + (f"\nvalue = {val}" if val is not None else "")
                 )
+
         elif isinstance(text, str):
             printstr = text
         elif callable(text):
-            printstr = text(self.m, ID, val, pos, ind)
+            printstr = text(m=self.m, ID=ID, val=val, pos=pos, ind=ind)
 
         if printstr is not None:
             # create a new annotation
