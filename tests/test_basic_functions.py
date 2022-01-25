@@ -56,7 +56,7 @@ class TestBasicPlotting(unittest.TestCase):
 
         # rectangles
         m.set_shape.geod_circles(radius=100000)
-        m.plot_map(coastlines=False)
+        m.plot_map()
         m.indicate_masked_points()
 
         m.add_feature.preset.ocean(ec="k", scale="110m")
@@ -65,7 +65,7 @@ class TestBasicPlotting(unittest.TestCase):
 
         # rectangles
         m.set_shape.rectangles()
-        m.plot_map(coastlines=False)
+        m.plot_map()
         m.add_feature.preset.ocean(ec="k", scale="110m")
 
         m.set_shape.rectangles(radius=1, radius_crs=4326)
@@ -664,9 +664,7 @@ class TestBasicPlotting(unittest.TestCase):
             getattr(m.set_shape, i[0])(**i[1])
             m.plot_specs.plot_crs = next(crss)
 
-            m.plot_map(
-                edgecolor="none", colorbar=True, coastlines=True, pick_distance=5
-            )
+            m.plot_map(edgecolor="none", colorbar=True, pick_distance=5)
             m.cb.click.attach.annotate()
 
         mgrid.parent.cb.click.share_events(*mgrid.children)

@@ -40,12 +40,15 @@ mg = MapsGrid(
     2, 2, m_inits=dict(top=(0, slice(0, 2))), ax_inits=dict(left=(1, 0), right=(1, 1))
 )
 
+mg.add_feature.preset.ocean()
+mg.add_feature.preset.coastline()
+
 # -------- set the specs for the Maps-object of the grid and plot the map
 mg.m_top.set_data(data=data, xcoord="lon", ycoord="lat", crs=4326)
 mg.m_top.set_classify_specs(
     scheme=Maps.CLASSIFIERS.UserDefined, bins=[50, 100, 200, 400, 800]
 )
-mg.m_top.set_shape.rectangles()
+mg.m_top.set_shape.ellipses(radius=0.5)
 mg.m_top.plot_map()
 
 # -------- set some axis labels

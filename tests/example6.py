@@ -31,7 +31,7 @@ wms2.add_layer.OSM_WMS(layer=1)
 m2 = m.copy(connect=True, layer=2)
 m2.set_data(data=data.sample(5000), xcoord="lon", ycoord="lat", crs=4326)
 m2.set_shape.geod_circles(radius=20000)
-m2.plot_map(coastlines=False)
+m2.plot_map()
 m2.add_wms.S1GBM.add_layer.vv()  # add S1GBM as background on layer 2 as well
 
 # ------------ CALLBACKS

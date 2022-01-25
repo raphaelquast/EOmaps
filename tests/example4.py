@@ -19,6 +19,8 @@ m.set_plot_specs(plot_crs=3035, title="A clickable widget!", histbins="bins")
 m.set_shape.rectangles()
 m.set_classify_specs(scheme="EqualInterval", k=5)
 m.plot_map()
+m.add_feature.preset.ocean()  # add ocean-coloring in the background
+m.add_feature.preset.coastline(zorder=100)  # add coastlines on top
 m.figure.f.set_figheight(8)
 
 # --------- attach pre-defined CALLBACK funcitons ---------

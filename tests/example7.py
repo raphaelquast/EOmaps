@@ -50,6 +50,7 @@ mg.m_0_0.plot_specs.crs = 4326
 mg.m_0_1.set_data(data=data, xcoord="lon", ycoord="lat", crs=4326)
 mg.m_0_1.plot_specs.crs = Maps.CRS.Orthographic(45, 45)
 
+mg.add_feature.preset.ocean()
 
 for m in mg:
     # plot the attached dataset and attach callbacks to it

@@ -1,5 +1,4 @@
 # EOmaps example 1:
-print("hello")
 from eomaps import Maps
 import pandas as pd
 import numpy as np
@@ -13,6 +12,8 @@ data = data.sample(15000)  # take 15000 random datapoints from the dataset
 # ------------------------------------
 
 m = Maps()
+m.add_feature.preset.ocean()
+m.add_feature.preset.coastline()
 m.set_data(
     data=data,  # a pandas-DataFrame holding the data & coordinates
     parameter="data_variable",  # the DataFrame-column you want to plot

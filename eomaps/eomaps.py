@@ -1709,7 +1709,6 @@ class Maps(object):
     def plot_map(
         self,
         colorbar=True,
-        coastlines=True,
         pick_distance=100,
         layer=None,
         dynamic=False,
@@ -1732,9 +1731,6 @@ class Maps(object):
         colorbar : bool
             Indicator if a colorbar should be added or not.
             (ONLY relevant for the first time a dataset is plotted!)
-            The default is True
-        coastlines : bool
-            Indicator if coastlines and a light-blue ocean shading should be added.
             The default is True
         pick_distance : int
             The maximum distance (in pixels) to trigger callbacks on the added collection.
@@ -1781,10 +1777,6 @@ class Maps(object):
             title = self.plot_specs["title"]
             if title is not None:
                 ax.set_title(title)
-
-            # add coastlines and ocean-coloring
-            if coastlines is True:
-                self.add_feature.preset.ocean(ec="k", layer=layer)
 
             if self.data is None:
                 return
