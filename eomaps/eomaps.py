@@ -1386,7 +1386,9 @@ class Maps(object):
     def add_feature(self):
         return NaturalEarth_features(self)
 
-    def add_gdf(self, gdf, picker_name=None, pick_method="contains", **kwargs):
+    def add_gdf(
+        self, gdf, picker_name=None, pick_method="centroids", val_key=None, **kwargs
+    ):
         """
         Overplot a `geopandas.GeoDataFrame` over the generated plot.
         (`plot_map()` must be called!)
@@ -1410,7 +1412,17 @@ class Maps(object):
         pick_method : str or callable
             if str :
                 The operation that is executed on the GeoDataFrame to identify
-                the picked geometry
+                the picked geometry.
+                Possible values are:
+
+                - "contains":
+                  pick a geometry only if it contains the clicked point
+                  (only works with polygons! (not with lines and points))
+                - "centroids":
+                  pick the closest geometry with respect to the centroids
+                  (should work with any geometry whose centroid is defined)
+
+                The default is "centroids"
             if callable :
                 A callable that is used to identify the picked geometry.
                 The call-signature is:
@@ -1422,6 +1434,10 @@ class Maps(object):
                 >>>     # if the pick is successful:
                 >>>     return True, dict(ID, pos, val, ind)
             The default is "contains"
+        val_key : str
+            The dataframe-column used to identify values for pick-callbacks.
+            The default is None.
+
         kwargs :
             all remaining kwargs are passed to `gdf.plot(**kwargs)`
         """
@@ -1434,6 +1450,8 @@ class Maps(object):
 
         # transform data to the plot crs
         usegdf = gdf.to_crs(self.crs_plot)
+        # explode the GeoDataFrame to avoid picking multi-part geometries
+        usegdf = usegdf.explode(index_parts=False)
 
         # plot gdf and identify newly added collections
         # (geopandas always uses collections)
@@ -1455,25 +1473,45 @@ class Maps(object):
         if picker_name is not None:
             if pick_method is not None:
                 if isinstance(pick_method, str):
+                    if pick_method in ["contains"]:
 
-                    def picker(artist, mouseevent):
-                        try:
-                            query = getattr(usegdf, pick_method)(
-                                gpd.points_from_xy(
-                                    [mouseevent.xdata], [mouseevent.ydata]
-                                )[0]
-                            )
-                            if query.any():
-                                inds = usegdf.index[query]
-                                return True, dict(
-                                    ind=inds[0],
-                                    dblclick=mouseevent.dblclick,
-                                    button=mouseevent.button,
+                        def picker(artist, mouseevent):
+                            try:
+                                query = getattr(usegdf, pick_method)(
+                                    gpd.points_from_xy(
+                                        [mouseevent.xdata], [mouseevent.ydata]
+                                    )[0]
                                 )
-                            else:
+                                if query.any():
+                                    return True, dict(
+                                        ID=usegdf.index[query][0],
+                                        ind=query.values.nonzero()[0][0],
+                                        val=(
+                                            usegdf[query][val_key].iloc[0]
+                                            if val_key
+                                            else None
+                                        ),
+                                    )
+                                else:
+                                    return False, dict()
+                            except:
                                 return False, dict()
-                        except:
-                            return False, dict()
+
+                    if pick_method == "centroids":
+                        tree = cKDTree(
+                            list(map(lambda x: (x.x, x.y), gdf.geometry.centroid))
+                        )
+
+                        def picker(artist, mouseevent):
+                            dist, ind = tree.query(
+                                (mouseevent.xdata, mouseevent.ydata), 1
+                            )
+
+                            ID = gdf.index[ind]
+                            val = gdf.iloc[ind][val_key] if val_key else None
+                            pos = tree.data[ind].tolist()
+
+                            return True, dict(ID=ID, pos=pos, val=val, ind=ind)
 
                 elif callable(pick_method):
                     picker = pick_method
@@ -1482,8 +1520,6 @@ class Maps(object):
                         "EOmaps: I don't know what to do with the provided pick_method"
                     )
 
-                # explode the GeoDataFrame to avoid picking multi-part geometries
-                usegdf = usegdf.explode(index_parts=False)
                 for art, prefix in zip(newcolls, prefixes):
                     # make the newly added collection pickable
                     self.cb.add_picker(picker_name + prefix, art, picker=picker)
