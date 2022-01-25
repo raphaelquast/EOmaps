@@ -790,12 +790,26 @@ class NaturalEarth_features:
 
                     m.BM.add_bg_artist(art, layer=layer)
             else:
-                s = gpd.read_file(shapereader.natural_earth(**self.feature))
-                s.set_crs(epsg=4326, inplace=True)
+                s = self.get_gdf()
                 for m in self._m if isinstance(self._m, MapsGrid) else [self._m]:
                     m._set_axes()
 
                     m.add_gdf(s, **kwargs)
+
+        if _gpd_OK:
+
+            def get_gdf(self):
+                """
+                Get a geopandas.GeoDataFrame for the selected NaturalEarth feature
+
+                Returns
+                -------
+                gdf : geopandas.GeoDataFrame
+                    A GeoDataFrame with all geometries and properties of the feature
+                """
+                gdf = gpd.read_file(shapereader.natural_earth(**self.feature))
+                gdf.set_crs(epsg=4326, inplace=True)
+                return gdf
 
     class _presets:
         def __init__(self, m):
