@@ -1503,13 +1503,16 @@ class Maps(object):
                         )
 
                         def picker(artist, mouseevent):
-                            dist, ind = tree.query(
-                                (mouseevent.xdata, mouseevent.ydata), 1
-                            )
+                            try:
+                                dist, ind = tree.query(
+                                    (mouseevent.xdata, mouseevent.ydata), 1
+                                )
 
-                            ID = gdf.index[ind]
-                            val = gdf.iloc[ind][val_key] if val_key else None
-                            pos = tree.data[ind].tolist()
+                                ID = gdf.index[ind]
+                                val = gdf.iloc[ind][val_key] if val_key else None
+                                pos = tree.data[ind].tolist()
+                            except:
+                                return False, dict()
 
                             return True, dict(ID=ID, pos=pos, val=val, ind=ind)
 
