@@ -750,10 +750,38 @@ class pick_callbacks(_click_callbacks):
         "plot",
         "clear_annotations",
         "clear_markers",
+        "highlight_geometry",
     ]
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+
+    def highlight_geometry(self, permanent=False, **kwargs):
+        """
+        Temporarily highlite the picked geometry.
+
+        Parameters
+        ----------
+        **kwargs :
+            keyword-arguments to style the geometry
+            (e.g. facecolor, edgecolor, linewidth etc. )
+
+        """
+        ID, pos, val, ind, picker_name = self._popargs(kwargs)
+
+        if ind is not None:
+            # get the selected geometry and re-project it to the desired crs
+            geom = self.m.cb.pick[picker_name].data.loc[[ID]].geometry
+            # add the geometry to the map
+            art = self.m.figure.ax.add_geometries(
+                geom, self.m.figure.ax.projection, **kwargs
+            )
+
+            if permanent is False:
+                # make the geometry temporary (e.g. remove it on the next pick event)
+                self.m.cb.pick[picker_name].add_temporary_artist(art, layer=2)
+            else:
+                self.m.BM.add_artist(art)
 
 
 class click_callbacks(_click_callbacks):
