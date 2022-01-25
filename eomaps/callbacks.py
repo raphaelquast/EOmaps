@@ -769,7 +769,7 @@ class pick_callbacks(_click_callbacks):
         """
         ID, pos, val, ind, picker_name = self._popargs(kwargs)
 
-        if ind is not None:
+        if ID is not None:
             # get the selected geometry and re-project it to the desired crs
             geom = self.m.cb.pick[picker_name].data.loc[[ID]].geometry
             # add the geometry to the map
