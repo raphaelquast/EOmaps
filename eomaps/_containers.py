@@ -10,9 +10,12 @@ import json
 import matplotlib.pyplot as plt
 from matplotlib.pyplot import get_cmap
 from matplotlib.gridspec import SubplotSpec
+from matplotlib.colors import rgb2hex
+
 import mapclassify
 
 import cartopy.feature as cfeature
+from cartopy.io import shapereader
 
 from ._webmap import _import_OK
 
@@ -29,6 +32,13 @@ try:
     _pd_OK = True
 except ImportError:
     _pd_OK = False
+
+try:
+    import geopandas as gpd
+
+    _gpd_OK = True
+except ImportError:
+    _gpd_OK = False
 
 
 def combdoc(*args):
@@ -543,7 +553,8 @@ class NaturalEarth_features:
         - 1:50m : Medium-scale data
         - 1:110m : Small-scale data
 
-    For available layers check the docstring of the individual categories.
+    For available features and additional info, check the docstring of the
+    individual categories!
 
     >>> m.add_feature.cultural_10m.< feature-name >( ... style-kwargs ...)
 
@@ -621,46 +632,151 @@ class NaturalEarth_features:
     class _feature:
         def __init__(self, m, category, name, scale):
             self._m = m
+            if not _gpd_OK:
+                # use cartopy to add the features
+                self.feature = cfeature.NaturalEarthFeature(
+                    category=category, name=name, scale=scale
+                )
+            else:
+                # just get the path to the cached download and use
+                # geopandas to add the feature (provides more flexibility!)
+                self.feature = dict(resolution=scale, category=category, name=name)
+            if not _gpd_OK:
+                self.__doc__ = dedent(
+                    f"""
+                    NaturalEarth feature:  {scale} | {category} | {name}
 
-            self.feature = cfeature.NaturalEarthFeature(
-                category=category, name=name, scale=scale
-            )
+                    Call this class like a function to add the feature to the map.
 
-            f = self.feature
-            self.__doc__ = dedent(
-                f"""
-                NaturalEarth feature:  {f.scale} | {f.category} | {f.name}
+                    Common style-keywords can be used to customize the appearance
+                    of the added features.
 
-                Call this class like a function to add it to the associated map.
-                Common style-keywords can be used to customize the appearance
-                of the added features.
+                    - "facecolor" (or "fc")
+                    - "edgecolor" (or "ec")
+                    - "linewidth" (or "lw")
+                    - "linestyle" (or "ls")
+                    - "alpha", "hatch", "dashes", ...
+                    - "zoder"
 
-                - "facecolor" (or "fc")
-                - "edgecolor" (or "ec")
-                - "linewidth" (or "lw")
-                - "linestyle" (or "ls")
-                - "alpha", "hatch", "dashes", ...
-                - "zoder"
+                    Parameters
+                    ----------
 
-                Parameters
-                ----------
+                    layer : int, optional
+                        The EOmaps layer-number at which the feature is drawn.
+                        The default is None.
 
-                layer : int, optional
-                    The EOmaps layer-number at which the feature is drawn.
-                    The default is None.
+                    Note
+                    ----
+                    Some shapes consist of point-geometries which cannot be
+                    properly added without `geopandas`!
 
-                Examples
-                --------
+                    Run the following command to install geopandas and activate
+                    additional NaturalEarth features in EOmaps!
 
-                >>> m = Maps()
-                >>> feature = m.add_feature.physical_10m.coastline
-                >>> feature(fc="none",
-                >>>         ec="k",
-                >>>         lw=.5,
-                >>>         ls="--",
-                >>>         )
-                """
-            )
+                        `conda install -c conda-forge geopandas`
+
+                    (check the docstring again after installing to get more infos)
+
+                    Examples
+                    --------
+
+                    >>> m = Maps()
+                    >>> feature = m.add_feature.physical_10m.coastline
+                    >>> feature(fc="none",
+                    >>>         ec="k",
+                    >>>         lw=.5,
+                    >>>         ls="--",
+                    >>>         )
+                    """
+                )
+            else:
+                self.__doc__ = dedent(
+                    f"""
+                    NaturalEarth feature:  {scale} | {category} | {name}
+
+                    Call this class like a function to add the feature to the map.
+
+                    All keyword-arguments are passed to `m.add_gdf` and the
+                    NaturalEarth features are added to the map just like any
+                    other GeoDataFrame!
+                    (e.g. you can even attach callbacks if you like!)
+
+
+                    Parameters
+                    ----------
+                    picker_name : str or None
+                        A unique name that is used to identify the pick-method.
+
+                        If a `picker_name` is provided, a new pick-container will be
+                        created that can be used to pick geometries of the GeoDataFrame.
+
+                        The container can then be accessed via:
+                            >>> m.cb.pick__<picker_name>
+                            or
+                            >>> m.cb.pick[picker_name]
+                        and it can be used in the same way as `m.cb.pick...`
+
+                    pick_method : str or callable
+                        if str :
+                            The operation that is executed on the GeoDataFrame to identify
+                            the picked geometry.
+                            Possible values are:
+
+                            - "contains":
+                              pick a geometry only if it contains the clicked point
+                              (only works with polygons! (not with lines and points))
+                            - "centroids":
+                              pick the closest geometry with respect to the centroids
+                              (should work with any geometry whose centroid is defined)
+
+                            The default is "centroids"
+                        if callable :
+                            A callable that is used to identify the picked geometry.
+                            The call-signature is:
+
+                            >>> def picker(artist, mouseevent):
+                            >>>     # if the pick is NOT successful:
+                            >>>     return False, dict()
+                            >>>     ...
+                            >>>     # if the pick is successful:
+                            >>>     return True, dict(ID, pos, val, ind)
+                        The default is "contains"
+                    val_key : str
+                        The dataframe-column used to identify values for pick-callbacks.
+                        The default is None.
+
+                    kwargs :
+                        All remaining kwargs are passed to the plotting function
+                        of geopandas (e.g. `gdf.plot(**kwargs)`)
+
+                        (facecolor, edgecolor, etc.)
+
+                    layer : int, optional
+                        The EOmaps layer-number at which the feature is drawn.
+                        The default is None.
+
+
+                    Examples
+                    --------
+
+                    >>> m = Maps()
+                    >>> feature = m.add_feature.physical_10m.coastline
+                    >>> feature(fc="none",
+                    >>>         ec="k",
+                    >>>         lw=.5,
+                    >>>         ls="--",
+                    >>>         )
+
+                    - make the features from NaturalEarth interactive!
+                    >>> m = Maps()
+                    >>> feature = m.add_feature.physical_110m.admin_0_countries
+                    >>> feature(fc="none", ec="k", picker_name="countries", val_key="NAME_EN")
+                    >>> m.cb.pick["countries"].attach.highlite_geometry()
+                    >>> m.cb.pick["countries"].attach.annotate()
+
+
+                    """
+                )
 
         def __repr__(self):
             f = self.feature
@@ -670,12 +786,21 @@ class NaturalEarth_features:
         def __call__(self, layer=0, **kwargs):
             from . import MapsGrid  # do this here to avoid circular imports!
 
-            for m in self._m if isinstance(self._m, MapsGrid) else [self._m]:
-                self.feature._kwargs.update(kwargs)
-                m._set_axes()
-                art = m.figure.ax.add_feature(self.feature)
+            if not _gpd_OK:
+                for m in self._m if isinstance(self._m, MapsGrid) else [self._m]:
+                    m._set_axes()
 
-                m.BM.add_bg_artist(art, layer=layer)
+                    self.feature._kwargs.update(kwargs)
+                    art = m.figure.ax.add_feature(self.feature)
+
+                    m.BM.add_bg_artist(art, layer=layer)
+            else:
+                s = gpd.read_file(shapereader.natural_earth(**self.feature))
+                s.set_crs(epsg=4326, inplace=True)
+                for m in self._m if isinstance(self._m, MapsGrid) else [self._m]:
+                    m._set_axes()
+
+                    m.add_gdf(s, **kwargs)
 
     class _presets:
         def __init__(self, m):
@@ -689,22 +814,27 @@ class NaturalEarth_features:
 
         @property
         def ocean(self):
+            # convert color to hex to avoid issues with geopandas
+            color = rgb2hex(cfeature.COLORS["water"])
             return self._feature(
                 self._m,
                 "physical",
                 "ocean",
-                fc=cfeature.COLORS["water"],
+                fc=color,
                 ec="none",
                 zorder=0,
             )
 
         @property
         def land(self):
+            # convert color to hex to avoid issues with geopandas
+            color = rgb2hex(cfeature.COLORS["land"])
+
             return self._feature(
                 self._m,
                 "physical",
                 "land",
-                fc=cfeature.COLORS["land"],
+                fc=tuple(color),
                 ec="none",
                 zorder=0,
             )
