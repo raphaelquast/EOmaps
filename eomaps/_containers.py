@@ -794,7 +794,7 @@ class NaturalEarth_features:
                 for m in self._m if isinstance(self._m, MapsGrid) else [self._m]:
                     m._set_axes()
 
-                    m.add_gdf(s, **kwargs)
+                    m.add_gdf(s, layer=layer, **kwargs)
 
         if _gpd_OK:
 

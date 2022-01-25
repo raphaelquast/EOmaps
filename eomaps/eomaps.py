@@ -1387,7 +1387,13 @@ class Maps(object):
         return NaturalEarth_features(self)
 
     def add_gdf(
-        self, gdf, picker_name=None, pick_method="centroids", val_key=None, **kwargs
+        self,
+        gdf,
+        picker_name=None,
+        pick_method="centroids",
+        val_key=None,
+        layer=None,
+        **kwargs,
     ):
         """
         Overplot a `geopandas.GeoDataFrame` over the generated plot.
@@ -1437,6 +1443,8 @@ class Maps(object):
         val_key : str
             The dataframe-column used to identify values for pick-callbacks.
             The default is None.
+        layer : int
+            The layer-index at which the dataset will be plotted.
 
         kwargs :
             all remaining kwargs are passed to `gdf.plot(**kwargs)`
@@ -1529,6 +1537,10 @@ class Maps(object):
 
                     # attach the re-projected GeoDataFrame to the pick-container
                     self.cb.pick[picker_name + prefix].data = usegdf
+
+        for art, prefix in zip(newcolls, prefixes):
+            if layer is not None:
+                self.BM.add_bg_artist(art, layer)
 
     def add_marker(
         self,
@@ -1777,8 +1789,7 @@ class Maps(object):
             closest data-point)
             The default is 10.
         layer : int
-            A layer-index in case the collection is intended to be updated
-            dynamically.
+            The layer-index at which the dataset will be plotted.
             The default is None.
         dynamic : bool
             If True, the collection will be dynamically updated
