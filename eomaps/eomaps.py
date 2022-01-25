@@ -1748,6 +1748,17 @@ class Maps(object):
             kwargs passed to the initialization of the matpltolib collection
             (dependent on the plot-shape) [linewidth, edgecolor, facecolor, ...]
         """
+
+        if "coastlines" in kwargs:
+            kwargs.pop("coastlines")
+            warnings.warn(
+                "EOmaps: the 'coastlines' kwarg for 'plot_map' is depreciated!"
+                + "Instead use "
+                + "\n    m.add_feature.preset.ocean()"
+                + "\n    m.add_feature.preset.coastline()"
+                + " instead!"
+            )
+
         if self.data is None and colorbar is True:
             print("EOmaps: ...cannot add a colormap if no data is provided!")
             colorbar = False
@@ -1755,10 +1766,6 @@ class Maps(object):
 
         self._set_axes()
         ax = self.figure.ax
-
-        if "dynamic_layer_idx" in kwargs:
-            layer = kwargs.pop("dynamic_layer_idx")
-            warnings.warn("EOmaps: 'dynamic_layer_idx' is depreciated... use 'layer'!")
 
         for key in ("cmap", "array", "norm"):
             assert (
