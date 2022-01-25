@@ -778,11 +778,6 @@ class NaturalEarth_features:
                     """
                 )
 
-        def __repr__(self):
-            f = self.feature
-
-            return f"NaturalEarth feature:  {f.scale} | {f.category} | {f.name}"
-
         def __call__(self, layer=0, **kwargs):
             from . import MapsGrid  # do this here to avoid circular imports!
 
