@@ -834,7 +834,7 @@ class NaturalEarth_features:
                 self._m,
                 "physical",
                 "land",
-                fc=tuple(color),
+                fc=color,
                 ec="none",
                 zorder=0,
             )
