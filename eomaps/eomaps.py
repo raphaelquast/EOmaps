@@ -1490,7 +1490,12 @@ class Maps(object):
         # transform data to the plot crs
         usegdf = gdf.to_crs(self.crs_plot)
         # explode the GeoDataFrame to avoid picking multi-part geometries
-        usegdf = usegdf.explode(index_parts=False)
+        try:
+            usegdf = usegdf.explode(index_parts=False)
+        except Exception:
+            # geopandas sometimes has problems exploding geometries...
+            # if it does not work, just continue with the Multi-geometries!
+            pass
 
         # plot gdf and identify newly added collections
         # (geopandas always uses collections)
