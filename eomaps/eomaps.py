@@ -2353,3 +2353,12 @@ class MapsGrid:
         (only possible if all maps share the same crs!)
         """
         self.parent.join_limits(*self.children)
+
+    @wraps(plt.savefig)
+    def savefig(self, *args, **kwargs):
+
+        # clear all cached background layers before saving to make sure they
+        # are re-drawn with the correct dpi-settings
+        self.parent.BM._bg_layers = dict()
+
+        self.f.savefig(*args, **kwargs)
