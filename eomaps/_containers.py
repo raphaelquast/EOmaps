@@ -95,6 +95,8 @@ class map_objects(object):
     @property
     def ax(self):
         ax = self._m._ax
+
+        # return None in case the plot is not yet initialized
         if isinstance(ax, SubplotSpec):
             ax = None
         return ax
@@ -419,6 +421,9 @@ class plot_specs(object):
 
     @property
     def plot_crs(self):
+        if self._m.figure.ax is not None:
+            return self._m.figure.ax.projection
+
         return self._plot_crs
 
     @plot_crs.setter
@@ -426,9 +431,11 @@ class plot_specs(object):
         if self._m.figure.ax is None:
             self._plot_crs = crs
         else:
-            raise AssertionError(
-                "EOmaps: The plot-crs can only be set BEFORE " + "the plot is created!"
-            )
+            if crs is not None:
+                raise AssertionError(
+                    "EOmaps: The plot-crs can only be set BEFORE "
+                    + "the plot is created!"
+                )
 
 
 class classify_specs(object):
@@ -651,6 +658,7 @@ class NaturalEarth_features:
                 # just get the path to the cached download and use
                 # geopandas to add the feature (provides more flexibility!)
                 self.feature = dict(resolution=scale, category=category, name=name)
+
             if not _gpd_OK:
                 self.__doc__ = dedent(
                     f"""

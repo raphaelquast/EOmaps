@@ -67,7 +67,11 @@ class Maps(object):
     """
     The base-class for generating plots with EOmaps.
 
-    Note: if you want to plot a grid of maps, checkout `MapsGrid`!
+    See Also
+    --------
+    - MapsGrid : Initialize a grid of Maps objects
+    - m.new_layer : get a Maps-object that represents a new layer of a map
+    - m.copy : copy an existing Maps object
 
     Parameters
     ----------
@@ -106,7 +110,6 @@ class Maps(object):
 
         * None:
             Initialize a new axes (the default)
-            (if a parent is provided, use the axis of the parent object)
         * `matplotilb.gridspec.SubplotSpec`:
             Use the SubplotSpec for initializing the axes.
             The SubplotSpec will be divided accordingly in case a colorbar
@@ -119,8 +122,7 @@ class Maps(object):
                 >>> m = Maps()
                 >>> ...
                 >>> m.plot_map(f_gs=gs[0,0])
-
-        * `matplotilb.axes`:
+        * `matplotilb.Axes`:
             Directly use the provided figure and axes instances for plotting.
             The axes MUST be a geo-axes with `m.plot_specs.crs_plot`
             projection. NO colorbar and NO histogram will be plotted.
@@ -171,13 +173,11 @@ class Maps(object):
         preferred_wms_service="wms",
     ):
 
+        # share the axes with the parent if no explicit axes is provided
         if parent is not None:
             assert (
                 f is None
             ), "You cannot specify the figure for connected Maps-objects!"
-
-            if gs_ax is None:
-                gs_ax = parent.figure.ax
 
         self._f = None
         self._orientation = orientation
@@ -205,7 +205,6 @@ class Maps(object):
             label=None,
             title=None,
             cmap=plt.cm.viridis.copy(),
-            plot_crs=4326,
             histbins=256,
             tick_precision=2,
             vmin=None,
@@ -215,6 +214,10 @@ class Maps(object):
             alpha=1,
             density=False,
         )
+
+        if gs_ax is None:
+            # set the plot_crs only if no explicit axes is provided
+            self.plot_specs.crs = 4326
 
         # default classify specs
         self.classify_specs = classify_specs(self)
@@ -355,6 +358,7 @@ class Maps(object):
 
     @parent.setter
     def parent(self, parent):
+        assert parent is not self, "EOmaps: A Maps-object cannot be its own parent!"
         assert self._parent is None, "EOmaps: There is already a parent Maps object!"
         self._parent = parent
         if parent not in [self, None]:
@@ -419,13 +423,70 @@ class Maps(object):
         m.figure.ax.callbacks.connect("xlim_changed", parent_xlims_change)
         m.figure.ax.callbacks.connect("ylim_changed", parent_ylims_change)
 
-    def copy(
+    def new_layer(
         self,
         copy_data=False,
+        copy_shape=True,
         copy_data_specs=True,
         copy_plot_specs=True,
         copy_classify_specs=True,
+        layer=None,
+    ):
+        """
+        Create a new Maps-object that shares the same plot-axes.
+
+        Parameters
+        ----------
+        copy_data : bool or str
+            - if True: the dataset will be copied
+            - if "share": the dataset will be shared
+              (changes will be shared between the Maps objects!!!)
+            - if False: no data will be assigned
+            The default is False
+        copy_shape : bool, optional
+            Indicator if the same shape should be assigned to the copied object
+            The default is True
+        copy_data_specs, copy_plot_specs, copy_classify_specs : bool, or list, optional
+            Indicator which properties should be copied
+            if True, ALL corresponding properties are copied
+            if a list or tuple is provided, only the selected properties are copied.
+            The default is True
+        layer : int
+            The default layer index at which map-features are plotted.
+            The default is None in which case the layer of the parent object is used.
+
+        Returns
+        -------
+        eomaps.Maps
+            A connected copy of the Maps-object that shares the same plot-axes.
+
+        See Also
+        --------
+        copy : general way for copying Maps objects
+        """
+
+        if layer is None:
+            layer = self.layer
+
+        return self.copy(
+            data=copy_data,
+            data_specs=copy_data_specs,
+            plot_specs=copy_plot_specs,
+            classify_specs=copy_classify_specs,
+            shape=copy_shape,
+            connect=True,
+            gs_ax=self.figure.ax,
+            layer=layer,
+        )
+
+    def copy(
+        self,
         connect=False,
+        data=False,
+        data_specs=True,
+        plot_specs=True,
+        classify_specs=True,
+        shape=True,
         **kwargs,
     ):
         """
@@ -439,21 +500,25 @@ class Maps(object):
         ----------
         connect : bool
             Indicator if the copy should be connected to the parent Maps object.
-            -> useful to add additional interactive layers to the plot
+            (Connecting objects is required if you want to have multiple
+             interactive maps in one figure!)
 
             - This is the same as using:
-                >>> m_copy = m.copy()
+                >>> m_copy = Maps(parent=m)
+              or
                 >>> m_copy.parent = m
-
-        copy_data : bool or str
+        data : bool or str
             - if True: the dataset will be copied
             - if "share": the dataset will be shared
               (changes will be shared between the Maps objects!!!)
             - if False: no data will be assigned
-
-        copy_data_specs, copy_plot_specs, copy_classify_specs : bool, optional
+        shape : bool, optional
+            Indicator if the same shape should be assigned to the copied object
+        data_specs, plot_specs, classify_specs : bool, or list, optional
             Indicator which properties should be copied
-        **kwargs :
+            if True, ALL corresponding properties are copied
+            if a list or tuple is provided, only the selected properties are copied.
+        kwargs :
             Additional kwargs passed to `m = Maps(**kwargs)`
             (e.g. f, gs_ax, orientation, layer)
         Returns
@@ -470,91 +535,58 @@ class Maps(object):
         # create a new class
         copy_cls = Maps(**kwargs)
 
-        if copy_data_specs:
+        if data_specs:
+            if data_specs is True:
+                # data-copying is treated separately below
+                data_specs = [i for i in self.data_specs.keys() if i != "data"]
+
             copy_cls.set_data_specs(
                 **{
                     key: copy.deepcopy(val)
                     for key, val in self.data_specs
-                    if key != "data"
+                    if key in data_specs
                 }
             )
-        if copy_plot_specs:
-            copy_cls.set_plot_specs(
-                **{key: copy.deepcopy(val) for key, val in self.plot_specs}
-            )
 
-            getattr(copy_cls.set_shape, self.shape.name)(**self.shape._initargs)
-
-        if copy_classify_specs:
-            copy_cls.set_classify_specs(
-                scheme=self.classify_specs.scheme,
-                **{key: copy.deepcopy(val) for key, val in self.classify_specs},
-            )
-
-        if copy_data is True:
+        if data is True:
             copy_cls.data = self.data.copy(deep=True)
-        elif copy_data == "share":
+        elif data == "share":
             copy_cls.data = self.data
 
-        return copy_cls
+        if plot_specs:
+            if plot_specs is True:
+                plot_specs = list(self.plot_specs.keys())
 
-    def copy_from(
-        self,
-        m,
-        copy_data=False,
-        copy_data_specs=True,
-        copy_plot_specs=True,
-        copy_classify_specs=True,
-        **kwargs,
-    ):
-        """
-        (deep)copy specifications from another Maps-object.
-        Already loaded data is only copied if `copy_data=True`!
+            if copy_cls.figure.ax is not None:
+                # don't copy the plot_crs if there's already an axes defined!
+                # (cartopy-projections can't be deep-copied)
+                plot_specs.pop(plot_specs.index("plot_crs"))
 
-        -> useful to quickly create plots with similar configurations
-
-        Parameters
-        ----------
-        copy_data : bool or str
-            Indicator if the actual dataset should be copied as well
-            (`copy_data_specs=True` only copies the specs and NOT the dataset!)
-
-            - if True: the dataset will be copied
-            - if "share": the dataset will be shared
-              (changes will be shared between the Maps objects!!!)
-            - if False: no data will be assigned
-
-        copy_data_specs, copy_plot_specs, copy_classify_specs : bool, optional
-            Indicator which properties should be copied
-
-        """
-
-        if copy_data_specs:
-            self.set_data_specs(
+            copy_cls.set_plot_specs(
                 **{
                     key: copy.deepcopy(val)
-                    for key, val in m.data_specs
-                    if key != "data"
+                    for key, val in self.plot_specs
+                    if key in plot_specs
                 }
             )
 
-        if copy_data is True:
-            self.data = m.data.copy(deep=True)
-        elif copy_data == "share":
-            self.data = m.data
+        if shape:
+            getattr(copy_cls.set_shape, self.shape.name)(**self.shape._initargs)
 
-        if copy_plot_specs:
-            self.set_plot_specs(
-                **{key: copy.deepcopy(val) for key, val in m.plot_specs}
+        if classify_specs:
+            if classify_specs is True:
+                classify_specs = list(self.classify_specs.keys())
+
+            copy_cls.set_classify_specs(
+                scheme=self.classify_specs.scheme,
+                **{
+                    key: copy.deepcopy(val)
+                    for key, val in self.classify_specs
+                    if key in classify_specs
+                },
             )
 
-            getattr(self.set_shape, m.shape.name)(**m.shape._initargs)
-
-        if copy_classify_specs:
-            self.set_classify_specs(
-                scheme=m.classify_specs.scheme,
-                **{key: copy.deepcopy(val) for key, val in m.classify_specs},
-            )
+        return copy_cls
 
     @property
     def data(self):
