@@ -124,11 +124,11 @@ class TestBasicPlotting(unittest.TestCase):
     def test_cpos(self):
         m = Maps()
         m.data = self.data
+        m.plot_specs.crs = 4326
 
         for cpos in ["ul", "ur", "ll", "lr", "c"]:
             m.set_data_specs(xcoord="x", ycoord="y", in_crs=3857)
             m.set_plot_specs(
-                plot_crs=4326,
                 title="asdf",
                 label="bsdf",
                 cpos_radius=2,
