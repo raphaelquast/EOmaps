@@ -179,6 +179,11 @@ class Maps(object):
             if gs_ax is None:
                 gs_ax = parent.figure.ax
 
+        self._f = None
+        self._orientation = orientation
+        self._ax = gs_ax
+        self._init_ax = gs_ax
+
         self._BM = None
         self._parent = None
         self._children = []
@@ -224,12 +229,6 @@ class Maps(object):
         )
 
         self._axpicker = None
-
-        self._f = None
-
-        self._orientation = orientation
-        self._ax = gs_ax
-        self._init_ax = gs_ax
 
     def _check_gpd(self):
         # raise an error if geopandas is not found

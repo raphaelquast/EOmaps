@@ -6,6 +6,7 @@ from types import SimpleNamespace
 from functools import lru_cache
 from pathlib import Path
 import json
+from warnings import warn
 
 import matplotlib.pyplot as plt
 from matplotlib.pyplot import get_cmap
@@ -412,13 +413,22 @@ class plot_specs(object):
     def cmap(self):
         return self._cmap
 
-    @cmap.getter
-    def cmap(self):
-        return self._cmap
-
     @cmap.setter
     def cmap(self, val):
         self._cmap = get_cmap(val)
+
+    @property
+    def plot_crs(self):
+        return self._plot_crs
+
+    @plot_crs.setter
+    def plot_crs(self, crs):
+        if self._m.figure.ax is None:
+            self._plot_crs = crs
+        else:
+            raise AssertionError(
+                "EOmaps: The plot-crs can only be set BEFORE " + "the plot is created!"
+            )
 
 
 class classify_specs(object):
