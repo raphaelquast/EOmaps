@@ -249,7 +249,7 @@ class TestCallbacks(unittest.TestCase):
         # ---------- test as CLICK callback
         m = self.create_basic_map()
 
-        m2 = m.copy(connect=True, copy_data="share")
+        m2 = m.new_layer(copy_data="share")
 
         m2.plot_specs.cmap = "Reds"
         m2.plot_map(layer=2)
@@ -366,7 +366,7 @@ class TestCallbacks(unittest.TestCase):
         # ---------- test as CLICK callback
         m = self.create_basic_map()
 
-        m2 = m.copy(connect=True, copy_data="share")
+        m2 = m.new_layer(copy_data="share")
 
         m2.plot_specs.cmap = "Reds"
         m2.plot_map(layer=2)

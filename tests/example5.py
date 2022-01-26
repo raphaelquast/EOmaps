@@ -39,14 +39,14 @@ cid = m.cb.click.attach.annotate(bbox=dict(alpha=0.75), color="w")
 
 # --------- add another layer of data to indicate the values in the masked area
 #           (copy all defined specs but the classification)
-m2 = m.copy(connect=True, copy_classify_specs=False)
+m2 = m.new_layer(copy_classify_specs=False)
 m2.data_specs.data = data_mask
 m2.set_shape.rectangles(mesh=False)
 m2.plot_specs.cmap = "magma"
 m2.plot_map()
 
 # --------- add another layer with data that is dynamically updated if we click on the masked area
-m3 = m.copy(connect=True, copy_classify_specs=False)
+m3 = m.new_layer(copy_classify_specs=False)
 m3.data_specs.data = data_OK.sample(1000)
 m3.set_shape.ellipses(radius=25000, radius_crs=3857)
 m3.set_plot_specs(cmap="gist_ncar")

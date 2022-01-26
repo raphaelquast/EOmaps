@@ -348,7 +348,7 @@ class TestBasicPlotting(unittest.TestCase):
         m = Maps()
         m.data = self.data
         m.set_data_specs(xcoord="x", ycoord="y", in_crs=3857)
-        m.set_plot_specs(plot_crs=3857)
+        m.set_plot_specs(plot_crs=3857, label="asdf")
 
         m.set_classify_specs(scheme="Quantiles", k=5)
 
@@ -370,7 +370,7 @@ class TestBasicPlotting(unittest.TestCase):
         self.assertTrue([*m.classify_specs] == [*m2.classify_specs])
         self.assertTrue(m2.data == None)
 
-        m3 = m.copy(copy_data=True)
+        m3 = m.copy(data=True)
 
         self.assertTrue(
             m.data_specs[["xcoord", "ycoord", "parameter", "crs"]]
@@ -392,10 +392,18 @@ class TestBasicPlotting(unittest.TestCase):
         m3.plot_map()
         plt.close(m3.figure.f)
 
-        m4 = m.copy(copy_data="share")
+        m4 = m.copy(data="share")
         self.assertTrue(m4.data is m.data)
 
-    def test_connect(self):
+        m4 = m.copy(data_specs=["xcoord", "ycoord"], plot_specs=["label"])
+
+        self.assertTrue(m4.data_specs.xcoord == m.data_specs.xcoord)
+        self.assertTrue(m4.data_specs.ycoord == m.data_specs.ycoord)
+
+        self.assertFalse(m4.plot_specs.plot_crs == m.plot_specs.plot_crs)
+        self.assertTrue(m4.plot_specs.label == m.plot_specs.label)
+
+    def test_copy_connect(self):
         m = Maps()
         m.data = self.data
         m.set_data_specs(xcoord="x", ycoord="y", in_crs=3857)
@@ -405,11 +413,18 @@ class TestBasicPlotting(unittest.TestCase):
         m.plot_map()
 
         # plot on the same axes
-        m2 = m.copy(connect=True, copy_data="share", gs_ax=m.figure.ax)
+        m2 = m.copy(connect=True, data="share", gs_ax=m.figure.ax)
         m2.set_shape.ellipses()
         m2.plot_map(facecolor="none", edgecolor="r")
 
-        plt.close(m.figure.f)
+        plt.close("all")
+
+    def test_new_layer(self):
+        m = Maps()
+        m.add_feature.preset.ocean()
+        m2 = m.new_layer()
+        m2.add_feature.preset.land()
+        plt.close("all")
 
     def test_join_limits(self):
         mg = MapsGrid(2, 1)
