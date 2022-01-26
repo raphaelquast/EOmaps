@@ -215,7 +215,7 @@ class Maps(object):
             density=False,
         )
 
-        if gs_ax is None:
+        if not isinstance(gs_ax, plt.Axes):
             # set the plot_crs only if no explicit axes is provided
             self.plot_specs.crs = 4326
 
