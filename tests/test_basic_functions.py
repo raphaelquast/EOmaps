@@ -23,17 +23,16 @@ class TestBasicPlotting(unittest.TestCase):
         self.data = pd.DataFrame(dict(x=x, y=y, value=y - x))
 
     def test_simple_map(self):
-        m = Maps()
+        m = Maps(4326)
         m.data = self.data
-        m.set_data_specs(xcoord="x", ycoord="y", in_crs=3857)
-        m.set_plot_specs(plot_crs=4326)
+        m.set_data_specs(xcoord="x", ycoord="y", crs=3857)
         m.plot_map()
         plt.close(m.figure.f)
 
         # -------------------------------------
 
         m = Maps()
-        m.set_data_specs(data=self.data, xcoord="x", ycoord="y", in_crs=3857)
+        m.set_data_specs(data=self.data, xcoord="x", ycoord="y", crs=3857)
         m.set_plot_specs(
             plot_crs=4326,
             title="asdf",
@@ -345,10 +344,10 @@ class TestBasicPlotting(unittest.TestCase):
         plt.close(m.figure.f)
 
     def test_copy(self):
-        m = Maps()
+        m = Maps(3857)
         m.data = self.data
         m.set_data_specs(xcoord="x", ycoord="y", in_crs=3857)
-        m.set_plot_specs(plot_crs=3857, label="asdf")
+        m.set_plot_specs(label="asdf")
 
         m.set_classify_specs(scheme="Quantiles", k=5)
 
