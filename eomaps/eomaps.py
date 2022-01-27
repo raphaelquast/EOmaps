@@ -220,11 +220,16 @@ class Maps(object):
             density=False,
         )
 
-        if crs is not None:
-            assert not isinstance(
-                gs_ax, plt.Axes
-            ), "You cannot set the crs if you already provide an explicit axes!"
+        if isinstance(gs_ax, plt.Axes):
             # set the plot_crs only if no explicit axes is provided
+            if crs is not None:
+                raise AssertionError(
+                    "You cannot set the crs if you already provide an explicit axes!"
+                )
+        else:
+            if crs is None:
+                crs = 4326
+
             self.plot_specs.crs = crs
 
         # default classify specs
