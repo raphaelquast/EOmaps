@@ -1900,7 +1900,18 @@ class Maps(object):
             self.cb._methods.append("pick")
 
             if colorbar:
-                if (self.figure.ax_cb is not None) and (
+                if hasattr(self.figure, "cb"):
+                    warnings.warn(
+                        "EOmaps: There is already a colorbar present on the map!"
+                    )
+                elif self.figure.ax is not None and (
+                    self.figure.ax_cb is None or self.figure.ax_cb_plot is None
+                ):
+                    warnings.warn(
+                        "EOmaps: Colorbars can only be added on the base-layer!"
+                    )
+
+                elif (self.figure.ax_cb is not None) and (
                     self.figure.ax_cb_plot is not None
                 ):
 
