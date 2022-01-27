@@ -12,7 +12,7 @@ data = pd.DataFrame(
 data = data.sample(3000)  # take 3000 random datapoints from the dataset
 # ------------------------------------
 
-m = Maps()
+m = Maps(crs=3857)  # create a map in a pseudo-mercator (epsg 3857) projection
 m.set_data(data=data, xcoord="lon", ycoord="lat", in_crs=4326)
 
 # --------- set the appearance of the plot
@@ -20,7 +20,6 @@ m.set_plot_specs(
     label="some parameter",  # set the label of the colorbar
     title="What a nice figure",  # set the title of the figure
     cmap="RdYlBu",  # set the colormap
-    crs=3857,  # plot the map in a pseudo-mercator (epsg3857) projection
     histbins="bins",  # use the histogram-bins as set by the classification scheme
     vmin=35,  # set all values below vmin to vmin
     vmax=60,  # set all values above vmax to vmax

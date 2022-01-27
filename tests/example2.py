@@ -12,16 +12,16 @@ data = pd.DataFrame(
 data = data.sample(4000)  # take 4000 random datapoints from the dataset
 # ------------------------------------
 
-mg = MapsGrid(1, 3)  # initialize a grid of Maps objects
+mg = MapsGrid(1, 3, crs=4326)  # initialize a grid of Maps objects
 # set the data on ALL maps-objects of the grid
 mg.set_data(data=data, xcoord="lon", ycoord="lat", in_crs=4326)
 
 # --------- set specs for the first axes
-mg.m_0_0.set_plot_specs(crs=4326, title="epsg=4326")
+mg.m_0_0.set_plot_specs(title="epsg=4326")
 mg.m_0_0.set_classify_specs(scheme="EqualInterval", k=10)
 
 # --------- set specs for the second axes
-mg.m_0_1.set_plot_specs(crs=Maps.crs_list.Stereographic(), title="Stereographic")
+mg.m_0_1.set_plot_specs(crs=Maps.CRS.Stereographic(), title="Stereographic")
 mg.m_0_1.set_shape.rectangles()
 mg.m_0_1.set_classify_specs(scheme="Quantiles", k=4)
 

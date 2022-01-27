@@ -11,10 +11,9 @@ data = pd.DataFrame(
 )
 # --------------------------------
 
-m = Maps()
+m = Maps(Maps.CRS.GOOGLE_MERCATOR)
 # set the crs to GOOGLE_MERCATOR to avoid reprojecting the WebMap data
 # (makes it a lot faster and it will also look much nicer!)
-m.plot_specs.crs = Maps.CRS.GOOGLE_MERCATOR
 
 # ------------- LAYER 0
 # add S1GBM as a base-layer

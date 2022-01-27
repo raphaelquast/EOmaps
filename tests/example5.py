@@ -20,10 +20,9 @@ data_OK.var = np.sqrt(data_OK.param)
 data_mask = data[data.param < 0]
 
 # --------- initialize a Maps object and plot a basic map
-m = Maps()
+m = Maps(Maps.CRS.Orthographic())
 m.set_data(data=data_OK, xcoord="lon", ycoord="lat", in_crs=4326)
 m.set_plot_specs(
-    crs=m.crs_list.Orthographic(),
     title="Wooohoo, a flashy map-widget with static indicators!",
     histbins=200,
     cmap="Spectral_r",

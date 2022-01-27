@@ -13,9 +13,9 @@ data = pd.DataFrame(
 )
 
 # --------- initialize a Maps object and plot a basic map
-m = Maps()
+m = Maps(crs=3035)
 m.set_data(data=data, xcoord="lon", ycoord="lat", in_crs=4326)
-m.set_plot_specs(plot_crs=3035, title="A clickable widget!", histbins="bins")
+m.set_plot_specs(title="A clickable widget!", histbins="bins")
 m.set_shape.rectangles()
 m.set_classify_specs(scheme="EqualInterval", k=5)
 m.plot_map()

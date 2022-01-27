@@ -11,7 +11,7 @@ data = pd.DataFrame(
 data = data.sample(15000)  # take 15000 random datapoints from the dataset
 # ------------------------------------
 
-m = Maps()
+m = Maps(crs=4326)
 m.add_feature.preset.ocean()
 m.add_feature.preset.coastline()
 m.set_data(

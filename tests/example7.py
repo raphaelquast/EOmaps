@@ -19,9 +19,8 @@ data = pd.DataFrame(
 )
 
 # ----------- setup some maps objects and assign datasets and the plot-crs
-mg = MapsGrid(1, 2)
+mg = MapsGrid(1, 2, crs=4326)
 mg.m_0_0.set_data(data=data.sample(100), xcoord="lon", ycoord="lat", crs=4326)
-mg.m_0_0.plot_specs.crs = 4326
 
 mg.m_0_1.set_data(data=data, xcoord="lon", ycoord="lat", crs=4326)
 mg.m_0_1.plot_specs.crs = Maps.CRS.Orthographic(45, 45)
