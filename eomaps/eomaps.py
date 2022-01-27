@@ -438,11 +438,10 @@ class Maps(object):
 
     def new_layer(
         self,
-        copy_data=False,
-        copy_shape=True,
-        copy_data_specs=True,
+        copy_data_specs=False,
         copy_plot_specs=True,
-        copy_classify_specs=True,
+        copy_classify_specs=False,
+        copy_shape=True,
         layer=None,
     ):
         """
@@ -450,22 +449,11 @@ class Maps(object):
 
         Parameters
         ----------
-        copy_data : bool or str
-            - if True: the dataset will be copied
-            - if "share": the dataset will be shared
-              (changes will be shared between the Maps objects!!!)
-            - if False: no data will be assigned
-            The default is False
-        copy_shape : bool, optional
-            Indicator if the same shape should be assigned to the copied object
-            The default is True
-        copy_data_specs, copy_plot_specs, copy_classify_specs : bool, or list, optional
-            Indicator which properties should be copied
-            if True, ALL corresponding properties are copied
-            if a list or tuple is provided, only the selected properties are copied.
-            The default is True
+        copy_data_specs, copy_shape, copy_plot_specs, copy_classify_specs : bool
+            Indicator if the corresponding properties should be copied to
+            the new layer. By default, only "plot_specs" and the "shape" are copied.
         layer : int
-            The default layer index at which map-features are plotted.
+            The layer index at which map-features are plotted by default.
             The default is None in which case the layer of the parent object is used.
 
         Returns
@@ -482,7 +470,6 @@ class Maps(object):
             layer = self.layer
 
         return self.copy(
-            data=copy_data,
             data_specs=copy_data_specs,
             plot_specs=copy_plot_specs,
             classify_specs=copy_classify_specs,
