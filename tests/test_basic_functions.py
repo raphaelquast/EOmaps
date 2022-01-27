@@ -355,8 +355,8 @@ class TestBasicPlotting(unittest.TestCase):
         m2 = m.copy()
 
         self.assertTrue(
-            m.data_specs[["xcoord", "ycoord", "parameter", "crs"]]
-            == m2.data_specs[["xcoord", "ycoord", "parameter", "crs"]]
+            m2.data_specs[["xcoord", "ycoord", "parameter", "crs"]]
+            == {"xcoord": "lon", "ycoord": "lat", "parameter": None, "in_crs": 4326}
         )
         self.assertTrue(
             all(
@@ -370,7 +370,7 @@ class TestBasicPlotting(unittest.TestCase):
         self.assertTrue([*m.classify_specs] == [*m2.classify_specs])
         self.assertTrue(m2.data == None)
 
-        m3 = m.copy(data=True)
+        m3 = m.copy(data_specs=True)
 
         self.assertTrue(
             m.data_specs[["xcoord", "ycoord", "parameter", "crs"]]
@@ -392,16 +392,16 @@ class TestBasicPlotting(unittest.TestCase):
         m3.plot_map()
         plt.close(m3.figure.f)
 
-        m4 = m.copy(data="share")
+        m4 = m.copy(
+            data_specs="share",
+            plot_specs="share",
+            classify_specs="share",
+            shape="share",
+        )
         self.assertTrue(m4.data is m.data)
-
-        m4 = m.copy(data_specs=["xcoord", "ycoord"], plot_specs=["label"])
-
-        self.assertTrue(m4.data_specs.xcoord == m.data_specs.xcoord)
-        self.assertTrue(m4.data_specs.ycoord == m.data_specs.ycoord)
-
-        self.assertFalse(m4.plot_specs.plot_crs == m.plot_specs.plot_crs)
-        self.assertTrue(m4.plot_specs.label == m.plot_specs.label)
+        self.assertTrue(m4.data_specs is m.data_specs)
+        self.assertTrue(m4.classify_specs is m.classify_specs)
+        self.assertTrue(m4.shape is m.shape)
 
     def test_copy_connect(self):
         m = Maps()
@@ -413,7 +413,7 @@ class TestBasicPlotting(unittest.TestCase):
         m.plot_map()
 
         # plot on the same axes
-        m2 = m.copy(connect=True, data="share", gs_ax=m.figure.ax)
+        m2 = m.copy(parent=m, data="share", gs_ax=m.figure.ax)
         m2.set_shape.ellipses()
         m2.plot_map(facecolor="none", edgecolor="r")
 
