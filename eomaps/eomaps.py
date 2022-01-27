@@ -75,6 +75,13 @@ class Maps(object):
 
     Parameters
     ----------
+    crs : int or a cartopy-projection, optional
+        The projection of the map.
+        If int, it is identified as an epsg-code
+        Otherwise you can specify any projection supported by `cartopy.crs`
+        A list for easy-accses is available as `Maps.CRS`
+
+        The default is 4326.
     parent : eomaps.Maps
         The parent Maps-object to use.
         Any maps-objects that share the same figure must be connected
@@ -139,7 +146,6 @@ class Maps(object):
         The default is "wms"
     """
 
-    crs_list = ccrs
     CRS = ccrs
 
     # mapclassify.CLASSIFIERS
@@ -165,6 +171,7 @@ class Maps(object):
 
     def __init__(
         self,
+        crs=None,
         parent=None,
         layer=0,
         orientation="vertical",
@@ -215,9 +222,12 @@ class Maps(object):
             density=False,
         )
 
-        if not isinstance(gs_ax, plt.Axes):
+        if crs is not None:
+            assert not isinstance(
+                gs_ax, plt.Axes
+            ), "You cannot set the crs if you already provide an explicit axes!"
             # set the plot_crs only if no explicit axes is provided
-            self.plot_specs.crs = 4326
+            self.plot_specs.crs = crs
 
         # default classify specs
         self.classify_specs = classify_specs(self)
@@ -682,7 +692,7 @@ class Maps(object):
             The projection to use for plotting.
             If int, it is identified as an epsg-code
             Otherwise you can specify any projection supported by cartopy.
-            A list for easy-accses is available as `m.crs_list`
+            A list for easy-accses is available as `Maps.CRS`
 
             The default is 4326.
         histbins : int, list, tuple, array or "bins", optional
@@ -2051,7 +2061,7 @@ class Maps(object):
             print("EOmaps: There are no masked points to indicate!")
             return
 
-        m = self.copy(connect=True, gs_ax=self.figure.ax)
+        m = self.new_layer()
         m.data = data
 
         t = self.figure.ax.transData.inverted()
