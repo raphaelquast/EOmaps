@@ -33,8 +33,6 @@ from matplotlib.gridspec import GridSpec, GridSpecFromSubplotSpec, SubplotSpec
 
 
 from cartopy import crs as ccrs
-from cartopy import feature as cfeature
-from cartopy.io import shapereader
 
 from .helpers import (
     pairwise,
