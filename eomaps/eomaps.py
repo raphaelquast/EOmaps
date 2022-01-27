@@ -2079,6 +2079,11 @@ class MapsGrid:
         the number of rows. The default is 2.
     c : int, optional
         the number of columns. The default is 2.
+    crs : int or a cartopy-projection, optional
+        The projection that will be assigned to all Maps objects.
+        (you can still change the projection of individual Maps objects later!)
+        See the doc of "Maps" for details.
+        The default is 4326.
     m_inits, ax_inits : dict, optional
         A dictionary that is used to initialize the Maps-objects (`m_inits`) and
         ordinary matplotlib-axes (`ax_inits`) from the underlying GridSpec object
@@ -2149,7 +2154,7 @@ class MapsGrid:
       the MapsGrid object!
     """
 
-    def __init__(self, r=2, c=2, m_inits=None, ax_inits=None, **kwargs):
+    def __init__(self, r=2, c=2, crs=None, m_inits=None, ax_inits=None, **kwargs):
         self._Maps = []
 
         self._gs = GridSpec(nrows=r, ncols=c, **kwargs)
@@ -2158,10 +2163,10 @@ class MapsGrid:
             for i in range(r):
                 for j in range(c):
                     if i == 0 and j == 0:
-                        mij = Maps(gs_ax=self._gs[0, 0])
+                        mij = Maps(crs=crs, gs_ax=self._gs[0, 0])
                         self.parent = mij
                     else:
-                        mij = Maps(parent=self.parent, gs_ax=self._gs[i, j])
+                        mij = Maps(crs=crs, parent=self.parent, gs_ax=self._gs[i, j])
 
                     self._Maps.append(mij)
                     setattr(self, f"m_{i}_{j}", mij)
@@ -2177,10 +2182,10 @@ class MapsGrid:
                     ), f"the provided name {key} is not a valid identifier"
 
                     if i == 0:
-                        mi = Maps(gs_ax=self._gs[val])
+                        mi = Maps(crs=crs, gs_ax=self._gs[val])
                         self.parent = mi
                     else:
-                        mi = Maps(parent=self.parent, gs_ax=self._gs[val])
+                        mi = Maps(crs=crs, parent=self.parent, gs_ax=self._gs[val])
 
                     self._Maps.append(mi)
                     setattr(self, f"m_{key}", mi)
