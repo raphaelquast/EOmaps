@@ -113,11 +113,14 @@ class shapes(object):
                 The class representing the plot-shape.
 
             """
-            self.radius = radius
+            from . import MapsGrid  # do this here to avoid circular imports!
 
-            self.n = n
+            for m in self._m if isinstance(self._m, MapsGrid) else [self._m]:
+                shape = self.__class__(m)
+                shape.radius = radius
+                shape.n = n
 
-            self._m.shape = self
+                m.shape = shape
 
         @property
         def _initargs(self):
@@ -293,13 +296,16 @@ class shapes(object):
             None.
 
             """
+            from . import MapsGrid  # do this here to avoid circular imports!
 
-            self._radius = radius
+            for m in self._m if isinstance(self._m, MapsGrid) else [self._m]:
+                shape = self.__class__(m)
 
-            self.radius_crs = radius_crs
-            self.n = n
+                shape._radius = radius
+                shape.radius_crs = radius_crs
+                shape.n = n
 
-            self._m.shape = self
+                m.shape = shape
 
         @property
         def _initargs(self):
@@ -496,19 +502,24 @@ class shapes(object):
             None.
 
             """
-            self._radius = radius
-            self.radius_crs = radius_crs
-            self.mesh = mesh
+            from . import MapsGrid  # do this here to avoid circular imports!
 
-            if mesh is True:
-                if n > 1:
-                    warnings.warn(
-                        "EOmaps: rectangles with 'mesh=True' only supports n=1"
-                    )
-                self.n = 1
-            else:
-                self.n = n
-            self._m.shape = self
+            for m in self._m if isinstance(self._m, MapsGrid) else [self._m]:
+                shape = self.__class__(m)
+
+                shape._radius = radius
+                shape.radius_crs = radius_crs
+                shape.mesh = mesh
+
+                if mesh is True:
+                    if n > 1:
+                        warnings.warn(
+                            "EOmaps: rectangles with 'mesh=True' only supports n=1"
+                        )
+                    shape.n = 1
+                else:
+                    shape.n = n
+                m.shape = shape
 
         @property
         def _initargs(self):
@@ -763,10 +774,15 @@ class shapes(object):
             None.
 
             """
-            self.mask_radius = mask_radius
-            self.masked = masked
+            from . import MapsGrid  # do this here to avoid circular imports!
 
-            self._m.shape = self
+            for m in self._m if isinstance(self._m, MapsGrid) else [self._m]:
+                shape = self.__class__(m)
+
+                shape.mask_radius = mask_radius
+                shape.masked = masked
+
+                m.shape = shape
 
         @property
         def _initargs(self):
@@ -995,12 +1011,17 @@ class shapes(object):
                 Indicator if a triangulation (flat=False) or polygons (flat=True)
                 should be plotted. The default is False
             """
-            self.mask_radius = mask_radius
-            self.mask_radius_crs = mask_radius_crs
-            self.masked = masked
-            self.flat = flat
+            from . import MapsGrid  # do this here to avoid circular imports!
 
-            self._m.shape = self
+            for m in self._m if isinstance(self._m, MapsGrid) else [self._m]:
+                shape = self.__class__(m)
+
+                shape.mask_radius = mask_radius
+                shape.mask_radius_crs = mask_radius_crs
+                shape.masked = masked
+                shape.flat = flat
+
+                m.shape = shape
 
         @property
         def _initargs(self):

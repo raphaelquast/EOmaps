@@ -2312,6 +2312,22 @@ class MapsGrid:
     def f(self):
         return self.parent.figure.f
 
+    @wraps(Maps.plot_map)
+    def plot_map(self, **kwargs):
+        for m in self:
+            m.plot_map(**kwargs)
+
+    plot_map.__doc__ = _doc_prefix + plot_map.__doc__
+
+    @property
+    @lru_cache()
+    @wraps(shapes)
+    def set_shape(self):
+        s = shapes(self)
+        s.__doc__ = self._doc_prefix + s.__doc__
+
+        return s
+
     @wraps(Maps.set_plot_specs)
     def set_plot_specs(self, **kwargs):
         for m in self:
@@ -2320,9 +2336,9 @@ class MapsGrid:
     set_plot_specs.__doc__ = _doc_prefix + set_plot_specs.__doc__
 
     @wraps(Maps.set_data_specs)
-    def set_data_specs(self, **kwargs):
+    def set_data_specs(self, *args, **kwargs):
         for m in self:
-            m.set_data_specs(**kwargs)
+            m.set_data_specs(*args, **kwargs)
 
     set_data_specs.__doc__ = _doc_prefix + set_data_specs.__doc__
 
