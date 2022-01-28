@@ -481,9 +481,8 @@ class TestBasicPlotting(unittest.TestCase):
         mg.set_data(data=self.data, xcoord="x", ycoord="y", in_crs=3857)
         mg.set_plot_specs(crs=4326, title="asdf", label="bsdf")
         mg.set_classify_specs(scheme=Maps.CLASSIFIERS.EqualInterval, k=4)
-
-        for m in mg:
-            m.plot_map()
+        mg.set_shape.rectangles()
+        mg.plot_map()
 
         mg.add_annotation(ID=520)
         mg.add_marker(ID=5, fc="r", radius=10, radius_crs=4326)
