@@ -2079,42 +2079,39 @@ class MapsGrid:
     Parameters
     ----------
     r : int, optional
-        the number of rows. The default is 2.
+        The number of rows. The default is 2.
     c : int, optional
-        the number of columns. The default is 2.
+        The number of columns. The default is 2.
     crs : int or a cartopy-projection, optional
         The projection that will be assigned to all Maps objects.
         (you can still change the projection of individual Maps objects later!)
         See the doc of "Maps" for details.
         The default is 4326.
-    m_inits, ax_inits : dict, optional
-        A dictionary that is used to initialize the Maps-objects (`m_inits`) and
-        ordinary matplotlib-axes (`ax_inits`) from the underlying GridSpec object
+    m_inits : dict, optional
+        A dictionary that is used to customize the initialization the Maps-objects.
 
         The keys of the dictionaries are used as names for the Maps-objects,
-        (accessible via `mgrid.m_<name>` or `mgrid.ax_<name>`) and the values
-        are used to identify the axes position from the GridSpec object.
+        (accessible via `mgrid.m_<name>` or `mgrid[m_<name>]`) and the values are used to
+        identify the position of the axes in the grid.
 
-        For example, to initialize a 2 by 2 grid with a large map on top,
-        a small maps on the bottom left and a normal plot on the bottom right, use:
+        Possible values are:
+        - a tuple of (row, col)
 
-            >>> m_inits = dict(top = (0, slice(0, 2)),
-            >>>                bottom_left=(1, 0))
-            >>> ax_inits = dict(bottom_right=(1, 1))
 
-            >>> mg = MapsGrid(2, 2, m_inits=m_inits, ax_inits=ax_inits)
-            >>> mg.m_top.plot_map()
-            >>> mg.m_bottom_left.plot_map()
-            >>> mg.ax_bottom_right.plot([1,2,3])
-
-        Note: If either `m_inits` or `ax_inits` is provided, ONLY the specified
-        objects are initialized!
+        Note: If either `m_inits` or `ax_inits` is provided, ONLY objects with the
+        specified properties are initialized!
 
         The default is None in which case a unique Maps-object will be created
         for each grid-cell (accessible via `mgrid.m_<row>_<col>`)
+    ax_inits : dict, optional
+        Completely similar to `m_inits` but instead of `Maps` objects, ordinary
+        matplotlib axes will be initialized. They are accessible via `mg.ax_<name>`.
 
+        Note: If you iterate over the MapsGrid object, ONLY the initialized Maps
+        objects will be returned!
     kwargs
-        additional keyword-arguments passed to `matplotlib.gridspec.GridSpec()`
+        Additional keyword-arguments passed to the `matplotlib.gridspec.GridSpec()`
+        function that is used to initialize the grid.
 
     Attributes
     ----------
@@ -2145,6 +2142,20 @@ class MapsGrid:
     set_<...> :
         set the corresponding property on all Maps-objects of the grid
 
+    Examples
+    --------
+    To initialize a 2 by 2 grid with a large map on top, a small map
+    on the bottom-left and an ordinary matplotlib plot on the bottom-right, use:
+
+        >>> m_inits = dict(top = (0, slice(0, 2)),
+        >>>                bottom_left=(1, 0))
+        >>> ax_inits = dict(bottom_right=(1, 1))
+
+        >>> mg = MapsGrid(2, 2, m_inits=m_inits, ax_inits=ax_inits)
+        >>> mg.m_top.plot_map()
+        >>> mg.m_bottom_left.plot_map()
+        >>> mg.ax_bottom_right.plot([1,2,3])
+
     Returns
     -------
     eomaps.MapsGrid
@@ -2159,8 +2170,9 @@ class MapsGrid:
 
     def __init__(self, r=2, c=2, crs=None, m_inits=None, ax_inits=None, **kwargs):
         self._Maps = []
-
+        self._names = defaultdict(list)
         self._gs = GridSpec(nrows=r, ncols=c, **kwargs)
+
         if m_inits is None and ax_inits is None:
             self._custom_init = False
             for i in range(r):
@@ -2172,17 +2184,21 @@ class MapsGrid:
                         mij = Maps(crs=crs, parent=self.parent, gs_ax=self._gs[i, j])
 
                     self._Maps.append(mij)
-                    setattr(self, f"m_{i}_{j}", mij)
+                    name = f"{i}_{j}"
+                    self._names["Maps"].append(name)
+                    setattr(self, "m_" + name, mij)
         else:
             self._custom_init = True
             if m_inits is not None:
+                assert self._test_unique_str_keys(
+                    m_inits
+                ), "EOmaps: there are duplicated keys in m_inits!"
                 for i, [key, val] in enumerate(m_inits.items()):
-                    assert isinstance(
-                        val, tuple
-                    ), "the values of m_inits must be tuples!"
-                    assert (
-                        key.isidentifier()
-                    ), f"the provided name {key} is not a valid identifier"
+                    if ax_inits is not None:
+                        q = set(m_inits).intersection(set(ax_inits))
+                        assert (
+                            len(q) == 0
+                        ), f"You cannot provide duplicate keys! Check: {q}"
 
                     if i == 0:
                         mi = Maps(crs=crs, gs_ax=self._gs[val])
@@ -2190,28 +2206,48 @@ class MapsGrid:
                     else:
                         mi = Maps(crs=crs, parent=self.parent, gs_ax=self._gs[val])
 
+                    name = str(key)
+                    self._names["Maps"].append(name)
+
                     self._Maps.append(mi)
-                    setattr(self, f"m_{key}", mi)
+                    setattr(self, f"m_{name}", mi)
 
             if ax_inits is not None:
+                assert self._test_unique_str_keys(
+                    ax_inits
+                ), "EOmaps: there are duplicated keys in ax_inits!"
                 for key, val in ax_inits.items():
-                    assert isinstance(
-                        val, tuple
-                    ), "the values of ax_inits must be tuples!"
-                    assert (
-                        key.isidentifier()
-                    ), f"the provided name {key} is not a valid identifier"
-
                     self.create_axes(val, name=key)
+
+    @staticmethod
+    def _test_unique_str_keys(x):
+        # check if all keys are unique (as strings)
+        seen = set()
+        return not any(str(i) in seen or seen.add(str(i)) for i in x)
 
     def __iter__(self):
         return iter(self._Maps)
 
     def __getitem__(self, key):
-        if self._custom_init is False:
-            return getattr(self, f"m_{key[0]}_{key[1]}")
-        else:
-            return getattr(self, key)
+        try:
+            if self._custom_init is False:
+                if isinstance(key, str):
+                    r, c = map(int, key.split("_"))
+                elif isinstance(key, (list, tuple)):
+                    r, c = key
+                else:
+                    raise IndexError(f"{key} is not a valid indexer for MapsGrid")
+
+                return getattr(self, f"m_{r}_{c}")
+            else:
+                if str(key) in self._names["Maps"]:
+                    return getattr(self, "m_" + str(key))
+                elif str(key) in self._names["Axes"]:
+                    return getattr(self, "ax_" + str(key))
+                else:
+                    raise IndexError(f"{key} is not a valid indexer for MapsGrid")
+        except:
+            raise IndexError(f"{key} is not a valid indexer for MapsGrid")
 
     def create_axes(self, ax_init, name=None):
         """
@@ -2259,6 +2295,8 @@ class MapsGrid:
             ), f"the provided name {name} is not a valid identifier"
 
         ax = self.f.add_subplot(self._gs[ax_init])
+
+        self._names["Axes"].append(name)
         setattr(self, f"ax_{name}", ax)
         return ax
 
