@@ -2301,7 +2301,7 @@ class MapsGrid:
         return ax
 
     _doc_prefix = (
-        "NOTE: This will execute the corresponding action on ALL Maps "
+        "This will execute the corresponding action on ALL Maps "
         + "objects of the MapsGrid!\n"
     )
 
@@ -2374,13 +2374,13 @@ class MapsGrid:
 
     def share_click_events(self):
         """
-        share click events between all Maps objects of the grid
+        Share click events between all Maps objects of the grid
         """
         self.parent.cb.click.share_events(*self.children)
 
     def share_pick_events(self, name="default"):
         """
-        share pick events between all Maps objects of the grid
+        Share pick events between all Maps objects of the grid
         """
         if name == "default":
             self.parent.cb.pick.share_events(*self.children)
@@ -2389,7 +2389,7 @@ class MapsGrid:
 
     def join_limits(self):
         """
-        join axis limits between all Maps objects of the grid
+        Join axis limits between all Maps objects of the grid
         (only possible if all maps share the same crs!)
         """
         self.parent.join_limits(*self.children)
