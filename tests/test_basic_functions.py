@@ -497,7 +497,7 @@ class TestBasicPlotting(unittest.TestCase):
 
     def test_MapsGrid2(self):
         mg = MapsGrid(
-            2, 2, m_inits=dict(a=(0, slice(0, 2)), b=(1, 0)), ax_inits=dict(c=(1, 1))
+            2, 2, m_inits={"a": (0, slice(0, 2)), 2: (1, 0)}, ax_inits=dict(c=(1, 1))
         )
 
         mg.set_data(data=self.data, xcoord="x", ycoord="y", in_crs=3857)
@@ -510,11 +510,27 @@ class TestBasicPlotting(unittest.TestCase):
         mg.add_annotation(ID=520)
         mg.add_marker(ID=5, fc="r", radius=10, radius_crs=4326)
 
-        self.assertTrue(mg.m_a is mg["m_a"])
-        self.assertTrue(mg.m_b is mg["m_b"])
-        self.assertTrue(mg.ax_c is mg["ax_c"])
+        self.assertTrue(mg.m_a is mg["a"])
+        self.assertTrue(mg.m_2 is mg[2])
+        self.assertTrue(mg.ax_c is mg["c"])
 
         plt.close(mg.f)
+
+        with self.assertRaises(AssertionError):
+            MapsGrid(
+                2,
+                2,
+                m_inits={"2": (0, slice(0, 2)), 2: (1, 0)},
+                ax_inits=dict(c=(1, 1)),
+            )
+
+        with self.assertRaises(AssertionError):
+            MapsGrid(
+                2,
+                2,
+                m_inits={1: (0, slice(0, 2)), 2: (1, 0)},
+                ax_inits={"2": (1, 1), 2: 2},
+            )
 
     def test_ScaleBar(self):
 
