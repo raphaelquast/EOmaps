@@ -7,39 +7,24 @@
 🌐 Initialization of Maps objects
 .................................
 
-To initialize a new ``Maps`` object, simply use:
+| EOmaps is all about ``Maps`` objects.
+| To start creating a new map (in this case a plot in ``epsg=4326``), simply use:
 
 .. code-block:: python
 
     from eomaps import Maps
-    m = Maps( ... )
+    m = Maps(crs=4326)
 
-
-To copy an existing ``Maps``-object (and share selected specifications), use:
-
-.. code-block:: python
-
-    from eomaps import Maps
-
-    m = Maps()
-    ...
-    m2 = m.copy(...)
-
-To create a ``Maps``-object that represents an additional layer of an already existing map,
-use one of the following:
-(In this way, the newly created ``Maps`` object will share the same figure and plot-axis.)
+You can then create **additional layers on the same map** by using:
 
 .. code-block:: python
 
-    from eomaps import Maps
+    m2 = m.new_layer(...)
 
-    m = Maps()
-    ...
-    m_layer1 = Maps(parent=m)
-    m_layer2 = m.copy(connect=True)
+(``m2`` is just another ``Maps`` object that shares the figure and plot-axes with ``m``)
 
 
-
+To get full control of how to copy an existing ``Maps``-object (and share selected specifications), have a look at ``m.copy()``.
 
 .. currentmodule:: eomaps
 
@@ -49,14 +34,17 @@ use one of the following:
     :template: only_names_in_toc.rst
 
     Maps
+    Maps.new_layer
     Maps.copy
-
 
 
 𝄜 Multiple maps in one figure
 ..............................
 
-To initialize (and manage) a grid of ``Maps`` objects, you can use a ``MapsGrid``:
+``MapsGrid`` objects can be used to create (and manage) multiple maps in one figure.
+
+It creates a grid of ``Maps`` objects (and/or ordinary ``matpltolib`` axes),
+and provides convenience-functions to perform actions on all maps of the figure.
 
 .. code-block:: python
 
@@ -72,13 +60,15 @@ To initialize (and manage) a grid of ``Maps`` objects, you can use a ``MapsGrid`
     for m in mgrid:
         ...
 
-❗ It is also possible to customize the positioning of the axes and **combine EOmaps plots with ordinary matplotlib axes** in one grid via the ``m_inits`` and ``ax_inits`` arguments!
+❗ NOTE: It is also possible to customize the positioning of the axes and **combine EOmaps plots with ordinary matplotlib axes** in one grid via the optional ``m_inits`` and ``ax_inits`` arguments!
 
-- if ``m_inits`` is provided, the specifications are used to initialize ``Maps`` objects (accessible via ``mgrid.m_<key>``)
-- if ``ax_inits`` is provided, the specifications are used to initialize ordinary matplotlib axes (accessible via ``mgrid.ax_<key>``)
+- if ``m_inits`` is provided, the init-specs are used to initialize ``Maps`` objects (accessible via ``mgrid.m_<key>``)
+- if ``ax_inits`` is provided, the init-specs are used to initialize ordinary matplotlib axes (accessible via ``mgrid.ax_<key>``)
 
-- To specify axes that span over multiple rows or columns, simply use ``slice(start, stop)``.
 - The initialization of the axes is based on matplotlib's `GridSpec <https://matplotlib.org/stable/api/_as_gen/matplotlib.gridspec.GridSpec.html>`_ functionality. All additional keyword-arguments (``width_ratios, height_ratios, etc.``) are passed to the initialization of the GridSpec object.
+
+  - The position of the axes are specified as tuples ``(row, col)``
+  - To specify axes that span over multiple rows or columns, simply use ``slice(start, stop)``.
 
 
 .. code-block:: python
@@ -107,7 +97,12 @@ To initialize (and manage) a grid of ``Maps`` objects, you can use a ``MapsGrid`
     :template: only_names_in_toc.rst
 
     MapsGrid
-    MapsGrid.create_axes
+    MapsGrid.join_limits
+    MapsGrid.share_click_events
+    MapsGrid.share_pick_events
+    MapsGrid.set_data_specs
+    MapsGrid.set_plot_specs
+    MapsGrid.set_classify_specs
 
 
 🌍 Set plot specifications
@@ -116,17 +111,17 @@ To initialize (and manage) a grid of ``Maps`` objects, you can use a ``MapsGrid`
 The appearance of the plot can be adjusted by setting the following properties
 of the Maps object:
 
-.. currentmodule:: eomaps.Maps
+.. currentmodule:: eomaps
 
 .. autosummary::
     :toctree: generated
     :nosignatures:
     :template: only_names_in_toc.rst
 
-    set_shape
-    set_data
-    set_plot_specs
-    set_classify_specs
+    Maps.set_shape
+    Maps.set_data
+    Maps.set_plot_specs
+    Maps.set_classify_specs
 
 Alternatively, you can also get/set the properties with:
 
@@ -177,15 +172,15 @@ Once the map is generated, a snapshot of the map can be saved at any time by usi
     m.savefig( "snapshot1.png", dpi=300, ... )
 
 
-.. currentmodule:: eomaps.Maps
+.. currentmodule:: eomaps
 
 .. autosummary::
     :toctree: generated
     :nosignatures:
     :template: only_names_in_toc.rst
 
-    plot_map
-    savefig
+    Maps.plot_map
+    Maps.savefig
 
 
 🛸 Callbacks - make the map interactive!
@@ -311,14 +306,14 @@ some time to finish...)
     m.plot_specs.crs = Maps.CRS.GOOGLE_MERCATOR # (at best the native crs of the service!)
     m.add_wms.attach.< SERVICE > ... .add_layer.< LAYER >( layer=1 )
 
-.. currentmodule:: eomaps.Maps
+.. currentmodule:: eomaps
 
 .. autosummary::
     :toctree: generated
     :nosignatures:
     :template: only_names_in_toc.rst
 
-    add_wms
+    Maps.add_wms
 
 
 < SERVICE > hereby specifies the pre-defined WebMap service you want to add.
@@ -390,32 +385,29 @@ Static annotations and markers can be added to the map via:
 
 Overlays from NaturalEarth and `geopandas.GeoDataFrames` can be added via:
 
-.. currentmodule:: eomaps.Maps
+.. currentmodule:: eomaps
 
 .. autosummary::
     :toctree: generated
     :nosignatures:
     :template: only_names_in_toc.rst
 
-    add_gdf
-    add_overlay
-    add_overlay_legend
-    add_coastlines
-
+    Maps.add_feature
+    Maps.add_gdf
 
 📏 Scalebars
 ------------
 
 A scalebar can be added to a map via:
 
-.. currentmodule:: eomaps.Maps
+.. currentmodule:: eomaps
 
 .. autosummary::
     :toctree: generated
     :nosignatures:
     :template: only_names_in_toc.rst
 
-    add_scalebar
+    Maps.add_scalebar
 
 .. code-block:: python
 
@@ -463,16 +455,16 @@ The scalebar has the following useful methods assigned:
 ----------------
 some additional functions and properties that might come in handy:
 
-.. currentmodule:: eomaps.Maps
+.. currentmodule:: eomaps
 
 .. autosummary::
     :toctree: generated
     :nosignatures:
 
-    join_limits
-    get_crs
-    indicate_masked_points
-    BM
-    parent
-    crs_plot
-    add_colorbar
+    Maps.join_limits
+    Maps.get_crs
+    Maps.indicate_masked_points
+    Maps.BM
+    Maps.parent
+    Maps.crs_plot
+    Maps.add_colorbar
