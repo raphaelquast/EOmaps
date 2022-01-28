@@ -2300,6 +2300,11 @@ class MapsGrid:
         setattr(self, f"ax_{name}", ax)
         return ax
 
+    _doc_prefix = (
+        "NOTE: This will execute the corresponding action on ALL Maps "
+        + "objects of the MapsGrid!\n"
+    )
+
     @property
     def children(self):
         return [i for i in self if i is not self.parent]
@@ -2313,10 +2318,14 @@ class MapsGrid:
         for m in self:
             m.set_plot_specs(**kwargs)
 
+    set_plot_specs.__doc__ = _doc_prefix + set_plot_specs.__doc__
+
     @wraps(Maps.set_data_specs)
     def set_data_specs(self, **kwargs):
         for m in self:
             m.set_data_specs(**kwargs)
+
+    set_data_specs.__doc__ = _doc_prefix + set_data_specs.__doc__
 
     set_data = set_data_specs
 
@@ -2325,31 +2334,43 @@ class MapsGrid:
         for m in self:
             m.set_classify_specs(scheme=scheme, **kwargs)
 
+    set_classify_specs.__doc__ = _doc_prefix + set_classify_specs.__doc__
+
     @wraps(Maps.add_annotation)
     def add_annotation(self, *args, **kwargs):
         for m in self:
             m.add_annotation(*args, **kwargs)
+
+    add_annotation.__doc__ = _doc_prefix + add_annotation.__doc__
 
     @wraps(Maps.add_marker)
     def add_marker(self, *args, **kwargs):
         for m in self:
             m.add_marker(*args, **kwargs)
 
+    add_marker.__doc__ = _doc_prefix + add_marker.__doc__
+
     @property
     @wraps(Maps.add_wms)
     @lru_cache()
     def add_wms(self):
-        return wms_container(self)
+        x = wms_container(self)
+        x.__doc__ = self._doc_prefix + x.__doc__
+        return x
 
     @property
     @wraps(Maps.add_feature)
     def add_feature(self):
-        return NaturalEarth_features(self)
+        x = NaturalEarth_features(self)
+        x.__doc__ = self._doc_prefix + x.__doc__
+        return x
 
     @wraps(Maps.add_gdf)
     def add_gdf(self, *args, **kwargs):
         for m in self:
             m.add_gdf(*args, **kwargs)
+
+    add_gdf.__doc__ = _doc_prefix + add_gdf.__doc__
 
     def share_click_events(self):
         """
