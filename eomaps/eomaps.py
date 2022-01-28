@@ -2062,7 +2062,7 @@ class Maps(object):
             print("EOmaps: There are no masked points to indicate!")
             return
 
-        m = self.new_layer()
+        m = self.new_layer(copy_data_specs=True)
         m.data = data
 
         t = self.figure.ax.transData.inverted()

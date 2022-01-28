@@ -48,10 +48,9 @@ class TestBasicPlotting(unittest.TestCase):
     def test_simple_plot_shapes(self):
         usedata = self.data.sample(500)
 
-        m = Maps()
+        m = Maps(4326)
         m.data = usedata
         m.set_data_specs(xcoord="x", ycoord="y", in_crs=3857)
-        m.set_plot_specs(crs=4326)
 
         # rectangles
         m.set_shape.geod_circles(radius=100000)
@@ -97,7 +96,7 @@ class TestBasicPlotting(unittest.TestCase):
         # delaunay
         m.set_shape.delaunay_triangulation(flat=True)
         m.plot_map()
-        m.indicate_masked_points(5)
+        m.indicate_masked_points(5, ec="r")
 
         m.set_shape.delaunay_triangulation(flat=False)
         m.plot_map()
@@ -412,7 +411,7 @@ class TestBasicPlotting(unittest.TestCase):
         m.plot_map()
 
         # plot on the same axes
-        m2 = m.copy(parent=m, data="share", gs_ax=m.figure.ax)
+        m2 = m.copy(parent=m, data_specs="share", gs_ax=m.figure.ax)
         m2.set_shape.ellipses()
         m2.plot_map(facecolor="none", edgecolor="r")
 
