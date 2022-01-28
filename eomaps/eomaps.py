@@ -264,12 +264,6 @@ class Maps(object):
 
     @property
     @lru_cache()
-    @wraps(shapes)
-    def set_shape(self):
-        return shapes(self)
-
-    @property
-    @lru_cache()
     @wraps(map_objects)
     def figure(self):
         return map_objects(self)
@@ -346,14 +340,6 @@ class Maps(object):
             return self.parent._axpicker
 
         return self.parent._axpicker
-
-    if wms_container is not None:
-
-        @property
-        @wraps(wms_container)
-        @lru_cache()
-        def add_wms(self):
-            return wms_container(self)
 
     def _add_child(self, m):
         self.parent._children.append(m)
@@ -561,6 +547,12 @@ class Maps(object):
     def data(self, val):
         # for downward-compatibility
         self.data_specs.data = val
+
+    @property
+    @lru_cache()
+    @wraps(shapes)
+    def set_shape(self):
+        return shapes(self)
 
     def set_data_specs(self, data=None, xcoord=None, ycoord=None, crs=None, **kwargs):
         """
@@ -1392,8 +1384,7 @@ class Maps(object):
         **kwargs,
     ):
         """
-        Overplot a `geopandas.GeoDataFrame` over the generated plot.
-        (`plot_map()` must be called!)
+        Plot a `geopandas.GeoDataFrame` on the map.
 
         Parameters
         ----------
@@ -1443,7 +1434,7 @@ class Maps(object):
             The layer-index at which the dataset will be plotted.
 
         kwargs :
-            all remaining kwargs are passed to `gdf.plot(**kwargs)`
+            all remaining kwargs are passed to `geopandas.GeoDataFrame.plot(**kwargs)`
         """
         self._check_gpd()
 
@@ -1748,6 +1739,14 @@ class Maps(object):
         s._make_pickable()
 
         return s
+
+    if wms_container is not None:
+
+        @property
+        @wraps(wms_container)
+        @lru_cache()
+        def add_wms(self):
+            return wms_container(self)
 
     @wraps(plt.savefig)
     def savefig(self, *args, **kwargs):
