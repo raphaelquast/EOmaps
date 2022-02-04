@@ -2160,6 +2160,7 @@ class MapsGrid:
     def __init__(
         self, r=2, c=2, crs=None, m_inits=None, ax_inits=None, figsize=None, **kwargs
     ):
+
         self._Maps = []
         self._names = defaultdict(list)
         self._gs = GridSpec(nrows=r, ncols=c, **kwargs)
@@ -2375,14 +2376,12 @@ class MapsGrid:
         @lru_cache()
         def add_wms(self):
             x = wms_container(self)
-            x.__doc__ = self._doc_prefix + x.__doc__
             return x
 
     @property
     @wraps(Maps.add_feature)
     def add_feature(self):
         x = NaturalEarth_features(self)
-        x.__doc__ = self._doc_prefix + x.__doc__
         return x
 
     @wraps(Maps.add_gdf)

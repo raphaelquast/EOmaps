@@ -21,10 +21,10 @@ You can then create **additional layers on the same map** by using:
 
     m2 = m.new_layer(...)
 
-(``m2`` is just another ``Maps`` object that shares the figure and plot-axes with ``m``)
+(``m2`` is then just another ``Maps`` object that shares the figure and plot-axes with ``m``)
 
 
-To get full control of how to copy an existing ``Maps``-object (and share selected specifications), have a look at ``m.copy()``.
+To get full control on how to copy existing ``Maps``-objects (and share selected specifications), have a look at ``m.copy()``.
 
 .. currentmodule:: eomaps
 
@@ -43,13 +43,13 @@ To get full control of how to copy an existing ``Maps``-object (and share select
 
 ``MapsGrid`` objects can be used to create (and manage) multiple maps in one figure.
 
-It creates a grid of ``Maps`` objects (and/or ordinary ``matpltolib`` axes),
+A ``MapsGrid`` creates a grid of ``Maps`` objects (and/or ordinary ``matpltolib`` axes),
 and provides convenience-functions to perform actions on all maps of the figure.
 
 .. code-block:: python
 
     from eomaps import MapsGrid
-    mgrid = MapsGrid(r=2, c=2, ... )
+    mgrid = MapsGrid(r=2, c=2, crs=..., ... )
     # you can then access the individual Maps-objects via:
     mgrid.m_0_0
     mgrid.m_0_1
@@ -68,7 +68,7 @@ and provides convenience-functions to perform actions on all maps of the figure.
 - The initialization of the axes is based on matplotlib's `GridSpec <https://matplotlib.org/stable/api/_as_gen/matplotlib.gridspec.GridSpec.html>`_ functionality. All additional keyword-arguments (``width_ratios, height_ratios, etc.``) are passed to the initialization of the GridSpec object.
 
   - The position of the axes are specified as tuples ``(row, col)``
-  - To specify axes that span over multiple rows or columns, simply use ``slice(start, stop)``.
+  - Axes that span over multiple rows or columns, can be specified via ``slice(start, stop)``.
 
 
 .. code-block:: python
@@ -79,6 +79,8 @@ and provides convenience-functions to perform actions on all maps of the figure.
     mgrid = MapsGrid(2, 2,
                      m_inits=dict(top_row=(0, slice(0, 2)),
                                   bottom_left=(1, 0)),
+                     crs=dict(top_row=4326,
+                              bottom_left=3857),
                      ax_inits=dict(bottom_right=(1, 1)),
                      width_ratios=(1, 2),
                      height_ratios=(2, 1))
@@ -103,6 +105,11 @@ and provides convenience-functions to perform actions on all maps of the figure.
     MapsGrid.set_data_specs
     MapsGrid.set_plot_specs
     MapsGrid.set_classify_specs
+    MapsGrid.add_wms
+    MapsGrid.add_feature
+    MapsGrid.add_annotation
+    MapsGrid.add_marker
+    MapsGrid.add_gdf
 
 
 🌍 Set plot specifications

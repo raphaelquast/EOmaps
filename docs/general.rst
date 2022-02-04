@@ -57,17 +57,22 @@ A list of the dependencies can be found below:
       - rtree
       - numpy
       - scipy
-      - pandas
       - matplotlib >=3.0
       - cartopy >=0.20.0
       - descartes
       - mapclassify
       - pyproj
       - pyepsg
+      # -------------- optional
+      - pandas
+      - geopandas
       # -------------- for WebMaps
       - owslib
       - requests
       - xmltodict
       - cairosvg
-      # -------------- optional
-      - geopandas
+      # -------------- only for building the docs
+      - sphinx
+      - sphinx-copybutton
+      - sphinx_rtd_theme
+      - mock
