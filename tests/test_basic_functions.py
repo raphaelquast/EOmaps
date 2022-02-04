@@ -34,7 +34,6 @@ class TestBasicPlotting(unittest.TestCase):
         m = Maps()
         m.set_data_specs(data=self.data, xcoord="x", ycoord="y", crs=3857)
         m.set_plot_specs(
-            plot_crs=4326,
             title="asdf",
             label="bsdf",
             histbins=100,
@@ -120,9 +119,8 @@ class TestBasicPlotting(unittest.TestCase):
         plt.close("all")
 
     def test_cpos(self):
-        m = Maps()
+        m = Maps(4326)
         m.data = self.data
-        m.plot_specs.crs = 4326
 
         for cpos in ["ul", "ur", "ll", "lr", "c"]:
             m.set_data_specs(xcoord="x", ycoord="y", in_crs=3857)
@@ -139,10 +137,10 @@ class TestBasicPlotting(unittest.TestCase):
             plt.close(m.figure.f)
 
     def test_alpha_and_splitbins(self):
-        m = Maps()
+        m = Maps(4326)
         m.data = self.data
         m.set_data_specs(xcoord="x", ycoord="y", in_crs=3857)
-        m.set_plot_specs(plot_crs=4326, alpha=0.4)
+        m.set_plot_specs(alpha=0.4)
         m.set_shape.rectangles()
         m.set_classify_specs(scheme="Percentiles", pct=[0.1, 0.2])
 
@@ -151,10 +149,9 @@ class TestBasicPlotting(unittest.TestCase):
         plt.close(m.figure.f)
 
     def test_classification(self):
-        m = Maps()
+        m = Maps(4326)
         m.data = self.data
         m.set_data_specs(xcoord="x", ycoord="y", in_crs=3857)
-        m.set_plot_specs(plot_crs=4326)
         m.set_shape.rectangles(radius=1, radius_crs="out")
 
         m.set_classify_specs(scheme="Quantiles", k=5)
@@ -164,10 +161,9 @@ class TestBasicPlotting(unittest.TestCase):
         plt.close(m.figure.f)
 
     def test_add_callbacks(self):
-        m = Maps()
+        m = Maps(3857)
         m.data = self.data.sample(10)
         m.set_data_specs(xcoord="x", ycoord="y", in_crs=3857)
-        m.set_plot_specs(plot_crs=3857)
         m.set_shape.ellipses(radius=200000)
 
         m.plot_map()
@@ -235,7 +231,6 @@ class TestBasicPlotting(unittest.TestCase):
         m = Maps()
         m.data = self.data
         m.set_data_specs(xcoord="x", ycoord="y", in_crs=3857)
-        m.set_plot_specs(plot_crs=4326)
 
         m.plot_map()
 
@@ -253,12 +248,10 @@ class TestBasicPlotting(unittest.TestCase):
         plt.close(m.figure.f)
 
     def test_add_marker(self):
-        m = Maps()
+        crs = Maps.CRS.Orthographic(central_latitude=45, central_longitude=45)
+        m = Maps(crs)
         m.data = self.data
         m.set_data_specs(xcoord="x", ycoord="y", in_crs=3857)
-        m.plot_specs.crs = Maps.CRS.Orthographic(
-            central_latitude=45, central_longitude=45
-        )
         m.plot_map()
 
         m.add_marker(
@@ -402,10 +395,9 @@ class TestBasicPlotting(unittest.TestCase):
         self.assertTrue(m4.shape is m.shape)
 
     def test_copy_connect(self):
-        m = Maps()
+        m = Maps(3857)
         m.data = self.data
         m.set_data_specs(xcoord="x", ycoord="y", in_crs=3857)
-        m.set_plot_specs(plot_crs=3857)
         m.set_shape.rectangles()
         m.set_classify_specs(scheme="Quantiles", k=5)
         m.plot_map()
@@ -425,9 +417,9 @@ class TestBasicPlotting(unittest.TestCase):
         plt.close("all")
 
     def test_join_limits(self):
-        mg = MapsGrid(2, 1)
+        mg = MapsGrid(2, 1, crs=3857)
+        mg.add_feature.preset.coastline()
         mg.set_data(data=self.data, xcoord="x", ycoord="y", in_crs=3857)
-        mg.set_plot_specs(plot_crs=3857)
         for m in mg:
             m.plot_map()
 
@@ -445,7 +437,7 @@ class TestBasicPlotting(unittest.TestCase):
 
     def test_draggable_axes(self):
 
-        mgrid = MapsGrid(2, 2)
+        mgrid = MapsGrid(2, 2, crs=[[4326, 4326], [3857, 3857]])
 
         for m in mgrid:
             m.plot_map(colorbar=False)
@@ -463,7 +455,7 @@ class TestBasicPlotting(unittest.TestCase):
         m = Maps(gs_ax=gs[0, 0])
         m.set_data_specs(data=self.data, xcoord="x", ycoord="y", in_crs=3857)
         m.set_plot_specs(histbins=5)
-        m.plot_map(colorbar=True)
+        m.plot_map()
         cb1 = m.add_colorbar(gs[1, 0], orientation="horizontal")
         cb2 = m.add_colorbar(gs[0, 1], orientation="vertical")
 
@@ -477,9 +469,9 @@ class TestBasicPlotting(unittest.TestCase):
         m.figure.set_colorbar_position((0.625, 0.25, 0.2, 0.1))
 
     def test_MapsGrid(self):
-        mg = MapsGrid(2, 2)
+        mg = MapsGrid(2, 2, crs=4326)
         mg.set_data(data=self.data, xcoord="x", ycoord="y", in_crs=3857)
-        mg.set_plot_specs(crs=4326, title="asdf", label="bsdf")
+        mg.set_plot_specs(title="asdf", label="bsdf")
         mg.set_classify_specs(scheme=Maps.CLASSIFIERS.EqualInterval, k=4)
         mg.set_shape.rectangles()
         mg.plot_map()
@@ -496,11 +488,15 @@ class TestBasicPlotting(unittest.TestCase):
 
     def test_MapsGrid2(self):
         mg = MapsGrid(
-            2, 2, m_inits={"a": (0, slice(0, 2)), 2: (1, 0)}, ax_inits=dict(c=(1, 1))
+            2,
+            2,
+            m_inits={"a": (0, slice(0, 2)), 2: (1, 0)},
+            crs={"a": 4326, 2: 3857},
+            ax_inits=dict(c=(1, 1)),
         )
 
         mg.set_data(data=self.data, xcoord="x", ycoord="y", in_crs=3857)
-        mg.set_plot_specs(crs=4326, title="asdf", label="bsdf")
+        mg.set_plot_specs(title="asdf", label="bsdf")
         mg.set_classify_specs(scheme=Maps.CLASSIFIERS.EqualInterval, k=4)
 
         for m in mg:
@@ -618,32 +614,30 @@ class TestBasicPlotting(unittest.TestCase):
             dict(lon=lon.flat, lat=lat.flat, data=(lon**2 + lat**2).flat)
         )
 
-        mgrid = MapsGrid(3, 4)
+        crs = [
+            Maps.CRS.Stereographic(),
+            Maps.CRS.Sinusoidal(),
+            Maps.CRS.Mercator(),
+            #
+            Maps.CRS.EckertI(),
+            Maps.CRS.EckertII(),
+            Maps.CRS.EckertIII(),
+            #
+            Maps.CRS.EckertIV(),
+            Maps.CRS.EckertV(),
+            Maps.CRS.Mollweide(),
+            #
+            Maps.CRS.Orthographic(central_longitude=45, central_latitude=45),
+            Maps.CRS.AlbersEqualArea(),
+            Maps.CRS.LambertCylindrical(),
+        ]
+
+        mgrid = MapsGrid(3, 4, crs=crs, figsize=(12, 10))
         mgrid.parent.set_data(
             data=df.sample(2000), xcoord="lon", ycoord="lat", crs=4326
         )
         for m in mgrid.children:
             m.set_data(**mgrid.parent.data_specs)
-
-        crss = iter(
-            (
-                m.CRS.Stereographic(),
-                m.CRS.Sinusoidal(),
-                m.CRS.Mercator(),
-                #
-                m.CRS.EckertI(),
-                m.CRS.EckertII(),
-                m.CRS.EckertIII(),
-                #
-                m.CRS.EckertIV(),
-                m.CRS.EckertV(),
-                m.CRS.Mollweide(),
-                #
-                m.CRS.Orthographic(central_longitude=45, central_latitude=45),
-                m.CRS.AlbersEqualArea(),
-                m.CRS.LambertCylindrical(),
-            )
-        )
 
         for i, m, title in zip(
             (
@@ -690,11 +684,10 @@ class TestBasicPlotting(unittest.TestCase):
 
             m.plot_specs.title = title
             getattr(m.set_shape, i[0])(**i[1])
-            m.plot_specs.plot_crs = next(crss)
 
-            m.plot_map(edgecolor="none", colorbar=True, pick_distance=5)
+            m.plot_map(edgecolor="none", pick_distance=5)
             m.cb.click.attach.annotate()
-
+            m.add_colorbar()
         mgrid.parent.cb.click.share_events(*mgrid.children)
 
         m.figure.f.tight_layout()

@@ -73,24 +73,7 @@ class map_objects(object):
     @property
     def f(self):
         # always return the figure of the parent object
-        if self._m.parent._f is None:
-            self._m.parent._BM = None  # reset the blit-manager
-            self._m.parent._f = plt.figure(figsize=(12, 8))
-
-            # attach a callback that is executed when the figure is closed
-            # (to inform the user that the Maps-object needs to be re-created)
-            self._cid_onclose = self._m.parent._f.canvas.mpl_connect(
-                "close_event", self._on_close
-            )
-            self._figure_closed = False
-            plt.draw()
-
         return self._m.parent._f
-
-    def _on_close(self, event):
-        # reset all objects connected to the figure to allow the re-initialization
-        # of a new figure object
-        self._m._reset_axes()
 
     @property
     def ax(self):
@@ -801,7 +784,6 @@ class NaturalEarth_features:
 
             if not _gpd_OK:
                 for m in self._m if isinstance(self._m, MapsGrid) else [self._m]:
-                    m._set_axes()
 
                     self.feature._kwargs.update(kwargs)
                     art = m.figure.ax.add_feature(self.feature)
@@ -810,7 +792,6 @@ class NaturalEarth_features:
             else:
                 s = self.get_gdf()
                 for m in self._m if isinstance(self._m, MapsGrid) else [self._m]:
-                    m._set_axes()
 
                     m.add_gdf(s, layer=layer, **kwargs)
 

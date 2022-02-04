@@ -227,8 +227,6 @@ class _wmts_layer(_WebMap_layer):
 
         for m in self._m if isinstance(self._m, MapsGrid) else [self._m]:
 
-            m._set_axes()
-
             print(f"EOmaps: Adding wmts-layer: {self.name}")
             art = m.figure.ax.add_wmts(
                 self._wms, self.name, wmts_kwargs=kwargs, interpolation="spline36"
@@ -261,9 +259,6 @@ class _wms_layer(_WebMap_layer):
         from . import MapsGrid  # do this here to avoid circular imports!
 
         for m in self._m if isinstance(self._m, MapsGrid) else [self._m]:
-
-            m._set_axes()
-
             art = m.figure.ax.add_wms(
                 self._wms, self.name, wms_kwargs=kwargs, interpolation="spline36"
             )
@@ -589,7 +584,6 @@ class _xyz_tile_service:
                     layer, transparent, alpha, interpolation, **kwargs
                 )
         else:
-            self._m._set_axes()
             self.kwargs = dict(interpolation=interpolation, alpha=alpha)
             self.kwargs.update(kwargs)
 

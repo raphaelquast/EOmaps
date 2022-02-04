@@ -12,7 +12,9 @@ data = pd.DataFrame(
 data = data.sample(4000)  # take 4000 random datapoints from the dataset
 # ------------------------------------
 
-mg = MapsGrid(1, 3, crs=4326)  # initialize a grid of Maps objects
+mg = MapsGrid(
+    1, 3, crs=[4326, Maps.CRS.Stereographic(), 3035], figsize=(10, 5)
+)  # initialize a grid of Maps objects
 # set the data on ALL maps-objects of the grid
 mg.set_data(data=data, xcoord="lon", ycoord="lat", in_crs=4326)
 
@@ -21,23 +23,25 @@ mg.m_0_0.set_plot_specs(title="epsg=4326")
 mg.m_0_0.set_classify_specs(scheme="EqualInterval", k=10)
 
 # --------- set specs for the second axes
-mg.m_0_1.set_plot_specs(crs=Maps.CRS.Stereographic(), title="Stereographic")
+mg.m_0_1.set_plot_specs(title="Stereographic")
 mg.m_0_1.set_shape.rectangles()
 mg.m_0_1.set_classify_specs(scheme="Quantiles", k=4)
 
 # --------- set specs for the third axes
-mg.m_0_2.set_plot_specs(crs=3035, title="epsg=3035")
+mg.m_0_2.set_plot_specs(title="epsg=3035")
 mg.m_0_2.set_classify_specs(
     scheme="StdMean", multiples=[-1, -0.75, -0.5, -0.25, 0.25, 0.5, 0.75, 1]
 )
 
+# --------- plot all maps and add colorbars to all maps
+mg.plot_map()
+mg.add_colorbar()
+
 # --------- plot all maps and rotate the ticks of the colorbar
 for m in mg:
-    m.plot_map()
     m.figure.ax_cb.tick_params(rotation=90, labelsize=8)
 
 # --------- set figsize and use a "tight_layout"
-mg.f.set_figheight(5)
 mg.f.tight_layout()
 
 # --------- add some callbacks to indicate the clicked data-point to all maps

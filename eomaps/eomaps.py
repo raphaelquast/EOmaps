@@ -142,6 +142,10 @@ class Maps(object):
         Set the preferred way for accessing WebMap services if both WMS and WMTS
         capabilities are possible.
         The default is "wms"
+
+    kwargs :
+        additional kwargs are passed to matplotlib.pyplot.figure()
+        - e.g. figsize=(10,5)
     """
 
     CRS = ccrs
@@ -176,6 +180,7 @@ class Maps(object):
         f=None,
         gs_ax=None,
         preferred_wms_service="wms",
+        **kwargs,
     ):
 
         # share the axes with the parent if no explicit axes is provided
@@ -188,9 +193,9 @@ class Maps(object):
         self._orientation = orientation
         self._ax = gs_ax
         self._init_ax = gs_ax
+        self._parent = None
 
         self._BM = None
-        self._parent = None
         self._children = []
 
         self.parent = parent  # invoke the setter!
@@ -246,6 +251,8 @@ class Maps(object):
 
         self._axpicker = None
 
+        self._init_figure(gs_ax=gs_ax, plot_crs=crs, **kwargs)
+
     def _check_gpd(self):
         # raise an error if geopandas is not found
         # (execute this in any function that requires geopandas!)
@@ -268,62 +275,71 @@ class Maps(object):
     def figure(self):
         return map_objects(self)
 
-    def _set_axes(self):
-        if self._ax is None or isinstance(self._ax, SubplotSpec):
-            f, gs, cbgs, ax, ax_cb, ax_cb_plot = self._init_figure(
-                gs_ax=self._ax,
-                add_colorbar=getattr(self, "cbQ", False),
+    @staticmethod
+    def _get_cartopy_crs(crs):
+        if isinstance(crs, Maps.CRS.CRS):
+            cartopy_proj = crs
+        elif crs == 4326:
+            cartopy_proj = ccrs.PlateCarree()
+        elif isinstance(crs, (int, np.integer)):
+            cartopy_proj = ccrs.epsg(crs)
+        else:
+            raise AssertionError(f"EOmaps: cannot identify the CRS for: {crs}")
+        return cartopy_proj
+
+    def _init_figure(self, gs_ax=None, plot_crs=None, **kwargs):
+        if self.figure.f is None:
+            self._f = plt.figure(**kwargs)
+
+        if isinstance(gs_ax, plt.Axes):
+            # in case an axis is provided, attempt to use it
+            ax = gs_ax
+            gs = gs_ax.get_gridspec()
+        else:
+            # create a new axis
+            if gs_ax is None:
+                gs = GridSpec(
+                    nrows=1, ncols=1, left=0.01, right=0.99, bottom=0.01, top=0.95
+                )
+                gsspec = gs[:]
+            elif isinstance(gs_ax, SubplotSpec):
+                gsspec = gs_ax
+                gs = gsspec.get_gridspec()
+
+            if plot_crs is None:
+                plot_crs = self.plot_specs["plot_crs"]
+
+            projection = self._get_cartopy_crs(plot_crs)
+
+            ax = self.figure.f.add_subplot(
+                gsspec, projection=projection, aspect="equal", adjustable="box"
             )
 
-            self._ax = ax
-            self._ax_cb = ax_cb
-            self._ax_cb_plot = ax_cb_plot
-            self._gridspec = gs
-            self._cb_gridspec = cbgs
+        self._ax = ax
+        self._gridspec = gs
 
-            # initialize the callbacks
-            self.cb._init_cbs()
+        # initialize the callbacks
+        self.cb._init_cbs()
 
-            def lims_change(*args, **kwargs):
-                self.BM._refetch_bg = True
+        def lims_change(*args, **kwargs):
+            self.BM._refetch_bg = True
 
-            self.figure.ax.callbacks.connect("xlim_changed", lims_change)
-            self.figure.ax.callbacks.connect("ylim_changed", lims_change)
+        self.figure.ax.callbacks.connect("xlim_changed", lims_change)
+        self.figure.ax.callbacks.connect("ylim_changed", lims_change)
 
-            if self.parent is self:
-                _ = self._draggable_axes
+        if self.parent is self:
+            _ = self._draggable_axes
 
-                if plt.get_backend() == "module://ipympl.backend_nbagg":
-                    warnings.warn(
-                        "EOmaps disables matplotlib's interactive mode (e.g. 'plt.ioff()') "
-                        + "when using the 'ipympl' backend to avoid recursions during callbacks!"
-                    )
-                    plt.ioff()
-                else:
-                    plt.ion()
+            if plt.get_backend() == "module://ipympl.backend_nbagg":
+                warnings.warn(
+                    "EOmaps disables matplotlib's interactive mode (e.g. 'plt.ioff()') "
+                    + "when using the 'ipympl' backend to avoid recursions during callbacks!"
+                )
+                plt.ioff()
             else:
-                # make sure the parent Maps-object is initialized as well!
-                self.parent._set_axes()
-            plt.show()
+                plt.ion()
 
-    def _reset_axes(self):
-        # reset all objects connected to the figure (in case it is closed)
-        for m in [self.parent, *self.parent._children]:
-            m._f = None
-            m._ax = m._init_ax
-            m._ax_cb = None
-            m._ax_cb_plot = None
-            m._gridspec = None
-            m._cb_gridspec = None
-
-            # reset all callbacks attached to the figure
-            m.cb._reset_cids()
-
-        # reset the Blit-Manager
-        self.parent._BM = None
-
-        # reset the draggable-axes class on next call
-        self.parent._axpicker = None
+        plt.show()
 
     @property
     def BM(self):
@@ -373,9 +389,7 @@ class Maps(object):
         *args :
             the axes to join.
         """
-        self._set_axes()
         for m in args:
-            m._set_axes()
             if m is not self:
                 self._join_axis_limits(m)
 
@@ -1036,122 +1050,6 @@ class Maps(object):
 
         return cbcmap, norm, bins, classified
 
-    def _init_fig_grid(self, gs_ax=None):
-
-        if gs_ax is None:
-            gs_main = None
-            gs_func = GridSpec
-        else:
-            gs_main = gs_ax
-            gs_func = partial(GridSpecFromSubplotSpec, subplot_spec=gs_main)
-
-        if self._orientation == "horizontal":
-            # gridspec for the plot
-            if gs_main:
-                gs = gs_func(
-                    nrows=1,
-                    ncols=2,
-                    width_ratios=[0.75, 0.15],
-                    wspace=0.02,
-                )
-            else:
-                gs = gs_func(
-                    nrows=1,
-                    ncols=2,
-                    width_ratios=[0.75, 0.15],
-                    left=0.01,
-                    right=0.91,
-                    bottom=0.02,
-                    top=0.92,
-                    wspace=0.02,
-                )
-            # sub-gridspec
-            cbgs = GridSpecFromSubplotSpec(
-                nrows=1,
-                ncols=2,
-                subplot_spec=gs[0, 1],
-                hspace=0,
-                wspace=0,
-                width_ratios=[0.9, 0.1],
-            )
-        elif self._orientation == "vertical":
-            if gs_main:
-                # gridspec for the plot
-                gs = gs_func(
-                    nrows=2,
-                    ncols=1,
-                    height_ratios=[0.75, 0.15],
-                    hspace=0.02,
-                )
-            else:
-                # gridspec for the plot
-                gs = gs_func(
-                    nrows=2,
-                    ncols=1,
-                    height_ratios=[0.75, 0.15],
-                    left=0.05,
-                    right=0.95,
-                    bottom=0.07,
-                    top=0.92,
-                    hspace=0.02,
-                )
-            # sub-gridspec
-            cbgs = GridSpecFromSubplotSpec(
-                nrows=2,
-                ncols=1,
-                subplot_spec=gs[1, 0],
-                hspace=0,
-                wspace=0,
-                height_ratios=[0.9, 0.1],
-            )
-
-        return gs, cbgs
-
-    def _init_figure(self, gs_ax=None, plot_crs=None, add_colorbar=True):
-        f = self.figure.f
-        if plot_crs is None:
-            plot_crs = self.plot_specs["plot_crs"]
-
-        if gs_ax is None or isinstance(gs_ax, SubplotSpec):
-            gs, cbgs = self._init_fig_grid(gs_ax=gs_ax)
-
-            if plot_crs == 4326:
-                cartopy_proj = ccrs.PlateCarree()
-            elif isinstance(plot_crs, int):
-                cartopy_proj = ccrs.epsg(plot_crs)
-            else:
-                cartopy_proj = plot_crs
-
-            if add_colorbar:
-                ax = f.add_subplot(
-                    gs[0], projection=cartopy_proj, aspect="equal", adjustable="box"
-                )
-                # axes for histogram
-                ax_cb_plot = f.add_subplot(cbgs[0], frameon=False, label="ax_cb_plot")
-                # axes for colorbar
-                ax_cb = f.add_subplot(cbgs[1], label="ax_cb")
-                # join colorbar and histogram axes
-                if self._orientation == "horizontal":
-                    ax_cb_plot.get_shared_y_axes().join(ax_cb_plot, ax_cb)
-                    ax_cb_plot.tick_params(rotation=90, axis="x")
-
-                elif self._orientation == "vertical":
-                    ax_cb_plot.get_shared_x_axes().join(ax_cb_plot, ax_cb)
-            else:
-                ax = f.add_subplot(
-                    gs[:], projection=cartopy_proj, aspect="equal", adjustable="box"
-                )
-                if hasattr(gs, "update"):
-                    gs.update(left=0.01, right=0.99, bottom=0.01, top=0.95)
-                ax_cb, ax_cb_plot = None, None
-
-        else:
-            ax = gs_ax
-            gs, cbgs = None, None
-            ax_cb, ax_cb_plot = None, None
-
-        return f, gs, cbgs, ax, ax_cb, ax_cb_plot
-
     def _add_colorbar(
         self,
         ax_cb=None,
@@ -1438,7 +1336,6 @@ class Maps(object):
         """
         self._check_gpd()
 
-        self._set_axes()
         ax = self.figure.ax
         defaultargs = dict(facecolor="none", edgecolor="k", lw=1.5)
         defaultargs.update(kwargs)
@@ -1590,8 +1487,6 @@ class Maps(object):
             >>> m.add_marker(ID=1, radius=2, radius_crs=4326, shape="rectangles")
             >>> m.add_marker(xy=(45, 35), xy_crs=4326, radius=20000, shape="geod_circles")
         """
-        self._set_axes()
-
         if ID is not None:
             assert xy is None, "You can only provide 'ID' or 'pos' not both!"
         else:
@@ -1669,8 +1564,6 @@ class Maps(object):
             >>> m.add_annotation(ID=1, text=addtxt)
 
         """
-        self._set_axes()
-
         if ID is not None:
             assert xy is None, "You can only provide 'ID' or 'pos' not both!"
 
@@ -1719,8 +1612,6 @@ class Maps(object):
         label_props=None,
     ):
 
-        self._set_axes()
-
         if lon is None and lat is None:
             extent = self.figure.ax.get_extent()
             lon, lat = self._transf_plot_to_lonlat.transform(
@@ -1759,7 +1650,6 @@ class Maps(object):
 
     def plot_map(
         self,
-        colorbar=True,
         pick_distance=100,
         layer=None,
         dynamic=False,
@@ -1779,10 +1669,6 @@ class Maps(object):
 
         Parameters
         ----------
-        colorbar : bool
-            Indicator if a colorbar should be added or not.
-            (ONLY relevant for the first time a dataset is plotted!)
-            The default is True
         pick_distance : int
             The maximum distance (in pixels) to trigger callbacks on the added collection.
             (The distance is evaluated between the clicked pixel and the center of the
@@ -1809,12 +1695,6 @@ class Maps(object):
                 + " instead!"
             )
 
-        if self.data is None and colorbar is True:
-            print("EOmaps: ...cannot add a colormap if no data is provided!")
-            colorbar = False
-        self.cbQ = colorbar
-
-        self._set_axes()
         ax = self.figure.ax
 
         for key in ("cmap", "array", "norm"):
@@ -1898,36 +1778,6 @@ class Maps(object):
             self.cb.pick._pick_distance = pick_distance
             self.cb._methods.append("pick")
 
-            if colorbar:
-                if hasattr(self.figure, "cb"):
-                    warnings.warn(
-                        "EOmaps: There is already a colorbar present on the map!"
-                    )
-                elif self.figure.ax is not None and (
-                    self.figure.ax_cb is None or self.figure.ax_cb_plot is None
-                ):
-                    warnings.warn(
-                        "EOmaps: Colorbars can only be added on the base-layer!"
-                    )
-
-                elif (self.figure.ax_cb is not None) and (
-                    self.figure.ax_cb_plot is not None
-                ):
-
-                    # ------------- add a colorbar with a histogram
-                    cb = self._add_colorbar(
-                        bins=bins,
-                        cmap=cbcmap,
-                        norm=norm,
-                        classified=classified,
-                    )
-                    self.figure.cb = cb
-                else:
-                    warnings.warn(
-                        "EOmaps: Colorbar could not be created... did "
-                        + "you call 'm.plot_map()' before adding other features?"
-                    )
-
             if dynamic is True:
                 self.BM.add_artist(coll, layer)
             else:
@@ -1951,14 +1801,17 @@ class Maps(object):
 
     def add_colorbar(
         self,
-        gs,
+        gs=0.2,
         orientation="horizontal",
         label=None,
         density=None,
         tick_precision=None,
+        pad_axes=0.1,
+        pad_size=(0.1, 0.1),
     ):
         """
-        Manually add a colorbar to an existing figure.
+        Add a colorbar to an existing figure.
+
         (NOTE: the preferred way is to use `plot_map(colorbar=True)` instead!)
 
         To change the position of the colorbar, use:
@@ -1973,34 +1826,101 @@ class Maps(object):
         orientation : str
             The orientation of the colorbar ("horizontal" or "vertical")
             The default is "horizontal"
+        pad_axes : float
+            The padding between the colorbar and the parent axes (as fraction of the
+            plot-height (if "horizontal") or plot-width (if "vertical")
+
+            The default is 0.1
+
+        pad_size : float, tuple
+            The padding for the size of the colorbar (e.g. the width if "horizontal"
+            and the height if "vertical") as a fraction of the corresponding size
+            of the parent-axes.
+
+        Notes
+        -----
+        Here's how the padding looks like as a scetch:
+        _________________________________________________________
+        |[ - - - - - - - - - - - - - - - - - - - - - - - - - - ]|
+        |[ - - - - - - - - - - - - MAP - - - - - - - - - - - - ]|
+        |[ - - - - - - - - - - - - - - - - - - - - - - - - - - ]|
+        |                                                       |
+        |                      ( pad_axes )                     |
+        |                                                       |
+        | ( pad_size[0] )   [ - COLORBAR  - ]   ( pad_size[1] ) |
+        |_______________________________________________________|
+
         """
 
-        # "_add_colorbar" orientation is opposite to the colorbar-orientation
-        if orientation == "horizontal":
-            cb_orientation = "vertical"
-        elif orientation == "vertical":
-            cb_orientation = "horizontal"
+        if isinstance(pad_size, (int, float)):
+            pad_size = [pad_size, pad_size]
 
-        if cb_orientation == "horizontal":
-            # sub-gridspec
-            cbgs = GridSpecFromSubplotSpec(
-                nrows=1,
-                ncols=2,
-                subplot_spec=gs,
-                hspace=0,
-                wspace=0,
-                width_ratios=[0.9, 0.1],
-            )
-        elif cb_orientation == "vertical":
-            # sub-gridspec
+        assert hasattr(
+            self.classify_specs, "_bins"
+        ), "EOmaps: you need to call `m.plot_map()` before adding a colorbar!"
+
+        # initialize colorbar axes
+        if isinstance(gs, float):
+            frac = gs
+            # get the original subplot-spec of the axes, and divide it based on
+            # the fraction that is intended for the colorbar
+            if orientation == "horizontal":
+                gs = GridSpecFromSubplotSpec(
+                    2,
+                    3,
+                    self.figure.ax.get_subplotspec(),
+                    height_ratios=(1, frac),
+                    width_ratios=(pad_size[0], 1, pad_size[1]),
+                    wspace=0,
+                    hspace=pad_axes,
+                )
+                self.figure.ax.set_subplotspec(gs[0, :])
+                gsspec = gs[1, 1]
+
+            elif orientation == "vertical":
+                gs = GridSpecFromSubplotSpec(
+                    3,
+                    2,
+                    self.figure.ax.get_subplotspec(),
+                    width_ratios=(1, frac),
+                    height_ratios=(pad_size[0], 1, pad_size[1]),
+                    hspace=0,
+                    wspace=pad_axes,
+                )
+                self.figure.ax.set_subplotspec(gs[:, 0])
+                gsspec = gs[1, 1]
+
+            else:
+                raise AssertionError("'{orientation}' is not a valid orientation")
+        else:
+            gsspec = gs
+
+        if orientation == "horizontal":
+            # sub-gridspec for the colorbar
             cbgs = GridSpecFromSubplotSpec(
                 nrows=2,
                 ncols=1,
-                subplot_spec=gs,
+                subplot_spec=gsspec,
                 hspace=0,
                 wspace=0,
                 height_ratios=[0.9, 0.1],
             )
+
+            # "_add_colorbar" orientation is opposite to the colorbar-orientation!
+            cb_orientation = "vertical"
+        elif orientation == "vertical":
+            # sub-gridspec for the colorbar
+            cbgs = GridSpecFromSubplotSpec(
+                nrows=1,
+                ncols=2,
+                subplot_spec=gsspec,
+                hspace=0,
+                wspace=0,
+                width_ratios=[0.9, 0.1],
+            )
+
+            # "_add_colorbar" orientation is opposite to the colorbar-orientation!
+            cb_orientation = "horizontal"
 
         ax_cb = self.figure.f.add_subplot(
             cbgs[1],
@@ -2012,6 +1932,12 @@ class Maps(object):
             frameon=False,
             label="ax_cb_plot",
         )
+
+        # join colorbar and histogram axes
+        if cb_orientation == "horizontal":
+            ax_cb_plot.get_shared_y_axes().join(ax_cb_plot, ax_cb)
+        elif cb_orientation == "vertical":
+            ax_cb_plot.get_shared_x_axes().join(ax_cb_plot, ax_cb)
 
         cb = self._add_colorbar(
             ax_cb=ax_cb,
@@ -2026,11 +1952,9 @@ class Maps(object):
             tick_precision=tick_precision,
         )
 
-        # join colorbar and histogram axes
-        if cb_orientation == "horizontal":
-            ax_cb_plot.get_shared_y_axes().join(ax_cb_plot, ax_cb)
-        elif cb_orientation == "vertical":
-            ax_cb_plot.get_shared_x_axes().join(ax_cb_plot, ax_cb)
+        self._ax_cb = ax_cb
+        self._ax_cb_plot = ax_cb_plot
+        self._cb_gridspec = cbgs
 
         return [cbgs, ax_cb, ax_cb_plot, orientation, cb]
 
@@ -2108,6 +2032,8 @@ class MapsGrid:
 
         Note: If you iterate over the MapsGrid object, ONLY the initialized Maps
         objects will be returned!
+    figsize : (float, float)
+        The width and height of the figure.
     kwargs
         Additional keyword-arguments passed to the `matplotlib.gridspec.GridSpec()`
         function that is used to initialize the grid.
@@ -2167,20 +2093,29 @@ class MapsGrid:
       the MapsGrid object!
     """
 
-    def __init__(self, r=2, c=2, crs=None, m_inits=None, ax_inits=None, **kwargs):
+    def __init__(
+        self, r=2, c=2, crs=None, m_inits=None, ax_inits=None, figsize=None, **kwargs
+    ):
         self._Maps = []
         self._names = defaultdict(list)
         self._gs = GridSpec(nrows=r, ncols=c, **kwargs)
 
         if m_inits is None and ax_inits is None:
+            if isinstance(crs, list):
+                crs = np.array(crs).reshape((r, c))
+            else:
+                crs = np.broadcast_to(crs, (r, c))
+
             self._custom_init = False
             for i in range(r):
                 for j in range(c):
                     if i == 0 and j == 0:
-                        mij = Maps(crs=crs, gs_ax=self._gs[0, 0])
+                        mij = Maps(crs=crs[i, j], gs_ax=self._gs[0, 0], figsize=figsize)
                         self.parent = mij
                     else:
-                        mij = Maps(crs=crs, parent=self.parent, gs_ax=self._gs[i, j])
+                        mij = Maps(
+                            crs=crs[i, j], parent=self.parent, gs_ax=self._gs[i, j]
+                        )
 
                     self._Maps.append(mij)
                     name = f"{i}_{j}"
@@ -2189,9 +2124,13 @@ class MapsGrid:
         else:
             self._custom_init = True
             if m_inits is not None:
+                if not isinstance(crs, dict):
+                    crs = {key: crs for key in m_inits}
+
                 assert self._test_unique_str_keys(
                     m_inits
                 ), "EOmaps: there are duplicated keys in m_inits!"
+
                 for i, [key, val] in enumerate(m_inits.items()):
                     if ax_inits is not None:
                         q = set(m_inits).intersection(set(ax_inits))
@@ -2200,10 +2139,10 @@ class MapsGrid:
                         ), f"You cannot provide duplicate keys! Check: {q}"
 
                     if i == 0:
-                        mi = Maps(crs=crs, gs_ax=self._gs[val])
+                        mi = Maps(crs=crs[key], gs_ax=self._gs[val], figsize=figsize)
                         self.parent = mi
                     else:
-                        mi = Maps(crs=crs, parent=self.parent, gs_ax=self._gs[val])
+                        mi = Maps(crs=crs[key], parent=self.parent, gs_ax=self._gs[val])
 
                     name = str(key)
                     self._names["Maps"].append(name)
@@ -2395,6 +2334,13 @@ class MapsGrid:
             m.add_scalebar(*args, **kwargs)
 
     add_scalebar.__doc__ = _doc_prefix + add_scalebar.__doc__
+
+    @wraps(Maps.add_colorbar)
+    def add_colorbar(self, *args, **kwargs):
+        for m in self:
+            m.add_colorbar(*args, **kwargs)
+
+    add_colorbar.__doc__ = _doc_prefix + add_colorbar.__doc__
 
     def share_click_events(self):
         """

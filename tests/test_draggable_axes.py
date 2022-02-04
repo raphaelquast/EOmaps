@@ -15,16 +15,16 @@ class TestDraggableAxes(unittest.TestCase):
         pass
 
     def test_draggable_axes(self):
-
+        # %%
         lon, lat = np.meshgrid(np.linspace(20, 50, 50), np.linspace(20, 50, 50))
         data = pd.DataFrame(dict(lon=lon.flat, lat=lat.flat, value=1))
 
         mg = MapsGrid()
-        for m in mg:
-            m.set_data(data=data)
-            m.plot_map()
+        mg.set_data(data)
+        mg.plot_map()
+        mg.add_colorbar()
 
-        cv = m.figure.f.canvas
+        cv = mg.f.canvas
 
         # activate draggable axes
         cv.key_press_event("alt+d")

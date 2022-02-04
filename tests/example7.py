@@ -19,11 +19,10 @@ data = pd.DataFrame(
 )
 
 # ----------- setup some maps objects and assign datasets and the plot-crs
-mg = MapsGrid(1, 2, crs=4326)
+mg = MapsGrid(1, 2, crs=[4326, Maps.CRS.Orthographic(45, 45)], figsize=(10, 6))
 mg.m_0_0.set_data(data=data.sample(100), xcoord="lon", ycoord="lat", crs=4326)
 
 mg.m_0_1.set_data(data=data, xcoord="lon", ycoord="lat", crs=4326)
-mg.m_0_1.plot_specs.crs = Maps.CRS.Orthographic(45, 45)
 
 mg.add_feature.preset.ocean()
 mg.add_feature.cultural_50m.admin_0_countries(
@@ -35,11 +34,10 @@ mg.add_feature.cultural_50m.admin_0_countries(
     lw=0.5,
 )
 
-for m in mg:
-    # plot the attached dataset and attach callbacks to it
-    m.set_shape.rectangles(radius=3, radius_crs=4326)
-    m.plot_map(alpha=0.75, ec=(1, 1, 1, 0.5), pick_distance=25, colorbar=False)
+mg.set_shape.rectangles(radius=3, radius_crs=4326)
+mg.plot_map(alpha=0.75, ec=(1, 1, 1, 0.5), pick_distance=25)
 
+for m in mg:
     # attach a callback to highlite the rectangles
     m.cb.pick.attach.mark(
         permanent=False, shape="rectangles", fc="none", ec="b", lw=2, layer=5
@@ -52,5 +50,4 @@ for m in mg:
 
 mg.share_pick_events()  # share default pick events
 mg.share_pick_events("countries")  # share the events of the "countries" picker
-mg.f.set_figheight(6)
 mg.f.tight_layout()

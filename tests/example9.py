@@ -37,7 +37,11 @@ data = pd.DataFrame(dict(count=database.count(axis=1), **coords))
 
 # -------- initialize a MapsGrid with a map on top and 2 ordinary axes below
 mg = MapsGrid(
-    2, 2, m_inits=dict(top=(0, slice(0, 2))), ax_inits=dict(left=(1, 0), right=(1, 1))
+    2,
+    2,
+    m_inits=dict(top=(0, slice(0, 2))),
+    ax_inits=dict(left=(1, 0), right=(1, 1)),
+    height_ratios=(3, 2),
 )
 
 mg.add_feature.preset.ocean()
@@ -90,4 +94,9 @@ mg.m_top.cb.pick.attach.annotate(layer=20)
 mg.m_top.cb.pick.attach.mark(permanent=False, buffer=1, fc="none", ec="r")
 mg.m_top.cb.pick.attach.mark(permanent=False, buffer=2, fc="none", ec="r", ls=":")
 
-mg.f.subplots_adjust(top=0.98, bottom=0.075, left=0.07, right=0.93)
+
+# add a colorbar
+mg.m_top.add_colorbar(0.25, pad_axes=0, pad_size=(0, 0))
+mg.m_top.figure.ax_cb_plot.tick_params(labelsize=6)
+
+mg.f.tight_layout()

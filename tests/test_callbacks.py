@@ -388,8 +388,7 @@ class TestCallbacks(unittest.TestCase):
 
     def test_indicate_extent(self):
         # test dynamic callbacks
-        mg = MapsGrid(2, 1)
-        mg.m_1_0.plot_specs.crs = Maps.CRS.Orthographic()
+        mg = MapsGrid(2, 1, crs=Maps.CRS.Orthographic())
 
         mg.m_0_0.add_feature.preset.ocean(ec="k", scale="110m")
         mg.m_1_0.add_feature.preset.ocean(ec="k", scale="110m")
