@@ -541,7 +541,7 @@ class classify_specs(object):
         )
 
 
-class NaturalEarth_features:
+class NaturalEarth_features(object):
     """
     Interface to the feature-layers provided by NaturalEarth
 

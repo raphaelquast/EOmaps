@@ -1269,6 +1269,7 @@ class Maps(object):
         return cb
 
     @property
+    @wraps(NaturalEarth_features)
     def add_feature(self):
         return NaturalEarth_features(self)
 
