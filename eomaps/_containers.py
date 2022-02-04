@@ -411,14 +411,12 @@ class plot_specs(object):
 
     @plot_crs.setter
     def plot_crs(self, crs):
-        if self._m.figure.ax is None:
-            self._plot_crs = crs
-        else:
-            if crs is not None:
-                raise AssertionError(
-                    "EOmaps: The plot-crs can only be set BEFORE "
-                    + "the plot is created!"
-                )
+        warn(
+            (
+                "\nIn EOmaps > v3.0 the plot-crs is set on "
+                + "initialization of the Maps-object! \nUse `m = Maps(crs=...)` instead!\n"
+            )
+        )
 
 
 class classify_specs(object):
