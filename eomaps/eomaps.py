@@ -235,7 +235,7 @@ class Maps(object):
             if crs is None:
                 crs = 4326
 
-            self.plot_specs.crs = crs
+            self.plot_specs._plot_crs = crs
 
         # default classify specs
         self.classify_specs = classify_specs(self)
