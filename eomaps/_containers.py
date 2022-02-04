@@ -332,6 +332,9 @@ class plot_specs(object):
             assert key in self.keys(), f"'{key}' is not a valid data-specs key"
 
         for key in self.keys():
+            if key == "plot_crs":
+                continue
+
             setattr(self, key, kwargs.get(key, None))
 
     def __repr__(self):

@@ -182,7 +182,6 @@ class Maps(object):
         preferred_wms_service="wms",
         **kwargs,
     ):
-
         # share the axes with the parent if no explicit axes is provided
         if parent is not None:
             assert (
@@ -513,8 +512,19 @@ class Maps(object):
             a new Maps class.
         """
 
-        # create a new class
+        plot_spec_list = list(self.plot_specs.keys())
+        plot_crs = plot_spec_list.pop(plot_spec_list.index("plot_crs"))
+
+        if "crs" not in kwargs and "gs_ax" not in kwargs:
+            kwargs["crs"] = plot_crs
+
         copy_cls = Maps(**kwargs)
+        if plot_specs is True:
+            copy_cls.set_plot_specs(
+                **{key: copy.deepcopy(self.plot_specs[key]) for key in plot_spec_list}
+            )
+        elif plot_specs == "share":
+            copy_cls.plot_specs = self.plot_specs
 
         if data_specs is True:
             data_specs = list(self.data_specs.keys())
@@ -523,20 +533,6 @@ class Maps(object):
             )
         elif data_specs == "share":
             copy_cls.data_specs = self.data_specs
-
-        if plot_specs is True:
-            plot_specs = list(self.plot_specs.keys())
-            if copy_cls.figure.ax is not None:
-                # don't copy the plot_crs if there's already an axes defined!
-                # (cartopy-projections can't be deep-copied)
-                plot_specs.pop(plot_specs.index("plot_crs"))
-
-            copy_cls.set_plot_specs(
-                **{key: copy.deepcopy(self.plot_specs[key]) for key in plot_specs}
-            )
-
-        elif plot_specs == "share":
-            copy_cls.plot_specs = self.plot_specs
 
         if shape is True:
             getattr(copy_cls.set_shape, self.shape.name)(**self.shape._initargs)
