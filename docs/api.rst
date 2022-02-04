@@ -15,7 +15,9 @@
     from eomaps import Maps
     m = Maps(crs=4326)
 
-You can then create **additional layers on the same map** by using:
+The CRS usable for plotting are accessible via `Maps.CRS`, e.g.: ``crs=Maps.CRS.Orthographic()``.
+
+One you have created your first ``Maps`` object, you can create **additional layers on the same map** by using:
 
 .. code-block:: python
 
@@ -139,16 +141,12 @@ Alternatively, you can also get/set the properties with:
     m.plot_specs.< property > = ...
     m.classify_specs.< property > = ...
 
-
-The CRS usable for plotting as well as available classifiers that can be used
-to classify the data are accessible via `Maps.CRS` and `Maps.CLASSIFIERS`:
+The available classifiers that can be used to classify the data are accessible via `Maps.CLASSIFIERS`:
 
 .. code-block:: python
 
     m = Maps()
     m.set_classify_specs(Maps.CLASSFIERS.Quantiles, k=5)
-    m.plot_specs.crs = Maps.CRS.Orthographic(central_latitude=45)
-
 
 🗺 Plot the map and save it
 ...........................
@@ -162,17 +160,20 @@ call :code:`m.plot_map()`:
     m.set_data( < the data specifications > )
     m.plot_map()
 
-
-If you only want to add a WebMap layer, simply use:
+you can then add a colorbar or to the map via:
 
 .. code-block:: python
 
-    m = Maps()
-    m.add_wms.< WebMap service >.add_layer.< Layer Name >()
+    m.add_colorbar()
+
+or add a WebMap layer via:
+
+.. code-block:: python
+
+    m.add_wms.< WebMap service >. ... .add_layer.< Layer Name >()
 
 
 Once the map is generated, a snapshot of the map can be saved at any time by using:
-
 
 .. code-block:: python
 
@@ -268,6 +269,7 @@ Callbacks that can be used only with `m.cb.pick`:
     :template: only_names_in_toc.rst
 
     load
+    highlight_geometry
 
 Pre-defined keypress callbacks
 ..............................
@@ -303,27 +305,19 @@ Callbacks that can be used with `m.cb.dynamic`
 
 WebMap services (TS/WMS/WMTS) can be attached to the map via:
 
-It is highly recommended to use the native crs of the WebMap service in order
-to avoid re-projecting the images (which degrades image quality and takes
-some time to finish...)
+It is highly recommended (and sometimes even required) to use the native crs
+of the WebMap service in order to avoid re-projecting the images
+(which degrades image quality and sometimes takes quite a lot of time to finish...)
+
+The general call-signature for adding WebMap services is:
 
 .. code-block:: python
 
-    m = Maps()
-    m.plot_specs.crs = Maps.CRS.GOOGLE_MERCATOR # (at best the native crs of the service!)
-    m.add_wms.attach.< SERVICE > ... .add_layer.< LAYER >( layer=1 )
-
-.. currentmodule:: eomaps
-
-.. autosummary::
-    :toctree: generated
-    :nosignatures:
-    :template: only_names_in_toc.rst
-
-    Maps.add_wms
+    m.add_wms.attach.< SERVICE > ... .add_layer.< LAYER >(...)
 
 
-< SERVICE > hereby specifies the pre-defined WebMap service you want to add.
+``< SERVICE >`` hereby specifies the pre-defined WebMap service you want to add,
+and ``< LAYER >`` indicates the actual layer-name.
 
 .. note::
     Services might be nested directory structures!
@@ -337,6 +331,22 @@ some time to finish...)
     A list of available layers from a sub-folder can be fetched via:
 
         :code:`m.add_wms.<...>. ... .<...>.layers`
+
+.. code-block:: python
+
+    m = Maps(Maps.CRS.GOOGLE_MERCATOR) # (at best the native crs of the service!)
+    m.add_wms.OpenStreetMap.add_layer.default()
+
+.. currentmodule:: eomaps
+
+.. autosummary::
+    :toctree: generated
+    :nosignatures:
+    :template: only_names_in_toc.rst
+
+    Maps.add_wms
+
+
 
 Global WebMap services:
 
@@ -368,8 +378,65 @@ Services specific for Austria (Europa)
     Austria.Wien_basemap
 
 
-🏕 Additional features and overlays
------------------------------------
+🌵 GeoDataFrames and NaturalEarth features
+------------------------------------------
+To add a ``geopandas.GeoDataFrame`` to a map, simply use ``m.add_gdf()``.
+
+It is possible to make the shapes of a ``GeoDataFrame`` pickable
+(e.g. usable with ``m.cb.pick`` callbacks) by providing a ``picker_name``
+and specifying a ``pick_method``.
+
+Once the ``picker_name`` is specified, pick-callbacks can be attached via:
+
+- ``m.cb.pick[<PICKER NAME>].attach.< CALLBACK >()``
+
+For example, to highlight the clicked country, you could use:
+.. code-block:: python
+
+    m = Maps()
+    gdf = m.add_feature.cultural_110m.admin_0_countries.get_gdf()
+    m.add_gdf(gdf, picker_name="countries", pick_method="contains")
+    m.cb.pick["countries"].attach.highlight_geometry(fc="r", ec="g", lw=2)
+
+
+Feature-layers provided by `NaturalEarth <https://www.naturalearthdata.com>` can be easily added to the plot via ``m.add_feature``.
+If ``geopandas`` is installed, ``GeoDataFrames`` are used to visualize the features, and all aforementioned
+functionalities of ``m.add_gdf`` can be used with NaturalEarth features as well!
+
+
+The general call-signature is:
+
+.. code-block:: python
+
+    m.add_feature.< CATEGORY >.< FEATURE >(...)
+
+    # if you only want to get the associated GeoDataFrame, you can use
+    gdf = m.add_feature.< CATEGORY >.< FEATURE >.get_gdf()
+
+Where ``< CATEGORY >`` specifies the resolution and general category of the feature, e.g.:
+- cultural_10m, cultural_50m, cultural_110m
+- physical_10m, physical_50m, physical_110m
+- preset
+
+.. code-block:: python
+
+    m = Maps()
+    m.add_feature.preset.ocean()
+    m.add_feature.preset.coastline()
+    m.add_feature.cultural_110m.admin_0_pacific_groupings(ec="r", lw=2)
+
+
+.. autosummary::
+    :toctree: generated
+    :nosignatures:
+    :template: only_names_in_toc.rst
+
+    add_gdf
+    add_feature
+
+
+🏕 Static annotations and markers
+---------------------------------
 
 Static annotations and markers can be added to the map via:
 
@@ -380,6 +447,14 @@ Static annotations and markers can be added to the map via:
     m.add_annotation( ... )
     m.add_marker( ... )
 
+To indicate a rectangular area specified in a given crs, simply use ``m.indicate_extent``:
+.. code-block:: python
+
+    m = Maps(Maps.CRS.Orthographic())
+    m.add_feature.preset.coastline()
+    m.indicate_extent(x0=-45, y0=-45, x1=45, y1=45, crs=4326, fc="r", ec="k", alpha=0.5)
+
+
 .. currentmodule:: eomaps.Maps
 
 .. autosummary::
@@ -389,18 +464,7 @@ Static annotations and markers can be added to the map via:
 
     add_marker
     add_annotation
-
-Overlays from NaturalEarth and `geopandas.GeoDataFrames` can be added via:
-
-.. currentmodule:: eomaps
-
-.. autosummary::
-    :toctree: generated
-    :nosignatures:
-    :template: only_names_in_toc.rst
-
-    Maps.add_feature
-    Maps.add_gdf
+    indicate_extent
 
 📏 Scalebars
 ------------
