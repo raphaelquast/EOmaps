@@ -1273,7 +1273,7 @@ class Maps(object):
         self,
         gdf,
         picker_name=None,
-        pick_method="centroids",
+        pick_method="contains",
         val_key=None,
         layer=None,
         **kwargs,
@@ -1393,7 +1393,7 @@ class Maps(object):
 
                     if pick_method == "centroids":
                         tree = cKDTree(
-                            list(map(lambda x: (x.x, x.y), gdf.geometry.centroid))
+                            list(map(lambda x: (x.x, x.y), usegdf.geometry.centroid))
                         )
 
                         def picker(artist, mouseevent):
@@ -1402,8 +1402,8 @@ class Maps(object):
                                     (mouseevent.xdata, mouseevent.ydata), 1
                                 )
 
-                                ID = gdf.index[ind]
-                                val = gdf.iloc[ind][val_key] if val_key else None
+                                ID = usegdf.index[ind]
+                                val = usegdf.iloc[ind][val_key] if val_key else None
                                 pos = tree.data[ind].tolist()
                             except:
                                 return False, dict()
