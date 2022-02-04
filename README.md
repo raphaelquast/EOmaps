@@ -30,7 +30,7 @@
   🌲🌳 Checkout the <a href=https://eomaps.readthedocs.io/en/latest>documentation</a> for more details and <a href=https://eomaps.readthedocs.io/en/latest/EOmaps_examples.html>examples</a> 🌳🌲
 </p>
 
-## 🔨 installation
+## 🔨 Installation
 
 To install EOmaps (and all its dependencies) via the `conda` package-manager, simply use:
 
@@ -39,6 +39,12 @@ conda install -c conda-forge eomaps
 ```
 For more information, have a look at the [installation instructions](https://eomaps.readthedocs.io/en/latest/general.html#installation) in the documentation!
 <br/>
+
+
+## 🚀 Contribute
+
+Found a bug or got an idea for an interesting feature? Open an issue and I'll see what I can do!  
+(I'm of course also happy about any pull requests on features and bug-fixes)
 
 ---------------
 
