@@ -9,7 +9,7 @@ import numpy as np
 lon, lat = np.meshgrid(np.linspace(-20, 40, 50), np.linspace(30, 60, 50))
 
 data = pd.DataFrame(
-    dict(lon=lon.flat, lat=lat.flat, data=np.sqrt(lon ** 2 + lat ** 2).flat)
+    dict(lon=lon.flat, lat=lat.flat, data=np.sqrt(lon**2 + lat**2).flat)
 )
 
 # --------- initialize a Maps object and plot a basic map

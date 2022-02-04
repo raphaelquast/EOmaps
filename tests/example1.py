@@ -6,7 +6,7 @@ import numpy as np
 # ----------- create some example-data
 lon, lat = np.meshgrid(np.arange(-20, 40, 0.25), np.arange(30, 60, 0.25))
 data = pd.DataFrame(
-    dict(lon=lon.flat, lat=lat.flat, data_variable=np.sqrt(lon ** 2 + lat ** 2).flat)
+    dict(lon=lon.flat, lat=lat.flat, data_variable=np.sqrt(lon**2 + lat**2).flat)
 )
 data = data.sample(15000)  # take 15000 random datapoints from the dataset
 # ------------------------------------

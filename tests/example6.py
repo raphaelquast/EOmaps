@@ -7,7 +7,7 @@ import pandas as pd
 # create some data
 lon, lat = np.meshgrid(np.linspace(-50, 50, 150), np.linspace(30, 60, 150))
 data = pd.DataFrame(
-    dict(lon=lon.flat, lat=lat.flat, data=np.sqrt(lon ** 2 + lat ** 2).flat)
+    dict(lon=lon.flat, lat=lat.flat, data=np.sqrt(lon**2 + lat**2).flat)
 )
 # --------------------------------
 

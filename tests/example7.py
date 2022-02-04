@@ -15,7 +15,7 @@ import geopandas as gpd
 # ----------- create some example-data
 lon, lat = np.meshgrid(np.linspace(-180, 180, 25), np.linspace(-90, 90, 25))
 data = pd.DataFrame(
-    dict(lon=lon.flat, lat=lat.flat, data=np.sqrt(lon ** 2 + lat ** 2).flat)
+    dict(lon=lon.flat, lat=lat.flat, data=np.sqrt(lon**2 + lat**2).flat)
 )
 
 # ----------- setup some maps objects and assign datasets and the plot-crs

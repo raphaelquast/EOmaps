@@ -823,7 +823,7 @@ class shapes(object):
             datamask = np.isfinite(x0) & np.isfinite(y0)
             [radiusx, radiusy] = radius
 
-            maxdist = 2 * np.mean(np.sqrt(radiusx ** 2 + radiusy ** 2))
+            maxdist = 2 * np.mean(np.sqrt(radiusx**2 + radiusy**2))
 
             xy = np.column_stack((x0[datamask], y0[datamask]))
 
@@ -971,7 +971,7 @@ class shapes(object):
 
             if masked:
                 radiusx, radiusy = radius
-                maxdist = 4 * np.mean(np.sqrt(radiusx ** 2 + radiusy ** 2))
+                maxdist = 4 * np.mean(np.sqrt(radiusx**2 + radiusy**2))
 
                 if radius_crs == "in":
                     x, y = x[datamask][tri.triangles], y[datamask][tri.triangles]

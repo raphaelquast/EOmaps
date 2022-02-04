@@ -615,7 +615,7 @@ class TestBasicPlotting(unittest.TestCase):
         lon, lat = np.meshgrid(lon, lat)
 
         df = pd.DataFrame(
-            dict(lon=lon.flat, lat=lat.flat, data=(lon ** 2 + lat ** 2).flat)
+            dict(lon=lon.flat, lat=lat.flat, data=(lon**2 + lat**2).flat)
         )
 
         mgrid = MapsGrid(3, 4)
