@@ -32,6 +32,8 @@ class TestBasicPlotting(unittest.TestCase):
         # -------------------------------------
 
         m = Maps()
+        m.add_feature.preset.ocean()
+        m.add_feature.preset.coastline()
         m.set_data_specs(data=self.data, xcoord="x", ycoord="y", crs=3857)
         m.set_plot_specs(
             title="asdf",
@@ -42,6 +44,7 @@ class TestBasicPlotting(unittest.TestCase):
             cpos_radius=1,
         )
         m.plot_map()
+        m.indicate_extent(20, 10, 60, 76, crs=4326, fc="r", ec="k", alpha=0.5)
         plt.close(m.figure.f)
 
     def test_simple_plot_shapes(self):
