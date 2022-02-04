@@ -2365,13 +2365,15 @@ class MapsGrid:
 
     add_marker.__doc__ = _doc_prefix + add_marker.__doc__
 
-    @property
-    @wraps(Maps.add_wms)
-    @lru_cache()
-    def add_wms(self):
-        x = wms_container(self)
-        x.__doc__ = self._doc_prefix + x.__doc__
-        return x
+    if wms_container is not None:
+
+        @property
+        @wraps(Maps.add_wms)
+        @lru_cache()
+        def add_wms(self):
+            x = wms_container(self)
+            x.__doc__ = self._doc_prefix + x.__doc__
+            return x
 
     @property
     @wraps(Maps.add_feature)
