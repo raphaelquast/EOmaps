@@ -305,12 +305,6 @@ Callbacks that can be used with `m.cb.dynamic`
 
 WebMap services (TS/WMS/WMTS) can be attached to the map via:
 
-It is highly recommended (and sometimes even required) to use the native crs
-of the WebMap service in order to avoid re-projecting the images
-(which degrades image quality and sometimes takes quite a lot of time to finish...)
-
-The general call-signature for adding WebMap services is:
-
 .. code-block:: python
 
     m.add_wms.attach.< SERVICE > ... .add_layer.< LAYER >(...)
@@ -318,6 +312,12 @@ The general call-signature for adding WebMap services is:
 
 ``< SERVICE >`` hereby specifies the pre-defined WebMap service you want to add,
 and ``< LAYER >`` indicates the actual layer-name.
+
+.. note::
+    It is highly recommended (and sometimes even required) to use the native crs
+    of the WebMap service in order to avoid re-projecting the images
+    (which degrades image quality and sometimes takes quite a lot of time to finish...)
+
 
 .. note::
     Services might be nested directory structures!
