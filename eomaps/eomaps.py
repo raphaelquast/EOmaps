@@ -1978,7 +1978,9 @@ class Maps(object):
         **kwargs
             additional kwargs passed to `m.plot_map(**kwargs)`
         """
-
+        if not hasattr(self, "_data_mask"):
+            print("EOmaps: There are no masked points to indicate!")
+            return
         data = self.data[~self._data_mask]
 
         if len(data) == 0:
@@ -1993,6 +1995,67 @@ class Maps(object):
         m.set_shape.ellipses(radius_crs="out", radius=r)
         m.plot_map(**kwargs)
         return m
+
+    if _gpd_OK:
+
+        def _make_rect_poly(self, x0, y0, x1, y1, crs=None, npts=100):
+            """
+            return a geopandas.GeoDataFrame with a rectangle in the given crs
+
+            Parameters
+            ----------
+            x0, y0, y1, y1 : float
+                the boundaries of the shape
+            npts : int, optional
+                The number of points used to draw the polygon-lines. The default is 100.
+            crs : any, optional
+                a coordinate-system identifier.
+                The default is None.
+
+            Returns
+            -------
+            gdf : geopandas.GeoDataFrame
+                the geodataframe with the shape and crs defined
+
+            """
+            from shapely.geometry import Polygon
+
+            xs, ys = np.linspace([x0, y0], [x1, y1], npts).T
+            x0, y0, x1, y1, xs, ys = np.broadcast_arrays(x0, y0, x1, y1, xs, ys)
+            verts = np.column_stack(
+                ((x0, ys), (xs, y1), (x1, ys[::-1]), (xs[::-1], y0))
+            ).T
+
+            gdf = gpd.GeoDataFrame(geometry=[Polygon(verts)])
+            gdf.set_crs(self.get_crs(crs), inplace=True)
+
+            return gdf
+
+        def indicate_extent(self, x0, y0, x1, y1, crs=4326, npts=100, **kwargs):
+            """
+            Indicate a rectangular extent in a given crs on the map.
+            (the rectangle is drawn as a polygon where each line is divided by "npts"
+             points to ensure correct re-projection of the shape to other crs)
+
+            Parameters
+            ----------
+            x0, y0, y1, y1 : float
+                the boundaries of the shape
+            npts : int, optional
+                The number of points used to draw the polygon-lines.
+                (e.g. to correctly display curvature in projected coordinate-systems)
+                The default is 100.
+            crs : any, optional
+                a coordinate-system identifier.
+                The default is 4326 (e.g. lon/lat).
+
+            kwargs :
+                additional keyword-arguments passed to `m.add_gdf()`.
+
+            """
+
+            gdf = self._make_rect_poly(x0, y0, x1, y1, crs, npts)
+            self.add_gdf(gdf, **kwargs)
 
 
 class MapsGrid:
