@@ -2389,6 +2389,13 @@ class MapsGrid:
 
     add_gdf.__doc__ = _doc_prefix + add_gdf.__doc__
 
+    @wraps(ScaleBar.__init__)
+    def add_scalebar(self, *args, **kwargs):
+        for m in self:
+            m.add_scalebar(*args, **kwargs)
+
+    add_scalebar.__doc__ = _doc_prefix + add_scalebar.__doc__
+
     def share_click_events(self):
         """
         Share click events between all Maps objects of the grid
