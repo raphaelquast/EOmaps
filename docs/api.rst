@@ -300,8 +300,8 @@ Callbacks that can be used with `m.cb.dynamic`
     indicate_extent
 
 
-🛰 How to add WebMap service layers
------------------------------------
+🛰 WebMap service layers
+------------------------
 
 WebMap services (TS/WMS/WMTS) can be attached to the map via:
 
