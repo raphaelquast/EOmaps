@@ -10,14 +10,14 @@
 
 # EOmaps
 
-### A library to create interactive maps of geographical datasets
+### A library to create interactive maps of geographical datasets.
 <ol type="none">
   <li>🌍 EOmaps provides a simple and intuitive interface to visualize and interact with geographical datasets</li>
   <ul type="none">
     <li>⬥ Data can be provided as 1D or 2D <code>lists</code>, <code>numpy-arrays</code> or <code>pandas.DataFrames</code></li>
-    <li>⬥ usable also for large datasets with > 1M datapoints</li>
+    <li>  &nbsp; &nbsp; &nbsp; ... usable also for large datasets with > 1M datapoints!</li>
     <li>⬥ WebMap layers, annotations, markers can be added with a single line of code</li>
-    <li>⬥ EOmaps also integrates well with <code>geopandas.GeoDataFrames</code></li>
+    <li>⬥ EOmaps is built on top of <code>matplotlib</code> and <code>cartopy</code> and integrates well <code>pandas</code> and <code>geopandas</code></li>
   </ul>
   <li>🌎 Quickly turn your maps into powerful interactive data-analysis widgets</li>
   <ul type="none">
@@ -43,8 +43,8 @@ For more information, have a look at the [installation instructions](https://eom
 
 ## 🚀 Contribute
 
-Found a bug or got an idea for an interesting feature? Open an issue and I'll see what I can do!  
-(I'm of course also happy about any pull requests on features and bug-fixes)
+Found a bug or got an idea for an interesting feature? Open an [issue](https://github.com/raphaelquast/EOmaps/issues) or start a [discussion](https://github.com/raphaelquast/EOmaps/discussions) and I'll see what I can do!  
+(I'm of course also happy about actual pull requests on features and bug-fixes!)
 
 ---------------
 
