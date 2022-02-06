@@ -505,18 +505,16 @@ class Maps(object):
 
         kwargs :
             Additional kwargs passed to `m = Maps(**kwargs)`
-            (e.g. parent, f, gs_ax, orientation, layer)
+            (e.g. crs, f, gs_ax, orientation, layer)
         Returns
         -------
         copy_cls : eomaps.Maps object
             a new Maps class.
         """
 
-        plot_spec_list = list(self.plot_specs.keys())
-        plot_crs = plot_spec_list.pop(plot_spec_list.index("plot_crs"))
-
+        plot_spec_list = [i for i in self.plot_specs.keys() if i != "plot_crs"]
         if "crs" not in kwargs and "gs_ax" not in kwargs:
-            kwargs["crs"] = plot_crs
+            kwargs["crs"] = self.plot_specs["plot_crs"]
 
         copy_cls = Maps(**kwargs)
         if plot_specs is True:
