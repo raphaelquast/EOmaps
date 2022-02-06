@@ -696,8 +696,8 @@ class BlitManager:
             The artist to be added.  Will be set to 'animated' (just
             to be safe).  *art* must be in the figure associated with
             the canvas this class is managing.
-        bottom : bool
-            Indicator if the artist should be added on top(False) or bottom(True)
+        layer : bool
+            The layer number
         """
         if art.figure != self.canvas.figure:
             raise RuntimeError
@@ -720,8 +720,8 @@ class BlitManager:
             The artist to be added.  Will be set to 'animated' (just
             to be safe).  *art* must be in the figure associated with
             the canvas this class is managing.
-        bottom : bool
-            Indicator if the artist should be added on top(False) or bottom(True)
+        layer : int
+            The layer number
         """
         if art.figure != self.canvas.figure:
             raise RuntimeError

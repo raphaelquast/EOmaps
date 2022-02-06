@@ -162,15 +162,24 @@ class _click_callbacks(object):
             >>> dict(xytext=(20, 20),
             >>>      textcoords="offset points",
             >>>      bbox=dict(boxstyle="round", fc="w"),
-            >>>      arrowprops=dict(arrowstyle="->"))
+            >>>      arrowprops=dict(arrowstyle="->")
             >>>     )
 
         """
-
         ID, pos, val, ind, picker_name = self._popargs(kwargs)
+        if isinstance(self.m.data_specs.xcoord, str):
+            xlabel = self.m.data_specs.xcoord
+        else:
+            xlabel = "xcoord"
+        if isinstance(self.m.data_specs.ycoord, str):
+            ylabel = self.m.data_specs.ycoord
+        else:
+            ylabel = "ycoord"
 
-        xlabel = self.m.data_specs.xcoord
-        ylabel = self.m.data_specs.ycoord
+        if self.m.data_specs.parameter is None:
+            parameter = "value"
+        else:
+            parameter = self.m.data_specs.parameter
 
         ax = self.m.figure.ax
 
@@ -178,7 +187,7 @@ class _click_callbacks(object):
             if ID is not None and self.m.data is not None:
                 x, y = [
                     np.format_float_positional(i, trim="-", precision=pos_precision)
-                    for i in self.m.data.loc[ID][[xlabel, ylabel]]
+                    for i in (self.m._props["xorig"][ind], self.m._props["yorig"][ind])
                 ]
                 x0, y0 = [
                     np.format_float_positional(i, trim="-", precision=pos_precision)
@@ -192,12 +201,8 @@ class _click_callbacks(object):
                 printstr = (
                     f"{xlabel} = {x} ({x0})\n"
                     + f"{ylabel} = {y} ({y0})\n"
-                    + (f"ID = {ID}\n" if ID is not None else "")
-                    + (
-                        f"{self.m.data_specs.parameter} = {val}"
-                        if val is not None
-                        else ""
-                    )
+                    + (f"ID = {ID}" if ID is not None else "")
+                    + (f"\n{parameter} = {val}" if val is not None else "")
                 )
             else:
                 lon, lat = self.m._transf_plot_to_lonlat.transform(*pos)
@@ -211,12 +216,17 @@ class _click_callbacks(object):
                 ]
 
                 printstr = (
-                    f"x = {x}\n" + f"y = {y}\n" + f"lon = {lon}\n" + f"lat = {lat}"
+                    f"x = {x}\n"
+                    + f"y = {y}\n"
+                    + f"lon = {lon}\n"
+                    + f"lat = {lat}"
+                    + (f"\nvalue = {val}" if val is not None else "")
                 )
+
         elif isinstance(text, str):
             printstr = text
         elif callable(text):
-            printstr = text(self.m, ID, val, pos, ind)
+            printstr = text(m=self.m, ID=ID, val=val, pos=pos, ind=ind)
 
         if printstr is not None:
             # create a new annotation
@@ -466,14 +476,18 @@ class _click_callbacks(object):
         ----------
         layer : int
             The layer-number you want to peek at.
-            (You must draw something on the layer first!)
+
+            Note:
+            You must draw something on the layer first! (Most EOmaps functions
+            that add features to a map support a `layer` argument that
+            lets you specify the layer at which the object is drawn.)
 
                 >>> m.plot_map(layer=1)
 
-        pos : TYPE
-            DESCRIPTION.
         how : str , float or tuple, optional
-            the peek-method.
+            The method you want to visualize the second layer.
+            (e.g. swipe from a side or display a rectangle)
+
                 - "left" (→), "right" (←), "top" (↓), "bottom" (↑):
                   swipe the layer at the mouse-position.
                 - if float, peek a square at the mouse-position, specified as
@@ -705,12 +719,10 @@ class _click_callbacks(object):
             self._pick_l.set_xdata(list(self._pick_l.get_xdata()) + [xindex])
             self._pick_l.set_ydata(list(self._pick_l.get_ydata()) + [val])
 
-        # self._pick_ax.autoscale()
         self._pick_ax.relim()
         self._pick_ax.autoscale_view(True, True, True)
-
-        self._pick_f.canvas.draw()
         self._pick_f.tight_layout()
+        self._pick_f.canvas.draw()
 
     def _plot_cleanup(self):
         # cleanup method for plot callback
@@ -737,10 +749,38 @@ class pick_callbacks(_click_callbacks):
         "plot",
         "clear_annotations",
         "clear_markers",
+        "highlight_geometry",
     ]
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+
+    def highlight_geometry(self, permanent=False, **kwargs):
+        """
+        Temporarily highlite the picked geometry.
+
+        Parameters
+        ----------
+        **kwargs :
+            keyword-arguments to style the geometry
+            (e.g. facecolor, edgecolor, linewidth etc. )
+
+        """
+        ID, pos, val, ind, picker_name = self._popargs(kwargs)
+
+        if ID is not None:
+            # get the selected geometry and re-project it to the desired crs
+            geom = self.m.cb.pick[picker_name].data.loc[[ID]].geometry
+            # add the geometry to the map
+            art = self.m.figure.ax.add_geometries(
+                geom, self.m.figure.ax.projection, **kwargs
+            )
+
+            if permanent is False:
+                # make the geometry temporary (e.g. remove it on the next pick event)
+                self.m.cb.pick[picker_name].add_temporary_artist(art, layer=2)
+            else:
+                self.m.BM.add_artist(art)
 
 
 class click_callbacks(_click_callbacks):
@@ -879,3 +919,316 @@ class dynamic_callbacks:
             )
 
         indicate()
+
+
+try:
+    import geopandas as gpd
+
+    _gpd_OK = True
+except ImportError:
+    _gpd_OK = False
+
+
+class utilities:
+    def __init__(self, m):
+        """
+        A set of utility-layers that can be added to existing maps.
+
+        Methods
+        -------
+        m.utilities.indicate_countries()
+            Indicate county-borders and names on click.
+
+        """
+        self._m = m
+
+    if _gpd_OK:
+
+        class _util_indicator:
+            def __init__(
+                self,
+                m,
+                gdf,
+                val_key,
+                pick_method="contains",
+                default_kwargs=None,
+                default_annotate_kwargs=None,
+                default_indicate_kwargs=None,
+                picker_name="util_indicator",
+            ):
+                self.m = m
+                self.gdf = gdf
+                self.val_key = val_key
+                self.pick_method = pick_method
+
+                self.default_kwargs = default_kwargs
+                self.default_annotate_kwargs = default_annotate_kwargs
+                self.default_indicate_kwargs = default_indicate_kwargs
+                self.picker_name = picker_name
+
+            def __call__(self, indicate_kwargs=None, annotate_kwargs=None, **kwargs):
+                """
+                A utility layer to indicate county-borders and names on click.
+
+                attached click-events:
+                    - The country-border is highlighted.
+                    - The name of the country is annotated.
+
+                Parameters
+                ----------
+                indicate_kwargs : dict, None or False, optional
+                    if False: Geometries will not be highlighted
+
+                    Keyword-arguments passed to `m.cb.pick.attach.highlight_geometry`.
+                    The default is:
+
+                        >>> dict(fc="b", ec="k", alpha=0.35)
+
+
+                annotate_kwargs : dict, None or False, optional
+                    if False: No annotation will be attached
+
+                    Keyword-arguments passed to `m.cb.pick.attach.annotate`.
+                    The default is:
+
+                        >>> dict(
+                        >>>     bbox=dict(boxstyle="round", fc="lightsteelblue"),
+                        >>>     arrowprops=dict(arrowstyle="fancy", fc="r")
+                        >>>     )
+
+                **kwargs :
+                    Keyword-arguments passed to `m.add_gdf`.
+                    The default is:
+
+                    >>> dict(ec="none", lw=0.5)
+
+
+                Note
+                ----
+                To remove the utility layer, call:
+
+                    >>> m.utilities.remove_indicate_extent()
+
+                Returns
+                -------
+                m : eomaps.Maps
+                    The Maps-object representing the new layer.
+
+                """
+                m = self.m.new_layer()
+                cids = set()
+
+                defaultargs = dict(ec="none", lw=0.5)
+                defaultargs.update(kwargs)
+                self.gdf._m = m
+                self.gdf(
+                    picker_name=self.picker_name,
+                    pick_method=self.pick_method,
+                    val_key=self.val_key,
+                    **defaultargs,
+                )
+
+                if indicate_kwargs is not False:
+                    default_indicate_kwargs = dict(fc="b", ec="k", alpha=0.35)
+                    if indicate_kwargs is not None:
+                        default_indicate_kwargs.update(indicate_kwargs)
+
+                    cids.add(
+                        m.cb.pick[self.picker_name].attach.highlight_geometry(
+                            **default_indicate_kwargs
+                        )
+                    )
+
+                if annotate_kwargs is not False:
+                    default_annotate_kwargs = dict(
+                        bbox=dict(boxstyle="round", fc="lightsteelblue"),
+                        arrowprops=dict(arrowstyle="fancy", fc="r"),
+                    )
+                    if annotate_kwargs is not None:
+                        default_annotate_kwargs.update(annotate_kwargs)
+
+                    cids.add(
+                        m.cb.pick[self.picker_name].attach.annotate(
+                            text=lambda val, **kwargs: str(val),
+                            **default_annotate_kwargs,
+                        )
+                    )
+
+                def get_remover(m, cids):
+                    def remove_indicate_countries():
+                        for i in cids:
+                            if i is not None:
+                                m.cb.pick__countries.remove(i)
+
+                    return remove_indicate_countries
+
+                setattr(
+                    self.m.utilities, "remove_indicate_countries", get_remover(m, cids)
+                )
+
+                return m
+
+        def indicate_countries(
+            self, indicate_kwargs=None, annotate_kwargs=None, **kwargs
+        ):
+            """
+            A utility layer to indicate county-borders and names on click.
+
+            attached click-events:
+                - The country-border is highlighted.
+                - The name of the country is annotated.
+
+            Parameters
+            ----------
+            indicate_kwargs : dict, None or False, optional
+                if False: Geometries will not be highlighted
+
+                Keyword-arguments passed to `m.cb.pick.attach.highlight_geometry`.
+                The default is:
+
+                    >>> dict(fc="b", ec="k", alpha=0.35)
+
+
+            annotate_kwargs : dict, None or False, optional
+                if False: No annotation will be attached
+
+                Keyword-arguments passed to `m.cb.pick.attach.annotate`.
+                The default is:
+
+                    >>> dict(
+                    >>>     bbox=dict(boxstyle="round", fc="lightsteelblue"),
+                    >>>     arrowprops=dict(arrowstyle="fancy", fc="r")
+                    >>>     )
+
+            **kwargs :
+                Keyword-arguments passed to `m.add_gdf`.
+                The default is:
+
+                >>> dict(ec="none", lw=0.5)
+
+
+            Note
+            ----
+            To remove the utility layer, call:
+
+                >>> m.utilities.remove_indicate_extent()
+
+            Returns
+            -------
+            m : eomaps.Maps
+                The Maps-object representing the new layer.
+
+            """
+
+            default_kwargs = dict(ec="k", lw=0.5)
+            if default_kwargs not in [None, False]:
+                default_kwargs.update(kwargs)
+
+            default_indicate_kwargs = dict(fc="royalblue", ec="k", alpha=0.35)
+            if indicate_kwargs not in [None, False]:
+                default_indicate_kwargs.update(indicate_kwargs)
+            elif indicate_kwargs is False:
+                default_indicate_kwargs = False
+
+            default_annotate_kwargs = dict(
+                bbox=dict(boxstyle="round", fc="cornflowerblue"),
+                arrowprops=dict(arrowstyle="fancy", fc="r"),
+            )
+            if annotate_kwargs not in [None, False]:
+                default_annotate_kwargs.update(annotate_kwargs)
+            elif annotate_kwargs is False:
+                default_annotate_kwargs = False
+
+            return self._util_indicator(
+                self._m,
+                self._m.add_feature.cultural_50m.admin_0_countries,
+                "SOVEREIGNT",
+                "contains",
+                picker_name="indicate_countries",
+            )(
+                indicate_kwargs=default_indicate_kwargs,
+                annotate_kwargs=default_annotate_kwargs,
+                **default_kwargs,
+            )
+
+        def indicate_cities(self, indicate_kwargs=None, annotate_kwargs=None, **kwargs):
+            """
+            A utility layer to indicate county-borders and names on click.
+
+            attached click-events:
+                - The country-border is highlighted.
+                - The name of the country is annotated.
+
+            Parameters
+            ----------
+            indicate_kwargs : dict, None or False, optional
+                if False: Geometries will not be highlighted
+
+                Keyword-arguments passed to `m.cb.pick.attach.highlight_geometry`.
+                The default is:
+
+                    >>> dict(fc="r", ec="k", alpha=0.35)
+
+
+            annotate_kwargs : dict, None or False, optional
+                if False: No annotation will be attached
+
+                Keyword-arguments passed to `m.cb.pick.attach.annotate`.
+                The default is:
+
+                    >>> dict(
+                    >>>     bbox=dict(boxstyle="round", fc="lightsteelblue"),
+                    >>>     arrowprops=dict(arrowstyle="fancy", fc="r")
+                    >>>     )
+
+            **kwargs :
+                Keyword-arguments passed to `m.add_gdf`.
+                The default is:
+
+                >>> dict(ec="none", lw=0.5)
+
+
+            Note
+            ----
+            To remove the utility layer, call:
+
+                >>> m.utilities.remove_indicate_extent()
+
+            Returns
+            -------
+            m : eomaps.Maps
+                The Maps-object representing the new layer.
+
+            """
+
+            default_kwargs = dict(fc=".3", ec=".7", lw=0.5)
+            if default_kwargs not in [None, False]:
+                default_kwargs.update(kwargs)
+
+            default_indicate_kwargs = dict(fc="r", ec="k", alpha=1)
+            if indicate_kwargs not in [None, False]:
+                default_indicate_kwargs.update(indicate_kwargs)
+            elif indicate_kwargs is False:
+                default_indicate_kwargs = False
+
+            default_annotate_kwargs = dict(
+                bbox=dict(boxstyle="round", fc="lightcoral"),
+                arrowprops=dict(arrowstyle="fancy", fc="r"),
+                xytext=(-20, -20),
+            )
+            if annotate_kwargs not in [None, False]:
+                default_annotate_kwargs.update(annotate_kwargs)
+            elif annotate_kwargs is False:
+                default_annotate_kwargs = False
+
+            return self._util_indicator(
+                m=self._m,
+                gdf=self._m.add_feature.cultural_50m.populated_places,
+                val_key="NAME",
+                pick_method="centroids",
+                picker_name="indicate_cities",
+            )(
+                indicate_kwargs=default_indicate_kwargs,
+                annotate_kwargs=default_annotate_kwargs,
+                **default_kwargs,
+            )

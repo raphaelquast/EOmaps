@@ -713,7 +713,7 @@ class cb_pick_container(_click_container):
                 )
             else:
                 clickdict = dict(
-                    ID=getattr(event, "ID", getattr(event, "ind", None)),
+                    ID=getattr(event, "ID", None),
                     pos=getattr(
                         event, "pos", (event.mouseevent.xdata, event.mouseevent.ydata)
                     ),
@@ -810,8 +810,8 @@ class cb_pick_container(_click_container):
 
             dummymouseevent = SimpleNamespace(
                 inaxes=m.figure.ax,
-                dblclick=event.dblclick,
-                button=event.button,
+                dblclick=event.mouseevent.dblclick,
+                button=event.mouseevent.button,
                 xdata=xdata,
                 ydata=ydata,
                 # x=event.mouseevent.x,
@@ -819,8 +819,8 @@ class cb_pick_container(_click_container):
             )
             dummyevent = SimpleNamespace(
                 artist=obj._artist,
-                dblclick=event.dblclick,
-                button=event.button,
+                dblclick=event.mouseevent.dblclick,
+                button=event.mouseevent.button,
                 # inaxes=m.figure.ax,
                 mouseevent=dummymouseevent,
                 # picker_name=picker_name,
@@ -829,7 +829,10 @@ class cb_pick_container(_click_container):
             pick = obj._picker(obj._artist, dummymouseevent)
 
             if pick[1] is not None:
+                dummyevent.ID = pick[1].get("ID", None)
                 dummyevent.ind = pick[1].get("ind", None)
+                dummyevent.val = pick[1].get("val", None)
+
                 if "dist" in pick[1]:
                     dummyevent.dist = pick[1].get("dist", None)
             else:

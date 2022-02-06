@@ -32,6 +32,7 @@ MOCK_MODULES = [
     "cartopy",
     "cartopy.io",
     "cartopy.io.img_tiles",
+    "cartopy.feature",
     "descartes",
     "mapclassify",
     "pyproj",
