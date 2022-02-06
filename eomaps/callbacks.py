@@ -166,7 +166,6 @@ class _click_callbacks(object):
             >>>     )
 
         """
-
         ID, pos, val, ind, picker_name = self._popargs(kwargs)
         if isinstance(self.m.data_specs.xcoord, str):
             xlabel = self.m.data_specs.xcoord
@@ -920,3 +919,316 @@ class dynamic_callbacks:
             )
 
         indicate()
+
+
+try:
+    import geopandas as gpd
+
+    _gpd_OK = True
+except ImportError:
+    _gpd_OK = False
+
+
+class utilities:
+    def __init__(self, m):
+        """
+        A set of utility-layers that can be added to existing maps.
+
+        Methods
+        -------
+        m.utilities.indicate_countries()
+            Indicate county-borders and names on click.
+
+        """
+        self._m = m
+
+    if _gpd_OK:
+
+        class _util_indicator:
+            def __init__(
+                self,
+                m,
+                gdf,
+                val_key,
+                pick_method="contains",
+                default_kwargs=None,
+                default_annotate_kwargs=None,
+                default_indicate_kwargs=None,
+                picker_name="util_indicator",
+            ):
+                self.m = m
+                self.gdf = gdf
+                self.val_key = val_key
+                self.pick_method = pick_method
+
+                self.default_kwargs = default_kwargs
+                self.default_annotate_kwargs = default_annotate_kwargs
+                self.default_indicate_kwargs = default_indicate_kwargs
+                self.picker_name = picker_name
+
+            def __call__(self, indicate_kwargs=None, annotate_kwargs=None, **kwargs):
+                """
+                A utility layer to indicate county-borders and names on click.
+
+                attached click-events:
+                    - The country-border is highlighted.
+                    - The name of the country is annotated.
+
+                Parameters
+                ----------
+                indicate_kwargs : dict, None or False, optional
+                    if False: Geometries will not be highlighted
+
+                    Keyword-arguments passed to `m.cb.pick.attach.highlight_geometry`.
+                    The default is:
+
+                        >>> dict(fc="b", ec="k", alpha=0.35)
+
+
+                annotate_kwargs : dict, None or False, optional
+                    if False: No annotation will be attached
+
+                    Keyword-arguments passed to `m.cb.pick.attach.annotate`.
+                    The default is:
+
+                        >>> dict(
+                        >>>     bbox=dict(boxstyle="round", fc="lightsteelblue"),
+                        >>>     arrowprops=dict(arrowstyle="fancy", fc="r")
+                        >>>     )
+
+                **kwargs :
+                    Keyword-arguments passed to `m.add_gdf`.
+                    The default is:
+
+                    >>> dict(ec="none", lw=0.5)
+
+
+                Note
+                ----
+                To remove the utility layer, call:
+
+                    >>> m.utilities.remove_indicate_extent()
+
+                Returns
+                -------
+                m : eomaps.Maps
+                    The Maps-object representing the new layer.
+
+                """
+                m = self.m.new_layer()
+                cids = set()
+
+                defaultargs = dict(ec="none", lw=0.5)
+                defaultargs.update(kwargs)
+                self.gdf._m = m
+                self.gdf(
+                    picker_name=self.picker_name,
+                    pick_method=self.pick_method,
+                    val_key=self.val_key,
+                    **defaultargs,
+                )
+
+                if indicate_kwargs is not False:
+                    default_indicate_kwargs = dict(fc="b", ec="k", alpha=0.35)
+                    if indicate_kwargs is not None:
+                        default_indicate_kwargs.update(indicate_kwargs)
+
+                    cids.add(
+                        m.cb.pick[self.picker_name].attach.highlight_geometry(
+                            **default_indicate_kwargs
+                        )
+                    )
+
+                if annotate_kwargs is not False:
+                    default_annotate_kwargs = dict(
+                        bbox=dict(boxstyle="round", fc="lightsteelblue"),
+                        arrowprops=dict(arrowstyle="fancy", fc="r"),
+                    )
+                    if annotate_kwargs is not None:
+                        default_annotate_kwargs.update(annotate_kwargs)
+
+                    cids.add(
+                        m.cb.pick[self.picker_name].attach.annotate(
+                            text=lambda val, **kwargs: str(val),
+                            **default_annotate_kwargs,
+                        )
+                    )
+
+                def get_remover(m, cids):
+                    def remove_indicate_countries():
+                        for i in cids:
+                            if i is not None:
+                                m.cb.pick__countries.remove(i)
+
+                    return remove_indicate_countries
+
+                setattr(
+                    self.m.utilities, "remove_indicate_countries", get_remover(m, cids)
+                )
+
+                return m
+
+        def indicate_countries(
+            self, indicate_kwargs=None, annotate_kwargs=None, **kwargs
+        ):
+            """
+            A utility layer to indicate county-borders and names on click.
+
+            attached click-events:
+                - The country-border is highlighted.
+                - The name of the country is annotated.
+
+            Parameters
+            ----------
+            indicate_kwargs : dict, None or False, optional
+                if False: Geometries will not be highlighted
+
+                Keyword-arguments passed to `m.cb.pick.attach.highlight_geometry`.
+                The default is:
+
+                    >>> dict(fc="b", ec="k", alpha=0.35)
+
+
+            annotate_kwargs : dict, None or False, optional
+                if False: No annotation will be attached
+
+                Keyword-arguments passed to `m.cb.pick.attach.annotate`.
+                The default is:
+
+                    >>> dict(
+                    >>>     bbox=dict(boxstyle="round", fc="lightsteelblue"),
+                    >>>     arrowprops=dict(arrowstyle="fancy", fc="r")
+                    >>>     )
+
+            **kwargs :
+                Keyword-arguments passed to `m.add_gdf`.
+                The default is:
+
+                >>> dict(ec="none", lw=0.5)
+
+
+            Note
+            ----
+            To remove the utility layer, call:
+
+                >>> m.utilities.remove_indicate_extent()
+
+            Returns
+            -------
+            m : eomaps.Maps
+                The Maps-object representing the new layer.
+
+            """
+
+            default_kwargs = dict(ec="k", lw=0.5)
+            if default_kwargs not in [None, False]:
+                default_kwargs.update(kwargs)
+
+            default_indicate_kwargs = dict(fc="royalblue", ec="k", alpha=0.35)
+            if indicate_kwargs not in [None, False]:
+                default_indicate_kwargs.update(indicate_kwargs)
+            elif indicate_kwargs is False:
+                default_indicate_kwargs = False
+
+            default_annotate_kwargs = dict(
+                bbox=dict(boxstyle="round", fc="cornflowerblue"),
+                arrowprops=dict(arrowstyle="fancy", fc="r"),
+            )
+            if annotate_kwargs not in [None, False]:
+                default_annotate_kwargs.update(annotate_kwargs)
+            elif annotate_kwargs is False:
+                default_annotate_kwargs = False
+
+            return self._util_indicator(
+                self._m,
+                self._m.add_feature.cultural_50m.admin_0_countries,
+                "SOVEREIGNT",
+                "contains",
+                picker_name="indicate_countries",
+            )(
+                indicate_kwargs=default_indicate_kwargs,
+                annotate_kwargs=default_annotate_kwargs,
+                **default_kwargs,
+            )
+
+        def indicate_cities(self, indicate_kwargs=None, annotate_kwargs=None, **kwargs):
+            """
+            A utility layer to indicate county-borders and names on click.
+
+            attached click-events:
+                - The country-border is highlighted.
+                - The name of the country is annotated.
+
+            Parameters
+            ----------
+            indicate_kwargs : dict, None or False, optional
+                if False: Geometries will not be highlighted
+
+                Keyword-arguments passed to `m.cb.pick.attach.highlight_geometry`.
+                The default is:
+
+                    >>> dict(fc="r", ec="k", alpha=0.35)
+
+
+            annotate_kwargs : dict, None or False, optional
+                if False: No annotation will be attached
+
+                Keyword-arguments passed to `m.cb.pick.attach.annotate`.
+                The default is:
+
+                    >>> dict(
+                    >>>     bbox=dict(boxstyle="round", fc="lightsteelblue"),
+                    >>>     arrowprops=dict(arrowstyle="fancy", fc="r")
+                    >>>     )
+
+            **kwargs :
+                Keyword-arguments passed to `m.add_gdf`.
+                The default is:
+
+                >>> dict(ec="none", lw=0.5)
+
+
+            Note
+            ----
+            To remove the utility layer, call:
+
+                >>> m.utilities.remove_indicate_extent()
+
+            Returns
+            -------
+            m : eomaps.Maps
+                The Maps-object representing the new layer.
+
+            """
+
+            default_kwargs = dict(fc=".3", ec=".7", lw=0.5)
+            if default_kwargs not in [None, False]:
+                default_kwargs.update(kwargs)
+
+            default_indicate_kwargs = dict(fc="r", ec="k", alpha=1)
+            if indicate_kwargs not in [None, False]:
+                default_indicate_kwargs.update(indicate_kwargs)
+            elif indicate_kwargs is False:
+                default_indicate_kwargs = False
+
+            default_annotate_kwargs = dict(
+                bbox=dict(boxstyle="round", fc="lightcoral"),
+                arrowprops=dict(arrowstyle="fancy", fc="r"),
+                xytext=(-20, -20),
+            )
+            if annotate_kwargs not in [None, False]:
+                default_annotate_kwargs.update(annotate_kwargs)
+            elif annotate_kwargs is False:
+                default_annotate_kwargs = False
+
+            return self._util_indicator(
+                m=self._m,
+                gdf=self._m.add_feature.cultural_50m.populated_places,
+                val_key="NAME",
+                pick_method="centroids",
+                picker_name="indicate_cities",
+            )(
+                indicate_kwargs=default_indicate_kwargs,
+                annotate_kwargs=default_annotate_kwargs,
+                **default_kwargs,
+            )

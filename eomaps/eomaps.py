@@ -54,6 +54,7 @@ from ._containers import (
 
 from ._cb_container import cb_container
 from .scalebar import ScaleBar
+from .callbacks import utilities
 
 try:
     import mapclassify
@@ -252,6 +253,8 @@ class Maps(object):
 
         self._init_figure(gs_ax=gs_ax, plot_crs=crs, **kwargs)
 
+        self._utilities = utilities(self)
+
     def _check_gpd(self):
         # raise an error if geopandas is not found
         # (execute this in any function that requires geopandas!)
@@ -261,6 +264,10 @@ class Maps(object):
                 + "... with conda, simply use:  "
                 + "'conda install -c conda-forge geopandas'"
             )
+
+    @property
+    def utilities(self):
+        return self._utilities
 
     @property
     @lru_cache()
@@ -1397,6 +1404,7 @@ class Maps(object):
                         )
 
                         def picker(artist, mouseevent):
+
                             try:
                                 dist, ind = tree.query(
                                     (mouseevent.xdata, mouseevent.ydata), 1
@@ -1405,6 +1413,7 @@ class Maps(object):
                                 ID = usegdf.index[ind]
                                 val = usegdf.iloc[ind][val_key] if val_key else None
                                 pos = tree.data[ind].tolist()
+
                             except:
                                 return False, dict()
 
@@ -1427,6 +1436,7 @@ class Maps(object):
         for art, prefix in zip(newcolls, prefixes):
             if layer is not None:
                 self.BM.add_bg_artist(art, layer)
+        return newcolls
 
     def add_marker(
         self,
