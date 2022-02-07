@@ -416,8 +416,9 @@ class plot_specs(object):
     def plot_crs(self, crs):
         warn(
             (
-                "\nIn EOmaps > v3.0 the plot-crs is set on "
-                + "initialization of the Maps-object! \nUse `m = Maps(crs=...)` instead!\n"
+                "\n▲▲▲ In EOmaps > v3.0 the plot-crs is set on "
+                + "initialization of the Maps-object!"
+                + "\n▲▲▲ Use `m = Maps(crs=...)` instead to set the plot-crs!\n"
             )
         )
 
