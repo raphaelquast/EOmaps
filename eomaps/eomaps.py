@@ -1692,7 +1692,11 @@ class Maps(object):
 
         ax = self.figure.ax
 
-        for key in ("cmap", "array", "norm"):
+        cmap = kwargs.pop("cmap", None)
+        if cmap is not None:
+            self.plot_specs.cmap = cmap
+
+        for key in ("array", "norm"):
             assert (
                 key not in kwargs
             ), f"The key '{key}' is assigned internally by EOmaps!"
