@@ -1997,7 +1997,8 @@ class Maps(object):
 
     if _gpd_OK:
 
-        def _make_rect_poly(self, x0, y0, x1, y1, crs=None, npts=100):
+        @staticmethod
+        def _make_rect_poly(x0, y0, x1, y1, crs=None, npts=100):
             """
             return a geopandas.GeoDataFrame with a rectangle in the given crs
 
@@ -2008,7 +2009,7 @@ class Maps(object):
             npts : int, optional
                 The number of points used to draw the polygon-lines. The default is 100.
             crs : any, optional
-                a coordinate-system identifier.
+                a coordinate-system identifier.  (e.g. output of `m.get_crs(crs)`)
                 The default is None.
 
             Returns
@@ -2026,7 +2027,7 @@ class Maps(object):
             ).T
 
             gdf = gpd.GeoDataFrame(geometry=[Polygon(verts)])
-            gdf.set_crs(self.get_crs(crs), inplace=True)
+            gdf.set_crs(crs, inplace=True)
 
             return gdf
 
@@ -2053,7 +2054,7 @@ class Maps(object):
 
             """
 
-            gdf = self._make_rect_poly(x0, y0, x1, y1, crs, npts)
+            gdf = self._make_rect_poly(x0, y0, x1, y1, self.get_crs(crs), npts)
             self.add_gdf(gdf, **kwargs)
 
 
