@@ -24,7 +24,7 @@ In short, EOmaps serves as a layer on top of matplotlib and cartopy to tackle th
   * use the mouse or keyboard to **trigger custom functions on selected datapoints**
 
 
-*(EOmaps hereby retains access to all functionalities of matplotlib and cartopy.)*
+*(EOmaps retains access to all functionalities of matplotlib and cartopy.)*
 
 | A detailed overview on how to use EOmaps is given in the :doc:`api` section.
 | Make sure to checkout the :doc:`EOmaps_examples` for an overview of the capabilities (incl. source code)!

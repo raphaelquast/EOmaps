@@ -448,6 +448,7 @@ Static annotations and markers can be added to the map via:
     m.add_marker( ... )
 
 To indicate a rectangular area specified in a given crs, simply use ``m.indicate_extent``:
+
 .. code-block:: python
 
     m = Maps(Maps.CRS.Orthographic())
