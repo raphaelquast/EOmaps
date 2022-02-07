@@ -1269,6 +1269,21 @@ class Maps(object):
 
     if _gpd_OK:
 
+        def _clip_gdf_on_crs_bounds(self, gdf):
+            from shapely.geometry import Polygon
+
+            # add intermediate points to the boundary-shape of the crs
+            # (to make sure re-projection is adequate)
+            crs = self._get_cartopy_crs(self.crs_plot)
+            coords = []
+            for c0, c1 in pairwise(crs.boundary.coords):
+                coords += list(zip(*np.linspace(c0, c1, 100).T))
+            crsbound = gpd.GeoDataFrame(geometry=[Polygon(coords)], crs=crs)
+
+            # clip the GeoDataFrame based on the (projected) crs-boundary shape
+            clip_gdf = gdf.to_crs(crs).clip(crsbound)
+            return clip_gdf
+
         def add_gdf(
             self,
             gdf,
@@ -1351,10 +1366,15 @@ class Maps(object):
             defaultargs.update(kwargs)
 
             # transform data to the plot crs
-            usegdf = gdf.to_crs(self.crs_plot)
-            # explode the GeoDataFrame to avoid picking multi-part geometries
+            if clip:
+                # clip the data with respect to the plot_crs
+                # (make sure to reset the index to correctly treat multi-entries)
+                usegdf = self._clip_gdf_on_crs_bounds(gdf).reset_index()
+            else:
+                usegdf = gdf.to_crs(self.crs_plot)
+
             try:
-                pass
+                # explode the GeoDataFrame to avoid picking multi-part geometries
                 usegdf = usegdf.explode(index_parts=False)
             except Exception:
                 # geopandas sometimes has problems exploding geometries...
