@@ -1267,164 +1267,185 @@ class Maps(object):
     def add_feature(self):
         return NaturalEarth_features(self)
 
-    def add_gdf(
-        self,
-        gdf,
-        picker_name=None,
-        pick_method="contains",
-        val_key=None,
-        layer=None,
-        **kwargs,
-    ):
-        """
-        Plot a `geopandas.GeoDataFrame` on the map.
+    if _gpd_OK:
 
-        Parameters
-        ----------
-        gdf : geopandas.GeoDataFrame
-            A GeoDataFrame that should be added to the plot.
-        picker_name : str or None
-            A unique name that is used to identify the pick-method.
+        def add_gdf(
+            self,
+            gdf,
+            picker_name=None,
+            pick_method="contains",
+            val_key=None,
+            layer=None,
+            clip=False,
+            **kwargs,
+        ):
+            """
+            Plot a `geopandas.GeoDataFrame` on the map.
 
-            If a `picker_name` is provided, a new pick-container will be
-            created that can be used to pick geometries of the GeoDataFrame.
+            Parameters
+            ----------
+            gdf : geopandas.GeoDataFrame
+                A GeoDataFrame that should be added to the plot.
+            picker_name : str or None
+                A unique name that is used to identify the pick-method.
 
-            The container can then be accessed via:
-                >>> m.cb.pick__<picker_name>
-                or
-                >>> m.cb.pick[picker_name]
-            and it can be used in the same way as `m.cb.pick...`
+                If a `picker_name` is provided, a new pick-container will be
+                created that can be used to pick geometries of the GeoDataFrame.
 
-        pick_method : str or callable
-            if str :
-                The operation that is executed on the GeoDataFrame to identify
-                the picked geometry.
-                Possible values are:
+                The container can then be accessed via:
+                    >>> m.cb.pick__<picker_name>
+                    or
+                    >>> m.cb.pick[picker_name]
+                and it can be used in the same way as `m.cb.pick...`
 
-                - "contains":
-                  pick a geometry only if it contains the clicked point
-                  (only works with polygons! (not with lines and points))
-                - "centroids":
-                  pick the closest geometry with respect to the centroids
-                  (should work with any geometry whose centroid is defined)
+            pick_method : str or callable
+                if str :
+                    The operation that is executed on the GeoDataFrame to identify
+                    the picked geometry.
+                    Possible values are:
 
-                The default is "centroids"
-            if callable :
-                A callable that is used to identify the picked geometry.
-                The call-signature is:
+                    - "contains":
+                      pick a geometry only if it contains the clicked point
+                      (only works with polygons! (not with lines and points))
+                    - "centroids":
+                      pick the closest geometry with respect to the centroids
+                      (should work with any geometry whose centroid is defined)
 
-                >>> def picker(artist, mouseevent):
-                >>>     # if the pick is NOT successful:
-                >>>     return False, dict()
-                >>>     ...
-                >>>     # if the pick is successful:
-                >>>     return True, dict(ID, pos, val, ind)
-            The default is "contains"
-        val_key : str
-            The dataframe-column used to identify values for pick-callbacks.
-            The default is None.
-        layer : int
-            The layer-index at which the dataset will be plotted.
+                    The default is "centroids"
+                if callable :
+                    A callable that is used to identify the picked geometry.
+                    The call-signature is:
 
-        kwargs :
-            all remaining kwargs are passed to `geopandas.GeoDataFrame.plot(**kwargs)`
-        """
-        self._check_gpd()
+                    >>> def picker(artist, mouseevent):
+                    >>>     # if the pick is NOT successful:
+                    >>>     return False, dict()
+                    >>>     ...
+                    >>>     # if the pick is successful:
+                    >>>     return True, dict(ID, pos, val, ind)
+                The default is "contains"
+            val_key : str
+                The dataframe-column used to identify values for pick-callbacks.
+                The default is None.
+            layer : int
+                The layer-index at which the dataset will be plotted.
+            clip : bool, optional
+                Indicator if the GeoDataFrame should be clipped with respect to the
+                crs-boundaries or not.
+                This can help with some issues concerning polygons that extend out
+                of the valid region. (e.g. adding ocean-coloring to epsg 3035)
+                The feature is not fully mature and might fail for certain
+                projections and geometries! The default is False.
+            kwargs :
+                all remaining kwargs are passed to `geopandas.GeoDataFrame.plot(**kwargs)`
 
-        ax = self.figure.ax
-        defaultargs = dict(facecolor="none", edgecolor="k", lw=1.5)
-        defaultargs.update(kwargs)
+            Returns
+            -------
+            new_artists : matplotlib.Artist
+                The matplotlib-artists added to the plot
 
-        # transform data to the plot crs
-        usegdf = gdf.to_crs(self.crs_plot)
-        # explode the GeoDataFrame to avoid picking multi-part geometries
-        try:
-            usegdf = usegdf.explode(index_parts=False)
-        except Exception:
-            # geopandas sometimes has problems exploding geometries...
-            # if it does not work, just continue with the Multi-geometries!
-            pass
+            """
+            self._check_gpd()
 
-        # plot gdf and identify newly added collections
-        # (geopandas always uses collections)
-        colls = [id(i) for i in self.figure.ax.collections]
-        usegdf.plot(ax=ax, aspect=ax.get_aspect(), **defaultargs)
-        newcolls = [i for i in self.figure.ax.collections if id(i) not in colls]
-        if len(newcolls) > 1:
-            prefixes = [
-                f"_{i.__class__.__name__.replace('Collection', '')}" for i in newcolls
-            ]
-            warnings.warn(
-                "EOmaps: Multiple geometry types encountered in `m.add_gdf`. "
-                + "The pick containers are re-named to"
-                + f"{[picker_name + prefix for prefix in prefixes]}"
-            )
-        else:
-            prefixes = [""]
+            ax = self.figure.ax
+            defaultargs = dict(facecolor="none", edgecolor="k", lw=1.5)
+            defaultargs.update(kwargs)
 
-        if picker_name is not None:
-            if pick_method is not None:
-                if isinstance(pick_method, str):
-                    if pick_method in ["contains"]:
+            # transform data to the plot crs
+            usegdf = gdf.to_crs(self.crs_plot)
+            # explode the GeoDataFrame to avoid picking multi-part geometries
+            try:
+                pass
+                usegdf = usegdf.explode(index_parts=False)
+            except Exception:
+                # geopandas sometimes has problems exploding geometries...
+                # if it does not work, just continue with the Multi-geometries!
+                pass
 
-                        def picker(artist, mouseevent):
-                            try:
-                                query = getattr(usegdf, pick_method)(
-                                    gpd.points_from_xy(
-                                        [mouseevent.xdata], [mouseevent.ydata]
-                                    )[0]
-                                )
-                                if query.any():
-                                    return True, dict(
-                                        ID=usegdf.index[query][0],
-                                        ind=query.values.nonzero()[0][0],
-                                        val=(
-                                            usegdf[query][val_key].iloc[0]
-                                            if val_key
-                                            else None
-                                        ),
+            # plot gdf and identify newly added collections
+            # (geopandas always uses collections)
+            colls = [id(i) for i in self.figure.ax.collections]
+            usegdf.plot(ax=ax, aspect=ax.get_aspect(), **defaultargs)
+            new_artists = [i for i in self.figure.ax.collections if id(i) not in colls]
+            if len(new_artists) > 1:
+                prefixes = [
+                    f"_{i.__class__.__name__.replace('Collection', '')}"
+                    for i in new_artists
+                ]
+                warnings.warn(
+                    "EOmaps: Multiple geometry types encountered in `m.add_gdf`. "
+                    + "The pick containers are re-named to"
+                    + f"{[picker_name + prefix for prefix in prefixes]}"
+                )
+            else:
+                prefixes = [""]
+
+            if picker_name is not None:
+                if pick_method is not None:
+                    if isinstance(pick_method, str):
+                        if pick_method in ["contains"]:
+
+                            def picker(artist, mouseevent):
+                                try:
+                                    query = getattr(usegdf, pick_method)(
+                                        gpd.points_from_xy(
+                                            [mouseevent.xdata], [mouseevent.ydata]
+                                        )[0]
                                     )
-                                else:
+                                    if query.any():
+                                        return True, dict(
+                                            ID=usegdf.index[query][0],
+                                            ind=query.values.nonzero()[0][0],
+                                            val=(
+                                                usegdf[query][val_key].iloc[0]
+                                                if val_key
+                                                else None
+                                            ),
+                                        )
+                                    else:
+                                        return False, dict()
+                                except:
                                     return False, dict()
-                            except:
-                                return False, dict()
 
-                    if pick_method == "centroids":
-                        tree = cKDTree(
-                            list(map(lambda x: (x.x, x.y), usegdf.geometry.centroid))
+                        if pick_method == "centroids":
+                            tree = cKDTree(
+                                list(
+                                    map(lambda x: (x.x, x.y), usegdf.geometry.centroid)
+                                )
+                            )
+
+                            def picker(artist, mouseevent):
+                                try:
+                                    dist, ind = tree.query(
+                                        (mouseevent.xdata, mouseevent.ydata), 1
+                                    )
+
+                                    ID = usegdf.index[ind]
+                                    val = usegdf.iloc[ind][val_key] if val_key else None
+                                    pos = tree.data[ind].tolist()
+                                except:
+                                    return False, dict()
+
+                                return True, dict(ID=ID, pos=pos, val=val, ind=ind)
+
+                    elif callable(pick_method):
+                        picker = pick_method
+                    else:
+                        print(
+                            "EOmaps: I don't know what to do with the provided pick_method"
                         )
 
-                        def picker(artist, mouseevent):
-                            try:
-                                dist, ind = tree.query(
-                                    (mouseevent.xdata, mouseevent.ydata), 1
-                                )
+                    for art, prefix in zip(new_artists, prefixes):
+                        # make the newly added collection pickable
+                        self.cb.add_picker(picker_name + prefix, art, picker=picker)
 
-                                ID = usegdf.index[ind]
-                                val = usegdf.iloc[ind][val_key] if val_key else None
-                                pos = tree.data[ind].tolist()
-                            except:
-                                return False, dict()
+                        # attach the re-projected GeoDataFrame to the pick-container
+                        self.cb.pick[picker_name + prefix].data = usegdf
 
-                            return True, dict(ID=ID, pos=pos, val=val, ind=ind)
+            for art, prefix in zip(new_artists, prefixes):
+                if layer is not None:
+                    self.BM.add_bg_artist(art, layer)
 
-                elif callable(pick_method):
-                    picker = pick_method
-                else:
-                    print(
-                        "EOmaps: I don't know what to do with the provided pick_method"
-                    )
-
-                for art, prefix in zip(newcolls, prefixes):
-                    # make the newly added collection pickable
-                    self.cb.add_picker(picker_name + prefix, art, picker=picker)
-
-                    # attach the re-projected GeoDataFrame to the pick-container
-                    self.cb.pick[picker_name + prefix].data = usegdf
-
-        for art, prefix in zip(newcolls, prefixes):
-            if layer is not None:
-                self.BM.add_bg_artist(art, layer)
+            return new_artists
 
     def add_marker(
         self,
