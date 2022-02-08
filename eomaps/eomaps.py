@@ -498,12 +498,9 @@ class Maps(object):
         Parameters
         ----------
         data_specs, plot_specs, classify_specs, shape : bool or "shared", optional
-            Indicator if the corresponding properties should be copied or shared
+            Indicator if the corresponding properties should be copied.
 
             - if True: ALL corresponding properties are copied
-            - if "shared": the property-containers are shared between the objects
-              (e.g. changing a property will change the property on the copied
-              object as well)
 
             By default, "plot_specs", "classify_specs" and the "shape" are copied.
 
@@ -525,29 +522,21 @@ class Maps(object):
             copy_cls.set_plot_specs(
                 **{key: copy.deepcopy(self.plot_specs[key]) for key in plot_spec_list}
             )
-        elif plot_specs == "share":
-            copy_cls.plot_specs = self.plot_specs
 
         if data_specs is True:
             data_specs = list(self.data_specs.keys())
             copy_cls.set_data_specs(
                 **{key: copy.deepcopy(val) for key, val in self.data_specs}
             )
-        elif data_specs == "share":
-            copy_cls.data_specs = self.data_specs
 
         if shape is True:
             getattr(copy_cls.set_shape, self.shape.name)(**self.shape._initargs)
-        elif shape == "share":
-            copy_cls.shape = self.shape
 
         if classify_specs is True:
             classify_specs = list(self.classify_specs.keys())
             copy_cls.set_classify_specs(
                 scheme=self.classify_specs.scheme, **self.classify_specs
             )
-        elif classify_specs == "share":
-            copy_cls.classify_specs = self.classify_specs
 
         return copy_cls
 

@@ -386,17 +386,6 @@ class TestBasicPlotting(unittest.TestCase):
         m3.plot_map()
         plt.close(m3.figure.f)
 
-        m4 = m.copy(
-            data_specs="share",
-            plot_specs="share",
-            classify_specs="share",
-            shape="share",
-        )
-        self.assertTrue(m4.data is m.data)
-        self.assertTrue(m4.data_specs is m.data_specs)
-        self.assertTrue(m4.classify_specs is m.classify_specs)
-        self.assertTrue(m4.shape is m.shape)
-
     def test_copy_connect(self):
         m = Maps(3857)
         m.data = self.data
@@ -406,7 +395,7 @@ class TestBasicPlotting(unittest.TestCase):
         m.plot_map()
 
         # plot on the same axes
-        m2 = m.copy(parent=m, data_specs="share", gs_ax=m.figure.ax)
+        m2 = m.copy(parent=m, data_specs=True, gs_ax=m.figure.ax)
         m2.set_shape.ellipses()
         m2.plot_map(facecolor="none", edgecolor="r")
 
