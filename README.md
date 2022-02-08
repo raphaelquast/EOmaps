@@ -1,4 +1,4 @@
-<p align="center"><img src="logos/EO_Maps_Logo_V2.png" alt="EOmaps example image 2" width="40%"></p>
+<p align="center"><img src="logos/EO_Maps_Logo_V2.png" alt="EOmaps example image 2" width="55%"></p>
 
 [![tests](https://github.com/raphaelquast/EOmaps/actions/workflows/testMaps.yml/badge.svg?branch=master)](https://github.com/raphaelquast/EOmaps/actions/workflows/testMaps.yml)
 [![codecov](https://codecov.io/gh/raphaelquast/EOmaps/branch/dev/graph/badge.svg?token=25M85P7MJG)](https://codecov.io/gh/raphaelquast/EOmaps)
@@ -194,3 +194,9 @@ mgrid.plot_map()      # call m.plot_map() on all Maps-objects of the grid
 mgrid.join_limits()   # join limits
 ```
 </details>
+
+----
+
+## 🌼 Thanks to
+
+- [Jakob Quast](https://quastquest.jimdofree.com/) for designing the nice logo!
