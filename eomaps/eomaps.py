@@ -188,7 +188,7 @@ class Maps(object):
                 f is None
             ), "You cannot specify the figure for connected Maps-objects!"
 
-        self._f = None
+        self._f = f
         self._orientation = orientation
         self._ax = gs_ax
         self._init_ax = gs_ax
