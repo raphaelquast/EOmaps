@@ -263,6 +263,10 @@ class Maps(object):
             )
 
     @property
+    def ax(self):
+        return self.figure.ax
+
+    @property
     @lru_cache()
     @wraps(cb_container)
     def cb(self):
