@@ -4,7 +4,7 @@
     <img src="logos/EO_Maps_Logo_V2.png" width="55%" />
   </a>
   <a href="https://github.com/raphaelquast/EOmaps/#gh-dark-mode-only">
-    <img src="logos/EO_Maps_Logo_V6.png" width="55%" />
+    <img src="logos/eo_maps_logo_v6.png" width="55%" />
   </a>
 </p>
 
