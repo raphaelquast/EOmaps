@@ -1857,8 +1857,10 @@ class Maps(object):
         label=None,
         density=None,
         tick_precision=None,
-        pad_axes=0.1,
-        pad_size=(0.1, 0.1),
+        top=0.05,
+        bottom=0.1,
+        left=0.1,
+        right=0.05,
     ):
         """
         Add a colorbar to an existing figure.
@@ -1877,34 +1879,29 @@ class Maps(object):
         orientation : str
             The orientation of the colorbar ("horizontal" or "vertical")
             The default is "horizontal"
-        pad_axes : float
+
+        top, bottom, left, right : float
             The padding between the colorbar and the parent axes (as fraction of the
             plot-height (if "horizontal") or plot-width (if "vertical")
-
-            The default is 0.1
-
-        pad_size : float, tuple
-            The padding for the size of the colorbar (e.g. the width if "horizontal"
-            and the height if "vertical") as a fraction of the corresponding size
-            of the parent-axes.
+            The default is (0.05, 0.1, 0.1, 0.05)
 
         Notes
         -----
         Here's how the padding looks like as a scetch:
-        _________________________________________________________
-        |[ - - - - - - - - - - - - - - - - - - - - - - - - - - ]|
-        |[ - - - - - - - - - - - - MAP - - - - - - - - - - - - ]|
-        |[ - - - - - - - - - - - - - - - - - - - - - - - - - - ]|
-        |                                                       |
-        |                      ( pad_axes )                     |
-        |                                                       |
-        | ( pad_size[0] )   [ - COLORBAR  - ]   ( pad_size[1] ) |
-        |_______________________________________________________|
+
+        >>> _________________________________________________________
+        >>> |[ - - - - - - - - - - - - - - - - - - - - - - - - - - ]|
+        >>> |[ - - - - - - - - - - - - MAP - - - - - - - - - - - - ]|
+        >>> |[ - - - - - - - - - - - - - - - - - - - - - - - - - - ]|
+        >>> |                                                       |
+        >>> |                         (top)                         |
+        >>> |                                                       |
+        >>> |      (left)       [ - COLORBAR  - ]      (right)      |
+        >>> |                                                       |
+        >>> |                       (bottom)                        |
+        >>> |_______________________________________________________|
 
         """
-
-        if isinstance(pad_size, (int, float)):
-            pad_size = [pad_size, pad_size]
 
         assert hasattr(
             self.classify_specs, "_bins"
@@ -1913,33 +1910,34 @@ class Maps(object):
         # initialize colorbar axes
         if isinstance(gs, float):
             frac = gs
+            gs = self.figure.ax.get_subplotspec()
             # get the original subplot-spec of the axes, and divide it based on
             # the fraction that is intended for the colorbar
             if orientation == "horizontal":
                 gs = GridSpecFromSubplotSpec(
-                    2,
+                    4,
                     3,
-                    self.figure.ax.get_subplotspec(),
-                    height_ratios=(1, frac),
-                    width_ratios=(pad_size[0], 1, pad_size[1]),
+                    gs,
+                    height_ratios=(1, top, frac, bottom),
+                    width_ratios=(left, 1, right),
                     wspace=0,
-                    hspace=pad_axes,
+                    hspace=0,
                 )
                 self.figure.ax.set_subplotspec(gs[0, :])
-                gsspec = gs[1, 1]
+                gsspec = gs[2, 1]
 
             elif orientation == "vertical":
                 gs = GridSpecFromSubplotSpec(
                     3,
-                    2,
-                    self.figure.ax.get_subplotspec(),
-                    width_ratios=(1, frac),
-                    height_ratios=(pad_size[0], 1, pad_size[1]),
+                    4,
+                    gs,
+                    width_ratios=(1, top, frac, bottom),
+                    height_ratios=(left, 1, right),
                     hspace=0,
-                    wspace=pad_axes,
+                    wspace=0,
                 )
                 self.figure.ax.set_subplotspec(gs[:, 0])
-                gsspec = gs[1, 1]
+                gsspec = gs[1, 2]
 
             else:
                 raise AssertionError("'{orientation}' is not a valid orientation")
