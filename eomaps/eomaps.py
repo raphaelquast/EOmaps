@@ -1265,21 +1265,6 @@ class Maps(object):
 
     if _gpd_OK:
 
-        def _clip_gdf_on_crs_bounds(self, gdf):
-            from shapely.geometry import Polygon
-
-            # add intermediate points to the boundary-shape of the crs
-            # (to make sure re-projection is adequate)
-            crs = self._get_cartopy_crs(self.crs_plot)
-            coords = []
-            for c0, c1 in pairwise(crs.boundary.coords):
-                coords += list(zip(*np.linspace(c0, c1, 100).T))
-            crsbound = gpd.GeoDataFrame(geometry=[Polygon(coords)], crs=crs)
-
-            # clip the GeoDataFrame based on the (projected) crs-boundary shape
-            clip_gdf = gdf.clip(crsbound.to_crs(gdf.crs))
-            return clip_gdf.to_crs(crs)
-
         def add_gdf(
             self,
             gdf,
@@ -1287,7 +1272,6 @@ class Maps(object):
             pick_method="contains",
             val_key=None,
             layer=None,
-            clip=False,
             temporary_picker=None,
             **kwargs,
         ):
@@ -1340,13 +1324,6 @@ class Maps(object):
                 The default is None.
             layer : int
                 The layer-index at which the dataset will be plotted.
-            clip : bool, optional
-                Indicator if the GeoDataFrame should be clipped with respect to the
-                crs-boundaries or not.
-                This can help with some issues concerning polygons that extend out
-                of the valid region. (e.g. adding ocean-coloring to epsg 3035)
-                The feature is not fully mature and might fail for certain
-                projections and geometries! The default is False.
             temporary_picker : str, optional
                 The name of the picker that should be used to make the geometry
                 temporary (e.g. remove it after each pick-event)
