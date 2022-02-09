@@ -1,4 +1,4 @@
-theme: jekyll-theme-slate
+remote_theme: pages-themes/primer@v0.2.0
 markdown: CommonMarkGhPages
-name: EOmaps
-title: null
+plugins:
+- jekyll-remote-theme # add this line to the plugins list if you already have one
