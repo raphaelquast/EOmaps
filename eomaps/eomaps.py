@@ -1531,6 +1531,7 @@ class Maps(object):
             >>> m.add_marker(ID=1, radius=2, radius_crs=4326, shape="rectangles")
             >>> m.add_marker(xy=(45, 35), xy_crs=4326, radius=20000, shape="geod_circles")
         """
+
         if ID is not None:
             assert xy is None, "You can only provide 'ID' or 'pos' not both!"
         else:
@@ -2105,6 +2106,71 @@ class Maps(object):
 
             gdf = self._make_rect_poly(x0, y0, x1, y1, self.get_crs(crs), npts)
             self.add_gdf(gdf, **kwargs)
+
+    def add_logo(self, filepath=None, position="lr", size=0.125, pad=0.1):
+        """
+        Add a small image (png, jpeg etc.) to the map whose position is dynamically
+        updated if the plot is resized or zoomed.
+
+        Parameters
+        ----------
+        filepath : str, optional
+            if str: The path to the image-file.
+            The default is None in which case an EOmaps logo is added to the map.
+        position : str, optional
+            The position of the logo.
+            - "ul", "ur" : upper left, upper right
+            - "ll", "lr" : lower left, lower right
+            The default is "lr".
+        size : float, optional
+            The size of the logo as a fraction of the axis-width.
+            The default is 0.15.
+        pad : float, optional
+            Padding between the axis-edge and the logo as a fraction of the logo-width.
+            The default is 0.1.
+        """
+
+        if filepath is None:
+            filepath = Path(__file__).parent.parent / "logo.png"
+
+        im = mpl.image.imread(filepath)
+
+        def getpos(pos):
+            s = pos.width * size
+            pw = s * pad
+
+            if position == "lr":
+                p = dict(rect=[pos.x1 - s - pw, pos.y0 + pw, s, s], anchor="SE")
+            elif position == "ll":
+                p = dict(rect=[pos.x0 + pw, pos.y0 + pw, s, s], anchor="SW")
+            elif position == "ur":
+                p = dict(rect=[pos.x1 - s - pw, pos.y1 - s - pw, s, s], anchor="NE")
+            elif position == "ul":
+                p = dict(rect=[pos.x0 + pw, pos.y1 - s - pw, s, s], anchor="NW")
+            return p
+
+        figax = self.figure.f.add_axes(**getpos(self.ax.get_position()))
+        figax.set_axis_off()
+        figax.imshow(im, aspect="equal")
+
+        def setlim(*args, **kwargs):
+            figax.set_position(getpos(self.ax.get_position())["rect"])
+
+        def update_decorator(f):
+            def newf(*args, **kwargs):
+                ret = f(*args, **kwargs)
+                setlim()
+                return ret
+
+            return newf
+
+        toolbar = self.figure.f.canvas.toolbar
+        if toolbar is not None:
+            toolbar._update_view = update_decorator(toolbar._update_view)
+            toolbar.release_zoom = update_decorator(toolbar.release_zoom)
+            toolbar.release_pan = update_decorator(toolbar.release_pan)
+
+        self.figure.f.canvas.mpl_connect("resize_event", setlim)
 
 
 class MapsGrid:
