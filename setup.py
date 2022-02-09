@@ -22,6 +22,7 @@ setup(
     description="A library to create interactive maps of geographical datasets.",
     packages=find_packages(),
     package_dir={"eomaps": "eomaps"},
+    package_data={"eomaps": ["logo.png", "NE_features.json"]},
     # include_package_data=True,
     author="Raphael Quast",
     author_email="raphael.quast@geo.tuwien.ac.at",
