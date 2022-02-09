@@ -1,4 +1,4 @@
-remote_theme: pages-themes/primer@v0.2.0
+remote_theme: pages-themes/primer@v0.6.0
 markdown: CommonMarkGhPages
 plugins:
 - jekyll-remote-theme
