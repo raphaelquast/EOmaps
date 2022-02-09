@@ -23,4 +23,7 @@ m.set_data(
 )  # the coordinate-system of the x- and y- coordinates
 
 m.plot_map()
+m.add_colorbar()
+
 m.cb.pick.attach.annotate()  # attach a basic pick-annotation (on left-click)
+m.add_logo()  # add a logo

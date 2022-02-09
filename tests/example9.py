@@ -96,7 +96,10 @@ mg.m_top.cb.pick.attach.mark(permanent=False, buffer=2, fc="none", ec="r", ls=":
 
 
 # add a colorbar
-mg.m_top.add_colorbar(0.25, pad_axes=0, pad_size=(0, 0))
+mg.m_top.add_colorbar(0.25, left=0, right=0, label="Number of observations")
 mg.m_top.figure.ax_cb_plot.tick_params(labelsize=6)
 
-mg.f.tight_layout()
+# update the padding for the axes
+mg.gridspec.update(bottom=0.1, left=0.12, right=0.94, wspace=0.3, hspace=0.2)
+
+mg.add_logo()

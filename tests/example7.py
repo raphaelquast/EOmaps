@@ -50,4 +50,4 @@ for m in mg:
 
 mg.share_pick_events()  # share default pick events
 mg.share_pick_events("countries")  # share the events of the "countries" picker
-mg.f.tight_layout()
+mg.m_0_1.add_logo(size=0.25, pad=0)

@@ -49,3 +49,5 @@ m.cb.keypress.attach.switch_layer(layer=2, key="2")
 # ------------------------------
 m.figure.f.set_size_inches(9, 4)
 m.figure.gridspec.update(left=0.01, right=0.99, bottom=0.01, top=0.99)
+
+m.add_logo()

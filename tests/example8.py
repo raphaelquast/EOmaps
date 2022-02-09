@@ -2,7 +2,7 @@
 
 from eomaps import Maps
 
-m = Maps()
+m = Maps(figsize=(9, 5))
 m.add_feature.preset.ocean(ec="k", scale="110m")
 
 s1 = m.add_scalebar(
@@ -41,4 +41,4 @@ s4.set_scale_props(scale=750000, n=10, width=4, colors=("k", "w"))
 s4.set_patch_props(fc="none", ec="none", offsets=(1, 1.6, 1, 1))
 s4.set_label_props(scale=1.5, offset=0.5, every=2, weight="bold", family="Courier New")
 
-m.figure.f.set_figheight(6)
+m.add_logo()

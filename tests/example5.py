@@ -20,7 +20,7 @@ data_OK.var = np.sqrt(data_OK.param)
 data_mask = data[data.param < 0]
 
 # --------- initialize a Maps object and plot a basic map
-m = Maps(Maps.CRS.Orthographic())
+m = Maps(Maps.CRS.Orthographic(), figsize=(10, 6))
 m.set_data(data=data_OK, xcoord="lon", ycoord="lat", in_crs=4326)
 m.set_plot_specs(
     title="Wooohoo, a flashy map-widget with static indicators!",
@@ -149,3 +149,6 @@ m.add_annotation(
     horizontalalignment="left",
     arrowprops=dict(arrowstyle="fancy", facecolor="w", connectionstyle="arc3,rad=0.35"),
 )
+
+m.add_colorbar(label="The Data")
+m.add_logo()

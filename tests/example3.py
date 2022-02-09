@@ -52,3 +52,5 @@ m.figure.gridspec.update(
 m.figure.set_colorbar_position(
     pos=[0.125, 0.1, 0.83, 0.15], ratio=999
 )  # manually re-position the colorbar
+
+m.add_logo(position="lr", pad=(-1.1, 0))
