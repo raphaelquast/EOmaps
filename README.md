@@ -1,11 +1,6 @@
 
 <p align="center">
-  <a href="https://github.com/raphaelquast/EOmaps/#gh-light-mode-only">
-    <img src="logos/EO_Maps_Logo_V2.png" width="55%" />
-  </a>
-  <a href="https://github.com/raphaelquast/EOmaps/#gh-dark-mode-only">
-    <img src="logos/eo_maps_logo_v6.png" width="55%" />
-  </a>
+    <img src="logos/EO_Maps_Logo_V6.png" width="55%" />
 </p>
 
 [![tests](https://github.com/raphaelquast/EOmaps/actions/workflows/testMaps.yml/badge.svg?branch=master)](https://github.com/raphaelquast/EOmaps/actions/workflows/testMaps.yml)
