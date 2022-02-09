@@ -1,4 +1,12 @@
-<p align="center"><img src="logos/EO_Maps_Logo_V2.png" alt="EOmaps example image 2" width="55%"></p>
+
+<p align="center">
+  <a href="https://github.com/raphaelquast/EOmaps/#gh-light-mode-only">
+    <img src="logos/EO_Maps_Logo_V2.png" width="55%" />
+  </a>
+  <a href="https://github.com/raphaelquast/EOmaps/#gh-dark-mode-only">
+    <img src="logos/EO_Maps_Logo_V6.png" width="55%" />
+  </a>
+</p>
 
 [![tests](https://github.com/raphaelquast/EOmaps/actions/workflows/testMaps.yml/badge.svg?branch=master)](https://github.com/raphaelquast/EOmaps/actions/workflows/testMaps.yml)
 [![codecov](https://codecov.io/gh/raphaelquast/EOmaps/branch/dev/graph/badge.svg?token=25M85P7MJG)](https://codecov.io/gh/raphaelquast/EOmaps)
