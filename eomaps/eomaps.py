@@ -1275,8 +1275,8 @@ class Maps(object):
             crsbound = gpd.GeoDataFrame(geometry=[Polygon(coords)], crs=crs)
 
             # clip the GeoDataFrame based on the (projected) crs-boundary shape
-            clip_gdf = gdf.to_crs(crs).clip(crsbound)
-            return clip_gdf
+            clip_gdf = gdf.clip(crsbound.to_crs(gdf.crs))
+            return clip_gdf.to_crs(crs)
 
         def add_gdf(
             self,
