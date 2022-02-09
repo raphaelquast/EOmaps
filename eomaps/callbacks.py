@@ -162,15 +162,25 @@ class _click_callbacks(object):
             >>> dict(xytext=(20, 20),
             >>>      textcoords="offset points",
             >>>      bbox=dict(boxstyle="round", fc="w"),
-            >>>      arrowprops=dict(arrowstyle="->"))
+            >>>      arrowprops=dict(arrowstyle="->")
             >>>     )
 
         """
 
         ID, pos, val, ind, picker_name = self._popargs(kwargs)
+        if isinstance(self.m.data_specs.xcoord, str):
+            xlabel = self.m.data_specs.xcoord
+        else:
+            xlabel = "xcoord"
+        if isinstance(self.m.data_specs.ycoord, str):
+            ylabel = self.m.data_specs.ycoord
+        else:
+            ylabel = "ycoord"
 
-        xlabel = self.m.data_specs.xcoord
-        ylabel = self.m.data_specs.ycoord
+        if self.m.data_specs.parameter is None:
+            parameter = "value"
+        else:
+            parameter = self.m.data_specs.parameter
 
         ax = self.m.figure.ax
 
@@ -178,7 +188,7 @@ class _click_callbacks(object):
             if ID is not None and self.m.data is not None:
                 x, y = [
                     np.format_float_positional(i, trim="-", precision=pos_precision)
-                    for i in self.m.data.loc[ID][[xlabel, ylabel]]
+                    for i in (self.m._props["xorig"][ind], self.m._props["yorig"][ind])
                 ]
                 x0, y0 = [
                     np.format_float_positional(i, trim="-", precision=pos_precision)
@@ -192,12 +202,8 @@ class _click_callbacks(object):
                 printstr = (
                     f"{xlabel} = {x} ({x0})\n"
                     + f"{ylabel} = {y} ({y0})\n"
-                    + (f"ID = {ID}\n" if ID is not None else "")
-                    + (
-                        f"{self.m.data_specs.parameter} = {val}"
-                        if val is not None
-                        else ""
-                    )
+                    + (f"ID = {ID}" if ID is not None else "")
+                    + (f"\n{parameter} = {val}" if val is not None else "")
                 )
             else:
                 lon, lat = self.m._transf_plot_to_lonlat.transform(*pos)
@@ -211,12 +217,17 @@ class _click_callbacks(object):
                 ]
 
                 printstr = (
-                    f"x = {x}\n" + f"y = {y}\n" + f"lon = {lon}\n" + f"lat = {lat}"
+                    f"x = {x}\n"
+                    + f"y = {y}\n"
+                    + f"lon = {lon}\n"
+                    + f"lat = {lat}"
+                    + (f"\nvalue = {val}" if val is not None else "")
                 )
+
         elif isinstance(text, str):
             printstr = text
         elif callable(text):
-            printstr = text(self.m, ID, val, pos, ind)
+            printstr = text(m=self.m, ID=ID, val=val, pos=pos, ind=ind)
 
         if printstr is not None:
             # create a new annotation
@@ -466,14 +477,18 @@ class _click_callbacks(object):
         ----------
         layer : int
             The layer-number you want to peek at.
-            (You must draw something on the layer first!)
+
+            Note:
+            You must draw something on the layer first! (Most EOmaps functions
+            that add features to a map support a `layer` argument that
+            lets you specify the layer at which the object is drawn.)
 
                 >>> m.plot_map(layer=1)
 
-        pos : TYPE
-            DESCRIPTION.
         how : str , float or tuple, optional
-            the peek-method.
+            The method you want to visualize the second layer.
+            (e.g. swipe from a side or display a rectangle)
+
                 - "left" (→), "right" (←), "top" (↓), "bottom" (↑):
                   swipe the layer at the mouse-position.
                 - if float, peek a square at the mouse-position, specified as
@@ -705,12 +720,10 @@ class _click_callbacks(object):
             self._pick_l.set_xdata(list(self._pick_l.get_xdata()) + [xindex])
             self._pick_l.set_ydata(list(self._pick_l.get_ydata()) + [val])
 
-        # self._pick_ax.autoscale()
         self._pick_ax.relim()
         self._pick_ax.autoscale_view(True, True, True)
-
-        self._pick_f.canvas.draw()
         self._pick_f.tight_layout()
+        self._pick_f.canvas.draw()
 
     def _plot_cleanup(self):
         # cleanup method for plot callback
@@ -737,10 +750,31 @@ class pick_callbacks(_click_callbacks):
         "plot",
         "clear_annotations",
         "clear_markers",
+        "highlight_geometry",
     ]
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+
+    def highlight_geometry(self, permanent=False, **kwargs):
+        """
+        Temporarily highlite the picked geometry.
+
+        Parameters
+        ----------
+        **kwargs :
+            keyword-arguments to style the geometry
+            (e.g. facecolor, edgecolor, linewidth etc. )
+
+        """
+        ID, pos, val, ind, picker_name = self._popargs(kwargs)
+
+        if ID is not None:
+            # get the selected geometry and re-project it to the desired crs
+            geom = self.m.cb.pick[picker_name].data.loc[[ID]].geometry
+            # add the geometry to the map
+
+            self.m.add_gdf(geom, temporary_picker=picker_name, **kwargs)
 
 
 class click_callbacks(_click_callbacks):

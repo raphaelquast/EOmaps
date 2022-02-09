@@ -7,12 +7,14 @@ import numpy as np
 # ----------- create some example-data
 lon, lat = np.meshgrid(np.arange(-30, 60, 0.25), np.arange(30, 60, 0.3))
 data = pd.DataFrame(
-    dict(lon=lon.flat, lat=lat.flat, data_variable=np.sqrt(lon ** 2 + lat ** 2).flat)
+    dict(lon=lon.flat, lat=lat.flat, data_variable=np.sqrt(lon**2 + lat**2).flat)
 )
 data = data.sample(3000)  # take 3000 random datapoints from the dataset
 # ------------------------------------
 
-m = Maps()
+m = Maps(
+    crs=3857, figsize=(9, 5)
+)  # create a map in a pseudo-mercator (epsg 3857) projection
 m.set_data(data=data, xcoord="lon", ycoord="lat", in_crs=4326)
 
 # --------- set the appearance of the plot
@@ -20,7 +22,6 @@ m.set_plot_specs(
     label="some parameter",  # set the label of the colorbar
     title="What a nice figure",  # set the title of the figure
     cmap="RdYlBu",  # set the colormap
-    crs=3857,  # plot the map in a pseudo-mercator (epsg3857) projection
     histbins="bins",  # use the histogram-bins as set by the classification scheme
     vmin=35,  # set all values below vmin to vmin
     vmax=60,  # set all values above vmax to vmax
@@ -41,9 +42,8 @@ m.plot_map(
     edgecolor="k", linewidth=0.5
 )  # pass some additional arguments to the plotted collection
 
-# ------------------ change the appearance of the figure
-m.figure.f.set_figwidth(9)  # set figure width
-m.figure.f.set_figheight(5)  # set figure height
+# ------------------ add a colorbar and change it's appearance
+m.add_colorbar()
 _ = m.figure.ax_cb_plot.set_ylabel("The Y label")  # add a y-label to the histogram
 
 m.figure.gridspec.update(
@@ -52,3 +52,5 @@ m.figure.gridspec.update(
 m.figure.set_colorbar_position(
     pos=[0.125, 0.1, 0.83, 0.15], ratio=999
 )  # manually re-position the colorbar
+
+m.add_logo(position="lr", pad=(-1.1, 0))

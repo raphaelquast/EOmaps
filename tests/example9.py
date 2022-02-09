@@ -37,15 +37,22 @@ data = pd.DataFrame(dict(count=database.count(axis=1), **coords))
 
 # -------- initialize a MapsGrid with a map on top and 2 ordinary axes below
 mg = MapsGrid(
-    2, 2, m_inits=dict(top=(0, slice(0, 2))), ax_inits=dict(left=(1, 0), right=(1, 1))
+    2,
+    2,
+    m_inits=dict(top=(0, slice(0, 2))),
+    ax_inits=dict(left=(1, 0), right=(1, 1)),
+    height_ratios=(3, 2),
 )
+
+mg.add_feature.preset.ocean()
+mg.add_feature.preset.coastline()
 
 # -------- set the specs for the Maps-object of the grid and plot the map
 mg.m_top.set_data(data=data, xcoord="lon", ycoord="lat", crs=4326)
 mg.m_top.set_classify_specs(
     scheme=Maps.CLASSIFIERS.UserDefined, bins=[50, 100, 200, 400, 800]
 )
-mg.m_top.set_shape.rectangles()
+mg.m_top.set_shape.ellipses(radius=0.5)
 mg.m_top.plot_map()
 
 # -------- set some axis labels
@@ -87,4 +94,12 @@ mg.m_top.cb.pick.attach.annotate(layer=20)
 mg.m_top.cb.pick.attach.mark(permanent=False, buffer=1, fc="none", ec="r")
 mg.m_top.cb.pick.attach.mark(permanent=False, buffer=2, fc="none", ec="r", ls=":")
 
-mg.f.subplots_adjust(top=0.98, bottom=0.075, left=0.07, right=0.93)
+
+# add a colorbar
+mg.m_top.add_colorbar(0.25, left=0, right=0, label="Number of observations")
+mg.m_top.figure.ax_cb_plot.tick_params(labelsize=6)
+
+# update the padding for the axes
+mg.gridspec.update(bottom=0.1, left=0.12, right=0.94, wspace=0.3, hspace=0.2)
+
+mg.add_logo()

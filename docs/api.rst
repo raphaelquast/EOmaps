@@ -7,39 +7,26 @@
 🌐 Initialization of Maps objects
 .................................
 
-To initialize a new ``Maps`` object, simply use:
+| EOmaps is all about ``Maps`` objects.
+| To start creating a new map (in this case a plot in ``epsg=4326``), simply use:
 
 .. code-block:: python
 
     from eomaps import Maps
-    m = Maps( ... )
+    m = Maps(crs=4326)
 
+The CRS usable for plotting are accessible via `Maps.CRS`, e.g.: ``crs=Maps.CRS.Orthographic()``.
 
-To copy an existing ``Maps``-object (and share selected specifications), use:
-
-.. code-block:: python
-
-    from eomaps import Maps
-
-    m = Maps()
-    ...
-    m2 = m.copy(...)
-
-To create a ``Maps``-object that represents an additional layer of an already existing map,
-use one of the following:
-(In this way, the newly created ``Maps`` object will share the same figure and plot-axis.)
+One you have created your first ``Maps`` object, you can create **additional layers on the same map** by using:
 
 .. code-block:: python
 
-    from eomaps import Maps
+    m2 = m.new_layer(...)
 
-    m = Maps()
-    ...
-    m_layer1 = Maps(parent=m)
-    m_layer2 = m.copy(connect=True)
+(``m2`` is then just another ``Maps`` object that shares the figure and plot-axes with ``m``)
 
 
-
+To get full control on how to copy existing ``Maps``-objects (and share selected specifications), have a look at ``m.copy()``.
 
 .. currentmodule:: eomaps
 
@@ -49,19 +36,22 @@ use one of the following:
     :template: only_names_in_toc.rst
 
     Maps
+    Maps.new_layer
     Maps.copy
-
 
 
 𝄜 Multiple maps in one figure
 ..............................
 
-To initialize (and manage) a grid of ``Maps`` objects, you can use a ``MapsGrid``:
+``MapsGrid`` objects can be used to create (and manage) multiple maps in one figure.
+
+A ``MapsGrid`` creates a grid of ``Maps`` objects (and/or ordinary ``matpltolib`` axes),
+and provides convenience-functions to perform actions on all maps of the figure.
 
 .. code-block:: python
 
     from eomaps import MapsGrid
-    mgrid = MapsGrid(r=2, c=2, ... )
+    mgrid = MapsGrid(r=2, c=2, crs=..., ... )
     # you can then access the individual Maps-objects via:
     mgrid.m_0_0
     mgrid.m_0_1
@@ -72,13 +62,15 @@ To initialize (and manage) a grid of ``Maps`` objects, you can use a ``MapsGrid`
     for m in mgrid:
         ...
 
-❗ It is also possible to customize the positioning of the axes and **combine EOmaps plots with ordinary matplotlib axes** in one grid via the ``m_inits`` and ``ax_inits`` arguments!
+❗ NOTE: It is also possible to customize the positioning of the axes and **combine EOmaps plots with ordinary matplotlib axes** in one grid via the optional ``m_inits`` and ``ax_inits`` arguments!
 
-- if ``m_inits`` is provided, the specifications are used to initialize ``Maps`` objects (accessible via ``mgrid.m_<key>``)
-- if ``ax_inits`` is provided, the specifications are used to initialize ordinary matplotlib axes (accessible via ``mgrid.ax_<key>``)
+- if ``m_inits`` is provided, the init-specs are used to initialize ``Maps`` objects (accessible via ``mgrid.m_<key>``)
+- if ``ax_inits`` is provided, the init-specs are used to initialize ordinary matplotlib axes (accessible via ``mgrid.ax_<key>``)
 
-- To specify axes that span over multiple rows or columns, simply use ``slice(start, stop)``.
 - The initialization of the axes is based on matplotlib's `GridSpec <https://matplotlib.org/stable/api/_as_gen/matplotlib.gridspec.GridSpec.html>`_ functionality. All additional keyword-arguments (``width_ratios, height_ratios, etc.``) are passed to the initialization of the GridSpec object.
+
+  - The position of the axes are specified as tuples ``(row, col)``
+  - Axes that span over multiple rows or columns, can be specified via ``slice(start, stop)``.
 
 
 .. code-block:: python
@@ -89,6 +81,8 @@ To initialize (and manage) a grid of ``Maps`` objects, you can use a ``MapsGrid`
     mgrid = MapsGrid(2, 2,
                      m_inits=dict(top_row=(0, slice(0, 2)),
                                   bottom_left=(1, 0)),
+                     crs=dict(top_row=4326,
+                              bottom_left=3857),
                      ax_inits=dict(bottom_right=(1, 1)),
                      width_ratios=(1, 2),
                      height_ratios=(2, 1))
@@ -107,7 +101,17 @@ To initialize (and manage) a grid of ``Maps`` objects, you can use a ``MapsGrid`
     :template: only_names_in_toc.rst
 
     MapsGrid
-    MapsGrid.create_axes
+    MapsGrid.join_limits
+    MapsGrid.share_click_events
+    MapsGrid.share_pick_events
+    MapsGrid.set_data_specs
+    MapsGrid.set_plot_specs
+    MapsGrid.set_classify_specs
+    MapsGrid.add_wms
+    MapsGrid.add_feature
+    MapsGrid.add_annotation
+    MapsGrid.add_marker
+    MapsGrid.add_gdf
 
 
 🌍 Set plot specifications
@@ -116,17 +120,17 @@ To initialize (and manage) a grid of ``Maps`` objects, you can use a ``MapsGrid`
 The appearance of the plot can be adjusted by setting the following properties
 of the Maps object:
 
-.. currentmodule:: eomaps.Maps
+.. currentmodule:: eomaps
 
 .. autosummary::
     :toctree: generated
     :nosignatures:
     :template: only_names_in_toc.rst
 
-    set_shape
-    set_data
-    set_plot_specs
-    set_classify_specs
+    Maps.set_shape
+    Maps.set_data
+    Maps.set_plot_specs
+    Maps.set_classify_specs
 
 Alternatively, you can also get/set the properties with:
 
@@ -137,16 +141,12 @@ Alternatively, you can also get/set the properties with:
     m.plot_specs.< property > = ...
     m.classify_specs.< property > = ...
 
-
-The CRS usable for plotting as well as available classifiers that can be used
-to classify the data are accessible via `Maps.CRS` and `Maps.CLASSIFIERS`:
+The available classifiers that can be used to classify the data are accessible via `Maps.CLASSIFIERS`:
 
 .. code-block:: python
 
     m = Maps()
     m.set_classify_specs(Maps.CLASSFIERS.Quantiles, k=5)
-    m.plot_specs.crs = Maps.CRS.Orthographic(central_latitude=45)
-
 
 🗺 Plot the map and save it
 ...........................
@@ -160,32 +160,35 @@ call :code:`m.plot_map()`:
     m.set_data( < the data specifications > )
     m.plot_map()
 
-
-If you only want to add a WebMap layer, simply use:
+you can then add a colorbar or to the map via:
 
 .. code-block:: python
 
-    m = Maps()
-    m.add_wms.< WebMap service >.add_layer.< Layer Name >()
+    m.add_colorbar()
+
+or add a WebMap layer via:
+
+.. code-block:: python
+
+    m.add_wms.< WebMap service >. ... .add_layer.< Layer Name >()
 
 
 Once the map is generated, a snapshot of the map can be saved at any time by using:
-
 
 .. code-block:: python
 
     m.savefig( "snapshot1.png", dpi=300, ... )
 
 
-.. currentmodule:: eomaps.Maps
+.. currentmodule:: eomaps
 
 .. autosummary::
     :toctree: generated
     :nosignatures:
     :template: only_names_in_toc.rst
 
-    plot_map
-    savefig
+    Maps.plot_map
+    Maps.savefig
 
 
 🛸 Callbacks - make the map interactive!
@@ -266,6 +269,7 @@ Callbacks that can be used only with `m.cb.pick`:
     :template: only_names_in_toc.rst
 
     load
+    highlight_geometry
 
 Pre-defined keypress callbacks
 ..............................
@@ -296,32 +300,24 @@ Callbacks that can be used with `m.cb.dynamic`
     indicate_extent
 
 
-🛰 How to add WebMap service layers
------------------------------------
+🛰 WebMap service layers
+------------------------
 
 WebMap services (TS/WMS/WMTS) can be attached to the map via:
 
-It is highly recommended to use the native crs of the WebMap service in order
-to avoid re-projecting the images (which degrades image quality and takes
-some time to finish...)
-
 .. code-block:: python
 
-    m = Maps()
-    m.plot_specs.crs = Maps.CRS.GOOGLE_MERCATOR # (at best the native crs of the service!)
-    m.add_wms.attach.< SERVICE > ... .add_layer.< LAYER >( layer=1 )
-
-.. currentmodule:: eomaps.Maps
-
-.. autosummary::
-    :toctree: generated
-    :nosignatures:
-    :template: only_names_in_toc.rst
-
-    add_wms
+    m.add_wms.attach.< SERVICE > ... .add_layer.< LAYER >(...)
 
 
-< SERVICE > hereby specifies the pre-defined WebMap service you want to add.
+``< SERVICE >`` hereby specifies the pre-defined WebMap service you want to add,
+and ``< LAYER >`` indicates the actual layer-name.
+
+.. note::
+    It is highly recommended (and sometimes even required) to use the native crs
+    of the WebMap service in order to avoid re-projecting the images
+    (which degrades image quality and sometimes takes quite a lot of time to finish...)
+
 
 .. note::
     Services might be nested directory structures!
@@ -335,6 +331,22 @@ some time to finish...)
     A list of available layers from a sub-folder can be fetched via:
 
         :code:`m.add_wms.<...>. ... .<...>.layers`
+
+.. code-block:: python
+
+    m = Maps(Maps.CRS.GOOGLE_MERCATOR) # (at best the native crs of the service!)
+    m.add_wms.OpenStreetMap.add_layer.default()
+
+.. currentmodule:: eomaps
+
+.. autosummary::
+    :toctree: generated
+    :nosignatures:
+    :template: only_names_in_toc.rst
+
+    Maps.add_wms
+
+
 
 Global WebMap services:
 
@@ -366,8 +378,65 @@ Services specific for Austria (Europa)
     Austria.Wien_basemap
 
 
-🏕 Additional features and overlays
------------------------------------
+🌵 GeoDataFrames and NaturalEarth features
+------------------------------------------
+To add a ``geopandas.GeoDataFrame`` to a map, simply use ``m.add_gdf()``.
+
+It is possible to make the shapes of a ``GeoDataFrame`` pickable
+(e.g. usable with ``m.cb.pick`` callbacks) by providing a ``picker_name``
+and specifying a ``pick_method``.
+
+Once the ``picker_name`` is specified, pick-callbacks can be attached via:
+
+- ``m.cb.pick[<PICKER NAME>].attach.< CALLBACK >()``
+
+For example, to highlight the clicked country, you could use:
+.. code-block:: python
+
+    m = Maps()
+    gdf = m.add_feature.cultural_110m.admin_0_countries.get_gdf()
+    m.add_gdf(gdf, picker_name="countries", pick_method="contains")
+    m.cb.pick["countries"].attach.highlight_geometry(fc="r", ec="g", lw=2)
+
+
+Feature-layers provided by `NaturalEarth <https://www.naturalearthdata.com>` can be easily added to the plot via ``m.add_feature``.
+If ``geopandas`` is installed, ``GeoDataFrames`` are used to visualize the features, and all aforementioned
+functionalities of ``m.add_gdf`` can be used with NaturalEarth features as well!
+
+
+The general call-signature is:
+
+.. code-block:: python
+
+    m.add_feature.< CATEGORY >.< FEATURE >(...)
+
+    # if you only want to get the associated GeoDataFrame, you can use
+    gdf = m.add_feature.< CATEGORY >.< FEATURE >.get_gdf()
+
+Where ``< CATEGORY >`` specifies the resolution and general category of the feature, e.g.:
+- cultural_10m, cultural_50m, cultural_110m
+- physical_10m, physical_50m, physical_110m
+- preset
+
+.. code-block:: python
+
+    m = Maps()
+    m.add_feature.preset.ocean()
+    m.add_feature.preset.coastline()
+    m.add_feature.cultural_110m.admin_0_pacific_groupings(ec="r", lw=2)
+
+
+.. autosummary::
+    :toctree: generated
+    :nosignatures:
+    :template: only_names_in_toc.rst
+
+    add_gdf
+    add_feature
+
+
+🏕 Static annotations and markers
+---------------------------------
 
 Static annotations and markers can be added to the map via:
 
@@ -378,6 +447,15 @@ Static annotations and markers can be added to the map via:
     m.add_annotation( ... )
     m.add_marker( ... )
 
+To indicate a rectangular area specified in a given crs, simply use ``m.indicate_extent``:
+
+.. code-block:: python
+
+    m = Maps(Maps.CRS.Orthographic())
+    m.add_feature.preset.coastline()
+    m.indicate_extent(x0=-45, y0=-45, x1=45, y1=45, crs=4326, fc="r", ec="k", alpha=0.5)
+
+
 .. currentmodule:: eomaps.Maps
 
 .. autosummary::
@@ -387,35 +465,21 @@ Static annotations and markers can be added to the map via:
 
     add_marker
     add_annotation
-
-Overlays from NaturalEarth and `geopandas.GeoDataFrames` can be added via:
-
-.. currentmodule:: eomaps.Maps
-
-.. autosummary::
-    :toctree: generated
-    :nosignatures:
-    :template: only_names_in_toc.rst
-
-    add_gdf
-    add_overlay
-    add_overlay_legend
-    add_coastlines
-
+    indicate_extent
 
 📏 Scalebars
 ------------
 
 A scalebar can be added to a map via:
 
-.. currentmodule:: eomaps.Maps
+.. currentmodule:: eomaps
 
 .. autosummary::
     :toctree: generated
     :nosignatures:
     :template: only_names_in_toc.rst
 
-    add_scalebar
+    Maps.add_scalebar
 
 .. code-block:: python
 
@@ -463,16 +527,16 @@ The scalebar has the following useful methods assigned:
 ----------------
 some additional functions and properties that might come in handy:
 
-.. currentmodule:: eomaps.Maps
+.. currentmodule:: eomaps
 
 .. autosummary::
     :toctree: generated
     :nosignatures:
 
-    join_limits
-    get_crs
-    indicate_masked_points
-    BM
-    parent
-    crs_plot
-    add_colorbar
+    Maps.join_limits
+    Maps.get_crs
+    Maps.indicate_masked_points
+    Maps.BM
+    Maps.parent
+    Maps.crs_plot
+    Maps.add_colorbar

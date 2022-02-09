@@ -83,6 +83,7 @@ class ScaleBar:
             - "rotation" : the rotation angle of the labels (in degrees)
               relative to the curvature of the scalebar
             - "color" : The color of the text
+            - "every" : indicator which scales should be labelled (e.g. every nth)
             - ... additional kwargs are passed to `matplotlib.font_manager.FontProperties`
               to set the used font-properties. Possible values are:
 
@@ -91,7 +92,7 @@ class ScaleBar:
               for example: `{family="Helvetica", style="italic"}`
 
             The default is:
-                >>> dict(scale=1, offset=1, rotation=0)
+                >>> dict(scale=1, offset=1, rotation=0, every=2)
         """
 
         self._m = m

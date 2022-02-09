@@ -4,6 +4,7 @@ from eomaps import Maps
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
+from matplotlib.patches import Patch
 
 # create some data
 lon, lat = np.meshgrid(np.linspace(-20, 40, 100), np.linspace(30, 60, 100))
@@ -19,10 +20,9 @@ data_OK.var = np.sqrt(data_OK.param)
 data_mask = data[data.param < 0]
 
 # --------- initialize a Maps object and plot a basic map
-m = Maps()
+m = Maps(Maps.CRS.Orthographic(), figsize=(10, 6))
 m.set_data(data=data_OK, xcoord="lon", ycoord="lat", in_crs=4326)
 m.set_plot_specs(
-    crs=m.crs_list.Orthographic(),
     title="Wooohoo, a flashy map-widget with static indicators!",
     histbins=200,
     cmap="Spectral_r",
@@ -38,14 +38,14 @@ cid = m.cb.click.attach.annotate(bbox=dict(alpha=0.75), color="w")
 
 # --------- add another layer of data to indicate the values in the masked area
 #           (copy all defined specs but the classification)
-m2 = m.copy(connect=True, copy_classify_specs=False)
+m2 = m.new_layer(copy_classify_specs=False)
 m2.data_specs.data = data_mask
 m2.set_shape.rectangles(mesh=False)
 m2.plot_specs.cmap = "magma"
 m2.plot_map()
 
 # --------- add another layer with data that is dynamically updated if we click on the masked area
-m3 = m.copy(connect=True, copy_classify_specs=False)
+m3 = m.new_layer(copy_classify_specs=False)
 m3.data_specs.data = data_OK.sample(1000)
 m3.set_shape.ellipses(radius=25000, radius_crs=3857)
 m3.set_plot_specs(cmap="gist_ncar")
@@ -62,38 +62,29 @@ def callback(self, **kwargs):
 m2.cb.click.attach(callback)
 
 # --------- add some basic overlays from NaturalEarth
-m.add_overlay(
-    dataspec=dict(resolution="10m", category="physical", name="lakes"),
-    styledict=dict(ec="none", fc="b"),
-)
-m.add_overlay(
-    dataspec=dict(resolution="10m", category="cultural", name="admin_0_countries"),
-    styledict=dict(ec=".75", fc="none", lw=0.5),
-)
-m.add_overlay(
-    dataspec=dict(resolution="10m", category="cultural", name="urban_areas"),
-    styledict=dict(ec="none", fc="r"),
-)
-m.add_overlay(
-    dataspec=dict(
-        resolution="10m", category="physical", name="rivers_lake_centerlines"
-    ),
-    styledict=dict(ec="b", fc="none", lw=0.25),
-)
 
-# --------- add a customized legend for the overlays
-m.add_overlay_legend(
+f0 = m.add_feature.physical_10m.lakes(ec="none", fc="b", zorder=100)
+f1 = m.add_feature.physical_10m.rivers_lake_centerlines(
+    ec="b", fc="none", lw=0.5, zorder=100
+)
+f2 = m.add_feature.cultural_10m.admin_0_countries(
+    ec=".75", fc="none", lw=0.5, zorder=100
+)
+f3 = m.add_feature.cultural_10m.urban_areas(ec="none", fc="r")
+
+# add a customized legend
+m.figure.ax.legend(
+    [
+        Patch(fc="b"),
+        plt.Line2D([], [], c="b"),
+        Patch(fc="r"),
+        plt.Line2D([], [], c=".75"),
+    ],
+    ["lakes", "rivers", "urban areas", "countries"],
     ncol=2,
     loc="lower center",
     facecolor="w",
     framealpha=1,
-    update_hl={
-        "admin_0_countries": [plt.Line2D([], [], c=".75"), "Country boarders"],
-        "rivers_lake_centerlines": [plt.Line2D([], [], c="b", alpha=0.5), "Rivers"],
-        "lakes": [None, "Lakes"],
-        "urban_areas": [None, "Urban Areas"],
-    },
-    sort_order=["lakes", "rivers_lake_centerlines", "urban_areas", "admin_0_countries"],
 )
 
 # --------- add some fancy (static) indicators for selected pixels
@@ -158,3 +149,6 @@ m.add_annotation(
     horizontalalignment="left",
     arrowprops=dict(arrowstyle="fancy", facecolor="w", connectionstyle="arc3,rad=0.35"),
 )
+
+m.add_colorbar(label="The Data")
+m.add_logo()

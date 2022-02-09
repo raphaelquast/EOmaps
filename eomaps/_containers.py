@@ -4,11 +4,19 @@ from operator import attrgetter
 from inspect import signature, _empty
 from types import SimpleNamespace
 from functools import lru_cache
+from pathlib import Path
+import json
+from warnings import warn
 
 import matplotlib.pyplot as plt
 from matplotlib.pyplot import get_cmap
 from matplotlib.gridspec import SubplotSpec
+from matplotlib.colors import rgb2hex
+
 import mapclassify
+
+import cartopy.feature as cfeature
+from cartopy.io import shapereader
 
 from ._webmap import _import_OK
 
@@ -18,6 +26,20 @@ if _import_OK:
         REST_API_services,
         _xyz_tile_service,
     )
+
+try:
+    import pandas as pd
+
+    _pd_OK = True
+except ImportError:
+    _pd_OK = False
+
+try:
+    import geopandas as gpd
+
+    _gpd_OK = True
+except ImportError:
+    _gpd_OK = False
 
 
 def combdoc(*args):
@@ -51,28 +73,13 @@ class map_objects(object):
     @property
     def f(self):
         # always return the figure of the parent object
-        if self._m.parent._f is None:
-            self._m.parent._BM = None  # reset the blit-manager
-            self._m.parent._f = plt.figure(figsize=(12, 8))
-
-            # attach a callback that is executed when the figure is closed
-            # (to inform the user that the Maps-object needs to be re-created)
-            self._cid_onclose = self._m.parent._f.canvas.mpl_connect(
-                "close_event", self._on_close
-            )
-            self._figure_closed = False
-            plt.draw()
-
         return self._m.parent._f
-
-    def _on_close(self, event):
-        # reset all objects connected to the figure to allow the re-initialization
-        # of a new figure object
-        self._m._reset_axes()
 
     @property
     def ax(self):
         ax = self._m._ax
+
+        # return None in case the plot is not yet initialized
         if isinstance(ax, SubplotSpec):
             ax = None
         return ax
@@ -289,7 +296,7 @@ class data_specs(object):
 
     @parameter.getter
     def parameter(self):
-        if self._parameter is None:
+        if _pd_OK and isinstance(self.data, pd.DataFrame) and self._parameter is None:
             if (
                 self.data is not None
                 and self.xcoord is not None
@@ -309,6 +316,7 @@ class data_specs(object):
                         "EOmaps: Parameter-name could not be identified!"
                         + "\nCheck the data-specs!"
                     )
+
         return self._parameter
 
 
@@ -324,6 +332,9 @@ class plot_specs(object):
             assert key in self.keys(), f"'{key}' is not a valid data-specs key"
 
         for key in self.keys():
+            if key == "plot_crs":
+                continue
+
             setattr(self, key, kwargs.get(key, None))
 
     def __repr__(self):
@@ -390,13 +401,26 @@ class plot_specs(object):
     def cmap(self):
         return self._cmap
 
-    @cmap.getter
-    def cmap(self):
-        return self._cmap
-
     @cmap.setter
     def cmap(self, val):
         self._cmap = get_cmap(val)
+
+    @property
+    def plot_crs(self):
+        if self._m.figure.ax is not None:
+            return self._m.figure.ax.projection
+
+        return self._plot_crs
+
+    @plot_crs.setter
+    def plot_crs(self, crs):
+        warn(
+            (
+                "\n▲▲▲ In EOmaps > v3.0 the plot-crs is set on "
+                + "initialization of the Maps-object!"
+                + "\n▲▲▲ Use `m = Maps(crs=...)` instead to set the plot-crs!\n"
+            )
+        )
 
 
 class classify_specs(object):
@@ -519,6 +543,369 @@ class classify_specs(object):
         )
 
 
+class NaturalEarth_features(object):
+    """
+    Interface to the feature-layers provided by NaturalEarth
+
+    (see https://www.naturalearthdata.com)
+
+    The features are grouped into the categories "cultural" and "physical"
+    at 3 different scales:
+        - 1:10m : Large-scale data
+        - 1:50m : Medium-scale data
+        - 1:110m : Small-scale data
+
+    For available features and additional info, check the docstring of the
+    individual categories!
+
+    >>> m.add_feature.cultural_10m.< feature-name >( ... style-kwargs ...)
+
+
+    Examples
+    --------
+
+    - add black (coarse resolution) coastlines
+    >>> m.add_feature.physical_110m.coastline(fc="none", ec="k")
+
+    - color all land red with 50% transparency
+    >>> m.add_feature.physical_110m.land(fc="r", alpha=0.5)
+
+    - color all countries with respect to their area
+    >>> countries = m.add_feature.cultural_10m.admin_0_countries
+    >>> areas = np.argsort([i.area for i in countries.feature.geometries()])
+    >>> countries(ec="k", fc= [i for i in plt.cm.viridis(areas / areas.max())])
+    """
+
+    def __init__(self, m):
+        self._m = m
+
+        with open(Path(__file__).parent / "NE_features.json", "r") as file:
+            features = json.load(file)
+
+        for scale, scale_items in features.items():
+            for category, category_items in scale_items.items():
+                ns = {
+                    name: self._feature(self._m, category, name, scale)
+                    for name in category_items
+                }
+
+                c = self._category(scale, category, **ns)
+                setattr(self, category + "_" + scale, c)
+
+    @property
+    def preset(self):
+        """
+        Access to commonly used NaturalEarth features with pre-defined styles.
+
+        - "coastline" - black coastlines
+        - "ocean" - blue ocean coloring
+        - "land" - beige land coloring
+        - "countries" - gray country boarder lines
+        """
+        return self._presets(self._m)
+
+    def __getitem__(self, key):
+        return getattr(self, key)
+
+    class _category:
+        def __init__(self, scale, category, **kwargs):
+
+            self._s = scale
+            self._c = category
+
+            for key, val in kwargs.items():
+                setattr(self, key, val)
+
+            self.__doc__ = combdoc(
+                NaturalEarth_features.__doc__,
+                "\nNotes\n-----\n Available NaturalEarth features for:   |   "
+                + scale
+                + "  "
+                + category
+                + "   |\n\n - "
+                + "\n - ".join(kwargs),
+            )
+
+        def __repr__(self):
+            return (
+                f"EOmaps interface for {self._s} {self._c} " + "NaturalEarth features"
+            )
+
+    class _feature:
+        def __init__(self, m, category, name, scale):
+            self._m = m
+            if not _gpd_OK:
+                # use cartopy to add the features
+                self.feature = cfeature.NaturalEarthFeature(
+                    category=category, name=name, scale=scale
+                )
+            else:
+                # just get the path to the cached download and use
+                # geopandas to add the feature (provides more flexibility!)
+                self.feature = dict(resolution=scale, category=category, name=name)
+
+            if not _gpd_OK:
+                self.__doc__ = dedent(
+                    f"""
+                    NaturalEarth feature:  {scale} | {category} | {name}
+
+                    Call this class like a function to add the feature to the map.
+
+                    Common style-keywords can be used to customize the appearance
+                    of the added features.
+
+                    - "facecolor" (or "fc")
+                    - "edgecolor" (or "ec")
+                    - "linewidth" (or "lw")
+                    - "linestyle" (or "ls")
+                    - "alpha", "hatch", "dashes", ...
+                    - "zoder"
+
+                    Parameters
+                    ----------
+
+                    layer : int, optional
+                        The EOmaps layer-number at which the feature is drawn.
+                        The default is None.
+
+                    Note
+                    ----
+                    Some shapes consist of point-geometries which cannot be
+                    properly added without `geopandas`!
+
+                    Run the following command to install geopandas and activate
+                    additional NaturalEarth features in EOmaps!
+
+                        `conda install -c conda-forge geopandas`
+
+                    (check the docstring again after installing to get more infos)
+
+                    Examples
+                    --------
+
+                    >>> m = Maps()
+                    >>> feature = m.add_feature.physical_10m.coastline
+                    >>> feature(fc="none",
+                    >>>         ec="k",
+                    >>>         lw=.5,
+                    >>>         ls="--",
+                    >>>         )
+                    """
+                )
+            else:
+                self.__doc__ = dedent(
+                    f"""
+                    NaturalEarth feature:  {scale} | {category} | {name}
+
+                    Call this class like a function to add the feature to the map.
+
+                    All keyword-arguments are passed to `m.add_gdf` and the
+                    NaturalEarth features are added to the map just like any
+                    other GeoDataFrame!
+                    (e.g. you can even attach callbacks if you like!)
+
+
+                    Parameters
+                    ----------
+                    picker_name : str or None
+                        A unique name that is used to identify the pick-method.
+
+                        If a `picker_name` is provided, a new pick-container will be
+                        created that can be used to pick geometries of the GeoDataFrame.
+
+                        The container can then be accessed via:
+                            >>> m.cb.pick__<picker_name>
+                            or
+                            >>> m.cb.pick[picker_name]
+                        and it can be used in the same way as `m.cb.pick...`
+
+                    pick_method : str or callable
+                        if str :
+                            The operation that is executed on the GeoDataFrame to identify
+                            the picked geometry.
+                            Possible values are:
+
+                            - "contains":
+                              pick a geometry only if it contains the clicked point
+                              (only works with polygons! (not with lines and points))
+                            - "centroids":
+                              pick the closest geometry with respect to the centroids
+                              (should work with any geometry whose centroid is defined)
+
+                            The default is "centroids"
+                        if callable :
+                            A callable that is used to identify the picked geometry.
+                            The call-signature is:
+
+                            >>> def picker(artist, mouseevent):
+                            >>>     # if the pick is NOT successful:
+                            >>>     return False, dict()
+                            >>>     ...
+                            >>>     # if the pick is successful:
+                            >>>     return True, dict(ID, pos, val, ind)
+                        The default is "contains"
+                    val_key : str
+                        The dataframe-column used to identify values for pick-callbacks.
+                        The default is None.
+
+                    kwargs :
+                        All remaining kwargs are passed to the plotting function
+                        of geopandas (e.g. `gdf.plot(**kwargs)`)
+
+                        (facecolor, edgecolor, etc.)
+
+                    layer : int, optional
+                        The EOmaps layer-number at which the feature is drawn.
+                        The default is None.
+
+
+                    Examples
+                    --------
+
+                    >>> m = Maps()
+                    >>> feature = m.add_feature.physical_10m.coastline
+                    >>> feature(fc="none",
+                    >>>         ec="k",
+                    >>>         lw=.5,
+                    >>>         ls="--",
+                    >>>         )
+
+                    - make the features from NaturalEarth interactive!
+                    >>> m = Maps()
+                    >>> feature = m.add_feature.physical_110m.admin_0_countries
+                    >>> feature(fc="none", ec="k", picker_name="countries", val_key="NAME_EN")
+                    >>> m.cb.pick["countries"].attach.highlite_geometry()
+                    >>> m.cb.pick["countries"].attach.annotate()
+
+
+                    """
+                )
+
+        def __call__(self, layer=None, **kwargs):
+            from . import MapsGrid  # do this here to avoid circular imports!
+
+            if not _gpd_OK:
+                for m in self._m if isinstance(self._m, MapsGrid) else [self._m]:
+                    if layer is None:
+                        uselayer = m.layer
+                    else:
+                        uselayer = layer
+
+                    self.feature._kwargs.update(kwargs)
+                    art = m.figure.ax.add_feature(self.feature)
+
+                    m.BM.add_bg_artist(art, layer=uselayer)
+            else:
+                s = self.get_gdf()
+                for m in self._m if isinstance(self._m, MapsGrid) else [self._m]:
+                    if layer is None:
+                        uselayer = m.layer
+                    else:
+                        uselayer = layer
+
+                    m.add_gdf(s, layer=uselayer, **kwargs)
+
+        if _gpd_OK:
+
+            def get_gdf(self):
+                """
+                Get a geopandas.GeoDataFrame for the selected NaturalEarth feature
+
+                Returns
+                -------
+                gdf : geopandas.GeoDataFrame
+                    A GeoDataFrame with all geometries and properties of the feature
+                """
+                gdf = gpd.read_file(shapereader.natural_earth(**self.feature))
+                gdf.set_crs(epsg=4326, inplace=True)
+                return gdf
+
+    class _presets:
+        def __init__(self, m):
+            self._m = m
+
+        @property
+        def coastline(self):
+            return self._feature(
+                self._m, "physical", "coastline", fc="none", ec="k", zorder=100
+            )
+
+        @property
+        def ocean(self):
+            # convert color to hex to avoid issues with geopandas
+            color = rgb2hex(cfeature.COLORS["water"])
+            return self._feature(
+                self._m,
+                "physical",
+                "ocean",
+                fc=color,
+                ec="none",
+                zorder=0,
+            )
+
+        @property
+        def land(self):
+            # convert color to hex to avoid issues with geopandas
+            color = rgb2hex(cfeature.COLORS["land"])
+
+            return self._feature(
+                self._m,
+                "physical",
+                "land",
+                fc=color,
+                ec="none",
+                zorder=0,
+            )
+
+        @property
+        def countries(self):
+            return self._feature(
+                self._m,
+                "cultural",
+                "admin_0_countries",
+                fc="none",
+                ec=".5",
+                lw=0.5,
+                zorder=100,
+            )
+
+        class _feature:
+            def __init__(self, m, category, name, **kwargs):
+                self._m = m
+                self.category = category
+                self.name = name
+
+                self.kwargs = kwargs
+
+                self.feature = getattr(
+                    getattr(self._m.add_feature, f"{self.category}_10m"), self.name
+                )
+
+                add_params = """
+                Other Parameters
+                ----------------
+                scale : str
+                    Set the scale of the feature preset ("10m", "50m" or "110m")
+                    The default is "50m"
+                """
+
+                self.__doc__ = combdoc(
+                    f"PRESET using {kwargs} ", self.feature.__doc__, add_params
+                )
+
+            def __call__(self, scale="50m", **kwargs):
+                k = dict(**self.kwargs)
+                k.update(kwargs)
+
+                self.feature = getattr(
+                    getattr(self._m.add_feature, f"{self.category}_{scale}"), self.name
+                )
+
+                self.__doc__ = self.feature.__doc__
+
+                return self.feature(**k)
+
+
 # avoid defining containers if import is not OK
 if not _import_OK:
     wms_container = None
@@ -634,13 +1021,13 @@ else:
             datasets must include proper acknowledgement, including citing the
             datasets and the journal article as in the following citation.
             """
-            if self._m._preferred_wms_service == "wms":
+            if self._m.parent._preferred_wms_service == "wms":
                 WMS = _WebServiec_collection(
                     m=self._m,
                     service_type="wms",
                     url="https://services.terrascope.be/wms/v2",
                 )
-            elif self._m._preferred_wms_service == "wmts":
+            elif self._m.parent._preferred_wms_service == "wmts":
                 WMS = _WebServiec_collection(
                     m=self._m,
                     service_type="wmts",

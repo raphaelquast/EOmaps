@@ -113,11 +113,14 @@ class shapes(object):
                 The class representing the plot-shape.
 
             """
-            self.radius = radius
+            from . import MapsGrid  # do this here to avoid circular imports!
 
-            self.n = n
+            for m in self._m if isinstance(self._m, MapsGrid) else [self._m]:
+                shape = self.__class__(m)
+                shape.radius = radius
+                shape.n = n
 
-            self._m.shape = self
+                m.shape = shape
 
         @property
         def _initargs(self):
@@ -293,13 +296,16 @@ class shapes(object):
             None.
 
             """
+            from . import MapsGrid  # do this here to avoid circular imports!
 
-            self._radius = radius
+            for m in self._m if isinstance(self._m, MapsGrid) else [self._m]:
+                shape = self.__class__(m)
 
-            self.radius_crs = radius_crs
-            self.n = n
+                shape._radius = radius
+                shape.radius_crs = radius_crs
+                shape.n = n
 
-            self._m.shape = self
+                m.shape = shape
 
         @property
         def _initargs(self):
@@ -496,19 +502,24 @@ class shapes(object):
             None.
 
             """
-            self._radius = radius
-            self.radius_crs = radius_crs
-            self.mesh = mesh
+            from . import MapsGrid  # do this here to avoid circular imports!
 
-            if mesh is True:
-                if n > 1:
-                    warnings.warn(
-                        "EOmaps: rectangles with 'mesh=True' only supports n=1"
-                    )
-                self.n = 1
-            else:
-                self.n = n
-            self._m.shape = self
+            for m in self._m if isinstance(self._m, MapsGrid) else [self._m]:
+                shape = self.__class__(m)
+
+                shape._radius = radius
+                shape.radius_crs = radius_crs
+                shape.mesh = mesh
+
+                if mesh is True:
+                    if n > 1:
+                        warnings.warn(
+                            "EOmaps: rectangles with 'mesh=True' only supports n=1"
+                        )
+                    shape.n = 1
+                else:
+                    shape.n = n
+                m.shape = shape
 
         @property
         def _initargs(self):
@@ -763,10 +774,15 @@ class shapes(object):
             None.
 
             """
-            self.mask_radius = mask_radius
-            self.masked = masked
+            from . import MapsGrid  # do this here to avoid circular imports!
 
-            self._m.shape = self
+            for m in self._m if isinstance(self._m, MapsGrid) else [self._m]:
+                shape = self.__class__(m)
+
+                shape.mask_radius = mask_radius
+                shape.masked = masked
+
+                m.shape = shape
 
         @property
         def _initargs(self):
@@ -807,7 +823,7 @@ class shapes(object):
             datamask = np.isfinite(x0) & np.isfinite(y0)
             [radiusx, radiusy] = radius
 
-            maxdist = 2 * np.mean(np.sqrt(radiusx ** 2 + radiusy ** 2))
+            maxdist = 2 * np.mean(np.sqrt(radiusx**2 + radiusy**2))
 
             xy = np.column_stack((x0[datamask], y0[datamask]))
 
@@ -865,112 +881,6 @@ class shapes(object):
 
             return coll
 
-    # class _trimesh_rectangles(_rectangles):
-    #     name = "trimesh_rectangles"
-    #     def __init__(self, m):
-    #         self._m = m
-
-    #     def __call__(self, radius="estimate", radius_crs="in"):
-    #         """
-    #         Draw a triangular mesh of rectangles with dimensions defined in units of a given crs.
-    #         (similar to rectangles but boundaries between neighbouring rectangles are not visible)
-
-    #         Parameters
-    #         ----------
-    #         radius : tuple or str, optional
-    #             a tuple representing the radius in x- and y- direction.
-    #             The default is "estimate" in which case the radius is attempted
-    #             to be estimated from the input-coordinates.
-    #         radius_crs : crs-specification, optional
-    #             The crs in which the dimensions are defined.
-    #             The default is "in".
-
-    #         Returns
-    #         -------
-    #         None.
-
-    #         """
-
-    #         self._radius = radius
-
-    #         self.radius_crs = radius_crs
-
-    #         self._m.shape = self
-
-    #     @property
-    #     def radius(self):
-    #         return shapes._get_radius(self._m, self._radius, self.radius_crs)
-
-    #     @radius.setter
-    #     def radius(self, val):
-    #         self._radius = val
-
-    #     def __repr__(self):
-    #         try:
-    #             s = f"trimesh_rectangles(radius={self.radius}, radius_crs={self.radius_crs})"
-    #         except AttributeError:
-    #             s = "trimesh_rectangles(radius, radius_crs)"
-    #         return s
-
-    #     def _get_trimesh_rectangle_triangulation(
-    #         self, x, y, crs, radius, radius_crs="in"
-    #     ):
-
-    #         verts, mask = self._get_rectangle_verts(x, y, crs, radius, radius_crs)
-
-    #         x = np.vstack(
-    #             [verts[:, 2][:, 0], verts[:, 3][:, 0], verts[:, 1][:, 0]]
-    #         ).T.flat
-    #         y = np.vstack(
-    #             [verts[:, 2][:, 1], verts[:, 3][:, 1], verts[:, 1][:, 1]]
-    #         ).T.flat
-
-    #         x2 = np.vstack(
-    #             [verts[:, 3][:, 0], verts[:, 0][:, 0], verts[:, 1][:, 0]]
-    #         ).T.flat
-    #         y2 = np.vstack(
-    #             [verts[:, 3][:, 1], verts[:, 0][:, 1], verts[:, 1][:, 1]]
-    #         ).T.flat
-
-    #         x = np.append(x, x2)
-    #         y = np.append(y, y2)
-
-    #         tri = Triangulation(
-    #             x, y, triangles=np.array(range(len(x))).reshape((len(x) // 3, 3))
-    #         )
-    #         return tri, mask
-
-    #     def get_coll(self, x, y, crs, **kwargs):
-    #         # special treatment of color and array inputs to distribute the values
-    #         color = kwargs.pop("color", None)
-    #         array = kwargs.pop("array", None)
-
-    #         tri, mask = self._get_trimesh_rectangle_triangulation(
-    #             x, y, crs, self.radius, self.radius_crs
-    #         )
-
-    #         coll = TriMesh(
-    #             tri,
-    #             transOffset=self._m.figure.ax.transData,
-    #             **kwargs,
-    #         )
-
-    #         # special treatment of color input to properly distribute values
-    #         if color is not None:
-    #             coll.set_facecolors([color] * (len(x)) * 6)
-    #         else:
-    #             # special treatment of array input to properly mask values
-    #             if array is not None:
-    #                 array = array[mask]
-
-    #                 # tri-contour meshes need 3 values for each triangle
-    #                 array = np.broadcast_to(array, (3, len(array))).T
-    #                 # we plot 2 triangles per rectangle
-    #                 array = np.broadcast_to(array, (2, *array.shape))
-    #                 coll.set_array(array.ravel())
-
-    #         return coll
-
     class _delaunay_triangulation(object):
         name = "delaunay_triangulation"
 
@@ -995,12 +905,17 @@ class shapes(object):
                 Indicator if a triangulation (flat=False) or polygons (flat=True)
                 should be plotted. The default is False
             """
-            self.mask_radius = mask_radius
-            self.mask_radius_crs = mask_radius_crs
-            self.masked = masked
-            self.flat = flat
+            from . import MapsGrid  # do this here to avoid circular imports!
 
-            self._m.shape = self
+            for m in self._m if isinstance(self._m, MapsGrid) else [self._m]:
+                shape = self.__class__(m)
+
+                shape.mask_radius = mask_radius
+                shape.mask_radius_crs = mask_radius_crs
+                shape.masked = masked
+                shape.flat = flat
+
+                m.shape = shape
 
         @property
         def _initargs(self):
@@ -1056,7 +971,7 @@ class shapes(object):
 
             if masked:
                 radiusx, radiusy = radius
-                maxdist = 4 * np.mean(np.sqrt(radiusx ** 2 + radiusy ** 2))
+                maxdist = 4 * np.mean(np.sqrt(radiusx**2 + radiusy**2))
 
                 if radius_crs == "in":
                     x, y = x[datamask][tri.triangles], y[datamask][tri.triangles]

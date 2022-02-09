@@ -9,17 +9,18 @@ import numpy as np
 lon, lat = np.meshgrid(np.linspace(-20, 40, 50), np.linspace(30, 60, 50))
 
 data = pd.DataFrame(
-    dict(lon=lon.flat, lat=lat.flat, data=np.sqrt(lon ** 2 + lat ** 2).flat)
+    dict(lon=lon.flat, lat=lat.flat, data=np.sqrt(lon**2 + lat**2).flat)
 )
 
 # --------- initialize a Maps object and plot a basic map
-m = Maps()
+m = Maps(crs=3035, figsize=(10, 8))
 m.set_data(data=data, xcoord="lon", ycoord="lat", in_crs=4326)
-m.set_plot_specs(plot_crs=3035, title="A clickable widget!", histbins="bins")
+m.set_plot_specs(title="A clickable widget!", histbins="bins")
 m.set_shape.rectangles()
 m.set_classify_specs(scheme="EqualInterval", k=5)
 m.plot_map()
-m.figure.f.set_figheight(8)
+m.add_feature.preset.ocean()  # add ocean-coloring in the background
+m.add_feature.preset.coastline(zorder=100)  # add coastlines on top
 
 # --------- attach pre-defined CALLBACK funcitons ---------
 
@@ -147,14 +148,15 @@ cid = m.cb.pick.attach(cb2, button=3)
 
 # add some static text
 _ = m.figure.f.text(
-    0.7,
-    0.85,
+    0.66,
+    0.92,
     "Left-click: temporary annotations\nRight-click: permanent annotations\nMiddle-click: clear permanent annotations",
     fontsize=10,
     horizontalalignment="left",
     verticalalignment="top",
     color="k",
     fontweight="bold",
+    bbox=dict(facecolor="w", alpha=0.75),
 )
 
 m.cb.click.attach.mark(
@@ -163,3 +165,7 @@ m.cb.click.attach.mark(
 m.cb.click.attach.mark(
     fc="none", ec="r", radius=50000, shape="geod_circles", permanent=False
 )
+
+
+m.add_colorbar(bottom=0.05)
+m.add_logo()
