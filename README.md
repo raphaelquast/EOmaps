@@ -1,7 +1,7 @@
 
 <p align="center">
     <a href=https://github.com/raphaelquast/EOmaps>
-    <img src="logos/EO_Maps_Logo_V6.png" width="55%" />
+    <img src="logos/EO_Maps_Logo_V2.png" width="55%" />
     </a>
 </p>
 
@@ -145,7 +145,7 @@ m.cb.keypress.attach.switch_layer(layer=1, key="a")
 m.add_wms(...)                      # add WebMapService layers
 m.add_gdf(...)                      # add geopandas.GeoDataFrames
 m.add_feature.<group>.<feature>()   # add feature-layers from NaturalEarth
-m.add colorbar(...)                 # add a colorbar to the map
+m.add_colorbar(...)                 # add a colorbar to the map
 
 m.add_annotation(...)               # add static annotations
 m.add_marker(...)                   # add static markers
