@@ -781,21 +781,29 @@ class NaturalEarth_features(object):
                     """
                 )
 
-        def __call__(self, layer=0, **kwargs):
+        def __call__(self, layer=None, **kwargs):
             from . import MapsGrid  # do this here to avoid circular imports!
 
             if not _gpd_OK:
                 for m in self._m if isinstance(self._m, MapsGrid) else [self._m]:
+                    if layer is None:
+                        uselayer = m.layer
+                    else:
+                        uselayer = layer
 
                     self.feature._kwargs.update(kwargs)
                     art = m.figure.ax.add_feature(self.feature)
 
-                    m.BM.add_bg_artist(art, layer=layer)
+                    m.BM.add_bg_artist(art, layer=uselayer)
             else:
                 s = self.get_gdf()
                 for m in self._m if isinstance(self._m, MapsGrid) else [self._m]:
+                    if layer is None:
+                        uselayer = m.layer
+                    else:
+                        uselayer = layer
 
-                    m.add_gdf(s, layer=layer, **kwargs)
+                    m.add_gdf(s, layer=uselayer, **kwargs)
 
         if _gpd_OK:
 

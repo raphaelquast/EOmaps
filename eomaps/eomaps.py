@@ -5,6 +5,7 @@ from collections import defaultdict
 import warnings
 import copy
 from types import SimpleNamespace
+from pathlib import Path
 
 import numpy as np
 
@@ -1285,6 +1286,7 @@ class Maps(object):
             val_key=None,
             layer=None,
             clip=False,
+            temporary_picker=None,
             **kwargs,
         ):
             """
@@ -1343,6 +1345,9 @@ class Maps(object):
                 of the valid region. (e.g. adding ocean-coloring to epsg 3035)
                 The feature is not fully mature and might fail for certain
                 projections and geometries! The default is False.
+            temporary_picker : str, optional
+                The name of the picker that should be used to make the geometry
+                temporary (e.g. remove it after each pick-event)
             kwargs :
                 all remaining kwargs are passed to `geopandas.GeoDataFrame.plot(**kwargs)`
 
@@ -1454,8 +1459,18 @@ class Maps(object):
                         # attach the re-projected GeoDataFrame to the pick-container
                         self.cb.pick[picker_name + prefix].data = usegdf
 
-            for art, prefix in zip(new_artists, prefixes):
-                if layer is not None:
+            if layer is None:
+                layer = self.layer
+
+            if temporary_picker is not None:
+                if temporary_picker == "default":
+                    for art, prefix in zip(new_artists, prefixes):
+                        self.cb.pick.add_temporary_artist(art, layer)
+                else:
+                    for art, prefix in zip(new_artists, prefixes):
+                        self.cb.pick[temporary_picker].add_temporary_artist(art, layer)
+            else:
+                for art, prefix in zip(new_artists, prefixes):
                     self.BM.add_bg_artist(art, layer)
 
             return new_artists

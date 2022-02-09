@@ -774,18 +774,7 @@ class pick_callbacks(_click_callbacks):
             geom = self.m.cb.pick[picker_name].data.loc[[ID]].geometry
             # add the geometry to the map
 
-            art = self.m.add_gdf(geom, **kwargs)
-            # art = self.m.figure.ax.add_geometries(
-            #     geom, self.m.figure.ax.projection, **kwargs
-            # )
-
-            if permanent is False:
-                for a in art:
-                    # make the geometry temporary (e.g. remove it on the next pick event)
-                    self.m.cb.pick[picker_name].add_temporary_artist(a, layer=2)
-            else:
-                self.m.BM.add_artist(art)
-            self.m.geom = art
+            self.m.add_gdf(geom, temporary_picker=picker_name, **kwargs)
 
 
 class click_callbacks(_click_callbacks):
