@@ -358,7 +358,7 @@ class draggable_axes:
             self._m_picked.figure.set_colorbar_position(b)
 
         self.set_annotations()
-        self.m.BM.update(artists=self._ax_picked + self._annotations)
+        self.m.BM.update(artists=self.all_axes + self._annotations)
 
     def _color_axes(self):
         for ax in self.all_axes:
@@ -449,8 +449,9 @@ class draggable_axes:
                         _ax_picked = cbi
                     break
 
-        if self._m_picked is _m_picked and self._cb_picked == _cb_picked:
-            return
+        if self._m_picked is not None:
+            if self._m_picked is _m_picked and self._cb_picked == _cb_picked:
+                return
 
         self._ax_picked = _ax_picked
         self._m_picked = _m_picked
@@ -467,7 +468,7 @@ class draggable_axes:
 
         self.set_annotations()
         self.m.BM.update(
-            layers=[self.m.layer], artists=self._ax_picked + self._annotations
+            layers=[self.m.layer], artists=self.all_axes + self._annotations
         )
 
     def cb_scroll(self, event):
@@ -522,7 +523,7 @@ class draggable_axes:
             self._m_picked.figure.set_colorbar_position(b)
 
         self._color_axes()
-        self.m.BM.update(artists=self._ax_picked + self._annotations)
+        self.m.BM.update(artists=self.all_axes + self._annotations)
 
     def cb_key_press(self, event):
         if (self.f.canvas.toolbar is not None) and self.f.canvas.toolbar.mode != "":
