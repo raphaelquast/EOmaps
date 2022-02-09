@@ -682,7 +682,7 @@ class TestBasicPlotting(unittest.TestCase):
             m.add_colorbar()
         mgrid.parent.cb.click.share_events(*mgrid.children)
 
-        m.figure.f.tight_layout()
+        m.figure.gridspec.update(left=0.05, top=0.95, bottom=0.05, right=0.95)
         # %%
         plt.close(m.figure.f)
 

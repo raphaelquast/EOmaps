@@ -2125,8 +2125,9 @@ class Maps(object):
         size : float, optional
             The size of the logo as a fraction of the axis-width.
             The default is 0.15.
-        pad : float, optional
+        pad : float, tuple optional
             Padding between the axis-edge and the logo as a fraction of the logo-width.
+            If a tuple is passed, (x-pad, y-pad)
             The default is 0.1.
         """
 
@@ -2137,16 +2138,19 @@ class Maps(object):
 
         def getpos(pos):
             s = pos.width * size
-            pw = s * pad
+            if isinstance(pad, tuple):
+                pwx, pwy = (s * pad[0], s * pad[1])
+            else:
+                pwx, pwy = (s * pad, s * pad)
 
             if position == "lr":
-                p = dict(rect=[pos.x1 - s - pw, pos.y0 + pw, s, s], anchor="SE")
+                p = dict(rect=[pos.x1 - s - pwx, pos.y0 + pwy, s, s], anchor="SE")
             elif position == "ll":
-                p = dict(rect=[pos.x0 + pw, pos.y0 + pw, s, s], anchor="SW")
+                p = dict(rect=[pos.x0 + pwx, pos.y0 + pwy, s, s], anchor="SW")
             elif position == "ur":
-                p = dict(rect=[pos.x1 - s - pw, pos.y1 - s - pw, s, s], anchor="NE")
+                p = dict(rect=[pos.x1 - s - pwx, pos.y1 - s - pwy, s, s], anchor="NE")
             elif position == "ul":
-                p = dict(rect=[pos.x0 + pw, pos.y1 - s - pw, s, s], anchor="NW")
+                p = dict(rect=[pos.x0 + pwx, pos.y1 - s - pwy, s, s], anchor="NW")
             return p
 
         figax = self.figure.f.add_axes(**getpos(self.ax.get_position()))
