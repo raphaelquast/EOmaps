@@ -303,7 +303,7 @@ class Maps(object):
             # create a new axis
             if gs_ax is None:
                 gs = GridSpec(
-                    nrows=1, ncols=1, left=0.01, right=0.99, bottom=0.01, top=0.95
+                    nrows=1, ncols=1, left=0.01, right=0.99, bottom=0.05, top=0.95
                 )
                 gsspec = gs[:]
             elif isinstance(gs_ax, SubplotSpec):
@@ -1066,6 +1066,8 @@ class Maps(object):
 
         if label is None:
             label = self.plot_specs["label"]
+            if label is None:
+                label = self.data_specs["parameter"]
         if histbins is None:
             histbins = self.plot_specs["histbins"]
         if cmap is None:
