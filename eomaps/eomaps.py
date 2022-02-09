@@ -2537,6 +2537,13 @@ class MapsGrid:
 
     add_colorbar.__doc__ = _doc_prefix + add_colorbar.__doc__
 
+    @wraps(Maps.add_logo)
+    def add_logo(self, *args, **kwargs):
+        for m in self:
+            m.add_logo(*args, **kwargs)
+
+    add_colorbar.__doc__ = _doc_prefix + add_logo.__doc__
+
     def share_click_events(self):
         """
         Share click events between all Maps objects of the grid
