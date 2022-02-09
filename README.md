@@ -1,6 +1,8 @@
 
 <p align="center">
+    <a href=https://github.com/raphaelquast/EOmaps>
     <img src="logos/EO_Maps_Logo_V6.png" width="55%" />
+    </a>
 </p>
 
 [![tests](https://github.com/raphaelquast/EOmaps/actions/workflows/testMaps.yml/badge.svg?branch=master)](https://github.com/raphaelquast/EOmaps/actions/workflows/testMaps.yml)
