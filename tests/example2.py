@@ -13,7 +13,7 @@ data = data.sample(4000)  # take 4000 random datapoints from the dataset
 # ------------------------------------
 
 mg = MapsGrid(
-    1, 3, crs=[4326, Maps.CRS.Stereographic(), 3035], figsize=(10, 5)
+    1, 3, crs=[4326, Maps.CRS.Stereographic(), 3035], figsize=(11, 5), bottom=0.15
 )  # initialize a grid of Maps objects
 # set the data on ALL maps-objects of the grid
 mg.set_data(data=data, xcoord="lon", ycoord="lat", in_crs=4326)
@@ -37,13 +37,11 @@ mg.m_0_2.set_classify_specs(
 mg.plot_map()
 mg.add_colorbar()
 
+mg.add_feature.preset.ocean()
+
 # --------- plot all maps and rotate the ticks of the colorbar
 for m in mg:
     m.figure.ax_cb.tick_params(rotation=90, labelsize=8)
-
-# --------- set figsize and use a "tight_layout"
-mg.f.tight_layout()
-
 # --------- add some callbacks to indicate the clicked data-point to all maps
 for m in mg:
     m.cb.pick.attach.mark(
@@ -56,7 +54,7 @@ for m in mg:
     m.cb.click.attach.mark(
         fc="none", ec="k", lw=2, buffer=10, permanent=False, shape=m.shape.name
     )
-
+    m.add_logo()
 # add a specific annotation-callback to the second map
 # (put it on a layer > 10 (the default for markers) so that it appears above the markers)
 mg.m_0_1.cb.pick.attach.annotate(layer=11, text="the closest point is here!")
