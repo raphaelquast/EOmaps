@@ -28,6 +28,9 @@ mg.m_0_1.set_shape.rectangles()
 mg.m_0_1.set_classify_specs(scheme="Quantiles", k=4)
 
 # --------- set specs for the third axes
+
+mg.m_0_2.ax.set_extent(mg.m_0_2.crs_plot.area_of_use.bounds)
+
 mg.m_0_2.set_plot_specs(title="epsg=3035")
 mg.m_0_2.set_classify_specs(
     scheme="StdMean", multiples=[-1, -0.75, -0.5, -0.25, 0.25, 0.5, 0.75, 1]
@@ -38,6 +41,8 @@ mg.plot_map()
 mg.add_colorbar()
 
 mg.add_feature.preset.ocean()
+mg.add_feature.preset.land()
+mg.add_feature.preset.coastline()
 
 # --------- plot all maps and rotate the ticks of the colorbar
 for m in mg:
