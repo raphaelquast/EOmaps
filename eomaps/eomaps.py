@@ -2222,6 +2222,15 @@ class MapsGrid:
     ----------
     f : matplotlib.figure
         The matplotlib figure object
+    gridspec : matplotlib.GridSpec
+        The matplotlib GridSpec instance used to initialize the axes.
+        NOTE: you can use it to dynamically adjust the layout of the subplots
+        completely similar to matplotlib's `f.subplots_adjust(...)`, e.g.:
+
+        >>> mg.gridspec.update(left=0.1, right=0.9,
+        >>>                    top=0.8, bottom=0.1,
+        >>>                    wspace=0.05, hspace=0.25)
+
     m_<identifier> : eomaps.Maps objects
         The individual Maps-objects can be accessed via `mgrid.m_<identifier>`
         The identifiers are hereby `<row>_<col>` or the keys of the `m_inits`
@@ -2231,6 +2240,7 @@ class MapsGrid:
         `mgrid.ax_<identifier>`. The identifiers are hereby the keys of the
         `ax_inits` dictionary (if provided).
         Note: if `ax_inits` is not specified, NO ordinary axes will be created!
+
 
     Methods
     -------
@@ -2279,7 +2289,9 @@ class MapsGrid:
 
         self._Maps = []
         self._names = defaultdict(list)
-        self._gs = GridSpec(nrows=r, ncols=c, **kwargs)
+        gskwargs = dict(bottom=0.01, top=0.99, left=0.01, right=0.99)
+        gskwargs.update(kwargs)
+        self.gridspec = GridSpec(nrows=r, ncols=c, **gskwargs)
 
         if m_inits is None and ax_inits is None:
             if isinstance(crs, list):
@@ -2291,11 +2303,13 @@ class MapsGrid:
             for i in range(r):
                 for j in range(c):
                     if i == 0 and j == 0:
-                        mij = Maps(crs=crs[i, j], gs_ax=self._gs[0, 0], figsize=figsize)
+                        mij = Maps(
+                            crs=crs[i, j], gs_ax=self.gridspec[0, 0], figsize=figsize
+                        )
                         self.parent = mij
                     else:
                         mij = Maps(
-                            crs=crs[i, j], parent=self.parent, gs_ax=self._gs[i, j]
+                            crs=crs[i, j], parent=self.parent, gs_ax=self.gridspec[i, j]
                         )
 
                     self._Maps.append(mij)
@@ -2320,10 +2334,14 @@ class MapsGrid:
                         ), f"You cannot provide duplicate keys! Check: {q}"
 
                     if i == 0:
-                        mi = Maps(crs=crs[key], gs_ax=self._gs[val], figsize=figsize)
+                        mi = Maps(
+                            crs=crs[key], gs_ax=self.gridspec[val], figsize=figsize
+                        )
                         self.parent = mi
                     else:
-                        mi = Maps(crs=crs[key], parent=self.parent, gs_ax=self._gs[val])
+                        mi = Maps(
+                            crs=crs[key], parent=self.parent, gs_ax=self.gridspec[val]
+                        )
 
                     name = str(key)
                     self._names["Maps"].append(name)
@@ -2413,7 +2431,7 @@ class MapsGrid:
                 name.isidentifier()
             ), f"the provided name {name} is not a valid identifier"
 
-        ax = self.f.add_subplot(self._gs[ax_init])
+        ax = self.f.add_subplot(self.gridspec[ax_init])
 
         self._names["Axes"].append(name)
         setattr(self, f"ax_{name}", ax)
