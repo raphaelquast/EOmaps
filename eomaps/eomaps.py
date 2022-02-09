@@ -2109,7 +2109,7 @@ class Maps(object):
             gdf = self._make_rect_poly(x0, y0, x1, y1, self.get_crs(crs), npts)
             self.add_gdf(gdf, **kwargs)
 
-    def add_logo(self, filepath=None, position="lr", size=0.125, pad=0.1):
+    def add_logo(self, filepath=None, position="lr", size=0.12, pad=0.1):
         """
         Add a small image (png, jpeg etc.) to the map whose position is dynamically
         updated if the plot is resized or zoomed.
@@ -2133,7 +2133,7 @@ class Maps(object):
         """
 
         if filepath is None:
-            filepath = Path(__file__).parent.parent / "logo.png"
+            filepath = Path(__file__).parent / "logo.png"
 
         im = mpl.image.imread(filepath)
 
