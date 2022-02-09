@@ -1,9 +1,13 @@
-EOmaps
-===================================
+.. image:: _static/logo.png
+  :width: 50%
+  :align: center
+  :target: https://github.com/raphaelquast/EOmaps
+
+|
 
 Welcome to the documentation for **EOmaps**!
 
-In short, EOmaps serves as a layer on top of matplotlib and cartopy to tackle the following points:
+In short, EOmaps serves as a layer on top of ``matplotlib`` and ``cartopy`` to tackle the following points:
 
 🔴 **Speed-up and simplify the creation of maps**
   * directly plot from unstructured 1D datasets (e.g. lists of coordinates and values)
@@ -24,7 +28,7 @@ In short, EOmaps serves as a layer on top of matplotlib and cartopy to tackle th
   * use the mouse or keyboard to **trigger custom functions on selected datapoints**
 
 
-*(EOmaps retains access to all functionalities of matplotlib and cartopy.)*
+*(EOmaps retains access to all underlying functionalities of matplotlib and cartopy.)*
 
 | A detailed overview on how to use EOmaps is given in the :doc:`api` section.
 | Make sure to checkout the :doc:`EOmaps_examples` for an overview of the capabilities (incl. source code)!
@@ -35,9 +39,15 @@ In short, EOmaps serves as a layer on top of matplotlib and cartopy to tackle th
 Contents
 --------
 
-.. toctree::
-   :maxdepth: 2
+.. table::
+   :align: center
+   :widths: auto
 
-   general
-   api
-   EOmaps_examples
+   +---------------------------------+-------------------------------+
+   | .. toctree::                    | .. toctree::                  |
+   |    :maxdepth: 2                 |    :maxdepth: 2               |
+   |    :caption: How to use EOmaps: |    :caption: Code-examples:   |
+   |                                 |                               |
+   |    general                      |                               |
+   |    api                          |    EOmaps_examples            |
+   +---------------------------------+-------------------------------+

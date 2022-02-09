@@ -1,3 +1,10 @@
+
+<p align="center">
+    <a href=https://github.com/raphaelquast/EOmaps>
+    <img src="eomaps/logo.png" width="55%" />
+    </a>
+</p>
+
 [![tests](https://github.com/raphaelquast/EOmaps/actions/workflows/testMaps.yml/badge.svg?branch=master)](https://github.com/raphaelquast/EOmaps/actions/workflows/testMaps.yml)
 [![codecov](https://codecov.io/gh/raphaelquast/EOmaps/branch/dev/graph/badge.svg?token=25M85P7MJG)](https://codecov.io/gh/raphaelquast/EOmaps)
 &nbsp; &nbsp; &nbsp;
@@ -7,11 +14,11 @@
 [![Documentation Status](https://readthedocs.org/projects/eomaps/badge/?version=latest)](https://eomaps.readthedocs.io/en/latest/?badge=latest)
 <a href="https://www.buymeacoffee.com/raphaelquast" target="_blank"><img src="https://www.buymeacoffee.com/assets/img/custom_images/yellow_img.png" alt="Buy Me A Coffee" align="right" style="height: 25px !important;" ></a>
 
-
-# EOmaps
+----
 
 ### A library to create interactive maps of geographical datasets.
-<ol type="none">
+
+<ul type="none">
   <li>🌍 EOmaps provides a simple and intuitive interface to visualize and interact with geographical datasets</li>
   <ul type="none">
     <li>⬥ Data can be provided as 1D or 2D <code>lists</code>, <code>numpy-arrays</code> or <code>pandas.DataFrames</code></li>
@@ -24,7 +31,7 @@
     <li>⬥ use callback functions to interact with the data (or an underlying database) </li>
     <li>⬥ compare multiple data-layers, WebMaps etc.</li>
   </ul>
-</ol>
+</ul>
 <br/>
 <p align="center">
   🌲🌳 Checkout the <a href=https://eomaps.readthedocs.io/en/latest>documentation</a> for more details and <a href=https://eomaps.readthedocs.io/en/latest/EOmaps_examples.html>examples</a> 🌳🌲
@@ -138,7 +145,7 @@ m.cb.keypress.attach.switch_layer(layer=1, key="a")
 m.add_wms(...)                      # add WebMapService layers
 m.add_gdf(...)                      # add geopandas.GeoDataFrames
 m.add_feature.<group>.<feature>()   # add feature-layers from NaturalEarth
-m.add colorbar(...)                 # add a colorbar to the map
+m.add_colorbar(...)                 # add a colorbar to the map
 
 m.add_annotation(...)               # add static annotations
 m.add_marker(...)                   # add static markers
@@ -192,3 +199,9 @@ mgrid.plot_map()      # call m.plot_map() on all Maps-objects of the grid
 mgrid.join_limits()   # join limits
 ```
 </details>
+
+----
+
+## 🌼 Thanks to
+
+- [Jakob Quast](https://quastquest.jimdofree.com/) for designing the nice logo!
