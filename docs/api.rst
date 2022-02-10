@@ -334,7 +334,7 @@ and ``< LAYER >`` indicates the actual layer-name.
 
 .. code-block:: python
 
-    m = Maps(Maps.CRS.GOOGLE_MERCATOR) # (at best the native crs of the service!)
+    m = Maps(Maps.CRS.GOOGLE_MERCATOR) # (the native crs of the service)
     m.add_wms.OpenStreetMap.add_layer.default()
 
 .. currentmodule:: eomaps
@@ -391,6 +391,7 @@ Once the ``picker_name`` is specified, pick-callbacks can be attached via:
 - ``m.cb.pick[<PICKER NAME>].attach.< CALLBACK >()``
 
 For example, to highlight the clicked country, you could use:
+
 .. code-block:: python
 
     m = Maps()
