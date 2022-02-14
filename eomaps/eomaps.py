@@ -909,19 +909,21 @@ class Maps(object):
             cpos_radius = self.plot_specs.cpos_radius
 
         props = dict()
-
         # get coordinate transformation from in_crs to plot_crs
+        # make sure to re-identify the CRS with pyproj to correctly skip re-projection
+        # in case we use in_crs == plot_crs
+
+        crs1 = CRS.from_user_input(in_crs)
+        crs2 = CRS.from_user_input(self.plot_specs._plot_crs)
         transformer = Transformer.from_crs(
-            self.get_crs(in_crs),
-            self.crs_plot,
+            crs1,
+            crs2,
             always_xy=True,
         )
-
         # identify the provided data and get it in the internal format
         z_data, xorig, yorig, ids, parameter = self._identify_data(
             data=data, xcoord=xcoord, ycoord=ycoord, parameter=parameter
         )
-
         if cpos is not None and cpos != "c":
             # fix position of pixel-center in the input-crs
             assert (
