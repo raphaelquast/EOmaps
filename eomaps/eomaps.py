@@ -1271,6 +1271,27 @@ class Maps(object):
 
     if _gpd_OK:
 
+        def _clip_gdf(self, gdf, how="crs"):
+            from shapely.ops import polygonize
+
+            if how == "crs":
+                clipgdf = gdf.clip(
+                    gpd.GeoDataFrame(
+                        geometry=[next(polygonize(self.crs_plot.boundary)).buffer(0)],
+                        crs=self.crs_plot,
+                    ).to_crs(gdf.crs)
+                )
+            elif how == "extent":
+                self.BM.update()
+                x0, x1, y0, y1 = self.ax.get_extent()
+                clipgdf = gdf.clip(
+                    self._make_rect_poly(x0, y0, x1, y1, self.crs_plot).to_crs(gdf.crs)
+                )
+            else:
+                raise TypeError("EOmaps: clip can only be None, 'crs' or 'extent'")
+
+            return clipgdf
+
         def add_gdf(
             self,
             gdf,
@@ -1279,6 +1300,8 @@ class Maps(object):
             val_key=None,
             layer=None,
             temporary_picker=None,
+            clip=False,
+            use_gpd=True,
             **kwargs,
         ):
             """
@@ -1333,6 +1356,36 @@ class Maps(object):
             temporary_picker : str, optional
                 The name of the picker that should be used to make the geometry
                 temporary (e.g. remove it after each pick-event)
+            clip : str or False
+                This feature can help with re-projection issues for non-global crs.
+                (see example below)
+
+                Indicator if geometries should be clipped prior to plotting or not.
+
+                - if "crs": clip with respect to the boundary of the crs
+                - if "extent": clip with respect to the current extent of the plot-axis.
+
+
+                >>> mg = MapsGrid(2, 3, crs=3035)
+                >>> mg.m_0_0.add_feature.preset.ocean(use_gpd=True)
+                >>> mg.m_0_1.add_feature.preset.ocean(use_gpd=True, clip="crs")
+                >>> mg.m_0_2.add_feature.preset.ocean(use_gpd=True, clip="extent")
+                >>> mg.m_1_0.add_feature.preset.ocean(use_gpd=False)
+                >>> mg.m_1_1.add_feature.preset.ocean(use_gpd=False, clip="crs")
+                >>> mg.m_1_2.add_feature.preset.ocean(use_gpd=False, clip="extent")
+
+            use_gpd : bool
+                Similar to "clip" this feature mainly addresses issues in the way how
+                re-projected geometries are displayed in certain coordinate-systems.
+                (see example below)
+
+                Indicator if plotting routines from geopandas or cartopy are used when
+                adding Polygons. (All other geometry-types always use geopandas!)
+
+                >>> mg = MapsGrid(2, 1, crs=Maps.CRS.Stereographic())
+                >>> mg.m_0_0.add_feature.preset.ocean(use_gpd=True)
+                >>> mg.m_1_0.add_feature.preset.ocean(use_gpd=False)
+
             kwargs :
                 all remaining kwargs are passed to `geopandas.GeoDataFrame.plot(**kwargs)`
 
@@ -1353,6 +1406,9 @@ class Maps(object):
             defaultargs = dict(facecolor="none", edgecolor="k", lw=1.5)
             defaultargs.update(kwargs)
 
+            if clip:
+                gdf = self._clip_gdf(gdf, clip)
+
             try:
                 # explode the GeoDataFrame to avoid picking multi-part geometries
                 gdf = gdf.explode(index_parts=False).to_crs(self.crs_plot)
@@ -1367,7 +1423,7 @@ class Maps(object):
 
             artists, prefixes = [], []
             for geomtype, geoms in gdf.groupby(gdf.geom_type):
-                if "Polygon" in geomtype:
+                if "Polygon" in geomtype and not use_gpd:
                     try:
                         raise TypeError
                         use_crs = self._get_cartopy_crs(gdf.crs)
