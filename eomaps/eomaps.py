@@ -2306,18 +2306,22 @@ class MapsGrid:
             self._custom_init = False
             for i in range(r):
                 for j in range(c):
+                    crsij = crs[i, j]
+                    if isinstance(crsij, np.generic):
+                        crsij = crsij.item()
+
                     if i == 0 and j == 0:
                         # use crs[i, j].item() to convert to native python-types
                         # (instead of numpy-dtypes)  ... check numpy.ndarray.item
                         mij = Maps(
-                            crs=crs[i, j].item(),
+                            crs=crsij,
                             gs_ax=self.gridspec[0, 0],
                             figsize=figsize,
                         )
                         self.parent = mij
                     else:
                         mij = Maps(
-                            crs=crs[i, j].item(),
+                            crs=crsij,
                             parent=self.parent,
                             gs_ax=self.gridspec[i, j],
                         )
@@ -2330,6 +2334,9 @@ class MapsGrid:
             self._custom_init = True
             if m_inits is not None:
                 if not isinstance(crs, dict):
+                    if isinstance(crs, np.generic):
+                        crs = crs.item()
+
                     crs = {key: crs for key in m_inits}
 
                 assert self._test_unique_str_keys(
