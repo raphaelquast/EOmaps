@@ -343,7 +343,22 @@ class Maps(object):
             else:
                 plt.ion()
 
+        # attach a callback that is executed when the figure is closed
+        self._cid_onclose = self.figure.f.canvas.mpl_connect(
+            "close_event", self._on_close
+        )
         plt.show()
+
+    def _on_close(self, event):
+        # reset attributes that might use up a lot of memory when the figure is closed
+
+        if hasattr(self, "_props"):
+            del self._props
+        if hasattr(self, "tree"):
+            del self.tree
+        if hasattr(self.figure, "coll"):
+            del self.figure.coll
+        plt.close(self.figure.f)
 
     @property
     def BM(self):
