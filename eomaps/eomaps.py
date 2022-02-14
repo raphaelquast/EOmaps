@@ -914,7 +914,11 @@ class Maps(object):
         # in case we use in_crs == plot_crs
 
         crs1 = CRS.from_user_input(in_crs)
-        crs2 = CRS.from_user_input(self.plot_specs._plot_crs)
+        if hasattr(self.plot_specs, "_plot_crs"):
+            crs2 = CRS.from_user_input(self.plot_specs._plot_crs)
+        else:
+            crs2 = CRS.from_user_input(self.parent.plot_specs._plot_crs)
+
         transformer = Transformer.from_crs(
             crs1,
             crs2,
