@@ -2305,13 +2305,19 @@ class MapsGrid:
             for i in range(r):
                 for j in range(c):
                     if i == 0 and j == 0:
+                        # use crs[i, j].item() to convert to native python-types
+                        # (instead of numpy-dtypes)  ... check numpy.ndarray.item
                         mij = Maps(
-                            crs=crs[i, j], gs_ax=self.gridspec[0, 0], figsize=figsize
+                            crs=crs[i, j].item(),
+                            gs_ax=self.gridspec[0, 0],
+                            figsize=figsize,
                         )
                         self.parent = mij
                     else:
                         mij = Maps(
-                            crs=crs[i, j], parent=self.parent, gs_ax=self.gridspec[i, j]
+                            crs=crs[i, j].item(),
+                            parent=self.parent,
+                            gs_ax=self.gridspec[i, j],
                         )
 
                     self._Maps.append(mij)
