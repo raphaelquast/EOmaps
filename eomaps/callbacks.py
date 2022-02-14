@@ -394,8 +394,8 @@ class _click_callbacks(object):
             pixelQ = True
             if not hasattr(self.m.shape, "radius"):
                 print(
-                    "EOmaps: You cannot attach markers with 'radius=pixel'"
-                    + f"if the shape {self.m.shape.name} is used for plotting!"
+                    "EOmaps: You cannot attach markers with 'radius=pixel' if the "
+                    + "plot-shape does not set a radius! Please specify it explicitly."
                 )
                 return
             radius = self.m.shape.radius
