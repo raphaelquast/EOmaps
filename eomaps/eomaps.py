@@ -2727,6 +2727,10 @@ class MapsGrid:
         except:
             raise IndexError(f"{key} is not a valid indexer for MapsGrid")
 
+    @property
+    def _preferred_wms_service(self):
+        return self.parent._preferred_wms_service
+
     def create_axes(self, ax_init, name=None):
         """
         Create (and return) an ordinary matplotlib axes.
