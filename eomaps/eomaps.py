@@ -1849,42 +1849,162 @@ class Maps(object):
 
         self.figure.f.savefig(*args, **kwargs)
 
-    def plot_map(
+    def _shade_map(
+        self, pick_distance=100, verbose=0, layer=None, dynamic=False, **kwargs
+    ):
+        """
+        Plot the dataset using the (very fast) "datashader" library.
+        (requires `datashader`... use `conda install -c conda-forge datashader`)
+
+        - This method is intended for extremely large datasets
+          (up to millions of datapoints)!
+
+        A dynamically updated "shaded" map will be generated.
+        Note that the datapoints in this case are NOT represented by the shapes
+        defined as `m.set_shape`!
+
+        - By default, the shading is performed using a "mean"-value aggregation hook
+
+        kwargs :
+            kwargs passed to `datashader.mpl_ext.dsshow`
+
+        """
+        try:
+            from datashader.mpl_ext import dsshow
+        except ImportError:
+            raise ImportError(
+                "EOmaps: Missing dependency: 'datashader' \n ... please install"
+                + " (conda install -c conda-forge datashader) to use the plot-shapes"
+                + "'shade_points' and 'shade_raster'"
+            )
+
+        # remove previously fetched backgrounds for the used layer
+        if layer in self.BM._bg_layers and dynamic is False:
+            del self.BM._bg_layers[layer]
+        self.BM._refetch_bg = True
+
+        if self.shape.name == "shade_raster":
+            crs1 = CRS.from_user_input(self.data_specs.crs)
+            if hasattr(self.plot_specs, "_plot_crs"):
+                crs2 = CRS.from_user_input(self.plot_specs._plot_crs)
+            else:
+                crs2 = CRS.from_user_input(self.parent.plot_specs._plot_crs)
+            assert crs1.equals(crs2), (
+                "EOmaps: how='Raster' can only be used if data-crs"
+                + " and plot-crs are equal!"
+            )
+
+        if verbose:
+            print("EOmaps: Preparing the data")
+        # ---------------------- prepare the data
+        props = self._prepare_data()
+        if len(props["z_data"]) == 0:
+            print("EOmaps: there was no data to plot")
+            return
+
+        # remember props for later use
+        self._props = props
+
+        vmin = self.plot_specs["vmin"]
+        if self.plot_specs["vmin"] is None:
+            vmin = np.nanmin(props["z_data"])
+        vmax = self.plot_specs["vmax"]
+        if self.plot_specs["vmax"] is None:
+            vmax = np.nanmax(props["z_data"])
+
+        # clip the data to properly account for vmin and vmax
+        props["z_data"] = props["z_data"].clip(vmin, vmax)
+
+        if verbose:
+            print("EOmaps: Classifying...")
+
+        # ---------------------- classify the data
+        cbcmap, norm, bins, classified = self._classify_data(
+            vmin=vmin,
+            vmax=vmax,
+            classify_specs=self.classify_specs,
+        )
+
+        self.classify_specs._cbcmap = cbcmap
+        self.classify_specs._norm = norm
+        self.classify_specs._bins = bins
+        self.classify_specs._classified = classified
+
+        if verbose:
+            print("EOmaps: Plotting...")
+        zdata = self.classify_specs._norm(props["z_data"].ravel())
+
+        df = pd.DataFrame(
+            dict(x=props["x0"].ravel(), y=props["y0"].ravel(), val=zdata), copy=False
+        )
+        # update here to ensure bounds are set
+        self.BM.update()
+
+        x0, x1, y0, y1 = self.ax.get_extent()
+        # df = df[
+        #     np.logical_and(
+        #         np.logical_and(df.x > x0, df.x < x1),
+        #         np.logical_and(df.y > y0, df.y < y1),
+        #     )
+        # ]
+
+        if len(df) == 0:
+            print("EOmaps: there was no data to plot")
+            return
+
+        plot_width, plot_height = int(self.ax.bbox.width), int(self.ax.bbox.height)
+
+        if self.shape.name == "shade_raster":
+            # raster rendering requires an xarray as input
+            df = df.set_index(["x", "y"]).to_xarray()
+
+        coll = dsshow(
+            df,
+            glyph=self.shape.glyph,
+            aggregator=self.shape.aggregator,
+            shade_hook=self.shape.shade_hook,
+            agg_hook=self.shape.agg_hook,
+            # norm="eq_hist",
+            norm=plt.Normalize(df.val.min(), df.val.max()),
+            cmap=cbcmap,
+            ax=self.ax,
+            plot_width=plot_width,
+            plot_height=plot_height,
+            # x_range=(x0, x1),
+            # y_range=(y0, y1),
+            x_range=(df.x.min(), df.x.max()),
+            y_range=(df.y.min(), df.y.max()),
+            **kwargs,
+        )
+
+        self.figure.coll = coll
+        if verbose:
+            print("EOmaps: Indexing for pick-callbacks...")
+
+        if pick_distance is not None:
+            # use a cKDTree based picking to speed up picks for large collections
+            self.tree = cKDTree(np.stack([props["x0"], props["y0"]], axis=1))
+
+            self.cb.pick._set_artist(coll)
+            self.cb.pick._init_cbs()
+            self.cb.pick._pick_distance = pick_distance
+            self.cb._methods.append("pick")
+
+        if dynamic is True:
+            self.BM.add_artist(coll, layer)
+        else:
+            self.BM.add_bg_artist(coll, layer)
+
+        if dynamic is True:
+            self.BM.update(clear=False)
+
+    def _plot_map(
         self,
         pick_distance=100,
         layer=None,
         dynamic=False,
         **kwargs,
     ):
-        """
-        Actually generate the map-plot based on the data provided as `m.data` and the
-        specifications defined in "data_specs", "plot_specs" and "classify_specs".
-
-        NOTE
-        ----
-        Each call to plot_map will replace the collection used for picking!
-        (only the last collection remains interactive on multiple calls to `m.plot_map()`)
-
-        If you need multiple responsive datasets, use connected maps-objects instead!
-        (e.g. `m2 = Maps(parent=m)` or have a look at `MapsGrid`)
-
-        Parameters
-        ----------
-        pick_distance : int
-            The maximum distance (in pixels) to trigger callbacks on the added collection.
-            (The distance is evaluated between the clicked pixel and the center of the
-            closest data-point)
-            The default is 10.
-        layer : int
-            The layer-index at which the dataset will be plotted.
-            The default is None.
-        dynamic : bool
-            If True, the collection will be dynamically updated
-
-        kwargs
-            kwargs passed to the initialization of the matpltolib collection
-            (dependent on the plot-shape) [linewidth, edgecolor, facecolor, ...]
-        """
 
         if "coastlines" in kwargs:
             kwargs.pop("coastlines")
@@ -1908,11 +2028,8 @@ class Maps(object):
             ), f"The key '{key}' is assigned internally by EOmaps!"
 
         try:
-            if layer is None:
-                layer = self.layer
-
             # remove previously fetched backgrounds for the used layer
-            if layer in self.BM._bg_layers:
+            if layer in self.BM._bg_layers and dynamic is False:
                 del self.BM._bg_layers[layer]
             self.BM._refetch_bg = True
 
@@ -1925,9 +2042,6 @@ class Maps(object):
 
             # ---------------------- prepare the data
             props = self._prepare_data()
-
-            # use a cKDTree based picking to speed up picks for large collections
-            self.tree = cKDTree(np.stack([props["x0"], props["y0"]], axis=1))
 
             # remember props for later use
             self._props = props
@@ -1974,14 +2088,18 @@ class Maps(object):
 
             self.figure.coll = coll
 
-            # attach the pick-callback that executes the callbacks
-            # self.attach_picker("default", self.figure.coll, None)
+            if pick_distance is not None:
+                # use a cKDTree based picking to speed up picks for large collections
+                self.tree = cKDTree(
+                    np.stack(
+                        [props["x0"][props["mask"]], props["y0"][props["mask"]]], axis=1
+                    )
+                )
 
-            # self.cb.add_picker("default", coll, None)
-            self.cb.pick._set_artist(coll)
-            self.cb.pick._init_cbs()
-            self.cb.pick._pick_distance = pick_distance
-            self.cb._methods.append("pick")
+                self.cb.pick._set_artist(coll)
+                self.cb.pick._init_cbs()
+                self.cb.pick._pick_distance = pick_distance
+                self.cb._methods.append("pick")
 
             if dynamic is True:
                 self.BM.add_artist(coll, layer)
@@ -2003,6 +2121,60 @@ class Maps(object):
 
         except Exception as ex:
             raise ex
+
+    def plot_map(
+        self,
+        pick_distance=100,
+        layer=None,
+        dynamic=False,
+        **kwargs,
+    ):
+        """
+        Actually generate the map-plot based on the data provided as `m.data` and the
+        specifications defined in "data_specs", "plot_specs" and "classify_specs".
+
+        NOTE
+        ----
+        Each call to plot_map will replace the collection used for picking!
+        (only the last collection remains interactive on multiple calls to `m.plot_map()`)
+
+        If you need multiple responsive datasets, use a new layer for each dataset!
+        (e.g. via `m2 = m.new_layer()`)
+
+        Parameters
+        ----------
+        pick_distance : int or None
+            If None, NO pick-callbacks will be assigned (e.g. 'm.cb.pick' will not work)
+            (useful for very large datasets to speed up plotting and save memory)
+
+            The maximum distance (in pixels) to trigger callbacks on the added collection.
+            (The distance is evaluated between the clicked pixel and the center of the
+            closest data-point)
+
+            The default is 10.
+        layer : int
+            The layer-index at which the dataset will be plotted.
+            The default is None.
+        dynamic : bool
+            If True, the collection will be dynamically updated
+
+        kwargs
+            kwargs passed to the initialization of the matpltolib collection
+            (dependent on the plot-shape) [linewidth, edgecolor, facecolor, ...]
+
+            For "shade_..." shapes, kwargs are passed to `datashader.mpl_ext.dsshow`
+        """
+        if layer is None:
+            layer = self.layer
+
+        if self.shape.name.startswith("shade"):
+            self._shade_map(
+                pick_distance=pick_distance, layer=layer, dynamic=dynamic, **kwargs
+            )
+        else:
+            self._plot_map(
+                pick_distance=pick_distance, layer=layer, dynamic=dynamic, **kwargs
+            )
 
     def add_colorbar(
         self,
