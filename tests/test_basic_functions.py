@@ -519,6 +519,37 @@ class TestBasicPlotting(unittest.TestCase):
                 ax_inits={"2": (1, 1), 2: 2},
             )
 
+    def test_compass(self):
+        m = Maps(Maps.CRS.Stereographic())
+        m.add_feature.preset.coastline(ec="k", scale="110m")
+        c1 = m.add_compass((0.1, 0.1))
+        c2 = m.add_compass((0.9, 0.9))
+
+        cv = m.figure.f.canvas
+
+        # click on compass to move it around
+        cv.button_press_event(*m.ax.transAxes.transform((0.1, 0.1)), 1, False)
+        cv.motion_notify_event(*m.ax.transAxes.transform((0.5, 0.5)), False)
+        cv.button_release_event(*m.ax.transAxes.transform((0.5, 0.5)), 1, False)
+
+        c1.set_position((-30000000, -2000000))
+        c1.set_patch("r", "g", 5)
+        c1.set_pickable(False)
+        c1.remove()
+
+        c2.set_position((0.75, 0.25), "axis")
+        c2.set_patch((1, 0, 1, 0.5), False)
+        c2.remove()
+
+        c = m.add_compass((0.5, 0.5), scale=7, style="north arrow", patch="g")
+        c.set_position((-30000000, -2000000))
+        c.set_patch("r", "g", 5)
+        c.set_position((0.75, 0.25), "axis")
+        c.set_patch((1, 0, 1, 0.5), False)
+        c.set_pickable(False)
+
+        plt.close("all")
+
     def test_ScaleBar(self):
 
         m = Maps()

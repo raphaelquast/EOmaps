@@ -54,7 +54,7 @@ from ._containers import (
 )
 
 from ._cb_container import cb_container
-from .scalebar import ScaleBar
+from .scalebar import ScaleBar, Compass
 
 try:
     import mapclassify
@@ -252,6 +252,8 @@ class Maps(object):
         self._axpicker = None
 
         self._init_figure(gs_ax=gs_ax, plot_crs=crs, **kwargs)
+
+        self._compass = set()
 
     def _check_gpd(self):
         # raise an error if geopandas is not found
@@ -1800,6 +1802,62 @@ class Maps(object):
             **kwargs,
         )
         self.BM.update(clear=False)
+
+    def add_compass(
+        self, pos=None, scale=10, style="compass", patch="w", txt="N", pickable=True
+    ):
+        """
+        Add a "compass" or "north-arrow" to the map.
+
+        Note
+        ----
+        You can use the mouse to pick the compass and move it anywhere on the map.
+        (the directions are dynamically updated if you pan/zoom or pick the compass)
+
+        If you press the "delete" key while clicking on the compass, it is removed.
+
+
+        Parameters
+        ----------
+        pos : tuple or None, optional
+            The relative position of the compass with respect to the axis.
+            (0,0) - lower left corner, (1,1) - upper right corner
+            Note that you can also move the compass with the mouse!
+        scale : float, optional
+            A scale-factor for the size of the compass. The default is 10.
+        style : str, optional
+
+            - "north arrow" : draw only a north-arrow
+            - "compass": draw a compass with arrows in all 4 directions
+
+            The default is "compass".
+        patch : False, str or tuple, optional
+            The color of the background-patch.
+            (can be any color specification supported by matplotlib)
+            The default is "w".
+        txt : str, optional
+            Indicator which directions should be indicated.
+            - "NESW" : add letters for all 4 directions
+            - "NE" : add only letters for North and East (same for other combinations)
+            - None : don't add any letters
+            The default is "N".
+        pickable : bool, optional
+            Indicator if the compass should be static (False) or if it can be dragged
+            with the mouse (True). The default is True
+
+        Returns
+        -------
+        compass : eomaps.Compass
+            A compass-object that can be used to manually adjust the style and position
+            of the compass or remove it from the map.
+
+        """
+
+        c = Compass(self)
+        c(pos=pos, scale=scale, style=style, patch=patch, txt=txt, pickable=pickable)
+        # store a reference to the object (required for callbacks)!
+        self._compass.add(c)
+        return c
 
     @wraps(ScaleBar.__init__)
     def add_scalebar(

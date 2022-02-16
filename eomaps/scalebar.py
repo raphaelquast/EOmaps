@@ -5,9 +5,11 @@ from pyproj import Transformer, CRS
 
 from matplotlib.collections import PolyCollection, LineCollection
 from matplotlib.textpath import TextPath
-from matplotlib.patches import PathPatch
+from matplotlib.patches import PathPatch, CirclePolygon
 from matplotlib.transforms import Affine2D
 from matplotlib.font_manager import FontProperties
+from matplotlib.offsetbox import AuxTransformBox
+import matplotlib.transforms as transforms
 
 
 class ScaleBar:
@@ -764,3 +766,349 @@ class ScaleBar:
             a.remove()
 
         self._m.BM.update()
+
+
+class Compass:
+    def __init__(self, m):
+        self._m = m
+
+        self._scale = 10
+        self._style = "north arrow"
+        self._patch = False
+        self._txt = "N"
+
+    def __call__(
+        self, pos=None, scale=10, style="north arrow", patch="w", txt="N", pickable=True
+    ):
+        self._m.BM.update()
+
+        ax2data = self._m.ax.transAxes + self._m.ax.transData.inverted()
+
+        if pos is None:
+            pos = ax2data.transform((0.5, 0.5))
+        else:
+            pos = ax2data.transform(pos)
+
+        self._style = style
+        self._patch = patch
+        self._txt = txt
+        self._scale = scale
+
+        self._artist = self._get_artist(pos)
+        self._m.ax.add_artist(self._artist)
+        self._m.BM.add_artist(self._artist)
+
+        self.set_position(pos)
+
+        if pickable:
+            if not self._artist.pickable():
+                self._artist.set_picker(True)
+
+        self._got_artist = True
+        self._canvas = self._artist.figure.canvas
+        self._cids = [
+            self._canvas.mpl_connect("pick_event", self._on_pick),
+            self._canvas.mpl_connect("button_release_event", self._on_release),
+            self._canvas.mpl_connect("resize_event", self._on_resize),
+        ]
+
+        self._add_zoom_callbacks()
+
+    def _on_resize(self, event):
+        self._update_offset(*self._pos)
+
+    def _get_artist(self, pos):
+        if self._style == "north arrow":
+            bg_patch = PolyCollection(
+                [[[-1.5, -0.5], [-1.5, 5], [1.5, 5], [1.5, -0.5]]],
+                facecolors=[self._patch] if self._patch else ["none"],
+                edgecolors=["k"] if self._patch else ["none"],
+            )
+
+            verts = [
+                [[1, 0], [0, 3], [0, 0.5]],  # N w
+                [[-1, 0], [0, 3], [0, 0.5]],  # N b
+            ]
+            arrow = PolyCollection(
+                verts,
+                facecolors=["w", "k"],
+                edgecolors=["k"],
+            )
+        elif self._style == "compass":
+            c = CirclePolygon((0, 0)).get_path().vertices
+
+            bg_patch = PolyCollection(
+                [[[-3.5, -3.5], [-3.5, 5], [3.5, 5], [3.5, -3.5]]],
+                facecolors=[self._patch] if self._patch else ["none"],
+                edgecolors=["k"] if self._patch else ["none"],
+            )
+
+            verts = [
+                [[-1, 0], [0, 3], [0, 1]],  # N b
+                [[0, 1], [3, 0], [1, 0]],  # E b
+                [[0, -3], [0, -1], [1, 0]],  # S b
+                [[-3, 0], [-1, 0], [0, -1]],  # W b
+                [[-3, 0], [0, 1], [-1, 0]],  # W w
+                [[0, 1], [0, 3], [1, 0]],  # N w
+                [[3, 0], [0, -1], [1, 0]],  # E w
+                [[0, -3], [-1, 0], [0, -1]],  # S w
+                c / 4,
+                c / 8,
+            ]
+
+            arrow = PolyCollection(
+                verts,
+                facecolors=["k"] * 4 + ["w"] * 4 + [".5", "w"],
+                edgecolors=["k"],
+            )
+        else:
+            raise AssertionError("EOmaps: {style} is not a valid compass-style.")
+
+        art = AuxTransformBox(self._get_transform(pos))
+        art.add_artist(bg_patch)
+        art.add_artist(arrow)
+
+        for t in self._txt:
+            if t == "N":
+                txt = PathPatch(TextPath((-0.75, 3.2), "N", size=2), fc="k", ec="none")
+                art.add_artist(txt)
+            elif self._style == "compass":
+                if t == "E":
+                    txt = PathPatch(
+                        TextPath((3.3, -0.75), "E", size=2), fc="k", ec="none"
+                    )
+                    art.add_artist(txt)
+                elif t == "S":
+                    txt = PathPatch(
+                        TextPath((-0.75, -4.7), "S", size=2), fc="k", ec="none"
+                    )
+                    art.add_artist(txt)
+                elif t == "W":
+                    txt = PathPatch(
+                        TextPath((-5.2, -0.75), "W", size=2), fc="k", ec="none"
+                    )
+                    art.add_artist(txt)
+
+        return art
+
+    def _update_offset(self, x, y):
+        # reset to the center of the axis if both are None
+        try:
+            ax2data = self._m.ax.transAxes + self._m.ax.transData.inverted()
+
+            if x is None or y is None:
+                try:
+                    x, y = ax2data.transform(
+                        self._ax2data.inverted().transform(self._pos)
+                    )
+                except Exception:
+                    x, y = 0.9, 0.1
+
+            self.set_position((x, y))
+        except Exception:
+            print("ups")
+            pass
+
+    def _get_transform(self, pos):
+
+        lon, lat = self._m._transf_plot_to_lonlat.transform(*pos)
+        x, y = self._m._transf_lonlat_to_plot.transform([lon, lon], [lat, lat + 0.01])
+
+        try:
+            ang = -np.arctan2(x[1] - x[0], y[1] - y[0])
+        except Exception:
+            print("EOmaps: could not add scalebar at the desired location")
+            return
+
+        r = transforms.Affine2D().rotate(ang)
+        s = transforms.Affine2D().scale(self._scale)
+        t = transforms.Affine2D().translate(*self._m.ax.transData.transform(pos))
+        trans = r + s + t
+        return trans
+
+    def _on_motion(self, evt):
+        if self._check_still_parented() and self._got_artist:
+            x, y = evt.xdata, evt.ydata
+
+            if x is None or y is None:
+                # continue values outside of the crs-domain
+                x, y = self._m.ax.transData.inverted().transform((evt.x, evt.y))
+            self._update_offset(x, y)
+            self._m.BM._draw_animated(artists=[self._artist])
+
+    def _on_pick(self, evt):
+        if self._check_still_parented() and evt.artist == self._artist:
+            self._got_artist = True
+            self._c1 = self._canvas.mpl_connect("motion_notify_event", self._on_motion)
+            self._c2 = self._canvas.mpl_connect("key_press_event", self._on_keypress)
+
+    def _on_keypress(self, event):
+        if event.key == "delete":
+            self.remove()
+
+    def _on_release(self, event):
+        if self._check_still_parented() and self._got_artist:
+            self._finalize_offset()
+            self._got_artist = False
+            try:
+                c1 = self._c1
+            except AttributeError:
+                pass
+            else:
+                self._canvas.mpl_disconnect(c1)
+
+            try:
+                c2 = self._c2
+            except AttributeError:
+                pass
+            else:
+                self._canvas.mpl_disconnect(c2)
+
+    def _check_still_parented(self):
+        if self._artist.figure is None:
+            self._disconnect()
+            return False
+        else:
+            return True
+
+    def _disconnect(self):
+        """Disconnect the callbacks."""
+        for cid in self._cids:
+            self._canvas.mpl_disconnect(cid)
+
+        for cid in self._ax_cids:
+            self._m.ax.callbacks.disconnect(cid)
+
+        try:
+            c1 = self._c1
+        except AttributeError:
+            pass
+        else:
+            self._canvas.mpl_disconnect(c1)
+
+        try:
+            c2 = self._c2
+        except AttributeError:
+            pass
+        else:
+            self._canvas.mpl_disconnect(c2)
+
+    def _finalize_offset(self):
+        pass
+
+    def _add_zoom_callbacks(self):
+        self._ax_cids = set()
+
+        self._ax_cids.add(
+            self._m.ax.callbacks.connect(
+                "xlim_changed", lambda *args: self._update_offset(None, None)
+            )
+        )
+        self._ax_cids.add(
+            self._m.ax.callbacks.connect(
+                "ylim_changed", lambda *args: self._update_offset(None, None)
+            )
+        )
+        self._ax_cids.add(
+            self._m.figure.f.canvas.mpl_connect(
+                "resize_event", lambda *args: self._update_offset(None, None)
+            )
+        )
+
+    def remove(self):
+        """
+        Remove the compass from the map.
+
+        Note
+        ----
+        You can also remove a compass by clicking on it and pressing the "delete"
+        button on the keyboard (while holding down the mouse-button)
+
+        """
+        self._disconnect()
+        self._m.BM.remove_artist(self._artist)
+        self._artist.remove()
+        self._m.BM.update()
+
+    def set_patch(self, facecolor=None, edgecolor=None, linewidth=None):
+        """
+        Set the style of the background patch.
+
+        Parameters
+        ----------
+        facecolor, edgecolor : str, tuple, None or False
+            - str or tuple: Set the color of the background patch.
+            - False or "none": Make the background-patch invisible.
+        linewidth: float
+            The linewidth of the patch.
+        """
+
+        if facecolor is False:
+            facecolor = "none"
+        if edgecolor is False:
+            edgecolor = "none"
+
+        if facecolor is not None:
+            self._artist.get_children()[0].set_facecolor(facecolor)
+        if edgecolor is not None:
+            self._artist.get_children()[0].set_edgecolor(edgecolor)
+        if linewidth is not None:
+            assert isinstance(
+                linewidth, (int, float, np.number)
+            ), "EOmaps: linewidth must be int or float!"
+            self._artist.get_children()[0].set_linewidth(linewidth)
+
+    def set_scale(self, scale):
+        """
+        Set the size of the  compass. (The default is 10)
+
+        Parameters
+        ----------
+        s : float
+            The size of the compass.
+        """
+
+        self._scale = scale
+        self._update_offset(*self._pos)
+
+    def set_pickable(self, b):
+        """
+        Set if the compass can be picked with the mouse or not.
+
+        Parameters
+        ----------
+        b : bool
+            True : enable picking
+            False : disable picking
+        """
+        if b is False:
+            b = None
+        self._artist.set_picker(b)
+
+    def set_position(self, pos, coords="data"):
+        """
+        Set the position of the compass.
+
+        Parameters
+        ----------
+        pos : tuple
+            The (x, y) coordinates.
+        coords : str, optional
+            Indicator how the coordinates are provided
+
+            - "data" : pos represents coordinates in the plot-crs
+            - "axis" : pos represents relative [0-1] coordinates with respect to the
+              axis (e.g. (0, 0) = lower left corner, (1, 1) = upper right corner).
+
+            The default is "data".
+        """
+        self._ax2data = self._m.ax.transAxes + self._m.ax.transData.inverted()
+
+        if coords == "axis":
+            pos = self._ax2data.transform(pos)
+
+        trans = self._get_transform(pos)
+        for c in self._artist.get_children():
+            c.set_transform(trans)
+
+        self._pos = pos
