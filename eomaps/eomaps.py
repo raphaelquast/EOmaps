@@ -1311,12 +1311,50 @@ class Maps(object):
     if _gpd_OK:
 
         def _clip_gdf(self, gdf, how="crs"):
-            from shapely.ops import polygonize
+
+            if how.startswith("gdal"):
+                methods = ["SymmetricDifference", "Intersection", "Difference"]
+                # "SymmetricDifference", "Intersection", "Difference"
+                method = how.split("_")[1]
+                assert method in methods, "EOmaps: '{how}' is not a valid clip-method"
+                try:
+                    from osgeo import gdal
+                    from shapely import wkt
+                except ImportError:
+                    raise ImportError(
+                        "EOmaps: Missing dependency: 'osgeo'\n"
+                        + "...clipping with gdal requires 'osgeo.gdal'"
+                    )
+
+                e = self.ax.projection.domain
+                e2 = gdal.ogr.CreateGeometryFromWkt(e.wkt)
+                if not e2.IsValid():
+                    e2 = e2.MakeValid()
+
+                gdf = gdf.to_crs(self.crs_plot)
+                clipgeoms = []
+                for g in gdf.explode().geometry:
+                    g2 = gdal.ogr.CreateGeometryFromWkt(g.wkt)
+
+                    if g2 is None:
+                        continue
+
+                    if not g2.IsValid():
+                        g2 = g2.MakeValid()
+
+                    i = getattr(g2, method)(e2)
+
+                    gclip = wkt.loads(i.ExportToWkt())
+                    clipgeoms.append(gclip)
+
+                gdf = gpd.GeoDataFrame(geometry=clipgeoms, crs=self.crs_plot)
+
+                return gdf
 
             if how == "crs":
                 clipgdf = gdf.clip(
                     gpd.GeoDataFrame(
-                        geometry=[next(polygonize(self.crs_plot.boundary)).buffer(0)],
+                        geometry=[self.ax.projection.domain],
                         crs=self.crs_plot,
                     ).to_crs(gdf.crs)
                 )
@@ -1326,6 +1364,12 @@ class Maps(object):
                 clipgdf = gdf.clip(
                     self._make_rect_poly(x0, y0, x1, y1, self.crs_plot).to_crs(gdf.crs)
                 )
+            elif how == "crs_bounds":
+                x0, x1, y0, y1 = self.ax.get_extent()
+                clipgdf = gdf.to_crs(self.crs_plot).clip(
+                    self._make_rect_poly(*self.crs_plot.boundary.bounds, self.crs_plot)
+                )
+
             else:
                 raise TypeError("EOmaps: clip can only be None, 'crs' or 'extent'")
 
@@ -1401,9 +1445,16 @@ class Maps(object):
 
                 Indicator if geometries should be clipped prior to plotting or not.
 
-                - if "crs": clip with respect to the boundary of the crs
+                - if "crs": clip with respect to the boundary-shape of the crs
+                - if "crs_bounds" : clip with respect to a rectangular crs boundary
                 - if "extent": clip with respect to the current extent of the plot-axis.
+                - if the 'gdal' python-bindings are installed, you can use gdal to clip
+                  the shapes with respect to the crs-boundary. (slower but more robust)
+                  The following logical operations are supported:
 
+                  - "gdal_SymmetricDifference"
+                  - "gdal_Intersection"
+                  - "gdal_Difference
 
                 >>> mg = MapsGrid(2, 3, crs=3035)
                 >>> mg.m_0_0.add_feature.preset.ocean(use_gpd=True)
