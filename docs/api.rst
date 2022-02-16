@@ -524,6 +524,47 @@ The scalebar has the following useful methods assigned:
     cb_offset_interval
     cb_rotate_interval
 
+
+🧭 Compass (or North Arrow)
+---------------------------
+
+A compass can be added to the map via:
+
+.. currentmodule:: eomaps
+
+.. autosummary::
+    :toctree: generated
+    :nosignatures:
+    :template: only_names_in_toc.rst
+
+    Maps.add_compass
+
+The compass object is dynamically updated if you pan/zoom the map, and it can be
+dragged around on the map with the mouse.
+
+.. code-block:: python
+
+    m = Maps()
+    m.add_feature.preset.coastline()
+    c1 = m.add_compass(pos=(.25, .25), style="compass")
+    c2 = m.add_compass(pos=(.5, .25), style="north arrow")    # to remove it, use
+
+    c1.set_patch(facecolor="g", edgecolor="k", linewidth=2)
+
+The returned ``compass`` object has the following useful methods assigned:
+
+.. currentmodule:: eomaps.scalebar.Compass
+
+.. autosummary::
+    :toctree: generated
+    :nosignatures:
+    :template: only_names_in_toc.rst
+
+    set_patch
+    set_scale
+    set_pickable
+    remove
+
 🔸 Miscellaneous
 ----------------
 some additional functions and properties that might come in handy:
