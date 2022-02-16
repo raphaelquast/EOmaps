@@ -406,6 +406,7 @@ class plot_specs(object):
         self._cmap = get_cmap(val)
 
     @property
+    @lru_cache()
     def plot_crs(self):
         if self._m.figure.ax is not None:
             return self._m.figure.ax.projection
@@ -797,7 +798,9 @@ class NaturalEarth_features(object):
                     m.BM.add_bg_artist(art, layer=uselayer)
             else:
                 s = self.get_gdf()
-                for m in self._m if isinstance(self._m, MapsGrid) else [self._m]:
+                for m in (
+                    self._m if self._m.__class__.__name__ == "MapsGrid" else [self._m]
+                ):
                     if layer is None:
                         uselayer = m.layer
                     else:
