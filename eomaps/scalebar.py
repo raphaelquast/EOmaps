@@ -945,6 +945,9 @@ class Compass:
     def _on_keypress(self, event):
         if event.key == "delete":
             self.remove()
+        if event.key == "d":
+            self._on_release(None)
+            self.set_pickable(False)
 
     def _on_release(self, event):
         if self._check_still_parented() and self._got_artist:
