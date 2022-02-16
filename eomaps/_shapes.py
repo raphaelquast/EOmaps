@@ -3,7 +3,7 @@ from matplotlib.tri import TriMesh, Triangulation
 import numpy as np
 
 from pyproj import CRS, Transformer
-from functools import update_wrapper, partial, lru_cache
+from functools import update_wrapper, partial, lru_cache, wraps
 import warnings
 
 
@@ -70,17 +70,7 @@ class shapes(object):
 
     def __init__(self, m):
         self._m = m
-
         self.radius_estimation_range = 100000
-
-        for shp in self._shp_list:
-            setattr(
-                self,
-                shp,
-                update_wrapper(
-                    getattr(self, f"_{shp}")(m=m), getattr(self, f"_{shp}").__call__
-                ),
-            )
 
     def _get(self, shape, **kwargs):
         shp = getattr(self, f"_{shape}")(self._m)
@@ -366,7 +356,7 @@ class shapes(object):
 
         def __call__(self, radius="estimate", radius_crs="in", n=20):
             """
-            Draw projected ellipses defined in distance-units of a given crs.
+            Draw projected ellipses with dimensions defined in units of a given crs.
 
             Parameters
             ----------
@@ -849,7 +839,7 @@ class shapes(object):
 
         def __call__(self, masked=True, mask_radius=None):
             """
-            Draw projected rectangles with dimensions defined in units of a given crs.
+            Draw a Voroni-Diagram of the data.
 
             Parameters
             ----------
@@ -858,11 +848,6 @@ class shapes(object):
 
             mask_radius : float, optional
                 the radius used for masking the voroni-diagram (in units of the plot-crs)
-
-            Returns
-            -------
-            None.
-
             """
             from . import MapsGrid  # do this here to avoid circular imports!
 
@@ -989,14 +974,15 @@ class shapes(object):
             self, masked=True, mask_radius=None, mask_radius_crs="in", flat=False
         ):
             """
-            Draw projected rectangles with dimensions defined in units of a given crs.
+            Draw a Delaunay-Triangulation of the data.
 
             Parameters
             ----------
             masked : bool
-                Indicator if the voroni-diagram should be masked or not
+                Indicator if the delaunay-triangulation should be masked or not
             mask_radius : float, optional
-                the radius used for masking the voroni-diagram (in units of the plot-crs)
+                the radius used for masking the delaunay-triangulation
+                (in units of the plot-crs)
             mask_radius_crs : str, optional
                 The crs in which the radius is defined (either "in" or "out")
             flat : bool
@@ -1174,12 +1160,10 @@ class shapes(object):
 
         def __call__(self, aggregator=None, shade_hook=None, agg_hook=None):
             """
-            Shade the data with "datashader" as infinitesimal points.
-
-            -> usable with very large datasets!
+            Shade the data as infinitesimal points (>> usable for very large datasets!).
 
             This function is based on the functionalities of `datashader.mpl_ext.dsshow`
-            provided by the matplotlib-extension for datashader.
+            provided by the matplotlib-extension for "datashader".
 
             Parameters
             ----------
@@ -1254,14 +1238,11 @@ class shapes(object):
 
         def __call__(self, aggregator=None, shade_hook=None, agg_hook=None):
             """
-            Shade the data with "datashader" as a rectangular raster.
+            Shade the data as a rectangular raster (>> usable for very large datasets!).
 
             - Using a raster-based shading is only possible if:
                 - the data can be converted to rectangular 2D arrays
                 - the crs of the data and the plot-crs are equal!
-
-            -> usable with very large datasets!
-
 
             This function is based on the functionalities of `datashader.mpl_ext.dsshow`
             provided by the matplotlib-extension for datashader.
@@ -1327,3 +1308,38 @@ class shapes(object):
         @property
         def radius_crs(self):
             return self._m.get_crs("in")
+
+    @wraps(_geod_circles.__call__)
+    def geod_circles(self, *args, **kwargs):
+        shp = self._geod_circles(m=self._m)
+        return shp.__call__(*args, **kwargs)
+
+    @wraps(_ellipses.__call__)
+    def ellipses(self, *args, **kwargs):
+        shp = self._ellipses(m=self._m)
+        return shp.__call__(*args, **kwargs)
+
+    @wraps(_rectangles.__call__)
+    def rectangles(self, *args, **kwargs):
+        shp = self._rectangles(m=self._m)
+        return shp.__call__(*args, **kwargs)
+
+    @wraps(_voroni_diagram.__call__)
+    def voroni_diagram(self, *args, **kwargs):
+        shp = self._voroni_diagram(m=self._m)
+        return shp.__call__(*args, **kwargs)
+
+    @wraps(_delaunay_triangulation.__call__)
+    def delaunay_triangulation(self, *args, **kwargs):
+        shp = self._delaunay_triangulation(m=self._m)
+        return shp.__call__(*args, **kwargs)
+
+    @wraps(_shade_points.__call__)
+    def shade_points(self, *args, **kwargs):
+        shp = self._shade_points(m=self._m)
+        return shp.__call__(*args, **kwargs)
+
+    @wraps(_shade_raster.__call__)
+    def shade_raster(self, *args, **kwargs):
+        shp = self._shade_raster(m=self._m)
+        return shp.__call__(*args, **kwargs)
