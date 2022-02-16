@@ -977,13 +977,15 @@ class Maps(object):
 
             xorig, yorig = self._set_cpos(xorig, yorig, rx, ry, cpos)
 
-        props["xorig"] = xorig
-        props["yorig"] = yorig
-        props["ids"] = ids
-        props["z_data"] = z_data
+        nanmask = ~np.isnan(z_data)
+
+        props["xorig"] = xorig[nanmask]
+        props["yorig"] = yorig[nanmask]
+        props["ids"] = ids[nanmask]
+        props["z_data"] = z_data[nanmask]
 
         # transform center-points to the plot_crs
-        props["x0"], props["y0"] = transformer.transform(xorig, yorig)
+        props["x0"], props["y0"] = transformer.transform(props["xorig"], props["yorig"])
 
         props["mask"] = np.isfinite(props["x0"]) & np.isfinite(props["y0"])
 
