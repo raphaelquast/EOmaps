@@ -1,4 +1,4 @@
 version: 2
 
 conda:
-  environment: tests/test_env.yaml
+  environment: tests/test_env.yml
