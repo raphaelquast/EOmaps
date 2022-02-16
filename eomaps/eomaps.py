@@ -1499,9 +1499,11 @@ class Maps(object):
             if clip:
                 gdf = self._clip_gdf(gdf, clip)
 
+            gdf = gdf.to_crs(self.crs_plot)
+
             try:
                 # explode the GeoDataFrame to avoid picking multi-part geometries
-                gdf = gdf.explode(index_parts=False).to_crs(self.crs_plot)
+                gdf = gdf.explode(index_parts=False)
             except Exception:
                 # geopandas sometimes has problems exploding geometries...
                 # if it does not work, just continue with the Multi-geometries!
