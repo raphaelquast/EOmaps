@@ -818,6 +818,17 @@ class Maps(object):
         )
         return transformer
 
+    @property
+    @lru_cache()
+    def _transf_lonlat_to_plot(self):
+        # get coordinate transformation from in_crs to plot_crs
+        transformer = Transformer.from_crs(
+            self.get_crs(4326),
+            self.crs_plot,
+            always_xy=True,
+        )
+        return transformer
+
     def get_crs(self, crs):
         """
         get the pyproj CRS instance of a given crs specification
