@@ -528,6 +528,28 @@ To indicate a rectangular area specified in a given crs, simply use ``m.indicate
     add_annotation
     indicate_extent
 
+
+🌈 Colorbars (with a histogram)
+-------------------------------
+
+A colorbar with a colored histogram on top can be added to the map via ``m.add_colorbar``.
+
+.. note::
+    You must plot a dataset first! (e.g. by calling ``m.plot_map()``)
+    The colorbar always represents the dataset that was used in the last call to ``m.plot_map()``.
+    If you need multiple colorbars, use an individual layer for each dataset! (e.g. via ``m2  = m.new_layer()``)
+
+.. currentmodule:: eomaps
+
+.. autosummary::
+    :toctree: generated
+    :nosignatures:
+    :template: only_names_in_toc.rst
+
+    Maps.add_colorbar
+
+
+
 📏 Scalebars
 ------------
 
