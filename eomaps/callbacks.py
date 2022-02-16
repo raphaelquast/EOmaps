@@ -322,10 +322,11 @@ class _click_callbacks(object):
         Parameters
         ----------
         radius : float, string or None, optional
-            If float: The radius of the marker in units of the "radius_crs".
-            If "pixel" the pixel dimensions of the clicked pixel are used
-            If None: The radius of the data used for plotting (if available),
-                     otherwise 1/10 of the width and height
+            - If float: The radius of the marker in units of the "radius_crs".
+            - If "pixel" the pixel dimensions of the clicked pixel are used
+            - If None: The radius of the data used for plotting (if available),
+              otherwise 1/10 of the width and height
+
             The default is None.
         radius_crs : any
             The crs specification in which the radius is provided.
@@ -334,9 +335,9 @@ class _click_callbacks(object):
 
         shape : str, optional
             Indicator which shape to draw. Currently supported shapes are:
-                - ellipses
-                - rectangles
-                - geod_circles
+            - ellipses
+            - rectangles
+            - geod_circles
 
             The default is None which defaults to the used shape for plotting
             if possible and else "ellipses".
@@ -352,10 +353,11 @@ class _click_callbacks(object):
             The layer-level on which to draw the artist.
             (First layer 0 is drawn, then layer 1 on top then layer 2 etc...)
             The default is 10.
-        **kwargs :
+        kwargs :
             kwargs passed to the matplotlib patch.
             (e.g. `facecolor`, `edgecolor`, `linewidth`, `alpha` etc.)
         """
+
         possible_shapes = ["ellipses", "rectangles", "geod_circles"]
 
         if shape is None:

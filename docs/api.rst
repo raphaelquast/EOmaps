@@ -114,6 +114,39 @@ and provides convenience-functions to perform actions on all maps of the figure.
     MapsGrid.add_gdf
 
 
+🔵 Setting the plot-shape
+..........................
+
+The shapes that are used to represent the datapoints can be set via ``m.set_shape``.
+
+.. currentmodule:: eomaps
+
+.. autosummary::
+    :toctree: generated
+    :nosignatures:
+    :template: only_names_in_toc.rst
+
+    Maps.set_shape
+
+Possible shapes are:
+
+.. currentmodule:: eomaps._shapes.shapes
+
+.. autosummary::
+    :toctree: generated
+    :nosignatures:
+    :template: only_names_in_toc.rst
+
+    geod_circles
+    ellipses
+    rectangles
+    voroni_diagram
+    delaunay_triangulation
+    shade_points
+    shade_raster
+
+
+
 🌍 Set plot specifications
 ..........................
 
@@ -246,7 +279,7 @@ Pre-defined click & pick callbacks
 
 Callbacks that can be used with both `m.cb.click` and `m.cb.pick`:
 
-.. currentmodule:: eomaps.callbacks._click_callbacks
+.. currentmodule:: eomaps.callbacks.click_callbacks
 
 .. autosummary::
     :toctree: generated
@@ -262,6 +295,8 @@ Callbacks that can be used with both `m.cb.click` and `m.cb.pick`:
     print_to_console
 
 Callbacks that can be used only with `m.cb.pick`:
+
+.. currentmodule:: eomaps.callbacks.pick_callbacks
 
 .. autosummary::
     :toctree: generated
@@ -426,14 +461,15 @@ Where ``< CATEGORY >`` specifies the resolution and general category of the feat
     m.add_feature.preset.coastline()
     m.add_feature.cultural_110m.admin_0_pacific_groupings(ec="r", lw=2)
 
+.. currentmodule:: eomaps
 
 .. autosummary::
     :toctree: generated
     :nosignatures:
     :template: only_names_in_toc.rst
 
-    add_gdf
-    add_feature
+    Maps.add_gdf
+    Maps.add_feature
 
 
 🏕 Static annotations and markers

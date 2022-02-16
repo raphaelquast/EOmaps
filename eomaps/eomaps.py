@@ -619,16 +619,16 @@ class Maps(object):
             The coordinate-system of the provided coordinates.
             Can be one of:
 
-                - PROJ string
-                - Dictionary of PROJ parameters
-                - PROJ keyword arguments for parameters
-                - JSON string with PROJ parameters
-                - CRS WKT string
-                - An authority string [i.e. 'epsg:4326']
-                - An EPSG integer code [i.e. 4326]
-                - A tuple of ("auth_name": "auth_code") [i.e ('epsg', '4326')]
-                - An object with a `to_wkt` method.
-                - A :class:`pyproj.crs.CRS` class
+            - PROJ string
+            - Dictionary of PROJ parameters
+            - PROJ keyword arguments for parameters
+            - JSON string with PROJ parameters
+            - CRS WKT string
+            - An authority string [i.e. 'epsg:4326']
+            - An EPSG integer code [i.e. 4326]
+            - A tuple of ("auth_name": "auth_code") [i.e ('epsg', '4326')]
+            - An object with a `to_wkt` method.
+            - A :class:`pyproj.crs.CRS` class
 
             (see `pyproj.CRS.from_user_input` for more details)
 
@@ -646,20 +646,21 @@ class Maps(object):
         --------
 
         - using a single `pandas.DataFrame`
-        >>> data = pd.DataFrame(dict(lon=[...], lat=[...], a=[...], b=[...]))
-        >>> m.set_data(data, xcoord="lon", ycoord="lat", parameter="a", crs=4326)
+          >>> data = pd.DataFrame(dict(lon=[...], lat=[...], a=[...], b=[...]))
+          >>> m.set_data(data, xcoord="lon", ycoord="lat", parameter="a", crs=4326)
 
         - using individual `pandas.Series`
-        >>> lon, lat, vals = pd.Series([...]), pd.Series([...]), pd.Series([...])
-        >>> m.set_data(vals, xcoord=x, ycoord=y, crs=4326)
+          >>> lon, lat, vals = pd.Series([...]), pd.Series([...]), pd.Series([...])
+          >>> m.set_data(vals, xcoord=x, ycoord=y, crs=4326)
 
         - using 1D lists
-        >>> lon, lat, vals = [...], [...], [...]
-        >>> m.set_data(vals, xcoord=lon, ycoord=lat, crs=4326)
+          >>> lon, lat, vals = [...], [...], [...]
+          >>> m.set_data(vals, xcoord=lon, ycoord=lat, crs=4326)
 
         - using 1D or 2D numpy.arrays
-        >>> lon, lat, vals = np.array([[...]]), np.array([[...]]), np.array([[...]])
-        >>> m.set_data(vals, xcoord=lon, ycoord=lat, crs=4326)
+          >>> lon, lat, vals = np.array([[...]]), np.array([[...]]), np.array([[...]])
+          >>> m.set_data(vals, xcoord=lon, ycoord=lat, crs=4326)
+
         """
 
         if data is not None:
@@ -1403,9 +1404,9 @@ class Maps(object):
                 created that can be used to pick geometries of the GeoDataFrame.
 
                 The container can then be accessed via:
-                    >>> m.cb.pick__<picker_name>
-                    or
-                    >>> m.cb.pick[picker_name]
+                >>> m.cb.pick__<picker_name>
+                or
+                >>> m.cb.pick[picker_name]
                 and it can be used in the same way as `m.cb.pick...`
 
             pick_method : str or callable
@@ -1422,6 +1423,7 @@ class Maps(object):
                       (should work with any geometry whose centroid is defined)
 
                     The default is "centroids"
+
                 if callable :
                     A callable that is used to identify the picked geometry.
                     The call-signature is:
@@ -1432,7 +1434,9 @@ class Maps(object):
                     >>>     ...
                     >>>     # if the pick is successful:
                     >>>     return True, dict(ID, pos, val, ind)
-                The default is "contains"
+
+                    The default is "contains"
+
             val_key : str
                 The dataframe-column used to identify values for pick-callbacks.
                 The default is None.
@@ -1657,9 +1661,9 @@ class Maps(object):
         xy_crs : any
             the identifier of the coordinate-system for the xy-coordinates
         radius : float or "pixel", optional
-            If float: The radius of the marker.
-            If "pixel": It will represent the dimensions of the selected pixel.
-                        (check the `buffer` kwarg!)
+            - If float: The radius of the marker.
+            - If "pixel": It will represent the dimensions of the selected pixel.
+              (check the `buffer` kwarg!)
 
             The default is None in which case "pixel" is used if a dataset is
             present and otherwise a shape with 1/10 of the axis-size is plotted
@@ -1671,14 +1675,14 @@ class Maps(object):
             (only relevant if radius is NOT specified as "pixel")
         shape : str, optional
             Indicator which shape to draw. Currently supported shapes are:
-                - geod_circles
-                - ellipses
-                - rectangles
+            - geod_circles
+            - ellipses
+            - rectangles
 
             The default is "circle".
         buffer : float, optional
             A factor to scale the size of the shape. The default is 1.
-        **kwargs :
+        kwargs :
             kwargs passed to the matplotlib patch.
             (e.g. `facecolor`, `edgecolor`, `linewidth`, `alpha` etc.)
 
@@ -1814,7 +1818,10 @@ class Maps(object):
         You can use the mouse to pick the compass and move it anywhere on the map.
         (the directions are dynamically updated if you pan/zoom or pick the compass)
 
-        If you press the "delete" key while clicking on the compass, it is removed.
+        - If you press the "delete" key while clicking on the compass, it is removed.
+          (same as calling `compass.remove()`)
+        - If you press the "d" key while clicking on the compass, it will be
+          disconnected from pick-events (same as calling `compass.set_pickable(False)`)
 
 
         Parameters
@@ -2220,7 +2227,8 @@ class Maps(object):
             kwargs passed to the initialization of the matpltolib collection
             (dependent on the plot-shape) [linewidth, edgecolor, facecolor, ...]
 
-            For "shade_..." shapes, kwargs are passed to `datashader.mpl_ext.dsshow`
+            For "shade_points" or "shade_raster" shapes, kwargs are passed to
+            `datashader.mpl_ext.dsshow`
         """
         if layer is None:
             layer = self.layer
@@ -2469,7 +2477,7 @@ class Maps(object):
             """
             Indicate a rectangular extent in a given crs on the map.
             (the rectangle is drawn as a polygon where each line is divided by "npts"
-             points to ensure correct re-projection of the shape to other crs)
+            points to ensure correct re-projection of the shape to other crs)
 
             Parameters
             ----------
@@ -2482,7 +2490,6 @@ class Maps(object):
             crs : any, optional
                 a coordinate-system identifier.
                 The default is 4326 (e.g. lon/lat).
-
             kwargs :
                 additional keyword-arguments passed to `m.add_gdf()`.
 
@@ -2585,7 +2592,7 @@ class MapsGrid:
 
         Possible values are:
         - a tuple of (row, col)
-
+        - an integer representing (row + col)
 
         Note: If either `m_inits` or `ax_inits` is provided, ONLY objects with the
         specified properties are initialized!
@@ -2648,14 +2655,14 @@ class MapsGrid:
     To initialize a 2 by 2 grid with a large map on top, a small map
     on the bottom-left and an ordinary matplotlib plot on the bottom-right, use:
 
-        >>> m_inits = dict(top = (0, slice(0, 2)),
-        >>>                bottom_left=(1, 0))
-        >>> ax_inits = dict(bottom_right=(1, 1))
+    >>> m_inits = dict(top = (0, slice(0, 2)),
+    >>>                bottom_left=(1, 0))
+    >>> ax_inits = dict(bottom_right=(1, 1))
 
-        >>> mg = MapsGrid(2, 2, m_inits=m_inits, ax_inits=ax_inits)
-        >>> mg.m_top.plot_map()
-        >>> mg.m_bottom_left.plot_map()
-        >>> mg.ax_bottom_right.plot([1,2,3])
+    >>> mg = MapsGrid(2, 2, m_inits=m_inits, ax_inits=ax_inits)
+    >>> mg.m_top.plot_map()
+    >>> mg.m_bottom_left.plot_map()
+    >>> mg.ax_bottom_right.plot([1,2,3])
 
     Returns
     -------

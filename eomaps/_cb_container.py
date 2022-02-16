@@ -374,6 +374,7 @@ class _click_container(_cb_container):
             (to remove the callback, use `m.cb.remove(cbname)`)
 
         """
+
         if self._method == "pick":
             assert self._m.figure.coll is not None, (
                 "you can only attach pick-callbacks after plotting a dataset!"

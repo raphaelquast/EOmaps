@@ -8,7 +8,7 @@
 ###############
 
 🐜 Recommended way (via ``conda``)
-------------------------------
+----------------------------------
 (To speed up the process... have a look at `mamba <https://github.com/mamba-org/mamba>`_ )
 
 EOmaps is available via the ``conda-forge`` channel and can be installed via:
@@ -66,12 +66,13 @@ A list of the dependencies can be found below:
       # -------------- optional
       - pandas
       - geopandas
+      - datashader
       # -------------- for WebMaps
       - owslib
       - requests
       - xmltodict
       - cairosvg
-      # -------------- only for building the docs
+      # -------------- for building the docs
       - sphinx
       - sphinx-copybutton
       - sphinx_rtd_theme

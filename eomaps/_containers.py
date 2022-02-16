@@ -552,9 +552,10 @@ class NaturalEarth_features(object):
 
     The features are grouped into the categories "cultural" and "physical"
     at 3 different scales:
-        - 1:10m : Large-scale data
-        - 1:50m : Medium-scale data
-        - 1:110m : Small-scale data
+
+    - 1:10m : Large-scale data
+    - 1:50m : Medium-scale data
+    - 1:110m : Small-scale data
 
     For available features and additional info, check the docstring of the
     individual categories!
@@ -566,15 +567,15 @@ class NaturalEarth_features(object):
     --------
 
     - add black (coarse resolution) coastlines
-    >>> m.add_feature.physical_110m.coastline(fc="none", ec="k")
+      >>> m.add_feature.physical_110m.coastline(fc="none", ec="k")
 
     - color all land red with 50% transparency
-    >>> m.add_feature.physical_110m.land(fc="r", alpha=0.5)
+      >>> m.add_feature.physical_110m.land(fc="r", alpha=0.5)
 
     - color all countries with respect to their area
-    >>> countries = m.add_feature.cultural_10m.admin_0_countries
-    >>> areas = np.argsort([i.area for i in countries.feature.geometries()])
-    >>> countries(ec="k", fc= [i for i in plt.cm.viridis(areas / areas.max())])
+      >>> countries = m.add_feature.cultural_10m.admin_0_countries
+      >>> areas = np.argsort([i.area for i in countries.feature.geometries()])
+      >>> countries(ec="k", fc= [i for i in plt.cm.viridis(areas / areas.max())])
     """
 
     def __init__(self, m):
