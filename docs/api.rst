@@ -40,6 +40,138 @@ To get full control on how to copy existing ``Maps``-objects (and share selected
     Maps.copy
 
 
+🔵 Setting the data and shape
+..............................
+
+To assign a dataset to a ``Maps`` object, use ``m.set_data``.
+The shapes that are used to represent the data-points are then set via ``m.set_shape``.
+
+.. code-block:: python
+
+    m = Maps()
+    m.set_data(data, xcoord, ycoord, parameter)
+    m.set_shape.rectangles(radius=1, radius_crs=4326)
+
+.. currentmodule:: eomaps
+
+.. autosummary::
+    :toctree: generated
+    :nosignatures:
+    :template: only_names_in_toc.rst
+
+    Maps.set_data
+    Maps.set_shape
+
+Possible shapes that work nicely for datasets with up to 1M data-points:
+
+.. currentmodule:: eomaps._shapes.shapes
+
+.. autosummary::
+    :toctree: generated
+    :nosignatures:
+    :template: only_names_in_toc.rst
+
+    geod_circles
+    ellipses
+    rectangles
+    voroni_diagram
+    delaunay_triangulation
+
+For extremely large datasets (>1M datapoints), it is recommended to use
+"shading" instead of representing each data-point with a projected polygon.
+
+Possible shapes that can be used to quickly generate a plot for millions of pixels are:
+
+.. autosummary::
+    :toctree: generated
+    :nosignatures:
+    :template: only_names_in_toc.rst
+
+    shade_points
+    shade_raster
+
+.. note::
+
+    The "shade"-shapes require the additional ``datashader`` dependency!
+    You can install it via:
+    ``conda install -c conda-forge datashader``
+
+
+🌍 Customizing the plot
+........................
+
+The appearance of the plot can be adjusted by setting the following properties
+of the Maps object:
+
+.. currentmodule:: eomaps
+
+.. autosummary::
+    :toctree: generated
+    :nosignatures:
+    :template: only_names_in_toc.rst
+
+    Maps.set_plot_specs
+    Maps.set_classify_specs
+
+Alternatively, you can also get/set the properties with:
+
+.. code-block:: python
+
+    m = Maps()
+    m.data_specs.< property > = ...
+    m.plot_specs.< property > = ...
+    m.classify_specs.< property > = ...
+
+The available classifiers that can be used to classify the data are accessible via `Maps.CLASSIFIERS`:
+
+.. code-block:: python
+
+    m = Maps()
+    m.set_classify_specs(Maps.CLASSFIERS.Quantiles, k=5)
+
+🗺 Plot the map and save it
+...........................
+
+If you want to plot a map based on a dataset, first set the data and then
+call :code:`m.plot_map()`:
+
+.. code-block:: python
+
+    m = Maps()
+    m.set_data( < the data specifications > )
+    m.plot_map()
+
+you can then add a colorbar or to the map via:
+
+.. code-block:: python
+
+    m.add_colorbar()
+
+or add a WebMap layer via:
+
+.. code-block:: python
+
+    m.add_wms.< WebMap service >. ... .add_layer.< Layer Name >()
+
+
+Once the map is generated, a snapshot of the map can be saved at any time by using:
+
+.. code-block:: python
+
+    m.savefig( "snapshot1.png", dpi=300, ... )
+
+
+.. currentmodule:: eomaps
+
+.. autosummary::
+    :toctree: generated
+    :nosignatures:
+    :template: only_names_in_toc.rst
+
+    Maps.plot_map
+    Maps.savefig
+
+
 𝄜 Multiple maps in one figure
 ..............................
 
@@ -114,114 +246,6 @@ and provides convenience-functions to perform actions on all maps of the figure.
     MapsGrid.add_gdf
 
 
-🔵 Setting the plot-shape
-..........................
-
-The shapes that are used to represent the datapoints can be set via ``m.set_shape``.
-
-.. currentmodule:: eomaps
-
-.. autosummary::
-    :toctree: generated
-    :nosignatures:
-    :template: only_names_in_toc.rst
-
-    Maps.set_shape
-
-Possible shapes are:
-
-.. currentmodule:: eomaps._shapes.shapes
-
-.. autosummary::
-    :toctree: generated
-    :nosignatures:
-    :template: only_names_in_toc.rst
-
-    geod_circles
-    ellipses
-    rectangles
-    voroni_diagram
-    delaunay_triangulation
-    shade_points
-    shade_raster
-
-
-
-🌍 Set plot specifications
-..........................
-
-The appearance of the plot can be adjusted by setting the following properties
-of the Maps object:
-
-.. currentmodule:: eomaps
-
-.. autosummary::
-    :toctree: generated
-    :nosignatures:
-    :template: only_names_in_toc.rst
-
-    Maps.set_shape
-    Maps.set_data
-    Maps.set_plot_specs
-    Maps.set_classify_specs
-
-Alternatively, you can also get/set the properties with:
-
-.. code-block:: python
-
-    m = Maps()
-    m.data_specs.< property > = ...
-    m.plot_specs.< property > = ...
-    m.classify_specs.< property > = ...
-
-The available classifiers that can be used to classify the data are accessible via `Maps.CLASSIFIERS`:
-
-.. code-block:: python
-
-    m = Maps()
-    m.set_classify_specs(Maps.CLASSFIERS.Quantiles, k=5)
-
-🗺 Plot the map and save it
-...........................
-
-If you want to plot a map based on a dataset, first set the data and then
-call :code:`m.plot_map()`:
-
-.. code-block:: python
-
-    m = Maps()
-    m.set_data( < the data specifications > )
-    m.plot_map()
-
-you can then add a colorbar or to the map via:
-
-.. code-block:: python
-
-    m.add_colorbar()
-
-or add a WebMap layer via:
-
-.. code-block:: python
-
-    m.add_wms.< WebMap service >. ... .add_layer.< Layer Name >()
-
-
-Once the map is generated, a snapshot of the map can be saved at any time by using:
-
-.. code-block:: python
-
-    m.savefig( "snapshot1.png", dpi=300, ... )
-
-
-.. currentmodule:: eomaps
-
-.. autosummary::
-    :toctree: generated
-    :nosignatures:
-    :template: only_names_in_toc.rst
-
-    Maps.plot_map
-    Maps.savefig
 
 
 🛸 Callbacks - make the map interactive!

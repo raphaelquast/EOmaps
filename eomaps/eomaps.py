@@ -646,18 +646,22 @@ class Maps(object):
         --------
 
         - using a single `pandas.DataFrame`
+
           >>> data = pd.DataFrame(dict(lon=[...], lat=[...], a=[...], b=[...]))
           >>> m.set_data(data, xcoord="lon", ycoord="lat", parameter="a", crs=4326)
 
         - using individual `pandas.Series`
+
           >>> lon, lat, vals = pd.Series([...]), pd.Series([...]), pd.Series([...])
           >>> m.set_data(vals, xcoord=x, ycoord=y, crs=4326)
 
         - using 1D lists
+
           >>> lon, lat, vals = [...], [...], [...]
           >>> m.set_data(vals, xcoord=lon, ycoord=lat, crs=4326)
 
         - using 1D or 2D numpy.arrays
+
           >>> lon, lat, vals = np.array([[...]]), np.array([[...]]), np.array([[...]])
           >>> m.set_data(vals, xcoord=lon, ycoord=lat, crs=4326)
 
