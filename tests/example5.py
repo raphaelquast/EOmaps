@@ -29,6 +29,8 @@ m.set_plot_specs(
 )
 m.set_shape.rectangles(mesh=True)
 m.set_classify_specs(scheme="Quantiles", k=10)
+# double the estimated radius in x-direction to make the plot dense
+m.shape.radius = (m.shape.radius[0] * 2, m.shape.radius[1])
 
 m.plot_map()
 m.figure.f.set_figheight(7)
@@ -41,6 +43,9 @@ cid = m.cb.click.attach.annotate(bbox=dict(alpha=0.75), color="w")
 m2 = m.new_layer(copy_classify_specs=False)
 m2.data_specs.data = data_mask
 m2.set_shape.rectangles(mesh=False)
+# double the estimated radius in x-direction to make the plot dense
+m2.shape.radius = (m2.shape.radius[0] * 2, m2.shape.radius[1])
+
 m2.plot_specs.cmap = "magma"
 m2.plot_map()
 
@@ -53,6 +58,7 @@ m3.set_plot_specs(cmap="gist_ncar")
 m3.plot_map(edgecolor="w", linewidth=0.25, layer=10, dynamic=True)
 
 # --------- define a callback that will change the position and data-values of the additional layer
+#           NOTE: this is not possible for the shapes:  "shade_points" and "shade_raster" !
 def callback(self, **kwargs):
     selection = np.random.randint(0, len(m3.data), 1000)
     m3.figure.coll.set_array(data_OK.param.iloc[selection])

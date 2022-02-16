@@ -40,7 +40,8 @@ mg.m_0_2.set_classify_specs(
 mg.plot_map()
 mg.add_colorbar()
 
-mg.add_feature.preset.ocean()
+# clip the ocean shape by the plot-extent to avoid re-projection issues
+mg.add_feature.preset.ocean(clip="extent")
 mg.add_feature.preset.land()
 mg.add_feature.preset.coastline()
 
