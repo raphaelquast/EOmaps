@@ -347,7 +347,18 @@ class Maps(object):
         self._cid_onclose = self.figure.f.canvas.mpl_connect(
             "close_event", self._on_close
         )
+        # attach a callback that is executed if the figure canvas is resized
+        self._cid_resize = self.figure.f.canvas.mpl_connect(
+            "resize_event", self._on_resize
+        )
+
         plt.show()
+
+    def _on_resize(self, event):
+        # make sure the background is re-fetched if the canvas has been resized
+        # (required for peeking layers after the canvas has been resized)
+
+        self.BM._refetch_bg = True
 
     def _on_close(self, event):
         # reset attributes that might use up a lot of memory when the figure is closed
