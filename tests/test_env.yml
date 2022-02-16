@@ -25,3 +25,5 @@ dependencies:
   - coveralls
   - pytest
   - pytest-cov
+  # --------------for building the docs
+  - sphinx-copybutton
