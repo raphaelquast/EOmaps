@@ -304,12 +304,12 @@ class Maps(object):
         if layer is None:
             layer = self.layer
 
-        return self.copy(
+        m = self.copy(
             data_specs=copy_data_specs,
             plot_specs=copy_plot_specs,
             classify_specs=copy_classify_specs,
             shape=copy_shape,
-            parent=self,
+            parent=self.parent,
             gs_ax=self.figure.ax,
             layer=layer,
         )
