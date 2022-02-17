@@ -15,9 +15,10 @@
     from eomaps import Maps
     m = Maps(crs=4326)
 
-The CRS usable for plotting are accessible via `Maps.CRS`, e.g.: ``crs=Maps.CRS.Orthographic()``.
+If you provide an ``int`` as crs, it will be identified as epsg-code.
+All other CRS usable for plotting are accessible via ``Maps.CRS``, e.g.: ``crs=Maps.CRS.Orthographic()``.
 
-One you have created your first ``Maps`` object, you can create **additional layers on the same map** by using:
+Once you have created your first ``Maps`` object, you can create **additional layers on the same map** by using:
 
 .. code-block:: python
 
