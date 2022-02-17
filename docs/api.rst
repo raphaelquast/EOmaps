@@ -44,13 +44,14 @@ To get full control on how to copy existing ``Maps``-objects (and share selected
 ..............................
 
 To assign a dataset to a ``Maps`` object, use ``m.set_data``.
-The shapes that are used to represent the data-points are then set via ``m.set_shape``.
+The shapes that are used to represent the data-points are set via ``m.set_shape``.
 
 .. code-block:: python
 
     m = Maps()
     m.set_data(data, xcoord, ycoord, parameter)
     m.set_shape.rectangles(radius=1, radius_crs=4326)
+    m.plot_map()
 
 .. currentmodule:: eomaps
 
@@ -89,6 +90,9 @@ Possible shapes that can be used to quickly generate a plot for millions of pixe
 
     shade_points
     shade_raster
+
+If shading is used, a dynamic averaging of the data based on the screen-resolution
+is performed (resampling based on the mean-value is used by default).
 
 .. note::
 
@@ -496,8 +500,8 @@ Where ``< CATEGORY >`` specifies the resolution and general category of the feat
     Maps.add_feature
 
 
-🏕 Static annotations and markers
----------------------------------
+🏕 Annotations and markers
+--------------------------
 
 Static annotations and markers can be added to the map via:
 
