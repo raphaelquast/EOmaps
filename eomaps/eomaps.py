@@ -1320,10 +1320,42 @@ class Maps(object):
     if _gpd_OK:
 
         def _clip_gdf(self, gdf, how="crs"):
+            """
+            Clip the shapes of a GeoDataFrame with respect to the boundaries
+            of the crs (or the plot-extent).
+
+            Parameters
+            ----------
+            gdf : geopandas.GeoDataFrame
+                The GeoDataFrame containing the geometries.
+            how : str, optional
+                Identifier how the clipping should be performed.
+
+                If a suffix "_invert" is added to the string, the polygon will be
+                inverted (via a symmetric-difference to the clip-shape)
+
+                - clipping with geopandas:
+                  - "crs" : use the actual crs boundary polygon
+                  - "crs_bounds" : use the boundary-envelope of the crs
+                  - "extent" : use the current plot-extent
+
+                - clipping with gdal (always uses the crs domain as clip-shape):
+                  - "gdal_Intersection"
+                  - "gdal_SymDifference"
+                  - "gdal_Difference"
+                  - "gdal_Union"
+
+                The default is "crs".
+
+            Returns
+            -------
+            gdf
+                A GeoDataFrame with the clipped geometries
+            """
 
             if how.startswith("gdal"):
-                methods = ["SymmetricDifference", "Intersection", "Difference"]
-                # "SymmetricDifference", "Intersection", "Difference"
+                methods = ["SymDifference", "Intersection", "Difference", "Union"]
+                # "SymDifference", "Intersection", "Difference"
                 method = how.split("_")[1]
                 assert method in methods, "EOmaps: '{how}' is not a valid clip-method"
                 try:
@@ -1342,7 +1374,7 @@ class Maps(object):
 
                 gdf = gdf.to_crs(self.crs_plot)
                 clipgeoms = []
-                for g in gdf.explode().geometry:
+                for g in gdf.geometry:
                     g2 = gdal.ogr.CreateGeometryFromWkt(g.wkt)
 
                     if g2 is None:
@@ -1353,6 +1385,9 @@ class Maps(object):
 
                     i = getattr(g2, method)(e2)
 
+                    if how.endswith("_invert"):
+                        i = i.SymDifference(e2)
+
                     gclip = wkt.loads(i.ExportToWkt())
                     clipgeoms.append(gclip)
 
@@ -1360,27 +1395,28 @@ class Maps(object):
 
                 return gdf
 
-            if how == "crs":
-                clipgdf = gdf.clip(
-                    gpd.GeoDataFrame(
-                        geometry=[self.ax.projection.domain],
-                        crs=self.crs_plot,
-                    ).to_crs(gdf.crs)
-                )
-            elif how == "extent":
+            if how == "crs" or how == "crs_invert":
+                clip_shp = gpd.GeoDataFrame(
+                    geometry=[self.ax.projection.domain], crs=self.crs_plot
+                ).to_crs(gdf.crs)
+            elif how == "extent" or how == "extent_invert":
                 self.BM.update()
                 x0, x1, y0, y1 = self.ax.get_extent()
-                clipgdf = gdf.clip(
-                    self._make_rect_poly(x0, y0, x1, y1, self.crs_plot).to_crs(gdf.crs)
+                clip_shp = self._make_rect_poly(x0, y0, x1, y1, self.crs_plot).to_crs(
+                    gdf.crs
                 )
-            elif how == "crs_bounds":
+            elif how == "crs_bounds" or how == "crs_bounds_invert":
                 x0, x1, y0, y1 = self.ax.get_extent()
-                clipgdf = gdf.to_crs(self.crs_plot).clip(
-                    self._make_rect_poly(*self.crs_plot.boundary.bounds, self.crs_plot)
-                )
-
+                clip_shp = self._make_rect_poly(
+                    *self.crs_plot.boundary.bounds, self.crs_plot
+                ).to_crs(gdf.crs)
             else:
                 raise TypeError("EOmaps: clip can only be None, 'crs' or 'extent'")
+
+            clipgdf = gdf.clip(clip_shp)
+
+            if how.endswith("_invert"):
+                clipgdf = clipgdf.symmetric_difference(clip_shp)
 
             return clipgdf
 
@@ -1464,9 +1500,15 @@ class Maps(object):
                   the shapes with respect to the crs-boundary. (slower but more robust)
                   The following logical operations are supported:
 
-                  - "gdal_SymmetricDifference"
-                  - "gdal_Intersection"
-                  - "gdal_Difference
+                  - "gdal_SymDifference" : symmetric difference
+                  - "gdal_Intersection" : intersection
+                  - "gdal_Difference" : difference
+                  - "gdal_Union" : union
+
+                If a suffix "_invert" is added to the clip-string (e.g. "crs_invert"
+                or "gdal_Intersection_invert") the obtained (clipped) polygons will be
+                inverted.
+
 
                 >>> mg = MapsGrid(2, 3, crs=3035)
                 >>> mg.m_0_0.add_feature.preset.ocean(use_gpd=True)
