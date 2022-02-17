@@ -314,6 +314,8 @@ class Maps(object):
             layer=layer,
         )
 
+        return m
+
     @property
     @lru_cache()
     @wraps(cb_container)
