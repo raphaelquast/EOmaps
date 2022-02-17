@@ -55,6 +55,7 @@ from ._containers import (
 
 from ._cb_container import cb_container
 from .scalebar import ScaleBar, Compass
+from .projections import Equi7Grid_projection
 
 try:
     import mapclassify
@@ -150,6 +151,7 @@ class Maps(object):
     """
 
     CRS = ccrs
+    CRS.Equi7Grid_projection = Equi7Grid_projection
 
     # mapclassify.CLASSIFIERS
     _classifiers = (
