@@ -6,18 +6,22 @@ except ImportError:
     equ7_OK = False
 
 from pathlib import Path
+
 from shapely.geometry import shape
+import shapefile
+
 from cartopy import crs as ccrs
 from pyproj import CRS
-import shapefile
 
 
 class Equi7Grid_projection(ccrs.Projection):
     """
-    Equi7Grid projection support for cartopy.
+    Equi7Grid projection for cartopy.
 
     >>> m = Maps(Equi7Grid_projection("EU"))
     >>> m.add_feature.preset.coastline()
+    >>> m.ax.add_geometries([m.ax.projection.equi7_zone_polygon],
+    >>>                     m.ax.projection, fc="none", ec="r")
 
     possible subgrid's are:
         - "EU": Europe
@@ -51,18 +55,20 @@ class Equi7Grid_projection(ccrs.Projection):
 
         self.subgrid = subgrid
 
-        crs = CRS.from_wkt(equi7grid.Equi7Grid._static_data[self.subgrid]["wkt"])
+        self.wkt = CRS.from_wkt(equi7grid.Equi7Grid._static_data[self.subgrid]["wkt"])
 
         with shapefile.Reader(str(shppath)) as r:
             projpoly = shape(r.shape())
 
         b = projpoly.bounds
-        proj4params = crs
+        proj4params = self.wkt
 
         super().__init__(proj4params, *args, **kwargs)
 
-        self._boundary = projpoly.boundary
+        self._boundary = projpoly.boundary.envelope
         self.bounds = [b[0], b[2], b[1], b[3]]
+
+        self.equi7_zone_polygon = projpoly
 
     @property
     def boundary(self):
