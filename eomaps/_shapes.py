@@ -110,7 +110,7 @@ class shapes(object):
             if radius_crs == "in":
                 # radiusx = np.median(np.abs(np.diff(np.unique(m._props["xorig"])))) / 2.0
                 # radiusy = np.median(np.abs(np.diff(np.unique(m._props["yorig"])))) / 2.0
-                print("EOmaps: Estimating average pixel radius ...")
+                print("EOmaps: Estimating average pixel radius (in data-crs)...")
                 in_tree = cKDTree(
                     np.stack(
                         [
@@ -136,6 +136,7 @@ class shapes(object):
                 # radiusx = np.median(np.abs(np.diff(np.unique(m._props["x0"])))) / 2.0
                 # radiusy = np.median(np.abs(np.diff(np.unique(m._props["y0"])))) / 2.0
                 if not hasattr(m, "tree"):
+                    print("EOmaps: Estimating average pixel radius (in plot-crs) ...")
                     tree = cKDTree(
                         np.stack(
                             [
@@ -156,6 +157,8 @@ class shapes(object):
 
                 dists, pts = tree.query(tree.data, 3)
                 radiusx = radiusy = np.median(dists) / 2
+                print(f"EOmaps: The estimated radius is: {radiusx:.4f}")
+
             else:
                 raise AssertionError(
                     "radius can only be estimated if radius_crs is 'in' or 'out'!"
