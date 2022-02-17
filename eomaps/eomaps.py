@@ -271,6 +271,49 @@ class Maps(object):
     def ax(self):
         return self.figure.ax
 
+    def new_layer(
+        self,
+        copy_data_specs=False,
+        copy_plot_specs=True,
+        copy_classify_specs=False,
+        copy_shape=True,
+        layer=None,
+    ):
+        """
+        Create a new Maps-object that shares the same plot-axes.
+
+        Parameters
+        ----------
+        copy_data_specs, copy_shape, copy_plot_specs, copy_classify_specs : bool
+            Indicator if the corresponding properties should be copied to
+            the new layer. By default, only "plot_specs" and the "shape" are copied.
+        layer : int
+            The layer index at which map-features are plotted by default.
+            The default is None in which case the layer of the parent object is used.
+
+        Returns
+        -------
+        eomaps.Maps
+            A connected copy of the Maps-object that shares the same plot-axes.
+
+        See Also
+        --------
+        copy : general way for copying Maps objects
+        """
+
+        if layer is None:
+            layer = self.layer
+
+        return self.copy(
+            data_specs=copy_data_specs,
+            plot_specs=copy_plot_specs,
+            classify_specs=copy_classify_specs,
+            shape=copy_shape,
+            parent=self,
+            gs_ax=self.figure.ax,
+            layer=layer,
+        )
+
     @property
     @lru_cache()
     @wraps(cb_container)
@@ -469,49 +512,6 @@ class Maps(object):
 
         m.figure.ax.callbacks.connect("xlim_changed", parent_xlims_change)
         m.figure.ax.callbacks.connect("ylim_changed", parent_ylims_change)
-
-    def new_layer(
-        self,
-        copy_data_specs=False,
-        copy_plot_specs=True,
-        copy_classify_specs=False,
-        copy_shape=True,
-        layer=None,
-    ):
-        """
-        Create a new Maps-object that shares the same plot-axes.
-
-        Parameters
-        ----------
-        copy_data_specs, copy_shape, copy_plot_specs, copy_classify_specs : bool
-            Indicator if the corresponding properties should be copied to
-            the new layer. By default, only "plot_specs" and the "shape" are copied.
-        layer : int
-            The layer index at which map-features are plotted by default.
-            The default is None in which case the layer of the parent object is used.
-
-        Returns
-        -------
-        eomaps.Maps
-            A connected copy of the Maps-object that shares the same plot-axes.
-
-        See Also
-        --------
-        copy : general way for copying Maps objects
-        """
-
-        if layer is None:
-            layer = self.layer
-
-        return self.copy(
-            data_specs=copy_data_specs,
-            plot_specs=copy_plot_specs,
-            classify_specs=copy_classify_specs,
-            shape=copy_shape,
-            parent=self,
-            gs_ax=self.figure.ax,
-            layer=layer,
-        )
 
     def copy(
         self,
