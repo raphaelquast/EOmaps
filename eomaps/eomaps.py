@@ -215,7 +215,6 @@ class Maps(object):
         self.plot_specs = plot_specs(
             self,
             label=None,
-            title=None,
             cmap=plt.cm.viridis.copy(),
             histbins=256,
             tick_precision=2,
@@ -687,7 +686,7 @@ class Maps(object):
 
     def set_plot_specs(self, **kwargs):
         """
-        Set the plot-specifications (title, label, colormap, crs, etc.)
+        Set the plot-specifications (label, colormap, crs, etc.)
 
         Use this function to update multiple data-specs in one go
         Alternatively you can set the data-specifications via
@@ -698,10 +697,6 @@ class Maps(object):
         ----------
         label : str, optional
             The colorbar-label.
-            If None, the name of the parameter will be used.
-            The default is None.
-        title : str, optional
-            The plot-title.
             If None, the name of the parameter will be used.
             The default is None.
         cmap : str or matplotlib.colormap, optional
@@ -2139,10 +2134,6 @@ class Maps(object):
             if layer in self.BM._bg_layers and dynamic is False:
                 del self.BM._bg_layers[layer]
             self.BM._refetch_bg = True
-
-            title = self.plot_specs["title"]
-            if title is not None:
-                ax.set_title(title)
 
             if self.data is None:
                 return

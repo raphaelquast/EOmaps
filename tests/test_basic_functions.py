@@ -36,7 +36,6 @@ class TestBasicPlotting(unittest.TestCase):
         m.add_feature.preset.coastline()
         m.set_data_specs(data=self.data, xcoord="x", ycoord="y", crs=3857)
         m.set_plot_specs(
-            title="asdf",
             label="bsdf",
             histbins=100,
             density=True,
@@ -128,7 +127,6 @@ class TestBasicPlotting(unittest.TestCase):
         for cpos in ["ul", "ur", "ll", "lr", "c"]:
             m.set_data_specs(xcoord="x", ycoord="y", in_crs=3857)
             m.set_plot_specs(
-                title="asdf",
                 label="bsdf",
                 cpos_radius=2,
                 histbins=100,
@@ -463,7 +461,7 @@ class TestBasicPlotting(unittest.TestCase):
     def test_MapsGrid(self):
         mg = MapsGrid(2, 2, crs=4326)
         mg.set_data(data=self.data, xcoord="x", ycoord="y", in_crs=3857)
-        mg.set_plot_specs(title="asdf", label="bsdf")
+        mg.set_plot_specs(label="bsdf")
         mg.set_classify_specs(scheme=Maps.CLASSIFIERS.EqualInterval, k=4)
         mg.set_shape.rectangles()
         mg.plot_map()
@@ -488,7 +486,7 @@ class TestBasicPlotting(unittest.TestCase):
         )
 
         mg.set_data(data=self.data, xcoord="x", ycoord="y", in_crs=3857)
-        mg.set_plot_specs(title="asdf", label="bsdf")
+        mg.set_plot_specs(label="bsdf")
         mg.set_classify_specs(scheme=Maps.CLASSIFIERS.EqualInterval, k=4)
 
         for m in mg:
@@ -705,7 +703,7 @@ class TestBasicPlotting(unittest.TestCase):
 
             print(title)
 
-            m.plot_specs.title = title
+            m.ax.set_title(title)
             getattr(m.set_shape, i[0])(**i[1])
 
             m.plot_map(edgecolor="none", pick_distance=5)

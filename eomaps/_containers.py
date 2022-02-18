@@ -359,12 +359,13 @@ class plot_specs(object):
 
     def __setitem__(self, key, val):
         key = self._sanitize_keys(key)
-        return setattr(self, key, val)
+        if key is not None:
+            return setattr(self, key, val)
 
     def __setattr__(self, key, val):
         key = self._sanitize_keys(key)
-
-        super().__setattr__(key, val)
+        if key is not None:
+            super().__setattr__(key, val)
 
     def __iter__(self):
         return iter(self[self.keys()].items())
@@ -374,11 +375,20 @@ class plot_specs(object):
         if key.startswith("_"):
             return key
 
-        assert key not in ["crs", "plot_crs"], (
-            "\n▲▲▲ In EOmaps > v3.0 the plot-crs is set on "
-            + "initialization of the Maps-object!"
-            + "\n▲▲▲ Use `m = Maps(crs=...)` instead to set the plot-crs!\n"
-        )
+        if key in ["crs", "plot_crs"]:
+            warn(
+                "\n▲▲▲ In EOmaps > v3.0 the plot-crs is set on "
+                + "initialization of the Maps-object!"
+                + "\n▲▲▲ Use `m = Maps(crs=...)` instead to set the plot-crs!\n"
+            )
+            return None
+
+        if key in ["title"]:
+            warn(
+                "\n▲▲▲ In EOmaps > v3.1 passing a 'title' to the plot-specs is depreciated. "
+                + "\n▲▲▲ Use `m.ax.set_title()` instead!\n"
+            )
+            return None
 
         assert key in self.keys(), f"{key} is not a valid plot-specs key!"
 
@@ -386,7 +396,7 @@ class plot_specs(object):
 
     def keys(self):
         # fmt: off
-        return ('label', 'title', 'cmap', 'histbins', 'tick_precision',
+        return ('label', 'cmap', 'histbins', 'tick_precision',
                 'vmin', 'vmax', 'cpos', 'cpos_radius', 'alpha', 'density')
         # fmt: on
 
@@ -401,7 +411,7 @@ class plot_specs(object):
     @property
     @lru_cache()
     def plot_crs(self):
-        return self._m._plot_crs
+        return self._m._crs_plot
 
 
 class classify_specs(object):

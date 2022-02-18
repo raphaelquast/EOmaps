@@ -21,9 +21,9 @@ data_mask = data[data.param < 0]
 
 # --------- initialize a Maps object and plot a basic map
 m = Maps(Maps.CRS.Orthographic(), figsize=(10, 6))
+m.ax.set_title("Wooohoo, a flashy map-widget with static indicators!")
 m.set_data(data=data_OK, xcoord="lon", ycoord="lat", in_crs=4326)
 m.set_plot_specs(
-    title="Wooohoo, a flashy map-widget with static indicators!",
     histbins=200,
     cmap="Spectral_r",
 )

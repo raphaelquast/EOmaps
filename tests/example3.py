@@ -20,7 +20,6 @@ m.set_data(data=data, xcoord="lon", ycoord="lat", in_crs=4326)
 # --------- set the appearance of the plot
 m.set_plot_specs(
     label="some parameter",  # set the label of the colorbar
-    title="What a nice figure",  # set the title of the figure
     cmap="RdYlBu",  # set the colormap
     histbins="bins",  # use the histogram-bins as set by the classification scheme
     vmin=35,  # set all values below vmin to vmin
@@ -30,7 +29,7 @@ m.set_plot_specs(
     alpha=0.75,  # add some transparency
     density=True,  # make the histogram values represent the "probability-density"
 )
-
+m.ax.set_title("What a nice figure")
 m.set_shape.geod_circles(radius=30000)  # plot geodesic-circles with 30 km radius
 
 # set the classification scheme that should be applied to the data
