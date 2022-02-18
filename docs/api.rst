@@ -42,8 +42,8 @@ Once you have created your first ``Maps`` object, you can create **additional la
     Maps.copy
 
 
-🔵 Setting the data and shape
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+🔵 Setting the data and plot-shape
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 To assign a dataset to a ``Maps`` object, use ``m.set_data``.
 The shapes that are used to represent the data-points are then assigned via ``m.set_shape``.
@@ -432,25 +432,6 @@ WebMap services (TS/WMS/WMTS) can be attached to the map via:
 ``< SERVICE >`` hereby specifies the pre-defined WebMap service you want to add,
 and ``< LAYER >`` indicates the actual layer-name.
 
-.. note::
-    It is highly recommended (and sometimes even required) to use the native crs
-    of the WebMap service in order to avoid re-projecting the images
-    (which degrades image quality and sometimes takes quite a lot of time to finish...)
-
-
-.. note::
-    Services might be nested directory structures!
-    The actual layer is always added via the `add_layer` directive.
-
-        :code:`m.add_wms.<...>. ... .<...>.add_layer.<...>()`
-
-    Some of the services dynamically fetch the structure via HTML-requests.
-    Therefore it can take a short moment before autocompletion is capable of
-    showing you the available options!
-    A list of available layers from a sub-folder can be fetched via:
-
-        :code:`m.add_wms.<...>. ... .<...>.layers`
-
 .. code-block:: python
 
     m = Maps(Maps.CRS.GOOGLE_MERCATOR) # (the native crs of the service)
@@ -466,8 +447,16 @@ and ``< LAYER >`` indicates the actual layer-name.
     Maps.add_wms
 
 
+.. note::
+    It is highly recommended (and sometimes even required) to use the native crs
+    of the WebMap service in order to avoid re-projecting the images
+    (which degrades image quality and sometimes takes quite a lot of time to finish...)
 
-Global WebMap services:
+    - most services come either in ``epsg=4326`` or in ``Maps.CRS.GOOGLE_MERCATOR`` projection
+
+
+Pre-defined (global) WebMap services:
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. currentmodule:: eomaps._containers.wms_container
 
@@ -495,6 +484,21 @@ Services specific for Austria (Europa)
 
     Austria.AT_basemap
     Austria.Wien_basemap
+
+
+.. note::
+    Services might be nested directory structures!
+    The actual layer is always added via the `add_layer` directive.
+
+        :code:`m.add_wms.<...>. ... .<...>.add_layer.<...>()`
+
+    Some of the services dynamically fetch the structure via HTML-requests.
+    Therefore it can take a short moment before autocompletion is capable of
+    showing you the available options!
+    A list of available layers from a sub-folder can be fetched via:
+
+        :code:`m.add_wms.<...>. ... .<...>.layers`
+
 
 .. _geodataframe:
 
