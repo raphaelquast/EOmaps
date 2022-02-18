@@ -355,14 +355,19 @@ class Maps(object):
         return cartopy_proj
 
     def _init_figure(self, gs_ax=None, plot_crs=None, **kwargs):
-        if self.figure.f is None:
+        if self.parent.figure.f is None:
             self._f = plt.figure(**kwargs)
+            newfig = True
+        else:
+            newfig = False
 
         if isinstance(gs_ax, plt.Axes):
             # in case an axis is provided, attempt to use it
             ax = gs_ax
             gs = gs_ax.get_gridspec()
+            newax = False
         else:
+            newax = True
             # create a new axis
             if gs_ax is None:
                 gs = GridSpec(
@@ -388,13 +393,15 @@ class Maps(object):
         # initialize the callbacks
         self.cb._init_cbs()
 
-        def lims_change(*args, **kwargs):
-            self.BM._refetch_bg = True
+        if newax:  # only if a new axis has been created
 
-        self.figure.ax.callbacks.connect("xlim_changed", lims_change)
-        self.figure.ax.callbacks.connect("ylim_changed", lims_change)
+            def lims_change(*args, **kwargs):
+                self.BM._refetch_bg = True
 
-        if self.parent is self:
+            self.figure.ax.callbacks.connect("xlim_changed", lims_change)
+            self.figure.ax.callbacks.connect("ylim_changed", lims_change)
+
+        if newfig:  # only if a new figure has been initialized
             _ = self._draggable_axes
 
             if plt.get_backend() == "module://ipympl.backend_nbagg":
@@ -406,14 +413,14 @@ class Maps(object):
             else:
                 plt.ion()
 
-        # attach a callback that is executed when the figure is closed
-        self._cid_onclose = self.figure.f.canvas.mpl_connect(
-            "close_event", self._on_close
-        )
-        # attach a callback that is executed if the figure canvas is resized
-        self._cid_resize = self.figure.f.canvas.mpl_connect(
-            "resize_event", self._on_resize
-        )
+            # attach a callback that is executed when the figure is closed
+            self._cid_onclose = self.figure.f.canvas.mpl_connect(
+                "close_event", self._on_close
+            )
+            # attach a callback that is executed if the figure canvas is resized
+            self._cid_resize = self.figure.f.canvas.mpl_connect(
+                "resize_event", self._on_resize
+            )
 
         plt.show()
 
