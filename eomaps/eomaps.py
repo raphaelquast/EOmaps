@@ -233,12 +233,12 @@ class Maps(object):
                 raise AssertionError(
                     "You cannot set the crs if you already provide an explicit axes!"
                 )
-            self._plot_crs = gs_ax.projection
+            self._crs_plot = gs_ax.projection
         else:
             if crs is None:
                 crs = 4326
 
-            self._plot_crs = crs
+            self._crs_plot = crs
 
         # default classify specs
         self.classify_specs = classify_specs(self)
@@ -814,7 +814,7 @@ class Maps(object):
         """
         The crs used for plotting.
         """
-        return self._get_cartopy_crs(self._plot_crs)
+        return self._get_cartopy_crs(self._crs_plot)
 
     @property
     @lru_cache()
@@ -960,7 +960,7 @@ class Maps(object):
         # in case we use in_crs == plot_crs
 
         crs1 = CRS.from_user_input(in_crs)
-        crs2 = CRS.from_user_input(self._plot_crs)
+        crs2 = CRS.from_user_input(self._crs_plot)
 
         transformer = Transformer.from_crs(
             crs1,
@@ -1995,7 +1995,7 @@ class Maps(object):
 
         if self.shape.name == "shade_raster":
             crs1 = CRS.from_user_input(self.data_specs.crs)
-            crs2 = CRS.from_user_input(self._plot_crs)
+            crs2 = CRS.from_user_input(self._crs_plot)
             assert crs1.equals(crs2), (
                 "EOmaps: how='Raster' can only be used if data-crs"
                 + " and plot-crs are equal!"
