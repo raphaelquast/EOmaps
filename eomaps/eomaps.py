@@ -56,6 +56,7 @@ from ._containers import (
 from ._cb_container import cb_container
 from .scalebar import ScaleBar, Compass
 from .projections import Equi7Grid_projection
+from .reader import read_file, from_file, new_layer_from_file
 
 try:
     import mapclassify
@@ -267,9 +268,22 @@ class Maps(object):
                 + "'conda install -c conda-forge geopandas'"
             )
 
+    from_file = from_file
+
+    @property
+    @wraps(read_file)
+    def read_file(self):
+        return read_file
+
     @property
     def ax(self):
         return self.figure.ax
+
+    @property
+    @wraps(new_layer_from_file)
+    @lru_cache()
+    def new_layer_from_file(self):
+        return new_layer_from_file(self)
 
     def new_layer(
         self,
