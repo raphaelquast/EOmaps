@@ -55,8 +55,6 @@ def setup(app):
 
 from eomaps import Maps  # to run __init__.py
 
-m = Maps()
-
 # -- Project information
 
 project = "EOmaps"
