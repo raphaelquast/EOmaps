@@ -1139,6 +1139,11 @@ class Maps(object):
         elif orientation == "vertical":
             cb_orientation = "horizontal"
 
+        if histbins == "bins":
+            assert (
+                classified
+            ), "EOmaps: using histbins='bins' is only possible for classified data!"
+
         n_cmap = cm.ScalarMappable(cmap=cmap, norm=norm)
         n_cmap.set_array(np.ma.masked_invalid(z_data))
         cb = plt.colorbar(
@@ -2281,6 +2286,7 @@ class Maps(object):
         orientation="horizontal",
         label=None,
         density=None,
+        histbins=None,
         tick_precision=None,
         top=0.05,
         bottom=0.1,
@@ -2299,12 +2305,36 @@ class Maps(object):
 
         Parameters
         ----------
-        gs : matpltolib.gridspec.GridSpec
-            the gridspec to derive the colorbar-axes from.
+        gs : float or matpltolib.gridspec.SubplotSpec
+            - if float: The fraction of the the parent axes to use for the colorbar.
+              (The colorbar will "steal" some space from the parent axes.)
+            - if SubplotSpec : A SubplotSpec instance that will be used to initialize
+              the colorbar.
+
+            The default is 0.2.
         orientation : str
             The orientation of the colorbar ("horizontal" or "vertical")
             The default is "horizontal"
+        label : str or None
+            The label of the colorbar.
+            If None, the parameter-name (e.g. `m.data_specs.parameter`) is used.
+            The default is None.
+        density : bool or None
+            Indicator if the y-axis of the histogram should represent the
+            probability-density (True) or the number of counts per bin (False)
+            If None, the value assigned in `m.plot_specs.density` is used.
+            The default is None.
+        histbins : int, list, tuple, array or "bins", optional
+            - If int: The number of histogram-bins to use for the colorbar.
+            - If list, tuple or numpy-array: the bins to use
+            - If "bins": use the bins obtained from the classification
+              (ONLY possible if a classification scheme is used!)
 
+            The default is 256.
+        tick_precision : int or None
+            The precision of the tick-labels in the colorbar. The default is 2.
+            If None, the value assigned in `m.plot_specs.tick_precision` is used.
+            The default is None.
         top, bottom, left, right : float
             The padding between the colorbar and the parent axes (as fraction of the
             plot-height (if "horizontal") or plot-width (if "vertical")
@@ -2424,6 +2454,7 @@ class Maps(object):
             label=label,
             density=density,
             tick_precision=tick_precision,
+            histbins=histbins,
         )
 
         self._ax_cb = ax_cb
