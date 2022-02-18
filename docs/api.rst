@@ -87,7 +87,7 @@ Possible shapes that work nicely for datasets with up to 1M data-points:
 For extremely large datasets (>1M datapoints), it is recommended to use
 "shading" instead of representing each data-point with a projected polygon.
 
-Possible shapes that can be used to quickly generate a plot for millions of pixels are:
+Possible shapes that can be used to quickly generate a plot for millions of datapoints are:
 
 .. autosummary::
     :toctree: generated
