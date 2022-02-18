@@ -233,11 +233,12 @@ class Maps(object):
                 raise AssertionError(
                     "You cannot set the crs if you already provide an explicit axes!"
                 )
+            self._plot_crs = gs_ax.projection
         else:
             if crs is None:
                 crs = 4326
 
-            self.plot_specs._plot_crs = crs
+            self._plot_crs = crs
 
         # default classify specs
         self.classify_specs = classify_specs(self)
@@ -546,14 +547,10 @@ class Maps(object):
             a new Maps class.
         """
 
-        plot_spec_list = [i for i in self.plot_specs.keys() if i != "plot_crs"]
-        if "crs" not in kwargs and "gs_ax" not in kwargs:
-            kwargs["crs"] = self.plot_specs["plot_crs"]
-
         copy_cls = Maps(**kwargs)
         if plot_specs is True:
             copy_cls.set_plot_specs(
-                **{key: copy.deepcopy(self.plot_specs[key]) for key in plot_spec_list}
+                **{key: copy.deepcopy(val) for key, val in self.plot_specs}
             )
 
         if data_specs is True:
@@ -812,11 +809,12 @@ class Maps(object):
         return x, y
 
     @property
+    @lru_cache()
     def crs_plot(self):
         """
-        The crs used for plotting. (A shortcut for `m.get_crs("plot")`)
+        The crs used for plotting.
         """
-        return self.get_crs("plot")
+        return self._get_cartopy_crs(self._plot_crs)
 
     @property
     @lru_cache()
@@ -860,7 +858,7 @@ class Maps(object):
         if crs == "in":
             crs = self.data_specs.crs
         elif crs == "out" or crs == "plot":
-            crs = self.plot_specs.plot_crs
+            crs = self.crs_plot
 
         if not isinstance(crs, CRS):
             crs = CRS.from_user_input(crs)
@@ -962,10 +960,7 @@ class Maps(object):
         # in case we use in_crs == plot_crs
 
         crs1 = CRS.from_user_input(in_crs)
-        if hasattr(self.plot_specs, "_plot_crs"):
-            crs2 = CRS.from_user_input(self.plot_specs._plot_crs)
-        else:
-            crs2 = CRS.from_user_input(self.parent.plot_specs._plot_crs)
+        crs2 = CRS.from_user_input(self._plot_crs)
 
         transformer = Transformer.from_crs(
             crs1,
@@ -1413,7 +1408,7 @@ class Maps(object):
                     *self.crs_plot.boundary.bounds, self.crs_plot
                 ).to_crs(gdf.crs)
             else:
-                raise TypeError("EOmaps: clip can only be None, 'crs' or 'extent'")
+                raise TypeError(f"EOmaps: '{how}' is not a valid clipping method")
 
             clipgdf = gdf.clip(clip_shp)
 
@@ -2000,10 +1995,7 @@ class Maps(object):
 
         if self.shape.name == "shade_raster":
             crs1 = CRS.from_user_input(self.data_specs.crs)
-            if hasattr(self.plot_specs, "_plot_crs"):
-                crs2 = CRS.from_user_input(self.plot_specs._plot_crs)
-            else:
-                crs2 = CRS.from_user_input(self.parent.plot_specs._plot_crs)
+            crs2 = CRS.from_user_input(self._plot_crs)
             assert crs1.equals(crs2), (
                 "EOmaps: how='Raster' can only be used if data-crs"
                 + " and plot-crs are equal!"

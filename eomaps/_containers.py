@@ -331,10 +331,6 @@ class plot_specs(object):
         for key in kwargs:
             assert key in self.keys(), f"'{key}' is not a valid data-specs key"
 
-        for key in self.keys():
-            if key == "plot_crs":
-                continue
-
             setattr(self, key, kwargs.get(key, None))
 
     def __repr__(self):
@@ -378,14 +374,11 @@ class plot_specs(object):
         if key.startswith("_"):
             return key
 
-        if key == "plot_epsg":
-            warn(
-                "EOmaps: the plot-spec 'plot_epsg' has been depreciated... "
-                + "try to use 'crs' or 'plot_crs' instead!"
-            )
-            key = "plot_crs"
-        elif key == "crs":
-            key = "plot_crs"
+        assert key not in ["crs", "plot_crs"], (
+            "\n▲▲▲ In EOmaps > v3.0 the plot-crs is set on "
+            + "initialization of the Maps-object!"
+            + "\n▲▲▲ Use `m = Maps(crs=...)` instead to set the plot-crs!\n"
+        )
 
         assert key in self.keys(), f"{key} is not a valid plot-specs key!"
 
@@ -393,7 +386,7 @@ class plot_specs(object):
 
     def keys(self):
         # fmt: off
-        return ('label', 'title', 'cmap', 'plot_crs', 'histbins', 'tick_precision',
+        return ('label', 'title', 'cmap', 'histbins', 'tick_precision',
                 'vmin', 'vmax', 'cpos', 'cpos_radius', 'alpha', 'density')
         # fmt: on
 
@@ -408,20 +401,7 @@ class plot_specs(object):
     @property
     @lru_cache()
     def plot_crs(self):
-        if self._m.figure.ax is not None:
-            return self._m.figure.ax.projection
-
-        return self._plot_crs
-
-    @plot_crs.setter
-    def plot_crs(self, crs):
-        warn(
-            (
-                "\n▲▲▲ In EOmaps > v3.0 the plot-crs is set on "
-                + "initialization of the Maps-object!"
-                + "\n▲▲▲ Use `m = Maps(crs=...)` instead to set the plot-crs!\n"
-            )
-        )
+        return self._m._plot_crs
 
 
 class classify_specs(object):
@@ -792,7 +772,6 @@ class NaturalEarth_features(object):
                         uselayer = m.layer
                     else:
                         uselayer = layer
-
                     self.feature._kwargs.update(kwargs)
                     art = m.figure.ax.add_feature(self.feature)
 
