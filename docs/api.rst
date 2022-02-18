@@ -5,18 +5,21 @@
 ---------
 
 🌐 Initialization of Maps objects
-.................................
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 | EOmaps is all about ``Maps`` objects.
-| To start creating a new map (in this case a plot in ``epsg=4326``), simply use:
+| To start creating a new map (in this case a plot in ``epsg=4326``, e.g. lon/lat projection), simply use:
 
 .. code-block:: python
 
     from eomaps import Maps
     m = Maps(crs=4326)
 
-If you provide an ``int`` as crs, it will be identified as epsg-code.
-All other CRS usable for plotting are accessible via ``Maps.CRS``, e.g.: ``crs=Maps.CRS.Orthographic()``.
+Possible ways for specifying the crs for plotting are:
+
+- if you provide an ``integer``, it is identified as an epsg-code.
+- All other CRS usable for plotting are accessible via ``Maps.CRS``,
+  e.g.: ``crs=Maps.CRS.Orthographic()`` or ``crs=Maps.CRS.Equi7Grid_projection("EU")``.
 
 Once you have created your first ``Maps`` object, you can create **additional layers on the same map** by using:
 
@@ -26,8 +29,6 @@ Once you have created your first ``Maps`` object, you can create **additional la
 
 (``m2`` is then just another ``Maps`` object that shares the figure and plot-axes with ``m``)
 
-
-To get full control on how to copy existing ``Maps``-objects (and share selected specifications), have a look at ``m.copy()``.
 
 .. currentmodule:: eomaps
 
@@ -42,10 +43,10 @@ To get full control on how to copy existing ``Maps``-objects (and share selected
 
 
 🔵 Setting the data and shape
-..............................
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 To assign a dataset to a ``Maps`` object, use ``m.set_data``.
-The shapes that are used to represent the data-points are set via ``m.set_shape``.
+The shapes that are used to represent the data-points are then assigned via ``m.set_shape``.
 
 .. code-block:: python
 
@@ -53,6 +54,10 @@ The shapes that are used to represent the data-points are set via ``m.set_shape`
     m.set_data(data, xcoord, ycoord, parameter)
     m.set_shape.rectangles(radius=1, radius_crs=4326)
     m.plot_map()
+
+    m2 = m.new_layer()
+    m2.set_data(...)
+    ...
 
 .. currentmodule:: eomaps
 
@@ -103,9 +108,9 @@ is performed (resampling based on the mean-value is used by default).
 
 
 🌍 Customizing the plot
-........................
+~~~~~~~~~~~~~~~~~~~~~~~
 
-The appearance of the plot can be adjusted by setting the following properties
+The general appearance of the plot can be adjusted by setting the ``plot_specs`` and ``classify_specs``
 of the Maps object:
 
 .. currentmodule:: eomaps
@@ -118,48 +123,49 @@ of the Maps object:
     Maps.set_plot_specs
     Maps.set_classify_specs
 
-Alternatively, you can also get/set the properties with:
+The available classifiers that can be used to classify the data (provided by ``mapclassify``) are accessible via `Maps.CLASSIFIERS`:
 
 .. code-block:: python
 
     m = Maps()
-    m.data_specs.< property > = ...
-    m.plot_specs.< property > = ...
-    m.classify_specs.< property > = ...
+    m.set_data(...)
+    m.set_shape.ellipses(...)
 
-The available classifiers that can be used to classify the data are accessible via `Maps.CLASSIFIERS`:
-
-.. code-block:: python
-
-    m = Maps()
     m.set_classify_specs(Maps.CLASSFIERS.Quantiles, k=5)
+    m.classify_specs.k = 10 # alternative way for setting classify-specs
+
+    m.set_plot_specs(cmap="RdBu", histbins=20)
+    m.plot_specs.alpha = .5 # alternative way for setting plot-specs
+
 
 🗺 Plot the map and save it
-...........................
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 If you want to plot a map based on a dataset, first set the data and then
-call :code:`m.plot_map()`:
+call ``m.plot_map()``.
+
+Any additional keyword-arguments passed to ``m.plot_map()`` are forwarded to the actual
+plot-command for the selected shape.
+
+Some useful arguments that are supported by most shapes (except "shade"-shapes) are:
+
+    - "fc" or "facecolor" : the face-color of the shapes
+    - "ec" or "edgecolor" : the edge-color of the shapes
+    - "lw" or "linewidth" : the linewidth of the shapes
+    - "alpha" : the alpha-transparency
 
 .. code-block:: python
 
     m = Maps()
-    m.set_data( < the data specifications > )
-    m.plot_map()
+    m.set_data(...)
+    ...
+    m.plot_map(fc="none", ec="g", lw=2, alpha=0.5)
 
-you can then add a colorbar or to the map via:
+You can then continue to add :ref:`colorbar`, :ref:`annotations_and_markers`,
+:ref:`scalebar`, :ref:`compass`,  :ref:`webmap_layers` or :ref:`geodataframe` to the map,
+or you can start to add :ref:`callbacks`.
 
-.. code-block:: python
-
-    m.add_colorbar()
-
-or add a WebMap layer via:
-
-.. code-block:: python
-
-    m.add_wms.< WebMap service >. ... .add_layer.< Layer Name >()
-
-
-Once the map is generated, a snapshot of the map can be saved at any time by using:
+Once the map is ready, a snapshot of the map can be saved at any time by using:
 
 .. code-block:: python
 
@@ -178,7 +184,7 @@ Once the map is generated, a snapshot of the map can be saved at any time by usi
 
 
 𝄜 Multiple maps in one figure
-..............................
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 ``MapsGrid`` objects can be used to create (and manage) multiple maps in one figure.
 
@@ -199,16 +205,50 @@ and provides convenience-functions to perform actions on all maps of the figure.
     for m in mgrid:
         ...
 
-❗ NOTE: It is also possible to customize the positioning of the axes and **combine EOmaps plots with ordinary matplotlib axes** in one grid via the optional ``m_inits`` and ``ax_inits`` arguments!
+Custom grids and mixed axes
+***************************
 
-- if ``m_inits`` is provided, the init-specs are used to initialize ``Maps`` objects (accessible via ``mgrid.m_<key>``)
-- if ``ax_inits`` is provided, the init-specs are used to initialize ordinary matplotlib axes (accessible via ``mgrid.ax_<key>``)
+Fully customized grid-definitions can be specified by providing ``m_inits`` and/or ``ax_inits`` dictionaries
+of the following structure:
 
-- The initialization of the axes is based on matplotlib's `GridSpec <https://matplotlib.org/stable/api/_as_gen/matplotlib.gridspec.GridSpec.html>`_ functionality. All additional keyword-arguments (``width_ratios, height_ratios, etc.``) are passed to the initialization of the GridSpec object.
+- The keys of the dictionary are used to identify the objects
+- The values of the dictionary are used to identify the position of the associated axes
+- The position can be either an integer ``N``, a tuple of integers or slices ``(row, col)``
+- Axes that span over multiple rows or columns, can be specified via ``slice(start, stop)``
 
-  - The position of the axes are specified as tuples ``(row, col)``
-  - Axes that span over multiple rows or columns, can be specified via ``slice(start, stop)``.
+.. code-block:: python
 
+    dict(
+        name1 = N  # position the axis at the Nth grid cell (counting firs)
+        name2 = (row, col), # position the axis at the (row, col) grid-cell
+        name3 = (row, slice(col_start, col_end)) # span the axis over multiple columns
+        name4 = (slice(row_start, row_end), col) # span the axis over multiple rows
+        )
+
+- ``m_inits`` is used to initialize ``Maps`` objects
+- ``ax_inits`` is used to initialize ordinary ``matplotlib`` axes
+
+The individual ``Maps``-objects and ``matpltolib-Axes`` are then accessible via:
+
+.. code-block:: python
+
+    mg = MapsGrid(2, 3,
+                  m_inits=dict(left=(0, 0), right=(0, 2)),
+                  ax_inits=dict(someplot=(1, slice(0, 3)))
+                  )
+    mg.m_left   # the Maps object with the name "left"
+    mg.m_right   # the Maps object with the name "right"
+
+    mg.ax_someplot   # the ordinary matplotlib-axis with the name "someplot"
+
+
+❗ NOTE: if ``m_inits`` and/or ``ax_inits`` are provided, ONLY the explicitly defined objects are initialized!
+
+
+- The initialization of the axes is based on matplotlib's `GridSpec <https://matplotlib.org/stable/api/_as_gen/matplotlib.gridspec.GridSpec.html>`_ functionality.
+  All additional keyword-arguments (``width_ratios, height_ratios, etc.``) are passed to the initialization of the ``GridSpec`` object.
+
+- To specify unique ``crs`` for each ``Maps`` object, provide a dictionary of ``crs`` specifications.
 
 .. code-block:: python
 
@@ -224,8 +264,8 @@ and provides convenience-functions to perform actions on all maps of the figure.
                      width_ratios=(1, 2),
                      height_ratios=(2, 1))
 
-    mgrid.m_top_row # a map extending over the entire top-row of the grid
-    mgrid.m_bottom_left # a map in the bottom left corner of the grid
+    mgrid.m_top_row # a map extending over the entire top-row of the grid (in epsg=4326)
+    mgrid.m_bottom_left # a map in the bottom left corner of the grid (in epsg=3857)
 
     mgrid.ax_bottom_right # an ordinary matplotlib axes in the bottom right corner of the grid
 
@@ -252,6 +292,7 @@ and provides convenience-functions to perform actions on all maps of the figure.
 
 
 
+.. _callbacks:
 
 🛸 Callbacks - make the map interactive!
 ----------------------------------------
@@ -271,7 +312,6 @@ They can be attached to a map via:
 .. currentmodule:: eomaps._cb_container.cb_container
 
 .. autosummary::
-    :toctree: generated
     :nosignatures:
     :template: only_names_in_toc.rst
 
@@ -282,29 +322,11 @@ They can be attached to a map via:
 
 
 `< CALLBACK >` indicates the action you want to assign o the event.
-There are many pre-defined callbacks but it is also possible to define custom
-functions and attach them to the map via:
-
-.. code-block:: python
-
-    def some_callback(self, asdf, **kwargs):
-        print("hello world")
-        print("the position of the clicked pixel", kwargs["pos"])
-        print("the data-index of the nearest datapoint", kwargs["ID"])
-        print("data-value of the nearest datapoint", kwargs["val"])
-
-        # `self` points to the underlying Maps-object, so you can
-        # access all properties of the Maps object via:
-        print("the plot-crs is:", self.plot_specs["plot_crs"])
-        ...
-        ...
-
-    m.cb.pick.attach(some_callback, double_click=False, button=1, asdf=1)
-
-
+There are many pre-defined callbacks, but it is also possible to define custom
+functions and attach them to the map.
 
 Pre-defined click & pick callbacks
-..................................
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Callbacks that can be used with both `m.cb.click` and `m.cb.pick`:
 
@@ -336,7 +358,7 @@ Callbacks that can be used only with `m.cb.pick`:
     highlight_geometry
 
 Pre-defined keypress callbacks
-..............................
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Callbacks that can be used with `m.cb.keypress`
 
@@ -350,7 +372,7 @@ Callbacks that can be used with `m.cb.keypress`
     switch_layer
 
 Pre-defined dynamic callbacks
-.............................
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Callbacks that can be used with `m.cb.dynamic`
 
@@ -363,6 +385,39 @@ Callbacks that can be used with `m.cb.dynamic`
 
     indicate_extent
 
+.. _webmap_layers:
+
+
+Custom callbacks
+~~~~~~~~~~~~~~~~
+
+Custom callback functions can be attached to the map via:
+
+.. code-block:: python
+
+    def some_callback(self, asdf, **kwargs):
+        print("hello world")
+        print("the position of the clicked pixel in plot-coordinates", kwargs["pos"])
+        print("the dataset-index of the nearest datapoint", kwargs["ID"])
+        print("data-value of the nearest datapoint", kwargs["val"])
+
+        # `self` points to the underlying Maps-object, so you can
+        # access all properties of the Maps object via:
+        print("the plot-crs is:", self.plot_specs["plot_crs"])
+        ...
+        ...
+
+    # attaching custom callbacks works completely similar for "click", "pick" and "keypress"!
+    m = Maps()
+    ...
+    m.cb.pick.attach(some_callback, double_click=False, button=1, asdf=1)
+    m.cb.click.attach(some_callback, double_click=False, button=2, asdf=1)
+    m.cb.keypress.attach(some_callback, key="x", asdf=1)
+
+
+- ❗ for pick callbacks, ``ID`` and ``val`` are not available!
+- ❗ for click callbacks the kwargs ``ID`` and ``val`` are not available!
+- ❗ for keypress callbacks the kwargs ``ID`` and ``val`` and ``pos`` are not available!
 
 🛰 WebMap service layers
 ------------------------
@@ -441,30 +496,47 @@ Services specific for Austria (Europa)
     Austria.AT_basemap
     Austria.Wien_basemap
 
+.. _geodataframe:
 
 🌵 GeoDataFrames and NaturalEarth features
 ------------------------------------------
-To add a ``geopandas.GeoDataFrame`` to a map, simply use ``m.add_gdf()``.
+
+A ``geopandas.GeoDataFrame`` can be added to the map via ``m.add_gdf()``.
+
+.. code-block:: python
+
+    import geopandas as gpd
+
+    gdf = gpd.GeoDataFrame(geometries=[...], crs=...)
+
+    m = Maps()
+    m.add_gdf(gdf, fc="r", ec="g", lw=2)
+
 
 It is possible to make the shapes of a ``GeoDataFrame`` pickable
 (e.g. usable with ``m.cb.pick`` callbacks) by providing a ``picker_name``
-and specifying a ``pick_method``.
+(and optionally specifying a ``pick_method``).
 
 Once the ``picker_name`` is specified, pick-callbacks can be attached via:
 
 - ``m.cb.pick[<PICKER NAME>].attach.< CALLBACK >()``
 
-For example, to highlight the clicked country, you could use:
+| For example, to highlight the clicked country, you could use:
 
 .. code-block:: python
 
     m = Maps()
+    # get the GeoDataFrame for a given NaturalEarth feature
     gdf = m.add_feature.cultural_110m.admin_0_countries.get_gdf()
+
+    # pick the shapes of the GeoDataFrame based on a "contains" query
     m.add_gdf(gdf, picker_name="countries", pick_method="contains")
+
+    # temporarily highlight the picked geometry
     m.cb.pick["countries"].attach.highlight_geometry(fc="r", ec="g", lw=2)
 
 
-Feature-layers provided by `NaturalEarth <https://www.naturalearthdata.com>` can be easily added to the plot via ``m.add_feature``.
+Feature-layers provided by `NaturalEarth <https://www.naturalearthdata.com>` can be directly added to the plot via ``m.add_feature``.
 If ``geopandas`` is installed, ``GeoDataFrames`` are used to visualize the features, and all aforementioned
 functionalities of ``m.add_gdf`` can be used with NaturalEarth features as well!
 
@@ -473,6 +545,8 @@ The general call-signature is:
 
 .. code-block:: python
 
+    m = Maps()
+    # just call the feature to add it to the map
     m.add_feature.< CATEGORY >.< FEATURE >(...)
 
     # if you only want to get the associated GeoDataFrame, you can use
@@ -490,6 +564,10 @@ Where ``< CATEGORY >`` specifies the resolution and general category of the feat
     m.add_feature.preset.coastline()
     m.add_feature.cultural_110m.admin_0_pacific_groupings(ec="r", lw=2)
 
+    # (ONLY if geopandas is installed)
+    m.add_feature.preset.countries(fc="none", ec="k", picker_name="countries", pick_method="contains")
+    m.cb.pick["countries"].attach. ...
+
 .. currentmodule:: eomaps
 
 .. autosummary::
@@ -500,6 +578,7 @@ Where ``< CATEGORY >`` specifies the resolution and general category of the feat
     Maps.add_gdf
     Maps.add_feature
 
+.. _annotations_and_markers:
 
 🏕 Annotations and markers
 --------------------------
@@ -513,7 +592,7 @@ Static annotations and markers can be added to the map via:
     m.add_annotation( ... )
     m.add_marker( ... )
 
-To indicate a rectangular area specified in a given crs, simply use ``m.indicate_extent``:
+To indicate a rectangular area in a given crs, simply use ``m.indicate_extent``:
 
 .. code-block:: python
 
@@ -533,6 +612,7 @@ To indicate a rectangular area specified in a given crs, simply use ``m.indicate
     add_annotation
     indicate_extent
 
+.. _colorbar:
 
 🌈 Colorbars (with a histogram)
 -------------------------------
@@ -554,6 +634,7 @@ A colorbar with a colored histogram on top can be added to the map via ``m.add_c
     Maps.add_colorbar
 
 
+.. _scalebar:
 
 📏 Scalebars
 ------------
@@ -611,6 +692,7 @@ The scalebar has the following useful methods assigned:
     cb_offset_interval
     cb_rotate_interval
 
+.. _compass:
 
 🧭 Compass (or North Arrow)
 ---------------------------
