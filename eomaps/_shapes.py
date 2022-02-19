@@ -80,12 +80,10 @@ class shapes(object):
 
     @staticmethod
     def _get_radius(m, radius, radius_crs, buffer=None):
-
-        if not hasattr(m, "_props"):
-            m._props = m._prepare_data()
-
         if (isinstance(radius, str) and radius == "estimate") or radius is None:
-            pass
+            # make sure props are defined otherwise we can't estimate the radius!
+            if not hasattr(m, "_props"):
+                m._props = m._prepare_data()
         else:
             # get manually specified radius (e.g. if radius != "estimate")
             if isinstance(radius, (list, tuple, np.ndarray)):
@@ -96,6 +94,7 @@ class shapes(object):
 
             # we need an immutuable object for the lru_cache!
             radius = tuple((radiusx, radiusy))
+
         return shapes._get_radius_cache(
             m=m, radius=radius, radius_crs=radius_crs, buffer=buffer
         )
