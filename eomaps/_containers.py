@@ -960,23 +960,62 @@ else:
             check: https://www.isric.org/about/data-policy
 
             """
-            print("EOmaps: fetching IRIS layers...")
             return self._ISRIC(self._m)
 
         class _ISRIC:
             # since this is not an ArcGIS REST API it needs some special treatment...
             def __init__(self, m, service_type="wms"):
+                self._m = m
+                self._service_type = service_type
+                self._fetched = False
+
+                # default layers (see REST_API_services for details)
+                self._layers = {
+                    "nitrogen",
+                    "phh2o",
+                    "soc",
+                    "silt",
+                    "ocd",
+                    "cfvo",
+                    "cec",
+                    "ocs",
+                    "sand",
+                    "clay",
+                    "bdod",
+                }
+
+                for i in self._layers:
+                    setattr(self, i, "NOT FOUND")
+
+            def __getattribute__(self, name):
+                # make sure all private properties are directly accessible
+                if name.startswith("_"):
+                    return object.__getattribute__(self, name)
+
+                # fetch layers on first attempt to get a non-private attribute
+                if not self._fetched:
+                    self._fetch_services()
+
+                return object.__getattribute__(self, name)
+
+            def _fetch_services(self):
+                print("EOmaps: fetching IRIS layers...")
+
                 import requests
                 import json
 
-                self._m = m
-                self._service_type = service_type
+                if self._fetched:
+                    return
+                # set _fetched to True immediately to avoid issues in __getattribute__
+                self._fetched = True
+
                 layers = requests.get(
                     "https://rest.isric.org/soilgrids/v2.0/properties/layers"
                 )
-                self._layers = json.loads(layers.content.decode())["layers"]
+                _layers = json.loads(layers.content.decode())["layers"]
 
-                for i in self._layers:
+                found_layers = set()
+                for i in _layers:
                     name = i["property"]
                     setattr(
                         self, name, _WebServiec_collection(self._m, service_type="wms")
@@ -984,6 +1023,20 @@ else:
                     getattr(
                         self, name
                     )._url = f"https://maps.isric.org/mapserv?map=/map/{name}.map"
+
+                    found_layers.add(name)
+
+                new_layers = found_layers - self._layers
+                if len(new_layers) > 0:
+                    print(f"EOmaps: ... found some new folders: {new_layers}")
+
+                invalid_layers = self._layers - found_layers
+                if len(invalid_layers) > 0:
+                    print(f"EOmaps: ... could not find the folders: {invalid_layers}")
+                for i in invalid_layers:
+                    delattr(self, i)
+
+                self._layers = found_layers
 
         @property
         @lru_cache()
@@ -1454,7 +1507,6 @@ else:
                     """,
                 )
 
-                API.fetch_services()
                 return API
 
             @property
@@ -1487,7 +1539,6 @@ else:
                     acknowledged.
                     """,
                 )
-                API.fetch_services()
 
                 return API
 
@@ -1521,7 +1572,6 @@ else:
                     acknowledged.
                     """,
                 )
-                API.fetch_services()
 
                 return API
 
@@ -1555,7 +1605,6 @@ else:
                     acknowledged.
                     """,
                 )
-                API.fetch_services()
 
                 return API
 
@@ -1589,7 +1638,6 @@ else:
                     acknowledged.
                     """,
                 )
-                API.fetch_services()
 
                 return API
 
@@ -1623,7 +1671,6 @@ else:
                     acknowledged.
                     """,
                 )
-                API.fetch_services()
 
                 return API
 
@@ -1657,7 +1704,6 @@ else:
                     acknowledged.
                     """,
                 )
-                API.fetch_services()
 
                 return API
 
@@ -1691,7 +1737,6 @@ else:
                     acknowledged.
                     """,
                 )
-                API.fetch_services()
 
                 return API
 
@@ -1725,7 +1770,6 @@ else:
                     acknowledged.
                     """,
                 )
-                API.fetch_services()
 
                 return API
 
@@ -1812,10 +1856,18 @@ else:
             API = REST_API_services(
                 m=self._m,
                 url="http://server.arcgisonline.com/arcgis/rest/services",
-                name="EEA_REST",
+                name="ERSI_ArcGIS_REST",
                 service_type="wmts",
+                layers={
+                    "Canvas",
+                    "Elevation",
+                    "Ocean",
+                    "Polar",
+                    "Reference",
+                    "SERVICES",
+                    "Specialty",
+                },
             )
-            API.fetch_services()
 
             return API
 
@@ -1885,7 +1937,6 @@ else:
                     name="custom_service",
                     service_type=service_type,
                 )
-                service.fetch_services()
             else:
                 service = _WebServiec_collection(self._m, service_type="wms", url=url)
 
