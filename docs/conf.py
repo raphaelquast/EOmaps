@@ -9,51 +9,51 @@ def setup(app):
     app.add_css_file("custom_css.css")
 
 
-import mock
+# import mock
 
-MOCK_MODULES = [
-    "rtree",
-    "numpy",
-    "scipy",
-    "scipy.spatial",
-    "pandas",
-    "geopandas",
-    "matplotlib",
-    "matplotlib.pyplot",
-    "matplotlib.colors",
-    "matplotlib.gridspec",
-    "matplotlib.transforms",
-    "matplotlib.tri",
-    "matplotlib.collections",
-    "matplotlib.textpath",
-    "matplotlib.patches",
-    "matplotlib.transforms",
-    "matplotlib.font_manager",
-    "cartopy",
-    "cartopy.io",
-    "cartopy.io.img_tiles",
-    "cartopy.feature",
-    "descartes",
-    "mapclassify",
-    "pyproj",
-    "pyepsg",
-    "owslib",
-    "owslib.wmts",
-    "owslib.wms",
-    "PIL",
-    "Image",
-    "urllib3.exceptions",
-    "requests",
-    "requests.exceptions",
-    "xmltodict",
-    "cairosvg",
-]
+# MOCK_MODULES = [
+#     "rtree",
+#     "numpy",
+#     "scipy",
+#     "scipy.spatial",
+#     "pandas",
+#     "geopandas",
+#     "matplotlib",
+#     "matplotlib.pyplot",
+#     "matplotlib.colors",
+#     "matplotlib.gridspec",
+#     "matplotlib.transforms",
+#     "matplotlib.tri",
+#     "matplotlib.collections",
+#     "matplotlib.textpath",
+#     "matplotlib.patches",
+#     "matplotlib.transforms",
+#     "matplotlib.font_manager",
+#     "matplotlib.offsetbox",
+#     "cartopy",
+#     "cartopy.io",
+#     "cartopy.io.img_tiles",
+#     "cartopy.feature",
+#     "descartes",
+#     "mapclassify",
+#     "pyproj",
+#     "pyepsg",
+#     "owslib",
+#     "owslib.wmts",
+#     "owslib.wms",
+#     "PIL",
+#     "Image",
+#     "urllib3.exceptions",
+#     "requests",
+#     "requests.exceptions",
+#     "xmltodict",
+#     "cairosvg",
+# ]
 
-for mod_name in MOCK_MODULES:
-    sys.modules[mod_name] = mock.Mock()
+# for mod_name in MOCK_MODULES:
+#     sys.modules[mod_name] = mock.Mock()
 
-import eomaps  # to run __init__.py
-
+from eomaps import Maps  # to run __init__.py
 
 # -- Project information
 

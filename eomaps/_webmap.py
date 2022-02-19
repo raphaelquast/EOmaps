@@ -338,17 +338,70 @@ class _WebServiec_collection(object):
 
 
 class REST_API_services:
-    def __init__(self, m, url, name, service_type="wmts", _params={"f": "pjson"}):
+    def __init__(
+        self, m, url, name, service_type="wmts", layers=None, _params={"f": "pjson"}
+    ):
+        """
+        fetch layers from a Rest API
+
+        Parameters
+        ----------
+        m : eomaps.Maps
+            the parent maps object.
+        url : str
+            the url to the API.
+        name : str
+            The name of the API.
+        service_type : str, optional
+            the service-type to use ("wms" or "wmts"). The default is "wmts".
+        layers : set, optional
+            A set of default layers used for delayed fetching (and autocompletion...)
+            As soon as one of the layers is accessed, the API is fetched and the
+            layers are updated according to the current status of the Server.
+            If None or empty, layers are immediately fetched!
+            The default is None.
+        _params : set, optional
+            additional parameters passed to the API. The default is {"f": "pjson"}.
+
+        """
         self._m = m
         self._REST_url = url
         self._name = name
         self._service_type = service_type
         self._params = _params
+        self._fetched = False
+        if layers is None:
+            layers = set()
+        self._layers = layers
 
-    def fetch_services(self):
+        for i in self._layers:
+            setattr(self, i, "NOT FOUND")
+
+        if len(self._layers) == 0:
+            self._fetch_services()
+
+    def __getattribute__(self, name):
+        # make sure all private properties are directly accessible
+        if name.startswith("_"):
+            return object.__getattribute__(self, name)
+
+        # fetch layers on first attempt to get a non-private attribute
+        if not self._fetched:
+            self._fetch_services()
+
+        return object.__getattribute__(self, name)
+
+    def _fetch_services(self):
+        if self._fetched:
+            return
+        # set _fetched to True immediately to avoid issues in __getattribute__
+        self._fetched = True
+
         print(f"EOmaps: ... fetching services for '{self._name}'")
+
         self._REST_API = _REST_API(self._REST_url, _params=self._params)
 
+        found_folders = set()
         for foldername, services in self._REST_API._structure.items():
             setattr(
                 self,
@@ -360,6 +413,18 @@ class REST_API_services:
                     url=self._REST_url,
                 ),
             )
+            found_folders.add(foldername)
+
+        new_layers = found_folders - self._layers
+        if len(new_layers) > 0:
+            print(f"EOmaps: ... found some new folders: {new_layers}")
+
+        invalid_layers = self._layers - found_folders
+        if len(invalid_layers) > 0:
+            print(f"EOmaps: ... could not find the folders: {invalid_layers}")
+        for i in invalid_layers:
+            delattr(self, i)
+
         print("EOmaps: done!")
 
 

@@ -3,8 +3,16 @@ from matplotlib.tri import TriMesh, Triangulation
 import numpy as np
 
 from pyproj import CRS, Transformer
-from functools import update_wrapper, partial
+from functools import partial, lru_cache, wraps
 import warnings
+
+
+try:
+    import datashader as ds
+
+    _ds_OK = True
+except ImportError:
+    _ds_OK = False
 
 
 class shapes(object):
@@ -33,6 +41,21 @@ class shapes(object):
 
         >>> m.set_shape.delaunay_triangulation(masked, mask_radius, mask_radius_crs, flat)
 
+        - Point-based shading
+
+        >>> m.set_shape.shade_points(aggregator, shade_hook, agg_hook)
+
+        - Raster-based shading
+
+        >>> m.set_shape.delaunay_triangulation(aggregator, shade_hook, agg_hook)
+
+    Attributes
+    ----------
+    radius_estimation_range : int
+        The number of datapoints to use for estimating the radius of a shape.
+        (only relevant if the radius is not specified explicitly.)
+        The default is 100000
+
     """
 
     _shp_list = [
@@ -41,19 +64,13 @@ class shapes(object):
         "rectangles",
         "voroni_diagram",
         "delaunay_triangulation",
+        "shade_points",
+        "shade_raster",
     ]
 
     def __init__(self, m):
         self._m = m
-
-        for shp in self._shp_list:
-            setattr(
-                self,
-                shp,
-                update_wrapper(
-                    getattr(self, f"_{shp}")(m=m), getattr(self, f"_{shp}").__call__
-                ),
-            )
+        self.radius_estimation_range = 100000
 
     def _get(self, shape, **kwargs):
         shp = getattr(self, f"_{shape}")(self._m)
@@ -63,25 +80,90 @@ class shapes(object):
 
     @staticmethod
     def _get_radius(m, radius, radius_crs, buffer=None):
+        if (isinstance(radius, str) and radius == "estimate") or radius is None:
+            # make sure props are defined otherwise we can't estimate the radius!
+            if not hasattr(m, "_props"):
+                m._props = m._prepare_data()
+        else:
+            # get manually specified radius (e.g. if radius != "estimate")
+            if isinstance(radius, (list, tuple, np.ndarray)):
+                radiusx, radiusy = radius
+            elif isinstance(radius, (int, float, np.number)):
+                radiusx = radius
+                radiusy = radius
+
+            # we need an immutuable object for the lru_cache!
+            radius = tuple((radiusx, radiusy))
+
+        return shapes._get_radius_cache(
+            m=m, radius=radius, radius_crs=radius_crs, buffer=buffer
+        )
+
+    @staticmethod
+    @lru_cache()
+    def _get_radius_cache(m, radius, radius_crs, buffer=None):
+        from scipy.spatial import cKDTree
+
         # get the radius for plotting
         if (isinstance(radius, str) and radius == "estimate") or radius is None:
             if radius_crs == "in":
-                radiusx = np.median(np.abs(np.diff(np.unique(m._props["xorig"])))) / 2.0
-                radiusy = np.median(np.abs(np.diff(np.unique(m._props["yorig"])))) / 2.0
+                # radiusx = np.median(np.abs(np.diff(np.unique(m._props["xorig"])))) / 2.0
+                # radiusy = np.median(np.abs(np.diff(np.unique(m._props["yorig"])))) / 2.0
+                print("EOmaps: Estimating average pixel radius (in data-crs)...")
+                in_tree = cKDTree(
+                    np.stack(
+                        [
+                            m._props["xorig"][m._props["mask"]][
+                                : m.set_shape.radius_estimation_range
+                            ],
+                            m._props["yorig"][m._props["mask"]][
+                                : m.set_shape.radius_estimation_range
+                            ],
+                        ],
+                        axis=1,
+                    ),
+                    compact_nodes=False,
+                    balanced_tree=False,
+                )
+
+                dists, pts = in_tree.query(in_tree.data, 3)
+                radiusx = radiusy = np.median(dists) / 2
+
+                print(f"EOmaps: The estimated radius is: {radiusx:.4f}")
+
             elif radius_crs == "out":
-                radiusx = np.median(np.abs(np.diff(np.unique(m._props["x0"])))) / 2.0
-                radiusy = np.median(np.abs(np.diff(np.unique(m._props["y0"])))) / 2.0
+                # radiusx = np.median(np.abs(np.diff(np.unique(m._props["x0"])))) / 2.0
+                # radiusy = np.median(np.abs(np.diff(np.unique(m._props["y0"])))) / 2.0
+                if not hasattr(m, "tree"):
+                    print("EOmaps: Estimating average pixel radius (in plot-crs) ...")
+                    tree = cKDTree(
+                        np.stack(
+                            [
+                                m._props["x0"][m._props["mask"]][
+                                    : m.set_shape.radius_estimation_range
+                                ],
+                                m._props["y0"][m._props["mask"]][
+                                    : m.set_shape.radius_estimation_range
+                                ],
+                            ],
+                            axis=1,
+                        ),
+                        compact_nodes=False,
+                        balanced_tree=False,
+                    )
+                else:
+                    tree = m.tree
+
+                dists, pts = tree.query(tree.data, 3)
+                radiusx = radiusy = np.median(dists) / 2
+                print(f"EOmaps: The estimated radius is: {radiusx:.4f}")
+
             else:
                 raise AssertionError(
                     "radius can only be estimated if radius_crs is 'in' or 'out'!"
                 )
         else:
-            # get manually specified radius (e.g. if radius != "estimate")
-            if isinstance(radius, (list, tuple, np.ndarray)):
-                radiusx, radiusy = radius
-            elif isinstance(radius, (int, float)):
-                radiusx = radius
-                radiusy = radius
+            radiusx, radiusy = radius
 
         if buffer is not None:
             radiusx = radiusx * buffer
@@ -276,7 +358,7 @@ class shapes(object):
 
         def __call__(self, radius="estimate", radius_crs="in", n=20):
             """
-            Draw projected ellipses defined in distance-units of a given crs.
+            Draw projected ellipses with dimensions defined in units of a given crs.
 
             Parameters
             ----------
@@ -759,7 +841,7 @@ class shapes(object):
 
         def __call__(self, masked=True, mask_radius=None):
             """
-            Draw projected rectangles with dimensions defined in units of a given crs.
+            Draw a Voroni-Diagram of the data.
 
             Parameters
             ----------
@@ -768,11 +850,6 @@ class shapes(object):
 
             mask_radius : float, optional
                 the radius used for masking the voroni-diagram (in units of the plot-crs)
-
-            Returns
-            -------
-            None.
-
             """
             from . import MapsGrid  # do this here to avoid circular imports!
 
@@ -881,6 +958,14 @@ class shapes(object):
 
             return coll
 
+        @property
+        def radius(self):
+            return shapes._get_radius(self._m, "estimate", "in")
+
+        @property
+        def radius_crs(self):
+            return self._m.get_crs("in")
+
     class _delaunay_triangulation(object):
         name = "delaunay_triangulation"
 
@@ -891,14 +976,15 @@ class shapes(object):
             self, masked=True, mask_radius=None, mask_radius_crs="in", flat=False
         ):
             """
-            Draw projected rectangles with dimensions defined in units of a given crs.
+            Draw a Delaunay-Triangulation of the data.
 
             Parameters
             ----------
             masked : bool
-                Indicator if the voroni-diagram should be masked or not
+                Indicator if the delaunay-triangulation should be masked or not
             mask_radius : float, optional
-                the radius used for masking the voroni-diagram (in units of the plot-crs)
+                the radius used for masking the delaunay-triangulation
+                (in units of the plot-crs)
             mask_radius_crs : str, optional
                 The crs in which the radius is defined (either "in" or "out")
             flat : bool
@@ -1056,3 +1142,206 @@ class shapes(object):
                         coll.set_array(array[datamask])
 
             return coll
+
+        @property
+        def radius(self):
+            return shapes._get_radius(self._m, "estimate", "in")
+
+        @property
+        def radius_crs(self):
+            return self._m.get_crs("in")
+
+    class _shade_points(object):
+        name = "shade_points"
+
+        def __init__(self, m):
+            self._m = m
+
+        def __repr__(self):
+            return "Point-based shading with datashader"
+
+        def __call__(self, aggregator=None, shade_hook=None, agg_hook=None):
+            """
+            Shade the data as infinitesimal points (>> usable for very large datasets!).
+
+            This function is based on the functionalities of `datashader.mpl_ext.dsshow`
+            provided by the matplotlib-extension for "datashader".
+
+            Parameters
+            ----------
+            aggregator : Reduction, optional
+                The reduction to compute per-pixel.
+                The default is `ds.mean("val")` where "val" represents the data-values.
+            shade_hook : callable, optional
+                A callable that takes the image output of the shading pipeline,
+                and returns another Image object.
+                See dynspread() and spread() for examples.
+                The default is `partial(ds.tf.dynspread, max_px=5)`.
+            agg_hook : callable, optional
+                A callable that takes the computed aggregate as an argument, and returns
+                another aggregate. This can be used to do preprocessing before the
+                aggregate is converted to an image.
+                The default is None.
+            """
+
+            assert _ds_OK, (
+                "EOmaps: Missing dependency: 'datashader' \n ... please install"
+                + " (conda install -c conda-forge datashader) to use 'shade_points'"
+            )
+
+            if aggregator is None:
+                aggregator = ds.mean("val")
+
+            if shade_hook is None:
+                shade_hook = partial(ds.tf.dynspread, max_px=5)
+
+            if agg_hook is None:
+                pass
+
+            glyph = ds.Point("x", "y")
+
+            from . import MapsGrid  # do this here to avoid circular imports!
+
+            for m in self._m if isinstance(self._m, MapsGrid) else [self._m]:
+                shape = self.__class__(m)
+
+                shape.aggregator = aggregator
+                shape.shade_hook = shade_hook
+                shape.agg_hook = agg_hook
+                shape.glyph = glyph
+
+                m.shape = shape
+
+        @property
+        def _initargs(self):
+            return dict(
+                aggregator=self.aggregator,
+                shade_hook=self.shade_hook,
+                agg_hook=self.agg_hook,
+                glyph=self.glyph,
+            )
+
+        @property
+        def radius(self):
+            return shapes._get_radius(self._m, "estimate", "in")
+
+        @property
+        def radius_crs(self):
+            return self._m.get_crs("in")
+
+    class _shade_raster(object):
+        name = "shade_raster"
+
+        def __init__(self, m):
+            self._m = m
+
+        def __repr__(self):
+            return "Raster-shading with datashader"
+
+        def __call__(self, aggregator=None, shade_hook=None, agg_hook=None):
+            """
+            Shade the data as a rectangular raster (>> usable for very large datasets!).
+
+            - Using a raster-based shading is only possible if:
+                - the data can be converted to rectangular 2D arrays
+                - the crs of the data and the plot-crs are equal!
+
+            This function is based on the functionalities of `datashader.mpl_ext.dsshow`
+            provided by the matplotlib-extension for datashader.
+
+            Parameters
+            ----------
+            aggregator : Reduction, optional
+                The reduction to compute per-pixel.
+                The default is `ds.mean("val")` where "val" represents the data-values.
+            shade_hook : callable, optional
+                A callable that takes the image output of the shading pipeline,
+                and returns another Image object.
+                See dynspread() and spread() for examples.
+                The default is None.
+            agg_hook : callable, optional
+                A callable that takes the computed aggregate as an argument, and returns
+                another aggregate. This can be used to do preprocessing before the
+                aggregate is converted to an image.
+                The default is None.
+            """
+
+            assert _ds_OK, (
+                "EOmaps: Missing dependency: 'datashader' \n ... please install"
+                + " (conda install -c conda-forge datashader) to use 'shade_raster'"
+            )
+
+            if aggregator is None:
+                aggregator = ds.mean("val")
+
+            if shade_hook is None:
+                shade_hook = None
+
+            if agg_hook is None:
+                pass
+
+            glyph = ds.glyphs.QuadMeshRectilinear("x", "y", "val")
+
+            from . import MapsGrid  # do this here to avoid circular imports!
+
+            for m in self._m if isinstance(self._m, MapsGrid) else [self._m]:
+                shape = self.__class__(m)
+
+                shape.aggregator = aggregator
+                shape.shade_hook = shade_hook
+                shape.agg_hook = agg_hook
+                shape.glyph = glyph
+
+                m.shape = shape
+
+        @property
+        def _initargs(self):
+            return dict(
+                aggregator=self.aggregator,
+                shade_hook=self.shade_hook,
+                agg_hook=self.agg_hook,
+                glyph=self.glyph,
+            )
+
+        @property
+        def radius(self):
+            return shapes._get_radius(self._m, "estimate", "in")
+
+        @property
+        def radius_crs(self):
+            return self._m.get_crs("in")
+
+    @wraps(_geod_circles.__call__)
+    def geod_circles(self, *args, **kwargs):
+        shp = self._geod_circles(m=self._m)
+        return shp.__call__(*args, **kwargs)
+
+    @wraps(_ellipses.__call__)
+    def ellipses(self, *args, **kwargs):
+        shp = self._ellipses(m=self._m)
+        return shp.__call__(*args, **kwargs)
+
+    @wraps(_rectangles.__call__)
+    def rectangles(self, *args, **kwargs):
+        shp = self._rectangles(m=self._m)
+        return shp.__call__(*args, **kwargs)
+
+    @wraps(_voroni_diagram.__call__)
+    def voroni_diagram(self, *args, **kwargs):
+        shp = self._voroni_diagram(m=self._m)
+        return shp.__call__(*args, **kwargs)
+
+    @wraps(_delaunay_triangulation.__call__)
+    def delaunay_triangulation(self, *args, **kwargs):
+        shp = self._delaunay_triangulation(m=self._m)
+        return shp.__call__(*args, **kwargs)
+
+    @wraps(_shade_points.__call__)
+    def shade_points(self, *args, **kwargs):
+        shp = self._shade_points(m=self._m)
+        return shp.__call__(*args, **kwargs)
+
+    @wraps(_shade_raster.__call__)
+    def shade_raster(self, *args, **kwargs):
+        shp = self._shade_raster(m=self._m)
+        return shp.__call__(*args, **kwargs)

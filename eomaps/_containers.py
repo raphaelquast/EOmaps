@@ -17,6 +17,7 @@ import mapclassify
 
 import cartopy.feature as cfeature
 from cartopy.io import shapereader
+from cartopy import crs as ccrs
 
 from ._webmap import _import_OK
 
@@ -331,10 +332,6 @@ class plot_specs(object):
         for key in kwargs:
             assert key in self.keys(), f"'{key}' is not a valid data-specs key"
 
-        for key in self.keys():
-            if key == "plot_crs":
-                continue
-
             setattr(self, key, kwargs.get(key, None))
 
     def __repr__(self):
@@ -363,12 +360,13 @@ class plot_specs(object):
 
     def __setitem__(self, key, val):
         key = self._sanitize_keys(key)
-        return setattr(self, key, val)
+        if key is not None:
+            return setattr(self, key, val)
 
     def __setattr__(self, key, val):
         key = self._sanitize_keys(key)
-
-        super().__setattr__(key, val)
+        if key is not None:
+            super().__setattr__(key, val)
 
     def __iter__(self):
         return iter(self[self.keys()].items())
@@ -378,14 +376,20 @@ class plot_specs(object):
         if key.startswith("_"):
             return key
 
-        if key == "plot_epsg":
+        if key in ["crs", "plot_crs"]:
             warn(
-                "EOmaps: the plot-spec 'plot_epsg' has been depreciated... "
-                + "try to use 'crs' or 'plot_crs' instead!"
+                "\n▲▲▲ In EOmaps > v3.0 the plot-crs is set on "
+                + "initialization of the Maps-object!"
+                + "\n▲▲▲ Use `m = Maps(crs=...)` instead to set the plot-crs!\n"
             )
-            key = "plot_crs"
-        elif key == "crs":
-            key = "plot_crs"
+            return None
+
+        if key in ["title"]:
+            warn(
+                "\n▲▲▲ In EOmaps > v3.1 passing a 'title' to the plot-specs is depreciated. "
+                + "\n▲▲▲ Use `m.ax.set_title()` instead!\n"
+            )
+            return None
 
         assert key in self.keys(), f"{key} is not a valid plot-specs key!"
 
@@ -393,7 +397,7 @@ class plot_specs(object):
 
     def keys(self):
         # fmt: off
-        return ('label', 'title', 'cmap', 'plot_crs', 'histbins', 'tick_precision',
+        return ('label', 'cmap', 'histbins', 'tick_precision',
                 'vmin', 'vmax', 'cpos', 'cpos_radius', 'alpha', 'density')
         # fmt: on
 
@@ -406,21 +410,9 @@ class plot_specs(object):
         self._cmap = get_cmap(val)
 
     @property
+    @lru_cache()
     def plot_crs(self):
-        if self._m.figure.ax is not None:
-            return self._m.figure.ax.projection
-
-        return self._plot_crs
-
-    @plot_crs.setter
-    def plot_crs(self, crs):
-        warn(
-            (
-                "\n▲▲▲ In EOmaps > v3.0 the plot-crs is set on "
-                + "initialization of the Maps-object!"
-                + "\n▲▲▲ Use `m = Maps(crs=...)` instead to set the plot-crs!\n"
-            )
-        )
+        return self._m._crs_plot
 
 
 class classify_specs(object):
@@ -551,9 +543,10 @@ class NaturalEarth_features(object):
 
     The features are grouped into the categories "cultural" and "physical"
     at 3 different scales:
-        - 1:10m : Large-scale data
-        - 1:50m : Medium-scale data
-        - 1:110m : Small-scale data
+
+    - 1:10m : Large-scale data
+    - 1:50m : Medium-scale data
+    - 1:110m : Small-scale data
 
     For available features and additional info, check the docstring of the
     individual categories!
@@ -565,15 +558,15 @@ class NaturalEarth_features(object):
     --------
 
     - add black (coarse resolution) coastlines
-    >>> m.add_feature.physical_110m.coastline(fc="none", ec="k")
+      >>> m.add_feature.physical_110m.coastline(fc="none", ec="k")
 
     - color all land red with 50% transparency
-    >>> m.add_feature.physical_110m.land(fc="r", alpha=0.5)
+      >>> m.add_feature.physical_110m.land(fc="r", alpha=0.5)
 
     - color all countries with respect to their area
-    >>> countries = m.add_feature.cultural_10m.admin_0_countries
-    >>> areas = np.argsort([i.area for i in countries.feature.geometries()])
-    >>> countries(ec="k", fc= [i for i in plt.cm.viridis(areas / areas.max())])
+      >>> countries = m.add_feature.cultural_10m.admin_0_countries
+      >>> areas = np.argsort([i.area for i in countries.feature.geometries()])
+      >>> countries(ec="k", fc= [i for i in plt.cm.viridis(areas / areas.max())])
     """
 
     def __init__(self, m):
@@ -790,14 +783,15 @@ class NaturalEarth_features(object):
                         uselayer = m.layer
                     else:
                         uselayer = layer
-
                     self.feature._kwargs.update(kwargs)
                     art = m.figure.ax.add_feature(self.feature)
 
                     m.BM.add_bg_artist(art, layer=uselayer)
             else:
                 s = self.get_gdf()
-                for m in self._m if isinstance(self._m, MapsGrid) else [self._m]:
+                for m in (
+                    self._m if self._m.__class__.__name__ == "MapsGrid" else [self._m]
+                ):
                     if layer is None:
                         uselayer = m.layer
                     else:
@@ -817,7 +811,7 @@ class NaturalEarth_features(object):
                     A GeoDataFrame with all geometries and properties of the feature
                 """
                 gdf = gpd.read_file(shapereader.natural_earth(**self.feature))
-                gdf.set_crs(epsg=4326, inplace=True)
+                gdf.set_crs(ccrs.PlateCarree(), inplace=True, allow_override=True)
                 return gdf
 
     class _presets:
@@ -967,23 +961,62 @@ else:
             check: https://www.isric.org/about/data-policy
 
             """
-            print("EOmaps: fetching IRIS layers...")
             return self._ISRIC(self._m)
 
         class _ISRIC:
             # since this is not an ArcGIS REST API it needs some special treatment...
             def __init__(self, m, service_type="wms"):
+                self._m = m
+                self._service_type = service_type
+                self._fetched = False
+
+                # default layers (see REST_API_services for details)
+                self._layers = {
+                    "nitrogen",
+                    "phh2o",
+                    "soc",
+                    "silt",
+                    "ocd",
+                    "cfvo",
+                    "cec",
+                    "ocs",
+                    "sand",
+                    "clay",
+                    "bdod",
+                }
+
+                for i in self._layers:
+                    setattr(self, i, "NOT FOUND")
+
+            def __getattribute__(self, name):
+                # make sure all private properties are directly accessible
+                if name.startswith("_"):
+                    return object.__getattribute__(self, name)
+
+                # fetch layers on first attempt to get a non-private attribute
+                if not self._fetched:
+                    self._fetch_services()
+
+                return object.__getattribute__(self, name)
+
+            def _fetch_services(self):
+                print("EOmaps: fetching IRIS layers...")
+
                 import requests
                 import json
 
-                self._m = m
-                self._service_type = service_type
+                if self._fetched:
+                    return
+                # set _fetched to True immediately to avoid issues in __getattribute__
+                self._fetched = True
+
                 layers = requests.get(
                     "https://rest.isric.org/soilgrids/v2.0/properties/layers"
                 )
-                self._layers = json.loads(layers.content.decode())["layers"]
+                _layers = json.loads(layers.content.decode())["layers"]
 
-                for i in self._layers:
+                found_layers = set()
+                for i in _layers:
                     name = i["property"]
                     setattr(
                         self, name, _WebServiec_collection(self._m, service_type="wms")
@@ -991,6 +1024,20 @@ else:
                     getattr(
                         self, name
                     )._url = f"https://maps.isric.org/mapserv?map=/map/{name}.map"
+
+                    found_layers.add(name)
+
+                new_layers = found_layers - self._layers
+                if len(new_layers) > 0:
+                    print(f"EOmaps: ... found some new folders: {new_layers}")
+
+                invalid_layers = self._layers - found_layers
+                if len(invalid_layers) > 0:
+                    print(f"EOmaps: ... could not find the folders: {invalid_layers}")
+                for i in invalid_layers:
+                    delattr(self, i)
+
+                self._layers = found_layers
 
         @property
         @lru_cache()
@@ -1461,7 +1508,6 @@ else:
                     """,
                 )
 
-                API.fetch_services()
                 return API
 
             @property
@@ -1494,7 +1540,6 @@ else:
                     acknowledged.
                     """,
                 )
-                API.fetch_services()
 
                 return API
 
@@ -1528,7 +1573,6 @@ else:
                     acknowledged.
                     """,
                 )
-                API.fetch_services()
 
                 return API
 
@@ -1562,7 +1606,6 @@ else:
                     acknowledged.
                     """,
                 )
-                API.fetch_services()
 
                 return API
 
@@ -1596,7 +1639,6 @@ else:
                     acknowledged.
                     """,
                 )
-                API.fetch_services()
 
                 return API
 
@@ -1630,7 +1672,6 @@ else:
                     acknowledged.
                     """,
                 )
-                API.fetch_services()
 
                 return API
 
@@ -1664,7 +1705,6 @@ else:
                     acknowledged.
                     """,
                 )
-                API.fetch_services()
 
                 return API
 
@@ -1698,7 +1738,6 @@ else:
                     acknowledged.
                     """,
                 )
-                API.fetch_services()
 
                 return API
 
@@ -1732,7 +1771,6 @@ else:
                     acknowledged.
                     """,
                 )
-                API.fetch_services()
 
                 return API
 
@@ -1819,10 +1857,18 @@ else:
             API = REST_API_services(
                 m=self._m,
                 url="http://server.arcgisonline.com/arcgis/rest/services",
-                name="EEA_REST",
+                name="ERSI_ArcGIS_REST",
                 service_type="wmts",
+                layers={
+                    "Canvas",
+                    "Elevation",
+                    "Ocean",
+                    "Polar",
+                    "Reference",
+                    "SERVICES",
+                    "Specialty",
+                },
             )
-            API.fetch_services()
 
             return API
 
@@ -1892,7 +1938,6 @@ else:
                     name="custom_service",
                     service_type=service_type,
                 )
-                service.fetch_services()
             else:
                 service = _WebServiec_collection(self._m, service_type="wms", url=url)
 

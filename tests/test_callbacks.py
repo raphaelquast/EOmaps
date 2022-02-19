@@ -54,6 +54,8 @@ class TestCallbacks(unittest.TestCase):
         m = self.create_basic_map()
         cid = m.cb.click.attach.get_values()
 
+        m.cb.pick.attach.annotate()
+
         self.click_ax_center(m)
         self.assertEqual(len(m.cb.click.get.picked_vals["pos"]), 1)
         self.assertTrue(m.cb.click.get.picked_vals["ID"][0] is None)
@@ -76,7 +78,7 @@ class TestCallbacks(unittest.TestCase):
         self.assertEqual(len(m.cb.pick.get.picked_vals["ID"]), 1)
         self.assertEqual(len(m.cb.pick.get.picked_vals["val"]), 1)
 
-        self.assertTrue(m.cb.pick.get.picked_vals["ID"][0] == 1275)
+        self.assertTrue(m.cb.pick.get.picked_vals["ID"][0] == 1274)
 
         self.click_ax_center(m)
         self.assertEqual(len(m.cb.pick.get.picked_vals["pos"]), 2)

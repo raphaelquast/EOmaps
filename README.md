@@ -34,7 +34,7 @@
 </ul>
 <br/>
 <p align="center">
-  🌲🌳 Checkout the <a href=https://eomaps.readthedocs.io/en/latest>documentation</a> for more details and <a href=https://eomaps.readthedocs.io/en/latest/EOmaps_examples.html>examples</a> 🌳🌲
+  🌲🌳 Checkout the <a href=https://eomaps.readthedocs.io/en/latest><b>documentation</b></a> for more details and <a href=https://eomaps.readthedocs.io/en/latest/EOmaps_examples.html><b>examples</b></a> 🌳🌲
 </p>
 
 ## 🔨 Installation
@@ -66,12 +66,19 @@ Found a bug or got an idea for an interesting feature? Open an [issue](https://g
 
 
 ## 🌳 Basic usage
+
+🛸 **Checkout the [documentation](https://eomaps.readthedocs.io/en/latest/api.html)!** 🛸
+
 - A list of coordinates and values is all you need as input!
   - plots of large (>1M datapoints) irregularly sampled datasets are generated in a few seconds!
-  - Represent your data as shapes with actual geographic dimensions (ellipses, rectangles, geodetic circles)
-    - or use Voroni diagrams and Delaunay triangulations to get interpolated contour-plots
-  - Re-project the data to any crs supported by <a href=https://scitools.org.uk/cartopy/docs/latest/reference/crs.html#coordinate-reference-systems-crs>cartopy</a>
-  - ... and get a nice colorbar with a colored histogram on top!
+- Represent your data
+  - as shapes with actual geographic dimensions (ellipses, rectangles, geodetic circles)
+  - via Voroni diagrams and Delaunay triangulations to get interpolated contour-plots
+  - via dynamic data-shading to speed up plots with extremely large datasets
+- Re-project the data to any crs supported by <a href=https://scitools.org.uk/cartopy/docs/latest/reference/crs.html#coordinate-reference-systems-crs>cartopy</a>
+- Quickly add features and additional layers to the plot
+  - Markers, Annotations, WebMap Layers, NaturalEarth features, Scalebars, Compasses (or North-arrows) etc.
+- Interact with the data via callback-functions.
 
 ```python
 import pandas as pd
@@ -82,123 +89,50 @@ lon, lat, data = [1,2,3,4,5], [1,2,3,4,5], [1,2,3,4,5]
 
 # initialize Maps object
 m = Maps(crs=Maps.CRS.Orthographic())
+
 # set the data
 m.set_data(data=data, xcoord=lon, ycoord=lat, crs=4326)
 # set the shape you want to use to represent the data-points
 m.set_shape.geod_circles(radius=10000) # (e.g. geodetic circles with 10km radius)
+
 # (optionally) set the appearance of the plot
 m.set_plot_specs(cmap="viridis", label="a nice label")
 # (optionally) classify the data
 m.set_classify_specs(scheme=Maps.CLASSIFIERS.Quantiles, k=5)
+
 # plot the map
 m.plot_map()
-# (optionally) add a colorbar
+
+# add a colorbar with a histogram on top
 m.add_colorbar()
 
-# ---- add another plot-layer to the map
-m2 = m.new_layer()
-...
-...
-```
-## 🌌 advanced usage
-[click to show] &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; 🛸 Checkout the [docs](https://eomaps.readthedocs.io/en/latest/api.html)! 🛸
+# add a scalebar
+m.add_scalebar()
 
-<details>
+# add a compass
+m.add_compass()
 
-  <summary>🌍 Attach callback functions to interact with the plot</summary>
+# add some basic features from NaturalEarth
+m.add_feature.preset.coastline()
 
-- Many pre-defined functions for common tasks are available!
-  - display coordinates and values, add markers, compare data-layers etc.
-  - ... or define your own function and attach it to the plot!
-- Maps objects can be interactively connected to analyze relations between datasets!
-
-```python
-# get a nice annotation if you click on a datapoint
+# use callback functions make the plot interactive!
 m.cb.pick.attach.annotate()
-# draw a marker if you click on a datapoint
-m.cb.pick.attach.mark(facecolor="r", edgecolor="g", shape="rectangles", radius=1, radius_crs=4326)
 
-# show the data-layer `1` in a inset-rectangle (size=20% width of the axes) if you click on the map
-m.cb.click.attach.peek_layer(how=0.2, layer=1)
-#attach some custom function to interact with the map
-m.cb.click.attach(<... a custom function ...>)
-
-# show the data-layer `1` if you press "a" on the keyboard and the layer `0` if you press "q"
-m.cb.keypress.attach.switch_layer(layer=0, key="q")
-m.cb.keypress.attach.switch_layer(layer=1, key="a")
-```
-
-</details>
-
-<details>
-
-  <summary>🌕 Add additional layers and overlays</summary>
-
-- many pre-defined interfaces for WebMap servers exist
-  - OpenStreetMap
-  - ESA WorldCover
-  - Nasa GIBS
-  - S1GBM
-  - ... and more!
-
-```python
-m.add_wms(...)                      # add WebMapService layers
-m.add_gdf(...)                      # add geopandas.GeoDataFrames
-m.add_feature.<group>.<feature>()   # add feature-layers from NaturalEarth
-m.add_colorbar(...)                 # add a colorbar to the map
-
-m.add_annotation(...)               # add static annotations
-m.add_marker(...)                   # add static markers
-```
-  </details>
-
-<details>
-
-  <summary>🪐 Save the figure</summary>
-
-```python
-m.savefig("oooh_what_a_nice_figure.png", dpi=300)
-```
-</details>
-
-<details>
-
-  <summary>🌗 Connect Maps-objects to get multiple interactive layers of data</summary>
-
-```python
-m = Maps()
+# ---- add another plot-layer on a different level (1) to the map
+#      (by default only layer 0 is shown!)
+m3 = m.new_layer(layer=1)
 ...
-m.plot_map()
+# peek on layer 1 if you click on the map
+m.cb.click.attach.peek_layer(layer=1, how=0.4)
+# switch between the layers if you press "0" or "1" on the keyboard
+m.cb.keypress.attach.switch_layer(layer=0, key="0")
+m.cb.keypress.attach.switch_layer(layer=1, key="1")
 
-m2 = m.new_layer(layer=2)
-m2.set_data(...)
-m2.set_shape(...)
-...
-m2.plot_map()         # plot another layer of data
-m2.cb.attach.peek_layer(layer=2, how=0.25)
+# ---- add new layers directly from a GeoTIFF / NetCDF or CSV files
+m4 = m.new_layer_from_file.GeoTIFF(...)
+m4 = m.new_layer_from_file.NetCDF(...)
+m4 = m.new_layer_from_file.CSV(...)
 ```
-</details>
-
-<details>
-
-  <summary>🌏 Plot grids of maps</summary>
-
-```python
-from eomaps import MapsGrid
-mgrid = MapsGrid(2, 2, crs=3857)
-
-for m in mgrid:
-   m.plot_specs.label = "asdf"
-
-mgrid.ax_0_0.add_feature.preset.ocean()
-mgrid.ax_0_1.add_feature.preset.land()
-mgrid.ax_1_0.add_feature.preset.coastline()
-mgrid.ax_1_1.add_feature.preset.countries()
-
-mgrid.plot_map()      # call m.plot_map() on all Maps-objects of the grid
-mgrid.join_limits()   # join limits
-```
-</details>
 
 ----
 

@@ -15,8 +15,12 @@ data = pd.DataFrame(
 # --------- initialize a Maps object and plot a basic map
 m = Maps(crs=3035, figsize=(10, 8))
 m.set_data(data=data, xcoord="lon", ycoord="lat", in_crs=4326)
-m.set_plot_specs(title="A clickable widget!", histbins="bins")
+m.ax.set_title("A clickable widget!")
+m.set_plot_specs(histbins="bins")
 m.set_shape.rectangles()
+# double the estimated radius in x-direction to make the plot dense
+m.shape.radius = (m.shape.radius[0] * 2, m.shape.radius[1])
+
 m.set_classify_specs(scheme="EqualInterval", k=5)
 m.plot_map()
 m.add_feature.preset.ocean()  # add ocean-coloring in the background

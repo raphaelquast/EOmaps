@@ -40,6 +40,7 @@ from .helpers import (
     cmap_alpha,
     BlitManager,
     draggable_axes,
+    progressbar,
 )
 from ._shapes import shapes
 
@@ -54,7 +55,9 @@ from ._containers import (
 )
 
 from ._cb_container import cb_container
-from .scalebar import ScaleBar
+from .scalebar import ScaleBar, Compass
+from .projections import Equi7Grid_projection
+from .reader import read_file, from_file, new_layer_from_file
 
 try:
     import mapclassify
@@ -150,6 +153,7 @@ class Maps(object):
     """
 
     CRS = ccrs
+    CRS.Equi7Grid_projection = Equi7Grid_projection
 
     # mapclassify.CLASSIFIERS
     _classifiers = (
@@ -213,7 +217,6 @@ class Maps(object):
         self.plot_specs = plot_specs(
             self,
             label=None,
-            title=None,
             cmap=plt.cm.viridis.copy(),
             histbins=256,
             tick_precision=2,
@@ -231,11 +234,12 @@ class Maps(object):
                 raise AssertionError(
                     "You cannot set the crs if you already provide an explicit axes!"
                 )
+            self._crs_plot = gs_ax.projection
         else:
             if crs is None:
                 crs = 4326
 
-            self.plot_specs._plot_crs = crs
+            self._crs_plot = crs
 
         # default classify specs
         self.classify_specs = classify_specs(self)
@@ -253,6 +257,8 @@ class Maps(object):
 
         self._init_figure(gs_ax=gs_ax, plot_crs=crs, **kwargs)
 
+        self._compass = set()
+
     def _check_gpd(self):
         # raise an error if geopandas is not found
         # (execute this in any function that requires geopandas!)
@@ -263,9 +269,67 @@ class Maps(object):
                 + "'conda install -c conda-forge geopandas'"
             )
 
+    from_file = from_file
+
+    @property
+    @wraps(read_file)
+    def read_file(self):
+        return read_file
+
     @property
     def ax(self):
         return self.figure.ax
+
+    @property
+    @wraps(new_layer_from_file)
+    @lru_cache()
+    def new_layer_from_file(self):
+        return new_layer_from_file(self)
+
+    def new_layer(
+        self,
+        copy_data_specs=False,
+        copy_plot_specs=True,
+        copy_classify_specs=False,
+        copy_shape=True,
+        layer=None,
+    ):
+        """
+        Create a new Maps-object that shares the same plot-axes.
+
+        Parameters
+        ----------
+        copy_data_specs, copy_shape, copy_plot_specs, copy_classify_specs : bool
+            Indicator if the corresponding properties should be copied to
+            the new layer. By default, only "plot_specs" and the "shape" are copied.
+        layer : int
+            The layer index at which map-features are plotted by default.
+            The default is None in which case the layer of the parent object is used.
+
+        Returns
+        -------
+        eomaps.Maps
+            A connected copy of the Maps-object that shares the same plot-axes.
+
+        See Also
+        --------
+        copy : general way for copying Maps objects
+        """
+
+        if layer is None:
+            layer = self.layer
+
+        m = self.copy(
+            data_specs=copy_data_specs,
+            plot_specs=copy_plot_specs,
+            classify_specs=copy_classify_specs,
+            shape=copy_shape,
+            parent=self.parent,
+            gs_ax=self.figure.ax,
+            layer=layer,
+        )
+
+        return m
 
     @property
     @lru_cache()
@@ -292,14 +356,19 @@ class Maps(object):
         return cartopy_proj
 
     def _init_figure(self, gs_ax=None, plot_crs=None, **kwargs):
-        if self.figure.f is None:
+        if self.parent.figure.f is None:
             self._f = plt.figure(**kwargs)
+            newfig = True
+        else:
+            newfig = False
 
         if isinstance(gs_ax, plt.Axes):
             # in case an axis is provided, attempt to use it
             ax = gs_ax
             gs = gs_ax.get_gridspec()
+            newax = False
         else:
+            newax = True
             # create a new axis
             if gs_ax is None:
                 gs = GridSpec(
@@ -325,13 +394,15 @@ class Maps(object):
         # initialize the callbacks
         self.cb._init_cbs()
 
-        def lims_change(*args, **kwargs):
-            self.BM._refetch_bg = True
+        if newax:  # only if a new axis has been created
 
-        self.figure.ax.callbacks.connect("xlim_changed", lims_change)
-        self.figure.ax.callbacks.connect("ylim_changed", lims_change)
+            def lims_change(*args, **kwargs):
+                self.BM._refetch_bg = True
 
-        if self.parent is self:
+            self.figure.ax.callbacks.connect("xlim_changed", lims_change)
+            self.figure.ax.callbacks.connect("ylim_changed", lims_change)
+
+        if newfig:  # only if a new figure has been initialized
             _ = self._draggable_axes
 
             if plt.get_backend() == "module://ipympl.backend_nbagg":
@@ -343,7 +414,33 @@ class Maps(object):
             else:
                 plt.ion()
 
+            # attach a callback that is executed when the figure is closed
+            self._cid_onclose = self.figure.f.canvas.mpl_connect(
+                "close_event", self._on_close
+            )
+            # attach a callback that is executed if the figure canvas is resized
+            self._cid_resize = self.figure.f.canvas.mpl_connect(
+                "resize_event", self._on_resize
+            )
+
         plt.show()
+
+    def _on_resize(self, event):
+        # make sure the background is re-fetched if the canvas has been resized
+        # (required for peeking layers after the canvas has been resized)
+
+        self.BM._refetch_bg = True
+
+    def _on_close(self, event):
+        # reset attributes that might use up a lot of memory when the figure is closed
+
+        if hasattr(self, "_props"):
+            del self._props
+        if hasattr(self, "tree"):
+            del self.tree
+        if hasattr(self.figure, "coll"):
+            del self.figure.coll
+        plt.close(self.figure.f)
 
     @property
     def BM(self):
@@ -440,49 +537,6 @@ class Maps(object):
         m.figure.ax.callbacks.connect("xlim_changed", parent_xlims_change)
         m.figure.ax.callbacks.connect("ylim_changed", parent_ylims_change)
 
-    def new_layer(
-        self,
-        copy_data_specs=False,
-        copy_plot_specs=True,
-        copy_classify_specs=False,
-        copy_shape=True,
-        layer=None,
-    ):
-        """
-        Create a new Maps-object that shares the same plot-axes.
-
-        Parameters
-        ----------
-        copy_data_specs, copy_shape, copy_plot_specs, copy_classify_specs : bool
-            Indicator if the corresponding properties should be copied to
-            the new layer. By default, only "plot_specs" and the "shape" are copied.
-        layer : int
-            The layer index at which map-features are plotted by default.
-            The default is None in which case the layer of the parent object is used.
-
-        Returns
-        -------
-        eomaps.Maps
-            A connected copy of the Maps-object that shares the same plot-axes.
-
-        See Also
-        --------
-        copy : general way for copying Maps objects
-        """
-
-        if layer is None:
-            layer = self.layer
-
-        return self.copy(
-            data_specs=copy_data_specs,
-            plot_specs=copy_plot_specs,
-            classify_specs=copy_classify_specs,
-            shape=copy_shape,
-            parent=self,
-            gs_ax=self.figure.ax,
-            layer=layer,
-        )
-
     def copy(
         self,
         data_specs=False,
@@ -514,14 +568,10 @@ class Maps(object):
             a new Maps class.
         """
 
-        plot_spec_list = [i for i in self.plot_specs.keys() if i != "plot_crs"]
-        if "crs" not in kwargs and "gs_ax" not in kwargs:
-            kwargs["crs"] = self.plot_specs["plot_crs"]
-
         copy_cls = Maps(**kwargs)
         if plot_specs is True:
             copy_cls.set_plot_specs(
-                **{key: copy.deepcopy(self.plot_specs[key]) for key in plot_spec_list}
+                **{key: copy.deepcopy(val) for key, val in self.plot_specs}
             )
 
         if data_specs is True:
@@ -591,16 +641,16 @@ class Maps(object):
             The coordinate-system of the provided coordinates.
             Can be one of:
 
-                - PROJ string
-                - Dictionary of PROJ parameters
-                - PROJ keyword arguments for parameters
-                - JSON string with PROJ parameters
-                - CRS WKT string
-                - An authority string [i.e. 'epsg:4326']
-                - An EPSG integer code [i.e. 4326]
-                - A tuple of ("auth_name": "auth_code") [i.e ('epsg', '4326')]
-                - An object with a `to_wkt` method.
-                - A :class:`pyproj.crs.CRS` class
+            - PROJ string
+            - Dictionary of PROJ parameters
+            - PROJ keyword arguments for parameters
+            - JSON string with PROJ parameters
+            - CRS WKT string
+            - An authority string [i.e. 'epsg:4326']
+            - An EPSG integer code [i.e. 4326]
+            - A tuple of ("auth_name": "auth_code") [i.e ('epsg', '4326')]
+            - An object with a `to_wkt` method.
+            - A :class:`pyproj.crs.CRS` class
 
             (see `pyproj.CRS.from_user_input` for more details)
 
@@ -618,20 +668,25 @@ class Maps(object):
         --------
 
         - using a single `pandas.DataFrame`
-        >>> data = pd.DataFrame(dict(lon=[...], lat=[...], a=[...], b=[...]))
-        >>> m.set_data(data, xcoord="lon", ycoord="lat", parameter="a", crs=4326)
+
+          >>> data = pd.DataFrame(dict(lon=[...], lat=[...], a=[...], b=[...]))
+          >>> m.set_data(data, xcoord="lon", ycoord="lat", parameter="a", crs=4326)
 
         - using individual `pandas.Series`
-        >>> lon, lat, vals = pd.Series([...]), pd.Series([...]), pd.Series([...])
-        >>> m.set_data(vals, xcoord=x, ycoord=y, crs=4326)
+
+          >>> lon, lat, vals = pd.Series([...]), pd.Series([...]), pd.Series([...])
+          >>> m.set_data(vals, xcoord=x, ycoord=y, crs=4326)
 
         - using 1D lists
-        >>> lon, lat, vals = [...], [...], [...]
-        >>> m.set_data(vals, xcoord=lon, ycoord=lat, crs=4326)
+
+          >>> lon, lat, vals = [...], [...], [...]
+          >>> m.set_data(vals, xcoord=lon, ycoord=lat, crs=4326)
 
         - using 1D or 2D numpy.arrays
-        >>> lon, lat, vals = np.array([[...]]), np.array([[...]]), np.array([[...]])
-        >>> m.set_data(vals, xcoord=lon, ycoord=lat, crs=4326)
+
+          >>> lon, lat, vals = np.array([[...]]), np.array([[...]]), np.array([[...]])
+          >>> m.set_data(vals, xcoord=lon, ycoord=lat, crs=4326)
+
         """
 
         if data is not None:
@@ -653,7 +708,7 @@ class Maps(object):
 
     def set_plot_specs(self, **kwargs):
         """
-        Set the plot-specifications (title, label, colormap, crs, etc.)
+        Set the plot-specifications (label, colormap, crs, etc.)
 
         Use this function to update multiple data-specs in one go
         Alternatively you can set the data-specifications via
@@ -664,10 +719,6 @@ class Maps(object):
         ----------
         label : str, optional
             The colorbar-label.
-            If None, the name of the parameter will be used.
-            The default is None.
-        title : str, optional
-            The plot-title.
             If None, the name of the parameter will be used.
             The default is None.
         cmap : str or matplotlib.colormap, optional
@@ -775,11 +826,12 @@ class Maps(object):
         return x, y
 
     @property
+    @lru_cache()
     def crs_plot(self):
         """
-        The crs used for plotting. (A shortcut for `m.get_crs("plot")`)
+        The crs used for plotting.
         """
-        return self.get_crs("plot")
+        return self._get_cartopy_crs(self._crs_plot)
 
     @property
     @lru_cache()
@@ -788,6 +840,17 @@ class Maps(object):
         transformer = Transformer.from_crs(
             self.crs_plot,
             self.get_crs(4326),
+            always_xy=True,
+        )
+        return transformer
+
+    @property
+    @lru_cache()
+    def _transf_lonlat_to_plot(self):
+        # get coordinate transformation from in_crs to plot_crs
+        transformer = Transformer.from_crs(
+            self.get_crs(4326),
+            self.crs_plot,
             always_xy=True,
         )
         return transformer
@@ -812,7 +875,7 @@ class Maps(object):
         if crs == "in":
             crs = self.data_specs.crs
         elif crs == "out" or crs == "plot":
-            crs = self.plot_specs.plot_crs
+            crs = self.crs_plot
 
         if not isinstance(crs, CRS):
             crs = CRS.from_user_input(crs)
@@ -860,6 +923,8 @@ class Maps(object):
                     xorig = np.asanyarray(xcoord).ravel()
                     yorig = np.asanyarray(ycoord).ravel()
 
+                return z_data, xorig, yorig, ids, parameter
+
             # check for explicit 1D value lists
             types = (list, np.ndarray)
             if _pd_OK:
@@ -884,7 +949,7 @@ class Maps(object):
                 xorig = np.asanyarray(xcoord).ravel()
                 yorig = np.asanyarray(ycoord).ravel()
 
-        return z_data, xorig, yorig, ids, parameter
+            return z_data, xorig, yorig, ids, parameter
 
     def _prepare_data(
         self,
@@ -909,19 +974,22 @@ class Maps(object):
             cpos_radius = self.plot_specs.cpos_radius
 
         props = dict()
-
         # get coordinate transformation from in_crs to plot_crs
+        # make sure to re-identify the CRS with pyproj to correctly skip re-projection
+        # in case we use in_crs == plot_crs
+
+        crs1 = CRS.from_user_input(in_crs)
+        crs2 = CRS.from_user_input(self._crs_plot)
+
         transformer = Transformer.from_crs(
-            self.get_crs(in_crs),
-            self.crs_plot,
+            crs1,
+            crs2,
             always_xy=True,
         )
-
         # identify the provided data and get it in the internal format
         z_data, xorig, yorig, ids, parameter = self._identify_data(
             data=data, xcoord=xcoord, ycoord=ycoord, parameter=parameter
         )
-
         if cpos is not None and cpos != "c":
             # fix position of pixel-center in the input-crs
             assert (
@@ -934,13 +1002,15 @@ class Maps(object):
 
             xorig, yorig = self._set_cpos(xorig, yorig, rx, ry, cpos)
 
-        props["xorig"] = xorig
-        props["yorig"] = yorig
-        props["ids"] = ids
-        props["z_data"] = z_data
+        nanmask = ~np.isnan(z_data)
+
+        props["xorig"] = xorig[nanmask]
+        props["yorig"] = yorig[nanmask]
+        props["ids"] = ids[nanmask]
+        props["z_data"] = z_data[nanmask]
 
         # transform center-points to the plot_crs
-        props["x0"], props["y0"] = transformer.transform(xorig, yorig)
+        props["x0"], props["y0"] = transformer.transform(props["xorig"], props["yorig"])
 
         props["mask"] = np.isfinite(props["x0"]) & np.isfinite(props["y0"])
 
@@ -1092,6 +1162,11 @@ class Maps(object):
             cb_orientation = "vertical"
         elif orientation == "vertical":
             cb_orientation = "horizontal"
+
+        if histbins == "bins":
+            assert (
+                classified
+            ), "EOmaps: using histbins='bins' is only possible for classified data!"
 
         n_cmap = cm.ScalarMappable(cmap=cmap, norm=norm)
         n_cmap.set_array(np.ma.masked_invalid(z_data))
@@ -1265,6 +1340,107 @@ class Maps(object):
 
     if _gpd_OK:
 
+        def _clip_gdf(self, gdf, how="crs"):
+            """
+            Clip the shapes of a GeoDataFrame with respect to the boundaries
+            of the crs (or the plot-extent).
+
+            Parameters
+            ----------
+            gdf : geopandas.GeoDataFrame
+                The GeoDataFrame containing the geometries.
+            how : str, optional
+                Identifier how the clipping should be performed.
+
+                If a suffix "_invert" is added to the string, the polygon will be
+                inverted (via a symmetric-difference to the clip-shape)
+
+                - clipping with geopandas:
+                  - "crs" : use the actual crs boundary polygon
+                  - "crs_bounds" : use the boundary-envelope of the crs
+                  - "extent" : use the current plot-extent
+
+                - clipping with gdal (always uses the crs domain as clip-shape):
+                  - "gdal_Intersection"
+                  - "gdal_SymDifference"
+                  - "gdal_Difference"
+                  - "gdal_Union"
+
+                The default is "crs".
+
+            Returns
+            -------
+            gdf
+                A GeoDataFrame with the clipped geometries
+            """
+
+            if how.startswith("gdal"):
+                methods = ["SymDifference", "Intersection", "Difference", "Union"]
+                # "SymDifference", "Intersection", "Difference"
+                method = how.split("_")[1]
+                assert method in methods, "EOmaps: '{how}' is not a valid clip-method"
+                try:
+                    from osgeo import gdal
+                    from shapely import wkt
+                except ImportError:
+                    raise ImportError(
+                        "EOmaps: Missing dependency: 'osgeo'\n"
+                        + "...clipping with gdal requires 'osgeo.gdal'"
+                    )
+
+                e = self.ax.projection.domain
+                e2 = gdal.ogr.CreateGeometryFromWkt(e.wkt)
+                if not e2.IsValid():
+                    e2 = e2.MakeValid()
+
+                gdf = gdf.to_crs(self.crs_plot)
+                clipgeoms = []
+                for g in gdf.geometry:
+                    g2 = gdal.ogr.CreateGeometryFromWkt(g.wkt)
+
+                    if g2 is None:
+                        continue
+
+                    if not g2.IsValid():
+                        g2 = g2.MakeValid()
+
+                    i = getattr(g2, method)(e2)
+
+                    if how.endswith("_invert"):
+                        i = i.SymDifference(e2)
+
+                    gclip = wkt.loads(i.ExportToWkt())
+                    clipgeoms.append(gclip)
+
+                gdf = gpd.GeoDataFrame(geometry=clipgeoms, crs=self.crs_plot)
+
+                return gdf
+
+            if how == "crs" or how == "crs_invert":
+                clip_shp = gpd.GeoDataFrame(
+                    geometry=[self.ax.projection.domain], crs=self.crs_plot
+                ).to_crs(gdf.crs)
+            elif how == "extent" or how == "extent_invert":
+                self.BM.update()
+                x0, x1, y0, y1 = self.ax.get_extent()
+                clip_shp = self._make_rect_poly(x0, y0, x1, y1, self.crs_plot).to_crs(
+                    gdf.crs
+                )
+            elif how == "crs_bounds" or how == "crs_bounds_invert":
+                x0, x1, y0, y1 = self.ax.get_extent()
+                clip_shp = self._make_rect_poly(
+                    *self.crs_plot.boundary.bounds, self.crs_plot
+                ).to_crs(gdf.crs)
+            else:
+                raise TypeError(f"EOmaps: '{how}' is not a valid clipping method")
+
+            clipgdf = gdf.clip(clip_shp)
+
+            if how.endswith("_invert"):
+                clipgdf = clipgdf.symmetric_difference(clip_shp)
+
+            return clipgdf
+
         def add_gdf(
             self,
             gdf,
@@ -1273,6 +1449,9 @@ class Maps(object):
             val_key=None,
             layer=None,
             temporary_picker=None,
+            clip=False,
+            reproject="gpd",
+            verbose=False,
             **kwargs,
         ):
             """
@@ -1289,9 +1468,9 @@ class Maps(object):
                 created that can be used to pick geometries of the GeoDataFrame.
 
                 The container can then be accessed via:
-                    >>> m.cb.pick__<picker_name>
-                    or
-                    >>> m.cb.pick[picker_name]
+                >>> m.cb.pick__<picker_name>
+                or
+                >>> m.cb.pick[picker_name]
                 and it can be used in the same way as `m.cb.pick...`
 
             pick_method : str or callable
@@ -1308,6 +1487,7 @@ class Maps(object):
                       (should work with any geometry whose centroid is defined)
 
                     The default is "centroids"
+
                 if callable :
                     A callable that is used to identify the picked geometry.
                     The call-signature is:
@@ -1318,7 +1498,9 @@ class Maps(object):
                     >>>     ...
                     >>>     # if the pick is successful:
                     >>>     return True, dict(ID, pos, val, ind)
-                The default is "contains"
+
+                    The default is "contains"
+
             val_key : str
                 The dataframe-column used to identify values for pick-callbacks.
                 The default is None.
@@ -1327,6 +1509,55 @@ class Maps(object):
             temporary_picker : str, optional
                 The name of the picker that should be used to make the geometry
                 temporary (e.g. remove it after each pick-event)
+            clip : str or False
+                This feature can help with re-projection issues for non-global crs.
+                (see example below)
+
+                Indicator if geometries should be clipped prior to plotting or not.
+
+                - if "crs": clip with respect to the boundary-shape of the crs
+                - if "crs_bounds" : clip with respect to a rectangular crs boundary
+                - if "extent": clip with respect to the current extent of the plot-axis.
+                - if the 'gdal' python-bindings are installed, you can use gdal to clip
+                  the shapes with respect to the crs-boundary. (slower but more robust)
+                  The following logical operations are supported:
+
+                  - "gdal_SymDifference" : symmetric difference
+                  - "gdal_Intersection" : intersection
+                  - "gdal_Difference" : difference
+                  - "gdal_Union" : union
+
+                If a suffix "_invert" is added to the clip-string (e.g. "crs_invert"
+                or "gdal_Intersection_invert") the obtained (clipped) polygons will be
+                inverted.
+
+
+                >>> mg = MapsGrid(2, 3, crs=3035)
+                >>> mg.m_0_0.add_feature.preset.ocean(use_gpd=True)
+                >>> mg.m_0_1.add_feature.preset.ocean(use_gpd=True, clip="crs")
+                >>> mg.m_0_2.add_feature.preset.ocean(use_gpd=True, clip="extent")
+                >>> mg.m_1_0.add_feature.preset.ocean(use_gpd=False)
+                >>> mg.m_1_1.add_feature.preset.ocean(use_gpd=False, clip="crs")
+                >>> mg.m_1_2.add_feature.preset.ocean(use_gpd=False, clip="extent")
+
+            reproject : str, optional
+                Similar to "clip" this feature mainly addresses issues in the way how
+                re-projected geometries are displayed in certain coordinate-systems.
+                (see example below)
+
+                - if "gpd": geopandas is used to re-project the geometries
+                - if "cartopy": cartopy is used to re-project the geometries
+                  (slower but generally more robust than "gpd")
+
+                >>> mg = MapsGrid(2, 1, crs=Maps.CRS.Stereographic())
+                >>> mg.m_0_0.add_feature.preset.ocean(use_gpd="gpd")
+                >>> mg.m_1_0.add_feature.preset.ocean(use_gpd="cartopy")
+
+                The default is "gpd"
+            verbose : bool, optional
+                Indicator if a progressbar should be printed when re-projecting
+                geometries with "use_gpd=False".
+                The default is False.
             kwargs :
                 all remaining kwargs are passed to `geopandas.GeoDataFrame.plot(**kwargs)`
 
@@ -1349,11 +1580,58 @@ class Maps(object):
 
             try:
                 # explode the GeoDataFrame to avoid picking multi-part geometries
-                gdf = gdf.explode(index_parts=False).to_crs(self.crs_plot)
+                gdf = gdf.explode(index_parts=False)
             except Exception:
                 # geopandas sometimes has problems exploding geometries...
                 # if it does not work, just continue with the Multi-geometries!
                 pass
+
+            if clip:
+                gdf = self._clip_gdf(gdf, clip)
+
+            if reproject == "gpd":
+                gdf = gdf.to_crs(self.crs_plot)
+            elif reproject == "cartopy":
+                # optionally use cartopy's re-projection routines to re-project
+                # geometries
+                if self.ax.projection != self._get_cartopy_crs(gdf.crs):
+                    # select only polygons that actually intersect with the CRS-boundary
+                    mask = gdf.intersects(
+                        self._make_rect_poly(
+                            *self.ax.projection.boundary.bounds, self.ax.projection
+                        )
+                        .to_crs(gdf.crs)
+                        .geometry[0]
+                    )
+                    gdf = gdf.copy()[mask]
+
+                    geoms = gdf.geometry
+                    if len(geoms) > 0:
+                        proj_geoms = []
+
+                        if verbose:
+                            for g in progressbar(
+                                geoms, "EOmaps: re-projecting... ", 20
+                            ):
+                                proj_geoms.append(
+                                    self.ax.projection.project_geometry(
+                                        g, ccrs.CRS(gdf.crs)
+                                    )
+                                )
+                        else:
+                            for g in geoms:
+                                proj_geoms.append(
+                                    self.ax.projection.project_geometry(
+                                        g, ccrs.CRS(gdf.crs)
+                                    )
+                                )
+
+                        gdf.geometry = proj_geoms
+                        gdf.set_crs(self.ax.projection, allow_override=True)
+            else:
+                raise AssertionError(
+                    "EOmaps: '{reproject}' is not a valid reproject-argument."
+                )
 
             # plot gdf and identify newly added collections
             # (geopandas always uses collections)
@@ -1361,37 +1639,13 @@ class Maps(object):
 
             artists, prefixes = [], []
             for geomtype, geoms in gdf.groupby(gdf.geom_type):
-                if "Polygon" in geomtype:
-                    try:
-                        raise TypeError
-                        use_crs = self._get_cartopy_crs(gdf.crs)
-                    except Exception:
-                        use_crs = Maps.CRS.PlateCarree()
-                        geoms = geoms.to_crs(4326)
+                gdf.plot(ax=ax, aspect=ax.get_aspect(), **defaultargs)
+                artists = [i for i in self.ax.collections if id(i) not in colls]
 
-                    for [key, alias] in [
-                        ("ec", "edgecolor"),
-                        ("fc", "facecolor"),
-                        ("lw", "linewidth"),
-                        ("ls", "linestyle"),
-                    ]:
-                        if key in defaultargs:
-                            defaultargs[alias] = defaultargs.pop(key)
-
-                    art = self.ax.add_geometries(
-                        geoms.geometry, crs=use_crs, **defaultargs
+                for i in artists:
+                    prefixes.append(
+                        f"_{i.__class__.__name__.replace('Collection', '')}"
                     )
-
-                    artists.append(art)
-                    prefixes.append(f"_{art.__class__.__name__.replace('Artist', '')}")
-                else:
-                    gdf.plot(ax=ax, aspect=ax.get_aspect(), **defaultargs)
-                    artists = [i for i in self.ax.collections if id(i) not in colls]
-
-                    for i in artists:
-                        prefixes.append(
-                            f"_{i.__class__.__name__.replace('Collection', '')}"
-                        )
 
             if picker_name is not None:
                 if pick_method is not None:
@@ -1501,9 +1755,9 @@ class Maps(object):
         xy_crs : any
             the identifier of the coordinate-system for the xy-coordinates
         radius : float or "pixel", optional
-            If float: The radius of the marker.
-            If "pixel": It will represent the dimensions of the selected pixel.
-                        (check the `buffer` kwarg!)
+            - If float: The radius of the marker.
+            - If "pixel": It will represent the dimensions of the selected pixel.
+              (check the `buffer` kwarg!)
 
             The default is None in which case "pixel" is used if a dataset is
             present and otherwise a shape with 1/10 of the axis-size is plotted
@@ -1515,14 +1769,14 @@ class Maps(object):
             (only relevant if radius is NOT specified as "pixel")
         shape : str, optional
             Indicator which shape to draw. Currently supported shapes are:
-                - geod_circles
-                - ellipses
-                - rectangles
+            - geod_circles
+            - ellipses
+            - rectangles
 
             The default is "circle".
         buffer : float, optional
             A factor to scale the size of the shape. The default is 1.
-        **kwargs :
+        kwargs :
             kwargs passed to the matplotlib patch.
             (e.g. `facecolor`, `edgecolor`, `linewidth`, `alpha` etc.)
 
@@ -1647,6 +1901,65 @@ class Maps(object):
         )
         self.BM.update(clear=False)
 
+    def add_compass(
+        self, pos=None, scale=10, style="compass", patch="w", txt="N", pickable=True
+    ):
+        """
+        Add a "compass" or "north-arrow" to the map.
+
+        Note
+        ----
+        You can use the mouse to pick the compass and move it anywhere on the map.
+        (the directions are dynamically updated if you pan/zoom or pick the compass)
+
+        - If you press the "delete" key while clicking on the compass, it is removed.
+          (same as calling `compass.remove()`)
+        - If you press the "d" key while clicking on the compass, it will be
+          disconnected from pick-events (same as calling `compass.set_pickable(False)`)
+
+
+        Parameters
+        ----------
+        pos : tuple or None, optional
+            The relative position of the compass with respect to the axis.
+            (0,0) - lower left corner, (1,1) - upper right corner
+            Note that you can also move the compass with the mouse!
+        scale : float, optional
+            A scale-factor for the size of the compass. The default is 10.
+        style : str, optional
+
+            - "north arrow" : draw only a north-arrow
+            - "compass": draw a compass with arrows in all 4 directions
+
+            The default is "compass".
+        patch : False, str or tuple, optional
+            The color of the background-patch.
+            (can be any color specification supported by matplotlib)
+            The default is "w".
+        txt : str, optional
+            Indicator which directions should be indicated.
+            - "NESW" : add letters for all 4 directions
+            - "NE" : add only letters for North and East (same for other combinations)
+            - None : don't add any letters
+            The default is "N".
+        pickable : bool, optional
+            Indicator if the compass should be static (False) or if it can be dragged
+            with the mouse (True). The default is True
+
+        Returns
+        -------
+        compass : eomaps.Compass
+            A compass-object that can be used to manually adjust the style and position
+            of the compass or remove it from the map.
+
+        """
+
+        c = Compass(self)
+        c(pos=pos, scale=scale, style=style, patch=patch, txt=txt, pickable=pickable)
+        # store a reference to the object (required for callbacks)!
+        self._compass.add(c)
+        return c
+
     @wraps(ScaleBar.__init__)
     def add_scalebar(
         self,
@@ -1695,42 +2008,159 @@ class Maps(object):
 
         self.figure.f.savefig(*args, **kwargs)
 
-    def plot_map(
+    def _shade_map(
+        self, pick_distance=100, verbose=0, layer=None, dynamic=False, **kwargs
+    ):
+        """
+        Plot the dataset using the (very fast) "datashader" library.
+        (requires `datashader`... use `conda install -c conda-forge datashader`)
+
+        - This method is intended for extremely large datasets
+          (up to millions of datapoints)!
+
+        A dynamically updated "shaded" map will be generated.
+        Note that the datapoints in this case are NOT represented by the shapes
+        defined as `m.set_shape`!
+
+        - By default, the shading is performed using a "mean"-value aggregation hook
+
+        kwargs :
+            kwargs passed to `datashader.mpl_ext.dsshow`
+
+        """
+        try:
+            from datashader.mpl_ext import dsshow
+        except ImportError:
+            raise ImportError(
+                "EOmaps: Missing dependency: 'datashader' \n ... please install"
+                + " (conda install -c conda-forge datashader) to use the plot-shapes"
+                + "'shade_points' and 'shade_raster'"
+            )
+
+        # remove previously fetched backgrounds for the used layer
+        if layer in self.BM._bg_layers and dynamic is False:
+            del self.BM._bg_layers[layer]
+        self.BM._refetch_bg = True
+
+        if self.shape.name == "shade_raster":
+            crs1 = CRS.from_user_input(self.data_specs.crs)
+            crs2 = CRS.from_user_input(self._crs_plot)
+            assert crs1.equals(crs2), (
+                "EOmaps: how='Raster' can only be used if data-crs"
+                + " and plot-crs are equal!"
+            )
+
+        if verbose:
+            print("EOmaps: Preparing the data")
+        # ---------------------- prepare the data
+        props = self._prepare_data()
+        if len(props["z_data"]) == 0:
+            print("EOmaps: there was no data to plot")
+            return
+
+        # remember props for later use
+        self._props = props
+
+        vmin = self.plot_specs["vmin"]
+        if self.plot_specs["vmin"] is None:
+            vmin = np.nanmin(props["z_data"])
+        vmax = self.plot_specs["vmax"]
+        if self.plot_specs["vmax"] is None:
+            vmax = np.nanmax(props["z_data"])
+
+        # clip the data to properly account for vmin and vmax
+        props["z_data"] = props["z_data"].clip(vmin, vmax)
+
+        if verbose:
+            print("EOmaps: Classifying...")
+
+        # ---------------------- classify the data
+        cbcmap, norm, bins, classified = self._classify_data(
+            vmin=vmin,
+            vmax=vmax,
+            classify_specs=self.classify_specs,
+        )
+
+        self.classify_specs._cbcmap = cbcmap
+        self.classify_specs._norm = norm
+        self.classify_specs._bins = bins
+        self.classify_specs._classified = classified
+
+        if verbose:
+            print("EOmaps: Plotting...")
+        zdata = self.classify_specs._norm(props["z_data"].ravel())
+
+        df = pd.DataFrame(
+            dict(x=props["x0"].ravel(), y=props["y0"].ravel(), val=zdata), copy=False
+        )
+        # update here to ensure bounds are set
+        self.BM.update()
+
+        x0, x1, y0, y1 = self.ax.get_extent()
+        # df = df[
+        #     np.logical_and(
+        #         np.logical_and(df.x > x0, df.x < x1),
+        #         np.logical_and(df.y > y0, df.y < y1),
+        #     )
+        # ]
+
+        if len(df) == 0:
+            print("EOmaps: there was no data to plot")
+            return
+
+        plot_width, plot_height = int(self.ax.bbox.width), int(self.ax.bbox.height)
+
+        if self.shape.name == "shade_raster":
+            # raster rendering requires an xarray as input
+            df = df.set_index(["x", "y"]).to_xarray()
+
+        coll = dsshow(
+            df,
+            glyph=self.shape.glyph,
+            aggregator=self.shape.aggregator,
+            shade_hook=self.shape.shade_hook,
+            agg_hook=self.shape.agg_hook,
+            # norm="eq_hist",
+            norm=plt.Normalize(df.val.min(), df.val.max()),
+            cmap=cbcmap,
+            ax=self.ax,
+            plot_width=plot_width,
+            plot_height=plot_height,
+            # x_range=(x0, x1),
+            # y_range=(y0, y1),
+            x_range=(df.x.min(), df.x.max()),
+            y_range=(df.y.min(), df.y.max()),
+            **kwargs,
+        )
+
+        self.figure.coll = coll
+        if verbose:
+            print("EOmaps: Indexing for pick-callbacks...")
+
+        if pick_distance is not None:
+            # use a cKDTree based picking to speed up picks for large collections
+            self.tree = cKDTree(np.stack([props["x0"], props["y0"]], axis=1))
+
+            self.cb.pick._set_artist(coll)
+            self.cb.pick._init_cbs()
+            self.cb.pick._pick_distance = pick_distance
+            self.cb._methods.append("pick")
+
+        if dynamic is True:
+            self.BM.add_artist(coll, layer)
+        else:
+            self.BM.add_bg_artist(coll, layer)
+
+        if dynamic is True:
+            self.BM.update(clear=False)
+
+    def _plot_map(
         self,
         pick_distance=100,
         layer=None,
         dynamic=False,
         **kwargs,
     ):
-        """
-        Actually generate the map-plot based on the data provided as `m.data` and the
-        specifications defined in "data_specs", "plot_specs" and "classify_specs".
-
-        NOTE
-        ----
-        Each call to plot_map will replace the collection used for picking!
-        (only the last collection remains interactive on multiple calls to `m.plot_map()`)
-
-        If you need multiple responsive datasets, use connected maps-objects instead!
-        (e.g. `m2 = Maps(parent=m)` or have a look at `MapsGrid`)
-
-        Parameters
-        ----------
-        pick_distance : int
-            The maximum distance (in pixels) to trigger callbacks on the added collection.
-            (The distance is evaluated between the clicked pixel and the center of the
-            closest data-point)
-            The default is 10.
-        layer : int
-            The layer-index at which the dataset will be plotted.
-            The default is None.
-        dynamic : bool
-            If True, the collection will be dynamically updated
-
-        kwargs
-            kwargs passed to the initialization of the matpltolib collection
-            (dependent on the plot-shape) [linewidth, edgecolor, facecolor, ...]
-        """
 
         if "coastlines" in kwargs:
             kwargs.pop("coastlines")
@@ -1754,26 +2184,16 @@ class Maps(object):
             ), f"The key '{key}' is assigned internally by EOmaps!"
 
         try:
-            if layer is None:
-                layer = self.layer
-
             # remove previously fetched backgrounds for the used layer
-            if layer in self.BM._bg_layers:
+            if layer in self.BM._bg_layers and dynamic is False:
                 del self.BM._bg_layers[layer]
             self.BM._refetch_bg = True
-
-            title = self.plot_specs["title"]
-            if title is not None:
-                ax.set_title(title)
 
             if self.data is None:
                 return
 
             # ---------------------- prepare the data
             props = self._prepare_data()
-
-            # use a cKDTree based picking to speed up picks for large collections
-            self.tree = cKDTree(np.stack([props["x0"], props["y0"]], axis=1))
 
             # remember props for later use
             self._props = props
@@ -1820,14 +2240,18 @@ class Maps(object):
 
             self.figure.coll = coll
 
-            # attach the pick-callback that executes the callbacks
-            # self.attach_picker("default", self.figure.coll, None)
+            if pick_distance is not None:
+                # use a cKDTree based picking to speed up picks for large collections
+                self.tree = cKDTree(
+                    np.stack(
+                        [props["x0"][props["mask"]], props["y0"][props["mask"]]], axis=1
+                    )
+                )
 
-            # self.cb.add_picker("default", coll, None)
-            self.cb.pick._set_artist(coll)
-            self.cb.pick._init_cbs()
-            self.cb.pick._pick_distance = pick_distance
-            self.cb._methods.append("pick")
+                self.cb.pick._set_artist(coll)
+                self.cb.pick._init_cbs()
+                self.cb.pick._pick_distance = pick_distance
+                self.cb._methods.append("pick")
 
             if dynamic is True:
                 self.BM.add_artist(coll, layer)
@@ -1850,12 +2274,68 @@ class Maps(object):
         except Exception as ex:
             raise ex
 
+    def plot_map(
+        self,
+        pick_distance=100,
+        layer=None,
+        dynamic=False,
+        **kwargs,
+    ):
+        """
+        Actually generate the map-plot based on the data provided as `m.data` and the
+        specifications defined in "data_specs", "plot_specs" and "classify_specs".
+
+        NOTE
+        ----
+        Each call to plot_map will replace the collection used for picking!
+        (only the last collection remains interactive on multiple calls to `m.plot_map()`)
+
+        If you need multiple responsive datasets, use a new layer for each dataset!
+        (e.g. via `m2 = m.new_layer()`)
+
+        Parameters
+        ----------
+        pick_distance : int or None
+            If None, NO pick-callbacks will be assigned (e.g. 'm.cb.pick' will not work)
+            (useful for very large datasets to speed up plotting and save memory)
+
+            The maximum distance (in pixels) to trigger callbacks on the added collection.
+            (The distance is evaluated between the clicked pixel and the center of the
+            closest data-point)
+
+            The default is 10.
+        layer : int
+            The layer-index at which the dataset will be plotted.
+            The default is None.
+        dynamic : bool
+            If True, the collection will be dynamically updated
+
+        kwargs
+            kwargs passed to the initialization of the matpltolib collection
+            (dependent on the plot-shape) [linewidth, edgecolor, facecolor, ...]
+
+            For "shade_points" or "shade_raster" shapes, kwargs are passed to
+            `datashader.mpl_ext.dsshow`
+        """
+        if layer is None:
+            layer = self.layer
+
+        if self.shape.name.startswith("shade"):
+            self._shade_map(
+                pick_distance=pick_distance, layer=layer, dynamic=dynamic, **kwargs
+            )
+        else:
+            self._plot_map(
+                pick_distance=pick_distance, layer=layer, dynamic=dynamic, **kwargs
+            )
+
     def add_colorbar(
         self,
         gs=0.2,
         orientation="horizontal",
         label=None,
         density=None,
+        histbins=None,
         tick_precision=None,
         top=0.05,
         bottom=0.1,
@@ -1874,12 +2354,36 @@ class Maps(object):
 
         Parameters
         ----------
-        gs : matpltolib.gridspec.GridSpec
-            the gridspec to derive the colorbar-axes from.
+        gs : float or matpltolib.gridspec.SubplotSpec
+            - if float: The fraction of the the parent axes to use for the colorbar.
+              (The colorbar will "steal" some space from the parent axes.)
+            - if SubplotSpec : A SubplotSpec instance that will be used to initialize
+              the colorbar.
+
+            The default is 0.2.
         orientation : str
             The orientation of the colorbar ("horizontal" or "vertical")
             The default is "horizontal"
+        label : str or None
+            The label of the colorbar.
+            If None, the parameter-name (e.g. `m.data_specs.parameter`) is used.
+            The default is None.
+        density : bool or None
+            Indicator if the y-axis of the histogram should represent the
+            probability-density (True) or the number of counts per bin (False)
+            If None, the value assigned in `m.plot_specs.density` is used.
+            The default is None.
+        histbins : int, list, tuple, array or "bins", optional
+            - If int: The number of histogram-bins to use for the colorbar.
+            - If list, tuple or numpy-array: the bins to use
+            - If "bins": use the bins obtained from the classification
+              (ONLY possible if a classification scheme is used!)
 
+            The default is 256.
+        tick_precision : int or None
+            The precision of the tick-labels in the colorbar. The default is 2.
+            If None, the value assigned in `m.plot_specs.tick_precision` is used.
+            The default is None.
         top, bottom, left, right : float
             The padding between the colorbar and the parent axes (as fraction of the
             plot-height (if "horizontal") or plot-width (if "vertical")
@@ -1999,6 +2503,7 @@ class Maps(object):
             label=label,
             density=density,
             tick_precision=tick_precision,
+            histbins=histbins,
         )
 
         self._ax_cb = ax_cb
@@ -2085,7 +2590,7 @@ class Maps(object):
             """
             Indicate a rectangular extent in a given crs on the map.
             (the rectangle is drawn as a polygon where each line is divided by "npts"
-             points to ensure correct re-projection of the shape to other crs)
+            points to ensure correct re-projection of the shape to other crs)
 
             Parameters
             ----------
@@ -2098,7 +2603,6 @@ class Maps(object):
             crs : any, optional
                 a coordinate-system identifier.
                 The default is 4326 (e.g. lon/lat).
-
             kwargs :
                 additional keyword-arguments passed to `m.add_gdf()`.
 
@@ -2201,7 +2705,7 @@ class MapsGrid:
 
         Possible values are:
         - a tuple of (row, col)
-
+        - an integer representing (row + col)
 
         Note: If either `m_inits` or `ax_inits` is provided, ONLY objects with the
         specified properties are initialized!
@@ -2264,14 +2768,14 @@ class MapsGrid:
     To initialize a 2 by 2 grid with a large map on top, a small map
     on the bottom-left and an ordinary matplotlib plot on the bottom-right, use:
 
-        >>> m_inits = dict(top = (0, slice(0, 2)),
-        >>>                bottom_left=(1, 0))
-        >>> ax_inits = dict(bottom_right=(1, 1))
+    >>> m_inits = dict(top = (0, slice(0, 2)),
+    >>>                bottom_left=(1, 0))
+    >>> ax_inits = dict(bottom_right=(1, 1))
 
-        >>> mg = MapsGrid(2, 2, m_inits=m_inits, ax_inits=ax_inits)
-        >>> mg.m_top.plot_map()
-        >>> mg.m_bottom_left.plot_map()
-        >>> mg.ax_bottom_right.plot([1,2,3])
+    >>> mg = MapsGrid(2, 2, m_inits=m_inits, ax_inits=ax_inits)
+    >>> mg.m_top.plot_map()
+    >>> mg.m_bottom_left.plot_map()
+    >>> mg.ax_bottom_right.plot([1,2,3])
 
     Returns
     -------
@@ -2304,14 +2808,24 @@ class MapsGrid:
             self._custom_init = False
             for i in range(r):
                 for j in range(c):
+                    crsij = crs[i, j]
+                    if isinstance(crsij, np.generic):
+                        crsij = crsij.item()
+
                     if i == 0 and j == 0:
+                        # use crs[i, j].item() to convert to native python-types
+                        # (instead of numpy-dtypes)  ... check numpy.ndarray.item
                         mij = Maps(
-                            crs=crs[i, j], gs_ax=self.gridspec[0, 0], figsize=figsize
+                            crs=crsij,
+                            gs_ax=self.gridspec[0, 0],
+                            figsize=figsize,
                         )
                         self.parent = mij
                     else:
                         mij = Maps(
-                            crs=crs[i, j], parent=self.parent, gs_ax=self.gridspec[i, j]
+                            crs=crsij,
+                            parent=self.parent,
+                            gs_ax=self.gridspec[i, j],
                         )
 
                     self._Maps.append(mij)
@@ -2322,6 +2836,9 @@ class MapsGrid:
             self._custom_init = True
             if m_inits is not None:
                 if not isinstance(crs, dict):
+                    if isinstance(crs, np.generic):
+                        crs = crs.item()
+
                     crs = {key: crs for key in m_inits}
 
                 assert self._test_unique_str_keys(
@@ -2387,6 +2904,10 @@ class MapsGrid:
                     raise IndexError(f"{key} is not a valid indexer for MapsGrid")
         except:
             raise IndexError(f"{key} is not a valid indexer for MapsGrid")
+
+    @property
+    def _preferred_wms_service(self):
+        return self.parent._preferred_wms_service
 
     def create_axes(self, ax_init, name=None):
         """

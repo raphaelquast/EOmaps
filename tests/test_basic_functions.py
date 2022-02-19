@@ -36,7 +36,6 @@ class TestBasicPlotting(unittest.TestCase):
         m.add_feature.preset.coastline()
         m.set_data_specs(data=self.data, xcoord="x", ycoord="y", crs=3857)
         m.set_plot_specs(
-            title="asdf",
             label="bsdf",
             histbins=100,
             density=True,
@@ -128,7 +127,6 @@ class TestBasicPlotting(unittest.TestCase):
         for cpos in ["ul", "ur", "ll", "lr", "c"]:
             m.set_data_specs(xcoord="x", ycoord="y", in_crs=3857)
             m.set_plot_specs(
-                title="asdf",
                 label="bsdf",
                 cpos_radius=2,
                 histbins=100,
@@ -463,7 +461,7 @@ class TestBasicPlotting(unittest.TestCase):
     def test_MapsGrid(self):
         mg = MapsGrid(2, 2, crs=4326)
         mg.set_data(data=self.data, xcoord="x", ycoord="y", in_crs=3857)
-        mg.set_plot_specs(title="asdf", label="bsdf")
+        mg.set_plot_specs(label="bsdf")
         mg.set_classify_specs(scheme=Maps.CLASSIFIERS.EqualInterval, k=4)
         mg.set_shape.rectangles()
         mg.plot_map()
@@ -488,7 +486,7 @@ class TestBasicPlotting(unittest.TestCase):
         )
 
         mg.set_data(data=self.data, xcoord="x", ycoord="y", in_crs=3857)
-        mg.set_plot_specs(title="asdf", label="bsdf")
+        mg.set_plot_specs(label="bsdf")
         mg.set_classify_specs(scheme=Maps.CLASSIFIERS.EqualInterval, k=4)
 
         for m in mg:
@@ -518,6 +516,37 @@ class TestBasicPlotting(unittest.TestCase):
                 m_inits={1: (0, slice(0, 2)), 2: (1, 0)},
                 ax_inits={"2": (1, 1), 2: 2},
             )
+
+    def test_compass(self):
+        m = Maps(Maps.CRS.Stereographic())
+        m.add_feature.preset.coastline(ec="k", scale="110m")
+        c1 = m.add_compass((0.1, 0.1))
+        c2 = m.add_compass((0.9, 0.9))
+
+        cv = m.figure.f.canvas
+
+        # click on compass to move it around
+        cv.button_press_event(*m.ax.transAxes.transform((0.1, 0.1)), 1, False)
+        cv.motion_notify_event(*m.ax.transAxes.transform((0.5, 0.5)), False)
+        cv.button_release_event(*m.ax.transAxes.transform((0.5, 0.5)), 1, False)
+
+        c1.set_position((-30000000, -2000000))
+        c1.set_patch("r", "g", 5)
+        c1.set_pickable(False)
+        c1.remove()
+
+        c2.set_position((0.75, 0.25), "axis")
+        c2.set_patch((1, 0, 1, 0.5), False)
+        c2.remove()
+
+        c = m.add_compass((0.5, 0.5), scale=7, style="north arrow", patch="g")
+        c.set_position((-30000000, -2000000))
+        c.set_patch("r", "g", 5)
+        c.set_position((0.75, 0.25), "axis")
+        c.set_patch((1, 0, 1, 0.5), False)
+        c.set_pickable(False)
+
+        plt.close("all")
 
     def test_ScaleBar(self):
 
@@ -674,7 +703,7 @@ class TestBasicPlotting(unittest.TestCase):
 
             print(title)
 
-            m.plot_specs.title = title
+            m.ax.set_title(title)
             getattr(m.set_shape, i[0])(**i[1])
 
             m.plot_map(edgecolor="none", pick_distance=5)

@@ -19,11 +19,11 @@ mg = MapsGrid(
 mg.set_data(data=data, xcoord="lon", ycoord="lat", in_crs=4326)
 
 # --------- set specs for the first axes
-mg.m_0_0.set_plot_specs(title="epsg=4326")
+mg.m_0_0.ax.set_title("epsg=4326")
 mg.m_0_0.set_classify_specs(scheme="EqualInterval", k=10)
 
 # --------- set specs for the second axes
-mg.m_0_1.set_plot_specs(title="Stereographic")
+mg.m_0_1.ax.set_title("Stereographic")
 mg.m_0_1.set_shape.rectangles()
 mg.m_0_1.set_classify_specs(scheme="Quantiles", k=4)
 
@@ -31,7 +31,7 @@ mg.m_0_1.set_classify_specs(scheme="Quantiles", k=4)
 
 mg.m_0_2.ax.set_extent(mg.m_0_2.crs_plot.area_of_use.bounds)
 
-mg.m_0_2.set_plot_specs(title="epsg=3035")
+mg.m_0_2.ax.set_title("epsg=3035")
 mg.m_0_2.set_classify_specs(
     scheme="StdMean", multiples=[-1, -0.75, -0.5, -0.25, 0.25, 0.5, 0.75, 1]
 )
@@ -40,7 +40,8 @@ mg.m_0_2.set_classify_specs(
 mg.plot_map()
 mg.add_colorbar()
 
-mg.add_feature.preset.ocean()
+# clip the ocean shape by the plot-extent to avoid re-projection issues
+mg.add_feature.preset.ocean(clip="extent")
 mg.add_feature.preset.land()
 mg.add_feature.preset.coastline()
 
