@@ -89,37 +89,43 @@ lon, lat, data = [1,2,3,4,5], [1,2,3,4,5], [1,2,3,4,5]
 
 # initialize Maps object
 m = Maps(crs=Maps.CRS.Orthographic())
+
 # set the data
 m.set_data(data=data, xcoord=lon, ycoord=lat, crs=4326)
 # set the shape you want to use to represent the data-points
 m.set_shape.geod_circles(radius=10000) # (e.g. geodetic circles with 10km radius)
+
 # (optionally) set the appearance of the plot
 m.set_plot_specs(cmap="viridis", label="a nice label")
 # (optionally) classify the data
 m.set_classify_specs(scheme=Maps.CLASSIFIERS.Quantiles, k=5)
+
 # plot the map
 m.plot_map()
 
 # add a colorbar
 m.add_colorbar()
+
 # add a scalebar
 m.add_scalebar()
+
 # add a compass
 m.add_compass()
 
-# make the plot interactive
+# use callback functions make the plot interactive!
 m.cb.pick.attach.annotate()
 
 # ---- add another plot-layer on a different level (1) to the map
-#      (e.g. it will be invisible by default)
+#      (by default only layer 0 is shown!)
 m3 = m.new_layer(layer=1)
 ...
-# peek on the new layer if you click on the map
-m3.cb.click.attach.peek_layer(layer=1, how=0.4)
-# switch to the new layer if you press "1" on the keyboard
-m3.cb.keypress.attach.switch_layer(layer=1, key="1")
+# peek on layer 1 if you click on the map
+m.cb.click.attach.peek_layer(layer=1, how=0.4)
+# switch between the layers if you press "0" or "1" on the keyboard
+m.cb.keypress.attach.switch_layer(layer=0, key="0")
+m.cb.keypress.attach.switch_layer(layer=1, key="1")
 
-# ---- plot data directly from a GeoTIFF / NetCDF / CSV file
+# ---- add new layers directly from a GeoTIFF / NetCDF or CSV files
 m4 = m.new_layer_from_file.GeoTIFF(...)
 m4 = m.new_layer_from_file.NetCDF(...)
 m4 = m.new_layer_from_file.CSV(...)
