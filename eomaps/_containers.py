@@ -17,6 +17,7 @@ import mapclassify
 
 import cartopy.feature as cfeature
 from cartopy.io import shapereader
+from cartopy import crs as ccrs
 
 from ._webmap import _import_OK
 
@@ -810,7 +811,7 @@ class NaturalEarth_features(object):
                     A GeoDataFrame with all geometries and properties of the feature
                 """
                 gdf = gpd.read_file(shapereader.natural_earth(**self.feature))
-                gdf.set_crs(epsg=4326, inplace=True)
+                gdf.set_crs(ccrs.PlateCarree(), inplace=True, allow_override=True)
                 return gdf
 
     class _presets:

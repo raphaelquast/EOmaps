@@ -1,6 +1,7 @@
 """a collection of useful helper-functions."""
 from itertools import tee
 import re
+import sys
 
 import numpy as np
 from matplotlib.colors import LinearSegmentedColormap, ListedColormap
@@ -64,6 +65,24 @@ def cmap_alpha(cmap, alpha, interpolate=False):
     else:
         new_cmap = ListedColormap(new_cmap)
     return new_cmap
+
+
+# a simple progressbar
+# taken from https://stackoverflow.com/a/34482761/9703451
+def progressbar(it, prefix="", size=60, file=sys.stdout):
+    count = len(it)
+
+    def show(j):
+        x = int(size * j / count)
+        file.write("\r%s[%s%s] %i/%i\r" % (prefix, "#" * x, "." * (size - x), j, count))
+        file.flush()
+
+    show(0)
+    for i, item in enumerate(it):
+        yield item
+        show(i + 1)
+    file.write("\n")
+    file.flush()
 
 
 class draggable_axes:

@@ -40,6 +40,7 @@ from .helpers import (
     cmap_alpha,
     BlitManager,
     draggable_axes,
+    progressbar,
 )
 from ._shapes import shapes
 
@@ -1449,7 +1450,8 @@ class Maps(object):
             layer=None,
             temporary_picker=None,
             clip=False,
-            use_gpd=True,
+            reproject="gpd",
+            verbose=False,
             **kwargs,
         ):
             """
@@ -1538,18 +1540,24 @@ class Maps(object):
                 >>> mg.m_1_1.add_feature.preset.ocean(use_gpd=False, clip="crs")
                 >>> mg.m_1_2.add_feature.preset.ocean(use_gpd=False, clip="extent")
 
-            use_gpd : bool
+            reproject : str, optional
                 Similar to "clip" this feature mainly addresses issues in the way how
                 re-projected geometries are displayed in certain coordinate-systems.
                 (see example below)
 
-                Indicator if plotting routines from geopandas or cartopy are used when
-                adding Polygons. (All other geometry-types always use geopandas!)
+                - if "gpd": geopandas is used to re-project the geometries
+                - if "cartopy": cartopy is used to re-project the geometries
+                  (slower but generally more robust than "gpd")
 
                 >>> mg = MapsGrid(2, 1, crs=Maps.CRS.Stereographic())
-                >>> mg.m_0_0.add_feature.preset.ocean(use_gpd=True)
-                >>> mg.m_1_0.add_feature.preset.ocean(use_gpd=False)
+                >>> mg.m_0_0.add_feature.preset.ocean(use_gpd="gpd")
+                >>> mg.m_1_0.add_feature.preset.ocean(use_gpd="cartopy")
 
+                The default is "gpd"
+            verbose : bool, optional
+                Indicator if a progressbar should be printed when re-projecting
+                geometries with "use_gpd=False".
+                The default is False.
             kwargs :
                 all remaining kwargs are passed to `geopandas.GeoDataFrame.plot(**kwargs)`
 
@@ -1570,11 +1578,6 @@ class Maps(object):
             defaultargs = dict(facecolor="none", edgecolor="k", lw=1.5)
             defaultargs.update(kwargs)
 
-            if clip:
-                gdf = self._clip_gdf(gdf, clip)
-
-            gdf = gdf.to_crs(self.crs_plot)
-
             try:
                 # explode the GeoDataFrame to avoid picking multi-part geometries
                 gdf = gdf.explode(index_parts=False)
@@ -1583,43 +1586,66 @@ class Maps(object):
                 # if it does not work, just continue with the Multi-geometries!
                 pass
 
+            if clip:
+                gdf = self._clip_gdf(gdf, clip)
+
+            if reproject == "gpd":
+                gdf = gdf.to_crs(self.crs_plot)
+            elif reproject == "cartopy":
+                # optionally use cartopy's re-projection routines to re-project
+                # geometries
+                if self.ax.projection != self._get_cartopy_crs(gdf.crs):
+                    # select only polygons that actually intersect with the CRS-boundary
+                    mask = gdf.intersects(
+                        self._make_rect_poly(
+                            *self.ax.projection.boundary.bounds, self.ax.projection
+                        )
+                        .to_crs(gdf.crs)
+                        .geometry[0]
+                    )
+                    gdf = gdf.copy()[mask]
+
+                    geoms = gdf.geometry
+                    if len(geoms) > 0:
+                        proj_geoms = []
+
+                        if verbose:
+                            for g in progressbar(
+                                geoms, "EOmaps: re-projecting... ", 20
+                            ):
+                                proj_geoms.append(
+                                    self.ax.projection.project_geometry(
+                                        g, ccrs.CRS(gdf.crs)
+                                    )
+                                )
+                        else:
+                            for g in geoms:
+                                proj_geoms.append(
+                                    self.ax.projection.project_geometry(
+                                        g, ccrs.CRS(gdf.crs)
+                                    )
+                                )
+
+                        gdf.geometry = proj_geoms
+                        gdf.set_crs(self.ax.projection, allow_override=True)
+            else:
+                raise AssertionError(
+                    "EOmaps: '{reproject}' is not a valid reproject-argument."
+                )
+
             # plot gdf and identify newly added collections
             # (geopandas always uses collections)
             colls = [id(i) for i in self.ax.collections]
 
             artists, prefixes = [], []
             for geomtype, geoms in gdf.groupby(gdf.geom_type):
-                if "Polygon" in geomtype and not use_gpd:
-                    try:
-                        raise TypeError
-                        use_crs = self._get_cartopy_crs(gdf.crs)
-                    except Exception:
-                        use_crs = Maps.CRS.PlateCarree()
-                        geoms = geoms.to_crs(4326)
+                gdf.plot(ax=ax, aspect=ax.get_aspect(), **defaultargs)
+                artists = [i for i in self.ax.collections if id(i) not in colls]
 
-                    for [key, alias] in [
-                        ("ec", "edgecolor"),
-                        ("fc", "facecolor"),
-                        ("lw", "linewidth"),
-                        ("ls", "linestyle"),
-                    ]:
-                        if key in defaultargs:
-                            defaultargs[alias] = defaultargs.pop(key)
-
-                    art = self.ax.add_geometries(
-                        geoms.geometry, crs=use_crs, **defaultargs
+                for i in artists:
+                    prefixes.append(
+                        f"_{i.__class__.__name__.replace('Collection', '')}"
                     )
-
-                    artists.append(art)
-                    prefixes.append(f"_{art.__class__.__name__.replace('Artist', '')}")
-                else:
-                    gdf.plot(ax=ax, aspect=ax.get_aspect(), **defaultargs)
-                    artists = [i for i in self.ax.collections if id(i) not in colls]
-
-                    for i in artists:
-                        prefixes.append(
-                            f"_{i.__class__.__name__.replace('Collection', '')}"
-                        )
 
             if picker_name is not None:
                 if pick_method is not None:
