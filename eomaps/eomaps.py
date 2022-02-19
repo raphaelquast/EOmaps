@@ -922,6 +922,8 @@ class Maps(object):
                     xorig = np.asanyarray(xcoord).ravel()
                     yorig = np.asanyarray(ycoord).ravel()
 
+                return z_data, xorig, yorig, ids, parameter
+
             # check for explicit 1D value lists
             types = (list, np.ndarray)
             if _pd_OK:
@@ -946,7 +948,7 @@ class Maps(object):
                 xorig = np.asanyarray(xcoord).ravel()
                 yorig = np.asanyarray(ycoord).ravel()
 
-        return z_data, xorig, yorig, ids, parameter
+            return z_data, xorig, yorig, ids, parameter
 
     def _prepare_data(
         self,
