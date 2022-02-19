@@ -103,7 +103,7 @@ m.set_classify_specs(scheme=Maps.CLASSIFIERS.Quantiles, k=5)
 # plot the map
 m.plot_map()
 
-# add a colorbar
+# add a colorbar with a histogram on top
 m.add_colorbar()
 
 # add a scalebar
@@ -111,6 +111,9 @@ m.add_scalebar()
 
 # add a compass
 m.add_compass()
+
+# add some basic features from NaturalEarth
+m.add_feature.preset.coastline()
 
 # use callback functions make the plot interactive!
 m.cb.pick.attach.annotate()
