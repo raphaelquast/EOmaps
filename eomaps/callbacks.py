@@ -915,3 +915,305 @@ class dynamic_callbacks:
             )
 
         indicate()
+
+
+# %%
+
+
+class _draw_shape(object):
+    def __init__(self, m, key=None, disconnect_key="escape"):
+        self._m = m
+        self.key = key
+        self.disconnect_key = disconnect_key
+
+        self._connect_cid = None
+        self._disconnect_cid = None
+
+        if key is not None:
+
+            def connect(*args, **kwargs):
+                self.connect(self.key)
+
+            self._connect_cid = self._m.cb.keypress.attach(connect, key=self.key)
+
+    def connect(self, key):
+        if self._disconnect_cid is None:
+
+            def disconnect(*args, **kwargs):
+                self.disconnect(self.disconnect_key)
+
+            self._disconnect_cid = self._m.cb.keypress.attach(
+                disconnect, key=self.disconnect_key
+            )
+            print("connecting")
+        else:
+            print("already connected")
+
+    def remove(self):
+        if self._connect_cid is not None:
+            self._m.cb.keypress.remove(self._connect_cid)
+            self._connect_cid = None
+
+    def disconnect(self, key):
+        if self._disconnect_cid is not None:
+            self._m.cb.keypress.remove(self._disconnect_cid)
+            self._disconnect_cid = None
+        print("disconnecting")
+
+
+class _draw_callbacks:
+    def __init__(self, m):
+        self._m = m
+
+    class path(_draw_shape):
+        def __init__(self, m, key="p"):
+            super().__init__(m=m, key=key)
+            self.key = key
+
+            self._draw_cid = None
+            self._release_cid = None
+            self._newline_cid = None
+            self._remove_line_cid = None
+            self._undo_cid = None
+            self._move_cid = None
+
+            self._cids = set()
+
+            self.coords = dict(x=[], y=[])
+            self.line = None
+            self.lines = list()
+
+            self._indicator = None
+
+            self.styles = {
+                1: dict(ls="-", marker=None, lw=0.5),
+                2: dict(ls="-", marker=None, lw=1),
+                3: dict(ls="-", marker=None, lw=2),
+                4: dict(ls="--", marker=None, lw=0.5),
+                5: dict(ls="--", marker=None, lw=1),
+                6: dict(ls="--", marker=None, lw=2),
+                7: dict(ls="-", marker=".", lw=0.5),
+                8: dict(ls="-", marker=".", lw=1),
+                9: dict(ls="-", marker=".", lw=2),
+            }
+
+            self.color = ".5"
+            self.style = 1
+
+        def connect(self, key):
+            super().connect(self.key)
+
+            def draw(*args, **kwargs):
+                self.draw(**kwargs)
+
+            def new_line(*args, **kwargs):
+                self.new_line(**kwargs)
+
+            def remove_line(*args, **kwargs):
+                self.remove_line(**kwargs)
+
+            def undo(*args, **kwargs):
+                self.undo(**kwargs)
+
+            def move(event):
+
+                # ignore callbacks while dragging axes
+                if self._m._draggable_axes._modifier_pressed:
+                    return
+                # don't execute callbacks if a toolbar-action is active
+                if (
+                    self._m.figure.f.canvas.toolbar is not None
+                ) and self._m.figure.f.canvas.toolbar.mode != "":
+                    return
+
+                self.draw_indicator(event)
+
+            if self._draw_cid is None:
+                self._draw_cid = self._m.cb.click.attach(draw, button=1)
+
+            if self._newline_cid is None:
+                self._newline_cid = self._m.cb.click.attach(new_line, button=2)
+
+            if self._undo_cid is None:
+                self._undo_cid = self._m.cb.click.attach(undo, button=3)
+
+            if self._remove_line_cid is None:
+                self._remove_line_cid = self._m.cb.keypress.attach(
+                    remove_line, key="delete"
+                )
+
+            # print("EOmaps: use 'rgbcmykw' to set the color of the line")
+            for key in "rgbcmykw":
+
+                def getcb(key):
+                    def cb(*args, **kwargs):
+                        if self.line is not None:
+                            self.line.set_color(key)
+                        if self._indicator is not None:
+                            self._indicator.set_markeredgecolor(key)
+                        self.color = key
+                        self._m.BM.update()
+                        print("setting color to", key)
+
+                    return cb
+
+                self._cids.add(self._m.cb.keypress.attach(getcb(key), key=key))
+
+            # print("EOmaps: use '123456789' to set the linestyle")
+            for key in [1, 2, 3, 4, 5, 6, 7, 8, 9]:
+
+                def getcb(key):
+                    def cb(*args, **kwargs):
+                        if self.line is not None:
+                            self.line.update(self.styles[key])
+                        self.style = key
+                        self._m.BM.update()
+
+                        print("using style", key)
+
+                    return cb
+
+                self._cids.add(self._m.cb.keypress.attach(getcb(key), key=str(key)))
+
+            # if self._release_cid is None:
+            #     self._release_cid = self._m.figure.f.canvas.mpl_connect(
+            #         'button_release_event',
+            #         self.new_line
+            #         )
+
+            # self.new_line()
+
+            if self._move_cid is None:
+                self._move_cid = self._m.figure.f.canvas.mpl_connect(
+                    "motion_notify_event", move
+                )
+
+        def disconnect(self, key):
+            super().disconnect(key)
+            if self._draw_cid is not None:
+                self._m.cb.click.remove(self._draw_cid)
+                self._draw_cid = None
+            print("stop drawing")
+
+            if self._release_cid is not None:
+                self._m.figure.f.canvas.mpl_disconnect(self._release_cid)
+                self._release_cid = None
+
+            while len(self._cids) > 0:
+                self._m.cb.keypress.remove(self._cids.pop())
+
+            if self._remove_line_cid is not None:
+                self._m.cb.keypress.remove(self._remove_line_cid)
+                self._remove_line_cid = None
+
+            if self._newline_cid is not None:
+                self._m.cb.click.remove(self._newline_cid)
+                self._newline_cid = None
+
+            if self._undo_cid is not None:
+                self._m.cb.click.remove(self._undo_cid)
+                self._undo_cid = None
+
+            if self._move_cid is not None:
+                self._m.figure.f.canvas.mpl_disconnect(self._move_cid)
+                self._m.BM.remove_artist(self._indicator)
+                self._indicator = None
+                self._move_cid = None
+
+            self._m.BM.update()
+
+        def remove_line(self, *args, **kwargs):
+            if self.line is not None:
+                if self.line is not None:
+                    self._m.BM.remove_artist(self.line)
+                if self._indicator is not None:
+                    self._m.BM.remove_artist(self._indicator)
+                if self.line in self.lines:
+                    self.lines.remove(self.line)
+                self.line = None
+                self._indicator = None
+
+            if len(self.lines) > 0:
+                self.line = self.lines.pop(-1)
+                self.coords = dict(
+                    x=list(self.line.get_xdata()), y=list(self.line.get_ydata())
+                )
+
+            else:
+                self.new_line(**kwargs)
+
+        def new_line(self, *args, **kwargs):
+            self.coords = dict(x=[], y=[])
+
+            (self.line,) = self._m.ax.plot(
+                self.coords["x"],
+                self.coords["y"],
+                color=self.color,
+                **self.styles[self.style],
+            )
+            self._m.BM.add_artist(self.line)
+
+            print("new line", self.line.get_color())
+
+            self._m.BM.update()
+
+            self.lines.append(self.line)
+
+            self.draw_indicator(None, pos=kwargs.pop("pos", None))
+
+        def undo(self, pos, *args, **kwargs):
+            if len(self.coords["x"]) > 0:
+                self.coords["x"].pop(-1)
+                self.coords["y"].pop(-1)
+            else:
+                self.remove_line()
+
+            self.draw()
+            self.draw_indicator(None, pos=pos)
+
+        def draw(self, pos=None, ID=None, val=None, ind=None):
+            if pos is not None:
+                self.coords["x"].append(pos[0])
+                self.coords["y"].append(pos[1])
+
+            if self.line is None:
+                self.new_line()
+            else:
+                self.line.set_xdata(self.coords["x"])
+                self.line.set_ydata(self.coords["y"])
+
+        def draw_indicator(self, event, pos=None):
+            if event is not None:
+                pos = event.xdata, event.ydata
+
+            if pos is not None:
+                if len(self.coords["x"]) > 0:
+                    x = [self.coords["x"][-1], pos[0]]
+                    y = [self.coords["y"][-1], pos[1]]
+                else:
+                    x = [pos[0]]
+                    y = [pos[1]]
+
+                if self._indicator is None:
+                    print("new_indicator")
+                    (self._indicator,) = self._m.ax.plot(
+                        x,
+                        y,
+                        c=".5",
+                        lw=0.5,
+                        marker="o",
+                        markerfacecolor="none",
+                        markeredgecolor=self.color,
+                    )
+                    self._m.BM.add_artist(self._indicator)
+                else:
+                    self._indicator.set_xdata(x)
+                    self._indicator.set_ydata(y)
+
+            self._m.BM.update()
+
+        def __call__(self):
+            self.connect(self.key)
+
+
+# %%
