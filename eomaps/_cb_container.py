@@ -880,8 +880,15 @@ class keypress_container(_cb_container):
             self._event = event
 
             if event.key in self.get.cbs:
-                for name, cb in self.get.cbs[event.key].items():
-                    cb(key=event.key)
+                # do this to allow deleting callbacks with a callback
+                cbs = self.get.cbs[event.key]
+                names = list(cbs)
+                for name in names:
+                    if name in cbs:
+                        cbs[name](key=event.key)
+
+                # for name, cb in self.get.cbs[event.key].items():
+                #     cb(key=event.key)
 
         if self._m is self._m.parent:
             self._cid_keypress_event = self._m.figure.f.canvas.mpl_connect(
