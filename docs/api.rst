@@ -385,8 +385,6 @@ Callbacks that can be used with `m.cb.dynamic`
 
     indicate_extent
 
-.. _webmap_layers:
-
 
 Custom callbacks
 ~~~~~~~~~~~~~~~~
@@ -418,6 +416,8 @@ Custom callback functions can be attached to the map via:
 - ❗ for pick callbacks, ``ID`` and ``val`` are not available!
 - ❗ for click callbacks the kwargs ``ID`` and ``val`` are not available!
 - ❗ for keypress callbacks the kwargs ``ID`` and ``val`` and ``pos`` are not available!
+
+.. _webmap_layers:
 
 🛰 WebMap service layers
 ------------------------
