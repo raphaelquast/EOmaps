@@ -961,12 +961,16 @@ class _draw_shape(object):
         print("disconnecting")
 
 
-class _draw_callbacks:
+class draw_callbacks:
     def __init__(self, m):
         self._m = m
 
-    class path(_draw_shape):
-        def __init__(self, m, key="p"):
+    @property
+    def path(self, key="p"):
+        return self._path(self._m, key=key)
+
+    class _path(_draw_shape):
+        def __init__(self, m, key):
             super().__init__(m=m, key=key)
             self.key = key
 
@@ -998,7 +1002,7 @@ class _draw_callbacks:
             }
 
             self.color = ".5"
-            self.style = 1
+            self.style = 2
 
         def connect(self, key):
             super().connect(self.key)
@@ -1007,13 +1011,22 @@ class _draw_callbacks:
                 self.draw(**kwargs)
 
             def new_line(*args, **kwargs):
-                self.new_line(**kwargs)
+                if len(self.coords["x"]) > 0:
+                    self.new_line(**kwargs)
 
             def remove_line(*args, **kwargs):
                 self.remove_line(**kwargs)
 
             def undo(*args, **kwargs):
                 self.undo(**kwargs)
+
+            def previous_line(*args, **kwargs):
+                print("prev")
+                self.previous_line(**kwargs)
+
+            def next_line(*args, **kwargs):
+                print("next")
+                self.next_line(**kwargs)
 
             def move(event):
 
@@ -1075,6 +1088,9 @@ class _draw_callbacks:
 
                 self._cids.add(self._m.cb.keypress.attach(getcb(key), key=str(key)))
 
+            self._cids.add(self._m.cb.keypress.attach(previous_line, key="left"))
+            self._cids.add(self._m.cb.keypress.attach(next_line, key="right"))
+
             # if self._release_cid is None:
             #     self._release_cid = self._m.figure.f.canvas.mpl_connect(
             #         'button_release_event',
@@ -1087,6 +1103,23 @@ class _draw_callbacks:
                 self._move_cid = self._m.figure.f.canvas.mpl_connect(
                     "motion_notify_event", move
                 )
+
+        def previous_line(self, *args, **kwargs):
+            try:
+                i = (self.lines.index(self.line) - 1) % len(self.lines)
+            except ValueError:
+                i = 0
+
+            self._switch_line(self.lines[i])
+
+        def next_line(self, *args, **kwargs):
+            try:
+                i = (self.lines.index(self.line) + 1) % len(self.lines)
+            except ValueError:
+                i = 0
+
+            if i < len(self.lines):
+                self._switch_line(self.lines[i])
 
         def disconnect(self, key):
             super().disconnect(key)
@@ -1116,33 +1149,35 @@ class _draw_callbacks:
 
             if self._move_cid is not None:
                 self._m.figure.f.canvas.mpl_disconnect(self._move_cid)
-                self._m.BM.remove_artist(self._indicator)
-                self._indicator = None
+                if self._indicator is not None:
+                    self._m.BM.remove_artist(self._indicator)
+                    self._indicator = None
                 self._move_cid = None
 
             self._m.BM.update()
 
+        def _switch_line(self, line):
+            self.line = line
+            self.coords = dict(x=list(line.get_xdata()), y=list(line.get_ydata()))
+            self.draw_indicator(None, None)
+
         def remove_line(self, *args, **kwargs):
             if self.line is not None:
                 if self.line is not None:
+                    self.line.set_visible(False)
                     self._m.BM.remove_artist(self.line)
-                if self._indicator is not None:
-                    self._m.BM.remove_artist(self._indicator)
                 if self.line in self.lines:
                     self.lines.remove(self.line)
                 self.line = None
-                self._indicator = None
 
             if len(self.lines) > 0:
-                self.line = self.lines.pop(-1)
-                self.coords = dict(
-                    x=list(self.line.get_xdata()), y=list(self.line.get_ydata())
-                )
+                self._switch_line(self.lines.pop(-1))
 
             else:
                 self.new_line(**kwargs)
 
         def new_line(self, *args, **kwargs):
+
             self.coords = dict(x=[], y=[])
 
             (self.line,) = self._m.ax.plot(
@@ -1167,7 +1202,6 @@ class _draw_callbacks:
                 self.coords["y"].pop(-1)
             else:
                 self.remove_line()
-
             self.draw()
             self.draw_indicator(None, pos=pos)
 
@@ -1182,6 +1216,17 @@ class _draw_callbacks:
                 self.line.set_xdata(self.coords["x"])
                 self.line.set_ydata(self.coords["y"])
 
+                if len(self.coords["x"]) == 1:
+                    self.line.update(
+                        dict(
+                            marker="o",
+                            markerfacecolor=self.color,
+                            markeredgecolor=self.color,
+                        )
+                    )
+                else:
+                    self.line.update(self.styles[self.style])
+
         def draw_indicator(self, event, pos=None):
             if event is not None:
                 pos = event.xdata, event.ydata
@@ -1193,22 +1238,28 @@ class _draw_callbacks:
                 else:
                     x = [pos[0]]
                     y = [pos[1]]
-
-                if self._indicator is None:
-                    print("new_indicator")
-                    (self._indicator,) = self._m.ax.plot(
-                        x,
-                        y,
-                        c=".5",
-                        lw=0.5,
-                        marker="o",
-                        markerfacecolor="none",
-                        markeredgecolor=self.color,
-                    )
-                    self._m.BM.add_artist(self._indicator)
+            else:
+                if len(self.coords["x"]) > 0:
+                    x = [self.coords["x"][-1]]
+                    y = [self.coords["y"][-1]]
                 else:
-                    self._indicator.set_xdata(x)
-                    self._indicator.set_ydata(y)
+                    x, y = [], []
+
+            if self._indicator is None:
+                print("new_indicator")
+                (self._indicator,) = self._m.ax.plot(
+                    x,
+                    y,
+                    c=".5",
+                    lw=0.5,
+                    marker="o",
+                    markerfacecolor="none",
+                    markeredgecolor=self.color,
+                )
+                self._m.BM.add_artist(self._indicator)
+            else:
+                self._indicator.set_xdata(x)
+                self._indicator.set_ydata(y)
 
             self._m.BM.update()
 
