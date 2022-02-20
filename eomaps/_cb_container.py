@@ -3,6 +3,7 @@ from eomaps.callbacks import (
     pick_callbacks,
     keypress_callbacks,
     dynamic_callbacks,
+    draw_callbacks,
 )
 from types import SimpleNamespace
 
@@ -1122,6 +1123,12 @@ class cb_container:
     @wraps(dynamic_callbacks)
     def dynamic(self):
         return dynamic_callbacks(m=self._m)
+
+    @property
+    @lru_cache()
+    @wraps(draw_callbacks)
+    def draw(self):
+        return draw_callbacks(self._m)
 
     def add_picker(self, name, artist, picker):
         """
