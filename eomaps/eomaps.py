@@ -23,6 +23,14 @@ try:
 except ImportError:
     _gpd_OK = False
 
+try:
+    import xarray as xar
+
+    _xar_OK = True
+except ImportError:
+    _xar_OK = False
+
+
 from scipy.spatial import cKDTree
 from pyproj import CRS, Transformer
 
@@ -912,14 +920,14 @@ class Maps(object):
         if data is not None:
             if _pd_OK and isinstance(data, pd.DataFrame):
                 # get the data-values
-                z_data = data[parameter].values.ravel()
+                z_data = data[parameter].values
                 # get the index-values
-                ids = data.index.values.ravel()
+                ids = data.index.values
 
                 if isinstance(xcoord, str) and isinstance(ycoord, str):
                     # get the data-coordinates
-                    xorig = data[xcoord].values.ravel()
-                    yorig = data[ycoord].values.ravel()
+                    xorig = data[xcoord].values
+                    yorig = data[ycoord].values
                 else:
                     assert isinstance(xcoord, (list, np.ndarray, pd.Series)), (
                         "xcoord must be either a column-name, or explicit values "
@@ -932,8 +940,8 @@ class Maps(object):
                         + f" Series object if you provide the data as '{type(data)}'"
                     )
 
-                    xorig = np.asanyarray(xcoord).ravel()
-                    yorig = np.asanyarray(ycoord).ravel()
+                    xorig = np.asanyarray(xcoord)
+                    yorig = np.asanyarray(ycoord)
 
                 return z_data, xorig, yorig, ids, parameter
 
@@ -944,7 +952,7 @@ class Maps(object):
 
             if isinstance(data, types):
                 # get the data-values
-                z_data = np.asanyarray(data).ravel()
+                z_data = np.asanyarray(data)
                 # get the index-values
                 ids = np.arange(z_data.size)
 
@@ -958,8 +966,8 @@ class Maps(object):
                 )
 
                 # get the data-coordinates
-                xorig = np.asanyarray(xcoord).ravel()
-                yorig = np.asanyarray(ycoord).ravel()
+                xorig = np.asanyarray(xcoord)
+                yorig = np.asanyarray(ycoord)
 
             return z_data, xorig, yorig, ids, parameter
 
@@ -998,6 +1006,7 @@ class Maps(object):
             crs2,
             always_xy=True,
         )
+
         # identify the provided data and get it in the internal format
         z_data, xorig, yorig, ids, parameter = self._identify_data(
             data=data, xcoord=xcoord, ycoord=ycoord, parameter=parameter
@@ -1014,17 +1023,28 @@ class Maps(object):
 
             xorig, yorig = self._set_cpos(xorig, yorig, rx, ry, cpos)
 
-        nanmask = ~np.isnan(z_data)
-
-        props["xorig"] = xorig[nanmask]
-        props["yorig"] = yorig[nanmask]
-        props["ids"] = ids[nanmask]
-        props["z_data"] = z_data[nanmask]
-
+        props["xorig"] = xorig
+        props["yorig"] = yorig
+        props["ids"] = ids
+        props["z_data"] = z_data
         # transform center-points to the plot_crs
         props["x0"], props["y0"] = transformer.transform(props["xorig"], props["yorig"])
-
         props["mask"] = np.isfinite(props["x0"]) & np.isfinite(props["y0"])
+
+        # convert the data to 1D for shapes that accept unstructured data
+        if self.shape.name != "shade_raster":
+            self._1Dprops(props)
+
+            # nanmask = ~np.isnan(z_data)
+            # props["z_data"] = props["z_data"][nanmask]
+            # props["xorig"] = props["xorig"][nanmask]
+            # props["yorig"] = props["yorig"][nanmask]
+
+            # props["x0"] = props["x0"][nanmask]
+            # props["y0"] = props["y0"][nanmask]
+            # props["mask"] = props["mask"][nanmask]
+
+            # props["ids"] = ids[nanmask]
 
         return props
 
@@ -1145,6 +1165,7 @@ class Maps(object):
 
         if z_data is None:
             z_data = self._props["z_data"]
+        z_data = z_data.ravel()
 
         if label is None:
             label = self.plot_specs["label"]
@@ -2100,11 +2121,7 @@ class Maps(object):
 
         if verbose:
             print("EOmaps: Plotting...")
-        zdata = self.classify_specs._norm(props["z_data"].ravel())
-
-        df = pd.DataFrame(
-            dict(x=props["x0"].ravel(), y=props["y0"].ravel(), val=zdata), copy=False
-        )
+        zdata = self.classify_specs._norm(props["z_data"])
         # update here to ensure bounds are set
         self.BM.update()
 
@@ -2116,15 +2133,40 @@ class Maps(object):
         #     )
         # ]
 
-        if len(df) == 0:
+        if len(zdata) == 0:
             print("EOmaps: there was no data to plot")
             return
 
         plot_width, plot_height = int(self.ax.bbox.width), int(self.ax.bbox.height)
 
         if self.shape.name == "shade_raster":
-            # raster rendering requires an xarray as input
-            df = df.set_index(["x", "y"]).to_xarray()
+            assert _xar_OK, "EOmaps: missing dependency `xarray` for 'shade_raster'"
+            if len(zdata.shape) == 2:
+                df = xar.DataArray(
+                    data=zdata.squeeze(),
+                    dims=["x", "y"],
+                    coords=dict(x=props["x0"].squeeze(), y=props["y0"].squeeze()),
+                )
+                df = xar.Dataset(dict(val=df))
+            else:
+                # use pandas to convert the data to a raster-format
+                df = (
+                    pd.DataFrame(
+                        dict(
+                            x=props["x0"].ravel(),
+                            y=props["y0"].ravel(),
+                            val=zdata.ravel(),
+                        ),
+                        copy=False,
+                    )
+                    .set_index(["x", "y"])
+                    .to_xarray()
+                )
+        else:
+            df = pd.DataFrame(
+                dict(x=props["x0"].ravel(), y=props["y0"].ravel(), val=zdata.ravel()),
+                copy=False,
+            )
 
         coll = dsshow(
             df,
@@ -2150,6 +2192,8 @@ class Maps(object):
             print("EOmaps: Indexing for pick-callbacks...")
 
         if pick_distance is not None:
+            self._1Dprops(props)
+
             # use a cKDTree based picking to speed up picks for large collections
             self.tree = cKDTree(np.stack([props["x0"], props["y0"]], axis=1))
 
@@ -2165,6 +2209,48 @@ class Maps(object):
 
         if dynamic is True:
             self.BM.update(clear=False)
+
+    @staticmethod
+    def _1Dprops(props):
+        # convert all arrays in props to a proper 1D representation that will be used
+        # to index and identify points
+
+        # Note: _prepare_data already converts datasets to 1D if
+        #       a shape that accepts non-rectangular datasets is used!
+
+        # Note: both ravel and meshgrid return views!
+        n_coord_shape = len(props["xorig"].shape)
+
+        props["x0"], props["y0"] = (
+            np.ravel(props["x0"]),
+            np.ravel(props["y0"]),
+        )
+        props["xorig"], props["yorig"] = (
+            np.ravel(props["xorig"]),
+            np.ravel(props["yorig"]),
+        )
+
+        # in case 2D data and 1D coordinate arrays are provided, use a meshgrid
+        # to identify the coordinates
+        if n_coord_shape == 1 and len(props["z_data"].shape) == 2:
+
+            props["x0"], props["y0"] = [
+                np.ravel(i) for i in np.meshgrid(props["x0"], props["y0"], copy=False)
+            ]
+            props["xorig"], props["yorig"] = [
+                np.ravel(i)
+                for i in np.meshgrid(props["xorig"], props["yorig"], copy=False)
+            ]
+            # transpose since 1D coordinates are expected to be provided as (y, x)
+            # and NOT as (x, y)
+            import pdb
+
+            pdb.set_trace()
+            props["z_data"] = props["z_data"].T.ravel()
+            props["mask"] = props["mask"].T.ravel()
+        else:
+            props["z_data"] = props["z_data"].ravel()
+            props["mask"] = props["mask"].ravel()
 
     def _plot_map(
         self,
@@ -2253,6 +2339,7 @@ class Maps(object):
             self.figure.coll = coll
 
             if pick_distance is not None:
+                self._1Dprops(props)
                 # use a cKDTree based picking to speed up picks for large collections
                 self.tree = cKDTree(
                     np.stack(

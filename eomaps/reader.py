@@ -1,6 +1,6 @@
 from functools import wraps
 import numpy as np
-from ._shapes import shapes
+from pyproj import CRS
 
 try:
     import pandas as pd
@@ -102,6 +102,18 @@ class read_file:
             else:
                 usencfile = ncfile
 
+            ncdims = list(usencfile.dims)  # dimension order as stored in the file
+
+            varnames = list(usencfile)
+            if len(varnames) > 1:
+                raise AssertionError(
+                    "EOmaps: there is more than 1 variable name available! "
+                    + "please select a specific dataset via the 'sel'- "
+                    + f"or 'isel' kwargs. Available variable names: {varnames}"
+                )
+            else:
+                usencfile = usencfile[varnames[0]]
+
             dims = list(usencfile.dims)
             if len(dims) > 2:
                 raise AssertionError(
@@ -112,8 +124,8 @@ class read_file:
 
             if data_crs is None:
                 for crskey in ["spatial_ref", "crs"]:
-                    if crskey in usencfile:
-                        crsattr = usencfile[crskey].attrs
+                    if crskey in ncfile:
+                        crsattr = ncfile[crskey].attrs
                         for wktkey in ["crs_wkt", "wkt"]:
                             if wktkey in crsattr:
                                 data_crs = crsattr[wktkey]
@@ -122,10 +134,13 @@ class read_file:
                 "EOmaps: No crs information found... please specify the crs "
                 + "via the 'data_crs' argument explicitly!"
             )
+            # check if we need to transpose the data
+            # (e.g. if data is provided with [y, x] dimensions instead of [x, y])
+            data = np.moveaxis(usencfile.values, *[dims.index(i) for i in ncdims])
 
-            data = usencfile.to_array().values
-            xcoord, ycoord = np.meshgrid(
-                getattr(usencfile, dims[0]).values, getattr(usencfile, dims[1]).values
+            xcoord, ycoord = (
+                getattr(usencfile, ncdims[0]).values,
+                getattr(usencfile, ncdims[1]).values,
             )
 
         if set_data is not None:
@@ -221,7 +236,6 @@ class read_file:
                 )
 
             data = usencfile[parameter]
-
             if coords is None:
                 coords = list(data.dims)
                 if len(coords) != 2:
@@ -242,7 +256,8 @@ class read_file:
 
             assert data_crs is not None, (
                 "EOmaps: No crs information found... please specify the crs "
-                + "via the 'data_crs' argument explicitly!"
+                + "via the 'data_crs' or 'crs_key' argument explicitly!"
+                + f"Available parameters are {list(ncfile)}, {list(ncfile.attrs)}"
             )
 
             if coords[0] in usencfile.coords:
@@ -460,10 +475,14 @@ def _from_file(
             crs = data.get("crs", None)
         # try if it's possible to initialize a Maps-object with the file crs
         try:
-            m = Maps._get_cartopy_crs(crs=crs)
+            crs = Maps._get_cartopy_crs(crs=crs)
         except Exception:
-            crs = 4326
-            print(f"EOmaps: could not use native crs... defaulting to epsg={crs}.")
+            try:
+                crs = Maps._get_cartopy_crs(crs=CRS.from_user_input(crs))
+
+            except Exception:
+                crs = 4326
+                print(f"EOmaps: could not use native crs... defaulting to epsg={crs}.")
 
         m = Maps(crs=crs, figsize=figsize)
 
@@ -487,13 +506,17 @@ def _from_file(
         return m
 
     else:
-        # try to plot as raster - shading...
-        try:
-            m.set_shape.shade_raster()
-            m.plot_map(**kwargs)
-            return m
-        except Exception:
-            pass
+        # only try to plot as raster if in_crs == out_crs
+        crs1 = CRS.from_user_input(m.data_specs.crs)
+        crs2 = CRS.from_user_input(m._crs_plot)
+        if crs1.equals(crs2):
+            try:
+                # try to plot as raster - shading...
+                m.set_shape.shade_raster()
+                m.plot_map(**kwargs)
+                return m
+            except Exception:
+                pass
 
         # try to plot as point - shading...
         try:
