@@ -2240,9 +2240,6 @@ class Maps(object):
             ]
             # transpose since 1D coordinates are expected to be provided as (y, x)
             # and NOT as (x, y)
-            import pdb
-
-            pdb.set_trace()
             props["z_data"] = props["z_data"].T.ravel()
             props["mask"] = props["mask"].T.ravel()
         else:
