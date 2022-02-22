@@ -24,7 +24,8 @@ mg.m_0_0.set_data(data=data.sample(100), xcoord="lon", ycoord="lat", crs=4326)
 
 mg.m_0_1.set_data(data=data, xcoord="lon", ycoord="lat", crs=4326)
 
-mg.add_feature.preset.ocean()
+mg.add_feature.preset.ocean(reproject="cartopy")
+
 mg.add_feature.cultural_50m.admin_0_countries(
     picker_name="countries",
     pick_method="contains",
