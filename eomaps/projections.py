@@ -65,7 +65,7 @@ class Equi7Grid_projection(ccrs.Projection):
 
         super().__init__(proj4params, *args, **kwargs)
 
-        self._boundary = projpoly.boundary.envelope
+        self._boundary = projpoly.boundary.envelope.boundary
         self.bounds = [b[0], b[2], b[1], b[3]]
 
         self.equi7_zone_polygon = projpoly
