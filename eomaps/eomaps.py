@@ -345,12 +345,21 @@ class Maps(object):
 
     @staticmethod
     def _get_cartopy_crs(crs):
-        if isinstance(crs, Maps.CRS.CRS):
+        if isinstance(crs, Maps.CRS.CRS):  # already a cartopy CRS
             cartopy_proj = crs
         elif crs == 4326:
             cartopy_proj = ccrs.PlateCarree()
         elif isinstance(crs, (int, np.integer)):
             cartopy_proj = ccrs.epsg(crs)
+        elif isinstance(crs, CRS):  # pyproj CRS
+            for (
+                subgrid,
+                equi7crs,
+            ) in Maps.CRS.Equi7Grid_projection._pyproj_crs_generator():
+                print("checking", subgrid)
+                if equi7crs == crs:
+                    cartopy_proj = Maps.CRS.Equi7Grid_projection(subgrid)
+                    break
         else:
             raise AssertionError(f"EOmaps: cannot identify the CRS for: {crs}")
         return cartopy_proj
