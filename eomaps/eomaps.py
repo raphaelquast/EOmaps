@@ -1607,7 +1607,6 @@ class Maps(object):
 
             self._check_gpd()
 
-            ax = self.figure.ax
             defaultargs = dict(facecolor="none", edgecolor="k", lw=1.5)
             defaultargs.update(kwargs)
 
@@ -1630,9 +1629,10 @@ class Maps(object):
                 if self.ax.projection != self._get_cartopy_crs(gdf.crs):
                     # select only polygons that actually intersect with the CRS-boundary
                     mask = gdf.intersects(
-                        self._make_rect_poly(
-                            *self.ax.projection.boundary.bounds, self.ax.projection
+                        gpd.GeoDataFrame(
+                            geometry=[self.ax.projection.domain], crs=self.ax.projection
                         )
+                        .to_crs(gdf.crs)
                         .to_crs(gdf.crs)
                         .geometry[0]
                     )
@@ -1663,18 +1663,15 @@ class Maps(object):
                         gdf.set_crs(self.ax.projection, allow_override=True)
             else:
                 raise AssertionError(
-                    "EOmaps: '{reproject}' is not a valid reproject-argument."
+                    f"EOmaps: '{reproject}' is not a valid reproject-argument."
                 )
-
             # plot gdf and identify newly added collections
             # (geopandas always uses collections)
             colls = [id(i) for i in self.ax.collections]
-
             artists, prefixes = [], []
             for geomtype, geoms in gdf.groupby(gdf.geom_type):
-                gdf.plot(ax=ax, aspect=ax.get_aspect(), **defaultargs)
+                gdf.plot(ax=self.ax, aspect=self.ax.get_aspect(), **defaultargs)
                 artists = [i for i in self.ax.collections if id(i) not in colls]
-
                 for i in artists:
                     prefixes.append(
                         f"_{i.__class__.__name__.replace('Collection', '')}"
