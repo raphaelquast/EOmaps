@@ -14,7 +14,7 @@ EOmaps is available via the ``conda-forge`` channel and can be installed via:
 
   .. code-block:: console
 
-      conda install -c conda-forge eomaps
+    conda install -c conda-forge eomaps
 
 This should make sure all required dependencies are correctly installed.
 
@@ -82,15 +82,13 @@ To use the full potential of EOmaps, some additional dependencies are required
   - To install all backends, explicitly use: ``conda install -c conda-forge matplotlib``  (or ``mamba ...``)
   - For ``QtAgg``, just install the ``pyqt`` bindings via ``conda install -c conda-forge pyqt``
 
-
-
 🐞 Alternative way (via ``pip``)
 -----------------------------------
 EOmaps is also available via ``pip`` and can be installed using
 
   .. code-block:: console
 
-     pip install eomaps
+    pip install eomaps
 
 
 However, it is not guaranteed that all dependencies are correctly resolved and some manual

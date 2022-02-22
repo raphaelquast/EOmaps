@@ -984,6 +984,7 @@ class draw_callbacks:
             self._cids = set()
 
             self.coords = dict(x=[], y=[])
+
             self.line = None
             self.lines = list()
 
@@ -1108,7 +1109,7 @@ class draw_callbacks:
             try:
                 i = (self.lines.index(self.line) - 1) % len(self.lines)
             except ValueError:
-                i = 0
+                return
 
             self._switch_line(self.lines[i])
 
@@ -1116,7 +1117,7 @@ class draw_callbacks:
             try:
                 i = (self.lines.index(self.line) + 1) % len(self.lines)
             except ValueError:
-                i = 0
+                return
 
             if i < len(self.lines):
                 self._switch_line(self.lines[i])
@@ -1179,7 +1180,6 @@ class draw_callbacks:
         def new_line(self, *args, **kwargs):
 
             self.coords = dict(x=[], y=[])
-
             (self.line,) = self._m.ax.plot(
                 self.coords["x"],
                 self.coords["y"],
@@ -1228,6 +1228,9 @@ class draw_callbacks:
                     self.line.update(self.styles[self.style])
 
         def draw_indicator(self, event, pos=None):
+            if len(self.coords["x"]) == 0:
+                return
+
             if event is not None:
                 pos = event.xdata, event.ydata
 
