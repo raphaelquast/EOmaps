@@ -234,9 +234,12 @@ class Maps(object):
                 raise AssertionError(
                     "You cannot set the crs if you already provide an explicit axes!"
                 )
-            self._crs_plot = gs_ax.projection
+            if gs_ax.projection == Maps.CRS.PlateCarree():
+                self._crs_plot = 4326
+            else:
+                self._crs_plot = gs_ax.projection
         else:
-            if crs is None:
+            if crs is None or crs == Maps.CRS.PlateCarree():
                 crs = 4326
 
             self._crs_plot = crs
