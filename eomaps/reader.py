@@ -449,7 +449,7 @@ def _from_file(
     figsize : tuple, optional
         The size of the figure. (Only relevant if parent is None!)
     kwargs :
-        Keyword-arguments passed to `m.shade_map()`
+        Keyword-arguments passed to `m.plot_map()`
     Returns
     -------
     m : eomaps.Maps
@@ -488,6 +488,11 @@ def _from_file(
 
     if coastline:
         m.add_feature.preset.coastline()
+
+    kwkeys = list(kwargs)
+    for key in kwkeys:
+        if key in m.plot_specs.keys():
+            m.plot_specs[key] = kwargs.pop(key)
 
     m.set_data(**data)
     if plot_specs:
