@@ -1107,12 +1107,6 @@ class cb_container:
     def dynamic(self):
         return dynamic_callbacks(m=self._m)
 
-    @property
-    @lru_cache()
-    @wraps(draw_callbacks)
-    def draw(self):
-        return draw_callbacks(self._m)
-
     def add_picker(self, name, artist, picker):
         """
         Attach a custom picker to an artist.
