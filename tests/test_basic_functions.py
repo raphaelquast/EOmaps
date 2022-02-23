@@ -50,10 +50,8 @@ class TestBasicPlotting(unittest.TestCase):
         usedata = self.data.sample(500)
 
         m = Maps(4326)
-        m.data = usedata
-        m.set_data_specs(xcoord="x", ycoord="y", in_crs=3857)
-
         # rectangles
+        m.set_data(usedata, xcoord="x", ycoord="y", in_crs=3857)
         m.set_shape.geod_circles(radius=100000)
         m.plot_map()
         m.indicate_masked_points()
@@ -63,6 +61,8 @@ class TestBasicPlotting(unittest.TestCase):
         plt.close("all")
 
         # rectangles
+        m = Maps(4326)
+        m.set_data(usedata, xcoord="x", ycoord="y", in_crs=3857)
         m.set_shape.rectangles()
         m.plot_map()
         m.add_feature.preset.ocean(ec="k", scale="110m")
@@ -74,6 +74,8 @@ class TestBasicPlotting(unittest.TestCase):
         m.plot_map()
 
         # rectangles
+        m = Maps(4326)
+        m.set_data(usedata, xcoord="x", ycoord="y", in_crs=3857)
         m.set_shape.rectangles(mesh=True)
         m.plot_map()
 
@@ -86,6 +88,9 @@ class TestBasicPlotting(unittest.TestCase):
         plt.close("all")
 
         # ellipses
+        m = Maps(4326)
+        m.set_data(usedata, xcoord="x", ycoord="y", in_crs=3857)
+
         m.set_shape.ellipses()
         m.plot_map()
 
@@ -95,6 +100,9 @@ class TestBasicPlotting(unittest.TestCase):
         plt.close("all")
 
         # delaunay
+        m = Maps(4326)
+        m.set_data(usedata, xcoord="x", ycoord="y", in_crs=3857)
+
         m.set_shape.delaunay_triangulation(flat=True)
         m.plot_map()
         m.indicate_masked_points(5, ec="r")
@@ -110,6 +118,9 @@ class TestBasicPlotting(unittest.TestCase):
         plt.close("all")
 
         # voroni
+        m = Maps(4326)
+        m.set_data(usedata, xcoord="x", ycoord="y", in_crs=3857)
+
         m.set_shape.voroni_diagram(masked=False)
         m.plot_map()
         m.indicate_masked_points(5, ec="k")

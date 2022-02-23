@@ -223,6 +223,10 @@ class shapes(object):
 
             self._radius = val
 
+        @property
+        def radius_crs(self):
+            return self._m.get_crs("geod")
+
         def __repr__(self):
             try:
                 s = f"geod_circles(radius={self.radius}, n={self.n})"
