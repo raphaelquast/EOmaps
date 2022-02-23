@@ -281,11 +281,11 @@ class Maps(object):
             )
 
     from_file = from_file
-
-    @property
-    @wraps(read_file)
-    def read_file(self):
-        return read_file
+    read_file = read_file
+    # @property
+    # @wraps(read_file)
+    # def read_file(self):
+    #     return read_file
 
     @property
     def ax(self):
