@@ -662,15 +662,8 @@ class cb_pick_container(_click_container):
         self._add_pick_callback()
 
     def _default_picker(self, artist, event):
-        ax = self._m.figure.ax
 
-        # set max. distance in pixel-coordinates for picking
-        if self._pick_distance is None:
-            maxdist = np.inf
-        else:
-            maxdist = self._pick_distance
-
-        if (event.inaxes != ax) or not hasattr(self._m, "tree"):
+        if (event.inaxes != self._m.ax) or not hasattr(self._m, "tree"):
             return False, dict(ind=None, dblclick=event.dblclick, button=event.button)
 
         # make sure non-finite coordinates (resulting from projections in
@@ -678,20 +671,10 @@ class cb_pick_container(_click_container):
         if not np.isfinite((event.xdata, event.ydata)).all():
             return False, dict(ind=None, dblclick=event.dblclick, button=event.button)
 
-        # use a cKDTree based picking to speed up picks for large collections
+        # find the closest point to the clicked pixel
         dist, index = self._m.tree.query((event.xdata, event.ydata))
 
-        # do this to make sure that we calculate the distance in the right axes!
-        # (necessary for connected pick-callbacks)
-        # for the axes of the original click, this is equal to (event.x, event.y)
-        p1 = ax.transData.transform((event.xdata, event.ydata))
-
-        p2 = ax.transData.transform(
-            (self._m._props["x0"][index], self._m._props["y0"][index])
-        )
-        pdist = np.sqrt(np.sum((p1 - p2) ** 2))
-
-        if pdist < maxdist:
+        if index is not None:
             return True, dict(
                 ind=index, dblclick=event.dblclick, button=event.button, dist=dist
             )

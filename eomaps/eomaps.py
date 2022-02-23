@@ -49,6 +49,7 @@ from .helpers import (
     BlitManager,
     draggable_axes,
     progressbar,
+    searchtree,
 )
 from ._shapes import shapes
 
@@ -918,7 +919,6 @@ class Maps(object):
             ycoord = self.data_specs.ycoord
         if parameter is None:
             parameter = self.data_specs.parameter
-
         if data is not None:
             if _pd_OK and isinstance(data, pd.DataFrame):
                 # get the data-values
@@ -2192,9 +2192,8 @@ class Maps(object):
 
         if pick_distance is not None:
             self._1Dprops(props)
-
-            # use a cKDTree based picking to speed up picks for large collections
-            self.tree = cKDTree(np.stack([props["x0"], props["y0"]], axis=1))
+            # self.tree = cKDTree(np.stack([props["x0"], props["y0"]], axis=1))
+            self.tree = searchtree(m=self, pick_distance=pick_distance)
 
             self.cb.pick._set_artist(coll)
             self.cb.pick._init_cbs()
@@ -2341,11 +2340,12 @@ class Maps(object):
             if pick_distance is not None:
                 self._1Dprops(props)
                 # use a cKDTree based picking to speed up picks for large collections
-                self.tree = cKDTree(
-                    np.stack(
-                        [props["x0"][props["mask"]], props["y0"][props["mask"]]], axis=1
-                    )
-                )
+                # self.tree = cKDTree(
+                #     np.stack(
+                #         [props["x0"][props["mask"]], props["y0"][props["mask"]]], axis=1
+                #     )
+                # )
+                self.tree = searchtree(m=self, pick_distance=pick_distance)
 
                 self.cb.pick._set_artist(coll)
                 self.cb.pick._init_cbs()
@@ -2398,11 +2398,11 @@ class Maps(object):
             If None, NO pick-callbacks will be assigned (e.g. 'm.cb.pick' will not work)
             (useful for very large datasets to speed up plotting and save memory)
 
-            The maximum distance (in pixels) to trigger callbacks on the added collection.
-            (The distance is evaluated between the clicked pixel and the center of the
-            closest data-point)
+            If int, it will be used to determine the search-area used to identify
+            clicked pixels (e.g. a rectangle with a edge-size of
+            `pick_distance * estimated radius`).
 
-            The default is 10.
+            The default is 100.
         layer : int
             The layer-index at which the dataset will be plotted.
             The default is None.

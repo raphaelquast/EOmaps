@@ -86,6 +86,83 @@ def progressbar(it, prefix="", size=60, file=sys.stdout):
     file.flush()
 
 
+class searchtree:
+    def __init__(self, m=None, pick_distance=50):
+        """
+        search for coordinates
+
+        Parameters
+        ----------
+        m : eomaps.Maps, optional
+            the maps-object. The default is None.
+        pick_distance : int, optional
+            used to limit the number of pixels in the search to
+            a rectangle of (pick_distance * estimated radius in plot_crs)
+            The default is 50.
+        """
+        self._m = m
+        self._pick_distance = pick_distance
+
+        if self._m.shape.radius_crs != "out":
+            radius = self._m.set_shape._estimate_radius(self._m, "out", np.max)
+        else:
+            radius = self._m.shape.radius
+        self.d = max(radius) * self._pick_distance
+
+        self._misses = 0
+
+    def query(self, x, k=1, d=None):
+        if d is None:
+            d = self.d
+
+        # select a rectangle around the pick-coordinates
+        # (provides tremendous speedups for very large datasets)
+        mx = np.logical_and(
+            self._m._props["x0"] > (x[0] - d), self._m._props["x0"] < (x[0] + d)
+        )
+        my = np.logical_and(
+            self._m._props["y0"] > (x[1] - d), self._m._props["y0"] < (x[1] + d)
+        )
+        m = np.logical_and(mx, my)
+        # get the indexes of the search-rectangle
+        idx = np.where(m)[0]
+        # evaluate the clicked pixel as the one with the smallest
+        # euclidean distance
+
+        if len(idx) > 0:
+            self._misses = 0
+            i = idx[
+                (
+                    (self._m._props["x0"][m] - x[0]) ** 2
+                    + (self._m._props["y0"][m] - x[1]) ** 2
+                ).argmin()
+            ]
+        else:
+            # show some warning if no points are found within the pick_distance
+            self._misses += 1
+
+            if self._misses < 3:
+                text = "Found no data here..."
+            else:
+                text = "Found no data here...\n Increase pick_distance?"
+
+            self._m.cb.click._cb.annotate(
+                pos=x,
+                permanent=False,
+                text=text,
+                xytext=(1, 1),
+                textcoords=self._m.figure.f.transFigure,
+                horizontalalignment="right",
+                verticalalignment="top",
+                arrowprops=None,
+                fontsize=7,
+                bbox=dict(ec="r", fc=(1, 0.9, 0.9, 0.5), lw=0.25, boxstyle="round"),
+            )
+
+            i = None
+        return None, i
+
+
 class draggable_axes:
     def __init__(self, m, modifier="alt+d", cb_modifier="control"):
         self.modifier = modifier
