@@ -842,6 +842,7 @@ class NaturalEarth_features(object):
                 fc=color,
                 ec="none",
                 zorder=0,
+                reproject="cartopy",
             )
 
         @property
