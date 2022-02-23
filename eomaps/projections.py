@@ -65,7 +65,7 @@ class Equi7Grid_projection(ccrs.Projection):
 
         super().__init__(proj4params, *args, **kwargs)
 
-        self._boundary = projpoly.boundary.envelope
+        self._boundary = projpoly.boundary.envelope.boundary
         self.bounds = [b[0], b[2], b[1], b[3]]
 
         self.equi7_zone_polygon = projpoly
@@ -73,3 +73,15 @@ class Equi7Grid_projection(ccrs.Projection):
     @property
     def boundary(self):
         return self._boundary
+
+    @classmethod
+    def _pyproj_crs_generator(cls):
+        # return a generator that yields Equi7Grid pyproj CRS instances
+        # (used to properly identify Equi7Grid crs as cartopy crs)
+        if not equ7_OK:
+            return
+        for subgrid in cls.subgrids:
+            yield (
+                subgrid,
+                CRS.from_wkt(equi7grid.Equi7Grid._static_data[subgrid]["wkt"]),
+            )
