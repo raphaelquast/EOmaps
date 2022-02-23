@@ -107,14 +107,13 @@ class shapes(object):
         if (isinstance(radius, str) and radius == "estimate") or radius is None:
             print("EOmaps: estimating radius...")
             radiusx, radiusy = shapes._estimate_radius(m, radius_crs)
+            print(f"EOmaps: The estimated radius is: {radiusx:.4f}")
         else:
             radiusx, radiusy = radius
 
         if buffer is not None:
             radiusx = radiusx * buffer
             radiusy = radiusy * buffer
-
-        print(f"EOmaps: The estimated radius is: {radiusx:.4f}")
 
         return (radiusx, radiusy)
 
@@ -476,34 +475,26 @@ class shapes(object):
             [rx, ry] = radius
             # transform corner-points
             if radius_crs == crs:
-                pr = t_in_plot.transform(x, y + ry)
-                pl = t_in_plot.transform(x, y - ry)
-                d = np.ma.masked_invalid(pl) - np.ma.masked_invalid(pr)
-                theta = np.arctan(d[1] / d[0]) - (np.pi / 2)
-
+                theta = np.full_like(x, 0)
                 xs, ys = self._calc_ellipse_points(
                     x,
                     y,
                     np.full_like(x, rx, dtype=float),
                     np.full_like(x, ry, dtype=float),
-                    theta,
+                    np.full_like(x, 0),
                     n=n,
                 )
                 xs, ys = np.ma.masked_invalid((xs, ys), copy=False)
                 xs, ys = np.ma.masked_invalid(t_in_plot.transform(xs, ys), copy=False)
             else:
                 p = t_in_radius.transform(x, y)
-                pr = t_radius_plot.transform(p[0], p[1] + y)
-                pl = t_radius_plot.transform(p[0], p[1] - y)
-
-                d = np.ma.masked_invalid(pl) - np.ma.masked_invalid(pr)
-                theta = np.arctan(d[1] / d[0]) - (np.pi / 2)
+                theta = np.full_like(x, 0)
                 xs, ys = self._calc_ellipse_points(
                     p[0],
                     p[1],
                     np.full_like(x, rx, dtype=float),
                     np.full_like(x, ry, dtype=float),
-                    theta,
+                    np.full_like(x, 0),
                     n=n,
                 )
 
