@@ -1604,9 +1604,6 @@ class Maps(object):
 
             self._check_gpd()
 
-            defaultargs = dict(facecolor="none", edgecolor="k", lw=1.5)
-            defaultargs.update(kwargs)
-
             try:
                 # explode the GeoDataFrame to avoid picking multi-part geometries
                 gdf = gdf.explode(index_parts=False)
@@ -1667,7 +1664,7 @@ class Maps(object):
             colls = [id(i) for i in self.ax.collections]
             artists, prefixes = [], []
             for geomtype, geoms in gdf.groupby(gdf.geom_type):
-                gdf.plot(ax=self.ax, aspect=self.ax.get_aspect(), **defaultargs)
+                gdf.plot(ax=self.ax, aspect=self.ax.get_aspect(), **kwargs)
                 artists = [i for i in self.ax.collections if id(i) not in colls]
                 for i in artists:
                     prefixes.append(
