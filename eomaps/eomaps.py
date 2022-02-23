@@ -364,7 +364,6 @@ class Maps(object):
                 subgrid,
                 equi7crs,
             ) in Maps.CRS.Equi7Grid_projection._pyproj_crs_generator():
-                print("checking", subgrid)
                 if equi7crs == crs:
                     cartopy_proj = Maps.CRS.Equi7Grid_projection(subgrid)
                     break
@@ -2227,7 +2226,6 @@ class Maps(object):
         # in case 2D data and 1D coordinate arrays are provided, use a meshgrid
         # to identify the coordinates
         if n_coord_shape == 1 and len(props["z_data"].shape) == 2:
-
             props["x0"], props["y0"] = [
                 np.ravel(i) for i in np.meshgrid(props["x0"], props["y0"], copy=False)
             ]
