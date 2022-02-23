@@ -455,12 +455,14 @@ class Maps(object):
         # reset attributes that might use up a lot of memory when the figure is closed
 
         if hasattr(self, "_props"):
+            self._props.clear()
             del self._props
         if hasattr(self, "tree"):
             del self.tree
         if hasattr(self.figure, "coll"):
             del self.figure.coll
-        plt.close(self.figure.f)
+
+        self.data_specs.delete()
 
     @property
     def BM(self):
