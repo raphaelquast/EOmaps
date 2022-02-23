@@ -2242,6 +2242,10 @@ class Maps(object):
             # and NOT as (x, y)
             props["z_data"] = props["z_data"].T.ravel()
             props["mask"] = props["mask"].T.ravel()
+
+            props["mask"] = (
+                np.isfinite(props["x0"]) & np.isfinite(props["y0"])
+            ).ravel()
         else:
             props["z_data"] = props["z_data"].ravel()
             props["mask"] = props["mask"].ravel()
