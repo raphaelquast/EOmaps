@@ -150,7 +150,7 @@ class searchtree:
                 pos=x,
                 permanent=False,
                 text=text,
-                xytext=(1, 1),
+                xytext=(0.98, 0.98),
                 textcoords=self._m.figure.f.transFigure,
                 horizontalalignment="right",
                 verticalalignment="top",
