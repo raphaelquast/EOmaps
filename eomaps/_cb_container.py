@@ -3,7 +3,6 @@ from eomaps.callbacks import (
     pick_callbacks,
     keypress_callbacks,
     dynamic_callbacks,
-    draw_callbacks,
 )
 from types import SimpleNamespace
 
