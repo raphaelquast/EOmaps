@@ -102,72 +102,69 @@ class shapes(object):
     @staticmethod
     @lru_cache()
     def _get_radius_cache(m, radius, radius_crs, buffer=None):
-        from scipy.spatial import cKDTree
 
         # get the radius for plotting
         if (isinstance(radius, str) and radius == "estimate") or radius is None:
-            if radius_crs == "in":
-                # radiusx = np.median(np.abs(np.diff(np.unique(m._props["xorig"])))) / 2.0
-                # radiusy = np.median(np.abs(np.diff(np.unique(m._props["yorig"])))) / 2.0
-                print("EOmaps: Estimating average pixel radius (in data-crs)...")
-                in_tree = cKDTree(
-                    np.stack(
-                        [
-                            m._props["xorig"][m._props["mask"]][
-                                : m.set_shape.radius_estimation_range
-                            ],
-                            m._props["yorig"][m._props["mask"]][
-                                : m.set_shape.radius_estimation_range
-                            ],
-                        ],
-                        axis=1,
-                    ),
-                    compact_nodes=False,
-                    balanced_tree=False,
-                )
-
-                dists, pts = in_tree.query(in_tree.data, 3)
-                radiusx = radiusy = np.median(dists) / 2
-
-                print(f"EOmaps: The estimated radius is: {radiusx:.4f}")
-
-            elif radius_crs == "out":
-                # radiusx = np.median(np.abs(np.diff(np.unique(m._props["x0"])))) / 2.0
-                # radiusy = np.median(np.abs(np.diff(np.unique(m._props["y0"])))) / 2.0
-                if not hasattr(m, "tree"):
-                    print("EOmaps: Estimating average pixel radius (in plot-crs) ...")
-                    tree = cKDTree(
-                        np.stack(
-                            [
-                                m._props["x0"][m._props["mask"]][
-                                    : m.set_shape.radius_estimation_range
-                                ],
-                                m._props["y0"][m._props["mask"]][
-                                    : m.set_shape.radius_estimation_range
-                                ],
-                            ],
-                            axis=1,
-                        ),
-                        compact_nodes=False,
-                        balanced_tree=False,
-                    )
-                else:
-                    tree = m.tree
-
-                dists, pts = tree.query(tree.data, 3)
-                radiusx = radiusy = np.median(dists) / 2
-                print(f"EOmaps: The estimated radius is: {radiusx:.4f}")
-
-            else:
-                raise AssertionError(
-                    "radius can only be estimated if radius_crs is 'in' or 'out'!"
-                )
+            print("EOmaps: estimating radius...")
+            radiusx, radiusy = shapes._estimate_radius(m, radius_crs)
         else:
             radiusx, radiusy = radius
 
         if buffer is not None:
             radiusx = radiusx * buffer
             radiusy = radiusy * buffer
+
+        print(f"EOmaps: The estimated radius is: {radiusx:.4f}")
+
+        return (radiusx, radiusy)
+
+    @staticmethod
+    def _estimate_radius(m, radius_crs, method=np.median):
+        from scipy.spatial import cKDTree
+
+        if radius_crs == "in":
+            in_tree = cKDTree(
+                np.stack(
+                    [
+                        m._props["xorig"][m._props["mask"]][
+                            : m.set_shape.radius_estimation_range
+                        ],
+                        m._props["yorig"][m._props["mask"]][
+                            : m.set_shape.radius_estimation_range
+                        ],
+                    ],
+                    axis=1,
+                ),
+                compact_nodes=False,
+                balanced_tree=False,
+            )
+
+            dists, pts = in_tree.query(in_tree.data, 3)
+            radiusx = radiusy = method(dists) / 2
+
+        elif radius_crs == "out":
+            tree = cKDTree(
+                np.stack(
+                    [
+                        m._props["x0"][m._props["mask"]][
+                            : m.set_shape.radius_estimation_range
+                        ],
+                        m._props["y0"][m._props["mask"]][
+                            : m.set_shape.radius_estimation_range
+                        ],
+                    ],
+                    axis=1,
+                ),
+                compact_nodes=False,
+                balanced_tree=False,
+            )
+
+            dists, pts = tree.query(tree.data, 3)
+            radiusx = radiusy = method(dists) / 2
+        else:
+            raise AssertionError(
+                "radius can only be estimated if radius_crs is 'in' or 'out'!"
+            )
 
         return (radiusx, radiusy)
 
