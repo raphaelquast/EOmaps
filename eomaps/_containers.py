@@ -192,6 +192,13 @@ class data_specs(object):
         self.crs = crs
         self.parameter = parameter
 
+    def delete(self):
+        self._data = None
+        self._xcoord = None
+        self._ycoord = None
+        self._crs = None
+        self._parameter = None
+
     def __repr__(self):
         txt = f"""\
               # parameter = {self.parameter}
