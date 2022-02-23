@@ -13,7 +13,7 @@ from eomaps import Maps, MapsGrid
 class TestCallbacks(unittest.TestCase):
     def setUp(self):
         self.lon, self.lat = np.meshgrid(
-            np.linspace(-25, 25, 50), np.linspace(-50, 50, 50)
+            np.linspace(-50, 50, 50), np.linspace(-25, 25, 50)
         )
 
         self.data = pd.DataFrame(
