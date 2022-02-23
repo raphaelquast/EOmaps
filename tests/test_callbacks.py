@@ -78,7 +78,7 @@ class TestCallbacks(unittest.TestCase):
         self.assertEqual(len(m.cb.pick.get.picked_vals["ID"]), 1)
         self.assertEqual(len(m.cb.pick.get.picked_vals["val"]), 1)
 
-        self.assertTrue(m.cb.pick.get.picked_vals["ID"][0] == 1274)
+        self.assertTrue(m.cb.pick.get.picked_vals["ID"][0] == 1225)
 
         self.click_ax_center(m)
         self.assertEqual(len(m.cb.pick.get.picked_vals["pos"]), 2)
