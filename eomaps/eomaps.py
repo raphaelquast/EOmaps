@@ -364,7 +364,6 @@ class Maps(object):
                 subgrid,
                 equi7crs,
             ) in Maps.CRS.Equi7Grid_projection._pyproj_crs_generator():
-                print("checking", subgrid)
                 if equi7crs == crs:
                     cartopy_proj = Maps.CRS.Equi7Grid_projection(subgrid)
                     break
@@ -1605,9 +1604,6 @@ class Maps(object):
 
             self._check_gpd()
 
-            defaultargs = dict(facecolor="none", edgecolor="k", lw=1.5)
-            defaultargs.update(kwargs)
-
             try:
                 # explode the GeoDataFrame to avoid picking multi-part geometries
                 gdf = gdf.explode(index_parts=False)
@@ -1668,7 +1664,7 @@ class Maps(object):
             colls = [id(i) for i in self.ax.collections]
             artists, prefixes = [], []
             for geomtype, geoms in gdf.groupby(gdf.geom_type):
-                gdf.plot(ax=self.ax, aspect=self.ax.get_aspect(), **defaultargs)
+                gdf.plot(ax=self.ax, aspect=self.ax.get_aspect(), **kwargs)
                 artists = [i for i in self.ax.collections if id(i) not in colls]
                 for i in artists:
                     prefixes.append(
@@ -2227,7 +2223,6 @@ class Maps(object):
         # in case 2D data and 1D coordinate arrays are provided, use a meshgrid
         # to identify the coordinates
         if n_coord_shape == 1 and len(props["z_data"].shape) == 2:
-
             props["x0"], props["y0"] = [
                 np.ravel(i) for i in np.meshgrid(props["x0"], props["y0"], copy=False)
             ]
