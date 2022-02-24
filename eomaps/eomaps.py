@@ -982,7 +982,6 @@ class Maps(object):
         ycoord=None,
         buffer=None,
     ):
-
         if in_crs is None:
             in_crs = self.data_specs.crs
         if cpos is None:
@@ -997,12 +996,6 @@ class Maps(object):
 
         crs1 = CRS.from_user_input(in_crs)
         crs2 = CRS.from_user_input(self._crs_plot)
-
-        transformer = Transformer.from_crs(
-            crs1,
-            crs2,
-            always_xy=True,
-        )
 
         # identify the provided data and get it in the internal format
         z_data, xorig, yorig, ids, parameter = self._identify_data(
@@ -1025,23 +1018,29 @@ class Maps(object):
         props["ids"] = ids
         props["z_data"] = z_data
         # transform center-points to the plot_crs
-        props["x0"], props["y0"] = transformer.transform(props["xorig"], props["yorig"])
-        props["mask"] = np.isfinite(props["x0"]) & np.isfinite(props["y0"])
+
+        if crs1 == crs2:
+            props["x0"], props["y0"] = props["xorig"], props["yorig"]
+        else:
+            transformer = Transformer.from_crs(
+                crs1,
+                crs2,
+                always_xy=True,
+            )
+            # convert 1D data to 2D to make sure re-projection is correct
+            if len(props["xorig"].shape) == 1 and len(props["z_data"].shape) == 2:
+                props["xorig"], props["yorig"] = np.meshgrid(
+                    props["xorig"], props["yorig"], copy=False
+                )
+                props["z_data"] = props["z_data"].T
+
+            props["x0"], props["y0"] = transformer.transform(
+                props["xorig"], props["yorig"]
+            )
 
         # convert the data to 1D for shapes that accept unstructured data
         if self.shape.name != "shade_raster":
             self._1Dprops(props)
-
-            # nanmask = ~np.isnan(z_data)
-            # props["z_data"] = props["z_data"][nanmask]
-            # props["xorig"] = props["xorig"][nanmask]
-            # props["yorig"] = props["yorig"][nanmask]
-
-            # props["x0"] = props["x0"][nanmask]
-            # props["y0"] = props["y0"][nanmask]
-            # props["mask"] = props["mask"][nanmask]
-
-            # props["ids"] = ids[nanmask]
 
         return props
 
@@ -2060,7 +2059,6 @@ class Maps(object):
                 + " (conda install -c conda-forge datashader) to use the plot-shapes"
                 + "'shade_points' and 'shade_raster'"
             )
-
         # remove previously fetched backgrounds for the used layer
         if layer in self.BM._bg_layers and dynamic is False:
             del self.BM._bg_layers[layer]
@@ -2085,6 +2083,8 @@ class Maps(object):
         # remember props for later use
         self._props = props
 
+        z_finite = np.isfinite(props["z_data"])
+
         vmin = self.plot_specs["vmin"]
         if self.plot_specs["vmin"] is None:
             vmin = np.nanmin(props["z_data"])
@@ -2094,7 +2094,6 @@ class Maps(object):
 
         # clip the data to properly account for vmin and vmax
         props["z_data"] = props["z_data"].clip(vmin, vmax)
-
         if verbose:
             print("EOmaps: Classifying...")
 
@@ -2112,7 +2111,18 @@ class Maps(object):
 
         if verbose:
             print("EOmaps: Plotting...")
-        zdata = self.classify_specs._norm(props["z_data"])
+
+        # convert to float to pass masked values to datashader as np.nan
+        zdata = self.classify_specs._norm(props["z_data"]).astype(float)
+        if len(zdata) == 0:
+            print("EOmaps: there was no data to plot")
+            return
+
+        # re-evaluate vmin and vmax after normalization
+        vmin, vmax = np.nanmin(zdata), np.nanmax(zdata)
+        # re-instate masked values
+        zdata[~z_finite] = np.nan
+
         # update here to ensure bounds are set
         self.BM.update()
 
@@ -2124,14 +2134,11 @@ class Maps(object):
         #     )
         # ]
 
-        if len(zdata) == 0:
-            print("EOmaps: there was no data to plot")
-            return
-
         plot_width, plot_height = int(self.ax.bbox.width), int(self.ax.bbox.height)
 
         if self.shape.name == "shade_raster":
             assert _xar_OK, "EOmaps: missing dependency `xarray` for 'shade_raster'"
+
             if len(zdata.shape) == 2:
                 df = xar.DataArray(
                     data=zdata.squeeze(),
@@ -2153,6 +2160,9 @@ class Maps(object):
                     .set_index(["x", "y"])
                     .to_xarray()
                 )
+
+            # if raster-shading does not succeed we need a 1D dataset
+            self._1Dprops(props)
         else:
             df = pd.DataFrame(
                 dict(x=props["x0"].ravel(), y=props["y0"].ravel(), val=zdata.ravel()),
@@ -2166,7 +2176,7 @@ class Maps(object):
             shade_hook=self.shape.shade_hook,
             agg_hook=self.shape.agg_hook,
             # norm="eq_hist",
-            norm=plt.Normalize(df.val.min(), df.val.max()),
+            norm=plt.Normalize(vmin, vmax),
             cmap=cbcmap,
             ax=self.ax,
             plot_width=plot_width,
@@ -2183,7 +2193,6 @@ class Maps(object):
             print("EOmaps: Indexing for pick-callbacks...")
 
         if pick_distance is not None:
-            self._1Dprops(props)
             # self.tree = cKDTree(np.stack([props["x0"], props["y0"]], axis=1))
             self.tree = searchtree(m=self, pick_distance=pick_distance)
 
@@ -2230,17 +2239,13 @@ class Maps(object):
                 np.ravel(i)
                 for i in np.meshgrid(props["xorig"], props["yorig"], copy=False)
             ]
+
             # transpose since 1D coordinates are expected to be provided as (y, x)
             # and NOT as (x, y)
             props["z_data"] = props["z_data"].T.ravel()
-            props["mask"] = props["mask"].T.ravel()
 
-            props["mask"] = (
-                np.isfinite(props["x0"]) & np.isfinite(props["y0"])
-            ).ravel()
         else:
             props["z_data"] = props["z_data"].ravel()
-            props["mask"] = props["mask"].ravel()
 
     def _plot_map(
         self,
@@ -2329,13 +2334,6 @@ class Maps(object):
             self.figure.coll = coll
 
             if pick_distance is not None:
-                self._1Dprops(props)
-                # use a cKDTree based picking to speed up picks for large collections
-                # self.tree = cKDTree(
-                #     np.stack(
-                #         [props["x0"][props["mask"]], props["y0"][props["mask"]]], axis=1
-                #     )
-                # )
                 self.tree = searchtree(m=self, pick_distance=pick_distance)
 
                 self.cb.pick._set_artist(coll)
