@@ -505,7 +505,19 @@ Services specific for Austria (Europa)
 🌵 GeoDataFrames and NaturalEarth features
 ------------------------------------------
 
+💠 GeoDataFrames
+~~~~~~~~~~~~~~~~~
+
 A ``geopandas.GeoDataFrame`` can be added to the map via ``m.add_gdf()``.
+
+.. currentmodule:: eomaps
+
+.. autosummary::
+    :toctree: generated
+    :nosignatures:
+    :template: only_names_in_toc.rst
+
+    Maps.add_gdf
 
 .. code-block:: python
 
@@ -515,7 +527,6 @@ A ``geopandas.GeoDataFrame`` can be added to the map via ``m.add_gdf()``.
 
     m = Maps()
     m.add_gdf(gdf, fc="r", ec="g", lw=2)
-
 
 It is possible to make the shapes of a ``GeoDataFrame`` pickable
 (e.g. usable with ``m.cb.pick`` callbacks) by providing a ``picker_name``
@@ -539,11 +550,19 @@ Once the ``picker_name`` is specified, pick-callbacks can be attached via:
     # temporarily highlight the picked geometry
     m.cb.pick["countries"].attach.highlight_geometry(fc="r", ec="g", lw=2)
 
+🌴 NaturalEarth features
+~~~~~~~~~~~~~~~~~~~~~~~~
 
-Feature-layers provided by `NaturalEarth <https://www.naturalearthdata.com>` can be directly added to the plot via ``m.add_feature``.
-If ``geopandas`` is installed, ``GeoDataFrames`` are used to visualize the features, and all aforementioned
-functionalities of ``m.add_gdf`` can be used with NaturalEarth features as well!
+Feature-layers provided by `NaturalEarth <https://www.naturalearthdata.com>`_ can be directly added to the plot via ``m.add_feature``.
 
+.. currentmodule:: eomaps
+
+.. autosummary::
+    :toctree: generated
+    :nosignatures:
+    :template: only_names_in_toc.rst
+
+    Maps.add_feature
 
 The general call-signature is:
 
@@ -561,6 +580,20 @@ Where ``< CATEGORY >`` specifies the resolution and general category of the feat
 - physical_10m, physical_50m, physical_110m
 - preset
 
+The most commonly used features are available as preset-layers:
+
+.. currentmodule:: eomaps._containers._NaturalEarth_presets
+
+.. autosummary::
+    :toctree: generated
+    :nosignatures:
+    :template: only_names_in_toc.rst
+
+    coastline
+    ocean
+    land
+    countries
+
 .. code-block:: python
 
     m = Maps()
@@ -572,15 +605,12 @@ Where ``< CATEGORY >`` specifies the resolution and general category of the feat
     m.add_feature.preset.countries(fc="none", ec="k", picker_name="countries", pick_method="contains")
     m.cb.pick["countries"].attach. ...
 
-.. currentmodule:: eomaps
 
-.. autosummary::
-    :toctree: generated
-    :nosignatures:
-    :template: only_names_in_toc.rst
+.. note::
 
-    Maps.add_gdf
-    Maps.add_feature
+    If ``geopandas`` is installed, ``GeoDataFrames`` are used to visualize the features, and all aforementioned
+    functionalities of ``m.add_gdf`` can be used with NaturalEarth features as well!
+
 
 .. _annotations_and_markers:
 
@@ -776,16 +806,6 @@ Read relevant data from a file
     ...
     m.plot_map()
 
-
-.. currentmodule:: eomaps
-
-.. autosummary::
-    :toctree: generated
-    :nosignatures:
-    :template: only_names_in_toc.rst
-
-    Maps.read_file
-
 .. currentmodule:: eomaps.reader
 
 .. autosummary::
@@ -812,16 +832,6 @@ Initialize Maps-objects from a file
         )
     m.add_colorbar()
     m.cb.pick.attach.annotate()
-
-
-.. currentmodule:: eomaps
-
-.. autosummary::
-    :toctree: generated
-    :nosignatures:
-    :template: only_names_in_toc.rst
-
-    Maps.from_file
 
 .. currentmodule:: eomaps.reader
 
@@ -855,13 +865,6 @@ Similar to ``Maps.from_file``, a new layer based on a file can be added to an ex
         )
 
 .. currentmodule:: eomaps
-
-.. autosummary::
-    :toctree: generated
-    :nosignatures:
-    :template: only_names_in_toc.rst
-
-    Maps.new_layer_from_file
 
 .. currentmodule:: eomaps.reader
 
