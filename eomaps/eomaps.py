@@ -1019,6 +1019,12 @@ class Maps(object):
         props["z_data"] = z_data
         # transform center-points to the plot_crs
 
+        if len(xorig.shape) == len(z_data.shape):
+            assert xorig.shape == z_data.shape and yorig.shape == z_data.shape, (
+                f"EOmaps: The data-shape {z_data.shape} and coordinate-shape "
+                + f"x={xorig.shape}, y={yorig.shape} do not match!"
+            )
+
         if crs1 == crs2:
             props["x0"], props["y0"] = props["xorig"], props["yorig"]
         else:
