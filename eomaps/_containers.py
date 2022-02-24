@@ -542,6 +542,138 @@ class classify_specs(object):
         )
 
 
+class _NaturalEarth_presets:
+    def __init__(self, m):
+        self._m = m
+
+    @property
+    def coastline(self):
+        """
+        Add a coastline to the map.
+
+        All provided arguments are passed to `m.add_feature`
+        (and further to `m.add_gdf` if geopandas is available)
+
+        The default args are:
+
+        - fc="none", ec="k", zorder=100
+        """
+        return self._feature(
+            self._m, "physical", "coastline", fc="none", ec="k", zorder=100
+        )
+
+    @property
+    def ocean(self):
+        """
+        Add ocean-coloring to the map.
+
+        All provided arguments are passed to `m.add_feature`
+        (and further to `m.add_gdf` if geopandas is available)
+
+        The default args are:
+
+        - fc=(0.59375, 0.71484375, 0.8828125), ec="none", zorder=0, reproject="cartopy"
+        """
+
+        # convert color to hex to avoid issues with geopandas
+        color = rgb2hex(cfeature.COLORS["water"])
+        return self._feature(
+            self._m,
+            "physical",
+            "ocean",
+            fc=color,
+            ec="none",
+            zorder=0,
+            reproject="cartopy",
+        )
+
+    @property
+    def land(self):
+        """
+        Add a land-coloring to the map.
+
+        All provided arguments are passed to `m.add_feature`
+        (and further to `m.add_gdf` if geopandas is available)
+
+        The default args are:
+
+        - fc=(0.9375, 0.9375, 0.859375), ec="none", zorder=0
+
+        """
+
+        # convert color to hex to avoid issues with geopandas
+        color = rgb2hex(cfeature.COLORS["land"])
+
+        return self._feature(
+            self._m,
+            "physical",
+            "land",
+            fc=color,
+            ec="none",
+            zorder=0,
+        )
+
+    @property
+    def countries(self):
+        """
+        Add country-boundaries to the map.
+
+        All provided arguments are passed to `m.add_feature`
+        (and further to `m.add_gdf` if geopandas is available)
+
+        The default args are:
+
+        - fc="none", ec=".5", lw=0.5, zorder=99
+
+        """
+
+        return self._feature(
+            self._m,
+            "cultural",
+            "admin_0_countries",
+            fc="none",
+            ec=".5",
+            lw=0.5,
+            zorder=99,
+        )
+
+    class _feature:
+        def __init__(self, m, category, name, **kwargs):
+            self._m = m
+            self.category = category
+            self.name = name
+
+            self.kwargs = kwargs
+
+            self.feature = getattr(
+                getattr(self._m.add_feature, f"{self.category}_10m"), self.name
+            )
+
+            add_params = """
+            Other Parameters
+            ----------------
+            scale : str
+                Set the scale of the feature preset ("10m", "50m" or "110m")
+                The default is "50m"
+            """
+
+            self.__doc__ = combdoc(
+                f"PRESET using {kwargs} ", self.feature.__doc__, add_params
+            )
+
+        def __call__(self, scale="50m", **kwargs):
+            k = dict(**self.kwargs)
+            k.update(kwargs)
+
+            self.feature = getattr(
+                getattr(self._m.add_feature, f"{self.category}_{scale}"), self.name
+            )
+
+            self.__doc__ = self.feature.__doc__
+
+            return self.feature(**k)
+
+
 class NaturalEarth_features(object):
     """
     Interface to the feature-layers provided by NaturalEarth
@@ -602,7 +734,7 @@ class NaturalEarth_features(object):
         - "land" - beige land coloring
         - "countries" - gray country boarder lines
         """
-        return self._NaturalEarth_presets(self._m)
+        return _NaturalEarth_presets(self._m)
 
     def __getitem__(self, key):
         return getattr(self, key)
@@ -820,138 +952,6 @@ class NaturalEarth_features(object):
                 gdf = gpd.read_file(shapereader.natural_earth(**self.feature))
                 gdf.set_crs(ccrs.PlateCarree(), inplace=True, allow_override=True)
                 return gdf
-
-
-class _NaturalEarth_presets:
-    def __init__(self, m):
-        self._m = m
-
-    @property
-    def coastline(self):
-        """
-        Add a coastline to the map.
-
-        All provided arguments are passed to `m.add_feature`
-        (and further to `m.add_gdf` if geopandas is available)
-
-        The default args are:
-
-        - fc="none", ec="k", zorder=100
-        """
-        return self._feature(
-            self._m, "physical", "coastline", fc="none", ec="k", zorder=100
-        )
-
-    @property
-    def ocean(self):
-        """
-        Add ocean-coloring to the map.
-
-        All provided arguments are passed to `m.add_feature`
-        (and further to `m.add_gdf` if geopandas is available)
-
-        The default args are:
-
-        - fc=(0.59375, 0.71484375, 0.8828125), ec="none", zorder=0, reproject="cartopy"
-        """
-
-        # convert color to hex to avoid issues with geopandas
-        color = rgb2hex(cfeature.COLORS["water"])
-        return self._feature(
-            self._m,
-            "physical",
-            "ocean",
-            fc=color,
-            ec="none",
-            zorder=0,
-            reproject="cartopy",
-        )
-
-    @property
-    def land(self):
-        """
-        Add a land-coloring to the map.
-
-        All provided arguments are passed to `m.add_feature`
-        (and further to `m.add_gdf` if geopandas is available)
-
-        The default args are:
-
-        - fc=(0.9375, 0.9375, 0.859375), ec="none", zorder=0
-
-        """
-
-        # convert color to hex to avoid issues with geopandas
-        color = rgb2hex(cfeature.COLORS["land"])
-
-        return self._feature(
-            self._m,
-            "physical",
-            "land",
-            fc=color,
-            ec="none",
-            zorder=0,
-        )
-
-    @property
-    def countries(self):
-        """
-        Add country-boundaries to the map.
-
-        All provided arguments are passed to `m.add_feature`
-        (and further to `m.add_gdf` if geopandas is available)
-
-        The default args are:
-
-        - fc="none", ec=".5", lw=0.5, zorder=99
-
-        """
-
-        return self._feature(
-            self._m,
-            "cultural",
-            "admin_0_countries",
-            fc="none",
-            ec=".5",
-            lw=0.5,
-            zorder=99,
-        )
-
-    class _feature:
-        def __init__(self, m, category, name, **kwargs):
-            self._m = m
-            self.category = category
-            self.name = name
-
-            self.kwargs = kwargs
-
-            self.feature = getattr(
-                getattr(self._m.add_feature, f"{self.category}_10m"), self.name
-            )
-
-            add_params = """
-            Other Parameters
-            ----------------
-            scale : str
-                Set the scale of the feature preset ("10m", "50m" or "110m")
-                The default is "50m"
-            """
-
-            self.__doc__ = combdoc(
-                f"PRESET using {kwargs} ", self.feature.__doc__, add_params
-            )
-
-        def __call__(self, scale="50m", **kwargs):
-            k = dict(**self.kwargs)
-            k.update(kwargs)
-
-            self.feature = getattr(
-                getattr(self._m.add_feature, f"{self.category}_{scale}"), self.name
-            )
-
-            self.__doc__ = self.feature.__doc__
-
-            return self.feature(**k)
 
 
 # avoid defining containers if import is not OK
