@@ -2039,7 +2039,13 @@ class Maps(object):
         self.figure.f.savefig(*args, **kwargs)
 
     def _shade_map(
-        self, pick_distance=100, verbose=0, layer=None, dynamic=False, **kwargs
+        self,
+        pick_distance=100,
+        verbose=0,
+        layer=None,
+        dynamic=False,
+        set_extent=True,
+        **kwargs,
     ):
         """
         Plot the dataset using the (very fast) "datashader" library.
@@ -2130,10 +2136,6 @@ class Maps(object):
         # re-instate masked values
         zdata[~z_finite] = np.nan
 
-        # update here to ensure bounds are set
-        self.BM.update()
-
-        x0, x1, y0, y1 = self.ax.get_extent()
         # df = df[
         #     np.logical_and(
         #         np.logical_and(df.x > x0, df.x < x1),
@@ -2176,6 +2178,17 @@ class Maps(object):
                 copy=False,
             )
 
+        if set_extent is True:
+            xf, yf = np.isfinite(df.x), np.isfinite(df.y)
+            x_range = (np.nanmin(df.x[xf]), np.nanmax(df.x[xf]))
+            y_range = (np.nanmin(df.y[yf]), np.nanmax(df.y[yf]))
+        else:
+            # update here to ensure bounds are set
+            self.BM.update()
+            x0, x1, y0, y1 = self.ax.get_extent()
+            x_range = (x0, x1)
+            y_range = (y0, y1)
+
         coll = dsshow(
             df,
             glyph=self.shape.glyph,
@@ -2190,8 +2203,10 @@ class Maps(object):
             plot_height=plot_height,
             # x_range=(x0, x1),
             # y_range=(y0, y1),
-            x_range=(df.x.min(), df.x.max()),
-            y_range=(df.y.min(), df.y.max()),
+            # x_range=(df.x.min(), df.x.max()),
+            # y_range=(df.y.min(), df.y.max()),
+            x_range=x_range,
+            y_range=y_range,
             **kwargs,
         )
 
@@ -2259,6 +2274,7 @@ class Maps(object):
         pick_distance=100,
         layer=None,
         dynamic=False,
+        set_extent=True,
         **kwargs,
     ):
 
@@ -2353,18 +2369,19 @@ class Maps(object):
             else:
                 self.BM.add_bg_artist(coll, layer)
 
-            # set the image extent
-            # get the extent of the added collection
-            b = self.figure.coll.get_datalim(ax.transData)
-            ymin, ymax = ax.projection.y_limits
-            xmin, xmax = ax.projection.x_limits
-            # set the axis-extent
-            ax.set_xlim(max(b.xmin, xmin), min(b.xmax, xmax))
-            ax.set_ylim(max(b.ymin, ymin), min(b.ymax, ymax))
+            if set_extent:
+                # set the image extent
+                # get the extent of the added collection
+                b = self.figure.coll.get_datalim(ax.transData)
+                ymin, ymax = ax.projection.y_limits
+                xmin, xmax = ax.projection.x_limits
+                # set the axis-extent
+                ax.set_xlim(max(b.xmin, xmin), min(b.xmax, xmax))
+                ax.set_ylim(max(b.ymin, ymin), min(b.ymax, ymax))
 
-            # self.figure.f.canvas.draw()
-            if dynamic is True:
-                self.BM.update(clear=False)
+                # self.figure.f.canvas.draw()
+                if dynamic is True:
+                    self.BM.update(clear=False)
 
         except Exception as ex:
             raise ex
@@ -2374,6 +2391,7 @@ class Maps(object):
         pick_distance=100,
         layer=None,
         dynamic=False,
+        set_extent=True,
         **kwargs,
     ):
         """
@@ -2404,7 +2422,13 @@ class Maps(object):
             The default is None.
         dynamic : bool
             If True, the collection will be dynamically updated
+        set_extent : bool
+            Set the plot-extent to the data-extent.
 
+            - if True: The plot-extent will be set to the extent of the data-coordinates
+            - if False: The plot-extent is kept as-is
+
+            The default is True
         kwargs
             kwargs passed to the initialization of the matpltolib collection
             (dependent on the plot-shape) [linewidth, edgecolor, facecolor, ...]
@@ -2417,11 +2441,19 @@ class Maps(object):
 
         if self.shape.name.startswith("shade"):
             self._shade_map(
-                pick_distance=pick_distance, layer=layer, dynamic=dynamic, **kwargs
+                pick_distance=pick_distance,
+                layer=layer,
+                dynamic=dynamic,
+                set_extent=set_extent,
+                **kwargs,
             )
         else:
             self._plot_map(
-                pick_distance=pick_distance, layer=layer, dynamic=dynamic, **kwargs
+                pick_distance=pick_distance,
+                layer=layer,
+                dynamic=dynamic,
+                set_extent=set_extent,
+                **kwargs,
             )
 
     def add_colorbar(
