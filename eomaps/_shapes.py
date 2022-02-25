@@ -1283,7 +1283,6 @@ class shapes(object):
                 aggregator=self.aggregator,
                 shade_hook=self.shade_hook,
                 agg_hook=self.agg_hook,
-                glyph=self.glyph,
             )
 
         @property
