@@ -223,3 +223,24 @@ This example shows how to use EOmaps to analyze a database that is associated wi
 
 
 .. image:: _static/fig9.gif
+
+
+
+🧮 Select 1D slices of a 2D dataset
+------------------------------------
+
+Use custom callback functions to perform arbitrary tasks on the data when clicking on the map.
+
+- Identify clicked row/col in a 2D dataset
+- Highlight the found row and column using a new layer
+
+(requires EOmaps >= v3.1.4)
+
+|toggleStart|
+
+.. literalinclude:: ../tests/example_row_col_selector.py
+
+|toggleEnd|
+
+
+.. image:: _static/example_row_col_selector.gif
