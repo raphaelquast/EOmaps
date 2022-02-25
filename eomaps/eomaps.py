@@ -1918,7 +1918,7 @@ class Maps(object):
                 # transform coordinates
                 xy = transformer.transform(*xy)
 
-        defaultargs = dict()
+        defaultargs = dict(permanent=True)
         defaultargs.update(kwargs)
         # add marker
         self.cb.click._cb.annotate(
