@@ -1918,15 +1918,16 @@ class Maps(object):
                 # transform coordinates
                 xy = transformer.transform(*xy)
 
+        defaultargs = dict()
+        defaultargs.update(kwargs)
         # add marker
         self.cb.click._cb.annotate(
             ID=ID,
             pos=xy,
             val=val,
-            ind=None if ID is None else self.data.index.get_loc(ID),
-            permanent=True,
+            ind=None if ID is None else ind,
             text=text,
-            **kwargs,
+            **defaultargs,
         )
         self.BM.update(clear=False)
 
