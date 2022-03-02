@@ -127,7 +127,7 @@ class map_objects(object):
                 self.cb_gridspec,
                 self.ax_cb,
                 self.ax_cb_plot,
-                "vertical" if self._m._orientation == "horizontal" else "horizontal",
+                self._m._orientation,
             ]
         else:
             _, ax_cb, ax_cb_plot, orientation, _ = cb
