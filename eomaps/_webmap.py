@@ -36,6 +36,12 @@ class _WebMap_layer:
         self._wms = wms
         self.wms_layer = self._wms.contents[name]
 
+        # hardcode support for EPSG:3857 == EPSG:900913 for now since cartopy
+        # hardcoded only  EPSG:900913
+        # (see from cartopy.io.ogc_clients import _CRS_TO_OGC_SRS)
+        if "EPSG:3857" in self.wms_layer.crsOptions:
+            self.wms_layer.crsOptions.append("EPSG:900913")
+
     @property
     def info(self):
         """
