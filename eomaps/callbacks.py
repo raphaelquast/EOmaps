@@ -847,7 +847,7 @@ class dynamic_callbacks:
     """
 
     def __init__(self, m):
-        self.m = m
+        self._m = m
 
     def indicate_extent(self, m=None, **kwargs):
         """
@@ -892,7 +892,7 @@ class dynamic_callbacks:
                 args = dict(n=100, fc="none", ec="r")
                 args.update(kwargs)
 
-                self._extent_marker = self.m.add_marker(
+                self._extent_marker = self._m.add_marker(
                     xy=((x0 + x1) / 2, (y0 + y1) / 2),
                     xy_crs=m.crs_plot,
                     layer=999,
