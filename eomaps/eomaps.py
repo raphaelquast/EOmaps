@@ -296,6 +296,7 @@ class Maps(object):
 
     def new_layer(
         self,
+        layer=None,
         copy_data_specs=False,
         copy_plot_specs=True,
         copy_classify_specs=False,
@@ -307,12 +308,16 @@ class Maps(object):
 
         Parameters
         ----------
+        layer : int, str or None
+            The name of the layer at which map-features are plotted.
+
+            - If "all": the corresponding feature will be added to ALL layers
+            - If None, the layer of the parent object is used.
+
+            The default is None.
         copy_data_specs, copy_shape, copy_plot_specs, copy_classify_specs : bool
             Indicator if the corresponding properties should be copied to
-            the new layer. By default, only "plot_specs" and the "shape" are copied.
-        layer : int
-            The layer index at which map-features are plotted by default.
-            The default is None in which case the layer of the parent object is used.
+            the new layer. By default no settings are copied.
 
         Returns
         -------
