@@ -749,8 +749,8 @@ class BlitManager:
             art.set_visible(True)
 
         for l in self._bg_artists:
-            if l != layer:
-                # make all artists of the corresponding layer visible
+            if l != layer and l != "all":  # artists on "all" are always visible!
+                # make all artists of the corresponding layer invisible
                 for art in self._bg_artists[l]:
                     art.set_visible(False)
 
@@ -818,8 +818,12 @@ class BlitManager:
             The artist to be added.  Will be set to 'animated' (just
             to be safe).  *art* must be in the figure associated with
             the canvas this class is managing.
-        layer : int
-            The layer number
+        layer : int or str
+            The layer name at which the artist should be drawn.
+
+            - If "all": the corresponding feature will be added to ALL layers
+
+            The default is 0.
         """
         if art.figure != self.canvas.figure:
             raise RuntimeError

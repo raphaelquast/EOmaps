@@ -796,8 +796,12 @@ class NaturalEarth_features(object):
                     Parameters
                     ----------
 
-                    layer : int, optional
-                        The EOmaps layer-number at which the feature is drawn.
+                    layer : int, str or None, optional
+                        The name of the layer at which map-features are plotted.
+
+                        - If "all": the corresponding feature will be added to ALL layers
+                        - If None, the layer of the parent object is used.
+
                         The default is None.
 
                     Note
@@ -886,8 +890,12 @@ class NaturalEarth_features(object):
 
                         (facecolor, edgecolor, etc.)
 
-                    layer : int, optional
-                        The EOmaps layer-number at which the feature is drawn.
+                    layer : int, str or None, optional
+                        The name of the layer at which map-features are plotted.
+
+                        - If "all": the corresponding feature will be added to ALL layers
+                        - If None, the layer of the parent object is used.
+
                         The default is None.
 
 

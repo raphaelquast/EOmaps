@@ -223,8 +223,12 @@ class _wmts_layer(_WebMap_layer):
 
         Parameters
         ----------
-        layer : int, optional
-            The background-layer index to put the wms-layer on.
+        layer : int, str or None, optional
+            The name of the layer at which map-features are plotted.
+
+            - If "all": the corresponding feature will be added to ALL layers
+            - If None, the layer of the parent object is used.
+
             The default is None.
         **kwargs :
             additional kwargs passed to the WebMap service request.
@@ -255,8 +259,12 @@ class _wms_layer(_WebMap_layer):
 
         Parameters
         ----------
-        layer : int, optional
-            The background-layer index to put the wms-layer on.
+        layer : int, str or None, optional
+            The name of the layer at which map-features are plotted.
+
+            - If "all": the corresponding feature will be added to ALL layers
+            - If None, the layer of the parent object is used.
+
             The default is None.
         **kwargs :
             additional kwargs passed to the WebMap service request.
@@ -626,9 +634,13 @@ class _xyz_tile_service:
         """
         Parameters
         ----------
-        layer : int, optional
-            The layer to put the WMS images on. The default is None in which
-            case the default layer for the Maps-object is used.
+        layer : int, str or None, optional
+            The name of the layer at which map-features are plotted.
+
+            - If "all": the corresponding feature will be added to ALL layers
+            - If None, the layer of the parent object is used.
+
+            The default is None.
         transparent : bool, optional
             Indicator if the WMS images should be read as RGB or RGBA
             (e.g. with or without transparency). The default is False.

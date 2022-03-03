@@ -482,6 +482,7 @@ class Maps(object):
         """The Blit-Manager used to dynamically update the plots"""
         if self.parent._BM is None:
             self.parent._BM = BlitManager(self)
+            self.parent._BM._bg_layer = self.parent.layer
         return self.parent._BM
 
     @property
@@ -1556,8 +1557,13 @@ class Maps(object):
             val_key : str
                 The dataframe-column used to identify values for pick-callbacks.
                 The default is None.
-            layer : int
-                The layer-index at which the dataset will be plotted.
+            layer : int, str or None
+                The name of the layer at which the dataset will be plotted.
+
+                - If "all": the corresponding feature will be added to ALL layers
+                - If None, the layer assigned to the Maps-object is used (e.g. `m.layer`)
+
+                The default is None.
             temporary_picker : str, optional
                 The name of the picker that should be used to make the geometry
                 temporary (e.g. remove it after each pick-event)
@@ -2434,8 +2440,12 @@ class Maps(object):
             `pick_distance * estimated radius`).
 
             The default is 100.
-        layer : int
-            The layer-index at which the dataset will be plotted.
+        layer : int, str or None
+            The layer at which the dataset will be plotted.
+
+            - If "all": the corresponding feature will be added to ALL layers
+            - If None, the layer assigned to the Maps object is used (e.g. `m.layer`)
+
             The default is None.
         dynamic : bool
             If True, the collection will be dynamically updated
