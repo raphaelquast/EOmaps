@@ -763,8 +763,6 @@ class BlitManager:
         self._bg_layers[layer] = cv.copy_from_bbox(bbox)
         self._refetch_bg = False
 
-        self.update()
-
     def on_draw(self, event):
         """Callback to register with 'draw_event'."""
         cv = self.canvas

@@ -271,9 +271,12 @@ class _layer_selector:
         # keep a reference to the buttons to make sure they stay interactive
         self._selectors.append(s)
 
+        # update widgets to make sure the right layer is selected
+        self._update_widgets(self._m.layer)
+
         return s
 
-    def _new_slider(self, layers=None, pos=None):
+    def _new_slider(self, layers=None, pos=None, txt_patch_props=None, **kwargs):
         """
         Get a slider-widget that can be used to switch between layers.
 
@@ -300,6 +303,27 @@ class _layer_selector:
             (x0, y0, width, height).
             If None, the slider will be added at the bottom of the current axis.
             The default is None.
+        txt_patch_props : dict or None
+            A dict used to style the background-patch of the text (e.g. the layer-names)
+
+            For example:
+
+            >>> dict(fc="w", ec="none", alpha=0.75, boxstyle="round, pad=.25")
+
+            - If None, no background patch will be added to the text.
+
+            The default is None.
+        kwargs :
+            Additional kwargs are passed to matplotlib.widgets.Slider
+
+            The default is
+            >>> dict(initcolor="none",
+            >>>      handle_style=dict(facecolor=".8", edgecolor="k", size=7),
+            >>>      label=None,
+            >>>      track_color="0.8",
+            >>>      color="0.2"
+            >>>      )
+
 
         Returns
         -------
@@ -336,17 +360,20 @@ class _layer_selector:
         else:
             ax_slider = self._m.figure.f.add_axes(pos)
 
+        kwargs.setdefault("color", ".2")  # remove start-position marker
+        kwargs.setdefault("track_color", ".8")  # remove start-position marker
+        kwargs.setdefault("initcolor", "none")  # remove start-position marker
+        kwargs.setdefault("handle_style", dict(facecolor=".8", edgecolor="k", size=7))
+        kwargs.setdefault("label", None)
+
         s = Slider(
-            ax_slider,
-            "layer",
-            0,
-            len(layers) - 1,
-            valinit=0,
-            valstep=1,
-            initcolor="none",  # Remove the line marking the valinit position.
-            handle_style=dict(facecolor=".8", edgecolor="k", size=7),
+            ax_slider, valmin=0, valmax=len(layers) - 1, valinit=0, valstep=1, **kwargs
         )
         s._labels = layers
+
+        # add some background-patch style for the text
+        if txt_patch_props is not None:
+            s.valtext.set_bbox(txt_patch_props)
 
         def fmt(val):
             if val < len(layers):
@@ -356,19 +383,16 @@ class _layer_selector:
 
         s._format = fmt
         s._handle.set_marker("D")
-        s.track.set_facecolor(".8")
+
         s.track.set_edgecolor("none")
         h = s.track.get_height() / 2
         s.track.set_height(h)
         s.track.set_y(s.track.get_y() + h / 2)
 
-        s.poly.set_facecolor(".2")
-
         def update(val):
             # button update function returns a string of the layer object
             l = layers[int(val)]
             self._m.BM.bg_layer = l
-            self._m.BM.update()
 
         self._m.BM.add_artist(ax_slider)
 
@@ -386,6 +410,9 @@ class _layer_selector:
             self._m.BM.update()
 
         s.remove = remove
+
+        # update widgets to make sure the right layer is selected
+        self._update_widgets(self._m.layer)
 
         return s
 
