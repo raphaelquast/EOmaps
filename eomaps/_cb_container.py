@@ -661,6 +661,9 @@ class cb_pick_container(_click_container):
         self._add_pick_callback()
 
     def _default_picker(self, artist, event):
+        # if no pick-callback is attached, don't identify the picked point
+        if len(self._m.cb.pick.get.cbs) == 0:
+            return False, None
 
         if (event.inaxes != self._m.ax) or not hasattr(self._m, "tree"):
             return False, dict(ind=None, dblclick=event.dblclick, button=event.button)
