@@ -768,6 +768,37 @@ The returned ``compass`` object has the following useful methods assigned:
     set_pickable
     remove
 
+🦜 Utilities
+-------------
+
+Some helpful utilities can be added to a map via `m.util.<...>`
+
+.. currentmodule:: eomaps
+
+.. autosummary::
+    :toctree: generated
+    :nosignatures:
+    :template: only_names_in_toc.rst
+
+    Maps.util
+
+Switching layers
+~~~~~~~~~~~~~~~~
+
+To simplify switching between layers, there are currently 2 widgets available:
+
+- ``m.util.layer_selector()`` : Add a set of clickable buttons to the map that activates the corresponding layers.
+- ``m.util.layer_slider()`` : Add a slider to the map that iterates through the available layers.
+
+.. currentmodule:: eomaps.utilities
+
+.. autosummary::
+    :toctree: generated
+    :nosignatures:
+    :template: only_names_in_toc.rst
+
+    layer_selector
+    layer_slider
 
 📦 Reading data (NetCDF, GeoTIFF, CSV...)
 -----------------------------------------
