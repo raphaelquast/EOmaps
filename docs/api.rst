@@ -799,6 +799,18 @@ To simplify switching between layers, there are currently 2 widgets available:
     layer_selector
     layer_slider
 
+
+.. code-block:: python
+
+    m = Maps(layer="coastline")
+    m.add_feature.preset.coastline()
+
+    m2 = m.new_layer(layer="ocean")
+    m2.add_feature.preset.ocean()
+
+    m.util.layer_selector()
+
+
 📦 Reading data (NetCDF, GeoTIFF, CSV...)
 -----------------------------------------
 
