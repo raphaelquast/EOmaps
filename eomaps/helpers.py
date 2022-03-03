@@ -114,7 +114,6 @@ class searchtree:
     def query(self, x, k=1, d=None):
         if d is None:
             d = self.d
-
         # select a rectangle around the pick-coordinates
         # (provides tremendous speedups for very large datasets)
         mx = np.logical_and(
@@ -130,7 +129,6 @@ class searchtree:
         # euclidean distance
 
         if len(idx) > 0:
-            self._misses = 0
             i = idx[
                 (
                     (self._m._props["x0"][m] - x[0]) ** 2
@@ -139,25 +137,24 @@ class searchtree:
             ]
         else:
             # show some warning if no points are found within the pick_distance
-            self._misses += 1
 
             if self._misses < 3:
-                text = "Found no data here..."
-            else:
+                self._misses += 1
+
                 text = "Found no data here...\n Increase pick_distance?"
 
-            self._m.cb.click._cb.annotate(
-                pos=x,
-                permanent=False,
-                text=text,
-                xytext=(0.98, 0.98),
-                textcoords=self._m.figure.f.transFigure,
-                horizontalalignment="right",
-                verticalalignment="top",
-                arrowprops=None,
-                fontsize=7,
-                bbox=dict(ec="r", fc=(1, 0.9, 0.9, 0.5), lw=0.25, boxstyle="round"),
-            )
+                self._m.cb.click._cb.annotate(
+                    pos=x,
+                    permanent=False,
+                    text=text,
+                    xytext=(0.98, 0.98),
+                    textcoords=self._m.figure.f.transFigure,
+                    horizontalalignment="right",
+                    verticalalignment="top",
+                    arrowprops=None,
+                    fontsize=7,
+                    bbox=dict(ec="r", fc=(1, 0.9, 0.9, 0.5), lw=0.25, boxstyle="round"),
+                )
 
             i = None
         return None, i
