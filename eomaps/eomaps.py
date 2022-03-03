@@ -300,7 +300,7 @@ class Maps(object):
         self,
         layer=None,
         copy_data_specs=False,
-        copy_plot_specs=True,
+        copy_plot_specs=False,
         copy_classify_specs=False,
         copy_shape=True,
     ):
