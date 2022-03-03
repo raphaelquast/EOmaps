@@ -861,7 +861,7 @@ class BlitManager:
 
         if layers is None and artists is None:
             # redraw all layers
-            for l in sorted(list(self._layers)):
+            for l in sorted(list(self._layers), key=lambda x: str(x)):
                 for a in self._layers[l]:
                     fig.draw_artist(a)
         else:
