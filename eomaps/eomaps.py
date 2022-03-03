@@ -421,6 +421,10 @@ class Maps(object):
         if newfig:  # only if a new figure has been initialized
             _ = self._draggable_axes
 
+            # set the _ignore_cb_events property on the parent
+            # (used to temporarily disconnect all callbacks)
+            self._ignore_cb_events = False
+
             if plt.get_backend() == "module://ipympl.backend_nbagg":
                 warnings.warn(
                     "EOmaps disables matplotlib's interactive mode (e.g. 'plt.ioff()') "
@@ -459,6 +463,14 @@ class Maps(object):
             del self.figure.coll
 
         self.data_specs.delete()
+
+    @property
+    def _ignore_cb_events(self):
+        return self.parent._persistent_ignore_cb_events
+
+    @_ignore_cb_events.setter
+    def _ignore_cb_events(self, val):
+        self.parent._persistent_ignore_cb_events = val
 
     @property
     def BM(self):

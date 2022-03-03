@@ -631,6 +631,7 @@ class draggable_axes:
 
     def _undo_draggable(self):
         self._modifier_pressed = False
+        self.m._ignore_cb_events = True
 
         print("EOmaps: Making axes interactive again")
         for ax, frameQ, spine_vis in zip(
@@ -659,6 +660,7 @@ class draggable_axes:
         self._frameon = [i.get_frame_on() for i in self.all_axes]
 
         self._modifier_pressed = True
+        self.m._ignore_cb_events = False
         print("EOmaps: Making axis draggable")
 
         for ax in self.all_axes:
@@ -731,6 +733,7 @@ class BlitManager:
 
     @bg_layer.setter
     def bg_layer(self, val):
+        self._m.util._layer_selector._update_widgets(val)
         self._bg_layer = val
 
     def fetch_bg(self, layer=None, bbox=None):

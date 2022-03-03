@@ -497,7 +497,7 @@ class cb_click_container(_click_container):
             self._event = event
 
             # ignore callbacks while dragging axes
-            if self._m._draggable_axes._modifier_pressed:
+            if self._m._ignore_cb_events:
                 return
             # don't execute callbacks if a toolbar-action is active
             if (
@@ -519,7 +519,7 @@ class cb_click_container(_click_container):
             self._event = event
 
             # ignore callbacks while dragging axes
-            if self._m._draggable_axes._modifier_pressed:
+            if self._m._ignore_cb_events:
                 return
             # don't execute callbacks if a toolbar-action is active
             if (
@@ -737,20 +737,21 @@ class cb_pick_container(_click_container):
         # execute onpick and forward the event to all connected Maps-objects
 
         def pickcb(event):
-            if not self._artist is event.artist:
+            # check if we want to ignore callbacks
+            if self._m._ignore_cb_events:
                 return
 
-            self._event = event
-            # check if the artists has a custom picker assigned
-
-            # ignore callbacks while dragging axes
-            if self._m._draggable_axes._modifier_pressed:
-                return
             # don't execute callbacks if a toolbar-action is active
             if (
                 self._m.figure.f.canvas.toolbar is not None
             ) and self._m.figure.f.canvas.toolbar.mode != "":
                 return
+
+            if not self._artist is event.artist:
+                return
+
+            self._event = event
+            # check if the artists has a custom picker assigned
 
             # execute "_onpick" on the maps-object that belongs to the clicked axes
             # and forward the event to all forwarded maps-objects
