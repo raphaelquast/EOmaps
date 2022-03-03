@@ -52,10 +52,10 @@ m.figure.gridspec.update(left=0.01, right=0.99, bottom=0.01, top=0.99)
 m.add_logo()
 
 # add a utility-widget for switching the layers
-m.util.layer_selector(loc="upper center", ncol=3)
+m.util.layer_selector(loc="upper left", ncol=3, bbox_to_anchor=(0.01, 0.99))
 
 m.util.layer_slider(
-    pos=(0.3, 0.75, 0.4, 0.025),
+    pos=(0.5, 0.93, 0.38, 0.025),
     color="r",
     handle_style=dict(facecolor="r"),
     txt_patch_props=dict(fc="w", ec="none", alpha=0.75, boxstyle="round, pad=.25"),
