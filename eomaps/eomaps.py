@@ -303,7 +303,6 @@ class Maps(object):
         copy_plot_specs=True,
         copy_classify_specs=False,
         copy_shape=True,
-        layer=None,
     ):
         """
         Create a new Maps-object that shares the same plot-axes.
