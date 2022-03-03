@@ -68,6 +68,8 @@ from .scalebar import ScaleBar, Compass
 from .projections import Equi7Grid_projection
 from .reader import read_file, from_file, new_layer_from_file
 
+from .utilities import utilities
+
 try:
     import mapclassify
 except ImportError:
@@ -349,6 +351,12 @@ class Maps(object):
     @wraps(cb_container)
     def cb(self):
         return cb_container(self)
+
+    @property
+    @lru_cache()
+    @wraps(utilities)
+    def util(self):
+        return utilities(self)
 
     @property
     @lru_cache()
