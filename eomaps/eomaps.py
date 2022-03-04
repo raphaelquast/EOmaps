@@ -2820,6 +2820,7 @@ class Maps(object):
             return p
 
         figax = self.figure.f.add_axes(**getpos(self.ax.get_position()))
+        figax.set_navigate(False)
         figax.set_axis_off()
         figax.imshow(im, aspect="equal")
 
