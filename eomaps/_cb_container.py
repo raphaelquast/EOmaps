@@ -404,8 +404,10 @@ class _click_container(_cb_container):
         # if multiple assignments are properly handled
         multi_cb_functions = ["mark", "annotate"]
 
-        if double_click:
+        if double_click is True:
             btn_key = "double"
+        elif double_click == "release":
+            btn_key = "release"
         else:
             btn_key = "single"
 
@@ -454,6 +456,7 @@ class cb_click_container(_click_container):
         super().__init__(*args, **kwargs)
 
         self._cid_button_press_event = None
+        self._cid_button_release_event = None
         self._cid_motion_event = None
         self._only = []
 
@@ -487,6 +490,14 @@ class cb_click_container(_click_container):
                     len(self._only) == 0 or key in self._only
                 ):
                     cb(**clickdict)
+
+    def _onrelease(self, event):
+        cbs = self.get.cbs["release"]
+
+        if event.button in cbs:
+            bcbs = cbs[event.button]
+            for cb in bcbs.values():
+                cb()
 
     def _reset_cids(self):
         self._cid_button_press_event = None
@@ -542,11 +553,37 @@ class cb_click_container(_click_container):
 
             self._m.parent.BM.update(clear=self._method)
 
+        def releasecb(event):
+            # ignore callbacks while dragging axes
+            if self._m._ignore_cb_events:
+                return
+            # don't execute callbacks if a toolbar-action is active
+            if (
+                self._m.figure.f.canvas.toolbar is not None
+            ) and self._m.figure.f.canvas.toolbar.mode != "":
+                return
+
+            # execute onclick on the maps object that belongs to the clicked axis
+            # and forward the event to all forwarded maps-objects
+            for obj in self._objs:
+                obj._onrelease(event)
+                # forward callbacks to the connected maps-objects
+                obj._fwd_cb(event)
+
+            self._m.parent.BM.update(clear=self._method)
+
         if self._cid_button_press_event is None:
             # ------------- add a callback
             self._cid_button_press_event = self._m.figure.f.canvas.mpl_connect(
                 "button_press_event", clickcb
             )
+
+        if self._cid_button_release_event is None:
+            # ------------- add a callback
+            self._cid_button_release_event = self._m.figure.f.canvas.mpl_connect(
+                "button_release_event", releasecb
+            )
+
         if self._cid_motion_event is None:
             # for click-callbacks, allow motion-detection
             self._cid_motion_event = self._m.figure.f.canvas.mpl_connect(
@@ -558,42 +595,42 @@ class cb_click_container(_click_container):
         if event.inaxes != self._m.figure.ax:
             return
 
-        for key, m in self._fwd_cbs.items():
-            obj = self._getobj(m)
-            if obj is None:
-                continue
+        if event.name == "button_release_event":
+            for key, m in self._fwd_cbs.items():
+                obj = self._getobj(m)
+                if obj is None:
+                    continue
+                obj._onrelease()
 
-            transformer = Transformer.from_crs(
-                self._m.crs_plot,
-                m.crs_plot,
-                always_xy=True,
-            )
+        else:
+            for key, m in self._fwd_cbs.items():
+                obj = self._getobj(m)
+                if obj is None:
+                    continue
 
-            # transform the coordinates of the clicked location
-            xdata, ydata = transformer.transform(event.xdata, event.ydata)
+                transformer = Transformer.from_crs(
+                    self._m.crs_plot,
+                    m.crs_plot,
+                    always_xy=True,
+                )
 
-            dummyevent = SimpleNamespace(
-                inaxes=m.figure.ax,
-                dblclick=event.dblclick,
-                button=event.button,
-                xdata=xdata,
-                ydata=ydata,
-            )
+                # transform the coordinates of the clicked location
+                xdata, ydata = transformer.transform(event.xdata, event.ydata)
 
-            dummymouseevent = SimpleNamespace(
-                inaxes=m.figure.ax,
-                dblclick=event.dblclick,
-                button=event.button,
-                xdata=xdata,
-                ydata=ydata,
-                # x=event.mouseevent.x,
-                # y=event.mouseevent.y,
-            )
+                dummymouseevent = SimpleNamespace(
+                    inaxes=m.figure.ax,
+                    dblclick=event.dblclick,
+                    button=event.button,
+                    xdata=xdata,
+                    ydata=ydata,
+                    # x=event.mouseevent.x,
+                    # y=event.mouseevent.y,
+                )
 
-            obj._onclick(dummymouseevent)
-            # append clear-action again since it will already be executed
-            # by the first click!
-            m.BM._after_update_actions.append(obj._clear_temporary_artists)
+                obj._onclick(dummymouseevent)
+                # append clear-action again since it will already be executed
+                # by the first click!
+                m.BM._after_update_actions.append(obj._clear_temporary_artists)
 
 
 class cb_pick_container(_click_container):

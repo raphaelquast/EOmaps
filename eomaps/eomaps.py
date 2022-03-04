@@ -2025,27 +2025,28 @@ class Maps(object):
         self,
         lon=None,
         lat=None,
-        azim=91.0,
-        scale=10000,
+        azim=0,
+        scale=None,
+        autoscale_fraction=0.25,
+        auto_position=(0.75, 0.25),
         scale_props=None,
         patch_props=None,
         label_props=None,
     ):
 
-        if lon is None and lat is None:
-            extent = self.figure.ax.get_extent()
-            lon, lat = self._transf_plot_to_lonlat.transform(
-                np.mean(extent[:2]),
-                np.mean(extent[2:]),
-            )
-
         s = ScaleBar(
             m=self,
             scale=scale,
+            autoscale_fraction=autoscale_fraction,
+            auto_position=auto_position,
             scale_props=scale_props,
             patch_props=patch_props,
             label_props=label_props,
         )
+
+        if lon is None or lat is None:
+            lon, lat = s._get_autopos(auto_position)
+
         s._add_scalebar(lon, lat, azim)
         s._make_pickable()
 
