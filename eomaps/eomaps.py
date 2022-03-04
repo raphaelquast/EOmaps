@@ -2877,6 +2877,35 @@ class Maps(object):
 
         self.figure.f.canvas.mpl_connect("resize_event", setlim)
 
+    def show_layer(self, name):
+        """
+        Display the selected layer on the map.
+
+        See Also
+        --------
+        - Maps.util.layer_selector
+        - Maps.util.layer_slider
+
+        Parameters
+        ----------
+        name : str or int, optional
+            The name of the layer to activate.
+            The default is None.
+        """
+        layers = self.util._layer_selector._get_layers()
+
+        if name not in layers:
+            lstr = " - " + "\n - ".join(layers)
+
+            raise AssertionError(
+                f"EOmaps: The layer '{name}' does not exist...\n"
+                + f"Use one of: \n{lstr}"
+            )
+
+        # invoke the bg_layer setter of the blit-manager
+        self.BM.bg_layer = name
+        self.BM.update()
+
 
 class MapsGrid:
     """
