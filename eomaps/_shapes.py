@@ -1262,7 +1262,8 @@ class shapes(object):
             if agg_hook is None:
                 pass
 
-            glyph = ds.glyphs.QuadMeshRectilinear("x", "y", "val")
+            # this might be changed by m._shade_raster depending on the dataset-shape
+            glyph = None
 
             from . import MapsGrid  # do this here to avoid circular imports!
 

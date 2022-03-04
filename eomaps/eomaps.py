@@ -2176,17 +2176,47 @@ class Maps(object):
 
         plot_width, plot_height = int(self.ax.bbox.width), int(self.ax.bbox.height)
 
+        # get rid of unnecessary dimensions in the numpy arrays
+        zdata = zdata.squeeze()
+        props["x0"] = props["x0"].squeeze()
+        props["y0"] = props["y0"].squeeze()
+
         if self.shape.name == "shade_raster":
+            from datashader import glyphs
+
             assert _xar_OK, "EOmaps: missing dependency `xarray` for 'shade_raster'"
 
             if len(zdata.shape) == 2:
-                df = xar.DataArray(
-                    data=zdata.squeeze(),
-                    dims=["x", "y"],
-                    coords=dict(x=props["x0"].squeeze(), y=props["y0"].squeeze()),
-                )
-                df = xar.Dataset(dict(val=df))
+
+                if (zdata.shape == props["x0"].shape) and (
+                    zdata.shape == props["y0"].shape
+                ):
+                    # use a curvilinear QuadMesh
+                    self.shape.glyph = glyphs.QuadMeshCurvilinear("x", "y", "val")
+
+                    # 2D coordinates and 2D raster
+                    df = xar.Dataset(
+                        data_vars=dict(val=(["xx", "yy"], zdata)),
+                        # dims=["x", "y"],
+                        coords=dict(
+                            x=(["xx", "yy"], props["x0"]), y=(["xx", "yy"], props["y0"])
+                        ),
+                    )
+                elif (zdata.shape[0] == props["x0"].shape) and (
+                    zdata.shape[1] == props["y0"].shape
+                ):
+                    # use a rectangular QuadMesh
+                    self.shape.glyph = glyphs.QuadMeshRectilinear("x", "y", "val")
+                    # 1D coordinates and 2D data
+                    df = xar.DataArray(
+                        data=zdata,
+                        dims=["x", "y"],
+                        coords=dict(x=props["x0"], y=props["y0"]),
+                    )
+                    df = xar.Dataset(dict(val=df))
             else:
+                # use a rectangular QuadMesh
+                self.shape.glyph = glyphs.QuadMeshRectilinear("x", "y", "val")
                 # use pandas to convert the data to a raster-format
                 df = (
                     pd.DataFrame(
@@ -2201,8 +2231,9 @@ class Maps(object):
                     .to_xarray()
                 )
 
-            # if raster-shading does not succeed we need a 1D dataset
+            # once the data is shaded, convert to 1D for further processing
             self._1Dprops(props)
+
         else:
             df = pd.DataFrame(
                 dict(x=props["x0"].ravel(), y=props["y0"].ravel(), val=zdata.ravel()),
@@ -2210,9 +2241,12 @@ class Maps(object):
             )
 
         if set_extent is True:
-            xf, yf = np.isfinite(df.x), np.isfinite(df.y)
-            x_range = (np.nanmin(df.x[xf]), np.nanmax(df.x[xf]))
-            y_range = (np.nanmin(df.y[yf]), np.nanmax(df.y[yf]))
+            # convert to a numpy-array to support 2D indexing with boolean arrays
+            x, y = np.asarray(df.x), np.asarray(df.y)
+
+            xf, yf = np.isfinite(x), np.isfinite(y)
+            x_range = (np.nanmin(x[xf]), np.nanmax(x[xf]))
+            y_range = (np.nanmin(y[yf]), np.nanmax(y[yf]))
         else:
             # update here to ensure bounds are set
             self.BM.update()
