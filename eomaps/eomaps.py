@@ -1615,8 +1615,8 @@ class Maps(object):
                   (slower but generally more robust than "gpd")
 
                 >>> mg = MapsGrid(2, 1, crs=Maps.CRS.Stereographic())
-                >>> mg.m_0_0.add_feature.preset.ocean(use_gpd="gpd")
-                >>> mg.m_1_0.add_feature.preset.ocean(use_gpd="cartopy")
+                >>> mg.m_0_0.add_feature.preset.ocean(reproject="gpd")
+                >>> mg.m_1_0.add_feature.preset.ocean(reproject="cartopy")
 
                 The default is "gpd"
             verbose : bool, optional
