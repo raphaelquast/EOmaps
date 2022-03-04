@@ -7,8 +7,8 @@
 🌐 Initialization of Maps objects
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-| EOmaps is all about ``Maps`` objects.
-| To start creating a new map (in this case a plot in ``epsg=4326``, e.g. lon/lat projection), simply use:
+| EOmaps is all about ``Maps`` objects.                                                                    |
+| To start creating a new map (in this case a plot in ``epsg=4326``, e.g. lon/lat projection), simply use: |
 
 .. code-block:: python
 
@@ -653,6 +653,26 @@ To indicate a rectangular area in a given crs, simply use ``m.indicate_extent``:
 
 A colorbar with a colored histogram on top can be added to the map via ``m.add_colorbar``.
 
+.. table::
+    :widths: 70 30
+    :align: center
+
+    +--------------------------------------------------------------------+------------------------------------------+
+    | .. code-block:: python                                             | .. image:: _static/minigifs/colorbar.png |
+    |                                                                    |   :align: center                         |
+    |   from eomaps import Maps                                          |                                          |
+    |   import numpy as np                                               |                                          |
+    |   x, y = np.mgrid[-45:45, 20:60]                                   |                                          |
+    |                                                                    |                                          |
+    |   m = Maps()                                                       |                                          |
+    |   m.add_feature.preset.coastline()                                 |                                          |
+    |   m.set_data(data=x+y, xcoord=x, ycoord=y, crs=4326)               |                                          |
+    |   m.set_classify_specs(scheme=Maps.CLASSIFIERS.EqualInterval, k=5) |                                          |
+    |   m.plot_map()                                                     |                                          |
+    |   m.add_colorbar(label="what a nice colorbar", histbins="bins")    |                                          |
+    |                                                                    |                                          |
+    +--------------------------------------------------------------------+------------------------------------------+
+
 .. note::
     You must plot a dataset first! (e.g. by calling ``m.plot_map()``)
     The colorbar always represents the dataset that was used in the last call to ``m.plot_map()``.
@@ -673,7 +693,20 @@ A colorbar with a colored histogram on top can be added to the map via ``m.add_c
 📏 Scalebars
 ------------
 
-A scalebar can be added to a map via:
+A scalebar can be added to a map via ``s = m.add_scalebar()``:
+
+.. table::
+    :widths: 70 30
+    :align: center
+
+    +-----------------------------------+------------------------------------------+
+    | .. code-block:: python            | .. image:: _static/minigifs/scalebar.gif |
+    |                                   |   :align: center                         |
+    |   from eomaps import Maps         |                                          |
+    |   m = Maps(Maps.CRS.Sinusoidal()) |                                          |
+    |   m.add_feature.preset.ocean()    |                                          |
+    |   s = m.add_scalebar()            |                                          |
+    +-----------------------------------+------------------------------------------+
 
 .. currentmodule:: eomaps
 
@@ -684,14 +717,23 @@ A scalebar can be added to a map via:
 
     Maps.add_scalebar
 
-.. code-block:: python
+The returned ``ScaleBar`` object provides the following useful methods:
 
-    m = Maps()
-    ...
-    s = m.add_scalebar( ... )
-    # to remove it, use
-    s.remove()
+.. currentmodule:: eomaps.scalebar
 
+.. autosummary::
+    :toctree: generated
+    :nosignatures:
+    :template: only_names_in_toc.rst
+
+    ScaleBar.remove
+    ScaleBar.set_position
+    ScaleBar.get_position
+    ScaleBar.set_label_props
+    ScaleBar.set_patch_props
+    ScaleBar.set_scale_props
+    ScaleBar.cb_offset_interval
+    ScaleBar.cb_rotate_interval
 
 .. Note::
 
@@ -707,31 +749,26 @@ A scalebar can be added to a map via:
     - ``up/down/left/right``: increase the size of the frame
     - ``alt + up/down/left/right``: decrease the size of the frame
 
-
-The scalebar has the following useful methods assigned:
-
-.. currentmodule:: eomaps.scalebar.ScaleBar
-
-.. autosummary::
-    :toctree: generated
-    :nosignatures:
-    :template: only_names_in_toc.rst
-
-    set_scale_props
-    set_patch_props
-    set_label_props
-    set_position
-    get_position
-    remove
-    cb_offset_interval
-    cb_rotate_interval
-
 .. _compass:
 
 🧭 Compass (or North Arrow)
 ---------------------------
 
 A compass can be added to the map via:
+
+.. table::
+    :widths: 70 30
+    :align: center
+
+    +--------------------------------------+-----------------------------------------+
+    | .. code-block:: python               | .. image:: _static/minigifs/compass.gif |
+    |                                      |   :align: center                        |
+    |   from eomaps import Maps            |                                         |
+    |   m = Maps(Maps.CRS.Stereographic()) |                                         |
+    |   m.add_feature.preset.ocean()       |                                         |
+    |                                      |                                         |
+    |   m.add_compass()                    |                                         |
+    +--------------------------------------+-----------------------------------------+
 
 .. currentmodule:: eomaps
 
@@ -768,10 +805,12 @@ The returned ``compass`` object has the following useful methods assigned:
     set_pickable
     remove
 
-🦜 Utilities
--------------
 
-Some helpful utilities can be added to a map via ``m.util.<...>``
+
+🦜 Utility widgets
+------------------
+
+Some helpful utility widgets can be added to a map via ``m.util.<...>``
 
 .. currentmodule:: eomaps
 
@@ -781,8 +820,8 @@ Some helpful utilities can be added to a map via ``m.util.<...>``
 
     Maps.util
 
-Switching between layers
-~~~~~~~~~~~~~~~~~~~~~~~~
+Layer switching
+~~~~~~~~~~~~~~~
 
 To simplify switching between layers, there are currently 2 widgets available:
 
@@ -800,15 +839,22 @@ To simplify switching between layers, there are currently 2 widgets available:
     layer_slider
 
 
-.. code-block:: python
+.. table::
+    :widths: 70 30
+    :align: center
 
-    m = Maps(layer="coastline")
-    m.add_feature.preset.coastline()
-
-    m2 = m.new_layer(layer="ocean")
-    m2.add_feature.preset.ocean()
-
-    m.util.layer_selector()
+    +------------------------------------+-------------------------------------------------+
+    | .. code-block:: python             | .. image:: _static/minigifs/layer_selector.gif  |
+    |                                    |    :align: center                               |
+    |   from eomaps import Maps          |                                                 |
+    |   m = Maps(layer="coastline")      |                                                 |
+    |   m.add_feature.preset.coastline() |                                                 |
+    |                                    |                                                 |
+    |   m2 = m.new_layer(layer="ocean")  |                                                 |
+    |   m2.add_feature.preset.ocean()    |                                                 |
+    |                                    |                                                 |
+    |   m.util.layer_selector()          |                                                 |
+    +------------------------------------+-------------------------------------------------+
 
 
 📦 Reading data (NetCDF, GeoTIFF, CSV...)
