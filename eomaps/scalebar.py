@@ -1,4 +1,5 @@
 from .helpers import pairwise
+from collections import OrderedDict
 
 import numpy as np
 from pyproj import Transformer, CRS
@@ -163,7 +164,7 @@ class ScaleBar:
             always_xy=True,
         )
 
-        self._artists = dict()
+        self._artists = OrderedDict(patch=None, scale=None)
 
     def _estimate_scale(self):
         try:
@@ -171,7 +172,9 @@ class ScaleBar:
             ang = np.deg2rad(self._azim)
 
             x0, y0 = ax2data.inverted().transform((self._lon, self._lat))
-            d = self._autoscale
+
+            aspect = self._m.ax.bbox.height / self._m.ax.bbox.width
+            d = self._autoscale * aspect
 
             dx = abs(d * np.cos(ang))
             dy = abs(d * np.sin(ang))
@@ -495,6 +498,9 @@ class ScaleBar:
     def _get_maxw(self, sscale, sn, lscale, lrotation, levery):
         # arguments are only used for caching!
 
+        # update here to make sure axis-transformations etc. are properly set
+        self._m.BM.update()
+
         # the max. width of the texts
         _maxw = 0
         for key, val in self._artists.items():
@@ -610,7 +616,9 @@ class ScaleBar:
 
     def _add_scalebar(self, lon, lat, azim):
 
-        assert len(self._artists) == 0, "EOmaps: there is already a scalebar present!"
+        assert (
+            self._artists["scale"] is None
+        ), "EOmaps: there is already a scalebar present!"
         # do this to make sure that the ax-transformations work as expected
         self._m.BM.update()
 
@@ -870,7 +878,7 @@ class ScaleBar:
         def newzoom(event):
             ret = f(event)
             # clear the cache to re-evaluate the text-width
-            ScaleBar._get_maxw.cache_clear()
+            self.__class__._get_maxw.cache_clear()
             if self._autoscale is not None:
                 prev_scale = self._scale_props["scale"]
                 try:
@@ -887,9 +895,9 @@ class ScaleBar:
 
     def _update_decorator(self, f):
         def newupdate():
-            ret = f()
             # clear the cache to re-evaluate the text-width
-            ScaleBar._get_maxw.cache_clear()
+            ret = f()
+            self.__class__._get_maxw.cache_clear()
             if self._autoscale is not None:
                 prev_scale = self._scale_props["scale"]
                 try:
@@ -899,6 +907,7 @@ class ScaleBar:
 
             if self._auto_position:
                 self.auto_position(self._auto_position)
+
             self.set_position()
             return ret
 
@@ -1066,7 +1075,6 @@ class Compass:
 
             self.set_position((x, y))
         except Exception:
-            print("ups")
             pass
 
     def _get_transform(self, pos):
