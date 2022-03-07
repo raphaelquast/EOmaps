@@ -768,57 +768,57 @@ Static annotations can be added to the map via ``m.add_annotation()``.
     :widths: 50 50
     :align: center
 
-    +----------------------------------------------------------------------------+---------------------------------------------+
-    | .. code-block:: python                                                     | .. image:: _static/minigifs/annotations.png |
-    |                                                                            |   :align: center                            |
-    |     from eomaps import Maps                                                |                                             |
-    |     import numpy as np                                                     |                                             |
-    |     x, y = np.mgrid[-45:45, 20:60]                                         |                                             |
-    |                                                                            |                                             |
-    |     m = Maps(crs=4326)                                                     |                                             |
-    |     m.set_data(x+y, x, y)                                                  |                                             |
-    |     m.add_feature.preset.coastline(ec="k", lw=.75)                         |                                             |
-    |     m.plot_map()                                                           |                                             |
-    |                                                                            |                                             |
-    |     # annotate any point in the dataset via the data-index                 |                                             |
-    |     m.add_annotation(ID=345)                                               |                                             |
-    |     # annotate an arbitrary position (in the plot-crs)                     |                                             |
-    |     m.add_annotation(                                                      |                                             |
-    |         xy=(20,25), text="A formula:\n $z=\sqrt{x^2+y^2}$",                |                                             |
-    |         fontweight="bold", bbox=dict(fc=".6", ec="none", pad=2))           |                                             |
-    |     # annotate coordinates defined in arbitrary crs                        |                                             |
-    |     m.add_annotation(                                                      |                                             |
-    |         xy=(2873921, 6527868), xy_crs=3857, xytext=(5,5),                  |                                             |
-    |         text="A location defined \nin epsg 3857", fontsize=8,              |                                             |
-    |         rotation=-45, bbox=dict(fc="skyblue", ec="k", ls="--", pad=2))     |                                             |
-    |                                                                            |                                             |
-    |     # functions can be used for more complex text                          |                                             |
-    |     def text(m, ID, val, pos, ind):                                        |                                             |
-    |         return f"lon={pos[0]}\nlat={pos[1]}"                               |                                             |
-    |                                                                            |                                             |
-    |     props = dict(xy=(-1.5, 38.45), text=text,                              |                                             |
-    |                  arrowprops=dict(arrowstyle="-|>", fc="fuchsia",           |                                             |
-    |                                  mutation_scale=15))                       |                                             |
-    |     m.add_annotation(**props, xytext=(20, 20), color="darkred")            |                                             |
-    |     m.add_annotation(**props, xytext=(-60, 20), color="purple")            |                                             |
-    |     m.add_annotation(**props, xytext=(-60, -40), color="dodgerblue")       |                                             |
-    |     m.add_annotation(**props, xytext=(20, -40), color="olive")             |                                             |
-    |                                                                            |                                             |
-    |     m.add_annotation(ID=2500, text=lambda ID, **kwargs: str(ID),           |                                             |
-    |                      color="w", fontweight="bold", rotation=90,            |                                             |
-    |                      arrowprops=dict(width=5, fc="b", ec="orange", lw=2),  |                                             |
-    |                      bbox=dict(boxstyle="round, rounding_size=.8, pad=.5", |                                             |
-    |                                fc="b", ec="orange", lw=2))                 |                                             |
-    |                                                                            |                                             |
-    |     m.add_annotation(ID=803, xytext=(-80,60),                              |                                             |
-    |                      bbox=dict(ec="r", fc="gold", lw=3),                   |                                             |
-    |                      arrowprops=dict(                                      |                                             |
-    |                          arrowstyle="fancy", relpos=(.48,-.2),             |                                             |
-    |                          mutation_scale=40, fc="r",                        |                                             |
-    |                          connectionstyle="angle3, angleA=90, angleB=-25")) |                                             |
-    |                                                                            |                                             |
-    +----------------------------------------------------------------------------+---------------------------------------------+
-
+    +-----------------------------------------------------------------------------------+---------------------------------------------+
+    | .. code-block:: python                                                            | .. image:: _static/minigifs/annotations.png |
+    |                                                                                   |   :align: center                            |
+    |     from eomaps import Maps                                                       |                                             |
+    |     import numpy as np                                                            |                                             |
+    |     x, y = np.mgrid[-45:45, 20:60]                                                |                                             |
+    |                                                                                   |                                             |
+    |     m = Maps(crs=4326)                                                            |                                             |
+    |     m.set_data(x+y, x, y)                                                         |                                             |
+    |     m.add_feature.preset.coastline(ec="k", lw=.75)                                |                                             |
+    |     m.plot_map()                                                                  |                                             |
+    |                                                                                   |                                             |
+    |     # annotate any point in the dataset via the data-index                        |                                             |
+    |     m.add_annotation(ID=345)                                                      |                                             |
+    |     # annotate an arbitrary position (in the plot-crs)                            |                                             |
+    |     m.add_annotation(                                                             |                                             |
+    |         xy=(20,25), text="A formula:\n $z=\sqrt{x^2+y^2}$",                       |                                             |
+    |         fontweight="bold", bbox=dict(fc=".6", ec="none", pad=2))                  |                                             |
+    |     # annotate coordinates defined in arbitrary crs                               |                                             |
+    |     m.add_annotation(                                                             |                                             |
+    |         xy=(2873921, 6527868), xy_crs=3857, xytext=(5,5),                         |                                             |
+    |         text="A location defined \nin epsg 3857", fontsize=8,                     |                                             |
+    |         rotation=-45, bbox=dict(fc="skyblue", ec="k", ls="--", pad=2))            |                                             |
+    |                                                                                   |                                             |
+    |     # functions can be used for more complex text                                 |                                             |
+    |     def text(m, ID, val, pos, ind):                                               |                                             |
+    |         return f"lon={pos[0]}\nlat={pos[1]}"                                      |                                             |
+    |                                                                                   |                                             |
+    |     props = dict(xy=(-1.5, 38.45), text=text,                                     |                                             |
+    |                  arrowprops=dict(arrowstyle="-|>", fc="fuchsia",                  |                                             |
+    |                                  mutation_scale=15))                              |                                             |
+    |                                                                                   |                                             |
+    |     m.add_annotation(**props, xytext=(20, 20), color="darkred")                   |                                             |
+    |     m.add_annotation(**props, xytext=(-60, 20), color="purple")                   |                                             |
+    |     m.add_annotation(**props, xytext=(-60, -40), color="dodgerblue")              |                                             |
+    |     m.add_annotation(**props, xytext=(20, -40), color="olive")                    |                                             |
+    |                                                                                   |                                             |
+    |     # multiple annotations can be added in one go (xy=([...], [...]) also works!) |                                             |
+    |     m.add_annotation(ID=[2500, 2700, 2900], text=lambda ID, **kwargs: str(ID),    |                                             |
+    |                      color="w", fontweight="bold", rotation=90,                   |                                             |
+    |                      arrowprops=dict(width=5, fc="b", ec="orange", lw=2),         |                                             |
+    |                      bbox=dict(boxstyle="round, rounding_size=.8, pad=.5",        |                                             |
+    |                                fc="b", ec="orange", lw=2))                        |                                             |
+    |                                                                                   |                                             |
+    |     m.add_annotation(ID=803, xytext=(-80,60),                                     |                                             |
+    |                      bbox=dict(ec="r", fc="gold", lw=3),                          |                                             |
+    |                      arrowprops=dict(                                             |                                             |
+    |                          arrowstyle="fancy", relpos=(.48,-.2),                    |                                             |
+    |                          mutation_scale=40, fc="r",                               |                                             |
+    |                          connectionstyle="angle3, angleA=90, angleB=-25"))        |                                             |
+    +-----------------------------------------------------------------------------------+---------------------------------------------+
 
 
 ▭ Rectangular areas
