@@ -8,7 +8,7 @@
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 | EOmaps is all about ``Maps`` objects.                                                                    |
-| To start creating a new map (in this case a plot in ``epsg=4326``, e.g. lon/lat projection), simply use: |
+| To start creating a new (empty) map (in this case a plot in ``epsg=4326``, e.g. lon/lat projection), simply use: |
 
 .. code-block:: python
 
@@ -105,6 +105,9 @@ is performed (resampling based on the mean-value is used by default).
     The "shade"-shapes require the additional ``datashader`` dependency!
     You can install it via:
     ``conda install -c conda-forge datashader``
+
+
+.. image:: _static/minigifs/plot_shapes.gif
 
 
 🌍 Customizing the plot
