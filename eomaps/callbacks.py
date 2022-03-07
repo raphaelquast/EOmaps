@@ -392,7 +392,7 @@ class _click_callbacks(object):
         else:
             pos_crs = "out"
 
-        if radius == "pixel":
+        if isinstance(radius, str) and radius == "pixel":
             pixelQ = True
             if not hasattr(self.m.shape, "radius"):
                 print(
@@ -405,8 +405,10 @@ class _click_callbacks(object):
             pixelQ = False
 
         # get manually specified radius (e.g. if radius != "estimate")
-        if isinstance(radius, (list, tuple)):
+        if isinstance(radius, list):
             radius = [i * buffer for i in radius]
+        elif isinstance(radius, tuple):
+            radius = tuple([i * buffer for i in radius])
         elif isinstance(radius, (int, float)):
             radius = radius * buffer
 
@@ -847,7 +849,7 @@ class dynamic_callbacks:
     """
 
     def __init__(self, m):
-        self.m = m
+        self._m = m
 
     def indicate_extent(self, m=None, **kwargs):
         """
@@ -892,7 +894,7 @@ class dynamic_callbacks:
                 args = dict(n=100, fc="none", ec="r")
                 args.update(kwargs)
 
-                self._extent_marker = self.m.add_marker(
+                self._extent_marker = self._m.add_marker(
                     xy=((x0 + x1) / 2, (y0 + y1) / 2),
                     xy_crs=m.crs_plot,
                     layer=999,

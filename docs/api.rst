@@ -14,6 +14,7 @@
 
     from eomaps import Maps
     m = Maps(crs=4326)
+    m.add_feature.preset.coastline()
 
 Possible ways for specifying the crs for plotting are:
 
@@ -107,6 +108,9 @@ is performed (resampling based on the mean-value is used by default).
     ``conda install -c conda-forge datashader``
 
 
+.. image:: _static/minigifs/plot_shapes.gif
+
+
 🌍 Customizing the plot
 ~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -163,7 +167,7 @@ Some useful arguments that are supported by most shapes (except "shade"-shapes) 
 
 You can then continue to add :ref:`colorbar`, :ref:`annotations_and_markers`,
 :ref:`scalebar`, :ref:`compass`,  :ref:`webmap_layers` or :ref:`geodataframe` to the map,
-or you can start to add :ref:`callbacks`.
+or you can start to add :ref:`utility` and :ref:`callbacks`.
 
 Once the map is ready, a snapshot of the map can be saved at any time by using:
 
@@ -412,15 +416,13 @@ Custom callback functions can be attached to the map via:
     m.cb.click.attach(some_callback, double_click=False, button=2, asdf=1)
     m.cb.keypress.attach(some_callback, key="x", asdf=1)
 
-
-- ❗ for pick callbacks, ``ID`` and ``val`` are not available!
-- ❗ for click callbacks the kwargs ``ID`` and ``val`` are not available!
-- ❗ for keypress callbacks the kwargs ``ID`` and ``val`` and ``pos`` are not available!
+- ❗ for click callbacks the kwargs ``ID`` and ``val`` are set to ``None``!
+- ❗ for keypress callbacks the kwargs ``ID`` and ``val`` and ``pos`` are set to ``None``!
 
 .. _webmap_layers:
 
-🛰 WebMap service layers
-------------------------
+🛰 WebMap layers
+----------------
 
 WebMap services (TS/WMS/WMTS) can be attached to the map via:
 
@@ -453,6 +455,37 @@ and ``< LAYER >`` indicates the actual layer-name.
     (which degrades image quality and sometimes takes quite a lot of time to finish...)
 
     - most services come either in ``epsg=4326`` or in ``Maps.CRS.GOOGLE_MERCATOR`` projection
+
+.. table::
+    :widths: 50 50
+    :align: center
+
+    +------------------------------------------------------------------------------------------------+-----------------------------------------+
+    | .. code-block:: python                                                                         | .. image:: _static/minigifs/add_wms.png |
+    |                                                                                                |   :align: center                        |
+    |     from eomaps import Maps, MapsGrid                                                          |                                         |
+    |     mg = MapsGrid(crs=Maps.CRS.GOOGLE_MERCATOR)                                                |                                         |
+    |     mg.join_limits()                                                                           |                                         |
+    |                                                                                                |                                         |
+    |     mg.m_0_0.add_wms.OpenStreetMap.add_layer.default()                                         |                                         |
+    |     mg.m_0_1.add_wms.OpenStreetMap.add_layer.stamen_toner()                                    |                                         |
+    |                                                                                                |                                         |
+    |     mg.m_1_1.add_wms.S1GBM.add_layer.vv()                                                      |                                         |
+    |                                                                                                |                                         |
+    |     # ... for more advanced                                                                    |                                         |
+    |     layer = mg.m_1_0.add_wms.ISRIC_SoilGrids.nitrogen.add_layer.nitrogen_0_5cm_mean            |                                         |
+    |     layer()                    # call the layer to add it to the map                           |                                         |
+    |     layer.info                 # the "info" property provides useful informations on the layer |                                         |
+    |     layer.add_legend()         # if a legend is provided, you can add id via:                  |                                         |
+    |     layer.set_extent_to_bbox() # set the extent according to the boundingBox                   |                                         |
+    |                                                                                                |                                         |
+    +------------------------------------------------------------------------------------------------+-----------------------------------------+
+
+
+
+
+
+
 
 
 Pre-defined (global) WebMap services:
@@ -538,17 +571,26 @@ Once the ``picker_name`` is specified, pick-callbacks can be attached via:
 
 | For example, to highlight the clicked country, you could use:
 
-.. code-block:: python
+.. table::
+    :widths: 50 50
+    :align: center
 
-    m = Maps()
-    # get the GeoDataFrame for a given NaturalEarth feature
-    gdf = m.add_feature.cultural_110m.admin_0_countries.get_gdf()
+    +----------------------------------------------------------------------------+----------------------------------------------+
+    | .. code-block:: python                                                     | .. image:: _static/minigifs/add_gdf_pick.gif |
+    |                                                                            |   :align: center                             |
+    |     from eomaps import Maps                                                |                                              |
+    |     m = Maps()                                                             |                                              |
+    |     # get the GeoDataFrame for a given NaturalEarth feature                |                                              |
+    |     gdf = m.add_feature.cultural_110m.admin_0_countries.get_gdf()          |                                              |
+    |                                                                            |                                              |
+    |     # pick the shapes of the GeoDataFrame based on a "contains" query      |                                              |
+    |     m.add_gdf(gdf, picker_name="countries", pick_method="contains")        |                                              |
+    |                                                                            |                                              |
+    |     # temporarily highlight the picked geometry                            |                                              |
+    |     m.cb.pick["countries"].attach.highlight_geometry(fc="r", ec="g", lw=2) |                                              |
+    |                                                                            |                                              |
+    +----------------------------------------------------------------------------+----------------------------------------------+
 
-    # pick the shapes of the GeoDataFrame based on a "contains" query
-    m.add_gdf(gdf, picker_name="countries", pick_method="contains")
-
-    # temporarily highlight the picked geometry
-    m.cb.pick["countries"].attach.highlight_geometry(fc="r", ec="g", lw=2)
 
 🌴 NaturalEarth features
 ~~~~~~~~~~~~~~~~~~~~~~~~
@@ -594,45 +636,63 @@ The most commonly used features are available as preset-layers:
     land
     countries
 
-.. code-block:: python
-
-    m = Maps()
-    m.add_feature.preset.ocean()
-    m.add_feature.preset.coastline()
-    m.add_feature.cultural_110m.admin_0_pacific_groupings(ec="r", lw=2)
-
-    # (ONLY if geopandas is installed)
-    m.add_feature.preset.countries(fc="none", ec="k", picker_name="countries", pick_method="contains")
-    m.cb.pick["countries"].attach. ...
-
++-------------------------------------------------------------------------+-------------------------------------------------+
+| .. code-block:: python                                                  | .. image:: _static/minigifs/add_feature.gif     |
+|                                                                         |   :align: center                                |
+|     from eomaps import Maps                                             |                                                 |
+|     m = Maps()                                                          |                                                 |
+|     m.add_feature.preset.coastline()                                    |                                                 |
+|     m.add_feature.preset.ocean()                                        |                                                 |
+|     m.add_feature.preset.land()                                         |                                                 |
+|     m.add_feature.preset.countries()                                    |                                                 |
+|                                                                         |                                                 |
+|     m.add_feature.physical_110m.lakes(ec="b")                           |                                                 |
+|     m.add_feature.cultural_110m.admin_0_pacific_groupings(ec="m", lw=2) |                                                 |
+|                                                                         |                                                 |
+|     # (only if geopandas is installed)                                  |                                                 |
+|     places = m.add_feature.cultural_110m.populated_places.get_gdf()     |                                                 |
+|     m.add_gdf(places, markersize=places.NATSCALE/10, fc="r")            |                                                 |
+|                                                                         |                                                 |
++-------------------------------------------------------------------------+-------------------------------------------------+
 
 .. note::
 
     If ``geopandas`` is installed, ``GeoDataFrames`` are used to visualize the features, and all aforementioned
-    functionalities of ``m.add_gdf`` can be used with NaturalEarth features as well!
+    functionalities of ``m.add_gdf`` can also directly be used with ``m.add_feature``!
 
 
 .. _annotations_and_markers:
 
-🏕 Annotations and markers
+🏕 Annotations and Markers
 --------------------------
 
-Static annotations and markers can be added to the map via:
+🔴 Markers
+~~~~~~~~~~~
 
-.. code-block:: python
+Static markers can be added to the map via ``m.add_marker()``.
 
-    m = Maps()
-    ...
-    m.add_annotation( ... )
-    m.add_marker( ... )
+- If a dataset has been plotted, you can mark any datapoint via its ID, e.g. ``ID=...``
+- To add a marker at an arbitrary position, use ``xy=(...)``
 
-To indicate a rectangular area in a given crs, simply use ``m.indicate_extent``:
+  - By default, the coordinates are assumed to be provided in the plot-crs
+  - You can specify arbitrary coordinates via ``xy_crs=...``
 
-.. code-block:: python
+- The radius is defined via ``radius=...``
 
-    m = Maps(Maps.CRS.Orthographic())
-    m.add_feature.preset.coastline()
-    m.indicate_extent(x0=-45, y0=-45, x1=45, y1=45, crs=4326, fc="r", ec="k", alpha=0.5)
+  - By default, the radius is assumed to be provided in the plot-crs
+  - You can specify the radius in an arbitrary crs via ``radius_crs=...``
+
+- The marker-shape is set via ``shape=...``
+
+  - Possible arguments are ``"ellipses"``, ``"rectangles"``, ``"geod_circles"``
+
+- Additional keyword-arguments are passed to the matplotlib collections used to draw the shapes
+  (e.g. "facecolor", "edgecolor", "linewidth", "alpha", etc.)
+
+- Multiple markers can be added in one go by using lists for ``xy``, ``radius``, etc.
+
+
+🛸 For dynamic markers checkout ``m.cb.click.attach.mark()`` or ``m.cb.pick.attach.mark()``
 
 
 .. currentmodule:: eomaps.Maps
@@ -643,8 +703,172 @@ To indicate a rectangular area in a given crs, simply use ``m.indicate_extent``:
     :template: only_names_in_toc.rst
 
     add_marker
-    add_annotation
+
+.. table::
+    :widths: 50 50
+    :align: center
+
+    +---------------------------------------------------------------------------+-----------------------------------------+
+    | .. code-block:: python                                                    | .. image:: _static/minigifs/markers.png |
+    |                                                                           |   :align: center                        |
+    |     from eomaps import Maps                                               |                                         |
+    |     m = Maps(crs=4326)                                                    |                                         |
+    |     m.add_feature.preset.coastline()                                      |                                         |
+    |                                                                           |                                         |
+    |     # ----- SINGLE MARKERS                                                |                                         |
+    |     # by default, MARKER DIMENSIONS are defined in units of the plot-crs! |                                         |
+    |     m.add_marker(xy=(0, 0), radius=20, shape="rectangles",                |                                         |
+    |                  fc="y", ec="r", ls=":", lw=2)                            |                                         |
+    |     m.add_marker(xy=(0, 0), radius=10, shape="ellipses",                  |                                         |
+    |                  fc="darkorange", ec="r", ls=":", lw=2)                   |                                         |
+    |                                                                           |                                         |
+    |     # MARKER DIMENSIONS can be specified in any CRS!                      |                                         |
+    |     m.add_marker(xy=(12000000, 0), xy_crs=3857,                           |                                         |
+    |                  radius=5000000, radius_crs=3857,                         |                                         |
+    |                  fc=(.5, .5, 0, .4), ec="r", lw=3, n=100)                 |                                         |
+    |                                                                           |                                         |
+    |     # GEODETIC CIRCLES with radius defined in meters                      |                                         |
+    |     m.add_marker(xy=(-135, 35), radius=3000000, shape="geod_circles",     |                                         |
+    |                  fc="none", ec="r", hatch="///", lw=2, n=100)             |                                         |
+    |                                                                           |                                         |
+    |     # ----- MULTIPLE MARKERS                                              |                                         |
+    |     x = [-80, -40, 40, 80]    # x-coordinates of the markers              |                                         |
+    |     fc = ["r", "g", "b", "c"] # the colors of the markers                 |                                         |
+    |                                                                           |                                         |
+    |     # N markers with the same radius                                      |                                         |
+    |     m.add_marker(xy=(x, [-60]*4), radius=10, fc=fc)                       |                                         |
+    |                                                                           |                                         |
+    |     # N markers with different radius and properties                      |                                         |
+    |     m.add_marker(xy=(x, [0]*4),  radius=[15, 10, 5, 2],                   |                                         |
+    |                  fc=fc, ec=["none", "r", "g", "b"], alpha=[1, .5, 1, .5]) |                                         |
+    |                                                                           |                                         |
+    |     # N markers with different widths and heights                         |                                         |
+    |     radius = ([15, 10, 5, 15], [5, 15, 15, 2])                            |                                         |
+    |     m.add_marker(xy=(x, [60]*4), radius=radius, fc=fc)                    |                                         |
+    +---------------------------------------------------------------------------+-----------------------------------------+
+
+
+📑 Annotations
+~~~~~~~~~~~~~~
+
+Static annotations can be added to the map via ``m.add_annotation()``.
+
+- The location is defined completely similar to ``m.add_marker()`` above.
+
+  - You can annotate a datapoint via its ID, or arbitrary coordinates in any crs.
+
+- Additional arguments are passed to matplotlibs ``plt.annotate`` and ``plt.text``
+
+  - This gives a lot of flexibility to style the annotations!
+
+
+🛸 For dynamic annotations checkout ``m.cb.click.attach.annotate()`` or ``m.cb.pick.attach.annotate()``
+
+
+.. table::
+    :widths: 50 50
+    :align: center
+
+    +-----------------------------------------------------------------------------------+---------------------------------------------+
+    | .. code-block:: python                                                            | .. image:: _static/minigifs/annotations.png |
+    |                                                                                   |   :align: center                            |
+    |     from eomaps import Maps                                                       |                                             |
+    |     import numpy as np                                                            |                                             |
+    |     x, y = np.mgrid[-45:45, 20:60]                                                |                                             |
+    |                                                                                   |                                             |
+    |     m = Maps(crs=4326)                                                            |                                             |
+    |     m.set_data(x+y, x, y)                                                         |                                             |
+    |     m.add_feature.preset.coastline(ec="k", lw=.75)                                |                                             |
+    |     m.plot_map()                                                                  |                                             |
+    |                                                                                   |                                             |
+    |     # annotate any point in the dataset via the data-index                        |                                             |
+    |     m.add_annotation(ID=345)                                                      |                                             |
+    |     # annotate an arbitrary position (in the plot-crs)                            |                                             |
+    |     m.add_annotation(                                                             |                                             |
+    |         xy=(20,25), text="A formula:\n $z=\sqrt{x^2+y^2}$",                       |                                             |
+    |         fontweight="bold", bbox=dict(fc=".6", ec="none", pad=2))                  |                                             |
+    |     # annotate coordinates defined in arbitrary crs                               |                                             |
+    |     m.add_annotation(                                                             |                                             |
+    |         xy=(2873921, 6527868), xy_crs=3857, xytext=(5,5),                         |                                             |
+    |         text="A location defined \nin epsg 3857", fontsize=8,                     |                                             |
+    |         rotation=-45, bbox=dict(fc="skyblue", ec="k", ls="--", pad=2))            |                                             |
+    |                                                                                   |                                             |
+    |     # functions can be used for more complex text                                 |                                             |
+    |     def text(m, ID, val, pos, ind):                                               |                                             |
+    |         return f"lon={pos[0]}\nlat={pos[1]}"                                      |                                             |
+    |                                                                                   |                                             |
+    |     props = dict(xy=(-1.5, 38.45), text=text,                                     |                                             |
+    |                  arrowprops=dict(arrowstyle="-|>", fc="fuchsia",                  |                                             |
+    |                                  mutation_scale=15))                              |                                             |
+    |                                                                                   |                                             |
+    |     m.add_annotation(**props, xytext=(20, 20), color="darkred")                   |                                             |
+    |     m.add_annotation(**props, xytext=(-60, 20), color="purple")                   |                                             |
+    |     m.add_annotation(**props, xytext=(-60, -40), color="dodgerblue")              |                                             |
+    |     m.add_annotation(**props, xytext=(20, -40), color="olive")                    |                                             |
+    |                                                                                   |                                             |
+    |     # multiple annotations can be added in one go (xy=([...], [...]) also works!) |                                             |
+    |     m.add_annotation(ID=[2500, 2700, 2900], text=lambda ID, **kwargs: str(ID),    |                                             |
+    |                      color="w", fontweight="bold", rotation=90,                   |                                             |
+    |                      arrowprops=dict(width=5, fc="b", ec="orange", lw=2),         |                                             |
+    |                      bbox=dict(boxstyle="round, rounding_size=.8, pad=.5",        |                                             |
+    |                                fc="b", ec="orange", lw=2))                        |                                             |
+    |                                                                                   |                                             |
+    |     m.add_annotation(ID=803, xytext=(-80,60),                                     |                                             |
+    |                      bbox=dict(ec="r", fc="gold", lw=3),                          |                                             |
+    |                      arrowprops=dict(                                             |                                             |
+    |                          arrowstyle="fancy", relpos=(.48,-.2),                    |                                             |
+    |                          mutation_scale=40, fc="r",                               |                                             |
+    |                          connectionstyle="angle3, angleA=90, angleB=-25"))        |                                             |
+    +-----------------------------------------------------------------------------------+---------------------------------------------+
+
+
+▭ Rectangular areas
+~~~~~~~~~~~~~~~~~~~
+
+To indicate rectangular areas in any given crs, simply use ``m.indicate_extent``:
+
+.. currentmodule:: eomaps.Maps
+
+.. autosummary::
+    :toctree: generated
+    :nosignatures:
+    :template: only_names_in_toc.rst
+
     indicate_extent
+
+
+.. table::
+    :widths: 50 50
+    :align: center
+
+    +-----------------------------------------------------------------------+-------------------------------------------------+
+    | .. code-block:: python                                                | .. image:: _static/minigifs/indicate_extent.png |
+    |                                                                       |   :align: center                                |
+    |     from eomaps import Maps                                           |                                                 |
+    |     m = Maps(crs=3035)                                                |                                                 |
+    |     m.add_feature.preset.coastline(ec="k")                            |                                                 |
+    |                                                                       |                                                 |
+    |     # indicate a lon/lat rectangle                                    |                                                 |
+    |     m.indicate_extent(-20, 35, 40, 50, hatch="//", fc="none", ec="r") |                                                 |
+    |                                                                       |                                                 |
+    |     # indicate some rectangles in epsg:3035                           |                                                 |
+    |     hatches = ["*", "xxxx", "...."]                                   |                                                 |
+    |     colors = ["yellow", "r", "darkblue"]                              |                                                 |
+    |     for i, h, c in zip(range(3), hatches, colors):                    |                                                 |
+    |         pos0 = (2e6 + i*2e6, 7e6, 3.5e6 + i*2e6, 9e6)                 |                                                 |
+    |         pos1 = (2e6 + i*2e6, 7e6 + 3e6, 3.5e6 + i*2e6, 9e6 + 3e6)     |                                                 |
+    |                                                                       |                                                 |
+    |         m.indicate_extent(*pos0, crs=3857, hatch=h, lw=0.25, ec=c)    |                                                 |
+    |         m.indicate_extent(*pos1, crs=3857, hatch=h, lw=0.25, ec=c)    |                                                 |
+    |                                                                       |                                                 |
+    |     # indicate a rectangle in Equi7Grid projection                    |                                                 |
+    |     try: # (requires equi7grid package)                               |                                                 |
+    |         m.indicate_extent(1000000, 1000000, 4800000, 4800000,         |                                                 |
+    |                           crs=Maps.CRS.Equi7Grid_projection("EU"),    |                                                 |
+    |                           fc="g", alpha=0.5, ec="k")                  |                                                 |
+    |     except:                                                           |                                                 |
+    |         pass                                                          |                                                 |
+    +-----------------------------------------------------------------------+-------------------------------------------------+
 
 .. _colorbar:
 
@@ -652,11 +876,6 @@ To indicate a rectangular area in a given crs, simply use ``m.indicate_extent``:
 -------------------------------
 
 A colorbar with a colored histogram on top can be added to the map via ``m.add_colorbar``.
-
-.. note::
-    You must plot a dataset first! (e.g. by calling ``m.plot_map()``)
-    The colorbar always represents the dataset that was used in the last call to ``m.plot_map()``.
-    If you need multiple colorbars, use an individual layer for each dataset! (e.g. via ``m2  = m.new_layer()``)
 
 .. currentmodule:: eomaps
 
@@ -667,13 +886,38 @@ A colorbar with a colored histogram on top can be added to the map via ``m.add_c
 
     Maps.add_colorbar
 
+.. table::
+    :widths: 70 30
+    :align: center
+
+    +--------------------------------------------------------------------+------------------------------------------+
+    | .. code-block:: python                                             | .. image:: _static/minigifs/colorbar.png |
+    |                                                                    |   :align: center                         |
+    |   from eomaps import Maps                                          |                                          |
+    |   import numpy as np                                               |                                          |
+    |   x, y = np.mgrid[-45:45, 20:60]                                   |                                          |
+    |                                                                    |                                          |
+    |   m = Maps()                                                       |                                          |
+    |   m.add_feature.preset.coastline()                                 |                                          |
+    |   m.set_data(data=x+y, xcoord=x, ycoord=y, crs=4326)               |                                          |
+    |   m.set_classify_specs(scheme=Maps.CLASSIFIERS.EqualInterval, k=5) |                                          |
+    |   m.plot_map()                                                     |                                          |
+    |   m.add_colorbar(label="what a nice colorbar", histbins="bins")    |                                          |
+    |                                                                    |                                          |
+    +--------------------------------------------------------------------+------------------------------------------+
+
+.. note::
+    You must plot a dataset first! (e.g. by calling ``m.plot_map()``)
+    The colorbar always represents the dataset that was used in the last call to ``m.plot_map()``.
+    If you need multiple colorbars, use an individual layer for each dataset! (e.g. via ``m2  = m.new_layer()``)
+
 
 .. _scalebar:
 
 📏 Scalebars
 ------------
 
-A scalebar can be added to a map via:
+A scalebar can be added to a map via ``s = m.add_scalebar()``:
 
 .. currentmodule:: eomaps
 
@@ -684,14 +928,18 @@ A scalebar can be added to a map via:
 
     Maps.add_scalebar
 
-.. code-block:: python
+.. table::
+    :widths: 70 30
+    :align: center
 
-    m = Maps()
-    ...
-    s = m.add_scalebar( ... )
-    # to remove it, use
-    s.remove()
-
+    +-----------------------------------+------------------------------------------+
+    | .. code-block:: python            | .. image:: _static/minigifs/scalebar.gif |
+    |                                   |   :align: center                         |
+    |   from eomaps import Maps         |                                          |
+    |   m = Maps(Maps.CRS.Sinusoidal()) |                                          |
+    |   m.add_feature.preset.ocean()    |                                          |
+    |   s = m.add_scalebar()            |                                          |
+    +-----------------------------------+------------------------------------------+
 
 .. Note::
 
@@ -707,31 +955,31 @@ A scalebar can be added to a map via:
     - ``up/down/left/right``: increase the size of the frame
     - ``alt + up/down/left/right``: decrease the size of the frame
 
+The returned ``ScaleBar`` object provides the following useful methods:
 
-The scalebar has the following useful methods assigned:
-
-.. currentmodule:: eomaps.scalebar.ScaleBar
+.. currentmodule:: eomaps.scalebar
 
 .. autosummary::
     :toctree: generated
     :nosignatures:
     :template: only_names_in_toc.rst
 
-    set_scale_props
-    set_patch_props
-    set_label_props
-    set_position
-    get_position
-    remove
-    cb_offset_interval
-    cb_rotate_interval
+    ScaleBar.remove
+    ScaleBar.set_position
+    ScaleBar.get_position
+    ScaleBar.set_label_props
+    ScaleBar.set_patch_props
+    ScaleBar.set_scale_props
+    ScaleBar.cb_offset_interval
+    ScaleBar.cb_rotate_interval
+
 
 .. _compass:
 
 🧭 Compass (or North Arrow)
 ---------------------------
 
-A compass can be added to the map via:
+A compass can be added to the map via ``m.add_compass()``:
 
 .. currentmodule:: eomaps
 
@@ -741,6 +989,22 @@ A compass can be added to the map via:
     :template: only_names_in_toc.rst
 
     Maps.add_compass
+
+.. table::
+    :widths: 70 30
+    :align: center
+
+    +--------------------------------------+-----------------------------------------+
+    | .. code-block:: python               | .. image:: _static/minigifs/compass.gif |
+    |                                      |   :align: center                        |
+    |   from eomaps import Maps            |                                         |
+    |   m = Maps(Maps.CRS.Stereographic()) |                                         |
+    |   m.add_feature.preset.ocean()       |                                         |
+    |                                      |                                         |
+    |   m.add_compass()                    |                                         |
+    +--------------------------------------+-----------------------------------------+
+
+
 
 The compass object is dynamically updated if you pan/zoom the map, and it can be
 dragged around on the map with the mouse.
@@ -767,6 +1031,58 @@ The returned ``compass`` object has the following useful methods assigned:
     set_scale
     set_pickable
     remove
+
+.. _utility:
+
+
+🦜 Utility widgets
+------------------
+
+Some helpful utility widgets can be added to a map via ``m.util.<...>``
+
+.. currentmodule:: eomaps
+
+.. autosummary::
+    :nosignatures:
+    :template: only_names_in_toc.rst
+
+    Maps.util
+
+Layer switching
+~~~~~~~~~~~~~~~
+
+To simplify switching between layers, there are currently 2 widgets available:
+
+- ``m.util.layer_selector()`` : Add a set of clickable buttons to the map that activates the corresponding layers.
+- ``m.util.layer_slider()`` : Add a slider to the map that iterates through the available layers.
+
+.. currentmodule:: eomaps.utilities.utilities
+
+.. autosummary::
+    :toctree: generated
+    :nosignatures:
+    :template: only_names_in_toc.rst
+
+    layer_selector
+    layer_slider
+
+
+.. table::
+    :widths: 70 30
+    :align: center
+
+    +------------------------------------+-------------------------------------------------+
+    | .. code-block:: python             | .. image:: _static/minigifs/layer_selector.gif  |
+    |                                    |    :align: center                               |
+    |   from eomaps import Maps          |                                                 |
+    |   m = Maps(layer="coastline")      |                                                 |
+    |   m.add_feature.preset.coastline() |                                                 |
+    |                                    |                                                 |
+    |   m2 = m.new_layer(layer="ocean")  |                                                 |
+    |   m2.add_feature.preset.ocean()    |                                                 |
+    |                                    |                                                 |
+    |   m.util.layer_selector()          |                                                 |
+    +------------------------------------+-------------------------------------------------+
 
 
 📦 Reading data (NetCDF, GeoTIFF, CSV...)

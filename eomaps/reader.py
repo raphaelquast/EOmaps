@@ -38,22 +38,17 @@ class read_file:
     """
 
     @staticmethod
-    def GeoTIFF(path, crs_key=None, data_crs=None, sel=None, isel=None, set_data=None):
+    def GeoTIFF(
+        path_or_dataset, crs_key=None, data_crs=None, sel=None, isel=None, set_data=None
+    ):
         """
         Read all relevant information necessary to add a GeoTIFF to the map.
 
-        Use it as:
-
-        >>> data = m.add_GeoTIFF(...)
-
-        or
-
-        >>> m.add_GeoTIFF(set_data=m)
-
         Parameters
         ----------
-        path : str
-            The path to the file.
+        path_or_dataset : str, pathlib.Path or xar.Dataset
+            - If str or pathlib.Path: The path to the file.
+            - If xar.Dataset: The xarray.Dataset instance to use
         crs_key : str, optional
             The variable-name that holds the crs-information.
 
@@ -83,6 +78,24 @@ class read_file:
         dict (if set_data is False) or None (if set_data is True)
             A dict that contains the data required for plotting.
 
+        Examples
+        --------
+
+        # to just read the data use one of the following:
+
+        >>> path = r"C:/folder/file.tiff"
+        >>> data = m.read_file.GeoTIFF(path)
+
+        >>> file = xar.open_dataset(path)
+        >>> data = m.read_file.GeoTIFF(file)
+
+        >>> with xar.open_dataset(path) as file:
+        >>>     data = m.read_file.GeoTIFF(file)
+
+        # to assign the data directly to the Maps-object, use `set_data=<Maps object>`:
+
+        >>> m.read_file.GeoTIFF(path, set_data=m)
+
         """
 
         assert _xar_OK and _rioxar_OK, (
@@ -94,7 +107,16 @@ class read_file:
         if isel is None and sel is None:
             isel = {"band": 0}
 
-        with xar.open_dataset(path) as ncfile:
+        opened = False  # just an indicator if we have to close the file in the end
+        try:
+            if isinstance(path_or_dataset, str):
+                # if a path is provided, open the file (and close it in the end)
+                opened = True
+                ncfile = xar.open_dataset(path_or_dataset)
+            elif isinstance(path_or_dataset, xar.Dataset):
+                # if an xar.Dataset is provided, use it
+                ncfile = path_or_dataset
+
             if sel is not None:
                 usencfile = ncfile.sel(**sel)
             elif isel is not None:
@@ -143,14 +165,17 @@ class read_file:
                 getattr(usencfile, ncdims[1]).values,
             )
 
-        if set_data is not None:
-            set_data.set_data(data=data, xcoord=xcoord, ycoord=ycoord, crs=data_crs)
-        else:
-            return dict(data=data, xcoord=xcoord, ycoord=ycoord, crs=data_crs)
+            if set_data is not None:
+                set_data.set_data(data=data, xcoord=xcoord, ycoord=ycoord, crs=data_crs)
+            else:
+                return dict(data=data, xcoord=xcoord, ycoord=ycoord, crs=data_crs)
+        finally:
+            if opened:
+                ncfile.close()
 
     @staticmethod
     def NetCDF(
-        path,
+        path_or_dataset,
         parameter=None,
         coords=None,
         crs_key=None,
@@ -162,18 +187,12 @@ class read_file:
         """
         Read all relevant information necessary to add a NetCDF to the map.
 
-        Use it as:
-
-        >>> data = m.read_file.NetCDF(...)
-
-        or
-
-        >>> m.read_file.NetCDF(set_data=m)
-
         Parameters
         ----------
-        path : str
-            The path to the file.
+        path_or_dataset : str, pathlib.Path or xar.Dataset
+            - If str or pathlib.Path: The path to the file.
+            - If xar.Dataset: The xarray.Dataset instance to use
+
         parameter : str
             The name of the variable to use as parameter.
             If None, the first variable of the NetCDF file will be used.
@@ -211,6 +230,25 @@ class read_file:
         dict (if set_data is False) or None (if set_data is True)
             A dict that contains the data required for plotting.
 
+        Examples
+        --------
+
+        # to just read the data use one of the following:
+
+        >>> path = r"C:/folder/file.tiff"
+        >>> data = m.read_file.NetCDF(path)
+
+        >>> file = xar.open_dataset(path)
+        >>> data = m.read_file.NetCDF(file)
+
+        >>> with xar.open_dataset(path) as file:
+        >>>     data = m.read_file.NetCDF(file)
+
+        # to assign the data directly to the Maps-object, use `set_data=<Maps object>`:
+
+        >>> m.read_file.NetCDF(path, set_data=m)
+
+
         """
 
         assert _xar_OK, (
@@ -218,7 +256,16 @@ class read_file:
             + "To install, use 'conda install -c conda-forge xarray'"
         )
 
-        with xar.open_dataset(path) as ncfile:
+        opened = False  # just an indicator if we have to close the file in the end
+        try:
+            if isinstance(path_or_dataset, str):
+                # if a path is provided, open the file (and close it in the end)
+                opened = True
+                ncfile = xar.open_dataset(path_or_dataset)
+            elif isinstance(path_or_dataset, xar.Dataset):
+                # if an xar.Dataset is provided, use it
+                ncfile = path_or_dataset
+
             if sel is not None:
                 usencfile = ncfile.sel(**sel)
             elif isel is not None:
@@ -292,22 +339,26 @@ class read_file:
             #     usencfile.coords[coords[0]].values, usencfile.coords[coords[1]].values
             # )
 
-        if set_data is not None:
-            set_data.set_data(
-                data=data.values,
-                xcoord=xcoord.values,
-                ycoord=ycoord.values,
-                crs=data_crs,
-                parameter=parameter,
-            )
-        else:
-            return dict(
-                data=data.values,
-                xcoord=xcoord.values,
-                ycoord=ycoord.values,
-                crs=data_crs,
-                parameter=parameter,
-            )
+            if set_data is not None:
+                set_data.set_data(
+                    data=data.values,
+                    xcoord=xcoord.values,
+                    ycoord=ycoord.values,
+                    crs=data_crs,
+                    parameter=parameter,
+                )
+            else:
+                return dict(
+                    data=data.values,
+                    xcoord=xcoord.values,
+                    ycoord=ycoord.values,
+                    crs=data_crs,
+                    parameter=parameter,
+                )
+
+        finally:
+            if opened:
+                ncfile.close()
 
     @staticmethod
     def CSV(
@@ -484,7 +535,7 @@ def _from_file(
                 crs = 4326
                 print(f"EOmaps: could not use native crs... defaulting to epsg={crs}.")
 
-        m = Maps(crs=crs, figsize=figsize)
+        m = Maps(crs=crs, figsize=figsize, layer=layer)
 
     if coastline:
         m.add_feature.preset.coastline()
@@ -552,7 +603,7 @@ class from_file:
 
     @staticmethod
     def NetCDF(
-        path,
+        path_or_dataset,
         parameter=None,
         coords=None,
         data_crs_key=None,
@@ -588,8 +639,9 @@ class from_file:
 
         Parameters
         ----------
-        path : str
-            The path to the NetCDF file.
+        path_or_dataset : str, pathlib.Path or xar.Dataset
+            - If str or pathlib.Path: The path to the file.
+            - If xar.Dataset: The xarray.Dataset instance to use
         parameter : str, optional
             The name of the variable to use as parameter.
             If None, the first variable of the NetCDF file will be used.
@@ -613,6 +665,9 @@ class from_file:
         sel : dict, optional
             A dictionary of keyword-arguments passed to `xarray.Dataset.sel()`
             (see https://xarray.pydata.org/en/stable/generated/xarray.Dataset.sel.html)
+
+            >>> sel = dict(altitude=100, time=pd.Date)
+
             The default is None.
         isel : dict, optional
             A dictionary of keyword-arguments passed to `xarray.Dataset.isel()`.
@@ -648,10 +703,35 @@ class from_file:
             The default is True
         kwargs :
             Keyword-arguments passed to `m.plot_map()`
+
         Returns
         -------
         m : eomaps.Maps
             The created Maps object.
+
+        Examples
+        --------
+        # to just read the data use one of the following:
+
+        >>> from eomaps import Maps
+        >>> path = r"C:/folder/file.nc"
+        >>> m = Maps.from_file.NetCDF(path)
+
+        # to select specific datasets from the file, use `sel` or `isel`:
+
+        >>> from datetime import datetime, timedelta
+        >>> sel = dict(date=datetime(2021,1,1),
+        >>>            tolerance=timedelta(10),
+        >>>            method="nearest")
+        >>> m = Maps.from_file.NetCDF(path, sel=sel)
+
+        # you can also use already opened filehandles:
+
+        >>> file = xar.open_dataset(path)
+        >>> m = Maps.from_file.NetCDF(file)
+
+        >>> with xar.open_dataset(path) as file:
+        >>>     m = Maps.from_file.NetCDF(file)
 
         """
 
@@ -662,7 +742,7 @@ class from_file:
 
         # read data
         data = read_file.NetCDF(
-            path,
+            path_or_dataset,
             parameter=parameter,
             coords=coords,
             crs_key=data_crs_key,
@@ -688,7 +768,7 @@ class from_file:
 
     @staticmethod
     def GeoTIFF(
-        path,
+        path_or_dataset,
         data_crs_key=None,
         data_crs=None,
         sel=None,
@@ -721,8 +801,9 @@ class from_file:
 
         Parameters
         ----------
-        path : str
-            The path to the GeoTIFF file.
+        path_or_dataset : str, pathlib.Path or xar.Dataset
+            - If str or pathlib.Path: The path to the file.
+            - If xar.Dataset: The xarray.Dataset instance to use
         data_crs_key : str, optional
             The variable-name that holds the crs-information.
 
@@ -772,10 +853,32 @@ class from_file:
             The default is True
         kwargs :
             Keyword-arguments passed to `m.plot_map()`
+
         Returns
         -------
         m : eomaps.Maps
             The created Maps object.
+
+        Examples
+        --------
+        # to just read the data use one of the following:
+
+        >>> from eomaps import Maps
+        >>> path = r"C:/folder/file.tiff"
+        >>> m = Maps.from_file.GeoTIFF(path)
+
+        # to select specific datasets from the file, use `sel` or `isel`:
+
+        >>> sel = dict(band = 1)
+        >>> m = Maps.from_file.GeoTIFF(path, sel=sel)
+
+        # you can also use already opened filehandles:
+
+        >>> file = xar.open_dataset(path)
+        >>> m = Maps.from_file.GeoTIFF(file)
+
+        >>> with xar.open_dataset(path) as file:
+        >>>     m = Maps.from_file.GeoTIFF(file)
 
         """
 
@@ -787,7 +890,7 @@ class from_file:
 
         # read data
         data = read_file.GeoTIFF(
-            path,
+            path_or_dataset,
             sel=sel,
             isel=isel,
             set_data=None,

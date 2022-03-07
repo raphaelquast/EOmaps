@@ -1,6 +1,7 @@
 """A collection of helper-functions to generate map-plots."""
 
-from functools import partial, lru_cache, wraps
+from functools import lru_cache, wraps
+from itertools import repeat
 from collections import defaultdict
 import warnings
 import copy
@@ -67,6 +68,8 @@ from ._cb_container import cb_container
 from .scalebar import ScaleBar, Compass
 from .projections import Equi7Grid_projection
 from .reader import read_file, from_file, new_layer_from_file
+
+from .utilities import utilities
 
 try:
     import mapclassify
@@ -296,23 +299,27 @@ class Maps(object):
 
     def new_layer(
         self,
+        layer=None,
         copy_data_specs=False,
-        copy_plot_specs=True,
+        copy_plot_specs=False,
         copy_classify_specs=False,
         copy_shape=True,
-        layer=None,
     ):
         """
         Create a new Maps-object that shares the same plot-axes.
 
         Parameters
         ----------
+        layer : int, str or None
+            The name of the layer at which map-features are plotted.
+
+            - If "all": the corresponding feature will be added to ALL layers
+            - If None, the layer of the parent object is used.
+
+            The default is None.
         copy_data_specs, copy_shape, copy_plot_specs, copy_classify_specs : bool
             Indicator if the corresponding properties should be copied to
-            the new layer. By default, only "plot_specs" and the "shape" are copied.
-        layer : int
-            The layer index at which map-features are plotted by default.
-            The default is None in which case the layer of the parent object is used.
+            the new layer. By default no settings are copied.
 
         Returns
         -------
@@ -341,9 +348,20 @@ class Maps(object):
 
     @property
     @lru_cache()
+    def plot(self):
+        return plot(self)
+
+    @property
+    @lru_cache()
     @wraps(cb_container)
     def cb(self):
         return cb_container(self)
+
+    @property
+    @lru_cache()
+    @wraps(utilities)
+    def util(self):
+        return utilities(self)
 
     @property
     @lru_cache()
@@ -421,6 +439,10 @@ class Maps(object):
         if newfig:  # only if a new figure has been initialized
             _ = self._draggable_axes
 
+            # set the _ignore_cb_events property on the parent
+            # (used to temporarily disconnect all callbacks)
+            self._ignore_cb_events = False
+
             if plt.get_backend() == "module://ipympl.backend_nbagg":
                 warnings.warn(
                     "EOmaps disables matplotlib's interactive mode (e.g. 'plt.ioff()') "
@@ -461,10 +483,19 @@ class Maps(object):
         self.data_specs.delete()
 
     @property
+    def _ignore_cb_events(self):
+        return self.parent._persistent_ignore_cb_events
+
+    @_ignore_cb_events.setter
+    def _ignore_cb_events(self, val):
+        self.parent._persistent_ignore_cb_events = val
+
+    @property
     def BM(self):
         """The Blit-Manager used to dynamically update the plots"""
         if self.parent._BM is None:
             self.parent._BM = BlitManager(self)
+            self.parent._BM._bg_layer = self.parent.layer
         return self.parent._BM
 
     @property
@@ -1539,8 +1570,13 @@ class Maps(object):
             val_key : str
                 The dataframe-column used to identify values for pick-callbacks.
                 The default is None.
-            layer : int
-                The layer-index at which the dataset will be plotted.
+            layer : int, str or None
+                The name of the layer at which the dataset will be plotted.
+
+                - If "all": the corresponding feature will be added to ALL layers
+                - If None, the layer assigned to the Maps-object is used (e.g. `m.layer`)
+
+                The default is None.
             temporary_picker : str, optional
                 The name of the picker that should be used to make the geometry
                 temporary (e.g. remove it after each pick-event)
@@ -1585,8 +1621,8 @@ class Maps(object):
                   (slower but generally more robust than "gpd")
 
                 >>> mg = MapsGrid(2, 1, crs=Maps.CRS.Stereographic())
-                >>> mg.m_0_0.add_feature.preset.ocean(use_gpd="gpd")
-                >>> mg.m_1_0.add_feature.preset.ocean(use_gpd="cartopy")
+                >>> mg.m_0_0.add_feature.preset.ocean(reproject="gpd")
+                >>> mg.m_1_0.add_feature.preset.ocean(reproject="cartopy")
 
                 The default is "gpd"
             verbose : bool, optional
@@ -1856,12 +1892,12 @@ class Maps(object):
 
         Parameters
         ----------
-        ID : any
+        ID : str, int, float or array-like
             The index-value of the pixel in m.data.
-        xy : tuple
+        xy : tuple of float or array-like
             A tuple of the position of the pixel provided in "xy_crs".
             If None, xy must be provided in the coordinate-system of the plot!
-            The default is None
+            The default is None.
         xy_crs : any
             the identifier of the coordinate-system for the xy-coordinates
         text : callable or str, optional
@@ -1869,11 +1905,12 @@ class Maps(object):
             if callable: A function that returns the string that should be
             printed in the annotation with the following call-signature:
 
-                >>> def text(m, ID, val, pos):
+                >>> def text(m, ID, val, pos, ind):
                 >>>     # m   ... the Maps object
                 >>>     # ID  ... the ID
                 >>>     # pos ... the position
                 >>>     # val ... the value
+                >>>     # ind ... the index of the clicked pixel
                 >>>
                 >>>     return "the string to print"
 
@@ -1887,48 +1924,75 @@ class Maps(object):
 
             >>> m.add_annotation(ID=1)
             >>> m.add_annotation(xy=(45, 35), xy_crs=4326)
+
+            NOTE: You can provide lists to add multiple annotations in one go!
+
+            >>> m.add_annotation(ID=[1, 5, 10, 20])
+            >>> m.add_annotation(xy=([23.5, 45.8, 23.7], [5, 6, 7]), xy_crs=4326)
+
+            The text can be customized by providing either a string
+
             >>> m.add_annotation(ID=1, text="some text")
 
-            >>> def addtxt(m, ID, val, pos):
+            or a callable that returns a string with the following signature:
+
+            >>> def addtxt(m, ID, val, pos, ind):
             >>>     return f"The ID {ID} at position {pos} has a value of {val}"
             >>> m.add_annotation(ID=1, text=addtxt)
 
         """
+
         if ID is not None:
             assert xy is None, "You can only provide 'ID' or 'pos' not both!"
-
-            # get the index of the first occurance of the ID in the provided ids
-            ind = np.nonzero(self._props["ids"] == ID)[0][0]
-            xy = (self._props["xorig"][ind], self._props["yorig"][ind])
-            val = self._props["z_data"][ind]
-
+            mask = np.isin(self._props["ids"], ID)
+            xy = (self._props["xorig"][mask], self._props["yorig"][mask])
+            val = self._props["z_data"][mask]
+            ind = self._props["ids"][mask]
+            ID = np.atleast_1d(ID)
             xy_crs = self.data_specs.crs
         else:
-            val = None
+            val = repeat(None)
+            ind = repeat(None)
+            ID = repeat(None)
 
-        if xy is not None:
+        assert (
+            xy is not None
+        ), "EOmaps: you must provide either ID or xy to position the annotation!"
 
-            if xy_crs is not None:
-                # get coordinate transformation
-                transformer = Transformer.from_crs(
-                    CRS.from_user_input(xy_crs),
-                    self.crs_plot,
-                    always_xy=True,
-                )
-                # transform coordinates
-                xy = transformer.transform(*xy)
+        xy = (np.atleast_1d(xy[0]), np.atleast_1d(xy[1]))
+
+        if xy_crs is not None:
+            # get coordinate transformation
+            transformer = Transformer.from_crs(
+                CRS.from_user_input(xy_crs),
+                self.crs_plot,
+                always_xy=True,
+            )
+            # transform coordinates
+            xy = transformer.transform(*xy)
 
         defaultargs = dict(permanent=True)
         defaultargs.update(kwargs)
-        # add marker
-        self.cb.click._cb.annotate(
-            ID=ID,
-            pos=xy,
-            val=val,
-            ind=None if ID is None else ind,
-            text=text,
-            **defaultargs,
-        )
+
+        if isinstance(text, str) or callable(text):
+            text = repeat(text)
+        else:
+            try:
+                iter(text)
+            except TypeError:
+                text = repeat(text)
+
+        for x, y, texti, vali, indi, IDi in zip(xy[0], xy[1], text, val, ind, ID):
+
+            # add marker
+            self.cb.click._cb.annotate(
+                ID=IDi,
+                pos=(x, y),
+                val=vali,
+                ind=indi,
+                text=texti,
+                **defaultargs,
+            )
         self.BM.update(clear=False)
 
     def add_compass(
@@ -1995,27 +2059,28 @@ class Maps(object):
         self,
         lon=None,
         lat=None,
-        azim=91.0,
-        scale=10000,
+        azim=0,
+        scale=None,
+        autoscale_fraction=0.25,
+        auto_position=(0.75, 0.25),
         scale_props=None,
         patch_props=None,
         label_props=None,
     ):
 
-        if lon is None and lat is None:
-            extent = self.figure.ax.get_extent()
-            lon, lat = self._transf_plot_to_lonlat.transform(
-                np.mean(extent[:2]),
-                np.mean(extent[2:]),
-            )
-
         s = ScaleBar(
             m=self,
             scale=scale,
+            autoscale_fraction=autoscale_fraction,
+            auto_position=auto_position,
             scale_props=scale_props,
             patch_props=patch_props,
             label_props=label_props,
         )
+
+        if lon is None or lat is None:
+            lon, lat = s._get_autopos(auto_position)
+
         s._add_scalebar(lon, lat, azim)
         s._make_pickable()
 
@@ -2145,17 +2210,47 @@ class Maps(object):
 
         plot_width, plot_height = int(self.ax.bbox.width), int(self.ax.bbox.height)
 
+        # get rid of unnecessary dimensions in the numpy arrays
+        zdata = zdata.squeeze()
+        props["x0"] = props["x0"].squeeze()
+        props["y0"] = props["y0"].squeeze()
+
         if self.shape.name == "shade_raster":
+            from datashader import glyphs
+
             assert _xar_OK, "EOmaps: missing dependency `xarray` for 'shade_raster'"
 
             if len(zdata.shape) == 2:
-                df = xar.DataArray(
-                    data=zdata.squeeze(),
-                    dims=["x", "y"],
-                    coords=dict(x=props["x0"].squeeze(), y=props["y0"].squeeze()),
-                )
-                df = xar.Dataset(dict(val=df))
+
+                if (zdata.shape == props["x0"].shape) and (
+                    zdata.shape == props["y0"].shape
+                ):
+                    # use a curvilinear QuadMesh
+                    self.shape.glyph = glyphs.QuadMeshCurvilinear("x", "y", "val")
+
+                    # 2D coordinates and 2D raster
+                    df = xar.Dataset(
+                        data_vars=dict(val=(["xx", "yy"], zdata)),
+                        # dims=["x", "y"],
+                        coords=dict(
+                            x=(["xx", "yy"], props["x0"]), y=(["xx", "yy"], props["y0"])
+                        ),
+                    )
+                elif (zdata.shape[0] == props["x0"].shape) and (
+                    zdata.shape[1] == props["y0"].shape
+                ):
+                    # use a rectangular QuadMesh
+                    self.shape.glyph = glyphs.QuadMeshRectilinear("x", "y", "val")
+                    # 1D coordinates and 2D data
+                    df = xar.DataArray(
+                        data=zdata,
+                        dims=["x", "y"],
+                        coords=dict(x=props["x0"], y=props["y0"]),
+                    )
+                    df = xar.Dataset(dict(val=df))
             else:
+                # use a rectangular QuadMesh
+                self.shape.glyph = glyphs.QuadMeshRectilinear("x", "y", "val")
                 # use pandas to convert the data to a raster-format
                 df = (
                     pd.DataFrame(
@@ -2170,8 +2265,9 @@ class Maps(object):
                     .to_xarray()
                 )
 
-            # if raster-shading does not succeed we need a 1D dataset
+            # once the data is shaded, convert to 1D for further processing
             self._1Dprops(props)
+
         else:
             df = pd.DataFrame(
                 dict(x=props["x0"].ravel(), y=props["y0"].ravel(), val=zdata.ravel()),
@@ -2179,9 +2275,12 @@ class Maps(object):
             )
 
         if set_extent is True:
-            xf, yf = np.isfinite(df.x), np.isfinite(df.y)
-            x_range = (np.nanmin(df.x[xf]), np.nanmax(df.x[xf]))
-            y_range = (np.nanmin(df.y[yf]), np.nanmax(df.y[yf]))
+            # convert to a numpy-array to support 2D indexing with boolean arrays
+            x, y = np.asarray(df.x), np.asarray(df.y)
+
+            xf, yf = np.isfinite(x), np.isfinite(y)
+            x_range = (np.nanmin(x[xf]), np.nanmax(x[xf]))
+            y_range = (np.nanmin(y[yf]), np.nanmax(y[yf]))
         else:
             # update here to ensure bounds are set
             self.BM.update()
@@ -2417,8 +2516,12 @@ class Maps(object):
             `pick_distance * estimated radius`).
 
             The default is 100.
-        layer : int
-            The layer-index at which the dataset will be plotted.
+        layer : int, str or None
+            The layer at which the dataset will be plotted.
+
+            - If "all": the corresponding feature will be added to ALL layers
+            - If None, the layer assigned to the Maps object is used (e.g. `m.layer`)
+
             The default is None.
         dynamic : bool
             If True, the collection will be dynamically updated
@@ -2672,7 +2775,7 @@ class Maps(object):
         m.data = data
 
         t = self.figure.ax.transData.inverted()
-        r = t.transform((100 + radius, 100 + radius)) - t.transform((100, 100))
+        r = (t.transform((100 + radius, 100 + radius)) - t.transform((100, 100))).mean()
         m.set_shape.ellipses(radius_crs="out", radius=r)
         m.plot_map(**kwargs)
         return m
@@ -2785,6 +2888,7 @@ class Maps(object):
             return p
 
         figax = self.figure.f.add_axes(**getpos(self.ax.get_position()))
+        figax.set_navigate(False)
         figax.set_axis_off()
         figax.imshow(im, aspect="equal")
 
@@ -2806,6 +2910,35 @@ class Maps(object):
             toolbar.release_pan = update_decorator(toolbar.release_pan)
 
         self.figure.f.canvas.mpl_connect("resize_event", setlim)
+
+    def show_layer(self, name):
+        """
+        Display the selected layer on the map.
+
+        See Also
+        --------
+        - Maps.util.layer_selector
+        - Maps.util.layer_slider
+
+        Parameters
+        ----------
+        name : str or int, optional
+            The name of the layer to activate.
+            The default is None.
+        """
+        layers = self.util._layer_selector._get_layers()
+
+        if name not in layers:
+            lstr = " - " + "\n - ".join(layers)
+
+            raise AssertionError(
+                f"EOmaps: The layer '{name}' does not exist...\n"
+                + f"Use one of: \n{lstr}"
+            )
+
+        # invoke the bg_layer setter of the blit-manager
+        self.BM.bg_layer = name
+        self.BM.update()
 
 
 class MapsGrid:

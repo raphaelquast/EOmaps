@@ -85,14 +85,23 @@ class shapes(object):
             if not hasattr(m, "_props"):
                 m._props = m._prepare_data()
         else:
+            if isinstance(radius, (list, np.ndarray)):
+                radiusx = radiusy = tuple(radius)
             # get manually specified radius (e.g. if radius != "estimate")
-            if isinstance(radius, (list, tuple, np.ndarray)):
+            elif isinstance(radius, tuple):
                 radiusx, radiusy = radius
             elif isinstance(radius, (int, float, np.number)):
-                radiusx = radius
-                radiusy = radius
+                radiusx = radiusy = radius
 
             # we need an immutuable object for the lru_cache!
+            # (if radius is passed as list we need to convert it to a hashable object)
+            try:
+                hash(radiusx)
+                hash(radiusy)
+            except TypeError:
+                radiusx = tuple(radiusx)
+                radiusy = tuple(radiusy)
+
             radius = tuple((radiusx, radiusy))
 
         return shapes._get_radius_cache(
@@ -1262,7 +1271,8 @@ class shapes(object):
             if agg_hook is None:
                 pass
 
-            glyph = ds.glyphs.QuadMeshRectilinear("x", "y", "val")
+            # this might be changed by m._shade_raster depending on the dataset-shape
+            glyph = None
 
             from . import MapsGrid  # do this here to avoid circular imports!
 

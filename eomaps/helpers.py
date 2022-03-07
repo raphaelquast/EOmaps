@@ -114,7 +114,6 @@ class searchtree:
     def query(self, x, k=1, d=None):
         if d is None:
             d = self.d
-
         # select a rectangle around the pick-coordinates
         # (provides tremendous speedups for very large datasets)
         mx = np.logical_and(
@@ -130,7 +129,6 @@ class searchtree:
         # euclidean distance
 
         if len(idx) > 0:
-            self._misses = 0
             i = idx[
                 (
                     (self._m._props["x0"][m] - x[0]) ** 2
@@ -139,25 +137,24 @@ class searchtree:
             ]
         else:
             # show some warning if no points are found within the pick_distance
-            self._misses += 1
 
             if self._misses < 3:
-                text = "Found no data here..."
-            else:
+                self._misses += 1
+
                 text = "Found no data here...\n Increase pick_distance?"
 
-            self._m.cb.click._cb.annotate(
-                pos=x,
-                permanent=False,
-                text=text,
-                xytext=(0.98, 0.98),
-                textcoords=self._m.figure.f.transFigure,
-                horizontalalignment="right",
-                verticalalignment="top",
-                arrowprops=None,
-                fontsize=7,
-                bbox=dict(ec="r", fc=(1, 0.9, 0.9, 0.5), lw=0.25, boxstyle="round"),
-            )
+                self._m.cb.click._cb.annotate(
+                    pos=x,
+                    permanent=False,
+                    text=text,
+                    xytext=(0.98, 0.98),
+                    textcoords=self._m.figure.f.transFigure,
+                    horizontalalignment="right",
+                    verticalalignment="top",
+                    arrowprops=None,
+                    fontsize=7,
+                    bbox=dict(ec="r", fc=(1, 0.9, 0.9, 0.5), lw=0.25, boxstyle="round"),
+                )
 
             i = None
         return None, i
@@ -634,6 +631,7 @@ class draggable_axes:
 
     def _undo_draggable(self):
         self._modifier_pressed = False
+        self.m._ignore_cb_events = True
 
         print("EOmaps: Making axes interactive again")
         for ax, frameQ, spine_vis in zip(
@@ -662,6 +660,7 @@ class draggable_axes:
         self._frameon = [i.get_frame_on() for i in self.all_axes]
 
         self._modifier_pressed = True
+        self.m._ignore_cb_events = False
         print("EOmaps: Making axis draggable")
 
         for ax in self.all_axes:
@@ -734,6 +733,7 @@ class BlitManager:
 
     @bg_layer.setter
     def bg_layer(self, val):
+        self._m.util._layer_selector._update_widgets(val)
         self._bg_layer = val
 
     def fetch_bg(self, layer=None, bbox=None):
@@ -749,8 +749,8 @@ class BlitManager:
             art.set_visible(True)
 
         for l in self._bg_artists:
-            if l != layer:
-                # make all artists of the corresponding layer visible
+            if l != layer and l != "all":  # artists on "all" are always visible!
+                # make all artists of the corresponding layer invisible
                 for art in self._bg_artists[l]:
                     art.set_visible(False)
 
@@ -818,8 +818,12 @@ class BlitManager:
             The artist to be added.  Will be set to 'animated' (just
             to be safe).  *art* must be in the figure associated with
             the canvas this class is managing.
-        layer : int
-            The layer number
+        layer : int or str
+            The layer name at which the artist should be drawn.
+
+            - If "all": the corresponding feature will be added to ALL layers
+
+            The default is 0.
         """
         if art.figure != self.canvas.figure:
             raise RuntimeError
@@ -864,7 +868,7 @@ class BlitManager:
 
         if layers is None and artists is None:
             # redraw all layers
-            for l in sorted(list(self._layers)):
+            for l in sorted(list(self._layers), key=lambda x: str(x)):
                 for a in self._layers[l]:
                     fig.draw_artist(a)
         else:
@@ -892,7 +896,7 @@ class BlitManager:
         bbox_bounds=None,
         bg_layer=None,
         artists=None,
-        clear="click",
+        clear=False,
         blit=True,
     ):
         """

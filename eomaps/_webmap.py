@@ -9,6 +9,7 @@ from io import BytesIO
 from pprint import PrettyPrinter
 
 from cartopy.io.img_tiles import GoogleWTS
+from cartopy import crs as ccrs
 import numpy as np
 
 from pyproj import CRS, Transformer
@@ -27,6 +28,8 @@ except ImportError:
 
 from .helpers import _sanitize
 
+from cartopy.io import ogc_clients
+
 
 class _WebMap_layer:
     # base class for adding methods to the _wms_layer- and wmts_layer objects
@@ -35,6 +38,15 @@ class _WebMap_layer:
         self.name = name
         self._wms = wms
         self.wms_layer = self._wms.contents[name]
+
+        # hardcode support for EPSG:3857 == GOOGLE_MERCATOR for now since cartopy
+        # hardcoded only  EPSG:900913
+        # (see from cartopy.io.ogc_clients import _CRS_TO_OGC_SRS)
+        if hasattr(self.wms_layer, "crsOptions"):
+            if "EPSG:3857" in self.wms_layer.crsOptions:
+                ogc_clients._CRS_TO_OGC_SRS[ccrs.GOOGLE_MERCATOR] = "EPSG:3857"
+            if "epsg:3857" in self.wms_layer.crsOptions:
+                ogc_clients._CRS_TO_OGC_SRS[ccrs.GOOGLE_MERCATOR] = "epsg:3857"
 
     @property
     def info(self):
@@ -187,14 +199,19 @@ class _WebMap_layer:
 
     def set_extent_to_bbox(self):
         bbox = getattr(self.wms_layer, "boundingBox", None)
-        if bbox is None:
-            (x0, y0, x1, y1) = getattr(self.wms_layer, "boundingBoxWGS84", None)
-            crs = 4326
-        else:
+        try:
             (x0, y0, x1, y1, crs) = bbox
+            incrs = CRS.from_user_input(crs)
+        except Exception:
+            print(
+                "EOmaps: could not determine bbox from 'boundingBox'... "
+                + "defaulting to 'boundingBoxWGS84'"
+            )
+            (x0, y0, x1, y1) = getattr(self.wms_layer, "boundingBoxWGS84", None)
+            incrs = CRS.from_user_input(4326)
 
         transformer = Transformer.from_crs(
-            CRS.from_user_input(crs),
+            incrs,
             self._m.crs_plot,
             always_xy=True,
         )
@@ -216,8 +233,12 @@ class _wmts_layer(_WebMap_layer):
 
         Parameters
         ----------
-        layer : int, optional
-            The background-layer index to put the wms-layer on.
+        layer : int, str or None, optional
+            The name of the layer at which map-features are plotted.
+
+            - If "all": the corresponding feature will be added to ALL layers
+            - If None, the layer of the parent object is used.
+
             The default is None.
         **kwargs :
             additional kwargs passed to the WebMap service request.
@@ -248,8 +269,12 @@ class _wms_layer(_WebMap_layer):
 
         Parameters
         ----------
-        layer : int, optional
-            The background-layer index to put the wms-layer on.
+        layer : int, str or None, optional
+            The name of the layer at which map-features are plotted.
+
+            - If "all": the corresponding feature will be added to ALL layers
+            - If None, the layer of the parent object is used.
+
             The default is None.
         **kwargs :
             additional kwargs passed to the WebMap service request.
@@ -313,10 +338,12 @@ class _WebServiec_collection(object):
 
     @staticmethod
     def _get_wmts(url):
+        # TODO expose useragent
         return WebMapTileService(url)
 
     @staticmethod
     def _get_wms(url):
+        # TODO expose useragent
         return WebMapService(url)
 
     @property
@@ -619,9 +646,13 @@ class _xyz_tile_service:
         """
         Parameters
         ----------
-        layer : int, optional
-            The layer to put the WMS images on. The default is None in which
-            case the default layer for the Maps-object is used.
+        layer : int, str or None, optional
+            The name of the layer at which map-features are plotted.
+
+            - If "all": the corresponding feature will be added to ALL layers
+            - If None, the layer of the parent object is used.
+
+            The default is None.
         transparent : bool, optional
             Indicator if the WMS images should be read as RGB or RGBA
             (e.g. with or without transparency). The default is False.
