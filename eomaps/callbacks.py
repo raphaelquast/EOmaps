@@ -392,7 +392,7 @@ class _click_callbacks(object):
         else:
             pos_crs = "out"
 
-        if radius == "pixel":
+        if isinstance(radius, str) and radius == "pixel":
             pixelQ = True
             if not hasattr(self.m.shape, "radius"):
                 print(
