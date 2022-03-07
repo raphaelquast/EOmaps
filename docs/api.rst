@@ -166,7 +166,7 @@ Some useful arguments that are supported by most shapes (except "shade"-shapes) 
 
 You can then continue to add :ref:`colorbar`, :ref:`annotations_and_markers`,
 :ref:`scalebar`, :ref:`compass`,  :ref:`webmap_layers` or :ref:`geodataframe` to the map,
-or you can start to add :ref:`callbacks`.
+or you can start to add :ref:`utility` or :ref:`callbacks`.
 
 Once the map is ready, a snapshot of the map can be saved at any time by using:
 
@@ -420,8 +420,8 @@ Custom callback functions can be attached to the map via:
 
 .. _webmap_layers:
 
-🛰 WebMap service layers
-------------------------
+🛰 WebMap layers
+----------------
 
 WebMap services (TS/WMS/WMTS) can be attached to the map via:
 
@@ -1030,6 +1030,7 @@ The returned ``compass`` object has the following useful methods assigned:
     set_pickable
     remove
 
+.. _utility:
 
 
 🦜 Utility widgets
