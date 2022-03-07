@@ -940,6 +940,20 @@ A scalebar can be added to a map via ``s = m.add_scalebar()``:
     |   s = m.add_scalebar()            |                                          |
     +-----------------------------------+------------------------------------------+
 
+.. Note::
+
+    The scalebar is a pickable object!
+    Click on it with the LEFT mouse button to drag it around, and use the RIGHT
+    mouse button to make it fixed again.
+
+    If the scalebar is picked (indicated by a red border), you can use the following
+    keys for adjusting some of the ScaleBar properties:
+
+    - ``delte``: remove the scalebar from the plot
+    - ``+``  and ``-``: rotate the scalebar
+    - ``up/down/left/right``: increase the size of the frame
+    - ``alt + up/down/left/right``: decrease the size of the frame
+
 The returned ``ScaleBar`` object provides the following useful methods:
 
 .. currentmodule:: eomaps.scalebar
@@ -958,19 +972,6 @@ The returned ``ScaleBar`` object provides the following useful methods:
     ScaleBar.cb_offset_interval
     ScaleBar.cb_rotate_interval
 
-.. Note::
-
-    The scalebar is a pickable object!
-    Click on it with the LEFT mouse button to drag it around, and use the RIGHT
-    mouse button to make it fixed again.
-
-    If the scalebar is picked (indicated by a red border), you can use the following
-    keys for adjusting some of the ScaleBar properties:
-
-    - ``delte``: remove the scalebar from the plot
-    - ``+``  and ``-``: rotate the scalebar
-    - ``up/down/left/right``: increase the size of the frame
-    - ``alt + up/down/left/right``: decrease the size of the frame
 
 .. _compass:
 
