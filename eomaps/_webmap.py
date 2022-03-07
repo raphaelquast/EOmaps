@@ -9,6 +9,7 @@ from io import BytesIO
 from pprint import PrettyPrinter
 
 from cartopy.io.img_tiles import GoogleWTS
+from cartopy import crs as ccrs
 import numpy as np
 
 from pyproj import CRS, Transformer
@@ -27,6 +28,8 @@ except ImportError:
 
 from .helpers import _sanitize
 
+from cartopy.io import ogc_clients
+
 
 class _WebMap_layer:
     # base class for adding methods to the _wms_layer- and wmts_layer objects
@@ -36,12 +39,14 @@ class _WebMap_layer:
         self._wms = wms
         self.wms_layer = self._wms.contents[name]
 
-        # hardcode support for EPSG:3857 == EPSG:900913 for now since cartopy
+        # hardcode support for EPSG:3857 == GOOGLE_MERCATOR for now since cartopy
         # hardcoded only  EPSG:900913
         # (see from cartopy.io.ogc_clients import _CRS_TO_OGC_SRS)
         if hasattr(self.wms_layer, "crsOptions"):
             if "EPSG:3857" in self.wms_layer.crsOptions:
-                self.wms_layer.crsOptions.append("EPSG:900913")
+                ogc_clients._CRS_TO_OGC_SRS[ccrs.GOOGLE_MERCATOR] = "EPSG:3857"
+            if "epsg:3857" in self.wms_layer.crsOptions:
+                ogc_clients._CRS_TO_OGC_SRS[ccrs.GOOGLE_MERCATOR] = "epsg:3857"
 
     @property
     def info(self):
@@ -194,7 +199,7 @@ class _WebMap_layer:
 
     def set_extent_to_bbox(self):
         bbox = getattr(self.wms_layer, "boundingBox", None)
-        if bbox is None:
+        if bbox is None or len(bbox) == 0:
             (x0, y0, x1, y1) = getattr(self.wms_layer, "boundingBoxWGS84", None)
             crs = 4326
         else:
@@ -328,10 +333,12 @@ class _WebServiec_collection(object):
 
     @staticmethod
     def _get_wmts(url):
+        # TODO expose useragent
         return WebMapTileService(url)
 
     @staticmethod
     def _get_wms(url):
+        # TODO expose useragent
         return WebMapService(url)
 
     @property
