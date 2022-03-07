@@ -2747,7 +2747,7 @@ class Maps(object):
         m.data = data
 
         t = self.figure.ax.transData.inverted()
-        r = t.transform((100 + radius, 100 + radius)) - t.transform((100, 100))
+        r = (t.transform((100 + radius, 100 + radius)) - t.transform((100, 100))).mean()
         m.set_shape.ellipses(radius_crs="out", radius=r)
         m.plot_map(**kwargs)
         return m
