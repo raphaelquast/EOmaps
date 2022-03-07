@@ -405,8 +405,10 @@ class _click_callbacks(object):
             pixelQ = False
 
         # get manually specified radius (e.g. if radius != "estimate")
-        if isinstance(radius, (list, tuple)):
+        if isinstance(radius, list):
             radius = [i * buffer for i in radius]
+        elif isinstance(radius, tuple):
+            radius = tuple([i * buffer for i in radius])
         elif isinstance(radius, (int, float)):
             radius = radius * buffer
 
