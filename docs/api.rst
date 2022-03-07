@@ -7,13 +7,14 @@
 🌐 Initialization of Maps objects
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-| EOmaps is all about ``Maps`` objects.                                                                    |
-| To start creating a new (empty) map (in this case a plot in ``epsg=4326``, e.g. lon/lat projection), simply use: |
+| EOmaps is all about ``Maps`` objects.
+| To start creating a new map (in this case a plot in ``epsg=4326``, e.g. lon/lat projection), simply use:
 
 .. code-block:: python
 
     from eomaps import Maps
     m = Maps(crs=4326)
+    m.add_feature.preset.coastline()
 
 Possible ways for specifying the crs for plotting are:
 
