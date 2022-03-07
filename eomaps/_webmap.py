@@ -199,14 +199,19 @@ class _WebMap_layer:
 
     def set_extent_to_bbox(self):
         bbox = getattr(self.wms_layer, "boundingBox", None)
-        if bbox is None or len(bbox) == 0:
-            (x0, y0, x1, y1) = getattr(self.wms_layer, "boundingBoxWGS84", None)
-            crs = 4326
-        else:
+        try:
             (x0, y0, x1, y1, crs) = bbox
+            incrs = CRS.from_user_input(crs)
+        except Exception:
+            print(
+                "EOmaps: could not determine bbox from 'boundingBox'... "
+                + "defaulting to 'boundingBoxWGS84'"
+            )
+            (x0, y0, x1, y1) = getattr(self.wms_layer, "boundingBoxWGS84", None)
+            incrs = CRS.from_user_input(4326)
 
         transformer = Transformer.from_crs(
-            CRS.from_user_input(crs),
+            incrs,
             self._m.crs_plot,
             always_xy=True,
         )
