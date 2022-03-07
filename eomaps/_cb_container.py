@@ -600,7 +600,7 @@ class cb_click_container(_click_container):
                 obj = self._getobj(m)
                 if obj is None:
                     continue
-                obj._onrelease()
+                obj._onrelease(event)
 
         else:
             for key, m in self._fwd_cbs.items():
