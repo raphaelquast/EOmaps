@@ -896,7 +896,7 @@ class BlitManager:
         bbox_bounds=None,
         bg_layer=None,
         artists=None,
-        clear="click",
+        clear=False,
         blit=True,
     ):
         """
