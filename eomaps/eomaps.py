@@ -347,6 +347,11 @@ class Maps(object):
 
     @property
     @lru_cache()
+    def plot(self):
+        return plot(self)
+
+    @property
+    @lru_cache()
     @wraps(cb_container)
     def cb(self):
         return cb_container(self)
@@ -1899,11 +1904,12 @@ class Maps(object):
             if callable: A function that returns the string that should be
             printed in the annotation with the following call-signature:
 
-                >>> def text(m, ID, val, pos):
+                >>> def text(m, ID, val, pos, ind):
                 >>>     # m   ... the Maps object
                 >>>     # ID  ... the ID
                 >>>     # pos ... the position
                 >>>     # val ... the value
+                >>>     # ind ... the index of the clicked pixel
                 >>>
                 >>>     return "the string to print"
 
@@ -1919,7 +1925,7 @@ class Maps(object):
             >>> m.add_annotation(xy=(45, 35), xy_crs=4326)
             >>> m.add_annotation(ID=1, text="some text")
 
-            >>> def addtxt(m, ID, val, pos):
+            >>> def addtxt(m, ID, val, pos, ind):
             >>>     return f"The ID {ID} at position {pos} has a value of {val}"
             >>> m.add_annotation(ID=1, text=addtxt)
 
