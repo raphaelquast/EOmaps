@@ -1,6 +1,7 @@
 """A collection of helper-functions to generate map-plots."""
 
-from functools import partial, lru_cache, wraps
+from functools import lru_cache, wraps
+from itertools import repeat
 from collections import defaultdict
 import warnings
 import copy
@@ -1891,12 +1892,12 @@ class Maps(object):
 
         Parameters
         ----------
-        ID : any
+        ID : str, int, float or array-like
             The index-value of the pixel in m.data.
-        xy : tuple
+        xy : tuple of float or array-like
             A tuple of the position of the pixel provided in "xy_crs".
             If None, xy must be provided in the coordinate-system of the plot!
-            The default is None
+            The default is None.
         xy_crs : any
             the identifier of the coordinate-system for the xy-coordinates
         text : callable or str, optional
@@ -1923,48 +1924,75 @@ class Maps(object):
 
             >>> m.add_annotation(ID=1)
             >>> m.add_annotation(xy=(45, 35), xy_crs=4326)
+
+            NOTE: You can provide lists to add multiple annotations in one go!
+
+            >>> m.add_annotation(ID=[1, 5, 10, 20])
+            >>> m.add_annotation(xy=([23.5, 45.8, 23.7], [5, 6, 7]), xy_crs=4326)
+
+            The text can be customized by providing either a string
+
             >>> m.add_annotation(ID=1, text="some text")
+
+            or a callable that returns a string with the following signature:
 
             >>> def addtxt(m, ID, val, pos, ind):
             >>>     return f"The ID {ID} at position {pos} has a value of {val}"
             >>> m.add_annotation(ID=1, text=addtxt)
 
         """
+
         if ID is not None:
             assert xy is None, "You can only provide 'ID' or 'pos' not both!"
-
-            # get the index of the first occurance of the ID in the provided ids
-            ind = np.nonzero(self._props["ids"] == ID)[0][0]
-            xy = (self._props["xorig"][ind], self._props["yorig"][ind])
-            val = self._props["z_data"][ind]
-
+            mask = np.isin(self._props["ids"], ID)
+            xy = (self._props["xorig"][mask], self._props["yorig"][mask])
+            val = self._props["z_data"][mask]
+            ind = self._props["ids"][mask]
+            ID = np.atleast_1d(ID)
             xy_crs = self.data_specs.crs
         else:
-            val = None
+            val = repeat(None)
+            ind = repeat(None)
+            ID = repeat(None)
 
-        if xy is not None:
+        assert (
+            xy is not None
+        ), "EOmaps: you must provide either ID or xy to position the annotation!"
 
-            if xy_crs is not None:
-                # get coordinate transformation
-                transformer = Transformer.from_crs(
-                    CRS.from_user_input(xy_crs),
-                    self.crs_plot,
-                    always_xy=True,
-                )
-                # transform coordinates
-                xy = transformer.transform(*xy)
+        xy = (np.atleast_1d(xy[0]), np.atleast_1d(xy[1]))
+
+        if xy_crs is not None:
+            # get coordinate transformation
+            transformer = Transformer.from_crs(
+                CRS.from_user_input(xy_crs),
+                self.crs_plot,
+                always_xy=True,
+            )
+            # transform coordinates
+            xy = transformer.transform(*xy)
 
         defaultargs = dict(permanent=True)
         defaultargs.update(kwargs)
-        # add marker
-        self.cb.click._cb.annotate(
-            ID=ID,
-            pos=xy,
-            val=val,
-            ind=None if ID is None else ind,
-            text=text,
-            **defaultargs,
-        )
+
+        if isinstance(text, str) or callable(text):
+            text = repeat(text)
+        else:
+            try:
+                iter(text)
+            except TypeError:
+                text = repeat(text)
+
+        for x, y, texti, vali, indi, IDi in zip(xy[0], xy[1], text, val, ind, ID):
+
+            # add marker
+            self.cb.click._cb.annotate(
+                ID=IDi,
+                pos=(x, y),
+                val=vali,
+                ind=indi,
+                text=texti,
+                **defaultargs,
+            )
         self.BM.update(clear=False)
 
     def add_compass(
