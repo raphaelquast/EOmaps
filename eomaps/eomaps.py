@@ -2081,7 +2081,11 @@ class Maps(object):
         )
 
         if lon is None or lat is None:
+            s._auto_position = auto_position
             lon, lat = s._get_autopos(auto_position)
+        else:
+            # don't auto-reposition if lon/lat has been provided
+            s._auto_position = None
 
         s._add_scalebar(lon, lat, azim)
         s._make_pickable()
