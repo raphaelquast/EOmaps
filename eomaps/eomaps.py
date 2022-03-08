@@ -428,6 +428,10 @@ class Maps(object):
         # initialize the callbacks
         self.cb._init_cbs()
 
+        # set the _ignore_cb_events property on the parent
+        # (used to temporarily disconnect all callbacks)
+        self.parent._ignore_cb_events = False
+
         if newax:  # only if a new axis has been created
 
             def lims_change(*args, **kwargs):
@@ -438,19 +442,15 @@ class Maps(object):
 
         if newfig:  # only if a new figure has been initialized
             _ = self._draggable_axes
-
-            # set the _ignore_cb_events property on the parent
-            # (used to temporarily disconnect all callbacks)
-            self._ignore_cb_events = False
-
-            if plt.get_backend() == "module://ipympl.backend_nbagg":
-                warnings.warn(
-                    "EOmaps disables matplotlib's interactive mode (e.g. 'plt.ioff()') "
-                    + "when using the 'ipympl' backend to avoid recursions during callbacks!"
-                )
-                plt.ioff()
-            else:
-                plt.ion()
+            if plt.isinteractive():
+                if plt.get_backend() == "module://ipympl.backend_nbagg":
+                    warnings.warn(
+                        "EOmaps disables matplotlib's interactive mode (e.g. 'plt.ioff()') "
+                        + "when using the 'ipympl' backend to avoid recursions during callbacks!"
+                    )
+                    plt.ioff()
+                else:
+                    plt.ion()
 
             # attach a callback that is executed when the figure is closed
             self._cid_onclose = self.figure.f.canvas.mpl_connect(
@@ -461,7 +461,9 @@ class Maps(object):
                 "resize_event", self._on_resize
             )
 
-        plt.show()
+        if newfig:
+            # we only need to call show if a new figure has been created!
+            plt.show()
 
     def _on_resize(self, event):
         # make sure the background is re-fetched if the canvas has been resized

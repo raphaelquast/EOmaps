@@ -253,7 +253,6 @@ class _layer_selector:
             # button update function returns a string of the layer object
             l = layers[int(val)]
             self._m.BM.bg_layer = l
-            self._m.BM.update()
 
         s.on_clicked = update
         s.set_draggable(draggable, m=self._m)
@@ -267,7 +266,7 @@ class _layer_selector:
 
         s.remove = remove
 
-        self._m.BM.add_artist(s.leg)
+        self._m.BM.add_artist(s.leg, layer="all")
         # keep a reference to the buttons to make sure they stay interactive
         self._selectors.append(s)
 

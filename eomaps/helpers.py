@@ -758,9 +758,11 @@ class BlitManager:
         # while we re-draw the artists
         cv.mpl_disconnect(self.cid)
         cv.draw()
+        self._bg_layers[layer] = cv.copy_from_bbox(bbox)
+        # blit here to avoid issues with the nbagg backend
+        self.update(clear=False, blit=True)
         self.cid = cv.mpl_connect("draw_event", self.on_draw)
 
-        self._bg_layers[layer] = cv.copy_from_bbox(bbox)
         self._refetch_bg = False
 
     def on_draw(self, event):
@@ -781,6 +783,7 @@ class BlitManager:
             # (they are cleared on clicks only)
             self.update(clear=False, blit=False)
         except Exception:
+            # we need to catch exceptions since QT does not like them...
             pass
 
     def add_artist(self, art, layer=0):
@@ -916,6 +919,7 @@ class BlitManager:
             If provided NO layer will be automatically updated!
             The default is None.
         """
+
         cv = self.canvas
         fig = cv.figure
 
