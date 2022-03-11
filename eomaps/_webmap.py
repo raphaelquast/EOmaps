@@ -197,7 +197,40 @@ class _WebMap_layer:
             self._m.BM.update()
             return legax
 
-    def set_extent_to_bbox(self):
+    def set_extent_to_bbox(self, shrink=False):
+        """
+        Set the extent of the axis to the bounding-box of the WebMap service.
+
+        This is particularly useful for non-global WebMap services.
+
+        Shrinking the bbox can help to avoid HTTP-request errors for tiles outside
+        the bbox of the WebMap service.
+
+        Error-messages that might be solved by shrinking the extent before adding
+        the layer:
+
+        - `RuntimeError: You must first set the image array`
+        - `requests.exceptions.HTTPError: 404 Client Error: Not Found for url`
+
+        Parameters
+        ----------
+        shrink : float, optional
+            Shrink the bounding-box by the provided shrinking factor (must be in [0, 1]).
+
+            - 0 : no shrinking (e.g. use the original bbox)
+            - < 1 : shrink the bbox by the factor (e.g. 0.5 = 50% smaller bbox)
+
+            The default is False.
+
+        Examples:
+        ---------
+
+        >>> m = Maps()
+        >>> layer = m.add_wms.Austria.Wien_basemap.add_layer.lb
+        >>> layer.set_extent_to_bbox(shrink=0.5)
+        >>> layer()
+        """
+
         bbox = getattr(self.wms_layer, "boundingBox", None)
         try:
             (x0, y0, x1, y1, crs) = bbox
@@ -209,6 +242,16 @@ class _WebMap_layer:
             )
             (x0, y0, x1, y1) = getattr(self.wms_layer, "boundingBoxWGS84", None)
             incrs = CRS.from_user_input(4326)
+
+        if shrink:
+            assert shrink >= 0, "EOmaps: shrink must be > 0!"
+            assert shrink < 1, "EOmaps: shrink must be < 1!"
+            dx = abs(x1 - x0) / 2
+            dy = abs(y1 - y0) / 2
+            x0 += dx * shrink
+            x1 -= dx * shrink
+            y0 += dy * shrink
+            y1 -= dy * shrink
 
         transformer = Transformer.from_crs(
             incrs,
