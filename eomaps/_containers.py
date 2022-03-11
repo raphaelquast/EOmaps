@@ -1148,6 +1148,51 @@ else:
 
         @property
         @lru_cache()
+        def GEBCO(self):
+            """
+            Global ocean & land terrain models
+            https://www.gebco.net/
+
+            GEBCO aims to provide the most authoritative, publicly available bathymetry
+            data sets for the world’s oceans.
+
+            GEBCO's current gridded bathymetric data set, the GEBCO_2021 Grid, is a
+            global terrain model for ocean and land, providing elevation data, in
+            meters, on a 15 arc-second interval grid. It is accompanied by a Type
+            Identifier (TID) Grid that gives information on the types of source data
+            that the GEBCO_2021 Grid is based.
+
+            For this release, we are making available a version of the grid with
+            under-ice topography/bathymetry information for Greenland and Antarctica.
+
+
+            Note
+            ----
+            **LICENSE-info (without any warranty for correctness!!)**
+
+            The GEBCO Grid is placed in the public domain and may be used free of charge.
+
+            If imagery from the WMS is included in web sites, reports and digital and
+            printed imagery then we request that the source of the data set is
+            acknowledged and be of the form
+
+            "Imagery reproduced from the GEBCO_2021 Grid, GEBCO Compilation Group (2021)
+            GEBCO 2021 Grid (doi:10.5285/c6612cbe-50b3-0cff-e053-6c86abc09f8f)"
+
+            (check: https://www.gebco.net/ for full details)
+
+            """
+            WMS = _WebServiec_collection(
+                m=self._m,
+                service_type="wms",
+                url="https://www.gebco.net/data_and_products/gebco_web_services/web_map_service/mapserv?request=getcapabilities&service=wms&version=1.1.1",
+            )
+
+            WMS.__doc__ = type(self).GEBCO.__doc__
+            return WMS
+
+        @property
+        @lru_cache()
         def NASA_GIBS(self):
             """
             NASA Global Imagery Browse Services (GIBS)
