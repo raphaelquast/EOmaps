@@ -152,7 +152,6 @@ class _layer_selector:
         self._selectors = []
 
     def _get_layers(self, layers=None):
-
         if layers is None:
             # get all (empty and non-empty) layers except the "all" layer
             layers = set((m.layer for m in self._m.parent._children))
@@ -253,6 +252,8 @@ class _layer_selector:
             # button update function returns a string of the layer object
             l = layers[int(val)]
             self._m.BM.bg_layer = l
+            self._m.BM.update(blit=False)
+            self._m.BM.canvas.draw_idle()
 
         s.on_clicked = update
         s.set_draggable(draggable, m=self._m)
@@ -262,7 +263,6 @@ class _layer_selector:
             s.leg.remove()
             if s in self._selectors:
                 self._selectors.remove(s)
-            self._m.BM.update()
 
         s.remove = remove
 
@@ -392,6 +392,7 @@ class _layer_selector:
             # button update function returns a string of the layer object
             l = layers[int(val)]
             self._m.BM.bg_layer = l
+            # self._m.show_layer(l)
 
         self._m.BM.add_artist(ax_slider)
 
