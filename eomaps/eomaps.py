@@ -2160,7 +2160,7 @@ class Maps(object):
         # remove previously fetched backgrounds for the used layer
         if layer in self.BM._bg_layers and dynamic is False:
             del self.BM._bg_layers[layer]
-        self.BM._refetch_bg = True
+            # self.BM._refetch_bg = True
 
         if self.shape.name == "shade_raster":
             crs1 = CRS.from_user_input(self.data_specs.crs)
@@ -2422,7 +2422,7 @@ class Maps(object):
             # remove previously fetched backgrounds for the used layer
             if layer in self.BM._bg_layers and dynamic is False:
                 del self.BM._bg_layers[layer]
-            self.BM._refetch_bg = True
+                # self.BM._refetch_bg = True
 
             if self.data is None:
                 return
