@@ -433,12 +433,26 @@ class Maps(object):
         self.parent._ignore_cb_events = False
 
         if newax:  # only if a new axis has been created
+            self._ax_xlims = (0, 0)
+            self._ax_ylims = (0, 0)
 
-            def lims_change(*args, **kwargs):
-                self.BM._refetch_bg = True
+            def xlims_change(*args, **kwargs):
+                if self._ax_xlims != args[0].get_xlim():
+                    print("x limchange", self.BM._refetch_bg)
+                    self.BM._refetch_bg = True
+                    # self.figure.f.stale = True
+                    self._ax_xlims = args[0].get_xlim()
 
-            self.figure.ax.callbacks.connect("xlim_changed", lims_change)
-            self.figure.ax.callbacks.connect("ylim_changed", lims_change)
+            # def ylims_change(*args, **kwargs):
+            #     if self._ax_ylims != args[0].get_ylim():
+            #         print("y limchange", self.BM._refetch_bg)
+            #         self.BM._refetch_bg = True
+            #         self._ax_ylims = args[0].get_ylim()
+
+            # do this only on xlims and NOT on ylims to avoid recursion
+            # (plot aspect ensures that y changes if x changes)
+            self.figure.ax.callbacks.connect("xlim_changed", xlims_change)
+            # self.figure.ax.callbacks.connect("ylim_changed", ylims_change)
 
         if newfig:  # only if a new figure has been initialized
             _ = self._draggable_axes
