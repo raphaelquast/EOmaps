@@ -1002,8 +1002,7 @@ class BlitManager:
                     layers = layer
 
                 for l in layers:
-                    self.fetch_bg(l, overlay=(name, layer))
-                    self._bg_layers[name] = self._bg_layers[l]
+                    self.fetch_bg(self._bg_layer, overlay=(name, layer))
 
                 self.fetch_bg(initial_layer)
                 self._m.show_layer(initial_layer)
