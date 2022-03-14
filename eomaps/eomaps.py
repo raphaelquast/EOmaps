@@ -477,12 +477,15 @@ class Maps(object):
 
         if newfig:
             # we only need to call show if a new figure has been created!
-            plt.show()
+            if plt.isinteractive():
+                # make sure to call show only if we use an interactive backend...
+                # (otherwise it will block subsequent code!)
+                plt.show()
 
     def _on_resize(self, event):
         # make sure the background is re-fetched if the canvas has been resized
-        # (required for peeking layers after the canvas has been resized)
-
+        # (required for peeking layers after the canvas has been resized
+        #  and for webagg and nbagg backends to correctly re-draw the layer)
         self.BM._refetch_bg = True
 
     def _on_close(self, event):
