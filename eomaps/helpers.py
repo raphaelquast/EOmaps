@@ -631,7 +631,7 @@ class draggable_axes:
 
     def _undo_draggable(self):
         self._modifier_pressed = False
-        self.m._ignore_cb_events = True
+        self.m._ignore_cb_events = False
 
         print("EOmaps: Making axes interactive again")
         for ax, frameQ, spine_vis in zip(
@@ -649,8 +649,11 @@ class draggable_axes:
                 self.f.canvas.mpl_disconnect(cid)
 
         self.clear_annotations()
-        self.m.BM.fetch_bg()
+        # self.m.BM.fetch_bg()
+
+        self.m.BM._refetch_bg = True
         self.f.canvas.draw()
+        self.m.BM.update()
 
     def _make_draggable(self):
         # all ordinary callbacks will not execute if" self._modifier_pressed" is True!
@@ -660,7 +663,7 @@ class draggable_axes:
         self._frameon = [i.get_frame_on() for i in self.all_axes]
 
         self._modifier_pressed = True
-        self.m._ignore_cb_events = False
+        self.m._ignore_cb_events = True
         print("EOmaps: Making axis draggable")
 
         for ax in self.all_axes:
