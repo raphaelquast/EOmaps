@@ -966,6 +966,14 @@ class BlitManager:
         # don't do this! it is causing infinit loops
         # cv.flush_events()
 
+    def _get_overlay_name(self, layer=None, bg_layer=None):
+        if layer is None:
+            layer = []
+        if bg_layer is None:
+            bg_layer = self.bg_layer
+
+        return "__overlay_" + str(bg_layer) + "_" + "_".join(map(str, layer))
+
     def _get_restore_bg_action(self, layer, bbox_bounds=None):
         """
         Update a part of the screen with a different background
@@ -973,20 +981,36 @@ class BlitManager:
 
         bbox_bounds = (x, y, width, height)
         """
+
         if bbox_bounds is None:
             bbox_bounds = self.canvas.figure.bbox.bounds
 
+        name = self._get_overlay_name(bg_layer=layer)
+
         def action():
+            if self.bg_layer == layer:
+                return
+
             x0, y0, w, h = bbox_bounds
 
-            if layer not in self._bg_layers:
+            initial_layer = self.bg_layer
+            if name not in self._bg_layers:
                 # fetch the required background layer
-                self.fetch_bg(layer)
-                self.canvas.restore_region(self._bg_layers[self.bg_layer])
+                if not isinstance(layer, (list, tuple)):
+                    layers = [layer]
+                else:
+                    layers = layer
+
+                for l in layers:
+                    self.fetch_bg(l, overlay=(name, layer))
+                    self._bg_layers[name] = self._bg_layers[l]
+
+                self.fetch_bg(initial_layer)
+                self._m.show_layer(initial_layer)
 
             # restore the region of interest
             self.canvas.restore_region(
-                self._bg_layers[layer],
+                self._bg_layers[name],
                 bbox=(
                     x0,
                     self.canvas.figure.bbox.height - y0 - h,
@@ -995,5 +1019,51 @@ class BlitManager:
                 ),
                 xy=(0, 0),
             )
+
+        return action
+
+    def _get_overlay_bg_action(self, layer, bbox_bounds=None):
+        """
+        Overlay a part of the screen with a different background
+        (intended as after-restore action)
+
+        bbox_bounds = (x, y, width, height)
+        """
+        if not isinstance(layer, (list, tuple)):
+            layer = [layer]
+
+        if bbox_bounds is None:
+            bbox_bounds = self.canvas.figure.bbox.bounds
+
+        if not hasattr(self, "_last_overlay_layer"):
+            self._last_overlay_layer = ""
+
+        def action():
+            name = self._get_overlay_name(layer, bg_layer=self.bg_layer)
+
+            print("THE NAME IS ", name)
+            if self.bg_layer == layer:
+                return
+
+            x0, y0, w, h = bbox_bounds
+
+            initial_layer = self.bg_layer
+            if name not in self._bg_layers:
+                # fetch the required background layer (assigned as <name>)
+                self.fetch_bg(initial_layer, overlay=(name, layer))
+                self._m.show_layer(initial_layer)
+
+            # restore the region of interest
+            if name in self._bg_layers:
+                self.canvas.restore_region(
+                    self._bg_layers[name],
+                    bbox=(
+                        x0,
+                        self.canvas.figure.bbox.height - y0 - h,
+                        x0 + w,
+                        self.canvas.figure.bbox.height - y0,
+                    ),
+                    xy=(0, 0),
+                )
 
         return action
