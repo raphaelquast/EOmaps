@@ -249,11 +249,23 @@ class _layer_selector:
         s = SelectorButtons(self._m.figure.f, layers, **kwargs)
 
         def update(val):
-            # button update function returns a string of the layer object
             l = layers[int(val)]
+
+            # make sure we re-fetch the artist states on a layer change during
+            # draggable-axes
+            drag = self._m.parent._draggable_axes
+            d = False
+            if drag._modifier_pressed:
+                drag._undo_draggable()
+                d = True
+
             self._m.BM.bg_layer = l
-            self._m.BM.update(blit=False)
-            self._m.BM.canvas.draw_idle()
+
+            if d:
+                drag._make_draggable()
+            else:
+                self._m.BM.update(blit=False)
+                self._m.BM.canvas.draw_idle()
 
         s.on_clicked = update
         s.set_draggable(draggable, m=self._m)
@@ -389,10 +401,21 @@ class _layer_selector:
         s.track.set_y(s.track.get_y() + h / 2)
 
         def update(val):
-            # button update function returns a string of the layer object
             l = layers[int(val)]
+
+            # make sure we re-fetch the artist states on a layer change during
+            # draggable-axes
+            drag = self._m.parent._draggable_axes
+            d = False
+            if drag._modifier_pressed:
+                drag._undo_draggable()
+                d = True
+
             self._m.BM.bg_layer = l
             # self._m.show_layer(l)
+
+            if d:
+                drag._make_draggable()
 
         self._m.BM.add_artist(ax_slider)
 
