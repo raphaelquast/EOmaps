@@ -1420,7 +1420,9 @@ else:
                     )
 
                     self.stamen_watercolor = _xyz_tile_service(
-                        self._m, "http://c.tile.stamen.com/watercolor/{z}/{x}/{y}.jpg"
+                        self._m,
+                        "http://c.tile.stamen.com/watercolor/{z}/{x}/{y}.jpg",
+                        maxzoom=18,
                     )
 
                     self.stamen_terrain = _xyz_tile_service(
