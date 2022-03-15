@@ -186,6 +186,10 @@ class draggable_axes:
         self._annotations = []
         self._hiddenax = []
 
+        self._artists_visible = dict()
+
+        self._ax_visible = dict()
+
     def clear_annotations(self):
         while len(self._annotations) > 0:
             a = self._annotations.pop(-1)
@@ -282,7 +286,7 @@ class draggable_axes:
         if key not in ["left", "right", "up", "down"]:
             return
 
-        if method == 0:
+        if method == 0:  # e.g. key pressed
             for ax in self._ax_picked:
                 if key == "left":
                     bbox = Bbox.from_bounds(
@@ -316,7 +320,7 @@ class draggable_axes:
                 bbox = bbox.transformed(self.f.transFigure.inverted())
 
                 ax.set_position(bbox)
-        if method == 1:
+        if method == 1:  # e.g. ctrl + key pressed
             if self._cb_picked:
                 if self._m_picked._orientation == "vertical":
                     ratio = (
@@ -343,12 +347,23 @@ class draggable_axes:
                     )
                 elif key == "up":
                     # toggle ax_cb_plot and make the ticks visible
-                    vis = not self._m_picked.figure.ax_cb_plot.get_visible()
-                    self._m_picked.figure.ax_cb_plot.set_visible(vis)
+                    if self._m_picked.figure.ax_cb_plot in self._ax_visible:
+                        vis = not self._ax_visible[self._m_picked.figure.ax_cb_plot]
+                    else:
+                        vis = not self._m_picked.figure.ax_cb_plot.get_visible()
+
+                    # self._m_picked.figure.ax_cb_plot.set_visible(vis)
+                    self._ax_visible[self._m_picked.figure.ax_cb_plot] = vis
+                    print("hiding ax_cb_plot DONE")
+
                 elif key == "down":
                     # toggle ax_cb and make the ticks visible
-                    vis = not self._m_picked.figure.ax_cb.get_visible()
-                    self._m_picked.figure.ax_cb.set_visible(vis)
+                    if self._m_picked.figure.ax_cb in self._ax_visible:
+                        vis = not self._ax_visible[self._m_picked.figure.ax_cb]
+                    else:
+                        vis = not self._m_picked.figure.ax_cb.get_visible()
+                    # self._m_picked.figure.ax_cb.set_visible(vis)
+                    self._ax_visible[self._m_picked.figure.ax_cb] = vis
 
                 # fix the visible ticks
                 if self._m_picked.figure.ax_cb.get_visible() is False:
@@ -400,7 +415,9 @@ class draggable_axes:
             else:
                 pass
         self.set_annotations()
-        self.m.BM.update(artists=self._ax_picked + self._annotations)
+        self._color_axes()
+        self.m.BM._refetch_bg = True
+        self.m.BM.canvas.draw()
 
     def cb_move(self, event):
         if (self.f.canvas.toolbar is not None) and self.f.canvas.toolbar.mode != "":
@@ -454,14 +471,21 @@ class draggable_axes:
             self._m_picked.figure.set_colorbar_position(b)
 
         self.set_annotations()
-        self.m.BM.update(artists=self.all_axes + self._annotations)
+
+        self.m.BM._refetch_bg = True
+        self.m.BM.canvas.draw()
 
     def _color_axes(self):
         for ax in self.all_axes:
-            ax.set_frame_on(True)
             for spine in ax.spines.values():
                 spine.set_edgecolor("red")
-                spine.set_linewidth(2)
+
+                if ax in self._ax_visible and self._ax_visible[ax]:
+                    spine.set_linestyle("-")
+                    spine.set_linewidth(2)
+                else:
+                    spine.set_linestyle(":")
+                    spine.set_linewidth(1)
 
         if self._ax_picked is not None:
             for ax in self._ax_picked:
@@ -469,7 +493,13 @@ class draggable_axes:
                     continue
                 for spine in ax.spines.values():
                     spine.set_edgecolor("green")
+
+                if ax in self._ax_visible and self._ax_visible[ax]:
+                    spine.set_linestyle("-")
                     spine.set_linewidth(2)
+                else:
+                    spine.set_linestyle(":")
+                    spine.set_linewidth(1)
 
     def cb_pick(self, event):
 
@@ -483,24 +513,24 @@ class draggable_axes:
         if eventax not in self.all_axes:
             # TODO this needs some update...
             # check if we clicked on a hidden ax, and if so make it visible again
-            hidden_ax, hidden_ann = None, None
-            for ax, ann in zip(self._hiddenax, self._annotations):
-                bbox = ax.bbox
-                if (
-                    (event.x > bbox.x0)
-                    & (event.x < bbox.x1)
-                    & (event.y > bbox.y0)
-                    & (event.y < bbox.y1)
-                ):
-                    hidden_ax = ax
-                    hidden_ann = ann
-                    break
-            if hidden_ax is not None:
-                hidden_ax.set_visible(True)
-                hidden_ann.set_visible(False)
-                self.m.BM.update(artists=[hidden_ax] + self._annotations)
-                self.set_annotations()
-                return
+            # hidden_ax, hidden_ann = None, None
+            # for ax, ann in zip(self._hiddenax, self._annotations):
+            #     bbox = ax.bbox
+            #     if (
+            #         (event.x > bbox.x0)
+            #         & (event.x < bbox.x1)
+            #         & (event.y > bbox.y0)
+            #         & (event.y < bbox.y1)
+            #     ):
+            #         hidden_ax = ax
+            #         hidden_ann = ann
+            #         break
+            # if hidden_ax is not None:
+            #     hidden_ax.set_visible(True)
+            #     hidden_ann.set_visible(False)
+            #     self.m.BM.update(artists=[hidden_ax] + self._annotations)
+            #     self.set_annotations()
+            #     return
 
             # if no axes is clicked "unpick" previously picked axes
             prev_pick = self._ax_picked
@@ -512,16 +542,7 @@ class draggable_axes:
             self._m_picked = None
             self._cb_picked = False
             self._color_axes()
-            # make previously picked axes visible again and fetch the background
-            if prev_pick is not None:
-                for ax in prev_pick:
-                    if ax not in self._hiddenax:
-                        ax.set_visible(True)
-
-            self.m.BM.fetch_bg()
-            self.m.BM.update(
-                layers=[self.m.layer], artists=prev_pick + self._annotations
-            )
+            self.m.BM.canvas.draw()
             return
 
         _m_picked = False
@@ -555,17 +576,8 @@ class draggable_axes:
 
         self._color_axes()
 
-        for ax in self._ax_picked:
-            ax.set_visible(False)
-        self.m.BM.fetch_bg()
-        for ax in self._ax_picked:
-            if ax not in self._hiddenax:
-                ax.set_visible(True)
-
         self.set_annotations()
-        self.m.BM.update(
-            layers=[self.m.layer], artists=self.all_axes + self._annotations
-        )
+        self.m.BM.canvas.draw()
 
     def cb_scroll(self, event):
         if (self.f.canvas.toolbar is not None) and self.f.canvas.toolbar.mode != "":
@@ -619,7 +631,7 @@ class draggable_axes:
             self._m_picked.figure.set_colorbar_position(b)
 
         self._color_axes()
-        self.m.BM.update(artists=self.all_axes + self._annotations)
+        self.m.BM.canvas.draw()
 
     def cb_key_press(self, event):
         if (self.f.canvas.toolbar is not None) and self.f.canvas.toolbar.mode != "":
@@ -632,10 +644,8 @@ class draggable_axes:
                 self._make_draggable()
 
     def _undo_draggable(self):
-        self._modifier_pressed = False
-        self.m._ignore_cb_events = False
+        print("EOmaps: Making axes interactive again...")
 
-        print("EOmaps: Making axes interactive again")
         for ax, frameQ, spine_vis in zip(
             self.all_axes, self._frameon, self._spines_visible
         ):
@@ -651,7 +661,29 @@ class draggable_axes:
                 self.f.canvas.mpl_disconnect(cid)
 
         self.clear_annotations()
-        # self.m.BM.fetch_bg()
+
+        for a, visQ in self._artists_visible.items():
+            a.set_visible(visQ)
+        self._artists_visible.clear()
+
+        # apply changes to the visibility state of the axes
+        # do this at the end since axes might also be artists!
+        for ax, val in self._ax_visible.items():
+            ax.set_visible(val)
+
+            # remember any axes that are intentionally hidden
+            if not val:
+                if ax in self.m.BM._bg_artists[self.m.BM.bg_layer]:
+                    self.m.BM._hidden_axes.add(ax)
+            else:
+                if ax in self.m.BM._hidden_axes:
+                    self.m.BM._hidden_axes.remove(ax)
+
+        self._ax_visible.clear()
+
+        # do this at the end!
+        self._modifier_pressed = False
+        self.m._ignore_cb_events = False
 
         self.m.BM._refetch_bg = True
         self.f.canvas.draw()
@@ -659,6 +691,18 @@ class draggable_axes:
 
     def _make_draggable(self):
         # all ordinary callbacks will not execute if" self._modifier_pressed" is True!
+        print("EOmaps: Making axis draggable...")
+
+        # remember the visibility state of the axes
+        # do this as the first thing since axes might be artists as well!
+        for ax in self.all_axes:
+            self._ax_visible[ax] = ax.get_visible()
+
+        # make all artists invisible (and remember their visibility state for later)
+        for l in self.m.BM._bg_artists.values():
+            for a in l:
+                self._artists_visible[a] = a.get_visible()
+                a.set_visible(False)
 
         # remember which spines were visible before
         self._spines_visible = self.get_spines_visible()
@@ -666,14 +710,17 @@ class draggable_axes:
 
         self._modifier_pressed = True
         self.m._ignore_cb_events = True
-        print("EOmaps: Making axis draggable")
 
         for ax in self.all_axes:
+            if ax not in self.m.BM._bg_artists[self.m.BM.bg_layer]:
+                continue
+            ax.set_visible(True)
+
             ax.set_frame_on(True)
             for spine in ax.spines.values():
                 spine.set_visible(True)
-                spine.set_edgecolor("red")
-                spine.set_linewidth(2)
+
+        self._color_axes()
 
         if len(self.cids) == 0:
             self.cids.append(self.f.canvas.mpl_connect("scroll_event", self.cb_scroll))
@@ -690,8 +737,7 @@ class draggable_axes:
 
         self.m.BM.fetch_bg()
         self.set_annotations()
-        self.m.BM.update(layers=[self.m.layer], artists=self._annotations)
-        # self.f.canvas.draw()
+        self.f.canvas.draw()
 
 
 # taken from https://matplotlib.org/stable/tutorials/advanced/blitting.html#class-based-example
