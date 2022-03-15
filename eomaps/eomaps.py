@@ -2594,6 +2594,7 @@ class Maps(object):
         bottom=0.1,
         left=0.1,
         right=0.05,
+        layer=None,
     ):
         """
         Add a colorbar to an existing figure.
@@ -2660,73 +2661,103 @@ class Maps(object):
 
         """
 
+        if layer is None:
+            layer = self.layer
+
         assert hasattr(
             self.classify_specs, "_bins"
         ), "EOmaps: you need to call `m.plot_map()` before adding a colorbar!"
 
-        # initialize colorbar axes
-        if isinstance(gs, float):
-            frac = gs
-            gs = self.figure.ax.get_subplotspec()
-            # get the original subplot-spec of the axes, and divide it based on
-            # the fraction that is intended for the colorbar
-            if orientation == "horizontal":
-                gs = GridSpecFromSubplotSpec(
-                    4,
-                    3,
-                    gs,
-                    height_ratios=(1, top, frac, bottom),
-                    width_ratios=(left, 1, right),
-                    wspace=0,
-                    hspace=0,
+        # check if there is already an existing colorbar in another axis
+        # and if we find one, use its specs instead of creating a new one
+        if hasattr(self, "_ax_cb"):
+            parent_m_for_cb = self
+
+            try:
+                if self._cb_gridspec.nrows == 2 and self._cb_gridspec.ncols == 1:
+                    cb_orientation = "vertical"
+                else:
+                    cb_orientation = "horizontal"
+            except AttributeError:
+                print(
+                    "EOmaps: could not add colorbar... maybe a colorbar for the"
+                    f"layer {layer} already exists?"
                 )
-                self.figure.ax.set_subplotspec(gs[0, :])
-                gsspec = gs[2, 1]
+                return
+        else:
+            parent_m_for_cb = None
+
+        if parent_m_for_cb is None:
+            # initialize colorbar axes
+            if isinstance(gs, float):
+                frac = gs
+                gs = self.figure.ax.get_subplotspec()
+                # get the original subplot-spec of the axes, and divide it based on
+                # the fraction that is intended for the colorbar
+                if orientation == "horizontal":
+                    gs = GridSpecFromSubplotSpec(
+                        4,
+                        3,
+                        gs,
+                        height_ratios=(1, top, frac, bottom),
+                        width_ratios=(left, 1, right),
+                        wspace=0,
+                        hspace=0,
+                    )
+                    self.figure.ax.set_subplotspec(gs[0, :])
+                    gsspec = gs[2, 1]
+
+                elif orientation == "vertical":
+                    gs = GridSpecFromSubplotSpec(
+                        3,
+                        4,
+                        gs,
+                        width_ratios=(1, top, frac, bottom),
+                        height_ratios=(left, 1, right),
+                        hspace=0,
+                        wspace=0,
+                    )
+                    self.figure.ax.set_subplotspec(gs[:, 0])
+                    gsspec = gs[1, 2]
+
+                else:
+                    raise AssertionError("'{orientation}' is not a valid orientation")
+            else:
+                gsspec = gs
+
+            if orientation == "horizontal":
+                # sub-gridspec for the colorbar
+                cbgs = GridSpecFromSubplotSpec(
+                    nrows=2,
+                    ncols=1,
+                    subplot_spec=gsspec,
+                    hspace=0,
+                    wspace=0,
+                    height_ratios=[0.9, 0.1],
+                )
+
+                # "_add_colorbar" orientation is opposite to the colorbar-orientation!
+                cb_orientation = "vertical"
 
             elif orientation == "vertical":
-                gs = GridSpecFromSubplotSpec(
-                    3,
-                    4,
-                    gs,
-                    width_ratios=(1, top, frac, bottom),
-                    height_ratios=(left, 1, right),
+                # sub-gridspec for the colorbar
+                cbgs = GridSpecFromSubplotSpec(
+                    nrows=1,
+                    ncols=2,
+                    subplot_spec=gsspec,
                     hspace=0,
                     wspace=0,
+                    width_ratios=[0.9, 0.1],
                 )
-                self.figure.ax.set_subplotspec(gs[:, 0])
-                gsspec = gs[1, 2]
 
-            else:
-                raise AssertionError("'{orientation}' is not a valid orientation")
+                # "_add_colorbar" orientation is opposite to the colorbar-orientation!
+                cb_orientation = "horizontal"
         else:
-            gsspec = gs
-
-        if orientation == "horizontal":
-            # sub-gridspec for the colorbar
-            cbgs = GridSpecFromSubplotSpec(
-                nrows=2,
-                ncols=1,
-                subplot_spec=gsspec,
-                hspace=0,
-                wspace=0,
-                height_ratios=[0.9, 0.1],
-            )
-
-            # "_add_colorbar" orientation is opposite to the colorbar-orientation!
-            cb_orientation = "vertical"
-        elif orientation == "vertical":
-            # sub-gridspec for the colorbar
-            cbgs = GridSpecFromSubplotSpec(
-                nrows=1,
-                ncols=2,
-                subplot_spec=gsspec,
-                hspace=0,
-                wspace=0,
-                width_ratios=[0.9, 0.1],
-            )
-
-            # "_add_colorbar" orientation is opposite to the colorbar-orientation!
-            cb_orientation = "horizontal"
+            cbgs = parent_m_for_cb._cb_gridspec
+            # cbgs = [
+            #     parent_m_for_cb.figure.ax_cb.get_gridspec()[0],
+            #     parent_m_for_cb.figure.ax_cb_plot.get_gridspec()[1],
+            # ]
 
         ax_cb = self.figure.f.add_subplot(
             cbgs[1],
@@ -2738,6 +2769,11 @@ class Maps(object):
             frameon=False,
             label="ax_cb_plot",
         )
+
+        # hide the colorbar if it is not added to the currently visible layer
+        if layer != self.BM._bg_layer:
+            ax_cb.set_visible(False)
+            ax_cb_plot.set_visible(False)
 
         # join colorbar and histogram axes
         if cb_orientation == "horizontal":
@@ -2762,6 +2798,9 @@ class Maps(object):
         self._ax_cb = ax_cb
         self._ax_cb_plot = ax_cb_plot
         self._cb_gridspec = cbgs
+
+        self.BM.add_bg_artist(self._ax_cb, layer)
+        self.BM.add_bg_artist(self._ax_cb_plot, layer)
 
         return [cbgs, ax_cb, ax_cb_plot, orientation, cb]
 
