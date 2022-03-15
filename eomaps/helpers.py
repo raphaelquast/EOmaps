@@ -354,7 +354,6 @@ class draggable_axes:
 
                     # self._m_picked.figure.ax_cb_plot.set_visible(vis)
                     self._ax_visible[self._m_picked.figure.ax_cb_plot] = vis
-                    print("hiding ax_cb_plot DONE")
 
                 elif key == "down":
                     # toggle ax_cb and make the ticks visible
@@ -887,10 +886,8 @@ class BlitManager:
             a.zorder -= overlay_zorder_bias
 
         self._refetch_bg = False
-        print("REFETCHED", layer, overlay_name)
 
     def on_draw(self, event):
-        print("draw")
         """Callback to register with 'draw_event'."""
         cv = self.canvas
         if event is not None:
@@ -1191,7 +1188,6 @@ class BlitManager:
         def action():
             name = self._get_overlay_name(layer, bg_layer=self.bg_layer)
 
-            print("THE NAME IS ", name)
             if self.bg_layer == layer:
                 return
 
