@@ -6,7 +6,9 @@ import sys
 import numpy as np
 from matplotlib.colors import LinearSegmentedColormap, ListedColormap
 from collections import defaultdict
+from itertools import chain
 from matplotlib.transforms import Bbox
+import matplotlib.pyplot as plt
 
 
 def pairwise(iterable, pairs=2):
@@ -724,7 +726,18 @@ class BlitManager:
 
         self._artists_to_clear = defaultdict(list)
 
+        self._hidden_axes = set()
+
         self._refetch_bg = True
+
+        # TODO these activate some crude fixes for jupyter notebook and webagg
+        # backends... proper fixes would be nice
+        self._mpl_backend_blit_fix = any(
+            i in plt.get_backend().lower() for i in ["webagg", "nbagg"]
+        )
+        self._mpl_backend_force_full = any(
+            i in plt.get_backend().lower() for i in ["nbagg"]
+        )
 
     @property
     def canvas(self):
@@ -736,39 +749,102 @@ class BlitManager:
 
     @bg_layer.setter
     def bg_layer(self, val):
+        for m in [self._m.parent, *self._m.parent._children]:
+            if m.layer != val:
+                if hasattr(m.figure, "ax_cb") and m.figure.ax_cb is not None:
+                    m.figure.ax_cb.set_visible(False)
+                if hasattr(m.figure, "ax_cb_plot") and m.figure.ax_cb_plot is not None:
+                    m.figure.ax_cb_plot.set_visible(False)
+            else:
+                if hasattr(m.figure, "ax_cb") and m.figure.ax_cb is not None:
+                    m.figure.ax_cb.set_visible(True)
+                if hasattr(m.figure, "ax_cb_plot") and m.figure.ax_cb_plot is not None:
+                    m.figure.ax_cb_plot.set_visible(True)
+
         self._m.util._layer_selector._update_widgets(val)
         self._bg_layer = val
+        # self.canvas.flush_events()
+        self._clear_temp_artists("on_layer_change")
+        self.fetch_bg(self._bg_layer)
 
-    def fetch_bg(self, layer=None, bbox=None):
+    def fetch_bg(self, layer=None, bbox=None, overlay=None):
+        # add this to the zorder of the overlay-artists prior to plotting
+        # to ensure that they appear on top of other artists
+        overlay_zorder_bias = 1000
+
         cv = self.canvas
-
         if layer is None:
             layer = self.bg_layer
+
+        if overlay is None:
+            overlay_name, overlay_layers = "", []
+        else:
+            overlay_name, overlay_layers = overlay
+
+        allartists = list(chain(*(self._bg_artists[i] for i in [layer, "all"])))
+        allartists.sort(key=lambda x: getattr(x, "zorder", -1))
+
+        overlay_artists = list(chain(*(self._bg_artists[i] for i in overlay_layers)))
+        overlay_artists.sort(key=lambda x: getattr(x, "zorder", -1))
+
+        for a in overlay_artists:
+            a.zorder += overlay_zorder_bias
+
+        allartists = allartists + overlay_artists
+
+        # check if all artists are stale, and if so skip re-fetching the background
+        # (only if also the axis extent is the same!)
+        newbg = any(art.stale for art in allartists)
+
+        # don't re-fetch the background if it is not necessary
+        if (
+            (not newbg)
+            and (self._bg_layers.get(layer, None) is not None)
+            and (
+                (overlay_name == "")
+                or (self._bg_layers.get(overlay_name, None) is not None)
+            )
+        ):
+            return
+
         if bbox is None:
             bbox = cv.figure.bbox
-
-        # make all artists of the corresponding layer visible
-        for art in self._bg_artists[layer]:
-            art.set_visible(True)
-
-        for l in self._bg_artists:
-            if l != layer and l != "all":  # artists on "all" are always visible!
-                # make all artists of the corresponding layer invisible
-                for art in self._bg_artists[l]:
-                    art.set_visible(False)
 
         # temporarily disconnect draw-event callback to avoid recursion
         # while we re-draw the artists
         cv.mpl_disconnect(self.cid)
-        cv.draw()
-        self._bg_layers[layer] = cv.copy_from_bbox(bbox)
-        # blit here to avoid issues with the nbagg backend
-        self.update(clear=False, blit=True)
+
+        if not self._m._draggable_axes._modifier_pressed:
+            # make all artists of the corresponding layer visible
+            for l in self._bg_artists:
+                if l not in [layer, "all", *overlay_layers]:
+                    # artists on "all" are always visible!
+                    # make all artists of other layers are invisible
+                    for art in self._bg_artists[l]:
+                        art.set_visible(False)
+
+            for art in allartists:
+                if art not in self._hidden_axes:
+                    art.set_visible(True)
+
+            cv._force_full = True
+            cv.draw()
+
+        if overlay_layers:
+            self._bg_layers[overlay_name] = cv.copy_from_bbox(bbox)
+        else:
+            self._bg_layers[layer] = cv.copy_from_bbox(bbox)
+
         self.cid = cv.mpl_connect("draw_event", self.on_draw)
 
+        for a in overlay_artists:
+            a.zorder -= overlay_zorder_bias
+
         self._refetch_bg = False
+        print("REFETCHED", layer, overlay_name)
 
     def on_draw(self, event):
+        print("draw")
         """Callback to register with 'draw_event'."""
         cv = self.canvas
         if event is not None:
@@ -778,13 +854,17 @@ class BlitManager:
             # reset all background-layers and re-fetch the default one
             if self._refetch_bg:
                 self._bg_layers = dict()
-                self.fetch_bg(self.bg_layer)
-            else:
-                self.fetch_bg(self.bg_layer)
+            self.fetch_bg()
 
-            # do an update but don't clear temporary artists!
-            # (they are cleared on clicks only)
-            self.update(clear=False, blit=False)
+            # workaround for nbagg backend to avoid glitches
+            # it's slow but at least it works...
+            # check progress of the following issuse
+            # https://github.com/matplotlib/matplotlib/issues/19116
+            if self._mpl_backend_blit_fix:
+                self.update()
+            else:
+                self.update(blit=False)
+
         except Exception:
             # we need to catch exceptions since QT does not like them...
             pass
@@ -837,6 +917,7 @@ class BlitManager:
         if art in self._bg_artists[layer]:
             print(f"EOmaps: Background-artist {art} already added")
         else:
+            # art.set_animated(True)
             self._bg_artists[layer].append(art)
 
     def remove_bg_artist(self, art, layer=None):
@@ -889,12 +970,28 @@ class BlitManager:
                     fig.draw_artist(a)
 
     def _clear_temp_artists(self, method):
-        while len(self._artists_to_clear[method]) > 0:
-            art = self._artists_to_clear[method].pop(-1)
-            art.set_visible(False)
-            self.remove_artist(art)
-            art.remove()
-        del self._artists_to_clear[method]
+        if method == "on_layer_change":
+            # clear all artists from the "on_layer_change" list irrespective of the
+            # method
+            allmethods = [i for i in self._artists_to_clear if i != method]
+            for art in self._artists_to_clear[method]:
+                for met in allmethods:
+                    if art in self._artists_to_clear[met]:
+                        art.set_visible(False)
+                        self.remove_artist(art)
+                        art.remove()
+                        self._artists_to_clear[met].remove(art)
+            del self._artists_to_clear[method]
+
+        else:
+            while len(self._artists_to_clear[method]) > 0:
+                art = self._artists_to_clear[method].pop(-1)
+                art.set_visible(False)
+                self.remove_artist(art)
+                art.remove()
+                if art in self._artists_to_clear["on_layer_change"]:
+                    self._artists_to_clear["on_layer_change"].remove(art)
+            del self._artists_to_clear[method]
 
     def update(
         self,
@@ -922,8 +1019,8 @@ class BlitManager:
             If provided NO layer will be automatically updated!
             The default is None.
         """
-
         cv = self.canvas
+
         fig = cv.figure
 
         if bg_layer is None:
@@ -938,8 +1035,8 @@ class BlitManager:
 
             # restore the background
             cv.restore_region(self._bg_layers[bg_layer])
-            # draw all of the animated artists
 
+            # draw all of the animated artists
             while len(self._after_restore_actions) > 0:
                 action = self._after_restore_actions.pop(0)
                 action()
@@ -947,6 +1044,14 @@ class BlitManager:
             self._draw_animated(layers=layers, artists=artists)
 
             if blit:
+
+                # workaround for nbagg backend to avoid glitches
+                # it's slow but at least it works...
+                # check progress of the following issuse
+                # https://github.com/matplotlib/matplotlib/issues/19116
+                if self._mpl_backend_force_full:
+                    cv._force_full = True
+
                 if bbox_bounds is not None:
 
                     class bbox:
