@@ -810,7 +810,7 @@ class BlitManager:
         self._bg_layer = val
         # self.canvas.flush_events()
         self._clear_temp_artists("on_layer_change")
-        self.fetch_bg(self._bg_layer)
+        # self.fetch_bg(self._bg_layer)
 
     def fetch_bg(self, layer=None, bbox=None, overlay=None):
         # add this to the zorder of the overlay-artists prior to plotting
