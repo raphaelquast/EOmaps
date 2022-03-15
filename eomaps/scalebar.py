@@ -553,7 +553,9 @@ class ScaleBar:
                 )
                 + self._m.figure.ax.transData
             )
-            self._m.BM.add_artist(self._artists[f"text_{i}"], layer=1)
+
+            self._artists[f"text_{i}"].set_zorder(1)
+            self._m.BM.add_artist(self._artists[f"text_{i}"])
 
     def _redraw_minitxt(self):
         # don't redraw if we haven't drawn anything yet
@@ -661,9 +663,12 @@ class ScaleBar:
         self._artists["scale"] = self._m.figure.ax.add_collection(coll, autolim=False)
 
         # -------------- make all artists animated
-        self._m.BM.add_artist(self._artists["scale"], layer=1)
-        # self._m.BM.add_artist(self._artists["text"], layer=1)
-        self._m.BM.add_artist(self._artists["patch"], layer=0)
+        self._artists["scale"].set_zorder(1)
+        self._artists["patch"].set_zorder(0)
+
+        self._m.BM.add_artist(self._artists["scale"])
+        # self._m.BM.add_artist(self._artists["text"])
+        self._m.BM.add_artist(self._artists["patch"])
 
         self._m.BM.update(artists=self._artists.values())
 

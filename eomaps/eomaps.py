@@ -1805,10 +1805,10 @@ class Maps(object):
             if temporary_picker is not None:
                 if temporary_picker == "default":
                     for art, prefix in zip(artists, prefixes):
-                        self.cb.pick.add_temporary_artist(art, layer)
+                        self.cb.pick.add_temporary_artist(art)
                 else:
                     for art, prefix in zip(artists, prefixes):
-                        self.cb.pick[temporary_picker].add_temporary_artist(art, layer)
+                        self.cb.pick[temporary_picker].add_temporary_artist(art)
             else:
                 for art, prefix in zip(artists, prefixes):
                     self.BM.add_bg_artist(art, layer)
@@ -2345,7 +2345,7 @@ class Maps(object):
             self.cb._methods.append("pick")
 
         if dynamic is True:
-            self.BM.add_artist(coll, layer)
+            self.BM.add_artist(coll)
         else:
             self.BM.add_bg_artist(coll, layer)
 
@@ -2486,7 +2486,7 @@ class Maps(object):
                 self.cb._methods.append("pick")
 
             if dynamic is True:
-                self.BM.add_artist(coll, layer)
+                self.BM.add_artist(coll)
             else:
                 self.BM.add_bg_artist(coll, layer)
 
@@ -2540,13 +2540,14 @@ class Maps(object):
             The default is 100.
         layer : int, str or None
             The layer at which the dataset will be plotted.
+            ONLY relevant if dynamic = False!
 
             - If "all": the corresponding feature will be added to ALL layers
             - If None, the layer assigned to the Maps object is used (e.g. `m.layer`)
 
             The default is None.
         dynamic : bool
-            If True, the collection will be dynamically updated
+            If True, the collection will be dynamically updated.
         set_extent : bool
             Set the plot-extent to the data-extent.
 
@@ -2669,11 +2670,25 @@ class Maps(object):
 
         # check if there is already an existing colorbar in another axis
         # and if we find one, use its specs instead of creating a new one
+
+        parent_m_for_cb = None
         if hasattr(self, "_ax_cb"):
             parent_m_for_cb = self
+        else:
+            # check if self is actually just another layer of an existing Maps object
+            # that already has a colorbar assigned
+            for m in [self.parent, *self.parent._children]:
+                if m is not self and m.ax is self.ax:
+                    if hasattr(m, "_ax_cb"):
+                        parent_m_for_cb = m
+                        break
 
+        if parent_m_for_cb:
             try:
-                if self._cb_gridspec.nrows == 2 and self._cb_gridspec.ncols == 1:
+                if (
+                    parent_m_for_cb._cb_gridspec.nrows == 2
+                    and parent_m_for_cb._cb_gridspec.ncols == 1
+                ):
                     cb_orientation = "vertical"
                 else:
                     cb_orientation = "horizontal"
@@ -2683,8 +2698,6 @@ class Maps(object):
                     f"layer {layer} already exists?"
                 )
                 return
-        else:
-            parent_m_for_cb = None
 
         if parent_m_for_cb is None:
             # initialize colorbar axes
@@ -2769,11 +2782,6 @@ class Maps(object):
             label="ax_cb_plot",
         )
 
-        # hide the colorbar if it is not added to the currently visible layer
-        if layer != self.BM._bg_layer:
-            ax_cb.set_visible(False)
-            ax_cb_plot.set_visible(False)
-
         # join colorbar and histogram axes
         if cb_orientation == "horizontal":
             ax_cb_plot.get_shared_y_axes().join(ax_cb_plot, ax_cb)
@@ -2793,6 +2801,13 @@ class Maps(object):
             tick_precision=tick_precision,
             histbins=histbins,
         )
+
+        # hide the colorbar if it is not added to the currently visible layer
+        if layer != self.BM._bg_layer:
+            ax_cb.set_visible(False)
+            ax_cb_plot.set_visible(False)
+            m.BM._hidden_axes.add(ax_cb)
+            m.BM._hidden_axes.add(ax_cb_plot)
 
         self._ax_cb = ax_cb
         self._ax_cb_plot = ax_cb_plot
@@ -3009,6 +3024,19 @@ class Maps(object):
         self.BM.bg_layer = name
         self.BM.update()
 
+    def redraw(self):
+        """
+        Force a re-draw of all cached layers.
+        This will make sure that actions not managed by EOmaps are also properly drawn.
+
+        - Use this at the very end of your code to trigger a final re-draw!
+
+        NOTE: Don't use this in an interactive context since it will trigger a re-draw
+        of all background-layers!
+        """
+        self.BM._refetch_bg = True
+        self.BM.canvas.draw()
+
 
 class MapsGrid:
     """
@@ -3049,6 +3077,9 @@ class MapsGrid:
         objects will be returned!
     figsize : (float, float)
         The width and height of the figure.
+    layer : int or str
+        The default layer to assign to all Maps-objects of the grid.
+        The default is 0.
     kwargs
         Additional keyword-arguments passed to the `matplotlib.gridspec.GridSpec()`
         function that is used to initialize the grid.
@@ -3119,7 +3150,8 @@ class MapsGrid:
     """
 
     def __init__(
-        self, r=2, c=2, crs=None, m_inits=None, ax_inits=None, figsize=None, **kwargs
+        self,
+        r=2,
     ):
 
         self._Maps = []

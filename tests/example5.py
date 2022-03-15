@@ -48,13 +48,13 @@ m2.shape.radius = (m2.shape.radius[0] * 2, m2.shape.radius[1])
 
 m2.plot_specs.cmap = "magma"
 m2.plot_map()
-
 # --------- add another layer with data that is dynamically updated if we click on the masked area
 m3 = m.new_layer(copy_classify_specs=False)
 m3.data_specs.data = data_OK.sample(1000)
 m3.set_shape.ellipses(radius=25000, radius_crs=3857)
 m3.set_plot_specs(cmap="gist_ncar")
 # plot the map and assign a "dynamic_layer_idx" to allow dynamic updates of the collection
+
 m3.plot_map(edgecolor="w", linewidth=0.25, layer=10, dynamic=True)
 
 # --------- define a callback that will change the position and data-values of the additional layer
@@ -142,6 +142,7 @@ m.add_marker(
     ls="--",
     lw=2,
 )
+
 m.add_annotation(
     ID=mark_id,
     text=(

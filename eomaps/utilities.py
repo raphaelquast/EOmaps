@@ -278,7 +278,7 @@ class _layer_selector:
 
         s.remove = remove
 
-        self._m.BM.add_artist(s.leg, layer="all")
+        self._m.BM.add_artist(s.leg)
         # keep a reference to the buttons to make sure they stay interactive
         self._selectors.append(s)
 

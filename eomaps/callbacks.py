@@ -116,7 +116,7 @@ class _click_callbacks(object):
         val_precision=4,
         permanent=False,
         text=None,
-        layer=10,
+        zorder=10,
         **kwargs,
     ):
         """
@@ -152,11 +152,13 @@ class _click_callbacks(object):
                 >>>     return "the string to print"
 
             The default is None.
-        layer : int
-            The layer-level on which to draw the artist.
-            (First layer 0 is drawn, then layer 1 on top then layer 2 etc...)
-            The default is 10.
-        **kwargs
+        zorder : int or float
+            The zorder of the artist. (e.g. the drawing-order)
+            For details, have a look at:
+
+            - https://matplotlib.org/stable/gallery/misc/zorder_demo.html
+
+        kwargs
             kwargs passed to matplotlib.pyplot.annotate(). The default is:
 
             >>> dict(xytext=(20, 20),
@@ -250,8 +252,8 @@ class _click_callbacks(object):
                 else:
                     self.permanent_annotations.append(annotation)
 
-            if layer is not None:
-                self.m.BM.add_artist(annotation, layer=layer)
+            annotation.set_zorder(zorder)
+            self.m.BM.add_artist(annotation)
 
             annotation.set_visible(True)
             annotation.xy = pos
@@ -307,7 +309,7 @@ class _click_callbacks(object):
         buffer=1,
         permanent=True,
         n=20,
-        layer=10,
+        zorder=10,
         **kwargs,
     ):
         """
@@ -349,10 +351,11 @@ class _click_callbacks(object):
         n : int
             The number of points to calculate for the shape.
             The default is 20.
-        layer : int
-            The layer-level on which to draw the artist.
-            (First layer 0 is drawn, then layer 1 on top then layer 2 etc...)
-            The default is 10.
+        zorder : int or float
+            The zorder of the artist. (e.g. the drawing-order)
+            For details, have a look at:
+
+            - https://matplotlib.org/stable/gallery/misc/zorder_demo.html
         kwargs :
             kwargs passed to the matplotlib patch.
             (e.g. `facecolor`, `edgecolor`, `linewidth`, `alpha` etc.)
@@ -454,8 +457,8 @@ class _click_callbacks(object):
         else:
             self._temporary_artists.append(marker)
 
-        if layer is not None:
-            self.m.BM.add_artist(marker, layer)
+        marker.set_zorder(zorder)
+        self.m.BM.add_artist(marker)
 
         return marker
 
@@ -560,7 +563,6 @@ class _click_callbacks(object):
             marker = self.mark(
                 pos=((x0m + x1m) / 2, (y0m + y1m) / 2),
                 radius_crs="out",
-                layer=1,
                 shape="rectangles",
                 radius=(w / 2, h / 2),
                 permanent=False,
@@ -612,7 +614,6 @@ class _click_callbacks(object):
             marker = self.mark(
                 pos=pos,
                 radius_crs="out",
-                layer=1,
                 shape="rectangles",
                 radius=(w / 2, h / 2),
                 permanent=False,

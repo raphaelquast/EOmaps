@@ -1,9 +1,13 @@
 # EOmaps example 8: Adding scalebars - what about distances?
 
 from eomaps import Maps
+import matplotlib.pyplot as plt
+
+plt.get_backend()
 
 m = Maps(figsize=(9, 5))
 m.add_feature.preset.ocean(ec="k", scale="110m")
+m.cb.click.attach.annotate()
 
 
 s1 = m.add_scalebar(

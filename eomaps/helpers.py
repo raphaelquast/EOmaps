@@ -757,7 +757,7 @@ class BlitManager:
         self._m = m
 
         self._bg = None
-        self._layers = defaultdict(list)
+        self._artists = defaultdict(list)
 
         self._bg_artists = defaultdict(list)
         self._bg_layers = dict()
@@ -912,7 +912,7 @@ class BlitManager:
             # we need to catch exceptions since QT does not like them...
             pass
 
-    def add_artist(self, art, layer=0):
+    def add_artist(self, art):
         """
         Add an artist to be managed.
 
@@ -926,13 +926,15 @@ class BlitManager:
         layer : bool
             The layer number
         """
+        layer = art.get_zorder()
+
         if art.figure != self.canvas.figure:
             raise RuntimeError
-        if art in self._layers[layer]:
+        if art in self._artists[layer]:
             return
         else:
             art.set_animated(True)
-            self._layers[layer].append(art)
+            self._artists[layer].append(art)
 
     def add_bg_artist(self, art, layer=0):
         """
@@ -976,14 +978,14 @@ class BlitManager:
 
     def remove_artist(self, art, layer=None):
         if layer is None:
-            for key, val in self._layers.items():
+            for key, val in self._artists.items():
                 if art in val:
                     art.set_animated(False)
                     val.remove(art)
         else:
-            if art in self._layers[layer]:
+            if art in self._artists[layer]:
                 art.set_animated(False)
-                self._layers[layer].remove(art)
+                self._artists[layer].remove(art)
 
     def _draw_animated(self, layers=None, artists=None):
         """
@@ -998,14 +1000,14 @@ class BlitManager:
 
         if layers is None and artists is None:
             # redraw all layers
-            for l in sorted(list(self._layers), key=lambda x: str(x)):
-                for a in self._layers[l]:
+            for l in sorted(list(self._artists)):
+                for a in self._artists[l]:
                     fig.draw_artist(a)
         else:
             if layers is not None:
                 # redraw artists from the selected layers
                 for l in layers:
-                    for a in self._layers[l]:
+                    for a in self._artists[l]:
                         fig.draw_artist(a)
             if artists is not None:
                 # redraw provided artists
