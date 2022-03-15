@@ -473,21 +473,15 @@ class _click_callbacks(object):
     def _mark_cleanup(self):
         self.clear_markers()
 
-    def peek_layer(self, layer=1, how="left", **kwargs):
+    def peek_layer(self, layer=1, how="left", overlay=False, **kwargs):
         """
         Swipe between data- or WebMap layers or peek a layers through a rectangle.
 
         Parameters
         ----------
-        layer : int
-            The layer-number you want to peek at.
-
-            Note:
-            You must draw something on the layer first! (Most EOmaps functions
-            that add features to a map support a `layer` argument that
-            lets you specify the layer at which the object is drawn.)
-
-                >>> m.plot_map(layer=1)
+        layer : int, str or list
+            - if int or str: The name of the layer you want to peek at.
+            - if list: A list of layer-names to peek at.
 
         how : str , float or tuple, optional
             The method you want to visualize the second layer.
@@ -501,10 +495,27 @@ class _click_callbacks(object):
                   as percentage of the axis-size (0-1)
 
             The default is "left".
+        overlay : bool, optional
+            Indicator if only the selected layers should be shown (False) or if the
+            layers should be used as an "overlay" on top of the current layer (True).
+            The default is False.
         **kwargs :
             additional kwargs passed to a rectangle-marker.
             the default is `(fc="none", ec="k", lw=1)`
 
+        Note
+        ----
+        You must draw something on the layer first!
+
+        To assign a layer to an object, either use the `layer=...` argument when
+        adding objects (e.g. `m.plot_map(layer=1)`), or use a new Maps-layer via
+
+        >>> m = Maps()
+        >>> m2 = m.new_layer(layer="the layer name")
+        >>> # now all artists added with m2 will be added to the layer
+        >>> # "the layer name" (if not explicitly specified otherwise)
+        >>> m2.plot_map()
+        >>> m.peek_layer(layer="the layer name")
         """
         ID, pos, val, ind, picker_name = self._popargs(kwargs)
 
@@ -546,7 +557,7 @@ class _click_callbacks(object):
             x1m, y1m = ax.transData.inverted().transform((x0 + blitw, y0 + blith))
             w, h = abs(x1m - x0m), abs(y1m - y0m)
 
-            self.mark(
+            marker = self.mark(
                 pos=((x0m + x1m) / 2, (y0m + y1m) / 2),
                 radius_crs="out",
                 layer=1,
@@ -598,7 +609,7 @@ class _click_callbacks(object):
             )
             w, h = abs(x1m - x0m), abs(y1m - y0m)
 
-            self.mark(
+            marker = self.mark(
                 pos=pos,
                 radius_crs="out",
                 layer=1,
@@ -610,9 +621,16 @@ class _click_callbacks(object):
         else:
             raise TypeError(f"EOmaps: {how} is not a valid peek method!")
 
-        self.m.BM._after_restore_actions.append(
-            self.m.BM._get_restore_bg_action(layer, (x0, y0, blitw, blith))
-        )
+        self.m.BM._artists_to_clear["on_layer_change"].append(marker)
+
+        if overlay:
+            self.m.BM._after_restore_actions.append(
+                self.m.BM._get_overlay_bg_action(layer, (x0, y0, blitw, blith))
+            )
+        else:
+            self.m.BM._after_restore_actions.append(
+                self.m.BM._get_restore_bg_action(layer, (x0, y0, blitw, blith))
+            )
 
     def load(
         self, database=None, load_method="load_fit", load_multiple=False, **kwargs
