@@ -3152,6 +3152,13 @@ class MapsGrid:
     def __init__(
         self,
         r=2,
+        c=2,
+        crs=None,
+        m_inits=None,
+        ax_inits=None,
+        figsize=None,
+        layer=0,
+        **kwargs,
     ):
 
         self._Maps = []
@@ -3180,6 +3187,7 @@ class MapsGrid:
                             crs=crsij,
                             gs_ax=self.gridspec[0, 0],
                             figsize=figsize,
+                            layer=layer,
                         )
                         self.parent = mij
                     else:
@@ -3187,6 +3195,7 @@ class MapsGrid:
                             crs=crsij,
                             parent=self.parent,
                             gs_ax=self.gridspec[i, j],
+                            layer=layer,
                         )
 
                     self._Maps.append(mij)
@@ -3215,12 +3224,18 @@ class MapsGrid:
 
                     if i == 0:
                         mi = Maps(
-                            crs=crs[key], gs_ax=self.gridspec[val], figsize=figsize
+                            crs=crs[key],
+                            gs_ax=self.gridspec[val],
+                            figsize=figsize,
+                            layer=layer,
                         )
                         self.parent = mi
                     else:
                         mi = Maps(
-                            crs=crs[key], parent=self.parent, gs_ax=self.gridspec[val]
+                            crs=crs[key],
+                            parent=self.parent,
+                            gs_ax=self.gridspec[val],
+                            layer=layer,
                         )
 
                     name = str(key)
@@ -3452,6 +3467,10 @@ class MapsGrid:
         """
         self.parent.join_limits(*self.children)
 
+    @wraps(Maps.redraw)
+    def redraw(self):
+        self.parent.redraw()
+
     @wraps(plt.savefig)
     def savefig(self, *args, **kwargs):
 
@@ -3460,3 +3479,8 @@ class MapsGrid:
         self.parent.BM._bg_layers = dict()
 
         self.f.savefig(*args, **kwargs)
+
+    @property
+    @wraps(Maps.util)
+    def util(self):
+        return self.parent.util
