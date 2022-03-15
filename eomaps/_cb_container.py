@@ -570,7 +570,7 @@ class cb_click_container(_click_container):
                 # forward callbacks to the connected maps-objects
                 obj._fwd_cb(event)
 
-            self._m.parent.BM.update(clear=False)
+            # self._m.parent.BM.update(clear=False)
 
         if self._cid_button_press_event is None:
             # ------------- add a callback
