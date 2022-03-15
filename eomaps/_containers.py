@@ -583,7 +583,7 @@ class _NaturalEarth_presets:
             "ocean",
             fc=color,
             ec="none",
-            zorder=0,
+            zorder=-1,
             reproject="cartopy",
         )
 
@@ -610,7 +610,7 @@ class _NaturalEarth_presets:
             "land",
             fc=color,
             ec="none",
-            zorder=0,
+            zorder=-1,
         )
 
     @property
