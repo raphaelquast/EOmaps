@@ -1995,32 +1995,18 @@ else:
             WMS.__doc__ = type(self).Austria.__doc__
             return WMS
 
-        def get_service(self, url, service_type="wms", rest_API=False):
+        def get_service(self, url, service_type="wms", rest_API=False, maxzoom=19):
             """
-            Get a object that can be used to add WMS or WMTS services based on
+            Get a object that can be used to add WMS, WMTS or XYZ services based on
             a GetCapabilities-link or a link to a ArcGIS REST API
 
-            Examples (WMS):
-            - Copernicus Global Land Mosaics for Austria, Germany and Slovenia
-              from Sentinel-2
+            The general usage is as follows (see examples below for more details):
 
-              - https://land.copernicus.eu/imagery-in-situ/global-image-mosaics/
-              >>> "https://s2gm-wms.brockmann-consult.de/cgi-bin/qgis_mapserv.fcgi?MAP=/home/qgis/projects/s2gm-wms_mosaics_vrt.qgs&service=WMS&request=GetCapabilities&version=1.1.1"
-            - Web Map Services of the city of Vienna (Austria)
-
-              - https://www.data.gv.at/katalog/dataset/stadt-wien_webmapservicewmsgeoserverwien
-              >>> "https://data.wien.gv.at/daten/geo?version=1.3.0&service=WMS&request=GetCapabilities"
-
-            Examples (WMTS):
-            - WMTS service for NASA GIBS datasets
-
-              >>> https://gibs.earthdata.nasa.gov/wmts/epsg4326/all/1.0.0/WMTSCapabilities.xml
-
-            Examples (rest_API):
-            - Interface to the ArcGIS REST Services Directory for the
-              Austrian Federal Institute of Geology (Geologische Bundesanstalt)
-              - https://www.geologie.ac.at/services/web-services
-              >>> "https://gisgba.geologie.ac.at/arcgis/rest/services"
+            >>> m = Maps()
+            >>> s = m.add_wms.get_service(...)
+            >>> wms = s.add_layer.<...>
+            >>> wms.set_extent_to_bbox() # set the extent of the map to the wms-extent
+            >>> wms(transparent=True) # add the service to the map
 
             Parameters
             ----------
@@ -2028,9 +2014,35 @@ else:
                 The service-url
             service_type: str
                 The type of service (either "wms" or "wmts")
+
+                - "wms" : `url` represents a link to a GetCapabilities.xml file for a
+                  WebMap service
+                - "wmts" : same as "wms" but for a WebMapTile service
+                - "xyz" : A direct link to a xyz-TileServer
+                  (the name of the layer is set to "xyz_layer")
+
+                  The url can be provided either as a string of the form:
+
+                  >>> "https://.../{z}/{x}/{y}.png"
+
+                  Or (for non-standard urls) as a function with the following
+                  call-signature:
+
+                  >>> def url(x, y, z):
+                  >>>     return "the url with x, y, z replaced by the arguments"
+
+                See the examples below for more details on common use-cases.
+
             rest_API : bool, optional
+                ONLY relevant if service_type is either "wms" or "wmts"!
+
                 Indicator if a GetCapabilities link (True) or a link to a
                 rest-API is provided (False). The default is False
+            maxzoom : int
+                ONLY relevant if service_type="xyz"!
+
+                The maximum zoom-level available (to avoid http-request errors) for too
+                high zoom levels. The default is 19.
 
             Returns
             -------
@@ -2038,17 +2050,72 @@ else:
                 An object that behaves just like `m.add_wms.<service>`
                 and provides easy-access to available WMS layers
 
-            """
+            Examples
+            --------
 
-            if rest_API:
-                service = REST_API_services(
-                    m=self._m,
-                    url=url,
-                    name="custom_service",
-                    service_type=service_type,
-                )
+            WMS Example:
+
+            - Copernicus Global Land Mosaics for Austria, Germany and Slovenia
+              from Sentinel-2
+
+              - https://land.copernicus.eu/imagery-in-situ/global-image-mosaics/
+              >>> url = "https://s2gm-wms.brockmann-consult.de/cgi-bin/qgis_mapserv.fcgi?MAP=/home/qgis/projects/s2gm-wms_mosaics_vrt.qgs&service=WMS&request=GetCapabilities&version=1.1.1"
+              >>> s = m.add_wms.get_service(url, "wms")
+
+            - Web Map Services of the city of Vienna (Austria)
+
+              >>> url = "https://data.wien.gv.at/daten/geo?version=1.3.0&service=WMS&request=GetCapabilities"
+              >>> s = m.add_wms.get_service(url, "wms")
+
+            WMTS Example:
+
+            - WMTS service for NASA GIBS datasets
+
+              >>> url = https://gibs.earthdata.nasa.gov/wmts/epsg4326/all/1.0.0/WMTSCapabilities.xml
+              >>> s = m.add_wms.get_service(url, "wmts")
+
+            Rest API Example:
+
+            - Interface to the ArcGIS REST Services Directory for the
+              Austrian Federal Institute of Geology (Geologische Bundesanstalt)
+
+              >>> url = "https://gisgba.geologie.ac.at/arcgis/rest/services"
+              >>> s = m.add_wms.get_service(url, "wms", rest_API=True)
+
+            XYZ Example:
+
+            - OpenStreetMap Tiles (https://wiki.openstreetmap.org/wiki/Tiles)
+
+              >>> url = r"https://tile.openstreetmap.org/{z}/{x}/{y}.png"
+              >>> s = m.add_wms.get_service(url, "xyz")
+
+
+              >>> def url(x, y, z):
+              >>>     return rf"https://tile.openstreetmap.org/{z}/{x}/{y}.png"
+              >>> s = m.add_wms.get_service(url, "xyz")
+
+            """
+            if service_type == "xyz":
+                if rest_API:
+                    print(
+                        "EOmaps: rest_API=True is not supported for service_type='xyz'"
+                    )
+
+                s = _xyz_tile_service(self._m, url, maxzoom=maxzoom)
+                service = SimpleNamespace(add_layer=SimpleNamespace(xyz_layer=s))
+
             else:
-                service = _WebServiec_collection(self._m, service_type="wms", url=url)
+                if rest_API:
+                    service = REST_API_services(
+                        m=self._m,
+                        url=url,
+                        name="custom_service",
+                        service_type=service_type,
+                    )
+                else:
+                    service = _WebServiec_collection(
+                        self._m, service_type="wms", url=url
+                    )
 
             return service
 
