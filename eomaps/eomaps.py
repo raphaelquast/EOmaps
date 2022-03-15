@@ -438,7 +438,6 @@ class Maps(object):
 
             def xlims_change(*args, **kwargs):
                 if self._ax_xlims != args[0].get_xlim():
-                    print("x limchange", self.BM._refetch_bg)
                     self.BM._refetch_bg = True
                     # self.figure.f.stale = True
                     self._ax_xlims = args[0].get_xlim()
