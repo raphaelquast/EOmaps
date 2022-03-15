@@ -22,9 +22,9 @@ m.set_shape.rectangles()
 m.shape.radius = (m.shape.radius[0] * 2, m.shape.radius[1])
 
 m.set_classify_specs(scheme="EqualInterval", k=5)
-m.plot_map()
 m.add_feature.preset.ocean()  # add ocean-coloring in the background
-m.add_feature.preset.coastline(zorder=100)  # add coastlines on top
+m.add_feature.preset.coastline()  # add coastlines on top
+m.plot_map()
 
 # --------- attach pre-defined CALLBACK funcitons ---------
 
@@ -37,10 +37,13 @@ m.cb.pick.attach.mark(
     ls="--",
     buffer=2.5,
     shape="ellipses",
-    layer=1,
+    zorder=1,
 )
 m.cb.pick.attach.annotate(
-    button=1, permanent=False, bbox=dict(boxstyle="round", fc="w", alpha=0.75), layer=10
+    button=1,
+    permanent=False,
+    bbox=dict(boxstyle="round", fc="w", alpha=0.75),
+    zorder=10,
 )
 ### save all picked values to a dict accessible via m.cb.get.picked_vals
 cid = m.cb.pick.attach.get_values(button=1)
@@ -53,7 +56,7 @@ m.cb.pick.attach.mark(
     edgecolor="k",
     buffer=1,
     shape="rectangles",
-    layer=1,
+    zorder=1,
 )
 
 ### add a customized permanent annotation if you right-click on a pixel
@@ -67,7 +70,7 @@ cid = m.cb.pick.attach.annotate(
     bbox=dict(boxstyle="round", fc="r"),
     text=text,
     xytext=(10, 10),
-    layer=9,  # put the permanent annotations on a layer below the temporary annotations
+    zorder=2,  # use zorder=2 to put the annotations on top of the markers
 )
 
 ### remove all permanent markers and annotations if you middle-click anywhere on the map
@@ -75,6 +78,7 @@ cid = m.cb.pick.attach.clear_annotations(button=2)
 cid = m.cb.pick.attach.clear_markers(button=2)
 
 # --------- define a custom callback to update some text to the map
+# (use a high zorder to draw the texts above all other things)
 txt = m.figure.f.text(
     0.5,
     0.35,
@@ -85,6 +89,7 @@ txt = m.figure.f.text(
     color="w",
     fontweight="bold",
     animated=True,
+    zorder=99,
 )
 txt2 = m.figure.f.text(
     0.18,
@@ -95,12 +100,13 @@ txt2 = m.figure.f.text(
     verticalalignment="top",
     fontweight="bold",
     animated=True,
+    zorder=99,
 )
 
 # add the custom text objects to the blit-manager (m.BM) to avoid re-drawing the whole
-# image if the text changes. (use a high layer number to draw the texts above all other things)
-m.BM.add_artist(txt, layer=20)
-m.BM.add_artist(txt2, layer=20)
+# image if the text changes.
+m.BM.add_artist(txt)
+m.BM.add_artist(txt2)
 
 
 def cb1(self, pos, ID, val, **kwargs):
@@ -131,6 +137,7 @@ def cb2(self, pos, ID, val, **kwargs):
     # plot a marker at the pixel-position
     (l,) = self.figure.ax.plot(*pos, marker="*", animated=True)
     # print the value at the pixel-position
+    # use a low zorder so the text will be drawn below the temporary annotations
     t = self.figure.ax.text(
         pos[0],
         pos[1] - 150000,
@@ -139,22 +146,28 @@ def cb2(self, pos, ID, val, **kwargs):
         verticalalignment="bottom",
         color=l.get_color(),
         animated=True,
+        zorder=1,
     )
-    # add the artists to the Blit-Manager (m.BM) to avoid triggering a re-draw of the whole figure each time the callback triggers
+    # add the artists to the Blit-Manager (m.BM) to avoid triggering a re-draw of the
+    # whole figure each time the callback triggers
 
-    # use layer=11 to make sure the marker is drawn ABOVE the temporary annotations (by default drawn on layer 10)
-    self.BM.add_artist(l, layer=11)
-    # use layer=1 to draw the text BELOW the annotations
-    self.BM.add_artist(t, layer=1)
+    self.BM.add_artist(l)
+    self.BM.add_artist(t)
 
 
 cid = m.cb.pick.attach(cb2, button=3)
 
 # add some static text
+txt = (
+    "Left-click: temporary annotations\n"
+    + "Right-click: permanent annotations\n"
+    + "Middle-click: clear permanent annotations"
+)
+
 _ = m.figure.f.text(
     0.66,
     0.92,
-    "Left-click: temporary annotations\nRight-click: permanent annotations\nMiddle-click: clear permanent annotations",
+    txt,
     fontsize=10,
     horizontalalignment="left",
     verticalalignment="top",
