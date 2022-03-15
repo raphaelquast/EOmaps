@@ -132,7 +132,7 @@ class map_objects(object):
         else:
             _, ax_cb, ax_cb_plot, orientation, _ = cb
 
-        if orientation == "horizontal":
+        if orientation == "vertical":
             pcb = ax_cb.get_position()
             pcbp = ax_cb_plot.get_position()
             if pos is None:
@@ -150,7 +150,7 @@ class map_objects(object):
                 [pos[0], pos[1] + hcb, pos[2], hp],
             )
 
-        elif orientation == "vertical":
+        elif orientation == "horizontal":
             pcb = ax_cb.get_position()
             pcbp = ax_cb_plot.get_position()
             if pos is None:
