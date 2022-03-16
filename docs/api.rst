@@ -505,6 +505,7 @@ Pre-defined (global) WebMap services:
     EEA_DiscoMap
     ESRI_ArcGIS
     S1GBM
+    GEBCO
 
 Services specific for Austria (Europa)
 
@@ -1004,19 +1005,8 @@ A compass can be added to the map via ``m.add_compass()``:
     |   m.add_compass()                    |                                         |
     +--------------------------------------+-----------------------------------------+
 
-
-
 The compass object is dynamically updated if you pan/zoom the map, and it can be
 dragged around on the map with the mouse.
-
-.. code-block:: python
-
-    m = Maps()
-    m.add_feature.preset.coastline()
-    c1 = m.add_compass(pos=(.25, .25), style="compass")
-    c2 = m.add_compass(pos=(.5, .25), style="north arrow")    # to remove it, use
-
-    c1.set_patch(facecolor="g", edgecolor="k", linewidth=2)
 
 The returned ``compass`` object has the following useful methods assigned:
 

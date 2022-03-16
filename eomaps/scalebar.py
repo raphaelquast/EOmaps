@@ -279,7 +279,7 @@ class ScaleBar:
 
         if hasattr(self, "_lon") and hasattr(self, "_lat"):
             self.set_position()
-            self._m.BM.update()
+            self._m.BM.update(blit=False)
 
     def set_patch_props(self, offsets=None, **kwargs):
         """
@@ -317,7 +317,7 @@ class ScaleBar:
 
         if hasattr(self, "_lon") and hasattr(self, "_lat"):
             self.set_position()
-            self._m.BM.update()
+            self._m.BM.update(blit=False)
 
     def set_label_props(
         self, scale=None, rotation=None, every=None, offset=None, color=None, **kwargs
@@ -372,7 +372,7 @@ class ScaleBar:
 
         if hasattr(self, "_lon") and hasattr(self, "_lat"):
             self.set_position()
-            self._m.BM.update()
+            self._m.BM.update(blit=False)
 
     def _get_base_pts(self, lon, lat, azim, npts=None):
         if npts is None:
@@ -499,7 +499,7 @@ class ScaleBar:
         # arguments are only used for caching!
 
         # update here to make sure axis-transformations etc. are properly set
-        self._m.BM.update()
+        self._m.BM.update(blit=False)
 
         # the max. width of the texts
         _maxw = 0
@@ -553,7 +553,9 @@ class ScaleBar:
                 )
                 + self._m.figure.ax.transData
             )
-            self._m.BM.add_artist(self._artists[f"text_{i}"], layer=1)
+
+            self._artists[f"text_{i}"].set_zorder(1)
+            self._m.BM.add_artist(self._artists[f"text_{i}"])
 
     def _redraw_minitxt(self):
         # don't redraw if we haven't drawn anything yet
@@ -619,8 +621,9 @@ class ScaleBar:
         assert (
             self._artists["scale"] is None
         ), "EOmaps: there is already a scalebar present!"
+
         # do this to make sure that the ax-transformations work as expected
-        self._m.BM.update()
+        self._m.BM.update(blit=False)
 
         self._lon = lon
         self._lat = lat
@@ -660,9 +663,12 @@ class ScaleBar:
         self._artists["scale"] = self._m.figure.ax.add_collection(coll, autolim=False)
 
         # -------------- make all artists animated
-        self._m.BM.add_artist(self._artists["scale"], layer=1)
-        # self._m.BM.add_artist(self._artists["text"], layer=1)
-        self._m.BM.add_artist(self._artists["patch"], layer=0)
+        self._artists["scale"].set_zorder(1)
+        self._artists["patch"].set_zorder(0)
+
+        self._m.BM.add_artist(self._artists["scale"])
+        # self._m.BM.add_artist(self._artists["text"])
+        self._m.BM.add_artist(self._artists["patch"])
 
         self._m.BM.update(artists=self._artists.values())
 
@@ -686,6 +692,7 @@ class ScaleBar:
             Indicator if the plot should be updated or not
             The default is True.
         """
+
         if lon is None:
             lon = self._lon
         if lat is None:
@@ -716,13 +723,14 @@ class ScaleBar:
         self._artists["patch"].set_verts([verts])
         self._artists["patch"].update(self._patch_props)
 
-        if self._m.cb.pick[self._picker_name].is_picked:
-            self._artists["patch"].set_edgecolor("r")
-            self._artists["patch"].set_linewidth(2)
-            self._artists["patch"].set_linestyle("-")
+        if self._picker_name:
+            if self._m.cb.pick[self._picker_name].is_picked:
+                self._artists["patch"].set_edgecolor("r")
+                self._artists["patch"].set_linewidth(2)
+                self._artists["patch"].set_linestyle("-")
 
         if update:
-            self._m.BM.update()
+            self._m.BM.update(blit=False)
 
     def _make_pickable(self):
         """
@@ -877,6 +885,7 @@ class ScaleBar:
     def _zoom_decorator(self, f):
         def newzoom(event):
             ret = f(event)
+
             # clear the cache to re-evaluate the text-width
             self.__class__._get_maxw.cache_clear()
             if self._autoscale is not None:

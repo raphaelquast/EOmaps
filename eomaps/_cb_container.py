@@ -88,7 +88,7 @@ class _cb_container(object):
                 if m1 is not m2:
                     self._getobj(m1)._fwd_cbs[id(m2)] = m2
 
-    def add_temporary_artist(self, artist, layer=None):
+    def add_temporary_artist(self, artist):
         """
         make an artist temporary
         (e.g. remove it from the map at the next event)
@@ -97,12 +97,8 @@ class _cb_container(object):
         ----------
         artist : matplotlib.artist
             the artist to use
-        layer : int, optional
-            the layer to put the artist on. The default is None.
         """
-        if layer is None:
-            layer = self._m.layer
-        self._m.BM.add_artist(artist, layer=layer)
+        self._m.BM.add_artist(artist)
         self._temporary_artists.append(artist)
 
 
@@ -570,7 +566,7 @@ class cb_click_container(_click_container):
                 # forward callbacks to the connected maps-objects
                 obj._fwd_cb(event)
 
-            self._m.parent.BM.update(clear=False)
+            # self._m.parent.BM.update(clear=False)
 
         if self._cid_button_press_event is None:
             # ------------- add a callback
@@ -600,7 +596,7 @@ class cb_click_container(_click_container):
                 obj = self._getobj(m)
                 if obj is None:
                     continue
-                obj._onrelease()
+                obj._onrelease(event)
 
         else:
             for key, m in self._fwd_cbs.items():

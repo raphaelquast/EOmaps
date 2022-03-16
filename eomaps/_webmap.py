@@ -197,7 +197,40 @@ class _WebMap_layer:
             self._m.BM.update()
             return legax
 
-    def set_extent_to_bbox(self):
+    def set_extent_to_bbox(self, shrink=False):
+        """
+        Set the extent of the axis to the bounding-box of the WebMap service.
+
+        This is particularly useful for non-global WebMap services.
+
+        Shrinking the bbox can help to avoid HTTP-request errors for tiles outside
+        the bbox of the WebMap service.
+
+        Error-messages that might be solved by shrinking the extent before adding
+        the layer:
+
+        - `RuntimeError: You must first set the image array`
+        - `requests.exceptions.HTTPError: 404 Client Error: Not Found for url`
+
+        Parameters
+        ----------
+        shrink : float, optional
+            Shrink the bounding-box by the provided shrinking factor (must be in [0, 1]).
+
+            - 0 : no shrinking (e.g. use the original bbox)
+            - < 1 : shrink the bbox by the factor (e.g. 0.5 = 50% smaller bbox)
+
+            The default is False.
+
+        Examples:
+        ---------
+
+        >>> m = Maps()
+        >>> layer = m.add_wms.Austria.Wien_basemap.add_layer.lb
+        >>> layer.set_extent_to_bbox(shrink=0.5)
+        >>> layer()
+        """
+
         bbox = getattr(self.wms_layer, "boundingBox", None)
         try:
             (x0, y0, x1, y1, crs) = bbox
@@ -209,6 +242,16 @@ class _WebMap_layer:
             )
             (x0, y0, x1, y1) = getattr(self.wms_layer, "boundingBoxWGS84", None)
             incrs = CRS.from_user_input(4326)
+
+        if shrink:
+            assert shrink >= 0, "EOmaps: shrink must be > 0!"
+            assert shrink < 1, "EOmaps: shrink must be < 1!"
+            dx = abs(x1 - x0) / 2
+            dy = abs(y1 - y0) / 2
+            x0 += dx * shrink
+            x1 -= dx * shrink
+            y0 += dy * shrink
+            y1 -= dy * shrink
 
         transformer = Transformer.from_crs(
             incrs,
@@ -594,6 +637,190 @@ class _REST_API(object):
         return all_services
 
 
+from cartopy.io import RasterSource
+from cartopy.io.ogc_clients import _warped_located_image, _target_extents
+
+
+class TileFactory(GoogleWTS):
+    def __init__(self, url, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._url = url
+
+    def _image_url(self, tile):
+        x, y, z = tile
+
+        if isinstance(self._url, str):
+            return self._url.format(x=x, y=y, z=z)
+        if callable(self._url):
+            return self._url(x=x, y=y, z=z)
+
+
+class xyzRasterSource(RasterSource):
+    """
+    A RasterSource that can be used with a SlipperyImageArtist to fetch tiles.
+    """
+
+    def __init__(self, url, crs, maxzoom=19, transparent=True):
+        """
+        Parameters
+        ----------
+        service: string or WebMapService instance
+            The WebMapService instance, or URL of a WMS service,
+            from whence to retrieve the image.
+        layers: string or list of strings
+            The name(s) of layers to use from the WMS service.
+        """
+        self.url = url
+
+        self._crs = crs
+        self._maxzoom = maxzoom
+
+        if transparent is True:
+            self.desired_tile_form = "RGBA"
+        else:
+            self.desired_tile_form = "RGB"
+
+        self._factory = TileFactory(self.url, desired_tile_form=self.desired_tile_form)
+
+    # function to estimate a proper zoom-level
+    @staticmethod
+    def _getz(d, zmax):
+        z = int(np.clip(np.ceil(np.log2(1 / d * 40075016.68557849)), 0, zmax))
+        return z
+
+    def getz(self, extent, target_resolution, zmax):
+        import shapely.geometry as sgeom
+
+        x0, x1, y0, y1 = extent
+        d = x1 - x0
+
+        domain = sgeom.box(x0, y0, x1, y1)
+
+        z = self._getz(d, zmax)
+        ntiles = len(list(self._factory.find_images(domain, z)))
+
+        # use the target resolution to increase the zoom-level until we use a
+        # reasonable amount of tiles
+        nimgs = np.ceil(max(target_resolution) / 256) ** 2
+
+        while ntiles < nimgs:
+            if z >= self._maxzoom:
+                break
+
+            z += 1
+            ntiles = len(list(self._factory.find_images(domain, z)))
+
+        return min(z, self._maxzoom)
+
+    def _native_srs(self, projection):
+        # Return the SRS which corresponds to the given projection when
+        # known, otherwise return None.
+        return self._crs
+
+    def validate_projection(self, projection):
+        # no need to validate the projection, we're always in 3857
+        pass
+
+    def _image_and_extent(
+        self,
+        wms_proj,
+        wms_srs,
+        wms_extent,
+        output_proj,
+        output_extent,
+        target_resolution,
+    ):
+        import shapely.geometry as sgeom
+
+        x0, x1, y0, y1 = wms_extent
+
+        domain = sgeom.box(x0, y0, x1, y1)
+
+        img, extent, origin = self._factory.image_for_domain(
+            domain,
+            self.getz(wms_extent, target_resolution, self._maxzoom),
+        )
+
+        # import PIL.Image
+        # output_extent = _target_extents(extent, self._crs, output_proj)[0]
+        # return _warped_located_image(PIL.Image.fromarray(img), wms_srs, extent,
+        #                               output_proj,
+        #                               output_extent,
+        #                               target_resolution
+        #                               )
+
+        # ------------- ---------------------------------------------------------------
+        # ------------- the following is copied from cartopy's version of ax.imshow
+        # ------------- since the above lines don't work for some reason...
+
+        if output_proj == wms_srs:
+            pass
+        else:
+            img = np.asanyarray(img)
+            if origin == "upper":
+                # It is implicitly assumed by the regridding operation that the
+                # origin of the image is 'lower', so simply adjust for that
+                # here.
+                img = img[::-1]
+
+            # target_extent = self._m.ax.get_extent(self._m.ax.projection)
+            # reproject the extent to the output-crs
+            target_extent = _target_extents(extent, self._crs, output_proj)[0]
+
+            regrid_shape = [int(i * 2) for i in target_resolution]
+            # check  self._m.ax._regrid_shape_aspect for a more proper regrid_shape
+
+            # Lazy import because scipy/pykdtree in img_transform are only
+            # optional dependencies
+            from cartopy.img_transform import warp_array
+
+            original_extent = extent
+            img, extent = warp_array(
+                img,
+                source_proj=self._crs,
+                source_extent=original_extent,
+                target_proj=output_proj,
+                target_res=regrid_shape,
+                target_extent=target_extent,
+                mask_extrapolated=True,
+            )
+
+            if origin == "upper":
+                # revert to the initial origin
+                img = img[::-1]
+
+        from cartopy.io.ogc_clients import LocatedImage
+
+        return LocatedImage(img, extent)
+
+    def fetch_raster(self, projection, extent, target_resolution):
+        import math
+
+        target_resolution = [math.ceil(val) for val in target_resolution]
+
+        if projection == self._crs:
+            wms_extents = [extent]
+        else:
+            # Calculate the bounding box(es) in WMS projection.
+            wms_extents = _target_extents(extent, projection, self._crs)
+
+        located_images = []
+
+        for wms_extent in wms_extents:
+            located_images.append(
+                self._image_and_extent(
+                    self._crs,
+                    self._crs,
+                    wms_extent,
+                    projection,
+                    extent,
+                    target_resolution,
+                )
+            )
+
+        return located_images
+
+
 class _xyz_tile_service:
     """
     general class for using x/y/z tile-service urls as WebMap layers
@@ -601,39 +828,14 @@ class _xyz_tile_service:
 
     def __init__(self, m, url, maxzoom=19):
         self._m = m
-
-        self._redraw = True
         self._factory = None
         self._artist = None
 
-        self._event_attached = None
-        self._layer = 0
-
         self.url = url
-
         self._maxzoom = maxzoom
 
     def _reinit(self, m):
         return _xyz_tile_service(m, self.url, self._maxzoom)
-
-    class TileFactory(GoogleWTS):
-        def __init__(self, url, *args, **kwargs):
-            super().__init__(*args, **kwargs)
-            self._url = url
-
-        def _image_url(self, tile):
-            x, y, z = tile
-
-            if isinstance(self._url, str):
-                return self._url.format(x=x, y=y, z=z)
-            if callable(self._url):
-                return self._url(x=x, y=y, z=z)
-
-    # function to estimate a proper zoom-level
-    @staticmethod
-    def getz(d, zmax):
-        z = int(np.clip(np.ceil(np.log2(4 / d * 40075016)), 1, zmax))
-        return z
 
     def __call__(
         self,
@@ -680,75 +882,19 @@ class _xyz_tile_service:
                     layer, transparent, alpha, interpolation, **kwargs
                 )
         else:
-            self.kwargs = dict(interpolation=interpolation, alpha=alpha)
+            self.kwargs = dict(interpolation=interpolation, alpha=alpha, origin="lower")
             self.kwargs.update(kwargs)
 
-            if transparent is True:
-                self.desired_tile_form = "RGBA"
-            else:
-                self.desired_tile_form = "RGB"
+            self._raster_source = xyzRasterSource(
+                self.url,
+                crs=ccrs.GOOGLE_MERCATOR,
+                maxzoom=self._maxzoom,
+                transparent=transparent,
+            )
 
-            if self._event_attached is None:
-                self._event_attached = self._m.figure.f.canvas.mpl_connect(
-                    "draw_event", self.ondraw
-                )
-                toolbar = self._m.figure.f.canvas.toolbar
-
-                if toolbar is not None:
-                    toolbar.release_zoom = self.zoom_decorator(toolbar.release_zoom)
-                    toolbar.release_pan = self.zoom_decorator(toolbar.release_pan)
-                    toolbar._update_view = self.update_decorator(toolbar._update_view)
+            self._artist = self._m.ax.add_raster(self._raster_source, **self.kwargs)
 
             if layer is None:
-                self._layer = self._m.layer
-            else:
-                self._layer = layer
+                layer = self._m.layer
 
-            self._factory = self.TileFactory(
-                self.url, desired_tile_form=self.desired_tile_form
-            )
-            self.redraw()
-
-    def redraw(self):
-        # get and remember the extent
-        extent = self._m.figure.ax.get_extent(crs=self._m.CRS.GOOGLE_MERCATOR)
-        if self._artist is not None:
-            self._m.BM.remove_bg_artist(self._artist)
-            self._artist.remove()
-            self._artist = None
-
-        img, extent, origin = self._factory.image_for_domain(
-            self._m.figure.ax._get_extent_geom(self._factory.crs),
-            self.getz(extent[1] - extent[0], self._maxzoom),
-        )
-        self._artist = self._m.figure.ax.imshow(
-            img,
-            extent=extent,
-            origin=origin,
-            transform=self._factory.crs,
-            **self.kwargs,
-        )
-
-        self._m.BM.add_bg_artist(self._artist, self._layer)
-
-    def ondraw(self, event):
-        if self._event_attached is not None:
-            self._m.figure.f.canvas.mpl_disconnect(self._event_attached)
-
-        self.redraw()
-
-    def zoom_decorator(self, f):
-        def newzoom(event):
-            ret = f(event)
-            self.redraw()
-            return ret
-
-        return newzoom
-
-    def update_decorator(self, f):
-        def newupdate():
-            ret = f()
-            self.redraw()
-            return ret
-
-        return newupdate
+            self._m.BM.add_bg_artist(self._artist, layer)

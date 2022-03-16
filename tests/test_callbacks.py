@@ -130,7 +130,7 @@ class TestCallbacks(unittest.TestCase):
             arrowprops=dict(arrowstyle="fancy"),
         )
 
-        cid = m.cb.click.attach.annotate(text=text, layer=0, **props)
+        cid = m.cb.click.attach.annotate(text=text, **props)
         self.click_ax_center(m)
 
         # ---------- test as PICK callback
@@ -157,7 +157,7 @@ class TestCallbacks(unittest.TestCase):
             arrowprops=dict(arrowstyle="fancy"),
         )
 
-        m.cb.pick.attach.annotate(text=text, layer=0, **props)
+        m.cb.pick.attach.annotate(text=text, **props)
         self.click_ax_center(m)
 
         plt.close("all")
@@ -192,14 +192,13 @@ class TestCallbacks(unittest.TestCase):
             fc="none",
             ec="m",
             n=100,
-            layer=3,
             permanent=False,
         )
 
         self.click_ax_center(m)
 
         cid = m.cb.click.attach.mark(
-            fc=(1, 0, 0, 0.5), ec="k", n=100, layer=20, permanent=False, buffer=15
+            fc=(1, 0, 0, 0.5), ec="k", n=100, permanent=False, buffer=15
         )
 
         self.click_ax_center(m)
@@ -234,14 +233,13 @@ class TestCallbacks(unittest.TestCase):
             fc="none",
             ec="m",
             n=100,
-            layer=3,
             permanent=False,
         )
 
         self.click_ax_center(m)
 
         cid = m.cb.pick.attach.mark(
-            fc=(1, 0, 0, 0.5), ec="k", n=100, layer=20, permanent=False, buffer=15
+            fc=(1, 0, 0, 0.5), ec="k", n=100, permanent=False, buffer=15
         )
 
         self.click_ax_center(m)
