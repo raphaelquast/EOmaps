@@ -158,7 +158,7 @@ def cb2(self, pos, ID, val, **kwargs):
 cid = m.cb.pick.attach(cb2, button=3)
 
 # add some static text
-txt = (
+infotext = (
     "Left-click: temporary annotations\n"
     + "Right-click: permanent annotations\n"
     + "Middle-click: clear permanent annotations"
@@ -167,7 +167,7 @@ txt = (
 _ = m.figure.f.text(
     0.66,
     0.92,
-    txt,
+    infotext,
     fontsize=10,
     horizontalalignment="left",
     verticalalignment="top",
