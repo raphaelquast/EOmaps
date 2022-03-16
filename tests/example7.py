@@ -41,7 +41,7 @@ mg.plot_map(alpha=0.75, ec=(1, 1, 1, 0.5), pick_distance=25)
 for m in mg:
     # attach a callback to highlite the rectangles
     m.cb.pick.attach.mark(
-        permanent=False, shape="rectangles", fc="none", ec="b", lw=2, layer=5
+        permanent=False, shape="rectangles", fc="none", ec="b", lw=2, zorder=5
     )
 
     # attach a callback to highlite the countries and indicate the names
