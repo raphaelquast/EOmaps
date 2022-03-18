@@ -796,7 +796,6 @@ class pick_callbacks(_click_callbacks):
             # get the selected geometry and re-project it to the desired crs
             geom = self.m.cb.pick[picker_name].data.loc[[ID]].geometry
             # add the geometry to the map
-
             self.m.add_gdf(geom, temporary_picker=picker_name, **kwargs)
 
 

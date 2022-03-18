@@ -2083,6 +2083,7 @@ class Maps(object):
         lon=None,
         lat=None,
         azim=0,
+        preset=None,
         scale=None,
         autoscale_fraction=0.25,
         auto_position=(0.75, 0.25),
@@ -2093,6 +2094,7 @@ class Maps(object):
 
         s = ScaleBar(
             m=self,
+            preset=preset,
             scale=scale,
             autoscale_fraction=autoscale_fraction,
             auto_position=auto_position,
