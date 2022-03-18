@@ -657,7 +657,7 @@ class TileFactory(GoogleWTS):
 
 class xyzRasterSource(RasterSource):
     """
-    A RasterSource that can be used with a SlipperyImageArtist to fetch tiles.
+    A RasterSource that can be used with a SlippyImageArtist to fetch tiles.
     """
 
     def __init__(self, url, crs, maxzoom=19, transparent=True):

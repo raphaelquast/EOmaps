@@ -3038,14 +3038,21 @@ class Maps(object):
 
     def redraw(self):
         """
-        Force a re-draw of all cached layers.
+        Force a re-draw of all cached background layers.
         This will make sure that actions not managed by EOmaps are also properly drawn.
 
         - Use this at the very end of your code to trigger a final re-draw!
 
-        NOTE: Don't use this in an interactive context since it will trigger a re-draw
+        Note
+        ----
+        Don't use this in an interactive context since it will trigger a re-draw
         of all background-layers!
+
+        To make an artist dynamically updated if you interact with the map, use:
+
+        >>> m.BM.add_artist(artist)
         """
+
         self.BM._refetch_bg = True
         self.BM.canvas.draw()
 
