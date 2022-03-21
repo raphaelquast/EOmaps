@@ -120,7 +120,8 @@ Some general specifications for the appearance of the plot can be adjusted by se
 
     m = Maps()
     m.set_data(...)
-    m.set_plot_specs(cmap="RdBu", vmin=0.1, vmax=0.5, histbins=20)
+    m.set_plot_specs(cmap="RdBu", vmin=0.1, vmax=0.5, histbins=20, alpha=0.75)
+    m.plot_specs.alpha = 0.5 # alternative way for setting plot-specs
 
 .. currentmodule:: eomaps
 
@@ -153,9 +154,6 @@ via ``m.set_classify_specs``. Available classifiers that can be used are accessi
 
     m.set_classify_specs(Maps.CLASSFIERS.Quantiles, k=5)
     m.classify_specs.k = 10 # alternative way for setting classify-specs
-
-    m.set_plot_specs(cmap="RdBu", histbins=20)
-    m.plot_specs.alpha = .5 # alternative way for setting plot-specs
 
 .. currentmodule:: eomaps
 
@@ -209,6 +207,7 @@ Some useful arguments that are supported by most shapes (except "shade"-shapes) 
     m.set_data(...)
     ...
     m.plot_map(fc="none", ec="g", lw=2, alpha=0.5)
+
 
 You can then continue to add :ref:`colorbar`, :ref:`annotations_and_markers`,
 :ref:`scalebar`, :ref:`compass`,  :ref:`webmap_layers` or :ref:`geodataframe` to the map,
