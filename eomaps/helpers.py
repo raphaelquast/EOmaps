@@ -904,7 +904,8 @@ class BlitManager:
             # reset all background-layers and re-fetch the default one
             if self._refetch_bg:
                 self._bg_layers = dict()
-            self.fetch_bg()
+            if self.bg_layer not in self._bg_layers:
+                self.fetch_bg()
 
             # workaround for nbagg backend to avoid glitches
             # it's slow but at least it works...
