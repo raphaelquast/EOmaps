@@ -2125,12 +2125,12 @@ class Maps(object):
 
     @wraps(plt.savefig)
     def savefig(self, *args, **kwargs):
-
         # clear all cached background layers before saving to make sure they
         # are re-drawn with the correct dpi-settings
         self.BM._bg_layers = dict()
-
         self.figure.f.savefig(*args, **kwargs)
+        # redraw after the save to ensure that backgrounds are correctly cached
+        self.redraw()
 
     def _shade_map(
         self,
