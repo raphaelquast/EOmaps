@@ -114,8 +114,13 @@ is performed (resampling based on the mean-value is used by default).
 🌍 Customizing the plot
 ~~~~~~~~~~~~~~~~~~~~~~~
 
-The general appearance of the plot can be adjusted by setting the ``plot_specs`` and ``classify_specs``
-of the Maps object:
+Some general specifications for the appearance of the plot can be adjusted by setting the ``plot_specs`` of the Maps object:
+
+.. code-block:: python
+
+    m = Maps()
+    m.set_data(...)
+    m.set_plot_specs(cmap="RdBu", vmin=0.1, vmax=0.5, histbins=20)
 
 .. currentmodule:: eomaps
 
@@ -125,9 +130,20 @@ of the Maps object:
     :template: only_names_in_toc.rst
 
     Maps.set_plot_specs
-    Maps.set_classify_specs
+    Maps.subplots_adjust
 
-The available classifiers that can be used to classify the data (provided by ``mapclassify``) are accessible via `Maps.CLASSIFIERS`:
+To adjust the margins of the subplots, use ``m.subplots_adjust``, e.g.:
+
+.. code-block:: python
+
+    m = Maps()
+    m.subplots_adjust(left=0.1, right=0.9, bottom=0.05, top=0.95)
+
+📊 Data classification
+~~~~~~~~~~~~~~~~~~~~~~~
+
+EOmaps provides an interface for `mapclassify <https://github.com/pysal/mapclassify>`_ to classify datasets prior to plotting
+via ``m.set_classify_specs``. Available classifiers that can be used are accessible via `Maps.CLASSIFIERS`:
 
 .. code-block:: python
 
@@ -140,6 +156,35 @@ The available classifiers that can be used to classify the data (provided by ``m
 
     m.set_plot_specs(cmap="RdBu", histbins=20)
     m.plot_specs.alpha = .5 # alternative way for setting plot-specs
+
+.. currentmodule:: eomaps
+
+.. autosummary::
+    :toctree: generated
+    :nosignatures:
+    :template: only_names_in_toc.rst
+
+    Maps.set_classify_specs
+
+
+Currently available classification-schemes are (see `mapclassify <https://github.com/pysal/mapclassify>`_ for details):
+
+    - BoxPlot (hinge)
+    - EqualInterval (k)
+    - FisherJenks (k)
+    - FisherJenksSampled (k, pct, truncate)
+    - HeadTailBreaks ()
+    - JenksCaspall (k)
+    - JenksCaspallForced (k)
+    - JenksCaspallSampled (k, pct)
+    - MaxP (k, initial)
+    - MaximumBreaks (k, mindiff)
+    - NaturalBreaks (k, initial)
+    - Quantiles (k)
+    - Percentiles (pct)
+    - StdMean (multiples)
+    - UserDefined (bins)
+
 
 
 🗺 Plot the map and save it
@@ -208,6 +253,9 @@ and provides convenience-functions to perform actions on all maps of the figure.
     # to perform actions on all Maps-objects, simply loop over the MapsGrid object
     for m in mgrid:
         ...
+
+    # set the margins of the plot-grid
+    mgrid.subplots_adjust(left=0.1, right=0.9, bottom=0.05, top=0.95, hspace=0.1, wspace=0.05)
 
 Custom grids and mixed axes
 ***************************
