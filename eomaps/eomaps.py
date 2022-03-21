@@ -3049,6 +3049,13 @@ class Maps(object):
         self.BM._refetch_bg = True
         self.BM.canvas.draw()
 
+    @wraps(GridSpec.update)
+    def subplots_adjust(self, **kwargs):
+        self.parent.figure.gridspec.update(**kwargs)
+        # after changing margins etc. a redraw is required
+        # to fetch the updated background!
+        self.redraw()
+
 
 class MapsGrid:
     """
@@ -3496,3 +3503,7 @@ class MapsGrid:
     @wraps(Maps.util)
     def util(self):
         return self.parent.util
+
+    @wraps(Maps.subplots_adjust)
+    def subplots_adjust(self, **kwargs):
+        return self.parent.subplots_adjust(**kwargs)
