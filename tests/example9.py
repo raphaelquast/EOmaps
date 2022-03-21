@@ -90,7 +90,7 @@ def update_plots(self, ID, **kwargs):
 
 # attach the custom callback (and some pre-defined)
 mg.m_top.cb.pick.attach(update_plots)
-mg.m_top.cb.pick.attach.annotate(layer=20)
+mg.m_top.cb.pick.attach.annotate()
 mg.m_top.cb.pick.attach.mark(permanent=False, buffer=1, fc="none", ec="r")
 mg.m_top.cb.pick.attach.mark(permanent=False, buffer=2, fc="none", ec="r", ls=":")
 

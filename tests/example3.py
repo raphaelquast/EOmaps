@@ -15,6 +15,8 @@ data = data.sample(3000)  # take 3000 random datapoints from the dataset
 m = Maps(
     crs=3857, figsize=(9, 5)
 )  # create a map in a pseudo-mercator (epsg 3857) projection
+m.add_feature.preset.ocean(fc="lightsteelblue")
+m.add_feature.preset.coastline(lw=0.25)
 m.set_data(data=data, xcoord="lon", ycoord="lat", in_crs=4326)
 
 # --------- set the appearance of the plot

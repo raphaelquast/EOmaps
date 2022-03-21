@@ -17,6 +17,7 @@ class ScaleBar:
     def __init__(
         self,
         m,
+        preset=None,
         scale=None,
         autoscale_fraction=0.25,
         auto_position=(0.75, 0.25),
@@ -51,6 +52,11 @@ class ScaleBar:
         azim : float
             The azimuth-direction (in degrees) in which the scalebar points.
             The default is 90.
+        preset : str
+            The name of the style preset to use.
+
+            - "bw" : a simple black-and white ruler without a background patch
+
         scale : float or None, optional
             The distance of the individual segments of the scalebar.
 
@@ -165,6 +171,21 @@ class ScaleBar:
         )
 
         self._artists = OrderedDict(patch=None, scale=None)
+
+        self.preset = preset
+
+        self._picker_name = None
+
+    def apply_preset(self, preset):
+        if preset == "bw":
+            self.set_scale_props(n=10, width=4, colors=("k", "w"))
+            self.set_patch_props(fc="none", ec="none", offsets=(1, 1.6, 1, 1))
+            self.set_label_props(
+                scale=1.5, offset=0.5, every=2, weight="bold", family="Courier New"
+            )
+            self._autoscale = 0.5
+            self._estimate_scale()
+            self.set_position()
 
     def _estimate_scale(self):
         try:
@@ -662,6 +683,9 @@ class ScaleBar:
         coll.set_linewidth(self._scale_props["width"])
         self._artists["scale"] = self._m.figure.ax.add_collection(coll, autolim=False)
 
+        # apply preset
+        self.apply_preset(self.preset)
+
         # -------------- make all artists animated
         self._artists["scale"].set_zorder(1)
         self._artists["patch"].set_zorder(0)
@@ -831,7 +855,7 @@ class ScaleBar:
             if not hasattr(s, "_cid_remove"):
                 s._cid_remove = self.cb.keypress.attach(scb_remove, key="delete", s=s)
 
-        def scb_unpick(self, s, **kwargs):
+        def scb_unpick(m, s, **kwargs):
             s._remove_callbacks()
 
         self._picker_name = f"_scalebar{len(self._existing_pickers)}"

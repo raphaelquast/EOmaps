@@ -60,7 +60,9 @@ def cb(m, ind, ID, coords, *args, **kwargs):
         m.data_specs.data[:, c], m.data_specs.xcoord[:, c], m.data_specs.ycoord[:, c]
     )
     m2.set_shape.ellipses(m.shape.radius)
-    m2.plot_map(fc="none", ec="b", set_extent=False)  # don't reset the plot extent!
+    # use "dynamic=True" to avoid re-drawing the background all the time
+    # use "set_extent=False" to avoid resetting the plot extent on each draw
+    m2.plot_map(fc="none", ec="b", set_extent=False, dynamic=True)
     m.cb.pick.add_temporary_artist(m2.figure.coll)  # remove the highlight on next pick
 
     # ---- highlight the picked row
@@ -68,7 +70,7 @@ def cb(m, ind, ID, coords, *args, **kwargs):
         m.data_specs.data[r, :], m.data_specs.xcoord[r, :], m.data_specs.ycoord[r, :]
     )
     m3.set_shape.ellipses(m.shape.radius)
-    m3.plot_map(fc="none", ec="r", set_extent=False)  # don't reset the plot extent!
+    m3.plot_map(fc="none", ec="r", set_extent=False, dynamic=True)
     m.cb.pick.add_temporary_artist(m3.figure.coll)  # remove the highlight on next pick
 
     # ---- plot the data for the selected column

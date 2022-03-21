@@ -348,11 +348,6 @@ class Maps(object):
 
     @property
     @lru_cache()
-    def plot(self):
-        return plot(self)
-
-    @property
-    @lru_cache()
     @wraps(cb_container)
     def cb(self):
         return cb_container(self)
@@ -1207,12 +1202,16 @@ class Maps(object):
         tick_precision=3,
         density=False,
         orientation=None,
+        log=False,
     ):
 
         if ax_cb is None:
             ax_cb = self.figure.ax_cb
         if ax_cb_plot is None:
             ax_cb_plot = self.figure.ax_cb_plot
+
+        if log:
+            ax_cb_plot.set_xscale("log")
 
         if z_data is None:
             z_data = self._props["z_data"]
@@ -1262,7 +1261,6 @@ class Maps(object):
             spacing="proportional",
             orientation=cb_orientation,
         )
-
         # plot the histogram
         hist_vals, hist_bins, init_hist = ax_cb_plot.hist(
             z_data,
@@ -1361,14 +1359,15 @@ class Maps(object):
                 labelbottom=True,
                 labeltop=False,
             )
-            ax_cb_plot.xaxis.set_major_locator(plt.MaxNLocator(5))
             ax_cb_plot.grid(axis="x", dashes=[5, 5], c="k", alpha=0.5)
             # add a line that indicates 0 histogram level
             ax_cb_plot.plot(
                 [1, 1], [0, 1], "k--", alpha=0.5, transform=ax_cb_plot.transAxes
             )
             # make sure lower x-limit is 0
-            ax_cb_plot.set_xlim(None, 0)
+            if log is False:
+                ax_cb_plot.xaxis.set_major_locator(plt.MaxNLocator(5))
+                ax_cb_plot.set_xlim(None, 0)
 
         elif orientation == "vertical":
             ax_cb_plot.tick_params(
@@ -1379,14 +1378,15 @@ class Maps(object):
                 labelbottom=False,
                 labeltop=False,
             )
-            ax_cb_plot.yaxis.set_major_locator(plt.MaxNLocator(5))
             ax_cb_plot.grid(axis="y", dashes=[5, 5], c="k", alpha=0.5)
             # add a line that indicates 0 histogram level
             ax_cb_plot.plot(
                 [0, 1], [0, 0], "k--", alpha=0.5, transform=ax_cb_plot.transAxes
             )
             # make sure lower y-limit is 0
-            ax_cb_plot.set_ylim(0)
+            if log is False:
+                ax_cb_plot.yaxis.set_major_locator(plt.MaxNLocator(5))
+                ax_cb_plot.set_ylim(0)
 
         cb.outline.set_visible(False)
 
@@ -2078,6 +2078,7 @@ class Maps(object):
         lon=None,
         lat=None,
         azim=0,
+        preset=None,
         scale=None,
         autoscale_fraction=0.25,
         auto_position=(0.75, 0.25),
@@ -2088,6 +2089,7 @@ class Maps(object):
 
         s = ScaleBar(
             m=self,
+            preset=preset,
             scale=scale,
             autoscale_fraction=autoscale_fraction,
             auto_position=auto_position,
@@ -2118,12 +2120,12 @@ class Maps(object):
 
     @wraps(plt.savefig)
     def savefig(self, *args, **kwargs):
-
         # clear all cached background layers before saving to make sure they
         # are re-drawn with the correct dpi-settings
         self.BM._bg_layers = dict()
-
         self.figure.f.savefig(*args, **kwargs)
+        # redraw after the save to ensure that backgrounds are correctly cached
+        self.redraw()
 
     def _shade_map(
         self,
@@ -2500,9 +2502,7 @@ class Maps(object):
                 ax.set_xlim(max(b.xmin, xmin), min(b.xmax, xmax))
                 ax.set_ylim(max(b.ymin, ymin), min(b.ymax, ymax))
 
-                # self.figure.f.canvas.draw()
-                if dynamic is True:
-                    self.BM.update(clear=False)
+            self.figure.f.canvas.draw_idle()
 
         except Exception as ex:
             raise ex
@@ -2595,6 +2595,7 @@ class Maps(object):
         left=0.1,
         right=0.05,
         layer=None,
+        log=False,
     ):
         """
         Add a colorbar to an existing figure.
@@ -2642,6 +2643,9 @@ class Maps(object):
             The padding between the colorbar and the parent axes (as fraction of the
             plot-height (if "horizontal") or plot-width (if "vertical")
             The default is (0.05, 0.1, 0.1, 0.05)
+        log : bool, optional
+            Indicator if the y-axis of the plot should be logarithmic or not.
+            The default is False
 
         Notes
         -----
@@ -2800,6 +2804,7 @@ class Maps(object):
             density=density,
             tick_precision=tick_precision,
             histbins=histbins,
+            log=log,
         )
 
         # hide the colorbar if it is not added to the currently visible layer
@@ -2974,7 +2979,7 @@ class Maps(object):
         figax.set_navigate(False)
         figax.set_axis_off()
         art = figax.imshow(im, aspect="equal", zorder=999)
-        self.BM.add_bg_artist(art, layer)
+        self.BM.add_artist(art)
 
         def setlim(*args, **kwargs):
             figax.set_position(getpos(self.ax.get_position())["rect"])
@@ -3026,16 +3031,30 @@ class Maps(object):
 
     def redraw(self):
         """
-        Force a re-draw of all cached layers.
+        Force a re-draw of all cached background layers.
         This will make sure that actions not managed by EOmaps are also properly drawn.
 
         - Use this at the very end of your code to trigger a final re-draw!
 
-        NOTE: Don't use this in an interactive context since it will trigger a re-draw
+        Note
+        ----
+        Don't use this in an interactive context since it will trigger a re-draw
         of all background-layers!
+
+        To make an artist dynamically updated if you interact with the map, use:
+
+        >>> m.BM.add_artist(artist)
         """
+
         self.BM._refetch_bg = True
         self.BM.canvas.draw()
+
+    @wraps(GridSpec.update)
+    def subplots_adjust(self, **kwargs):
+        self.parent.figure.gridspec.update(**kwargs)
+        # after changing margins etc. a redraw is required
+        # to fetch the updated background!
+        self.redraw()
 
 
 class MapsGrid:
@@ -3484,3 +3503,7 @@ class MapsGrid:
     @wraps(Maps.util)
     def util(self):
         return self.parent.util
+
+    @wraps(Maps.subplots_adjust)
+    def subplots_adjust(self, **kwargs):
+        return self.parent.subplots_adjust(**kwargs)
