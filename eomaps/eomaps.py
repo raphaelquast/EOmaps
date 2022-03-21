@@ -2502,9 +2502,7 @@ class Maps(object):
                 ax.set_xlim(max(b.xmin, xmin), min(b.xmax, xmax))
                 ax.set_ylim(max(b.ymin, ymin), min(b.ymax, ymax))
 
-                # self.figure.f.canvas.draw()
-                if dynamic is True:
-                    self.BM.update(clear=False)
+            self.figure.f.canvas.draw_idle()
 
         except Exception as ex:
             raise ex
