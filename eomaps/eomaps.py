@@ -348,11 +348,6 @@ class Maps(object):
 
     @property
     @lru_cache()
-    def plot(self):
-        return plot(self)
-
-    @property
-    @lru_cache()
     @wraps(cb_container)
     def cb(self):
         return cb_container(self)
