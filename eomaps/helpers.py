@@ -812,6 +812,13 @@ class BlitManager:
         self._clear_temp_artists("on_layer_change")
         # self.fetch_bg(self._bg_layer)
 
+    def _refetch_layer(self, layer):
+        if layer == "all":
+            self._refetch_bg = True
+        else:
+            if layer in self._bg_layers:
+                del self._bg_layers[layer]
+
     def fetch_bg(self, layer=None, bbox=None, overlay=None):
         # add this to the zorder of the overlay-artists prior to plotting
         # to ensure that they appear on top of other artists
@@ -964,6 +971,7 @@ class BlitManager:
         else:
             # art.set_animated(True)
             self._bg_artists[layer].append(art)
+            self._m.BM._refetch_layer(layer)
 
     def remove_bg_artist(self, art, layer=None):
         if layer is None:
