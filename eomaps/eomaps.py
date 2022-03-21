@@ -2979,7 +2979,7 @@ class Maps(object):
         figax.set_navigate(False)
         figax.set_axis_off()
         art = figax.imshow(im, aspect="equal", zorder=999)
-        self.BM.add_bg_artist(art, layer)
+        self.BM.add_artist(art)
 
         def setlim(*args, **kwargs):
             figax.set_position(getpos(self.ax.get_position())["rect"])
