@@ -780,9 +780,12 @@ class BlitManager:
         self._mpl_backend_blit_fix = any(
             i in plt.get_backend().lower() for i in ["webagg", "nbagg"]
         )
-        self._mpl_backend_force_full = any(
-            i in plt.get_backend().lower() for i in ["nbagg"]
-        )
+
+        # self._mpl_backend_force_full = any(
+        #     i in plt.get_backend().lower() for i in ["nbagg"]
+        # )
+        # recent fixes seem to take care of this nbagg issue...
+        self._mpl_backend_force_full = False
 
     @property
     def canvas(self):
