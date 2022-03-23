@@ -3109,13 +3109,6 @@ class MapsGrid:
         The matplotlib figure object
     gridspec : matplotlib.GridSpec
         The matplotlib GridSpec instance used to initialize the axes.
-        NOTE: you can use it to dynamically adjust the layout of the subplots
-        completely similar to matplotlib's `f.subplots_adjust(...)`, e.g.:
-
-        >>> mg.gridspec.update(left=0.1, right=0.9,
-        >>>                    top=0.8, bottom=0.1,
-        >>>                    wspace=0.05, hspace=0.25)
-
     m_<identifier> : eomaps.Maps objects
         The individual Maps-objects can be accessed via `mgrid.m_<identifier>`
         The identifiers are hereby `<row>_<col>` or the keys of the `m_inits`
@@ -3141,6 +3134,12 @@ class MapsGrid:
         call the underlying `add_<...>` method on all Maps-objects of the grid
     set_<...> :
         set the corresponding property on all Maps-objects of the grid
+    subplots_adjust :
+        Dynamically adjust the layout of the subplots, e.g:
+
+        >>> mg.subplots_adjust(left=0.1, right=0.9,
+        >>>                    top=0.8, bottom=0.1,
+        >>>                    wspace=0.05, hspace=0.25)
 
     Examples
     --------
