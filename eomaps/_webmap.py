@@ -794,9 +794,7 @@ class xyzRasterSource(RasterSource):
         return LocatedImage(img, extent)
 
     def fetch_raster(self, projection, extent, target_resolution):
-        import math
-
-        target_resolution = [math.ceil(val) for val in target_resolution]
+        target_resolution = [np.ceil(val) for val in target_resolution]
 
         if projection == self._crs:
             wms_extents = [extent]
@@ -805,7 +803,6 @@ class xyzRasterSource(RasterSource):
             wms_extents = _target_extents(extent, projection, self._crs)
 
         located_images = []
-
         for wms_extent in wms_extents:
             located_images.append(
                 self._image_and_extent(
