@@ -1074,6 +1074,13 @@ class BlitManager:
             The default is None.
         """
         cv = self.canvas
+        if (cv.toolbar is not None) and cv.toolbar.mode != "":
+            # only re-draw artists during toolbar-actions (e.g. pan/zoom)
+            # this avoids a glitch with animated artists during pan/zoom events
+            self._draw_animated(layers=layers, artists=artists)
+            if self._mpl_backend_blit_fix:
+                cv.blit()
+            return
 
         fig = cv.figure
 
