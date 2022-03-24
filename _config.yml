@@ -1,8 +1,8 @@
 remote_theme: pages-themes/primer@v0.6.0
 markdown: CommonMarkGhPages
+  options: ["UNSAFE"]
 plugins:
   - jekyll-remote-theme
 show_downloads: true
 name: EOmaps
 header: null
-include: ["_static"]
