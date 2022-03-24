@@ -1,5 +1,6 @@
 remote_theme: pages-themes/primer@v0.6.0
 markdown: CommonMarkGhPages
+commonmark:
   options: ["UNSAFE"]
 plugins:
   - jekyll-remote-theme
