@@ -6,4 +6,4 @@ show_downloads: true
 name: EOmaps
 header: null
 include: 
-  - docs/_static/
+  - docs/_static/logo.png
