@@ -5,4 +5,4 @@ plugins:
 show_downloads: true
 name: EOmaps
 header: null
-include: ["docs/", "docs/_static/"]
+includes_dir: docs/_static/
