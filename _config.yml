@@ -5,5 +5,4 @@ plugins:
 show_downloads: true
 name: EOmaps
 header: null
-include: 
-  - docs/_static/logo.png
+include: ["docs/", "docs/_static/"]
