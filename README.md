@@ -1,7 +1,7 @@
 
 <p align="center">
     <a href=https://github.com/raphaelquast/EOmaps>
-    <img src="eomaps/logo.png" width="55%" />
+    <img src="https://github.com/raphaelquast/EOmaps/blob/dev/docs/_static/logo.png?raw=true" alt="EOmaps logo" width="55%">
     </a>
 </p>
 
