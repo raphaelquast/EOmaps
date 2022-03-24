@@ -1,8 +1,9 @@
 remote_theme: pages-themes/primer@v0.6.0
 markdown: CommonMarkGhPages
 plugins:
-- jekyll-remote-theme
+  - jekyll-remote-theme
 show_downloads: true
 name: EOmaps
 header: null
-include: ["docs/_static/"]
+include: 
+  - docs/_static/
