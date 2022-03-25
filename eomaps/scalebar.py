@@ -183,7 +183,7 @@ class ScaleBar:
             self.set_label_props(
                 scale=1.5, offset=0.5, every=2, weight="bold", family="Courier New"
             )
-            self._autoscale = 0.5
+
             self._estimate_scale()
             self.set_position()
 
