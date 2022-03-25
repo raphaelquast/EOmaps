@@ -786,6 +786,7 @@ class BlitManager:
         # )
         # recent fixes seem to take care of this nbagg issue...
         self._mpl_backend_force_full = False
+        self._mpl_backend_blit_fix = False
 
     @property
     def canvas(self):
