@@ -794,9 +794,7 @@ class xyzRasterSource(RasterSource):
         return LocatedImage(img, extent)
 
     def fetch_raster(self, projection, extent, target_resolution):
-        import math
-
-        target_resolution = [math.ceil(val) for val in target_resolution]
+        target_resolution = [np.ceil(val) for val in target_resolution]
 
         if projection == self._crs:
             wms_extents = [extent]
@@ -805,7 +803,6 @@ class xyzRasterSource(RasterSource):
             wms_extents = _target_extents(extent, projection, self._crs)
 
         located_images = []
-
         for wms_extent in wms_extents:
             located_images.append(
                 self._image_and_extent(
@@ -882,6 +879,9 @@ class _xyz_tile_service:
                     layer, transparent, alpha, interpolation, **kwargs
                 )
         else:
+            if layer is None:
+                layer = self._m.layer
+
             self.kwargs = dict(interpolation=interpolation, alpha=alpha, origin="lower")
             self.kwargs.update(kwargs)
 
@@ -892,9 +892,32 @@ class _xyz_tile_service:
                 transparent=transparent,
             )
 
-            self._artist = self._m.ax.add_raster(self._raster_source, **self.kwargs)
+            # avoid using "add_raster" and use the subclassed SlippyImageArtist
+            # self._artist = self._m.ax.add_raster(self._raster_source, **self.kwargs)
 
-            if layer is None:
-                layer = self._m.layer
+            # ------- following lines are equivalent to ax.add_raster
+            #         (only SlippyImageArtist has been subclassed)
+
+            self._raster_source.validate_projection(self._m.ax.projection)
+            img = SlippyImageArtist_NEW(self._m.ax, self._raster_source, **self.kwargs)
+            with self._m.ax.hold_limits():
+                self._m.ax.add_image(img)
+            self._artist = img
 
             self._m.BM.add_bg_artist(self._artist, layer)
+
+
+from cartopy.mpl.slippy_image_artist import SlippyImageArtist
+
+# subclass cartopy's SlippyImageArtist but handle draw-capture within EOmaps
+class SlippyImageArtist_NEW(SlippyImageArtist):
+    def __init__(self, ax, *args, **kwargs):
+        super().__init__(ax, *args, **kwargs)
+
+    def on_press(self, event=None):
+        # don't capture user interaction since this is handled internally by EOmaps
+        # (e.g. draw-events are already only issued if necessary!)
+        # This is required to ensure correct fetching of backgrounds with a draggable
+        # slider (e.g. button is pressed but new background should be fetched!)
+        # self.user_is_interacting = True
+        return

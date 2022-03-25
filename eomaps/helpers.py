@@ -780,9 +780,13 @@ class BlitManager:
         self._mpl_backend_blit_fix = any(
             i in plt.get_backend().lower() for i in ["webagg", "nbagg"]
         )
-        self._mpl_backend_force_full = any(
-            i in plt.get_backend().lower() for i in ["nbagg"]
-        )
+
+        # self._mpl_backend_force_full = any(
+        #     i in plt.get_backend().lower() for i in ["nbagg"]
+        # )
+        # recent fixes seem to take care of this nbagg issue...
+        self._mpl_backend_force_full = False
+        self._mpl_backend_blit_fix = False
 
     @property
     def canvas(self):
@@ -1074,6 +1078,13 @@ class BlitManager:
             The default is None.
         """
         cv = self.canvas
+        if (cv.toolbar is not None) and cv.toolbar.mode != "":
+            # only re-draw artists during toolbar-actions (e.g. pan/zoom)
+            # this avoids a glitch with animated artists during pan/zoom events
+            self._draw_animated(layers=layers, artists=artists)
+            if self._mpl_backend_blit_fix:
+                cv.blit()
+            return
 
         fig = cv.figure
 

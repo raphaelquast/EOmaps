@@ -2166,14 +2166,6 @@ class Maps(object):
             del self.BM._bg_layers[layer]
             # self.BM._refetch_bg = True
 
-        if self.shape.name == "shade_raster":
-            crs1 = CRS.from_user_input(self.data_specs.crs)
-            crs2 = CRS.from_user_input(self._crs_plot)
-            assert crs1.equals(crs2), (
-                "EOmaps: how='Raster' can only be used if data-crs"
-                + " and plot-crs are equal!"
-            )
-
         if verbose:
             print("EOmaps: Preparing the data")
         # ---------------------- prepare the data
@@ -2243,9 +2235,7 @@ class Maps(object):
             from datashader import glyphs
 
             assert _xar_OK, "EOmaps: missing dependency `xarray` for 'shade_raster'"
-
             if len(zdata.shape) == 2:
-
                 if (zdata.shape == props["x0"].shape) and (
                     zdata.shape == props["y0"].shape
                 ):
@@ -2260,8 +2250,25 @@ class Maps(object):
                             x=(["xx", "yy"], props["x0"]), y=(["xx", "yy"], props["y0"])
                         ),
                     )
-                elif (zdata.shape[0] == props["x0"].shape) and (
-                    zdata.shape[1] == props["y0"].shape
+                elif ((zdata.shape[1],) == props["x0"].shape) and (
+                    (zdata.shape[0],) == props["y0"].shape
+                ):
+                    raise AssertionError(
+                        "EOmaps: it seems like you need to transpose your data! \n"
+                        + f"the dataset has a shape of {zdata.shape}, but the "
+                        + f"coordinates suggest ({props['x0'].shape}, {props['x0'].shape})"
+                    )
+                elif (zdata.T.shape == props["x0"].shape) and (
+                    zdata.T.shape == props["y0"].shape
+                ):
+                    raise AssertionError(
+                        "EOmaps: it seems like you need to transpose your data! \n"
+                        + f"the dataset has a shape of {zdata.shape}, but the "
+                        + f"coordinates suggest {props['x0'].shape}"
+                    )
+
+                elif ((zdata.shape[0],) == props["x0"].shape) and (
+                    (zdata.shape[1],) == props["y0"].shape
                 ):
                     # use a rectangular QuadMesh
                     self.shape.glyph = glyphs.QuadMeshRectilinear("x", "y", "val")
@@ -2273,20 +2280,41 @@ class Maps(object):
                     )
                     df = xar.Dataset(dict(val=df))
             else:
-                # use a rectangular QuadMesh
-                self.shape.glyph = glyphs.QuadMeshRectilinear("x", "y", "val")
-                # use pandas to convert the data to a raster-format
+                # first convert 1D inputs to 2D, then reproject the grid and use
+                # a curvilinear QuadMesh to display the data
+
+                # use pandas to convert to 2D
                 df = (
                     pd.DataFrame(
                         dict(
-                            x=props["x0"].ravel(),
-                            y=props["y0"].ravel(),
+                            x=props["xorig"].ravel(),
+                            y=props["yorig"].ravel(),
                             val=zdata.ravel(),
                         ),
                         copy=False,
                     )
                     .set_index(["x", "y"])
                     .to_xarray()
+                )
+                xg, yg = np.meshgrid(df.x, df.y)
+
+                # transform the grid from input-coordinates to the plot-coordinates
+                crs1 = CRS.from_user_input(self.data_specs.crs)
+                crs2 = CRS.from_user_input(self._crs_plot)
+                if crs1 != crs2:
+                    transformer = Transformer.from_crs(
+                        crs1,
+                        crs2,
+                        always_xy=True,
+                    )
+                    xg, yg = transformer.transform(xg, yg)
+
+                # use a curvilinear QuadMesh
+                self.shape.glyph = glyphs.QuadMeshCurvilinear("x", "y", "val")
+
+                df = xar.Dataset(
+                    data_vars=dict(val=(["xx", "yy"], df.val.values.T)),
+                    coords=dict(x=(["xx", "yy"], xg), y=(["xx", "yy"], yg)),
                 )
 
             # once the data is shaded, convert to 1D for further processing
@@ -3109,13 +3137,6 @@ class MapsGrid:
         The matplotlib figure object
     gridspec : matplotlib.GridSpec
         The matplotlib GridSpec instance used to initialize the axes.
-        NOTE: you can use it to dynamically adjust the layout of the subplots
-        completely similar to matplotlib's `f.subplots_adjust(...)`, e.g.:
-
-        >>> mg.gridspec.update(left=0.1, right=0.9,
-        >>>                    top=0.8, bottom=0.1,
-        >>>                    wspace=0.05, hspace=0.25)
-
     m_<identifier> : eomaps.Maps objects
         The individual Maps-objects can be accessed via `mgrid.m_<identifier>`
         The identifiers are hereby `<row>_<col>` or the keys of the `m_inits`
@@ -3141,6 +3162,12 @@ class MapsGrid:
         call the underlying `add_<...>` method on all Maps-objects of the grid
     set_<...> :
         set the corresponding property on all Maps-objects of the grid
+    subplots_adjust :
+        Dynamically adjust the layout of the subplots, e.g:
+
+        >>> mg.subplots_adjust(left=0.1, right=0.9,
+        >>>                    top=0.8, bottom=0.1,
+        >>>                    wspace=0.05, hspace=0.25)
 
     Examples
     --------
