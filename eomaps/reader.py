@@ -563,16 +563,17 @@ def _from_file(
 
     else:
         # only try to plot as raster if in_crs == out_crs
-        crs1 = CRS.from_user_input(m.data_specs.crs)
-        crs2 = CRS.from_user_input(m._crs_plot)
-        if crs1.equals(crs2):
-            try:
-                # try to plot as raster - shading...
-                m.set_shape.shade_raster()
-                m.plot_map(**kwargs)
-                return m
-            except Exception:
-                pass
+        try:
+            # try to plot as raster - shading...
+            m.set_shape.shade_raster()
+            m.plot_map(**kwargs)
+            return m
+        except Exception:
+            print(
+                "EOmaps: failed to plot file with 'shade_raster'... "
+                + "defaulting to 'shade_points'"
+            )
+            pass
 
         # try to plot as point - shading...
         try:
@@ -580,6 +581,10 @@ def _from_file(
             m.plot_map(**kwargs)
             return m
         except Exception:
+            print(
+                "EOmaps: failed to plot file with 'shade_points'... "
+                + "defaulting to 'ellipses'"
+            )
             pass
 
         # try to plot as ellipses
