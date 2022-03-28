@@ -2250,8 +2250,10 @@ class Maps(object):
                             x=(["xx", "yy"], props["x0"]), y=(["xx", "yy"], props["y0"])
                         ),
                     )
-                elif ((zdata.shape[1],) == props["x0"].shape) and (
-                    (zdata.shape[0],) == props["y0"].shape
+                elif (
+                    ((zdata.shape[1],) == props["x0"].shape)
+                    and ((zdata.shape[0],) == props["y0"].shape)
+                    and (props["x0"].shape != props["y0"].shape)
                 ):
                     raise AssertionError(
                         "EOmaps: it seems like you need to transpose your data! \n"
