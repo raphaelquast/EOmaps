@@ -1,6 +1,7 @@
 from functools import wraps
 import numpy as np
 from pyproj import CRS
+from pathlib import Path
 
 try:
     import pandas as pd
@@ -109,7 +110,7 @@ class read_file:
 
         opened = False  # just an indicator if we have to close the file in the end
         try:
-            if isinstance(path_or_dataset, str):
+            if isinstance(path_or_dataset, (str, Path)):
                 # if a path is provided, open the file (and close it in the end)
                 opened = True
                 ncfile = xar.open_dataset(path_or_dataset)
@@ -258,7 +259,7 @@ class read_file:
 
         opened = False  # just an indicator if we have to close the file in the end
         try:
-            if isinstance(path_or_dataset, str):
+            if isinstance(path_or_dataset, (str, Path)):
                 # if a path is provided, open the file (and close it in the end)
                 opened = True
                 ncfile = xar.open_dataset(path_or_dataset)
