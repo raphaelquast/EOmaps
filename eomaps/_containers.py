@@ -200,17 +200,19 @@ class data_specs(object):
         self._parameter = None
 
     def __repr__(self):
-        txt = f"""\
-              # parameter = {self.parameter}
-              # coordinates = ({self.xcoord}, {self.ycoord})
-              # crs: {indent(fill(self.crs.__repr__(), 60),
-                              "                      ").strip()}
+        try:
+            txt = f"""\
+                  # parameter = {self.parameter}
+                  # coordinates = ({self.xcoord}, {self.ycoord})
+                  # crs: {indent(fill(self.crs.__repr__(), 60),
+                                  "                      ").strip()}
 
-              # data:\
-              {indent(self.data.__repr__(), "                ")}
-              """
-
-        return dedent(txt)
+                  # data:\
+                  {indent(self.data.__repr__(), "                ")}
+                  """
+            return dedent(txt)
+        except:
+            return object.__repr__(self)
 
     def __getitem__(self, key):
         if isinstance(key, (list, tuple)):
