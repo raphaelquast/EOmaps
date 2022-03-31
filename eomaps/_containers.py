@@ -561,7 +561,12 @@ class _NaturalEarth_presets:
         - fc="none", ec="k", zorder=100
         """
         return self._feature(
-            self._m, "physical", "coastline", fc="none", ec="k", zorder=100
+            self._m,
+            "physical",
+            "coastline",
+            fc="none",
+            ec="k",
+            zorder=100,
         )
 
     @property
