@@ -53,7 +53,9 @@ class _cb_container(object):
                 event = self._event
 
             for m in [*self._m.parent._children, self._m.parent]:
-                if event.inaxes is m.figure.ax:
+                # don't use "is" in here since Maps-children are proxies
+                # (and so are their attributes)!
+                if event.inaxes == m.figure.ax:
                     obj = self._getobj(m)
                     if obj is not None:
                         objs.append(obj)
