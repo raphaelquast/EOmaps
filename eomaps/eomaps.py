@@ -2672,11 +2672,16 @@ class Maps(object):
 
             The default is True
         memmap : bool or None
-            Indicator if memory-mapping should be use to save memory for very
-            large datasets.
+            Indicator if memory-mapping should be use to save memory by storing
+            intermediate datasets (e.g. projected coordinates, indexes & the data)
+            in a temporary folder on disc rather than keeping everything in memory.
+            This will cause a slight decrease when identifying clicked points but it
+            provides a major reduction in memory-usage for very large datasets.
 
-            If None: memory-mapping is only used if "shade_raster" or "shade_points"
+            - If None: memory-mapping is only used if "shade_raster" or "shade_points"
             is used as plot-shape.
+            - if True: memory-mapping is used
+            - if False: memory-mapping is disabled
 
             The default is None.
 
