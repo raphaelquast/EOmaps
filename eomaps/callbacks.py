@@ -559,7 +559,6 @@ class _click_callbacks(object):
             x0m, y0m = ax.transData.inverted().transform((x0, y0))
             x1m, y1m = ax.transData.inverted().transform((x0 + blitw, y0 + blith))
             w, h = abs(x1m - x0m), abs(y1m - y0m)
-
             marker = self.mark(
                 pos=((x0m + x1m) / 2, (y0m + y1m) / 2),
                 radius_crs="out",
@@ -568,7 +567,6 @@ class _click_callbacks(object):
                 permanent=False,
                 **args,
             )
-
         elif isinstance(how, (float, list, tuple)):
             if isinstance(how, float):
                 w0, h0 = self.m.figure.ax.transAxes.transform((0, 0))
