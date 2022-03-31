@@ -173,7 +173,7 @@ class TestBasicPlotting(unittest.TestCase):
         plt.close(m.figure.f)
 
     def test_add_callbacks(self):
-        m = Maps(3857)
+        m = Maps(3857, layer="layername")
         m.data = self.data.sample(10)
         m.set_data_specs(xcoord="x", ycoord="y", in_crs=3857)
         m.set_shape.ellipses(radius=200000)
@@ -194,7 +194,7 @@ class TestBasicPlotting(unittest.TestCase):
 
             self.assertTrue(
                 cbID
-                == f"{cb}_0__{'double' if double_click else 'single'}__{mouse_button}"
+                == f"{cb}_0__{m.layer}__{'double' if double_click else 'single'}__{mouse_button}"
             )
             self.assertTrue(len(m.cb.pick.get.attached_callbacks) == 1)
             m.cb.pick.remove(cbID)
@@ -214,7 +214,7 @@ class TestBasicPlotting(unittest.TestCase):
 
             self.assertTrue(
                 cbID
-                == f"{cb}_0__{'double' if double_click else 'single'}__{mouse_button}"
+                == f"{cb}_0__{m.layer}__{'double' if double_click else 'single'}__{mouse_button}"
             )
             self.assertTrue(len(m.cb.click.get.attached_callbacks) == 1)
             m.cb.click.remove(cbID)
