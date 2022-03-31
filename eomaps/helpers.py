@@ -924,7 +924,7 @@ class BlitManager:
             activate_action = self._on_layer_activation.get(l, None)
             if activate_action is not None:
                 for action in activate_action:
-                    action(self._m)
+                    action(self._m, l)
 
         allartists = list(chain(*(self._bg_artists[i] for i in [layer, "all"])))
         allartists.sort(key=lambda x: getattr(x, "zorder", -1))
