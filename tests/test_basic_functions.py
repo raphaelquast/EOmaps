@@ -232,7 +232,7 @@ class TestBasicPlotting(unittest.TestCase):
 
             cbID = m.cb.keypress.attach(cb, key=key)
 
-            self.assertTrue(cbID == f"{cb}_0__{key}")
+            self.assertTrue(cbID == f"{cb}_0__{m.layer}__{key}")
             self.assertTrue(len(m.cb.keypress.get.attached_callbacks) == 1)
             m.cb.keypress.remove(cbID)
             self.assertTrue(len(m.cb.keypress.get.attached_callbacks) == 0)
