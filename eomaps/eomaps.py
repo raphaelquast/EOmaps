@@ -192,7 +192,7 @@ class Maps(object):
         self,
         crs=None,
         parent=None,
-        layer=0,
+        layer="all",
         orientation="vertical",
         f=None,
         gs_ax=None,
