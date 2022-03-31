@@ -1347,7 +1347,9 @@ else:
                     self._m = m
 
                     self.default = _xyz_tile_service(
-                        self._m, "https://tile.openstreetmap.org/{z}/{x}/{y}.png"
+                        self._m,
+                        "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
+                        name="OSM_default",
                     )
                     self.default.__doc__ = combdoc(
                         """
@@ -1364,7 +1366,9 @@ else:
                     )
 
                     self.default_german = _xyz_tile_service(
-                        self._m, "https://tile.openstreetmap.de/{z}/{x}/{y}.png"
+                        self._m,
+                        "https://tile.openstreetmap.de/{z}/{x}/{y}.png",
+                        name="OSM_default_german",
                     )
                     self.default_german.__doc__ = combdoc(
                         """
@@ -1384,6 +1388,7 @@ else:
                         m=self._m,
                         url="https://c.tile.opentopomap.org/{z}/{x}/{y}.png",
                         maxzoom=16,
+                        name="OSM_OpenTopoMap",
                     )
                     self.OpenTopoMap.__doc__ = combdoc(
                         """
@@ -1404,48 +1409,60 @@ else:
                     self.stamen_toner = _xyz_tile_service(
                         self._m,
                         "https://stamen-tiles.a.ssl.fastly.net/toner/{z}/{x}/{y}.png",
+                        name="OSM_stamen_toner",
                     )
                     self.stamen_toner_lines = _xyz_tile_service(
                         self._m,
                         "https://stamen-tiles.a.ssl.fastly.net/toner-lines/{z}/{x}/{y}.png",
+                        name="OSM_stamen_toner_lines",
                     )
                     self.stamen_toner_background = _xyz_tile_service(
                         self._m,
                         "https://stamen-tiles.a.ssl.fastly.net/toner-background/{z}/{x}/{y}.png",
+                        name="OSM_stamen_toner_background",
                     )
                     self.stamen_toner_lite = _xyz_tile_service(
                         self._m,
                         "https://stamen-tiles.a.ssl.fastly.net/toner-lite/{z}/{x}/{y}.png",
+                        name="OSM_stamen_toner_lite",
                     )
                     self.stamen_toner_hybrid = _xyz_tile_service(
                         self._m,
                         "https://stamen-tiles.a.ssl.fastly.net/toner-hybrid/{z}/{x}/{y}.png",
+                        name="OSM_stamen_toner_hybrid",
                     )
                     self.stamen_toner_labels = _xyz_tile_service(
                         self._m,
                         "https://stamen-tiles.a.ssl.fastly.net/toner-labels/{z}/{x}/{y}.png",
+                        name="OSM_stamen_toner_labels",
                     )
 
                     self.stamen_watercolor = _xyz_tile_service(
                         self._m,
                         "http://c.tile.stamen.com/watercolor/{z}/{x}/{y}.jpg",
+                        name="OSM_stamen_watercolor",
                         maxzoom=18,
                     )
 
                     self.stamen_terrain = _xyz_tile_service(
-                        self._m, "http://c.tile.stamen.com/terrain/{z}/{x}/{y}.jpg"
+                        self._m,
+                        "http://c.tile.stamen.com/terrain/{z}/{x}/{y}.jpg",
+                        name="OSM_stamen_terrain",
                     )
                     self.stamen_terrain_lines = _xyz_tile_service(
                         self._m,
                         "http://c.tile.stamen.com/terrain-lines/{z}/{x}/{y}.jpg",
+                        name="OSM_stamen_terrain_lines",
                     )
                     self.stamen_terrain_labels = _xyz_tile_service(
                         self._m,
                         "http://c.tile.stamen.com/terrain-labels/{z}/{x}/{y}.jpg",
+                        name="OSM_stamen_terrain_labels",
                     )
                     self.stamen_terrain_background = _xyz_tile_service(
                         self._m,
                         "http://c.tile.stamen.com/terrain-background/{z}/{x}/{y}.jpg",
+                        name="OSM_stamen_terrain_background",
                     )
 
                     stamen_doc = """
@@ -1940,6 +1957,7 @@ else:
                     self._m,
                     lambda x, y, z: f"https://s1map.eodc.eu/vv/{z}/{x}/{2**z-1-y}.png",
                     13,
+                    name="S1GBM_vv",
                 )
 
                 WMS.__doc__ = combdoc("Polarization: VV", type(self).__doc__)
@@ -1951,6 +1969,7 @@ else:
                     self._m,
                     lambda x, y, z: f"https://s1map.eodc.eu/vh/{z}/{x}/{2**z-1-y}.png",
                     13,
+                    name="S1GBM_vh",
                 )
                 WMS.__doc__ = combdoc("Polarization: VH", type(self).__doc__)
                 return WMS
