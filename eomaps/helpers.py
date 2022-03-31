@@ -973,10 +973,11 @@ class BlitManager:
 
         if art in self._bg_artists[layer]:
             print(f"EOmaps: Background-artist {art} already added")
-        else:
-            # art.set_animated(True)
-            self._bg_artists[layer].append(art)
-            self._m.BM._refetch_layer(layer)
+            return
+
+        # art.set_animated(True)
+        self._bg_artists[layer].append(art)
+        self._m.BM._refetch_layer(layer)
 
     def remove_bg_artist(self, art, layer=None):
         if layer is None:
