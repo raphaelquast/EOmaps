@@ -13,7 +13,7 @@
 .. code-block:: python
 
     from eomaps import Maps
-    m = Maps(crs=4326)
+    m = Maps(crs=4326, figsize=(10, 5))
     m.add_feature.preset.coastline()
 
 Possible ways for specifying the crs for plotting are:
@@ -22,14 +22,39 @@ Possible ways for specifying the crs for plotting are:
 - All other CRS usable for plotting are accessible via ``Maps.CRS``,
   e.g.: ``crs=Maps.CRS.Orthographic()`` or ``crs=Maps.CRS.Equi7Grid_projection("EU")``.
 
+Additional keyword arguments are forwarded to the creation of the matplotlib-figure
+(e.g.: ``figsize``, ``frameon``, ``edgecolor`` etc).
+
+▤ Layers
+++++++++
+
+Each ``Maps`` object represents an individual plot-layer of the map.
 Once you have created your first ``Maps`` object, you can create **additional layers on the same map** by using:
 
 .. code-block:: python
 
-    m2 = m.new_layer(...)
+    m = Maps()    # same as m = Maps(layer="all")
+    # since the default layer is "all" the coastlines will be visible on all layers!
+    m.add_feature.preset.coastline()
 
-(``m2`` is then just another ``Maps`` object that shares the figure and plot-axes with ``m``)
+    # create a new layer
+    m2 = m.new_layer(layer="ocean")
+    # the ocean will only be visible if the "ocean" layer is visible.
+    m2.add_feature.preset.ocean()
 
+    # show the new layer
+    m.show_layer("ocean")
+
+- ``m2`` is then just another ``Maps`` object that shares the figure and plot-axes with ``m``.
+- If you don't provide an explicit layer name, the new Maps-object will use the same layer as its parent!
+
+To manually switch between layers, use ``m.show_layer("the layer name")`` or have a look at the :ref:`utility`.
+
+
+There is one layer-name that has a special meaning... the ``"all"`` layer.
+Any callback functions, features or plots created on this layer will be **visible on all other layers** as well!
+
+By default, the parent ``Maps`` object (e.g. the first one you create) is assigned to the layer ``"all"``.
 
 .. currentmodule:: eomaps
 
@@ -40,6 +65,7 @@ Once you have created your first ``Maps`` object, you can create **additional la
 
     Maps
     Maps.new_layer
+    Maps.show_layer
     Maps.copy
 
 
@@ -52,12 +78,15 @@ The shapes that are used to represent the data-points are then assigned via ``m.
 .. code-block:: python
 
     m = Maps()
-    m.set_data(data, xcoord, ycoord, parameter)
-    m.set_shape.rectangles(radius=1, radius_crs=4326)
-    m.plot_map()
+    m.add_feature.preset.coastline()   # add coastlines to ALL layers
 
-    m2 = m.new_layer()
-    m2.set_data(...)
+    m2 = m.new_layer("data")
+    m2.set_data(data, xcoord, ycoord, parameter)
+    m2.set_shape.rectangles(radius=1, radius_crs=4326)
+    m2.plot_map()
+
+    m3 = m.new_layer("another layer")
+    m3.set_data(...)
     ...
 
 .. currentmodule:: eomaps
@@ -204,9 +233,12 @@ Some useful arguments that are supported by most shapes (except "shade"-shapes) 
 .. code-block:: python
 
     m = Maps()
-    m.set_data(...)
+    m.add_feature.preset.coastline()
+
+    m2 = m.new_layer("a data layer")
+    m2.set_data(...)
     ...
-    m.plot_map(fc="none", ec="g", lw=2, alpha=0.5)
+    m2.plot_map(fc="none", ec="g", lw=2, alpha=0.5)
 
 
 You can then continue to add :ref:`colorbar`, :ref:`annotations_and_markers`,
@@ -239,22 +271,33 @@ Once the map is ready, a snapshot of the map can be saved at any time by using:
 A ``MapsGrid`` creates a grid of ``Maps`` objects (and/or ordinary ``matpltolib`` axes),
 and provides convenience-functions to perform actions on all maps of the figure.
 
+The default layer for all ``Maps`` of the ``MapsGrid`` is ``"all"``.
+
 .. code-block:: python
 
     from eomaps import MapsGrid
-    mgrid = MapsGrid(r=2, c=2, crs=..., ... )
+    mg = MapsGrid(r=2, c=2, crs=..., layer=..., ... )
     # you can then access the individual Maps-objects via:
-    mgrid.m_0_0
-    mgrid.m_0_1
-    mgrid.m_1_0
-    mgrid.m_1_1
+    mg.m_0_0
+    mg.m_0_1
+    mg.m_1_0
+    mg.m_1_1
 
-    # to perform actions on all Maps-objects, simply loop over the MapsGrid object
-    for m in mgrid:
+    m2 = mg.m_0_0.new_layer("newlayer")
+    ...
+
+    # there are many convenience-functions to perform actions on all Maps-objects:
+    mg.add_feature.preset.coastline()
+    mg.add_compass()
+    ...
+
+    # to perform more complex actions on all Maps-objects, simply loop over the MapsGrid object
+    for m in mg:
         ...
 
     # set the margins of the plot-grid
-    mgrid.subplots_adjust(left=0.1, right=0.9, bottom=0.05, top=0.95, hspace=0.1, wspace=0.05)
+    mg.subplots_adjust(left=0.1, right=0.9, bottom=0.05, top=0.95, hspace=0.1, wspace=0.05)
+
 
 Custom grids and mixed axes
 ***************************
@@ -375,6 +418,12 @@ They can be attached to a map via:
 `< CALLBACK >` indicates the action you want to assign o the event.
 There are many pre-defined callbacks, but it is also possible to define custom
 functions and attach them to the map.
+
+.. Note::
+
+    Callbacks are only executed if the layer of the associated ``Maps`` object is actually visible!
+    (This assures that pick-callbacks always referr to the visible dataset.)
+
 
 Pre-defined click & pick callbacks
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
