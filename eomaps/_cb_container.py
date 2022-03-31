@@ -285,7 +285,9 @@ class _click_container(_cb_container):
         """
         if callback is not None:
             s = callback.split("__")
-            name, ds, b = s
+            name, layer, ds, b = s
+
+        cbname = name + "__" + layer
 
         dsdict = self.get.cbs.get(ds, None)
         if dsdict is not None:
@@ -299,8 +301,8 @@ class _click_container(_cb_container):
             return
 
         if bdict is not None:
-            if name in bdict:
-                del bdict[name]
+            if cbname in bdict:
+                del bdict[cbname]
 
                 # call cleanup methods on removal
                 fname = name.rsplit("_", 1)[0]
@@ -408,19 +410,22 @@ class _click_container(_cb_container):
         d = self.get.cbs[btn_key][button]
 
         # get a unique name for the callback
-        ncb = [int(i.rsplit("_", 1)[1]) for i in d if i.startswith(callback.__name__)]
-        cbkey = callback.__name__ + f"_{max(ncb) + 1 if len(ncb) > 0 else 0}"
-
-        # if callback.__name__ not in multi_cb_functions:
-        #     assert len(ncb) == 0, (
-        #         f"Multiple assignments of the callback '{callback.__name__}' using "
-        #         + "the same button is not (yet) supported... use a different button!"
-        #     )
+        # name_idx__layer
+        ncb = [
+            int(i.split("__", 1)[0].rsplit("_", 1)[1])
+            for i in d
+            if i.startswith(callback.__name__)
+        ]
+        cbkey = (
+            callback.__name__
+            + f"_{max(ncb) + 1 if len(ncb) > 0 else 0}"
+            + f"__{self._m.layer}"
+        )
 
         d[cbkey] = partial(callback, *args, **kwargs)
 
         # add mouse-button assignment as suffix to the name (with __ separator)
-        cbname = cbkey + f"__{btn_key}__{button}"
+        cbname = cbkey + f"__{btn_key}__{button}"  # TODO
 
         return cbname
 
@@ -469,6 +474,7 @@ class cb_click_container(_click_container):
         return clickdict
 
     def _onclick(self, event):
+
         clickdict = self._get_clickdict(event)
 
         if event.dblclick:
@@ -479,6 +485,12 @@ class cb_click_container(_click_container):
         if event.button in cbs:
             bcbs = cbs[event.button]
             for key in self._sort_cbs(bcbs):
+                layer = key.split("__")[1]
+                if layer != "all" and layer != str(self._m.BM.bg_layer):
+                    # TODO
+                    # only execute callbacks if the layer name of the associated
+                    # maps-object is active
+                    return
                 cb = bcbs[key]
                 if clickdict is not None and (
                     len(self._only) == 0 or key in self._only
@@ -494,76 +506,95 @@ class cb_click_container(_click_container):
                 cb()
 
     def _reset_cids(self):
+        if self._cid_button_press_event:
+            self._m.figure.f.canvas.mpl_disconnect(self._cid_button_press_event)
         self._cid_button_press_event = None
+
+        if self._cid_motion_event:
+            self._m.figure.f.canvas.mpl_disconnect(self._cid_motion_event)
         self._cid_motion_event = None
+
+        if self._cid_button_release_event:
+            self._m.figure.f.canvas.mpl_disconnect(self._cid_button_release_event)
+        self._cid_button_release_event = None
 
     def _add_click_callback(self):
         def clickcb(event):
-            self._event = event
+            try:
+                self._event = event
 
-            # ignore callbacks while dragging axes
-            if self._m._ignore_cb_events:
-                return
-            # don't execute callbacks if a toolbar-action is active
-            if (
-                self._m.figure.f.canvas.toolbar is not None
-            ) and self._m.figure.f.canvas.toolbar.mode != "":
-                return
+                # ignore callbacks while dragging axes
+                if self._m._ignore_cb_events:
+                    return
+                # don't execute callbacks if a toolbar-action is active
+                if (
+                    self._m.figure.f.canvas.toolbar is not None
+                ) and self._m.figure.f.canvas.toolbar.mode != "":
+                    return
 
-            # execute onclick on the maps object that belongs to the clicked axis
-            # and forward the event to all forwarded maps-objects
-            for obj in self._objs:
-                obj._onclick(event)
-                obj._m.BM._after_update_actions.append(obj._clear_temporary_artists)
-                # forward callbacks to the connected maps-objects
-                obj._fwd_cb(event)
+                # execute onclick on the maps object that belongs to the clicked axis
+                # and forward the event to all forwarded maps-objects
 
-            self._m.parent.BM.update(clear=self._method)
+                for obj in self._objs:
+                    obj._onclick(event)
+                    obj._m.BM._after_update_actions.append(obj._clear_temporary_artists)
+                    # forward callbacks to the connected maps-objects
+                    obj._fwd_cb(event)
+
+                self._m.parent.BM.update(clear=self._method)
+            except ReferenceError:
+                pass
 
         def movecb(event):
-            self._event = event
+            try:
+                self._event = event
 
-            # ignore callbacks while dragging axes
-            if self._m._ignore_cb_events:
-                return
-            # don't execute callbacks if a toolbar-action is active
-            if (
-                self._m.figure.f.canvas.toolbar is not None
-            ) and self._m.figure.f.canvas.toolbar.mode != "":
-                return
+                # ignore callbacks while dragging axes
+                if self._m._ignore_cb_events:
+                    return
+                # don't execute callbacks if a toolbar-action is active
+                if (
+                    self._m.figure.f.canvas.toolbar is not None
+                ) and self._m.figure.f.canvas.toolbar.mode != "":
+                    return
 
-            # only execute movecb if a mouse-button is holded down
-            # and only if the motion is happening inside the axes
-            if not event.button:  # or (event.inaxes != self._m.figure.ax):
-                return
+                # only execute movecb if a mouse-button is holded down
+                # and only if the motion is happening inside the axes
+                if not event.button:  # or (event.inaxes != self._m.figure.ax):
+                    return
 
-            # execute onclick on the maps object that belongs to the clicked axis
-            # and forward the event to all forwarded maps-objects
-            for obj in self._objs:
-                obj._onclick(event)
-                obj._m.BM._after_update_actions.append(obj._clear_temporary_artists)
-                # forward callbacks to the connected maps-objects
-                obj._fwd_cb(event)
+                # execute onclick on the maps object that belongs to the clicked axis
+                # and forward the event to all forwarded maps-objects
+                for obj in self._objs:
+                    obj._onclick(event)
+                    obj._m.BM._after_update_actions.append(obj._clear_temporary_artists)
+                    # forward callbacks to the connected maps-objects
+                    obj._fwd_cb(event)
 
-            self._m.parent.BM.update(clear=self._method)
+                self._m.parent.BM.update(clear=self._method)
+            except ReferenceError:
+                pass
 
         def releasecb(event):
-            # ignore callbacks while dragging axes
-            if self._m._ignore_cb_events:
-                return
-            # don't execute callbacks if a toolbar-action is active
-            if (
-                self._m.figure.f.canvas.toolbar is not None
-            ) and self._m.figure.f.canvas.toolbar.mode != "":
-                return
+            try:
+                # ignore callbacks while dragging axes
+                if self._m._ignore_cb_events:
+                    return
+                # don't execute callbacks if a toolbar-action is active
+                if (
+                    self._m.figure.f.canvas.toolbar is not None
+                ) and self._m.figure.f.canvas.toolbar.mode != "":
+                    return
 
-            # execute onclick on the maps object that belongs to the clicked axis
-            # and forward the event to all forwarded maps-objects
-            for obj in self._objs:
-                obj._onrelease(event)
-                # forward callbacks to the connected maps-objects
-                obj._fwd_cb(event)
-
+                # execute onclick on the maps object that belongs to the clicked axis
+                # and forward the event to all forwarded maps-objects
+                for obj in self._objs:
+                    obj._onrelease(event)
+                    # forward callbacks to the connected maps-objects
+                    obj._fwd_cb(event)
+            except ReferenceError:
+                # ignore errors caused by no-longer existing weakrefs
+                pass
             # self._m.parent.BM.update(clear=False)
 
         if self._cid_button_press_event is None:
@@ -692,8 +723,14 @@ class cb_pick_container(_click_container):
         self._add_pick_callback()
 
     def _default_picker(self, artist, event):
-        # if no pick-callback is attached, don't identify the picked point
-        if len(self._m.cb.pick.get.cbs) == 0:
+        try:
+            # if no pick-callback is attached, don't identify the picked point
+            if len(self._m.cb.pick.get.cbs) == 0:
+                return False, None
+        except ReferenceError:
+            # in case we encounter a reference-error, remove the picker from the artist
+            # (happens if the picker originates from a no-longer existing Maps object)
+            self._artist.set_picker(None)
             return False, None
 
         if (event.inaxes != self._m.ax) or not hasattr(self._m, "tree"):
@@ -760,44 +797,56 @@ class cb_pick_container(_click_container):
         if event.mouseevent.button in cbs:
             bcbs = cbs[event.mouseevent.button]
             for key in self._sort_cbs(bcbs):
+                layer = key.split("__")[1]
+                if layer != "all" and layer != str(self._m.BM.bg_layer):
+                    # TODO
+                    # only execute callbacks if the layer name of the associated
+                    # maps-object is active
+                    return
+
                 cb = bcbs[key]
                 if clickdict is not None:
                     cb(**clickdict)
 
     def _reset_cids(self):
-        self._cid_pick_event = dict()
+        for method, cid in self._cid_pick_event.items():
+            self._m.figure.f.canvas.mpl_disconnect(cid)
+        self._cid_pick_event.clear()
 
     def _add_pick_callback(self):
         # execute onpick and forward the event to all connected Maps-objects
 
         def pickcb(event):
-            # check if we want to ignore callbacks
-            if self._m._ignore_cb_events:
-                return
+            try:
+                # check if we want to ignore callbacks
+                if self._m._ignore_cb_events:
+                    return
 
-            # don't execute callbacks if a toolbar-action is active
-            if (
-                self._m.figure.f.canvas.toolbar is not None
-            ) and self._m.figure.f.canvas.toolbar.mode != "":
-                return
+                # don't execute callbacks if a toolbar-action is active
+                if (
+                    self._m.figure.f.canvas.toolbar is not None
+                ) and self._m.figure.f.canvas.toolbar.mode != "":
+                    return
 
-            if not self._artist is event.artist:
-                return
+                if not self._artist is event.artist:
+                    return
 
-            self._event = event
-            # check if the artists has a custom picker assigned
+                self._event = event
+                # check if the artists has a custom picker assigned
 
-            # execute "_onpick" on the maps-object that belongs to the clicked axes
-            # and forward the event to all forwarded maps-objects
-            self._onpick(event)
-            # forward callbacks to the connected maps-objects
-            self._fwd_cb(event, self._picker_name)
+                # execute "_onpick" on the maps-object that belongs to the clicked axes
+                # and forward the event to all forwarded maps-objects
+                self._onpick(event)
+                # forward callbacks to the connected maps-objects
+                self._fwd_cb(event, self._picker_name)
 
-            self._m.BM._after_update_actions.append(self._clear_temporary_artists)
-            self._m.BM._clear_temp_artists(self._method)
+                self._m.BM._after_update_actions.append(self._clear_temporary_artists)
+                self._m.BM._clear_temp_artists(self._method)
 
-            # self._m.parent.BM.update(clear=self._method)
-            # don't update here... the click-callback will take care of it!
+                # self._m.parent.BM.update(clear=self._method)
+                # don't update here... the click-callback will take care of it!
+            except ReferenceError:
+                pass
 
         # attach the callbacks (only once per method!)
         if self._method not in self._cid_pick_event:
@@ -886,27 +935,41 @@ class keypress_container(_cb_container):
     def __init__(self, m, cb_cls=None, method="keypress"):
         super().__init__(m, cb_cls, method)
 
+        self._cid_keypress_event = None
+
     def _init_cbs(self):
         if self._m.parent is self._m:
             self._initialize_callbacks()
 
     def _reset_cids(self):
+        if self._cid_keypress_event:
+            self._m.figure.f.canvas.mpl_disconnect(self._cid_keypress_event)
         self._cid_keypress_event = None
 
     def _initialize_callbacks(self):
         def _onpress(event):
-            self._event = event
+            try:
+                self._event = event
 
-            if event.key in self.get.cbs:
-                # do this to allow deleting callbacks with a callback
-                cbs = self.get.cbs[event.key]
-                names = list(cbs)
-                for name in names:
-                    if name in cbs:
-                        cbs[name](key=event.key)
+                for obj in self._objs:
+                    # only trigger callbacks on the right layer
+                    if (obj._m.layer != "all") and (
+                        obj._m.layer != self._m.BM.bg_layer
+                    ):
+                        continue
+                    if event.key in obj.get.cbs:
 
-                # for name, cb in self.get.cbs[event.key].items():
-                #     cb(key=event.key)
+                        # do this to allow deleting callbacks with a callback
+                        # otherwise modifying a dict during iteration is problematic!
+                        cbs = obj.get.cbs[event.key]
+                        names = list(cbs)
+                        for name in names:
+                            if name in cbs:
+                                cbs[name](key=event.key)
+
+                self._m.parent.BM.update(clear=self._method)
+            except ReferenceError:
+                pass
 
         if self._m is self._m.parent:
             self._cid_keypress_event = self._m.figure.f.canvas.mpl_connect(
@@ -1001,16 +1064,19 @@ class keypress_container(_cb_container):
         ----------
         callback : int, str or tuple
             if str: the name of the callback to remove
-                    (`<function_name>_<count>__<key>`)
+                    (`<function_name>_<count>__<layer>__<key>`)
         """
+
         if callback is not None:
-            name, key = callback.split("__")
+            name, layer, key = callback.split("__")
+
+        cbname = name + "__" + layer
 
         cbs = self.get.cbs.get(key, None)
 
         if cbs is not None:
-            if name in cbs:
-                del cbs[name]
+            if cbname in cbs:
+                del cbs[cbname]
 
                 # call cleanup methods on removal
                 fname = name.rsplit("_", 1)[0]
@@ -1074,7 +1140,11 @@ class keypress_container(_cb_container):
         ncb = [
             int(i.rsplit("_", 1)[1]) for i in cbdict if i.startswith(callback.__name__)
         ]
-        cbkey = callback.__name__ + f"_{max(ncb) + 1 if len(ncb) > 0 else 0}"
+        cbkey = (
+            callback.__name__
+            + f"_{max(ncb) + 1 if len(ncb) > 0 else 0}"
+            + f"__{self._m.layer}"
+        )
 
         # append the callback
         cbdict[cbkey] = partial(callback, **kwargs)
