@@ -126,7 +126,6 @@ class read_file:
                 usencfile = ncfile
 
             ncdims = list(usencfile.dims)  # dimension order as stored in the file
-
             varnames = list(usencfile)
             if len(varnames) > 1:
                 raise AssertionError(
@@ -445,7 +444,7 @@ def _from_file(
     coastline=True,
     parent=None,
     figsize=None,
-    layer=0,
+    layer=None,
     **kwargs,
 ):
     """
@@ -514,6 +513,9 @@ def _from_file(
         data["data"] = val_transform(data["data"])
 
     if parent is not None:
+        if layer is None:
+            layer = parent.layer
+
         m = parent.new_layer(
             copy_data_specs=False,
             copy_plot_specs=False,
@@ -522,6 +524,8 @@ def _from_file(
             layer=layer,
         )
     else:
+        if layer is None:
+            layer = 0
         # get crs from file
         if crs is None:
             crs = data.get("crs", None)
