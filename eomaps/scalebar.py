@@ -187,6 +187,17 @@ class ScaleBar:
             self._estimate_scale()
             self.set_position()
 
+    @staticmethod
+    def round_to_n(x, n=0):
+        # round to n significant digits
+        # 1234 -> 1000
+        # 0.01234 -> 0.1
+        res = round(x, n - int(np.floor(np.log10(abs(x)))))
+        if res.is_integer():
+            return int(res)
+        else:
+            return res
+
     def _estimate_scale(self):
         try:
             ax2data = self._m.ax.transAxes + self._m.ax.transData.inverted()
@@ -210,12 +221,9 @@ class ScaleBar:
 
             faz, baz, dist = geod.inv(*l0, *l1)
 
-            scale = int(dist / self._scale_props["n"])
-
-            ndigits = len(str(scale))
-
-            if ndigits > 2:
-                scale = round(scale, -(ndigits - 1))
+            scale = dist / self._scale_props["n"]
+            # round to 1 significant digit
+            scale = self.round_to_n(scale)
 
             self._scale_props["scale"] = scale
             return scale
@@ -442,7 +450,7 @@ class ScaleBar:
     def _get_txt(self, n):
         scale = self._scale_props["scale"]
         # the text displayed above the scalebar
-        units = {" cm": 0.01, " m": 1, " km": 1000, "k km": 1000000}
+        units = {" mm": 0.001, " m": 1, " km": 1000, "k km": 1000000}
         for key, val in units.items():
             x = scale * n / val
             if scale * n / val < 1000:
