@@ -788,6 +788,9 @@ class BlitManager:
         self._mpl_backend_force_full = False
         self._mpl_backend_blit_fix = False
 
+        self._on_layer_change = list()
+        self._on_layer_activation = defaultdict(list)
+
     @property
     def canvas(self):
         return self._m.figure.f.canvas
@@ -798,6 +801,19 @@ class BlitManager:
 
     @bg_layer.setter
     def bg_layer(self, val):
+        self._bg_layer = val
+
+        # a general callable to be called on every layer change
+        if len(self._on_layer_change) > 0:
+            for action in self._on_layer_change:
+                action(self._m, val)
+
+        # individual callables executed if a specific layer is activated
+        activate_action = self._on_layer_activation.get(val, None)
+        if activate_action is not None:
+            for action in activate_action:
+                action(self._m)
+
         for m in [self._m.parent, *self._m.parent._children]:
             if m.layer != val:
                 if hasattr(m.figure, "ax_cb") and m.figure.ax_cb is not None:
@@ -811,10 +827,77 @@ class BlitManager:
                     m.figure.ax_cb_plot.set_visible(True)
 
         self._m.util._layer_selector._update_widgets(val)
-        self._bg_layer = val
         # self.canvas.flush_events()
         self._clear_temp_artists("on_layer_change")
         # self.fetch_bg(self._bg_layer)
+
+    def on_layer(self, func, layer=None, persistent=False):
+        """
+        Add callables that are executed whenever the visible layer changes.
+
+        Parameters
+        ----------
+        func : callable
+            The callable to use.
+            The call-signature is:
+
+            >>> def func(m, l):
+            >>>    # m... the Maps-object
+            >>>    # l... the name of the layer
+
+
+        layer : str or None, optional
+            - If str: The function will only be called if the specified layer is
+              activated.
+            - If None: The function will be called on any layer-change.
+
+            The default is None.
+        persistent : bool, optional
+            Indicator if the function should be called only once (False) or if it
+            should be called whenever a layer is activated.
+            The default is False.
+
+        Returns
+        -------
+        inner : TYPE
+            DESCRIPTION.
+
+        """
+        if layer is None:
+            if not persistent:
+
+                def remove_decorator(func):
+                    def inner(*args, **kwargs):
+                        try:
+                            func(*args, **kwargs)
+                            idx = self._on_layer_change.index(inner)
+                            self._on_layer_change.pop(idx)
+                        except IndexError:
+                            pass
+
+                    return inner
+
+                func = remove_decorator(func)
+
+            self._on_layer_change.append(func)
+
+        else:
+            if not persistent:
+
+                def remove_decorator(func):
+                    def inner(*args, **kwargs):
+                        try:
+                            func(*args, **kwargs)
+                            idx = self._on_layer_activation[layer].index(inner)
+                            self._on_layer_activation[layer].pop(idx)
+                        except IndexError:
+                            pass
+
+                    return inner
+
+                func = remove_decorator(func)
+
+            self._on_layer_activation[layer].append(func)
 
     def _refetch_layer(self, layer):
         if layer == "all":
@@ -826,6 +909,7 @@ class BlitManager:
     def fetch_bg(self, layer=None, bbox=None, overlay=None):
         # add this to the zorder of the overlay-artists prior to plotting
         # to ensure that they appear on top of other artists
+
         overlay_zorder_bias = 1000
 
         cv = self.canvas
@@ -836,6 +920,12 @@ class BlitManager:
             overlay_name, overlay_layers = "", []
         else:
             overlay_name, overlay_layers = overlay
+
+        for l in overlay_layers:
+            activate_action = self._on_layer_activation.get(l, None)
+            if activate_action is not None:
+                for action in activate_action:
+                    action(self._m)
 
         allartists = list(chain(*(self._bg_artists[i] for i in [layer, "all"])))
         allartists.sort(key=lambda x: getattr(x, "zorder", -1))
@@ -1110,7 +1200,6 @@ class BlitManager:
             self._draw_animated(layers=layers, artists=artists)
 
             if blit:
-
                 # workaround for nbagg backend to avoid glitches
                 # it's slow but at least it works...
                 # check progress of the following issuse
