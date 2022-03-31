@@ -398,10 +398,6 @@ class _click_container(_cb_container):
             else:
                 callback = callback.__get__(self._m)
 
-        # make sure multiple callbacks of the same funciton are only assigned
-        # if multiple assignments are properly handled
-        multi_cb_functions = ["mark", "annotate"]
-
         if double_click is True:
             btn_key = "double"
         elif double_click == "release":
