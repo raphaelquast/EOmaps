@@ -814,7 +814,6 @@ class ScaleBar:
             s.set_label_props(offset=o)
 
         def addcbs(self, s, **kwargs):
-            self.cb.click._only.append(s._cid_remove_cbs.split("__", 1)[0])
 
             # make sure we pick always only one scalebar
             for i in s._existing_pickers:
@@ -826,7 +825,6 @@ class ScaleBar:
 
             if not hasattr(s, "_cid_move"):
                 s._cid_move = self.cb.click.attach(scb_move, s=s)
-                self.cb.click._only.append(s._cid_move.split("__", 1)[0])
 
             if not hasattr(s, "_cid_up"):
                 s._cid_up = self.cb.keypress.attach(scb_az_ud, key="+", up=True, s=s)
@@ -903,7 +901,6 @@ class ScaleBar:
 
         self._m.cb.pick[self._picker_name].is_picked = False
 
-        self._m.cb.click._only.clear()
         self.set_position()
 
     def _decorate_zooms(self):

@@ -457,7 +457,6 @@ class cb_click_container(_click_container):
         self._cid_button_press_event = None
         self._cid_button_release_event = None
         self._cid_motion_event = None
-        self._only = []
 
     def _init_cbs(self):
         if self._m.parent is self._m:
@@ -492,9 +491,7 @@ class cb_click_container(_click_container):
                     # maps-object is active
                     return
                 cb = bcbs[key]
-                if clickdict is not None and (
-                    len(self._only) == 0 or key in self._only
-                ):
+                if clickdict is not None:
                     cb(**clickdict)
 
     def _onrelease(self, event):
