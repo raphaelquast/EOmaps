@@ -208,7 +208,6 @@ class Maps(object):
         self._f = f
         self._orientation = orientation
         self._ax = gs_ax
-        self._init_ax = gs_ax
         self._parent = None
 
         self._BM = None
