@@ -812,7 +812,7 @@ class BlitManager:
         activate_action = self._on_layer_activation.get(val, None)
         if activate_action is not None:
             for action in activate_action:
-                action(self._m)
+                action(self._m, val)
 
         for m in [self._m.parent, *self._m.parent._children]:
             if m.layer != val:
@@ -826,7 +826,6 @@ class BlitManager:
                 if hasattr(m.figure, "ax_cb_plot") and m.figure.ax_cb_plot is not None:
                     m.figure.ax_cb_plot.set_visible(True)
 
-        self._m.util._layer_selector._update_widgets(val)
         # self.canvas.flush_events()
         self._clear_temp_artists("on_layer_change")
         # self.fetch_bg(self._bg_layer)

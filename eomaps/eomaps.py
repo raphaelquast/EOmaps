@@ -3086,6 +3086,25 @@ class Maps(object):
         # to fetch the updated background!
         self.redraw()
 
+    def _get_layers(self, exclude=None):
+        # return a list of all (empty and non-empty) layer-names
+        layers = set((m.layer for m in self.parent._children))
+        # add layers that are not yet activated (but have an activation
+        # method defined...)
+        layers = layers.union(set(self.BM._on_layer_activation))
+        # add all (possibly still invisible) layers with artists defined
+        layers = layers.union(set(self.BM._bg_artists))
+
+        if exclude:
+            for l in exclude:
+                if l in layers:
+                    layers.remove(l)
+
+        # sort the layers
+        layers = sorted(layers, key=lambda x: str(x))
+
+        return layers
+
 
 class MapsGrid:
     """
