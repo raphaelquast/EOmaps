@@ -7,6 +7,7 @@ import warnings
 import copy
 from types import SimpleNamespace
 from pathlib import Path
+import weakref
 
 import numpy as np
 
@@ -211,7 +212,7 @@ class Maps(object):
         self._parent = None
 
         self._BM = None
-        self._children = []
+        self._children = weakref.WeakSet()
 
         self.parent = parent  # invoke the setter!
         self._orientation = "vertical"
@@ -226,7 +227,7 @@ class Maps(object):
 
         # default plot specs
         self.plot_specs = plot_specs(
-            self,
+            weakref.proxy(self),
             label=None,
             cmap=plt.cm.viridis.copy(),
             histbins=256,
@@ -255,13 +256,13 @@ class Maps(object):
 
             self._crs_plot = crs
 
-        # default classify specs
-        self.classify_specs = classify_specs(self)
+        self._crs_plot_cartopy = self._get_cartopy_crs(self._crs_plot)
 
-        self.set_shape.ellipses()
+        # default classify specs
+        self.classify_specs = classify_specs(weakref.proxy(self))
 
         self.data_specs = data_specs(
-            self,
+            weakref.proxy(self),
             xcoord="lon",
             ycoord="lat",
             crs=4326,
@@ -269,9 +270,79 @@ class Maps(object):
 
         self._axpicker = None
 
+        self._figure = map_objects(weakref.proxy(self))
+        self._cb = cb_container(weakref.proxy(self))  # accessor for the callbacks
         self._init_figure(gs_ax=gs_ax, plot_crs=crs, **kwargs)
+        self._utilities = utilities(weakref.proxy(self))
+        self._wms_container = wms_container(weakref.proxy(self))
 
+        self._shapes = shapes(weakref.proxy(self))
+        self.set_shape.ellipses()
+
+        # the radius is estimated when plot_map is called
+        self._estimated_radius = None
+
+        # cache commonly used transformers
+        self._transf_plot_to_lonlat = Transformer.from_crs(
+            self.crs_plot,
+            self.get_crs(4326),
+            always_xy=True,
+        )
+        self._transf_lonlat_to_plot = Transformer.from_crs(
+            self.get_crs(4326),
+            self.crs_plot,
+            always_xy=True,
+        )
+
+        # a set to hold references to the compass objects
         self._compass = set()
+
+        # a set holding the callback ID's from added logos
+        self._logo_cids = set()
+
+        # keep track of all decorated functions that need to be "undecorated" so that
+        # Maps-objects can be garbage-collected
+        self._cleanup_functions = set()
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, type, value, traceback):
+        self.cleanup()
+
+    @staticmethod
+    def _proxy(obj):
+        # create a proxy if the object is not yet a proxy
+        if type(obj) is not weakref.ProxyType:
+            return weakref.proxy(obj)
+        else:
+            return obj
+
+    def cleanup(self):
+        """
+        Cleanup all references to the object so that it can be deleted.
+
+        Returns
+        -------
+        None.
+
+        """
+        # remove the xlim-callback since it contains a reference to self
+        print("cleanup")
+        if hasattr(self, "_cid_xlim"):
+            self.ax.callbacks.disconnect(self._cid_xlim)
+
+        # disconnect all callbacks from attached logos
+        for cid in self._logo_cids:
+            self.figure.f.canvas.mpl_disconnect(cid)
+
+        # disconnect all click, pick and keypress callbacks
+        self.cb._reset_cids()
+
+        # call all additional cleanup functions
+        for f in self._cleanup_functions:
+            f()
+        self._cleanup_functions.clear()
 
     def _check_gpd(self):
         # raise an error if geopandas is not found
@@ -288,7 +359,7 @@ class Maps(object):
 
     @property
     def ax(self):
-        return self.figure.ax
+        return self._ax
 
     @property
     @wraps(new_layer_from_file)
@@ -331,7 +402,7 @@ class Maps(object):
         """
 
         if layer is None:
-            layer = self.layer
+            layer = copy.deepcopy(self.layer)
 
         m = self.copy(
             data_specs=copy_data_specs,
@@ -346,22 +417,22 @@ class Maps(object):
         return m
 
     @property
-    @lru_cache()
+    # @lru_cache()
     @wraps(cb_container)
     def cb(self):
-        return cb_container(self)
+        return self._cb
 
     @property
-    @lru_cache()
+    # @lru_cache()
     @wraps(utilities)
     def util(self):
-        return utilities(self)
+        return self._utilities
 
     @property
-    @lru_cache()
+    # @lru_cache()
     @wraps(map_objects)
     def figure(self):
-        return map_objects(self)
+        return self._figure
 
     @staticmethod
     def _get_cartopy_crs(crs):
@@ -417,6 +488,7 @@ class Maps(object):
             )
 
         self._ax = ax
+
         self._gridspec = gs
 
         # initialize the callbacks
@@ -444,7 +516,9 @@ class Maps(object):
 
             # do this only on xlims and NOT on ylims to avoid recursion
             # (plot aspect ensures that y changes if x changes)
-            self.figure.ax.callbacks.connect("xlim_changed", xlims_change)
+            self._cid_xlim = self.figure.ax.callbacks.connect(
+                "xlim_changed", xlims_change
+            )
             # self.figure.ax.callbacks.connect("ylim_changed", ylims_change)
 
         if newfig:  # only if a new figure has been initialized
@@ -483,16 +557,21 @@ class Maps(object):
 
     def _on_close(self, event):
         # reset attributes that might use up a lot of memory when the figure is closed
+        for m in [self.parent, *self.parent._children]:
 
-        if hasattr(self, "_props"):
-            self._props.clear()
-            del self._props
-        if hasattr(self, "tree"):
-            del self.tree
-        if hasattr(self.figure, "coll"):
-            del self.figure.coll
+            if hasattr(m, "_props"):
+                m._props.clear()
+                del m._props
+            if hasattr(m, "tree"):
+                del m.tree
+            if hasattr(m.figure, "coll"):
+                del m.figure.coll
 
-        self.data_specs.delete()
+            m.data_specs.delete()
+
+        # delete the tempfolder containing the memmaps
+        if hasattr(self.parent, "_tmpfolder"):
+            self.parent._tmpfolder.cleanup()
 
     @property
     def _ignore_cb_events(self):
@@ -505,9 +584,10 @@ class Maps(object):
     @property
     def BM(self):
         """The Blit-Manager used to dynamically update the plots"""
+        m = weakref.proxy(self)
         if self.parent._BM is None:
-            self.parent._BM = BlitManager(self)
-            self.parent._BM._bg_layer = self.parent.layer
+            self.parent._BM = BlitManager(m)
+            self.parent._BM._bg_layer = m.parent.layer
         return self.parent._BM
 
     @property
@@ -520,7 +600,7 @@ class Maps(object):
         return self.parent._axpicker
 
     def _add_child(self, m):
-        self.parent._children.append(m)
+        self.parent._children.add(m)
 
     @property
     def parent(self):
@@ -529,7 +609,7 @@ class Maps(object):
         If None, `self` is returned!
         """
         if self._parent is None:
-            return self
+            return weakref.proxy(self)
         else:
             return self._parent
 
@@ -537,7 +617,13 @@ class Maps(object):
     def parent(self, parent):
         assert parent is not self, "EOmaps: A Maps-object cannot be its own parent!"
         assert self._parent is None, "EOmaps: There is already a parent Maps object!"
-        self._parent = parent
+
+        if parent is not None:
+            self._parent = self._proxy(parent)
+        else:
+            # None cannot be weak-referenced!
+            self._parent = None
+
         if parent not in [self, None]:
             # add the child to the topmost parent-object
             self.parent._add_child(self)
@@ -553,7 +639,7 @@ class Maps(object):
         """
         for m in args:
             if m is not self:
-                self._join_axis_limits(m)
+                self._join_axis_limits(weakref.proxy(m))
 
     def _join_axis_limits(self, m):
         if self.figure.ax.projection != m.figure.ax.projection:
@@ -662,10 +748,10 @@ class Maps(object):
         self.data_specs.data = val
 
     @property
-    @lru_cache()
+    # @lru_cache()
     @wraps(shapes)
     def set_shape(self):
-        return shapes(self)
+        return self._shapes
 
     def set_data_specs(self, data=None, xcoord=None, ycoord=None, crs=None, **kwargs):
         """
@@ -859,14 +945,6 @@ class Maps(object):
         """
         self.classify_specs._set_scheme_and_args(scheme, **kwargs)
 
-    @property
-    @lru_cache()
-    def _bounds(self):
-        # get the extent of the added collection
-        b = self.figure.coll.get_datalim(self.figure.ax.transData)
-        # set the axis-extent
-        return (b.xmin, b.ymin, b.xmax, b.ymax)
-
     def _set_cpos(self, x, y, radiusx, radiusy, cpos):
         # use x = x + ...   instead of x +=  to allow casting from int to float
         if cpos == "c":
@@ -887,34 +965,12 @@ class Maps(object):
         return x, y
 
     @property
-    @lru_cache()
+    # @lru_cache()
     def crs_plot(self):
         """
         The crs used for plotting.
         """
-        return self._get_cartopy_crs(self._crs_plot)
-
-    @property
-    @lru_cache()
-    def _transf_plot_to_lonlat(self):
-        # get coordinate transformation from in_crs to plot_crs
-        transformer = Transformer.from_crs(
-            self.crs_plot,
-            self.get_crs(4326),
-            always_xy=True,
-        )
-        return transformer
-
-    @property
-    @lru_cache()
-    def _transf_lonlat_to_plot(self):
-        # get coordinate transformation from in_crs to plot_crs
-        transformer = Transformer.from_crs(
-            self.get_crs(4326),
-            self.crs_plot,
-            always_xy=True,
-        )
-        return transformer
+        return self._crs_plot_cartopy
 
     def get_crs(self, crs):
         """
@@ -1056,10 +1112,6 @@ class Maps(object):
 
             xorig, yorig = self._set_cpos(xorig, yorig, rx, ry, cpos)
 
-        props["xorig"] = xorig
-        props["yorig"] = yorig
-        props["ids"] = ids
-        props["z_data"] = z_data
         # transform center-points to the plot_crs
 
         if len(xorig.shape) == len(z_data.shape):
@@ -1069,7 +1121,7 @@ class Maps(object):
             )
 
         if crs1 == crs2:
-            props["x0"], props["y0"] = props["xorig"], props["yorig"]
+            x0, y0 = xorig, yorig
         else:
             transformer = Transformer.from_crs(
                 crs1,
@@ -1077,15 +1129,18 @@ class Maps(object):
                 always_xy=True,
             )
             # convert 1D data to 2D to make sure re-projection is correct
-            if len(props["xorig"].shape) == 1 and len(props["z_data"].shape) == 2:
-                props["xorig"], props["yorig"] = np.meshgrid(
-                    props["xorig"], props["yorig"], copy=False
-                )
-                props["z_data"] = props["z_data"].T
+            if len(xorig.shape) == 1 and len(z_data.shape) == 2:
+                xorig, yorig = np.meshgrid(xorig, yorig, copy=False)
+                z_data = z_data.T
 
-            props["x0"], props["y0"] = transformer.transform(
-                props["xorig"], props["yorig"]
-            )
+            x0, y0 = transformer.transform(xorig, yorig)
+
+        props["xorig"] = xorig
+        props["yorig"] = yorig
+        props["ids"] = ids
+        props["z_data"] = z_data
+        props["x0"] = x0
+        props["y0"] = y0
 
         # convert the data to 1D for shapes that accept unstructured data
         if self.shape.name != "shade_raster":
@@ -1419,7 +1474,7 @@ class Maps(object):
     @property
     @wraps(NaturalEarth_features)
     def add_feature(self):
-        return NaturalEarth_features(self)
+        return NaturalEarth_features(weakref.proxy(self))
 
     if _gpd_OK:
 
@@ -1672,7 +1727,6 @@ class Maps(object):
 
             if clip:
                 gdf = self._clip_gdf(gdf, clip)
-
             if reproject == "gpd":
                 gdf = gdf.to_crs(self.crs_plot)
             elif reproject == "cartopy":
@@ -2065,7 +2119,7 @@ class Maps(object):
 
         """
 
-        c = Compass(self)
+        c = Compass(weakref.proxy(self))
         c(pos=pos, scale=scale, style=style, patch=patch, txt=txt, pickable=pickable)
         # store a reference to the object (required for callbacks)!
         self._compass.add(c)
@@ -2085,9 +2139,16 @@ class Maps(object):
         patch_props=None,
         label_props=None,
     ):
+        # TODO temporary fix to make scalebar layer-independent
+        # (e.g. always attach it to a Maps-object at the "all" layer)
+        l_iter = (i for i in [self.parent, *self.parent._children] if i.layer == "all")
+        try:
+            s_m = next(l_iter)
+        except StopIteration:
+            s_m = self.new_layer("all")
 
         s = ScaleBar(
-            m=self,
+            m=s_m,
             preset=preset,
             scale=scale,
             autoscale_fraction=autoscale_fraction,
@@ -2113,9 +2174,9 @@ class Maps(object):
 
         @property
         @wraps(wms_container)
-        @lru_cache()
+        # @lru_cache()
         def add_wms(self):
-            return wms_container(self)
+            return self._wms_container
 
     @wraps(plt.savefig)
     def savefig(self, *args, **kwargs):
@@ -2330,7 +2391,6 @@ class Maps(object):
         if set_extent is True:
             # convert to a numpy-array to support 2D indexing with boolean arrays
             x, y = np.asarray(df.x), np.asarray(df.y)
-
             xf, yf = np.isfinite(x), np.isfinite(y)
             x_range = (np.nanmin(x[xf]), np.nanmax(x[xf]))
             y_range = (np.nanmin(y[yf]), np.nanmax(y[yf]))
@@ -2395,12 +2455,12 @@ class Maps(object):
         n_coord_shape = len(props["xorig"].shape)
 
         props["x0"], props["y0"] = (
-            np.ravel(props["x0"]),
-            np.ravel(props["y0"]),
+            props["x0"].ravel(),
+            props["y0"].ravel(),
         )
         props["xorig"], props["yorig"] = (
-            np.ravel(props["xorig"]),
-            np.ravel(props["yorig"]),
+            props["xorig"].ravel(),
+            props["yorig"].ravel(),
         )
 
         # in case 2D data and 1D coordinate arrays are provided, use a meshgrid
@@ -2420,6 +2480,33 @@ class Maps(object):
 
         else:
             props["z_data"] = props["z_data"].ravel()
+
+    def _memmap_props(self):
+        from tempfile import TemporaryDirectory, TemporaryFile
+
+        if not hasattr(self.parent, "_tmpfolder"):
+            self.parent._tmpfolder = TemporaryDirectory()
+
+        memmaps = dict()
+
+        for key, data in self._props.items():
+            file = TemporaryFile(
+                prefix=key + "__", suffix=".dat", dir=self.parent._tmpfolder.name
+            )
+
+            # filename = path.join(tmpfolder.name, f'{key}.dat')
+            args = dict(filename=file, dtype="float32", shape=data.shape)
+
+            fp = np.memmap(**args, mode="w+")
+
+            fp[:] = data[:]  # write the data to the memmap object
+            fp.flush()  # flush the data to disk
+
+            # replace the file in memory with the memmap
+            memmaps[key] = np.memmap(**args, mode="r")
+
+        for key, val in memmaps.items():
+            self._props[key] = val
 
     def _plot_map(
         self,
@@ -2503,7 +2590,6 @@ class Maps(object):
             coll = self.shape.get_coll(props["xorig"], props["yorig"], "in", **args)
 
             coll.set_clim(vmin, vmax)
-
             ax.add_collection(coll)
 
             self.figure.coll = coll
@@ -2542,6 +2628,7 @@ class Maps(object):
         layer=None,
         dynamic=False,
         set_extent=True,
+        memmap=None,
         **kwargs,
     ):
         """
@@ -2584,6 +2671,15 @@ class Maps(object):
             - if False: The plot-extent is kept as-is
 
             The default is True
+        memmap : bool or None
+            Indicator if memory-mapping should be use to save memory for very
+            large datasets.
+
+            If None: memory-mapping is only used if "shade_raster" or "shade_points"
+            is used as plot-shape.
+
+            The default is None.
+
         kwargs
             kwargs passed to the initialization of the matpltolib collection
             (dependent on the plot-shape) [linewidth, edgecolor, facecolor, ...]
@@ -2602,6 +2698,8 @@ class Maps(object):
                 set_extent=set_extent,
                 **kwargs,
             )
+            if memmap is None:
+                memmap = True
         else:
             self._plot_map(
                 pick_distance=pick_distance,
@@ -2610,6 +2708,9 @@ class Maps(object):
                 set_extent=set_extent,
                 **kwargs,
             )
+
+        if memmap:
+            self._memmap_props()
 
     def add_colorbar(
         self,
@@ -2703,7 +2804,6 @@ class Maps(object):
 
         # check if there is already an existing colorbar in another axis
         # and if we find one, use its specs instead of creating a new one
-
         parent_m_for_cb = None
         if hasattr(self, "_ax_cb"):
             parent_m_for_cb = self
@@ -3014,6 +3114,9 @@ class Maps(object):
             figax.set_position(getpos(self.ax.get_position())["rect"])
 
         def update_decorator(f):
+            # use this so that we can "undecorate" the function with the
+            # __wrapped__ property
+            @wraps(f)
             def newf(*args, **kwargs):
                 ret = f(*args, **kwargs)
                 setlim()
@@ -3027,7 +3130,14 @@ class Maps(object):
             toolbar.release_zoom = update_decorator(toolbar.release_zoom)
             toolbar.release_pan = update_decorator(toolbar.release_pan)
 
-        self.figure.f.canvas.mpl_connect("resize_event", setlim)
+        def cleanup():
+            toolbar._update_view = toolbar._update_view.__wrapped__
+            toolbar.release_zoom = toolbar.release_zoom.__wrapped__
+            toolbar.release_pan = toolbar.release_pan.__wrapped__
+
+        self._cleanup_functions.add(cleanup)
+
+        self._logo_cids.add(self.figure.f.canvas.mpl_connect("resize_event", setlim))
 
     def show_layer(self, name):
         """
@@ -3044,10 +3154,10 @@ class Maps(object):
             The name of the layer to activate.
             The default is None.
         """
-        layers = self.util._layer_selector._get_layers()
+        layers = self._get_layers()
 
         if name not in layers:
-            lstr = " - " + "\n - ".join(layers)
+            lstr = " - " + "\n - ".join(map(str, layers))
 
             raise AssertionError(
                 f"EOmaps: The layer '{name}' does not exist...\n"
@@ -3056,6 +3166,7 @@ class Maps(object):
 
         # invoke the bg_layer setter of the blit-manager
         self.BM.bg_layer = name
+        # self.BM.canvas.draw_idle()
         self.BM.update()
 
     def redraw(self):
@@ -3223,7 +3334,7 @@ class MapsGrid:
         m_inits=None,
         ax_inits=None,
         figsize=None,
-        layer=0,
+        layer="all",
         **kwargs,
     ):
 
@@ -3316,6 +3427,10 @@ class MapsGrid:
                 ), "EOmaps: there are duplicated keys in ax_inits!"
                 for key, val in ax_inits.items():
                     self.create_axes(val, name=key)
+
+    def cleanup(self):
+        for m in self:
+            m.cleanup()
 
     @staticmethod
     def _test_unique_str_keys(x):
