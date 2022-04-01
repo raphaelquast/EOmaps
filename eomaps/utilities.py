@@ -274,7 +274,7 @@ class _layer_selector:
         self._selectors.append(s)
 
         # update widgets to make sure the right layer is selected
-        self._update_widgets(self._m.layer)
+        self._update_widgets(self._m.BM.bg_layer)
 
         return s
 
@@ -440,7 +440,7 @@ class _layer_selector:
         s.remove = remove
 
         # update widgets to make sure the right layer is selected
-        self._update_widgets(self._m.layer)
+        self._update_widgets(self._m.BM.bg_layer)
 
         return s
 
