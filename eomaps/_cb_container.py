@@ -473,7 +473,6 @@ class cb_click_container(_click_container):
         return clickdict
 
     def _onclick(self, event):
-
         clickdict = self._get_clickdict(event)
 
         if event.dblclick:
@@ -720,6 +719,11 @@ class cb_pick_container(_click_container):
         self._add_pick_callback()
 
     def _default_picker(self, artist, event):
+
+        # make sure that objects are only picked if we are on the right layer
+        if self._m.layer != self._m.BM.bg_layer:
+            return False, None
+
         try:
             # if no pick-callback is attached, don't identify the picked point
             if len(self._m.cb.pick.get.cbs) == 0:
@@ -779,6 +783,11 @@ class cb_pick_container(_click_container):
         if event.artist is not self._artist:
             return
 
+        # only execute onpick if the correct layer is visible
+        # (relevant for forwarded callbacks)
+        if self._m.layer != self._m.BM.bg_layer:
+            return
+
         # don't execute callbacks if a toolbar-action is active
         if (
             self._m.figure.f.canvas.toolbar is not None
@@ -786,6 +795,7 @@ class cb_pick_container(_click_container):
             return
 
         clickdict = self._get_pickdict(event)
+
         if event.mouseevent.dblclick:
             cbs = self.get.cbs["double"]
         else:
@@ -815,6 +825,11 @@ class cb_pick_container(_click_container):
 
         def pickcb(event):
             try:
+
+                # make sure pickcb is only executed if we are on the right layer
+                if self._m.layer != self._m.BM.bg_layer:
+                    return
+
                 # check if we want to ignore callbacks
                 if self._m._ignore_cb_events:
                     return
