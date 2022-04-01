@@ -297,7 +297,7 @@ class _wmts_layer(_WebMap_layer):
             else:
                 self._layer = layer
 
-            if self._m.BM.bg_layer == self._layer:
+            if self._layer == "all" or self._m.BM.bg_layer == self._layer:
                 # add the layer immediately if the layer is already active
                 self._do_add_layer(self._m, self._layer)
             else:
@@ -348,7 +348,7 @@ class _wms_layer(_WebMap_layer):
             else:
                 self._layer = layer
 
-            if m.BM.bg_layer == self._layer:
+            if self._layer == "all" or m.BM.bg_layer == self._layer:
                 # add the layer immediately if the layer is already active
                 self._do_add_layer(m, self._layer)
             else:
@@ -928,7 +928,7 @@ class _xyz_tile_service:
             )
             self._kwargs.update(kwargs)
 
-            if self._m.BM.bg_layer == self._layer:
+            if self._layer == "all" or self._m.BM.bg_layer == self._layer:
                 # add the layer immediately if the layer is already active
                 self._do_add_layer(self._m, self._layer)
             else:
