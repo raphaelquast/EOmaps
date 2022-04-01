@@ -795,6 +795,18 @@ class BlitManager:
     def canvas(self):
         return self._m.figure.f.canvas
 
+    def _do_on_layer_change(self, layer):
+        # general callbacks executed on any layer change
+        if len(self._on_layer_change) > 0:
+            for action in self._on_layer_change:
+                action(self._m, layer)
+
+        # individual callables executed if a specific layer is activated
+        activate_action = self._on_layer_activation.get(layer, None)
+        if activate_action is not None:
+            for action in activate_action:
+                action(self._m, layer)
+
     @property
     def bg_layer(self):
         return self._bg_layer
@@ -804,15 +816,7 @@ class BlitManager:
         self._bg_layer = val
 
         # a general callable to be called on every layer change
-        if len(self._on_layer_change) > 0:
-            for action in self._on_layer_change:
-                action(self._m, val)
-
-        # individual callables executed if a specific layer is activated
-        activate_action = self._on_layer_activation.get(val, None)
-        if activate_action is not None:
-            for action in activate_action:
-                action(self._m, val)
+        self._do_on_layer_change(layer=val)
 
         for m in [self._m.parent, *self._m.parent._children]:
             if m.layer != val:
