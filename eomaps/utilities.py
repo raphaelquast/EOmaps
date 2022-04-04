@@ -196,7 +196,8 @@ class _layer_selector:
         exclude_layers : list or None
             A list of layer-names that should be excluded.
             Only relevant if `layers=None` is used.
-            The default is None
+            The default is None in which case only the "all" layer is excluded.
+            (Same as `exclude = ["all"]`. Use `exclude=[]` to get all available layers.)
         kwargs :
             All additional arguments are passed to `plt.legend`
 
@@ -231,6 +232,8 @@ class _layer_selector:
         """
 
         if layers is None:
+            if exclude_layers is None:
+                exclude_layers = ["all"]
             layers = self._m._get_layers(exclude=exclude_layers)
 
         assert (
@@ -325,8 +328,8 @@ class _layer_selector:
         exclude_layers : list or None
             A list of layer-names that should be excluded.
             Only relevant if `layers=None` is used.
-            The default is None
-
+            The default is None in which case only the "all" layer is excluded.
+            (Same as `exclude = ["all"]`. Use `exclude=[]` to get all available layers.)
         kwargs :
             Additional kwargs are passed to matplotlib.widgets.Slider
 
@@ -358,6 +361,8 @@ class _layer_selector:
 
         """
         if layers is None:
+            if exclude_layers is None:
+                exclude_layers = ["all"]
             layers = self._m._get_layers(exclude=exclude_layers)
 
         assert (
