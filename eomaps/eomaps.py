@@ -340,7 +340,7 @@ class Maps(object):
         # disconnect all callbacks from attached logos
         for cid in self._logo_cids:
             self.figure.f.canvas.mpl_disconnect(cid)
-            self._logo_cids.clear()
+        self._logo_cids.clear()
 
         # disconnect all click, pick and keypress callbacks
         self.cb._reset_cids()
