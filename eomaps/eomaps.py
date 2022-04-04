@@ -9,6 +9,7 @@ from types import SimpleNamespace
 from pathlib import Path
 import weakref
 from tempfile import TemporaryDirectory, TemporaryFile
+import gc
 
 import numpy as np
 
