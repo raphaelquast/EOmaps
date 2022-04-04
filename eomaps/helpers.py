@@ -1132,17 +1132,28 @@ class BlitManager:
 
     def _clear_temp_artists(self, method):
         if method == "on_layer_change":
-            # clear all artists from the "on_layer_change" list irrespective of the
-            # method
+            # clear all artists from "on_layer_change" list irrespective of the method
             allmethods = [i for i in self._artists_to_clear if i != method]
             for art in self._artists_to_clear[method]:
                 for met in allmethods:
+
                     if art in self._artists_to_clear[met]:
                         art.set_visible(False)
                         self.remove_artist(art)
                         art.remove()
                         self._artists_to_clear[met].remove(art)
             del self._artists_to_clear[method]
+
+            # always clear all temporary "pick" artists on a layer-change
+            for method in ["pick"]:
+                while len(self._artists_to_clear[method]) > 0:
+                    art = self._artists_to_clear[method].pop(-1)
+                    art.set_visible(False)
+                    self.remove_artist(art)
+                    art.remove()
+                    if art in self._artists_to_clear["on_layer_change"]:
+                        self._artists_to_clear["on_layer_change"].remove(art)
+                del self._artists_to_clear[method]
 
         else:
             while len(self._artists_to_clear[method]) > 0:
