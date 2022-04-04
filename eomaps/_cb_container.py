@@ -1201,7 +1201,7 @@ class cb_container:
 
         self._keypress = keypress_container(
             m=self._m,
-            cb_cls=click_callbacks,
+            cb_cls=keypress_callbacks,
             method="keypress",
         )
 
