@@ -1195,7 +1195,7 @@ class cb_container:
 
         self._pick = cb_pick_container(
             m=self._m,
-            cb_cls=click_callbacks,
+            cb_cls=pick_callbacks,
             method="pick",
         )
 
