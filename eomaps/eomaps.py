@@ -334,13 +334,16 @@ class Maps(object):
         print("cleanup")
         if hasattr(self, "_cid_xlim"):
             self.ax.callbacks.disconnect(self._cid_xlim)
+            del self._cid_xlim
 
         # disconnect all callbacks from attached logos
         for cid in self._logo_cids:
             self.figure.f.canvas.mpl_disconnect(cid)
+            self._logo_cids.clear()
 
         # disconnect all click, pick and keypress callbacks
         self.cb._reset_cids()
+
         # call all additional cleanup functions
         for f in self._cleanup_functions:
             f()
