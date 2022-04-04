@@ -358,6 +358,14 @@ class Maps(object):
     from_file = from_file
     read_file = read_file
 
+    def show(self):
+        """
+        Make the layer of this `Maps`-object visible.
+        (just a shortcut for `m.show_layer(m.layer)`)
+        """
+
+        self.show_layer(self.layer)
+
     @property
     def ax(self):
         return self._ax
