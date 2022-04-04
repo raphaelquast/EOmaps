@@ -194,7 +194,7 @@ class Maps(object):
         self,
         crs=None,
         parent=None,
-        layer="all",
+        layer=0,
         orientation="vertical",
         f=None,
         gs_ax=None,
@@ -357,6 +357,12 @@ class Maps(object):
 
     from_file = from_file
     read_file = read_file
+
+    @property
+    def all(self):
+        if not hasattr(self.parent, "_all"):
+            self.parent._all = self.parent.new_layer("all")
+        return self.parent._all
 
     def show(self):
         """
@@ -3364,7 +3370,7 @@ class MapsGrid:
         m_inits=None,
         ax_inits=None,
         figsize=None,
-        layer="all",
+        layer=0,
         **kwargs,
     ):
 
