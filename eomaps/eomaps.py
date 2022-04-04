@@ -214,7 +214,7 @@ class Maps(object):
         self._parent = None
 
         self._BM = None
-        self._children = weakref.WeakSet()
+        self._children = set()  # weakref.WeakSet()
 
         self.parent = parent  # invoke the setter!
         self._orientation = "vertical"
@@ -349,6 +349,10 @@ class Maps(object):
         for f in self._cleanup_functions:
             f()
         self._cleanup_functions.clear()
+
+        # remove the children from the parent Maps object
+        if self in self.parent._children:
+            self.parent._children.remove(self)
 
     def _check_gpd(self):
         # raise an error if geopandas is not found
