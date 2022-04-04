@@ -8,6 +8,7 @@ import copy
 from types import SimpleNamespace
 from pathlib import Path
 import weakref
+from tempfile import TemporaryDirectory, TemporaryFile
 
 import numpy as np
 
@@ -2481,15 +2482,22 @@ class Maps(object):
         else:
             props["z_data"] = props["z_data"].ravel()
 
-    def _memmap_props(self):
-        from tempfile import TemporaryDirectory, TemporaryFile
-
+    def _memmap_props(self, dir=None):
+        # memory-map all datasets in the self._props dict to free memory while
+        # keeping all callbacks etc. responsive.
         if not hasattr(self.parent, "_tmpfolder"):
-            self.parent._tmpfolder = TemporaryDirectory()
+            if isinstance(dir, (str, Path)):
+                self.parent._tmpfolder = TemporaryDirectory(dir=dir)
+            else:
+                self.parent._tmpfolder = TemporaryDirectory()
 
         memmaps = dict()
 
         for key, data in self._props.items():
+            # don't memmap x0 and y0 since they are needed to identify points
+            # (e.g. they would be loaded to memory as soon as a point is clicked)
+            if key in ["x0", "y0"]:
+                continue
             file = TemporaryFile(
                 prefix=key + "__", suffix=".dat", dir=self.parent._tmpfolder.name
             )
@@ -2671,17 +2679,25 @@ class Maps(object):
             - if False: The plot-extent is kept as-is
 
             The default is True
-        memmap : bool or None
+        memmap : bool, str, pathlib.Path or None
             Indicator if memory-mapping should be use to save memory by storing
             intermediate datasets (e.g. projected coordinates, indexes & the data)
             in a temporary folder on disc rather than keeping everything in memory.
-            This will cause a slight decrease when identifying clicked points but it
-            provides a major reduction in memory-usage for very large datasets.
+            This causes a slight performance penalty when identifying clicked points but
+            it provides a major reduction in memory-usage for very large datasets
+            (or if you want a large number of interactive layers).
 
             - If None: memory-mapping is only used if "shade_raster" or "shade_points"
-            is used as plot-shape.
-            - if True: memory-mapping is used
+              is used as plot-shape.
             - if False: memory-mapping is disabled
+            - if True: memory-mapping is used with an automatically located tempfolder
+            - if str or pathlib.Path: memory-mapping is used and the provided folder
+              is used as location for the temporary files (stored in a temp-subfolder).
+
+            NOTE: The tempfolder and all files will be deleted if the figure is closed,
+            the Maps-object is deleted or the kernel is interrupted!
+
+            The location of the tempfolder is accessible via `m._tempfolder`
 
             The default is None.
 
@@ -2714,8 +2730,10 @@ class Maps(object):
                 **kwargs,
             )
 
+        # after plotting, use memory-mapping to store datasets required by
+        # callbacks etc. so that we don't need to keep them in memory.
         if memmap:
-            self._memmap_props()
+            self._memmap_props(dir=memmap)
 
     def add_colorbar(
         self,
