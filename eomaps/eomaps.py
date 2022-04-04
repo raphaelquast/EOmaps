@@ -276,6 +276,7 @@ class Maps(object):
         self._init_figure(gs_ax=gs_ax, plot_crs=crs, **kwargs)
         self._utilities = utilities(weakref.proxy(self))
         self._wms_container = wms_container(weakref.proxy(self))
+        self._new_layer_from_file = new_layer_from_file(weakref.proxy(self))
 
         self._shapes = shapes(weakref.proxy(self))
         self.set_shape.ellipses()
@@ -378,9 +379,8 @@ class Maps(object):
 
     @property
     @wraps(new_layer_from_file)
-    @lru_cache()
     def new_layer_from_file(self):
-        return new_layer_from_file(self)
+        return self._new_layer_from_file
 
     def new_layer(
         self,
