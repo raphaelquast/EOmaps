@@ -323,7 +323,6 @@ class shapes(object):
         def get_coll(self, x, y, crs, **kwargs):
 
             xs, ys, mask = self._get_geod_circle_points(x, y, crs, self.radius, self.n)
-
             # special treatment of array input to properly mask values
             array = kwargs.pop("array", None)
 
@@ -351,6 +350,7 @@ class shapes(object):
                 array=array,
                 **kwargs,
             )
+
             return coll
 
     class _ellipses(object):
