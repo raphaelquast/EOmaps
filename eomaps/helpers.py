@@ -116,6 +116,7 @@ class searchtree:
     def query(self, x, k=1, d=None):
         if d is None:
             d = self.d
+
         # select a rectangle around the pick-coordinates
         # (provides tremendous speedups for very large datasets)
         mx = np.logical_and(
@@ -159,6 +160,7 @@ class searchtree:
                 )
 
             i = None
+
         return None, i
 
 
@@ -961,6 +963,7 @@ class BlitManager:
 
         # temporarily disconnect draw-event callback to avoid recursion
         # while we re-draw the artists
+
         cv.mpl_disconnect(self.cid)
 
         if not self._m._draggable_axes._modifier_pressed:
@@ -994,6 +997,7 @@ class BlitManager:
     def on_draw(self, event):
         """Callback to register with 'draw_event'."""
         cv = self.canvas
+
         if event is not None:
             if event.canvas != cv:
                 raise RuntimeError
@@ -1061,6 +1065,11 @@ class BlitManager:
 
             The default is 0.
         """
+
+        if not any(m.layer == layer for m in (self._m, *self._m._children)):
+            print(f"creating a new Maps-object for the layer {layer}")
+            self._m.new_layer(layer)
+
         if art.figure != self.canvas.figure:
             raise RuntimeError
 
