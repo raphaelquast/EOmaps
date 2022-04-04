@@ -2261,7 +2261,10 @@ class Maps(object):
             vmax = np.nanmax(props["z_data"])
 
         # clip the data to properly account for vmin and vmax
-        props["z_data"] = props["z_data"].clip(vmin, vmax)
+        # (do this only if we don't intend to use the full dataset!)
+        if self.plot_specs["vmin"] or self.plot_specs["vmax"]:
+            props["z_data"] = props["z_data"].clip(vmin, vmax)
+
         if verbose:
             print("EOmaps: Classifying...")
 
@@ -2583,7 +2586,9 @@ class Maps(object):
                 vmax = np.nanmax(props["z_data"])
 
             # clip the data to properly account for vmin and vmax
-            props["z_data"] = props["z_data"].clip(vmin, vmax)
+            # (do this only if we don't intend to use the full dataset!)
+            if self.plot_specs["vmin"] or self.plot_specs["vmax"]:
+                props["z_data"] = props["z_data"].clip(vmin, vmax)
 
             # ---------------------- classify the data
             cbcmap, norm, bins, classified = self._classify_data(
