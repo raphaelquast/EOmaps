@@ -1265,9 +1265,6 @@ class Maps(object):
         if ax_cb_plot is None:
             ax_cb_plot = self.figure.ax_cb_plot
 
-        if log:
-            ax_cb_plot.set_xscale("log")
-
         if z_data is None:
             z_data = self._props["z_data"]
         z_data = z_data.ravel()
@@ -1298,8 +1295,15 @@ class Maps(object):
 
         if orientation == "horizontal":
             cb_orientation = "vertical"
+
+            if log:
+                ax_cb_plot.set_xscale("log")
+
         elif orientation == "vertical":
             cb_orientation = "horizontal"
+
+            if log:
+                ax_cb_plot.set_yscale("log")
 
         if histbins == "bins":
             assert (
@@ -1469,6 +1473,8 @@ class Maps(object):
             ot = ax_cb.yaxis.get_offset_text()
             ot.set_horizontalalignment("center")
             ot.set_position((1, 0))
+
+        ax_cb.autoscale()
 
         return cb
 
