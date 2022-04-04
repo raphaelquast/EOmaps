@@ -2688,7 +2688,7 @@ class Maps(object):
         layer=None,
         dynamic=False,
         set_extent=True,
-        memmap=None,
+        memmap=False,
         **kwargs,
     ):
         """
@@ -2731,13 +2731,13 @@ class Maps(object):
             - if False: The plot-extent is kept as-is
 
             The default is True
-        memmap : bool, str, pathlib.Path or None
-            Indicator if memory-mapping should be use to save memory by storing
-            intermediate datasets (e.g. projected coordinates, indexes & the data)
-            in a temporary folder on disc rather than keeping everything in memory.
+        memmap : bool, str or pathlib.Path
+            Use memory-mapping to save some memory by storing intermediate datasets
+            (e.g. projected coordinates, indexes & the data) in a temporary folder on
+            disc rather than keeping everything in memory.
             This causes a slight performance penalty when identifying clicked points but
-            it provides a major reduction in memory-usage for very large datasets
-            (or if you want a large number of interactive layers).
+            it can provide a reduction in memory-usage for very large datasets
+            (or for a very large number of interactive layers).
 
             - If None: memory-mapping is only used if "shade_raster" or "shade_points"
               is used as plot-shape.
@@ -2751,7 +2751,7 @@ class Maps(object):
 
             The location of the tempfolder is accessible via `m._tempfolder`
 
-            The default is None.
+            The default is False.
 
         kwargs
             kwargs passed to the initialization of the matpltolib collection
@@ -2771,8 +2771,6 @@ class Maps(object):
                 set_extent=set_extent,
                 **kwargs,
             )
-            if memmap is None:
-                memmap = True
         else:
             self._plot_map(
                 pick_distance=pick_distance,
