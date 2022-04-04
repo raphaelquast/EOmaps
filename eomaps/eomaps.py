@@ -2442,7 +2442,7 @@ class Maps(object):
 
         if pick_distance is not None:
             # self.tree = cKDTree(np.stack([props["x0"], props["y0"]], axis=1))
-            self.tree = searchtree(m=self, pick_distance=pick_distance)
+            self.tree = searchtree(m=self._proxy(self), pick_distance=pick_distance)
 
             self.cb.pick._set_artist(coll)
             self.cb.pick._init_cbs()
@@ -2459,6 +2459,7 @@ class Maps(object):
 
     @staticmethod
     def _1Dprops(props):
+
         # convert all arrays in props to a proper 1D representation that will be used
         # to index and identify points
 
@@ -2616,7 +2617,7 @@ class Maps(object):
             self.figure.coll = coll
 
             if pick_distance is not None:
-                self.tree = searchtree(m=self, pick_distance=pick_distance)
+                self.tree = searchtree(m=self._proxy(self), pick_distance=pick_distance)
 
                 self.cb.pick._set_artist(coll)
                 self.cb.pick._init_cbs()
