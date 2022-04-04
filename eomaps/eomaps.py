@@ -340,7 +340,6 @@ class Maps(object):
 
         # disconnect all click, pick and keypress callbacks
         self.cb._reset_cids()
-
         # call all additional cleanup functions
         for f in self._cleanup_functions:
             f()
@@ -432,19 +431,16 @@ class Maps(object):
         return m
 
     @property
-    # @lru_cache()
     @wraps(cb_container)
     def cb(self):
         return self._cb
 
     @property
-    # @lru_cache()
     @wraps(utilities)
     def util(self):
         return self._utilities
 
     @property
-    # @lru_cache()
     @wraps(map_objects)
     def figure(self):
         return self._figure
@@ -763,7 +759,6 @@ class Maps(object):
         self.data_specs.data = val
 
     @property
-    # @lru_cache()
     @wraps(shapes)
     def set_shape(self):
         return self._shapes
@@ -980,7 +975,6 @@ class Maps(object):
         return x, y
 
     @property
-    # @lru_cache()
     def crs_plot(self):
         """
         The crs used for plotting.
@@ -2195,7 +2189,6 @@ class Maps(object):
 
         @property
         @wraps(wms_container)
-        # @lru_cache()
         def add_wms(self):
             return self._wms_container
 
