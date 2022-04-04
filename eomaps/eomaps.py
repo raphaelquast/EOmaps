@@ -371,7 +371,7 @@ class Maps(object):
         """
         Get a Maps-object on the "all" layer.
 
-        Use it just as any other Maps-object. (It's the same as Maps(layer="all"))
+        Use it just as any other Maps-object. (It's the same as `Maps(layer="all")`)
 
         >>> m.all.cb.click.attach.annotate()
 
