@@ -311,6 +311,7 @@ class Maps(object):
 
     def __exit__(self, type, value, traceback):
         self.cleanup()
+        gc.collect()
 
     @staticmethod
     def _proxy(obj):
