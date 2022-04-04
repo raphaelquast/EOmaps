@@ -332,7 +332,6 @@ class Maps(object):
 
         """
         # remove the xlim-callback since it contains a reference to self
-        print("cleanup")
         if hasattr(self, "_cid_xlim"):
             self.ax.callbacks.disconnect(self._cid_xlim)
             del self._cid_xlim
