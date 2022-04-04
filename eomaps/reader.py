@@ -592,6 +592,21 @@ def _from_file(
             )
             pass
 
+        # don't try to plot ellipses if the dataset is larger than 2M points
+        if _pd_OK and isinstance(m.data, pd.DataFrame):
+            # get the data-values
+            size = m.data[m.data_specs.parameter].size
+        else:
+            size = m.data.size
+
+        if size > 2000_000:
+            raise AssertionError(
+                "EOmaps: ...aborting attempt to plot "
+                + f"{np.format_float_scientific(size)} datapoints from a file "
+                + "as ellipses to avoid a memory-overflow... explicitly use "
+                + "`shape='ellipses'` if you really want to create an ellipse-plot!"
+            )
+
         # try to plot as ellipses
         m.set_shape.ellipses()
         m.plot_map(**kwargs)
