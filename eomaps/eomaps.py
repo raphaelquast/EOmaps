@@ -2312,7 +2312,7 @@ class Maps(object):
             return
 
         # re-evaluate vmin and vmax after normalization
-        vmin, vmax = np.nanmin(zdata), np.nanmax(zdata)
+        vmin, vmax = self.classify_specs._norm([vmin, vmax]).astype(float)
         # re-instate masked values
         zdata[~z_finite] = np.nan
 
