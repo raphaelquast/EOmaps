@@ -582,16 +582,22 @@ class Maps(object):
             if hasattr(m, "_props"):
                 m._props.clear()
                 del m._props
+
             if hasattr(m, "tree"):
                 del m.tree
+
             if hasattr(m.figure, "coll"):
                 del m.figure.coll
 
             m.data_specs.delete()
+            m.cleanup()
 
         # delete the tempfolder containing the memmaps
         if hasattr(self.parent, "_tmpfolder"):
             self.parent._tmpfolder.cleanup()
+
+        # run garbage-collection to immediately free memory
+        gc.collect
 
     @property
     def _ignore_cb_events(self):
