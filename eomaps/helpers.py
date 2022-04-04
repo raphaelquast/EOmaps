@@ -127,17 +127,17 @@ class searchtree:
         )
         m = np.logical_and(mx, my)
         # get the indexes of the search-rectangle
-        idx = np.where(m)[0]
+        idx = np.where(m.ravel())[0]
         # evaluate the clicked pixel as the one with the smallest
         # euclidean distance
-
         if len(idx) > 0:
             i = idx[
                 (
-                    (self._m._props["x0"][m] - x[0]) ** 2
-                    + (self._m._props["y0"][m] - x[1]) ** 2
+                    (self._m._props["x0"][m].ravel() - x[0]) ** 2
+                    + (self._m._props["y0"][m].ravel() - x[1]) ** 2
                 ).argmin()
             ]
+
         else:
             # show some warning if no points are found within the pick_distance
 

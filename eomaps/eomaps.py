@@ -2484,13 +2484,30 @@ class Maps(object):
         # in case 2D data and 1D coordinate arrays are provided, use a meshgrid
         # to identify the coordinates
         if n_coord_shape == 1 and len(props["z_data"].shape) == 2:
+
             props["x0"], props["y0"] = [
-                np.ravel(i) for i in np.meshgrid(props["x0"], props["y0"], copy=False)
+                i
+                for i in np.broadcast_arrays(
+                    *np.meshgrid(props["x0"], props["y0"], copy=False, sparse=True)
+                )
             ]
+
             props["xorig"], props["yorig"] = [
-                np.ravel(i)
-                for i in np.meshgrid(props["xorig"], props["yorig"], copy=False)
+                i
+                for i in np.broadcast_arrays(
+                    *np.meshgrid(
+                        props["xorig"], props["yorig"], copy=False, sparse=True
+                    )
+                )
             ]
+
+            # props["x0"], props["y0"] = [
+            #     np.ravel(i) for i in np.meshgrid(props["x0"], props["y0"], copy=False)
+            # ]
+            # props["xorig"], props["yorig"] = [
+            #     np.ravel(i)
+            #     for i in np.meshgrid(props["xorig"], props["yorig"], copy=False)
+            # ]
 
             # transpose since 1D coordinates are expected to be provided as (y, x)
             # and NOT as (x, y)
@@ -2614,7 +2631,9 @@ class Maps(object):
             else:
                 args = dict(array=props["z_data"], cmap=cbcmap, norm=norm, **kwargs)
 
-            coll = self.shape.get_coll(props["xorig"], props["yorig"], "in", **args)
+            coll = self.shape.get_coll(
+                props["xorig"].ravel(), props["yorig"].ravel(), "in", **args
+            )
 
             coll.set_clim(vmin, vmax)
             ax.add_collection(coll)

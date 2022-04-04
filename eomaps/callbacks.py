@@ -190,7 +190,10 @@ class _click_callbacks(object):
             if ID is not None and self.m.data is not None:
                 x, y = [
                     np.format_float_positional(i, trim="-", precision=pos_precision)
-                    for i in (self.m._props["xorig"][ind], self.m._props["yorig"][ind])
+                    for i in (
+                        self.m._props["xorig"].flat[ind],
+                        self.m._props["yorig"].flat[ind],
+                    )
                 ]
                 x0, y0 = [
                     np.format_float_positional(i, trim="-", precision=pos_precision)

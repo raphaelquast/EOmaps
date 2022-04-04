@@ -137,8 +137,8 @@ class shapes(object):
             in_tree = cKDTree(
                 np.stack(
                     [
-                        m._props["xorig"][: m.set_shape.radius_estimation_range],
-                        m._props["yorig"][: m.set_shape.radius_estimation_range],
+                        m._props["xorig"].flat[: m.set_shape.radius_estimation_range],
+                        m._props["yorig"].flat[: m.set_shape.radius_estimation_range],
                     ],
                     axis=1,
                 ),
@@ -153,8 +153,8 @@ class shapes(object):
             tree = cKDTree(
                 np.stack(
                     [
-                        m._props["x0"][: m.set_shape.radius_estimation_range],
-                        m._props["y0"][: m.set_shape.radius_estimation_range],
+                        m._props["x0"].flat[: m.set_shape.radius_estimation_range],
+                        m._props["y0"].flat[: m.set_shape.radius_estimation_range],
                     ],
                     axis=1,
                 ),

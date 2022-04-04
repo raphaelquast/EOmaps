@@ -761,8 +761,11 @@ class cb_pick_container(_click_container):
         if ind is not None:
             if self._m.figure.coll is not None and event.artist is self._m.figure.coll:
                 clickdict = dict(
-                    pos=(self._m._props["x0"][ind], self._m._props["y0"][ind]),
-                    ID=self._m._props["ids"][ind],
+                    pos=(
+                        self._m._props["x0"].flat[ind],
+                        self._m._props["y0"].flat[ind],
+                    ),
+                    ID=self._m._props["ids"].flat[ind],
                     val=self._m._props["z_data"][ind],
                     ind=ind,
                     picker_name=self._picker_name,
