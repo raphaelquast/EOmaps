@@ -6,7 +6,7 @@ from eomaps.callbacks import (
 )
 from types import SimpleNamespace
 
-from functools import update_wrapper, partial, wraps, lru_cache
+from functools import update_wrapper, partial, wraps
 from collections import defaultdict
 import matplotlib.pyplot as plt
 
@@ -1187,41 +1187,45 @@ class cb_container:
 
         self._methods = ["click", "keypress"]
 
-    @property
-    @lru_cache()
-    @wraps(cb_click_container)
-    def click(self):
-        return cb_click_container(
+        self._click = cb_click_container(
             m=self._m,
             cb_cls=click_callbacks,
             method="click",
         )
 
-    @property
-    @lru_cache()
-    @wraps(cb_pick_container)
-    def pick(self):
-        return cb_pick_container(
+        self._pick = cb_pick_container(
             m=self._m,
-            cb_cls=pick_callbacks,
+            cb_cls=click_callbacks,
             method="pick",
         )
 
-    @property
-    @lru_cache()
-    @wraps(keypress_container)
-    def keypress(self):
-        return keypress_container(
+        self._keypress = keypress_container(
             m=self._m,
-            cb_cls=keypress_callbacks,
+            cb_cls=click_callbacks,
             method="keypress",
         )
 
+        self._dynamic = dynamic_callbacks(m=self._m)
+
     @property
-    @lru_cache()
+    @wraps(cb_click_container)
+    def click(self):
+        return self._click
+
+    @property
+    @wraps(cb_pick_container)
+    def pick(self):
+        return self._pick
+
+    @property
+    @wraps(keypress_container)
+    def keypress(self):
+        return self._keypress
+
+    @property
     @wraps(dynamic_callbacks)
     def dynamic(self):
-        return dynamic_callbacks(m=self._m)
+        return self._dynamic
 
     def add_picker(self, name, artist, picker):
         """
