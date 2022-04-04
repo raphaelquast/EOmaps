@@ -368,6 +368,14 @@ class Maps(object):
 
     @property
     def all(self):
+        """
+        Get a Maps-object on the "all" layer.
+
+        Use it just as any other Maps-object. (It's the same as Maps(layer="all"))
+
+        >>> m.all.cb.click.attach.annotate()
+
+        """
         if not hasattr(self.parent, "_all"):
             self.parent._all = self.parent.new_layer("all")
         return self.parent._all
