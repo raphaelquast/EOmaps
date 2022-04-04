@@ -29,13 +29,13 @@ def pairwise(iterable, pairs=2):
     return zip(*x)
 
 
-def _sanitize(s):
+def _sanitize(s, prefix="layer_"):
     # taken from https://stackoverflow.com/a/3303361/9703451
     s = str(s)
     # Remove leading characters until we find a letter or underscore
     s2 = re.sub("^[^a-zA-Z_]+", "", s)
     if len(s2) == 0:
-        s2 = _sanitize("layer_" + str(s))
+        s2 = _sanitize(prefix + str(s))
     # replace invalid characters with an underscore
     s = re.sub("[^0-9a-zA-Z_]", "_", s2)
     return s
