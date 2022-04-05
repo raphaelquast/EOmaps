@@ -127,7 +127,7 @@ class map_objects(object):
         else:
             _, ax_cb, ax_cb_plot, orientation, _ = cb
 
-        if orientation == "vertical":
+        if orientation == "horizontal":
             pcb = ax_cb.get_position()
             pcbp = ax_cb_plot.get_position()
             if pos is None:
@@ -145,7 +145,7 @@ class map_objects(object):
                 [pos[0], pos[1] + hcb, pos[2], hp],
             )
 
-        elif orientation == "horizontal":
+        elif orientation == "vertical":
             pcb = ax_cb.get_position()
             pcbp = ax_cb_plot.get_position()
             if pos is None:
@@ -164,6 +164,9 @@ class map_objects(object):
             )
         else:
             raise TypeError(f"EOmaps: '{orientation}' is not a valid orientation")
+
+        # re-fetch the background layer to make changes visible
+        self._m.BM.fetch_bg(self._m.layer)
 
 
 class data_specs(object):
