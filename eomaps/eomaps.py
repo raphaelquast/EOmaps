@@ -2882,6 +2882,13 @@ class Maps(object):
 
         """
 
+        if hasattr(self, "_colorbar"):
+            print(
+                "EOmaps: A colorbar already exists for this Maps-object!\n"
+                + "...use a new layer if you want multiple colorbars!"
+            )
+            return
+
         if layer is None:
             layer = self.layer
 
