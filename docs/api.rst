@@ -13,18 +13,21 @@
 .. code-block:: python
 
     from eomaps import Maps
-    m = Maps(crs=4326, figsize=(10, 5))
+    m = Maps(crs=4326, layer="first layer", figsize=(10, 5))
     m.add_feature.preset.coastline()
+
+- ``crs`` represents the projection used for plotting
+- ``layer`` represents the name of the layer associated with the Maps-object (see below)
+- all additional keyword arguments are forwarded to the creation of the matplotlib-figure
+  (e.g.: ``figsize``, ``frameon``, ``edgecolor`` etc).
 
 
 Possible ways for specifying the crs for plotting are:
 
-- if you provide an ``integer``, it is identified as an epsg-code.
+- If you provide an integer, it is identified as an epsg-code (e.g. ``4326``, ``3035``, etc.).
 - All other CRS usable for plotting are accessible via ``Maps.CRS``,
   e.g.: ``crs=Maps.CRS.Orthographic()`` or ``crs=Maps.CRS.Equi7Grid_projection("EU")``.
-
-Additional keyword arguments are forwarded to the creation of the matplotlib-figure
-(e.g.: ``figsize``, ``frameon``, ``edgecolor`` etc).
+  (``Maps.CRS`` is just an accessor for ``cartopy.crs``)
 
 ▤ Layers
 ++++++++
@@ -35,13 +38,14 @@ Additional keyword arguments are forwarded to the creation of the matplotlib-fig
 .. code-block:: python
 
     m = Maps()    # same as `m = Maps(layer=0)`
-    # to add a feature to all layers, use `m.all`
-    m.all.add_feature.preset.coastline()
 
     # create a new layer
     m2 = m.new_layer(layer="ocean")
     # the ocean will only be visible if the "ocean" layer is visible.
     m2.add_feature.preset.ocean()
+
+    # to add a feature to all layers, use `m.all`
+    m.all.add_feature.preset.coastline()
 
     # show the "ocean" layer
     m.show_layer("ocean")
@@ -50,7 +54,10 @@ Additional keyword arguments are forwarded to the creation of the matplotlib-fig
 - If you don't provide an explicit layer name, the new Maps-object will use the same layer as its parent!
   (you can have multiple ``Maps`` objects on the same layer!)
 
-To manually switch between layers, use ``m.show_layer("the layer name")``, call ``m2.show()`` or have a look at the :ref:`utility`.
+
+.. note::
+    Features, datasets, colormaps etc. added to a ``Maps`` object are only visible if the associated layer is visible!
+    To manually switch between layers, use ``m.show_layer("the layer name")``, call ``m2.show()`` or have a look at the :ref:`utility`.
 
 .. note::
 
@@ -1304,9 +1311,6 @@ Similar to ``Maps.from_file``, a new layer based on a file can be added to an ex
     new_layer_from_file.GeoTIFF
     new_layer_from_file.NetCDF
     new_layer_from_file.CSV
-
-
-
 
 
 🔸 Miscellaneous
