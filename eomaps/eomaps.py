@@ -102,6 +102,9 @@ class Maps(object):
     layer : int or str, optional
         The name of the plot-layer assigned to this Maps-object.
         The default is 0.
+
+    Other Parameters:
+    -----------------
     parent : eomaps.Maps
         The parent Maps-object to use.
         Any maps-objects that share the same figure must be connected
