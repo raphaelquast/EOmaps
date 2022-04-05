@@ -804,14 +804,14 @@ class BlitManager:
     def _do_on_layer_change(self, layer):
         # general callbacks executed on any layer change
         if len(self._on_layer_change) > 0:
-            for action in self._on_layer_change:
-                action(self._m, layer)
+            for action, m in self._on_layer_change:
+                action(m, layer)
 
         # individual callables executed if a specific layer is activated
         activate_action = self._on_layer_activation.get(layer, None)
         if activate_action is not None:
-            for action in activate_action:
-                action(self._m, layer)
+            for (action, m) in activate_action:
+                action(m, layer)
 
     @property
     def bg_layer(self):
@@ -840,7 +840,7 @@ class BlitManager:
         self._clear_temp_artists("on_layer_change")
         # self.fetch_bg(self._bg_layer)
 
-    def on_layer(self, func, layer=None, persistent=False):
+    def on_layer(self, func, layer=None, persistent=False, m=None):
         """
         Add callables that are executed whenever the visible layer changes.
 
@@ -868,6 +868,8 @@ class BlitManager:
 
 
         """
+        if m is None:
+            m = self._m
 
         if layer is None:
             if not persistent:
@@ -876,8 +878,9 @@ class BlitManager:
                     def inner(*args, **kwargs):
                         try:
                             func(*args, **kwargs)
-                            idx = self._on_layer_change.index(inner)
-                            self._on_layer_change.pop(idx)
+                            if inner in self._on_layer_activation[layer]:
+                                idx = self._on_layer_change.index(inner)
+                                self._on_layer_change.pop(idx)
                         except IndexError:
                             pass
 
@@ -885,7 +888,7 @@ class BlitManager:
 
                 func = remove_decorator(func)
 
-            self._on_layer_change.append(func)
+            self._on_layer_change.append([func, m])
 
         else:
             if not persistent:
@@ -894,8 +897,9 @@ class BlitManager:
                     def inner(*args, **kwargs):
                         try:
                             func(*args, **kwargs)
-                            idx = self._on_layer_activation[layer].index(inner)
-                            self._on_layer_activation[layer].pop(idx)
+                            if inner in self._on_layer_activation[layer]:
+                                idx = self._on_layer_activation[layer].index(inner)
+                                self._on_layer_activation[layer].pop(idx)
                         except IndexError:
                             pass
 
@@ -903,7 +907,7 @@ class BlitManager:
 
                 func = remove_decorator(func)
 
-            self._on_layer_activation[layer].append(func)
+            self._on_layer_activation[layer].append([func, m])
 
     def _refetch_layer(self, layer):
         if layer == "all":
@@ -928,10 +932,11 @@ class BlitManager:
             overlay_name, overlay_layers = overlay
 
         for l in overlay_layers:
+            x = self._on_layer_activation.get(l, [None, None])
             activate_action = self._on_layer_activation.get(l, None)
             if activate_action is not None:
-                for action in activate_action:
-                    action(self._m, l)
+                for action, m in activate_action:
+                    action(m, l)
 
         allartists = list(chain(*(self._bg_artists[i] for i in [layer, "all"])))
         allartists.sort(key=lambda x: getattr(x, "zorder", -1))

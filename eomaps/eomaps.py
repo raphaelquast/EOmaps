@@ -3432,6 +3432,9 @@ class MapsGrid:
 
         self._Maps = []
         self._names = defaultdict(list)
+
+        self._wms_container = wms_container(self)
+
         gskwargs = dict(bottom=0.01, top=0.99, left=0.01, right=0.99)
         gskwargs.update(kwargs)
         self.gridspec = GridSpec(nrows=r, ncols=c, **gskwargs)
@@ -3679,10 +3682,8 @@ class MapsGrid:
 
         @property
         @wraps(Maps.add_wms)
-        @lru_cache()
         def add_wms(self):
-            x = wms_container(self)
-            return x
+            return self._wms_container
 
     @property
     @wraps(Maps.add_feature)

@@ -303,7 +303,7 @@ class _wmts_layer(_WebMap_layer):
             else:
                 # delay adding the layer until it is effectively activated
                 self._m.BM.on_layer(
-                    func=self._do_add_layer, layer=self._layer, persistent=False
+                    func=self._do_add_layer, layer=self._layer, persistent=False, m=m
                 )
 
     def _do_add_layer(self, m, l):
@@ -352,15 +352,17 @@ class _wms_layer(_WebMap_layer):
                 # add the layer immediately if the layer is already active
                 self._do_add_layer(m, self._layer)
             else:
+                # self._do_add_layer(m, self._layer)
+
                 # delay adding the layer until it is effectively activated
+
                 m.BM.on_layer(
-                    func=self._do_add_layer, layer=self._layer, persistent=False
+                    func=self._do_add_layer, layer=self._layer, persistent=True, m=m
                 )
 
-    def _do_add_layer(self, m, l):
+    def _do_add_layer(self, m, l, usem=None):
         # actually add the layer to the map.
         print(f"EOmaps: ... adding wms-layer {self.name}")
-
         art = m.figure.ax.add_wms(
             self._wms, self.name, wms_kwargs=self._kwargs, interpolation="spline36"
         )
@@ -915,7 +917,6 @@ class _xyz_tile_service:
             self._layer = layer
 
         self._transparent = transparent
-
         if isinstance(self._m, MapsGrid):
             for m in self._m:
                 self._reinit(m).__call__(
@@ -934,7 +935,10 @@ class _xyz_tile_service:
             else:
                 # delay adding the layer until it is effectively activated
                 self._m.BM.on_layer(
-                    func=self._do_add_layer, layer=self._layer, persistent=False
+                    func=self._do_add_layer,
+                    layer=self._layer,
+                    persistent=False,
+                    m=self._m,
                 )
 
     def _do_add_layer(self, m, l):
