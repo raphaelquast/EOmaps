@@ -16,6 +16,7 @@
     m = Maps(crs=4326, figsize=(10, 5))
     m.add_feature.preset.coastline()
 
+
 Possible ways for specifying the crs for plotting are:
 
 - if you provide an ``integer``, it is identified as an epsg-code.
@@ -28,33 +29,36 @@ Additional keyword arguments are forwarded to the creation of the matplotlib-fig
 ▤ Layers
 ++++++++
 
-Each ``Maps`` object represents an individual plot-layer of the map.
-Once you have created your first ``Maps`` object, you can create **additional layers on the same map** by using:
+| Each ``Maps`` object represents an individual plot-layer of the map.
+| Once you have created your first ``Maps`` object, you can create **additional layers on the same map** by using:
 
 .. code-block:: python
 
-    m = Maps()    # same as m = Maps(layer="all")
-    # since the default layer is "all" the coastlines will be visible on all layers!
-    m.add_feature.preset.coastline()
+    m = Maps()    # same as `m = Maps(layer=0)`
+    # to add a feature to all layers, use `m.all`
+    m.all.add_feature.preset.coastline()
 
     # create a new layer
     m2 = m.new_layer(layer="ocean")
     # the ocean will only be visible if the "ocean" layer is visible.
     m2.add_feature.preset.ocean()
 
-    # show the new layer
+    # show the "ocean" layer
     m.show_layer("ocean")
 
-- ``m2`` is then just another ``Maps`` object that shares the figure and plot-axes with ``m``.
+- ``m2`` and ``m.all`` are just ordinary ``Maps`` objects that share the figure and plot-axes with ``m``
 - If you don't provide an explicit layer name, the new Maps-object will use the same layer as its parent!
+  (you can have multiple ``Maps`` objects on the same layer!)
 
-To manually switch between layers, use ``m.show_layer("the layer name")`` or have a look at the :ref:`utility`.
+To manually switch between layers, use ``m.show_layer("the layer name")``, call ``m2.show()`` or have a look at the :ref:`utility`.
 
+.. note::
 
-There is one layer-name that has a special meaning... the ``"all"`` layer.
-Any callback functions, features or plots created on this layer will be **visible on all other layers** as well!
+    There is one layer-name that has a special meaning... the ``"all"`` layer.
+    Any callbacks, features or plots added to this layer will be **executed on all other layers** as well!
 
-By default, the parent ``Maps`` object (e.g. the first one you create) is assigned to the layer ``"all"``.
+    You can always add features and callbacks to the ``all`` layer via the shortcut ``m.all. ...``
+
 
 .. currentmodule:: eomaps
 
@@ -65,8 +69,10 @@ By default, the parent ``Maps`` object (e.g. the first one you create) is assign
 
     Maps
     Maps.new_layer
+    Maps.all
     Maps.show_layer
     Maps.copy
+
 
 
 🔵 Setting the data and plot-shape
@@ -78,7 +84,8 @@ The shapes that are used to represent the data-points are then assigned via ``m.
 .. code-block:: python
 
     m = Maps()
-    m.add_feature.preset.coastline()   # add coastlines to ALL layers
+    m.add_feature.preset.ocean()           # add ocean-colors to the default layer (=0)
+    m.all.add_feature.preset.coastline()   # add coastlines to ALL layers
 
     m2 = m.new_layer("data")
     m2.set_data(data, xcoord, ycoord, parameter)
@@ -135,7 +142,6 @@ is performed (resampling based on the mean-value is used by default).
     The "shade"-shapes require the additional ``datashader`` dependency!
     You can install it via:
     ``conda install -c conda-forge datashader``
-
 
 .. image:: _static/minigifs/plot_shapes.gif
 
@@ -270,8 +276,6 @@ Once the map is ready, a snapshot of the map can be saved at any time by using:
 
 A ``MapsGrid`` creates a grid of ``Maps`` objects (and/or ordinary ``matpltolib`` axes),
 and provides convenience-functions to perform actions on all maps of the figure.
-
-The default layer for all ``Maps`` of the ``MapsGrid`` is ``"all"``.
 
 .. code-block:: python
 
@@ -422,7 +426,10 @@ functions and attach them to the map.
 .. Note::
 
     Callbacks are only executed if the layer of the associated ``Maps`` object is actually visible!
-    (This assures that pick-callbacks always referr to the visible dataset.)
+    (This assures that pick-callbacks always refer to the visible dataset.)
+
+    To define callbacks that are executed independent of the visible layer, attach it to the ``"all"``
+    layer using something like ``m.all.cb.click.attach.annotate()``.
 
 
 Pre-defined click & pick callbacks
@@ -544,13 +551,14 @@ and ``< LAYER >`` indicates the actual layer-name.
 
     Maps.add_wms
 
-
 .. note::
+
     It is highly recommended (and sometimes even required) to use the native crs
     of the WebMap service in order to avoid re-projecting the images
     (which degrades image quality and sometimes takes quite a lot of time to finish...)
 
     - most services come either in ``epsg=4326`` or in ``Maps.CRS.GOOGLE_MERCATOR`` projection
+
 
 .. table::
     :widths: 50 50
@@ -576,11 +584,6 @@ and ``< LAYER >`` indicates the actual layer-name.
     |     layer.set_extent_to_bbox() # set the extent according to the boundingBox                   |                                         |
     |                                                                                                |                                         |
     +------------------------------------------------------------------------------------------------+-----------------------------------------+
-
-
-
-
-
 
 
 
@@ -620,14 +623,14 @@ Services specific for Austria (Europa)
     Services might be nested directory structures!
     The actual layer is always added via the `add_layer` directive.
 
-        :code:`m.add_wms.<...>. ... .<...>.add_layer.<...>()`
+        :code:`m.add_wms.<...>. ... .<...>.add_layer.<LAYER NAME>()`
 
     Some of the services dynamically fetch the structure via HTML-requests.
     Therefore it can take a short moment before autocompletion is capable of
     showing you the available options!
     A list of available layers from a sub-folder can be fetched via:
 
-        :code:`m.add_wms.<...>. ... .<...>.layers`
+        :code:`m.add_wms.<...>. ... .<LAYER NAME>.layers`
 
 
 .. _geodataframe:
@@ -972,7 +975,21 @@ To indicate rectangular areas in any given crs, simply use ``m.indicate_extent``
 🌈 Colorbars (with a histogram)
 -------------------------------
 
-A colorbar with a colored histogram on top can be added to the map via ``m.add_colorbar``.
+| Before adding a colorbar, you must plot the data using ``m.plot_map()``.
+| A colorbar with a colored histogram on top can then be added to the map via ``m.add_colorbar``.
+
+.. note::
+    Colorbars are only visible if the layer at which the data was plotted is visible!
+
+    .. code-block:: python
+
+        m = Maps(layer=0)
+        ...
+        m.add_colorbar()   # this colorbar is only visible on the layer 0
+
+        m2 = m.new_layer("data")
+        ...
+        m2.add_colorbar()  # this colorbar is only visible on the "data" layer
 
 .. currentmodule:: eomaps
 
@@ -1004,9 +1021,9 @@ A colorbar with a colored histogram on top can be added to the map via ``m.add_c
     +--------------------------------------------------------------------+------------------------------------------+
 
 .. note::
-    You must plot a dataset first! (e.g. by calling ``m.plot_map()``)
-    The colorbar always represents the dataset that was used in the last call to ``m.plot_map()``.
-    If you need multiple colorbars, use an individual layer for each dataset! (e.g. via ``m2  = m.new_layer()``)
+    | You must plot a dataset first! (e.g. by calling ``m.plot_map()``)
+    | The colorbar always represents the dataset that was used in the last call to ``m.plot_map()``.
+    | If you need multiple colorbars, use an individual ``Maps`` object for each dataset! (e.g. via ``m2  = m.new_layer()``)
 
 
 .. _scalebar:
@@ -1142,6 +1159,11 @@ To simplify switching between layers, there are currently 2 widgets available:
 - ``m.util.layer_selector()`` : Add a set of clickable buttons to the map that activates the corresponding layers.
 - ``m.util.layer_slider()`` : Add a slider to the map that iterates through the available layers.
 
+By default the widgets will show all available layers (except the "all" layer).
+
+- To show only a subset of layers, use ``layers=[...layer names...]``.
+- To exclude certain layers from the widget, use ``exclude_layers=[...layer-names to exclude...]``
+
 .. currentmodule:: eomaps.utilities.utilities
 
 .. autosummary::
@@ -1175,6 +1197,10 @@ To simplify switching between layers, there are currently 2 widgets available:
 -----------------------------------------
 
 EOmaps provides some basic capabilities to read and plot directly from commonly used file-types.
+
+By default, the ``Maps.from_file`` and ``m.new_layer_from_file`` functions try to plot the data
+with ``shade_raster`` (if it fails it will fallback to ``shade_points`` and finally to ``ellipses``).
+
 
 .. note::
 
@@ -1300,3 +1326,5 @@ some additional functions and properties that might come in handy:
     Maps.parent
     Maps.crs_plot
     Maps.add_colorbar
+    Maps.show
+    Maps.show_layer
