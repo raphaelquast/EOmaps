@@ -385,9 +385,9 @@ class Maps(object):
         >>> m.all.cb.click.attach.annotate()
 
         """
-        if not hasattr(self.parent, "_all"):
-            self.parent._all = self.parent.new_layer("all")
-        return self.parent._all
+        if not hasattr(self, "_all"):
+            self._all = self.new_layer("all")
+        return self._all
 
     def show(self):
         """
@@ -3432,6 +3432,9 @@ class MapsGrid:
 
         self._Maps = []
         self._names = defaultdict(list)
+
+        self._wms_container = wms_container(self)
+
         gskwargs = dict(bottom=0.01, top=0.99, left=0.01, right=0.99)
         gskwargs.update(kwargs)
         self.gridspec = GridSpec(nrows=r, ncols=c, **gskwargs)
@@ -3679,10 +3682,8 @@ class MapsGrid:
 
         @property
         @wraps(Maps.add_wms)
-        @lru_cache()
         def add_wms(self):
-            x = wms_container(self)
-            return x
+            return self._wms_container
 
     @property
     @wraps(Maps.add_feature)
