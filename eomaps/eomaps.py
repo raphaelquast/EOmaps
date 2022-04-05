@@ -3049,7 +3049,7 @@ class Maps(object):
         # remember colorbar for later (so that we can update its position etc.)
         self._colorbar = [layer, cbgs, ax_cb, ax_cb_plot, orientation, cb]
 
-        return [cbgs, ax_cb, ax_cb_plot, orientation, cb]
+        return [layer, cbgs, ax_cb, ax_cb_plot, orientation, cb]
 
     def indicate_masked_points(self, radius=1.0, **kwargs):
         """
