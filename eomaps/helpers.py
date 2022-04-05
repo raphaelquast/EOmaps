@@ -886,9 +886,6 @@ class BlitManager:
                             func(*args, **kwargs)
                             if inner in self._on_layer_change[layer]:
                                 self._on_layer_change[layer].pop(inner)
-
-                                # idx = self._on_layer_change.index(inner)
-                                # self._on_layer_change.pop(idx)
                         except IndexError:
                             pass
 
@@ -905,16 +902,8 @@ class BlitManager:
                     def inner(*args, **kwargs):
                         try:
                             func(*args, **kwargs)
-                            print(
-                                [*args],
-                                {**kwargs},
-                                inner,
-                                self._on_layer_activation[layer],
-                            )
                             if inner in self._on_layer_activation[layer]:
                                 self._on_layer_activation[layer].pop(inner)
-                                # idx = self._on_layer_activation[layer].index(inner)
-                                # self._on_layer_activation[layer].pop(idx)
                         except IndexError:
                             pass
 
@@ -947,7 +936,6 @@ class BlitManager:
             overlay_name, overlay_layers = overlay
 
         for l in overlay_layers:
-            x = self._on_layer_activation.get(l, [None, None])
             activate_action = self._on_layer_activation.get(l, None)
             if activate_action is not None:
                 for action, m in activate_action:
