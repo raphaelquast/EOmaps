@@ -357,7 +357,7 @@ class _wms_layer(_WebMap_layer):
                 # delay adding the layer until it is effectively activated
 
                 m.BM.on_layer(
-                    func=self._do_add_layer, layer=self._layer, persistent=True, m=m
+                    func=self._do_add_layer, layer=self._layer, persistent=False, m=m
                 )
 
     def _do_add_layer(self, m, l, usem=None):
