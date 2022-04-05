@@ -99,6 +99,9 @@ class Maps(object):
         A list for easy-accses is available as `Maps.CRS`
 
         The default is 4326.
+    layer : int or str, optional
+        The name of the plot-layer assigned to this Maps-object.
+        The default is 0.
     parent : eomaps.Maps
         The parent Maps-object to use.
         Any maps-objects that share the same figure must be connected
@@ -208,9 +211,9 @@ class Maps(object):
 
         self._BM = None
         self._children = set()  # weakref.WeakSet()
+        self._layer = layer
 
         self.parent = parent  # invoke the setter!
-        self.layer = layer
 
         # preferred way of accessing WMS services (used in the WMS container)
         assert preferred_wms_service in [
@@ -361,6 +364,13 @@ class Maps(object):
 
     from_file = from_file
     read_file = read_file
+
+    @property
+    def layer(self):
+        """
+        The layer-name associated with this Maps-object.
+        """
+        return self._layer
 
     @property
     def all(self):
