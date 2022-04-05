@@ -1,3 +1,4 @@
+# %matplotlib widget
 from eomaps import Maps, MapsGrid
 import numpy as np
 import itertools
@@ -16,7 +17,7 @@ mg = MapsGrid(
     m_inits={"map": (slice(0, 2), 0)},
     ax_inits={"row": (0, 1), "col": (1, 1)},
     crs=Maps.CRS.InterruptedGoodeHomolosine(),
-    figsize=(12, 5),
+    figsize=(8, 5),
 )
 
 mg.gridspec.update(top=0.95, bottom=0.1, left=0.01, right=0.99, hspace=0.3, wspace=0.15)

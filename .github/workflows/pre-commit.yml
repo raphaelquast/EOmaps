@@ -5,7 +5,6 @@ name: pre-commit
 #  push:
 #    branches: [master, dev]
 on:
-    push:
     pull_request:
     # to trigger workflow manually from actions-tab
     workflow_dispatch:

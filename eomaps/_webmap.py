@@ -2,7 +2,6 @@ from functools import lru_cache
 from warnings import warn, filterwarnings, catch_warnings
 from types import SimpleNamespace
 from collections import defaultdict
-import re
 
 from PIL import Image
 from io import BytesIO
@@ -29,6 +28,8 @@ except ImportError:
 from .helpers import _sanitize
 
 from cartopy.io import ogc_clients
+from cartopy.io import RasterSource
+from cartopy.io.ogc_clients import _target_extents
 
 
 class _WebMap_layer:
@@ -290,15 +291,30 @@ class _wmts_layer(_WebMap_layer):
         from . import MapsGrid  # do this here to avoid circular imports!
 
         for m in self._m if isinstance(self._m, MapsGrid) else [self._m]:
-
-            print(f"EOmaps: Adding wmts-layer: {self.name}")
-            art = m.figure.ax.add_wmts(
-                self._wms, self.name, wmts_kwargs=kwargs, interpolation="spline36"
-            )
+            self._kwargs = kwargs
             if layer is None:
-                layer = m.layer
+                self._layer = m.layer
+            else:
+                self._layer = layer
 
-            m.BM.add_bg_artist(art, layer)
+            if self._layer == "all" or self._m.BM.bg_layer == self._layer:
+                # add the layer immediately if the layer is already active
+                self._do_add_layer(self._m, self._layer)
+            else:
+                # delay adding the layer until it is effectively activated
+                self._m.BM.on_layer(
+                    func=self._do_add_layer, layer=self._layer, persistent=False
+                )
+
+    def _do_add_layer(self, m, l):
+        # actually add the layer to the map.
+        print(f"EOmaps: Adding wmts-layer: {self.name}")
+
+        art = m.figure.ax.add_wmts(
+            self._wms, self.name, wmts_kwargs=self._kwargs, interpolation="spline36"
+        )
+
+        m.BM.add_bg_artist(art, l)
 
 
 class _wms_layer(_WebMap_layer):
@@ -323,18 +339,33 @@ class _wms_layer(_WebMap_layer):
             additional kwargs passed to the WebMap service request.
             (e.g. transparent=True, time='2020-02-05', etc.)
         """
-        print(f"EOmaps: ... adding wms-layer: {self.name}")
         from . import MapsGrid  # do this here to avoid circular imports!
 
         for m in self._m if isinstance(self._m, MapsGrid) else [self._m]:
-            art = m.figure.ax.add_wms(
-                self._wms, self.name, wms_kwargs=kwargs, interpolation="spline36"
-            )
-
+            self._kwargs = kwargs
             if layer is None:
-                layer = m.layer
+                self._layer = m.layer
+            else:
+                self._layer = layer
 
-            m.BM.add_bg_artist(art, layer)
+            if self._layer == "all" or m.BM.bg_layer == self._layer:
+                # add the layer immediately if the layer is already active
+                self._do_add_layer(m, self._layer)
+            else:
+                # delay adding the layer until it is effectively activated
+                m.BM.on_layer(
+                    func=self._do_add_layer, layer=self._layer, persistent=False
+                )
+
+    def _do_add_layer(self, m, l):
+        # actually add the layer to the map.
+        print(f"EOmaps: ... adding wms-layer {self.name}")
+
+        art = m.figure.ax.add_wms(
+            self._wms, self.name, wms_kwargs=self._kwargs, interpolation="spline36"
+        )
+
+        m.BM.add_bg_artist(art, l)
 
 
 class _WebServiec_collection(object):
@@ -637,10 +668,6 @@ class _REST_API(object):
         return all_services
 
 
-from cartopy.io import RasterSource
-from cartopy.io.ogc_clients import _warped_located_image, _target_extents
-
-
 class TileFactory(GoogleWTS):
     def __init__(self, url, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -763,9 +790,16 @@ class xyzRasterSource(RasterSource):
                 # here.
                 img = img[::-1]
 
-            # target_extent = self._m.ax.get_extent(self._m.ax.projection)
             # reproject the extent to the output-crs
-            target_extent = _target_extents(extent, self._crs, output_proj)[0]
+
+            target_extent = ogc_clients._target_extents(extent, self._crs, output_proj)
+            if len(target_extent) > 0:
+                target_extent = target_extent[0]
+            else:
+                # TODO properly check what's going on here
+                # (only relevant for Equi7Grid projections if a xyz-layer is added
+                # without zooming first)
+                target_extent = output_extent
 
             regrid_shape = [int(i * 2) for i in target_resolution]
             # check  self._m.ax._regrid_shape_aspect for a more proper regrid_shape
@@ -804,16 +838,16 @@ class xyzRasterSource(RasterSource):
 
         located_images = []
         for wms_extent in wms_extents:
-            located_images.append(
-                self._image_and_extent(
-                    self._crs,
-                    self._crs,
-                    wms_extent,
-                    projection,
-                    extent,
-                    target_resolution,
-                )
+            img = self._image_and_extent(
+                self._crs,
+                self._crs,
+                wms_extent,
+                projection,
+                extent,
+                target_resolution,
             )
+            if img:
+                located_images.append(img)
 
         return located_images
 
@@ -823,13 +857,14 @@ class _xyz_tile_service:
     general class for using x/y/z tile-service urls as WebMap layers
     """
 
-    def __init__(self, m, url, maxzoom=19):
+    def __init__(self, m, url, maxzoom=19, name=None):
         self._m = m
         self._factory = None
         self._artist = None
 
         self.url = url
         self._maxzoom = maxzoom
+        self.name = name
 
     def _reinit(self, m):
         return _xyz_tile_service(m, self.url, self._maxzoom)
@@ -871,7 +906,15 @@ class _xyz_tile_service:
             Additional kwargs passed to the cartopy-wrapper for
             matplotlib's `imshow`.
         """
+
         from . import MapsGrid  # do this here to avoid circular imports!
+
+        if layer is None:
+            self._layer = self._m.layer
+        else:
+            self._layer = layer
+
+        self._transparent = transparent
 
         if isinstance(self._m, MapsGrid):
             for m in self._m:
@@ -879,32 +922,45 @@ class _xyz_tile_service:
                     layer, transparent, alpha, interpolation, **kwargs
                 )
         else:
-            if layer is None:
-                layer = self._m.layer
 
-            self.kwargs = dict(interpolation=interpolation, alpha=alpha, origin="lower")
-            self.kwargs.update(kwargs)
-
-            self._raster_source = xyzRasterSource(
-                self.url,
-                crs=ccrs.GOOGLE_MERCATOR,
-                maxzoom=self._maxzoom,
-                transparent=transparent,
+            self._kwargs = dict(
+                interpolation=interpolation, alpha=alpha, origin="lower"
             )
+            self._kwargs.update(kwargs)
 
-            # avoid using "add_raster" and use the subclassed SlippyImageArtist
-            # self._artist = self._m.ax.add_raster(self._raster_source, **self.kwargs)
+            if self._layer == "all" or self._m.BM.bg_layer == self._layer:
+                # add the layer immediately if the layer is already active
+                self._do_add_layer(self._m, self._layer)
+            else:
+                # delay adding the layer until it is effectively activated
+                self._m.BM.on_layer(
+                    func=self._do_add_layer, layer=self._layer, persistent=False
+                )
 
-            # ------- following lines are equivalent to ax.add_raster
-            #         (only SlippyImageArtist has been subclassed)
+    def _do_add_layer(self, m, l):
+        # actually add the layer to the map.
+        print(f"EOmaps: ... adding wms-layer {self.name}")
 
-            self._raster_source.validate_projection(self._m.ax.projection)
-            img = SlippyImageArtist_NEW(self._m.ax, self._raster_source, **self.kwargs)
-            with self._m.ax.hold_limits():
-                self._m.ax.add_image(img)
-            self._artist = img
+        self._raster_source = xyzRasterSource(
+            self.url,
+            crs=ccrs.GOOGLE_MERCATOR,
+            maxzoom=self._maxzoom,
+            transparent=self._transparent,
+        )
 
-            self._m.BM.add_bg_artist(self._artist, layer)
+        # avoid using "add_raster" and use the subclassed SlippyImageArtist
+        # self._artist = self._m.ax.add_raster(self._raster_source, **self.kwargs)
+
+        # ------- following lines are equivalent to ax.add_raster
+        #         (only SlippyImageArtist has been subclassed)
+
+        self._raster_source.validate_projection(m.ax.projection)
+        img = SlippyImageArtist_NEW(m.ax, self._raster_source, **self._kwargs)
+        with self._m.ax.hold_limits():
+            m.ax.add_image(img)
+        self._artist = img
+
+        m.BM.add_bg_artist(self._artist, l)
 
 
 from cartopy.mpl.slippy_image_artist import SlippyImageArtist

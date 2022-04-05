@@ -183,9 +183,20 @@ class ScaleBar:
             self.set_label_props(
                 scale=1.5, offset=0.5, every=2, weight="bold", family="Courier New"
             )
-            self._autoscale = 0.5
+
             self._estimate_scale()
             self.set_position()
+
+    @staticmethod
+    def round_to_n(x, n=0):
+        # round to n significant digits
+        # 1234 -> 1000
+        # 0.01234 -> 0.1
+        res = round(x, n - int(np.floor(np.log10(abs(x)))))
+        if res.is_integer():
+            return int(res)
+        else:
+            return res
 
     def _estimate_scale(self):
         try:
@@ -210,12 +221,9 @@ class ScaleBar:
 
             faz, baz, dist = geod.inv(*l0, *l1)
 
-            scale = int(dist / self._scale_props["n"])
-
-            ndigits = len(str(scale))
-
-            if ndigits > 2:
-                scale = round(scale, -(ndigits - 1))
+            scale = dist / self._scale_props["n"]
+            # round to 1 significant digit
+            scale = self.round_to_n(scale)
 
             self._scale_props["scale"] = scale
             return scale
@@ -442,7 +450,7 @@ class ScaleBar:
     def _get_txt(self, n):
         scale = self._scale_props["scale"]
         # the text displayed above the scalebar
-        units = {" cm": 0.01, " m": 1, " km": 1000, "k km": 1000000}
+        units = {" mm": 0.001, " m": 1, " km": 1000, "k km": 1000000}
         for key, val in units.items():
             x = scale * n / val
             if scale * n / val < 1000:
@@ -806,7 +814,6 @@ class ScaleBar:
             s.set_label_props(offset=o)
 
         def addcbs(self, s, **kwargs):
-            self.cb.click._only.append(s._cid_remove_cbs.split("__", 1)[0])
 
             # make sure we pick always only one scalebar
             for i in s._existing_pickers:
@@ -818,7 +825,6 @@ class ScaleBar:
 
             if not hasattr(s, "_cid_move"):
                 s._cid_move = self.cb.click.attach(scb_move, s=s)
-                self.cb.click._only.append(s._cid_move.split("__", 1)[0])
 
             if not hasattr(s, "_cid_up"):
                 s._cid_up = self.cb.keypress.attach(scb_az_ud, key="+", up=True, s=s)
@@ -895,7 +901,6 @@ class ScaleBar:
 
         self._m.cb.pick[self._picker_name].is_picked = False
 
-        self._m.cb.click._only.clear()
         self.set_position()
 
     def _decorate_zooms(self):

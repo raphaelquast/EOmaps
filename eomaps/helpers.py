@@ -29,13 +29,13 @@ def pairwise(iterable, pairs=2):
     return zip(*x)
 
 
-def _sanitize(s):
+def _sanitize(s, prefix="layer_"):
     # taken from https://stackoverflow.com/a/3303361/9703451
     s = str(s)
     # Remove leading characters until we find a letter or underscore
     s2 = re.sub("^[^a-zA-Z_]+", "", s)
     if len(s2) == 0:
-        s2 = _sanitize("layer_" + str(s))
+        s2 = _sanitize(prefix + str(s))
     # replace invalid characters with an underscore
     s = re.sub("[^0-9a-zA-Z_]", "_", s2)
     return s
@@ -116,6 +116,7 @@ class searchtree:
     def query(self, x, k=1, d=None):
         if d is None:
             d = self.d
+
         # select a rectangle around the pick-coordinates
         # (provides tremendous speedups for very large datasets)
         mx = np.logical_and(
@@ -126,17 +127,17 @@ class searchtree:
         )
         m = np.logical_and(mx, my)
         # get the indexes of the search-rectangle
-        idx = np.where(m)[0]
+        idx = np.where(m.ravel())[0]
         # evaluate the clicked pixel as the one with the smallest
         # euclidean distance
-
         if len(idx) > 0:
             i = idx[
                 (
-                    (self._m._props["x0"][m] - x[0]) ** 2
-                    + (self._m._props["y0"][m] - x[1]) ** 2
+                    (self._m._props["x0"][m].ravel() - x[0]) ** 2
+                    + (self._m._props["y0"][m].ravel() - x[1]) ** 2
                 ).argmin()
             ]
+
         else:
             # show some warning if no points are found within the pick_distance
 
@@ -159,6 +160,7 @@ class searchtree:
                 )
 
             i = None
+
         return None, i
 
 
@@ -322,12 +324,13 @@ class draggable_axes:
                 ax.set_position(bbox)
         if method == 1:  # e.g. ctrl + key pressed
             if self._cb_picked:
-                if self._m_picked._orientation == "vertical":
+                orientation = self._m_picked._colorbar[-2]
+                if orientation == "horizontal":
                     ratio = (
                         self._m_picked.figure.ax_cb_plot.bbox.height
                         / self._m_picked.figure.ax_cb.bbox.height
                     )
-                elif self._m_picked._orientation == "horizontal":
+                elif orientation == "vertical":
                     ratio = (
                         self._m_picked.figure.ax_cb_plot.bbox.width
                         / self._m_picked.figure.ax_cb.bbox.width
@@ -365,8 +368,9 @@ class draggable_axes:
                     self._ax_visible[self._m_picked.figure.ax_cb] = vis
 
                 # fix the visible ticks
+                orientation = self._m_picked._colorbar[-2]
                 if self._m_picked.figure.ax_cb.get_visible() is False:
-                    if self._m_picked._orientation == "horizontal":
+                    if orientation == "vertical":
                         self._m_picked.figure.ax_cb_plot.tick_params(
                             right=True,
                             labelright=True,
@@ -377,7 +381,7 @@ class draggable_axes:
                             top=False,
                             labeltop=False,
                         )
-                    elif self._m_picked._orientation == "vertical":
+                    elif orientation == "horizontal":
                         self._m_picked.figure.ax_cb_plot.tick_params(
                             bottom=True,
                             labelbottom=True,
@@ -389,7 +393,7 @@ class draggable_axes:
                             labelright=False,
                         )
                 else:
-                    if self._m_picked._orientation == "horizontal":
+                    if orientation == "vertical":
                         self._m_picked.figure.ax_cb_plot.tick_params(
                             right=False,
                             labelright=False,
@@ -400,7 +404,7 @@ class draggable_axes:
                             top=False,
                             labeltop=False,
                         )
-                    elif self._m_picked._orientation == "vertical":
+                    elif orientation == "horizontal":
                         self._m_picked.figure.ax_cb_plot.tick_params(
                             bottom=False,
                             labelbottom=False,
@@ -457,9 +461,10 @@ class draggable_axes:
             if not self._cb_picked:
                 ax.set_position(bbox)
             else:
-                if self._m_picked._orientation == "vertical":
+                orientation = self._m_picked._colorbar[-2]
+                if orientation == "horizontal":
                     b = [bbox.x0, bbox.y0, bbox.width, b[3] + bbox.height]
-                elif self._m_picked._orientation == "horizontal":
+                elif orientation == "vertical":
                     b = [bbox.x0, bbox.y0, b[2] + bbox.width, bbox.height]
 
         if (
@@ -611,14 +616,15 @@ class draggable_axes:
                     )
                 )
             else:
-                if self._m_picked._orientation == "vertical":
+                orientation = self._m_picked._colorbar[-2]
+                if orientation == "horizontal":
                     b = [
                         pos.x0 - wstep / 2,
                         pos.y0 - hstep / 2,
                         pos.width + wstep,
                         b[3] + pos.height + hstep,
                     ]
-                elif self._m_picked._orientation == "horizontal":
+                elif orientation == "vertical":
                     b = [
                         pos.x0 - wstep / 2,
                         pos.y0 - hstep / 2,
@@ -788,9 +794,24 @@ class BlitManager:
         self._mpl_backend_force_full = False
         self._mpl_backend_blit_fix = False
 
+        self._on_layer_change = list()
+        self._on_layer_activation = defaultdict(list)
+
     @property
     def canvas(self):
         return self._m.figure.f.canvas
+
+    def _do_on_layer_change(self, layer):
+        # general callbacks executed on any layer change
+        if len(self._on_layer_change) > 0:
+            for action in self._on_layer_change:
+                action(self._m, layer)
+
+        # individual callables executed if a specific layer is activated
+        activate_action = self._on_layer_activation.get(layer, None)
+        if activate_action is not None:
+            for action in activate_action:
+                action(self._m, layer)
 
     @property
     def bg_layer(self):
@@ -798,23 +819,91 @@ class BlitManager:
 
     @bg_layer.setter
     def bg_layer(self, val):
-        for m in [self._m.parent, *self._m.parent._children]:
-            if m.layer != val:
-                if hasattr(m.figure, "ax_cb") and m.figure.ax_cb is not None:
-                    m.figure.ax_cb.set_visible(False)
-                if hasattr(m.figure, "ax_cb_plot") and m.figure.ax_cb_plot is not None:
-                    m.figure.ax_cb_plot.set_visible(False)
-            else:
-                if hasattr(m.figure, "ax_cb") and m.figure.ax_cb is not None:
-                    m.figure.ax_cb.set_visible(True)
-                if hasattr(m.figure, "ax_cb_plot") and m.figure.ax_cb_plot is not None:
-                    m.figure.ax_cb_plot.set_visible(True)
-
-        self._m.util._layer_selector._update_widgets(val)
         self._bg_layer = val
+
+        # a general callable to be called on every layer change
+        self._do_on_layer_change(layer=val)
+
+        # hide all colorbars that are not no the visible layer
+        for m in [self._m.parent, *self._m.parent._children]:
+            if getattr(m, "_colorbar", None) is not None:
+                [layer, cbgs, ax_cb, ax_cb_plot, orientation, cb] = m._colorbar
+
+                if layer != val:
+                    ax_cb.set_visible(False)
+                    ax_cb_plot.set_visible(False)
+                else:
+                    ax_cb.set_visible(True)
+                    ax_cb_plot.set_visible(True)
+
         # self.canvas.flush_events()
         self._clear_temp_artists("on_layer_change")
         # self.fetch_bg(self._bg_layer)
+
+    def on_layer(self, func, layer=None, persistent=False):
+        """
+        Add callables that are executed whenever the visible layer changes.
+
+        Parameters
+        ----------
+        func : callable
+            The callable to use.
+            The call-signature is:
+
+            >>> def func(m, l):
+            >>>    # m... the Maps-object
+            >>>    # l... the name of the layer
+
+
+        layer : str or None, optional
+            - If str: The function will only be called if the specified layer is
+              activated.
+            - If None: The function will be called on any layer-change.
+
+            The default is None.
+        persistent : bool, optional
+            Indicator if the function should be called only once (False) or if it
+            should be called whenever a layer is activated.
+            The default is False.
+
+
+        """
+
+        if layer is None:
+            if not persistent:
+
+                def remove_decorator(func):
+                    def inner(*args, **kwargs):
+                        try:
+                            func(*args, **kwargs)
+                            idx = self._on_layer_change.index(inner)
+                            self._on_layer_change.pop(idx)
+                        except IndexError:
+                            pass
+
+                    return inner
+
+                func = remove_decorator(func)
+
+            self._on_layer_change.append(func)
+
+        else:
+            if not persistent:
+
+                def remove_decorator(func):
+                    def inner(*args, **kwargs):
+                        try:
+                            func(*args, **kwargs)
+                            idx = self._on_layer_activation[layer].index(inner)
+                            self._on_layer_activation[layer].pop(idx)
+                        except IndexError:
+                            pass
+
+                    return inner
+
+                func = remove_decorator(func)
+
+            self._on_layer_activation[layer].append(func)
 
     def _refetch_layer(self, layer):
         if layer == "all":
@@ -826,6 +915,7 @@ class BlitManager:
     def fetch_bg(self, layer=None, bbox=None, overlay=None):
         # add this to the zorder of the overlay-artists prior to plotting
         # to ensure that they appear on top of other artists
+
         overlay_zorder_bias = 1000
 
         cv = self.canvas
@@ -836,6 +926,12 @@ class BlitManager:
             overlay_name, overlay_layers = "", []
         else:
             overlay_name, overlay_layers = overlay
+
+        for l in overlay_layers:
+            activate_action = self._on_layer_activation.get(l, None)
+            if activate_action is not None:
+                for action in activate_action:
+                    action(self._m, l)
 
         allartists = list(chain(*(self._bg_artists[i] for i in [layer, "all"])))
         allartists.sort(key=lambda x: getattr(x, "zorder", -1))
@@ -868,6 +964,7 @@ class BlitManager:
 
         # temporarily disconnect draw-event callback to avoid recursion
         # while we re-draw the artists
+
         cv.mpl_disconnect(self.cid)
 
         if not self._m._draggable_axes._modifier_pressed:
@@ -901,6 +998,7 @@ class BlitManager:
     def on_draw(self, event):
         """Callback to register with 'draw_event'."""
         cv = self.canvas
+
         if event is not None:
             if event.canvas != cv:
                 raise RuntimeError
@@ -968,15 +1066,21 @@ class BlitManager:
 
             The default is 0.
         """
+
+        if not any(m.layer == layer for m in (self._m, *self._m._children)):
+            print(f"creating a new Maps-object for the layer {layer}")
+            self._m.new_layer(layer)
+
         if art.figure != self.canvas.figure:
             raise RuntimeError
 
         if art in self._bg_artists[layer]:
             print(f"EOmaps: Background-artist {art} already added")
-        else:
-            # art.set_animated(True)
-            self._bg_artists[layer].append(art)
-            self._m.BM._refetch_layer(layer)
+            return
+
+        # art.set_animated(True)
+        self._bg_artists[layer].append(art)
+        self._m.BM._refetch_layer(layer)
 
     def remove_bg_artist(self, art, layer=None):
         if layer is None:
@@ -1029,17 +1133,28 @@ class BlitManager:
 
     def _clear_temp_artists(self, method):
         if method == "on_layer_change":
-            # clear all artists from the "on_layer_change" list irrespective of the
-            # method
+            # clear all artists from "on_layer_change" list irrespective of the method
             allmethods = [i for i in self._artists_to_clear if i != method]
             for art in self._artists_to_clear[method]:
                 for met in allmethods:
+
                     if art in self._artists_to_clear[met]:
                         art.set_visible(False)
                         self.remove_artist(art)
                         art.remove()
                         self._artists_to_clear[met].remove(art)
             del self._artists_to_clear[method]
+
+            # always clear all temporary "pick" artists on a layer-change
+            for method in ["pick"]:
+                while len(self._artists_to_clear[method]) > 0:
+                    art = self._artists_to_clear[method].pop(-1)
+                    art.set_visible(False)
+                    self.remove_artist(art)
+                    art.remove()
+                    if art in self._artists_to_clear["on_layer_change"]:
+                        self._artists_to_clear["on_layer_change"].remove(art)
+                del self._artists_to_clear[method]
 
         else:
             while len(self._artists_to_clear[method]) > 0:
@@ -1109,7 +1224,6 @@ class BlitManager:
             self._draw_animated(layers=layers, artists=artists)
 
             if blit:
-
                 # workaround for nbagg backend to avoid glitches
                 # it's slow but at least it works...
                 # check progress of the following issuse

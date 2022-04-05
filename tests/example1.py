@@ -25,7 +25,7 @@ m.set_data(
 m.plot_map()
 m.add_colorbar()
 
-c = m.add_compass((0.05, 0.86), 7, patch=None)
+c = m.add_compass((0.05, 0.86), scale=7, patch=None)
 
 m.cb.pick.attach.annotate()  # attach a basic pick-annotation (on left-click)
 m.add_logo()  # add a logo

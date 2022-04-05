@@ -151,23 +151,8 @@ class _layer_selector:
         self._sliders = []
         self._selectors = []
 
-    def _get_layers(self, layers=None):
-        if layers is None:
-            # get all (empty and non-empty) layers except the "all" layer
-            layers = set((m.layer for m in self._m.parent._children))
-            layers = sorted(
-                layers.union(set(self._m.BM._bg_artists)), key=lambda x: str(x)
-            )
-
-            if "all" in layers:
-                layers.remove("all")
-
-        else:
-            for l in layers:
-                if l not in self._m.BM._bg_artists:
-                    print(f"EOmaps: The layer {l} appears to be empty...")
-
-        return layers
+        # register a function to update all associated widgets on a layer-chance
+        self._m.BM.on_layer(lambda m, l: self._update_widgets(l), persistent=True)
 
     def _update_widgets(self, l):
         # this function is called whenever the background-layer changed
@@ -183,7 +168,7 @@ class _layer_selector:
             if l in s.labels:
                 s.set_active(s.circles[s.labels.index(l)])
 
-    def _new_selector(self, layers=None, draggable=True, **kwargs):
+    def _new_selector(self, layers=None, draggable=True, exclude_layers=None, **kwargs):
         """
         Get a button-widget that can be used to select the displayed plot-layer.
 
@@ -208,6 +193,11 @@ class _layer_selector:
         draggable : bool, optional
             Indicator if the widget should be draggable or not.
             The default is True.
+        exclude_layers : list or None
+            A list of layer-names that should be excluded.
+            Only relevant if `layers=None` is used.
+            The default is None in which case only the "all" layer is excluded.
+            (Same as `exclude = ["all"]`. Use `exclude=[]` to get all available layers.)
         kwargs :
             All additional arguments are passed to `plt.legend`
 
@@ -241,7 +231,11 @@ class _layer_selector:
 
         """
 
-        layers = self._get_layers(layers)
+        if layers is None:
+            if exclude_layers is None:
+                exclude_layers = ["all"]
+            layers = self._m._get_layers(exclude=exclude_layers)
+
         assert (
             len(layers) > 0
         ), "EOmaps: There are no layers with artists available.. plot something first!"
@@ -283,11 +277,18 @@ class _layer_selector:
         self._selectors.append(s)
 
         # update widgets to make sure the right layer is selected
-        self._update_widgets(self._m.layer)
+        self._update_widgets(self._m.BM.bg_layer)
 
         return s
 
-    def _new_slider(self, layers=None, pos=None, txt_patch_props=None, **kwargs):
+    def _new_slider(
+        self,
+        layers=None,
+        pos=None,
+        txt_patch_props=None,
+        exclude_layers=None,
+        **kwargs,
+    ):
         """
         Get a slider-widget that can be used to switch between layers.
 
@@ -324,6 +325,11 @@ class _layer_selector:
             - If None, no background patch will be added to the text.
 
             The default is None.
+        exclude_layers : list or None
+            A list of layer-names that should be excluded.
+            Only relevant if `layers=None` is used.
+            The default is None in which case only the "all" layer is excluded.
+            (Same as `exclude = ["all"]`. Use `exclude=[]` to get all available layers.)
         kwargs :
             Additional kwargs are passed to matplotlib.widgets.Slider
 
@@ -354,7 +360,11 @@ class _layer_selector:
         >>> s.remove()
 
         """
-        layers = self._get_layers(layers)
+        if layers is None:
+            if exclude_layers is None:
+                exclude_layers = ["all"]
+            layers = self._m._get_layers(exclude=exclude_layers)
+
         assert (
             len(layers) > 0
         ), "EOmaps: There are no layers with artists available.. plot something first!"
@@ -435,7 +445,7 @@ class _layer_selector:
         s.remove = remove
 
         # update widgets to make sure the right layer is selected
-        self._update_widgets(self._m.layer)
+        self._update_widgets(self._m.BM.bg_layer)
 
         return s
 

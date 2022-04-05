@@ -1,6 +1,7 @@
 from functools import wraps
 import numpy as np
 from pyproj import CRS
+from pathlib import Path
 
 try:
     import pandas as pd
@@ -109,7 +110,7 @@ class read_file:
 
         opened = False  # just an indicator if we have to close the file in the end
         try:
-            if isinstance(path_or_dataset, str):
+            if isinstance(path_or_dataset, (str, Path)):
                 # if a path is provided, open the file (and close it in the end)
                 opened = True
                 ncfile = xar.open_dataset(path_or_dataset)
@@ -125,7 +126,6 @@ class read_file:
                 usencfile = ncfile
 
             ncdims = list(usencfile.dims)  # dimension order as stored in the file
-
             varnames = list(usencfile)
             if len(varnames) > 1:
                 raise AssertionError(
@@ -258,7 +258,7 @@ class read_file:
 
         opened = False  # just an indicator if we have to close the file in the end
         try:
-            if isinstance(path_or_dataset, str):
+            if isinstance(path_or_dataset, (str, Path)):
                 # if a path is provided, open the file (and close it in the end)
                 opened = True
                 ncfile = xar.open_dataset(path_or_dataset)
@@ -444,7 +444,7 @@ def _from_file(
     coastline=True,
     parent=None,
     figsize=None,
-    layer=0,
+    layer=None,
     **kwargs,
 ):
     """
@@ -513,6 +513,9 @@ def _from_file(
         data["data"] = val_transform(data["data"])
 
     if parent is not None:
+        if layer is None:
+            layer = parent.layer
+
         m = parent.new_layer(
             copy_data_specs=False,
             copy_plot_specs=False,
@@ -521,6 +524,8 @@ def _from_file(
             layer=layer,
         )
     else:
+        if layer is None:
+            layer = 0
         # get crs from file
         if crs is None:
             crs = data.get("crs", None)
@@ -563,16 +568,17 @@ def _from_file(
 
     else:
         # only try to plot as raster if in_crs == out_crs
-        crs1 = CRS.from_user_input(m.data_specs.crs)
-        crs2 = CRS.from_user_input(m._crs_plot)
-        if crs1.equals(crs2):
-            try:
-                # try to plot as raster - shading...
-                m.set_shape.shade_raster()
-                m.plot_map(**kwargs)
-                return m
-            except Exception:
-                pass
+        try:
+            # try to plot as raster - shading...
+            m.set_shape.shade_raster()
+            m.plot_map(**kwargs)
+            return m
+        except Exception:
+            print(
+                "EOmaps: failed to plot file with 'shade_raster'... "
+                + "defaulting to 'shade_points'"
+            )
+            pass
 
         # try to plot as point - shading...
         try:
@@ -580,7 +586,26 @@ def _from_file(
             m.plot_map(**kwargs)
             return m
         except Exception:
+            print(
+                "EOmaps: failed to plot file with 'shade_points'... "
+                + "defaulting to 'ellipses'"
+            )
             pass
+
+        # don't try to plot ellipses if the dataset is larger than 2M points
+        if _pd_OK and isinstance(m.data, pd.DataFrame):
+            # get the data-values
+            size = m.data[m.data_specs.parameter].size
+        else:
+            size = m.data.size
+
+        if size > 2000_000:
+            raise AssertionError(
+                "EOmaps: ...aborting attempt to plot "
+                + f"{np.format_float_scientific(size)} datapoints from a file "
+                + "as ellipses to avoid a memory-overflow... explicitly use "
+                + "`shape='ellipses'` if you really want to create an ellipse-plot!"
+            )
 
         # try to plot as ellipses
         m.set_shape.ellipses()

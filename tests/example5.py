@@ -69,17 +69,16 @@ m2.cb.click.attach(callback)
 
 # --------- add some basic overlays from NaturalEarth
 
-f0 = m.add_feature.physical_10m.lakes(ec="none", fc="b", zorder=100)
-f1 = m.add_feature.physical_10m.rivers_lake_centerlines(
+m.add_feature.preset.coastline("10m", zorder=101)
+m.add_feature.physical_10m.lakes(ec="none", fc="b", zorder=100)
+m.add_feature.physical_10m.rivers_lake_centerlines(
     ec="b", fc="none", lw=0.5, zorder=100
 )
-f2 = m.add_feature.cultural_10m.admin_0_countries(
-    ec=".75", fc="none", lw=0.5, zorder=100
-)
-f3 = m.add_feature.cultural_10m.urban_areas(ec="none", fc="r")
+m.add_feature.cultural_10m.admin_0_countries(ec=".75", fc="none", lw=0.5, zorder=100)
+m.add_feature.cultural_10m.urban_areas(ec="none", fc="r")
 
 # add a customized legend
-m.figure.ax.legend(
+leg = m.figure.ax.legend(
     [
         Patch(fc="b"),
         plt.Line2D([], [], c="b"),
@@ -92,6 +91,9 @@ m.figure.ax.legend(
     facecolor="w",
     framealpha=1,
 )
+# add the legend to the blit-manager to keep it on top of dynamically updated artists
+leg.zorder = 999
+m.BM.add_artist(leg)
 
 # --------- add some fancy (static) indicators for selected pixels
 mark_id = 6060
@@ -103,6 +105,7 @@ for buffer in np.linspace(1, 5, 10):
         fc=[1, 0, 0, 0.1],
         ec="r",
         buffer=buffer * 5,
+        n=100,  # use 100 points to represet the ellipses
     )
 m.add_marker(
     ID=mark_id, shape="rectangles", radius="pixel", fc="g", ec="y", buffer=3, alpha=0.5
@@ -157,5 +160,5 @@ m.add_annotation(
     arrowprops=dict(arrowstyle="fancy", facecolor="w", connectionstyle="arc3,rad=0.35"),
 )
 
-m.add_colorbar(label="The Data")
+cb = m.add_colorbar(label="The Data")
 m.add_logo()

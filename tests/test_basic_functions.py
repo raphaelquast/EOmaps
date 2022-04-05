@@ -173,7 +173,7 @@ class TestBasicPlotting(unittest.TestCase):
         plt.close(m.figure.f)
 
     def test_add_callbacks(self):
-        m = Maps(3857)
+        m = Maps(3857, layer="layername")
         m.data = self.data.sample(10)
         m.set_data_specs(xcoord="x", ycoord="y", in_crs=3857)
         m.set_shape.ellipses(radius=200000)
@@ -194,7 +194,7 @@ class TestBasicPlotting(unittest.TestCase):
 
             self.assertTrue(
                 cbID
-                == f"{cb}_0__{'double' if double_click else 'single'}__{mouse_button}"
+                == f"{cb}_0__{m.layer}__{'double' if double_click else 'single'}__{mouse_button}"
             )
             self.assertTrue(len(m.cb.pick.get.attached_callbacks) == 1)
             m.cb.pick.remove(cbID)
@@ -214,7 +214,7 @@ class TestBasicPlotting(unittest.TestCase):
 
             self.assertTrue(
                 cbID
-                == f"{cb}_0__{'double' if double_click else 'single'}__{mouse_button}"
+                == f"{cb}_0__{m.layer}__{'double' if double_click else 'single'}__{mouse_button}"
             )
             self.assertTrue(len(m.cb.click.get.attached_callbacks) == 1)
             m.cb.click.remove(cbID)
@@ -232,7 +232,7 @@ class TestBasicPlotting(unittest.TestCase):
 
             cbID = m.cb.keypress.attach(cb, key=key)
 
-            self.assertTrue(cbID == f"{cb}_0__{key}")
+            self.assertTrue(cbID == f"{cb}_0__{m.layer}__{key}")
             self.assertTrue(len(m.cb.keypress.get.attached_callbacks) == 1)
             m.cb.keypress.remove(cbID)
             self.assertTrue(len(m.cb.keypress.get.attached_callbacks) == 0)
@@ -445,7 +445,7 @@ class TestBasicPlotting(unittest.TestCase):
         mgrid.parent._draggable_axes._make_draggable()
         mgrid.parent._draggable_axes._undo_draggable()
 
-        m = Maps(orientation="horizontal")
+        m = Maps()
         m.plot_map()
         m._draggable_axes._make_draggable()
         m._draggable_axes._undo_draggable()

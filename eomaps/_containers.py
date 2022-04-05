@@ -123,16 +123,11 @@ class map_objects(object):
         """
 
         if cb is None:
-            _, ax_cb, ax_cb_plot, orientation = [
-                self.cb_gridspec,
-                self.ax_cb,
-                self.ax_cb_plot,
-                self._m._orientation,
-            ]
+            _, _, ax_cb, ax_cb_plot, orientation, _ = self._m._colorbar
         else:
-            _, ax_cb, ax_cb_plot, orientation, _ = cb
+            _, _, ax_cb, ax_cb_plot, orientation, _ = cb
 
-        if orientation == "vertical":
+        if orientation == "horizontal":
             pcb = ax_cb.get_position()
             pcbp = ax_cb_plot.get_position()
             if pos is None:
@@ -150,7 +145,7 @@ class map_objects(object):
                 [pos[0], pos[1] + hcb, pos[2], hp],
             )
 
-        elif orientation == "horizontal":
+        elif orientation == "vertical":
             pcb = ax_cb.get_position()
             pcbp = ax_cb_plot.get_position()
             if pos is None:
@@ -169,6 +164,9 @@ class map_objects(object):
             )
         else:
             raise TypeError(f"EOmaps: '{orientation}' is not a valid orientation")
+
+        # re-fetch the background layer to make changes visible
+        self._m.BM.fetch_bg(self._m.layer)
 
 
 class data_specs(object):
@@ -200,17 +198,19 @@ class data_specs(object):
         self._parameter = None
 
     def __repr__(self):
-        txt = f"""\
-              # parameter = {self.parameter}
-              # coordinates = ({self.xcoord}, {self.ycoord})
-              # crs: {indent(fill(self.crs.__repr__(), 60),
-                              "                      ").strip()}
+        try:
+            txt = f"""\
+                  # parameter = {self.parameter}
+                  # coordinates = ({self.xcoord}, {self.ycoord})
+                  # crs: {indent(fill(self.crs.__repr__(), 60),
+                                  "                      ").strip()}
 
-              # data:\
-              {indent(self.data.__repr__(), "                ")}
-              """
-
-        return dedent(txt)
+                  # data:\
+                  {indent(self.data.__repr__(), "                ")}
+                  """
+            return dedent(txt)
+        except:
+            return object.__repr__(self)
 
     def __getitem__(self, key):
         if isinstance(key, (list, tuple)):
@@ -559,7 +559,12 @@ class _NaturalEarth_presets:
         - fc="none", ec="k", zorder=100
         """
         return self._feature(
-            self._m, "physical", "coastline", fc="none", ec="k", zorder=100
+            self._m,
+            "physical",
+            "coastline",
+            fc="none",
+            ec="k",
+            zorder=100,
         )
 
     @property
@@ -1340,7 +1345,9 @@ else:
                     self._m = m
 
                     self.default = _xyz_tile_service(
-                        self._m, "https://tile.openstreetmap.org/{z}/{x}/{y}.png"
+                        self._m,
+                        "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
+                        name="OSM_default",
                     )
                     self.default.__doc__ = combdoc(
                         """
@@ -1357,7 +1364,9 @@ else:
                     )
 
                     self.default_german = _xyz_tile_service(
-                        self._m, "https://tile.openstreetmap.de/{z}/{x}/{y}.png"
+                        self._m,
+                        "https://tile.openstreetmap.de/{z}/{x}/{y}.png",
+                        name="OSM_default_german",
                     )
                     self.default_german.__doc__ = combdoc(
                         """
@@ -1377,6 +1386,7 @@ else:
                         m=self._m,
                         url="https://c.tile.opentopomap.org/{z}/{x}/{y}.png",
                         maxzoom=16,
+                        name="OSM_OpenTopoMap",
                     )
                     self.OpenTopoMap.__doc__ = combdoc(
                         """
@@ -1397,48 +1407,60 @@ else:
                     self.stamen_toner = _xyz_tile_service(
                         self._m,
                         "https://stamen-tiles.a.ssl.fastly.net/toner/{z}/{x}/{y}.png",
+                        name="OSM_stamen_toner",
                     )
                     self.stamen_toner_lines = _xyz_tile_service(
                         self._m,
                         "https://stamen-tiles.a.ssl.fastly.net/toner-lines/{z}/{x}/{y}.png",
+                        name="OSM_stamen_toner_lines",
                     )
                     self.stamen_toner_background = _xyz_tile_service(
                         self._m,
                         "https://stamen-tiles.a.ssl.fastly.net/toner-background/{z}/{x}/{y}.png",
+                        name="OSM_stamen_toner_background",
                     )
                     self.stamen_toner_lite = _xyz_tile_service(
                         self._m,
                         "https://stamen-tiles.a.ssl.fastly.net/toner-lite/{z}/{x}/{y}.png",
+                        name="OSM_stamen_toner_lite",
                     )
                     self.stamen_toner_hybrid = _xyz_tile_service(
                         self._m,
                         "https://stamen-tiles.a.ssl.fastly.net/toner-hybrid/{z}/{x}/{y}.png",
+                        name="OSM_stamen_toner_hybrid",
                     )
                     self.stamen_toner_labels = _xyz_tile_service(
                         self._m,
                         "https://stamen-tiles.a.ssl.fastly.net/toner-labels/{z}/{x}/{y}.png",
+                        name="OSM_stamen_toner_labels",
                     )
 
                     self.stamen_watercolor = _xyz_tile_service(
                         self._m,
                         "http://c.tile.stamen.com/watercolor/{z}/{x}/{y}.jpg",
+                        name="OSM_stamen_watercolor",
                         maxzoom=18,
                     )
 
                     self.stamen_terrain = _xyz_tile_service(
-                        self._m, "http://c.tile.stamen.com/terrain/{z}/{x}/{y}.jpg"
+                        self._m,
+                        "http://c.tile.stamen.com/terrain/{z}/{x}/{y}.jpg",
+                        name="OSM_stamen_terrain",
                     )
                     self.stamen_terrain_lines = _xyz_tile_service(
                         self._m,
                         "http://c.tile.stamen.com/terrain-lines/{z}/{x}/{y}.jpg",
+                        name="OSM_stamen_terrain_lines",
                     )
                     self.stamen_terrain_labels = _xyz_tile_service(
                         self._m,
                         "http://c.tile.stamen.com/terrain-labels/{z}/{x}/{y}.jpg",
+                        name="OSM_stamen_terrain_labels",
                     )
                     self.stamen_terrain_background = _xyz_tile_service(
                         self._m,
                         "http://c.tile.stamen.com/terrain-background/{z}/{x}/{y}.jpg",
+                        name="OSM_stamen_terrain_background",
                     )
 
                     stamen_doc = """
@@ -1933,6 +1955,7 @@ else:
                     self._m,
                     lambda x, y, z: f"https://s1map.eodc.eu/vv/{z}/{x}/{2**z-1-y}.png",
                     13,
+                    name="S1GBM_vv",
                 )
 
                 WMS.__doc__ = combdoc("Polarization: VV", type(self).__doc__)
@@ -1944,6 +1967,7 @@ else:
                     self._m,
                     lambda x, y, z: f"https://s1map.eodc.eu/vh/{z}/{x}/{2**z-1-y}.png",
                     13,
+                    name="S1GBM_vh",
                 )
                 WMS.__doc__ = combdoc("Polarization: VH", type(self).__doc__)
                 return WMS

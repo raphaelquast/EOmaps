@@ -3,7 +3,7 @@ from matplotlib.tri import TriMesh, Triangulation
 import numpy as np
 
 from pyproj import CRS, Transformer
-from functools import partial, lru_cache, wraps
+from functools import partial, wraps
 import warnings
 
 
@@ -109,14 +109,17 @@ class shapes(object):
         )
 
     @staticmethod
-    @lru_cache()
     def _get_radius_cache(m, radius, radius_crs, buffer=None):
-
         # get the radius for plotting
         if (isinstance(radius, str) and radius == "estimate") or radius is None:
-            print("EOmaps: estimating radius...")
-            radiusx, radiusy = shapes._estimate_radius(m, radius_crs)
-            print(f"EOmaps: The estimated radius is: {radiusx:.4f}")
+            if m._estimated_radius is None:
+                print("EOmaps: estimating radius...")
+                radiusx, radiusy = shapes._estimate_radius(m, radius_crs)
+                m._estimated_radius = (radiusx, radiusy)
+                print(f"EOmaps: The estimated radius is: {radiusx:.4f}")
+            else:
+                (radiusx, radiusy) = m._estimated_radius
+
         else:
             radiusx, radiusy = radius
 
@@ -134,8 +137,8 @@ class shapes(object):
             in_tree = cKDTree(
                 np.stack(
                     [
-                        m._props["xorig"][: m.set_shape.radius_estimation_range],
-                        m._props["yorig"][: m.set_shape.radius_estimation_range],
+                        m._props["xorig"].flat[: m.set_shape.radius_estimation_range],
+                        m._props["yorig"].flat[: m.set_shape.radius_estimation_range],
                     ],
                     axis=1,
                 ),
@@ -150,8 +153,8 @@ class shapes(object):
             tree = cKDTree(
                 np.stack(
                     [
-                        m._props["x0"][: m.set_shape.radius_estimation_range],
-                        m._props["y0"][: m.set_shape.radius_estimation_range],
+                        m._props["x0"].flat[: m.set_shape.radius_estimation_range],
+                        m._props["y0"].flat[: m.set_shape.radius_estimation_range],
                     ],
                     axis=1,
                 ),
@@ -320,7 +323,6 @@ class shapes(object):
         def get_coll(self, x, y, crs, **kwargs):
 
             xs, ys, mask = self._get_geod_circle_points(x, y, crs, self.radius, self.n)
-
             # special treatment of array input to properly mask values
             array = kwargs.pop("array", None)
 
@@ -348,6 +350,7 @@ class shapes(object):
                 array=array,
                 **kwargs,
             )
+
             return coll
 
     class _ellipses(object):
@@ -403,10 +406,13 @@ class shapes(object):
 
         def __repr__(self):
             try:
-                s = f"ellipses(radius={self.radius}, radius_crs={self.radius_crs}, n={self.n})"
-            except AttributeError:
-                s = "ellipses(radius, radius_crs, n)"
-            return s
+                try:
+                    s = f"ellipses(radius={self.radius}, radius_crs={self.radius_crs}, n={self.n})"
+                except AttributeError:
+                    s = "ellipses(radius, radius_crs, n)"
+                return s
+            except:
+                return object.__repr__(self)
 
         def _calc_ellipse_points(self, x0, y0, a, b, theta, n, start_angle=0):
             """
