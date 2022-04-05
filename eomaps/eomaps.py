@@ -324,12 +324,16 @@ class Maps(object):
 
     def cleanup(self):
         """
-        Cleanup all references to the object so that it can be deleted.
+        Cleanup all references to the object so that it can be savely deleted.
+        (primarily used internally to clear objects if the figure is closed)
 
-        Returns
-        -------
-        None.
+        Note
+        ----
+        Executing this function will remove ALL attached callbacks
+        and delete all assigned datasets & pre-computed values.
 
+        ONLY execute this if you do not need to do anything with the layer
+        (except for looking at it)
         """
         # remove the xlim-callback since it contains a reference to self
         if hasattr(self, "_cid_xlim"):
