@@ -479,7 +479,7 @@ class _click_callbacks(object):
     def _mark_cleanup(self):
         self.clear_markers()
 
-    def peek_layer(self, layer=1, how="left", overlay=False, **kwargs):
+    def peek_layer(self, layer=1, how=(0.4, 0.4), overlay=False, **kwargs):
         """
         Swipe between data- or WebMap layers or peek a layers through a rectangle.
 
@@ -495,10 +495,10 @@ class _click_callbacks(object):
 
                 - "left" (→), "right" (←), "top" (↓), "bottom" (↑):
                   swipe the layer at the mouse-position.
-                - if float, peek a square at the mouse-position, specified as
+                - if float: peek a square at the mouse-position, specified as
                   percentage of the axis-width (0-1)
-                - (width, height) peek a rectangle at the mouse-position, specified
-                  as percentage of the axis-size (0-1)
+                - if tuple: (width, height) peek a rectangle at the mouse-position,
+                  specified as percentage of the axis-size (0-1)
 
             The default is "left".
         overlay : bool, optional
