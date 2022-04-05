@@ -2182,16 +2182,9 @@ class Maps(object):
         patch_props=None,
         label_props=None,
     ):
-        # TODO temporary fix to make scalebar layer-independent
-        # (e.g. always attach it to a Maps-object at the "all" layer)
-        l_iter = (i for i in [self.parent, *self.parent._children] if i.layer == "all")
-        try:
-            s_m = next(l_iter)
-        except StopIteration:
-            s_m = self.new_layer("all")
 
         s = ScaleBar(
-            m=s_m,
+            m=self,
             preset=preset,
             scale=scale,
             autoscale_fraction=autoscale_fraction,
