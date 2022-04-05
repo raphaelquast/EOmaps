@@ -3180,7 +3180,7 @@ class Maps(object):
         im = mpl.image.imread(filepath)
 
         def getpos(pos):
-            s = pos.width * size
+            s = size
             if isinstance(pad, tuple):
                 pwx, pwy = (s * pad[0], s * pad[1])
             else:
