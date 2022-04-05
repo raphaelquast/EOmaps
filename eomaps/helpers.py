@@ -324,12 +324,13 @@ class draggable_axes:
                 ax.set_position(bbox)
         if method == 1:  # e.g. ctrl + key pressed
             if self._cb_picked:
-                if self._m_picked._orientation == "vertical":
+                orientation = self._m_picked._colorbar[-2]
+                if orientation == "horizontal":
                     ratio = (
                         self._m_picked.figure.ax_cb_plot.bbox.height
                         / self._m_picked.figure.ax_cb.bbox.height
                     )
-                elif self._m_picked._orientation == "horizontal":
+                elif orientation == "vertical":
                     ratio = (
                         self._m_picked.figure.ax_cb_plot.bbox.width
                         / self._m_picked.figure.ax_cb.bbox.width
@@ -367,8 +368,9 @@ class draggable_axes:
                     self._ax_visible[self._m_picked.figure.ax_cb] = vis
 
                 # fix the visible ticks
+                orientation = self._m_picked._colorbar[-2]
                 if self._m_picked.figure.ax_cb.get_visible() is False:
-                    if self._m_picked._orientation == "horizontal":
+                    if orientation == "vertical":
                         self._m_picked.figure.ax_cb_plot.tick_params(
                             right=True,
                             labelright=True,
@@ -379,7 +381,7 @@ class draggable_axes:
                             top=False,
                             labeltop=False,
                         )
-                    elif self._m_picked._orientation == "vertical":
+                    elif orientation == "horizontal":
                         self._m_picked.figure.ax_cb_plot.tick_params(
                             bottom=True,
                             labelbottom=True,
@@ -391,7 +393,7 @@ class draggable_axes:
                             labelright=False,
                         )
                 else:
-                    if self._m_picked._orientation == "horizontal":
+                    if orientation == "vertical":
                         self._m_picked.figure.ax_cb_plot.tick_params(
                             right=False,
                             labelright=False,
@@ -402,7 +404,7 @@ class draggable_axes:
                             top=False,
                             labeltop=False,
                         )
-                    elif self._m_picked._orientation == "vertical":
+                    elif orientation == "horizontal":
                         self._m_picked.figure.ax_cb_plot.tick_params(
                             bottom=False,
                             labelbottom=False,
@@ -459,9 +461,10 @@ class draggable_axes:
             if not self._cb_picked:
                 ax.set_position(bbox)
             else:
-                if self._m_picked._orientation == "vertical":
+                orientation = self._m_picked._colorbar[-2]
+                if orientation == "horizontal":
                     b = [bbox.x0, bbox.y0, bbox.width, b[3] + bbox.height]
-                elif self._m_picked._orientation == "horizontal":
+                elif orientation == "vertical":
                     b = [bbox.x0, bbox.y0, b[2] + bbox.width, bbox.height]
 
         if (
@@ -613,14 +616,15 @@ class draggable_axes:
                     )
                 )
             else:
-                if self._m_picked._orientation == "vertical":
+                orientation = self._m_picked._colorbar[-2]
+                if orientation == "horizontal":
                     b = [
                         pos.x0 - wstep / 2,
                         pos.y0 - hstep / 2,
                         pos.width + wstep,
                         b[3] + pos.height + hstep,
                     ]
-                elif self._m_picked._orientation == "horizontal":
+                elif orientation == "vertical":
                     b = [
                         pos.x0 - wstep / 2,
                         pos.y0 - hstep / 2,
@@ -862,12 +866,9 @@ class BlitManager:
             should be called whenever a layer is activated.
             The default is False.
 
-        Returns
-        -------
-        inner : TYPE
-            DESCRIPTION.
 
         """
+
         if layer is None:
             if not persistent:
 
