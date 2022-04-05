@@ -1,5 +1,6 @@
 # EOmaps example 4: Turn your maps into a powerful widgets
 
+# %matplotlib widget
 from eomaps import Maps
 import pandas as pd
 import numpy as np
@@ -116,7 +117,7 @@ def cb1(self, pos, ID, val, **kwargs):
         f"You clicked on {nvals} pixel"
         + ("s" if nvals > 1 else "")
         + "!\n... and the "
-        + ("average" if nvals > 1 else "")
+        + ("average " if nvals > 1 else "")
         + f"value is {np.mean(self.cb.pick.get.picked_vals['val']):.3f}"
     )
 

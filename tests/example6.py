@@ -12,13 +12,12 @@ data = pd.DataFrame(
 )
 # --------------------------------
 
-m = Maps(Maps.CRS.GOOGLE_MERCATOR)
+m = Maps(Maps.CRS.GOOGLE_MERCATOR, layer="S1GBM_vv")
 # set the crs to GOOGLE_MERCATOR to avoid reprojecting the WebMap data
 # (makes it a lot faster and it will also look much nicer!)
 # ------------- LAYER 0
 # add a layer showing S1GBM
-m1 = m.new_layer(layer="S1GBM_vv")
-m1.add_wms.S1GBM.add_layer.vv()
+m.add_wms.S1GBM.add_layer.vv()
 
 # ------------- LAYER 1
 # if you just want to add features, you can also do it within the same Maps-object!
@@ -40,17 +39,17 @@ m2.cb.pick.attach.annotate(zorder=100)  # use a high zorder to put it on top
 
 # on a left-click, show layers ("data", "OSM") in a rectangle
 # (with a size of 20% of the axis)
-m.cb.click.attach.peek_layer(layer=["data", "OSM"], how=0.2)
+m.all.cb.click.attach.peek_layer(layer=["data", "OSM"], how=0.2)
 
 # on a right-click, "swipe" the layers ("data", "S1GBM_vv") from the left
-m.cb.click.attach.peek_layer(
+m.all.cb.click.attach.peek_layer(
     layer=["data", "S1GBM_vv"], how="left", button=3, overlay=True
 )
 
 # switch between the layers with the keys 0, 1 and 2
-m.cb.keypress.attach.switch_layer(layer="S1GBM_vv", key="0")
-m.cb.keypress.attach.switch_layer(layer="OSM", key="1")
-m.cb.keypress.attach.switch_layer(layer="data", key="2")
+m.all.cb.keypress.attach.switch_layer(layer="S1GBM_vv", key="0")
+m.all.cb.keypress.attach.switch_layer(layer="OSM", key="1")
+m.all.cb.keypress.attach.switch_layer(layer="data", key="2")
 
 # ------------------------------
 m.figure.f.set_size_inches(9, 4)
