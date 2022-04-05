@@ -1,7 +1,6 @@
 name: test_Maps
 
 on:
-   push:
    pull_request:
    # to trigger workflow manually from actions-tab
    workflow_dispatch:
