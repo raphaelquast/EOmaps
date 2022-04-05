@@ -113,11 +113,6 @@ class Maps(object):
 
         Note: Instead of specifying explicit axes, you might want to have a
         look at `eomaps.MapsGrid` objects!
-
-    orientation : str, optional
-        Indicator if the colorbar should be plotted right of the map
-        ("horizontal") or below the map ("vertical"). The default is "vertical"
-
     f : matplotlib.Figure, optional
         Explicitly specify the matplotlib figure instance to use.
         (ONLY useful if you want to add a map to an already existing figure!)
@@ -196,7 +191,6 @@ class Maps(object):
         crs=None,
         parent=None,
         layer=0,
-        orientation="vertical",
         f=None,
         gs_ax=None,
         preferred_wms_service="wms",
@@ -209,7 +203,6 @@ class Maps(object):
             ), "You cannot specify the figure for connected Maps-objects!"
 
         self._f = f
-        self._orientation = orientation
         self._ax = gs_ax
         self._parent = None
 
@@ -217,7 +210,6 @@ class Maps(object):
         self._children = set()  # weakref.WeakSet()
 
         self.parent = parent  # invoke the setter!
-        self._orientation = "vertical"
         self.layer = layer
 
         # preferred way of accessing WMS services (used in the WMS container)
@@ -1290,7 +1282,7 @@ class Maps(object):
         vmax=None,
         tick_precision=3,
         density=False,
-        orientation=None,
+        orientation="vertical",
         log=False,
     ):
 
@@ -1323,9 +1315,6 @@ class Maps(object):
             tick_precision = self.plot_specs["tick_precision"]
         if density is None:
             density = self.plot_specs["density"]
-
-        if orientation is None:
-            orientation = self._orientation
 
         if orientation == "horizontal":
             cb_orientation = "vertical"
