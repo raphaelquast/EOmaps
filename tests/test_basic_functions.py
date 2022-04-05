@@ -445,7 +445,7 @@ class TestBasicPlotting(unittest.TestCase):
         mgrid.parent._draggable_axes._make_draggable()
         mgrid.parent._draggable_axes._undo_draggable()
 
-        m = Maps(orientation="horizontal")
+        m = Maps()
         m.plot_map()
         m._draggable_axes._make_draggable()
         m._draggable_axes._undo_draggable()

@@ -123,12 +123,7 @@ class map_objects(object):
         """
 
         if cb is None:
-            _, ax_cb, ax_cb_plot, orientation = [
-                self.cb_gridspec,
-                self.ax_cb,
-                self.ax_cb_plot,
-                self._m._orientation,
-            ]
+            _, ax_cb, ax_cb_plot, orientation, _ = self._m._colorbar
         else:
             _, ax_cb, ax_cb_plot, orientation, _ = cb
 

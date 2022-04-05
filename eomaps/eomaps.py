@@ -3034,6 +3034,9 @@ class Maps(object):
         self.BM.add_bg_artist(self._ax_cb, layer)
         self.BM.add_bg_artist(self._ax_cb_plot, layer)
 
+        # remember colorbar for later (so that we can update its position etc.)
+        self._colorbar = [cbgs, ax_cb, ax_cb_plot, orientation, cb]
+
         return [cbgs, ax_cb, ax_cb_plot, orientation, cb]
 
     def indicate_masked_points(self, radius=1.0, **kwargs):
