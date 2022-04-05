@@ -385,9 +385,9 @@ class Maps(object):
         >>> m.all.cb.click.attach.annotate()
 
         """
-        if not hasattr(self.parent, "_all"):
-            self.parent._all = self.parent.new_layer("all")
-        return self.parent._all
+        if not hasattr(self, "_all"):
+            self._all = self.new_layer("all")
+        return self._all
 
     def show(self):
         """
