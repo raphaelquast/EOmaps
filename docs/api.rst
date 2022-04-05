@@ -64,8 +64,10 @@ Possible ways for specifying the crs for plotting are:
     There is one layer-name that has a special meaning... the ``"all"`` layer.
     Any callbacks, features or plots added to this layer will be **executed on all other layers** as well!
 
-    You can always add features and callbacks to the ``all`` layer via the shortcut ``m.all. ...``
-
+    You can add features and callbacks to the ``all`` layer via:
+    - using the shortcut ``m.all. ...``
+    - creating a dedicated ``Maps`` object via ``m_all = Maps(layer="all")`` or ``m_all = m.new_layer("all")``
+    - using the "layer" kwarg of functions e.g. ``m.plot_map(layer="all")``
 
 .. currentmodule:: eomaps
 

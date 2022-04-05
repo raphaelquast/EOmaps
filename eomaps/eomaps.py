@@ -2810,7 +2810,11 @@ class Maps(object):
         """
         Add a colorbar to an existing figure.
 
-        (NOTE: the preferred way is to use `plot_map(colorbar=True)` instead!)
+        The colorbar always represents the data of the associated Maps-object
+        that was assigned in the last call to `m.plot_map()`.
+
+        By default, the colorbar will only be visible on the layer of the associated
+        Maps-object (you can override this by providing an explicit "layer"-name).
 
         To change the position of the colorbar, use:
 
@@ -2853,6 +2857,11 @@ class Maps(object):
             The padding between the colorbar and the parent axes (as fraction of the
             plot-height (if "horizontal") or plot-width (if "vertical")
             The default is (0.05, 0.1, 0.1, 0.05)
+        layer : int, str or None, optional
+            The layer to put the colorbar on.
+            To make the colorbar visible on all layers, use `layer="all"`
+            If None, the layer of the associated Maps-object is used.
+            The default is None.
         log : bool, optional
             Indicator if the y-axis of the plot should be logarithmic or not.
             The default is False
@@ -3024,7 +3033,7 @@ class Maps(object):
         )
 
         # hide the colorbar if it is not added to the currently visible layer
-        if layer != self.BM._bg_layer:
+        if layer not in [self.BM._bg_layer, "all"]:
             ax_cb.set_visible(False)
             ax_cb_plot.set_visible(False)
             m.BM._hidden_axes.add(ax_cb)
@@ -3038,7 +3047,7 @@ class Maps(object):
         self.BM.add_bg_artist(self._ax_cb_plot, layer)
 
         # remember colorbar for later (so that we can update its position etc.)
-        self._colorbar = [cbgs, ax_cb, ax_cb_plot, orientation, cb]
+        self._colorbar = [layer, cbgs, ax_cb, ax_cb_plot, orientation, cb]
 
         return [cbgs, ax_cb, ax_cb_plot, orientation, cb]
 

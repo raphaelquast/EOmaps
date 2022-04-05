@@ -123,9 +123,9 @@ class map_objects(object):
         """
 
         if cb is None:
-            _, ax_cb, ax_cb_plot, orientation, _ = self._m._colorbar
+            _, _, ax_cb, ax_cb_plot, orientation, _ = self._m._colorbar
         else:
-            _, ax_cb, ax_cb_plot, orientation, _ = cb
+            _, _, ax_cb, ax_cb_plot, orientation, _ = cb
 
         if orientation == "horizontal":
             pcb = ax_cb.get_position()

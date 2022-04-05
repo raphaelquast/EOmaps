@@ -824,17 +824,17 @@ class BlitManager:
         # a general callable to be called on every layer change
         self._do_on_layer_change(layer=val)
 
+        # hide all colorbars that are not no the visible layer
         for m in [self._m.parent, *self._m.parent._children]:
-            if m.layer != val:
-                if hasattr(m.figure, "ax_cb") and m.figure.ax_cb is not None:
-                    m.figure.ax_cb.set_visible(False)
-                if hasattr(m.figure, "ax_cb_plot") and m.figure.ax_cb_plot is not None:
-                    m.figure.ax_cb_plot.set_visible(False)
-            else:
-                if hasattr(m.figure, "ax_cb") and m.figure.ax_cb is not None:
-                    m.figure.ax_cb.set_visible(True)
-                if hasattr(m.figure, "ax_cb_plot") and m.figure.ax_cb_plot is not None:
-                    m.figure.ax_cb_plot.set_visible(True)
+            if getattr(m, "_colorbar", None) is not None:
+                [layer, cbgs, ax_cb, ax_cb_plot, orientation, cb] = m._colorbar
+
+                if layer != val:
+                    ax_cb.set_visible(False)
+                    ax_cb_plot.set_visible(False)
+                else:
+                    ax_cb.set_visible(True)
+                    ax_cb_plot.set_visible(True)
 
         # self.canvas.flush_events()
         self._clear_temp_artists("on_layer_change")
