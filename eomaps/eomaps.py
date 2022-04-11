@@ -3036,8 +3036,8 @@ class Maps(object):
         if layer not in [self.BM._bg_layer, "all"]:
             ax_cb.set_visible(False)
             ax_cb_plot.set_visible(False)
-            m.BM._hidden_axes.add(ax_cb)
-            m.BM._hidden_axes.add(ax_cb_plot)
+            self.BM._hidden_axes.add(ax_cb)
+            self.BM._hidden_axes.add(ax_cb_plot)
 
         self._ax_cb = ax_cb
         self._ax_cb_plot = ax_cb_plot
