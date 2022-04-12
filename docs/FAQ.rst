@@ -27,7 +27,7 @@ reasonably well if you want the figures embedded in a Jupyter Notebook.
 
 🔸 For classical notebooks, there's also the ``nbagg`` backend provided by matplotlib
 
-- To use it, simply execute the magic ``%matpltolib notebook`` before starting to plot.
+- To use it, simply execute the magic ``%matplotlib notebook`` before starting to plot.
 
 🔸 Finally, you can also use the magic ``%matplotlib qt`` and use the ``qt5agg`` backend within Jupyter Notebooks!
 
