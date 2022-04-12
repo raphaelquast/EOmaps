@@ -2586,6 +2586,12 @@ class Maps(object):
         This function is ONLY necessary if you want to use pick-callbacks **without**
         actually plotting the data**! Otherwise a call to `m.plot_map()` is sufficient!
 
+        - Each `Maps` object can always have only one pickable dataset.
+        - The used data is always the dataset that was assigned in the last call to
+          `m.plot_map()` or `m.make_dataset_pickable()`.
+        - To get multiple pickable datasets, use an individual layer for each of the
+          datasets (e.g. first `m2 = m.new_layer()` and then assign the data to `m2`)
+
         Parameters
         ----------
         pick_distance : int
