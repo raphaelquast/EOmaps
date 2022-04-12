@@ -531,6 +531,39 @@ Custom callback functions can be attached to the map via:
 - ❗ for click callbacks the kwargs ``ID`` and ``val`` are set to ``None``!
 - ❗ for keypress callbacks the kwargs ``ID`` and ``val`` and ``pos`` are set to ``None``!
 
+
+Picking a dataset without plotting it first
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+It is possible to attach ``pick`` callbacks to a ``Maps`` object without plotting the data first
+by using ``m.make_dataset_pickable()``.
+
+.. code-block:: python
+
+    m = Maps()
+    m.add_feature.preset.coastline()
+    m.set_data(... the dataset ...)
+    m.make_dataset_pickable()
+    # now it's possible to attach pick-callbacks even though the data is still "invisible"
+    m.cb.pick.attach.annotate()
+
+
+.. note::
+
+    Using ``m.make_dataset_pickable()`` is ONLY necessary if you want to use ``pick``
+    callbacks without actually plotting the data! Otherwise a call to ``m.plot_map()``
+    is sufficient!
+
+
+.. currentmodule:: eomaps.Maps
+
+.. autosummary::
+    :toctree: generated
+    :nosignatures:
+    :template: only_names_in_toc.rst
+
+    make_dataset_pickable
+
+
 .. _webmap_layers:
 
 🛰 WebMap layers
