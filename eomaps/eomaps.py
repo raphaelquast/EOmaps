@@ -2571,6 +2571,75 @@ class Maps(object):
         for key, val in memmaps.items():
             self._props[key] = val
 
+    def make_dataset_pickable(
+        self,
+        pick_distance=100,
+    ):
+        """
+        Make the associated dataset pickable **without plotting** it first.
+
+        After executing this function, `m.cb.pick` callbacks can be attached to the
+        `Maps` object.
+
+        NOTE
+        ----
+        This function is ONLY necessary if you want to use pick-callbacks **without**
+        actually plotting the data**! Otherwise a call to `m.plot_map()` is sufficient!
+
+        Parameters
+        ----------
+        pick_distance : int
+            The search-area surrounding the clicked pixel used to identify the datapoint
+            (e.g. a rectangle with a edge-size of `pick_distance * estimated radius`).
+
+            The default is 100.
+
+        Examples
+        --------
+
+        >>> m = Maps()
+        >>> m.add_feature.preset.coastline()
+        >>> ...
+        >>> # a dataset that should be pickable but NOT visible...
+        >>> # (e.g. in this case 100 points along the diagonal)
+        >>> m2 = m.new_layer()
+        >>> m2.set_data(*np.linspace([0, -180,-90,], [100, 180, 90], 100).T)
+        >>> m2.make_dataset_pickable()
+        >>> m2.cb.pick.attach.annotate()  # get an annotation for the invisible dataset
+        >>> # ...call m2.plot_map() to make the dataset visible...
+        """
+
+        if self.data is None:
+            print("EOmaps: you must set the data first!")
+            return
+
+        if hasattr(self.figure, "coll") and self.figure.coll:
+            print(
+                "EOmaps: There is already a collection assigned to this Maps-object"
+                + "... make sure to use a new layer for the pickable dataset!"
+            )
+            return
+
+        # ---------------------- prepare the data
+        props = self._prepare_data()
+        self._props = props
+        # use the axis as Artist to execute pick-events on any click on the axis
+
+        x0, x1 = self._props["x0"].min(), self._props["x0"].max()
+        y0, y1 = self._props["y0"].min(), self._props["y0"].max()
+
+        # use a transparent rectangle of the data-extent as artist for picking
+        (art,) = self.ax.fill([x0, x1, x1, x0], [y0, y0, y1, y1], fc="none", ec="none")
+
+        self.figure.coll = art
+
+        if pick_distance is not None:
+            self.tree = searchtree(m=self._proxy(self), pick_distance=pick_distance)
+            self.cb.pick._set_artist(art)
+            self.cb.pick._init_cbs()
+            self.cb.pick._pick_distance = pick_distance
+            self.cb._methods.append("pick")
+
     def _plot_map(
         self,
         pick_distance=100,
