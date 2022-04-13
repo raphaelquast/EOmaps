@@ -21,8 +21,9 @@
 <ul type="none">
   <li>🌍 EOmaps provides a simple and intuitive interface to visualize and interact with geographical datasets</li>
   <ul type="none">
-    <li>⬥ Data can be provided as 1D or 2D <code>lists</code>, <code>numpy-arrays</code> or <code>pandas.DataFrames</code></li>
-    <li>  &nbsp; &nbsp; &nbsp; ... usable also for large datasets with > 1M datapoints!</li>
+    <li>⬥ Data can be provided as 1D or 2D <code>lists</code>, <code>numpy-arrays</code>, <code>pandas.DataFrames</code></li>
+    <li>  &nbsp; &nbsp; &nbsp; or as GeoTIFFs,  NetCDFs and csv-files.</li>
+    <li>  &nbsp; &nbsp; &nbsp; ... usable also for large datasets with millions of datapoints!</li>
     <li>⬥ WebMap layers, annotations, markers can be added with a single line of code</li>
     <li>⬥ EOmaps is built on top of <code>matplotlib</code> and <code>cartopy</code> and integrates well <code>pandas</code> and <code>geopandas</code></li>
   </ul>
@@ -74,7 +75,7 @@ Found a bug or got an idea for an interesting feature? Open an [issue](https://g
 - Represent your data
   - as shapes with actual geographic dimensions (ellipses, rectangles, geodetic circles)
   - via Voroni diagrams and Delaunay triangulations to get interpolated contour-plots
-  - via dynamic data-shading to speed up plots with extremely large datasets
+  - via dynamic data-shading to speed up plots of extremely large datasets
 - Re-project the data to any crs supported by <a href=https://scitools.org.uk/cartopy/docs/latest/reference/crs.html#coordinate-reference-systems-crs>cartopy</a>
 - Quickly add features and additional layers to the plot
   - Markers, Annotations, WebMap Layers, NaturalEarth features, Scalebars, Compasses (or North-arrows) etc.
@@ -109,24 +110,31 @@ m.add_colorbar()
 # add a scalebar
 m.add_scalebar()
 
-# add a compass
+# add a compass (or north-arrow)
 m.add_compass()
 
 # add some basic features from NaturalEarth
 m.add_feature.preset.coastline()
 
+# add WebMap services
+m.add_wms.OpenStreetMap.add_layer.default()
+
 # use callback functions make the plot interactive!
 m.cb.pick.attach.annotate()
 
-# ---- add another plot-layer on a different level (1) to the map
-#      (by default only layer 0 is shown!)
-m3 = m.new_layer(layer=1)
-...
+# ----- use multiple layers to compare and analyze different datasets!
+# ---- add another plot-layer to the map
+m3 = m.new_layer(layer="layer 2")
+m3.add_feature.preset.ocean()
+
 # peek on layer 1 if you click on the map
-m.cb.click.attach.peek_layer(layer=1, how=0.4)
+m.cb.click.attach.peek_layer(layer="layer 2", how=0.4)
 # switch between the layers if you press "0" or "1" on the keyboard
 m.cb.keypress.attach.switch_layer(layer=0, key="0")
-m.cb.keypress.attach.switch_layer(layer=1, key="1")
+m.cb.keypress.attach.switch_layer(layer="layer 2", key="1")
+
+# get a clickable widget to switch between the available plot-layers
+m.util.layer_selector()
 
 # ---- add new layers directly from a GeoTIFF / NetCDF or CSV files
 m4 = m.new_layer_from_file.GeoTIFF(...)
