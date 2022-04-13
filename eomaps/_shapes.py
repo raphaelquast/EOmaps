@@ -861,7 +861,7 @@ class shapes(object):
                 shape.mask_radius = mask_radius
                 shape.masked = masked
 
-                m.shape = shape
+                m._shape = shape
 
         @property
         def _initargs(self):
