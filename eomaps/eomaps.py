@@ -3481,7 +3481,7 @@ class Maps(object):
                 ("logarithmic\n" if log else "")
                 + f"shaded pixel\n{'density' if density else 'bin count'}"
             )
-            ax_cb_plot.tick_params(labelleft=False)
+            ax_cb_plot.tick_params(labelleft=False, which="both")
 
         if orientation == "horizontal":
             if vmin and vmax:
