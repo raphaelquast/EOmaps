@@ -797,7 +797,9 @@ class Maps(object):
     def set_shape(self):
         return self._shapes
 
-    def set_data_specs(self, data=None, xcoord=None, ycoord=None, crs=None, **kwargs):
+    def set_data_specs(
+        self, data=None, xcoord=None, ycoord=None, crs=None, encoding=None, **kwargs
+    ):
         """
         Set the properties of the dataset you want to plot.
 
@@ -854,6 +856,20 @@ class Maps(object):
 
             If None, the first column (despite of xcoord and ycoord) will be used.
             The default is None.
+        encoding : dict or None, optional
+            A dict containing the encoding information in case the data is provided as
+            encoded values (useful to avoid decoding large integer-encoded datasets).
+
+            If provided, the data will be decoded "on-demand" with respect to the
+            provided "scale_factor" and "add_offset" according to the formula:
+
+            >>> actual_value = encoding["add_offset"] + encoding["scale_factor"] * value
+
+            Note: Colorbars and pick-callbakcs will use the encoding-information to
+            display the actual data-values!
+
+            If None, no value-transformation is performed.
+            The default is None
 
         Examples
         --------
@@ -878,6 +894,13 @@ class Maps(object):
           >>> lon, lat, vals = np.array([[...]]), np.array([[...]]), np.array([[...]])
           >>> m.set_data(vals, xcoord=lon, ycoord=lat, crs=4326)
 
+        - integer-encoded datasets
+
+          >>> lon, lat, vals = [...], [...], [1, 2, 3, ...]
+          >>> encoding = dict(scale_factor=0.01, add_offset=1)
+          >>> # colorbars and pick-callbacks will now show values as (1 + 0.01 * value)
+          >>> # e.g. the "actual" data values are [0.01, 0.02, 0.03, ...]
+          >>> m.set_data(vals, xcoord=lon, ycoord=lat, crs=4326, encoding=encoding)
         """
 
         if data is not None:
