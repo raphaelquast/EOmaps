@@ -1033,6 +1033,7 @@ To indicate rectangular areas in any given crs, simply use ``m.indicate_extent``
         ...
         m2.add_colorbar()  # this colorbar is only visible on the "data" layer
 
+
 .. currentmodule:: eomaps
 
 .. autosummary::
@@ -1066,6 +1067,30 @@ To indicate rectangular areas in any given crs, simply use ``m.indicate_extent``
     | You must plot a dataset first! (e.g. by calling ``m.plot_map()``)
     | The colorbar always represents the dataset that was used in the last call to ``m.plot_map()``.
     | If you need multiple colorbars, use an individual ``Maps`` object for each dataset! (e.g. via ``m2  = m.new_layer()``)
+
+
+
+🌠 Using the colorbar as a "dynamic shade indicator"
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+If you use ``shade_raster`` or ``shade_points`` as plot-shape, the colorbar can be used to indicate the
+distribution of the shaded pixels within the current field of view by setting ``dynamic_shade_indicator=True``.
+
+    +--------------------------------------------------------------------+--------------------------------------------------+
+    | .. code-block:: python                                             | .. image:: _static/minigifs/dynamic_colorbar.png |
+    |                                                                    |   :align: center                                 |
+    |   from eomaps import Maps                                          |                                                  |
+    |   import numpy as np                                               |                                                  |
+    |   x, y = np.mgrid[-45:45, 20:60]                                   |                                                  |
+    |                                                                    |                                                  |
+    |   m = Maps()                                                       |                                                  |
+    |   m.add_feature.preset.coastline()                                 |                                                  |
+    |   m.set_data(data=x+y, xcoord=x, ycoord=y, crs=4326)               |                                                  |
+    |   m.set_shape.shade_raster()                                       |                                                  |
+    |   m.plot_map()                                                     |                                                  |
+    |   m.add_colorbar(dynamic_shade_indicator=True, histbins=20)        |                                                  |
+    |                                                                    |                                                  |
+    +--------------------------------------------------------------------+--------------------------------------------------+
 
 
 .. _scalebar:
