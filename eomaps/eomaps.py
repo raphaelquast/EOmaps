@@ -856,7 +856,7 @@ class Maps(object):
 
             If None, the first column (despite of xcoord and ycoord) will be used.
             The default is None.
-        encoding : dict or None, optional
+        encoding : dict or False, optional
             A dict containing the encoding information in case the data is provided as
             encoded values (useful to avoid decoding large integer-encoded datasets).
 
@@ -868,8 +868,8 @@ class Maps(object):
             Note: Colorbars and pick-callbakcs will use the encoding-information to
             display the actual data-values!
 
-            If None, no value-transformation is performed.
-            The default is None
+            If False, no value-transformation is performed.
+            The default is False
 
         Examples
         --------

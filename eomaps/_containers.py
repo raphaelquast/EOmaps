@@ -199,7 +199,7 @@ class data_specs(object):
         self._ycoord = None
         self._crs = None
         self._parameter = None
-        self.encoding = None
+        self.encoding = False
 
     def __repr__(self):
         try:
