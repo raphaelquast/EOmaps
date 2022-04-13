@@ -31,7 +31,7 @@ class TestWMS(unittest.TestCase):
 
     def test_WMS_ESA_WorldCover(self):
         m = Maps(Maps.CRS.GOOGLE_MERCATOR)
-        m.plot_map(colormap=False)
+        m.add_feature.preset.coastline()
         ESA_layer = m.add_wms.ESA_WorldCover.add_layer.WORLDCOVER_2020_MAP
         ESA_layer.set_extent_to_bbox()
         ESA_layer.info
@@ -49,7 +49,7 @@ class TestWMS(unittest.TestCase):
 
     def test_WMS_legend_capabilities_NASA_GIBS(self):
         m = Maps(4326)
-        m.plot_map(colormap=False)
+        m.add_feature.preset.coastline()
 
         # use a layer that provides a legend
         NASA_layer = (
