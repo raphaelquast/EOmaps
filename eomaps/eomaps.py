@@ -2893,6 +2893,43 @@ class Maps(object):
         if memmap:
             self._memmap_props(dir=memmap)
 
+    def _decode_values(self, val):
+        """
+        Decode data-values with respect to the provided "scale_factor" and "add_offset"
+        using the formula:
+
+            `actual_value = add_offset + scale_factor * encoded_value`
+
+        The encoding is defined in `m.data_specs.encoding`
+
+        Parameters
+        ----------
+        val : array-like
+            The encoded data-values
+
+        Returns
+        -------
+        decoded_values
+            The decoded data values
+        """
+
+        encoding = self.data_specs.encoding
+        if encoding is not None:
+            try:
+                scale_factor = encoding.get("scale_factor", None)
+                add_offset = encoding.get("add_offset", None)
+
+                if scale_factor:
+                    val *= scale_factor
+                if add_offset:
+                    val += add_offset
+
+                return val
+            except:
+                return val
+        else:
+            return val
+
     def add_colorbar(
         self,
         gs=0.2,
