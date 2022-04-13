@@ -21,7 +21,6 @@ m.set_data(
     ycoord="lat",  # the name of the DataFrame-column representing the y-coordinates
     crs=4326,
 )  # the coordinate-system of the x- and y- coordinates
-
 m.plot_map()
 m.add_colorbar()
 

@@ -1,5 +1,4 @@
 # EOmaps example 4: Turn your maps into a powerful widgets
-
 # %matplotlib widget
 from eomaps import Maps
 import pandas as pd
