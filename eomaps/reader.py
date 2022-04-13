@@ -644,54 +644,7 @@ def _from_file(
         elif isinstance(shape, dict):
             getattr(m.set_shape, shape.pop("shape"))(**shape)
 
-        m.plot_map(**kwargs)
-        return m
-
-    else:
-        # only try to plot as raster if in_crs == out_crs
-        try:
-            # try to plot as raster - shading...
-            m.set_shape.shade_raster()
-            m.plot_map(**kwargs)
-            return m
-        except Exception:
-            print(
-                "EOmaps: failed to plot file with 'shade_raster'... "
-                + "defaulting to 'shade_points'"
-            )
-            pass
-
-        # try to plot as point - shading...
-        try:
-            m.set_shape.shade_points()
-            m.plot_map(**kwargs)
-            return m
-        except Exception:
-            print(
-                "EOmaps: failed to plot file with 'shade_points'... "
-                + "defaulting to 'ellipses'"
-            )
-            pass
-
-        # don't try to plot ellipses if the dataset is larger than 2M points
-        if _pd_OK and isinstance(m.data, pd.DataFrame):
-            # get the data-values
-            size = m.data[m.data_specs.parameter].size
-        else:
-            size = m.data.size
-
-        if size > 2000_000:
-            raise AssertionError(
-                "EOmaps: ...aborting attempt to plot "
-                + f"{np.format_float_scientific(size)} datapoints from a file "
-                + "as ellipses to avoid a memory-overflow... explicitly use "
-                + "`shape='ellipses'` if you really want to create an ellipse-plot!"
-            )
-
-        # try to plot as ellipses
-        m.set_shape.ellipses()
-        m.plot_map(**kwargs)
-
+    m.plot_map(**kwargs)
     return m
 
 
