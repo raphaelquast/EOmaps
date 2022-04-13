@@ -22,7 +22,7 @@
   <li>🌍 EOmaps provides a simple and intuitive interface to visualize and interact with geographical datasets</li>
   <ul type="none">
     <li>⬥ Data can be provided as 1D or 2D <code>lists</code>, <code>numpy-arrays</code>, <code>pandas.DataFrames</code></li>
-    <li>  &nbsp; &nbsp; &nbsp; or as GeoTIFFs,  NetCDFs and csv-files.</li>
+    <li>  &nbsp; &nbsp; &nbsp; or directly from GeoTIFFs,  NetCDFs and csv-files.</li>
     <li>  &nbsp; &nbsp; &nbsp; ... usable also for large datasets with millions of datapoints!</li>
     <li>⬥ WebMap layers, annotations, markers can be added with a single line of code</li>
     <li>⬥ EOmaps is built on top of <code>matplotlib</code> and <code>cartopy</code> and integrates well <code>pandas</code> and <code>geopandas</code></li>
