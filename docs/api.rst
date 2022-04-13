@@ -447,6 +447,37 @@ functions and attach them to the map.
     layer using something like ``m.all.cb.click.attach.annotate()``.
 
 
+
++-----------------------------------------------------------------------------------+--------------------------------------------------+
+| .. code-block:: python                                                            | .. image:: _static/minigifs/simple_callbacks.gif |
+|                                                                                   |   :align: center                                 |
+|     from eomaps import Maps                                                       |                                                  |
+|     import numpy as np                                                            |                                                  |
+|     x, y = np.mgrid[-45:45, 20:60]                                                |                                                  |
+|                                                                                   |                                                  |
+|     m = Maps(Maps.CRS.Orthographic())                                             |                                                  |
+|     m.all.add_feature.preset.coastline()                                          |                                                  |
+|     m.set_data(data=x+y**2, xcoord=x, ycoord=y, crs=4326)                         |                                                  |
+|     m.plot_map(pick_distance=10)                                                  |                                                  |
+|                                                                                   |                                                  |
+|     m2 = m.new_layer(copy_data_specs=True, layer="second_layer")                  |                                                  |
+|     m2.set_plot_specs(cmap="tab10")                                               |                                                  |
+|     m2.plot_map()                                                                 |                                                  |
+|                                                                                   |                                                  |
+|     # get an annotation if you RIGHT-click anywhere on the map                    |                                                  |
+|     m.cb.click.attach.annotate(xytext=(-60, -60),                                 |                                                  |
+|                                bbox=dict(boxstyle="round", fc="r"))               |                                                  |
+|                                                                                   |                                                  |
+|     # pick the nearest datapoint if you click on the MIDDLE mouse button          |                                                  |
+|     m.cb.pick.attach.annotate(button=2)                                           |                                                  |
+|     m.cb.pick.attach.mark(buffer=1, permanent=False, fc="none", ec="r", button=2) |                                                  |
+|     m.cb.pick.attach.mark(buffer=4, permanent=False, fc="none", ec="r", button=2) |                                                  |
+|                                                                                   |                                                  |
+|     # peek at the second layer if you LEFT-click on the map                       |                                                  |
+|     m.cb.click.attach.peek_layer("second_layer", how=.25, button=3)               |                                                  |
++-----------------------------------------------------------------------------------+--------------------------------------------------+
+
+
 Pre-defined click & pick callbacks
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
