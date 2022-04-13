@@ -80,6 +80,18 @@ except ImportError:
     print("No module named 'mapclassify'... classification will not work!")
 
 
+if plt.isinteractive():
+    if plt.get_backend() == "module://ipympl.backend_nbagg":
+        warnings.warn(
+            "EOmaps disables matplotlib's interactive mode (e.g. 'plt.ioff()') "
+            + "when using the 'ipympl' backend to avoid recursions during callbacks!"
+            + "call `plt.show() to show the map!"
+        )
+        plt.ioff()
+    else:
+        plt.ion()
+
+
 class Maps(object):
     """
     The base-class for generating plots with EOmaps.
@@ -559,15 +571,6 @@ class Maps(object):
 
         if newfig:  # only if a new figure has been initialized
             _ = self._draggable_axes
-            if plt.isinteractive():
-                if plt.get_backend() == "module://ipympl.backend_nbagg":
-                    warnings.warn(
-                        "EOmaps disables matplotlib's interactive mode (e.g. 'plt.ioff()') "
-                        + "when using the 'ipympl' backend to avoid recursions during callbacks!"
-                    )
-                    plt.ioff()
-                else:
-                    plt.ion()
 
             # attach a callback that is executed when the figure is closed
             self._cid_onclose = self.figure.f.canvas.mpl_connect(
