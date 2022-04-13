@@ -1253,7 +1253,10 @@ class Maps(object):
         props["y0"] = y0
 
         # convert the data to 1D for shapes that accept unstructured data
-        if self.shape.name != "shade_raster":
+
+        # invoke the shape-setter to make sure a shape is set
+        used_shape = self.shape
+        if used_shape.name != "shade_raster":
             self._1Dprops(props)
 
         return props
@@ -2460,6 +2463,7 @@ class Maps(object):
         props["x0"] = props["x0"].squeeze()
         props["y0"] = props["y0"].squeeze()
 
+        # the shape is always set after _prepare data!
         if self.shape.name == "shade_raster":
             assert _xar_OK, "EOmaps: missing dependency `xarray` for 'shade_raster'"
             if len(zdata.shape) == 2:
@@ -2974,7 +2978,9 @@ class Maps(object):
         if layer is None:
             layer = self.layer
 
-        if self.shape.name.startswith("shade"):
+        useshape = self.shape  # invoke the setter to set the default shape
+
+        if useshape.name.startswith("shade"):
             self._shade_map(
                 pick_distance=pick_distance,
                 layer=layer,

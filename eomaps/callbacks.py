@@ -370,11 +370,14 @@ class _click_callbacks(object):
         possible_shapes = ["ellipses", "rectangles", "geod_circles"]
 
         if shape is None:
-            shape = (
-                self.m.shape.name
-                if (self.m.shape.name in possible_shapes)
-                else "ellipses"
-            )
+            if self.m.shape is not None:
+                shape = (
+                    self.m.shape.name
+                    if (self.m.shape.name in possible_shapes)
+                    else "ellipses"
+                )
+            else:
+                "ellipses"
         else:
             assert (
                 shape in possible_shapes
@@ -421,7 +424,7 @@ class _click_callbacks(object):
         elif isinstance(radius, (int, float)):
             radius = radius * buffer
 
-        if self.m.shape.name == "geod_circles":
+        if self.m.shape and self.m.shape.name == "geod_circles":
             if shape != "geod_circles" and pixelQ:
                 warnings.warn(
                     "EOmaps: Only `geod_circles` markers are possible"
@@ -430,7 +433,10 @@ class _click_callbacks(object):
                 )
                 shape = "geod_circles"
 
-        elif self.m.shape.name in ["voroni_diagram", "delaunay_triangulation"]:
+        elif self.m.shape and self.m.shape.name in [
+            "voroni_diagram",
+            "delaunay_triangulation",
+        ]:
             assert radius != "pixel", (
                 "EOmaps: Using `radius='pixel' is not possible"
                 + "if the plot-shape was '{self.m.shape.name}'."
