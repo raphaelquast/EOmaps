@@ -90,6 +90,12 @@ Possible ways for specifying the crs for plotting are:
 To assign a dataset to a ``Maps`` object, use ``m.set_data``.
 The shapes that are used to represent the data-points are then assigned via ``m.set_shape``.
 
+.. note::
+
+    By default, the plot-shape is assigned based on the associated dataset!
+    - For >500k pixels, ``m.set_shape.ellipses()`` is used.
+    - For larger datasets ``m.set_shape.shade_raster`` is used.
+
 .. code-block:: python
 
     m = Maps()
