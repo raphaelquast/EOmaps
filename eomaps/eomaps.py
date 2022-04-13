@@ -918,6 +918,9 @@ class Maps(object):
         for key, val in kwargs.items():
             self.data_specs[key] = val
 
+        if encoding is not None:
+            self.data_specs.encoding = encoding
+
     set_data = set_data_specs
 
     def set_plot_specs(self, **kwargs):
