@@ -1235,7 +1235,7 @@ class shapes(object):
         def __repr__(self):
             return "Raster-shading with datashader"
 
-        def __call__(self, aggregator=None, shade_hook=None, agg_hook=None):
+        def __call__(self, aggregator="mean", shade_hook=None, agg_hook=None):
             """
             Shade the data as a rectangular raster (>> usable for very large datasets!).
 
@@ -1248,9 +1248,17 @@ class shapes(object):
 
             Parameters
             ----------
-            aggregator : Reduction, optional
+            aggregator : str or datashader.reductions, optional
                 The reduction to compute per-pixel.
-                The default is `ds.mean("val")` where "val" represents the data-values.
+                (see https://datashader.org/api.html#reductions for details)
+
+                If a string is provided, it is interpreted as `ds.<aggregator>("val")`
+                where "val" represents the data-values.
+
+                Possible string values are:
+                - "mean", "min", "max", "first", "last", "std", "sum", "var", "count"
+
+                The default is "mean", e.g. `datashader.mean("val")`
             shade_hook : callable, optional
                 A callable that takes the image output of the shading pipeline,
                 and returns another Image object.
@@ -1270,6 +1278,8 @@ class shapes(object):
 
             if aggregator is None:
                 aggregator = ds.mean("val")
+            if isinstance(aggregator, str):
+                aggregator = getattr(ds, aggregator)("val")
 
             if shade_hook is None:
                 shade_hook = None
