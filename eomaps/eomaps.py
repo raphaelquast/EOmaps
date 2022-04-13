@@ -1457,13 +1457,13 @@ class Maps(object):
                         boxstyle="round,pad=.35",
                     ),
                 )
-                self.BM.add_artist(self._cb_nodata_txt)
+                self.BM.add_bg_artist(self._cb_nodata_txt, self.layer)
 
             return
         else:
             # remove the no-data indicator if it is still here
             if hasattr(self, "_cb_nodata_txt"):
-                self.BM.remove_artist(self._cb_nodata_txt)
+                self.BM.remove_bg_artist(self._cb_nodata_txt)
                 self._cb_nodata_txt.remove()
                 del self._cb_nodata_txt
 
