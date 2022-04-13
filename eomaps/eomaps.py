@@ -813,7 +813,7 @@ class Maps(object):
             )
 
         if shape is True:
-            if shape is not None:
+            if self.shape is not None:
                 getattr(copy_cls.set_shape, self.shape.name)(**self.shape._initargs)
 
         if classify_specs is True:
