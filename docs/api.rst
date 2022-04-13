@@ -8,7 +8,7 @@
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 | EOmaps is all about ``Maps`` objects.
-| To start creating a new map (in this case a plot in ``epsg=4326``, e.g. lon/lat projection), simply use:
+| To start creating a new map (in this case a plot in ``epsg=4326``, e.g. lon/lat), simply use:
 
 .. code-block:: python
 
@@ -1083,7 +1083,7 @@ If you use ``shade_raster`` or ``shade_points`` as plot-shape, the colorbar can 
 distribution of the shaded pixels within the current field of view by setting ``dynamic_shade_indicator=True``.
 
     +--------------------------------------------------------------------+--------------------------------------------------+
-    | .. code-block:: python                                             | .. image:: _static/minigifs/dynamic_colorbar.png |
+    | .. code-block:: python                                             | .. image:: _static/minigifs/dynamic_colorbar.gif |
     |                                                                    |   :align: center                                 |
     |   from eomaps import Maps                                          |                                                  |
     |   import numpy as np                                               |                                                  |
