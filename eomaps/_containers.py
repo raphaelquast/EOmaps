@@ -182,6 +182,7 @@ class data_specs(object):
         ycoord="lat",
         crs=4326,
         parameter=None,
+        encoding=None,
     ):
         self._m = m
         self.data = data
@@ -190,24 +191,40 @@ class data_specs(object):
         self.crs = crs
         self.parameter = parameter
 
+        self._encoding = encoding
+
     def delete(self):
         self._data = None
         self._xcoord = None
         self._ycoord = None
         self._crs = None
         self._parameter = None
+        self.encoding = False
 
     def __repr__(self):
         try:
             txt = f"""\
-                  # parameter = {self.parameter}
-                  # coordinates = ({self.xcoord}, {self.ycoord})
-                  # crs: {indent(fill(self.crs.__repr__(), 60),
-                                  "                      ").strip()}
+                  # parameter: {self.parameter}
+                  # xcoord: {indent(fill(self.xcoord.__repr__(), 60),
+                                    "                      ").strip()}
+                  # ycoord: {indent(fill(self.ycoord.__repr__(), 60),
+                                    "                      ").strip()}
 
-                  # data:\
-                  {indent(self.data.__repr__(), "                ")}
+                  # crs: {indent(fill(self.crs.__repr__(), 60),
+                                 "                      ").strip()}
+
+                  # data: {indent(self.data.__repr__(),
+                                  "                ").lstrip()}
+
                   """
+            txt = txt
+            if self.encoding:
+                txt += dedent(
+                    f"""\
+                    # encoding: {indent(fill(self.encoding.__repr__(), 60),
+                    "                ").lstrip()}
+                    """
+                )
             return dedent(txt)
         except:
             return object.__repr__(self)
@@ -258,7 +275,7 @@ class data_specs(object):
         return key
 
     def keys(self):
-        return ("parameter", "xcoord", "ycoord", "in_crs", "data")
+        return ("parameter", "xcoord", "ycoord", "in_crs", "data", "encoding")
 
     @property
     def data(self):
@@ -326,6 +343,14 @@ class data_specs(object):
                     )
 
         return self._parameter
+
+    @property
+    def encoding(self):
+        return self._encoding
+
+    @encoding.setter
+    def encoding(self, encoding):
+        self._encoding = encoding
 
 
 class plot_specs(object):

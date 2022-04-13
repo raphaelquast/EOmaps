@@ -1,6 +1,6 @@
 """A collection of helper-functions to generate map-plots."""
 
-from functools import lru_cache, wraps
+from functools import lru_cache, wraps, partial
 from itertools import repeat
 from collections import defaultdict
 import warnings
@@ -34,6 +34,13 @@ try:
 except ImportError:
     _xar_OK = False
 
+try:
+    from datashader import glyphs
+    from datashader.mpl_ext import dsshow, ScalarDSArtist
+
+    _ds_OK = True
+except ImportError:
+    _ds_OK = False
 
 from scipy.spatial import cKDTree
 from pyproj import CRS, Transformer
@@ -78,6 +85,18 @@ try:
     import mapclassify
 except ImportError:
     print("No module named 'mapclassify'... classification will not work!")
+
+
+if plt.isinteractive():
+    if plt.get_backend() == "module://ipympl.backend_nbagg":
+        warnings.warn(
+            "EOmaps disables matplotlib's interactive mode (e.g. 'plt.ioff()') "
+            + "when using the 'ipympl' backend to avoid recursions during callbacks!"
+            + "call `plt.show() to show the map!"
+        )
+        plt.ioff()
+    else:
+        plt.ion()
 
 
 class Maps(object):
@@ -278,7 +297,7 @@ class Maps(object):
         self._new_layer_from_file = new_layer_from_file(weakref.proxy(self))
 
         self._shapes = shapes(weakref.proxy(self))
-        self.set_shape.ellipses()
+        self._shape = None
 
         # the radius is estimated when plot_map is called
         self._estimated_radius = None
@@ -374,6 +393,39 @@ class Maps(object):
         The layer-name associated with this Maps-object.
         """
         return self._layer
+
+    @property
+    def shape(self):
+        """
+        The shape that will be used to represent the dataset if `m.plot_map()` is called
+
+        By default "ellipses" is used for datasets < 500k datapoints and
+        "shade_raster" is used otherwise.
+
+        """
+        if self._shape is None:
+            if self.data is not None:
+                if hasattr(self.data, "size"):
+                    # numpy, xarray and pandas support .size
+                    size = self.data.size
+                else:
+                    # to support ordinary lists
+                    size = len(self.data)
+                if size > 500_000:
+                    if _ds_OK:
+                        self.set_shape.shade_raster()
+                    else:
+                        print(
+                            "EOmaps-Warning: you attempt to plot a large dataset"
+                            + f"({size} datapoints) but the 'datashader' library could"
+                            + " not be imported! The plot might take long to finish!"
+                            + "... defaulting to 'ellipses' as plot-shape."
+                        )
+                        self.set_shape.ellipses()
+                else:
+                    self.set_shape.ellipses()
+
+        return self._shape
 
     @property
     def all(self):
@@ -559,15 +611,6 @@ class Maps(object):
 
         if newfig:  # only if a new figure has been initialized
             _ = self._draggable_axes
-            if plt.isinteractive():
-                if plt.get_backend() == "module://ipympl.backend_nbagg":
-                    warnings.warn(
-                        "EOmaps disables matplotlib's interactive mode (e.g. 'plt.ioff()') "
-                        + "when using the 'ipympl' backend to avoid recursions during callbacks!"
-                    )
-                    plt.ioff()
-                else:
-                    plt.ion()
 
             # attach a callback that is executed when the figure is closed
             self._cid_onclose = self.figure.f.canvas.mpl_connect(
@@ -770,7 +813,8 @@ class Maps(object):
             )
 
         if shape is True:
-            getattr(copy_cls.set_shape, self.shape.name)(**self.shape._initargs)
+            if self.shape is not None:
+                getattr(copy_cls.set_shape, self.shape.name)(**self.shape._initargs)
 
         if classify_specs is True:
             classify_specs = list(self.classify_specs.keys())
@@ -794,7 +838,9 @@ class Maps(object):
     def set_shape(self):
         return self._shapes
 
-    def set_data_specs(self, data=None, xcoord=None, ycoord=None, crs=None, **kwargs):
+    def set_data_specs(
+        self, data=None, xcoord=None, ycoord=None, crs=None, encoding=None, **kwargs
+    ):
         """
         Set the properties of the dataset you want to plot.
 
@@ -851,6 +897,20 @@ class Maps(object):
 
             If None, the first column (despite of xcoord and ycoord) will be used.
             The default is None.
+        encoding : dict or False, optional
+            A dict containing the encoding information in case the data is provided as
+            encoded values (useful to avoid decoding large integer-encoded datasets).
+
+            If provided, the data will be decoded "on-demand" with respect to the
+            provided "scale_factor" and "add_offset" according to the formula:
+
+            >>> actual_value = encoding["add_offset"] + encoding["scale_factor"] * value
+
+            Note: Colorbars and pick-callbakcs will use the encoding-information to
+            display the actual data-values!
+
+            If False, no value-transformation is performed.
+            The default is False
 
         Examples
         --------
@@ -875,6 +935,13 @@ class Maps(object):
           >>> lon, lat, vals = np.array([[...]]), np.array([[...]]), np.array([[...]])
           >>> m.set_data(vals, xcoord=lon, ycoord=lat, crs=4326)
 
+        - integer-encoded datasets
+
+          >>> lon, lat, vals = [...], [...], [1, 2, 3, ...]
+          >>> encoding = dict(scale_factor=0.01, add_offset=1)
+          >>> # colorbars and pick-callbacks will now show values as (1 + 0.01 * value)
+          >>> # e.g. the "actual" data values are [0.01, 0.02, 0.03, ...]
+          >>> m.set_data(vals, xcoord=lon, ycoord=lat, crs=4326, encoding=encoding)
         """
 
         if data is not None:
@@ -891,6 +958,9 @@ class Maps(object):
 
         for key, val in kwargs.items():
             self.data_specs[key] = val
+
+        if encoding is not None:
+            self.data_specs.encoding = encoding
 
     set_data = set_data_specs
 
@@ -1183,7 +1253,10 @@ class Maps(object):
         props["y0"] = y0
 
         # convert the data to 1D for shapes that accept unstructured data
-        if self.shape.name != "shade_raster":
+
+        # invoke the shape-setter to make sure a shape is set
+        used_shape = self.shape
+        if used_shape.name != "shade_raster":
             self._1Dprops(props)
 
         return props
@@ -1297,6 +1370,7 @@ class Maps(object):
         density=False,
         orientation="vertical",
         log=False,
+        tick_formatter=None,
     ):
 
         if ax_cb is None:
@@ -1326,6 +1400,12 @@ class Maps(object):
                 vmax = np.nanmax(self._props["z_data"])
         if tick_precision is None:
             tick_precision = self.plot_specs["tick_precision"]
+
+        if tick_formatter is None:
+            tick_formatter = partial(
+                self._default_cb_tick_formatter, precision=tick_precision
+            )
+
         if density is None:
             density = self.plot_specs["density"]
 
@@ -1346,8 +1426,51 @@ class Maps(object):
                 classified
             ), "EOmaps: using histbins='bins' is only possible for classified data!"
 
+        # TODO deepcopy is required to avoid issues with datashader?
+        norm = copy.deepcopy(norm)
         n_cmap = cm.ScalarMappable(cmap=cmap, norm=norm)
-        n_cmap.set_array(np.ma.masked_invalid(z_data))
+        valid_zdata = z_data[np.isfinite(z_data)]
+
+        # skip drawing the colorbar in case no data is available
+        # and show a notification that there's no data instead
+        # (relevant for dynamic colorbars if you pan to a region without data)
+        if len(valid_zdata) == 0:
+            ax_cb.set_visible(False)
+            ax_cb_plot.set_visible(False)
+            if ax_cb not in self.BM._hidden_axes:
+                self.BM._hidden_axes.add(ax_cb)
+            if ax_cb_plot not in self.BM._hidden_axes:
+                self.BM._hidden_axes.add(ax_cb_plot)
+
+            if not hasattr(self, "_cb_nodata_txt"):
+                axpos = ax_cb_plot.get_position()
+                self._cb_nodata_txt = self.ax.text(
+                    (axpos.x1 + axpos.x0) / 2,
+                    (axpos.y1 + axpos.y0) / 2,
+                    "... no dynamic colorbar data ...",
+                    transform=self.figure.f.transFigure,
+                    horizontalalignment="center",
+                    verticalalignment="center",
+                    fontsize=8,
+                    bbox=dict(
+                        facecolor="lightcoral",
+                        edgecolor="k",
+                        linewidth=0.35,
+                        alpha=0.5,
+                        boxstyle="round,pad=.35",
+                    ),
+                )
+                self.BM.add_bg_artist(self._cb_nodata_txt, self.layer)
+
+            return
+        else:
+            # remove the no-data indicator if it is still here
+            if hasattr(self, "_cb_nodata_txt"):
+                self.BM.remove_bg_artist(self._cb_nodata_txt)
+                self._cb_nodata_txt.remove()
+                del self._cb_nodata_txt
+
+        n_cmap.set_array(valid_zdata)
         cb = plt.colorbar(
             n_cmap,
             cax=ax_cb,
@@ -1363,7 +1486,7 @@ class Maps(object):
             bins=bins if (classified and histbins == "bins") else histbins,
             color="k",
             align="mid",
-            # range=(norm.vmin, norm.vmax),
+            range=(vmin, vmax) if (vmin and vmax) else None,
             density=density,
         )
 
@@ -1383,7 +1506,6 @@ class Maps(object):
                 maxval = minval + width
 
             patch.set_facecolor(cmap(norm((minval + maxval) / 2)))
-
             # take care of histogram-bins that have splitted colors
             if bins is not None:
                 splitbins = bins[np.where((minval < bins) & (maxval > bins))]
@@ -1504,13 +1626,17 @@ class Maps(object):
         else:
             cb.set_ticks(cb.get_ticks())
 
+        if tick_formatter:
+            if orientation == "vertical":
+                cb.ax.xaxis.set_major_formatter(tick_formatter)
+            elif orientation == "horizontal":
+                cb.ax.yaxis.set_major_formatter(tick_formatter)
+
         # format position of scientific exponent for colorbar ticks
         if cb_orientation == "vertical":
             ot = ax_cb.yaxis.get_offset_text()
             ot.set_horizontalalignment("center")
             ot.set_position((1, 0))
-
-        ax_cb.autoscale()
 
         return cb
 
@@ -2248,14 +2374,12 @@ class Maps(object):
             kwargs passed to `datashader.mpl_ext.dsshow`
 
         """
-        try:
-            from datashader.mpl_ext import dsshow
-        except ImportError:
-            raise ImportError(
-                "EOmaps: Missing dependency: 'datashader' \n ... please install"
-                + " (conda install -c conda-forge datashader) to use the plot-shapes"
-                + "'shade_points' and 'shade_raster'"
-            )
+        assert _ds_OK, (
+            "EOmaps: Missing dependency: 'datashader' \n ... please install"
+            + " (conda install -c conda-forge datashader) to use the plot-shapes "
+            + "'shade_points' and 'shade_raster'"
+        )
+
         # remove previously fetched backgrounds for the used layer
         if layer in self.BM._bg_layers and dynamic is False:
             del self.BM._bg_layers[layer]
@@ -2275,16 +2399,25 @@ class Maps(object):
         z_finite = np.isfinite(props["z_data"])
 
         vmin = self.plot_specs["vmin"]
-        if self.plot_specs["vmin"] is None:
-            vmin = np.nanmin(props["z_data"])
         vmax = self.plot_specs["vmax"]
-        if self.plot_specs["vmax"] is None:
-            vmax = np.nanmax(props["z_data"])
 
-        # clip the data to properly account for vmin and vmax
-        # (do this only if we don't intend to use the full dataset!)
-        if self.plot_specs["vmin"] or self.plot_specs["vmax"]:
-            props["z_data"] = props["z_data"].clip(vmin, vmax)
+        # get the name of the used aggretation reduction
+        aggname = self.shape.aggregator.__class__.__name__
+        if aggname in ["first", "last", "max", "min", "mean", "mode"]:
+            # set vmin/vmax in case the aggregation still represents data-values
+            if vmin is None:
+                vmin = np.min(props["z_data"][z_finite])
+            if vmax is None:
+                vmax = np.max(props["z_data"][z_finite])
+        else:
+            # set vmin/vmax for aggregations that do NOT represent data values
+
+            # allow vmin/vmax = None (e.g. autoscaling)
+            if "count" in aggname:
+                # if the reduction represents a count, don't count empty pixels
+                if vmin and vmin <= 0:
+                    print("EOmaps: setting vmin=1 to avoid counting empty pixels...")
+                    vmin = 1
 
         if verbose:
             print("EOmaps: Classifying...")
@@ -2301,26 +2434,27 @@ class Maps(object):
         self.classify_specs._bins = bins
         self.classify_specs._classified = classified
 
+        # in case the aggregation does not represent data-values
+        # (e.g. count, std, var ... ) use an automatic "linear" normalization
+        if aggname in ["first", "last", "max", "min", "mean", "mode"]:
+            kwargs.setdefault("norm", self.classify_specs._norm)
+
+            # clip the data to properly account for vmin and vmax
+            # (do this only if we don't intend to use the full dataset!)
+            if self.plot_specs["vmin"] or self.plot_specs["vmax"]:
+                props["z_data"] = props["z_data"].clip(vmin, vmax)
+        else:
+            kwargs.setdefault("norm", "linear")
+            kwargs.setdefault("vmin", vmin)
+            kwargs.setdefault("vmax", vmax)
+
         if verbose:
             print("EOmaps: Plotting...")
 
-        # convert to float to pass masked values to datashader as np.nan
-        zdata = self.classify_specs._norm(props["z_data"]).astype(float)
+        zdata = props["z_data"]
         if len(zdata) == 0:
             print("EOmaps: there was no data to plot")
             return
-
-        # re-evaluate vmin and vmax after normalization
-        vmin, vmax = self.classify_specs._norm([vmin, vmax]).astype(float)
-        # re-instate masked values
-        zdata[~z_finite] = np.nan
-
-        # df = df[
-        #     np.logical_and(
-        #         np.logical_and(df.x > x0, df.x < x1),
-        #         np.logical_and(df.y > y0, df.y < y1),
-        #     )
-        # ]
 
         plot_width, plot_height = int(self.ax.bbox.width), int(self.ax.bbox.height)
 
@@ -2329,9 +2463,8 @@ class Maps(object):
         props["x0"] = props["x0"].squeeze()
         props["y0"] = props["y0"].squeeze()
 
+        # the shape is always set after _prepare data!
         if self.shape.name == "shade_raster":
-            from datashader import glyphs
-
             assert _xar_OK, "EOmaps: missing dependency `xarray` for 'shade_raster'"
             if len(zdata.shape) == 2:
                 if (zdata.shape == props["x0"].shape) and (
@@ -2446,7 +2579,7 @@ class Maps(object):
             shade_hook=self.shape.shade_hook,
             agg_hook=self.shape.agg_hook,
             # norm="eq_hist",
-            norm=plt.Normalize(vmin, vmax),
+            # norm=plt.Normalize(vmin, vmax),
             cmap=cbcmap,
             ax=self.ax,
             plot_width=plot_width,
@@ -2570,6 +2703,81 @@ class Maps(object):
 
         for key, val in memmaps.items():
             self._props[key] = val
+
+    def make_dataset_pickable(
+        self,
+        pick_distance=100,
+    ):
+        """
+        Make the associated dataset pickable **without plotting** it first.
+
+        After executing this function, `m.cb.pick` callbacks can be attached to the
+        `Maps` object.
+
+        NOTE
+        ----
+        This function is ONLY necessary if you want to use pick-callbacks **without**
+        actually plotting the data**! Otherwise a call to `m.plot_map()` is sufficient!
+
+        - Each `Maps` object can always have only one pickable dataset.
+        - The used data is always the dataset that was assigned in the last call to
+          `m.plot_map()` or `m.make_dataset_pickable()`.
+        - To get multiple pickable datasets, use an individual layer for each of the
+          datasets (e.g. first `m2 = m.new_layer()` and then assign the data to `m2`)
+
+        Parameters
+        ----------
+        pick_distance : int
+            The search-area surrounding the clicked pixel used to identify the datapoint
+            (e.g. a rectangle with a edge-size of `pick_distance * estimated radius`).
+
+            The default is 100.
+
+        Examples
+        --------
+
+        >>> m = Maps()
+        >>> m.add_feature.preset.coastline()
+        >>> ...
+        >>> # a dataset that should be pickable but NOT visible...
+        >>> # (e.g. in this case 100 points along the diagonal)
+        >>> m2 = m.new_layer()
+        >>> m2.set_data(*np.linspace([0, -180,-90,], [100, 180, 90], 100).T)
+        >>> m2.make_dataset_pickable()
+        >>> m2.cb.pick.attach.annotate()  # get an annotation for the invisible dataset
+        >>> # ...call m2.plot_map() to make the dataset visible...
+        """
+
+        if self.data is None:
+            print("EOmaps: you must set the data first!")
+            return
+
+        if hasattr(self.figure, "coll") and self.figure.coll:
+            print(
+                "EOmaps: There is already a collection assigned to this Maps-object"
+                + "... make sure to use a new layer for the pickable dataset!"
+            )
+            return
+
+        # ---------------------- prepare the data
+        props = self._prepare_data()
+        self._props = props
+        # use the axis as Artist to execute pick-events on any click on the axis
+
+        x0, x1 = self._props["x0"].min(), self._props["x0"].max()
+        y0, y1 = self._props["y0"].min(), self._props["y0"].max()
+
+        # use a transparent rectangle of the data-extent as artist for picking
+        (art,) = self.ax.fill([x0, x1, x1, x0], [y0, y0, y1, y1], fc="none", ec="none")
+
+        self.figure.coll = art
+
+        if pick_distance is not None:
+            self.tree = searchtree(m=self._proxy(self), pick_distance=pick_distance)
+            self.cb.pick._set_artist(art)
+            self.cb.pick._init_cbs()
+            self.cb.pick._pick_distance = pick_distance
+            self.cb._methods.append("pick")
 
     def _plot_map(
         self,
@@ -2770,7 +2978,9 @@ class Maps(object):
         if layer is None:
             layer = self.layer
 
-        if self.shape.name.startswith("shade"):
+        useshape = self.shape  # invoke the setter to set the default shape
+
+        if useshape.name.startswith("shade"):
             self._shade_map(
                 pick_distance=pick_distance,
                 layer=layer,
@@ -2792,6 +3002,103 @@ class Maps(object):
         if memmap:
             self._memmap_props(dir=memmap)
 
+    def _remove_colorbar(self):
+        if hasattr(self, "_ax_cb"):
+            self._ax_cb.remove()
+            del self._ax_cb
+        if hasattr(self, "_ax_cb_plot"):
+            self._ax_cb_plot.remove()
+            del self._ax_cb_plot
+        # if hasattr(self, "_cb_gridspec"):
+        #     del self._cb_gridspec
+
+        del self._colorbar
+
+        self.redraw()
+
+    def _redraw_colorbar(self):
+        # redraw for interactively updated colorbars
+
+        if hasattr(self.figure, "coll") and self.figure.coll:
+            if not hasattr(self, "_ds_data"):
+                self._ds_data = self.figure.coll.get_ds_data()
+        else:
+            return
+
+        # TODO requires numpy > 1.10.0
+        if np.allclose(self._ds_data, self.figure.coll.get_ds_data(), equal_nan=True):
+            return
+        else:
+            self._ds_data = self.figure.coll.get_ds_data()
+
+        # redraw a dynamic_shade_indicator colorbar
+        if hasattr(self, "_colorbar") and hasattr(self, "_cb_kwargs"):
+            if self._cb_kwargs["dynamic_shade_indicator"] is True:
+
+                # remove the axes but NOT the gridspec definition (self._cb_gridspec)
+                # (It will be used to initialize new axes!)
+                if hasattr(self, "_ax_cb"):
+                    self._ax_cb.remove()
+                    del self._ax_cb
+                if hasattr(self, "_ax_cb_plot"):
+                    self._ax_cb_plot.remove()
+                    del self._ax_cb_plot
+
+                del self._colorbar
+                try:
+                    self.BM._draw_animated(artists=[self.figure.coll])
+                except Exception:
+                    pass
+                self.add_colorbar(**self._cb_kwargs)
+
+    def _decode_values(self, val):
+        """
+        Decode data-values with respect to the provided "scale_factor" and "add_offset"
+        using the formula:
+
+            `actual_value = add_offset + scale_factor * encoded_value`
+
+        The encoding is defined in `m.data_specs.encoding`
+
+        Parameters
+        ----------
+        val : array-like
+            The encoded data-values
+
+        Returns
+        -------
+        decoded_values
+            The decoded data values
+        """
+
+        encoding = self.data_specs.encoding
+        if encoding is not None:
+            try:
+                scale_factor = encoding.get("scale_factor", None)
+                add_offset = encoding.get("add_offset", None)
+
+                if scale_factor:
+                    val *= scale_factor
+                if add_offset:
+                    val += add_offset
+
+                return val
+            except:
+                return val
+        else:
+            return val
+
+    def _default_cb_tick_formatter(self, x, pos, precision=None):
+        """
+        A formatter to format the tick-labels of the colorbar for encoded datasets.
+        (used in xaxis.set_major_formatter() )
+        """
+
+        if precision:
+            return np.format_float_positional(self._decode_values(x), precision)
+        else:
+            return self._decode_values(x)
+
     def add_colorbar(
         self,
         gs=0.2,
@@ -2806,6 +3113,8 @@ class Maps(object):
         right=0.05,
         layer=None,
         log=False,
+        tick_formatter=None,
+        dynamic_shade_indicator=False,
     ):
         """
         Add a colorbar to an existing figure.
@@ -2865,7 +3174,28 @@ class Maps(object):
         log : bool, optional
             Indicator if the y-axis of the plot should be logarithmic or not.
             The default is False
+        dynamic_shade_indicator : bool
+            ONLY relevant if data-shading is used! ("shade_raster" or "shade_points")
 
+            - False: The colorbar represents the actual (full) dataset
+            - True: The colorbar is dynamically updated and represents the density of
+              the shaded pixel values within the current field of view.
+
+            The default is False.
+        tick_formatter : callable
+            A function that will be used to format the ticks of the colorbar.
+
+            The function will be used with matpltlibs `set_major_formatter`...
+            For details, see:
+            https://matplotlib.org/stable/api/_as_gen/matplotlib.axis.Axis.set_major_formatter.html
+
+            Call-signagure:
+            >>> def tick_formatter(x, pos):
+            >>>     # x ... the tick-value
+            >>>     # pos ... the tick-position
+            >>>     return f"{x} m"
+
+            The default is None.
         Notes
         -----
         Here's how the padding looks like as a scetch:
@@ -2884,6 +3214,18 @@ class Maps(object):
 
         """
 
+        self._cb_kwargs = dict(
+            orientation=orientation,
+            label=label,
+            density=density,
+            histbins=histbins,
+            tick_precision=tick_precision,
+            layer=layer,
+            log=log,
+            dynamic_shade_indicator=dynamic_shade_indicator,
+            tick_formatter=tick_formatter,
+        )
+
         if hasattr(self, "_colorbar"):
             print(
                 "EOmaps: A colorbar already exists for this Maps-object!\n"
@@ -2901,14 +3243,14 @@ class Maps(object):
         # check if there is already an existing colorbar in another axis
         # and if we find one, use its specs instead of creating a new one
         parent_m_for_cb = None
-        if hasattr(self, "_ax_cb"):
+        if hasattr(self, "_cb_gridspec"):
             parent_m_for_cb = self
         else:
             # check if self is actually just another layer of an existing Maps object
             # that already has a colorbar assigned
             for m in [self.parent, *self.parent._children]:
                 if m is not self and m.ax is self.ax:
-                    if hasattr(m, "_ax_cb"):
+                    if hasattr(m, "_cb_gridspec"):
                         parent_m_for_cb = m
                         break
 
@@ -3017,12 +3359,108 @@ class Maps(object):
         elif cb_orientation == "vertical":
             ax_cb_plot.get_shared_x_axes().join(ax_cb_plot, ax_cb)
 
+        coll = self.figure.coll
+        renorm = False
+
+        if _ds_OK and isinstance(coll, ScalarDSArtist):
+            aggname = self.shape.aggregator.__class__.__name__
+            if aggname in ["first", "last", "max", "min", "mean", "mode"]:
+                pass
+            else:
+                renorm = True
+
+                if not dynamic_shade_indicator:
+                    print(
+                        "EOmaps: Only dynamic colorbars are possible when using"
+                        + f" '{aggname}' as datashader-aggregation reduction method "
+                        + "...creating a 'dynamic_shade_indicator' colorbar instead."
+                    )
+                    dynamic_shade_indicator = True
+
+            if dynamic_shade_indicator:
+                try:
+                    z_data = coll.get_ds_data().values
+                    # z_data = coll.norm(z_data)
+                    # z_data = self.classify_specs._norm(z_data)
+                except:
+                    self.redraw()
+                    z_data = coll.get_ds_data().values
+                    # z_data = coll.norm(z_data)
+                    # z_data = self.classify_specs._norm(z_data)
+
+                if "count" in aggname:
+                    # make sure we don't count empty pixels
+                    z_data = z_data[~(z_data == 0)]
+
+                # datashader sets None to 0 by default!
+                # z_data = z_data[z_data > 0]
+
+                bins = self.classify_specs._bins
+                # bins = None
+
+                cmap = self.classify_specs._cbcmap
+                # cmap = coll.get_cmap()
+
+                if renorm:
+                    z_data = z_data[~np.isnan(z_data)]
+                    vmin = coll.norm.vmin  # np.nanmin(z_data)
+                    vmax = coll.norm.vmax  # np.nanmax(z_data)
+                    norm = coll.norm
+                    # make sure the norm clips with respect to vmin/vmax
+                    # (only clip if either vmin or vmax is not None)
+                    if vmin or vmax:
+                        z_data = z_data.clip(vmin, vmax)
+                    cmap = coll.get_cmap()
+                else:
+                    vmin, vmax = None, None  # None means take values from plot_specs!
+                    norm = self.classify_specs._norm
+
+                def redraw(*args, **kwargs):
+                    self._redraw_colorbar()
+
+                # TODO remove cid on figure close
+                if not hasattr(self, "_cid_colorbar"):
+                    self._cid_colorbar = self.figure.coll.add_callback(redraw)
+                    # TODO colorbar not properly updated on layer change after zoom
+                    self.BM.on_layer(redraw, layer=self.layer, persistent=True, m=self)
+            else:
+                z_data = None
+                vmin = None
+                vmax = None
+                bins = self.classify_specs._bins
+                cmap = self.classify_specs._cbcmap
+                norm = self.classify_specs._norm
+
+        else:
+            if dynamic_shade_indicator:
+                print(
+                    "EOmaps: using 'dynamic_shade_indicator=True' is only possible "
+                    + " with 'shade' shapes (e.g. 'shade_raster' or 'shade_points'"
+                )
+                dynamic_shade_indicator = False
+
+            z_data = None
+            vmin = None
+            vmax = None
+            bins = self.classify_specs._bins
+            cmap = self.classify_specs._cbcmap
+            norm = self.classify_specs._norm
+
+        # reflect changes to the dynamic_shade_indicator in the saved kwargs
+        self._cb_kwargs["dynamic_shade_indicator"] = dynamic_shade_indicator
+
         cb = self._add_colorbar(
             ax_cb=ax_cb,
             ax_cb_plot=ax_cb_plot,
-            bins=self.classify_specs._bins,
-            cmap=self.classify_specs._cbcmap,
-            norm=self.classify_specs._norm,
+            bins=bins,
+            cmap=cmap,
+            norm=norm,
+            z_data=z_data,
+            vmin=vmin,
+            vmax=vmax,
+            # bins=self.classify_specs._bins,
+            # cmap=self.classify_specs._cbcmap,
+            # norm=self.classify_specs._norm,
             classified=self.classify_specs._classified,
             orientation=cb_orientation,
             label=label,
@@ -3030,18 +3468,38 @@ class Maps(object):
             tick_precision=tick_precision,
             histbins=histbins,
             log=log,
+            tick_formatter=tick_formatter,
         )
 
         # hide the colorbar if it is not added to the currently visible layer
         if layer not in [self.BM._bg_layer, "all"]:
             ax_cb.set_visible(False)
             ax_cb_plot.set_visible(False)
-            m.BM._hidden_axes.add(ax_cb)
-            m.BM._hidden_axes.add(ax_cb_plot)
+            self.BM._hidden_axes.add(ax_cb)
+            self.BM._hidden_axes.add(ax_cb_plot)
 
         self._ax_cb = ax_cb
         self._ax_cb_plot = ax_cb_plot
         self._cb_gridspec = cbgs
+
+        if dynamic_shade_indicator:
+            ax_cb_plot.set_ylabel(
+                ("logarithmic\n" if log else "")
+                + f"shaded pixel\n{'density' if density else 'bin count'}"
+            )
+            ax_cb_plot.tick_params(labelleft=False, which="both")
+
+        if orientation == "horizontal":
+            if vmin and vmax:
+                ax_cb_plot.set_xlim(vmin, vmax)
+            # else:
+            #     ax_cb_plot.autoscale_view(tight=True)
+
+        if orientation == "vertical":
+            if vmin and vmax:
+                ax_cb_plot.set_ylim(vmin, vmax)
+            # else:
+            #     ax_cb_plot.autoscale_view(tight=True)
 
         self.BM.add_bg_artist(self._ax_cb, layer)
         self.BM.add_bg_artist(self._ax_cb_plot, layer)

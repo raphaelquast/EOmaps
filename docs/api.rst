@@ -8,7 +8,7 @@
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 | EOmaps is all about ``Maps`` objects.
-| To start creating a new map (in this case a plot in ``epsg=4326``, e.g. lon/lat projection), simply use:
+| To start creating a new map (in this case a plot in ``epsg=4326``, e.g. lon/lat), simply use:
 
 .. code-block:: python
 
@@ -89,6 +89,12 @@ Possible ways for specifying the crs for plotting are:
 
 To assign a dataset to a ``Maps`` object, use ``m.set_data``.
 The shapes that are used to represent the data-points are then assigned via ``m.set_shape``.
+
+.. note::
+
+    By default, the plot-shape is assigned based on the associated dataset!
+    - For >500k pixels, ``m.set_shape.ellipses()`` is used.
+    - For larger datasets ``m.set_shape.shade_raster`` is used.
 
 .. code-block:: python
 
@@ -441,6 +447,37 @@ functions and attach them to the map.
     layer using something like ``m.all.cb.click.attach.annotate()``.
 
 
+
++-----------------------------------------------------------------------------------+--------------------------------------------------+
+| .. code-block:: python                                                            | .. image:: _static/minigifs/simple_callbacks.gif |
+|                                                                                   |   :align: center                                 |
+|     from eomaps import Maps                                                       |                                                  |
+|     import numpy as np                                                            |                                                  |
+|     x, y = np.mgrid[-45:45, 20:60]                                                |                                                  |
+|                                                                                   |                                                  |
+|     m = Maps(Maps.CRS.Orthographic())                                             |                                                  |
+|     m.all.add_feature.preset.coastline()                                          |                                                  |
+|     m.set_data(data=x+y**2, xcoord=x, ycoord=y, crs=4326)                         |                                                  |
+|     m.plot_map(pick_distance=10)                                                  |                                                  |
+|                                                                                   |                                                  |
+|     m2 = m.new_layer(copy_data_specs=True, layer="second_layer")                  |                                                  |
+|     m2.set_plot_specs(cmap="tab10")                                               |                                                  |
+|     m2.plot_map()                                                                 |                                                  |
+|                                                                                   |                                                  |
+|     # get an annotation if you RIGHT-click anywhere on the map                    |                                                  |
+|     m.cb.click.attach.annotate(xytext=(-60, -60),                                 |                                                  |
+|                                bbox=dict(boxstyle="round", fc="r"))               |                                                  |
+|                                                                                   |                                                  |
+|     # pick the nearest datapoint if you click on the MIDDLE mouse button          |                                                  |
+|     m.cb.pick.attach.annotate(button=2)                                           |                                                  |
+|     m.cb.pick.attach.mark(buffer=1, permanent=False, fc="none", ec="r", button=2) |                                                  |
+|     m.cb.pick.attach.mark(buffer=4, permanent=False, fc="none", ec="r", button=2) |                                                  |
+|                                                                                   |                                                  |
+|     # peek at the second layer if you LEFT-click on the map                       |                                                  |
+|     m.cb.click.attach.peek_layer("second_layer", how=.25, button=3)               |                                                  |
++-----------------------------------------------------------------------------------+--------------------------------------------------+
+
+
 Pre-defined click & pick callbacks
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -530,6 +567,39 @@ Custom callback functions can be attached to the map via:
 
 - ❗ for click callbacks the kwargs ``ID`` and ``val`` are set to ``None``!
 - ❗ for keypress callbacks the kwargs ``ID`` and ``val`` and ``pos`` are set to ``None``!
+
+
+Picking a dataset without plotting it first
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+It is possible to attach ``pick`` callbacks to a ``Maps`` object without plotting the data first
+by using ``m.make_dataset_pickable()``.
+
+.. code-block:: python
+
+    m = Maps()
+    m.add_feature.preset.coastline()
+    m.set_data(... the dataset ...)
+    m.make_dataset_pickable()
+    # now it's possible to attach pick-callbacks even though the data is still "invisible"
+    m.cb.pick.attach.annotate()
+
+
+.. note::
+
+    Using ``m.make_dataset_pickable()`` is ONLY necessary if you want to use ``pick``
+    callbacks without actually plotting the data! Otherwise a call to ``m.plot_map()``
+    is sufficient!
+
+
+.. currentmodule:: eomaps.Maps
+
+.. autosummary::
+    :toctree: generated
+    :nosignatures:
+    :template: only_names_in_toc.rst
+
+    make_dataset_pickable
+
 
 .. _webmap_layers:
 
@@ -1000,6 +1070,7 @@ To indicate rectangular areas in any given crs, simply use ``m.indicate_extent``
         ...
         m2.add_colorbar()  # this colorbar is only visible on the "data" layer
 
+
 .. currentmodule:: eomaps
 
 .. autosummary::
@@ -1033,6 +1104,30 @@ To indicate rectangular areas in any given crs, simply use ``m.indicate_extent``
     | You must plot a dataset first! (e.g. by calling ``m.plot_map()``)
     | The colorbar always represents the dataset that was used in the last call to ``m.plot_map()``.
     | If you need multiple colorbars, use an individual ``Maps`` object for each dataset! (e.g. via ``m2  = m.new_layer()``)
+
+
+
+🌠 Using the colorbar as a "dynamic shade indicator"
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+If you use ``shade_raster`` or ``shade_points`` as plot-shape, the colorbar can be used to indicate the
+distribution of the shaded pixels within the current field of view by setting ``dynamic_shade_indicator=True``.
+
+    +--------------------------------------------------------------------+--------------------------------------------------+
+    | .. code-block:: python                                             | .. image:: _static/minigifs/dynamic_colorbar.gif |
+    |                                                                    |   :align: center                                 |
+    |   from eomaps import Maps                                          |                                                  |
+    |   import numpy as np                                               |                                                  |
+    |   x, y = np.mgrid[-45:45, 20:60]                                   |                                                  |
+    |                                                                    |                                                  |
+    |   m = Maps()                                                       |                                                  |
+    |   m.add_feature.preset.coastline()                                 |                                                  |
+    |   m.set_data(data=x+y, xcoord=x, ycoord=y, crs=4326)               |                                                  |
+    |   m.set_shape.shade_raster()                                       |                                                  |
+    |   m.plot_map()                                                     |                                                  |
+    |   m.add_colorbar(dynamic_shade_indicator=True, histbins=20)        |                                                  |
+    |                                                                    |                                                  |
+    +--------------------------------------------------------------------+--------------------------------------------------+
 
 
 .. _scalebar:

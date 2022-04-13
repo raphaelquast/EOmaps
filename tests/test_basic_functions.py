@@ -441,12 +441,12 @@ class TestBasicPlotting(unittest.TestCase):
         mgrid = MapsGrid(2, 2, crs=[[4326, 4326], [3857, 3857]])
 
         for m in mgrid:
-            m.plot_map(colorbar=False)
+            m.add_feature.preset.coastline()
         mgrid.parent._draggable_axes._make_draggable()
         mgrid.parent._draggable_axes._undo_draggable()
 
         m = Maps()
-        m.plot_map()
+        m.add_feature.preset.coastline()
         m._draggable_axes._make_draggable()
         m._draggable_axes._undo_draggable()
 

@@ -47,7 +47,7 @@ m.plot_map(
 m.add_colorbar()
 _ = m.figure.ax_cb_plot.set_ylabel("The Y label")  # add a y-label to the histogram
 
-m.figure.gridspec.update(
+m.subplots_adjust(
     bottom=0.1, top=0.95, left=0.075, right=0.95, hspace=0.2
 )  # adjust the padding
 m.figure.set_colorbar_position(

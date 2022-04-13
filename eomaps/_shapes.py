@@ -18,6 +18,10 @@ except ImportError:
 class shapes(object):
     """
     Set the plot-shape to represent the data-points.
+
+    By default, "ellipses" is used for datasets smaller than 500k pixels and shading
+    with "shade_raster" is used for larger datasets (if datashader is installed).
+
     Possible shapes are:
     (check the individual docs for details!)
 
@@ -202,7 +206,7 @@ class shapes(object):
                 shape.radius = radius
                 shape.n = n
 
-                m.shape = shape
+                m._shape = shape
 
         @property
         def _initargs(self):
@@ -390,7 +394,7 @@ class shapes(object):
                 shape.radius_crs = radius_crs
                 shape.n = n
 
-                m.shape = shape
+                m._shape = shape
 
         @property
         def _initargs(self):
@@ -599,7 +603,7 @@ class shapes(object):
                     shape.n = 1
                 else:
                     shape.n = n
-                m.shape = shape
+                m._shape = shape
 
         @property
         def _initargs(self):
@@ -857,7 +861,7 @@ class shapes(object):
                 shape.mask_radius = mask_radius
                 shape.masked = masked
 
-                m.shape = shape
+                m._shape = shape
 
         @property
         def _initargs(self):
@@ -999,7 +1003,7 @@ class shapes(object):
                 shape.masked = masked
                 shape.flat = flat
 
-                m.shape = shape
+                m._shape = shape
 
         @property
         def _initargs(self):
@@ -1208,7 +1212,7 @@ class shapes(object):
                 shape.agg_hook = agg_hook
                 shape.glyph = glyph
 
-                m.shape = shape
+                m._shape = shape
 
         @property
         def _initargs(self):
@@ -1235,7 +1239,7 @@ class shapes(object):
         def __repr__(self):
             return "Raster-shading with datashader"
 
-        def __call__(self, aggregator=None, shade_hook=None, agg_hook=None):
+        def __call__(self, aggregator="mean", shade_hook=None, agg_hook=None):
             """
             Shade the data as a rectangular raster (>> usable for very large datasets!).
 
@@ -1248,9 +1252,17 @@ class shapes(object):
 
             Parameters
             ----------
-            aggregator : Reduction, optional
+            aggregator : str or datashader.reductions, optional
                 The reduction to compute per-pixel.
-                The default is `ds.mean("val")` where "val" represents the data-values.
+                (see https://datashader.org/api.html#reductions for details)
+
+                If a string is provided, it is interpreted as `ds.<aggregator>("val")`
+                where "val" represents the data-values.
+
+                Possible string values are:
+                - "mean", "min", "max", "first", "last", "std", "sum", "var", "count"
+
+                The default is "mean", e.g. `datashader.mean("val")`
             shade_hook : callable, optional
                 A callable that takes the image output of the shading pipeline,
                 and returns another Image object.
@@ -1270,6 +1282,8 @@ class shapes(object):
 
             if aggregator is None:
                 aggregator = ds.mean("val")
+            if isinstance(aggregator, str):
+                aggregator = getattr(ds, aggregator)("val")
 
             if shade_hook is None:
                 shade_hook = None
@@ -1290,7 +1304,7 @@ class shapes(object):
                 shape.agg_hook = agg_hook
                 shape.glyph = glyph
 
-                m.shape = shape
+                m._shape = shape
 
         @property
         def _initargs(self):
