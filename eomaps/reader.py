@@ -40,7 +40,13 @@ class read_file:
 
     @staticmethod
     def GeoTIFF(
-        path_or_dataset, crs_key=None, data_crs=None, sel=None, isel=None, set_data=None
+        path_or_dataset,
+        crs_key=None,
+        data_crs=None,
+        sel=None,
+        isel=None,
+        set_data=None,
+        mask_and_scale=False,
     ):
         """
         Read all relevant information necessary to add a GeoTIFF to the map.
@@ -73,6 +79,24 @@ class read_file:
             Indicator if the dataset should be returned None or assigned to the
             provided Maps-object  (e.g. by using m.set_data(...)).
             The default is None.
+        mask_and_scale : bool
+            Indicator if the data should be masked and scaled with respect to the
+            file-attributes *_FillValue*, *scale_factor* and *add_offset*.
+
+            - If False: the data will only be scaled "on demand", avoiding costly
+              initialization of very large float-arrays. Masking will still be applied
+              in case a *_FillValue* attribute has been found.
+              (a masked-array is returned to avoid dtype conversions)
+              The encoding is accessible via `m.data_specs.encoding`
+            - If True: all data will be masked and scaled after reading.
+              For more details see `xarray.open_dataset`.
+
+            NOTE: using `mask_and_scale=True` results in a conversion of the data-values
+            to floats!! For very large datasets this can cause a huge increase in
+            memory-usage! EOmaps handles the scaling internally to show correct
+            values for callbacks and colorbars, even if `mask_and_scale=False`!
+
+            The default is False.
 
         Returns
         -------
@@ -113,7 +137,9 @@ class read_file:
             if isinstance(path_or_dataset, (str, Path)):
                 # if a path is provided, open the file (and close it in the end)
                 opened = True
-                ncfile = xar.open_dataset(path_or_dataset)
+                ncfile = xar.open_dataset(
+                    path_or_dataset, mask_and_scale=mask_and_scale
+                )
             elif isinstance(path_or_dataset, xar.Dataset):
                 # if an xar.Dataset is provided, use it
                 ncfile = path_or_dataset
@@ -165,10 +191,33 @@ class read_file:
                 getattr(usencfile, ncdims[1]).values,
             )
 
-            if set_data is not None:
-                set_data.set_data(data=data, xcoord=xcoord, ycoord=ycoord, crs=data_crs)
+            # only use masked arrays if mask_and_scale is False!
+            # (otherwise the mask is already applied as NaN's in the float-array)
+            # Using masked-arrays ensures that we can deal with integers as well!
+            if mask_and_scale is False:
+                encoding = usencfile.attrs
+                fill_value = encoding.get("_FillValue", None)
+                if fill_value:
+                    data = np.ma.masked_where(data == fill_value, data, copy=False)
             else:
-                return dict(data=data, xcoord=xcoord, ycoord=ycoord, crs=data_crs)
+                encoding = None
+
+            if set_data is not None:
+                set_data.set_data(
+                    data=data,
+                    xcoord=xcoord,
+                    ycoord=ycoord,
+                    crs=data_crs,
+                    encoding=encoding,
+                )
+            else:
+                return dict(
+                    data=data,
+                    xcoord=xcoord,
+                    ycoord=ycoord,
+                    crs=data_crs,
+                    encoding=encoding,
+                )
         finally:
             if opened:
                 ncfile.close()
@@ -183,6 +232,7 @@ class read_file:
         sel=None,
         isel=None,
         set_data=None,
+        mask_and_scale=False,
     ):
         """
         Read all relevant information necessary to add a NetCDF to the map.
@@ -224,6 +274,24 @@ class read_file:
             Indicator if the dataset should be returned None or assigned to the
             provided Maps-object  (e.g. by using m.set_data(...)).
             The default is None.
+        mask_and_scale : bool
+            Indicator if the data should be masked and scaled with respect to the
+            file-attributes *_FillValue*, *scale_factor* and *add_offset*.
+
+            - If False: the data will only be scaled "on demand", avoiding costly
+              initialization of very large float-arrays. Masking will still be applied
+              in case a *_FillValue* attribute has been found.
+              (a masked-array is returned to avoid dtype conversions)
+              The encoding is accessible via `m.data_specs.encoding`
+            - If True: all data will be masked and scaled after reading.
+              For more details see `xarray.open_dataset`.
+
+            NOTE: using `mask_and_scale=True` results in a conversion of the data-values
+            to floats!! For very large datasets this can cause a huge increase in
+            memory-usage! EOmaps handles the scaling internally to show correct
+            values for callbacks and colorbars, even if `mask_and_scale=False`!
+
+            The default is False.
 
         Returns
         -------
@@ -339,6 +407,17 @@ class read_file:
             #     usencfile.coords[coords[0]].values, usencfile.coords[coords[1]].values
             # )
 
+            # only use masked arrays if mask_and_scale is False!
+            # (otherwise the mask is already applied as NaN's in the float-array)
+            # Using masked-arrays ensures that we can deal with integers as well!
+            if mask_and_scale is False:
+                encoding = usencfile.attrs
+                fill_value = encoding.get("_FillValue", None)
+                if fill_value:
+                    data = np.ma.masked_where(data == fill_value, data, copy=False)
+            else:
+                encoding = None
+
             if set_data is not None:
                 set_data.set_data(
                     data=data.values,
@@ -346,6 +425,7 @@ class read_file:
                     ycoord=ycoord.values,
                     crs=data_crs,
                     parameter=parameter,
+                    encoding=encoding,
                 )
             else:
                 return dict(
@@ -354,6 +434,7 @@ class read_file:
                     ycoord=ycoord.values,
                     crs=data_crs,
                     parameter=parameter,
+                    encoding=encoding,
                 )
 
         finally:
@@ -641,6 +722,7 @@ class from_file:
         classify_specs=None,
         val_transform=None,
         coastline=True,
+        mask_and_scale=False,
         **kwargs,
     ):
         """
@@ -660,7 +742,6 @@ class from_file:
         >>> m.set_plot_specs(...)
         >>> m.set_classify_specs(...)
         >>> m.plot_map(...)
-
 
         Parameters
         ----------
@@ -726,6 +807,24 @@ class from_file:
         coastline: bool
             Indicator if a coastline should be added or not.
             The default is True
+        mask_and_scale : bool
+            Indicator if the data should be masked and scaled with respect to the
+            file-attributes *_FillValue*, *scale_factor* and *add_offset*.
+
+            - If False: the data will only be scaled "on demand", avoiding costly
+              initialization of very large float-arrays. Masking will still be applied
+              in case a *_FillValue* attribute has been found.
+              (a masked-array is returned to avoid dtype conversions)
+              The encoding is accessible via `m.data_specs.encoding`
+            - If True: all data will be masked and scaled after reading.
+              For more details see `xarray.open_dataset`.
+
+            NOTE: using `mask_and_scale=True` results in a conversion of the data-values
+            to floats!! For very large datasets this can cause a huge increase in
+            memory-usage! EOmaps handles the scaling internally to show correct
+            values for callbacks and colorbars, even if `mask_and_scale=False`!
+
+            The default is False.
         kwargs :
             Keyword-arguments passed to `m.plot_map()`
 
@@ -775,6 +874,7 @@ class from_file:
             sel=sel,
             isel=isel,
             set_data=None,
+            mask_and_scale=mask_and_scale,
         )
 
         if val_transform:
@@ -804,6 +904,7 @@ class from_file:
         classify_specs=None,
         val_transform=None,
         coastline=True,
+        mask_and_scale=False,
         **kwargs,
     ):
         """
@@ -876,6 +977,24 @@ class from_file:
         coastline: bool
             Indicator if a coastline should be added or not.
             The default is True
+        mask_and_scale : bool
+            Indicator if the data should be masked and scaled with respect to the
+            file-attributes *_FillValue*, *scale_factor* and *add_offset*.
+
+            - If False: the data will only be scaled "on demand", avoiding costly
+              initialization of very large float-arrays. Masking will still be applied
+              in case a *_FillValue* attribute has been found.
+              (a masked-array is returned to avoid dtype conversions)
+              The encoding is accessible via `m.data_specs.encoding`
+            - If True: all data will be masked and scaled after reading.
+              For more details see `xarray.open_dataset`.
+
+            NOTE: using `mask_and_scale=True` results in a conversion of the data-values
+            to floats!! For very large datasets this can cause a huge increase in
+            memory-usage! EOmaps handles the scaling internally to show correct
+            values for callbacks and colorbars, even if `mask_and_scale=False`!
+
+            The default is False.
         kwargs :
             Keyword-arguments passed to `m.plot_map()`
 
@@ -921,6 +1040,7 @@ class from_file:
             set_data=None,
             data_crs=data_crs,
             crs_key=data_crs_key,
+            mask_and_scale=mask_and_scale,
         )
 
         if val_transform:
