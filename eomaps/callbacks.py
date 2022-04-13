@@ -71,8 +71,7 @@ class _click_callbacks(object):
         # (artists will be removed after each draw-event!)
         self._temporary_artists = temp_artists
 
-    @staticmethod
-    def _popargs(kwargs):
+    def _popargs(self, kwargs):
         # pop the default kwargs passed to each callback function
         # (to avoid showing them as kwargs when called)
         ID = kwargs.pop("ID", None)
@@ -80,6 +79,9 @@ class _click_callbacks(object):
         val = kwargs.pop("val", None)
         ind = kwargs.pop("ind", None)
         picker_name = kwargs.pop("picker_name", "default")
+
+        # decode values in case a encoding is provided
+        val = self.m._decode_values(val)
 
         return ID, pos, val, ind, picker_name
 
@@ -170,6 +172,7 @@ class _click_callbacks(object):
         """
 
         ID, pos, val, ind, picker_name = self._popargs(kwargs)
+
         if isinstance(self.m.data_specs.xcoord, str):
             xlabel = self.m.data_specs.xcoord
         else:
