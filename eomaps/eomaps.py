@@ -297,7 +297,7 @@ class Maps(object):
         self._new_layer_from_file = new_layer_from_file(weakref.proxy(self))
 
         self._shapes = shapes(weakref.proxy(self))
-        self.set_shape.ellipses()
+        self._shape = None
 
         # the radius is estimated when plot_map is called
         self._estimated_radius = None
@@ -393,6 +393,39 @@ class Maps(object):
         The layer-name associated with this Maps-object.
         """
         return self._layer
+
+    @property
+    def shape(self):
+        """
+        The shape that will be used to represent the dataset if `m.plot_map()` is called
+
+        By default "ellipses" is used for datasets < 500k datapoints and
+        "shade_raster" is used otherwise.
+
+        """
+        if self._shape is None:
+            if self.data is not None:
+                if hasattr(self.data, "size"):
+                    # numpy, xarray and pandas support .size
+                    size = self.data.size
+                else:
+                    # to support ordinary lists
+                    size = len(self.data)
+                if size > 500_000:
+                    if _ds_OK:
+                        self.set_shape.shade_raster()
+                    else:
+                        print(
+                            "EOmaps-Warning: you attempt to plot a large dataset"
+                            + f"({size} datapoints) but the 'datashader' library could"
+                            + " not be imported! The plot might take long to finish!"
+                            + "... defaulting to 'ellipses' as plot-shape."
+                        )
+                        self.set_shape.ellipses()
+                else:
+                    self.set_shape.ellipses()
+
+        return self._shape
 
     @property
     def all(self):

@@ -18,6 +18,10 @@ except ImportError:
 class shapes(object):
     """
     Set the plot-shape to represent the data-points.
+
+    By default, "ellipses" is used for datasets smaller than 500k pixels and shading
+    with "shade_raster" is used for larger datasets (if datashader is installed).
+
     Possible shapes are:
     (check the individual docs for details!)
 
@@ -202,7 +206,7 @@ class shapes(object):
                 shape.radius = radius
                 shape.n = n
 
-                m.shape = shape
+                m._shape = shape
 
         @property
         def _initargs(self):
@@ -390,7 +394,7 @@ class shapes(object):
                 shape.radius_crs = radius_crs
                 shape.n = n
 
-                m.shape = shape
+                m._shape = shape
 
         @property
         def _initargs(self):
@@ -599,7 +603,7 @@ class shapes(object):
                     shape.n = 1
                 else:
                     shape.n = n
-                m.shape = shape
+                m._shape = shape
 
         @property
         def _initargs(self):
@@ -999,7 +1003,7 @@ class shapes(object):
                 shape.masked = masked
                 shape.flat = flat
 
-                m.shape = shape
+                m._shape = shape
 
         @property
         def _initargs(self):
@@ -1208,7 +1212,7 @@ class shapes(object):
                 shape.agg_hook = agg_hook
                 shape.glyph = glyph
 
-                m.shape = shape
+                m._shape = shape
 
         @property
         def _initargs(self):
@@ -1300,7 +1304,7 @@ class shapes(object):
                 shape.agg_hook = agg_hook
                 shape.glyph = glyph
 
-                m.shape = shape
+                m._shape = shape
 
         @property
         def _initargs(self):
