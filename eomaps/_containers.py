@@ -1999,6 +1999,44 @@ else:
 
         @property
         @lru_cache()
+        def S2_cloudless(self):
+            """
+            Global cloudless Sentinel-2 maps, crafted by EOX.
+            https://s2maps.eu/
+
+            Endless sunshine, eternal summer - the Sentinel-2 cloudless layer combines
+            trillions of pixels collected during differing weather conditions during
+            the whole year of 2020 and merges them into a sunny homogeneous mosaic,
+            almost free from satellite and atmospheric effects. Our thanks go to the
+            European Commission and the European Space Agency for the free, full,
+            and open Sentinel-2 data.
+
+            Note
+            ----
+            **LICENSE-info (without any warranty for correctness!!)**
+
+            You are free to use Sentinel-2 cloudless as long as you follow the
+            applicable license conditions. The conditions for use are the attribution
+            when publishing any imagery or content from Sentinel-2 cloudless as well as
+            the non-commercial use for the 2018 and 2019 data. The attribution shall be
+            displayed legibly and in proximity to the usage, in on-line publications
+            (social-networks etc.) it shall include the links and show the text as
+            described below.
+
+            (check: https://s2maps.eu/ for full details)
+
+            """
+            WMS = _WebServiec_collection(
+                m=self._m,
+                service_type="wms",
+                url="https://tiles.maps.eox.at/wms?service=wms&request=getcapabilities",
+            )
+
+            WMS.__doc__ = type(self).S2_cloudless.__doc__
+            return WMS
+
+        @property
+        @lru_cache()
         def ESRI_ArcGIS(self):
             """
             Interface to the ERSI ArcGIS REST Services Directory
