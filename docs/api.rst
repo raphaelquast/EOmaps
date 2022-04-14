@@ -683,6 +683,7 @@ Pre-defined (global) WebMap services:
     EEA_DiscoMap
     ESRI_ArcGIS
     S1GBM
+    S2_cloudless
     GEBCO
 
 Services specific for Austria (Europa)
