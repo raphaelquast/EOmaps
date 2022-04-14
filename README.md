@@ -51,7 +51,7 @@ For more information, have a look at the [installation instructions](https://eom
 <br/>
 
 
-## ✔️ Citation 
+## ✔️ Citation
 Did EOmaps help in your research?  
 Consider supporting the development and add a citation to your publication!
 
