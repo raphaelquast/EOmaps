@@ -14,6 +14,8 @@
 [![Documentation Status](https://readthedocs.org/projects/eomaps/badge/?version=latest)](https://eomaps.readthedocs.io/en/latest/?badge=latest)
 <a href="https://www.buymeacoffee.com/raphaelquast" target="_blank"><img src="https://www.buymeacoffee.com/assets/img/custom_images/yellow_img.png" alt="Buy Me A Coffee" align="right" style="height: 25px !important;" ></a>
 
+<a href="https://zenodo.org/badge/latestdoi/410829039" target="_blank"><img src="https://zenodo.org/badge/410829039.svg" alt="DOI: 10.5281/zenodo.6459598" align="right" style="height: 20px !important;" ></a>
+
 ----
 
 ### A library to create interactive maps of geographical datasets.
@@ -49,9 +51,17 @@ For more information, have a look at the [installation instructions](https://eom
 <br/>
 
 
+## ✔️ Citation
+Did EOmaps help in your research?  
+Consider supporting the development and add a citation to your publication!
+
+[![https://doi.org/10.5281/zenodo.6459598](https://zenodo.org/badge/410829039.svg)](https://zenodo.org/badge/latestdoi/410829039)
+
+
 ## 🚀 Contribute
 
-Found a bug or got an idea for an interesting feature? Open an [issue](https://github.com/raphaelquast/EOmaps/issues) or start a [discussion](https://github.com/raphaelquast/EOmaps/discussions) and I'll see what I can do!  
+Found a bug or got an idea for an interesting feature?  
+Open an [issue](https://github.com/raphaelquast/EOmaps/issues) or start a [discussion](https://github.com/raphaelquast/EOmaps/discussions) and I'll see what I can do!  
 (I'm of course also happy about actual pull requests on features and bug-fixes!)
 
 ---------------
