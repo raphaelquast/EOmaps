@@ -973,9 +973,25 @@ class shapes(object):
             if array is not None:
                 array = array[datamask][mask]
 
+            if "color" in kwargs:
+                color = kwargs.pop("color", None)
+            elif "facecolor" in kwargs:
+                color = kwargs.pop("facecolor", None)
+            elif "facecolors" in kwargs:
+                color = kwargs.pop("facecolors", None)
+            elif "fc" in kwargs:
+                color = kwargs.pop("fc", None)
+
+            if color is not None:
+                if array is not None:
+                    color = np.broadcast_to(color, array.shape)
+
+                color = color[datamask][mask]
+
             coll = PolyCollection(
                 verts=verts,
                 array=array,
+                facecolors=color,
                 # transOffset=self._m.figure.ax.transData,
                 **kwargs,
             )
