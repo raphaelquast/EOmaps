@@ -399,18 +399,13 @@ class Maps(object):
         """
         The shape that will be used to represent the dataset if `m.plot_map()` is called
 
-        By default "ellipses" is used for datasets < 500k datapoints and
-        "shade_raster" is used otherwise.
+        By default "ellipses" is used for datasets < 500k datapoints and for plots
+        where no explicit data is assigned, and "shade_raster" is used otherwise.
 
         """
         if self._shape is None:
             if self.data is not None:
-                if hasattr(self.data, "size"):
-                    # numpy, xarray and pandas support .size
-                    size = self.data.size
-                else:
-                    # to support ordinary lists
-                    size = len(self.data)
+                size = np.size(self.data)
                 if size > 500_000:
                     if _ds_OK:
                         self.set_shape.shade_raster()
@@ -424,6 +419,8 @@ class Maps(object):
                         self.set_shape.ellipses()
                 else:
                     self.set_shape.ellipses()
+            else:
+                self.set_shape.ellipses()
 
         return self._shape
 
@@ -1123,59 +1120,73 @@ class Maps(object):
             ycoord = self.data_specs.ycoord
         if parameter is None:
             parameter = self.data_specs.parameter
-        if data is not None:
-            if _pd_OK and isinstance(data, pd.DataFrame):
+        if data is not None and _pd_OK and isinstance(data, pd.DataFrame):
+            if parameter is not None:
                 # get the data-values
                 z_data = data[parameter].values
-                # get the index-values
-                ids = data.index.values
+            else:
+                z_data = np.repeat(np.nan, len(data))
 
-                if isinstance(xcoord, str) and isinstance(ycoord, str):
-                    # get the data-coordinates
-                    xorig = data[xcoord].values
-                    yorig = data[ycoord].values
-                else:
-                    assert isinstance(xcoord, (list, np.ndarray, pd.Series)), (
-                        "xcoord must be either a column-name, or explicit values "
-                        " specified as a list, a numpy-array or a pandas"
-                        + f" Series object if you provide the data as '{type(data)}'"
-                    )
-                    assert isinstance(ycoord, (list, np.ndarray, pd.Series)), (
-                        "ycoord must be either a column-name, or explicit values "
-                        " specified as a list, a numpy-array or a pandas"
-                        + f" Series object if you provide the data as '{type(data)}'"
-                    )
+            # get the index-values
+            ids = data.index.values
 
-                    xorig = np.asanyarray(xcoord)
-                    yorig = np.asanyarray(ycoord)
-
-                return z_data, xorig, yorig, ids, parameter
-
-            # check for explicit 1D value lists
-            types = (list, np.ndarray)
-            if _pd_OK:
-                types += (pd.Series,)
-
-            if isinstance(data, types):
-                # get the data-values
-                z_data = np.asanyarray(data)
-                # get the index-values
-                ids = np.arange(z_data.size)
-
-                assert isinstance(xcoord, types), (
-                    "xcoord must be either a list, a numpy-array or a pandas"
-                    + f" Series object if you provide the data as '{type(data)}'"
-                )
-                assert isinstance(ycoord, types), (
-                    "ycoord must be either a list, a numpy-array or a pandas"
-                    + f" Series object if you provide the data as '{type(data)}'"
-                )
-
+            if isinstance(xcoord, str) and isinstance(ycoord, str):
                 # get the data-coordinates
+                xorig = data[xcoord].values
+                yorig = data[ycoord].values
+            else:
+                assert isinstance(xcoord, (list, np.ndarray, pd.Series)), (
+                    "xcoord must be either a column-name, or explicit values "
+                    " specified as a list, a numpy-array or a pandas"
+                    + f" Series object if you provide the data as '{type(data)}'"
+                )
+                assert isinstance(ycoord, (list, np.ndarray, pd.Series)), (
+                    "ycoord must be either a column-name, or explicit values "
+                    " specified as a list, a numpy-array or a pandas"
+                    + f" Series object if you provide the data as '{type(data)}'"
+                )
+
                 xorig = np.asanyarray(xcoord)
                 yorig = np.asanyarray(ycoord)
 
             return z_data, xorig, yorig, ids, parameter
+
+        # identify all other types except for pandas.DataFrames
+
+        # check for explicit 1D value lists
+        types = (list, np.ndarray)
+        if _pd_OK:
+            types += (pd.Series,)
+
+        assert isinstance(
+            xcoord, types
+        ), "xcoord must be either a list, a numpy-array or a pandas.Series"
+        assert isinstance(
+            ycoord, types
+        ), "ycoord must be either a list, a numpy-array or a pandas.Series"
+
+        # get the data-coordinates
+        xorig = np.asanyarray(xcoord)
+        yorig = np.asanyarray(ycoord)
+
+        if data is not None:
+            if isinstance(data, types):
+                # get the data-values
+                z_data = np.asanyarray(data)
+        else:
+            if xorig.shape == yorig.shape:
+                z_data = np.full(xorig.shape, np.nan)
+            elif (
+                (xorig.shape != yorig.shape)
+                and (len(xorig.shape) == 1)
+                and (len(yorig.shape) == 1)
+            ):
+                z_data = np.full((xorig.shape[0], yorig.shape[0]), np.nan)
+
+        # get the index-values
+        ids = np.arange(z_data.size)
+
+        return z_data, xorig, yorig, ids, parameter
 
     def _prepare_data(
         self,
@@ -1434,7 +1445,7 @@ class Maps(object):
         # skip drawing the colorbar in case no data is available
         # and show a notification that there's no data instead
         # (relevant for dynamic colorbars if you pan to a region without data)
-        if len(valid_zdata) == 0:
+        if self.data is not None and len(valid_zdata) == 0:
             ax_cb.set_visible(False)
             ax_cb_plot.set_visible(False)
             if ax_cb not in self.BM._hidden_axes:
@@ -2748,9 +2759,9 @@ class Maps(object):
         >>> # ...call m2.plot_map() to make the dataset visible...
         """
 
-        if self.data is None:
-            print("EOmaps: you must set the data first!")
-            return
+        # if self.data is None:
+        #     print("EOmaps: you must set the data first!")
+        #     return
 
         if hasattr(self.figure, "coll") and self.figure.coll:
             print(
@@ -2815,8 +2826,8 @@ class Maps(object):
                 del self.BM._bg_layers[layer]
                 # self.BM._refetch_bg = True
 
-            if self.data is None:
-                return
+            # if self.data is None:
+            #     return
 
             # ---------------------- prepare the data
             props = self._prepare_data()
@@ -2825,10 +2836,10 @@ class Maps(object):
             self._props = props
 
             vmin = self.plot_specs["vmin"]
-            if self.plot_specs["vmin"] is None:
+            if self.plot_specs["vmin"] is None and self.data is not None:
                 vmin = np.nanmin(props["z_data"])
             vmax = self.plot_specs["vmax"]
-            if self.plot_specs["vmax"] is None:
+            if self.plot_specs["vmax"] is None and self.data is not None:
                 vmax = np.nanmax(props["z_data"])
 
             # clip the data to properly account for vmin and vmax
@@ -3213,6 +3224,13 @@ class Maps(object):
         >>> |_______________________________________________________|
 
         """
+
+        if self.data is None:
+            print(
+                "EOmaps: There is no data for the colorbar! Use m.set_data(data=...)"
+                + "to set the data."
+            )
+            return
 
         self._cb_kwargs = dict(
             orientation=orientation,
