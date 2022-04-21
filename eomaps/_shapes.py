@@ -807,15 +807,37 @@ class shapes(object):
                 **kwargs,
             )
 
+            def broadcast_color(x):
+                if isinstance(
+                    x,
+                    (
+                        int,
+                        float,
+                        str,
+                        *np.sctypes["int"],
+                        *np.sctypes["uint"],
+                        *np.sctypes["float"],
+                    ),
+                ):
+                    array = np.repeat(x, np.count_nonzero(mask))
+                else:
+                    array = np.asanyarray(x)[mask]
+
+                # tri-contour meshes need 3 values for each triangle
+                array = np.broadcast_to(array, (3, len(array))).T
+                # we plot 2 triangles per rectangle
+                array = np.broadcast_to(array, (2, *array.shape))
+                return array.ravel()
+
             # special treatment of color input to properly distribute values
             if color is not None:
-                coll.set_facecolors([color] * (len(x)) * 6)
+                coll.set_facecolors(broadcast_color(color))
             elif facecolor is not None:
-                coll.set_facecolors([facecolor] * (len(x)) * 6)
+                coll.set_facecolors(broadcast_color(facecolor))
             elif facecolors is not None:
-                coll.set_facecolors([facecolors] * (len(x)) * 6)
+                coll.set_facecolors(broadcast_color(facecolors))
             elif fc is not None:
-                coll.set_facecolors([fc] * (len(x)) * 6)
+                coll.set_facecolors(broadcast_color(fc))
             else:
                 # special treatment of array input to properly mask values
                 if array is not None:
