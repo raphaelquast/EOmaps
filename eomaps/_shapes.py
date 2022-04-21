@@ -981,6 +981,8 @@ class shapes(object):
                 color = kwargs.pop("facecolors", None)
             elif "fc" in kwargs:
                 color = kwargs.pop("fc", None)
+            else:
+                color = None
 
             if color is not None:
                 if array is not None:
