@@ -1170,7 +1170,9 @@ class shapes(object):
 
             # special treatment of color input to properly distribute values
             if color is not None:
-                coll.set_facecolors([color] * (len(x)) * 6)
+                if not isinstance(color, (list, np.ndarray)):
+                    color = np.repeat(color, len(x))
+                coll.set_facecolors(np.tile(color, 6))
             else:
                 if array is not None:
                     # tri-contour meshes need 3 values for each triangle
