@@ -1172,7 +1172,10 @@ class shapes(object):
             if color is not None:
                 if not isinstance(color, (list, np.ndarray)):
                     color = np.repeat(color, len(x))
-                coll.set_facecolors(np.tile(color, 6))
+                if self.flat:
+                    coll.set_facecolors(color[datamask][maskedTris[:, 0]])
+                else:
+                    coll.set_facecolors(np.tile(color[datamask], 6))
             else:
                 if array is not None:
                     # tri-contour meshes need 3 values for each triangle
