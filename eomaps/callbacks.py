@@ -310,7 +310,7 @@ class _click_callbacks(object):
     def mark(
         self,
         radius=None,
-        radius_crs="in",
+        radius_crs=None,
         shape=None,
         buffer=1,
         permanent=True,
@@ -337,9 +337,16 @@ class _click_callbacks(object):
 
             The default is None.
         radius_crs : any
-            The crs specification in which the radius is provided.
-            The default is "in" (e.g. the crs of the input-data).
             (only relevant if radius is NOT specified as "pixel")
+
+            The crs specification in which the radius is provided.
+            - use "in" for input-crs, "out" for plot-crs
+            - or use any other crs-specification (e.g. wkt-string, epsg-code etc.)
+
+            If None, the radius_crs of the assigned plot-shape is used if possible
+            (e.g. m.shape.radius_crs) and otherwise the input-crs is used (e.g. "in").
+
+            The default is None.
 
         shape : str, optional
             Indicator which shape to draw. Currently supported shapes are:
@@ -382,6 +389,12 @@ class _click_callbacks(object):
             assert (
                 shape in possible_shapes
             ), f"'{shape}' is not a valid marker-shape... use one of {possible_shapes}"
+
+        if radius_crs is None:
+            try:
+                radius_crs = self.m.shape.radius_crs
+            except Exception:
+                radius_crs = "in"
 
         if radius is None:
             if self.m.figure.coll is not None:
