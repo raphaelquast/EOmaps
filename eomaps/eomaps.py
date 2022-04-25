@@ -836,7 +836,7 @@ class Maps(object):
         return self._shapes
 
     def set_data_specs(
-        self, data=None, xcoord=None, ycoord=None, crs=None, encoding=None, **kwargs
+        self, data=None, xcoord=None, ycoord=None, crs=None, encoding=None
     ):
         """
         Set the properties of the dataset you want to plot.
