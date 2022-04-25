@@ -185,15 +185,13 @@ class _click_container(_cb_container):
                 the function to attach to the map.
                 The call-signature is:
 
-                >>> def some_callback(self, **kwargs):
+                >>> def some_callback(asdf, **kwargs):
                 >>>     print("hello world")
                 >>>     print("the position of the clicked pixel", kwargs["pos"])
                 >>>     print("the data-index of the clicked pixel", kwargs["ID"])
                 >>>     print("data-value of the clicked pixel", kwargs["val"])
-                >>>     print("the plot-crs is:", self.plot_specs["plot_crs"])
                 >>>
-                >>> m.cb.attach(some_callback)
-
+                >>> m.cb.attach(some_callback, asdf=1)
 
             double_click : bool
                 Indicator if the callback should be executed on double-click (True)
@@ -342,13 +340,12 @@ class _click_container(_cb_container):
                 - "clear_markers" : clear all existing markers
 
             You can also define a custom function with the following call-signature:
-                >>> def some_callback(self, asdf, **kwargs):
+                >>> def some_callback(asdf, **kwargs):
                 >>>     print("hello world")
                 >>>     print("the position of the clicked pixel", kwargs["pos"])
                 >>>     print("the data-index of the clicked pixel", kwargs["ID"])
                 >>>     print("data-value of the clicked pixel", kwargs["val"])
-                >>>     print("the plot-crs is:", self.m.plot_specs["plot_crs"])
-                >>>     print("asdf is:", asdf)
+                >>>     print("asdf is set to:", asdf)
 
                 >>> m.cb.attach(some_callback, double_click=False, button=1, asdf=1)
 
@@ -392,13 +389,6 @@ class _click_container(_cb_container):
                 + "\n    - ".join(self._cb_list)
             )
             callback = getattr(self._cb, callback)
-        elif callable(callback):
-            # re-bind the callback methods to the eomaps.Maps.cb object
-            # in case custom functions are used
-            if hasattr(callback, "__func__"):
-                callback = callback.__func__.__get__(self._m)
-            else:
-                callback = callback.__get__(self._m)
 
         if double_click is True:
             btn_key = "double"
@@ -542,6 +532,9 @@ class cb_click_container(_click_container):
                 pass
 
         def movecb(event):
+            if plt.get_backend() == "module://ipympl.backend_nbagg":
+                return
+
             try:
                 self._event = event
 
@@ -1034,10 +1027,10 @@ class keypress_container(_cb_container):
                 the function to attach to the map.
                 The call-signature is:
 
-                >>> def some_callback(self, **kwargs):
-                >>>     print("hello world")
+                >>> def some_callback(asdf, **kwargs):
+                >>>     print("hello world, asdf=", asdf)
                 >>>
-                >>> m.cb.attach(some_callback)
+                >>> m.cb.attach(some_callback, asdf=1)
 
             key : str
                 the key to use
@@ -1142,13 +1135,6 @@ class keypress_container(_cb_container):
                 + "\n    - ".join(self._cb_list)
             )
             callback = getattr(self._cb, callback)
-        elif callable(callback):
-            # re-bind the callback methods to the eomaps.Maps.cb object
-            # in case custom functions are used
-            if hasattr(callback, "__func__"):
-                callback = callback.__func__.__get__(self._m)
-            else:
-                callback = callback.__get__(self._m)
 
         cbdict = self.get.cbs[key]
         # get a unique name for the callback

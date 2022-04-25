@@ -546,16 +546,12 @@ Custom callback functions can be attached to the map via:
 
 .. code-block:: python
 
-    def some_callback(self, asdf, **kwargs):
+    def some_callback(asdf, **kwargs):
         print("hello world")
+        print("the value of 'asdf' is", asdf)
         print("the position of the clicked pixel in plot-coordinates", kwargs["pos"])
         print("the dataset-index of the nearest datapoint", kwargs["ID"])
         print("data-value of the nearest datapoint", kwargs["val"])
-
-        # `self` points to the underlying Maps-object, so you can
-        # access all properties of the Maps object via:
-        print("the plot-crs is:", self.plot_specs["plot_crs"])
-        ...
         ...
 
     # attaching custom callbacks works completely similar for "click", "pick" and "keypress"!
