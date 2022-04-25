@@ -13,7 +13,7 @@ the plot-settings must be adjusted to ensure that ``matplotlib`` plots remain in
 .. image:: _static/spyder_preferences.png
 
 
-🕷 Using EOmaps with the PyCharm IDE
+🗖 Using EOmaps with the PyCharm IDE
 ------------------------------------
 
 The `PyCharm IDE <https://www.jetbrains.com/pycharm/>`_  automatically registers its own matplotlib backend
@@ -41,8 +41,6 @@ In addition, if you use a **commercial version** of PyCharm, make sure to **disa
 in the **Python Scientific** preferences since it forces plots to be rendered as static images.
 
 .. image:: _static/pycharm_preferences_2.png
-
-
 
 
 📓 Using EOmaps with Jupyter Notebooks
