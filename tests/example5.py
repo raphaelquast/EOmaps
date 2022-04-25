@@ -20,9 +20,9 @@ data_OK.var = np.sqrt(data_OK.param)
 data_mask = data[data.param < 0]
 
 # --------- initialize a Maps object and plot a basic map
-m = Maps(Maps.CRS.Orthographic(), figsize=(10, 6))
+m = Maps(Maps.CRS.Orthographic(), figsize=(10, 7))
 m.ax.set_title("Wooohoo, a flashy map-widget with static indicators!")
-m.set_data(data=data_OK, xcoord="lon", ycoord="lat", in_crs=4326)
+m.set_data(data=data_OK, x="lon", y="lat", in_crs=4326)
 m.set_plot_specs(
     histbins=200,
     cmap="Spectral_r",
@@ -33,7 +33,6 @@ m.set_classify_specs(scheme="Quantiles", k=10)
 m.shape.radius = (m.shape.radius[0] * 2, m.shape.radius[1])
 
 m.plot_map()
-m.figure.f.set_figheight(7)
 
 # ... add a basic "annotate" callback
 cid = m.cb.click.attach.annotate(bbox=dict(alpha=0.75), color="w")
@@ -59,13 +58,13 @@ m3.plot_map(edgecolor="w", linewidth=0.25, layer=10, dynamic=True)
 
 # --------- define a callback that will change the position and data-values of the additional layer
 #           NOTE: this is not possible for the shapes:  "shade_points" and "shade_raster" !
-def callback(self, **kwargs):
+def callback(m, **kwargs):
     selection = np.random.randint(0, len(m3.data), 1000)
-    m3.figure.coll.set_array(data_OK.param.iloc[selection])
+    m.figure.coll.set_array(data_OK.param.iloc[selection])
 
 
 # attach the callback to the second Maps object such that it triggers when we click on the masked-area
-m2.cb.click.attach(callback)
+m2.cb.click.attach(callback, m=m3)
 
 # --------- add some basic overlays from NaturalEarth
 

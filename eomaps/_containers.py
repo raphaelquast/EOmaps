@@ -178,16 +178,17 @@ class data_specs(object):
         self,
         m,
         data=None,
-        xcoord="lon",
-        ycoord="lat",
+        x="lon",
+        y="lat",
         crs=4326,
         parameter=None,
         encoding=None,
+        **kwargs,
     ):
         self._m = m
         self.data = data
-        self.xcoord = xcoord
-        self.ycoord = ycoord
+        self.x = x
+        self.y = y
         self.crs = crs
         self.parameter = parameter
 
@@ -195,8 +196,8 @@ class data_specs(object):
 
     def delete(self):
         self._data = None
-        self._xcoord = None
-        self._ycoord = None
+        self._x = None
+        self._y = None
         self._crs = None
         self._parameter = None
         self.encoding = False
@@ -205,9 +206,9 @@ class data_specs(object):
         try:
             txt = f"""\
                   # parameter: {self.parameter}
-                  # xcoord: {indent(fill(self.xcoord.__repr__(), 60),
+                  # x: {indent(fill(self.x.__repr__(), 60),
                                     "                      ").strip()}
-                  # ycoord: {indent(fill(self.ycoord.__repr__(), 60),
+                  # y: {indent(fill(self.y.__repr__(), 60),
                                     "                      ").strip()}
 
                   # crs: {indent(fill(self.crs.__repr__(), 60),
@@ -270,12 +271,16 @@ class data_specs(object):
         if key == "crs":
             key = "in_crs"
 
-        assert key in self.keys(), f"{key} is not a valid data-specs key!"
+        assert key in [
+            *self.keys(),
+            "xcoord",
+            "ycoord",
+        ], f"{key} is not a valid data-specs key!"
 
         return key
 
     def keys(self):
-        return ("parameter", "xcoord", "ycoord", "in_crs", "data", "encoding")
+        return ("parameter", "x", "y", "in_crs", "data", "encoding")
 
     @property
     def data(self):
@@ -297,19 +302,59 @@ class data_specs(object):
 
     @property
     def xcoord(self):
-        return self._xcoord
+        warn(
+            "EOmaps: `m.data_specs.xcoord` is depreciated."
+            + "use `m.data_specs.x` instead!",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return self._x
 
     @xcoord.setter
     def xcoord(self, xcoord):
-        self._xcoord = xcoord
+        warn(
+            "EOmaps: `m.data_specs.xcoord` is depreciated."
+            + "use `m.data_specs.x` instead!",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        self._x = xcoord
 
     @property
     def ycoord(self):
-        return self._ycoord
+        warn(
+            "EOmaps: `m.data_specs.ycoord` is depreciated."
+            + "use `m.data_specs.y` instead!",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return self._y
 
     @ycoord.setter
     def ycoord(self, ycoord):
-        self._ycoord = ycoord
+        warn(
+            "EOmaps: `m.data_specs.ycoord` is depreciated."
+            + "use `m.data_specs.y` instead!",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        self._y = ycoord
+
+    @property
+    def x(self):
+        return self._x
+
+    @x.setter
+    def x(self, x):
+        self._x = x
+
+    @property
+    def y(self):
+        return self._y
+
+    @y.setter
+    def y(self, y):
+        self._y = y
 
     @property
     def parameter(self):
@@ -322,17 +367,11 @@ class data_specs(object):
     @parameter.getter
     def parameter(self):
         if _pd_OK and isinstance(self.data, pd.DataFrame) and self._parameter is None:
-            if (
-                self.data is not None
-                and self.xcoord is not None
-                and self.ycoord is not None
-            ):
+            if self.data is not None and self.x is not None and self.y is not None:
 
                 try:
                     self.parameter = next(
-                        i
-                        for i in self.data.keys()
-                        if i not in [self.xcoord, self.ycoord]
+                        i for i in self.data.keys() if i not in [self.x, self.y]
                     )
                     print(f"EOmaps: Parameter was set to: '{self.parameter}'")
 

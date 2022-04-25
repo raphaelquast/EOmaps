@@ -282,8 +282,8 @@ class Maps(object):
 
         self.data_specs = data_specs(
             weakref.proxy(self),
-            xcoord="lon",
-            ycoord="lat",
+            x="lon",
+            y="lat",
             crs=4326,
         )
 
@@ -836,7 +836,7 @@ class Maps(object):
         return self._shapes
 
     def set_data_specs(
-        self, data=None, xcoord=None, ycoord=None, crs=None, encoding=None
+        self, data=None, x=None, y=None, crs=None, encoding=None, **kwargs
     ):
         """
         Set the properties of the dataset you want to plot.
@@ -857,16 +857,18 @@ class Maps(object):
             - a 1D or 2D numpy-array with the data-values
             - a 1D list of data values
 
-        xcoord, ycoord : str, optional
+        x, y : str, optional
             Specify the coordinates associated with the provided data.
             Accepted inputs are:
 
             - a string (corresponding to the column-names of the `pandas.DataFrame`)
+
+              - ONLY if "data" is provided as a pandas.DataFrame!
+
             - a pandas.Series
             - a 1D or 2D numpy-array
             - a 1D list
 
-            The names of columns that contain the coordinates in the specified crs.
             The default is "lon" and "lat".
         crs : int, dict or str
             The coordinate-system of the provided coordinates.
@@ -892,8 +894,8 @@ class Maps(object):
 
             The name of the column that should be used as parameter.
 
-            If None, the first column (despite of xcoord and ycoord) will be used.
-            The default is None.
+            If None, the first column (despite of the columns assigned as "x" and "y")
+            will be used. The default is None.
         encoding : dict or False, optional
             A dict containing the encoding information in case the data is provided as
             encoded values (useful to avoid decoding large integer-encoded datasets).
@@ -915,22 +917,22 @@ class Maps(object):
         - using a single `pandas.DataFrame`
 
           >>> data = pd.DataFrame(dict(lon=[...], lat=[...], a=[...], b=[...]))
-          >>> m.set_data(data, xcoord="lon", ycoord="lat", parameter="a", crs=4326)
+          >>> m.set_data(data, x="lon", y="lat", parameter="a", crs=4326)
 
         - using individual `pandas.Series`
 
           >>> lon, lat, vals = pd.Series([...]), pd.Series([...]), pd.Series([...])
-          >>> m.set_data(vals, xcoord=x, ycoord=y, crs=4326)
+          >>> m.set_data(vals, x=lon, y=lat, crs=4326)
 
         - using 1D lists
 
           >>> lon, lat, vals = [...], [...], [...]
-          >>> m.set_data(vals, xcoord=lon, ycoord=lat, crs=4326)
+          >>> m.set_data(vals, x=lon, y=lat, crs=4326)
 
         - using 1D or 2D numpy.arrays
 
           >>> lon, lat, vals = np.array([[...]]), np.array([[...]]), np.array([[...]])
-          >>> m.set_data(vals, xcoord=lon, ycoord=lat, crs=4326)
+          >>> m.set_data(vals, x=lon, y=lat, crs=4326)
 
         - integer-encoded datasets
 
@@ -938,17 +940,41 @@ class Maps(object):
           >>> encoding = dict(scale_factor=0.01, add_offset=1)
           >>> # colorbars and pick-callbacks will now show values as (1 + 0.01 * value)
           >>> # e.g. the "actual" data values are [0.01, 0.02, 0.03, ...]
-          >>> m.set_data(vals, xcoord=lon, ycoord=lat, crs=4326, encoding=encoding)
+          >>> m.set_data(vals, x=lon, y=lat, crs=4326, encoding=encoding)
         """
+
+        # depreciate the use of "xcoord" and "ycoord"... use "x", "y" instead
+        if "xcoord" in kwargs:
+            if x is None:
+                warnings.warn(
+                    "EOmaps: using 'xcoord' in 'm.set_data' is depreciated."
+                    + "Use 'x=...' instead!",
+                    DeprecationWarning,
+                    stacklevel=2,
+                )
+                x = kwargs.pop("xcoord")
+            else:
+                raise TypeError("EOmaps: You cannot provide both 'x' and 'xcoord'!")
+        if "ycoord" in kwargs:
+            if y is None:
+                warnings.warn(
+                    "EOmaps: using 'ycoord' in 'm.set_data' is depreciated."
+                    + "Use 'y=...' instead!",
+                    DeprecationWarning,
+                    stacklevel=2,
+                )
+                y = kwargs.pop("ycoord")
+            else:
+                raise TypeError("EOmaps: You cannot provide both 'y' and 'ycoord'!")
 
         if data is not None:
             self.data_specs.data = data
 
-        if xcoord is not None:
-            self.data_specs.xcoord = xcoord
+        if x is not None:
+            self.data_specs.x = x
 
-        if ycoord is not None:
-            self.data_specs.ycoord = ycoord
+        if y is not None:
+            self.data_specs.y = y
 
         if crs is not None:
             self.data_specs.crs = crs
@@ -1106,7 +1132,7 @@ class Maps(object):
 
         return crs
 
-    def _identify_data(self, data=None, xcoord=None, ycoord=None, parameter=None):
+    def _identify_data(self, data=None, x=None, y=None, parameter=None):
         """
         Identify the way how the data has been provided and convert to the
         internal structure.
@@ -1114,10 +1140,10 @@ class Maps(object):
 
         if data is None:
             data = self.data_specs.data
-        if xcoord is None:
-            xcoord = self.data_specs.xcoord
-        if ycoord is None:
-            ycoord = self.data_specs.ycoord
+        if x is None:
+            x = self.data_specs.x
+        if y is None:
+            y = self.data_specs.y
         if parameter is None:
             parameter = self.data_specs.parameter
         if data is not None and _pd_OK and isinstance(data, pd.DataFrame):
@@ -1130,24 +1156,24 @@ class Maps(object):
             # get the index-values
             ids = data.index.values
 
-            if isinstance(xcoord, str) and isinstance(ycoord, str):
+            if isinstance(x, str) and isinstance(y, str):
                 # get the data-coordinates
-                xorig = data[xcoord].values
-                yorig = data[ycoord].values
+                xorig = data[x].values
+                yorig = data[y].values
             else:
-                assert isinstance(xcoord, (list, np.ndarray, pd.Series)), (
-                    "xcoord must be either a column-name, or explicit values "
+                assert isinstance(x, (list, np.ndarray, pd.Series)), (
+                    "'x' must be either a column-name, or explicit values "
                     " specified as a list, a numpy-array or a pandas"
                     + f" Series object if you provide the data as '{type(data)}'"
                 )
-                assert isinstance(ycoord, (list, np.ndarray, pd.Series)), (
-                    "ycoord must be either a column-name, or explicit values "
+                assert isinstance(y, (list, np.ndarray, pd.Series)), (
+                    "'y' must be either a column-name, or explicit values "
                     " specified as a list, a numpy-array or a pandas"
                     + f" Series object if you provide the data as '{type(data)}'"
                 )
 
-                xorig = np.asanyarray(xcoord)
-                yorig = np.asanyarray(ycoord)
+                xorig = np.asanyarray(x)
+                yorig = np.asanyarray(y)
 
             return z_data, xorig, yorig, ids, parameter
 
@@ -1159,15 +1185,15 @@ class Maps(object):
             types += (pd.Series,)
 
         assert isinstance(
-            xcoord, types
-        ), "xcoord must be either a list, a numpy-array or a pandas.Series"
+            x, types
+        ), "'x' must be either a list, a numpy-array or a pandas.Series"
         assert isinstance(
-            ycoord, types
-        ), "ycoord must be either a list, a numpy-array or a pandas.Series"
+            y, types
+        ), "'y' must be either a list, a numpy-array or a pandas.Series"
 
         # get the data-coordinates
-        xorig = np.asanyarray(xcoord)
-        yorig = np.asanyarray(ycoord)
+        xorig = np.asanyarray(x)
+        yorig = np.asanyarray(y)
 
         if data is not None:
             if isinstance(data, types):
@@ -1198,8 +1224,8 @@ class Maps(object):
         cpos=None,
         cpos_radius=None,
         parameter=None,
-        xcoord=None,
-        ycoord=None,
+        x=None,
+        y=None,
         buffer=None,
     ):
         if in_crs is None:
@@ -1219,7 +1245,7 @@ class Maps(object):
 
         # identify the provided data and get it in the internal format
         z_data, xorig, yorig, ids, parameter = self._identify_data(
-            data=data, xcoord=xcoord, ycoord=ycoord, parameter=parameter
+            data=data, x=x, y=y, parameter=parameter
         )
         if cpos is not None and cpos != "c":
             # fix position of pixel-center in the input-crs

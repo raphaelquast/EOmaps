@@ -186,7 +186,7 @@ class read_file:
             # (e.g. if data is provided with [y, x] dimensions instead of [x, y])
             data = np.moveaxis(usencfile.values, *[dims.index(i) for i in ncdims])
 
-            xcoord, ycoord = (
+            x, y = (
                 getattr(usencfile, ncdims[0]).values,
                 getattr(usencfile, ncdims[1]).values,
             )
@@ -205,16 +205,16 @@ class read_file:
             if set_data is not None:
                 set_data.set_data(
                     data=data,
-                    xcoord=xcoord,
-                    ycoord=ycoord,
+                    x=x,
+                    y=y,
                     crs=data_crs,
                     encoding=encoding,
                 )
             else:
                 return dict(
                     data=data,
-                    xcoord=xcoord,
-                    ycoord=ycoord,
+                    x=x,
+                    y=y,
                     crs=data_crs,
                     encoding=encoding,
                 )
@@ -376,9 +376,9 @@ class read_file:
             )
 
             if coords[0] in usencfile.coords:
-                xcoord = usencfile.coords[coords[0]]
+                x = usencfile.coords[coords[0]]
             elif coords[0] in usencfile:
-                xcoord = usencfile[coords[0]]
+                x = usencfile[coords[0]]
             else:
                 raise AssertionError(
                     f"EOmaps: Coordinate '{coords[0]}' is not present in the NetCDF.\n"
@@ -387,9 +387,9 @@ class read_file:
                 )
 
             if coords[1] in usencfile.coords:
-                ycoord = usencfile.coords[coords[1]]
+                y = usencfile.coords[coords[1]]
             elif coords[1] in usencfile:
-                ycoord = usencfile[coords[1]]
+                y = usencfile[coords[1]]
             else:
                 raise AssertionError(
                     f"EOmaps: Coordinate '{coords[1]}' is not present in the NetCDF\n"
@@ -397,15 +397,23 @@ class read_file:
                     + f"Available variables: {list(ncfile)}"
                 )
 
-            if data.dims != xcoord.dims or data.dims != xcoord.dims:
-                raise AssertionError(
-                    "EOmaps: Invalid dimensions of data and coordinates!\n"
-                    + f"data: {data.dims},  xcoord: {xcoord.dims}, ycoord: {ycoord.dims}"
-                )
-
-            # xcoord, ycoord = np.meshgrid(
-            #     usencfile.coords[coords[0]].values, usencfile.coords[coords[1]].values
-            # )
+            # 1D coordinates + 2D data expects transposed data!
+            transpose = False
+            if data.dims != x.dims or data.dims != x.dims:
+                if (len(data.dims) == 2 and len(x.dims) == 1 and len(y.dims) == 1) and (
+                    data.dims[0] == x.dims[0] and data.dims[1] == y.dims[0]
+                ):
+                    x, y = y, x
+                    transpose = True
+                elif (
+                    len(data.dims) == 2 and len(x.dims) == 1 and len(y.dims) == 1
+                ) and (data.dims[0] == y.dims[0] and data.dims[1] == x.dims[0]):
+                    transpose = True
+                else:
+                    raise AssertionError(
+                        "EOmaps: Invalid dimensions of data and coordinates!\n"
+                        + f"data: {data.dims},  x: {x.dims}, y: {y.dims}"
+                    )
 
             # only use masked arrays if mask_and_scale is False!
             # (otherwise the mask is already applied as NaN's in the float-array)
@@ -420,18 +428,18 @@ class read_file:
 
             if set_data is not None:
                 set_data.set_data(
-                    data=data.values,
-                    xcoord=xcoord.values,
-                    ycoord=ycoord.values,
+                    data=data.values.T if transpose else data.values,
+                    x=x.values,
+                    y=y.values,
                     crs=data_crs,
                     parameter=parameter,
                     encoding=encoding,
                 )
             else:
                 return dict(
-                    data=data.values,
-                    xcoord=xcoord.values,
-                    ycoord=ycoord.values,
+                    data=data.values.T if transpose else data.values,
+                    x=x.values,
+                    y=y.values,
                     crs=data_crs,
                     parameter=parameter,
                     encoding=encoding,
@@ -445,8 +453,8 @@ class read_file:
     def CSV(
         path,
         parameter=None,
-        xcoord=None,
-        ycoord=None,
+        x=None,
+        y=None,
         crs=None,
         set_data=None,
         **kwargs,
@@ -468,10 +476,10 @@ class read_file:
             The path to the csv-file.
         parameter : str
             The column-name to use as parameter.
-        xcoord : str
-            The column-name to use as xcoord.
-        ycoord : str
-            The column-name to use as ycoord.
+        x : str
+            The column-name to use as "x" coordinates.
+        y : str
+            The column-name to use as "y" coordinates.
         crs : crs-identifier
             The crs of the data. (see "Maps.set_data" for details)
 
@@ -491,7 +499,7 @@ class read_file:
 
         data = pd.read_csv(path, **kwargs)
 
-        for key in [parameter, xcoord, ycoord]:
+        for key in [parameter, x, y]:
             assert key in data, (
                 f"EOmaps: the parameter-name {key} is not a column of the csv-file!\n"
                 + f"Available columns are: {list(data)}"
@@ -499,17 +507,17 @@ class read_file:
 
         if set_data is not None:
             set_data.set_data(
-                data=data[[parameter, xcoord, ycoord]],
-                xcoord=xcoord,
-                ycoord=ycoord,
+                data=data[[parameter, x, y]],
+                x=x,
+                y=y,
                 crs=crs,
                 parameter=parameter,
             )
         else:
             return dict(
-                data=data[[parameter, xcoord, ycoord]],
-                xcoord=xcoord,
-                ycoord=ycoord,
+                data=data[[parameter, x, y]],
+                x=x,
+                y=y,
                 crs=crs,
                 parameter=parameter,
             )
@@ -1014,8 +1022,8 @@ class from_file:
     def CSV(
         path=None,
         parameter=None,
-        xcoord=None,
-        ycoord=None,
+        x=None,
+        y=None,
         data_crs=None,
         plot_crs=None,
         shape=None,
@@ -1050,10 +1058,10 @@ class from_file:
             The path to the csv-file.
         parameter : str
             The column-name to use as parameter.
-        xcoord : str
-            The column-name to use as xcoord.
-        ycoord : str
-            The column-name to use as ycoord.
+        x : str
+            The column-name to use as "x" coordinate.
+        y : str
+            The column-name to use as "y" coordinate.
         data_crs : crs-identifier
             The crs of the data. (see "Maps.set_data" for details)
         plot_crs : any, optional
@@ -1098,8 +1106,8 @@ class from_file:
         data = read_file.CSV(
             path=path,
             parameter=parameter,
-            xcoord=xcoord,
-            ycoord=ycoord,
+            x=x,
+            y=y,
             crs=data_crs,
         )
 

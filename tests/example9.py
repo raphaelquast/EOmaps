@@ -48,7 +48,7 @@ mg.add_feature.preset.ocean()
 mg.add_feature.preset.coastline()
 
 # -------- set the specs for the Maps-object of the grid and plot the map
-mg.m_top.set_data(data=data, xcoord="lon", ycoord="lat", crs=4326)
+mg.m_top.set_data(data=data, x="lon", y="lat", crs=4326)
 mg.m_top.set_classify_specs(
     scheme=Maps.CLASSIFIERS.UserDefined, bins=[50, 100, 200, 400, 800]
 )
@@ -67,7 +67,7 @@ mg.parent.BM.add_artist(mg.ax_left)
 mg.parent.BM.add_artist(mg.ax_right)
 
 # -------- define a custom callback function to update the plots
-def update_plots(self, ID, **kwargs):
+def update_plots(ID, **kwargs):
     # get the data
     x = database.loc[ID].dropna()
 

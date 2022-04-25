@@ -14,7 +14,7 @@ data = pd.DataFrame(
 
 # --------- initialize a Maps object and plot a basic map
 m = Maps(crs=3035, figsize=(10, 8))
-m.set_data(data=data, xcoord="lon", ycoord="lat", in_crs=4326)
+m.set_data(data=data, x="lon", y="lat", in_crs=4326)
 m.ax.set_title("A clickable widget!")
 m.set_plot_specs(histbins="bins")
 m.set_shape.rectangles()
@@ -109,19 +109,19 @@ m.BM.add_artist(txt)
 m.BM.add_artist(txt2)
 
 
-def cb1(self, pos, ID, val, **kwargs):
+def cb1(m, pos, ID, val, **kwargs):
     # update the text that indicates how many pixels we've clicked
-    nvals = len(self.cb.pick.get.picked_vals["ID"])
+    nvals = len(m.cb.pick.get.picked_vals["ID"])
     txt.set_text(
         f"You clicked on {nvals} pixel"
         + ("s" if nvals > 1 else "")
         + "!\n... and the "
         + ("average " if nvals > 1 else "")
-        + f"value is {np.mean(self.cb.pick.get.picked_vals['val']):.3f}"
+        + f"value is {np.mean(m.cb.pick.get.picked_vals['val']):.3f}"
     )
 
     # update the list of lon/lat coordinates on the top left of the figure
-    d = self.data.loc[ID]
+    d = m.data.loc[ID]
     lonlat_list = txt2.get_text().splitlines()
     if len(lonlat_list) > 10:
         lonlat_txt = lonlat_list[0] + "\n" + "\n".join(lonlat_list[-10:]) + "\n"
@@ -130,15 +130,15 @@ def cb1(self, pos, ID, val, **kwargs):
     txt2.set_text(lonlat_txt + f"{d['lon']:.2f}  /  {d['lat']:.2f}" + "\n")
 
 
-cid = m.cb.pick.attach(cb1, button=1)
+cid = m.cb.pick.attach(cb1, button=1, m=m)
 
 
-def cb2(self, pos, ID, val, **kwargs):
+def cb2(m, pos, ID, val, **kwargs):
     # plot a marker at the pixel-position
-    (l,) = self.figure.ax.plot(*pos, marker="*", animated=True)
+    (l,) = m.figure.ax.plot(*pos, marker="*", animated=True)
     # print the value at the pixel-position
     # use a low zorder so the text will be drawn below the temporary annotations
-    t = self.figure.ax.text(
+    t = m.figure.ax.text(
         pos[0],
         pos[1] - 150000,
         f"{val:.2f}",
@@ -151,11 +151,11 @@ def cb2(self, pos, ID, val, **kwargs):
     # add the artists to the Blit-Manager (m.BM) to avoid triggering a re-draw of the
     # whole figure each time the callback triggers
 
-    self.BM.add_artist(l)
-    self.BM.add_artist(t)
+    m.BM.add_artist(l)
+    m.BM.add_artist(t)
 
 
-cid = m.cb.pick.attach(cb2, button=3)
+cid = m.cb.pick.attach(cb2, button=3, m=m)
 
 # add some static text
 infotext = (

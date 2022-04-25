@@ -17,7 +17,7 @@ m = Maps(
 )  # create a map in a pseudo-mercator (epsg 3857) projection
 m.add_feature.preset.ocean(fc="lightsteelblue")
 m.add_feature.preset.coastline(lw=0.25)
-m.set_data(data=data, xcoord="lon", ycoord="lat", in_crs=4326)
+m.set_data(data=data, x="lon", y="lat", in_crs=4326)
 
 # --------- set the appearance of the plot
 m.set_plot_specs(
@@ -54,4 +54,4 @@ m.figure.set_colorbar_position(
     pos=[0.125, 0.1, 0.83, 0.15], ratio=999
 )  # manually re-position the colorbar
 
-m.add_logo(position="lr", pad=(-1.1, 0))
+m.add_logo(position="lr", pad=(-1.1, 0), size=0.1)

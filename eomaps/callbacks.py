@@ -89,8 +89,8 @@ class _click_callbacks(object):
         """Print details on the clicked pixel to the console"""
         ID, pos, val, ind, picker_name = self._popargs(kwargs)
 
-        xlabel = self.m.data_specs.xcoord
-        ylabel = self.m.data_specs.ycoord
+        xlabel = self.m.data_specs.x
+        ylabel = self.m.data_specs.y
         if ID is not None:
             printstr = ""
             x, y = [np.format_float_positional(i, trim="-", precision=4) for i in pos]
@@ -173,14 +173,14 @@ class _click_callbacks(object):
 
         ID, pos, val, ind, picker_name = self._popargs(kwargs)
 
-        if isinstance(self.m.data_specs.xcoord, str):
-            xlabel = self.m.data_specs.xcoord
+        if isinstance(self.m.data_specs.x, str):
+            xlabel = self.m.data_specs.x
         else:
-            xlabel = "xcoord"
-        if isinstance(self.m.data_specs.ycoord, str):
-            ylabel = self.m.data_specs.ycoord
+            xlabel = "x"
+        if isinstance(self.m.data_specs.y, str):
+            ylabel = self.m.data_specs.y
         else:
-            ylabel = "ycoord"
+            ylabel = "y"
 
         if self.m.data_specs.parameter is None:
             parameter = "value"
@@ -748,8 +748,15 @@ class _click_callbacks(object):
 
             self._pick_f.canvas.mpl_connect("close_event", on_close)
 
-        _pick_xlabel = self.m.data_specs.xcoord
-        _pick_ylabel = self.m.data_specs.ycoord
+        if isinstance(self.m.data_specs.x, str):
+            _pick_xlabel = self.m.data_specs.x
+        else:
+            _pick_xlabel = "x"
+
+        if isinstance(self.m.data_specs.y, str):
+            _pick_ylabel = self.m.data_specs.y
+        else:
+            _pick_ylabel = "y"
 
         if x_index == "pos":
             x, y = [

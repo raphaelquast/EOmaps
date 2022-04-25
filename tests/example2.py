@@ -22,7 +22,7 @@ mg = MapsGrid(
     layer="layer 1",
 )
 # set the data on ALL maps-objects of the grid
-mg.set_data(data=data, xcoord="lon", ycoord="lat", in_crs=4326)
+mg.set_data(data=data, x="lon", y="lat", in_crs=4326)
 
 # --------- set specs for the first axis
 mg.m_0_0.ax.set_title("epsg=4326")
@@ -89,7 +89,7 @@ for m in mg:
 m2.figure.ax_cb.tick_params(rotation=90, labelsize=8)
 
 # add logos to all maps
-mg.add_logo()
+mg.add_logo(size=0.05)
 
 # trigger a final re-draw of all layers to make sure the manual
 # changes to the ticks are properly reflected in the cached layers.

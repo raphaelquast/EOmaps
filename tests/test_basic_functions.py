@@ -25,7 +25,7 @@ class TestBasicPlotting(unittest.TestCase):
     def test_simple_map(self):
         m = Maps(4326)
         m.data = self.data
-        m.set_data_specs(xcoord="x", ycoord="y", crs=3857)
+        m.set_data_specs(x="x", y="y", crs=3857)
         m.plot_map()
         plt.close(m.figure.f)
 
@@ -34,7 +34,7 @@ class TestBasicPlotting(unittest.TestCase):
         m = Maps()
         m.add_feature.preset.ocean()
         m.add_feature.preset.coastline()
-        m.set_data_specs(data=self.data, xcoord="x", ycoord="y", crs=3857)
+        m.set_data_specs(data=self.data, x="x", y="y", crs=3857)
         m.set_plot_specs(
             label="bsdf",
             histbins=100,
@@ -51,7 +51,7 @@ class TestBasicPlotting(unittest.TestCase):
 
         m = Maps(4326)
         # rectangles
-        m.set_data(usedata, xcoord="x", ycoord="y", in_crs=3857)
+        m.set_data(usedata, x="x", y="y", in_crs=3857)
         m.set_shape.geod_circles(radius=100000)
         m.plot_map()
         m.indicate_masked_points()
@@ -62,7 +62,7 @@ class TestBasicPlotting(unittest.TestCase):
 
         # rectangles
         m = Maps(4326)
-        m.set_data(usedata, xcoord="x", ycoord="y", in_crs=3857)
+        m.set_data(usedata, x="x", y="y", in_crs=3857)
         m.set_shape.rectangles()
         m.plot_map()
         m.add_feature.preset.ocean(ec="k", scale="110m")
@@ -75,7 +75,7 @@ class TestBasicPlotting(unittest.TestCase):
 
         # rectangles
         m = Maps(4326)
-        m.set_data(usedata, xcoord="x", ycoord="y", in_crs=3857)
+        m.set_data(usedata, x="x", y="y", in_crs=3857)
         m.set_shape.rectangles(mesh=True)
         m.plot_map()
 
@@ -89,7 +89,7 @@ class TestBasicPlotting(unittest.TestCase):
 
         # ellipses
         m = Maps(4326)
-        m.set_data(usedata, xcoord="x", ycoord="y", in_crs=3857)
+        m.set_data(usedata, x="x", y="y", in_crs=3857)
 
         m.set_shape.ellipses()
         m.plot_map()
@@ -101,7 +101,7 @@ class TestBasicPlotting(unittest.TestCase):
 
         # delaunay
         m = Maps(4326)
-        m.set_data(usedata, xcoord="x", ycoord="y", in_crs=3857)
+        m.set_data(usedata, x="x", y="y", in_crs=3857)
 
         m.set_shape.delaunay_triangulation(flat=True)
         m.plot_map()
@@ -119,7 +119,7 @@ class TestBasicPlotting(unittest.TestCase):
 
         # voroni
         m = Maps(4326)
-        m.set_data(usedata, xcoord="x", ycoord="y", in_crs=3857)
+        m.set_data(usedata, x="x", y="y", in_crs=3857)
 
         m.set_shape.voroni_diagram(masked=False)
         m.plot_map()
@@ -136,7 +136,7 @@ class TestBasicPlotting(unittest.TestCase):
         m.data = self.data
 
         for cpos in ["ul", "ur", "ll", "lr", "c"]:
-            m.set_data_specs(xcoord="x", ycoord="y", in_crs=3857)
+            m.set_data_specs(x="x", y="y", in_crs=3857)
             m.set_plot_specs(
                 label="bsdf",
                 cpos_radius=2,
@@ -151,7 +151,7 @@ class TestBasicPlotting(unittest.TestCase):
     def test_alpha_and_splitbins(self):
         m = Maps(4326)
         m.data = self.data
-        m.set_data_specs(xcoord="x", ycoord="y", in_crs=3857)
+        m.set_data_specs(x="x", y="y", in_crs=3857)
         m.set_plot_specs(alpha=0.4)
         m.set_shape.rectangles()
         m.set_classify_specs(scheme="Percentiles", pct=[0.1, 0.2])
@@ -163,7 +163,7 @@ class TestBasicPlotting(unittest.TestCase):
     def test_classification(self):
         m = Maps(4326)
         m.data = self.data
-        m.set_data_specs(xcoord="x", ycoord="y", in_crs=3857)
+        m.set_data_specs(x="x", y="y", in_crs=3857)
         m.set_shape.rectangles(radius=1, radius_crs="out")
 
         m.set_classify_specs(scheme="Quantiles", k=5)
@@ -175,7 +175,7 @@ class TestBasicPlotting(unittest.TestCase):
     def test_add_callbacks(self):
         m = Maps(3857, layer="layername")
         m.data = self.data.sample(10)
-        m.set_data_specs(xcoord="x", ycoord="y", in_crs=3857)
+        m.set_data_specs(x="x", y="y", in_crs=3857)
         m.set_shape.ellipses(radius=200000)
 
         m.plot_map()
@@ -242,7 +242,7 @@ class TestBasicPlotting(unittest.TestCase):
     def test_add_annotate(self):
         m = Maps()
         m.data = self.data
-        m.set_data_specs(xcoord="x", ycoord="y", in_crs=3857)
+        m.set_data_specs(x="x", y="y", in_crs=3857)
 
         m.plot_map()
 
@@ -263,7 +263,7 @@ class TestBasicPlotting(unittest.TestCase):
         crs = Maps.CRS.Orthographic(central_latitude=45, central_longitude=45)
         m = Maps(crs)
         m.data = self.data
-        m.set_data_specs(xcoord="x", ycoord="y", in_crs=3857)
+        m.set_data_specs(x="x", y="y", in_crs=3857)
         m.plot_map()
 
         m.add_marker(
@@ -350,7 +350,7 @@ class TestBasicPlotting(unittest.TestCase):
     def test_copy(self):
         m = Maps(3857)
         m.data = self.data
-        m.set_data_specs(xcoord="x", ycoord="y", in_crs=3857)
+        m.set_data_specs(x="x", y="y", in_crs=3857)
         m.set_plot_specs(label="asdf")
 
         m.set_classify_specs(scheme="Quantiles", k=5)
@@ -358,8 +358,8 @@ class TestBasicPlotting(unittest.TestCase):
         m2 = m.copy()
 
         self.assertTrue(
-            m2.data_specs[["xcoord", "ycoord", "parameter", "crs"]]
-            == {"xcoord": "lon", "ycoord": "lat", "parameter": None, "in_crs": 4326}
+            m2.data_specs[["x", "y", "parameter", "crs"]]
+            == {"x": "lon", "y": "lat", "parameter": None, "in_crs": 4326}
         )
         self.assertTrue(
             all(
@@ -376,8 +376,8 @@ class TestBasicPlotting(unittest.TestCase):
         m3 = m.copy(data_specs=True)
 
         self.assertTrue(
-            m.data_specs[["xcoord", "ycoord", "parameter", "crs"]]
-            == m3.data_specs[["xcoord", "ycoord", "parameter", "crs"]]
+            m.data_specs[["x", "y", "parameter", "crs"]]
+            == m3.data_specs[["x", "y", "parameter", "crs"]]
         )
         self.assertTrue(
             all(
@@ -398,7 +398,7 @@ class TestBasicPlotting(unittest.TestCase):
     def test_copy_connect(self):
         m = Maps(3857)
         m.data = self.data
-        m.set_data_specs(xcoord="x", ycoord="y", in_crs=3857)
+        m.set_data_specs(x="x", y="y", in_crs=3857)
         m.set_shape.rectangles()
         m.set_classify_specs(scheme="Quantiles", k=5)
         m.plot_map()
@@ -420,7 +420,7 @@ class TestBasicPlotting(unittest.TestCase):
     def test_join_limits(self):
         mg = MapsGrid(2, 1, crs=3857)
         mg.add_feature.preset.coastline()
-        mg.set_data(data=self.data, xcoord="x", ycoord="y", in_crs=3857)
+        mg.set_data(data=self.data, x="x", y="y", in_crs=3857)
         for m in mg:
             m.plot_map()
 
@@ -433,7 +433,7 @@ class TestBasicPlotting(unittest.TestCase):
     def test_prepare_data(self):
         m = Maps()
         m.data = self.data
-        m.set_data_specs(xcoord="x", ycoord="y", in_crs=3857, parameter="value")
+        m.set_data_specs(x="x", y="y", in_crs=3857, parameter="value")
         data = m._prepare_data()
 
     def test_draggable_axes(self):
@@ -454,7 +454,7 @@ class TestBasicPlotting(unittest.TestCase):
         gs = GridSpec(2, 2)
 
         m = Maps(gs_ax=gs[0, 0])
-        m.set_data_specs(data=self.data, xcoord="x", ycoord="y", in_crs=3857)
+        m.set_data_specs(data=self.data, x="x", y="y", in_crs=3857)
         m.set_plot_specs(histbins=5)
         m.plot_map()
         cb1 = m.add_colorbar(gs[1, 0], orientation="horizontal")
@@ -471,7 +471,7 @@ class TestBasicPlotting(unittest.TestCase):
 
     def test_MapsGrid(self):
         mg = MapsGrid(2, 2, crs=4326)
-        mg.set_data(data=self.data, xcoord="x", ycoord="y", in_crs=3857)
+        mg.set_data(data=self.data, x="x", y="y", in_crs=3857)
         mg.set_plot_specs(label="bsdf")
         mg.set_classify_specs(scheme=Maps.CLASSIFIERS.EqualInterval, k=4)
         mg.set_shape.rectangles()
@@ -496,7 +496,7 @@ class TestBasicPlotting(unittest.TestCase):
             ax_inits=dict(c=(1, 1)),
         )
 
-        mg.set_data(data=self.data, xcoord="x", ycoord="y", in_crs=3857)
+        mg.set_data(data=self.data, x="x", y="y", in_crs=3857)
         mg.set_plot_specs(label="bsdf")
         mg.set_classify_specs(scheme=Maps.CLASSIFIERS.EqualInterval, k=4)
 
@@ -665,9 +665,7 @@ class TestBasicPlotting(unittest.TestCase):
         ]
 
         mgrid = MapsGrid(3, 4, crs=crs, figsize=(12, 10))
-        mgrid.parent.set_data(
-            data=df.sample(2000), xcoord="lon", ycoord="lat", crs=4326
-        )
+        mgrid.parent.set_data(data=df.sample(2000), x="lon", y="lat", crs=4326)
         for m in mgrid.children:
             m.set_data(**mgrid.parent.data_specs)
 
@@ -732,20 +730,20 @@ class TestBasicPlotting(unittest.TestCase):
 
         # 2D numpy array
         m = Maps()
-        m.set_data(vals, xcoord=lon, ycoord=lat)
+        m.set_data(vals, x=lon, y=lat)
         m.plot_map()
 
         # 1D numpy array
         m = Maps()
-        m.set_data(vals.ravel(), xcoord=lon.ravel(), ycoord=lat.ravel())
+        m.set_data(vals.ravel(), x=lon.ravel(), y=lat.ravel())
         m.plot_map()
 
         # 1D lists
         m = Maps()
         m.set_data(
             vals.ravel().tolist(),
-            xcoord=lon.ravel().tolist(),
-            ycoord=lat.ravel().tolist(),
+            x=lon.ravel().tolist(),
+            y=lat.ravel().tolist(),
         )
         m.plot_map()
 

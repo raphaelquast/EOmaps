@@ -28,9 +28,9 @@ class TestCallbacks(unittest.TestCase):
         m = Maps()
         # use either a pandas.DataFrame or a 2D numpy-array for testing
         if self.nfig % 2 == 0:
-            m.set_data(self.data, xcoord="lon", ycoord="lat")
+            m.set_data(self.data, x="lon", y="lat")
         else:
-            m.set_data(self.lon + self.lat, xcoord=self.lon, ycoord=self.lat)
+            m.set_data(self.lon + self.lat, x=self.lon, y=self.lat)
 
         m.plot_map()
         m.figure.f.canvas.draw()
