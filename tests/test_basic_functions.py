@@ -133,20 +133,17 @@ class TestBasicPlotting(unittest.TestCase):
 
     def test_cpos(self):
         m = Maps(4326)
-        m.data = self.data
+        m.set_shape.ellipses(n=100)
+        m.set_data_specs(self.data, x="x", y="y", in_crs=3857)
 
-        for cpos in ["ul", "ur", "ll", "lr", "c"]:
-            m.set_data_specs(x="x", y="y", in_crs=3857)
+        for cpos, color in zip(["ul", "ur", "ll", "lr", "c"], "rgbcm"):
             m.set_plot_specs(
-                label="bsdf",
-                cpos_radius=2,
-                histbins=100,
-                density=True,
+                cpos_radius=m.shape.radius[0] / 2,
                 cpos=cpos,
             )
-            m.plot_map()
+            m.plot_map(fc="none", ec=color)
 
-            plt.close(m.figure.f)
+        plt.close(m.figure.f)
 
     def test_alpha_and_splitbins(self):
         m = Maps(4326)
