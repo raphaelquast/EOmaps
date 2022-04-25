@@ -947,7 +947,7 @@ class Maps(object):
         if "xcoord" in kwargs:
             if x is None:
                 warnings.warn(
-                    "EOmaps: using 'xcoord' in 'm.set_data' is depreciated."
+                    "EOmaps: using 'xcoord' in 'm.set_data' is depreciated. "
                     + "Use 'x=...' instead!",
                     DeprecationWarning,
                     stacklevel=2,
@@ -958,7 +958,7 @@ class Maps(object):
         if "ycoord" in kwargs:
             if y is None:
                 warnings.warn(
-                    "EOmaps: using 'ycoord' in 'm.set_data' is depreciated."
+                    "EOmaps: using 'ycoord' in 'm.set_data' is depreciated. "
                     + "Use 'y=...' instead!",
                     DeprecationWarning,
                     stacklevel=2,
@@ -1186,10 +1186,10 @@ class Maps(object):
 
         assert isinstance(
             x, types
-        ), "'x' must be either a list, a numpy-array or a pandas.Series"
+        ), "'x' coordinates must be provided as list, numpy-array or pandas.Series"
         assert isinstance(
             y, types
-        ), "'y' must be either a list, a numpy-array or a pandas.Series"
+        ), "'y' coordinates must be provided as list, numpy-array or pandas.Series"
 
         # get the data-coordinates
         xorig = np.asanyarray(x)
