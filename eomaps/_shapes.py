@@ -175,6 +175,52 @@ class shapes(object):
 
         return (radiusx, radiusy)
 
+    @staticmethod
+    def _get_colors_and_array(kwargs, mask):
+        # identify colors and the array
+
+        # special treatment of array input to properly mask values
+        array = kwargs.pop("array", None)
+        if array is not None:
+            array = array[mask]
+        else:
+            array = None
+
+        # ----------- manual color specifications
+        # allow the synonyms "color", "fc" and "facecolor"
+        color = None
+        for i in ["color", "fc", "facecolors"]:
+            if not color:
+                color = kwargs.pop(i, None)
+                if color is not None:
+                    c_key = i
+            elif kwargs.pop(i, None) is not None:
+                raise TypeError(
+                    "EOmaps: only one of 'color', 'facecolor' or 'fc' "
+                    + "can be specified!"
+                )
+
+        if color is None:
+            return {"array": array}
+
+        if isinstance(color, (int, float, str, np.number)):
+            # if a scalar is provided, broadcast it
+            color = np.broadcast_to(color, mask.shape)
+        elif isinstance(color, tuple):
+            if len(color) in [3, 4]:
+                if all(map(lambda i: isinstance(i, (int, float, np.number)), color)):
+                    # check if a tuple of numbers is provided, and if so broadcast
+                    # it as a rgb or rgba tuple
+                    color = np.broadcast_to(np.rec.fromarrays(color), mask.shape)
+                elif all(map(lambda i: isinstance(i, (list, np.ndarray)), color)):
+                    # check if a tuple of lists or arrays is provided, and if so,
+                    # broadcast them as RGB arrays
+                    color = np.rec.fromarrays(np.broadcast_arrays(*color))
+
+        # still use np.asanyarray in here in case lists are provided
+        color = np.asanyarray(color).ravel()[mask]
+        return {c_key: color, "array": array}
+
     class _geod_circles(object):
         name = "geod_circles"
 
@@ -327,8 +373,6 @@ class shapes(object):
         def get_coll(self, x, y, crs, **kwargs):
 
             xs, ys, mask = self._get_geod_circle_points(x, y, crs, self.radius, self.n)
-            # special treatment of array input to properly mask values
-            array = kwargs.pop("array", None)
 
             # only plot polygons if they contain 2 or more vertices
             vertmask = np.count_nonzero(mask, axis=0) > 2
@@ -345,13 +389,12 @@ class shapes(object):
                 i.compressed().reshape(-1, 2) for i, m in zip(verts, vertmask) if m
             )
 
-            if array is not None:
-                array = array[vertmask]
+            color_and_array = shapes._get_colors_and_array(kwargs, vertmask)
 
             coll = PolyCollection(
                 verts,
                 # transOffset=self._m.figure.ax.transData,
-                array=array,
+                **color_and_array,
                 **kwargs,
             )
 
@@ -534,17 +577,14 @@ class shapes(object):
             # remember masked points
             self._m._data_mask = mask
 
-            # special treatment of array input to properly mask values
-            array = kwargs.pop("array", None)
-            if array is not None:
-                array = array[mask]
+            color_and_array = shapes._get_colors_and_array(kwargs, mask)
 
             verts = np.stack((xs[mask], ys[mask])).T.swapaxes(0, 1)
 
             coll = PolyCollection(
                 verts,
                 # transOffset=self._m.figure.ax.transData,
-                array=array,
+                **color_and_array,
                 **kwargs,
             )
             return coll
@@ -736,15 +776,12 @@ class shapes(object):
             # remember masked points
             self._m._data_mask = mask
 
-            # special treatment of array input to properly mask values
-            array = kwargs.pop("array", None)
-            if array is not None:
-                array = array[mask]
+            color_and_array = shapes._get_colors_and_array(kwargs, mask)
 
             coll = PolyCollection(
                 verts=verts,
                 # transOffset=self._m.figure.ax.transData,
-                array=array,
+                **color_and_array,
                 **kwargs,
             )
 
@@ -786,68 +823,35 @@ class shapes(object):
             return tri, mask
 
         def _get_trimesh_coll(self, x, y, crs, **kwargs):
-            # special treatment of color and array inputs to distribute the values
-            color = kwargs.pop("color", None)
-            fc = kwargs.pop("fc", None)
-            facecolor = kwargs.pop("facecolor", None)
-            facecolors = kwargs.pop("facecolors", None)
-
-            array = kwargs.pop("array", None)
-
             tri, mask = self._get_trimesh_rectangle_triangulation(
                 x, y, crs, self.radius, self.radius_crs, self.n
             )
-
             # remember masked points
             self._m._data_mask = mask
 
-            coll = TriMesh(
-                tri,
-                # transOffset=self._m.figure.ax.transData,
-                **kwargs,
-            )
+            color_and_array = shapes._get_colors_and_array(kwargs, mask)
 
-            def broadcast_color(x):
-                if isinstance(
-                    x,
-                    (
-                        int,
-                        float,
-                        str,
-                        *np.sctypes["int"],
-                        *np.sctypes["uint"],
-                        *np.sctypes["float"],
-                    ),
-                ):
-                    array = np.repeat(x, np.count_nonzero(mask))
-                else:
-                    array = np.asanyarray(x)[mask]
-
+            def broadcast_colors_and_array(array):
+                if array is None:
+                    return
                 # tri-contour meshes need 3 values for each triangle
                 array = np.broadcast_to(array, (3, len(array))).T
                 # we plot 2 triangles per rectangle
                 array = np.broadcast_to(array, (2, *array.shape))
+
                 return array.ravel()
 
-            # special treatment of color input to properly distribute values
-            if color is not None:
-                coll.set_facecolors(broadcast_color(color))
-            elif facecolor is not None:
-                coll.set_facecolors(broadcast_color(facecolor))
-            elif facecolors is not None:
-                coll.set_facecolors(broadcast_color(facecolors))
-            elif fc is not None:
-                coll.set_facecolors(broadcast_color(fc))
-            else:
-                # special treatment of array input to properly mask values
-                if array is not None:
-                    array = array[mask]
+            color_and_array = {
+                key: broadcast_colors_and_array(val)
+                for key, val in color_and_array.items()
+            }
 
-                    # tri-contour meshes need 3 values for each triangle
-                    array = np.broadcast_to(array, (3, len(array))).T
-                    # we plot 2 triangles per rectangle
-                    array = np.broadcast_to(array, (2, *array.shape))
-                    coll.set_array(array.ravel())
+            coll = TriMesh(
+                tri,
+                # transOffset=self._m.figure.ax.transData,
+                **color_and_array,
+                **kwargs,
+            )
 
             return coll
 
@@ -957,9 +961,6 @@ class shapes(object):
 
         def get_coll(self, x, y, crs, **kwargs):
 
-            # special treatment of array input to properly mask values
-            array = kwargs.pop("array", None)
-
             verts, mask, datamask = self._get_voroni_verts_and_mask(
                 x, y, crs, self.mask_radius, masked=self.masked
             )
@@ -970,30 +971,13 @@ class shapes(object):
             # remember the mask
             self._m._data_mask = mask2
 
-            if array is not None:
-                array = array[datamask][mask]
-
-            if "color" in kwargs:
-                color = kwargs.pop("color", None)
-            elif "facecolor" in kwargs:
-                color = kwargs.pop("facecolor", None)
-            elif "facecolors" in kwargs:
-                color = kwargs.pop("facecolors", None)
-            elif "fc" in kwargs:
-                color = kwargs.pop("fc", None)
-            else:
-                color = None
-
-            if color is not None:
-                if array is not None:
-                    color = np.broadcast_to(color, array.shape)
-
-                color = color[datamask][mask]
+            color_and_array = shapes._get_colors_and_array(
+                kwargs, np.logical_and(datamask, mask)
+            )
 
             coll = PolyCollection(
                 verts=verts,
-                array=array,
-                facecolors=color,
+                **color_and_array,
                 # transOffset=self._m.figure.ax.transData,
                 **kwargs,
             )
@@ -1136,31 +1120,9 @@ class shapes(object):
 
         def get_coll(self, x, y, crs, **kwargs):
 
-            # special treatment of color and array inputs to distribute the values
-            color = kwargs.pop("color", None)
-            array = kwargs.pop("array", None)
-
             tri, datamask = self._get_delaunay_triangulation(
                 x, y, crs, self.mask_radius, self.mask_radius_crs, self.masked
             )
-
-            if self.flat == False:
-                coll = TriMesh(
-                    tri,
-                    # transOffset=self._m.figure.ax.transData,
-                    **kwargs,
-                )
-            else:
-                # Vertices of triangles.
-                maskedTris = tri.get_masked_triangles()
-                verts = np.stack((tri.x[maskedTris], tri.y[maskedTris]), axis=-1)
-
-                coll = PolyCollection(
-                    verts=verts,
-                    # transOffset=self._m.figure.ax.transData,
-                    **kwargs,
-                )
-
             maskedTris = tri.get_masked_triangles()
 
             # find the masked points that are not masked by the datamask
@@ -1170,23 +1132,43 @@ class shapes(object):
             # remember the mask
             self._m._data_mask = mask
 
-            # special treatment of color input to properly distribute values
-            if color is not None:
-                if not isinstance(color, (list, np.ndarray)):
-                    color = np.repeat(color, len(x))
-                if self.flat:
-                    coll.set_facecolors(color[datamask][maskedTris[:, 0]])
-                else:
-                    coll.set_facecolors(np.tile(color[datamask], 6))
-            else:
-                if array is not None:
-                    # tri-contour meshes need 3 values for each triangle
+            color_and_array = shapes._get_colors_and_array(kwargs, datamask)
 
-                    if self.flat:
-                        array = array[datamask][maskedTris].mean(axis=1)
-                        coll.set_array(array.ravel())
+            if self.flat == False:
+                for key, val in color_and_array.items():
+                    if val is None:
+                        continue
+
+                    if key == "array":
+                        pass
                     else:
-                        coll.set_array(array[datamask])
+                        color_and_array[key] = np.tile(val, 6)
+
+                coll = TriMesh(
+                    tri,
+                    # transOffset=self._m.figure.ax.transData,
+                    **color_and_array,
+                    **kwargs,
+                )
+            else:
+                for key, val in color_and_array.items():
+                    if val is None:
+                        continue
+
+                    if key == "array":
+                        color_and_array[key] = val[maskedTris].mean(axis=1)
+                    else:
+                        color_and_array[key] = val[maskedTris[:, 0]]
+
+                # Vertices of triangles.
+                verts = np.stack((tri.x[maskedTris], tri.y[maskedTris]), axis=-1)
+
+                coll = PolyCollection(
+                    verts=verts,
+                    # transOffset=self._m.figure.ax.transData,
+                    **color_and_array,
+                    **kwargs,
+                )
 
             return coll
 
