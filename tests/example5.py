@@ -101,7 +101,7 @@ for buffer in np.linspace(1, 5, 10):
         ID=mark_id,
         shape="ellipses",
         radius="pixel",
-        fc=[1, 0, 0, 0.1],
+        fc=(1, 0, 0, 0.1),
         ec="r",
         buffer=buffer * 5,
         n=100,  # use 100 points to represet the ellipses
