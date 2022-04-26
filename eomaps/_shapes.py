@@ -220,7 +220,7 @@ class shapes(object):
             color = np.rec.fromarrays(color.T)
 
         # still use np.asanyarray in here in case lists are provided
-        color = np.asanyarray(color).ravel()[mask.ravel()]
+        color = np.asanyarray(color).reshape(*mask.shape, -1)[mask].squeeze()
         return {c_key: color, "array": array}
 
     class _geod_circles(object):
