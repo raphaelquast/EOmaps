@@ -117,15 +117,15 @@ class TestBasicPlotting(unittest.TestCase):
 
         plt.close("all")
 
-        # voroni
+        # voronoi
         m = Maps(4326)
         m.set_data(usedata, x="x", y="y", in_crs=3857)
 
-        m.set_shape.voroni_diagram(masked=False)
+        m.set_shape.voronoi_diagram(masked=False)
         m.plot_map()
         m.indicate_masked_points(5, ec="k")
 
-        m.set_shape.voroni_diagram(masked=True, mask_radius=5)
+        m.set_shape.voronoi_diagram(masked=True, mask_radius=5)
         m.plot_map()
         m.indicate_masked_points(5, ec="k")
 
@@ -677,8 +677,8 @@ class TestBasicPlotting(unittest.TestCase):
                 ["rectangles", dict(radius=1.5, radius_crs="in", mesh=True)],
                 #
                 ["rectangles", dict(radius=100000, radius_crs="out", mesh=True)],
-                ["voroni_diagram", dict(mask_radius=200000)],
-                ["voroni_diagram", dict(masked=False)],
+                ["voronoi_diagram", dict(mask_radius=200000)],
+                ["voronoi_diagram", dict(masked=False)],
                 #
                 [
                     "delaunay_triangulation",
@@ -699,8 +699,8 @@ class TestBasicPlotting(unittest.TestCase):
                 "out_rectangles",
                 "in_trimesh_rectangles",
                 "out_trimesh_rectangles",
-                "voroni",
-                "voroni_unmasked",
+                "voronoi",
+                "voronoi_unmasked",
                 "delaunay_flat",
                 "delaunay",
                 "delaunay_unmasked",

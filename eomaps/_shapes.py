@@ -37,9 +37,9 @@ class shapes(object):
 
         >>> m.set_shape.geod_circles(radius)
 
-        - Voroni diagram
+        - Voronoi diagram
 
-        >>> m.set_shape.voroni_diagram(masked, mask_radius)
+        >>> m.set_shape.voronoi_diagram(masked, mask_radius)
 
         - Delaunay triangulation
 
@@ -66,7 +66,7 @@ class shapes(object):
         "geod_circles",
         "ellipses",
         "rectangles",
-        "voroni_diagram",
+        "voronoi_diagram",
         "delaunay_triangulation",
         "shade_points",
         "shade_raster",
@@ -855,23 +855,23 @@ class shapes(object):
             else:
                 return self._get_polygon_coll(x, y, crs, **kwargs)
 
-    class _voroni_diagram(object):
-        name = "voroni_diagram"
+    class _voronoi_diagram(object):
+        name = "voronoi_diagram"
 
         def __init__(self, m):
             self._m = m
 
         def __call__(self, masked=True, mask_radius=None):
             """
-            Draw a Voroni-Diagram of the data.
+            Draw a Voronoi-Diagram of the data.
 
             Parameters
             ----------
             masked : bool
-                Indicator if the voroni-diagram should be masked or not
+                Indicator if the voronoi-diagram should be masked or not
 
             mask_radius : float, optional
-                the radius used for masking the voroni-diagram (in units of the plot-crs)
+                the radius used for masking the voronoi-diagram (in units of the plot-crs)
             """
             from . import MapsGrid  # do this here to avoid circular imports!
 
@@ -889,9 +889,9 @@ class shapes(object):
 
         def __repr__(self):
             try:
-                s = f"voroni_diagram(mask_radius={self.mask_radius}, masked={self.masked})"
+                s = f"voronoi_diagram(mask_radius={self.mask_radius}, masked={self.masked})"
             except AttributeError:
-                s = "voroni_diagram(mask_radius, masked)"
+                s = "voronoi_diagram(mask_radius, masked)"
 
             return s
 
@@ -903,12 +903,12 @@ class shapes(object):
         def mask_radius(self, val):
             self._mask_radius = val
 
-        def _get_voroni_verts_and_mask(self, x, y, crs, radius, masked=True):
+        def _get_voronoi_verts_and_mask(self, x, y, crs, radius, masked=True):
             try:
                 from scipy.spatial import Voronoi
                 from itertools import zip_longest
             except ImportError:
-                raise ImportError("'scipy' is required for 'Voroni'!")
+                raise ImportError("'scipy' is required for 'voronoi'!")
 
             # transform from crs to the plot_crs
             t_in_plot = Transformer.from_crs(
@@ -955,7 +955,7 @@ class shapes(object):
 
         def get_coll(self, x, y, crs, **kwargs):
 
-            verts, mask, datamask = self._get_voroni_verts_and_mask(
+            verts, mask, datamask = self._get_voronoi_verts_and_mask(
                 x, y, crs, self.mask_radius, masked=self.masked
             )
 
@@ -1358,9 +1358,9 @@ class shapes(object):
         shp = self._rectangles(m=self._m)
         return shp.__call__(*args, **kwargs)
 
-    @wraps(_voroni_diagram.__call__)
-    def voroni_diagram(self, *args, **kwargs):
-        shp = self._voroni_diagram(m=self._m)
+    @wraps(_voronoi_diagram.__call__)
+    def voronoi_diagram(self, *args, **kwargs):
+        shp = self._voronoi_diagram(m=self._m)
         return shp.__call__(*args, **kwargs)
 
     @wraps(_delaunay_triangulation.__call__)

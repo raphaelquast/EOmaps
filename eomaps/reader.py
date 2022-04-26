@@ -746,7 +746,7 @@ class from_file:
             possible, else epsg=4326.
         shape : str, dict or None, optional
             - if str: The name of the shape to use, e.g. one of:
-              ['geod_circles', 'ellipses', 'rectangles', 'voroni_diagram',
+              ['geod_circles', 'ellipses', 'rectangles', 'voronoi_diagram',
               'delaunay_triangulation', 'shade_points', 'shade_raster']
             - if dict: a dictionary with parameters passed to the selected shape.
               The dict MUST contain a key "shape" that holds the name of the shape!
@@ -916,7 +916,7 @@ class from_file:
             possible, else epsg=4326.
         shape : str, dict or None, optional
             - if str: The name of the shape to use, e.g. one of:
-              ['geod_circles', 'ellipses', 'rectangles', 'voroni_diagram',
+              ['geod_circles', 'ellipses', 'rectangles', 'voronoi_diagram',
               'delaunay_triangulation', 'shade_points', 'shade_raster']
             - if dict: a dictionary with parameters passed to the selected shape.
               The dict MUST contain a key "shape" that holds the name of the shape!
@@ -1070,7 +1070,7 @@ class from_file:
             possible, else epsg=4326.
         shape : str, dict or None, optional
             - if str: The name of the shape to use, e.g. one of:
-              ['geod_circles', 'ellipses', 'rectangles', 'voroni_diagram',
+              ['geod_circles', 'ellipses', 'rectangles', 'voronoi_diagram',
               'delaunay_triangulation', 'shade_points', 'shade_raster']
             - if dict: a dictionary with parameters passed to the selected shape.
               The dict MUST contain a key "shape" that holds the name of the shape!

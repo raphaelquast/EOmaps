@@ -447,7 +447,7 @@ class _click_callbacks(object):
                 shape = "geod_circles"
 
         elif self.m.shape and self.m.shape.name in [
-            "voroni_diagram",
+            "voronoi_diagram",
             "delaunay_triangulation",
         ]:
             assert radius != "pixel", (
