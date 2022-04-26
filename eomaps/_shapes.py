@@ -190,7 +190,7 @@ class shapes(object):
         # allow the synonyms "color", "fc" and "facecolor"
         color = None
         for i in ["color", "fc", "facecolors"]:
-            if not color:
+            if color is None:
                 color = kwargs.pop(i, None)
                 if color is not None:
                     c_key = i
@@ -216,9 +216,11 @@ class shapes(object):
                     # check if a tuple of lists or arrays is provided, and if so,
                     # broadcast them as RGB arrays
                     color = np.rec.fromarrays(np.broadcast_arrays(*color))
+        elif isinstance(color, np.ndarray) and (color.shape[-1] in [3, 4]):
+            color = np.rec.fromarrays(color.T)
 
         # still use np.asanyarray in here in case lists are provided
-        color = np.asanyarray(color).ravel()[mask]
+        color = np.asanyarray(color).ravel()[mask.ravel()]
         return {c_key: color, "array": array}
 
     class _geod_circles(object):
