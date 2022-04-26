@@ -1352,6 +1352,7 @@ class shapes(object):
         def __call__(self, radius="estimate", radius_crs="in"):
             """
             Draw 2D datasets as rectangles (only 2D datasets, but possibly large ones)
+
             (similar to plt.imshow)
 
             Note
