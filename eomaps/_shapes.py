@@ -218,9 +218,9 @@ class shapes(object):
                     color = np.rec.fromarrays(np.broadcast_arrays(*color))
         elif isinstance(color, np.ndarray) and (color.shape[-1] in [3, 4]):
             color = np.rec.fromarrays(color.T)
-
-        # still use np.asanyarray in here in case lists are provided
-        color = np.asanyarray(color).reshape(*mask.shape, -1)[mask].squeeze()
+        else:
+            # still use np.asanyarray in here in case lists are provided
+            color = np.asanyarray(color).reshape(*mask.shape, -1)[mask].squeeze()
         return {c_key: color, "array": array}
 
     class _geod_circles(object):
@@ -594,8 +594,7 @@ class shapes(object):
 
         def __call__(self, radius="estimate", radius_crs="in", mesh=False, n=10):
             """
-            Draw projected rectangles (with possibly curved edges) whose dimensions are
-            defined in units of a given crs.
+            Draw projected rectangles with fixed dimensions (and possibly curved edges)
 
             Parameters
             ----------
@@ -1352,7 +1351,7 @@ class shapes(object):
 
         def __call__(self, radius="estimate", radius_crs="in"):
             """
-            Draw rectangles with dimensions defined in units of a given crs.
+            Draw 2D datasets as rectangles (only 2D datasets... but possibly large ones)
             (similar to plt.imshow)
 
             Note
