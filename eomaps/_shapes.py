@@ -1351,7 +1351,7 @@ class shapes(object):
 
         def __call__(self, radius="estimate", radius_crs="in"):
             """
-            Draw 2D datasets as rectangles (only 2D datasets... but possibly large ones)
+            Draw 2D datasets as rectangles (only 2D datasets, but possibly large ones)
             (similar to plt.imshow)
 
             Note
@@ -1363,7 +1363,7 @@ class shapes(object):
             (e.g. the effective shape is a distorted rectangle with straight edges)
 
             - use `m.set_shape.rectangles()` if you need "curved" edges!
-
+            - use `m.set_shape.shade_raster()` for very large datasets
 
             Parameters
             ----------
