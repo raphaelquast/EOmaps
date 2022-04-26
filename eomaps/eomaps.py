@@ -1247,6 +1247,7 @@ class Maps(object):
         z_data, xorig, yorig, ids, parameter = self._identify_data(
             data=data, x=x, y=y, parameter=parameter
         )
+
         if cpos is not None and cpos != "c":
             # fix position of pixel-center in the input-crs
             assert (
@@ -1260,15 +1261,28 @@ class Maps(object):
             xorig, yorig = self._set_cpos(xorig, yorig, rx, ry, cpos)
 
         # transform center-points to the plot_crs
-
         if len(xorig.shape) == len(z_data.shape):
             assert xorig.shape == z_data.shape and yorig.shape == z_data.shape, (
                 f"EOmaps: The data-shape {z_data.shape} and coordinate-shape "
                 + f"x={xorig.shape}, y={yorig.shape} do not match!"
             )
 
+        # invoke the shape-setter to make sure a shape is set
+        used_shape = self.shape
+
         if crs1 == crs2:
+            if used_shape.name in ["raster"]:
+                # convert 1D data to 2D (required for QuadMeshes)
+                if (
+                    len(xorig.shape) == 1
+                    and len(yorig.shape) == 1
+                    and len(z_data.shape) == 2
+                ):
+                    xorig, yorig = np.meshgrid(xorig, yorig, copy=False)
+                    z_data = z_data.T
+
             x0, y0 = xorig, yorig
+
         else:
             transformer = Transformer.from_crs(
                 crs1,
@@ -1276,7 +1290,11 @@ class Maps(object):
                 always_xy=True,
             )
             # convert 1D data to 2D to make sure re-projection is correct
-            if len(xorig.shape) == 1 and len(z_data.shape) == 2:
+            if (
+                len(xorig.shape) == 1
+                and len(yorig.shape) == 1
+                and len(z_data.shape) == 2
+            ):
                 xorig, yorig = np.meshgrid(xorig, yorig, copy=False)
                 z_data = z_data.T
 
@@ -1290,10 +1308,7 @@ class Maps(object):
         props["y0"] = y0
 
         # convert the data to 1D for shapes that accept unstructured data
-
-        # invoke the shape-setter to make sure a shape is set
-        used_shape = self.shape
-        if used_shape.name != "shade_raster":
+        if used_shape.name not in ["shade_raster", "raster"]:
             self._1Dprops(props)
 
         return props
@@ -2897,9 +2912,13 @@ class Maps(object):
             else:
                 args = dict(array=props["z_data"], cmap=cbcmap, norm=norm, **kwargs)
 
-            coll = self.shape.get_coll(
-                props["xorig"].ravel(), props["yorig"].ravel(), "in", **args
-            )
+            if self.shape.name in ["raster"]:
+                coll = self.shape.get_coll(props["xorig"], props["yorig"], "in", **args)
+            else:
+                # convert input to 1D
+                coll = self.shape.get_coll(
+                    props["xorig"].ravel(), props["yorig"].ravel(), "in", **args
+                )
 
             coll.set_clim(vmin, vmax)
             ax.add_collection(coll)

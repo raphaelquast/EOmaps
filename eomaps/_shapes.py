@@ -1,4 +1,4 @@
-from matplotlib.collections import PolyCollection
+from matplotlib.collections import PolyCollection, QuadMesh
 from matplotlib.tri import TriMesh, Triangulation
 import numpy as np
 
@@ -1343,6 +1343,179 @@ class shapes(object):
         def radius_crs(self):
             return self._m.get_crs("in")
 
+    class _raster(object):
+        name = "raster"
+
+        def __init__(self, m):
+            self._m = m
+            self._radius = None
+
+        def __call__(self, radius="estimate", radius_crs="in"):
+            """
+            Draw rectangles with dimensions defined in units of a given crs.
+            (similar to plt.imshow)
+
+            Note
+            ----
+            The raster-shape uses a QuadMesh to represent the datapoints.
+            This considerably speeds up plotting of large datasets but it has the
+            disadvantage that only the vertices of the rectangles will be reprojected
+            to the plot-crs while the curvature of the edges is NOT considerd!
+            (e.g. the effective shape is a distorted rectangle with straight edges)
+
+            - use `m.set_shape.rectangles()` if you need "curved" edges!
+
+
+            Parameters
+            ----------
+            radius : tuple or str, optional
+                a tuple representing the radius in x- and y- direction.
+                The default is "estimate" in which case the radius is attempted
+                to be estimated from the input-coordinates.
+            radius_crs : crs-specification, optional
+                The crs in which the dimensions are defined.
+                The default is "in".
+            """
+
+            from . import MapsGrid  # do this here to avoid circular imports!
+
+            for m in self._m if isinstance(self._m, MapsGrid) else [self._m]:
+                shape = self.__class__(m)
+
+                shape._radius = radius
+                shape.radius_crs = radius_crs
+                m._shape = shape
+
+        @property
+        def _initargs(self):
+            return dict(
+                radius=self._radius,
+                radius_crs=self.radius_crs,
+            )
+
+        @property
+        def radius(self):
+            if self._radius is None:
+                return shapes._get_radius(self._m, self._radius, self.radius_crs)
+            return self._radius
+
+        def __repr__(self):
+            try:
+                s = f"rectangles(radius={self.radius}, radius_crs={self.radius_crs})"
+            except AttributeError:
+                s = "rectangles(radius, radius_crs)"
+
+            return s
+
+        def _get_rectangle_verts(self, x, y, crs):
+            # the number of intermediate points is fixed to 1 when using a QuadMesh
+            # (e.g. no intermediate points, only vertices)
+            n = 1
+            rx, ry = abs(x[0, 0] - x[0, 1]) / 2, abs(y[0, 0] - y[1, 0]) / 2
+            self._radius = rx, ry
+            p = x, y
+
+            in_crs = self._m.get_crs(crs)
+
+            # transform corner-points
+            in_crs = self._m.get_crs(crs)
+            # transform from crs to the plot_crs
+            t = Transformer.from_crs(
+                in_crs,
+                self._m.crs_plot,
+                always_xy=True,
+            )
+
+            # make sure we do not transform out of bounds (if possible)
+            if in_crs.area_of_use is not None:
+                transformer = Transformer.from_crs(
+                    in_crs.geodetic_crs, in_crs, always_xy=True
+                )
+                xmin, ymin, xmax, ymax = transformer.transform_bounds(
+                    *in_crs.area_of_use.bounds
+                )
+
+                clipx = partial(np.clip, a_min=xmin, a_max=xmax)
+                clipy = partial(np.clip, a_min=ymin, a_max=ymax)
+            else:
+                clipx, clipy = lambda x: x, lambda y: y
+
+            px = np.column_stack(
+                (
+                    clipx(np.linspace(p[0] - rx, p[0] + rx, n)).T.flat,
+                    clipx(np.repeat([p[0] + rx], n, axis=0)).T.flat,
+                    clipx(np.linspace(p[0] + rx, p[0] - rx, n)).T.flat,
+                    clipx(np.repeat([p[0] - rx], n)).T.flat,
+                )
+            )
+
+            py = np.column_stack(
+                (
+                    clipy(np.repeat([p[1] + ry], n, axis=0)).T.flat,
+                    clipy(np.linspace(p[1] + ry, p[1] - ry, n)).T.flat,
+                    clipy(np.repeat([p[1] - ry], n, axis=0)).T.flat,
+                    clipy(np.linspace(p[1] - ry, p[1] + ry, n)).T.flat,
+                )
+            )
+
+            v = np.full((p[0].shape[0] + 1, p[0].shape[1] + 1, 2), None, dtype=float)
+
+            v[:-1, :-1, 0] = p[0] - rx
+            v[:-1, :-1, 1] = p[1] - ry
+
+            v[-1, :-1] = v[-2, :-1] + [0, 2 * rx]
+            v[:, -1] = v[:, -2] + [2 * ry, 0]
+
+            px, py = t.transform(v[:, :, 0], v[:, :, 1])
+            verts = np.stack((px, py), axis=2)
+
+            mask = np.logical_and(np.isfinite(px)[:-1, :-1], np.isfinite(py)[:-1, :-1])
+
+            return verts, mask
+
+        def _get_polygon_coll(self, x, y, crs, **kwargs):
+
+            verts, mask = self._get_rectangle_verts(
+                x,
+                y,
+                crs,
+            )
+
+            # remember masked points
+            self._m._data_mask = mask
+
+            # don't use a mask here since we need the full 2D array
+            color_and_array = shapes._get_colors_and_array(
+                kwargs, np.full_like(mask, True)
+            )
+            for key, val in color_and_array.items():
+                if val is not None:
+                    # convert to 1D to avoid indexing issues in
+                    # matplotlib.collections.QuadMesh.get_cursor_data
+                    color_and_array[key] = val.ravel()
+
+            # temporary fix for https://github.com/matplotlib/matplotlib/issues/22908
+            QuadMesh.get_cursor_data = lambda *args, **kwargs: None
+
+            coll = QuadMesh(
+                verts,
+                **color_and_array,
+                **kwargs,
+            )
+
+            return coll
+
+        def get_coll(self, x, y, crs, **kwargs):
+            x, y = np.asanyarray(x), np.asanyarray(y)
+            assert (
+                len(x.shape) == 2 and len(y.shape) == 2
+            ), "EOmaps: using 'raster' as plot-shape is only possible for 2D datasets!"
+            # don't use antialiasing by default since it introduces unwanted
+            # transparency for reprojected QuadMeshes!
+            kwargs.setdefault("antialiased", False)
+
+            return self._get_polygon_coll(x, y, crs, **kwargs)
+
     @wraps(_geod_circles.__call__)
     def geod_circles(self, *args, **kwargs):
         shp = self._geod_circles(m=self._m)
@@ -1356,6 +1529,11 @@ class shapes(object):
     @wraps(_rectangles.__call__)
     def rectangles(self, *args, **kwargs):
         shp = self._rectangles(m=self._m)
+        return shp.__call__(*args, **kwargs)
+
+    @wraps(_raster.__call__)
+    def raster(self, *args, **kwargs):
+        shp = self._raster(m=self._m)
         return shp.__call__(*args, **kwargs)
 
     @wraps(_voronoi_diagram.__call__)
