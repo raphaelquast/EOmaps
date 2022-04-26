@@ -422,11 +422,6 @@ class shapes(object):
             n : int
                 The number of points to calculate on the circle.
                 The default is 20.
-
-            Returns
-            -------
-            None.
-
             """
             from . import MapsGrid  # do this here to avoid circular imports!
 
@@ -597,7 +592,8 @@ class shapes(object):
 
         def __call__(self, radius="estimate", radius_crs="in", mesh=False, n=10):
             """
-            Draw projected rectangles with dimensions defined in units of a given crs.
+            Draw projected rectangles (with possibly curved edges) whose dimensions are
+            defined in units of a given crs.
 
             Parameters
             ----------
@@ -621,10 +617,6 @@ class shapes(object):
                 edges (e.g. to plot "curved" rectangles in projected crs)
                 Use n=1 to get actual rectangles!
                 The default is 10
-            Returns
-            -------
-            None.
-
             """
             from . import MapsGrid  # do this here to avoid circular imports!
 
