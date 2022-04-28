@@ -499,7 +499,6 @@ class shapes(object):
             ys = (
                 y0 + a * np.cos(angs) * np.sin(theta) + b * np.sin(angs) * np.cos(theta)
             )
-
             return (xs, ys)
 
         def _get_ellipse_points(self, x, y, crs, radius, radius_crs="in", n=20):
@@ -509,6 +508,7 @@ class shapes(object):
                 self._m.crs_plot,
                 always_xy=True,
             )
+
             # transform from crs to the radius_crs
             t_in_radius = Transformer.from_crs(
                 self._m.get_crs(crs),
@@ -525,10 +525,11 @@ class shapes(object):
             [rx, ry] = radius
             # transform corner-points
             if radius_crs == crs:
+                p = (x, y)
                 theta = np.full_like(x, 0)
                 xs, ys = self._calc_ellipse_points(
-                    x,
-                    y,
+                    p[0],
+                    p[1],
                     np.full_like(x, rx, dtype=float),
                     np.full_like(x, ry, dtype=float),
                     np.full_like(x, 0),
@@ -553,16 +554,36 @@ class shapes(object):
                     t_radius_plot.transform(xs, ys), copy=False
                 )
 
-            # get the mask for invalid, very distorted or very large shapes
-            dx = np.abs(xs.max(axis=1) - xs.min(axis=1))
-            dy = np.abs(ys.max(axis=1) - ys.min(axis=1))
-            mask = (
-                ~xs.mask.any(axis=1)
-                & ~ys.mask.any(axis=1)
-                & (dx <= (np.ma.median(dx) * 10))
-                & (dy <= (np.ma.median(dy) * 10))
-                & np.isfinite(theta)
-            )
+            # mask coordinates that are in another halfspace than their center
+            # (required for proper longitude wrapping)
+            # TODO this still needs some adjustments!
+            x0, _, x1, _ = self._m.ax.projection.boundary.bounds
+            xc = (x0 + x1) / 2
+
+            def getQ(x, xs, xc):
+                quadrants, pts_quadrants = np.full_like(x, -1), np.full_like(xs, -1)
+
+                quadrant = x < xc
+                quadrants[quadrant] = 1
+                pts_quadrant = xs < xc
+                pts_quadrants[pts_quadrant] = 1
+
+                quadrant = x > xc
+                quadrants[quadrant] = 2
+                pts_quadrant = xs > xc
+                pts_quadrants[pts_quadrant] = 2
+
+                return quadrants, pts_quadrants
+
+            quadrants, pts_quadrants = getQ(x, xs, xc)
+
+            maskx = pts_quadrants != quadrants[:, np.newaxis]
+            maskx = maskx & (np.broadcast_to((x != xc)[:, np.newaxis], xs.shape))
+
+            xs.mask = xs.mask | maskx
+            ys.mask = xs.mask
+
+            mask = ~np.all(maskx, axis=1) & np.isfinite(theta)
 
             return xs, ys, mask
 
@@ -571,12 +592,11 @@ class shapes(object):
                 x, y, crs, self.radius, self.radius_crs, n=self.n
             )
 
-            # remember masked points
-            self._m._data_mask = mask
-
+            verts = np.ma.stack((xs, ys)).T.swapaxes(0, 1)
             color_and_array = shapes._get_colors_and_array(kwargs, mask)
 
-            verts = np.stack((xs[mask], ys[mask])).T.swapaxes(0, 1)
+            # remember masked points
+            self._m._data_mask = mask
 
             coll = PolyCollection(
                 verts,
