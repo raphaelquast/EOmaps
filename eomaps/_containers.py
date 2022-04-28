@@ -389,6 +389,13 @@ class data_specs(object):
 
     @encoding.setter
     def encoding(self, encoding):
+        if encoding not in [None, False]:
+            assert isinstance(encoding, dict), "EOmaps: encoding must be a dictionary!"
+
+            assert all(
+                i in ["scale_factor", "add_offset"] for i in encoding
+            ), "EOmaps: encoding accepts only 'scale_factor' and 'add_offset' as keys!"
+
         self._encoding = encoding
 
 
