@@ -1431,7 +1431,20 @@ class shapes(object):
             # the number of intermediate points is fixed to 1 when using a QuadMesh
             # (e.g. no intermediate points, only vertices)
             n = 1
-            rx, ry = abs(x[0, 0] - x[0, 1]) / 2, abs(y[0, 0] - y[1, 0]) / 2
+
+            # estimate the radius (make sure only finite values are considered)
+
+            # try to find the radius based on the first row/col of the data
+            # (a shortcut for very large datasets...)
+            rx = np.diff(x[0])[0]
+            ry = np.diff(y.T[0])[0]
+            if not np.isfinite([rx, ry]).all():
+                # if no finite radius is found, search for the radius in the whole array
+                dx = np.diff(x, axis=1)
+                dy = np.diff(y, axis=0)
+                rx = abs(dx[np.isfinite(dx)][0])
+                ry = abs(dy[np.isfinite(dy)][0])
+
             self._radius = rx, ry
             p = x, y
 
@@ -1460,21 +1473,26 @@ class shapes(object):
             else:
                 clipx, clipy = lambda x: x, lambda y: y
 
+            x0 = clipx(p[0] - rx)
+            x1 = clipx(p[0] + rx)
+            y0 = clipx(p[1] - ry)
+            y1 = clipx(p[1] + ry)
+
             px = np.column_stack(
                 (
-                    clipx(np.linspace(p[0] - rx, p[0] + rx, n)).T.flat,
-                    clipx(np.repeat([p[0] + rx], n, axis=0)).T.flat,
-                    clipx(np.linspace(p[0] + rx, p[0] - rx, n)).T.flat,
-                    clipx(np.repeat([p[0] - rx], n)).T.flat,
+                    np.linspace(x0, x1, n).T.flat,
+                    np.repeat([x1], n, axis=0).T.flat,
+                    np.linspace(x1, x0, n).T.flat,
+                    np.repeat([x0], n).T.flat,
                 )
             )
 
             py = np.column_stack(
                 (
-                    clipy(np.repeat([p[1] + ry], n, axis=0)).T.flat,
-                    clipy(np.linspace(p[1] + ry, p[1] - ry, n)).T.flat,
-                    clipy(np.repeat([p[1] - ry], n, axis=0)).T.flat,
-                    clipy(np.linspace(p[1] - ry, p[1] + ry, n)).T.flat,
+                    np.repeat([y1], n, axis=0).T.flat,
+                    np.linspace(y1, x0, n).T.flat,
+                    np.repeat([y0], n, axis=0).T.flat,
+                    np.linspace(y0, x1, n).T.flat,
                 )
             )
 
@@ -1486,7 +1504,7 @@ class shapes(object):
             v[-1, :-1] = v[-2, :-1] + [0, 2 * rx]
             v[:, -1] = v[:, -2] + [2 * ry, 0]
 
-            px, py = t.transform(v[:, :, 0], v[:, :, 1])
+            px, py = t.transform(clipx(v[:, :, 0]), clipy(v[:, :, 1]))
             verts = np.stack((px, py), axis=2)
 
             mask = np.logical_and(np.isfinite(px)[:-1, :-1], np.isfinite(py)[:-1, :-1])
