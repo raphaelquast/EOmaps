@@ -3330,7 +3330,10 @@ class Maps(object):
             ax_cb_plot.get_shared_x_axes().join(ax_cb_plot, ax_cb)
 
         coll = self.figure.coll
+
         renorm = False
+        vmin = coll.norm.vmin
+        vmax = coll.norm.vmax
 
         if _ds_OK and isinstance(coll, ScalarDSArtist):
             aggname = self.shape.aggregator.__class__.__name__
@@ -3370,8 +3373,6 @@ class Maps(object):
 
                 cmap = self.classify_specs._cbcmap
                 # cmap = coll.get_cmap()
-                vmin = coll.norm.vmin
-                vmax = coll.norm.vmax
 
                 if renorm:
                     z_data = z_data[~np.isnan(z_data)]
@@ -3410,8 +3411,6 @@ class Maps(object):
             bins = self.classify_specs._bins
             cmap = self.classify_specs._cbcmap
             norm = self.classify_specs._norm
-            vmin = norm.vmin
-            vmax = norm.vmax
 
         # reflect changes to the dynamic_shade_indicator in the saved kwargs
         self._cb_kwargs["dynamic_shade_indicator"] = dynamic_shade_indicator
