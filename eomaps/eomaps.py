@@ -3944,6 +3944,29 @@ class MapsGrid:
                 for key, val in ax_inits.items():
                     self.create_axes(val, name=key)
 
+    def new_layer(self, layer=None):
+        if layer is None:
+            layer = self.parent.layer
+
+        mg = MapsGrid(m_inits=dict())  # initialize an empty MapsGrid
+        mg.gridspec = self.gridspec
+
+        for name, m in zip(self._names["Maps"], self._Maps):
+            newm = m.new_layer(layer)
+            mg._Maps.append(newm)
+            mg._names["Maps"].append(name)
+            setattr(mg, "m_" + name, newm)
+
+            if m is self.parent:
+                mg.parent = newm
+
+        for name in self._names["Axes"]:
+            ax = getattr(self, f"ax_{name}")
+            mg._names["Axes"].append(name)
+            setattr(mg, f"ax_{name}", ax)
+
+        return mg
+
     def cleanup(self):
         for m in self:
             m.cleanup()
