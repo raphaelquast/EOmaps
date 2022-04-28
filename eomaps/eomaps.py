@@ -383,7 +383,8 @@ class Maps(object):
         The shape that will be used to represent the dataset if `m.plot_map()` is called
 
         By default "ellipses" is used for datasets < 500k datapoints and for plots
-        where no explicit data is assigned, and "shade_raster" is used otherwise.
+        where no explicit data is assigned, and otherwise "shade_raster" is used
+        for 2D datasets and "shade_points" is used for unstructured datasets.
 
         """
         if self._shape is None:
@@ -391,7 +392,12 @@ class Maps(object):
                 size = np.size(self.data)
                 if size > 500_000:
                     if _ds_OK:
-                        self.set_shape.shade_raster()
+                        if len(self.data.shape) == 2:
+                            # shade_raster requires 2D data!
+                            self.set_shape.shade_raster()
+                        else:
+                            # shade_points should work for any dataset
+                            self.set_shape.shade_points()
                     else:
                         print(
                             "EOmaps-Warning: you attempt to plot a large dataset"
