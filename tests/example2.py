@@ -58,11 +58,10 @@ mg.add_feature.preset.coastline(layer="all")  # add the coastline to all layers
 # NOTE: this layer is not visible by default but it can be shown by clicking
 # on the layer-switcher utility buttons (bottom center of the figure)
 # or by using `m2.show()`   or via  `m.show_layer("layer 2")`
-m2 = mg.m_0_1.new_layer(layer="layer 2", copy_data_specs=True, copy_plot_specs=True)
+m2 = mg.m_0_1.new_layer(layer="layer 2", copy_data_specs=True)
 m2.set_shape.delaunay_triangulation(mask_radius=max(m2.shape.radius) * 2)
 m2.set_classify_specs(scheme="Quantiles", k=4)
-m2.set_plot_specs(cmap="RdYlBu")
-m2.plot_map()
+m2.plot_map(cmap="RdYlBu")
 m2.add_colorbar()
 # add an annotation that is only executed if "layer 2" is active
 m2.cb.click.attach.annotate(text="callbacks are layer-sensitive!")

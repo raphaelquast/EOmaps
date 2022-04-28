@@ -156,7 +156,7 @@ class _click_container(_cb_container):
             >>>     print("the position of the clicked pixel", kwargs["pos"])
             >>>     print("the data-index of the clicked pixel", kwargs["ID"])
             >>>     print("data-value of the clicked pixel", kwargs["val"])
-            >>>     print("the plot-crs is:", self.plot_specs["plot_crs"])
+            >>>     print("the plot-crs is:", self.crs_plot)
 
             >>> m.cb.pick.attach(some_callback, double_click=False, button=1, asdf=1)
         """

@@ -16,7 +16,6 @@ data = pd.DataFrame(
 m = Maps(crs=3035, figsize=(10, 8))
 m.set_data(data=data, x="lon", y="lat", in_crs=4326)
 m.ax.set_title("A clickable widget!")
-m.set_plot_specs(histbins="bins")
 m.set_shape.rectangles()
 # double the estimated radius in x-direction to make the plot dense
 m.shape.radius = (m.shape.radius[0] * 2, m.shape.radius[1])
@@ -184,5 +183,5 @@ m.cb.click.attach.mark(
 )
 
 
-m.add_colorbar(bottom=0.05)
+m.add_colorbar(histbins="bins", bottom=0.05)
 m.add_logo()

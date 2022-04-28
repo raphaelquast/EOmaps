@@ -23,16 +23,12 @@ data_mask = data[data.param < 0]
 m = Maps(Maps.CRS.Orthographic(), figsize=(10, 7))
 m.ax.set_title("Wooohoo, a flashy map-widget with static indicators!")
 m.set_data(data=data_OK, x="lon", y="lat", in_crs=4326)
-m.set_plot_specs(
-    histbins=200,
-    cmap="Spectral_r",
-)
 m.set_shape.rectangles(mesh=True)
 m.set_classify_specs(scheme="Quantiles", k=10)
 # double the estimated radius in x-direction to make the plot dense
 m.shape.radius = (m.shape.radius[0] * 2, m.shape.radius[1])
 
-m.plot_map()
+m.plot_map(cmap="Spectral_r")
 
 # ... add a basic "annotate" callback
 cid = m.cb.click.attach.annotate(bbox=dict(alpha=0.75), color="w")
@@ -44,17 +40,14 @@ m2.data_specs.data = data_mask
 m2.set_shape.rectangles(mesh=False)
 # double the estimated radius in x-direction to make the plot dense
 m2.shape.radius = (m2.shape.radius[0] * 2, m2.shape.radius[1])
-
-m2.plot_specs.cmap = "magma"
-m2.plot_map()
+m2.plot_map(cmap="magma")
 # --------- add another layer with data that is dynamically updated if we click on the masked area
 m3 = m.new_layer(copy_classify_specs=False)
 m3.data_specs.data = data_OK.sample(1000)
 m3.set_shape.ellipses(radius=25000, radius_crs=3857)
-m3.set_plot_specs(cmap="gist_ncar")
 # plot the map and assign a "dynamic_layer_idx" to allow dynamic updates of the collection
 
-m3.plot_map(edgecolor="w", linewidth=0.25, layer=10, dynamic=True)
+m3.plot_map(cmap="gist_ncar", edgecolor="w", linewidth=0.25, layer=10, dynamic=True)
 
 # --------- define a callback that will change the position and data-values of the additional layer
 #           NOTE: this is not possible for the shapes:  "shade_points" and "shade_raster" !
@@ -159,5 +152,5 @@ m.add_annotation(
     arrowprops=dict(arrowstyle="fancy", facecolor="w", connectionstyle="arc3,rad=0.35"),
 )
 
-cb = m.add_colorbar(label="The Data")
+cb = m.add_colorbar(label="The Data", tick_precision=1)
 m.add_logo()

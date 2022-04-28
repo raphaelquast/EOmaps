@@ -60,7 +60,7 @@ def cmap_alpha(cmap, alpha, interpolate=False):
     new_cmap : matplotlib.colormap
         a new colormap with the desired transparency
     """
-
+    cmap = plt.get_cmap(cmap)
     new_cmap = cmap(np.arange(cmap.N))
     new_cmap[:, -1] = alpha
     if interpolate:

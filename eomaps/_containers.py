@@ -183,6 +183,8 @@ class data_specs(object):
         crs=4326,
         parameter=None,
         encoding=None,
+        cpos="c",
+        cpos_radius=None,
         **kwargs,
     ):
         self._m = m
@@ -193,6 +195,8 @@ class data_specs(object):
         self.parameter = parameter
 
         self._encoding = encoding
+        self._cpos = cpos
+        self._cpos_radius = cpos_radius
 
     def delete(self):
         self._data = None
@@ -200,7 +204,9 @@ class data_specs(object):
         self._y = None
         self._crs = None
         self._parameter = None
-        self.encoding = False
+        self._encoding = False
+        self._cpos = "c"
+        self._cpos_radius = False
 
     def __repr__(self):
         try:
@@ -216,9 +222,7 @@ class data_specs(object):
 
                   # data: {indent(self.data.__repr__(),
                                   "                ").lstrip()}
-
                   """
-            txt = txt
             if self.encoding:
                 txt += dedent(
                     f"""\
@@ -226,6 +230,9 @@ class data_specs(object):
                     "                ").lstrip()}
                     """
                 )
+            if self.cpos_radius:
+                txt += f"# cpos: {'self.cpos'} (cpos_radius={self.cpos_radius})"
+
             return dedent(txt)
         except:
             return object.__repr__(self)
@@ -280,7 +287,16 @@ class data_specs(object):
         return key
 
     def keys(self):
-        return ("parameter", "x", "y", "in_crs", "data", "encoding")
+        return (
+            "parameter",
+            "x",
+            "y",
+            "in_crs",
+            "data",
+            "encoding",
+            "cpos",
+            "cpos_radius",
+        )
 
     @property
     def data(self):
@@ -398,99 +414,21 @@ class data_specs(object):
 
         self._encoding = encoding
 
+    @property
+    def cpos(self):
+        return self._cpos
 
-class plot_specs(object):
-    """
-    a container for accessing the plot specifications
-    """
-
-    def __init__(self, m, **kwargs):
-        self._m = m
-
-        for key in kwargs:
-            assert key in self.keys(), f"'{key}' is not a valid data-specs key"
-
-            setattr(self, key, kwargs.get(key, None))
-
-    def __repr__(self):
-        txt = "\n".join(
-            f"# {key}: {indent(fill(self[key].__repr__(), 60),  ' '*(len(key) + 4)).strip()}"
-            for key in self.keys()
-        )
-        return txt
-
-    def __getitem__(self, key):
-        if isinstance(key, (list, tuple)):
-            for i in key:
-                assert i in self.keys(), f"{i} is not a valid plot-specs key!"
-            if len(key) == 0:
-                item = dict()
-            else:
-                key = list(key)
-                if len(key) == 1:
-                    item = {key[0]: getattr(self, key[0])}
-                else:
-                    item = dict(zip(key, attrgetter(*key)(self)))
-        else:
-            assert key in self.keys(), f"'{key}' is not a valid plot-specs key!"
-            item = getattr(self, key)
-        return item
-
-    def __setitem__(self, key, val):
-        key = self._sanitize_keys(key)
-        if key is not None:
-            return setattr(self, key, val)
-
-    def __setattr__(self, key, val):
-        key = self._sanitize_keys(key)
-        if key is not None:
-            super().__setattr__(key, val)
-
-    def __iter__(self):
-        return iter(self[self.keys()].items())
-
-    def _sanitize_keys(self, key):
-        # pass any keys starting with _
-        if key.startswith("_"):
-            return key
-
-        if key in ["crs", "plot_crs"]:
-            warn(
-                "\n▲▲▲ In EOmaps > v3.0 the plot-crs is set on "
-                + "initialization of the Maps-object!"
-                + "\n▲▲▲ Use `m = Maps(crs=...)` instead to set the plot-crs!\n"
-            )
-            return None
-
-        if key in ["title"]:
-            warn(
-                "\n▲▲▲ In EOmaps > v3.1 passing a 'title' to the plot-specs is depreciated. "
-                + "\n▲▲▲ Use `m.ax.set_title()` instead!\n"
-            )
-            return None
-
-        assert key in self.keys(), f"{key} is not a valid plot-specs key!"
-
-        return key
-
-    def keys(self):
-        # fmt: off
-        return ('label', 'cmap', 'histbins', 'tick_precision',
-                'vmin', 'vmax', 'cpos', 'cpos_radius', 'alpha', 'density')
-        # fmt: on
+    @cpos.setter
+    def cpos(self, cpos):
+        self._cpos = cpos
 
     @property
-    def cmap(self):
-        return self._cmap
+    def cpos_radius(self):
+        return self._cpos_radius
 
-    @cmap.setter
-    def cmap(self, val):
-        self._cmap = get_cmap(val)
-
-    @property
-    @lru_cache()
-    def plot_crs(self):
-        return self._m._crs_plot
+    @cpos_radius.setter
+    def cpos_radius(self, cpos_radius):
+        self._cpos_radius = cpos_radius
 
 
 class classify_specs(object):

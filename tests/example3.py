@@ -17,20 +17,15 @@ m = Maps(
 )  # create a map in a pseudo-mercator (epsg 3857) projection
 m.add_feature.preset.ocean(fc="lightsteelblue")
 m.add_feature.preset.coastline(lw=0.25)
-m.set_data(data=data, x="lon", y="lat", in_crs=4326)
-
-# --------- set the appearance of the plot
-m.set_plot_specs(
-    label="some parameter",  # set the label of the colorbar
-    cmap="RdYlBu",  # set the colormap
-    histbins="bins",  # use the histogram-bins as set by the classification scheme
-    vmin=35,  # set all values below vmin to vmin
-    vmax=60,  # set all values above vmax to vmax
-    cpos="c",  # the pixel-coordinates represent the "center-position"
-    cpos_radius=None,  # radius (in in_crs) to shift the center-position if "cpos" is not "c"
-    alpha=0.75,  # add some transparency
-    density=True,  # make the histogram values represent the "probability-density"
+m.set_data(
+    data=data,
+    x="lon",
+    y="lat",
+    in_crs=4326,
+    cpos="c",  # pixel-coordinates represent "center-position" (default)
+    cpos_radius=None,  # radius to shift the center-position if "cpos" is not "c"
 )
+
 m.ax.set_title("What a nice figure")
 m.set_shape.geod_circles(radius=30000)  # plot geodesic-circles with 30 km radius
 
@@ -40,11 +35,16 @@ m.set_classify_specs(
 )
 
 m.plot_map(
-    edgecolor="k", linewidth=0.5
+    edgecolor="k",  # give shapes a black edgecolor
+    linewidth=0.5,  # ... with a linewidth of 0.5
+    cmap="RdYlBu",  # use a red-yellow-blue colormap
+    vmin=35,  # map colors to values above 35
+    vmax=60,  # map colors to values below 60
+    alpha=0.75,  # add some transparency
 )  # pass some additional arguments to the plotted collection
 
 # ------------------ add a colorbar and change it's appearance
-m.add_colorbar()
+m.add_colorbar(histbins="bins", label="some parameter", density=True)
 _ = m.figure.ax_cb_plot.set_ylabel("The Y label")  # add a y-label to the histogram
 
 m.subplots_adjust(

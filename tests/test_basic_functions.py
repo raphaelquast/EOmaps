@@ -34,13 +34,8 @@ class TestBasicPlotting(unittest.TestCase):
         m = Maps()
         m.add_feature.preset.ocean()
         m.add_feature.preset.coastline()
-        m.set_data_specs(data=self.data, x="x", y="y", crs=3857)
-        m.set_plot_specs(
-            label="bsdf",
-            histbins=100,
-            density=True,
-            cpos="ur",
-            cpos_radius=1,
+        m.set_data_specs(
+            data=self.data, x="x", y="y", crs=3857, cpos="ur", cpos_radius=1
         )
         m.plot_map()
         m.indicate_extent(20, 10, 60, 76, crs=4326, fc="r", ec="k", alpha=0.5)
@@ -137,11 +132,11 @@ class TestBasicPlotting(unittest.TestCase):
         m.set_data_specs(self.data, x="x", y="y", in_crs=3857)
 
         for cpos, color in zip(["ul", "ur", "ll", "lr", "c"], "rgbcm"):
-            m.set_plot_specs(
+            m.set_data_specs(
                 cpos_radius=m.shape.radius[0] / 2,
                 cpos=cpos,
             )
-            m.plot_map(fc="none", ec=color)
+            m.plot_map(fc="none", ec=color, lw=0.5 if cpos != "c" else 2)
 
         plt.close(m.figure.f)
 
@@ -149,11 +144,10 @@ class TestBasicPlotting(unittest.TestCase):
         m = Maps(4326)
         m.data = self.data
         m.set_data_specs(x="x", y="y", in_crs=3857)
-        m.set_plot_specs(alpha=0.4)
         m.set_shape.rectangles()
         m.set_classify_specs(scheme="Percentiles", pct=[0.1, 0.2])
 
-        m.plot_map()
+        m.plot_map(alpha=0.4)
 
         plt.close(m.figure.f)
 
@@ -348,7 +342,6 @@ class TestBasicPlotting(unittest.TestCase):
         m = Maps(3857)
         m.data = self.data
         m.set_data_specs(x="x", y="y", in_crs=3857)
-        m.set_plot_specs(label="asdf")
 
         m.set_classify_specs(scheme="Quantiles", k=5)
 
@@ -358,15 +351,6 @@ class TestBasicPlotting(unittest.TestCase):
             m2.data_specs[["x", "y", "parameter", "crs"]]
             == {"x": "lon", "y": "lat", "parameter": None, "in_crs": 4326}
         )
-        self.assertTrue(
-            all(
-                [
-                    [i == j]
-                    for i, j in zip(m.plot_specs, m2.plot_specs)
-                    if i[0] != "cmap"
-                ]
-            )
-        )
         self.assertTrue([*m.classify_specs] == [*m2.classify_specs])
         self.assertTrue(m2.data == None)
 
@@ -375,15 +359,6 @@ class TestBasicPlotting(unittest.TestCase):
         self.assertTrue(
             m.data_specs[["x", "y", "parameter", "crs"]]
             == m3.data_specs[["x", "y", "parameter", "crs"]]
-        )
-        self.assertTrue(
-            all(
-                [
-                    [i == j]
-                    for i, j in zip(m.plot_specs, m3.plot_specs)
-                    if i[0] != "cmap"
-                ]
-            )
         )
         self.assertTrue([*m.classify_specs] == [*m3.classify_specs])
         self.assertFalse(m3.data is m.data)
@@ -452,13 +427,16 @@ class TestBasicPlotting(unittest.TestCase):
 
         m = Maps(gs_ax=gs[0, 0])
         m.set_data_specs(data=self.data, x="x", y="y", in_crs=3857)
-        m.set_plot_specs(histbins=5)
         m.plot_map()
         cb1 = m.add_colorbar(gs[1, 0], orientation="horizontal")
         cb2 = m.add_colorbar(gs[0, 1], orientation="vertical")
 
         cb3 = m.add_colorbar(
-            gs[1, 1], orientation="horizontal", density=True, label="naseawas"
+            gs[1, 1],
+            orientation="horizontal",
+            density=True,
+            label="naseawas",
+            histbins=5,
         )
         m.figure.set_colorbar_position(cb=cb1, ratio=10)
         m.figure.set_colorbar_position(cb=cb2, ratio=20)
@@ -468,15 +446,16 @@ class TestBasicPlotting(unittest.TestCase):
 
     def test_MapsGrid(self):
         mg = MapsGrid(2, 2, crs=4326)
-        mg.set_data(data=self.data, x="x", y="y", in_crs=3857)
-        mg.set_plot_specs(label="bsdf")
+        mg.set_data(
+            data=self.data, x="x", y="y", in_crs=3857, encoding=dict(scale_factor=1e-7)
+        )
         mg.set_classify_specs(scheme=Maps.CLASSIFIERS.EqualInterval, k=4)
         mg.set_shape.rectangles()
         mg.plot_map()
 
         mg.add_annotation(ID=520)
         mg.add_marker(ID=5, fc="r", radius=10, radius_crs=4326)
-
+        mg.add_colorbar()
         self.assertTrue(mg.m_0_0 is mg[0, 0])
         self.assertTrue(mg.m_0_1 is mg[0, 1])
         self.assertTrue(mg.m_1_0 is mg[1, 0])
@@ -494,7 +473,6 @@ class TestBasicPlotting(unittest.TestCase):
         )
 
         mg.set_data(data=self.data, x="x", y="y", in_crs=3857)
-        mg.set_plot_specs(label="bsdf")
         mg.set_classify_specs(scheme=Maps.CLASSIFIERS.EqualInterval, k=4)
 
         for m in mg:
@@ -662,9 +640,13 @@ class TestBasicPlotting(unittest.TestCase):
         ]
 
         mgrid = MapsGrid(3, 4, crs=crs, figsize=(12, 10))
-        mgrid.parent.set_data(data=df.sample(2000), x="lon", y="lat", crs=4326)
-        for m in mgrid.children:
-            m.set_data(**mgrid.parent.data_specs)
+        mgrid.set_data(
+            data=df.sample(2000),
+            x="lon",
+            y="lat",
+            crs=4326,
+            encoding=dict(scale_factor=1e-6),
+        )
 
         for i, m, title in zip(
             (

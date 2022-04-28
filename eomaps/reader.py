@@ -527,7 +527,6 @@ def _from_file(
     data,
     crs=None,
     shape=None,
-    plot_specs=None,
     classify_specs=None,
     val_transform=None,
     coastline=True,
@@ -550,9 +549,8 @@ def _from_file(
 
         >>> m = Maps(crs=..., layer=...)
         >>> m.set_data(**m.read_GeoTIFF(...))
-        >>> m.set_plot_specs(...)
         >>> m.set_classify_specs(...)
-        >>> m.plot_map(...)
+        >>> m.plot_map(**kwargs)
 
     Parameters
     ----------
@@ -567,9 +565,6 @@ def _from_file(
         The default is {"band": 0}.
     isel : dict, optional
         A dict of keyword-arguments passed to `xarray.Dataset.isel()`.
-        The default is None.
-    plot_specs : dict, optional
-        A dict of keyword-arguments passed to `m.set_plot_specs()`.
         The default is None.
     classify_specs : dict, optional
         A dict of keyword-arguments passed to `m.set_classify_specs()`.
@@ -607,7 +602,6 @@ def _from_file(
 
         m = parent.new_layer(
             copy_data_specs=False,
-            copy_plot_specs=False,
             copy_classify_specs=False,
             copy_shape=False,
             layer=layer,
@@ -634,14 +628,7 @@ def _from_file(
     if coastline:
         m.add_feature.preset.coastline()
 
-    kwkeys = list(kwargs)
-    for key in kwkeys:
-        if key in m.plot_specs.keys():
-            m.plot_specs[key] = kwargs.pop(key)
-
     m.set_data(**data)
-    if plot_specs:
-        m.set_plot_specs(**plot_specs)
     if classify_specs:
         m.set_classify_specs(**classify_specs)
 
@@ -679,7 +666,6 @@ class from_file:
         isel=None,
         plot_crs=None,
         shape=None,
-        plot_specs=None,
         classify_specs=None,
         val_transform=None,
         coastline=True,
@@ -700,9 +686,8 @@ class from_file:
 
         >>> m = Maps(crs=...)
         >>> m.set_data(**m.read_file.NetCDF(...))
-        >>> m.set_plot_specs(...)
         >>> m.set_classify_specs(...)
-        >>> m.plot_map(...)
+        >>> m.plot_map(**kwargs)
 
         Parameters
         ----------
@@ -753,9 +738,6 @@ class from_file:
 
               >>> dict(shape="rectangles", radius=1, radius_crs=.5)
 
-        plot_specs : dict, optional
-            A dict of keyword-arguments passed to `m.set_plot_specs()`.
-            The default is None.
         classify_specs : dict, optional
             A dict of keyword-arguments passed to `m.set_classify_specs()`.
             The default is None.
@@ -845,7 +827,6 @@ class from_file:
             data,
             crs=plot_crs,
             shape=shape,
-            plot_specs=plot_specs,
             classify_specs=classify_specs,
             val_transform=val_transform,
             coastline=coastline,
@@ -861,7 +842,6 @@ class from_file:
         isel=None,
         plot_crs=None,
         shape=None,
-        plot_specs=None,
         classify_specs=None,
         val_transform=None,
         coastline=True,
@@ -882,9 +862,8 @@ class from_file:
 
         >>> m = Maps(crs=...)
         >>> m.set_data(**m.read_file.GeoTIFF(...))
-        >>> m.set_plot_specs(...)
         >>> m.set_classify_specs(...)
-        >>> m.plot_map(...)
+        >>> m.plot_map(**kwargs)
 
         Parameters
         ----------
@@ -923,9 +902,6 @@ class from_file:
 
               >>> dict(shape="rectangles", radius=1, radius_crs=.5)
 
-        plot_specs : dict, optional
-            A dict of keyword-arguments passed to `m.set_plot_specs()`.
-            The default is None.
         classify_specs : dict, optional
             A dict of keyword-arguments passed to `m.set_classify_specs()`.
             The default is None.
@@ -1011,7 +987,6 @@ class from_file:
             data,
             crs=plot_crs,
             shape=shape,
-            plot_specs=plot_specs,
             classify_specs=classify_specs,
             val_transform=val_transform,
             coastline=coastline,
@@ -1027,7 +1002,6 @@ class from_file:
         data_crs=None,
         plot_crs=None,
         shape=None,
-        plot_specs=None,
         classify_specs=None,
         val_transform=None,
         coastline=True,
@@ -1047,9 +1021,8 @@ class from_file:
 
         >>> m = Maps(crs=...)
         >>> m.set_data(**m.read_file.CSV(...))
-        >>> m.set_plot_specs(...)
         >>> m.set_classify_specs(...)
-        >>> m.plot_map(...)
+        >>> m.plot_map(**kwargs)
 
 
         Parameters
@@ -1077,9 +1050,6 @@ class from_file:
 
               >>> dict(shape="rectangles", radius=1, radius_crs=.5)
 
-        plot_specs : dict, optional
-            A dict of keyword-arguments passed to `m.set_plot_specs()`.
-            The default is None.
         classify_specs : dict, optional
             A dict of keyword-arguments passed to `m.set_classify_specs()`.
             The default is None.
@@ -1115,7 +1085,6 @@ class from_file:
             data,
             crs=plot_crs,
             shape=shape,
-            plot_specs=plot_specs,
             classify_specs=classify_specs,
             val_transform=val_transform,
             coastline=coastline,
