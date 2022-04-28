@@ -142,7 +142,7 @@ class shapes(object):
         if radius_crs == "in":
             if (
                 isinstance(m.data_specs.x, (list, tuple, np.ndarray))
-                and len(m.data_specs.x.shape) == 2
+                and len(np.asanyarray(m.data_specs.x.shape)) == 2
             ):
                 radiusx = np.nanmedian(
                     np.diff(m._props["xorig"].reshape(m.data_specs.x.shape), axis=1)
@@ -176,7 +176,7 @@ class shapes(object):
         elif radius_crs == "out":
             if (
                 isinstance(m.data_specs.x, (list, tuple, np.ndarray))
-                and len(m.data_specs.x.shape) == 2
+                and len(np.asanyarray(m.data_specs.x.shape)) == 2
             ):
                 radiusx = np.nanmedian(np.diff(m._props["x0"]))
                 radiusy = np.nanmedian(np.diff(m._props["y0"]))
