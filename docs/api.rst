@@ -30,39 +30,38 @@ Possible ways for specifying the crs for plotting are:
   (``Maps.CRS`` is just an accessor for ``cartopy.crs``)
 
 ▤ Layers
-++++++++
+~~~~~~~~~
 
 | Each ``Maps`` object represents an individual plot-layer of the map.
 | Once you have created your first ``Maps`` object, you can create **additional layers on the same map** by using:
 
 .. code-block:: python
 
-    m = Maps()    # same as `m = Maps(layer=0)`
+    m = Maps()                           # same as `m = Maps(layer=0)`
+    m2 = m.new_layer()                   # "m2" is just another Maps-object on the same layer as "m"!
 
-    # create a new layer
-    m2 = m.new_layer(layer="ocean")
-    # the ocean will only be visible if the "ocean" layer is visible.
-    m2.add_feature.preset.ocean()
+    m_ocean = m.new_layer(layer="ocean") # create a new layer named "ocean"
+    m_ocean.add_feature.preset.ocean()   # features on this layer will only be visible if the "ocean" layer is visible!
+    m.show_layer("ocean")                # show the "ocean" layer
 
-    # to add a feature to all layers, use `m.all`
-    m.all.add_feature.preset.coastline()
+    m.all.add_feature.preset.coastline() # to add a feature to all layers, simply add it to the `all` layer with `m.all...`
 
-    # show the "ocean" layer
-    m.show_layer("ocean")
+    m.util.layer_selector()              # get a utility widget to simplify switching between existing layers
 
-- ``m2`` and ``m.all`` are just ordinary ``Maps`` objects that share the figure and plot-axes with ``m``
+- ``m2``, ``m_ocean`` and ``m.all`` are just ordinary ``Maps`` objects that share the figure and plot-axes with ``m``
 - If you don't provide an explicit layer name, the new Maps-object will use the same layer as its parent!
   (you can have multiple ``Maps`` objects on the same layer!)
 
 
-.. note::
+.. admonition:: Map-features and colorbars are layer-sensitive!
+
     Features, datasets, colormaps etc. added to a ``Maps`` object are only visible if the associated layer is visible!
-    To manually switch between layers, use ``m.show_layer("the layer name")``, call ``m2.show()`` or have a look at the :ref:`utility`.
+    To manually switch between layers, use ``m.show_layer("the layer name")``, call ``m.show()`` or have a look at the :ref:`utility`.
 
-.. note::
+.. admonition:: The "all" layer
 
-    There is one layer-name that has a special meaning... the ``"all"`` layer.
-    Any callbacks, features or plots added to this layer will be **executed on all other layers** as well!
+    | There is one layer-name that has a special meaning... the ``"all"`` layer.
+    | Any callbacks, features or plots added to this layer will be **executed on all other layers** as well!
 
     You can add features and callbacks to the ``all`` layer via:
     - using the shortcut ``m.all. ...``
@@ -87,29 +86,34 @@ Possible ways for specifying the crs for plotting are:
 🔵 Setting the data and plot-shape
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-To assign a dataset to a ``Maps`` object, use ``m.set_data``.
+To assign a dataset to a ``Maps`` object, use ``m.set_data(...)``.
 The shapes that are used to represent the data-points are then assigned via ``m.set_shape``.
 
-.. note::
+.. admonition:: What's used by default?
 
-    By default, the plot-shape is assigned based on the associated dataset!
-    - For >500k pixels, ``m.set_shape.ellipses()`` is used.
-    - For larger datasets ``m.set_shape.shade_raster`` is used.
+    By default, the plot-shape is assigned based on the associated dataset.
+
+    - For datasets with less than 500 000 pixels, ``m.set_shape.ellipses()`` is used.
+    - | For larger 2D datasets ``m.set_shape.shade_raster()`` is used
+      | ... and ``m.set_shape.shade_points()`` is used for the rest.
 
 .. code-block:: python
 
-    m = Maps()
-    m.add_feature.preset.ocean()           # add ocean-colors to the default layer (=0)
-    m.all.add_feature.preset.coastline()   # add coastlines to ALL layers
+    m = Maps()                                # create a Maps-object
+    m.set_data(data1, x, y, crs, ...)         # assign some data to the Maps-object
+    m.set_shape.geod_circles(radius=1000,     # draw geodetic circles with 1km radius
+                             n=100)           # use 100 intermediate points to represent the shape
 
-    m2 = m.new_layer("data")
-    m2.set_data(data, xcoord, ycoord, parameter)
-    m2.set_shape.rectangles(radius=1, radius_crs=4326)
-    m2.plot_map()
+    m.plot_map()                              # plot the data
 
-    m3 = m.new_layer("another layer")
-    m3.set_data(...)
-    ...
+    m2 = m.new_layer()                        # create a new Maps-object on the same layer
+    m2.set_data(data, x, y, crs, ...)         # assign another dataset to the new Maps object
+    m2.set_shape.rectangles(radius=1,         # represent the datapoints as 1x1 degree rectangles
+                            radius_crs=4326)
+    m2.plot_map()                             # plot the data
+
+    m3 = m.new_layer("data")                  # create a new layer named "data"
+    ...                                       # ...
 
 .. currentmodule:: eomaps
 
@@ -133,11 +137,13 @@ Possible shapes that work nicely for datasets with up to 1M data-points:
     geod_circles
     ellipses
     rectangles
-    voroni_diagram
+    voronoi_diagram
     delaunay_triangulation
+    raster
 
-For extremely large datasets (>1M datapoints), it is recommended to use
-"shading" instead of representing each data-point with a projected polygon.
+While ``raster`` still works nicely for large datasets , for extremely large datasets
+(several million datapoints), it is recommended to use "shading" instead of representing
+each data-point with a projected polygon.
 
 Possible shapes that can be used to quickly generate a plot for millions of datapoints are:
 
@@ -149,8 +155,8 @@ Possible shapes that can be used to quickly generate a plot for millions of data
     shade_points
     shade_raster
 
-If shading is used, a dynamic averaging of the data based on the screen-resolution
-is performed (resampling based on the mean-value is used by default).
+If shading is used, a dynamic averaging of the data based on the screen-resolution and the
+currently visible plot-extent is performed (resampling based on the mean-value is used by default).
 
 .. note::
 
@@ -158,37 +164,99 @@ is performed (resampling based on the mean-value is used by default).
     You can install it via:
     ``conda install -c conda-forge datashader``
 
+To get an overview of the existing shapes and their main use-cases, here's a simple decision-tree:
+
+.. image:: _static/shapes_decision_tree.png
+
 .. image:: _static/minigifs/plot_shapes.gif
 
 
 🌍 Customizing the plot
 ~~~~~~~~~~~~~~~~~~~~~~~
 
-Some general specifications for the appearance of the plot can be adjusted by setting the ``plot_specs`` of the Maps object:
+All arguments to customize the appearance of a dataset are passed to ``m.plot_map(...)``.
+
+In general, the colors assigned to the shapes are specified by selecting a colormap (``cmap``)
+and (optionally) setting appropriate limits via ``vmin`` and ``vmax``.
+
+- ``cmap`` can be specified as (see `matplotlib-docs <https://matplotlib.org/stable/tutorials/colors/colormaps.html>`_ for more details):
+
+  - a name of a pre-defined ``matplotlib`` colormap (e.g. ``"viridis"``, ``"RdYlBu"`` etc.)
+  - or a general ``matplotlib`` colormap object
+
+- ``vmin`` and ``vmax`` set the range of data-values that are mapped
+
+  - (Any values outside this range will get the colormaps ``over`` and ``under`` colors assigned.)
+
 
 .. code-block:: python
-
     m = Maps()
     m.set_data(...)
-    m.set_plot_specs(cmap="RdBu", vmin=0.1, vmax=0.5, histbins=20, alpha=0.75)
-    m.plot_specs.alpha = 0.5 # alternative way for setting plot-specs
+    m.plot_map(cmap="viridis", vmin=0, vmax=1)
 
-.. currentmodule:: eomaps
+------
 
-.. autosummary::
-    :toctree: generated
-    :nosignatures:
-    :template: only_names_in_toc.rst
+The colors of shapes can also be set **manually** by providing one of the following arguments to ``m.plot_map(...)``:
 
-    Maps.set_plot_specs
-    Maps.subplots_adjust
+- to set both **facecolor** AND **edgecolor** use ``color=...``
+- to set the **facecolor** use ``fc=...`` or ``facecolor=...``
+- to set the **edgecolor** use ``ec=...`` or ``edgecolor=...``
 
-To adjust the margins of the subplots, use ``m.subplots_adjust``, e.g.:
+.. note::
+
+    - Manual color specifications do NOT work with the ``shade`` shapes!
+    - Providing manual colors will override the colors assigned by the ``cmap``!
+    - The ``colorbar`` will NOT represent manually defined colors!
+
+
+Uniform colors
+**************
+
+To apply a uniform color to all datapoints, you can use matpltolib's color-names or pass an RGB or RGBA tuple.
 
 .. code-block:: python
 
-    m = Maps()
-    m.subplots_adjust(left=0.1, right=0.9, bottom=0.05, top=0.95)
+    m.plot_map(fc="r")
+    m.plot_map(fc="orange")
+    m.plot_map(fc=(1, 0, 0.5))
+    m.plot_map(fc=(1, 0, 0.5, .25))
+    # for grayscale use a string of a number between 0 and 1
+    m.plot_map(fc="0.3")
+
+
+Explicit colors
+***************
+
+To explicitly color each datapoint with a pre-defined color, simply provide a list or array of the aforementioned types.
+
+.. code-block:: python
+
+    m.plot_map(fc=["r", "g", "orange"])
+    # for grayscale use a string of a number between 0 and 1
+    m.plot_map(fc=[".1", ".2", "0.3"])
+    # or use RGB / RGBA tuples
+    m.plot_map(fc=[(1, 0, 0.5), (.3, .4, .5), (1, 1, 0)])
+    m.plot_map(fc=[(1, 0, 0.5, .25), (1, 0, 0.5, .75), (.1, .2, 0.5, .5)])
+
+
+RGB composites
+**************
+
+To create an RGB or RGBA composite from 3 (or 4) datasets, pass the datasets as tuple:
+- the datasets must have the same size as the coordinate arrays!
+- the datasets must be scaled between 0 and 1
+
+.. code-block:: python
+
+    # if you pass a tuple of 3 or 4 arrays, they will be used to set the
+    # RGB (or RGBA) colors of the shapes
+    m.plot_map(fc=(<R-array>, <G-array>, <B-array>))
+    m.plot_map(fc=(<R-array>, <G-array>, <B-array>, <A-array>))
+
+    # you can fix individual color channels by passing a list with 1 element
+    m.plot_map(fc=(<R-array>, [0.12345], <B-array>, <A-array>))
+
+
 
 📊 Data classification
 ~~~~~~~~~~~~~~~~~~~~~~~
@@ -259,7 +327,24 @@ Some useful arguments that are supported by most shapes (except "shade"-shapes) 
     m2 = m.new_layer("a data layer")
     m2.set_data(...)
     ...
-    m2.plot_map(fc="none", ec="g", lw=2, alpha=0.5)
+    m2.plot_map(cmap="viridis", ec="g", lw=2, alpha=0.5)
+
+
+To adjust the margins of the subplots, use ``m.subplots_adjust``, e.g.:
+
+.. code-block:: python
+
+    m = Maps()
+    m.subplots_adjust(left=0.1, right=0.9, bottom=0.05, top=0.95)
+
+.. currentmodule:: eomaps
+
+.. autosummary::
+    :toctree: generated
+    :nosignatures:
+    :template: only_names_in_toc.rst
+
+    Maps.subplots_adjust
 
 
 You can then continue to add :ref:`colorbar`, :ref:`annotations_and_markers`,
@@ -395,7 +480,6 @@ The individual ``Maps``-objects and ``matpltolib-Axes`` are then accessible via:
     MapsGrid.share_click_events
     MapsGrid.share_pick_events
     MapsGrid.set_data_specs
-    MapsGrid.set_plot_specs
     MapsGrid.set_classify_specs
     MapsGrid.add_wms
     MapsGrid.add_feature
@@ -457,12 +541,11 @@ functions and attach them to the map.
 |                                                                                   |                                                  |
 |     m = Maps(Maps.CRS.Orthographic())                                             |                                                  |
 |     m.all.add_feature.preset.coastline()                                          |                                                  |
-|     m.set_data(data=x+y**2, xcoord=x, ycoord=y, crs=4326)                         |                                                  |
+|     m.set_data(data=x+y**2, x=x, y=y, crs=4326)                                   |                                                  |
 |     m.plot_map(pick_distance=10)                                                  |                                                  |
 |                                                                                   |                                                  |
 |     m2 = m.new_layer(copy_data_specs=True, layer="second_layer")                  |                                                  |
-|     m2.set_plot_specs(cmap="tab10")                                               |                                                  |
-|     m2.plot_map()                                                                 |                                                  |
+|     m2.plot_map(cmap="tab10")                                                     |                                                  |
 |                                                                                   |                                                  |
 |     # get an annotation if you RIGHT-click anywhere on the map                    |                                                  |
 |     m.cb.click.attach.annotate(xytext=(-60, -60),                                 |                                                  |
@@ -1090,7 +1173,7 @@ To indicate rectangular areas in any given crs, simply use ``m.indicate_extent``
     |                                                                    |                                          |
     |   m = Maps()                                                       |                                          |
     |   m.add_feature.preset.coastline()                                 |                                          |
-    |   m.set_data(data=x+y, xcoord=x, ycoord=y, crs=4326)               |                                          |
+    |   m.set_data(data=x+y, x=x, y=y, crs=4326)                         |                                          |
     |   m.set_classify_specs(scheme=Maps.CLASSIFIERS.EqualInterval, k=5) |                                          |
     |   m.plot_map()                                                     |                                          |
     |   m.add_colorbar(label="what a nice colorbar", histbins="bins")    |                                          |
@@ -1119,7 +1202,7 @@ distribution of the shaded pixels within the current field of view by setting ``
     |                                                                    |                                                  |
     |   m = Maps()                                                       |                                                  |
     |   m.add_feature.preset.coastline()                                 |                                                  |
-    |   m.set_data(data=x+y, xcoord=x, ycoord=y, crs=4326)               |                                                  |
+    |   m.set_data(data=x+y, x=x, y=y, crs=4326)                         |                                                  |
     |   m.set_shape.shade_raster()                                       |                                                  |
     |   m.plot_map()                                                     |                                                  |
     |   m.add_colorbar(dynamic_shade_indicator=True, histbins=20)        |                                                  |
@@ -1357,7 +1440,7 @@ Initialize Maps-objects from a file
     m = Maps.from_file.GeoTIFF(
         "the filepath",
         classify_specs=dict(Maps.CLASSFIERS.Quantiles, k=10),
-        plot_specs=dict(cmap="RdBu")
+        cmap="RdBu"
         )
     m.add_colorbar()
     m.cb.pick.attach.annotate()
@@ -1390,7 +1473,7 @@ Similar to ``Maps.from_file``, a new layer based on a file can be added to an ex
         data_crs=4326,
         isel=dict(time=123),
         classify_specs=dict(Maps.CLASSFIERS.Quantiles, k=10),
-        plot_specs=dict(cmap="RdBu")
+        cmap="RdBu"
         )
 
 .. currentmodule:: eomaps

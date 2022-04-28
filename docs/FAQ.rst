@@ -1,7 +1,10 @@
 👀 FAQ
 =======
 
-🕷 Using EOmaps with the Spyder IDE
+Configuring the editor (IDE)
+****************************
+
+🕷 Spyder IDE
 -----------------------------------
 
 To use the whole potential of EOmaps with the awesome `Spyder IDE <https://www.spyder-ide.org>`_  ,
@@ -13,7 +16,7 @@ the plot-settings must be adjusted to ensure that ``matplotlib`` plots remain in
 .. image:: _static/spyder_preferences.png
 
 
-🗖 Using EOmaps with the PyCharm IDE
+🗖 PyCharm IDE
 ------------------------------------
 
 The `PyCharm IDE <https://www.jetbrains.com/pycharm/>`_  automatically registers its own matplotlib backend
@@ -43,7 +46,7 @@ in the **Python Scientific** preferences since it forces plots to be rendered as
 .. image:: _static/pycharm_preferences_2.png
 
 
-📓 Using EOmaps with Jupyter Notebooks
+📓 Jupyter Notebooks
 --------------------------------------
 
 While EOmaps works best with matplotlib's ``Qt5Agg`` backend, most of the functionalities work
