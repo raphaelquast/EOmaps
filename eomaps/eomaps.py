@@ -2971,7 +2971,17 @@ class Maps(object):
             self._memmap_props(dir=memmap)
 
         if hasattr(self, "_data_mask") and not np.all(self._data_mask):
-            print("EOmaps: Warning: some datapoints could not be drawn! \n")
+            print("EOmaps: Warning: some datapoints could not be drawn!")
+
+        x0, y0, x1, y1 = self.crs_plot.boundary.bounds
+
+        if (
+            np.any(self._props["x0"] < x0)
+            or np.any(self._props["x0"] > x1)
+            or np.any(self._props["y0"] < y0)
+            or np.any(self._props["y0"] > y1)
+        ):
+            print("EOmaps: Warning: some points are outside the CRS bounds!")
 
     def _remove_colorbar(self):
         if hasattr(self, "_ax_cb"):
