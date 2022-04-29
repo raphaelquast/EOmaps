@@ -597,31 +597,42 @@ class shapes(object):
                     t_radius_plot.transform(xs, ys), copy=False
                 )
 
-            # mask coordinates that are in another halfspace than their center
-            # (required for proper longitude wrapping)
-            # TODO this still needs some adjustments!
-            x0, _, x1, _ = self._m.ax.projection.boundary.bounds
-            xc = (x0 + x1) / 2
+            # ------------------------- implement some kind of "wraparound"
 
-            def getQ(x, xs, xc):
-                quadrants, pts_quadrants = np.full_like(x, -1), np.full_like(xs, -1)
+            # check if any points are in different halfspaces with respect to x
+            # and if so, mask the ones in the wrong halfspace
+            # (required for proper longitude wrapping)
+            # TODO this might be a lot easier (and faster) to implement!
+
+            xc = 0  # the center-point (e.g. (-180 + 180)/2 = 0 )
+
+            def getQ(x, xc):
+                quadrants = np.full_like(x, -1)
 
                 quadrant = x < xc
-                quadrants[quadrant] = 1
-                pts_quadrant = xs < xc
-                pts_quadrants[pts_quadrant] = 1
-
+                quadrants[quadrant] = 0
                 quadrant = x > xc
-                quadrants[quadrant] = 2
-                pts_quadrant = xs > xc
-                pts_quadrants[pts_quadrant] = 2
+                quadrants[quadrant] = 1
 
-                return quadrants, pts_quadrants
+                return quadrants
 
-            quadrants, pts_quadrants = getQ(x, xs, xc)
+            t_in_lonlat = shapes.get_transformer(
+                CRS.from_user_input(self._m.get_crs(crs)), 4326
+            )
+            t_plot_lonlat = shapes.get_transformer(
+                CRS.from_user_input(self._m.crs_plot), 4326
+            )
 
+            # transform the coordinates to lon/lat
+            xp, _ = t_in_lonlat.transform(x, y)
+            xsp, _ = t_plot_lonlat.transform(xs, ys)
+
+            quadrants, pts_quadrants = getQ(xp, xc), getQ(xsp, xc)
+
+            # mask any point that is in a different quadrant than the center point
             maskx = pts_quadrants != quadrants[:, np.newaxis]
-            maskx = maskx & (np.broadcast_to((x != xc)[:, np.newaxis], xs.shape))
+            # take care of points that are on the center line (e.g. don't mask them)
+            maskx = maskx & (np.broadcast_to((xp != xc)[:, np.newaxis], xs.shape))
 
             xs.mask = xs.mask | maskx
             ys.mask = xs.mask
@@ -635,9 +646,17 @@ class shapes(object):
                 x, y, crs, self.radius, self.radius_crs, n=self.n
             )
 
-            verts = np.ma.stack((xs, ys)).T.swapaxes(0, 1)
-            color_and_array = shapes._get_colors_and_array(kwargs, mask)
+            # compress the coordinates (masked arrays produce artefacts on the boundary
+            # in case intermediate points are masked)
+            verts = (
+                np.column_stack((x.compressed(), y.compressed()))
+                for i, (x, y) in enumerate(zip(xs, ys))
+                if mask[i]
+            )
 
+            # verts = np.ma.stack((xs, ys)).T.swapaxes(0, 1)
+
+            color_and_array = shapes._get_colors_and_array(kwargs, mask)
             # remember masked points
             self._m._data_mask = mask
 
@@ -647,6 +666,7 @@ class shapes(object):
                 **color_and_array,
                 **kwargs,
             )
+
             return coll
 
     class _rectangles(object):
