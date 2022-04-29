@@ -272,7 +272,6 @@ class shapes(object):
     @lru_cache()
     def get_transformer(in_crs, out_crs):
         # cache transformers to avoid re-initialization for each feature
-        print("getting...")
         t = Transformer.from_crs(in_crs, out_crs, always_xy=True)
         return t
 
