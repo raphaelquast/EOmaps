@@ -3512,17 +3512,19 @@ class Maps(object):
             print("EOmaps: There are no masked points to indicate!")
             return
 
-        if len(self._props["z_data"][~self._data_mask]) == 0:
+        mask = np.broadcast_to(self._data_mask, self._props["z_data"].shape)
+
+        if len(self._props["z_data"][~mask]) == 0:
             print("EOmaps: There are no masked points to indicate!")
             return
 
         kwargs.setdefault("ec", "r")
 
         self.ax.scatter(
-            self._props["x0"][~self._data_mask],
-            self._props["y0"][~self._data_mask],
+            self._props["x0"][~mask],
+            self._props["y0"][~mask],
             cmap=self.classify_specs._cbcmap,
-            c=self._props["z_data"][~self._data_mask],
+            c=self._props["z_data"][~mask],
             **kwargs,
         )
 
