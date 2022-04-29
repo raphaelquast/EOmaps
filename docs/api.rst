@@ -243,6 +243,7 @@ RGB composites
 **************
 
 To create an RGB or RGBA composite from 3 (or 4) datasets, pass the datasets as tuple:
+
 - the datasets must have the same size as the coordinate arrays!
 - the datasets must be scaled between 0 and 1
 
@@ -877,11 +878,11 @@ The general call-signature is:
     gdf = m.add_feature.< CATEGORY >.< FEATURE >.get_gdf()
 
 Where ``< CATEGORY >`` specifies the resolution and general category of the feature, e.g.:
-- cultural_10m, cultural_50m, cultural_110m
-- physical_10m, physical_50m, physical_110m
-- preset
 
-The most commonly used features are available as preset-layers:
+- ``cultural_10m``, ``cultural_50m``, ``cultural_110m``: cultural features (e.g. countries, states etc.)
+- ``physical_10m``, ``physical_50m``, ``physical_110m``: physical features (e.g. coastline, land, ocean etc.)
+
+The most commonly used features are available under the ``preset`` category:
 
 .. currentmodule:: eomaps._containers._NaturalEarth_presets
 
