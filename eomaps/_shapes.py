@@ -144,11 +144,17 @@ class shapes(object):
                 isinstance(m.data_specs.x, np.ndarray)
                 and len(m.data_specs.x.shape) == 2
             ):
-                radiusx = np.nanmedian(
-                    np.diff(m._props["xorig"].reshape(m.data_specs.x.shape), axis=1)
+                radiusx = (
+                    np.nanmedian(
+                        np.diff(m._props["xorig"].reshape(m.data_specs.x.shape), axis=1)
+                    )
+                    / 2
                 )
-                radiusy = np.nanmedian(
-                    np.diff(m._props["yorig"].reshape(m.data_specs.y.shape), axis=0)
+                radiusy = (
+                    np.nanmedian(
+                        np.diff(m._props["yorig"].reshape(m.data_specs.y.shape), axis=0)
+                    )
+                    / 2
                 )
             else:
                 from scipy.spatial import cKDTree
@@ -178,8 +184,18 @@ class shapes(object):
                 isinstance(m.data_specs.x, np.ndarray)
                 and len(m.data_specs.x.shape) == 2
             ):
-                radiusx = np.nanmedian(np.diff(m._props["x0"]))
-                radiusy = np.nanmedian(np.diff(m._props["y0"]))
+                radiusx = (
+                    np.nanmedian(
+                        np.diff(m._props["x0"].reshape(m.data_specs.x.shape), axis=1)
+                    )
+                    / 2
+                )
+                radiusy = (
+                    np.nanmedian(
+                        np.diff(m._props["y0"].reshape(m.data_specs.y.shape), axis=0)
+                    )
+                    / 2
+                )
             else:
                 from scipy.spatial import cKDTree
 
