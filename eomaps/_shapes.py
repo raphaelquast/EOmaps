@@ -3,7 +3,7 @@ from matplotlib.tri import TriMesh, Triangulation
 import numpy as np
 
 from pyproj import CRS, Transformer
-from functools import partial, wraps
+from functools import partial, wraps, lru_cache
 import warnings
 
 
@@ -268,6 +268,14 @@ class shapes(object):
             color = np.asanyarray(color).reshape(*mask.shape, -1)[mask].squeeze()
         return {c_key: color, "array": array}
 
+    @staticmethod
+    @lru_cache()
+    def get_transformer(in_crs, out_crs):
+        # cache transformers to avoid re-initialization for each feature
+        print("getting...")
+        t = Transformer.from_crs(in_crs, out_crs, always_xy=True)
+        return t
+
     class _geod_circles(object):
         name = "geod_circles"
 
@@ -384,16 +392,12 @@ class shapes(object):
             x, y = np.asarray(x), np.asarray(y)
 
             # transform from in-crs to lon/lat
-            radius_t = Transformer.from_crs(
-                CRS.from_user_input(self._m.get_crs(crs)),
-                CRS.from_epsg(4326),
-                always_xy=True,
+            radius_t = shapes.get_transformer(
+                CRS.from_user_input(self._m.get_crs(crs)), CRS.from_epsg(4326)
             )
             # transform from lon/lat to the plot_crs
-            plot_t = Transformer.from_crs(
-                CRS.from_epsg(4326),
-                CRS.from_user_input(self._m.crs_plot),
-                always_xy=True,
+            plot_t = shapes.get_transformer(
+                CRS.from_epsg(4326), CRS.from_user_input(self._m.crs_plot)
             )
 
             lon, lat = radius_t.transform(x, y)
@@ -547,24 +551,18 @@ class shapes(object):
             return (xs, ys)
 
         def _get_ellipse_points(self, x, y, crs, radius, radius_crs="in", n=20):
-            # transform from crs to the plot_crs
-            t_in_plot = Transformer.from_crs(
-                self._m.get_crs(crs),
-                self._m.crs_plot,
-                always_xy=True,
-            )
 
-            # transform from crs to the radius_crs
-            t_in_radius = Transformer.from_crs(
-                self._m.get_crs(crs),
-                self._m.get_crs(radius_crs),
-                always_xy=True,
+            # transform from crs to the plot_crs
+            t_in_plot = shapes.get_transformer(
+                CRS.from_user_input(self._m.get_crs(crs)), self._m.crs_plot
             )
             # transform from crs to the radius_crs
-            t_radius_plot = Transformer.from_crs(
-                self._m.get_crs(radius_crs),
-                self._m.crs_plot,
-                always_xy=True,
+            t_in_radius = shapes.get_transformer(
+                CRS.from_user_input(self._m.get_crs(crs)), self._m.get_crs(radius_crs)
+            )
+            # transform from crs to the radius_crs
+            t_radius_plot = shapes.get_transformer(
+                CRS.from_user_input(self._m.get_crs(radius_crs)), self._m.crs_plot
             )
 
             [rx, ry] = radius
@@ -736,17 +734,14 @@ class shapes(object):
             if radius_crs == crs:
                 in_crs = self._m.get_crs(crs)
                 # transform from crs to the plot_crs
-                t = Transformer.from_crs(
-                    in_crs,
-                    self._m.crs_plot,
-                    always_xy=True,
+                t = shapes.get_transformer(
+                    CRS.from_user_input(in_crs), self._m.crs_plot
                 )
 
                 # make sure we do not transform out of bounds (if possible)
                 if in_crs.area_of_use is not None:
-                    transformer = Transformer.from_crs(
-                        in_crs.geodetic_crs, in_crs, always_xy=True
-                    )
+                    transformer = shapes.get_transformer(in_crs.geodetic_crs, in_crs)
+
                     xmin, ymin, xmax, ymax = transformer.transform_bounds(
                         *in_crs.area_of_use.bounds
                     )
@@ -761,23 +756,14 @@ class shapes(object):
                 r_crs = self._m.get_crs(radius_crs)
 
                 # transform from crs to the radius_crs
-                t_in_radius = Transformer.from_crs(
-                    in_crs,
-                    r_crs,
-                    always_xy=True,
-                )
+                t_in_radius = shapes.get_transformer(in_crs, r_crs)
                 # transform from radius_crs to the plot_crs
-                t = Transformer.from_crs(
-                    r_crs,
-                    self._m.crs_plot,
-                    always_xy=True,
-                )
+                t = shapes.get_transformer(r_crs, self._m.crs_plot)
 
                 # make sure we do not transform out of bounds (if possible)
                 if r_crs.area_of_use is not None:
-                    transformer = Transformer.from_crs(
-                        r_crs.geodetic_crs, r_crs, always_xy=True
-                    )
+                    transformer = shapes.get_transformer(r_crs.geodetic_crs, r_crs)
+
                     xmin, ymin, xmax, ymax = transformer.transform_bounds(
                         *r_crs.area_of_use.bounds
                     )
@@ -975,10 +961,8 @@ class shapes(object):
                 raise ImportError("'scipy' is required for 'voronoi'!")
 
             # transform from crs to the plot_crs
-            t_in_plot = Transformer.from_crs(
-                self._m.get_crs(crs),
-                self._m.crs_plot,
-                always_xy=True,
+            t_in_plot = shapes.get_transformer(
+                CRS.from_user_input(self._m.get_crs(crs)), self._m.crs_plot
             )
 
             x0, y0 = t_in_plot.transform(x, y)
@@ -1124,10 +1108,8 @@ class shapes(object):
                 raise ImportError("'scipy' is required for 'delaunay_triangulation'!")
 
             # transform from crs to the plot_crs
-            t_in_plot = Transformer.from_crs(
-                self._m.get_crs(crs),
-                self._m.crs_plot,
-                always_xy=True,
+            t_in_plot = shapes.get_transformer(
+                CRS.from_user_input(self._m.get_crs(crs)), self._m.crs_plot
             )
 
             x0, y0 = t_in_plot.transform(x, y)
@@ -1498,17 +1480,12 @@ class shapes(object):
             # transform corner-points
             in_crs = self._m.get_crs(crs)
             # transform from crs to the plot_crs
-            t = Transformer.from_crs(
-                in_crs,
-                self._m.crs_plot,
-                always_xy=True,
-            )
+            t = shapes.get_transformer(in_crs, self._m.crs_plot)
 
             # make sure we do not transform out of bounds (if possible)
             if in_crs.area_of_use is not None:
-                transformer = Transformer.from_crs(
-                    in_crs.geodetic_crs, in_crs, always_xy=True
-                )
+                transformer = shapes.get_transformer(in_crs.geodetic_crs, in_crs)
+
                 xmin, ymin, xmax, ymax = transformer.transform_bounds(
                     *in_crs.area_of_use.bounds
                 )
