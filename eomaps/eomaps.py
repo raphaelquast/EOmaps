@@ -2970,6 +2970,9 @@ class Maps(object):
         if memmap:
             self._memmap_props(dir=memmap)
 
+        if hasattr(self, "_data_mask") and not np.all(self._data_mask):
+            print("EOmaps: Warning: some datapoints could not be drawn! \n")
+
     def _remove_colorbar(self):
         if hasattr(self, "_ax_cb"):
             self._ax_cb.remove()
