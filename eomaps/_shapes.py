@@ -631,9 +631,14 @@ class shapes(object):
             # mask any point that is in a different quadrant than the center point
             maskx = pts_quadrants != quadrants[:, np.newaxis]
             # take care of points that are on the center line (e.g. don't mask them)
-            maskx = maskx & (np.broadcast_to((xp != xc)[:, np.newaxis], xs.shape))
+            # (use a +- 10 degree around 0 as treshold)
+            cpoints = np.broadcast_to(
+                np.isclose(xp, xc, atol=10)[:, np.newaxis], xs.shape
+            )
 
-            xs.mask = xs.mask | maskx
+            maskx[cpoints] = False
+            xs.mask[maskx] = True
+
             ys.mask = xs.mask
 
             mask = ~np.all(maskx, axis=1) & np.isfinite(theta)
