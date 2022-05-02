@@ -1,11 +1,15 @@
 👀 FAQ
 =======
 
-Configuring the editor (IDE)
-****************************
+
+.. include:: introduction.rst
+
+
+💻 Configuring the editor (IDE)
+*******************************
 
 🕷 Spyder IDE
------------------------------------
+-------------
 
 To use the whole potential of EOmaps with the awesome `Spyder IDE <https://www.spyder-ide.org>`_  ,
 the plot-settings must be adjusted to ensure that ``matplotlib`` plots remain interactive.
@@ -17,7 +21,7 @@ the plot-settings must be adjusted to ensure that ``matplotlib`` plots remain in
 
 
 🗖 PyCharm IDE
-------------------------------------
+--------------
 
 The `PyCharm IDE <https://www.jetbrains.com/pycharm/>`_  automatically registers its own matplotlib backend
 which (for some unknown reason) freezes on interactive plots.
@@ -47,7 +51,7 @@ in the **Python Scientific** preferences since it forces plots to be rendered as
 
 
 📓 Jupyter Notebooks
---------------------------------------
+--------------------
 
 While EOmaps works best with matplotlib's ``Qt5Agg`` backend, most of the functionalities work
 reasonably well if you want the figures embedded in a Jupyter Notebook.
@@ -70,3 +74,43 @@ reasonably well if you want the figures embedded in a Jupyter Notebook.
 
 Checkout the `matplotlib doc <https://matplotlib.org/stable/users/explain/interactive.html#jupyter-notebooks-jupyterlab>`_
 for more info!
+
+
+
+
+⚙ Port script from EOmaps v3.x to v4.x
+***************************************
+
+Starting with **EOmaps v4.0** the ``m.plot_specs`` property and the ``m.set_plot_specs`` function have been removed and all
+associated attributes are now set in the appropriate functions.
+
+- This provides a much better usability but requires a minor adjustment of existing scripts.
+
+Porting a script from v3.x to v4.x is quick and easy and involves only the following 2 steps:
+
+1. search in your script for any occurrence of the word ``.plot_specs`` and ``.set_plot_specs(``
+2. remove the calls to ``plot_specs`` and ``.set_plot_specs`` and move the affected arguments to the correct functions:
+
+- ``vmin``, ``vmax`` ``alpha`` and ``cmap`` are now set when calling ``m.plot_map(vmin=..., vmax=..., cmap=...)``
+- ``histbins``, ``label``, ``tick_precision`` and ``density`` are now set when calling ``m.add_colorbar(histbins=..., label=..., tick_precision=..., density=...)``
+- ``cpos`` and ``cpos_radius`` are now set when setting the data with ``m.set_data(data, x, y, cpos=..., cpos_radius=...)``
+
+**EOmaps v3.x:**
+
+.. code-block:: python
+
+  m = Maps()
+  m.set_data(...)
+  m.set_plot_specs(vmin=1, vmax=20, cmap="viridis", histbins=100, cpos="ul", cpos_radius=1)
+  m.add_colorbar()
+  m.plot_map()
+
+
+**EOmaps v4.x:**
+
+.. code-block:: python
+
+  m = Maps()
+  m.set_data(cpos="ul", cpos_radius=1)
+  m.plot_map(vmin=1, vmax=20, cmap="viridis")
+  m.add_colorbar(histbins=100)

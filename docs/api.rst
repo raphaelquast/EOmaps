@@ -190,6 +190,7 @@ and (optionally) setting appropriate limits via ``vmin`` and ``vmax``.
 
 
 .. code-block:: python
+
     m = Maps()
     m.set_data(...)
     m.plot_map(cmap="viridis", vmin=0, vmax=1)
