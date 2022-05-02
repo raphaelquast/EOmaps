@@ -86,22 +86,31 @@ associated attributes are now set in the appropriate functions.
 
 - This provides a much better usability but requires a minor adjustment of existing scripts.
 
-Porting a script from v3.x to v4.x is quick and easy and involves only the following 2 steps:
+Porting a script from v3.x to v4.x is quick and easy and involves only the following steps:
 
 1. search in your script for any occurrence of the word ``.plot_specs`` and ``.set_plot_specs(``
-2. remove the calls to ``plot_specs`` and ``.set_plot_specs`` and move the affected arguments to the correct functions:
 
-- ``vmin``, ``vmax`` ``alpha`` and ``cmap`` are now set when calling ``m.plot_map(vmin=..., vmax=..., cmap=...)``
-- ``histbins``, ``label``, ``tick_precision`` and ``density`` are now set when calling ``m.add_colorbar(histbins=..., label=..., tick_precision=..., density=...)``
-- ``cpos`` and ``cpos_radius`` are now set when setting the data with ``m.set_data(data, x, y, cpos=..., cpos_radius=...)``
+  - remove the calls to ``plot_specs`` and ``.set_plot_specs`` and move the affected arguments to the correct functions:
+
+    - | ``vmin``, ``vmax`` ``alpha`` and ``cmap`` are now set in
+      | ``m.plot_map(vmin=..., vmax=..., alpha=..., cmap=...)``
+    - | ``histbins``, ``label``, ``tick_precision`` and ``density`` are now set in
+      | ``m.add_colorbar(histbins=..., label=..., tick_precision=..., density=...)``
+    - | ``cpos`` and ``cpos_radius`` are now (optionally) set in
+      | ``m.set_data(data, x, y, cpos=..., cpos_radius=...)``
+
+3. search in your script for any occurrence of the word ``voroni_diagram`` and replace it with ``voronoi_diagram``
+4. search in your script for any occurrences of the words ``xcoord`` and ``ycoord`` and replace them with ``x`` and ``y``
+
 
 **EOmaps v3.x:**
 
 .. code-block:: python
 
   m = Maps()
-  m.set_data(...)
+  m.set_data(data=..., xcoord=..., ycoord=...)
   m.set_plot_specs(vmin=1, vmax=20, cmap="viridis", histbins=100, cpos="ul", cpos_radius=1)
+  m.set_shape.voroni_diagram()
   m.add_colorbar()
   m.plot_map()
 
@@ -111,6 +120,8 @@ Porting a script from v3.x to v4.x is quick and easy and involves only the follo
 .. code-block:: python
 
   m = Maps()
-  m.set_data(cpos="ul", cpos_radius=1)
+  m.set_data(data=..., x=..., y=...,
+             cpos="ul", cpos_radius=1)
   m.plot_map(vmin=1, vmax=20, cmap="viridis")
+  m.set_shape.voronoi_diagram()
   m.add_colorbar(histbins=100)
