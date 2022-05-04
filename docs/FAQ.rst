@@ -85,15 +85,15 @@ Changes between **EOmaps v3.x** and **EOmaps v4.0**:
 
 - the following properties and functions have been removed:
 
-  - ❌ m.plot_specs.
-  - ❌ m.set_plot_specs()
+  - ❌ ``m.plot_specs.``
+  - ❌ ``m.set_plot_specs()``
   - | arguments are now directly passed to relevant functions:
-    | m.plot_map(), m.add_colorbar() and m.set_data()
+    | ``m.plot_map()``, ``m.add_colorbar()`` and ``m.set_data()``
 
-- 🔶 m.set_shape.voroni_diagram is renamed to m.set_shape.voronoi_diagram
+- 🔶 ``m.set_shape.voroni_diagram()`` is renamed to ``m.set_shape.voronoi_diagram()``
 - | 🔷 custom callbacks are no longer bound to the Maps-object
   | the call-signature of custom callbacks has changed to:
-  | def cb(self, *args, **kwargs) >> def cb(*args, **kwargs)
+  | ``def cb(self, *args, **kwargs)`` >> ``def cb(*args, **kwargs)``
 
 Porting a script from v3.x to v4.x is quick and easy and involves the following steps:
 
