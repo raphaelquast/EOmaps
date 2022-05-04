@@ -71,9 +71,9 @@ def cb(m, ind, ID, coords, *args, **kwargs):
     m.cb.pick.add_temporary_artist(m3.figure.coll)  # remove the highlight on next pick
 
     # ---- plot the data for the selected column
-    (art0,) = mg.ax_col.plot(m.data_specs.ycoord[:, c], m.data_specs.data[:, c], c="b")
+    (art0,) = mg.ax_col.plot(m.data_specs.y[:, c], m.data_specs.data[:, c], c="b")
     (art01,) = mg.ax_col.plot(
-        m.data_specs.ycoord[r, c],
+        m.data_specs.y[r, c],
         m.data_specs.data[r, c],
         c="k",
         marker="o",
