@@ -707,7 +707,7 @@ class ScaleBar:
         # make sure to update the artists on zoom
         self._decorate_zooms()
 
-    def set_position(self, lon=None, lat=None, azim=None, update=True):
+    def set_position(self, lon=None, lat=None, azim=None, update=False):
         """
         Sset the position of the colorbar
 
@@ -721,8 +721,8 @@ class ScaleBar:
             The azimuth-direction in which to calculate the intermediate
             points for the scalebar. The default is None.
         update : bool
-            Indicator if the plot should be updated or not
-            The default is True.
+            Indicator if the plot should be immediately updated (True) or at the next
+            event (False). The default is False.
         """
 
         if lon is None:
@@ -762,7 +762,7 @@ class ScaleBar:
                 self._artists["patch"].set_linestyle("-")
 
         if update:
-            self._m.BM.update(blit=False)
+            self._m.BM.update()
 
     def _make_pickable(self):
         """

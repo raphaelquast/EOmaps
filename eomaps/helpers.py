@@ -821,6 +821,10 @@ class BlitManager:
 
     @bg_layer.setter
     def bg_layer(self, val):
+        # make sure we use a "full" update for webagg and ipympl backends
+        # (e.g. force full redraw of canvas instead of a diff)
+        self.canvas._force_full = True
+
         self._bg_layer = val
 
         # a general callable to be called on every layer change
@@ -1034,9 +1038,8 @@ class BlitManager:
             The artist to be added.  Will be set to 'animated' (just
             to be safe).  *art* must be in the figure associated with
             the canvas this class is managing.
-        layer : bool
-            The layer number
         """
+
         layer = art.get_zorder()
 
         if art.figure != self.canvas.figure:
@@ -1095,6 +1098,8 @@ class BlitManager:
                 self._bg_artists[layer].remove(art)
 
     def remove_artist(self, art, layer=None):
+        # this only removes the artist from the blit-manager,
+        # it does not clear it from the plot!
         if layer is None:
             for key, val in self._artists.items():
                 if art in val:
@@ -1132,7 +1137,20 @@ class BlitManager:
                 for a in artists:
                     fig.draw_artist(a)
 
-    def _clear_temp_artists(self, method):
+    def _clear_temp_artists(self, method, forward=True):
+        # clear artists from connected methods
+        if method == "move" and forward:
+            self._clear_temp_artists("click", False)
+        elif method == "click" and forward:
+            self._clear_temp_artists("move", False)
+        elif method == "pick" and forward:
+            self._clear_temp_artists("click", False)
+            self._clear_temp_artists("move", False)
+        elif method == "on_layer_change" and forward:
+            self._clear_temp_artists("pick", False)
+            self._clear_temp_artists("click", False)
+            self._clear_temp_artists("move", False)
+
         if method == "on_layer_change":
             # clear all artists from "on_layer_change" list irrespective of the method
             allmethods = [i for i in self._artists_to_clear if i != method]
@@ -1142,27 +1160,23 @@ class BlitManager:
                     if art in self._artists_to_clear[met]:
                         art.set_visible(False)
                         self.remove_artist(art)
-                        art.remove()
+                        try:
+                            art.remove()
+                        except ValueError:
+                            # ignore errors if the artist no longer exists
+                            pass
                         self._artists_to_clear[met].remove(art)
             del self._artists_to_clear[method]
-
-            # always clear all temporary "pick" artists on a layer-change
-            for method in ["pick"]:
-                while len(self._artists_to_clear[method]) > 0:
-                    art = self._artists_to_clear[method].pop(-1)
-                    art.set_visible(False)
-                    self.remove_artist(art)
-                    art.remove()
-                    if art in self._artists_to_clear["on_layer_change"]:
-                        self._artists_to_clear["on_layer_change"].remove(art)
-                del self._artists_to_clear[method]
-
         else:
             while len(self._artists_to_clear[method]) > 0:
                 art = self._artists_to_clear[method].pop(-1)
                 art.set_visible(False)
                 self.remove_artist(art)
-                art.remove()
+                try:
+                    art.remove()
+                except ValueError:
+                    # ignore errors if the artist no longer exists
+                    pass
                 if art in self._artists_to_clear["on_layer_change"]:
                     self._artists_to_clear["on_layer_change"].remove(art)
             del self._artists_to_clear[method]

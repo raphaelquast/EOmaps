@@ -360,7 +360,7 @@ class _click_callbacks(object):
             A factor to scale the size of the shape. The default is 1.
         permanent : bool, optional
             Indicator if the shapes should be permanent (True) or removed
-            on each new double-click (False)
+            on each new double-click (False).
         n : int
             The number of points to calculate for the shape.
             The default is 20.
@@ -373,7 +373,6 @@ class _click_callbacks(object):
             kwargs passed to the matplotlib patch.
             (e.g. `facecolor`, `edgecolor`, `linewidth`, `alpha` etc.)
         """
-
         possible_shapes = ["ellipses", "rectangles", "geod_circles"]
 
         if shape is None:
@@ -467,23 +466,24 @@ class _click_callbacks(object):
             )
         else:
             raise TypeError(f"EOmaps: '{shape}' is not a valid marker-shape")
-
+        x, y = np.atleast_1d(pos[0]), np.atleast_1d(pos[1])
         coll = shp.get_coll(
             np.atleast_1d(pos[0]), np.atleast_1d(pos[1]), pos_crs, **kwargs
         )
 
-        if permanent and not hasattr(self, "permanent_markers"):
+        if permanent is True and not hasattr(self, "permanent_markers"):
             self.permanent_markers = []
 
         marker = self.m.figure.ax.add_collection(coll)
 
-        if permanent:
-            self.permanent_markers.append(marker)
-        else:
-            self._temporary_artists.append(marker)
-
         marker.set_zorder(zorder)
-        self.m.BM.add_artist(marker)
+
+        if permanent is True:
+            self.permanent_markers.append(marker)
+            self.m.BM.add_bg_artist(marker, self.m.layer)
+        elif permanent is False:
+            self._temporary_artists.append(marker)
+            self.m.BM.add_artist(marker)
 
         return marker
 
@@ -550,7 +550,7 @@ class _click_callbacks(object):
         ax = self.m.figure.ax
 
         # default boundary args
-        args = dict(fc="none", ec="k", lw=1)
+        args = dict(fc="none", ec="k", lw=1.1)
         args.update(kwargs)
 
         if isinstance(how, str):
@@ -592,6 +592,7 @@ class _click_callbacks(object):
                 permanent=False,
                 **args,
             )
+
         elif isinstance(how, (float, list, tuple)):
             if isinstance(how, float):
                 w0, h0 = self.m.figure.ax.transAxes.transform((0, 0))
@@ -638,14 +639,20 @@ class _click_callbacks(object):
                 pos=pos,
                 radius_crs="out",
                 shape="rectangles",
-                radius=(w / 2, h / 2),
+                radius=(w / 1.99, h / 1.99),  # 1.99 to be larger than the blit-region
                 permanent=False,
                 **args,
             )
+
         else:
             raise TypeError(f"EOmaps: {how} is not a valid peek method!")
 
-        self.m.BM._artists_to_clear["on_layer_change"].append(marker)
+        def doit():
+            self.m.BM._artists_to_clear["click"].append(marker)
+            self.m.BM._artists_to_clear["move"].append(marker)
+            self.m.BM._artists_to_clear["on_layer_change"].append(marker)
+
+        self.m.BM._after_restore_actions.append(doit)
 
         if overlay:
             self.m.BM._after_restore_actions.append(

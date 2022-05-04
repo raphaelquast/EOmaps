@@ -119,6 +119,10 @@ class _click_container(_cb_container):
     def __init__(self, m, cb_cls=None, method="pick"):
         super().__init__(m, cb_cls, method)
 
+        # a dict to identify connected _move callbacks
+        # (e.g. to remove "_move" and "click" cbs in one go)
+        self._connected_move_cbs = dict()
+
     class _attach:
         """
         Attach custom or pre-defined callbacks to the map.
@@ -208,7 +212,6 @@ class _click_container(_cb_container):
                 kwargs passed to the callback-function
                 For documentation of the individual functions check the docs in `m.cb`
 
-
             Returns
             -------
             cid : int
@@ -279,8 +282,14 @@ class _click_container(_cb_container):
         ----------
         callback : int, str or tuple
             if str: the name of the callback to remove
-                    (`<function_name>_<count>__<double/single>__<button_ID>`)
+                    (`<function_name>_<count>__<layer>__<double/single>__<button_ID>`)
         """
+        # remove motion callbacks connected to click-callbacks
+        if self._method == "click":
+            if callback in self._connected_move_cbs:
+                for i in self._connected_move_cbs[callback]:
+                    self._m.cb._move.remove(i)
+
         if callback is not None:
             s = callback.split("__")
             name, layer, ds, b = s
@@ -360,6 +369,14 @@ class _click_container(_cb_container):
                 - RIGHT = 3
                 - BACK = 8
                 - FORWARD = 9
+        on_motion : bool
+            !! Only relevant for "click" callbacks !!
+
+            - True: Continuously execute the callback if the mouse is moved while the
+              assigned button is pressed.
+            - False: Only execute the callback on clicks.
+
+            The default is True.
         **kwargs :
             kwargs passed to the callback-function
             For documentation of the individual functions check the docs in `m.cb`
@@ -377,6 +394,21 @@ class _click_container(_cb_container):
                 "you can only attach pick-callbacks after plotting a dataset!"
                 + "... use `m.plot_map()` first."
             )
+
+        # attach "on_move" callbacks
+        movecb_name = None
+        # set on_motion True for "click" callbacks and False otherwise
+        on_motion = kwargs.pop("on_motion", True if self._method == "click" else False)
+        if self._method == "click" and on_motion is True:
+            movecb_name = self._m.cb._move._add_callback(
+                *args,
+                callback=callback,
+                double_click=double_click,
+                button=button,
+                **kwargs,
+            )
+        elif on_motion is True:
+            print("EOmaps: 'on_motion=True' is only possible for 'click' callbacks!")
 
         assert not all(
             i in kwargs for i in ["pos", "ID", "val", "double_click", "button"]
@@ -416,6 +448,9 @@ class _click_container(_cb_container):
 
         # add mouse-button assignment as suffix to the name (with __ separator)
         cbname = cbkey + f"__{btn_key}__{button}"  # TODO
+
+        if movecb_name is not None:
+            self._connected_move_cbs[cbname] = [movecb_name]
 
         return cbname
 
@@ -475,10 +510,8 @@ class cb_click_container(_click_container):
             for key in self._sort_cbs(bcbs):
                 layer = key.split("__")[1]
                 if layer != "all" and layer != str(self._m.BM.bg_layer):
-                    # TODO
-                    # only execute callbacks if the layer name of the associated
-                    # maps-object is active
                     return
+
                 cb = bcbs[key]
                 if clickdict is not None:
                     cb(**clickdict)
@@ -531,39 +564,6 @@ class cb_click_container(_click_container):
             except ReferenceError:
                 pass
 
-        def movecb(event):
-            if plt.get_backend() == "module://ipympl.backend_nbagg":
-                return
-
-            try:
-                self._event = event
-
-                # ignore callbacks while dragging axes
-                if self._m._ignore_cb_events:
-                    return
-                # don't execute callbacks if a toolbar-action is active
-                if (
-                    self._m.figure.f.canvas.toolbar is not None
-                ) and self._m.figure.f.canvas.toolbar.mode != "":
-                    return
-
-                # only execute movecb if a mouse-button is holded down
-                # and only if the motion is happening inside the axes
-                if not event.button:  # or (event.inaxes != self._m.figure.ax):
-                    return
-
-                # execute onclick on the maps object that belongs to the clicked axis
-                # and forward the event to all forwarded maps-objects
-                for obj in self._objs:
-                    obj._onclick(event)
-                    obj._m.BM._after_update_actions.append(obj._clear_temporary_artists)
-                    # forward callbacks to the connected maps-objects
-                    obj._fwd_cb(event)
-
-                self._m.parent.BM.update(clear=self._method)
-            except ReferenceError:
-                pass
-
         def releasecb(event):
             try:
                 # ignore callbacks while dragging axes
@@ -596,12 +596,6 @@ class cb_click_container(_click_container):
             # ------------- add a callback
             self._cid_button_release_event = self._m.figure.f.canvas.mpl_connect(
                 "button_release_event", releasecb
-            )
-
-        if self._cid_motion_event is None:
-            # for click-callbacks, allow motion-detection
-            self._cid_motion_event = self._m.figure.f.canvas.mpl_connect(
-                "motion_notify_event", movecb
             )
 
     def _fwd_cb(self, event):
@@ -645,6 +639,84 @@ class cb_click_container(_click_container):
                 # append clear-action again since it will already be executed
                 # by the first click!
                 m.BM._after_update_actions.append(obj._clear_temporary_artists)
+
+
+class cb_move_container(cb_click_container):
+    """
+    Callbacks that are executed if you move the mouse while holding down a button.
+    (used internally to make click-callbacks motion-sensitive, but it can be
+     used just as any other callback with `m.cb._move.attach...`)
+
+
+    Methods
+    -------
+
+    attach : accessor for callbacks.
+        Executing the functions will attach the associated callback to the map!
+
+    get : accessor for return-objects
+        A container to provide easy-access to the return-values of the callbacks.
+
+    remove : remove prviously added callbacks from the map
+
+    forward_events : forward events to connected maps-objects
+
+    share_events : share events between connected maps-objects (e.g. forward both ways)
+
+    """
+
+    # this is just a copy of cb_click_container to manage motion-sensitive callbacks
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        self._cid_motion_event = None
+
+    def _init_cbs(self):
+        if self._m.parent is self._m:
+            self._add_move_callback()
+
+    def _reset_cids(self):
+        if self._cid_motion_event:
+            self._m.figure.f.canvas.mpl_disconnect(self._cid_motion_event)
+        self._cid_motion_event = None
+
+    def _add_move_callback(self):
+        def movecb(event):
+            try:
+                self._event = event
+
+                # only execute movecb if a mouse-button is holded down
+                # and only if the motion is happening inside the axes
+                if not event.button:  # or (event.inaxes != self._m.figure.ax):
+                    return
+
+                # ignore callbacks while dragging axes
+                if self._m._ignore_cb_events:
+                    return
+                # don't execute callbacks if a toolbar-action is active
+                if (
+                    self._m.figure.f.canvas.toolbar is not None
+                ) and self._m.figure.f.canvas.toolbar.mode != "":
+                    return
+
+                # execute onclick on the maps object that belongs to the clicked axis
+                # and forward the event to all forwarded maps-objects
+                for obj in self._objs:
+                    obj._onclick(event)
+                    obj._m.BM._after_update_actions.append(obj._clear_temporary_artists)
+                    # forward callbacks to the connected maps-objects
+                    obj._fwd_cb(event)
+
+                self._m.parent.BM.update(clear=self._method)
+            except ReferenceError:
+                pass
+
+        if self._cid_motion_event is None:
+            # for click-callbacks, allow motion-detection
+            self._cid_motion_event = self._m.figure.f.canvas.mpl_connect(
+                "motion_notify_event", movecb
+            )
 
 
 class cb_pick_container(_click_container):
@@ -852,6 +924,7 @@ class cb_pick_container(_click_container):
                 self._m.BM._clear_temp_artists(self._method)
 
                 # self._m.parent.BM.update(clear=self._method)
+                self._m.parent.BM._clear_temp_artists(self._method)
                 # don't update here... the click-callback will take care of it!
             except ReferenceError:
                 pass
@@ -1174,12 +1247,18 @@ class cb_container:
     def __init__(self, m):
         self._m = m
 
-        self._methods = ["click", "keypress"]
+        self._methods = ["click", "move", "keypress"]
 
         self._click = cb_click_container(
             m=self._m,
             cb_cls=click_callbacks,
             method="click",
+        )
+
+        self._move = cb_move_container(
+            m=self._m,
+            cb_cls=click_callbacks,
+            method="move",
         )
 
         self._pick = cb_pick_container(
@@ -1200,6 +1279,11 @@ class cb_container:
     @wraps(cb_click_container)
     def click(self):
         return self._click
+
+    @property
+    @wraps(cb_move_container)
+    def move(self):
+        return self._move
 
     @property
     @wraps(cb_pick_container)

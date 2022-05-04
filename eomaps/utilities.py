@@ -4,7 +4,10 @@ from matplotlib.widgets import Slider
 from functools import wraps
 
 
-class SelectorButtons:
+from matplotlib.pyplot import Artist
+
+
+class SelectorButtons(Artist):
     # A custom button implementation that uses a legend as container-artist
     # ... adapted from https://stackoverflow.com/a/71323434/9703451
     def __init__(
@@ -34,6 +37,7 @@ class SelectorButtons:
             Size of the radio buttons
         Further parameters are passed on to `Legend`.
         """
+        super().__init__()
 
         self.activecolor = activecolor
         self.inactive_color = inactive_color
@@ -125,6 +129,7 @@ class DraggableLegend_new(DraggableLegend):
             dx = evt.x - self.mouse_x
             dy = evt.y - self.mouse_y
             self.update_offset(dx, dy)
+            self.legend.stale = True
             self._m.BM.update()
 
     def on_pick(self, evt):
@@ -271,8 +276,15 @@ class _layer_selector:
                 self._selectors.remove(s)
 
         s.remove = remove
+        s.set_zorder(9999)  # make sure the widget is on top of other artists
+        s.figure = self._m.figure.f  # make sure the figure is set for the artist
+        s.set_animated(True)
 
-        self._m.BM.add_artist(s.leg)
+        if not draggable:
+            self._m.BM.add_artist(s)
+        else:
+            self._m.BM.add_artist(s.leg)
+
         # keep a reference to the buttons to make sure they stay interactive
         self._selectors.append(s)
 

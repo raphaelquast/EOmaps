@@ -619,9 +619,12 @@ class Maps(object):
 
         if newfig:
             # we only need to call show if a new figure has been created!
-            if plt.isinteractive():
+            if (
+                plt.isinteractive()
+                or plt.get_backend() == "module://ipympl.backend_nbagg"
+            ):
                 # make sure to call show only if we use an interactive backend...
-                # (otherwise it will block subsequent code!)
+                # or within the ipympl backend (otherwise it will block subsequent code!)
                 plt.show()
 
     def _on_resize(self, event):
@@ -1089,9 +1092,16 @@ class Maps(object):
         elif crs == "out" or crs == "plot":
             crs = self.crs_plot
 
-        if not isinstance(crs, CRS):
-            crs = CRS.from_user_input(crs)
+        if not hasattr(self, "_crs_cache"):
+            self._crs_cache = dict()
 
+        h = hash(crs)
+
+        if h in self._crs_cache:
+            crs = self._crs_cache[h]
+        else:
+            crs = CRS.from_user_input(crs)
+            self._crs_cache[h] = crs
         return crs
 
     def _identify_data(self, data=None, x=None, y=None, parameter=None):
@@ -4196,6 +4206,7 @@ class MapsGrid:
         Share click events between all Maps objects of the grid
         """
         self.parent.cb.click.share_events(*self.children)
+        self.parent.cb._move.share_events(*self.children)
 
     def share_pick_events(self, name="default"):
         """

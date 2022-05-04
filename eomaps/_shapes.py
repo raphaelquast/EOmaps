@@ -83,7 +83,7 @@ class shapes(object):
         return shp
 
     @staticmethod
-    def _get_radius(m, radius, radius_crs, buffer=None):
+    def _get_radius(m, radius, radius_crs):
         if (isinstance(radius, str) and radius == "estimate") or radius is None:
             # make sure props are defined otherwise we can't estimate the radius!
             if not hasattr(m, "_props"):
@@ -108,37 +108,31 @@ class shapes(object):
 
             radius = tuple((radiusx, radiusy))
 
-        return shapes._get_radius_cache(
-            m=m, radius=radius, radius_crs=radius_crs, buffer=buffer
-        )
+        return shapes._get_radius_cache(m=m, radius=radius, radius_crs=radius_crs)
 
     @staticmethod
-    def _get_radius_cache(m, radius, radius_crs, buffer=None):
+    def _get_radius_cache(m, radius, radius_crs):
         # get the radius for plotting
         if (isinstance(radius, str) and radius == "estimate") or radius is None:
             if m._estimated_radius is None:
                 print("EOmaps: estimating radius...")
                 radiusx, radiusy = shapes._estimate_radius(m, radius_crs)
-                m._estimated_radius = (radiusx, radiusy)
                 if radiusx == radiusy:
                     print(f"EOmaps: radius: {radiusx:.4f}")
                 else:
                     print(f"EOmaps: radius: ({radiusx:.4f}, {radiusy:.4f})")
+                m._estimated_radius = (radiusx, radiusy)
             else:
                 (radiusx, radiusy) = m._estimated_radius
 
         else:
             radiusx, radiusy = radius
 
-        if buffer is not None:
-            radiusx = radiusx * buffer
-            radiusy = radiusy * buffer
-
         return (radiusx, radiusy)
 
     @staticmethod
     def _estimate_radius(m, radius_crs, method=np.median):
-
+        print("estimating", radius_crs)
         if radius_crs == "in":
             if (
                 isinstance(m.data_specs.x, np.ndarray)
@@ -391,9 +385,7 @@ class shapes(object):
             x, y = np.asarray(x), np.asarray(y)
 
             # transform from in-crs to lon/lat
-            radius_t = shapes.get_transformer(
-                CRS.from_user_input(self._m.get_crs(crs)), CRS.from_epsg(4326)
-            )
+            radius_t = shapes.get_transformer(self._m.get_crs(crs), CRS.from_epsg(4326))
             # transform from lon/lat to the plot_crs
             plot_t = shapes.get_transformer(
                 CRS.from_epsg(4326), CRS.from_user_input(self._m.crs_plot)
@@ -490,7 +482,8 @@ class shapes(object):
 
         @property
         def radius(self):
-            return shapes._get_radius(self._m, self._radius, self.radius_crs)
+            radius = shapes._get_radius(self._m, self._radius, self.radius_crs)
+            return radius
 
         @radius.setter
         def radius(self, val):
@@ -550,19 +543,15 @@ class shapes(object):
             return (xs, ys)
 
         def _get_ellipse_points(self, x, y, crs, radius, radius_crs="in", n=20):
+            crs = self._m.get_crs(crs)
+            radius_crs = self._m.get_crs(radius_crs)
 
             # transform from crs to the plot_crs
-            t_in_plot = shapes.get_transformer(
-                CRS.from_user_input(self._m.get_crs(crs)), self._m.crs_plot
-            )
+            t_in_plot = shapes.get_transformer(crs, self._m.crs_plot)
             # transform from crs to the radius_crs
-            t_in_radius = shapes.get_transformer(
-                CRS.from_user_input(self._m.get_crs(crs)), self._m.get_crs(radius_crs)
-            )
+            t_in_radius = shapes.get_transformer(crs, radius_crs)
             # transform from crs to the radius_crs
-            t_radius_plot = shapes.get_transformer(
-                CRS.from_user_input(self._m.get_crs(radius_crs)), self._m.crs_plot
-            )
+            t_radius_plot = shapes.get_transformer(radius_crs, self._m.crs_plot)
 
             [rx, ry] = radius
             # transform corner-points
@@ -615,12 +604,8 @@ class shapes(object):
 
                 return quadrants
 
-            t_in_lonlat = shapes.get_transformer(
-                CRS.from_user_input(self._m.get_crs(crs)), 4326
-            )
-            t_plot_lonlat = shapes.get_transformer(
-                CRS.from_user_input(self._m.crs_plot), 4326
-            )
+            t_in_lonlat = shapes.get_transformer(crs, 4326)
+            t_plot_lonlat = shapes.get_transformer(self._m.crs_plot, 4326)
 
             # transform the coordinates to lon/lat
             xp, _ = t_in_lonlat.transform(x, y)
@@ -736,7 +721,8 @@ class shapes(object):
 
         @property
         def radius(self):
-            return shapes._get_radius(self._m, self._radius, self.radius_crs)
+            radius = shapes._get_radius(self._m, self._radius, self.radius_crs)
+            return radius
 
         @radius.setter
         def radius(self, val):
@@ -985,9 +971,7 @@ class shapes(object):
                 raise ImportError("'scipy' is required for 'voronoi'!")
 
             # transform from crs to the plot_crs
-            t_in_plot = shapes.get_transformer(
-                CRS.from_user_input(self._m.get_crs(crs)), self._m.crs_plot
-            )
+            t_in_plot = shapes.get_transformer(self._m.get_crs(crs), self._m.crs_plot)
 
             x0, y0 = t_in_plot.transform(x, y)
 
@@ -1052,11 +1036,12 @@ class shapes(object):
 
         @property
         def radius(self):
-            return shapes._get_radius(self._m, "estimate", "in")
+            radius = shapes._get_radius(self._m, "estimate", "in")
+            return radius
 
         @property
         def radius_crs(self):
-            return self._m.get_crs("in")
+            return "in"
 
     class _delaunay_triangulation(object):
         name = "delaunay_triangulation"
@@ -1108,7 +1093,8 @@ class shapes(object):
             try:
                 s = (
                     f"delaunay_triangulation(mask_radius={self.mask_radius}, "
-                    + "mask_radius_crs={self.mask_radius_crs}, masked={masked}, flat={flat})"
+                    + f"mask_radius_crs={self.mask_radius_crs}, "
+                    + f"masked={self.masked}, flat={self.flat})"
                 )
             except AttributeError:
                 s = "delaunay_triangulation(mask_radius, mask_radius_crs, masked, flat)"
@@ -1125,6 +1111,7 @@ class shapes(object):
         def _get_delaunay_triangulation(
             self, x, y, crs, radius, radius_crs="out", masked=True
         ):
+
             # prepare data
             try:
                 from scipy.spatial import Delaunay
@@ -1132,9 +1119,7 @@ class shapes(object):
                 raise ImportError("'scipy' is required for 'delaunay_triangulation'!")
 
             # transform from crs to the plot_crs
-            t_in_plot = shapes.get_transformer(
-                CRS.from_user_input(self._m.get_crs(crs)), self._m.crs_plot
-            )
+            t_in_plot = shapes.get_transformer(self._m.get_crs(crs), self._m.crs_plot)
 
             x0, y0 = t_in_plot.transform(x, y)
             datamask = np.isfinite(x0) & np.isfinite(y0)
@@ -1180,6 +1165,7 @@ class shapes(object):
                 # mask any triangle whose side-length exceeds maxdist
                 mask = np.any(l > maxdist, axis=0)
                 tri.set_mask(mask)
+
             return tri, datamask
 
         def get_coll(self, x, y, crs, **kwargs):
@@ -1238,11 +1224,12 @@ class shapes(object):
 
         @property
         def radius(self):
-            return shapes._get_radius(self._m, "estimate", "in")
+            radius = shapes._get_radius(self._m, "estimate", "in")
+            return radius
 
         @property
         def radius_crs(self):
-            return self._m.get_crs("in")
+            return "in"
 
     class _shade_points(object):
         name = "shade_points"
@@ -1315,11 +1302,12 @@ class shapes(object):
 
         @property
         def radius(self):
-            return shapes._get_radius(self._m, "estimate", "in")
+            radius = shapes._get_radius(self._m, "estimate", "in")
+            return radius
 
         @property
         def radius_crs(self):
-            return self._m.get_crs("in")
+            return "in"
 
     class _shade_raster(object):
         name = "shade_raster"
@@ -1407,11 +1395,12 @@ class shapes(object):
 
         @property
         def radius(self):
-            return shapes._get_radius(self._m, "estimate", "in")
+            radius = shapes._get_radius(self._m, "estimate", "in")
+            return radius
 
         @property
         def radius_crs(self):
-            return self._m.get_crs("in")
+            return "in"
 
     class _raster(object):
         name = "raster"
@@ -1467,7 +1456,9 @@ class shapes(object):
         @property
         def radius(self):
             if self._radius is None:
-                return shapes._get_radius(self._m, self._radius, self.radius_crs)
+                radius = shapes._get_radius(self._m, self._radius, self.radius_crs)
+                return radius
+
             return self._radius
 
         def __repr__(self):
