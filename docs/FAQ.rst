@@ -81,12 +81,21 @@ for more info!
 ⚙ Port script from EOmaps v3.x to v4.x
 ***************************************
 
-Starting with **EOmaps v4.0** ``m.plot_specs`` and ``m.set_plot_specs`` have been **removed** and all
-associated attributes are now set in the appropriate functions!
+Changes between **EOmaps v3.x** and **EOmaps v4.0**:
 
-- This provides a much better usability but requires some minor adjustments of existing scripts.
+- the following properties and functions have been removed:
 
-Porting a script from v3.x to v4.x is quick and easy and involves only the following steps:
+  - ❌ m.plot_specs.
+  - ❌ m.set_plot_specs()
+  - | arguments are now directly passed to relevant functions:
+    | m.plot_map(), m.add_colorbar() and m.set_data()
+
+- 🔶 m.set_shape.voroni_diagram is renamed to m.set_shape.voronoi_diagram
+- | 🔷 custom callbacks are no longer bound to the Maps-object
+  | the call-signature of custom callbacks has changed to:
+  | def cb(self, *args, **kwargs) >> def cb(*args, **kwargs)
+
+Porting a script from v3.x to v4.x is quick and easy and involves the following steps:
 
 1. Search your script for all occurrences of the words ``.plot_specs`` and ``.set_plot_specs(``,
    move the affected arguments to the correct functions (and remove the calls once you're done):
@@ -100,7 +109,7 @@ Porting a script from v3.x to v4.x is quick and easy and involves only the follo
 
 2. Search your script for all occurrences of the words ``xcoord`` and ``ycoord`` and replace them with ``x`` and ``y``
 
-3. **ONLY** if you plot **voronoi diagrams**:
+3. **ONLY** if you used **voronoi diagrams**:
 
   - search in your script for all occurrences of the word ``voroni_diagram`` and replace it with ``voronoi_diagram``
 
