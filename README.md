@@ -44,13 +44,16 @@
 
 ### ❗ update notice ❗
 > There are breaking API changes between `EOmaps v3.x` and `EOmaps v4.0`  
-> Only minor changes are required to port existing scripts, see: [⚙ Port script from EOmaps v3.x to v4.x](https://eomaps.readthedocs.io/en/latest/FAQ.html#port-script-from-eomaps-v3-x-to-v4-x)
+> Only minor changes are required for existing scripts, see: [⚙ Port script from EOmaps v3.x to v4.x](https://eomaps.readthedocs.io/en/latest/FAQ.html#port-script-from-eomaps-v3-x-to-v4-x)
 
 <details>
 <summary>[click to show] a quick summary of the API changes</summary>
 
-- ❌ `m.plot_specs.` has been removed
-- ❌ `m.set_plot_specs()` has been removed
+- the following properties and functions have been removed:
+  - ❌ `m.plot_specs.`
+  - ❌ `m.set_plot_specs()`
+  - arguments are now directly passed to relevant functions:  
+    `m.plot_map()`, `m.add_colorbar()` and `m.set_data()`
 - 🔶 `m.set_shape.voroni_diagram` is renamed to `m.set_shape.voronoi_diagram`
 - 🔷 custom callbacks are no longer bound to the Maps-object  
   🔷 `def cb(self, *args, **kwargs)  >>  def cb(*args, **kwargs)`
