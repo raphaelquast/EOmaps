@@ -156,6 +156,7 @@ Porting a script from v3.x to v4.x is quick and easy and involves the following 
 
 Note: if you really need access to the maps-object within custom callbacks,
 simply provide it as an explicit argument!
+
 .. code-block:: python
 
   def custom_cb(**kwargs, m=None, asdf=None):
