@@ -76,6 +76,7 @@ Checkout the `matplotlib doc <https://matplotlib.org/stable/users/explain/intera
 for more info!
 
 📸 Record interactive maps to create animations
+************************************************
 
 The best way to record interactions on a EOmaps map is with the
 free and open source `ScreenToGif <https://www.screentogif.com/>`_ software.
