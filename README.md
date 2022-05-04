@@ -40,6 +40,26 @@
   🌲🌳 Checkout the <a href=https://eomaps.readthedocs.io/en/latest><b>documentation</b></a> for more details and <a href=https://eomaps.readthedocs.io/en/latest/EOmaps_examples.html><b>examples</b></a> 🌳🌲
 </p>
 
+---
+
+### ❗ update notice ❗
+> There are breaking API changes between `EOmaps v3.x` and `EOmaps v4.0`  
+> Only minor changes are required to port existing scripts, see: [⚙ Port script from EOmaps v3.x to v4.x](https://eomaps.readthedocs.io/en/latest/FAQ.html#port-script-from-eomaps-v3-x-to-v4-x)
+
+<details>
+<summary>[click to show] a quick summary of the API changes</summary>
+
+- ❌ `m.plot_specs.` has been removed
+- ❌ `m.set_plot_specs()` has been removed
+- 🔶 `m.set_shape.voroni_diagram` is renamed to `m.set_shape.voronoi_diagram`
+- 🔷 custom callbacks are no longer bound to the Maps-object  
+  🔷 `def cb(self, *args, **kwargs)  >>  def cb(*args, **kwargs)`
+
+</details>
+
+---
+
+
 ## 🔨 Installation
 
 To install EOmaps (and all its dependencies) via the `conda` package-manager, simply use:
