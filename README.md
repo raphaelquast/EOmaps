@@ -52,12 +52,26 @@
 - the following properties and functions have been removed:
   - ❌ `m.plot_specs.`
   - ❌ `m.set_plot_specs()`
-  - arguments are now directly passed to relevant functions:  
-    `m.plot_map()`, `m.add_colorbar()` and `m.set_data()`
+  - Arguments are now directly passed to relevant functions:  
+
+    ```python
+    m = Maps
+    # m.set_plot_specs(cmap=..., vmin=..., vmax=..., cpos=..., cpos_radius=..., histbins=...)
+    # m.plot_specs.<  > = ...
+    m.set_data(..., cpos=..., cpos_radius=...)
+    m.plot_map(cmap=..., vmin=..., vmax=...)
+    m.add_colorbar(histbins=...)
+    ```
+
+
 - 🔶 `m.set_shape.voroni_diagram` is renamed to `m.set_shape.voronoi_diagram`
 - 🔷 custom callbacks are no longer bound to the Maps-object  
   -  the call-signature of custom callbacks has changed to:  
      `def cb(self, *args, **kwargs)  >>  def cb(*args, **kwargs)`
+
+
+
+
 
 </details>
 
