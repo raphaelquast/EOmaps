@@ -56,7 +56,8 @@
     `m.plot_map()`, `m.add_colorbar()` and `m.set_data()`
 - 🔶 `m.set_shape.voroni_diagram` is renamed to `m.set_shape.voronoi_diagram`
 - 🔷 custom callbacks are no longer bound to the Maps-object  
-  🔷 `def cb(self, *args, **kwargs)  >>  def cb(*args, **kwargs)`
+  -  the call-signature of custom callbacks has changed to:  
+     `def cb(self, *args, **kwargs)  >>  def cb(*args, **kwargs)`
 
 </details>
 
