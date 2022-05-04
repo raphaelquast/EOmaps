@@ -17,8 +17,8 @@ m.add_feature.preset.coastline()
 m.set_data(
     data=data,  # a pandas-DataFrame holding the data & coordinates
     parameter="data_variable",  # the DataFrame-column you want to plot
-    xcoord="lon",  # the name of the DataFrame-column representing the x-coordinates
-    ycoord="lat",  # the name of the DataFrame-column representing the y-coordinates
+    x="lon",  # the name of the DataFrame-column representing the x-coordinates
+    y="lat",  # the name of the DataFrame-column representing the y-coordinates
     crs=4326,
 )  # the coordinate-system of the x- and y- coordinates
 m.plot_map()

@@ -66,7 +66,6 @@ from ._shapes import shapes
 
 from ._containers import (
     data_specs,
-    plot_specs,
     map_objects,
     classify_specs,
     # cb_container,
@@ -168,8 +167,7 @@ class Maps(object):
                 >>> m.plot_map(f_gs=gs[0,0])
         * `matplotilb.Axes`:
             Directly use the provided figure and axes instances for plotting.
-            The axes MUST be a geo-axes with `m.plot_specs.crs_plot`
-            projection. NO colorbar and NO histogram will be plotted.
+            The axes MUST be a geo-axes with `m.crs_plot` projection.
 
                 >>> import matplotlib.pyplot as plt
                 >>> f = plt.figure()
@@ -244,21 +242,6 @@ class Maps(object):
         ], "preferred_wms_service must be either 'wms' or 'wmts' !"
         self._preferred_wms_service = preferred_wms_service
 
-        # default plot specs
-        self.plot_specs = plot_specs(
-            weakref.proxy(self),
-            label=None,
-            cmap=plt.cm.viridis.copy(),
-            histbins=256,
-            tick_precision=2,
-            vmin=None,
-            vmax=None,
-            cpos="c",
-            cpos_radius=None,
-            alpha=1,
-            density=False,
-        )
-
         if isinstance(gs_ax, plt.Axes):
             # set the plot_crs only if no explicit axes is provided
             if crs is not None:
@@ -282,8 +265,8 @@ class Maps(object):
 
         self.data_specs = data_specs(
             weakref.proxy(self),
-            xcoord="lon",
-            ycoord="lat",
+            x="lon",
+            y="lat",
             crs=4326,
         )
 
@@ -338,6 +321,21 @@ class Maps(object):
             return weakref.proxy(obj)
         else:
             return obj
+
+    @property
+    def plot_specs(self):
+        raise AssertionError(
+            "EOmaps: 'm.plot_specs' has been removed in v4.0!\n For instructions "
+            + "on how to quickly port your script to EOmaps >= 4.0, see: \n"
+            + r"https://eomaps.readthedocs.io/en/latest/FAQ.html#port-script-from-eomaps-v3-x-to-v4-x"
+        )
+
+    def set_plot_specs(self, *args, **kwargs):
+        raise AssertionError(
+            "EOmaps: 'm.set_plot_specs' has been removed in v4.0!\n For instructions "
+            + "on how to quickly port your script to EOmaps >= 4.0, see: \n"
+            + r"https://eomaps.readthedocs.io/en/latest/FAQ.html#port-script-from-eomaps-v3-x-to-v4-x"
+        )
 
     def cleanup(self):
         """
@@ -399,21 +397,22 @@ class Maps(object):
         """
         The shape that will be used to represent the dataset if `m.plot_map()` is called
 
-        By default "ellipses" is used for datasets < 500k datapoints and
-        "shade_raster" is used otherwise.
+        By default "ellipses" is used for datasets < 500k datapoints and for plots
+        where no explicit data is assigned, and otherwise "shade_raster" is used
+        for 2D datasets and "shade_points" is used for unstructured datasets.
 
         """
         if self._shape is None:
             if self.data is not None:
-                if hasattr(self.data, "size"):
-                    # numpy, xarray and pandas support .size
-                    size = self.data.size
-                else:
-                    # to support ordinary lists
-                    size = len(self.data)
+                size = np.size(self.data)
                 if size > 500_000:
                     if _ds_OK:
-                        self.set_shape.shade_raster()
+                        if len(self.data.shape) == 2:
+                            # shade_raster requires 2D data!
+                            self.set_shape.shade_raster()
+                        else:
+                            # shade_points should work for any dataset
+                            self.set_shape.shade_points()
                     else:
                         print(
                             "EOmaps-Warning: you attempt to plot a large dataset"
@@ -424,6 +423,8 @@ class Maps(object):
                         self.set_shape.ellipses()
                 else:
                     self.set_shape.ellipses()
+            else:
+                self.set_shape.ellipses()
 
         return self._shape
 
@@ -462,7 +463,6 @@ class Maps(object):
         self,
         layer=None,
         copy_data_specs=False,
-        copy_plot_specs=False,
         copy_classify_specs=False,
         copy_shape=True,
     ):
@@ -478,7 +478,7 @@ class Maps(object):
             - If None, the layer of the parent object is used.
 
             The default is None.
-        copy_data_specs, copy_shape, copy_plot_specs, copy_classify_specs : bool
+        copy_data_specs, copy_shape, copy_classify_specs : bool
             Indicator if the corresponding properties should be copied to
             the new layer. By default no settings are copied.
 
@@ -497,7 +497,6 @@ class Maps(object):
 
         m = self.copy(
             data_specs=copy_data_specs,
-            plot_specs=copy_plot_specs,
             classify_specs=copy_classify_specs,
             shape=copy_shape,
             parent=self.parent,
@@ -566,9 +565,6 @@ class Maps(object):
                 gsspec = gs_ax
                 gs = gsspec.get_gridspec()
 
-            if plot_crs is None:
-                plot_crs = self.plot_specs["plot_crs"]
-
             projection = self._get_cartopy_crs(plot_crs)
 
             ax = self.figure.f.add_subplot(
@@ -623,9 +619,12 @@ class Maps(object):
 
         if newfig:
             # we only need to call show if a new figure has been created!
-            if plt.isinteractive():
+            if (
+                plt.isinteractive()
+                or plt.get_backend() == "module://ipympl.backend_nbagg"
+            ):
                 # make sure to call show only if we use an interactive backend...
-                # (otherwise it will block subsequent code!)
+                # or within the ipympl backend (otherwise it will block subsequent code!)
                 plt.show()
 
     def _on_resize(self, event):
@@ -772,7 +771,6 @@ class Maps(object):
     def copy(
         self,
         data_specs=False,
-        plot_specs=True,
         classify_specs=True,
         shape=True,
         **kwargs,
@@ -784,12 +782,12 @@ class Maps(object):
 
         Parameters
         ----------
-        data_specs, plot_specs, classify_specs, shape : bool or "shared", optional
+        data_specs, classify_specs, shape : bool or "shared", optional
             Indicator if the corresponding properties should be copied.
 
             - if True: ALL corresponding properties are copied
 
-            By default, "plot_specs", "classify_specs" and the "shape" are copied.
+            By default, "classify_specs" and the "shape" are copied.
 
         kwargs :
             Additional kwargs passed to `m = Maps(**kwargs)`
@@ -801,10 +799,6 @@ class Maps(object):
         """
 
         copy_cls = Maps(**kwargs)
-        if plot_specs is True:
-            copy_cls.set_plot_specs(
-                **{key: copy.deepcopy(val) for key, val in self.plot_specs}
-            )
 
         if data_specs is True:
             data_specs = list(self.data_specs.keys())
@@ -839,7 +833,15 @@ class Maps(object):
         return self._shapes
 
     def set_data_specs(
-        self, data=None, xcoord=None, ycoord=None, crs=None, encoding=None, **kwargs
+        self,
+        data=None,
+        x=None,
+        y=None,
+        crs=None,
+        encoding=None,
+        cpos="c",
+        cpos_radius=None,
+        **kwargs,
     ):
         """
         Set the properties of the dataset you want to plot.
@@ -860,16 +862,18 @@ class Maps(object):
             - a 1D or 2D numpy-array with the data-values
             - a 1D list of data values
 
-        xcoord, ycoord : str, optional
+        x, y : str, optional
             Specify the coordinates associated with the provided data.
             Accepted inputs are:
 
             - a string (corresponding to the column-names of the `pandas.DataFrame`)
+
+              - ONLY if "data" is provided as a pandas.DataFrame!
+
             - a pandas.Series
             - a 1D or 2D numpy-array
             - a 1D list
 
-            The names of columns that contain the coordinates in the specified crs.
             The default is "lon" and "lat".
         crs : int, dict or str
             The coordinate-system of the provided coordinates.
@@ -895,8 +899,8 @@ class Maps(object):
 
             The name of the column that should be used as parameter.
 
-            If None, the first column (despite of xcoord and ycoord) will be used.
-            The default is None.
+            If None, the first column (despite of the columns assigned as "x" and "y")
+            will be used. The default is None.
         encoding : dict or False, optional
             A dict containing the encoding information in case the data is provided as
             encoded values (useful to avoid decoding large integer-encoded datasets).
@@ -911,6 +915,17 @@ class Maps(object):
 
             If False, no value-transformation is performed.
             The default is False
+        cpos : str, optional
+            Indicator if the provided x-y coordinates correspond to the center ("c"),
+            upper-left corner ("ul"), lower-left corner ("ll") etc.  of the pixel.
+            If any value other than "c" is provided, a "cpos_radius" must be set!
+            The default is "c".
+        cpos_radius : int or tuple, optional
+            The pixel-radius (in the input-crs) that will be used to set the
+            center-position of the provided data.
+            If a number is provided, the pixels are treated as squares.
+            If a tuple (rx, ry) is provided, the pixels are treated as rectangles.
+            The default is None.
 
         Examples
         --------
@@ -918,22 +933,22 @@ class Maps(object):
         - using a single `pandas.DataFrame`
 
           >>> data = pd.DataFrame(dict(lon=[...], lat=[...], a=[...], b=[...]))
-          >>> m.set_data(data, xcoord="lon", ycoord="lat", parameter="a", crs=4326)
+          >>> m.set_data(data, x="lon", y="lat", parameter="a", crs=4326)
 
         - using individual `pandas.Series`
 
           >>> lon, lat, vals = pd.Series([...]), pd.Series([...]), pd.Series([...])
-          >>> m.set_data(vals, xcoord=x, ycoord=y, crs=4326)
+          >>> m.set_data(vals, x=lon, y=lat, crs=4326)
 
         - using 1D lists
 
           >>> lon, lat, vals = [...], [...], [...]
-          >>> m.set_data(vals, xcoord=lon, ycoord=lat, crs=4326)
+          >>> m.set_data(vals, x=lon, y=lat, crs=4326)
 
         - using 1D or 2D numpy.arrays
 
           >>> lon, lat, vals = np.array([[...]]), np.array([[...]]), np.array([[...]])
-          >>> m.set_data(vals, xcoord=lon, ycoord=lat, crs=4326)
+          >>> m.set_data(vals, x=lon, y=lat, crs=4326)
 
         - integer-encoded datasets
 
@@ -941,17 +956,41 @@ class Maps(object):
           >>> encoding = dict(scale_factor=0.01, add_offset=1)
           >>> # colorbars and pick-callbacks will now show values as (1 + 0.01 * value)
           >>> # e.g. the "actual" data values are [0.01, 0.02, 0.03, ...]
-          >>> m.set_data(vals, xcoord=lon, ycoord=lat, crs=4326, encoding=encoding)
+          >>> m.set_data(vals, x=lon, y=lat, crs=4326, encoding=encoding)
         """
+
+        # depreciate the use of "xcoord" and "ycoord"... use "x", "y" instead
+        if "xcoord" in kwargs:
+            if x is None:
+                warnings.warn(
+                    "EOmaps: using 'xcoord' in 'm.set_data' is depreciated. "
+                    + "Use 'x=...' instead!",
+                    DeprecationWarning,
+                    stacklevel=2,
+                )
+                x = kwargs.pop("xcoord")
+            else:
+                raise TypeError("EOmaps: You cannot provide both 'x' and 'xcoord'!")
+        if "ycoord" in kwargs:
+            if y is None:
+                warnings.warn(
+                    "EOmaps: using 'ycoord' in 'm.set_data' is depreciated. "
+                    + "Use 'y=...' instead!",
+                    DeprecationWarning,
+                    stacklevel=2,
+                )
+                y = kwargs.pop("ycoord")
+            else:
+                raise TypeError("EOmaps: You cannot provide both 'y' and 'ycoord'!")
 
         if data is not None:
             self.data_specs.data = data
 
-        if xcoord is not None:
-            self.data_specs.xcoord = xcoord
+        if x is not None:
+            self.data_specs.x = x
 
-        if ycoord is not None:
-            self.data_specs.ycoord = ycoord
+        if y is not None:
+            self.data_specs.y = y
 
         if crs is not None:
             self.data_specs.crs = crs
@@ -962,64 +1001,13 @@ class Maps(object):
         if encoding is not None:
             self.data_specs.encoding = encoding
 
+        if cpos is not None:
+            self.data_specs.cpos = cpos
+
+        if cpos_radius is not None:
+            self.data_specs.cpos_radius = cpos_radius
+
     set_data = set_data_specs
-
-    def set_plot_specs(self, **kwargs):
-        """
-        Set the plot-specifications (label, colormap, crs, etc.)
-
-        Use this function to update multiple data-specs in one go
-        Alternatively you can set the data-specifications via
-
-            >>> m.data_specs.< property > = ...`
-
-        Parameters
-        ----------
-        label : str, optional
-            The colorbar-label.
-            If None, the name of the parameter will be used.
-            The default is None.
-        cmap : str or matplotlib.colormap, optional
-            The colormap to use. The default is "viridis".
-        plot_crs : int or cartopy-projection, optional
-            The projection to use for plotting.
-            If int, it is identified as an epsg-code
-            Otherwise you can specify any projection supported by cartopy.
-            A list for easy-accses is available as `Maps.CRS`
-
-            The default is 4326.
-        histbins : int, list, tuple, array or "bins", optional
-            If int: The number of histogram-bins to use for the colorbar.
-            If list, tuple or numpy-array: the bins to use
-            If "bins": use the bins obtained from the classification
-            (ONLY possible if a classification scheme is used!)
-
-            The default is 256.
-        tick_precision : int, optional
-            The precision of the tick-labels in the colorbar. The default is 2.
-        vmin, vmax : float, optional
-            Min- and max. values assigned to the colorbar. The default is None.
-        cpos : str, optional
-            Indicator if the provided x-y coordinates correspond to the center ("c"),
-            upper-left ("ul"), lower-left ("ll") etc.  of the pixel.
-            If any value other than "c" is provided, a "cpos_radius" must be set!
-            The default is "c".
-        cpos_radius : int or tuple, optional
-            The pixel-radius (in the input-crs) that will be used to set the
-            center-position of the provided data.
-            If a number is provided, the pixels are treated as squares.
-            If a tuple (rx, ry) is provided, the pixels are treated as rectangles.
-        alpha : int, optional
-            Set the transparency of the plot (0-1)
-            The default is 1.
-        density : bool, optional
-            Indicator if the y-axis of the histogram should represent the
-            probability-density (True) or the number of counts per bin (False)
-            The default is False.
-        """
-
-        for key, val in kwargs.items():
-            self.plot_specs[key] = val
 
     def set_classify_specs(self, scheme=None, **kwargs):
         """
@@ -1091,7 +1079,7 @@ class Maps(object):
         crs : "in", "out" or a crs definition
             the crs to return
             if "in" : the crs defined in m.data_specs.crs
-            if "out" or "plot" : the crs defined in m.plot_specs.plot_crs
+            if "out" or "plot" : the crs used for plotting
 
         Returns
         -------
@@ -1104,12 +1092,19 @@ class Maps(object):
         elif crs == "out" or crs == "plot":
             crs = self.crs_plot
 
-        if not isinstance(crs, CRS):
-            crs = CRS.from_user_input(crs)
+        if not hasattr(self, "_crs_cache"):
+            self._crs_cache = dict()
 
+        h = hash(crs)
+
+        if h in self._crs_cache:
+            crs = self._crs_cache[h]
+        else:
+            crs = CRS.from_user_input(crs)
+            self._crs_cache[h] = crs
         return crs
 
-    def _identify_data(self, data=None, xcoord=None, ycoord=None, parameter=None):
+    def _identify_data(self, data=None, x=None, y=None, parameter=None):
         """
         Identify the way how the data has been provided and convert to the
         internal structure.
@@ -1117,65 +1112,79 @@ class Maps(object):
 
         if data is None:
             data = self.data_specs.data
-        if xcoord is None:
-            xcoord = self.data_specs.xcoord
-        if ycoord is None:
-            ycoord = self.data_specs.ycoord
+        if x is None:
+            x = self.data_specs.x
+        if y is None:
+            y = self.data_specs.y
         if parameter is None:
             parameter = self.data_specs.parameter
-        if data is not None:
-            if _pd_OK and isinstance(data, pd.DataFrame):
+        if data is not None and _pd_OK and isinstance(data, pd.DataFrame):
+            if parameter is not None:
                 # get the data-values
                 z_data = data[parameter].values
-                # get the index-values
-                ids = data.index.values
+            else:
+                z_data = np.repeat(np.nan, len(data))
 
-                if isinstance(xcoord, str) and isinstance(ycoord, str):
-                    # get the data-coordinates
-                    xorig = data[xcoord].values
-                    yorig = data[ycoord].values
-                else:
-                    assert isinstance(xcoord, (list, np.ndarray, pd.Series)), (
-                        "xcoord must be either a column-name, or explicit values "
-                        " specified as a list, a numpy-array or a pandas"
-                        + f" Series object if you provide the data as '{type(data)}'"
-                    )
-                    assert isinstance(ycoord, (list, np.ndarray, pd.Series)), (
-                        "ycoord must be either a column-name, or explicit values "
-                        " specified as a list, a numpy-array or a pandas"
-                        + f" Series object if you provide the data as '{type(data)}'"
-                    )
+            # get the index-values
+            ids = data.index.values
 
-                    xorig = np.asanyarray(xcoord)
-                    yorig = np.asanyarray(ycoord)
+            if isinstance(x, str) and isinstance(y, str):
+                # get the data-coordinates
+                xorig = data[x].values
+                yorig = data[y].values
+            else:
+                assert isinstance(x, (list, np.ndarray, pd.Series)), (
+                    "'x' must be either a column-name, or explicit values "
+                    " specified as a list, a numpy-array or a pandas"
+                    + f" Series object if you provide the data as '{type(data)}'"
+                )
+                assert isinstance(y, (list, np.ndarray, pd.Series)), (
+                    "'y' must be either a column-name, or explicit values "
+                    " specified as a list, a numpy-array or a pandas"
+                    + f" Series object if you provide the data as '{type(data)}'"
+                )
 
-                return z_data, xorig, yorig, ids, parameter
+                xorig = np.asanyarray(x)
+                yorig = np.asanyarray(y)
 
-            # check for explicit 1D value lists
-            types = (list, np.ndarray)
-            if _pd_OK:
-                types += (pd.Series,)
+            return z_data, xorig, yorig, ids, parameter
 
+        # identify all other types except for pandas.DataFrames
+
+        # check for explicit 1D value lists
+        types = (list, np.ndarray)
+        if _pd_OK:
+            types += (pd.Series,)
+
+        assert isinstance(
+            x, types
+        ), "'x' coordinates must be provided as list, numpy-array or pandas.Series"
+        assert isinstance(
+            y, types
+        ), "'y' coordinates must be provided as list, numpy-array or pandas.Series"
+
+        # get the data-coordinates
+        xorig = np.asanyarray(x)
+        yorig = np.asanyarray(y)
+
+        if data is not None:
             if isinstance(data, types):
                 # get the data-values
                 z_data = np.asanyarray(data)
-                # get the index-values
-                ids = np.arange(z_data.size)
+        else:
+            if xorig.shape == yorig.shape:
+                z_data = np.full(xorig.shape, np.nan)
+            elif (
+                (xorig.shape != yorig.shape)
+                and (len(xorig.shape) == 1)
+                and (len(yorig.shape) == 1)
+            ):
+                z_data = np.full((xorig.shape[0], yorig.shape[0]), np.nan)
 
-                assert isinstance(xcoord, types), (
-                    "xcoord must be either a list, a numpy-array or a pandas"
-                    + f" Series object if you provide the data as '{type(data)}'"
-                )
-                assert isinstance(ycoord, types), (
-                    "ycoord must be either a list, a numpy-array or a pandas"
-                    + f" Series object if you provide the data as '{type(data)}'"
-                )
+        # get the index-values
+        ids = np.arange(z_data.size)
 
-                # get the data-coordinates
-                xorig = np.asanyarray(xcoord)
-                yorig = np.asanyarray(ycoord)
-
-            return z_data, xorig, yorig, ids, parameter
+        return z_data, xorig, yorig, ids, parameter
 
     def _prepare_data(
         self,
@@ -1187,16 +1196,16 @@ class Maps(object):
         cpos=None,
         cpos_radius=None,
         parameter=None,
-        xcoord=None,
-        ycoord=None,
+        x=None,
+        y=None,
         buffer=None,
     ):
         if in_crs is None:
             in_crs = self.data_specs.crs
         if cpos is None:
-            cpos = self.plot_specs.cpos
+            cpos = self.data_specs.cpos
         if cpos_radius is None:
-            cpos_radius = self.plot_specs.cpos_radius
+            cpos_radius = self.data_specs.cpos_radius
 
         props = dict()
         # get coordinate transformation from in_crs to plot_crs
@@ -1208,8 +1217,9 @@ class Maps(object):
 
         # identify the provided data and get it in the internal format
         z_data, xorig, yorig, ids, parameter = self._identify_data(
-            data=data, xcoord=xcoord, ycoord=ycoord, parameter=parameter
+            data=data, x=x, y=y, parameter=parameter
         )
+
         if cpos is not None and cpos != "c":
             # fix position of pixel-center in the input-crs
             assert (
@@ -1223,15 +1233,28 @@ class Maps(object):
             xorig, yorig = self._set_cpos(xorig, yorig, rx, ry, cpos)
 
         # transform center-points to the plot_crs
-
         if len(xorig.shape) == len(z_data.shape):
             assert xorig.shape == z_data.shape and yorig.shape == z_data.shape, (
                 f"EOmaps: The data-shape {z_data.shape} and coordinate-shape "
                 + f"x={xorig.shape}, y={yorig.shape} do not match!"
             )
 
+        # invoke the shape-setter to make sure a shape is set
+        used_shape = self.shape
+
         if crs1 == crs2:
+            if used_shape.name in ["raster"]:
+                # convert 1D data to 2D (required for QuadMeshes)
+                if (
+                    len(xorig.shape) == 1
+                    and len(yorig.shape) == 1
+                    and len(z_data.shape) == 2
+                ):
+                    xorig, yorig = np.meshgrid(xorig, yorig, copy=False)
+                    z_data = z_data.T
+
             x0, y0 = xorig, yorig
+
         else:
             transformer = Transformer.from_crs(
                 crs1,
@@ -1239,7 +1262,11 @@ class Maps(object):
                 always_xy=True,
             )
             # convert 1D data to 2D to make sure re-projection is correct
-            if len(xorig.shape) == 1 and len(z_data.shape) == 2:
+            if (
+                len(xorig.shape) == 1
+                and len(yorig.shape) == 1
+                and len(z_data.shape) == 2
+            ):
                 xorig, yorig = np.meshgrid(xorig, yorig, copy=False)
                 z_data = z_data.T
 
@@ -1253,10 +1280,7 @@ class Maps(object):
         props["y0"] = y0
 
         # convert the data to 1D for shapes that accept unstructured data
-
-        # invoke the shape-setter to make sure a shape is set
-        used_shape = self.shape
-        if used_shape.name != "shade_raster":
+        if used_shape.name not in ["shade_raster", "raster"]:
             self._1Dprops(props)
 
         return props
@@ -1265,7 +1289,6 @@ class Maps(object):
         self,
         z_data=None,
         cmap=None,
-        histbins=None,
         vmin=None,
         vmax=None,
         classify_specs=None,
@@ -1273,20 +1296,6 @@ class Maps(object):
 
         if z_data is None:
             z_data = self._props["z_data"]
-        if cmap is None:
-            cmap = self.plot_specs["cmap"]
-        if self.plot_specs["alpha"] < 1:
-            cmap = cmap_alpha(
-                cmap,
-                self.plot_specs["alpha"],
-            )
-
-        if histbins is None:
-            histbins = self.plot_specs["histbins"]
-        if vmin is None:
-            vmin = self.plot_specs["vmin"]
-        if vmax is None:
-            vmax = self.plot_specs["vmax"]
 
         if isinstance(cmap, str):
             cmap = plt.get_cmap(cmap)
@@ -1320,24 +1329,8 @@ class Maps(object):
             colors = cmap(np.linspace(0, 1, nbins))
         else:
             classified = False
-            if isinstance(histbins, int):
-                nbins = histbins
-                bins = None
-            elif isinstance(histbins, (list, tuple, np.ndarray)):
-                nbins = len(histbins)
-                bins = histbins
-            else:
-                if isinstance(histbins, str) and histbins == "bins":
-                    raise TypeError(
-                        "using histbins='bins' is only valid"
-                        + "if you classify the data!"
-                    )
-                else:
-                    raise TypeError(
-                        "you can only provide integers, lists "
-                        + "tuples or numpy-arrays as histbins!"
-                    )
-            colors = cmap(np.linspace(0, 1, nbins))
+            bins = None
+            colors = cmap(np.linspace(0, 1, 256))
             norm = mpl.colors.Normalize(vmin, vmax)
 
         # initialize a colormap
@@ -1360,7 +1353,7 @@ class Maps(object):
         z_data=None,
         label=None,
         bins=None,
-        histbins=None,
+        histbins=256,
         cmap="viridis",
         norm=None,
         classified=False,
@@ -1383,31 +1376,12 @@ class Maps(object):
         z_data = z_data.ravel()
 
         if label is None:
-            label = self.plot_specs["label"]
-            if label is None:
-                label = self.data_specs["parameter"]
-        if histbins is None:
-            histbins = self.plot_specs["histbins"]
-        if cmap is None:
-            cmap = self.plot_specs["cmap"]
-        if vmin is None:
-            vmin = self.plot_specs["vmin"]
-            if vmin is None:
-                vmin = np.nanmin(self._props["z_data"])
-        if vmax is None:
-            vmax = self.plot_specs["vmax"]
-            if vmax is None:
-                vmax = np.nanmax(self._props["z_data"])
-        if tick_precision is None:
-            tick_precision = self.plot_specs["tick_precision"]
+            label = self.data_specs["parameter"]
 
         if tick_formatter is None:
             tick_formatter = partial(
                 self._default_cb_tick_formatter, precision=tick_precision
             )
-
-        if density is None:
-            density = self.plot_specs["density"]
 
         if orientation == "horizontal":
             cb_orientation = "vertical"
@@ -1434,7 +1408,7 @@ class Maps(object):
         # skip drawing the colorbar in case no data is available
         # and show a notification that there's no data instead
         # (relevant for dynamic colorbars if you pan to a region without data)
-        if len(valid_zdata) == 0:
+        if self.data is not None and len(valid_zdata) == 0:
             ax_cb.set_visible(False)
             ax_cb_plot.set_visible(False)
             if ax_cb not in self.BM._hidden_axes:
@@ -2236,7 +2210,7 @@ class Maps(object):
         self.BM.update(clear=False)
 
     def add_compass(
-        self, pos=None, scale=10, style="compass", patch="w", txt="N", pickable=True
+        self, pos=None, scale=10, style="compass", patch=None, txt="N", pickable=True
     ):
         """
         Add a "compass" or "north-arrow" to the map.
@@ -2380,6 +2354,10 @@ class Maps(object):
             + "'shade_points' and 'shade_raster'"
         )
 
+        cmap = kwargs.pop("cmap", "viridis")
+        vmin = kwargs.pop("vmin", None)
+        vmax = kwargs.pop("vmin", None)
+
         # remove previously fetched backgrounds for the used layer
         if layer in self.BM._bg_layers and dynamic is False:
             del self.BM._bg_layers[layer]
@@ -2397,9 +2375,6 @@ class Maps(object):
         self._props = props
 
         z_finite = np.isfinite(props["z_data"])
-
-        vmin = self.plot_specs["vmin"]
-        vmax = self.plot_specs["vmax"]
 
         # get the name of the used aggretation reduction
         aggname = self.shape.aggregator.__class__.__name__
@@ -2426,6 +2401,7 @@ class Maps(object):
         cbcmap, norm, bins, classified = self._classify_data(
             vmin=vmin,
             vmax=vmax,
+            cmap=cmap,
             classify_specs=self.classify_specs,
         )
 
@@ -2441,7 +2417,7 @@ class Maps(object):
 
             # clip the data to properly account for vmin and vmax
             # (do this only if we don't intend to use the full dataset!)
-            if self.plot_specs["vmin"] or self.plot_specs["vmax"]:
+            if vmin or vmax:
                 props["z_data"] = props["z_data"].clip(vmin, vmax)
         else:
             kwargs.setdefault("norm", "linear")
@@ -2748,9 +2724,9 @@ class Maps(object):
         >>> # ...call m2.plot_map() to make the dataset visible...
         """
 
-        if self.data is None:
-            print("EOmaps: you must set the data first!")
-            return
+        # if self.data is None:
+        #     print("EOmaps: you must set the data first!")
+        #     return
 
         if hasattr(self.figure, "coll") and self.figure.coll:
             print(
@@ -2800,9 +2776,9 @@ class Maps(object):
 
         ax = self.figure.ax
 
-        cmap = kwargs.pop("cmap", None)
-        if cmap is not None:
-            self.plot_specs.cmap = cmap
+        cmap = kwargs.pop("cmap", "viridis")
+        vmin = kwargs.pop("vmin", None)
+        vmax = kwargs.pop("vmax", None)
 
         for key in ("array", "norm"):
             assert (
@@ -2815,8 +2791,8 @@ class Maps(object):
                 del self.BM._bg_layers[layer]
                 # self.BM._refetch_bg = True
 
-            if self.data is None:
-                return
+            # if self.data is None:
+            #     return
 
             # ---------------------- prepare the data
             props = self._prepare_data()
@@ -2824,22 +2800,21 @@ class Maps(object):
             # remember props for later use
             self._props = props
 
-            vmin = self.plot_specs["vmin"]
-            if self.plot_specs["vmin"] is None:
+            if vmin is None and self.data is not None:
                 vmin = np.nanmin(props["z_data"])
-            vmax = self.plot_specs["vmax"]
-            if self.plot_specs["vmax"] is None:
+            if vmax is None and self.data is not None:
                 vmax = np.nanmax(props["z_data"])
 
             # clip the data to properly account for vmin and vmax
             # (do this only if we don't intend to use the full dataset!)
-            if self.plot_specs["vmin"] or self.plot_specs["vmax"]:
+            if vmin or vmax:
                 props["z_data"] = props["z_data"].clip(vmin, vmax)
 
             # ---------------------- classify the data
             cbcmap, norm, bins, classified = self._classify_data(
                 vmin=vmin,
                 vmax=vmax,
+                cmap=cmap,
                 classify_specs=self.classify_specs,
             )
 
@@ -2860,9 +2835,13 @@ class Maps(object):
             else:
                 args = dict(array=props["z_data"], cmap=cbcmap, norm=norm, **kwargs)
 
-            coll = self.shape.get_coll(
-                props["xorig"].ravel(), props["yorig"].ravel(), "in", **args
-            )
+            if self.shape.name in ["raster"]:
+                coll = self.shape.get_coll(props["xorig"], props["yorig"], "in", **args)
+            else:
+                # convert input to 1D
+                coll = self.shape.get_coll(
+                    props["xorig"].ravel(), props["yorig"].ravel(), "in", **args
+                )
 
             coll.set_clim(vmin, vmax)
             ax.add_collection(coll)
@@ -2908,7 +2887,7 @@ class Maps(object):
     ):
         """
         Actually generate the map-plot based on the data provided as `m.data` and the
-        specifications defined in "data_specs", "plot_specs" and "classify_specs".
+        specifications defined in "data_specs" and "classify_specs".
 
         NOTE
         ----
@@ -2968,6 +2947,11 @@ class Maps(object):
 
             The default is False.
 
+        Other Parameters:
+        -----------------
+        vmin, vmax : float, optional
+            Min- and max. values assigned to the colorbar. The default is None.
+
         kwargs
             kwargs passed to the initialization of the matpltolib collection
             (dependent on the plot-shape) [linewidth, edgecolor, facecolor, ...]
@@ -2975,10 +2959,19 @@ class Maps(object):
             For "shade_points" or "shade_raster" shapes, kwargs are passed to
             `datashader.mpl_ext.dsshow`
         """
+
         if layer is None:
             layer = self.layer
 
         useshape = self.shape  # invoke the setter to set the default shape
+
+        # make sure the colormap is properly set and transparencys are assigned
+        cmap = kwargs.setdefault("cmap", "viridis")
+        if "alpha" in kwargs and kwargs["alpha"] < 1:
+            kwargs["cmap"] = cmap_alpha(
+                cmap,
+                kwargs["alpha"],
+            )
 
         if useshape.name.startswith("shade"):
             self._shade_map(
@@ -3001,6 +2994,19 @@ class Maps(object):
         # callbacks etc. so that we don't need to keep them in memory.
         if memmap:
             self._memmap_props(dir=memmap)
+
+        if hasattr(self, "_data_mask") and not np.all(self._data_mask):
+            print("EOmaps: Warning: some datapoints could not be drawn!")
+
+        x0, y0, x1, y1 = self.crs_plot.boundary.bounds
+
+        if (
+            np.any(self._props["x0"] < x0)
+            or np.any(self._props["x0"] > x1)
+            or np.any(self._props["y0"] < y0)
+            or np.any(self._props["y0"] > y1)
+        ):
+            print("EOmaps: Warning: some points are outside the CRS bounds!")
 
     def _remove_colorbar(self):
         if hasattr(self, "_ax_cb"):
@@ -3093,20 +3099,17 @@ class Maps(object):
         A formatter to format the tick-labels of the colorbar for encoded datasets.
         (used in xaxis.set_major_formatter() )
         """
-
-        if precision:
-            return np.format_float_positional(self._decode_values(x), precision)
-        else:
-            return self._decode_values(x)
+        # if precision=None the shortest representation of the number is used
+        return np.format_float_positional(self._decode_values(x), precision)
 
     def add_colorbar(
         self,
         gs=0.2,
         orientation="horizontal",
         label=None,
-        density=None,
-        histbins=None,
-        tick_precision=None,
+        density=False,
+        histbins=256,
+        tick_precision=3,
         top=0.05,
         bottom=0.1,
         left=0.1,
@@ -3149,8 +3152,7 @@ class Maps(object):
         density : bool or None
             Indicator if the y-axis of the histogram should represent the
             probability-density (True) or the number of counts per bin (False)
-            If None, the value assigned in `m.plot_specs.density` is used.
-            The default is None.
+            The default is False.
         histbins : int, list, tuple, array or "bins", optional
             - If int: The number of histogram-bins to use for the colorbar.
             - If list, tuple or numpy-array: the bins to use
@@ -3159,9 +3161,8 @@ class Maps(object):
 
             The default is 256.
         tick_precision : int or None
-            The precision of the tick-labels in the colorbar. The default is 2.
-            If None, the value assigned in `m.plot_specs.tick_precision` is used.
-            The default is None.
+            The precision of the tick-labels in the colorbar.
+            The default is 3.
         top, bottom, left, right : float
             The padding between the colorbar and the parent axes (as fraction of the
             plot-height (if "horizontal") or plot-width (if "vertical")
@@ -3213,6 +3214,13 @@ class Maps(object):
         >>> |_______________________________________________________|
 
         """
+
+        if self.data is None:
+            print(
+                "EOmaps: There is no data for the colorbar! Use m.set_data(data=...)"
+                + "to set the data."
+            )
+            return
 
         self._cb_kwargs = dict(
             orientation=orientation,
@@ -3360,7 +3368,10 @@ class Maps(object):
             ax_cb_plot.get_shared_x_axes().join(ax_cb_plot, ax_cb)
 
         coll = self.figure.coll
+
         renorm = False
+        vmin = coll.norm.vmin
+        vmax = coll.norm.vmax
 
         if _ds_OK and isinstance(coll, ScalarDSArtist):
             aggname = self.shape.aggregator.__class__.__name__
@@ -3403,8 +3414,6 @@ class Maps(object):
 
                 if renorm:
                     z_data = z_data[~np.isnan(z_data)]
-                    vmin = coll.norm.vmin  # np.nanmin(z_data)
-                    vmax = coll.norm.vmax  # np.nanmax(z_data)
                     norm = coll.norm
                     # make sure the norm clips with respect to vmin/vmax
                     # (only clip if either vmin or vmax is not None)
@@ -3412,7 +3421,6 @@ class Maps(object):
                         z_data = z_data.clip(vmin, vmax)
                     cmap = coll.get_cmap()
                 else:
-                    vmin, vmax = None, None  # None means take values from plot_specs!
                     norm = self.classify_specs._norm
 
                 def redraw(*args, **kwargs):
@@ -3425,8 +3433,6 @@ class Maps(object):
                     self.BM.on_layer(redraw, layer=self.layer, persistent=True, m=self)
             else:
                 z_data = None
-                vmin = None
-                vmax = None
                 bins = self.classify_specs._bins
                 cmap = self.classify_specs._cbcmap
                 norm = self.classify_specs._norm
@@ -3440,8 +3446,6 @@ class Maps(object):
                 dynamic_shade_indicator = False
 
             z_data = None
-            vmin = None
-            vmax = None
             bins = self.classify_specs._bins
             cmap = self.classify_specs._cbcmap
             norm = self.classify_specs._norm
@@ -3532,20 +3536,22 @@ class Maps(object):
         if not hasattr(self, "_data_mask"):
             print("EOmaps: There are no masked points to indicate!")
             return
-        data = self.data[~self._data_mask]
 
-        if len(data) == 0:
+        mask = np.broadcast_to(self._data_mask, self._props["z_data"].shape)
+
+        if len(self._props["z_data"][~mask]) == 0:
             print("EOmaps: There are no masked points to indicate!")
             return
 
-        m = self.new_layer(copy_data_specs=True)
-        m.data = data
+        kwargs.setdefault("ec", "r")
 
-        t = self.figure.ax.transData.inverted()
-        r = (t.transform((100 + radius, 100 + radius)) - t.transform((100, 100))).mean()
-        m.set_shape.ellipses(radius_crs="out", radius=r)
-        m.plot_map(**kwargs)
-        return m
+        self.ax.scatter(
+            self._props["x0"][~mask],
+            self._props["y0"][~mask],
+            cmap=self.classify_specs._cbcmap,
+            c=self._props["z_data"][~mask],
+            **kwargs,
+        )
 
     if _gpd_OK:
 
@@ -3681,11 +3687,13 @@ class Maps(object):
             toolbar.release_pan = update_decorator(toolbar.release_pan)
 
         def cleanup():
+
             toolbar._update_view = toolbar._update_view.__wrapped__
             toolbar.release_zoom = toolbar.release_zoom.__wrapped__
             toolbar.release_pan = toolbar.release_pan.__wrapped__
 
-        self._cleanup_functions.add(cleanup)
+        if toolbar is not None:
+            self._cleanup_functions.add(cleanup)
 
         self._logo_cids.add(self.figure.f.canvas.mpl_connect("resize_event", setlim))
 
@@ -3981,6 +3989,29 @@ class MapsGrid:
                 for key, val in ax_inits.items():
                     self.create_axes(val, name=key)
 
+    def new_layer(self, layer=None):
+        if layer is None:
+            layer = self.parent.layer
+
+        mg = MapsGrid(m_inits=dict())  # initialize an empty MapsGrid
+        mg.gridspec = self.gridspec
+
+        for name, m in zip(self._names["Maps"], self._Maps):
+            newm = m.new_layer(layer)
+            mg._Maps.append(newm)
+            mg._names["Maps"].append(name)
+            setattr(mg, "m_" + name, newm)
+
+            if m is self.parent:
+                mg.parent = newm
+
+        for name in self._names["Axes"]:
+            ax = getattr(self, f"ax_{name}")
+            mg._names["Axes"].append(name)
+            setattr(mg, f"ax_{name}", ax)
+
+        return mg
+
     def cleanup(self):
         for m in self:
             m.cleanup()
@@ -4099,13 +4130,6 @@ class MapsGrid:
 
         return s
 
-    @wraps(Maps.set_plot_specs)
-    def set_plot_specs(self, **kwargs):
-        for m in self:
-            m.set_plot_specs(**kwargs)
-
-    set_plot_specs.__doc__ = _doc_prefix + set_plot_specs.__doc__
-
     @wraps(Maps.set_data_specs)
     def set_data_specs(self, *args, **kwargs):
         for m in self:
@@ -4182,6 +4206,7 @@ class MapsGrid:
         Share click events between all Maps objects of the grid
         """
         self.parent.cb.click.share_events(*self.children)
+        self.parent.cb._move.share_events(*self.children)
 
     def share_pick_events(self, name="default"):
         """

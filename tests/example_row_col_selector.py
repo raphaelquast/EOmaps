@@ -34,7 +34,7 @@ mg.ax_col.set_xlim(-92.5, 92.5)
 mg.ax_col.set_ylim(data.min(), data.max())
 
 # ---- plot the map
-m = mg.m_map
+m = mg.m_map  # get the Maps-object
 
 m.set_data(data, lon, lat, parameter=name)
 m.set_classify_specs(Maps.CLASSIFIERS.NaturalBreaks, k=5)
@@ -57,9 +57,7 @@ def cb(m, ind, ID, coords, *args, **kwargs):
     coords.update(dict(r=r, c=c))
 
     # ---- highlight the picked column
-    m2.set_data(
-        m.data_specs.data[:, c], m.data_specs.xcoord[:, c], m.data_specs.ycoord[:, c]
-    )
+    m2.set_data(m.data_specs.data[:, c], m.data_specs.x[:, c], m.data_specs.y[:, c])
     m2.set_shape.ellipses(m.shape.radius)
     # use "dynamic=True" to avoid re-drawing the background all the time
     # use "set_extent=False" to avoid resetting the plot extent on each draw
@@ -67,17 +65,15 @@ def cb(m, ind, ID, coords, *args, **kwargs):
     m.cb.pick.add_temporary_artist(m2.figure.coll)  # remove the highlight on next pick
 
     # ---- highlight the picked row
-    m3.set_data(
-        m.data_specs.data[r, :], m.data_specs.xcoord[r, :], m.data_specs.ycoord[r, :]
-    )
+    m3.set_data(m.data_specs.data[r, :], m.data_specs.x[r, :], m.data_specs.y[r, :])
     m3.set_shape.ellipses(m.shape.radius)
     m3.plot_map(fc="none", ec="r", set_extent=False, dynamic=True)
     m.cb.pick.add_temporary_artist(m3.figure.coll)  # remove the highlight on next pick
 
     # ---- plot the data for the selected column
-    (art0,) = mg.ax_col.plot(m.data_specs.ycoord[:, c], m.data_specs.data[:, c], c="b")
+    (art0,) = mg.ax_col.plot(m.data_specs.y[:, c], m.data_specs.data[:, c], c="b")
     (art01,) = mg.ax_col.plot(
-        m.data_specs.ycoord[r, c],
+        m.data_specs.y[r, c],
         m.data_specs.data[r, c],
         c="k",
         marker="o",
@@ -89,9 +85,9 @@ def cb(m, ind, ID, coords, *args, **kwargs):
     m.cb.pick.add_temporary_artist(art01)
 
     # ---- plot the data for the selected row
-    (art1,) = mg.ax_row.plot(m.data_specs.xcoord[r, :], m.data_specs.data[r, :], c="r")
+    (art1,) = mg.ax_row.plot(m.data_specs.x[r, :], m.data_specs.data[r, :], c="r")
     (art11,) = mg.ax_row.plot(
-        m.data_specs.xcoord[r, c],
+        m.data_specs.x[r, c],
         m.data_specs.data[r, c],
         c="k",
         marker="o",
@@ -107,7 +103,7 @@ def cb(m, ind, ID, coords, *args, **kwargs):
         ID=ID,
         text=(
             f"row/col={r}/{c}\n"
-            + f"lon/lat={m.data_specs.xcoord[r,c]:.2f}/{m.data_specs.ycoord[r,c]:.2f}"
+            + f"lon/lat={m.data_specs.x[r,c]:.2f}/{m.data_specs.y[r,c]:.2f}"
             + f"\nval={m.data[r,c]:.2f}"
         ),
         permanent=False,
@@ -119,4 +115,4 @@ def cb(m, ind, ID, coords, *args, **kwargs):
 # initialize a dict that can be used to access the last clicked (row, col)
 coords = dict(r=None, c=None)
 # attach the custom callback
-m.cb.pick.attach(cb, coords=coords)
+m.cb.pick.attach(cb, coords=coords, m=m)

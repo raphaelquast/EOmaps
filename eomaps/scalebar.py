@@ -707,7 +707,7 @@ class ScaleBar:
         # make sure to update the artists on zoom
         self._decorate_zooms()
 
-    def set_position(self, lon=None, lat=None, azim=None, update=True):
+    def set_position(self, lon=None, lat=None, azim=None, update=False):
         """
         Sset the position of the colorbar
 
@@ -721,8 +721,8 @@ class ScaleBar:
             The azimuth-direction in which to calculate the intermediate
             points for the scalebar. The default is None.
         update : bool
-            Indicator if the plot should be updated or not
-            The default is True.
+            Indicator if the plot should be immediately updated (True) or at the next
+            event (False). The default is False.
         """
 
         if lon is None:
@@ -762,7 +762,7 @@ class ScaleBar:
                 self._artists["patch"].set_linestyle("-")
 
         if update:
-            self._m.BM.update(blit=False)
+            self._m.BM.update()
 
     def _make_pickable(self):
         """
@@ -776,7 +776,7 @@ class ScaleBar:
             - use <ARROW-keys> to set the size of the patch
         """
 
-        def scb_move(self, s, pos, **kwargs):
+        def scb_move(s, pos, **kwargs):
             # scb_remove(self, s)
             # s._artists["patch"].set_pickradius(150)
             # if not s._artists["patch"].contains(self.cb.click._event)[0]:
@@ -785,58 +785,58 @@ class ScaleBar:
             # don't update here... the click callback updates itself!
             s.set_position(lon, lat, update=False)
 
-        def scb_remove(self, s, **kwargs):
-            if not self.cb.pick[s._picker_name].is_picked:
+        def scb_remove(s, **kwargs):
+            if not s._m.cb.pick[s._picker_name].is_picked:
                 return
             s.remove()
 
-        def scb_az_ud(self, s, up=True, **kwargs):
-            if not self.cb.pick[s._picker_name].is_picked:
+        def scb_az_ud(s, up=True, **kwargs):
+            if not s._m.cb.pick[s._picker_name].is_picked:
                 return
             s._azim += s.cb_rotate_interval if up else -s.cb_rotate_interval
             s.set_position(update=True)
 
         # ------------ callbacks to change frame with arrow-keys
-        def scb_patch_dim(self, s, udlr, add=True, **kwargs):
-            if not self.cb.pick[s._picker_name].is_picked:
+        def scb_patch_dim(s, udlr, add=True, **kwargs):
+            if not s._m.cb.pick[s._picker_name].is_picked:
                 return
             o = [*s._patch_offsets]
             o[udlr] += 0.1 if add else -0.1
             s.set_patch_props(offsets=o)
 
         # ------------ callbacks to change the text offset with alt +-
-        def scb_txt_offset(self, s, add=True, **kwargs):
-            if not self.cb.pick[s._picker_name].is_picked:
+        def scb_txt_offset(s, add=True, **kwargs):
+            if not s._m.cb.pick[s._picker_name].is_picked:
                 return
 
             o = s._label_props["offset"]
             o += s._cb_offset_interval if add else -s._cb_offset_interval
             s.set_label_props(offset=o)
 
-        def addcbs(self, s, **kwargs):
-
+        def addcbs(s, **kwargs):
+            m = s._m
             # make sure we pick always only one scalebar
             for i in s._existing_pickers:
-                p = getattr(self.cb, i)
+                p = getattr(m.cb, i)
                 if p.is_picked is True and p.scalebar is not s:
                     p.scalebar._remove_callbacks()
 
-            self.cb.pick[s._picker_name].is_picked = True
+            m.cb.pick[s._picker_name].is_picked = True
 
             if not hasattr(s, "_cid_move"):
-                s._cid_move = self.cb.click.attach(scb_move, s=s)
+                s._cid_move = m.cb.click.attach(scb_move, s=s)
 
             if not hasattr(s, "_cid_up"):
-                s._cid_up = self.cb.keypress.attach(scb_az_ud, key="+", up=True, s=s)
+                s._cid_up = m.cb.keypress.attach(scb_az_ud, key="+", up=True, s=s)
             if not hasattr(s, "_cid_down"):
-                s._cid_down = self.cb.keypress.attach(scb_az_ud, key="-", up=False, s=s)
+                s._cid_down = m.cb.keypress.attach(scb_az_ud, key="-", up=False, s=s)
 
             if not hasattr(s, "_cid_txt_offset_up"):
-                s._cid_txt_offset_up = self.cb.keypress.attach(
+                s._cid_txt_offset_up = m.cb.keypress.attach(
                     scb_txt_offset, key="alt++", add=True, s=s
                 )
             if not hasattr(s, "_cid_txt_offset_down"):
-                s._cid_txt_offset_down = self.cb.keypress.attach(
+                s._cid_txt_offset_down = m.cb.keypress.attach(
                     scb_txt_offset, key="alt+-", add=False, s=s
                 )
 
@@ -845,7 +845,7 @@ class ScaleBar:
                     setattr(
                         s,
                         f"_cid_patch_dim_{key}_0",
-                        self.cb.keypress.attach(
+                        m.cb.keypress.attach(
                             scb_patch_dim, key=key, udlr=udlr, add=True, s=s
                         ),
                     )
@@ -853,15 +853,15 @@ class ScaleBar:
                     setattr(
                         s,
                         f"_cid_patch_dim_{key}_1",
-                        self.cb.keypress.attach(
+                        m.cb.keypress.attach(
                             scb_patch_dim, key="alt+" + key, udlr=udlr, add=False, s=s
                         ),
                     )
 
             if not hasattr(s, "_cid_remove"):
-                s._cid_remove = self.cb.keypress.attach(scb_remove, key="delete", s=s)
+                s._cid_remove = m.cb.keypress.attach(scb_remove, key="delete", s=s)
 
-        def scb_unpick(m, s, **kwargs):
+        def scb_unpick(s, **kwargs):
             s._remove_callbacks()
 
         self._picker_name = f"_scalebar{len(self._existing_pickers)}"

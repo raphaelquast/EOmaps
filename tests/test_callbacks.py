@@ -28,9 +28,9 @@ class TestCallbacks(unittest.TestCase):
         m = Maps()
         # use either a pandas.DataFrame or a 2D numpy-array for testing
         if self.nfig % 2 == 0:
-            m.set_data(self.data, xcoord="lon", ycoord="lat")
+            m.set_data(self.data, x="lon", y="lat")
         else:
-            m.set_data(self.lon + self.lat, xcoord=self.lon, ycoord=self.lat)
+            m.set_data(self.lon + self.lat, x=self.lon, y=self.lat)
 
         m.plot_map()
         m.figure.f.canvas.draw()
@@ -250,9 +250,7 @@ class TestCallbacks(unittest.TestCase):
         m = self.create_basic_map()
 
         m2 = m.new_layer(copy_data_specs=True)
-
-        m2.plot_specs.cmap = "Reds"
-        m2.plot_map(layer=2)
+        m2.plot_map(layer=2, cmap="Reds")
 
         cid = m.cb.click.attach.peek_layer(layer=2)
         self.click_ax_center(m)
@@ -368,8 +366,7 @@ class TestCallbacks(unittest.TestCase):
 
         m2 = m.new_layer(copy_data_specs=True)
 
-        m2.plot_specs.cmap = "Reds"
-        m2.plot_map(layer=2)
+        m2.plot_map(layer=2, cmap="Reds")
 
         cid0 = m.cb.keypress.attach.switch_layer(layer=0, key="0")
         cid1 = m.cb.keypress.attach.switch_layer(layer=2, key="2")

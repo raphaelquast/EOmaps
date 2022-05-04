@@ -186,7 +186,7 @@ class read_file:
             # (e.g. if data is provided with [y, x] dimensions instead of [x, y])
             data = np.moveaxis(usencfile.values, *[dims.index(i) for i in ncdims])
 
-            xcoord, ycoord = (
+            x, y = (
                 getattr(usencfile, ncdims[0]).values,
                 getattr(usencfile, ncdims[1]).values,
             )
@@ -205,16 +205,16 @@ class read_file:
             if set_data is not None:
                 set_data.set_data(
                     data=data,
-                    xcoord=xcoord,
-                    ycoord=ycoord,
+                    x=x,
+                    y=y,
                     crs=data_crs,
                     encoding=encoding,
                 )
             else:
                 return dict(
                     data=data,
-                    xcoord=xcoord,
-                    ycoord=ycoord,
+                    x=x,
+                    y=y,
                     crs=data_crs,
                     encoding=encoding,
                 )
@@ -376,9 +376,9 @@ class read_file:
             )
 
             if coords[0] in usencfile.coords:
-                xcoord = usencfile.coords[coords[0]]
+                x = usencfile.coords[coords[0]]
             elif coords[0] in usencfile:
-                xcoord = usencfile[coords[0]]
+                x = usencfile[coords[0]]
             else:
                 raise AssertionError(
                     f"EOmaps: Coordinate '{coords[0]}' is not present in the NetCDF.\n"
@@ -387,9 +387,9 @@ class read_file:
                 )
 
             if coords[1] in usencfile.coords:
-                ycoord = usencfile.coords[coords[1]]
+                y = usencfile.coords[coords[1]]
             elif coords[1] in usencfile:
-                ycoord = usencfile[coords[1]]
+                y = usencfile[coords[1]]
             else:
                 raise AssertionError(
                     f"EOmaps: Coordinate '{coords[1]}' is not present in the NetCDF\n"
@@ -397,15 +397,23 @@ class read_file:
                     + f"Available variables: {list(ncfile)}"
                 )
 
-            if data.dims != xcoord.dims or data.dims != xcoord.dims:
-                raise AssertionError(
-                    "EOmaps: Invalid dimensions of data and coordinates!\n"
-                    + f"data: {data.dims},  xcoord: {xcoord.dims}, ycoord: {ycoord.dims}"
-                )
-
-            # xcoord, ycoord = np.meshgrid(
-            #     usencfile.coords[coords[0]].values, usencfile.coords[coords[1]].values
-            # )
+            # 1D coordinates + 2D data expects transposed data!
+            transpose = False
+            if data.dims != x.dims or data.dims != x.dims:
+                if (len(data.dims) == 2 and len(x.dims) == 1 and len(y.dims) == 1) and (
+                    data.dims[0] == x.dims[0] and data.dims[1] == y.dims[0]
+                ):
+                    x, y = y, x
+                    transpose = True
+                elif (
+                    len(data.dims) == 2 and len(x.dims) == 1 and len(y.dims) == 1
+                ) and (data.dims[0] == y.dims[0] and data.dims[1] == x.dims[0]):
+                    transpose = True
+                else:
+                    raise AssertionError(
+                        "EOmaps: Invalid dimensions of data and coordinates!\n"
+                        + f"data: {data.dims},  x: {x.dims}, y: {y.dims}"
+                    )
 
             # only use masked arrays if mask_and_scale is False!
             # (otherwise the mask is already applied as NaN's in the float-array)
@@ -420,18 +428,18 @@ class read_file:
 
             if set_data is not None:
                 set_data.set_data(
-                    data=data.values,
-                    xcoord=xcoord.values,
-                    ycoord=ycoord.values,
+                    data=data.values.T if transpose else data.values,
+                    x=x.values,
+                    y=y.values,
                     crs=data_crs,
                     parameter=parameter,
                     encoding=encoding,
                 )
             else:
                 return dict(
-                    data=data.values,
-                    xcoord=xcoord.values,
-                    ycoord=ycoord.values,
+                    data=data.values.T if transpose else data.values,
+                    x=x.values,
+                    y=y.values,
                     crs=data_crs,
                     parameter=parameter,
                     encoding=encoding,
@@ -445,8 +453,8 @@ class read_file:
     def CSV(
         path,
         parameter=None,
-        xcoord=None,
-        ycoord=None,
+        x=None,
+        y=None,
         crs=None,
         set_data=None,
         **kwargs,
@@ -468,10 +476,10 @@ class read_file:
             The path to the csv-file.
         parameter : str
             The column-name to use as parameter.
-        xcoord : str
-            The column-name to use as xcoord.
-        ycoord : str
-            The column-name to use as ycoord.
+        x : str
+            The column-name to use as "x" coordinates.
+        y : str
+            The column-name to use as "y" coordinates.
         crs : crs-identifier
             The crs of the data. (see "Maps.set_data" for details)
 
@@ -491,7 +499,7 @@ class read_file:
 
         data = pd.read_csv(path, **kwargs)
 
-        for key in [parameter, xcoord, ycoord]:
+        for key in [parameter, x, y]:
             assert key in data, (
                 f"EOmaps: the parameter-name {key} is not a column of the csv-file!\n"
                 + f"Available columns are: {list(data)}"
@@ -499,17 +507,17 @@ class read_file:
 
         if set_data is not None:
             set_data.set_data(
-                data=data[[parameter, xcoord, ycoord]],
-                xcoord=xcoord,
-                ycoord=ycoord,
+                data=data[[parameter, x, y]],
+                x=x,
+                y=y,
                 crs=crs,
                 parameter=parameter,
             )
         else:
             return dict(
-                data=data[[parameter, xcoord, ycoord]],
-                xcoord=xcoord,
-                ycoord=ycoord,
+                data=data[[parameter, x, y]],
+                x=x,
+                y=y,
                 crs=crs,
                 parameter=parameter,
             )
@@ -519,7 +527,6 @@ def _from_file(
     data,
     crs=None,
     shape=None,
-    plot_specs=None,
     classify_specs=None,
     val_transform=None,
     coastline=True,
@@ -542,9 +549,8 @@ def _from_file(
 
         >>> m = Maps(crs=..., layer=...)
         >>> m.set_data(**m.read_GeoTIFF(...))
-        >>> m.set_plot_specs(...)
         >>> m.set_classify_specs(...)
-        >>> m.plot_map(...)
+        >>> m.plot_map(**kwargs)
 
     Parameters
     ----------
@@ -559,9 +565,6 @@ def _from_file(
         The default is {"band": 0}.
     isel : dict, optional
         A dict of keyword-arguments passed to `xarray.Dataset.isel()`.
-        The default is None.
-    plot_specs : dict, optional
-        A dict of keyword-arguments passed to `m.set_plot_specs()`.
         The default is None.
     classify_specs : dict, optional
         A dict of keyword-arguments passed to `m.set_classify_specs()`.
@@ -599,7 +602,6 @@ def _from_file(
 
         m = parent.new_layer(
             copy_data_specs=False,
-            copy_plot_specs=False,
             copy_classify_specs=False,
             copy_shape=False,
             layer=layer,
@@ -626,14 +628,7 @@ def _from_file(
     if coastline:
         m.add_feature.preset.coastline()
 
-    kwkeys = list(kwargs)
-    for key in kwkeys:
-        if key in m.plot_specs.keys():
-            m.plot_specs[key] = kwargs.pop(key)
-
     m.set_data(**data)
-    if plot_specs:
-        m.set_plot_specs(**plot_specs)
     if classify_specs:
         m.set_classify_specs(**classify_specs)
 
@@ -671,7 +666,6 @@ class from_file:
         isel=None,
         plot_crs=None,
         shape=None,
-        plot_specs=None,
         classify_specs=None,
         val_transform=None,
         coastline=True,
@@ -692,9 +686,8 @@ class from_file:
 
         >>> m = Maps(crs=...)
         >>> m.set_data(**m.read_file.NetCDF(...))
-        >>> m.set_plot_specs(...)
         >>> m.set_classify_specs(...)
-        >>> m.plot_map(...)
+        >>> m.plot_map(**kwargs)
 
         Parameters
         ----------
@@ -738,16 +731,13 @@ class from_file:
             possible, else epsg=4326.
         shape : str, dict or None, optional
             - if str: The name of the shape to use, e.g. one of:
-              ['geod_circles', 'ellipses', 'rectangles', 'voroni_diagram',
+              ['geod_circles', 'ellipses', 'rectangles', 'voronoi_diagram',
               'delaunay_triangulation', 'shade_points', 'shade_raster']
             - if dict: a dictionary with parameters passed to the selected shape.
               The dict MUST contain a key "shape" that holds the name of the shape!
 
               >>> dict(shape="rectangles", radius=1, radius_crs=.5)
 
-        plot_specs : dict, optional
-            A dict of keyword-arguments passed to `m.set_plot_specs()`.
-            The default is None.
         classify_specs : dict, optional
             A dict of keyword-arguments passed to `m.set_classify_specs()`.
             The default is None.
@@ -837,7 +827,6 @@ class from_file:
             data,
             crs=plot_crs,
             shape=shape,
-            plot_specs=plot_specs,
             classify_specs=classify_specs,
             val_transform=val_transform,
             coastline=coastline,
@@ -853,7 +842,6 @@ class from_file:
         isel=None,
         plot_crs=None,
         shape=None,
-        plot_specs=None,
         classify_specs=None,
         val_transform=None,
         coastline=True,
@@ -874,9 +862,8 @@ class from_file:
 
         >>> m = Maps(crs=...)
         >>> m.set_data(**m.read_file.GeoTIFF(...))
-        >>> m.set_plot_specs(...)
         >>> m.set_classify_specs(...)
-        >>> m.plot_map(...)
+        >>> m.plot_map(**kwargs)
 
         Parameters
         ----------
@@ -908,16 +895,13 @@ class from_file:
             possible, else epsg=4326.
         shape : str, dict or None, optional
             - if str: The name of the shape to use, e.g. one of:
-              ['geod_circles', 'ellipses', 'rectangles', 'voroni_diagram',
+              ['geod_circles', 'ellipses', 'rectangles', 'voronoi_diagram',
               'delaunay_triangulation', 'shade_points', 'shade_raster']
             - if dict: a dictionary with parameters passed to the selected shape.
               The dict MUST contain a key "shape" that holds the name of the shape!
 
               >>> dict(shape="rectangles", radius=1, radius_crs=.5)
 
-        plot_specs : dict, optional
-            A dict of keyword-arguments passed to `m.set_plot_specs()`.
-            The default is None.
         classify_specs : dict, optional
             A dict of keyword-arguments passed to `m.set_classify_specs()`.
             The default is None.
@@ -1003,7 +987,6 @@ class from_file:
             data,
             crs=plot_crs,
             shape=shape,
-            plot_specs=plot_specs,
             classify_specs=classify_specs,
             val_transform=val_transform,
             coastline=coastline,
@@ -1014,12 +997,11 @@ class from_file:
     def CSV(
         path=None,
         parameter=None,
-        xcoord=None,
-        ycoord=None,
+        x=None,
+        y=None,
         data_crs=None,
         plot_crs=None,
         shape=None,
-        plot_specs=None,
         classify_specs=None,
         val_transform=None,
         coastline=True,
@@ -1039,9 +1021,8 @@ class from_file:
 
         >>> m = Maps(crs=...)
         >>> m.set_data(**m.read_file.CSV(...))
-        >>> m.set_plot_specs(...)
         >>> m.set_classify_specs(...)
-        >>> m.plot_map(...)
+        >>> m.plot_map(**kwargs)
 
 
         Parameters
@@ -1050,10 +1031,10 @@ class from_file:
             The path to the csv-file.
         parameter : str
             The column-name to use as parameter.
-        xcoord : str
-            The column-name to use as xcoord.
-        ycoord : str
-            The column-name to use as ycoord.
+        x : str
+            The column-name to use as "x" coordinate.
+        y : str
+            The column-name to use as "y" coordinate.
         data_crs : crs-identifier
             The crs of the data. (see "Maps.set_data" for details)
         plot_crs : any, optional
@@ -1062,16 +1043,13 @@ class from_file:
             possible, else epsg=4326.
         shape : str, dict or None, optional
             - if str: The name of the shape to use, e.g. one of:
-              ['geod_circles', 'ellipses', 'rectangles', 'voroni_diagram',
+              ['geod_circles', 'ellipses', 'rectangles', 'voronoi_diagram',
               'delaunay_triangulation', 'shade_points', 'shade_raster']
             - if dict: a dictionary with parameters passed to the selected shape.
               The dict MUST contain a key "shape" that holds the name of the shape!
 
               >>> dict(shape="rectangles", radius=1, radius_crs=.5)
 
-        plot_specs : dict, optional
-            A dict of keyword-arguments passed to `m.set_plot_specs()`.
-            The default is None.
         classify_specs : dict, optional
             A dict of keyword-arguments passed to `m.set_classify_specs()`.
             The default is None.
@@ -1098,8 +1076,8 @@ class from_file:
         data = read_file.CSV(
             path=path,
             parameter=parameter,
-            xcoord=xcoord,
-            ycoord=ycoord,
+            x=x,
+            y=y,
             crs=data_crs,
         )
 
@@ -1107,7 +1085,6 @@ class from_file:
             data,
             crs=plot_crs,
             shape=shape,
-            plot_specs=plot_specs,
             classify_specs=classify_specs,
             val_transform=val_transform,
             coastline=coastline,

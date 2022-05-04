@@ -40,6 +40,44 @@
   🌲🌳 Checkout the <a href=https://eomaps.readthedocs.io/en/latest><b>documentation</b></a> for more details and <a href=https://eomaps.readthedocs.io/en/latest/EOmaps_examples.html><b>examples</b></a> 🌳🌲
 </p>
 
+---
+
+### ❗ update notice ❗
+> There are breaking API changes between `EOmaps v3.x` and `EOmaps v4.0`  
+> To quickly update existing scripts, see: [⚙ Port script from EOmaps v3.x to v4.x](https://eomaps.readthedocs.io/en/latest/FAQ.html#port-script-from-eomaps-v3-x-to-v4-x)
+
+<details>
+<summary>[click to show] a quick summary of the API changes</summary>
+
+- the following properties and functions have been removed:
+  - ❌ `m.plot_specs.`
+  - ❌ `m.set_plot_specs()`
+  - Arguments are now directly passed to relevant functions:  
+
+    ```python
+    m = Maps
+    # m.set_plot_specs(cmap=..., vmin=..., vmax=..., cpos=..., cpos_radius=..., histbins=...)
+    # m.plot_specs.<  > = ...
+    m.set_data(..., cpos=..., cpos_radius=...)
+    m.plot_map(cmap=..., vmin=..., vmax=...)
+    m.add_colorbar(histbins=...)
+    ```
+
+
+- 🔶 `m.set_shape.voroni_diagram` is renamed to `m.set_shape.voronoi_diagram`
+- 🔷 custom callbacks are no longer bound to the Maps-object  
+  -  the call-signature of custom callbacks has changed to:  
+     `def cb(self, *args, **kwargs)  >>  def cb(*args, **kwargs)`
+
+
+
+
+
+</details>
+
+---
+
+
 ## 🔨 Installation
 
 To install EOmaps (and all its dependencies) via the `conda` package-manager, simply use:
@@ -102,20 +140,18 @@ lon, lat, data = [1,2,3,4,5], [1,2,3,4,5], [1,2,3,4,5]
 m = Maps(crs=Maps.CRS.Orthographic())
 
 # set the data
-m.set_data(data=data, xcoord=lon, ycoord=lat, crs=4326)
+m.set_data(data=data, x=lon, y=lat, crs=4326)
 # set the shape you want to use to represent the data-points
 m.set_shape.geod_circles(radius=10000) # (e.g. geodetic circles with 10km radius)
 
-# (optionally) set the appearance of the plot
-m.set_plot_specs(cmap="viridis", label="a nice label")
 # (optionally) classify the data
 m.set_classify_specs(scheme=Maps.CLASSIFIERS.Quantiles, k=5)
 
-# plot the map
-m.plot_map()
+# plot the map using matplotlibs "viridis" colormap
+m.plot_map(cmap="viridis", vmin=2, vmax=4)
 
 # add a colorbar with a histogram on top
-m.add_colorbar()
+m.add_colorbar(histbins=200)
 
 # add a scalebar
 m.add_scalebar()
@@ -146,7 +182,7 @@ m.cb.keypress.attach.switch_layer(layer="layer 2", key="1")
 # get a clickable widget to switch between the available plot-layers
 m.util.layer_selector()
 
-# ---- add new layers directly from a GeoTIFF / NetCDF or CSV files
+# ---- add new layers directly from GeoTIFF / NetCDF or CSV files
 m4 = m.new_layer_from_file.GeoTIFF(...)
 m4 = m.new_layer_from_file.NetCDF(...)
 m4 = m.new_layer_from_file.CSV(...)

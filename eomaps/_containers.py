@@ -178,36 +178,43 @@ class data_specs(object):
         self,
         m,
         data=None,
-        xcoord="lon",
-        ycoord="lat",
+        x="lon",
+        y="lat",
         crs=4326,
         parameter=None,
         encoding=None,
+        cpos="c",
+        cpos_radius=None,
+        **kwargs,
     ):
         self._m = m
         self.data = data
-        self.xcoord = xcoord
-        self.ycoord = ycoord
+        self.x = x
+        self.y = y
         self.crs = crs
         self.parameter = parameter
 
         self._encoding = encoding
+        self._cpos = cpos
+        self._cpos_radius = cpos_radius
 
     def delete(self):
         self._data = None
-        self._xcoord = None
-        self._ycoord = None
+        self._x = None
+        self._y = None
         self._crs = None
         self._parameter = None
-        self.encoding = False
+        self._encoding = False
+        self._cpos = "c"
+        self._cpos_radius = False
 
     def __repr__(self):
         try:
             txt = f"""\
                   # parameter: {self.parameter}
-                  # xcoord: {indent(fill(self.xcoord.__repr__(), 60),
+                  # x: {indent(fill(self.x.__repr__(), 60),
                                     "                      ").strip()}
-                  # ycoord: {indent(fill(self.ycoord.__repr__(), 60),
+                  # y: {indent(fill(self.y.__repr__(), 60),
                                     "                      ").strip()}
 
                   # crs: {indent(fill(self.crs.__repr__(), 60),
@@ -215,9 +222,7 @@ class data_specs(object):
 
                   # data: {indent(self.data.__repr__(),
                                   "                ").lstrip()}
-
                   """
-            txt = txt
             if self.encoding:
                 txt += dedent(
                     f"""\
@@ -225,6 +230,9 @@ class data_specs(object):
                     "                ").lstrip()}
                     """
                 )
+            if self.cpos_radius:
+                txt += f"# cpos: {'self.cpos'} (cpos_radius={self.cpos_radius})"
+
             return dedent(txt)
         except:
             return object.__repr__(self)
@@ -270,12 +278,25 @@ class data_specs(object):
         if key == "crs":
             key = "in_crs"
 
-        assert key in self.keys(), f"{key} is not a valid data-specs key!"
+        assert key in [
+            *self.keys(),
+            "xcoord",
+            "ycoord",
+        ], f"{key} is not a valid data-specs key!"
 
         return key
 
     def keys(self):
-        return ("parameter", "xcoord", "ycoord", "in_crs", "data", "encoding")
+        return (
+            "parameter",
+            "x",
+            "y",
+            "in_crs",
+            "data",
+            "encoding",
+            "cpos",
+            "cpos_radius",
+        )
 
     @property
     def data(self):
@@ -297,19 +318,59 @@ class data_specs(object):
 
     @property
     def xcoord(self):
-        return self._xcoord
+        warn(
+            "EOmaps: `m.data_specs.xcoord` is depreciated."
+            + "use `m.data_specs.x` instead!",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return self._x
 
     @xcoord.setter
     def xcoord(self, xcoord):
-        self._xcoord = xcoord
+        warn(
+            "EOmaps: `m.data_specs.xcoord` is depreciated."
+            + "use `m.data_specs.x` instead!",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        self._x = xcoord
 
     @property
     def ycoord(self):
-        return self._ycoord
+        warn(
+            "EOmaps: `m.data_specs.ycoord` is depreciated."
+            + "use `m.data_specs.y` instead!",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return self._y
 
     @ycoord.setter
     def ycoord(self, ycoord):
-        self._ycoord = ycoord
+        warn(
+            "EOmaps: `m.data_specs.ycoord` is depreciated."
+            + "use `m.data_specs.y` instead!",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        self._y = ycoord
+
+    @property
+    def x(self):
+        return self._x
+
+    @x.setter
+    def x(self, x):
+        self._x = x
+
+    @property
+    def y(self):
+        return self._y
+
+    @y.setter
+    def y(self, y):
+        self._y = y
 
     @property
     def parameter(self):
@@ -322,17 +383,11 @@ class data_specs(object):
     @parameter.getter
     def parameter(self):
         if _pd_OK and isinstance(self.data, pd.DataFrame) and self._parameter is None:
-            if (
-                self.data is not None
-                and self.xcoord is not None
-                and self.ycoord is not None
-            ):
+            if self.data is not None and self.x is not None and self.y is not None:
 
                 try:
                     self.parameter = next(
-                        i
-                        for i in self.data.keys()
-                        if i not in [self.xcoord, self.ycoord]
+                        i for i in self.data.keys() if i not in [self.x, self.y]
                     )
                     print(f"EOmaps: Parameter was set to: '{self.parameter}'")
 
@@ -350,101 +405,30 @@ class data_specs(object):
 
     @encoding.setter
     def encoding(self, encoding):
+        if encoding not in [None, False]:
+            assert isinstance(encoding, dict), "EOmaps: encoding must be a dictionary!"
+
+            assert all(
+                i in ["scale_factor", "add_offset"] for i in encoding
+            ), "EOmaps: encoding accepts only 'scale_factor' and 'add_offset' as keys!"
+
         self._encoding = encoding
 
+    @property
+    def cpos(self):
+        return self._cpos
 
-class plot_specs(object):
-    """
-    a container for accessing the plot specifications
-    """
-
-    def __init__(self, m, **kwargs):
-        self._m = m
-
-        for key in kwargs:
-            assert key in self.keys(), f"'{key}' is not a valid data-specs key"
-
-            setattr(self, key, kwargs.get(key, None))
-
-    def __repr__(self):
-        txt = "\n".join(
-            f"# {key}: {indent(fill(self[key].__repr__(), 60),  ' '*(len(key) + 4)).strip()}"
-            for key in self.keys()
-        )
-        return txt
-
-    def __getitem__(self, key):
-        if isinstance(key, (list, tuple)):
-            for i in key:
-                assert i in self.keys(), f"{i} is not a valid plot-specs key!"
-            if len(key) == 0:
-                item = dict()
-            else:
-                key = list(key)
-                if len(key) == 1:
-                    item = {key[0]: getattr(self, key[0])}
-                else:
-                    item = dict(zip(key, attrgetter(*key)(self)))
-        else:
-            assert key in self.keys(), f"'{key}' is not a valid plot-specs key!"
-            item = getattr(self, key)
-        return item
-
-    def __setitem__(self, key, val):
-        key = self._sanitize_keys(key)
-        if key is not None:
-            return setattr(self, key, val)
-
-    def __setattr__(self, key, val):
-        key = self._sanitize_keys(key)
-        if key is not None:
-            super().__setattr__(key, val)
-
-    def __iter__(self):
-        return iter(self[self.keys()].items())
-
-    def _sanitize_keys(self, key):
-        # pass any keys starting with _
-        if key.startswith("_"):
-            return key
-
-        if key in ["crs", "plot_crs"]:
-            warn(
-                "\n▲▲▲ In EOmaps > v3.0 the plot-crs is set on "
-                + "initialization of the Maps-object!"
-                + "\n▲▲▲ Use `m = Maps(crs=...)` instead to set the plot-crs!\n"
-            )
-            return None
-
-        if key in ["title"]:
-            warn(
-                "\n▲▲▲ In EOmaps > v3.1 passing a 'title' to the plot-specs is depreciated. "
-                + "\n▲▲▲ Use `m.ax.set_title()` instead!\n"
-            )
-            return None
-
-        assert key in self.keys(), f"{key} is not a valid plot-specs key!"
-
-        return key
-
-    def keys(self):
-        # fmt: off
-        return ('label', 'cmap', 'histbins', 'tick_precision',
-                'vmin', 'vmax', 'cpos', 'cpos_radius', 'alpha', 'density')
-        # fmt: on
+    @cpos.setter
+    def cpos(self, cpos):
+        self._cpos = cpos
 
     @property
-    def cmap(self):
-        return self._cmap
+    def cpos_radius(self):
+        return self._cpos_radius
 
-    @cmap.setter
-    def cmap(self, val):
-        self._cmap = get_cmap(val)
-
-    @property
-    @lru_cache()
-    def plot_crs(self):
-        return self._m._crs_plot
+    @cpos_radius.setter
+    def cpos_radius(self, cpos_radius):
+        self._cpos_radius = cpos_radius
 
 
 class classify_specs(object):
@@ -1996,6 +1980,44 @@ else:
                 )
                 WMS.__doc__ = combdoc("Polarization: VH", type(self).__doc__)
                 return WMS
+
+        @property
+        @lru_cache()
+        def S2_cloudless(self):
+            """
+            Global cloudless Sentinel-2 maps, crafted by EOX.
+            https://s2maps.eu/
+
+            Endless sunshine, eternal summer - the Sentinel-2 cloudless layer combines
+            trillions of pixels collected during differing weather conditions during
+            the whole year of 2020 and merges them into a sunny homogeneous mosaic,
+            almost free from satellite and atmospheric effects. Our thanks go to the
+            European Commission and the European Space Agency for the free, full,
+            and open Sentinel-2 data.
+
+            Note
+            ----
+            **LICENSE-info (without any warranty for correctness!!)**
+
+            You are free to use Sentinel-2 cloudless as long as you follow the
+            applicable license conditions. The conditions for use are the attribution
+            when publishing any imagery or content from Sentinel-2 cloudless as well as
+            the non-commercial use for the 2018 and 2019 data. The attribution shall be
+            displayed legibly and in proximity to the usage, in on-line publications
+            (social-networks etc.) it shall include the links and show the text as
+            described below.
+
+            (check: https://s2maps.eu/ for full details)
+
+            """
+            WMS = _WebServiec_collection(
+                m=self._m,
+                service_type="wms",
+                url="https://tiles.maps.eox.at/wms?service=wms&request=getcapabilities",
+            )
+
+            WMS.__doc__ = type(self).S2_cloudless.__doc__
+            return WMS
 
         @property
         @lru_cache()

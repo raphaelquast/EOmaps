@@ -23,6 +23,12 @@ This should make sure all required dependencies are correctly installed.
   Since EOMaps dependencies can be demanding to solve for ``conda`` it is highly recommended to have a look at `mamba <https://github.com/mamba-org/mamba>`_
   (a C++ re-implementation of ``conda`` that provides a remarkable speedup)
 
+  To install ``mamba``, simply use:
+
+  .. code-block:: console
+
+    conda install -c conda-forge mamba
+
   Once ``mamba`` is installed, you just need to replace the term ``conda`` with ``mamba`` and you're good to go!
 
   .. code-block:: console
@@ -30,9 +36,21 @@ This should make sure all required dependencies are correctly installed.
     mamba install -c conda-forge eomaps
 
 
+A quick tutorial on how to get started from scratch is available here: :ref:`quickstart_guide`
+
+
 🐜 optional dependencies
 ~~~~~~~~~~~~~~~~~~~~~~~~~
-To use the full potential of EOmaps, some additional dependencies are required
+To use the full potential of EOmaps, some additional dependencies might be required
+
+.. admonition:: Note on ``matplotlib`` backends
+
+  By default EOmaps requires only a minimal version of ``matplotlib`` that does not include bindings for
+  all available `matplotlib backends <https://matplotlib.org/stable/users/explain/backends.html?highlight=backend#backends>`_.
+
+  - To install all backends, explicitly use: ``conda install -c conda-forge matplotlib``  (or ``mamba ...``)
+  - For ``QtAgg``, just install the ``pyqt`` bindings via ``conda install -c conda-forge pyqt``
+
 
 - `Pandas <https://pandas.pydata.org/>`_
 
@@ -72,15 +90,6 @@ To use the full potential of EOmaps, some additional dependencies are required
 
     - Install via ``pip install equi7grid``
 
-
-
-.. admonition:: Note on ``matplotlib`` backends
-
-  By default EOmaps requires only a minimal version of ``matplotlib`` that does not include bindings for
-  all available `matplotlib backends <https://matplotlib.org/stable/users/explain/backends.html?highlight=backend#backends>`_.
-
-  - To install all backends, explicitly use: ``conda install -c conda-forge matplotlib``  (or ``mamba ...``)
-  - For ``QtAgg``, just install the ``pyqt`` bindings via ``conda install -c conda-forge pyqt``
 
 🐞 Alternative way (via ``pip``)
 -----------------------------------

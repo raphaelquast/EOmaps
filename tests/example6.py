@@ -27,7 +27,7 @@ m.add_wms.OpenStreetMap.add_layer.default(layer="OSM")
 # ------------- LAYER 2
 # create a new layer and plot some data
 m2 = m.new_layer(layer="data")
-m2.set_data(data=data.sample(5000), xcoord="lon", ycoord="lat", crs=4326)
+m2.set_data(data=data.sample(5000), x="lon", y="lat", crs=4326)
 m2.set_shape.geod_circles(radius=20000)
 m2.plot_map()
 

@@ -1,9 +1,9 @@
-from matplotlib.collections import PolyCollection
+from matplotlib.collections import PolyCollection, QuadMesh
 from matplotlib.tri import TriMesh, Triangulation
 import numpy as np
 
 from pyproj import CRS, Transformer
-from functools import partial, wraps
+from functools import partial, wraps, lru_cache
 import warnings
 
 
@@ -37,9 +37,9 @@ class shapes(object):
 
         >>> m.set_shape.geod_circles(radius)
 
-        - Voroni diagram
+        - Voronoi diagram
 
-        >>> m.set_shape.voroni_diagram(masked, mask_radius)
+        >>> m.set_shape.voronoi_diagram(masked, mask_radius)
 
         - Delaunay triangulation
 
@@ -66,7 +66,7 @@ class shapes(object):
         "geod_circles",
         "ellipses",
         "rectangles",
-        "voroni_diagram",
+        "voronoi_diagram",
         "delaunay_triangulation",
         "shade_points",
         "shade_raster",
@@ -83,7 +83,7 @@ class shapes(object):
         return shp
 
     @staticmethod
-    def _get_radius(m, radius, radius_crs, buffer=None):
+    def _get_radius(m, radius, radius_crs):
         if (isinstance(radius, str) and radius == "estimate") or radius is None:
             # make sure props are defined otherwise we can't estimate the radius!
             if not hasattr(m, "_props"):
@@ -108,72 +108,165 @@ class shapes(object):
 
             radius = tuple((radiusx, radiusy))
 
-        return shapes._get_radius_cache(
-            m=m, radius=radius, radius_crs=radius_crs, buffer=buffer
-        )
+        return shapes._get_radius_cache(m=m, radius=radius, radius_crs=radius_crs)
 
     @staticmethod
-    def _get_radius_cache(m, radius, radius_crs, buffer=None):
+    def _get_radius_cache(m, radius, radius_crs):
         # get the radius for plotting
         if (isinstance(radius, str) and radius == "estimate") or radius is None:
             if m._estimated_radius is None:
                 print("EOmaps: estimating radius...")
                 radiusx, radiusy = shapes._estimate_radius(m, radius_crs)
+                if radiusx == radiusy:
+                    print(f"EOmaps: radius: {radiusx:.4f}")
+                else:
+                    print(f"EOmaps: radius: ({radiusx:.4f}, {radiusy:.4f})")
                 m._estimated_radius = (radiusx, radiusy)
-                print(f"EOmaps: The estimated radius is: {radiusx:.4f}")
             else:
                 (radiusx, radiusy) = m._estimated_radius
 
         else:
             radiusx, radiusy = radius
 
-        if buffer is not None:
-            radiusx = radiusx * buffer
-            radiusy = radiusy * buffer
-
         return (radiusx, radiusy)
 
     @staticmethod
     def _estimate_radius(m, radius_crs, method=np.median):
-        from scipy.spatial import cKDTree
-
         if radius_crs == "in":
-            in_tree = cKDTree(
-                np.stack(
-                    [
-                        m._props["xorig"].flat[: m.set_shape.radius_estimation_range],
-                        m._props["yorig"].flat[: m.set_shape.radius_estimation_range],
-                    ],
-                    axis=1,
-                ),
-                compact_nodes=False,
-                balanced_tree=False,
-            )
+            if (
+                isinstance(m.data_specs.x, np.ndarray)
+                and len(m.data_specs.x.shape) == 2
+            ):
+                radiusx = (
+                    np.nanmedian(
+                        np.diff(m._props["xorig"].reshape(m.data_specs.x.shape), axis=1)
+                    )
+                    / 2
+                )
+                radiusy = (
+                    np.nanmedian(
+                        np.diff(m._props["yorig"].reshape(m.data_specs.y.shape), axis=0)
+                    )
+                    / 2
+                )
+            else:
+                from scipy.spatial import cKDTree
 
-            dists, pts = in_tree.query(in_tree.data, 3)
-            radiusx = radiusy = method(dists) / 2
+                in_tree = cKDTree(
+                    np.stack(
+                        [
+                            m._props["xorig"].flat[
+                                : m.set_shape.radius_estimation_range
+                            ],
+                            m._props["yorig"].flat[
+                                : m.set_shape.radius_estimation_range
+                            ],
+                        ],
+                        axis=1,
+                    ),
+                    compact_nodes=False,
+                    balanced_tree=False,
+                )
+
+                dists, pts = in_tree.query(in_tree.data, 3)
+
+                radiusx = radiusy = method(dists) / 2
 
         elif radius_crs == "out":
-            tree = cKDTree(
-                np.stack(
-                    [
-                        m._props["x0"].flat[: m.set_shape.radius_estimation_range],
-                        m._props["y0"].flat[: m.set_shape.radius_estimation_range],
-                    ],
-                    axis=1,
-                ),
-                compact_nodes=False,
-                balanced_tree=False,
-            )
+            if (
+                isinstance(m.data_specs.x, np.ndarray)
+                and len(m.data_specs.x.shape) == 2
+            ):
+                radiusx = (
+                    np.nanmedian(
+                        np.diff(m._props["x0"].reshape(m.data_specs.x.shape), axis=1)
+                    )
+                    / 2
+                )
+                radiusy = (
+                    np.nanmedian(
+                        np.diff(m._props["y0"].reshape(m.data_specs.y.shape), axis=0)
+                    )
+                    / 2
+                )
+            else:
+                from scipy.spatial import cKDTree
 
-            dists, pts = tree.query(tree.data, 3)
-            radiusx = radiusy = method(dists) / 2
+                tree = cKDTree(
+                    np.stack(
+                        [
+                            m._props["x0"].flat[: m.set_shape.radius_estimation_range],
+                            m._props["y0"].flat[: m.set_shape.radius_estimation_range],
+                        ],
+                        axis=1,
+                    ),
+                    compact_nodes=False,
+                    balanced_tree=False,
+                )
+
+                dists, pts = tree.query(tree.data, 3)
+                radiusx = radiusy = method(dists) / 2
         else:
             raise AssertionError(
                 "radius can only be estimated if radius_crs is 'in' or 'out'!"
             )
 
         return (radiusx, radiusy)
+
+    @staticmethod
+    def _get_colors_and_array(kwargs, mask):
+        # identify colors and the array
+
+        # special treatment of array input to properly mask values
+        array = kwargs.pop("array", None)
+        if array is not None:
+            array = array[mask]
+        else:
+            array = None
+
+        # ----------- manual color specifications
+        # allow the synonyms "color", "fc" and "facecolor"
+        color = None
+        for i in ["color", "fc", "facecolors"]:
+            if color is None:
+                color = kwargs.pop(i, None)
+                if color is not None:
+                    c_key = i
+            elif kwargs.pop(i, None) is not None:
+                raise TypeError(
+                    "EOmaps: only one of 'color', 'facecolor' or 'fc' "
+                    + "can be specified!"
+                )
+
+        if color is None:
+            return {"array": array}
+
+        if isinstance(color, (int, float, str, np.number)):
+            # if a scalar is provided, broadcast it
+            color = np.broadcast_to(color, mask.shape)
+        elif isinstance(color, tuple):
+            if len(color) in [3, 4]:
+                if all(map(lambda i: isinstance(i, (int, float, np.number)), color)):
+                    # check if a tuple of numbers is provided, and if so broadcast
+                    # it as a rgb or rgba tuple
+                    color = np.broadcast_to(np.rec.fromarrays(color), mask.shape)
+                elif all(map(lambda i: isinstance(i, (list, np.ndarray)), color)):
+                    # check if a tuple of lists or arrays is provided, and if so,
+                    # broadcast them as RGB arrays
+                    color = np.rec.fromarrays(np.broadcast_arrays(*color))
+        elif isinstance(color, np.ndarray) and (color.shape[-1] in [3, 4]):
+            color = np.rec.fromarrays(color.T)
+        else:
+            # still use np.asanyarray in here in case lists are provided
+            color = np.asanyarray(color).reshape(*mask.shape, -1)[mask].squeeze()
+        return {c_key: color, "array": array}
+
+    @staticmethod
+    @lru_cache()
+    def get_transformer(in_crs, out_crs):
+        # cache transformers to avoid re-initialization for each feature
+        t = Transformer.from_crs(in_crs, out_crs, always_xy=True)
+        return t
 
     class _geod_circles(object):
         name = "geod_circles"
@@ -291,16 +384,10 @@ class shapes(object):
             x, y = np.asarray(x), np.asarray(y)
 
             # transform from in-crs to lon/lat
-            radius_t = Transformer.from_crs(
-                CRS.from_user_input(self._m.get_crs(crs)),
-                CRS.from_epsg(4326),
-                always_xy=True,
-            )
+            radius_t = shapes.get_transformer(self._m.get_crs(crs), CRS.from_epsg(4326))
             # transform from lon/lat to the plot_crs
-            plot_t = Transformer.from_crs(
-                CRS.from_epsg(4326),
-                CRS.from_user_input(self._m.crs_plot),
-                always_xy=True,
+            plot_t = shapes.get_transformer(
+                CRS.from_epsg(4326), CRS.from_user_input(self._m.crs_plot)
             )
 
             lon, lat = radius_t.transform(x, y)
@@ -327,8 +414,6 @@ class shapes(object):
         def get_coll(self, x, y, crs, **kwargs):
 
             xs, ys, mask = self._get_geod_circle_points(x, y, crs, self.radius, self.n)
-            # special treatment of array input to properly mask values
-            array = kwargs.pop("array", None)
 
             # only plot polygons if they contain 2 or more vertices
             vertmask = np.count_nonzero(mask, axis=0) > 2
@@ -345,13 +430,12 @@ class shapes(object):
                 i.compressed().reshape(-1, 2) for i, m in zip(verts, vertmask) if m
             )
 
-            if array is not None:
-                array = array[vertmask]
+            color_and_array = shapes._get_colors_and_array(kwargs, vertmask)
 
             coll = PolyCollection(
                 verts,
                 # transOffset=self._m.figure.ax.transData,
-                array=array,
+                **color_and_array,
                 **kwargs,
             )
 
@@ -379,11 +463,6 @@ class shapes(object):
             n : int
                 The number of points to calculate on the circle.
                 The default is 20.
-
-            Returns
-            -------
-            None.
-
             """
             from . import MapsGrid  # do this here to avoid circular imports!
 
@@ -402,7 +481,8 @@ class shapes(object):
 
         @property
         def radius(self):
-            return shapes._get_radius(self._m, self._radius, self.radius_crs)
+            radius = shapes._get_radius(self._m, self._radius, self.radius_crs)
+            return radius
 
         @radius.setter
         def radius(self, val):
@@ -459,36 +539,27 @@ class shapes(object):
             ys = (
                 y0 + a * np.cos(angs) * np.sin(theta) + b * np.sin(angs) * np.cos(theta)
             )
-
             return (xs, ys)
 
         def _get_ellipse_points(self, x, y, crs, radius, radius_crs="in", n=20):
+            crs = self._m.get_crs(crs)
+            radius_crs = self._m.get_crs(radius_crs)
+
             # transform from crs to the plot_crs
-            t_in_plot = Transformer.from_crs(
-                self._m.get_crs(crs),
-                self._m.crs_plot,
-                always_xy=True,
-            )
+            t_in_plot = shapes.get_transformer(crs, self._m.crs_plot)
             # transform from crs to the radius_crs
-            t_in_radius = Transformer.from_crs(
-                self._m.get_crs(crs),
-                self._m.get_crs(radius_crs),
-                always_xy=True,
-            )
+            t_in_radius = shapes.get_transformer(crs, radius_crs)
             # transform from crs to the radius_crs
-            t_radius_plot = Transformer.from_crs(
-                self._m.get_crs(radius_crs),
-                self._m.crs_plot,
-                always_xy=True,
-            )
+            t_radius_plot = shapes.get_transformer(radius_crs, self._m.crs_plot)
 
             [rx, ry] = radius
             # transform corner-points
             if radius_crs == crs:
+                p = (x, y)
                 theta = np.full_like(x, 0)
                 xs, ys = self._calc_ellipse_points(
-                    x,
-                    y,
+                    p[0],
+                    p[1],
                     np.full_like(x, rx, dtype=float),
                     np.full_like(x, ry, dtype=float),
                     np.full_like(x, 0),
@@ -513,16 +584,48 @@ class shapes(object):
                     t_radius_plot.transform(xs, ys), copy=False
                 )
 
-            # get the mask for invalid, very distorted or very large shapes
-            dx = np.abs(xs.max(axis=1) - xs.min(axis=1))
-            dy = np.abs(ys.max(axis=1) - ys.min(axis=1))
-            mask = (
-                ~xs.mask.any(axis=1)
-                & ~ys.mask.any(axis=1)
-                & (dx <= (np.ma.median(dx) * 10))
-                & (dy <= (np.ma.median(dy) * 10))
-                & np.isfinite(theta)
+            # ------------------------- implement some kind of "wraparound"
+
+            # check if any points are in different halfspaces with respect to x
+            # and if so, mask the ones in the wrong halfspace
+            # (required for proper longitude wrapping)
+            # TODO this might be a lot easier (and faster) to implement!
+
+            xc = 0  # the center-point (e.g. (-180 + 180)/2 = 0 )
+
+            def getQ(x, xc):
+                quadrants = np.full_like(x, -1)
+
+                quadrant = x < xc
+                quadrants[quadrant] = 0
+                quadrant = x > xc
+                quadrants[quadrant] = 1
+
+                return quadrants
+
+            t_in_lonlat = shapes.get_transformer(crs, 4326)
+            t_plot_lonlat = shapes.get_transformer(self._m.crs_plot, 4326)
+
+            # transform the coordinates to lon/lat
+            xp, _ = t_in_lonlat.transform(x, y)
+            xsp, _ = t_plot_lonlat.transform(xs, ys)
+
+            quadrants, pts_quadrants = getQ(xp, xc), getQ(xsp, xc)
+
+            # mask any point that is in a different quadrant than the center point
+            maskx = pts_quadrants != quadrants[:, np.newaxis]
+            # take care of points that are on the center line (e.g. don't mask them)
+            # (use a +- 10 degree around 0 as treshold)
+            cpoints = np.broadcast_to(
+                np.isclose(xp, xc, atol=10)[:, np.newaxis], xs.shape
             )
+
+            maskx[cpoints] = False
+            xs.mask[maskx] = True
+
+            ys.mask = xs.mask
+
+            mask = ~np.all(maskx, axis=1) & np.isfinite(theta)
 
             return xs, ys, mask
 
@@ -531,22 +634,27 @@ class shapes(object):
                 x, y, crs, self.radius, self.radius_crs, n=self.n
             )
 
+            # compress the coordinates (masked arrays produce artefacts on the boundary
+            # in case intermediate points are masked)
+            verts = (
+                np.column_stack((x.compressed(), y.compressed()))
+                for i, (x, y) in enumerate(zip(xs, ys))
+                if mask[i]
+            )
+
+            # verts = np.ma.stack((xs, ys)).T.swapaxes(0, 1)
+
+            color_and_array = shapes._get_colors_and_array(kwargs, mask)
             # remember masked points
             self._m._data_mask = mask
-
-            # special treatment of array input to properly mask values
-            array = kwargs.pop("array", None)
-            if array is not None:
-                array = array[mask]
-
-            verts = np.stack((xs[mask], ys[mask])).T.swapaxes(0, 1)
 
             coll = PolyCollection(
                 verts,
                 # transOffset=self._m.figure.ax.transData,
-                array=array,
+                **color_and_array,
                 **kwargs,
             )
+
             return coll
 
     class _rectangles(object):
@@ -557,7 +665,7 @@ class shapes(object):
 
         def __call__(self, radius="estimate", radius_crs="in", mesh=False, n=10):
             """
-            Draw projected rectangles with dimensions defined in units of a given crs.
+            Draw projected rectangles with fixed dimensions (and possibly curved edges)
 
             Parameters
             ----------
@@ -581,10 +689,6 @@ class shapes(object):
                 edges (e.g. to plot "curved" rectangles in projected crs)
                 Use n=1 to get actual rectangles!
                 The default is 10
-            Returns
-            -------
-            None.
-
             """
             from . import MapsGrid  # do this here to avoid circular imports!
 
@@ -616,7 +720,8 @@ class shapes(object):
 
         @property
         def radius(self):
-            return shapes._get_radius(self._m, self._radius, self.radius_crs)
+            radius = shapes._get_radius(self._m, self._radius, self.radius_crs)
+            return radius
 
         @radius.setter
         def radius(self, val):
@@ -638,17 +743,14 @@ class shapes(object):
             if radius_crs == crs:
                 in_crs = self._m.get_crs(crs)
                 # transform from crs to the plot_crs
-                t = Transformer.from_crs(
-                    in_crs,
-                    self._m.crs_plot,
-                    always_xy=True,
+                t = shapes.get_transformer(
+                    CRS.from_user_input(in_crs), self._m.crs_plot
                 )
 
                 # make sure we do not transform out of bounds (if possible)
                 if in_crs.area_of_use is not None:
-                    transformer = Transformer.from_crs(
-                        in_crs.geodetic_crs, in_crs, always_xy=True
-                    )
+                    transformer = shapes.get_transformer(in_crs.geodetic_crs, in_crs)
+
                     xmin, ymin, xmax, ymax = transformer.transform_bounds(
                         *in_crs.area_of_use.bounds
                     )
@@ -663,23 +765,14 @@ class shapes(object):
                 r_crs = self._m.get_crs(radius_crs)
 
                 # transform from crs to the radius_crs
-                t_in_radius = Transformer.from_crs(
-                    in_crs,
-                    r_crs,
-                    always_xy=True,
-                )
+                t_in_radius = shapes.get_transformer(in_crs, r_crs)
                 # transform from radius_crs to the plot_crs
-                t = Transformer.from_crs(
-                    r_crs,
-                    self._m.crs_plot,
-                    always_xy=True,
-                )
+                t = shapes.get_transformer(r_crs, self._m.crs_plot)
 
                 # make sure we do not transform out of bounds (if possible)
                 if r_crs.area_of_use is not None:
-                    transformer = Transformer.from_crs(
-                        r_crs.geodetic_crs, r_crs, always_xy=True
-                    )
+                    transformer = shapes.get_transformer(r_crs.geodetic_crs, r_crs)
+
                     xmin, ymin, xmax, ymax = transformer.transform_bounds(
                         *r_crs.area_of_use.bounds
                     )
@@ -736,15 +829,12 @@ class shapes(object):
             # remember masked points
             self._m._data_mask = mask
 
-            # special treatment of array input to properly mask values
-            array = kwargs.pop("array", None)
-            if array is not None:
-                array = array[mask]
+            color_and_array = shapes._get_colors_and_array(kwargs, mask)
 
             coll = PolyCollection(
                 verts=verts,
                 # transOffset=self._m.figure.ax.transData,
-                array=array,
+                **color_and_array,
                 **kwargs,
             )
 
@@ -786,46 +876,35 @@ class shapes(object):
             return tri, mask
 
         def _get_trimesh_coll(self, x, y, crs, **kwargs):
-            # special treatment of color and array inputs to distribute the values
-            color = kwargs.pop("color", None)
-            fc = kwargs.pop("fc", None)
-            facecolor = kwargs.pop("facecolor", None)
-            facecolors = kwargs.pop("facecolors", None)
-
-            array = kwargs.pop("array", None)
-
             tri, mask = self._get_trimesh_rectangle_triangulation(
                 x, y, crs, self.radius, self.radius_crs, self.n
             )
-
             # remember masked points
             self._m._data_mask = mask
+
+            color_and_array = shapes._get_colors_and_array(kwargs, mask)
+
+            def broadcast_colors_and_array(array):
+                if array is None:
+                    return
+                # tri-contour meshes need 3 values for each triangle
+                array = np.broadcast_to(array, (3, len(array))).T
+                # we plot 2 triangles per rectangle
+                array = np.broadcast_to(array, (2, *array.shape))
+
+                return array.ravel()
+
+            color_and_array = {
+                key: broadcast_colors_and_array(val)
+                for key, val in color_and_array.items()
+            }
 
             coll = TriMesh(
                 tri,
                 # transOffset=self._m.figure.ax.transData,
+                **color_and_array,
                 **kwargs,
             )
-
-            # special treatment of color input to properly distribute values
-            if color is not None:
-                coll.set_facecolors([color] * (len(x)) * 6)
-            elif facecolor is not None:
-                coll.set_facecolors([facecolor] * (len(x)) * 6)
-            elif facecolors is not None:
-                coll.set_facecolors([facecolors] * (len(x)) * 6)
-            elif fc is not None:
-                coll.set_facecolors([fc] * (len(x)) * 6)
-            else:
-                # special treatment of array input to properly mask values
-                if array is not None:
-                    array = array[mask]
-
-                    # tri-contour meshes need 3 values for each triangle
-                    array = np.broadcast_to(array, (3, len(array))).T
-                    # we plot 2 triangles per rectangle
-                    array = np.broadcast_to(array, (2, *array.shape))
-                    coll.set_array(array.ravel())
 
             return coll
 
@@ -835,23 +914,23 @@ class shapes(object):
             else:
                 return self._get_polygon_coll(x, y, crs, **kwargs)
 
-    class _voroni_diagram(object):
-        name = "voroni_diagram"
+    class _voronoi_diagram(object):
+        name = "voronoi_diagram"
 
         def __init__(self, m):
             self._m = m
 
         def __call__(self, masked=True, mask_radius=None):
             """
-            Draw a Voroni-Diagram of the data.
+            Draw a Voronoi-Diagram of the data.
 
             Parameters
             ----------
             masked : bool
-                Indicator if the voroni-diagram should be masked or not
+                Indicator if the voronoi-diagram should be masked or not
 
             mask_radius : float, optional
-                the radius used for masking the voroni-diagram (in units of the plot-crs)
+                the radius used for masking the voronoi-diagram (in units of the plot-crs)
             """
             from . import MapsGrid  # do this here to avoid circular imports!
 
@@ -869,9 +948,9 @@ class shapes(object):
 
         def __repr__(self):
             try:
-                s = f"voroni_diagram(mask_radius={self.mask_radius}, masked={self.masked})"
+                s = f"voronoi_diagram(mask_radius={self.mask_radius}, masked={self.masked})"
             except AttributeError:
-                s = "voroni_diagram(mask_radius, masked)"
+                s = "voronoi_diagram(mask_radius, masked)"
 
             return s
 
@@ -883,19 +962,15 @@ class shapes(object):
         def mask_radius(self, val):
             self._mask_radius = val
 
-        def _get_voroni_verts_and_mask(self, x, y, crs, radius, masked=True):
+        def _get_voronoi_verts_and_mask(self, x, y, crs, radius, masked=True):
             try:
                 from scipy.spatial import Voronoi
                 from itertools import zip_longest
             except ImportError:
-                raise ImportError("'scipy' is required for 'Voroni'!")
+                raise ImportError("'scipy' is required for 'voronoi'!")
 
             # transform from crs to the plot_crs
-            t_in_plot = Transformer.from_crs(
-                self._m.get_crs(crs),
-                self._m.crs_plot,
-                always_xy=True,
-            )
+            t_in_plot = shapes.get_transformer(self._m.get_crs(crs), self._m.crs_plot)
 
             x0, y0 = t_in_plot.transform(x, y)
 
@@ -935,10 +1010,7 @@ class shapes(object):
 
         def get_coll(self, x, y, crs, **kwargs):
 
-            # special treatment of array input to properly mask values
-            array = kwargs.pop("array", None)
-
-            verts, mask, datamask = self._get_voroni_verts_and_mask(
+            verts, mask, datamask = self._get_voronoi_verts_and_mask(
                 x, y, crs, self.mask_radius, masked=self.masked
             )
 
@@ -948,12 +1020,13 @@ class shapes(object):
             # remember the mask
             self._m._data_mask = mask2
 
-            if array is not None:
-                array = array[datamask][mask]
+            color_and_array = shapes._get_colors_and_array(
+                kwargs, np.logical_and(datamask, mask)
+            )
 
             coll = PolyCollection(
                 verts=verts,
-                array=array,
+                **color_and_array,
                 # transOffset=self._m.figure.ax.transData,
                 **kwargs,
             )
@@ -962,11 +1035,12 @@ class shapes(object):
 
         @property
         def radius(self):
-            return shapes._get_radius(self._m, "estimate", "in")
+            radius = shapes._get_radius(self._m, "estimate", "in")
+            return radius
 
         @property
         def radius_crs(self):
-            return self._m.get_crs("in")
+            return "in"
 
     class _delaunay_triangulation(object):
         name = "delaunay_triangulation"
@@ -1018,7 +1092,8 @@ class shapes(object):
             try:
                 s = (
                     f"delaunay_triangulation(mask_radius={self.mask_radius}, "
-                    + "mask_radius_crs={self.mask_radius_crs}, masked={masked}, flat={flat})"
+                    + f"mask_radius_crs={self.mask_radius_crs}, "
+                    + f"masked={self.masked}, flat={self.flat})"
                 )
             except AttributeError:
                 s = "delaunay_triangulation(mask_radius, mask_radius_crs, masked, flat)"
@@ -1035,6 +1110,7 @@ class shapes(object):
         def _get_delaunay_triangulation(
             self, x, y, crs, radius, radius_crs="out", masked=True
         ):
+
             # prepare data
             try:
                 from scipy.spatial import Delaunay
@@ -1042,11 +1118,7 @@ class shapes(object):
                 raise ImportError("'scipy' is required for 'delaunay_triangulation'!")
 
             # transform from crs to the plot_crs
-            t_in_plot = Transformer.from_crs(
-                self._m.get_crs(crs),
-                self._m.crs_plot,
-                always_xy=True,
-            )
+            t_in_plot = shapes.get_transformer(self._m.get_crs(crs), self._m.crs_plot)
 
             x0, y0 = t_in_plot.transform(x, y)
             datamask = np.isfinite(x0) & np.isfinite(y0)
@@ -1092,35 +1164,14 @@ class shapes(object):
                 # mask any triangle whose side-length exceeds maxdist
                 mask = np.any(l > maxdist, axis=0)
                 tri.set_mask(mask)
+
             return tri, datamask
 
         def get_coll(self, x, y, crs, **kwargs):
 
-            # special treatment of color and array inputs to distribute the values
-            color = kwargs.pop("color", None)
-            array = kwargs.pop("array", None)
-
             tri, datamask = self._get_delaunay_triangulation(
                 x, y, crs, self.mask_radius, self.mask_radius_crs, self.masked
             )
-
-            if self.flat == False:
-                coll = TriMesh(
-                    tri,
-                    # transOffset=self._m.figure.ax.transData,
-                    **kwargs,
-                )
-            else:
-                # Vertices of triangles.
-                maskedTris = tri.get_masked_triangles()
-                verts = np.stack((tri.x[maskedTris], tri.y[maskedTris]), axis=-1)
-
-                coll = PolyCollection(
-                    verts=verts,
-                    # transOffset=self._m.figure.ax.transData,
-                    **kwargs,
-                )
-
             maskedTris = tri.get_masked_triangles()
 
             # find the masked points that are not masked by the datamask
@@ -1130,28 +1181,54 @@ class shapes(object):
             # remember the mask
             self._m._data_mask = mask
 
-            # special treatment of color input to properly distribute values
-            if color is not None:
-                coll.set_facecolors([color] * (len(x)) * 6)
-            else:
-                if array is not None:
-                    # tri-contour meshes need 3 values for each triangle
+            color_and_array = shapes._get_colors_and_array(kwargs, datamask)
 
-                    if self.flat:
-                        array = array[datamask][maskedTris].mean(axis=1)
-                        coll.set_array(array.ravel())
+            if self.flat == False:
+                for key, val in color_and_array.items():
+                    if val is None:
+                        continue
+
+                    if key == "array":
+                        pass
                     else:
-                        coll.set_array(array[datamask])
+                        color_and_array[key] = np.tile(val, 6)
+
+                coll = TriMesh(
+                    tri,
+                    # transOffset=self._m.figure.ax.transData,
+                    **color_and_array,
+                    **kwargs,
+                )
+            else:
+                for key, val in color_and_array.items():
+                    if val is None:
+                        continue
+
+                    if key == "array":
+                        color_and_array[key] = val[maskedTris].mean(axis=1)
+                    else:
+                        color_and_array[key] = val[maskedTris[:, 0]]
+
+                # Vertices of triangles.
+                verts = np.stack((tri.x[maskedTris], tri.y[maskedTris]), axis=-1)
+
+                coll = PolyCollection(
+                    verts=verts,
+                    # transOffset=self._m.figure.ax.transData,
+                    **color_and_array,
+                    **kwargs,
+                )
 
             return coll
 
         @property
         def radius(self):
-            return shapes._get_radius(self._m, "estimate", "in")
+            radius = shapes._get_radius(self._m, "estimate", "in")
+            return radius
 
         @property
         def radius_crs(self):
-            return self._m.get_crs("in")
+            return "in"
 
     class _shade_points(object):
         name = "shade_points"
@@ -1224,11 +1301,12 @@ class shapes(object):
 
         @property
         def radius(self):
-            return shapes._get_radius(self._m, "estimate", "in")
+            radius = shapes._get_radius(self._m, "estimate", "in")
+            return radius
 
         @property
         def radius_crs(self):
-            return self._m.get_crs("in")
+            return "in"
 
     class _shade_raster(object):
         name = "shade_raster"
@@ -1316,11 +1394,201 @@ class shapes(object):
 
         @property
         def radius(self):
-            return shapes._get_radius(self._m, "estimate", "in")
+            radius = shapes._get_radius(self._m, "estimate", "in")
+            return radius
 
         @property
         def radius_crs(self):
-            return self._m.get_crs("in")
+            return "in"
+
+    class _raster(object):
+        name = "raster"
+
+        def __init__(self, m):
+            self._m = m
+            self._radius = None
+
+        def __call__(self, radius="estimate", radius_crs="in"):
+            """
+            Draw 2D datasets as rectangles (only 2D datasets, but possibly large ones)
+
+            (similar to plt.imshow)
+
+            Note
+            ----
+            The raster-shape uses a QuadMesh to represent the datapoints.
+            This considerably speeds up plotting of large datasets but it has the
+            disadvantage that only the vertices of the rectangles will be reprojected
+            to the plot-crs while the curvature of the edges is NOT considerd!
+            (e.g. the effective shape is a distorted rectangle with straight edges)
+
+            - use `m.set_shape.rectangles()` if you need "curved" edges!
+            - use `m.set_shape.shade_raster()` for very large datasets
+
+            Parameters
+            ----------
+            radius : tuple or str, optional
+                a tuple representing the radius in x- and y- direction.
+                The default is "estimate" in which case the radius is attempted
+                to be estimated from the input-coordinates.
+            radius_crs : crs-specification, optional
+                The crs in which the dimensions are defined.
+                The default is "in".
+            """
+
+            from . import MapsGrid  # do this here to avoid circular imports!
+
+            for m in self._m if isinstance(self._m, MapsGrid) else [self._m]:
+                shape = self.__class__(m)
+
+                shape._radius = radius
+                shape.radius_crs = radius_crs
+                m._shape = shape
+
+        @property
+        def _initargs(self):
+            return dict(
+                radius=self._radius,
+                radius_crs=self.radius_crs,
+            )
+
+        @property
+        def radius(self):
+            if self._radius is None:
+                radius = shapes._get_radius(self._m, self._radius, self.radius_crs)
+                return radius
+
+            return self._radius
+
+        def __repr__(self):
+            try:
+                s = f"rectangles(radius={self.radius}, radius_crs={self.radius_crs})"
+            except AttributeError:
+                s = "rectangles(radius, radius_crs)"
+
+            return s
+
+        def _get_rectangle_verts(self, x, y, crs):
+            # the number of intermediate points is fixed to 1 when using a QuadMesh
+            # (e.g. no intermediate points, only vertices)
+            n = 1
+
+            # estimate the radius (make sure only finite values are considered)
+
+            # try to find the radius based on the first row/col of the data
+            # (a shortcut for very large datasets...)
+            rx = np.diff(x[0])[0]
+            ry = np.diff(y.T[0])[0]
+            if not np.isfinite([rx, ry]).all():
+                # if no finite radius is found, search for the radius in the whole array
+                dx = np.diff(x, axis=1)
+                dy = np.diff(y, axis=0)
+                rx = abs(dx[np.isfinite(dx)][0])
+                ry = abs(dy[np.isfinite(dy)][0])
+
+            self._radius = rx, ry
+            p = x, y
+
+            in_crs = self._m.get_crs(crs)
+
+            # transform corner-points
+            in_crs = self._m.get_crs(crs)
+            # transform from crs to the plot_crs
+            t = shapes.get_transformer(in_crs, self._m.crs_plot)
+
+            # make sure we do not transform out of bounds (if possible)
+            if in_crs.area_of_use is not None:
+                transformer = shapes.get_transformer(in_crs.geodetic_crs, in_crs)
+
+                xmin, ymin, xmax, ymax = transformer.transform_bounds(
+                    *in_crs.area_of_use.bounds
+                )
+
+                clipx = partial(np.clip, a_min=xmin, a_max=xmax)
+                clipy = partial(np.clip, a_min=ymin, a_max=ymax)
+            else:
+                clipx, clipy = lambda x: x, lambda y: y
+
+            x0 = clipx(p[0] - rx)
+            x1 = clipx(p[0] + rx)
+            y0 = clipx(p[1] - ry)
+            y1 = clipx(p[1] + ry)
+
+            px = np.column_stack(
+                (
+                    np.linspace(x0, x1, n).T.flat,
+                    np.repeat([x1], n, axis=0).T.flat,
+                    np.linspace(x1, x0, n).T.flat,
+                    np.repeat([x0], n).T.flat,
+                )
+            )
+
+            py = np.column_stack(
+                (
+                    np.repeat([y1], n, axis=0).T.flat,
+                    np.linspace(y1, x0, n).T.flat,
+                    np.repeat([y0], n, axis=0).T.flat,
+                    np.linspace(y0, x1, n).T.flat,
+                )
+            )
+
+            v = np.full((p[0].shape[0] + 1, p[0].shape[1] + 1, 2), None, dtype=float)
+
+            v[:-1, :-1, 0] = p[0] - rx
+            v[:-1, :-1, 1] = p[1] - ry
+
+            v[-1, :-1] = v[-2, :-1] + [0, 2 * rx]
+            v[:, -1] = v[:, -2] + [2 * ry, 0]
+
+            px, py = t.transform(clipx(v[:, :, 0]), clipy(v[:, :, 1]))
+            verts = np.stack((px, py), axis=2)
+
+            mask = np.logical_and(np.isfinite(px)[:-1, :-1], np.isfinite(py)[:-1, :-1])
+
+            return verts, mask
+
+        def _get_polygon_coll(self, x, y, crs, **kwargs):
+
+            verts, mask = self._get_rectangle_verts(
+                x,
+                y,
+                crs,
+            )
+
+            # remember masked points
+            self._m._data_mask = mask
+
+            # don't use a mask here since we need the full 2D array
+            color_and_array = shapes._get_colors_and_array(
+                kwargs, np.full_like(mask, True)
+            )
+            for key, val in color_and_array.items():
+                if val is not None:
+                    # convert to 1D to avoid indexing issues in
+                    # matplotlib.collections.QuadMesh.get_cursor_data
+                    color_and_array[key] = val.ravel()
+
+            # temporary fix for https://github.com/matplotlib/matplotlib/issues/22908
+            QuadMesh.get_cursor_data = lambda *args, **kwargs: None
+
+            coll = QuadMesh(
+                verts,
+                **color_and_array,
+                **kwargs,
+            )
+
+            return coll
+
+        def get_coll(self, x, y, crs, **kwargs):
+            x, y = np.asanyarray(x), np.asanyarray(y)
+            assert (
+                len(x.shape) == 2 and len(y.shape) == 2
+            ), "EOmaps: using 'raster' as plot-shape is only possible for 2D datasets!"
+            # don't use antialiasing by default since it introduces unwanted
+            # transparency for reprojected QuadMeshes!
+            kwargs.setdefault("antialiased", False)
+
+            return self._get_polygon_coll(x, y, crs, **kwargs)
 
     @wraps(_geod_circles.__call__)
     def geod_circles(self, *args, **kwargs):
@@ -1337,9 +1605,14 @@ class shapes(object):
         shp = self._rectangles(m=self._m)
         return shp.__call__(*args, **kwargs)
 
-    @wraps(_voroni_diagram.__call__)
-    def voroni_diagram(self, *args, **kwargs):
-        shp = self._voroni_diagram(m=self._m)
+    @wraps(_raster.__call__)
+    def raster(self, *args, **kwargs):
+        shp = self._raster(m=self._m)
+        return shp.__call__(*args, **kwargs)
+
+    @wraps(_voronoi_diagram.__call__)
+    def voronoi_diagram(self, *args, **kwargs):
+        shp = self._voronoi_diagram(m=self._m)
         return shp.__call__(*args, **kwargs)
 
     @wraps(_delaunay_triangulation.__call__)

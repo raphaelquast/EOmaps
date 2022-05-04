@@ -20,9 +20,9 @@ data = pd.DataFrame(
 
 # ----------- setup some maps objects and assign datasets and the plot-crs
 mg = MapsGrid(1, 2, crs=[4326, Maps.CRS.Orthographic(45, 45)], figsize=(10, 6))
-mg.m_0_0.set_data(data=data.sample(100), xcoord="lon", ycoord="lat", crs=4326)
+mg.m_0_0.set_data(data=data.sample(100), x="lon", y="lat", crs=4326)
 
-mg.m_0_1.set_data(data=data, xcoord="lon", ycoord="lat", crs=4326)
+mg.m_0_1.set_data(data=data, x="lon", y="lat", crs=4326)
 
 mg.add_feature.preset.ocean(reproject="cartopy")
 

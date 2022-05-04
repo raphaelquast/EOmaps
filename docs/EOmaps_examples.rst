@@ -1,5 +1,7 @@
 .. include:: substitutions.rst
 
+.. _EOmaps_examples:
+
 🌐 EOmaps examples
 ==================
 

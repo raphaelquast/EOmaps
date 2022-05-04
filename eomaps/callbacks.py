@@ -89,8 +89,8 @@ class _click_callbacks(object):
         """Print details on the clicked pixel to the console"""
         ID, pos, val, ind, picker_name = self._popargs(kwargs)
 
-        xlabel = self.m.data_specs.xcoord
-        ylabel = self.m.data_specs.ycoord
+        xlabel = self.m.data_specs.x
+        ylabel = self.m.data_specs.y
         if ID is not None:
             printstr = ""
             x, y = [np.format_float_positional(i, trim="-", precision=4) for i in pos]
@@ -173,14 +173,14 @@ class _click_callbacks(object):
 
         ID, pos, val, ind, picker_name = self._popargs(kwargs)
 
-        if isinstance(self.m.data_specs.xcoord, str):
-            xlabel = self.m.data_specs.xcoord
+        if isinstance(self.m.data_specs.x, str):
+            xlabel = self.m.data_specs.x
         else:
-            xlabel = "xcoord"
-        if isinstance(self.m.data_specs.ycoord, str):
-            ylabel = self.m.data_specs.ycoord
+            xlabel = "x"
+        if isinstance(self.m.data_specs.y, str):
+            ylabel = self.m.data_specs.y
         else:
-            ylabel = "ycoord"
+            ylabel = "y"
 
         if self.m.data_specs.parameter is None:
             parameter = "value"
@@ -310,7 +310,7 @@ class _click_callbacks(object):
     def mark(
         self,
         radius=None,
-        radius_crs="in",
+        radius_crs=None,
         shape=None,
         buffer=1,
         permanent=True,
@@ -337,9 +337,16 @@ class _click_callbacks(object):
 
             The default is None.
         radius_crs : any
-            The crs specification in which the radius is provided.
-            The default is "in" (e.g. the crs of the input-data).
             (only relevant if radius is NOT specified as "pixel")
+
+            The crs specification in which the radius is provided.
+            - use "in" for input-crs, "out" for plot-crs
+            - or use any other crs-specification (e.g. wkt-string, epsg-code etc.)
+
+            If None, the radius_crs of the assigned plot-shape is used if possible
+            (e.g. m.shape.radius_crs) and otherwise the input-crs is used (e.g. "in").
+
+            The default is None.
 
         shape : str, optional
             Indicator which shape to draw. Currently supported shapes are:
@@ -353,7 +360,7 @@ class _click_callbacks(object):
             A factor to scale the size of the shape. The default is 1.
         permanent : bool, optional
             Indicator if the shapes should be permanent (True) or removed
-            on each new double-click (False)
+            on each new double-click (False).
         n : int
             The number of points to calculate for the shape.
             The default is 20.
@@ -366,7 +373,6 @@ class _click_callbacks(object):
             kwargs passed to the matplotlib patch.
             (e.g. `facecolor`, `edgecolor`, `linewidth`, `alpha` etc.)
         """
-
         possible_shapes = ["ellipses", "rectangles", "geod_circles"]
 
         if shape is None:
@@ -382,6 +388,12 @@ class _click_callbacks(object):
             assert (
                 shape in possible_shapes
             ), f"'{shape}' is not a valid marker-shape... use one of {possible_shapes}"
+
+        if radius_crs is None:
+            try:
+                radius_crs = self.m.shape.radius_crs
+            except Exception:
+                radius_crs = "in"
 
         if radius is None:
             if self.m.figure.coll is not None:
@@ -434,7 +446,7 @@ class _click_callbacks(object):
                 shape = "geod_circles"
 
         elif self.m.shape and self.m.shape.name in [
-            "voroni_diagram",
+            "voronoi_diagram",
             "delaunay_triangulation",
         ]:
             assert radius != "pixel", (
@@ -454,23 +466,24 @@ class _click_callbacks(object):
             )
         else:
             raise TypeError(f"EOmaps: '{shape}' is not a valid marker-shape")
-
+        x, y = np.atleast_1d(pos[0]), np.atleast_1d(pos[1])
         coll = shp.get_coll(
             np.atleast_1d(pos[0]), np.atleast_1d(pos[1]), pos_crs, **kwargs
         )
 
-        if permanent and not hasattr(self, "permanent_markers"):
+        if permanent is True and not hasattr(self, "permanent_markers"):
             self.permanent_markers = []
 
         marker = self.m.figure.ax.add_collection(coll)
 
-        if permanent:
-            self.permanent_markers.append(marker)
-        else:
-            self._temporary_artists.append(marker)
-
         marker.set_zorder(zorder)
-        self.m.BM.add_artist(marker)
+
+        if permanent is True:
+            self.permanent_markers.append(marker)
+            self.m.BM.add_bg_artist(marker, self.m.layer)
+        elif permanent is False:
+            self._temporary_artists.append(marker)
+            self.m.BM.add_artist(marker)
 
         return marker
 
@@ -537,7 +550,7 @@ class _click_callbacks(object):
         ax = self.m.figure.ax
 
         # default boundary args
-        args = dict(fc="none", ec="k", lw=1)
+        args = dict(fc="none", ec="k", lw=1.1)
         args.update(kwargs)
 
         if isinstance(how, str):
@@ -579,6 +592,7 @@ class _click_callbacks(object):
                 permanent=False,
                 **args,
             )
+
         elif isinstance(how, (float, list, tuple)):
             if isinstance(how, float):
                 w0, h0 = self.m.figure.ax.transAxes.transform((0, 0))
@@ -625,14 +639,20 @@ class _click_callbacks(object):
                 pos=pos,
                 radius_crs="out",
                 shape="rectangles",
-                radius=(w / 2, h / 2),
+                radius=(w / 1.99, h / 1.99),  # 1.99 to be larger than the blit-region
                 permanent=False,
                 **args,
             )
+
         else:
             raise TypeError(f"EOmaps: {how} is not a valid peek method!")
 
-        self.m.BM._artists_to_clear["on_layer_change"].append(marker)
+        def doit():
+            self.m.BM._artists_to_clear["click"].append(marker)
+            self.m.BM._artists_to_clear["move"].append(marker)
+            self.m.BM._artists_to_clear["on_layer_change"].append(marker)
+
+        self.m.BM._after_restore_actions.append(doit)
 
         if overlay:
             self.m.BM._after_restore_actions.append(
@@ -735,8 +755,15 @@ class _click_callbacks(object):
 
             self._pick_f.canvas.mpl_connect("close_event", on_close)
 
-        _pick_xlabel = self.m.data_specs.xcoord
-        _pick_ylabel = self.m.data_specs.ycoord
+        if isinstance(self.m.data_specs.x, str):
+            _pick_xlabel = self.m.data_specs.x
+        else:
+            _pick_xlabel = "x"
+
+        if isinstance(self.m.data_specs.y, str):
+            _pick_ylabel = self.m.data_specs.y
+        else:
+            _pick_ylabel = "y"
 
         if x_index == "pos":
             x, y = [
