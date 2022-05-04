@@ -164,14 +164,18 @@ class _layer_selector:
         # to synchronize changes across all selectors and sliders
         # see setter for   helpers.BM._bg_layer
         for s in self._sliders:
-            if l in s._labels:
+            try:
                 s.eventson = False
                 s.set_val(s._labels.index(l))
                 s.eventson = True
+            except IndexError:
+                pass
 
         for s in self._selectors:
-            if l in s.labels:
+            try:
                 s.set_active(s.circles[s.labels.index(l)])
+            except IndexError:
+                pass
 
     def _new_selector(self, layers=None, draggable=True, exclude_layers=None, **kwargs):
         """
