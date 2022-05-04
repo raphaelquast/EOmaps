@@ -81,16 +81,15 @@ for more info!
 ⚙ Port script from EOmaps v3.x to v4.x
 ***************************************
 
-Starting with **EOmaps v4.0** the ``m.plot_specs`` property and the ``m.set_plot_specs`` function have been removed and all
-associated attributes are now set in the appropriate functions.
+Starting with **EOmaps v4.0** ``m.plot_specs`` and ``m.set_plot_specs`` have been **removed** and all
+associated attributes are now set in the appropriate functions!
 
-- This provides a much better usability but requires a minor adjustment of existing scripts.
+- This provides a much better usability but requires some minor adjustments of existing scripts.
 
 Porting a script from v3.x to v4.x is quick and easy and involves only the following steps:
 
-1. search in your script for any occurrence of the word ``.plot_specs`` and ``.set_plot_specs(``
-
-  - remove the calls to ``plot_specs`` and ``.set_plot_specs`` and move the affected arguments to the correct functions:
+1. Search your script for all occurrences of the words ``.plot_specs`` and ``.set_plot_specs(``,
+   move the affected arguments to the correct functions (and remove the calls once you're done):
 
     - | ``vmin``, ``vmax`` ``alpha`` and ``cmap`` are now set in
       | ``m.plot_map(vmin=..., vmax=..., alpha=..., cmap=...)``
@@ -99,8 +98,16 @@ Porting a script from v3.x to v4.x is quick and easy and involves only the follo
     - | ``cpos`` and ``cpos_radius`` are now (optionally) set in
       | ``m.set_data(data, x, y, cpos=..., cpos_radius=...)``
 
-3. search in your script for any occurrence of the word ``voroni_diagram`` and replace it with ``voronoi_diagram``
-4. search in your script for any occurrences of the words ``xcoord`` and ``ycoord`` and replace them with ``x`` and ``y``
+2. Search your script for all occurrences of the words ``xcoord`` and ``ycoord`` and replace them with ``x`` and ``y``
+
+3. **ONLY** if you plot **voronoi diagrams**:
+
+  - search in your script for all occurrences of the word ``voroni_diagram`` and replace it with ``voronoi_diagram``
+
+4. **ONLY** if you used **custom callback functions**:
+
+  - the first argument of custom callbacks is no longer identified as the ``Maps`` object.
+  - if you really need access to the ``Maps`` object within the callback, pass it as an explicit argument!
 
 
 **EOmaps v3.x:**
@@ -114,14 +121,35 @@ Porting a script from v3.x to v4.x is quick and easy and involves only the follo
   m.add_colorbar()
   m.plot_map()
 
+  # ---------------------------- custom callback signature:
+  def custom_cb(m, asdf=1):
+      print(asdf)
+
+  m.cb.click.attach(custom_cb)
+
 
 **EOmaps v4.x:**
 
 .. code-block:: python
 
   m = Maps()
-  m.set_data(data=..., x=..., y=...,
-             cpos="ul", cpos_radius=1)
+  m.set_data(data=..., x=..., y=..., cpos="ul", cpos_radius=1)
   m.plot_map(vmin=1, vmax=20, cmap="viridis")
   m.set_shape.voronoi_diagram()
   m.add_colorbar(histbins=100)
+
+  # ---------------------------- custom callback signature:
+  def custom_cb(**kwargs, asdf=None):
+      print(asdf)
+
+  m.cb.click.attach(custom_cb, asdf=1)
+
+
+Note: if you really need access to the maps-object within custom callbacks,
+simply provide it as an explicit argument!
+.. code-block:: python
+
+  def custom_cb(**kwargs, m=None, asdf=None):
+      ...
+
+  m.cb.click.attach(custom_cb, m=m, asdf=1)

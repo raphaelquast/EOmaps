@@ -197,7 +197,7 @@ and (optionally) setting appropriate limits via ``vmin`` and ``vmax``.
 
 ------
 
-The colors of shapes can also be set **manually** by providing one of the following arguments to ``m.plot_map(...)``:
+Colors can also be set **manually** by providing one of the following arguments to ``m.plot_map(...)``:
 
 - to set both **facecolor** AND **edgecolor** use ``color=...``
 - to set the **facecolor** use ``fc=...`` or ``facecolor=...``
