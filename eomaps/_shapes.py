@@ -132,7 +132,6 @@ class shapes(object):
 
     @staticmethod
     def _estimate_radius(m, radius_crs, method=np.median):
-        print("estimating", radius_crs)
         if radius_crs == "in":
             if (
                 isinstance(m.data_specs.x, np.ndarray)
