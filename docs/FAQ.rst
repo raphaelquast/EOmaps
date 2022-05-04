@@ -75,7 +75,12 @@ reasonably well if you want the figures embedded in a Jupyter Notebook.
 Checkout the `matplotlib doc <https://matplotlib.org/stable/users/explain/interactive.html#jupyter-notebooks-jupyterlab>`_
 for more info!
 
+📸 Record interactive maps to create animations
 
+The best way to record interactions on a EOmaps map is with the
+free and open source `ScreenToGif<https://www.screentogif.com/>`_ software.
+
+All animated gifs in this documentation have been created with this awesome piece of software.
 
 
 ⚙ Port script from EOmaps v3.x to v4.x
