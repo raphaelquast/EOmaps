@@ -2210,7 +2210,7 @@ class Maps(object):
         self.BM.update(clear=False)
 
     def add_compass(
-        self, pos=None, scale=10, style="compass", patch="w", txt="N", pickable=True
+        self, pos=None, scale=10, style="compass", patch=None, txt="N", pickable=True
     ):
         """
         Add a "compass" or "north-arrow" to the map.
