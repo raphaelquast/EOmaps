@@ -126,20 +126,18 @@ lon, lat, data = [1,2,3,4,5], [1,2,3,4,5], [1,2,3,4,5]
 m = Maps(crs=Maps.CRS.Orthographic())
 
 # set the data
-m.set_data(data=data, xcoord=lon, ycoord=lat, crs=4326)
+m.set_data(data=data, x=lon, y=lat, crs=4326)
 # set the shape you want to use to represent the data-points
 m.set_shape.geod_circles(radius=10000) # (e.g. geodetic circles with 10km radius)
 
-# (optionally) set the appearance of the plot
-m.set_plot_specs(cmap="viridis", label="a nice label")
 # (optionally) classify the data
 m.set_classify_specs(scheme=Maps.CLASSIFIERS.Quantiles, k=5)
 
-# plot the map
-m.plot_map()
+# plot the map using matplotlibs "viridis" colormap
+m.plot_map(cmap="viridis", vmin=2, vmax=4)
 
 # add a colorbar with a histogram on top
-m.add_colorbar()
+m.add_colorbar(histbins=200)
 
 # add a scalebar
 m.add_scalebar()
@@ -170,7 +168,7 @@ m.cb.keypress.attach.switch_layer(layer="layer 2", key="1")
 # get a clickable widget to switch between the available plot-layers
 m.util.layer_selector()
 
-# ---- add new layers directly from a GeoTIFF / NetCDF or CSV files
+# ---- add new layers directly from GeoTIFF / NetCDF or CSV files
 m4 = m.new_layer_from_file.GeoTIFF(...)
 m4 = m.new_layer_from_file.NetCDF(...)
 m4 = m.new_layer_from_file.CSV(...)
