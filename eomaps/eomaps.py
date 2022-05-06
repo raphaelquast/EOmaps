@@ -1096,7 +1096,6 @@ class Maps(object):
             self._crs_cache = dict()
 
         h = hash(crs)
-
         if h in self._crs_cache:
             crs = self._crs_cache[h]
         else:
@@ -3010,9 +3009,11 @@ class Maps(object):
 
     def _remove_colorbar(self):
         if hasattr(self, "_ax_cb"):
+            self._ax_cb.cla()
             self._ax_cb.remove()
             del self._ax_cb
         if hasattr(self, "_ax_cb_plot"):
+            self._ax_cb_plot.cla()
             self._ax_cb_plot.remove()
             del self._ax_cb_plot
         # if hasattr(self, "_cb_gridspec"):
@@ -3191,6 +3192,7 @@ class Maps(object):
             https://matplotlib.org/stable/api/_as_gen/matplotlib.axis.Axis.set_major_formatter.html
 
             Call-signagure:
+
             >>> def tick_formatter(x, pos):
             >>>     # x ... the tick-value
             >>>     # pos ... the tick-position
@@ -3237,7 +3239,8 @@ class Maps(object):
         if hasattr(self, "_colorbar"):
             print(
                 "EOmaps: A colorbar already exists for this Maps-object!\n"
-                + "...use a new layer if you want multiple colorbars!"
+                + "...use a new layer if you want multiple colorbars or use "
+                + "`m._remove_colorbar() to remove the existing colorbar."
             )
             return
 
