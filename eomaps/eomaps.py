@@ -3250,7 +3250,6 @@ class Maps(object):
         assert hasattr(
             self.classify_specs, "_bins"
         ), "EOmaps: you need to call `m.plot_map()` before adding a colorbar!"
-
         # check if there is already an existing colorbar in another axis
         # and if we find one, use its specs instead of creating a new one
         parent_m_for_cb = None
@@ -3286,6 +3285,7 @@ class Maps(object):
             if isinstance(gs, float):
                 frac = gs
                 gs = self.figure.ax.get_subplotspec()
+
                 # get the original subplot-spec of the axes, and divide it based on
                 # the fraction that is intended for the colorbar
                 if orientation == "horizontal":
@@ -3360,9 +3360,14 @@ class Maps(object):
         )
         ax_cb_plot = self.figure.f.add_subplot(
             cbgs[0],
-            frameon=False,
+            frameon=True,
             label="ax_cb_plot",
         )
+        # keep the background of the plot-axis but remove the outer frame
+        ax_cb_plot.spines["top"].set_visible(False)
+        ax_cb_plot.spines["right"].set_visible(False)
+        ax_cb_plot.spines["bottom"].set_visible(False)
+        ax_cb_plot.spines["left"].set_visible(False)
 
         # join colorbar and histogram axes
         if cb_orientation == "horizontal":
