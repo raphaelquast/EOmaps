@@ -252,8 +252,10 @@ Use custom callback functions to perform arbitrary tasks on the data when clicki
   :width: 75%
 
 
-🔬 Inset-maps to show zoomed-in regions
-----------------------------------------
+.. _EOmaps_examples_inset_maps:
+
+🔬 Inset-maps - get a zoomed-in view on selected areas
+------------------------------------------------------
 
 Quickly create nice inset-maps to show details for specific regions.
 

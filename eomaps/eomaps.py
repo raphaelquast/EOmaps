@@ -586,8 +586,7 @@ class Maps(object):
 
         See also
         --------
-
-        The following additional methods are defined on "inset Maps objects":
+        The following additional methods are defined on inset `Maps` objects
 
         m.indicate_inset_extent :
             Plot a polygon representing the extent of the inset map on another Maps
@@ -595,8 +594,8 @@ class Maps(object):
         m.set_inset_position :
             Set the (center) position and size of the inset-map.
 
-        Examples:
-        ---------
+        Examples
+        --------
 
         Simple example:
 
