@@ -798,8 +798,12 @@ class BlitManager:
         self._on_layer_activation = defaultdict(dict)
 
     @property
+    def figure(self):
+        return self._m.figure.f
+
+    @property
     def canvas(self):
-        return self._m.figure.f.canvas
+        return self.figure.canvas
 
     def _do_on_layer_change(self, layer):
         # general callbacks executed on any layer change
@@ -965,7 +969,7 @@ class BlitManager:
             return
 
         if bbox is None:
-            bbox = cv.figure.bbox
+            bbox = self.figure.bbox
 
         # temporarily disconnect draw-event callback to avoid recursion
         # while we re-draw the artists
@@ -1041,8 +1045,7 @@ class BlitManager:
         """
 
         layer = art.get_zorder()
-
-        if art.figure != self.canvas.figure:
+        if art.figure != self.figure:
             raise RuntimeError
         if art in self._artists[layer]:
             return
@@ -1075,7 +1078,7 @@ class BlitManager:
             print(f"creating a new Maps-object for the layer {layer}")
             self._m.new_layer(layer)
 
-        if art.figure != self.canvas.figure:
+        if art.figure != self.figure:
             raise RuntimeError
 
         if art in self._bg_artists[layer]:
@@ -1207,6 +1210,7 @@ class BlitManager:
             If provided NO layer will be automatically updated!
             The default is None.
         """
+
         cv = self.canvas
         if (cv.toolbar is not None) and cv.toolbar.mode != "":
             # only re-draw artists during toolbar-actions (e.g. pan/zoom)
@@ -1215,8 +1219,6 @@ class BlitManager:
             if self._mpl_backend_blit_fix:
                 cv.blit()
             return
-
-        fig = cv.figure
 
         if bg_layer is None:
             bg_layer = self.bg_layer
@@ -1227,7 +1229,6 @@ class BlitManager:
         else:
             if clear:
                 self._clear_temp_artists(clear)
-
             # restore the background
             cv.restore_region(self._bg_layers[bg_layer])
 
@@ -1254,7 +1255,7 @@ class BlitManager:
                     cv.blit(bbox)
                 else:
                     # update the GUI state
-                    cv.blit(fig.bbox)
+                    cv.blit(self.figure.bbox)
 
             # execute all actions registered to be called after blitting
             while len(self._after_update_actions) > 0:
@@ -1282,7 +1283,7 @@ class BlitManager:
         """
 
         if bbox_bounds is None:
-            bbox_bounds = self.canvas.figure.bbox.bounds
+            bbox_bounds = self.figure.bbox.bounds
 
         name = self._get_overlay_name(bg_layer=layer)
 
@@ -1310,9 +1311,9 @@ class BlitManager:
                 self._bg_layers[name],
                 bbox=(
                     x0,
-                    self.canvas.figure.bbox.height - y0 - h,
+                    self.figure.bbox.height - y0 - h,
                     x0 + w,
-                    self.canvas.figure.bbox.height - y0,
+                    self.figure.bbox.height - y0,
                 ),
                 xy=(0, 0),
             )
@@ -1330,7 +1331,7 @@ class BlitManager:
             layer = [layer]
 
         if bbox_bounds is None:
-            bbox_bounds = self.canvas.figure.bbox.bounds
+            bbox_bounds = self.figure.bbox.bounds
 
         if not hasattr(self, "_last_overlay_layer"):
             self._last_overlay_layer = ""
@@ -1355,9 +1356,9 @@ class BlitManager:
                     self._bg_layers[name],
                     bbox=(
                         x0,
-                        self.canvas.figure.bbox.height - y0 - h,
+                        self.figure.bbox.height - y0 - h,
                         x0 + w,
-                        self.canvas.figure.bbox.height - y0,
+                        self.figure.bbox.height - y0,
                     ),
                     xy=(0, 0),
                 )
