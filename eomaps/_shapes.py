@@ -453,8 +453,8 @@ class shapes(object):
 
             Parameters
             ----------
-            radius : tuple or str, optional
-                a tuple representing the radius in x- and y- direction.
+            radius : int, float, tuple or str, optional
+                The radius in x- and y- direction.
                 The default is "estimate" in which case the radius is attempted
                 to be estimated from the input-coordinates.
             radius_crs : crs-specification, optional
@@ -552,7 +552,11 @@ class shapes(object):
             # transform from crs to the radius_crs
             t_radius_plot = shapes.get_transformer(radius_crs, self._m.crs_plot)
 
-            [rx, ry] = radius
+            if isinstance(radius, (int, float, np.number)):
+                rx, ry = radius, radius
+            else:
+                rx, ry = radius
+
             # transform corner-points
             if radius_crs == crs:
                 p = (x, y)
@@ -669,8 +673,8 @@ class shapes(object):
 
             Parameters
             ----------
-            radius : tuple or str, optional
-                a tuple representing the radius in x- and y- direction.
+            radius : int, float, tuple or str, optional
+                The radius in x- and y- direction.
                 The default is "estimate" in which case the radius is attempted
                 to be estimated from the input-coordinates.
             radius_crs : crs-specification, optional
@@ -738,7 +742,11 @@ class shapes(object):
         def _get_rectangle_verts(self, x, y, crs, radius, radius_crs="in", n=4):
             in_crs = self._m.get_crs(crs)
 
-            [rx, ry] = radius
+            if isinstance(radius, (int, float, np.number)):
+                rx, ry = radius, radius
+            else:
+                rx, ry = radius
+
             # transform corner-points
             if radius_crs == crs:
                 in_crs = self._m.get_crs(crs)
