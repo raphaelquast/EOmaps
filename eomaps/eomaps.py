@@ -1619,22 +1619,23 @@ class Maps(object):
             nbins = len(bins)
             norm = mpl.colors.BoundaryNorm(bins, nbins)
             colors = cmap(np.linspace(0, 1, nbins))
+
+            # initialize the classified colormap
+            cbcmap = LinearSegmentedColormap.from_list(
+                "cmapname", colors=colors, N=len(colors)
+            )
+            if cmap._rgba_bad:
+                cbcmap.set_bad(cmap._rgba_bad)
+            if cmap._rgba_over:
+                cbcmap.set_over(cmap._rgba_over)
+            if cmap._rgba_under:
+                cbcmap.set_under(cmap._rgba_under)
+
         else:
             classified = False
             bins = None
-            colors = cmap(np.linspace(0, 1, 256))
+            cbcmap = cmap
             norm = mpl.colors.Normalize(vmin, vmax)
-
-        # initialize a colormap
-        cbcmap = LinearSegmentedColormap.from_list(
-            "cmapname", colors=colors, N=len(colors)
-        )
-        if cmap._rgba_bad:
-            cbcmap.set_bad(cmap._rgba_bad)
-        if cmap._rgba_over:
-            cbcmap.set_over(cmap._rgba_over)
-        if cmap._rgba_under:
-            cbcmap.set_under(cmap._rgba_under)
 
         return cbcmap, norm, bins, classified
 
@@ -1756,7 +1757,15 @@ class Maps(object):
             density=density,
         )
 
-        # color the histogram
+        # identify position of color-splits in the colorbar
+        if isinstance(n_cmap.cmap, LinearSegmentedColormap):
+            # for LinearSegmentedcolormap N is the number of quantizations!
+            splitpos = np.linspace(vmin, vmax, n_cmap.cmap.N)
+        else:
+            # for ListedColormap N is the number of colors
+            splitpos = np.linspace(vmin, vmax, n_cmap.cmap.N + 1)
+
+        # color the histogram patches
         for patch in list(ax_cb_plot.patches):
             # the list is important!! since otherwise we change ax.patches
             # as we iterate over it... which is not a good idea...
@@ -1771,64 +1780,36 @@ class Maps(object):
                 height = patch.get_height()
                 maxval = minval + width
 
-            patch.set_facecolor(cmap(norm((minval + maxval) / 2)))
-            # take care of histogram-bins that have splitted colors
-            if bins is not None:
-                splitbins = bins[np.where((minval < bins) & (maxval > bins))]
+            # ----------- take care of histogram-bins that have splitted colors
+            # identify bins that extend beyond a color-change
+            splitbins = [
+                minval,
+                *splitpos[(splitpos > minval) & (maxval > splitpos)],
+                maxval,
+            ]
 
-                if len(splitbins) > 0:
-
-                    patch.remove()
-                    # add first and last patch
-                    # (note b0 = b1 if only 1 split is performed!)
-                    b0 = splitbins[0]
+            if len(splitbins) > 2:
+                patch.remove()
+                # add in-between patches
+                for b0, b1 in pairwise(splitbins):
                     if orientation == "horizontal":
-                        p0 = mpl.patches.Rectangle(
-                            (0, minval),
+                        pi = mpl.patches.Rectangle(
+                            (0, b0),
                             width,
-                            (b0 - minval),
-                            facecolor=cmap(norm(minval)),
+                            (b1 - b0),
+                            facecolor=cmap(norm((b0 + b1) / 2)),
                         )
                     elif orientation == "vertical":
-                        p0 = mpl.patches.Rectangle(
-                            (minval, 0),
-                            (b0 - minval),
+                        pi = mpl.patches.Rectangle(
+                            (b0, 0),
+                            (b1 - b0),
                             height,
-                            facecolor=cmap(norm(minval)),
+                            facecolor=cmap(norm((b0 + b1) / 2)),
                         )
 
-                    b1 = splitbins[-1]
-                    if orientation == "horizontal":
-                        p1 = mpl.patches.Rectangle(
-                            (0, b1), width, (maxval - b1), facecolor=cmap(norm(maxval))
-                        )
-                    elif orientation == "vertical":
-                        p1 = mpl.patches.Rectangle(
-                            (b1, 0), (maxval - b1), height, facecolor=cmap(norm(maxval))
-                        )
-
-                    ax_cb_plot.add_patch(p0)
-                    ax_cb_plot.add_patch(p1)
-
-                    # add in-between patches
-                    if len(splitbins > 1):
-                        for b0, b1 in pairwise(splitbins):
-                            pi = mpl.patches.Rectangle(
-                                (0, b0), width, (b1 - b0), facecolor=cmap(norm(b0))
-                            )
-
-                            if orientation == "horizontal":
-                                pi = mpl.patches.Rectangle(
-                                    (0, b0), width, (b1 - b0), facecolor=cmap(norm(b0))
-                                )
-                            elif orientation == "vertical":
-                                pi = mpl.patches.Rectangle(
-                                    (b0, 0), (b1 - b0), height, facecolor=cmap(norm(b0))
-                                )
-
-                            ax_cb_plot.add_patch(pi)
-                else:
-                    patch.set_facecolor(cmap(norm((minval + maxval) / 2)))
+                    ax_cb_plot.add_patch(pi)
+            else:
+                patch.set_facecolor(cmap(norm((minval + maxval) / 2)))
 
         # setup appearance of histogram
         if orientation == "horizontal":
