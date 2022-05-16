@@ -130,11 +130,7 @@ Open an [issue](https://github.com/raphaelquast/EOmaps/issues) or start a [discu
 - Interact with the data via callback-functions.
 
 ```python
-import pandas as pd
 from eomaps import Maps
-
-# the data you want to plot
-lon, lat, data = [1,2,3,4,5], [1,2,3,4,5], [1,2,3,4,5]
 
 # initialize Maps object
 m = Maps(crs=Maps.CRS.Orthographic())
@@ -144,7 +140,7 @@ m.add_feature.preset.coastline()
 m.add_feature.cultural_50m.admin_0_countries(fc="none", ec="g")
 
 # easily visualize both structured and unstructured datasets
-m.set_data(data=data, x=lon, y=lat, crs=4326)
+m.set_data(data=[1, 2, 3, 4], x=[45, 46, 47, 42], y=[23, 24, 25, 26], crs=4326)
 # set the shape you want to use to represent the data-points
 m.set_shape.geod_circles(radius=10000) # (e.g. geodetic circles with 10km radius)
 # (optionally) classify the data
