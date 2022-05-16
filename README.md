@@ -99,7 +99,7 @@ Consider supporting the development and add a citation to your publication!
 ## 🚀 Contribute
 
 Found a bug or got an idea for an interesting feature?  
-Open an [issue](https://github.com/raphaelquast/EOmaps/issues) or start a [discussion](https://github.com/raphaelquast/EOmaps/discussions) and I'll see what I can do!  
+Open an [issue](https://github.com/raphaelquast/EOmaps/issues) or start a [discussion](https://github.com/raphaelquast/EOmaps/discussions), and I'll see what I can do!  
 (I'm of course also happy about actual pull requests on features and bug-fixes!)
 
 ---------------
@@ -139,53 +139,54 @@ lon, lat, data = [1,2,3,4,5], [1,2,3,4,5], [1,2,3,4,5]
 # initialize Maps object
 m = Maps(crs=Maps.CRS.Orthographic())
 
-# set the data
+# add basic map-features from NaturalEarth
+m.add_feature.preset.coastline()
+m.add_feature.cultural_50m.admin_0_countries(fc="none", ec="g")
+
+# easily visualize both structured and unstructured datasets
 m.set_data(data=data, x=lon, y=lat, crs=4326)
 # set the shape you want to use to represent the data-points
 m.set_shape.geod_circles(radius=10000) # (e.g. geodetic circles with 10km radius)
-
 # (optionally) classify the data
 m.set_classify_specs(scheme=Maps.CLASSIFIERS.Quantiles, k=5)
-
-# plot the map using matplotlibs "viridis" colormap
+# plot the data
 m.plot_map(cmap="viridis", vmin=2, vmax=4)
-
-# add a colorbar with a histogram on top
+# add a colorbar with a colored histogram on top
 m.add_colorbar(histbins=200)
 
 # add a scalebar
 m.add_scalebar()
-
 # add a compass (or north-arrow)
 m.add_compass()
 
-# add some basic features from NaturalEarth
-m.add_feature.preset.coastline()
-
-# add WebMap services
+# add imagery from a variety of open-access WebMap services
 m.add_wms.OpenStreetMap.add_layer.default()
 
-# use callback functions make the plot interactive!
+# use callback functions to interact with the map!
 m.cb.pick.attach.annotate()
 
-# ----- use multiple layers to compare and analyze different datasets!
-# ---- add another plot-layer to the map
+# use multiple layers to compare and analyze different datasets!
 m3 = m.new_layer(layer="layer 2")
 m3.add_feature.preset.ocean()
 
-# peek on layer 1 if you click on the map
+# attach a callback to peek on layer 1 if you click on the map
 m.cb.click.attach.peek_layer(layer="layer 2", how=0.4)
-# switch between the layers if you press "0" or "1" on the keyboard
+# attach callbacks to switch between the layers with the keyboard
 m.cb.keypress.attach.switch_layer(layer=0, key="0")
 m.cb.keypress.attach.switch_layer(layer="layer 2", key="1")
 
 # get a clickable widget to switch between the available plot-layers
 m.util.layer_selector()
 
-# ---- add new layers directly from GeoTIFF / NetCDF or CSV files
+# add zoomed-in "inset-maps" to highlight areas on th map
+m_inset = m.new_inset_map((10, 45))
+m_inset.add_feature.preset.coastline(fc="g")
+
+# ---- plot data directly from GeoTIFF / NetCDF or CSV files
 m4 = m.new_layer_from_file.GeoTIFF(...)
 m4 = m.new_layer_from_file.NetCDF(...)
 m4 = m.new_layer_from_file.CSV(...)
+
 ```
 
 ----

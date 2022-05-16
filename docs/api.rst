@@ -1190,8 +1190,8 @@ To indicate rectangular areas in any given crs, simply use ``m.indicate_extent``
     | If you need multiple colorbars, use an individual ``Maps`` object for each dataset! (e.g. via ``m2  = m.new_layer()``)
 
 
-To manually change the position of the colorbar (and the relative size between the colorbar
-and the histogram), use `m.figure.set_colorbar_position()`
+To manually change the position of a previously created colorbar (or the relative size between the colorbar
+and the histogram), use `m.figure.set_colorbar_position()`.
 
 .. currentmodule:: eomaps._containers.map_objects
 
