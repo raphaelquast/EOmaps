@@ -168,7 +168,7 @@ class _layer_selector:
                 s.eventson = False
                 s.set_val(s._labels.index(l))
                 s.eventson = True
-            except IndexError:
+            except ValueError:
                 pass
 
         for s in self._selectors:
