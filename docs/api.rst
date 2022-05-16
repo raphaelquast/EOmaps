@@ -1186,9 +1186,21 @@ To indicate rectangular areas in any given crs, simply use ``m.indicate_extent``
 
 .. note::
     | You must plot a dataset first! (e.g. by calling ``m.plot_map()``)
-    | The colorbar always represents the dataset that was used in the last call to ``m.plot_map()``.
+    | The colorbar always represents the dataset that was used in the last call to ``m.°^^^^plot_map()``.
     | If you need multiple colorbars, use an individual ``Maps`` object for each dataset! (e.g. via ``m2  = m.new_layer()``)
 
+
+To manually change the position of the colorbar (and the relative size between the colorbar
+and the histogram), use `m.figure.set_colorbar_position()`
+
+.. currentmodule:: eomaps._containers.map_objects
+
+.. autosummary::
+    :toctree: generated
+    :nosignatures:
+    :template: only_names_in_toc.rst
+
+    set_colorbar_position
 
 
 🌠 Using the colorbar as a "dynamic shade indicator"

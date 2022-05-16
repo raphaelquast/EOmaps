@@ -3405,8 +3405,8 @@ class Maps(object):
 
         To change the position of the colorbar, use:
 
-            >>> cb = m.add_colorbar(gs)
-            >>> m.figure.set_colorbar_position(pos, cb=cb)
+            >>> m.add_colorbar()
+            >>> m.figure.set_colorbar_position(pos=[.1, .05, .8, .2], ratio=10)
 
         Parameters
         ----------
@@ -3473,6 +3473,12 @@ class Maps(object):
             >>>     return f"{x} m"
 
             The default is None.
+
+        See Also
+        --------
+        - m.figure.set_colorbar_position :
+            Adjust the position and ratio of existing colorbars
+
         Notes
         -----
         Here's how the padding looks like as a scetch:
