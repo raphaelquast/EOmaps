@@ -23,10 +23,8 @@ There are 3 basic steps required to visualize your data:
 |toggleEnd|
 
 .. image:: _static/fig1.gif
+  :width: 75%
 
-.. raw:: html
-
-   <hr>
 
 
 🌍 Data-classification and multiple Maps in one figure
@@ -48,7 +46,7 @@ There are 3 basic steps required to visualize your data:
 |toggleEnd|
 
 .. image:: _static/fig2.gif
-
+  :width: 75%
 
 
 🗺 Customize the appearance of the plot
@@ -69,7 +67,7 @@ There are 3 basic steps required to visualize your data:
 |toggleEnd|
 
 .. image:: _static/fig3.png
-
+  :width: 75%
 
 
 🛸 Turn your maps into powerful widgets
@@ -96,7 +94,7 @@ There are 3 basic steps required to visualize your data:
 |toggleEnd|
 
 .. image:: _static/fig4.gif
-
+  :width: 75%
 
 
 🌲 🏡🌳 Add overlays and indicators
@@ -115,6 +113,7 @@ There are 3 basic steps required to visualize your data:
 |toggleEnd|
 
 .. image:: _static/fig5.gif
+  :width: 75%
 
 The data displayed in the above gif is taken from:
     - NaturalEarth (https://www.naturalearthdata.com/)
@@ -132,6 +131,7 @@ The data displayed in the above gif is taken from:
 |toggleEnd|
 
 .. image:: _static/fig6.gif
+  :width: 75%
 
 The data displayed in the above gif is taken from:
     - Sentinel-1 Global Backscatter Model (https://researchdata.tuwien.ac.at/records/n2d1v-gqb91)
@@ -164,6 +164,8 @@ geopandas.GeoDataFrames can be used to assign callbacks with EOmaps.
 |toggleEnd|
 
 .. image:: _static/fig7.gif
+  :width: 75%
+
 
 The data displayed in the above gif is taken from:
     - NaturalEarth (https://www.naturalearthdata.com/)
@@ -201,6 +203,7 @@ EOmaps has a nice customizable scalebar feature!
 |toggleEnd|
 
 .. image:: _static/fig8.gif
+  :width: 75%
 
 The data displayed in the above gif is taken from:
     - NaturalEarth (https://www.naturalearthdata.com/)
@@ -225,7 +228,7 @@ This example shows how to use EOmaps to analyze a database that is associated wi
 
 
 .. image:: _static/fig9.gif
-
+  :width: 75%
 
 
 🧮 Select 1D slices of a 2D dataset
@@ -246,3 +249,28 @@ Use custom callback functions to perform arbitrary tasks on the data when clicki
 
 
 .. image:: _static/example_row_col_selector.gif
+  :width: 75%
+
+
+.. _EOmaps_examples_inset_maps:
+
+🔬 Inset-maps - get a zoomed-in view on selected areas
+------------------------------------------------------
+
+Quickly create nice inset-maps to show details for specific regions.
+
+- the location and extent of the inset can be defined in any given crs
+  - (or as a geodesic circle with a radius defined in meters)
+- the inset-map can have a different crs than the "parent" map
+
+(requires EOmaps >= v4.1)
+
+|toggleStart|
+
+.. literalinclude:: ../tests/example_inset_maps.py
+
+|toggleEnd|
+
+
+.. image:: _static/example_inset_maps.png
+  :width: 75%

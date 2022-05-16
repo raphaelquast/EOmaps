@@ -168,12 +168,16 @@ class _layer_selector:
                 s.eventson = False
                 s.set_val(s._labels.index(l))
                 s.eventson = True
+            except ValueError:
+                pass
             except IndexError:
                 pass
 
         for s in self._selectors:
             try:
                 s.set_active(s.circles[s.labels.index(l)])
+            except ValueError:
+                pass
             except IndexError:
                 pass
 

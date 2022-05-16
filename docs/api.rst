@@ -171,6 +171,74 @@ To get an overview of the existing shapes and their main use-cases, here's a sim
 .. image:: _static/minigifs/plot_shapes.gif
 
 
+
+🗺 Plot the map and save it
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+If you want to plot a map based on a dataset, first set the data and then
+call ``m.plot_map()``.
+
+Any additional keyword-arguments passed to ``m.plot_map()`` are forwarded to the actual
+plot-command for the selected shape.
+
+Some useful arguments that are supported by most shapes (except "shade"-shapes) are:
+
+    - "fc" or "facecolor" : the face-color of the shapes
+    - "ec" or "edgecolor" : the edge-color of the shapes
+    - "lw" or "linewidth" : the linewidth of the shapes
+    - "alpha" : the alpha-transparency
+
+.. code-block:: python
+
+    m = Maps()
+    m.add_feature.preset.coastline()
+
+    m2 = m.new_layer("a data layer")
+    m2.set_data(...)
+    ...
+    m2.plot_map(cmap="viridis", ec="g", lw=2, alpha=0.5)
+
+
+To adjust the margins of the subplots, use ``m.subplots_adjust``, e.g.:
+
+.. code-block:: python
+
+    m = Maps()
+    m.subplots_adjust(left=0.1, right=0.9, bottom=0.05, top=0.95)
+
+.. currentmodule:: eomaps
+
+.. autosummary::
+    :toctree: generated
+    :nosignatures:
+    :template: only_names_in_toc.rst
+
+    Maps.subplots_adjust
+
+
+You can then continue to add :ref:`colorbar`, :ref:`annotations_and_markers`,
+:ref:`scalebar`, :ref:`compass`,  :ref:`webmap_layers` or :ref:`geodataframe` to the map,
+or you can start to add :ref:`utility` and :ref:`callbacks`.
+
+Once the map is ready, a snapshot of the map can be saved at any time by using:
+
+.. code-block:: python
+
+    m.savefig( "snapshot1.png", dpi=300, ... )
+
+
+.. currentmodule:: eomaps
+
+.. autosummary::
+    :toctree: generated
+    :nosignatures:
+    :template: only_names_in_toc.rst
+
+    Maps.plot_map
+    Maps.savefig
+
+
+
 🌍 Customizing the plot
 ~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -303,72 +371,6 @@ Currently available classification-schemes are (see `mapclassify <https://github
     - StdMean (multiples)
     - UserDefined (bins)
 
-
-
-🗺 Plot the map and save it
-~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-If you want to plot a map based on a dataset, first set the data and then
-call ``m.plot_map()``.
-
-Any additional keyword-arguments passed to ``m.plot_map()`` are forwarded to the actual
-plot-command for the selected shape.
-
-Some useful arguments that are supported by most shapes (except "shade"-shapes) are:
-
-    - "fc" or "facecolor" : the face-color of the shapes
-    - "ec" or "edgecolor" : the edge-color of the shapes
-    - "lw" or "linewidth" : the linewidth of the shapes
-    - "alpha" : the alpha-transparency
-
-.. code-block:: python
-
-    m = Maps()
-    m.add_feature.preset.coastline()
-
-    m2 = m.new_layer("a data layer")
-    m2.set_data(...)
-    ...
-    m2.plot_map(cmap="viridis", ec="g", lw=2, alpha=0.5)
-
-
-To adjust the margins of the subplots, use ``m.subplots_adjust``, e.g.:
-
-.. code-block:: python
-
-    m = Maps()
-    m.subplots_adjust(left=0.1, right=0.9, bottom=0.05, top=0.95)
-
-.. currentmodule:: eomaps
-
-.. autosummary::
-    :toctree: generated
-    :nosignatures:
-    :template: only_names_in_toc.rst
-
-    Maps.subplots_adjust
-
-
-You can then continue to add :ref:`colorbar`, :ref:`annotations_and_markers`,
-:ref:`scalebar`, :ref:`compass`,  :ref:`webmap_layers` or :ref:`geodataframe` to the map,
-or you can start to add :ref:`utility` and :ref:`callbacks`.
-
-Once the map is ready, a snapshot of the map can be saved at any time by using:
-
-.. code-block:: python
-
-    m.savefig( "snapshot1.png", dpi=300, ... )
-
-
-.. currentmodule:: eomaps
-
-.. autosummary::
-    :toctree: generated
-    :nosignatures:
-    :template: only_names_in_toc.rst
-
-    Maps.plot_map
-    Maps.savefig
 
 
 𝄜 Multiple maps in one figure
@@ -738,10 +740,10 @@ and ``< LAYER >`` indicates the actual layer-name.
     |                                                                                                |                                         |
     |     # ... for more advanced                                                                    |                                         |
     |     layer = mg.m_1_0.add_wms.ISRIC_SoilGrids.nitrogen.add_layer.nitrogen_0_5cm_mean            |                                         |
-    |     layer()                    # call the layer to add it to the map                           |                                         |
-    |     layer.info                 # the "info" property provides useful informations on the layer |                                         |
-    |     layer.add_legend()         # if a legend is provided, you can add id via:                  |                                         |
     |     layer.set_extent_to_bbox() # set the extent according to the boundingBox                   |                                         |
+    |     layer.info                 # the "info" property provides useful informations on the layer |                                         |
+    |     layer()                    # call the layer to add it to the map                           |                                         |
+    |     layer.add_legend()         # if a legend is provided, you can add it to the map!           |                                         |
     |                                                                                                |                                         |
     +------------------------------------------------------------------------------------------------+-----------------------------------------+
 
@@ -1184,9 +1186,21 @@ To indicate rectangular areas in any given crs, simply use ``m.indicate_extent``
 
 .. note::
     | You must plot a dataset first! (e.g. by calling ``m.plot_map()``)
-    | The colorbar always represents the dataset that was used in the last call to ``m.plot_map()``.
+    | The colorbar always represents the dataset that was used in the last call to ``m.°^^^^plot_map()``.
     | If you need multiple colorbars, use an individual ``Maps`` object for each dataset! (e.g. via ``m2  = m.new_layer()``)
 
+
+To manually change the position of a previously created colorbar (or the relative size between the colorbar
+and the histogram), use `m.figure.set_colorbar_position()`.
+
+.. currentmodule:: eomaps._containers.map_objects
+
+.. autosummary::
+    :toctree: generated
+    :nosignatures:
+    :template: only_names_in_toc.rst
+
+    set_colorbar_position
 
 
 🌠 Using the colorbar as a "dynamic shade indicator"
@@ -1377,6 +1391,71 @@ By default the widgets will show all available layers (except the "all" layer).
     |                                    |                                                 |
     |   m.util.layer_selector()          |                                                 |
     +------------------------------------+-------------------------------------------------+
+
+
+🔬 Inset-maps - zoom-in on interesting areas
+--------------------------------------------
+
+Inset maps that show zoomed-in regions can be created with ``m.new_inset_map()``.
+
+.. code-block:: python
+
+    m = Maps()                                  # the "parent" Maps-object (e.g. the "big" map)
+    m.add_feature.preset.coastline()
+    m2 = m.new_inset_map(xy=(5, 5), radius=10)  # a new Maps-object that represents the inset-map
+    m2.add_feature.preset.ocean()               # it can be used just like any other Maps-objects!
+
+- An inset-map is defined by it's center-position and a radius
+- The used boundary-shape can be one of:
+
+  - "ellipses" (e.g. projected ellipses with a radius defined in a given crs)
+  - "rectangles" (e.g. projected rectangles with a radius defined in a given crs)
+  - "geod_circles" (e.g. geodesic circles with a radius defined in meters)
+
+
+For convenience, inset-map objects have the following special methods defined:
+
+- ``m.set_inset_position()``: Set the size and (center) position of the inset-map relative to the figure size.
+- ``m.indicate_inset_extent()``: Indicate the extent of the inset-map on arbitrary Maps-objects.
+
+
+Checkout the associated example on how to use inset-maps: :ref:`EOmaps_examples_inset_maps`
+
+
+.. table::
+    :widths: 60 40
+    :align: center
+
+    +----------------------------------------------------------------+--------------------------------------------+
+    | .. code-block:: python                                         | .. image:: _static/minigifs/inset_maps.png |
+    |                                                                |   :align: center                           |
+    |     m = Maps(Maps.CRS.PlateCarree(central_longitude=-60))      |                                            |
+    |     m.add_feature.preset.ocean()                               |                                            |
+    |     m2 = m.new_inset_map(xy=(5, 45), radius=10,                |                                            |
+    |                          plot_position=(.3, .5), plot_size=.7, |                                            |
+    |                          edgecolor="r", linewidth=4,           |                                            |
+    |                          indicate_extent=dict(fc=(1,0,0,.5),   |                                            |
+    |                                               ec="r", lw=1)    |                                            |
+    |                          )                                     |                                            |
+    |     m2.add_feature.preset.coastline()                          |                                            |
+    |     m2.add_feature.preset.countries()                          |                                            |
+    |     m2.add_feature.preset.ocean()                              |                                            |
+    |                                                                |                                            |
+    |     m2.add_feature.cultural_10m.urban_areas(fc="r")            |                                            |
+    |     m2.add_feature.physical_10m.rivers_europe(ec="b", lw=0.25) |                                            |
+    |     m2.add_feature.physical_10m.lakes_europe(fc="b")           |                                            |
+    |                                                                |                                            |
+    +----------------------------------------------------------------+--------------------------------------------+
+
+
+.. currentmodule:: eomaps.Maps
+
+.. autosummary::
+    :toctree: generated
+    :nosignatures:
+    :template: only_names_in_toc.rst
+
+    new_inset_map
 
 
 📦 Reading data (NetCDF, GeoTIFF, CSV...)

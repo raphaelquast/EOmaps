@@ -28,3 +28,9 @@ class TestExamples(unittest.TestCase):
 
     def test_example9(self):
         import example9
+
+    def test_example_inset_maps(self):
+        import example_inset_maps
+
+    def test_example_row_col_selector(self):
+        import example_row_col_selector

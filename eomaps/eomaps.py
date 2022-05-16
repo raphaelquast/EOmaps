@@ -506,6 +506,299 @@ class Maps(object):
 
         return m
 
+    def new_inset_map(
+        self,
+        xy=(45, 45),
+        radius=5,
+        plot_position=(0.5, 0.5),
+        plot_size=0.5,
+        xy_crs=4326,
+        radius_crs=4326,
+        inset_crs=4326,
+        edgecolor="r",
+        linewidth=2,
+        shape="ellipses",
+        indicate_extent=True,
+    ):
+        """
+        Create a new (empty) inset-map that shows a zoomed-in view on a given extent.
+        The returned Maps-object can then be used to populate the inset-map with
+        features, datasets etc.
+
+        See examples below on how to use inset-maps.
+
+
+        Note
+        ----
+        - By default NO features are added to the inset-map!
+          Use it just like any other Maps-object to add features or plot datasets!
+        - Zooming is disabled on inset-maps for now due to issues with zoom-events on
+          overlapping axes.
+        - Non-rectangular cropping of WebMap services is not yet supported.
+          (e.g. use "rectangles" as shape and the native CRS of the WebMap service
+          for the inset map.)
+
+        Parameters
+        ----------
+        xy : tuple, optional
+            The center-coordinates of the area to indicate.
+            (provided in the xy_crs projection)
+            The default is (45., 45.).
+        radius : float or tuple, optional
+            The radius of the extent to indicate.
+            (provided in units of the radius_crs projection)
+            The default is 5.
+        plot_position : tuple, optional
+            The center-position of the inset map in relative units (0-1) with respect to
+            the figure size. The default is (.5,.5).
+        plot_size : float, optional
+            The relative size of the inset-map compared to the figure width.
+            The default is 0.5.
+        xy_crs : any, optional
+            The crs used for specifying the xy-position.
+            The default is 4326.
+        radius_crs : any, optional
+            The crs used for specifying the radius.
+            The default is 4326.
+        inset_crs : any, optional
+            The crs that is used in the inset-map.
+            The default is 4326.
+        edgecolor : str or tuple, optional
+            The edgecolor of the boundary. The default is "r".
+        linewidth : TYPE, optional
+            The linewidth of the boundary. The default is 2.
+        shape : str, optional
+            The shape to use. Can be either "ellipses", "rectangles" or "geod_circles".
+            The default is "ellipses".
+        indicate_extent : bool or dict, optional
+            - If True: add a polygon representing the inset-extent to the parent map.
+            - If a dict is provided, it will be used to update the appearance of the
+              added polygon (e.g. facecolor, edgecolor, linewidth etc.)
+
+            NOTE: you can also use `m.indicate_inset_extent(...)` to manually indicate
+            the inset-shape on arbitrary Maps-objects.
+
+        Returns
+        -------
+        m : eomaps.Maps
+            A eomaps.Maps-object of the inset-map.
+            (use it just like any other Maps-object)
+
+        See also
+        --------
+        The following additional methods are defined on inset `Maps` objects
+
+        m.indicate_inset_extent :
+            Plot a polygon representing the extent of the inset map on another Maps
+            object.
+        m.set_inset_position :
+            Set the (center) position and size of the inset-map.
+
+        Examples
+        --------
+
+        Simple example:
+
+        >>> m = Maps()
+        >>> m.add_feature.preset.coastline()
+        >>> m2 = m.new_inset_map(xy=(45, 45), radius=10,
+        >>>                      plot_position=(.3, .5), plot_size=.7)
+        >>> m2.add_feature.preset.ocean()
+
+        ... a bit more complexity:
+
+        >>> m = Maps(Maps.CRS.Orthographic())
+        >>> m.add_feature.preset.coastline() # add some coastlines
+        >>> m2 = m.new_inset_map(xy=(5, 45),
+        >>>                      xy_crs=4326,
+        >>>                      shape="geod_circles",
+        >>>                      radius=1000000,
+        >>>                      plot_position=(.3, .4),
+        >>>                      plot_size=.5,
+        >>>                      inset_crs=3035,
+        >>>                      edgecolor="g",
+        >>>                      indicate_extent=False)
+        >>>
+        >>> m2.add_feature.preset.coastline()
+        >>> m2.add_feature.preset.ocean()
+        >>> m2.add_feature.preset.land()
+        >>> m2.set_data([1, 2, 3], [5, 6, 7], [45, 46, 47], crs=4326)
+        >>> m2.plot_map()
+        >>> m2.add_annotation(ID=1)
+        >>> m2.indicate_inset_extent(m, ec="g", fc=(0,1,0,.25))
+
+        """
+
+        x, y = xy
+        plot_x, plot_y = plot_position
+
+        # setup a gridspec at the desired position
+        gs = GridSpec(
+            1,
+            1,
+            left=plot_x - plot_size / 2,
+            bottom=plot_y - plot_size / 2,
+            top=plot_y + plot_size / 2,
+            right=plot_x + plot_size / 2,
+        )[0]
+        # initialize a new maps-object with a new axis
+        m2 = Maps(inset_crs, parent=self, gs_ax=gs)
+
+        # get the boundary of a ellipse in the inset_crs
+        possible_shapes = ["ellipses", "rectangles", "geod_circles"]
+        assert (
+            shape in possible_shapes
+        ), f"EOmaps: the inset shape can only be one of {possible_shapes}"
+
+        shp = m2.set_shape._get(shape)
+        if shape == "ellipses":
+            shp_pts = shp._get_ellipse_points(
+                x=np.atleast_1d(x),
+                y=np.atleast_1d(y),
+                crs=xy_crs,
+                radius=radius,
+                radius_crs=radius_crs,
+                n=100,
+            )
+            bnd_verts = np.stack(shp_pts[:2], axis=2)[0]
+
+        elif shape == "rectangles":
+            shp_pts = shp._get_rectangle_verts(
+                x=np.atleast_1d(x),
+                y=np.atleast_1d(y),
+                crs=xy_crs,
+                radius=radius,
+                radius_crs=radius_crs,
+                n=100,
+            )
+            bnd_verts = shp_pts[0][0]
+
+        elif shape == "geod_circles":
+            shp_pts = shp._get_geod_circle_points(
+                x=np.atleast_1d(x),
+                y=np.atleast_1d(y),
+                crs=xy_crs,
+                radius=radius,
+                # radius_crs=radius_crs,
+                n=100,
+            )
+            bnd_verts = np.stack(shp_pts[:2], axis=2).squeeze()
+
+        boundary = mpl.path.Path(bnd_verts)
+
+        # set the map boundary
+        m2.ax.set_boundary(boundary)
+        # set the plot-extent to the envelope of the shape
+        (x0, y0), (x1, y1) = bnd_verts.min(axis=0), bnd_verts.max(axis=0)
+        m2.ax.set_extent((x0, x1, y0, y1), crs=m2.ax.projection)
+
+        # TODO turn off navigation until the matpltolib pull-request on
+        # zoom-events in overlapping axes is resolved
+        # https://github.com/matplotlib/matplotlib/pull/22347
+        m2.ax.set_navigate(False)
+
+        # set style of the inset-boundary
+        m2.ax.spines["geo"].set_edgecolor(edgecolor)
+        m2.ax.spines["geo"].set_lw(linewidth)
+
+        # ------------
+
+        # turn off set_extent for plot_map by default to avoid resetting the plot-extent
+        from functools import partial
+
+        m2.plot_map = partial(m2.plot_map, set_extent=False)
+
+        # add a convenience-method to add a boundary-polygon to a map
+        def indicate_inset_extent(self, m, **kwargs):
+            """
+            Add a polygon to a  map that indicates the extent of the inset-map.
+
+            Parameters
+            ----------
+            m : eomaps.Maps
+                The Maps-object that will be used to draw the marker.
+                (e.g. the map on which the extent of the inset should be indicated)
+            kwargs :
+                additional keyword-arguments passed to `m.add_marker`
+                (e.g. "facecolor", "edgecolor" etc.)
+            """
+            if not any((i in kwargs for i in ["fc", "facecolor"])):
+                kwargs["fc"] = "none"
+            if not any((i in kwargs for i in ["ec", "edgecolor"])):
+                kwargs["ec"] = edgecolor
+            if not any((i in kwargs for i in ["lw", "linewidth"])):
+                kwargs["lw"] = linewidth
+
+            m.add_marker(
+                shape=shape,
+                xy=xy,
+                xy_crs=xy_crs,
+                radius=radius,
+                radius_crs=radius_crs,
+                n=100,
+                **kwargs,
+            )
+
+        m2.indicate_inset_extent = indicate_inset_extent.__get__(m2)
+
+        if indicate_extent is True:
+            m2.indicate_inset_extent(self, edgecolor=edgecolor)
+        elif isinstance(indicate_extent, dict):
+            if not any((i in indicate_extent for i in ["ec", "edgecolor"])):
+                m2.indicate_inset_extent(self, **indicate_extent, edgecolor=edgecolor)
+            else:
+                m2.indicate_inset_extent(self, **indicate_extent)
+
+        # add a convenience-method to set the position based on the center of the axis
+        def set_inset_position(self, x=None, y=None, size=None):
+            """
+            Set the (center) position and size of the inset-map.
+
+            Parameters
+            ----------
+            x, y : int or float, optional
+                The center position in relative units (0-1) with respect to the figure.
+                If None, the existing position is used.
+                The default is None.
+            size : float, optional
+                The relative radius (0-1) of the inset in relation to the figure width.
+                If None, the existing size is used.
+                The default is None.
+            """
+
+            y0, y1, x0, x1 = self.figure.gridspec.get_grid_positions(self.figure.f)
+
+            if self.figure.cb_gridspec is not None:
+                y0cb, y1cb, x0cb, x1cb = self.figure.cb_gridspec.get_grid_positions(
+                    self.figure.f
+                )
+
+                x0 = min(*x0, *x0cb)
+                x1 = max(*x1, *x1cb)
+                y0 = min(*y0, *y0cb)
+                y1 = max(*y1, *y1cb)
+
+            if size is None:
+                size = abs(x1 - x0)
+
+            if x is None:
+                x = (x0 + x1) / 2
+            if y is None:
+                y = (y0 + y1) / 2
+
+            self.figure.gridspec.update(
+                left=x - size / 2,
+                bottom=y - size / 2,
+                right=x + size / 2,
+                top=y + size / 2,
+            )
+
+            self.redraw()
+
+        m2.set_inset_position = set_inset_position.__get__(m2)
+
+        return m2
+
     @property
     @wraps(cb_container)
     def cb(self):
@@ -1096,7 +1389,6 @@ class Maps(object):
             self._crs_cache = dict()
 
         h = hash(crs)
-
         if h in self._crs_cache:
             crs = self._crs_cache[h]
         else:
@@ -1327,22 +1619,23 @@ class Maps(object):
             nbins = len(bins)
             norm = mpl.colors.BoundaryNorm(bins, nbins)
             colors = cmap(np.linspace(0, 1, nbins))
+
+            # initialize the classified colormap
+            cbcmap = LinearSegmentedColormap.from_list(
+                "cmapname", colors=colors, N=len(colors)
+            )
+            if cmap._rgba_bad:
+                cbcmap.set_bad(cmap._rgba_bad)
+            if cmap._rgba_over:
+                cbcmap.set_over(cmap._rgba_over)
+            if cmap._rgba_under:
+                cbcmap.set_under(cmap._rgba_under)
+
         else:
             classified = False
             bins = None
-            colors = cmap(np.linspace(0, 1, 256))
+            cbcmap = cmap
             norm = mpl.colors.Normalize(vmin, vmax)
-
-        # initialize a colormap
-        cbcmap = LinearSegmentedColormap.from_list(
-            "cmapname", colors=colors, N=len(colors)
-        )
-        if cmap._rgba_bad:
-            cbcmap.set_bad(cmap._rgba_bad)
-        if cmap._rgba_over:
-            cbcmap.set_over(cmap._rgba_over)
-        if cmap._rgba_under:
-            cbcmap.set_under(cmap._rgba_under)
 
         return cbcmap, norm, bins, classified
 
@@ -1464,7 +1757,15 @@ class Maps(object):
             density=density,
         )
 
-        # color the histogram
+        # identify position of color-splits in the colorbar
+        if isinstance(n_cmap.cmap, LinearSegmentedColormap):
+            # for LinearSegmentedcolormap N is the number of quantizations!
+            splitpos = np.linspace(vmin, vmax, n_cmap.cmap.N)
+        else:
+            # for ListedColormap N is the number of colors
+            splitpos = np.linspace(vmin, vmax, n_cmap.cmap.N + 1)
+
+        # color the histogram patches
         for patch in list(ax_cb_plot.patches):
             # the list is important!! since otherwise we change ax.patches
             # as we iterate over it... which is not a good idea...
@@ -1479,64 +1780,36 @@ class Maps(object):
                 height = patch.get_height()
                 maxval = minval + width
 
-            patch.set_facecolor(cmap(norm((minval + maxval) / 2)))
-            # take care of histogram-bins that have splitted colors
-            if bins is not None:
-                splitbins = bins[np.where((minval < bins) & (maxval > bins))]
+            # ----------- take care of histogram-bins that have splitted colors
+            # identify bins that extend beyond a color-change
+            splitbins = [
+                minval,
+                *splitpos[(splitpos > minval) & (maxval > splitpos)],
+                maxval,
+            ]
 
-                if len(splitbins) > 0:
-
-                    patch.remove()
-                    # add first and last patch
-                    # (note b0 = b1 if only 1 split is performed!)
-                    b0 = splitbins[0]
+            if len(splitbins) > 2:
+                patch.remove()
+                # add in-between patches
+                for b0, b1 in pairwise(splitbins):
                     if orientation == "horizontal":
-                        p0 = mpl.patches.Rectangle(
-                            (0, minval),
+                        pi = mpl.patches.Rectangle(
+                            (0, b0),
                             width,
-                            (b0 - minval),
-                            facecolor=cmap(norm(minval)),
+                            (b1 - b0),
+                            facecolor=cmap(norm((b0 + b1) / 2)),
                         )
                     elif orientation == "vertical":
-                        p0 = mpl.patches.Rectangle(
-                            (minval, 0),
-                            (b0 - minval),
+                        pi = mpl.patches.Rectangle(
+                            (b0, 0),
+                            (b1 - b0),
                             height,
-                            facecolor=cmap(norm(minval)),
+                            facecolor=cmap(norm((b0 + b1) / 2)),
                         )
 
-                    b1 = splitbins[-1]
-                    if orientation == "horizontal":
-                        p1 = mpl.patches.Rectangle(
-                            (0, b1), width, (maxval - b1), facecolor=cmap(norm(maxval))
-                        )
-                    elif orientation == "vertical":
-                        p1 = mpl.patches.Rectangle(
-                            (b1, 0), (maxval - b1), height, facecolor=cmap(norm(maxval))
-                        )
-
-                    ax_cb_plot.add_patch(p0)
-                    ax_cb_plot.add_patch(p1)
-
-                    # add in-between patches
-                    if len(splitbins > 1):
-                        for b0, b1 in pairwise(splitbins):
-                            pi = mpl.patches.Rectangle(
-                                (0, b0), width, (b1 - b0), facecolor=cmap(norm(b0))
-                            )
-
-                            if orientation == "horizontal":
-                                pi = mpl.patches.Rectangle(
-                                    (0, b0), width, (b1 - b0), facecolor=cmap(norm(b0))
-                                )
-                            elif orientation == "vertical":
-                                pi = mpl.patches.Rectangle(
-                                    (b0, 0), (b1 - b0), height, facecolor=cmap(norm(b0))
-                                )
-
-                            ax_cb_plot.add_patch(pi)
-                else:
-                    patch.set_facecolor(cmap(norm((minval + maxval) / 2)))
+                    ax_cb_plot.add_patch(pi)
+            else:
+                patch.set_facecolor(cmap(norm((minval + maxval) / 2)))
 
         # setup appearance of histogram
         if orientation == "horizontal":
@@ -3010,9 +3283,11 @@ class Maps(object):
 
     def _remove_colorbar(self):
         if hasattr(self, "_ax_cb"):
+            self._ax_cb.cla()
             self._ax_cb.remove()
             del self._ax_cb
         if hasattr(self, "_ax_cb_plot"):
+            self._ax_cb_plot.cla()
             self._ax_cb_plot.remove()
             del self._ax_cb_plot
         # if hasattr(self, "_cb_gridspec"):
@@ -3130,8 +3405,8 @@ class Maps(object):
 
         To change the position of the colorbar, use:
 
-            >>> cb = m.add_colorbar(gs)
-            >>> m.figure.set_colorbar_position(pos, cb=cb)
+            >>> m.add_colorbar()
+            >>> m.figure.set_colorbar_position(pos=[.1, .05, .8, .2], ratio=10)
 
         Parameters
         ----------
@@ -3191,12 +3466,19 @@ class Maps(object):
             https://matplotlib.org/stable/api/_as_gen/matplotlib.axis.Axis.set_major_formatter.html
 
             Call-signagure:
+
             >>> def tick_formatter(x, pos):
             >>>     # x ... the tick-value
             >>>     # pos ... the tick-position
             >>>     return f"{x} m"
 
             The default is None.
+
+        See Also
+        --------
+        - m.figure.set_colorbar_position :
+            Adjust the position and ratio of existing colorbars
+
         Notes
         -----
         Here's how the padding looks like as a scetch:
@@ -3237,7 +3519,8 @@ class Maps(object):
         if hasattr(self, "_colorbar"):
             print(
                 "EOmaps: A colorbar already exists for this Maps-object!\n"
-                + "...use a new layer if you want multiple colorbars!"
+                + "...use a new layer if you want multiple colorbars or use "
+                + "`m._remove_colorbar() to remove the existing colorbar."
             )
             return
 
@@ -3247,7 +3530,6 @@ class Maps(object):
         assert hasattr(
             self.classify_specs, "_bins"
         ), "EOmaps: you need to call `m.plot_map()` before adding a colorbar!"
-
         # check if there is already an existing colorbar in another axis
         # and if we find one, use its specs instead of creating a new one
         parent_m_for_cb = None
@@ -3283,6 +3565,7 @@ class Maps(object):
             if isinstance(gs, float):
                 frac = gs
                 gs = self.figure.ax.get_subplotspec()
+
                 # get the original subplot-spec of the axes, and divide it based on
                 # the fraction that is intended for the colorbar
                 if orientation == "horizontal":
@@ -3357,9 +3640,14 @@ class Maps(object):
         )
         ax_cb_plot = self.figure.f.add_subplot(
             cbgs[0],
-            frameon=False,
+            frameon=True,
             label="ax_cb_plot",
         )
+        # keep the background of the plot-axis but remove the outer frame
+        ax_cb_plot.spines["top"].set_visible(False)
+        ax_cb_plot.spines["right"].set_visible(False)
+        ax_cb_plot.spines["bottom"].set_visible(False)
+        ax_cb_plot.spines["left"].set_visible(False)
 
         # join colorbar and histogram axes
         if cb_orientation == "horizontal":

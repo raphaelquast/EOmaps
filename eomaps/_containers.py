@@ -104,8 +104,7 @@ class map_objects(object):
     # @wraps(plt.Axes.set_position)
     def set_colorbar_position(self, pos=None, ratio=None, cb=None):
         """
-        a wrapper to set the position of the colorbar and the histogram at
-        the same time
+        Set the position (and ratio) of a previously created colorbar with a histogram.
 
         Parameters
         ----------
@@ -120,6 +119,22 @@ class map_objects(object):
         cb : list, optional
             The colorbar-objects (as returned by `m.add_colorbar()`)
             If None, the existing colorbar will be used.
+
+        Examples
+        --------
+
+        Change both the position and the ratio between colorbar and histogram
+
+        >>> m.figure.set_colorbar_position(pos=[.1, .1, .8, .2], ratio=15)
+
+        Change only the ratio between colorbar and histogram
+
+        >>> m.figure.set_colorbar_position(ratio=999)
+
+        Change only the position of colorbar and histogram
+
+        >>> m.figure.set_colorbar_position(pos=[.1, .1, .8, .2])
+
         """
 
         if cb is None:
