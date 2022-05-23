@@ -2409,23 +2409,41 @@ class Maps(object):
         Examples
         --------
 
-            >>> m.add_annotation(ID=1)
-            >>> m.add_annotation(xy=(45, 35), xy_crs=4326)
+        >>> m.add_annotation(ID=1)
+        >>> m.add_annotation(xy=(45, 35), xy_crs=4326)
 
-            NOTE: You can provide lists to add multiple annotations in one go!
+        NOTE: You can provide lists to add multiple annotations in one go!
 
-            >>> m.add_annotation(ID=[1, 5, 10, 20])
-            >>> m.add_annotation(xy=([23.5, 45.8, 23.7], [5, 6, 7]), xy_crs=4326)
+        >>> m.add_annotation(ID=[1, 5, 10, 20])
+        >>> m.add_annotation(xy=([23.5, 45.8, 23.7], [5, 6, 7]), xy_crs=4326)
 
-            The text can be customized by providing either a string
+        The text can be customized by providing either a string
 
-            >>> m.add_annotation(ID=1, text="some text")
+        >>> m.add_annotation(ID=1, text="some text")
 
-            or a callable that returns a string with the following signature:
+        or a callable that returns a string with the following signature:
 
-            >>> def addtxt(m, ID, val, pos, ind):
-            >>>     return f"The ID {ID} at position {pos} has a value of {val}"
-            >>> m.add_annotation(ID=1, text=addtxt)
+        >>> def addtxt(m, ID, val, pos, ind):
+        >>>     return f"The ID {ID} at position {pos} has a value of {val}"
+        >>> m.add_annotation(ID=1, text=addtxt)
+
+        **Customizing the appearance**
+
+        For the full set of possibilities, see:
+        https://matplotlib.org/stable/tutorials/text/annotations.html
+
+        >>> m.add_annotation(xy=[7.10, 45.16], xy_crs=4326,
+        >>>                  text="blubb", xytext=(30,30),
+        >>>                  horizontalalignment="center", verticalalignment="center",
+        >>>                  arrowprops=dict(ec="g",
+        >>>                                  arrowstyle='-[',
+        >>>                                  connectionstyle="angle",
+        >>>                                  ),
+        >>>                  bbox=dict(boxstyle='circle,pad=0.5',
+        >>>                            fc='yellow',
+        >>>                            alpha=0.3
+        >>>                            )
+        >>>                  )
 
         """
 
