@@ -3242,7 +3242,9 @@ class Maps(object):
         -----------------
         vmin, vmax : float, optional
             Min- and max. values assigned to the colorbar. The default is None.
-
+        zorder : float
+            The zorder of the artist (e.g. the stacking level of overlapping artists)
+            The default is 1
         kwargs
             kwargs passed to the initialization of the matpltolib collection
             (dependent on the plot-shape) [linewidth, edgecolor, facecolor, ...]
@@ -3263,6 +3265,10 @@ class Maps(object):
                 cmap,
                 kwargs["alpha"],
             )
+
+        # make sure zorder is set to 1 by default
+        # (by default shading would use 0 while ordinary collections use 1)
+        kwargs.setdefault("zorder", 1)
 
         if useshape.name.startswith("shade"):
             self._shade_map(
