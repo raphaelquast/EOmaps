@@ -972,7 +972,6 @@ class _xyz_tile_service:
             crs=ccrs.GOOGLE_MERCATOR,
             maxzoom=self._maxzoom,
             transparent=self._transparent,
-            zorder=self._zorder,
         )
 
         # avoid using "add_raster" and use the subclassed SlippyImageArtist
@@ -982,7 +981,9 @@ class _xyz_tile_service:
         #         (only SlippyImageArtist has been subclassed)
 
         self._raster_source.validate_projection(m.ax.projection)
-        img = SlippyImageArtist_NEW(m.ax, self._raster_source, **self._kwargs)
+        img = SlippyImageArtist_NEW(
+            m.ax, self._raster_source, zorder=self._zorder, **self._kwargs
+        )
         with self._m.ax.hold_limits():
             m.ax.add_image(img)
         self._artist = img
