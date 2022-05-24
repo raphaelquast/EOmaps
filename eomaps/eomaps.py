@@ -2573,7 +2573,7 @@ class Maps(object):
             mask = np.isin(self._props["ids"], ID)
             xy = (self._props["xorig"][mask], self._props["yorig"][mask])
             val = self._props["z_data"][mask]
-            ind = self._props["ids"][mask]
+            ind = np.where(mask)[0]
             ID = np.atleast_1d(ID)
             xy_crs = self.data_specs.crs
         else:
