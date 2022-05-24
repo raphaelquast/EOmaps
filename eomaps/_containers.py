@@ -138,13 +138,23 @@ class map_objects(object):
         """
 
         if cb is None:
-            _, _, ax_cb, ax_cb_plot, orientation, _ = self._m._colorbar
+            (
+                _,
+                _,
+                ax_cb,
+                ax_cb_plot,
+                ax_cb_extend,
+                extend_frac,
+                orientation,
+                _,
+            ) = self._m._colorbar
         else:
             _, _, ax_cb, ax_cb_plot, orientation, _ = cb
 
         if orientation == "horizontal":
             pcb = ax_cb.get_position()
             pcbp = ax_cb_plot.get_position()
+
             if pos is None:
                 pos = [pcb.x0, pcb.y0, pcb.width, pcb.height + pcbp.height]
             if ratio is None:
@@ -159,6 +169,16 @@ class map_objects(object):
             ax_cb_plot.set_position(
                 [pos[0], pos[1] + hcb, pos[2], hp],
             )
+
+            # adjust colorbar extension arrows
+            if ax_cb_extend:
+                frac = (
+                    ax_cb.bbox.transformed(ax_cb.figure.transFigure.inverted()).width
+                    * extend_frac
+                )
+                ax_cb_extend.set_position(
+                    [pos[0] - frac / 2, pos[1], pos[2] + frac, hcb],
+                )
 
         elif orientation == "vertical":
             pcb = ax_cb.get_position()
@@ -177,6 +197,17 @@ class map_objects(object):
             ax_cb_plot.set_position(
                 [pos[0], pos[1], wp, pos[3]],
             )
+
+            # adjust colorbar extension arrows
+            if ax_cb_extend:
+                frac = (
+                    ax_cb.bbox.transformed(ax_cb.figure.transFigure.inverted()).height
+                    * extend_frac
+                )
+                ax_cb_extend.set_position(
+                    [pos[0], pos[1] - frac / 2, wcb, pos[3] + frac],
+                )
+
         else:
             raise TypeError(f"EOmaps: '{orientation}' is not a valid orientation")
 

@@ -51,6 +51,10 @@ from matplotlib import cm
 from matplotlib.colors import LinearSegmentedColormap
 from matplotlib.gridspec import GridSpec, GridSpecFromSubplotSpec, SubplotSpec
 
+import matplotlib.path as mpath
+import matplotlib.patches as mpatches
+from matplotlib.collections import PatchCollection
+
 
 from cartopy import crs as ccrs
 
@@ -1748,7 +1752,7 @@ class Maps(object):
         )
         # plot the histogram
         hist_vals, hist_bins, init_hist = ax_cb_plot.hist(
-            z_data,
+            z_data.clip(vmin, vmax) if (vmin or vmax) else z_data,
             orientation=orientation,
             bins=bins if (classified and histbins == "bins") else histbins,
             color="k",
@@ -1885,7 +1889,124 @@ class Maps(object):
             ot.set_horizontalalignment("center")
             ot.set_position((1, 0))
 
+        # make sure axis limits are correct
+        if orientation == "vertical":
+            limsetfunc = ax_cb.set_xlim
+        else:
+            limsetfunc = ax_cb.set_ylim
+
+        limsetfunc(vmin, vmax)
+
         return cb
+
+    def _add_cb_extend_arrows(self, cb, orientation, extend_frac=0.03, which=None):
+        """
+        Add a new axis that holds extension-triangles for the colorbar.
+
+        Parameters
+        ----------
+        cb : matplotilb.colorbar
+            the colorbar to use
+        orientation : str
+            "vertical" or "horizontal"
+        extend_frac : float, optional
+            the fraction of the axis to use for the extension-triangles.
+            (NOTE: triangles will be drawn OUTSIDE the axes!!)
+            The default is 0.03.
+        which : str
+            Indicator which triangles should be drawn (one of "upper", "lower" or "both").
+            The default is None in which case only relevant arrows are drawn
+            (e.g. "upper" is only drawn if there are values > vmax).
+        """
+
+        if which is None:
+            a = cb.mappable.get_array()
+            vmin, vmax = cb.mappable.norm.vmin, cb.mappable.norm.vmax
+            which = []
+            if (a > vmax).any():
+                which.append("upper")
+            if (a < vmin).any():
+                which.append("lower")
+
+            if len(which) == 2:
+                which = "both"
+            else:
+                print("EOmaps: no extension arrows necessary")
+                return
+
+        # get the bounding box of the current colorbar axis
+        bbox = self.figure.ax_cb.bbox.transformed(self.figure.f.transFigure.inverted())
+
+        if orientation == "horizontal":
+            if which == "both":
+                which = "left right"
+            elif which == "upper":
+                which = "right"
+            elif which == "lower":
+                which = "left"
+
+            frac = extend_frac * (bbox.width)
+            axcb2 = self.figure.f.add_axes(
+                (bbox.x0 - frac / 2, bbox.y0, bbox.width + frac, bbox.height),
+                zorder=-99,
+            )
+            axcb2.get_shared_y_axes().join(axcb2, self.figure.ax_cb)
+            # set the limits to (0, 1) so we can directly use the fractions
+            axcb2.set_xlim(0, 1)
+
+        else:
+            if which == "both":
+                which = "top bottom"
+            elif which == "upper":
+                which = "top"
+            elif which == "lower":
+                which = "bottom"
+            frac = extend_frac * (bbox.height)
+            axcb2 = self.figure.f.add_axes(
+                (bbox.x0, bbox.y0 - frac / 2, bbox.width, bbox.height + frac),
+                zorder=-99,
+            )
+            axcb2.get_shared_x_axes().join(axcb2, self.figure.ax_cb)
+            # set the limits to (0, 1) so we can directly use the fractions
+            axcb2.set_ylim(0, 1)
+
+        axcb2.set_axis_off()
+
+        ex = extend_frac / 2
+        points = dict(
+            left=[[0, 0.5], [ex, 1], [ex, 0], [0, 0.5]],
+            right=[[1, 0.5], [1 - ex, 1], [1 - ex, 0], [1, 0.5]],
+            top=[[0.5, 1], [0, 1 - ex], [1, 1 - ex], [0.5, 1]],
+            bottom=[[0.5, 0], [0, ex], [1, ex], [0.5, 0]],
+        )
+
+        cmap = self.figure.coll.cmap
+        colors = dict(
+            left=cmap.get_under(),
+            right=cmap.get_over(),
+            top=cmap.get_over(),
+            bottom=cmap.get_under(),
+        )
+
+        patches = []
+        use_colors = []
+        for w in which.split(" "):
+            p = points[w]
+            Path = mpath.Path
+            path_data = [
+                (Path.MOVETO, p[0]),
+                (Path.LINETO, p[1]),
+                (Path.LINETO, p[2]),
+                (Path.CLOSEPOLY, p[3]),
+            ]
+            codes, verts = zip(*path_data)
+            path = mpath.Path(verts, codes)
+            patches.append(mpatches.PathPatch(path))
+            use_colors.append(colors[w])
+        collection = PatchCollection(patches, fc=use_colors, ec="none", lw=0)
+
+        axcb2.add_collection(collection)
+        return axcb2
 
     @property
     @wraps(NaturalEarth_features)
@@ -2705,11 +2826,13 @@ class Maps(object):
         # (e.g. count, std, var ... ) use an automatic "linear" normalization
         if aggname in ["first", "last", "max", "min", "mean", "mode"]:
             kwargs.setdefault("norm", self.classify_specs._norm)
+            kwargs.setdefault("vmin", vmin)
+            kwargs.setdefault("vmax", vmax)
 
             # clip the data to properly account for vmin and vmax
             # (do this only if we don't intend to use the full dataset!)
-            if vmin or vmax:
-                props["z_data"] = props["z_data"].clip(vmin, vmax)
+            # if vmin or vmax:
+            #     props["z_data"] = props["z_data"].clip(vmin, vmax)
         else:
             kwargs.setdefault("norm", "linear")
             kwargs.setdefault("vmin", vmin)
@@ -3098,8 +3221,8 @@ class Maps(object):
 
             # clip the data to properly account for vmin and vmax
             # (do this only if we don't intend to use the full dataset!)
-            if vmin or vmax:
-                props["z_data"] = props["z_data"].clip(vmin, vmax)
+            # if vmin or vmax:
+            #     props["z_data"] = props["z_data"].clip(vmin, vmax)
 
             # ---------------------- classify the data
             cbcmap, norm, bins, classified = self._classify_data(
@@ -3417,6 +3540,7 @@ class Maps(object):
         log=False,
         tick_formatter=None,
         dynamic_shade_indicator=False,
+        extend_frac=0.015,
     ):
         """
         Add a colorbar to an existing figure.
@@ -3497,6 +3621,11 @@ class Maps(object):
             >>>     return f"{x} m"
 
             The default is None.
+        extend_frac : float or None
+            The fraction of the colorbar to use for adding "extension-arrows" to
+            indicate out-of-bounds values.
+            If None, no extension arrows will be drawn.
+            The default is 0.015
 
         See Also
         --------
@@ -3729,8 +3858,8 @@ class Maps(object):
                     norm = coll.norm
                     # make sure the norm clips with respect to vmin/vmax
                     # (only clip if either vmin or vmax is not None)
-                    if vmin or vmax:
-                        z_data = z_data.clip(vmin, vmax)
+                    # if vmin or vmax:
+                    #     z_data = z_data.clip(vmin, vmax)
                     cmap = coll.get_cmap()
                 else:
                     norm = self.classify_specs._norm
@@ -3820,8 +3949,20 @@ class Maps(object):
         self.BM.add_bg_artist(self._ax_cb, layer)
         self.BM.add_bg_artist(self._ax_cb_plot, layer)
 
+        ax_cb_extend = self._add_cb_extend_arrows(
+            cb, orientation, extend_frac=extend_frac
+        )
         # remember colorbar for later (so that we can update its position etc.)
-        self._colorbar = [layer, cbgs, ax_cb, ax_cb_plot, orientation, cb]
+        self._colorbar = [
+            layer,
+            cbgs,
+            ax_cb,
+            ax_cb_plot,
+            ax_cb_extend,
+            extend_frac,
+            orientation,
+            cb,
+        ]
 
         return [layer, cbgs, ax_cb, ax_cb_plot, orientation, cb]
 
