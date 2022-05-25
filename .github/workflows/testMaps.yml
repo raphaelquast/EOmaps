@@ -23,6 +23,12 @@ jobs:
       - uses: conda-incubator/setup-miniconda@v2.1.1
         with:
           environment-file: tests/test_env.yml
+
+          # use mamba to speed up installation
+          mamba-version: "*"
+          channels: conda-forge
+          channel-priority: true
+
           activate-environment: testMaps
 
           show-channel-urls: true
