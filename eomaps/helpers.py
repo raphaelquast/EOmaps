@@ -837,15 +837,27 @@ class BlitManager:
         # hide all colorbars that are not no the visible layer
         for m in [self._m.parent, *self._m.parent._children]:
             if getattr(m, "_colorbar", None) is not None:
-                [layer, cbgs, ax_cb, ax_cb_plot, orientation, cb] = m._colorbar
+                [
+                    layer,
+                    cbgs,
+                    ax_cb,
+                    ax_cb_plot,
+                    ax_cb_extend,
+                    extend_frac,
+                    orientation,
+                    cb,
+                ] = m._colorbar
 
                 if layer != val:
                     ax_cb.set_visible(False)
                     ax_cb_plot.set_visible(False)
+                    if ax_cb_extend:
+                        ax_cb_extend.set_visible(False)
                 else:
                     ax_cb.set_visible(True)
                     ax_cb_plot.set_visible(True)
-
+                    if ax_cb_extend:
+                        ax_cb_extend.set_visible(True)
         # self.canvas.flush_events()
         self._clear_temp_artists("on_layer_change")
         # self.fetch_bg(self._bg_layer)

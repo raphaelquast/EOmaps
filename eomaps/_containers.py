@@ -149,7 +149,7 @@ class map_objects(object):
                 _,
             ) = self._m._colorbar
         else:
-            _, _, ax_cb, ax_cb_plot, orientation, _ = cb
+            _, _, ax_cb, ax_cb_plot, ax_cb_extend, extend_frac, orientation, _ = cb
 
         if orientation == "horizontal":
             pcb = ax_cb.get_position()
@@ -205,7 +205,7 @@ class map_objects(object):
                     * extend_frac
                 )
                 ax_cb_extend.set_position(
-                    [pos[0], pos[1] - frac / 2, wcb, pos[3] + frac],
+                    [pos[0] + wp, pos[1] - frac / 2, wcb, pos[3] + frac],
                 )
 
         else:
