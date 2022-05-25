@@ -1904,7 +1904,7 @@ class Maps(object):
 
         return cb
 
-    def _add_cb_extend_arrows(self, cb, orientation, extend_frac=0.05, which="auto"):
+    def _add_cb_extend_arrows(self, cb, orientation, extend_frac=0.025, which="auto"):
         """
         Add a new axis that holds extension-triangles for the colorbar.
 
@@ -3556,8 +3556,8 @@ class Maps(object):
         log=False,
         tick_formatter=None,
         dynamic_shade_indicator=False,
-        extend_frac=0.025,
         add_extend_arrows="auto",
+        extend_frac=0.025,
     ):
         """
         Add a colorbar to an existing figure.
@@ -3646,16 +3646,20 @@ class Maps(object):
             >>>     return f"{x} m"
 
             The default is None.
+        add_extend_arrows : str
+            Set if extension-arrows should be drawn. (e.g. to indicate that there are
+            some data-values outside the colorbar-range)
+
+            - Can be one of: ("auto", "upper", "lower", "both")
+            - If "auto": extension-arrows are only drawn if values outside the color
+              boundaries are encoundered. The default is "auto"
+
+            Note: The range of the colors is set with `m.plot_map(vmin=..., vmax=...)`
         extend_frac : float or None
             The fraction of the colorbar to use for adding "extension-arrows" to
             indicate out-of-bounds values.
             If None, no extension arrows will be drawn.
             The default is 0.015
-        add_extend_arrows : str
-            Set which extension-arrows are drawn.
-            Can be one of: ("auto", "upper", "lower", "both")
-            If "auto": extension-arrows are only drawn if values outside the color
-            boundaries are encoundered. The default is "auto"
 
         See Also
         --------
