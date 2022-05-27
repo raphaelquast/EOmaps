@@ -636,7 +636,7 @@ class draggable_axes:
             self._m_picked.figure.set_colorbar_position(b)
 
         self._color_axes()
-        self.m.BM.canvas.draw()
+        self.m.redraw()
 
     def cb_key_press(self, event):
         if (self.f.canvas.toolbar is not None) and self.f.canvas.toolbar.mode != "":
@@ -690,9 +690,7 @@ class draggable_axes:
         self._modifier_pressed = False
         self.m._ignore_cb_events = False
 
-        self.m.BM._refetch_bg = True
-        self.f.canvas.draw()
-        self.m.BM.update()
+        self.m.redraw()
 
     def _make_draggable(self):
         # all ordinary callbacks will not execute if" self._modifier_pressed" is True!
@@ -704,8 +702,17 @@ class draggable_axes:
             self._ax_visible[ax] = ax.get_visible()
 
         # make all artists invisible (and remember their visibility state for later)
-        for l in self.m.BM._bg_artists.values():
-            for a in l:
+        # for l in self.m.BM._bg_artists.values():
+        #     for a in l:
+        #         self._artists_visible[a] = a.get_visible()
+        #         a.set_visible(False)
+        dyn_artists = list(chain(*self.m.BM._artists.values()))
+        for a in set(
+            [*self.m.figure.f.artists, *chain(*self.m.BM._bg_artists.values())]
+        ):
+            if a in dyn_artists:
+                continue
+            if not isinstance(a, plt.Axes):
                 self._artists_visible[a] = a.get_visible()
                 a.set_visible(False)
 
@@ -740,9 +747,8 @@ class draggable_axes:
                 self.f.canvas.mpl_connect("key_press_event", self.cb_move_with_key)
             )
 
-        self.m.BM.fetch_bg()
         self.set_annotations()
-        self.f.canvas.draw()
+        self.m.redraw()
 
 
 # taken from https://matplotlib.org/stable/tutorials/advanced/blitting.html#class-based-example
@@ -837,15 +843,27 @@ class BlitManager:
         # hide all colorbars that are not no the visible layer
         for m in [self._m.parent, *self._m.parent._children]:
             if getattr(m, "_colorbar", None) is not None:
-                [layer, cbgs, ax_cb, ax_cb_plot, orientation, cb] = m._colorbar
+                [
+                    layer,
+                    cbgs,
+                    ax_cb,
+                    ax_cb_plot,
+                    ax_cb_extend,
+                    extend_frac,
+                    orientation,
+                    cb,
+                ] = m._colorbar
 
                 if layer != val:
                     ax_cb.set_visible(False)
                     ax_cb_plot.set_visible(False)
+                    if ax_cb_extend:
+                        ax_cb_extend.set_visible(False)
                 else:
                     ax_cb.set_visible(True)
                     ax_cb_plot.set_visible(True)
-
+                    if ax_cb_extend:
+                        ax_cb_extend.set_visible(True)
         # self.canvas.flush_events()
         self._clear_temp_artists("on_layer_change")
         # self.fetch_bg(self._bg_layer)

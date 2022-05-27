@@ -271,7 +271,7 @@ class _wmts_layer(_WebMap_layer):
         super().__init__(*args, **kwargs)
         pass
 
-    def __call__(self, layer=None, **kwargs):
+    def __call__(self, layer=None, zorder=0, **kwargs):
         """
         Add the WMTS layer to the map
 
@@ -284,6 +284,9 @@ class _wmts_layer(_WebMap_layer):
             - If None, the layer of the parent object is used.
 
             The default is None.
+        zorder : float
+            The zorder of the artist (e.g. the stacking level of overlapping artists)
+            The default is 0
         **kwargs :
             additional kwargs passed to the WebMap service request.
             (e.g. transparent=True, time='2020-02-05', etc.)
@@ -291,6 +294,7 @@ class _wmts_layer(_WebMap_layer):
         from . import MapsGrid  # do this here to avoid circular imports!
 
         for m in self._m if isinstance(self._m, MapsGrid) else [self._m]:
+            self._zorder = zorder
             self._kwargs = kwargs
             if layer is None:
                 self._layer = m.layer
@@ -311,7 +315,11 @@ class _wmts_layer(_WebMap_layer):
         print(f"EOmaps: Adding wmts-layer: {self.name}")
 
         art = m.figure.ax.add_wmts(
-            self._wms, self.name, wmts_kwargs=self._kwargs, interpolation="spline36"
+            self._wms,
+            self.name,
+            wmts_kwargs=self._kwargs,
+            interpolation="spline36",
+            zorder=self._zorder,
         )
 
         m.BM.add_bg_artist(art, l)
@@ -322,7 +330,7 @@ class _wms_layer(_WebMap_layer):
         super().__init__(*args, **kwargs)
         pass
 
-    def __call__(self, layer=None, **kwargs):
+    def __call__(self, layer=None, zorder=0, **kwargs):
         """
         Add the WMS layer to the map
 
@@ -335,6 +343,9 @@ class _wms_layer(_WebMap_layer):
             - If None, the layer of the parent object is used.
 
             The default is None.
+        zorder : float
+            The zorder of the artist (e.g. the stacking level of overlapping artists)
+            The default is 0
         **kwargs :
             additional kwargs passed to the WebMap service request.
             (e.g. transparent=True, time='2020-02-05', etc.)
@@ -343,6 +354,8 @@ class _wms_layer(_WebMap_layer):
 
         for m in self._m if isinstance(self._m, MapsGrid) else [self._m]:
             self._kwargs = kwargs
+            self._zorder = zorder
+
             if layer is None:
                 self._layer = m.layer
             else:
@@ -364,7 +377,11 @@ class _wms_layer(_WebMap_layer):
         # actually add the layer to the map.
         print(f"EOmaps: ... adding wms-layer {self.name}")
         art = m.figure.ax.add_wms(
-            self._wms, self.name, wms_kwargs=self._kwargs, interpolation="spline36"
+            self._wms,
+            self.name,
+            wms_kwargs=self._kwargs,
+            interpolation="spline36",
+            zorder=self._zorder,
         )
 
         m.BM.add_bg_artist(art, l)
@@ -877,6 +894,7 @@ class _xyz_tile_service:
         transparent=False,
         alpha=1,
         interpolation="spline36",
+        zorder=0,
         **kwargs,
     ):
         """
@@ -904,6 +922,9 @@ class _xyz_tile_service:
             required (e.g. if you don't use the native projection of the WMS)
             changing this value will slow down re-projection but it can
             provide a huge boost in image quality! The default is 750.
+        zorder : float
+            The zorder of the artist (e.g. the stacking level of overlapping artists)
+            The default is 0
         **kwargs :
             Additional kwargs passed to the cartopy-wrapper for
             matplotlib's `imshow`.
@@ -920,7 +941,7 @@ class _xyz_tile_service:
         if isinstance(self._m, MapsGrid):
             for m in self._m:
                 self._reinit(m).__call__(
-                    layer, transparent, alpha, interpolation, **kwargs
+                    layer, transparent, alpha, interpolation, zorder, **kwargs
                 )
         else:
 
@@ -928,6 +949,7 @@ class _xyz_tile_service:
                 interpolation=interpolation, alpha=alpha, origin="lower"
             )
             self._kwargs.update(kwargs)
+            self._zorder = zorder
 
             if self._layer == "all" or self._m.BM.bg_layer == self._layer:
                 # add the layer immediately if the layer is already active
@@ -959,7 +981,9 @@ class _xyz_tile_service:
         #         (only SlippyImageArtist has been subclassed)
 
         self._raster_source.validate_projection(m.ax.projection)
-        img = SlippyImageArtist_NEW(m.ax, self._raster_source, **self._kwargs)
+        img = SlippyImageArtist_NEW(
+            m.ax, self._raster_source, zorder=self._zorder, **self._kwargs
+        )
         with self._m.ax.hold_limits():
             m.ax.add_image(img)
         self._artist = img

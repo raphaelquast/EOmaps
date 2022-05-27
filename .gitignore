@@ -6,4 +6,11 @@ docs/_build
 docs/debug.log
 docs/.vscode
 docs/generated
+docs/_tables
 .spyproject
+EOmaps.egg-info
+.pytest_cache
+logos
+tests/Images
+tests/.ipynb_checkpoints
+docs/_static/example_gifs_very_old

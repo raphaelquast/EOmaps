@@ -51,6 +51,10 @@ from matplotlib import cm
 from matplotlib.colors import LinearSegmentedColormap
 from matplotlib.gridspec import GridSpec, GridSpecFromSubplotSpec, SubplotSpec
 
+import matplotlib.path as mpath
+import matplotlib.patches as mpatches
+from matplotlib.collections import PatchCollection
+
 
 from cartopy import crs as ccrs
 
@@ -1747,15 +1751,20 @@ class Maps(object):
             orientation=cb_orientation,
         )
         # plot the histogram
-        hist_vals, hist_bins, init_hist = ax_cb_plot.hist(
-            z_data,
-            orientation=orientation,
-            bins=bins if (classified and histbins == "bins") else histbins,
-            color="k",
-            align="mid",
-            range=(vmin, vmax) if (vmin and vmax) else None,
-            density=density,
-        )
+        # (only if the axis has a finite size)
+        if ax_cb_plot.bbox.width > 0 and ax_cb_plot.bbox.height > 0:
+            ax_cb_plot.set_axis_on()
+            _ = ax_cb_plot.hist(
+                z_data.clip(vmin, vmax) if (vmin or vmax) else z_data,
+                orientation=orientation,
+                bins=bins if (classified and histbins == "bins") else histbins,
+                color="k",
+                align="mid",
+                range=(vmin, vmax) if (vmin and vmax) else None,
+                density=density,
+            )
+        else:
+            ax_cb_plot.set_axis_off()
 
         # identify position of color-splits in the colorbar
         if isinstance(n_cmap.cmap, LinearSegmentedColormap):
@@ -1885,7 +1894,134 @@ class Maps(object):
             ot.set_horizontalalignment("center")
             ot.set_position((1, 0))
 
+        # make sure axis limits are correct
+        if orientation == "vertical":
+            limsetfunc = ax_cb.set_xlim
+        else:
+            limsetfunc = ax_cb.set_ylim
+
+        limsetfunc(vmin, vmax)
+
         return cb
+
+    def _add_cb_extend_arrows(self, cb, orientation, extend_frac=0.025, which="auto"):
+        """
+        Add a new axis that holds extension-triangles for the colorbar.
+
+        Parameters
+        ----------
+        cb : matplotilb.colorbar
+            the colorbar to use
+        orientation : str
+            "vertical" or "horizontal"
+        extend_frac : float, optional
+            the fraction of the axis to use for the extension-triangles.
+            (NOTE: triangles will be drawn OUTSIDE the axes!!)
+            The default is 0.03.
+        which : str
+            Indicator which triangles should be drawn
+            (one of "auto", "upper", "lower" or "both").
+            The default is "auto" in which case only relevant arrows are drawn
+            (e.g. "upper" is only drawn if there are values > vmax).
+        """
+
+        if which == "auto":
+            a = cb.mappable.get_array()
+            vmin, vmax = cb.mappable.norm.vmin, cb.mappable.norm.vmax
+
+            if (a > vmax).any():
+                which = "upper"
+            if (a < vmin).any():
+                if which == "upper":
+                    which = "both"
+                else:
+                    which = "lower"
+
+            if which == "auto":
+                # (no extension arrows necessary)
+                return
+
+        # get the bounding box of the current colorbar axis
+        bbox = self.figure.ax_cb.bbox.transformed(self.figure.f.transFigure.inverted())
+
+        if orientation == "horizontal":
+            if which == "both":
+                which = "left right"
+            elif which == "upper":
+                which = "right"
+            elif which == "lower":
+                which = "left"
+
+            frac = extend_frac * (bbox.width)
+            axcb2 = self.figure.f.add_axes(
+                (bbox.x0 - frac / 2, bbox.y0, bbox.width + frac, bbox.height),
+                zorder=-99,
+            )
+            axcb2.get_shared_y_axes().join(axcb2, self.figure.ax_cb)
+            # set the limits to (0, 1) so we can directly use the fractions
+            axcb2.set_xlim(0, 1)
+
+        else:
+            if which == "both":
+                which = "top bottom"
+            elif which == "upper":
+                which = "top"
+            elif which == "lower":
+                which = "bottom"
+            frac = extend_frac * (bbox.height)
+            axcb2 = self.figure.f.add_axes(
+                (bbox.x0, bbox.y0 - frac / 2, bbox.width, bbox.height + frac),
+                zorder=-99,
+            )
+            axcb2.get_shared_x_axes().join(axcb2, self.figure.ax_cb)
+            # set the limits to (0, 1) so we can directly use the fractions
+            axcb2.set_ylim(0, 1)
+
+        axcb2.set_axis_off()
+
+        # get the coordinates of the colorbar in units of axcb2
+
+        bbox_transf = self.figure.ax_cb.bbox.transformed(axcb2.transAxes.inverted())
+
+        x0, x1, y0, y1 = bbox_transf.x0, bbox_transf.x1, bbox_transf.y0, bbox_transf.y1
+
+        # make sure the arrow overlapps a little bit with the parent cb-axes
+        # to avoid gaps between the arrow and the colorbar
+        ovx, ovy = bbox_transf.width * 0.1, bbox_transf.height * 0.1
+
+        points = dict(
+            left=[[0, 0.5], [x0, 1], [x0 + ovx, 1], [x0 + ovx, 0], [x0, 0], [0, 0.5]],
+            right=[[1, 0.5], [x1, 1], [x1 - ovx, 1], [x1 - ovx, 0], [x1, 0], [1, 0.5]],
+            top=[[0.5, 1], [0, y1 - ovy], [1, y1 - ovy], [0.5, 1]],
+            bottom=[[0.5, 0], [0, y0 + ovy], [1, y0 + ovy], [0.5, 0]],
+        )
+
+        cmap = self.figure.coll.cmap
+        colors = dict(
+            left=cmap.get_under(),
+            right=cmap.get_over(),
+            top=cmap.get_over(),
+            bottom=cmap.get_under(),
+        )
+
+        patches = []
+        use_colors = []
+        for w in which.split(" "):
+            p = points[w]
+            Path = mpath.Path
+            path_data = [
+                (Path.MOVETO, p[0]),
+                *[(Path.LINETO, pi) for pi in p[1:-1]],
+                (Path.CLOSEPOLY, p[-1]),
+            ]
+            codes, verts = zip(*path_data)
+            path = mpath.Path(verts, codes)
+            patches.append(mpatches.PathPatch(path))
+            use_colors.append(colors[w])
+        collection = PatchCollection(patches, fc=use_colors, ec="none", lw=0)
+
+        axcb2.add_collection(collection)
+        return axcb2
 
     @property
     @wraps(NaturalEarth_features)
@@ -2409,23 +2545,41 @@ class Maps(object):
         Examples
         --------
 
-            >>> m.add_annotation(ID=1)
-            >>> m.add_annotation(xy=(45, 35), xy_crs=4326)
+        >>> m.add_annotation(ID=1)
+        >>> m.add_annotation(xy=(45, 35), xy_crs=4326)
 
-            NOTE: You can provide lists to add multiple annotations in one go!
+        NOTE: You can provide lists to add multiple annotations in one go!
 
-            >>> m.add_annotation(ID=[1, 5, 10, 20])
-            >>> m.add_annotation(xy=([23.5, 45.8, 23.7], [5, 6, 7]), xy_crs=4326)
+        >>> m.add_annotation(ID=[1, 5, 10, 20])
+        >>> m.add_annotation(xy=([23.5, 45.8, 23.7], [5, 6, 7]), xy_crs=4326)
 
-            The text can be customized by providing either a string
+        The text can be customized by providing either a string
 
-            >>> m.add_annotation(ID=1, text="some text")
+        >>> m.add_annotation(ID=1, text="some text")
 
-            or a callable that returns a string with the following signature:
+        or a callable that returns a string with the following signature:
 
-            >>> def addtxt(m, ID, val, pos, ind):
-            >>>     return f"The ID {ID} at position {pos} has a value of {val}"
-            >>> m.add_annotation(ID=1, text=addtxt)
+        >>> def addtxt(m, ID, val, pos, ind):
+        >>>     return f"The ID {ID} at position {pos} has a value of {val}"
+        >>> m.add_annotation(ID=1, text=addtxt)
+
+        **Customizing the appearance**
+
+        For the full set of possibilities, see:
+        https://matplotlib.org/stable/tutorials/text/annotations.html
+
+        >>> m.add_annotation(xy=[7.10, 45.16], xy_crs=4326,
+        >>>                  text="blubb", xytext=(30,30),
+        >>>                  horizontalalignment="center", verticalalignment="center",
+        >>>                  arrowprops=dict(ec="g",
+        >>>                                  arrowstyle='-[',
+        >>>                                  connectionstyle="angle",
+        >>>                                  ),
+        >>>                  bbox=dict(boxstyle='circle,pad=0.5',
+        >>>                            fc='yellow',
+        >>>                            alpha=0.3
+        >>>                            )
+        >>>                  )
 
         """
 
@@ -2434,7 +2588,7 @@ class Maps(object):
             mask = np.isin(self._props["ids"], ID)
             xy = (self._props["xorig"][mask], self._props["yorig"][mask])
             val = self._props["z_data"][mask]
-            ind = self._props["ids"][mask]
+            ind = np.where(mask)[0]
             ID = np.atleast_1d(ID)
             xy_crs = self.data_specs.crs
         else:
@@ -2687,11 +2841,13 @@ class Maps(object):
         # (e.g. count, std, var ... ) use an automatic "linear" normalization
         if aggname in ["first", "last", "max", "min", "mean", "mode"]:
             kwargs.setdefault("norm", self.classify_specs._norm)
+            kwargs.setdefault("vmin", vmin)
+            kwargs.setdefault("vmax", vmax)
 
             # clip the data to properly account for vmin and vmax
             # (do this only if we don't intend to use the full dataset!)
-            if vmin or vmax:
-                props["z_data"] = props["z_data"].clip(vmin, vmax)
+            # if vmin or vmax:
+            #     props["z_data"] = props["z_data"].clip(vmin, vmax)
         else:
             kwargs.setdefault("norm", "linear")
             kwargs.setdefault("vmin", vmin)
@@ -3080,8 +3236,8 @@ class Maps(object):
 
             # clip the data to properly account for vmin and vmax
             # (do this only if we don't intend to use the full dataset!)
-            if vmin or vmax:
-                props["z_data"] = props["z_data"].clip(vmin, vmax)
+            # if vmin or vmax:
+            #     props["z_data"] = props["z_data"].clip(vmin, vmax)
 
             # ---------------------- classify the data
             cbcmap, norm, bins, classified = self._classify_data(
@@ -3224,7 +3380,9 @@ class Maps(object):
         -----------------
         vmin, vmax : float, optional
             Min- and max. values assigned to the colorbar. The default is None.
-
+        zorder : float
+            The zorder of the artist (e.g. the stacking level of overlapping artists)
+            The default is 1
         kwargs
             kwargs passed to the initialization of the matpltolib collection
             (dependent on the plot-shape) [linewidth, edgecolor, facecolor, ...]
@@ -3245,6 +3403,10 @@ class Maps(object):
                 cmap,
                 kwargs["alpha"],
             )
+
+        # make sure zorder is set to 1 by default
+        # (by default shading would use 0 while ordinary collections use 1)
+        kwargs.setdefault("zorder", 1)
 
         if useshape.name.startswith("shade"):
             self._shade_map(
@@ -3389,10 +3551,13 @@ class Maps(object):
         bottom=0.1,
         left=0.1,
         right=0.05,
+        histogram_size=9,
         layer=None,
         log=False,
         tick_formatter=None,
         dynamic_shade_indicator=False,
+        add_extend_arrows="auto",
+        extend_frac=0.025,
     ):
         """
         Add a colorbar to an existing figure.
@@ -3403,14 +3568,16 @@ class Maps(object):
         By default, the colorbar will only be visible on the layer of the associated
         Maps-object (you can override this by providing an explicit "layer"-name).
 
-        To change the position of the colorbar, use:
+        To change the position of the colorbar after it has been created, use:
 
-            >>> m.add_colorbar()
-            >>> m.figure.set_colorbar_position(pos=[.1, .05, .8, .2], ratio=10)
+            >>> cb = m.add_colorbar()
+            >>> m.figure.set_colorbar_position(pos=[.1, .05, .8, .2], ratio=10, cb=cb)
 
         Parameters
         ----------
         gs : float or matpltolib.gridspec.SubplotSpec
+            The relative size of the colorbar (or an explicit GridSpec definition)
+
             - if float: The fraction of the the parent axes to use for the colorbar.
               (The colorbar will "steal" some space from the parent axes.)
             - if SubplotSpec : A SubplotSpec instance that will be used to initialize
@@ -3442,6 +3609,16 @@ class Maps(object):
             The padding between the colorbar and the parent axes (as fraction of the
             plot-height (if "horizontal") or plot-width (if "vertical")
             The default is (0.05, 0.1, 0.1, 0.05)
+        histogram_size : float
+            Set the relative size of the histogram compared to the colorbar, e.g.:
+
+            `<size of histogram> = histogram_size * <size of colorbar>`
+
+            - 0 = NO histogram (e.g. a "plain" colorbar)
+            - 1 = histogram and colorbar have the same size
+            - 999 = NO colorbar (e.g. a "plain" histogram)
+
+            The default is 9.
         layer : int, str or None, optional
             The layer to put the colorbar on.
             To make the colorbar visible on all layers, use `layer="all"`
@@ -3473,6 +3650,20 @@ class Maps(object):
             >>>     return f"{x} m"
 
             The default is None.
+        add_extend_arrows : str
+            Set if extension-arrows should be drawn. (e.g. to indicate that there are
+            some data-values outside the colorbar-range)
+
+            - Can be one of: ("auto", "upper", "lower", "both")
+            - If "auto": extension-arrows are only drawn if values outside the color
+              boundaries are encoundered. The default is "auto"
+
+            Note: The range of the colors is set with `m.plot_map(vmin=..., vmax=...)`
+        extend_frac : float or None
+            The fraction of the colorbar to use for adding "extension-arrows" to
+            indicate out-of-bounds values.
+            If None, no extension arrows will be drawn.
+            The default is 0.015
 
         See Also
         --------
@@ -3490,6 +3681,7 @@ class Maps(object):
         >>> |                                                       |
         >>> |                         (top)                         |
         >>> |                                                       |
+        >>> |                  [ -  HISTOGRAM  - ]                  |
         >>> |      (left)       [ - COLORBAR  - ]      (right)      |
         >>> |                                                       |
         >>> |                       (bottom)                        |
@@ -3504,6 +3696,13 @@ class Maps(object):
             )
             return
 
+        assert hasattr(
+            self.classify_specs, "_bins"
+        ), "EOmaps: you need to call `m.plot_map()` before adding a colorbar!"
+
+        if layer is None:
+            layer = self.layer
+
         self._cb_kwargs = dict(
             orientation=orientation,
             label=label,
@@ -3516,33 +3715,29 @@ class Maps(object):
             tick_formatter=tick_formatter,
         )
 
-        if hasattr(self, "_colorbar"):
-            print(
-                "EOmaps: A colorbar already exists for this Maps-object!\n"
-                + "...use a new layer if you want multiple colorbars or use "
-                + "`m._remove_colorbar() to remove the existing colorbar."
-            )
-            return
-
-        if layer is None:
-            layer = self.layer
-
-        assert hasattr(
-            self.classify_specs, "_bins"
-        ), "EOmaps: you need to call `m.plot_map()` before adding a colorbar!"
-        # check if there is already an existing colorbar in another axis
-        # and if we find one, use its specs instead of creating a new one
         parent_m_for_cb = None
-        if hasattr(self, "_cb_gridspec"):
-            parent_m_for_cb = self
-        else:
-            # check if self is actually just another layer of an existing Maps object
-            # that already has a colorbar assigned
-            for m in [self.parent, *self.parent._children]:
-                if m is not self and m.ax is self.ax:
-                    if hasattr(m, "_cb_gridspec"):
-                        parent_m_for_cb = m
-                        break
+        if isinstance(gs, (int, float)):
+            if hasattr(self, "_colorbar"):
+                print(
+                    "EOmaps: A colorbar already exists for this Maps-object!\n"
+                    + "...use a new layer if you want multiple colorbars or use "
+                    + "`m._remove_colorbar() to remove the existing colorbar."
+                )
+                return
+
+            # check if there is already an existing colorbar in another axis
+            # and if we find one, use its specs instead of creating a new one
+
+            if hasattr(self, "_cb_gridspec"):
+                parent_m_for_cb = self
+            else:
+                # check if self is actually just another layer of an existing Maps object
+                # that already has a colorbar assigned
+                for m in [self.parent, *self.parent._children]:
+                    if m is not self and m.ax is self.ax:
+                        if hasattr(m, "_cb_gridspec"):
+                            parent_m_for_cb = m
+                            break
 
         if parent_m_for_cb:
             try:
@@ -3607,7 +3802,7 @@ class Maps(object):
                     subplot_spec=gsspec,
                     hspace=0,
                     wspace=0,
-                    height_ratios=[0.9, 0.1],
+                    height_ratios=[histogram_size, 1],
                 )
 
                 # "_add_colorbar" orientation is opposite to the colorbar-orientation!
@@ -3621,7 +3816,7 @@ class Maps(object):
                     subplot_spec=gsspec,
                     hspace=0,
                     wspace=0,
-                    width_ratios=[0.9, 0.1],
+                    width_ratios=[histogram_size, 1],
                 )
 
                 # "_add_colorbar" orientation is opposite to the colorbar-orientation!
@@ -3705,8 +3900,8 @@ class Maps(object):
                     norm = coll.norm
                     # make sure the norm clips with respect to vmin/vmax
                     # (only clip if either vmin or vmax is not None)
-                    if vmin or vmax:
-                        z_data = z_data.clip(vmin, vmax)
+                    # if vmin or vmax:
+                    #     z_data = z_data.clip(vmin, vmax)
                     cmap = coll.get_cmap()
                 else:
                     norm = self.classify_specs._norm
@@ -3796,10 +3991,31 @@ class Maps(object):
         self.BM.add_bg_artist(self._ax_cb, layer)
         self.BM.add_bg_artist(self._ax_cb_plot, layer)
 
+        ax_cb_extend = self._add_cb_extend_arrows(
+            cb, orientation, extend_frac=extend_frac, which=add_extend_arrows
+        )
         # remember colorbar for later (so that we can update its position etc.)
-        self._colorbar = [layer, cbgs, ax_cb, ax_cb_plot, orientation, cb]
+        self._colorbar = [
+            layer,
+            cbgs,
+            ax_cb,
+            ax_cb_plot,
+            ax_cb_extend,
+            extend_frac,
+            orientation,
+            cb,
+        ]
 
-        return [layer, cbgs, ax_cb, ax_cb_plot, orientation, cb]
+        return [
+            layer,
+            cbgs,
+            ax_cb,
+            ax_cb_plot,
+            ax_cb_extend,
+            extend_frac,
+            orientation,
+            cb,
+        ]
 
     def indicate_masked_points(self, radius=1.0, **kwargs):
         """

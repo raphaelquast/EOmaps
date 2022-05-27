@@ -24,9 +24,12 @@
 
 Possible ways for specifying the crs for plotting are:
 
-- If you provide an integer, it is identified as an epsg-code (e.g. ``4326``, ``3035``, etc.).
+- If you provide an integer, it is identified as an epsg-code (e.g. ``4326``, ``3035``, etc.)
+
+  - 4326 hereby defaults to `PlateCarree` projection
+
 - All other CRS usable for plotting are accessible via ``Maps.CRS``,
-  e.g.: ``crs=Maps.CRS.Orthographic()`` or ``crs=Maps.CRS.Equi7Grid_projection("EU")``.
+  e.g.: ``crs=Maps.CRS.Orthographic()``, ``crs=Maps.CRS.GOOGLE_MERCATOR`` or ``crs=Maps.CRS.Equi7Grid_projection("EU")``.
   (``Maps.CRS`` is just an accessor for ``cartopy.crs``)
 
 ▤ Layers
@@ -1140,6 +1143,7 @@ To indicate rectangular areas in any given crs, simply use ``m.indicate_extent``
 
 | Before adding a colorbar, you must plot the data using ``m.plot_map()``.
 | A colorbar with a colored histogram on top can then be added to the map via ``m.add_colorbar``.
+
 
 .. note::
     Colorbars are only visible if the layer at which the data was plotted is visible!
