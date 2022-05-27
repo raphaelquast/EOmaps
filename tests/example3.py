@@ -44,14 +44,17 @@ m.plot_map(
 )  # pass some additional arguments to the plotted collection
 
 # ------------------ add a colorbar and change it's appearance
-m.add_colorbar(histbins="bins", label="some parameter", density=True)
-_ = m.figure.ax_cb_plot.set_ylabel("The Y label")  # add a y-label to the histogram
+m.add_colorbar(
+    histbins="bins", label="some parameter", density=True, histogram_size=999
+)
 
-m.subplots_adjust(
-    bottom=0.1, top=0.95, left=0.075, right=0.95, hspace=0.2
-)  # adjust the padding
-m.figure.set_colorbar_position(
-    pos=[0.125, 0.1, 0.83, 0.15], ratio=999
-)  # manually re-position the colorbar
+# add a y-label to the histogram
+_ = m.figure.ax_cb_plot.set_ylabel("The Y label")
 
+# adjust the padding of the subplots
+m.subplots_adjust(bottom=0.1, top=0.95, left=0.075, right=0.95, hspace=0.2)
+# manually re-position the colorbar
+m.figure.set_colorbar_position(pos=[0.125, 0.1, 0.83, 0.15])
+
+# add a logo to the plot
 m.add_logo(position="lr", pad=(-1.1, 0), size=0.1)
