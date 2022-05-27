@@ -69,10 +69,11 @@ class _cb_container(object):
     def _sort_cbs(self, cbs):
         if not cbs:
             return set()
-        cbnames = set([i.rsplit("_", 1)[0] for i in cbs])
-
+        cbnames = set([i.rsplit("__", 1)[0].rsplit("_", 1)[0] for i in cbs])
         sortp = self._cb_list + list(set(self._cb_list) ^ cbnames)
-        return sorted(list(cbs), key=lambda w: sortp.index(w.rsplit("_", 1)[0]))
+        return sorted(
+            list(cbs), key=lambda w: sortp.index(w.rsplit("__", 1)[0].rsplit("_", 1)[0])
+        )
 
     def __repr__(self):
         txt = "Attached callbacks:\n    " + "\n    ".join(
