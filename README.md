@@ -21,7 +21,7 @@
 ### A library to create interactive maps of geographical datasets.
 
 <ul type="none">
-  <li>🌍 EOmaps provides a simple and intuitive interface to visualize and interact with geographical datasets</li>
+  <li>🌍 EOmaps provides a simple and intuitive interface to visualize and interact with geographical datasets.</li>
   <ul type="none">
     <li>⬥ Data can be provided as 1D or 2D <code>lists</code>, <code>numpy-arrays</code>, <code>pandas.DataFrames</code></li>
     <li>  &nbsp; &nbsp; &nbsp; or directly from GeoTIFFs,  NetCDFs and csv-files.</li>
@@ -36,44 +36,12 @@
   </ul>
 </ul>
 <br/>
-<p align="center">
-  🌲🌳 Checkout the <a href=https://eomaps.readthedocs.io/en/latest><b>documentation</b></a> for more details and <a href=https://eomaps.readthedocs.io/en/latest/EOmaps_examples.html><b>examples</b></a> 🌳🌲
-</p>
 
 ---
 
 ### ❗ update notice ❗
 > There are breaking API changes between `EOmaps v3.x` and `EOmaps v4.0`  
 > To quickly update existing scripts, see: [⚙ Port script from EOmaps v3.x to v4.x](https://eomaps.readthedocs.io/en/latest/FAQ.html#port-script-from-eomaps-v3-x-to-v4-x)
-
-<details>
-<summary>[click to show] a quick summary of the API changes</summary>
-
-- the following properties and functions have been removed:
-  - ❌ `m.plot_specs.`
-  - ❌ `m.set_plot_specs()`
-  - Arguments are now directly passed to relevant functions:  
-
-    ```python
-    m = Maps
-    # m.set_plot_specs(cmap=..., vmin=..., vmax=..., cpos=..., cpos_radius=..., histbins=...)
-    # m.plot_specs.<  > = ...
-    m.set_data(..., cpos=..., cpos_radius=...)
-    m.plot_map(cmap=..., vmin=..., vmax=...)
-    m.add_colorbar(histbins=...)
-    ```
-
-
-- 🔶 `m.set_shape.voroni_diagram` is renamed to `m.set_shape.voronoi_diagram`
-- 🔷 custom callbacks are no longer bound to the Maps-object  
-  -  the call-signature of custom callbacks has changed to:  
-     `def cb(self, *args, **kwargs)  >>  def cb(*args, **kwargs)`
-
-
-
-
-
-</details>
 
 ---
 
@@ -88,6 +56,9 @@ conda install -c conda-forge eomaps
 For more information, have a look at the [installation instructions](https://eomaps.readthedocs.io/en/latest/general.html#installation) in the documentation!
 <br/>
 
+## 📖 Documentation
+
+Checkout the <a href=https://eomaps.readthedocs.io/en/latest><b>documentation</b></a> for more details and <a href=https://eomaps.readthedocs.io/en/latest/EOmaps_examples.html><b>examples</b></a> !
 
 ## ✔️ Citation
 Did EOmaps help in your research?  
@@ -120,13 +91,23 @@ Open an [issue](https://github.com/raphaelquast/EOmaps/issues) or start a [discu
         <img src="https://github.com/raphaelquast/EOmaps/blob/dev/docs/_static/fig8.gif?raw=true" alt="EOmaps example 8">
       </td>
   </tr>
+  <tr>
     <td valign="center">
         <img src="https://github.com/raphaelquast/EOmaps/blob/dev/docs/_static/fig9.gif?raw=true" alt="EOmaps example 9">
     </td>
     <td valign="center">
         <img src="https://github.com/raphaelquast/EOmaps/blob/dev/docs/_static/fig4.gif?raw=true" alt="EOmaps example 4">
     </td>
- </table>
+  </tr>
+  <tr>
+    <td valign="center">
+        <img src="https://github.com/raphaelquast/EOmaps/blob/dev/docs/_static/inset_maps.png?raw=true" alt="EOmaps inset-maps">
+    </td>
+    <td valign="center">
+        <img src="https://github.com/raphaelquast/EOmaps/blob/dev/docs/_static/fig3.png?raw=true" alt="EOmaps example 3">
+    </td>
+  </tr>
+</table>
 
 
 
