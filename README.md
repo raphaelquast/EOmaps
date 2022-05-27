@@ -49,16 +49,20 @@
 ## 🔨 Installation
 
 To install EOmaps (and all its dependencies) via the `conda` package-manager, simply use:
-
 ```python
 conda install -c conda-forge eomaps
 ```
-For more information, have a look at the [installation instructions](https://eomaps.readthedocs.io/en/latest/general.html#installation) in the documentation!
+... to get a huge speedup, use `mamba` to solve the dependencies!
+```python
+conda install -c conda-forge mamba
+mamba install -c conda-forge eomaps
+```
+For more information, have a look at the [installation instructions](https://eomaps.readthedocs.io/en/latest/general.html#installation) or checkout the quickstart guide [🚀 from 0 to EOmaps](https://eomaps.readthedocs.io/en/latest/FAQ.html#from-0-to-eomaps-a-quickstart-guide)!
 <br/>
 
 ## 📖 Documentation
 
-Checkout the <a href=https://eomaps.readthedocs.io/en/latest><b>documentation</b></a> for more details and <a href=https://eomaps.readthedocs.io/en/latest/EOmaps_examples.html><b>examples</b></a> !
+Make sure to have a look at the <a href=https://eomaps.readthedocs.io/en/latest><b>documentation</b></a> which provides a lot of <a href=https://eomaps.readthedocs.io/en/latest/EOmaps_examples.html><b>examples</b></a> on how to create awesome interactive maps (incl. source code)!
 
 ## ✔️ Citation
 Did EOmaps help in your research?  
