@@ -127,8 +127,8 @@ Open an [issue](https://github.com/raphaelquast/EOmaps/issues) or start a [discu
         <img src="https://github.com/raphaelquast/EOmaps/blob/dev/docs/_static/fig4.gif?raw=true" alt="EOmaps example 4">
     </td>
  </table>
-    
-    
+
+
 
 ## 🌳 Basic usage
 
