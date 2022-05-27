@@ -13,4 +13,4 @@ EOmaps.egg-info
 logos
 tests/Images
 tests/.ipynb_checkpoints
-tests/static/example_gifs_very_old
+tests/_static/example_gifs_very_old
