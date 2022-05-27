@@ -3610,9 +3610,13 @@ class Maps(object):
             plot-height (if "horizontal") or plot-width (if "vertical")
             The default is (0.05, 0.1, 0.1, 0.05)
         histogram_size : float
-            The relative size of the histogram compared to the colorbar.
+            Set the relative size of the histogram compared to the colorbar, e.g.:
 
-            - If you don't want a histogram above the colorbar, set the size to 0
+            `<size of histogram> = histogram_size * <size of colorbar>`
+
+            - 0 = NO histogram (e.g. a "plain" colorbar)
+            - 1 = histogram and colorbar have the same size
+            - 999 = NO colorbar (e.g. a "plain" histogram)
 
             The default is 9.
         layer : int, str or None, optional
@@ -3677,6 +3681,7 @@ class Maps(object):
         >>> |                                                       |
         >>> |                         (top)                         |
         >>> |                                                       |
+        >>> |                  [ -  HISTOGRAM  - ]                  |
         >>> |      (left)       [ - COLORBAR  - ]      (right)      |
         >>> |                                                       |
         >>> |                       (bottom)                        |
