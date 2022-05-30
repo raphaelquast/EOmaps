@@ -1697,11 +1697,6 @@ class Maps(object):
             if log:
                 ax_cb_plot.set_yscale("log")
 
-        if histbins == "bins":
-            assert (
-                classified
-            ), "EOmaps: using histbins='bins' is only possible for classified data!"
-
         # TODO deepcopy is required to avoid issues with datashader?
         norm = copy.deepcopy(norm)
         n_cmap = cm.ScalarMappable(cmap=cmap, norm=norm)
@@ -3704,6 +3699,11 @@ class Maps(object):
         assert hasattr(
             self.classify_specs, "_bins"
         ), "EOmaps: you need to call `m.plot_map()` before adding a colorbar!"
+
+        if histbins == "bins":
+            assert (
+                self.classify_specs._classified
+            ), "EOmaps: using histbins='bins' is only possible for classified data!"
 
         if layer is None:
             layer = self.layer
