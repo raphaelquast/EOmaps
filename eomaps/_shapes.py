@@ -1578,14 +1578,18 @@ class shapes(object):
                     # matplotlib.collections.QuadMesh.get_cursor_data
                     color_and_array[key] = val.ravel()
 
-            # temporary fix for https://github.com/matplotlib/matplotlib/issues/22908
-            QuadMesh.get_cursor_data = lambda *args, **kwargs: None
-
             coll = QuadMesh(
                 verts,
                 **color_and_array,
                 **kwargs,
             )
+
+            # temporary fix for https://github.com/matplotlib/matplotlib/issues/22908
+            # QuadMesh.get_cursor_data = lambda *args, **kwargs: None
+            coll.get_cursor_data = lambda *args, **kwargs: None
+            # temporary fix for https://github.com/matplotlib/matplotlib/issues/23164
+            # (no need for .contains in EOmaps since pixels are identified internally)
+            coll.contains = lambda *args, **kwargs: [False]
 
             return coll
 
