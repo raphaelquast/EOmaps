@@ -1278,6 +1278,8 @@ class shapes(object):
 
             if aggregator is None:
                 aggregator = ds.mean("val")
+            elif isinstance(aggregator, str):
+                aggregator = getattr(ds, aggregator)("val")
 
             if shade_hook is None:
                 shade_hook = partial(ds.tf.dynspread, max_px=5)
