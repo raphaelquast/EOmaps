@@ -1478,7 +1478,12 @@ class Maps(object):
                 z_data = np.full((xorig.shape[0], yorig.shape[0]), np.nan)
 
         # get the index-values
-        ids = np.arange(z_data.size)
+        if isinstance(data, pd.Series):
+            # use actual index values if pd.Series was passed as "data"
+            ids = data.index.values
+        else:
+            # use numeric index values for all other types
+            ids = np.arange(z_data.size)
 
         return z_data, xorig, yorig, ids, parameter
 
