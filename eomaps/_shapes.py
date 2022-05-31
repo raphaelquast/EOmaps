@@ -1595,9 +1595,6 @@ class shapes(object):
 
         def get_coll(self, x, y, crs, **kwargs):
             x, y = np.asanyarray(x), np.asanyarray(y)
-            assert (
-                len(x.shape) == 2 and len(y.shape) == 2
-            ), "EOmaps: using 'raster' as plot-shape is only possible for 2D datasets!"
             # don't use antialiasing by default since it introduces unwanted
             # transparency for reprojected QuadMeshes!
             kwargs.setdefault("antialiased", False)

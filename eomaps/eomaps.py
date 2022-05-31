@@ -3265,7 +3265,44 @@ class Maps(object):
                 args = dict(array=props["z_data"], cmap=cbcmap, norm=norm, **kwargs)
 
             if self.shape.name in ["raster"]:
-                coll = self.shape.get_coll(props["xorig"], props["yorig"], "in", **args)
+                # if input-data is 1D, try to convert data to 2D (required for raster)
+                # TODO make an explicit data-conversion function for 2D-only shapes
+                if (
+                    _pd_OK
+                    and isinstance(self.data, pd.DataFrame)
+                    and isinstance(self.data_specs.x, str)
+                    and isinstance(self.data_specs.y, str)
+                    and len(props["z_data"].shape) == 1
+                ):
+
+                    df = (
+                        pd.DataFrame(
+                            dict(
+                                x=props["xorig"].ravel(),
+                                y=props["yorig"].ravel(),
+                                val=props["z_data"].ravel(),
+                            ),
+                            copy=False,
+                        ).set_index(["x", "y"])
+                    )["val"].unstack("y")
+
+                    xg, yg = np.meshgrid(df.index.values, df.columns.values)
+
+                    if args["array"] is not None:
+                        args["array"] = df.values.T
+
+                    coll = self.shape.get_coll(xg, yg, "in", **args)
+                elif len(props["xorig"].shape) == 2 and len(props["yorig"].shape) == 2:
+                    coll = self.shape.get_coll(
+                        props["xorig"], props["yorig"], "in", **args
+                    )
+                else:
+                    raise AssertionError(
+                        "EOmaps: using 'raster' is only possible if "
+                        + "you provide coordinates and data as 2D "
+                        + "arrays or as a 1D pandas.DataFrame (which "
+                        + "will be converted to 2D internally)"
+                    )
             else:
                 # convert input to 1D
                 coll = self.shape.get_coll(
