@@ -2031,7 +2031,7 @@ else:
         @lru_cache()
         def S2_cloudless(self):
             """
-            Global cloudless Sentinel-2 maps, crafted by EOX.
+            Global cloudless Sentinel-2 maps, crafted by EOX
             https://s2maps.eu/
 
             Endless sunshine, eternal summer - the Sentinel-2 cloudless layer combines

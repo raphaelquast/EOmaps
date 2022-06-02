@@ -752,8 +752,10 @@ and ``< LAYER >`` indicates the actual layer-name.
 
 
 
-Pre-defined (global) WebMap services:
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Pre-defined WebMap services:
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+**Global:**
 
 .. currentmodule:: eomaps._containers.wms_container
 
@@ -772,7 +774,7 @@ Pre-defined (global) WebMap services:
     S2_cloudless
     GEBCO
 
-Services specific for Austria (Europa)
+**Services specific for Austria (Europe)**
 
 .. currentmodule:: eomaps._containers
 
@@ -787,7 +789,7 @@ Services specific for Austria (Europa)
 
 .. note::
     Services might be nested directory structures!
-    The actual layer is always added via the `add_layer` directive.
+    The actual layer is always added via the ``add_layer`` directive.
 
         :code:`m.add_wms.<...>. ... .<...>.add_layer.<LAYER NAME>()`
 
@@ -797,6 +799,44 @@ Services specific for Austria (Europa)
     A list of available layers from a sub-folder can be fetched via:
 
         :code:`m.add_wms.<...>. ... .<LAYER NAME>.layers`
+
+Using custom WebMap services
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+It is also possible to use custom WMS/WMTS/XYZ services.
+(see docstring of ``m.add_wms.get_service`` for more details and examples)
+
+.. currentmodule:: eomaps._containers.wms_container
+
+.. autosummary::
+    :toctree: generated
+    :nosignatures:
+    :template: only_names_in_toc.rst
+
+    get_service
+
+
+.. code-block:: python
+
+    m = Maps()
+    # define the service
+    service = m.add_wms.get_service(<... link to GetCapabilities.xml ...>,
+                                    service_type="wms",
+                                    res_API=False,
+                                    maxzoom=19)
+    # once the service is defined, you can use it just like the pre-defined ones
+    service.layers   # >> get a list of all layers provided by the service
+
+    # select one of the layers
+    layer = service.add_layer. ... .< LAYER >
+    layer.info                  # >> get some additional infos for the selected layer
+    layer.set_extent_to_bbox()  # >> set the map-extent to the bbox of the layer
+
+    # call the layer to add it to the map
+    # (optionally providing additional kwargs for fetching map-tiles)
+    layer(...)
+
+
 
 
 .. _geodataframe:
