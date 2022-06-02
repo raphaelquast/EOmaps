@@ -1386,7 +1386,6 @@ class shapes(object):
 
             for m in self._m if isinstance(self._m, MapsGrid) else [self._m]:
                 shape = self.__class__(m)
-
                 shape.aggregator = aggregator
                 shape.shade_hook = shade_hook
                 shape.agg_hook = agg_hook
@@ -1487,14 +1486,14 @@ class shapes(object):
 
             # try to find the radius based on the first row/col of the data
             # (a shortcut for very large datasets...)
-            rx = np.diff(x[0])[0]
-            ry = np.diff(y.T[0])[0]
+            rx = np.diff(x[0])[0] / 2
+            ry = np.diff(y.T[0])[0] / 2
             if not np.isfinite([rx, ry]).all():
                 # if no finite radius is found, search for the radius in the whole array
                 dx = np.diff(x, axis=1)
                 dy = np.diff(y, axis=0)
-                rx = abs(dx[np.isfinite(dx)][0])
-                ry = abs(dy[np.isfinite(dy)][0])
+                rx = abs(dx[np.isfinite(dx)][0]) / 2
+                ry = abs(dy[np.isfinite(dy)][0]) / 2
 
             self._radius = rx, ry
             p = x, y
@@ -1519,29 +1518,7 @@ class shapes(object):
             else:
                 clipx, clipy = lambda x: x, lambda y: y
 
-            x0 = clipx(p[0] - rx)
-            x1 = clipx(p[0] + rx)
-            y0 = clipx(p[1] - ry)
-            y1 = clipx(p[1] + ry)
-
-            px = np.column_stack(
-                (
-                    np.linspace(x0, x1, n).T.flat,
-                    np.repeat([x1], n, axis=0).T.flat,
-                    np.linspace(x1, x0, n).T.flat,
-                    np.repeat([x0], n).T.flat,
-                )
-            )
-
-            py = np.column_stack(
-                (
-                    np.repeat([y1], n, axis=0).T.flat,
-                    np.linspace(y1, x0, n).T.flat,
-                    np.repeat([y0], n, axis=0).T.flat,
-                    np.linspace(y0, x1, n).T.flat,
-                )
-            )
-
+            # distribute the values as rectangle vertices
             v = np.full((p[0].shape[0] + 1, p[0].shape[1] + 1, 2), None, dtype=float)
 
             v[:-1, :-1, 0] = p[0] - rx
