@@ -82,7 +82,7 @@ Possible ways for specifying the crs for plotting are:
     Maps.new_layer
     Maps.all
     Maps.show_layer
-    Maps.copy
+    Maps.fetch_layers
 
 
 
