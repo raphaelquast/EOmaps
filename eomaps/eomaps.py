@@ -4319,6 +4319,58 @@ class Maps(object):
 
         return layers
 
+    def fetch_layers(self, layers=None, verbose=True):
+        """
+        Fetch (and cache) layers of a map.
+
+        This is particularly useful if you want to use sliders or buttons to quickly
+        switch between the layers (e.g. once the backgrounds are cached, switching
+        layers will be fast).
+
+        Note: After zooming or re-sizing the map, the cache is cleared and
+        you need to call this function again.
+
+        Parameters
+        ----------
+        layers : list or None, optional
+            A list of layer-names that should be fetched.
+            If None, all layers (except the "all" layer) are fetched.
+            The default is None.
+        verbose : bool
+            Indicator if status-messages should be printed or not.
+            The default is True.
+
+        See Also
+        --------
+        m.cb.keypress.attach.fetch_layers : use a keypress callback to fetch layers
+
+        """
+
+        active_layer = self.BM._bg_layer
+        all_layers = self._get_layers()
+
+        if layers is None:
+            layers = all_layers
+            if "all" in layers:
+                layers.remove("all")  # don't explicitly fetch the "all" layer
+        else:
+            if not set(layers).issubset(all_layers):
+                raise AssertionError(
+                    "EOmaps: Unable to fetch the following layers:\n - "
+                    + "\n - ".join(set(layers).difference(all_layers))
+                )
+
+        nlayers = len(layers)
+        assert nlayers > 0, "EOmaps: There are no layers to fetch."
+
+        for i, l in enumerate(layers):
+            if verbose:
+                print("EOmaps: fetching layer", f"{i + 1}/{nlayers}:", l)
+            self.show_layer(l)
+
+        self.show_layer(active_layer)
+        self.BM.update()
+
 
 class MapsGrid:
     """
