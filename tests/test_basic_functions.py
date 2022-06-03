@@ -387,6 +387,12 @@ class TestBasicPlotting(unittest.TestCase):
         m.add_feature.preset.ocean()
         m2 = m.new_layer()
         m2.add_feature.preset.land()
+
+        m3 = m.new_layer()
+        m3.add_feature.preset.coastline()
+
+        m.fetch_layers()
+
         plt.close("all")
 
     def test_join_limits(self):
@@ -428,7 +434,12 @@ class TestBasicPlotting(unittest.TestCase):
         m = Maps(gs_ax=gs[0, 0])
         m.set_data_specs(data=self.data, x="x", y="y", in_crs=3857)
         m.plot_map()
-        cb1 = m.add_colorbar(gs[1, 0], orientation="horizontal")
+        cb1 = m.add_colorbar(
+            gs[1, 0],
+            orientation="horizontal",
+            add_extend_arrows="left",
+            extend_frac=0.4,
+        )
         cb2 = m.add_colorbar(gs[0, 1], orientation="vertical")
 
         cb3 = m.add_colorbar(
@@ -437,6 +448,8 @@ class TestBasicPlotting(unittest.TestCase):
             density=True,
             label="naseawas",
             histbins=5,
+            add_extend_arrows="both",
+            extend_frac=0.4,
         )
         m.figure.set_colorbar_position(cb=cb1, ratio=10)
         m.figure.set_colorbar_position(cb=cb2, ratio=20)

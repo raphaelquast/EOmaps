@@ -1,4 +1,4 @@
-from functools import lru_cache
+from functools import lru_cache, partial
 from warnings import warn, filterwarnings, catch_warnings
 from types import SimpleNamespace
 from collections import defaultdict
@@ -40,6 +40,12 @@ class _WebMap_layer:
         self._wms = wms
         self.wms_layer = self._wms.contents[name]
 
+        styles = list(self.wms_layer.styles)
+        if len(styles) == 0:
+            self._style = None
+        else:
+            self._style = "default" if "default" in styles else styles[0]
+
         # hardcode support for EPSG:3857 == GOOGLE_MERCATOR for now since cartopy
         # hardcoded only  EPSG:900913
         # (see from cartopy.io.ogc_clients import _CRS_TO_OGC_SRS)
@@ -66,16 +72,22 @@ class _WebMap_layer:
             txt += f"{key} : {s}\n"
 
         try:
-            _ = self.wms_layer.styles["default"]["legend"]
-            legQ = True
+
+            if any(("legend" in val for key, val in self.wms_layer.styles.items())):
+                legQ = True
+            else:
+                legQ = False
         except Exception:
             legQ = False
 
         print(f"\n LEGEND available: {legQ}\n\n" + txt)
 
-    def fetch_legend(self, style="default"):
+    def fetch_legend(self, style=None):
+        if style is None:
+            style = self._style
         try:
-            url = self.wms_layer.styles["default"]["legend"]
+
+            url = self.wms_layer.styles[style]["legend"]
             legend = requests.get(url)
 
             if url.endswith(".svg"):
@@ -95,7 +107,7 @@ class _WebMap_layer:
             img = None
         return img
 
-    def add_legend(self, style="default"):
+    def add_legend(self, style=None):
         """
         Add a legend to the plot (if available)
 
@@ -115,6 +127,9 @@ class _WebMap_layer:
 
         """
         from matplotlib.transforms import Bbox
+
+        if style is None:
+            style = self._style
 
         self._legend_picked = False
 
@@ -265,6 +280,21 @@ class _WebMap_layer:
         self._m.figure.ax.set_xlim(x0, x1)
         self._m.figure.ax.set_ylim(y0, y1)
 
+    def _set_style(self, style=None):
+        # style is a list with 1 entry!
+
+        styles = list(self.wms_layer.styles)
+
+        if style is not None:
+            assert (
+                style[0] in styles
+            ), f"EOmaps: WebMap style {style} is not available, use one of {styles}"
+            self._style = style[0]
+        else:
+            style = self._style
+
+        return style
+
 
 class _wmts_layer(_WebMap_layer):
     def __init__(self, *args, **kwargs):
@@ -293,6 +323,10 @@ class _wmts_layer(_WebMap_layer):
         """
         from . import MapsGrid  # do this here to avoid circular imports!
 
+        style = self._set_style(kwargs.get("styles", None))
+        if self._style is not None:
+            kwargs["styles"] = [self._style]
+
         for m in self._m if isinstance(self._m, MapsGrid) else [self._m]:
             self._zorder = zorder
             self._kwargs = kwargs
@@ -303,24 +337,56 @@ class _wmts_layer(_WebMap_layer):
 
             if self._layer == "all" or self._m.BM.bg_layer == self._layer:
                 # add the layer immediately if the layer is already active
-                self._do_add_layer(self._m, self._layer)
+                self._do_add_layer(self._m, self._layer, zorder=zorder, kwargs=kwargs)
             else:
                 # delay adding the layer until it is effectively activated
                 self._m.BM.on_layer(
-                    func=self._do_add_layer, layer=self._layer, persistent=False, m=m
+                    partial(self._do_add_layer, zorder=zorder, kwargs=kwargs),
+                    layer=self._layer,
+                    persistent=False,
+                    m=m,
                 )
 
-    def _do_add_layer(self, m, l):
+    # ------------------------
+    # The following is very much a copy of "cartopy.mpl.geoaxes.GeoAxes.add_raster"
+    # and "cartopy.mpl.geoaxes.GeoAxes.add_wmts", using a different implementation
+    # for SlippyImageArtist
+    @staticmethod
+    def _add_wmts(ax, wms, layers, wms_kwargs=None, **kwargs):
+        from cartopy.io.ogc_clients import WMSRasterSource
+
+        wms = WMSRasterSource(wms, layers, getmap_extra_kwargs=wms_kwargs)
+
+        # Allow a fail-fast error if the raster source cannot provide
+        # images in the current projection.
+        wms.validate_projection(ax.projection)
+        img = SlippyImageArtist_NEW(ax, wms, **kwargs)
+        with ax.hold_limits():
+            ax.add_image(img)
+
+        return img
+
+    def _do_add_layer(self, m, l, zorder, kwargs):
         # actually add the layer to the map.
         print(f"EOmaps: Adding wmts-layer: {self.name}")
 
-        art = m.figure.ax.add_wmts(
+        # use slightly adapted implementation of cartopy's ax.add_wmts
+        art = self._add_wmts(
+            m.ax,
             self._wms,
             self.name,
-            wmts_kwargs=self._kwargs,
+            wms_kwargs=kwargs,
             interpolation="spline36",
-            zorder=self._zorder,
+            zorder=zorder,
         )
+
+        # art = m.figure.ax.add_wmts(
+        #     self._wms,
+        #     self.name,
+        #     wmts_kwargs=kwargs,
+        #     interpolation="spline36",
+        #     zorder=zorder,
+        # )
 
         m.BM.add_bg_artist(art, l)
 
@@ -352,6 +418,10 @@ class _wms_layer(_WebMap_layer):
         """
         from . import MapsGrid  # do this here to avoid circular imports!
 
+        style = self._set_style(kwargs.get("styles", None))
+        if self._style is not None:
+            kwargs["styles"] = [self._style]
+
         for m in self._m if isinstance(self._m, MapsGrid) else [self._m]:
             self._kwargs = kwargs
             self._zorder = zorder
@@ -363,26 +433,64 @@ class _wms_layer(_WebMap_layer):
 
             if self._layer == "all" or m.BM.bg_layer == self._layer:
                 # add the layer immediately if the layer is already active
-                self._do_add_layer(m, self._layer)
+                self._do_add_layer(m, self._layer, zorder=zorder, kwargs=kwargs)
             else:
                 # self._do_add_layer(m, self._layer)
 
                 # delay adding the layer until it is effectively activated
 
+                # m.BM.on_layer(
+                #     func=self._do_add_layer, layer=self._layer, persistent=False, m=m
+                # )
+
                 m.BM.on_layer(
-                    func=self._do_add_layer, layer=self._layer, persistent=False, m=m
+                    func=partial(self._do_add_layer, zorder=zorder, kwargs=kwargs),
+                    layer=layer,
+                    persistent=False,
+                    m=m,
                 )
 
-    def _do_add_layer(self, m, l, usem=None):
+    # ------------------------
+    # The following is very much a copy of "cartopy.mpl.geoaxes.GeoAxes.add_raster"
+    # and "cartopy.mpl.geoaxes.GeoAxes.add_wms", using a different implementation
+    # for SlippyImageArtist
+
+    @staticmethod
+    def _add_wms(ax, wms, layers, wms_kwargs=None, **kwargs):
+        from cartopy.io.ogc_clients import WMSRasterSource
+
+        wms = WMSRasterSource(wms, layers, getmap_extra_kwargs=wms_kwargs)
+
+        # Allow a fail-fast error if the raster source cannot provide
+        # images in the current projection.
+        wms.validate_projection(ax.projection)
+        img = SlippyImageArtist_NEW(ax, wms, **kwargs)
+        with ax.hold_limits():
+            ax.add_image(img)
+
+        return img
+
+    def _do_add_layer(self, m, l, zorder, kwargs):
         # actually add the layer to the map.
         print(f"EOmaps: ... adding wms-layer {self.name}")
-        art = m.figure.ax.add_wms(
+
+        # use slightly adapted implementation of cartopy's ax.add_wms
+        art = self._add_wms(
+            m.ax,
             self._wms,
             self.name,
-            wms_kwargs=self._kwargs,
+            wms_kwargs=kwargs,
             interpolation="spline36",
-            zorder=self._zorder,
+            zorder=zorder,
         )
+
+        # art = m.figure.ax.add_wms(
+        #     self._wms,
+        #     self.name,
+        #     wms_kwargs=kwargs,
+        #     interpolation="spline36",
+        #     zorder=zorder,
+        # )
 
         m.BM.add_bg_artist(art, l)
 
@@ -755,7 +863,6 @@ class xyzRasterSource(RasterSource):
 
             z += 1
             ntiles = len(list(self._factory.find_images(domain, z)))
-
         return min(z, self._maxzoom)
 
     def _native_srs(self, projection):
@@ -991,17 +1098,86 @@ class _xyz_tile_service:
         m.BM.add_bg_artist(self._artist, l)
 
 
-from cartopy.mpl.slippy_image_artist import SlippyImageArtist
+# ------------------------------------------------------------------------------
+# The following is very much copied from cartopy.mpl.slippy_image_artist.py
+# https://github.com/SciTools/cartopy/blob/main/lib/cartopy/mpl/slippy_image_artist.py
 
-# subclass cartopy's SlippyImageArtist but handle draw-capture within EOmaps
-class SlippyImageArtist_NEW(SlippyImageArtist):
-    def __init__(self, ax, *args, **kwargs):
-        super().__init__(ax, *args, **kwargs)
+# The only changes are that user-interaction is handled internally by EOmaps
+# instead of using the self.user_is_interacting sentinel.
 
-    def on_press(self, event=None):
-        # don't capture user interaction since this is handled internally by EOmaps
-        # (e.g. draw-events are already only issued if necessary!)
-        # This is required to ensure correct fetching of backgrounds with a draggable
-        # slider (e.g. button is pressed but new background should be fetched!)
-        # self.user_is_interacting = True
-        return
+# To keep changes clear, original code is kept in-place but commented out
+# ------------------------------------------------------------------------------
+
+from matplotlib.image import AxesImage
+import matplotlib.artist
+
+
+class SlippyImageArtist_NEW(AxesImage):
+
+    """
+    A subclass of :class:`~matplotlib.image.AxesImage` which provides an
+    interface for getting a raster from the given object with interactive
+    slippy map type functionality.
+
+    Kwargs are passed to the AxesImage constructor.
+
+    """
+
+    def __init__(self, ax, raster_source, **kwargs):
+        self.raster_source = raster_source
+        # This artist fills the Axes, so should not influence layout.
+        kwargs.setdefault("in_layout", False)
+        super().__init__(ax, **kwargs)
+        self.cache = []
+
+        # ax.figure.canvas.mpl_connect('button_press_event', self.on_press)
+        # ax.figure.canvas.mpl_connect('button_release_event', self.on_release)
+
+        ax.callbacks.connect("xlim_changed", self.on_xlim)
+
+        # self.on_release()
+
+    # def on_press(self, event=None):
+    #     self.user_is_interacting = True
+
+    # def on_release(self, event=None):
+    #     self.user_is_interacting = False
+    #     self.stale = True
+
+    def on_xlim(self, *args, **kwargs):
+        self.stale = True
+
+    def get_window_extent(self, renderer=None):
+        return self.axes.get_window_extent(renderer=renderer)
+
+    @matplotlib.artist.allow_rasterization
+    def draw(self, renderer, *args, **kwargs):
+        if not self.get_visible():
+            return
+
+        ax = self.axes
+        window_extent = ax.get_window_extent()
+        [x1, y1], [x2, y2] = ax.viewLim.get_points()
+        # if not self.user_is_interacting:
+        #     located_images = self.raster_source.fetch_raster(
+        #         ax.projection, extent=[x1, x2, y1, y2],
+        #         target_resolution=(window_extent.width, window_extent.height))
+        #     self.cache = located_images
+
+        located_images = self.raster_source.fetch_raster(
+            ax.projection,
+            extent=[x1, x2, y1, y2],
+            target_resolution=(window_extent.width, window_extent.height),
+        )
+        self.cache = located_images
+
+        for img, extent in self.cache:
+            self.set_array(img)
+            with ax.hold_limits():
+                self.set_extent(extent)
+            super().draw(renderer, *args, **kwargs)
+
+    def can_composite(self):
+        # As per https://github.com/SciTools/cartopy/issues/689, disable
+        # compositing multiple raster sources.
+        return False

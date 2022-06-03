@@ -862,15 +862,13 @@ class keypress_callbacks:
     key is pressed.
     """
 
-    _cb_list = [
-        "switch_layer",
-    ]
+    _cb_list = ["switch_layer", "fetch_layers"]
 
     def __init__(self, m, temp_artists):
         self._temporary_artists = temp_artists
         self._m = m
 
-    def switch_layer(self, layer=1, key="1"):
+    def switch_layer(self, layer=1, key="x"):
         """
         Change the default layer of the map.
 
@@ -881,12 +879,55 @@ class keypress_callbacks:
         ----------
         layer : int, optional
             The layer to use. The default is 1.
+
+        Additional Parameters
+        ---------------------
         key : str, optional
-            The key to use. Modifiers are indicated with a +, e.g. "alt+x".
-            The default is "1".
+            The key to use for triggering the callback.
+            Modifiers are indicated with a "+", e.g. "alt+x".
+            The default is "x".
         """
+
         self._m.BM.bg_layer = layer
         self._m.BM.fetch_bg()
+
+    def fetch_layers(self, layers=None, verbose=True, key="x"):
+        """
+        Fetch (and cache) layers of a map.
+
+        This is particularly useful if you want to use sliders or buttons to quickly
+        switch between the layers (e.g. once the backgrounds are cached, switching
+        layers will be fast).
+
+        Note: After zooming or re-sizing the map, the cache is cleared and
+        you need to call this function again!
+
+
+        Note
+        ----
+        Callbacks are layer-sensitive, so you most probably want to attach this
+        callback to the "all"-layer so that it can be triggered independent of the
+        active layer. (e.g. `m.all.cb.keypress.attach.fetch_layer()`
+
+        Parameters
+        ----------
+        layers : list or None, optional
+            A list of layer-names that should be fetched.
+            If None, all layers (except the "all" layer) are fetched.
+            The default is None.
+        verbose : bool
+            Indicator if status-messages should be printed or not.
+            The default is True.
+
+        Additional Parameters
+        ---------------------
+        key : str, optional
+            The key to use for triggering the callback.
+            Modifiers are indicated with a "+", e.g. "alt+x".
+            The default is "x".
+        """
+
+        self._m.fetch_layers(layers=layers, verbose=verbose)
 
 
 class dynamic_callbacks:

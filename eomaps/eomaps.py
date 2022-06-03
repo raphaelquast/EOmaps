@@ -1478,7 +1478,12 @@ class Maps(object):
                 z_data = np.full((xorig.shape[0], yorig.shape[0]), np.nan)
 
         # get the index-values
-        ids = np.arange(z_data.size)
+        if isinstance(data, pd.Series):
+            # use actual index values if pd.Series was passed as "data"
+            ids = data.index.values
+        else:
+            # use numeric index values for all other types
+            ids = np.arange(z_data.size)
 
         return z_data, xorig, yorig, ids, parameter
 
@@ -1691,11 +1696,6 @@ class Maps(object):
 
             if log:
                 ax_cb_plot.set_yscale("log")
-
-        if histbins == "bins":
-            assert (
-                classified
-            ), "EOmaps: using histbins='bins' is only possible for classified data!"
 
         # TODO deepcopy is required to avoid issues with datashader?
         norm = copy.deepcopy(norm)
@@ -3265,7 +3265,44 @@ class Maps(object):
                 args = dict(array=props["z_data"], cmap=cbcmap, norm=norm, **kwargs)
 
             if self.shape.name in ["raster"]:
-                coll = self.shape.get_coll(props["xorig"], props["yorig"], "in", **args)
+                # if input-data is 1D, try to convert data to 2D (required for raster)
+                # TODO make an explicit data-conversion function for 2D-only shapes
+                if (
+                    _pd_OK
+                    and isinstance(self.data, pd.DataFrame)
+                    and isinstance(self.data_specs.x, str)
+                    and isinstance(self.data_specs.y, str)
+                    and len(props["z_data"].shape) == 1
+                ):
+
+                    df = (
+                        pd.DataFrame(
+                            dict(
+                                x=props["xorig"].ravel(),
+                                y=props["yorig"].ravel(),
+                                val=props["z_data"].ravel(),
+                            ),
+                            copy=False,
+                        ).set_index(["x", "y"])
+                    )["val"].unstack("y")
+
+                    xg, yg = np.meshgrid(df.index.values, df.columns.values)
+
+                    if args["array"] is not None:
+                        args["array"] = df.values.T
+
+                    coll = self.shape.get_coll(xg, yg, "in", **args)
+                elif len(props["xorig"].shape) == 2 and len(props["yorig"].shape) == 2:
+                    coll = self.shape.get_coll(
+                        props["xorig"], props["yorig"], "in", **args
+                    )
+                else:
+                    raise AssertionError(
+                        "EOmaps: using 'raster' is only possible if "
+                        + "you provide coordinates and data as 2D "
+                        + "arrays or as a 1D pandas.DataFrame (which "
+                        + "will be converted to 2D internally)"
+                    )
             else:
                 # convert input to 1D
                 coll = self.shape.get_coll(
@@ -3699,6 +3736,11 @@ class Maps(object):
         assert hasattr(
             self.classify_specs, "_bins"
         ), "EOmaps: you need to call `m.plot_map()` before adding a colorbar!"
+
+        if histbins == "bins":
+            assert (
+                self.classify_specs._classified
+            ), "EOmaps: using histbins='bins' is only possible for classified data!"
 
         if layer is None:
             layer = self.layer
@@ -4276,6 +4318,58 @@ class Maps(object):
         layers = sorted(layers, key=lambda x: str(x))
 
         return layers
+
+    def fetch_layers(self, layers=None, verbose=True):
+        """
+        Fetch (and cache) layers of a map.
+
+        This is particularly useful if you want to use sliders or buttons to quickly
+        switch between the layers (e.g. once the backgrounds are cached, switching
+        layers will be fast).
+
+        Note: After zooming or re-sizing the map, the cache is cleared and
+        you need to call this function again.
+
+        Parameters
+        ----------
+        layers : list or None, optional
+            A list of layer-names that should be fetched.
+            If None, all layers (except the "all" layer) are fetched.
+            The default is None.
+        verbose : bool
+            Indicator if status-messages should be printed or not.
+            The default is True.
+
+        See Also
+        --------
+        m.cb.keypress.attach.fetch_layers : use a keypress callback to fetch layers
+
+        """
+
+        active_layer = self.BM._bg_layer
+        all_layers = self._get_layers()
+
+        if layers is None:
+            layers = all_layers
+            if "all" in layers:
+                layers.remove("all")  # don't explicitly fetch the "all" layer
+        else:
+            if not set(layers).issubset(all_layers):
+                raise AssertionError(
+                    "EOmaps: Unable to fetch the following layers:\n - "
+                    + "\n - ".join(set(layers).difference(all_layers))
+                )
+
+        nlayers = len(layers)
+        assert nlayers > 0, "EOmaps: There are no layers to fetch."
+
+        for i, l in enumerate(layers):
+            if verbose:
+                print("EOmaps: fetching layer", f"{i + 1}/{nlayers}:", l)
+            self.show_layer(l)
+
+        self.show_layer(active_layer)
+        self.BM.update()
 
 
 class MapsGrid:

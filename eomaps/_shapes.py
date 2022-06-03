@@ -1278,6 +1278,8 @@ class shapes(object):
 
             if aggregator is None:
                 aggregator = ds.mean("val")
+            elif isinstance(aggregator, str):
+                aggregator = getattr(ds, aggregator)("val")
 
             if shade_hook is None:
                 shade_hook = partial(ds.tf.dynspread, max_px=5)
@@ -1384,7 +1386,6 @@ class shapes(object):
 
             for m in self._m if isinstance(self._m, MapsGrid) else [self._m]:
                 shape = self.__class__(m)
-
                 shape.aggregator = aggregator
                 shape.shade_hook = shade_hook
                 shape.agg_hook = agg_hook
@@ -1485,14 +1486,14 @@ class shapes(object):
 
             # try to find the radius based on the first row/col of the data
             # (a shortcut for very large datasets...)
-            rx = np.diff(x[0])[0]
-            ry = np.diff(y.T[0])[0]
+            rx = np.diff(x[0])[0] / 2
+            ry = np.diff(y.T[0])[0] / 2
             if not np.isfinite([rx, ry]).all():
                 # if no finite radius is found, search for the radius in the whole array
                 dx = np.diff(x, axis=1)
                 dy = np.diff(y, axis=0)
-                rx = abs(dx[np.isfinite(dx)][0])
-                ry = abs(dy[np.isfinite(dy)][0])
+                rx = abs(dx[np.isfinite(dx)][0]) / 2
+                ry = abs(dy[np.isfinite(dy)][0]) / 2
 
             self._radius = rx, ry
             p = x, y
@@ -1517,29 +1518,7 @@ class shapes(object):
             else:
                 clipx, clipy = lambda x: x, lambda y: y
 
-            x0 = clipx(p[0] - rx)
-            x1 = clipx(p[0] + rx)
-            y0 = clipx(p[1] - ry)
-            y1 = clipx(p[1] + ry)
-
-            px = np.column_stack(
-                (
-                    np.linspace(x0, x1, n).T.flat,
-                    np.repeat([x1], n, axis=0).T.flat,
-                    np.linspace(x1, x0, n).T.flat,
-                    np.repeat([x0], n).T.flat,
-                )
-            )
-
-            py = np.column_stack(
-                (
-                    np.repeat([y1], n, axis=0).T.flat,
-                    np.linspace(y1, x0, n).T.flat,
-                    np.repeat([y0], n, axis=0).T.flat,
-                    np.linspace(y0, x1, n).T.flat,
-                )
-            )
-
+            # distribute the values as rectangle vertices
             v = np.full((p[0].shape[0] + 1, p[0].shape[1] + 1, 2), None, dtype=float)
 
             v[:-1, :-1, 0] = p[0] - rx
@@ -1576,22 +1555,23 @@ class shapes(object):
                     # matplotlib.collections.QuadMesh.get_cursor_data
                     color_and_array[key] = val.ravel()
 
-            # temporary fix for https://github.com/matplotlib/matplotlib/issues/22908
-            QuadMesh.get_cursor_data = lambda *args, **kwargs: None
-
             coll = QuadMesh(
                 verts,
                 **color_and_array,
                 **kwargs,
             )
 
+            # temporary fix for https://github.com/matplotlib/matplotlib/issues/22908
+            # QuadMesh.get_cursor_data = lambda *args, **kwargs: None
+            coll.get_cursor_data = lambda *args, **kwargs: None
+            # temporary fix for https://github.com/matplotlib/matplotlib/issues/23164
+            # (no need for .contains in EOmaps since pixels are identified internally)
+            coll.contains = lambda *args, **kwargs: [False]
+
             return coll
 
         def get_coll(self, x, y, crs, **kwargs):
             x, y = np.asanyarray(x), np.asanyarray(y)
-            assert (
-                len(x.shape) == 2 and len(y.shape) == 2
-            ), "EOmaps: using 'raster' as plot-shape is only possible for 2D datasets!"
             # don't use antialiasing by default since it introduces unwanted
             # transparency for reprojected QuadMeshes!
             kwargs.setdefault("antialiased", False)

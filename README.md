@@ -37,13 +37,8 @@
 </ul>
 <br/>
 
----
 
-### ❗ update notice ❗
-> There are breaking API changes between `EOmaps v3.x` and `EOmaps v4.0`  
-> To quickly update existing scripts, see: [⚙ Port script from EOmaps v3.x to v4.x](https://eomaps.readthedocs.io/en/latest/FAQ.html#port-script-from-eomaps-v3-x-to-v4-x)
-
----
+> ❗ update notice: [⚙ Port script from EOmaps v3.x to v4.x](https://eomaps.readthedocs.io/en/latest/FAQ.html#port-script-from-eomaps-v3-x-to-v4-x)
 
 
 ## 🔨 Installation
@@ -80,11 +75,11 @@ Open an [issue](https://github.com/raphaelquast/EOmaps/issues) or start a [discu
 ---------------
 <table>
   <tr>
-    <td valign="center">
+    <td valign="center" style="width:50%">
         <img src="https://github.com/raphaelquast/EOmaps/blob/dev/docs/_static/fig6.gif?raw=true" alt="EOmaps example 6">
       </td>
     <td valign="center">
-        <img src="https://github.com/raphaelquast/EOmaps/blob/dev/docs/_static/fig2.gif?raw=true" alt="EOmaps example 2">
+        <img src="https://github.com/raphaelquast/EOmaps/blob/dev/docs/_static/minigifs/advanced_wms.gif?raw=true" alt="EOmaps example 2">
       </td>
   </tr>
   <tr>
@@ -92,7 +87,7 @@ Open an [issue](https://github.com/raphaelquast/EOmaps/issues) or start a [discu
         <img src="https://github.com/raphaelquast/EOmaps/blob/dev/docs/_static/fig7.gif?raw=true" alt="EOmaps example 7">
       </td>
     <td valign="center">
-        <img src="https://github.com/raphaelquast/EOmaps/blob/dev/docs/_static/fig8.gif?raw=true" alt="EOmaps example 8">
+        <img src="https://github.com/raphaelquast/EOmaps/blob/dev/docs/_static/fig2.gif?raw=true" alt="EOmaps example 8">
       </td>
   </tr>
   <tr>
@@ -108,7 +103,7 @@ Open an [issue](https://github.com/raphaelquast/EOmaps/issues) or start a [discu
         <img src="https://github.com/raphaelquast/EOmaps/blob/dev/docs/_static/inset_maps.png?raw=true" alt="EOmaps inset-maps">
     </td>
     <td valign="center">
-        <img src="https://github.com/raphaelquast/EOmaps/blob/dev/docs/_static/fig3.png?raw=true" alt="EOmaps example 3">
+        <img src="https://github.com/raphaelquast/EOmaps/blob/dev/docs/_static/fig8.gif?raw=true" alt="EOmaps example 3">
     </td>
   </tr>
 </table>

@@ -2031,7 +2031,7 @@ else:
         @lru_cache()
         def S2_cloudless(self):
             """
-            Global cloudless Sentinel-2 maps, crafted by EOX.
+            Global cloudless Sentinel-2 maps, crafted by EOX
             https://s2maps.eu/
 
             Endless sunshine, eternal summer - the Sentinel-2 cloudless layer combines
@@ -2063,6 +2063,45 @@ else:
             )
 
             WMS.__doc__ = type(self).S2_cloudless.__doc__
+            return WMS
+
+        @property
+        @lru_cache()
+        def CAMS(self):
+            """
+            Copernicus Atmosphere Monitoring Service (Global and European)
+            https://atmosphere.copernicus.eu/
+
+            A selection of global and European air quality products hosted by ECMWF
+            (http://eccharts.ecmwf.int)
+
+            For details on the available layers, see:
+            https://confluence.ecmwf.int/display/CKB/WMS+for+CAMS+Global+and+European+air+quality+products
+
+            Note
+            ----
+            **LICENSE-info (without any warranty for correctness!!)**
+
+            Access to Copernicus Products is given for any purpose in so far as it
+            is lawful, whereas use may include, but is not limited to: reproduction;
+            distribution; communication to the public; adaptation, modification and
+            combination with other data and information; or any combination of the
+            foregoing.
+
+            All users of Copernicus Products must provide clear and visible attribution
+            to the Copernicus programme. The Licensee will communicate to the public
+            the source of the Copernicus Products by crediting the Copernicus Climate
+            Change and Atmosphere Monitoring Services.
+
+            (check: https://apps.ecmwf.int/datasets/licences/copernicus/ for full details)
+            """
+            WMS = _WebServiec_collection(
+                m=self._m,
+                service_type="wms",
+                url="https://eccharts.ecmwf.int/wms/?token=public",
+            )
+
+            WMS.__doc__ = type(self).CAMS.__doc__
             return WMS
 
         @property
