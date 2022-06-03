@@ -37,11 +37,8 @@
 </ul>
 <br/>
 
----
 
 > ❗ update notice: [⚙ Port script from EOmaps v3.x to v4.x](https://eomaps.readthedocs.io/en/latest/FAQ.html#port-script-from-eomaps-v3-x-to-v4-x)
-
----
 
 
 ## 🔨 Installation
