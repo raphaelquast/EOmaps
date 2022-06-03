@@ -172,6 +172,8 @@ class _layer_selector:
                 pass
             except IndexError:
                 pass
+            finally:
+                s.eventson = True
 
         for s in self._selectors:
             try:
@@ -432,6 +434,7 @@ class _layer_selector:
 
         def update(val):
             l = layers[int(val)]
+
             # make sure we re-fetch the artist states on a layer change during
             # draggable-axes
             drag = self._m.parent._draggable_axes
@@ -444,8 +447,6 @@ class _layer_selector:
 
             if d:
                 drag._make_draggable()
-
-            self._m.BM.update()
 
         self._m.BM.add_artist(ax_slider)
 
