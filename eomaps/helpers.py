@@ -834,7 +834,6 @@ class BlitManager:
         # make sure we use a "full" update for webagg and ipympl backends
         # (e.g. force full redraw of canvas instead of a diff)
         self.canvas._force_full = True
-
         self._bg_layer = val
 
         # a general callable to be called on every layer change
@@ -864,7 +863,7 @@ class BlitManager:
                     ax_cb_plot.set_visible(True)
                     if ax_cb_extend:
                         ax_cb_extend.set_visible(True)
-        # self.canvas.flush_events()
+
         self._clear_temp_artists("on_layer_change")
         # self.fetch_bg(self._bg_layer)
 
@@ -945,7 +944,6 @@ class BlitManager:
     def fetch_bg(self, layer=None, bbox=None, overlay=None):
         # add this to the zorder of the overlay-artists prior to plotting
         # to ensure that they appear on top of other artists
-
         overlay_zorder_bias = 1000
 
         cv = self.canvas
