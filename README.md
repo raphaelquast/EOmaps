@@ -39,9 +39,7 @@
 
 ---
 
-### ❗ update notice ❗
-> There are breaking API changes between `EOmaps v3.x` and `EOmaps v4.0`  
-> To quickly update existing scripts, see: [⚙ Port script from EOmaps v3.x to v4.x](https://eomaps.readthedocs.io/en/latest/FAQ.html#port-script-from-eomaps-v3-x-to-v4-x)
+> ❗ update notice: To update existing scripts from EOmaps v3.x to v4.x see: [⚙ Port script from EOmaps v3.x to v4.x](https://eomaps.readthedocs.io/en/latest/FAQ.html#port-script-from-eomaps-v3-x-to-v4-x)
 
 ---
 
