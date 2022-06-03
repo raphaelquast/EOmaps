@@ -613,6 +613,7 @@ Callbacks that can be used with `m.cb.keypress`
     :template: only_names_in_toc.rst
 
     switch_layer
+    fetch_layers
 
 Pre-defined dynamic callbacks
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
