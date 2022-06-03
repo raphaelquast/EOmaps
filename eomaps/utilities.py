@@ -412,6 +412,8 @@ class _layer_selector:
         s = Slider(
             ax_slider, valmin=0, valmax=len(layers) - 1, valinit=0, valstep=1, **kwargs
         )
+        s.drawon = False
+
         s._labels = layers
 
         # add some background-patch style for the text
