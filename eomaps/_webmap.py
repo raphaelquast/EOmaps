@@ -41,8 +41,10 @@ class _WebMap_layer:
         self.wms_layer = self._wms.contents[name]
 
         styles = list(self.wms_layer.styles)
-
-        self._style = "default" if "default" in styles else styles[0]
+        if len(styles) == 0:
+            self._style = None
+        else:
+            self._style = "default" if "default" in styles else styles[0]
 
         # hardcode support for EPSG:3857 == GOOGLE_MERCATOR for now since cartopy
         # hardcoded only  EPSG:900913
@@ -289,7 +291,9 @@ class _WebMap_layer:
             ), f"EOmaps: WebMap style {style} is not available, use one of {styles}"
             self._style = style[0]
         else:
-            style = [self._style]
+            style = self._style
+
+        return style
 
 
 class _wmts_layer(_WebMap_layer):
@@ -319,7 +323,9 @@ class _wmts_layer(_WebMap_layer):
         """
         from . import MapsGrid  # do this here to avoid circular imports!
 
-        self._set_style(kwargs.get("styles", None))
+        style = self._set_style(kwargs.get("styles", None))
+        if self._style is not None:
+            kwargs["styles"] = [self._style]
 
         for m in self._m if isinstance(self._m, MapsGrid) else [self._m]:
             self._zorder = zorder
@@ -412,7 +418,9 @@ class _wms_layer(_WebMap_layer):
         """
         from . import MapsGrid  # do this here to avoid circular imports!
 
-        self._set_style(kwargs.get("styles", None))
+        style = self._set_style(kwargs.get("styles", None))
+        if self._style is not None:
+            kwargs["styles"] = [self._style]
 
         for m in self._m if isinstance(self._m, MapsGrid) else [self._m]:
             self._kwargs = kwargs
