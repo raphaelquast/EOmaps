@@ -40,6 +40,10 @@ class _WebMap_layer:
         self._wms = wms
         self.wms_layer = self._wms.contents[name]
 
+        styles = list(self.wms_layer.styles)
+
+        self._style = "default" if "default" in styles else styles[0]
+
         # hardcode support for EPSG:3857 == GOOGLE_MERCATOR for now since cartopy
         # hardcoded only  EPSG:900913
         # (see from cartopy.io.ogc_clients import _CRS_TO_OGC_SRS)
@@ -66,16 +70,22 @@ class _WebMap_layer:
             txt += f"{key} : {s}\n"
 
         try:
-            _ = self.wms_layer.styles["default"]["legend"]
-            legQ = True
+
+            if any(("legend" in val for key, val in self.wms_layer.styles.items())):
+                legQ = True
+            else:
+                legQ = False
         except Exception:
             legQ = False
 
         print(f"\n LEGEND available: {legQ}\n\n" + txt)
 
-    def fetch_legend(self, style="default"):
+    def fetch_legend(self, style=None):
+        if style is None:
+            style = self._style
         try:
-            url = self.wms_layer.styles["default"]["legend"]
+
+            url = self.wms_layer.styles[style]["legend"]
             legend = requests.get(url)
 
             if url.endswith(".svg"):
@@ -95,7 +105,7 @@ class _WebMap_layer:
             img = None
         return img
 
-    def add_legend(self, style="default"):
+    def add_legend(self, style=None):
         """
         Add a legend to the plot (if available)
 
@@ -115,6 +125,9 @@ class _WebMap_layer:
 
         """
         from matplotlib.transforms import Bbox
+
+        if style is None:
+            style = self._style
 
         self._legend_picked = False
 
@@ -265,6 +278,19 @@ class _WebMap_layer:
         self._m.figure.ax.set_xlim(x0, x1)
         self._m.figure.ax.set_ylim(y0, y1)
 
+    def _set_style(self, style=None):
+        # style is a list with 1 entry!
+
+        styles = list(self.wms_layer.styles)
+
+        if style is not None:
+            assert (
+                style[0] in styles
+            ), f"EOmaps: WebMap style {style} is not available, use one of {styles}"
+            self._style = style[0]
+        else:
+            style = [self._style]
+
 
 class _wmts_layer(_WebMap_layer):
     def __init__(self, *args, **kwargs):
@@ -292,6 +318,8 @@ class _wmts_layer(_WebMap_layer):
             (e.g. transparent=True, time='2020-02-05', etc.)
         """
         from . import MapsGrid  # do this here to avoid circular imports!
+
+        self._set_style(kwargs.get("styles", None))
 
         for m in self._m if isinstance(self._m, MapsGrid) else [self._m]:
             self._zorder = zorder
@@ -383,6 +411,8 @@ class _wms_layer(_WebMap_layer):
             (e.g. transparent=True, time='2020-02-05', etc.)
         """
         from . import MapsGrid  # do this here to avoid circular imports!
+
+        self._set_style(kwargs.get("styles", None))
 
         for m in self._m if isinstance(self._m, MapsGrid) else [self._m]:
             self._kwargs = kwargs
