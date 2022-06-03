@@ -1,4 +1,4 @@
-from functools import lru_cache
+from functools import lru_cache, partial
 from warnings import warn, filterwarnings, catch_warnings
 from types import SimpleNamespace
 from collections import defaultdict
@@ -404,8 +404,6 @@ class _wms_layer(_WebMap_layer):
                 # m.BM.on_layer(
                 #     func=self._do_add_layer, layer=self._layer, persistent=False, m=m
                 # )
-
-                from functools import partial
 
                 m.BM.on_layer(
                     func=partial(self._do_add_layer, zorder=zorder, kwargs=kwargs),
