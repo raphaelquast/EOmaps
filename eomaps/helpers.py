@@ -864,6 +864,16 @@ class BlitManager:
                     if ax_cb_extend:
                         ax_cb_extend.set_visible(True)
 
+        # hide all wms_legends that are not on the visible layer
+        if hasattr(self._m.parent, "_wms_legend"):
+            for layer, legends in self._m.parent._wms_legend.items():
+                if self._bg_layer == layer:
+                    for i in legends:
+                        i.set_visible(True)
+                else:
+                    for i in legends:
+                        i.set_visible(False)
+
         self._clear_temp_artists("on_layer_change")
         # self.fetch_bg(self._bg_layer)
 
