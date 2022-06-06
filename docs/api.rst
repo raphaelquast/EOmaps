@@ -1591,7 +1591,7 @@ Read relevant data from a file
 .. code-block:: python
 
     m = Maps()
-    data = m.read_data.NetCDF(
+    data = m.read_file.NetCDF(
         "the filepath",
         parameter="adsf",
         coords=("longitude", "latitude"),
