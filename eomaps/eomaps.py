@@ -2498,7 +2498,8 @@ class Maps(object):
         marker = self.cb.click._cb.mark(
             ID=ID, pos=xy, radius=radius, ind=None, shape=shape, buffer=buffer, **kwargs
         )
-        self.BM.update(clear=False)
+
+        self.BM._draw_animated(artists=[marker])
 
         return marker
 
