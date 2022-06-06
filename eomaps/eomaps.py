@@ -311,6 +311,9 @@ class Maps(object):
         # Maps-objects can be garbage-collected
         self._cleanup_functions = set()
 
+        if not hasattr(self.parent, "_wms_legend"):
+            self.parent._wms_legend = dict()
+
     def __enter__(self):
         return self
 
