@@ -2430,6 +2430,7 @@ class Maps(object):
         radius=None,
         shape="ellipses",
         buffer=1,
+        layer=None,
         **kwargs,
     ):
         """
@@ -2467,6 +2468,10 @@ class Maps(object):
             The default is "circle".
         buffer : float, optional
             A factor to scale the size of the shape. The default is 1.
+        layer : str, int or None
+            The name of the layer at which the marker should be drawn.
+            If None, the layer associated with the used Maps-object (e.g. m.layer)
+            is used. The default is None.
         kwargs :
             kwargs passed to the matplotlib patch.
             (e.g. `facecolor`, `edgecolor`, `linewidth`, `alpha` etc.)
@@ -2499,7 +2504,14 @@ class Maps(object):
 
         # add marker
         marker = self.cb.click._cb.mark(
-            ID=ID, pos=xy, radius=radius, ind=None, shape=shape, buffer=buffer, **kwargs
+            ID=ID,
+            pos=xy,
+            radius=radius,
+            ind=None,
+            shape=shape,
+            buffer=buffer,
+            layer=layer,
+            **kwargs,
         )
 
         self.BM._draw_animated(artists=[marker])
