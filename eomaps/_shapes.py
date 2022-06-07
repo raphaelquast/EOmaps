@@ -6,13 +6,18 @@ from pyproj import CRS, Transformer
 from functools import partial, wraps, lru_cache
 import warnings
 
+ds = None
 
-try:
-    import datashader as ds
 
-    _ds_OK = True
-except ImportError:
-    _ds_OK = False
+def _register_datashader():
+    global ds
+
+    try:
+        import datashader as ds
+    except ImportError:
+        return False
+
+    return True
 
 
 class shapes(object):
@@ -1271,7 +1276,7 @@ class shapes(object):
                 The default is None.
             """
 
-            assert _ds_OK, (
+            assert _register_datashader(), (
                 "EOmaps: Missing dependency: 'datashader' \n ... please install"
                 + " (conda install -c conda-forge datashader) to use 'shade_points'"
             )
@@ -1363,7 +1368,7 @@ class shapes(object):
                 The default is None.
             """
 
-            assert _ds_OK, (
+            assert _register_datashader(), (
                 "EOmaps: Missing dependency: 'datashader' \n ... please install"
                 + " (conda install -c conda-forge datashader) to use 'shade_raster'"
             )

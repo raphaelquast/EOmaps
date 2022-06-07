@@ -13,6 +13,7 @@ import gc
 
 import numpy as np
 
+
 try:
     import pandas as pd
 
@@ -27,20 +28,35 @@ try:
 except ImportError:
     _gpd_OK = False
 
-try:
-    import xarray as xar
 
-    _xar_OK = True
-except ImportError:
-    _xar_OK = False
+# ------- perform lazy delayed imports
+# (for optional dependencies that take long time to import)
+xar = None
 
-try:
-    from datashader import glyphs
-    from datashader.mpl_ext import dsshow, ScalarDSArtist
 
-    _ds_OK = True
-except ImportError:
-    _ds_OK = False
+def _register_xarray():
+    global xar
+    try:
+        import xarray as xar
+    except ImportError:
+        return False
+
+    return True
+
+
+ds = None
+
+
+def _register_datashader():
+    global ds
+
+    try:
+        import datashader as ds
+    except ImportError:
+        return False
+
+    return True
+
 
 from scipy.spatial import cKDTree
 from pyproj import CRS, Transformer
@@ -413,7 +429,7 @@ class Maps(object):
             if self.data is not None:
                 size = np.size(self.data)
                 if size > 500_000:
-                    if _ds_OK:
+                    if _register_datashader():
                         if len(self.data.shape) == 2:
                             # shade_raster requires 2D data!
                             self.set_shape.shade_raster()
@@ -2791,7 +2807,7 @@ class Maps(object):
             kwargs passed to `datashader.mpl_ext.dsshow`
 
         """
-        assert _ds_OK, (
+        assert _register_datashader(), (
             "EOmaps: Missing dependency: 'datashader' \n ... please install"
             + " (conda install -c conda-forge datashader) to use the plot-shapes "
             + "'shade_points' and 'shade_raster'"
@@ -2886,15 +2902,17 @@ class Maps(object):
 
         # the shape is always set after _prepare data!
         if self.shape.name == "shade_raster":
-            assert _xar_OK, "EOmaps: missing dependency `xarray` for 'shade_raster'"
+            assert (
+                _register_xarray()
+            ), "EOmaps: missing dependency `xarray` for 'shade_raster'"
             if len(zdata.shape) == 2:
                 if (zdata.shape == props["x0"].shape) and (
                     zdata.shape == props["y0"].shape
                 ):
                     # use a curvilinear QuadMesh
-                    self.shape.glyph = glyphs.QuadMeshCurvilinear("x", "y", "val")
-
+                    self.shape.glyph = ds.glyphs.QuadMeshCurvilinear("x", "y", "val")
                     # 2D coordinates and 2D raster
+
                     df = xar.Dataset(
                         data_vars=dict(val=(["xx", "yy"], zdata)),
                         # dims=["x", "y"],
@@ -2902,6 +2920,7 @@ class Maps(object):
                             x=(["xx", "yy"], props["x0"]), y=(["xx", "yy"], props["y0"])
                         ),
                     )
+
                 elif (
                     ((zdata.shape[1],) == props["x0"].shape)
                     and ((zdata.shape[0],) == props["y0"].shape)
@@ -2925,7 +2944,8 @@ class Maps(object):
                     (zdata.shape[1],) == props["y0"].shape
                 ):
                     # use a rectangular QuadMesh
-                    self.shape.glyph = glyphs.QuadMeshRectilinear("x", "y", "val")
+                    self.shape.glyph = ds.glyphs.QuadMeshRectilinear("x", "y", "val")
+
                     # 1D coordinates and 2D data
                     df = xar.DataArray(
                         data=zdata,
@@ -2964,7 +2984,7 @@ class Maps(object):
                     xg, yg = transformer.transform(xg, yg)
 
                 # use a curvilinear QuadMesh
-                self.shape.glyph = glyphs.QuadMeshCurvilinear("x", "y", "val")
+                self.shape.glyph = ds.glyphs.QuadMeshCurvilinear("x", "y", "val")
 
                 df = xar.Dataset(
                     data_vars=dict(val=(["xx", "yy"], df.val.values.T)),
@@ -2993,7 +3013,7 @@ class Maps(object):
             x_range = (x0, x1)
             y_range = (y0, y1)
 
-        coll = dsshow(
+        coll = ds.mpl_ext.dsshow(
             df,
             glyph=self.shape.glyph,
             aggregator=self.shape.aggregator,
@@ -3914,7 +3934,7 @@ class Maps(object):
         vmin = coll.norm.vmin
         vmax = coll.norm.vmax
 
-        if _ds_OK and isinstance(coll, ScalarDSArtist):
+        if _register_datashader() and isinstance(coll, ds.mpl_ext.ScalarDSArtist):
             aggname = self.shape.aggregator.__class__.__name__
             if aggname in ["first", "last", "max", "min", "mean", "mode"]:
                 pass
