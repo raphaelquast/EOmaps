@@ -1499,7 +1499,7 @@ class Maps(object):
                     raise AssertionError(
                         f"{iname} values must be a list, numpy-array or pandas.Series"
                     )
-
+                else:
                     if iname == "data":
                         pandas_series_data = True
 
