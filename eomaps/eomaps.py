@@ -44,14 +44,16 @@ def _register_xarray():
     return True
 
 
-ds = None
+ds, mpl_ext = None, None
 
 
 def _register_datashader():
     global ds
+    global mpl_ext
 
     try:
         import datashader as ds
+        from datashader import mpl_ext
     except ImportError:
         return False
 
@@ -3013,7 +3015,7 @@ class Maps(object):
             x_range = (x0, x1)
             y_range = (y0, y1)
 
-        coll = ds.mpl_ext.dsshow(
+        coll = mpl_ext.dsshow(
             df,
             glyph=self.shape.glyph,
             aggregator=self.shape.aggregator,
@@ -3934,7 +3936,7 @@ class Maps(object):
         vmin = coll.norm.vmin
         vmax = coll.norm.vmax
 
-        if _register_datashader() and isinstance(coll, ds.mpl_ext.ScalarDSArtist):
+        if _register_datashader() and isinstance(coll, mpl_ext.ScalarDSArtist):
             aggname = self.shape.aggregator.__class__.__name__
             if aggname in ["first", "last", "max", "min", "mean", "mode"]:
                 pass
