@@ -316,6 +316,7 @@ class _click_callbacks(object):
         permanent=True,
         n=20,
         zorder=10,
+        layer=None,
         **kwargs,
     ):
         """
@@ -369,6 +370,12 @@ class _click_callbacks(object):
             For details, have a look at:
 
             - https://matplotlib.org/stable/gallery/misc/zorder_demo.html
+
+        layer : str or None, optional
+            ONLY relevant if "permanent=True" !
+            The layer to put the marker on.
+            If None, the layer associated with the used Maps-object (e.g. `m.layer`)
+            The default is None
         kwargs :
             kwargs passed to the matplotlib patch.
             (e.g. `facecolor`, `edgecolor`, `linewidth`, `alpha` etc.)
@@ -480,8 +487,14 @@ class _click_callbacks(object):
 
         if permanent is True:
             self.permanent_markers.append(marker)
-            self.m.BM.add_bg_artist(marker, self.m.layer)
+            if layer is None:
+                layer = self.m.layer
+            self.m.BM.add_bg_artist(marker, layer)
         elif permanent is False:
+            if layer is not None:
+                warnings.warn(
+                    "EOmaps: `m.add_marker(layer=...)` is ignored if `permanent=False`"
+                )
             self._temporary_artists.append(marker)
             self.m.BM.add_artist(marker)
 

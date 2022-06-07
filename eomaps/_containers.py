@@ -13,8 +13,6 @@ from matplotlib.pyplot import get_cmap
 from matplotlib.gridspec import SubplotSpec
 from matplotlib.colors import rgb2hex
 
-import mapclassify
-
 import cartopy.feature as cfeature
 from cartopy.io import shapereader
 from cartopy import crs as ccrs
@@ -28,19 +26,43 @@ if _import_OK:
         _xyz_tile_service,
     )
 
-try:
-    import pandas as pd
+pd = None
 
-    _pd_OK = True
-except ImportError:
-    _pd_OK = False
 
-try:
-    import geopandas as gpd
+def _register_pandas():
+    global pd
+    try:
+        import pandas as pd
+    except ImportError:
+        return False
 
-    _gpd_OK = True
-except ImportError:
-    _gpd_OK = False
+    return True
+
+
+gpd = None
+
+
+def _register_geopandas():
+    global gpd
+    try:
+        import geopandas as gpd
+    except ImportError:
+        return False
+
+    return True
+
+
+mapclassify = None
+
+
+def _register_mapclassify():
+    global mapclassify
+    try:
+        import mapclassify
+    except ImportError:
+        return False
+
+    return True
 
 
 def combdoc(*args):
@@ -428,7 +450,12 @@ class data_specs(object):
 
     @parameter.getter
     def parameter(self):
-        if _pd_OK and isinstance(self.data, pd.DataFrame) and self._parameter is None:
+
+        if (
+            self._parameter is None
+            and _register_pandas()
+            and isinstance(self.data, pd.DataFrame)
+        ):
             if self.data is not None and self.x is not None and self.y is not None:
 
                 try:
@@ -454,9 +481,9 @@ class data_specs(object):
         if encoding not in [None, False]:
             assert isinstance(encoding, dict), "EOmaps: encoding must be a dictionary!"
 
-            assert all(
-                i in ["scale_factor", "add_offset"] for i in encoding
-            ), "EOmaps: encoding accepts only 'scale_factor' and 'add_offset' as keys!"
+            # assert all(
+            #     i in ["scale_factor", "add_offset"] for i in encoding
+            # ), "EOmaps: encoding accepts only 'scale_factor' and 'add_offset' as keys!"
 
         self._encoding = encoding
 
@@ -551,6 +578,11 @@ class classify_specs(object):
 
     def _get_default_args(self):
         if hasattr(self, "_scheme") and self._scheme is not None:
+            assert _register_mapclassify(), (
+                "EOmaps: Missing dependency: 'mapclassify' \n ... please install"
+                + " (conda install -c conda-forge mapclassify) to use data-classifications."
+            )
+
             assert self._scheme in mapclassify.CLASSIFIERS, (
                 f"the classification-scheme '{self._scheme}' is not valid... "
                 + " use one of:"
@@ -592,6 +624,11 @@ class classify_specs(object):
         """
         accessor for possible classification schemes
         """
+        assert _register_mapclassify(), (
+            "EOmaps: Missing dependency: 'mapclassify' \n ... please install"
+            + " (conda install -c conda-forge mapclassify) to use data-classifications."
+        )
+
         return SimpleNamespace(
             **dict(zip(mapclassify.CLASSIFIERS, mapclassify.CLASSIFIERS))
         )
@@ -826,7 +863,7 @@ class NaturalEarth_features(object):
     class _feature:
         def __init__(self, m, category, name, scale):
             self._m = m
-            if not _gpd_OK:
+            if not _register_geopandas():
                 # use cartopy to add the features
                 self.feature = cfeature.NaturalEarthFeature(
                     category=category, name=name, scale=scale
@@ -836,7 +873,7 @@ class NaturalEarth_features(object):
                 # geopandas to add the feature (provides more flexibility!)
                 self.feature = dict(resolution=scale, category=category, name=name)
 
-            if not _gpd_OK:
+            if not _register_geopandas():
                 self.__doc__ = dedent(
                     f"""
                     NaturalEarth feature:  {scale} | {category} | {name}
@@ -984,7 +1021,7 @@ class NaturalEarth_features(object):
         def __call__(self, layer=None, **kwargs):
             from . import MapsGrid  # do this here to avoid circular imports!
 
-            if not _gpd_OK:
+            if not _register_geopandas():
                 for m in self._m if isinstance(self._m, MapsGrid) else [self._m]:
                     if layer is None:
                         uselayer = m.layer
@@ -1006,20 +1043,23 @@ class NaturalEarth_features(object):
 
                     m.add_gdf(s, layer=uselayer, **kwargs)
 
-        if _gpd_OK:
+        def get_gdf(self):
+            """
+            Get a geopandas.GeoDataFrame for the selected NaturalEarth feature
 
-            def get_gdf(self):
-                """
-                Get a geopandas.GeoDataFrame for the selected NaturalEarth feature
+            Returns
+            -------
+            gdf : geopandas.GeoDataFrame
+                A GeoDataFrame with all geometries and properties of the feature
+            """
 
-                Returns
-                -------
-                gdf : geopandas.GeoDataFrame
-                    A GeoDataFrame with all geometries and properties of the feature
-                """
-                gdf = gpd.read_file(shapereader.natural_earth(**self.feature))
-                gdf.set_crs(ccrs.PlateCarree(), inplace=True, allow_override=True)
-                return gdf
+            assert (
+                _register_geopandas()
+            ), "EOmaps: Missing dependency `geopandas` for `feature.get_gdf()`"
+
+            gdf = gpd.read_file(shapereader.natural_earth(**self.feature))
+            gdf.set_crs(ccrs.PlateCarree(), inplace=True, allow_override=True)
+            return gdf
 
 
 # avoid defining containers if import is not OK

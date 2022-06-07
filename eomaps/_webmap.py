@@ -191,7 +191,6 @@ class _WebMap_layer:
                     return
 
                 pos = legax.get_position()
-
                 steps = event.step
 
                 legax.set_position(
@@ -210,7 +209,15 @@ class _WebMap_layer:
             self._m.figure.f.canvas.mpl_connect("button_release_event", cb_release)
             self._m.figure.f.canvas.mpl_connect("motion_notify_event", cb_move)
 
+            if not hasattr(self, "_layer"):
+                # use the currently active layer if the webmap service has not yet
+                # been added to the map
+                print("EOmaps: The WebMap for the legend is not yet added to the map!")
+                self._layer = self._m.BM._bg_layer
+            self._m.parent._wms_legend.setdefault(self._layer, list()).append(legax)
+
             self._m.BM.update()
+
             return legax
 
     def set_extent_to_bbox(self, shrink=False):
@@ -363,7 +370,6 @@ class _wmts_layer(_WebMap_layer):
         img = SlippyImageArtist_NEW(ax, wms, **kwargs)
         with ax.hold_limits():
             ax.add_image(img)
-
         return img
 
     def _do_add_layer(self, m, l, zorder, kwargs):
@@ -387,7 +393,6 @@ class _wmts_layer(_WebMap_layer):
         #     interpolation="spline36",
         #     zorder=zorder,
         # )
-
         m.BM.add_bg_artist(art, l)
 
 

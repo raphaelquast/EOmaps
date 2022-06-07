@@ -3,26 +3,41 @@ import numpy as np
 from pyproj import CRS
 from pathlib import Path
 
-try:
-    import pandas as pd
+pd = None
 
-    _pd_OK = True
-except ImportError:
-    _pd_OK = False
 
-try:
-    import xarray as xar
+def _register_pandas():
+    global pd
+    try:
+        import pandas as pd
+    except ImportError:
+        return False
 
-    _xar_OK = True
-except ImportError:
-    _xar_OK = False
+    return True
 
-try:
-    import rioxarray
 
-    _rioxar_OK = True
-except ImportError:
-    _rioxar_OK = False
+xar = None
+
+
+def _register_xarray():
+    global xar
+    try:
+        import xarray as xar
+    except ImportError:
+        return False
+    return True
+
+
+rioxarray = None
+
+
+def _register_rioxarray():
+    global rioxarray
+    try:
+        import rioxarray
+    except ImportError:
+        return False
+    return True
 
 
 class read_file:
@@ -123,7 +138,7 @@ class read_file:
 
         """
 
-        assert _xar_OK and _rioxar_OK, (
+        assert _register_xarray() and _register_rioxarray(), (
             "EOmaps: missing dependency for read_GeoTIFF: 'xarray' 'rioxarray'\n"
             + "To install, use 'conda install -c conda-forge xarray'"
             + "To install, use 'conda install -c conda-forge rioxarray'"
@@ -319,7 +334,7 @@ class read_file:
 
         """
 
-        assert _xar_OK, (
+        assert _register_xarray(), (
             "EOmaps: missing dependency for read_GeoTIFF: 'xarray'\n"
             + "To install, use 'conda install -c conda-forge xarray'"
         )
@@ -492,7 +507,7 @@ class read_file:
             A dict that contains the data required for plotting.
 
         """
-        assert _pd_OK, (
+        assert _register_pandas(), (
             "EOmaps: missing dependency for read_csv: 'pandas'\n"
             + "To install, use 'conda install -c conda-forge pandas'"
         )
@@ -802,7 +817,7 @@ class from_file:
 
         """
 
-        assert _xar_OK, (
+        assert _register_xarray(), (
             "EOmaps: missing dependency for read_NetCDF: 'xarray'\n"
             + "To install, use 'conda install -c conda-forge xarray'"
         )
@@ -963,7 +978,7 @@ class from_file:
 
         """
 
-        assert _xar_OK and _rioxar_OK, (
+        assert _register_xarray() and _register_rioxarray(), (
             "EOmaps: missing dependency for read_GeoTIFF: 'xarray' 'rioxarray'\n"
             + "To install, use 'conda install -c conda-forge xarray'"
             + "To install, use 'conda install -c conda-forge rioxarray'"

@@ -13,34 +13,76 @@ import gc
 
 import numpy as np
 
-try:
-    import pandas as pd
 
-    _pd_OK = True
-except ImportError:
-    _pd_OK = False
+pd = None
 
-try:
-    import geopandas as gpd
 
-    _gpd_OK = True
-except ImportError:
-    _gpd_OK = False
+def _register_pandas():
+    global pd
+    try:
+        import pandas as pd
+    except ImportError:
+        return False
 
-try:
-    import xarray as xar
+    return True
 
-    _xar_OK = True
-except ImportError:
-    _xar_OK = False
 
-try:
-    from datashader import glyphs
-    from datashader.mpl_ext import dsshow, ScalarDSArtist
+gpd = None
 
-    _ds_OK = True
-except ImportError:
-    _ds_OK = False
+
+def _register_geopandas():
+    global gpd
+    try:
+        import geopandas as gpd
+    except ImportError:
+        return False
+
+    return True
+
+
+# ------- perform lazy delayed imports
+# (for optional dependencies that take long time to import)
+xar = None
+
+
+def _register_xarray():
+    global xar
+    try:
+        import xarray as xar
+    except ImportError:
+        return False
+
+    return True
+
+
+ds, mpl_ext = None, None
+
+
+def _register_datashader():
+    global ds
+    global mpl_ext
+
+    try:
+        import datashader as ds
+        from datashader import mpl_ext
+    except ImportError:
+        return False
+
+    return True
+
+
+mapclassify = None
+
+
+def _register_mapclassify():
+    global mapclassify
+    try:
+        import mapclassify
+    except ImportError:
+        return False
+
+    return True
+
 
 from scipy.spatial import cKDTree
 from pyproj import CRS, Transformer
@@ -84,18 +126,13 @@ from .reader import read_file, from_file, new_layer_from_file
 
 from .utilities import utilities
 
-try:
-    import mapclassify
-except ImportError:
-    print("No module named 'mapclassify'... classification will not work!")
-
 
 if plt.isinteractive():
     if plt.get_backend() == "module://ipympl.backend_nbagg":
         warnings.warn(
             "EOmaps disables matplotlib's interactive mode (e.g. 'plt.ioff()') "
             + "when using the 'ipympl' backend to avoid recursions during callbacks!"
-            + "call `plt.show() to show the map!"
+            + "call `plt.show()` or `m.show()` to show the map!"
         )
         plt.ioff()
     else:
@@ -311,6 +348,9 @@ class Maps(object):
         # Maps-objects can be garbage-collected
         self._cleanup_functions = set()
 
+        if not hasattr(self.parent, "_wms_legend"):
+            self.parent._wms_legend = dict()
+
     def __enter__(self):
         return self
 
@@ -376,16 +416,6 @@ class Maps(object):
         if self in self.parent._children:
             self.parent._children.remove(self)
 
-    def _check_gpd(self):
-        # raise an error if geopandas is not found
-        # (execute this in any function that requires geopandas!)
-        if not _gpd_OK:
-            raise ImportError(
-                "EOmaps: You need to install geopandas first!\n"
-                + "... with conda, simply use:  "
-                + "'conda install -c conda-forge geopandas'"
-            )
-
     from_file = from_file
     read_file = read_file
 
@@ -410,7 +440,7 @@ class Maps(object):
             if self.data is not None:
                 size = np.size(self.data)
                 if size > 500_000:
-                    if _ds_OK:
+                    if _register_datashader():
                         if len(self.data.shape) == 2:
                             # shade_raster requires 2D data!
                             self.set_shape.shade_raster()
@@ -449,10 +479,16 @@ class Maps(object):
     def show(self):
         """
         Make the layer of this `Maps`-object visible.
-        (just a shortcut for `m.show_layer(m.layer)`)
+        (a shortcut for `m.show_layer(m.layer)`)
+
+        If matploltib is used in non-interactive mode, (e.g. `plt.ioff()`)
+        `plt.show()` is called as well!
         """
 
         self.show_layer(self.layer)
+
+        if not plt.isinteractive():
+            plt.show()
 
     @property
     def ax(self):
@@ -1339,6 +1375,12 @@ class Maps(object):
             kwargs passed to the call to the respective mapclassify classifier
             (dependent on the selected scheme... see above)
         """
+
+        assert _register_mapclassify(), (
+            "EOmaps: Missing dependency: 'mapclassify' \n ... please install"
+            + " (conda install -c conda-forge mapclassify) to use data-classifications."
+        )
+
         self.classify_specs._set_scheme_and_args(scheme, **kwargs)
 
     def _set_cpos(self, x, y, radiusx, radiusy, cpos):
@@ -1414,59 +1456,66 @@ class Maps(object):
             y = self.data_specs.y
         if parameter is None:
             parameter = self.data_specs.parameter
-        if data is not None and _pd_OK and isinstance(data, pd.DataFrame):
-            if parameter is not None:
-                # get the data-values
-                z_data = data[parameter].values
-            else:
-                z_data = np.repeat(np.nan, len(data))
 
-            # get the index-values
-            ids = data.index.values
+        # check other types before pandas to avoid unnecessary import
+        if data is not None and not isinstance(data, (list, tuple, np.ndarray)):
+            if _register_pandas() and isinstance(data, pd.DataFrame):
 
-            if isinstance(x, str) and isinstance(y, str):
-                # get the data-coordinates
-                xorig = data[x].values
-                yorig = data[y].values
-            else:
-                assert isinstance(x, (list, np.ndarray, pd.Series)), (
-                    "'x' must be either a column-name, or explicit values "
-                    " specified as a list, a numpy-array or a pandas"
-                    + f" Series object if you provide the data as '{type(data)}'"
-                )
-                assert isinstance(y, (list, np.ndarray, pd.Series)), (
-                    "'y' must be either a column-name, or explicit values "
-                    " specified as a list, a numpy-array or a pandas"
-                    + f" Series object if you provide the data as '{type(data)}'"
-                )
+                if parameter is not None:
+                    # get the data-values
+                    z_data = data[parameter].values
+                else:
+                    z_data = np.repeat(np.nan, len(data))
 
-                xorig = np.asanyarray(x)
-                yorig = np.asanyarray(y)
+                # get the index-values
+                ids = data.index.values
 
-            return z_data, xorig, yorig, ids, parameter
+                if isinstance(x, str) and isinstance(y, str):
+                    # get the data-coordinates
+                    xorig = data[x].values
+                    yorig = data[y].values
+                else:
+                    assert isinstance(x, (list, np.ndarray, pd.Series)), (
+                        "'x' must be either a column-name, or explicit values "
+                        " specified as a list, a numpy-array or a pandas"
+                        + f" Series object if you provide the data as '{type(data)}'"
+                    )
+                    assert isinstance(y, (list, np.ndarray, pd.Series)), (
+                        "'y' must be either a column-name, or explicit values "
+                        " specified as a list, a numpy-array or a pandas"
+                        + f" Series object if you provide the data as '{type(data)}'"
+                    )
+
+                    xorig = np.asanyarray(x)
+                    yorig = np.asanyarray(y)
+
+                return z_data, xorig, yorig, ids, parameter
 
         # identify all other types except for pandas.DataFrames
 
-        # check for explicit 1D value lists
-        types = (list, np.ndarray)
-        if _pd_OK:
-            types += (pd.Series,)
+        # lazily check if pandas was used
+        pandas_series_data = False
+        for iname, i in zip(("x", "y", "data"), (x, y, data)):
+            if iname == "data" and i is None:
+                # allow empty datasets
+                continue
 
-        assert isinstance(
-            x, types
-        ), "'x' coordinates must be provided as list, numpy-array or pandas.Series"
-        assert isinstance(
-            y, types
-        ), "'y' coordinates must be provided as list, numpy-array or pandas.Series"
+            if not isinstance(i, (list, np.ndarray)):
+                if _register_pandas() and not isinstance(i, pd.Series):
+                    raise AssertionError(
+                        f"{iname} values must be a list, numpy-array or pandas.Series"
+                    )
+                else:
+                    if iname == "data":
+                        pandas_series_data = True
 
         # get the data-coordinates
         xorig = np.asanyarray(x)
         yorig = np.asanyarray(y)
 
         if data is not None:
-            if isinstance(data, types):
-                # get the data-values
-                z_data = np.asanyarray(data)
+            # get the data-values
+            z_data = np.asanyarray(data)
         else:
             if xorig.shape == yorig.shape:
                 z_data = np.full(xorig.shape, np.nan)
@@ -1478,7 +1527,7 @@ class Maps(object):
                 z_data = np.full((xorig.shape[0], yorig.shape[0]), np.nan)
 
         # get the index-values
-        if isinstance(data, pd.Series):
+        if pandas_series_data is True:
             # use actual index values if pd.Series was passed as "data"
             ids = data.index.values
         else:
@@ -1594,6 +1643,11 @@ class Maps(object):
         vmax=None,
         classify_specs=None,
     ):
+
+        assert _register_mapclassify(), (
+            "EOmaps: Missing dependency: 'mapclassify' \n ... please install"
+            + " (conda install -c conda-forge mapclassify) to use data-classifications."
+        )
 
         if z_data is None:
             z_data = self._props["z_data"]
@@ -2028,396 +2082,399 @@ class Maps(object):
     def add_feature(self):
         return NaturalEarth_features(weakref.proxy(self))
 
-    if _gpd_OK:
+    def _clip_gdf(self, gdf, how="crs"):
+        """
+        Clip the shapes of a GeoDataFrame with respect to the boundaries
+        of the crs (or the plot-extent).
 
-        def _clip_gdf(self, gdf, how="crs"):
-            """
-            Clip the shapes of a GeoDataFrame with respect to the boundaries
-            of the crs (or the plot-extent).
+        Parameters
+        ----------
+        gdf : geopandas.GeoDataFrame
+            The GeoDataFrame containing the geometries.
+        how : str, optional
+            Identifier how the clipping should be performed.
 
-            Parameters
-            ----------
-            gdf : geopandas.GeoDataFrame
-                The GeoDataFrame containing the geometries.
-            how : str, optional
-                Identifier how the clipping should be performed.
+            If a suffix "_invert" is added to the string, the polygon will be
+            inverted (via a symmetric-difference to the clip-shape)
 
-                If a suffix "_invert" is added to the string, the polygon will be
-                inverted (via a symmetric-difference to the clip-shape)
+            - clipping with geopandas:
+              - "crs" : use the actual crs boundary polygon
+              - "crs_bounds" : use the boundary-envelope of the crs
+              - "extent" : use the current plot-extent
 
-                - clipping with geopandas:
-                  - "crs" : use the actual crs boundary polygon
-                  - "crs_bounds" : use the boundary-envelope of the crs
-                  - "extent" : use the current plot-extent
+            - clipping with gdal (always uses the crs domain as clip-shape):
+              - "gdal_Intersection"
+              - "gdal_SymDifference"
+              - "gdal_Difference"
+              - "gdal_Union"
 
-                - clipping with gdal (always uses the crs domain as clip-shape):
-                  - "gdal_Intersection"
-                  - "gdal_SymDifference"
-                  - "gdal_Difference"
-                  - "gdal_Union"
+            The default is "crs".
 
-                The default is "crs".
+        Returns
+        -------
+        gdf
+            A GeoDataFrame with the clipped geometries
+        """
+        assert _register_geopandas(), (
+            "EOmaps: Missing dependency `geopandas`!\n"
+            + "please install '(conda install -c conda-forge geopandas)'"
+            + "to use `m.add_gdf()`."
+        )
 
-            Returns
-            -------
-            gdf
-                A GeoDataFrame with the clipped geometries
-            """
-
-            if how.startswith("gdal"):
-                methods = ["SymDifference", "Intersection", "Difference", "Union"]
-                # "SymDifference", "Intersection", "Difference"
-                method = how.split("_")[1]
-                assert method in methods, "EOmaps: '{how}' is not a valid clip-method"
-                try:
-                    from osgeo import gdal
-                    from shapely import wkt
-                except ImportError:
-                    raise ImportError(
-                        "EOmaps: Missing dependency: 'osgeo'\n"
-                        + "...clipping with gdal requires 'osgeo.gdal'"
-                    )
-
-                e = self.ax.projection.domain
-                e2 = gdal.ogr.CreateGeometryFromWkt(e.wkt)
-                if not e2.IsValid():
-                    e2 = e2.MakeValid()
-
-                gdf = gdf.to_crs(self.crs_plot)
-                clipgeoms = []
-                for g in gdf.geometry:
-                    g2 = gdal.ogr.CreateGeometryFromWkt(g.wkt)
-
-                    if g2 is None:
-                        continue
-
-                    if not g2.IsValid():
-                        g2 = g2.MakeValid()
-
-                    i = getattr(g2, method)(e2)
-
-                    if how.endswith("_invert"):
-                        i = i.SymDifference(e2)
-
-                    gclip = wkt.loads(i.ExportToWkt())
-                    clipgeoms.append(gclip)
-
-                gdf = gpd.GeoDataFrame(geometry=clipgeoms, crs=self.crs_plot)
-
-                return gdf
-
-            if how == "crs" or how == "crs_invert":
-                clip_shp = gpd.GeoDataFrame(
-                    geometry=[self.ax.projection.domain], crs=self.crs_plot
-                ).to_crs(gdf.crs)
-            elif how == "extent" or how == "extent_invert":
-                self.BM.update()
-                x0, x1, y0, y1 = self.ax.get_extent()
-                clip_shp = self._make_rect_poly(x0, y0, x1, y1, self.crs_plot).to_crs(
-                    gdf.crs
-                )
-            elif how == "crs_bounds" or how == "crs_bounds_invert":
-                x0, x1, y0, y1 = self.ax.get_extent()
-                clip_shp = self._make_rect_poly(
-                    *self.crs_plot.boundary.bounds, self.crs_plot
-                ).to_crs(gdf.crs)
-            else:
-                raise TypeError(f"EOmaps: '{how}' is not a valid clipping method")
-
-            clipgdf = gdf.clip(clip_shp)
-
-            if how.endswith("_invert"):
-                clipgdf = clipgdf.symmetric_difference(clip_shp)
-
-            return clipgdf
-
-        def add_gdf(
-            self,
-            gdf,
-            picker_name=None,
-            pick_method="contains",
-            val_key=None,
-            layer=None,
-            temporary_picker=None,
-            clip=False,
-            reproject="gpd",
-            verbose=False,
-            **kwargs,
-        ):
-            """
-            Plot a `geopandas.GeoDataFrame` on the map.
-
-            Parameters
-            ----------
-            gdf : geopandas.GeoDataFrame
-                A GeoDataFrame that should be added to the plot.
-            picker_name : str or None
-                A unique name that is used to identify the pick-method.
-
-                If a `picker_name` is provided, a new pick-container will be
-                created that can be used to pick geometries of the GeoDataFrame.
-
-                The container can then be accessed via:
-                >>> m.cb.pick__<picker_name>
-                or
-                >>> m.cb.pick[picker_name]
-                and it can be used in the same way as `m.cb.pick...`
-
-            pick_method : str or callable
-                if str :
-                    The operation that is executed on the GeoDataFrame to identify
-                    the picked geometry.
-                    Possible values are:
-
-                    - "contains":
-                      pick a geometry only if it contains the clicked point
-                      (only works with polygons! (not with lines and points))
-                    - "centroids":
-                      pick the closest geometry with respect to the centroids
-                      (should work with any geometry whose centroid is defined)
-
-                    The default is "centroids"
-
-                if callable :
-                    A callable that is used to identify the picked geometry.
-                    The call-signature is:
-
-                    >>> def picker(artist, mouseevent):
-                    >>>     # if the pick is NOT successful:
-                    >>>     return False, dict()
-                    >>>     ...
-                    >>>     # if the pick is successful:
-                    >>>     return True, dict(ID, pos, val, ind)
-
-                    The default is "contains"
-
-            val_key : str
-                The dataframe-column used to identify values for pick-callbacks.
-                The default is None.
-            layer : int, str or None
-                The name of the layer at which the dataset will be plotted.
-
-                - If "all": the corresponding feature will be added to ALL layers
-                - If None, the layer assigned to the Maps-object is used (e.g. `m.layer`)
-
-                The default is None.
-            temporary_picker : str, optional
-                The name of the picker that should be used to make the geometry
-                temporary (e.g. remove it after each pick-event)
-            clip : str or False
-                This feature can help with re-projection issues for non-global crs.
-                (see example below)
-
-                Indicator if geometries should be clipped prior to plotting or not.
-
-                - if "crs": clip with respect to the boundary-shape of the crs
-                - if "crs_bounds" : clip with respect to a rectangular crs boundary
-                - if "extent": clip with respect to the current extent of the plot-axis.
-                - if the 'gdal' python-bindings are installed, you can use gdal to clip
-                  the shapes with respect to the crs-boundary. (slower but more robust)
-                  The following logical operations are supported:
-
-                  - "gdal_SymDifference" : symmetric difference
-                  - "gdal_Intersection" : intersection
-                  - "gdal_Difference" : difference
-                  - "gdal_Union" : union
-
-                If a suffix "_invert" is added to the clip-string (e.g. "crs_invert"
-                or "gdal_Intersection_invert") the obtained (clipped) polygons will be
-                inverted.
-
-
-                >>> mg = MapsGrid(2, 3, crs=3035)
-                >>> mg.m_0_0.add_feature.preset.ocean(use_gpd=True)
-                >>> mg.m_0_1.add_feature.preset.ocean(use_gpd=True, clip="crs")
-                >>> mg.m_0_2.add_feature.preset.ocean(use_gpd=True, clip="extent")
-                >>> mg.m_1_0.add_feature.preset.ocean(use_gpd=False)
-                >>> mg.m_1_1.add_feature.preset.ocean(use_gpd=False, clip="crs")
-                >>> mg.m_1_2.add_feature.preset.ocean(use_gpd=False, clip="extent")
-
-            reproject : str, optional
-                Similar to "clip" this feature mainly addresses issues in the way how
-                re-projected geometries are displayed in certain coordinate-systems.
-                (see example below)
-
-                - if "gpd": geopandas is used to re-project the geometries
-                - if "cartopy": cartopy is used to re-project the geometries
-                  (slower but generally more robust than "gpd")
-
-                >>> mg = MapsGrid(2, 1, crs=Maps.CRS.Stereographic())
-                >>> mg.m_0_0.add_feature.preset.ocean(reproject="gpd")
-                >>> mg.m_1_0.add_feature.preset.ocean(reproject="cartopy")
-
-                The default is "gpd"
-            verbose : bool, optional
-                Indicator if a progressbar should be printed when re-projecting
-                geometries with "use_gpd=False".
-                The default is False.
-            kwargs :
-                all remaining kwargs are passed to `geopandas.GeoDataFrame.plot(**kwargs)`
-
-            Returns
-            -------
-            new_artists : matplotlib.Artist
-                The matplotlib-artists added to the plot
-
-            """
-            assert pick_method in ["centroids", "contains"], (
-                f"EOmaps: '{pick_method}' is not a valid GeoDataFrame pick-method! "
-                + "... use one of ['contains', 'centroids']"
-            )
-
-            self._check_gpd()
-
+        if how.startswith("gdal"):
+            methods = ["SymDifference", "Intersection", "Difference", "Union"]
+            # "SymDifference", "Intersection", "Difference"
+            method = how.split("_")[1]
+            assert method in methods, "EOmaps: '{how}' is not a valid clip-method"
             try:
-                # explode the GeoDataFrame to avoid picking multi-part geometries
-                gdf = gdf.explode(index_parts=False)
-            except Exception:
-                # geopandas sometimes has problems exploding geometries...
-                # if it does not work, just continue with the Multi-geometries!
-                pass
-
-            if clip:
-                gdf = self._clip_gdf(gdf, clip)
-            if reproject == "gpd":
-                gdf = gdf.to_crs(self.crs_plot)
-            elif reproject == "cartopy":
-                # optionally use cartopy's re-projection routines to re-project
-                # geometries
-                if self.ax.projection != self._get_cartopy_crs(gdf.crs):
-                    # select only polygons that actually intersect with the CRS-boundary
-                    mask = gdf.intersects(
-                        gpd.GeoDataFrame(
-                            geometry=[self.ax.projection.domain], crs=self.ax.projection
-                        )
-                        .to_crs(gdf.crs)
-                        .to_crs(gdf.crs)
-                        .geometry[0]
-                    )
-                    gdf = gdf.copy()[mask]
-
-                    geoms = gdf.geometry
-                    if len(geoms) > 0:
-                        proj_geoms = []
-
-                        if verbose:
-                            for g in progressbar(
-                                geoms, "EOmaps: re-projecting... ", 20
-                            ):
-                                proj_geoms.append(
-                                    self.ax.projection.project_geometry(
-                                        g, ccrs.CRS(gdf.crs)
-                                    )
-                                )
-                        else:
-                            for g in geoms:
-                                proj_geoms.append(
-                                    self.ax.projection.project_geometry(
-                                        g, ccrs.CRS(gdf.crs)
-                                    )
-                                )
-
-                        gdf.geometry = proj_geoms
-                        gdf.set_crs(self.ax.projection, allow_override=True)
-            else:
-                raise AssertionError(
-                    f"EOmaps: '{reproject}' is not a valid reproject-argument."
+                from osgeo import gdal
+                from shapely import wkt
+            except ImportError:
+                raise ImportError(
+                    "EOmaps: Missing dependency: 'osgeo'\n"
+                    + "...clipping with gdal requires 'osgeo.gdal'"
                 )
-            # plot gdf and identify newly added collections
-            # (geopandas always uses collections)
-            colls = [id(i) for i in self.ax.collections]
-            artists, prefixes = [], []
-            for geomtype, geoms in gdf.groupby(gdf.geom_type):
-                gdf.plot(ax=self.ax, aspect=self.ax.get_aspect(), **kwargs)
-                artists = [i for i in self.ax.collections if id(i) not in colls]
-                for i in artists:
-                    prefixes.append(
-                        f"_{i.__class__.__name__.replace('Collection', '')}"
+
+            e = self.ax.projection.domain
+            e2 = gdal.ogr.CreateGeometryFromWkt(e.wkt)
+            if not e2.IsValid():
+                e2 = e2.MakeValid()
+
+            gdf = gdf.to_crs(self.crs_plot)
+            clipgeoms = []
+            for g in gdf.geometry:
+                g2 = gdal.ogr.CreateGeometryFromWkt(g.wkt)
+
+                if g2 is None:
+                    continue
+
+                if not g2.IsValid():
+                    g2 = g2.MakeValid()
+
+                i = getattr(g2, method)(e2)
+
+                if how.endswith("_invert"):
+                    i = i.SymDifference(e2)
+
+                gclip = wkt.loads(i.ExportToWkt())
+                clipgeoms.append(gclip)
+
+            gdf = gpd.GeoDataFrame(geometry=clipgeoms, crs=self.crs_plot)
+
+            return gdf
+
+        if how == "crs" or how == "crs_invert":
+            clip_shp = gpd.GeoDataFrame(
+                geometry=[self.ax.projection.domain], crs=self.crs_plot
+            ).to_crs(gdf.crs)
+        elif how == "extent" or how == "extent_invert":
+            self.BM.update()
+            x0, x1, y0, y1 = self.ax.get_extent()
+            clip_shp = self._make_rect_poly(x0, y0, x1, y1, self.crs_plot).to_crs(
+                gdf.crs
+            )
+        elif how == "crs_bounds" or how == "crs_bounds_invert":
+            x0, x1, y0, y1 = self.ax.get_extent()
+            clip_shp = self._make_rect_poly(
+                *self.crs_plot.boundary.bounds, self.crs_plot
+            ).to_crs(gdf.crs)
+        else:
+            raise TypeError(f"EOmaps: '{how}' is not a valid clipping method")
+
+        clipgdf = gdf.clip(clip_shp)
+
+        if how.endswith("_invert"):
+            clipgdf = clipgdf.symmetric_difference(clip_shp)
+
+        return clipgdf
+
+    def add_gdf(
+        self,
+        gdf,
+        picker_name=None,
+        pick_method="contains",
+        val_key=None,
+        layer=None,
+        temporary_picker=None,
+        clip=False,
+        reproject="gpd",
+        verbose=False,
+        **kwargs,
+    ):
+        """
+        Plot a `geopandas.GeoDataFrame` on the map.
+
+        Parameters
+        ----------
+        gdf : geopandas.GeoDataFrame
+            A GeoDataFrame that should be added to the plot.
+        picker_name : str or None
+            A unique name that is used to identify the pick-method.
+
+            If a `picker_name` is provided, a new pick-container will be
+            created that can be used to pick geometries of the GeoDataFrame.
+
+            The container can then be accessed via:
+            >>> m.cb.pick__<picker_name>
+            or
+            >>> m.cb.pick[picker_name]
+            and it can be used in the same way as `m.cb.pick...`
+
+        pick_method : str or callable
+            if str :
+                The operation that is executed on the GeoDataFrame to identify
+                the picked geometry.
+                Possible values are:
+
+                - "contains":
+                  pick a geometry only if it contains the clicked point
+                  (only works with polygons! (not with lines and points))
+                - "centroids":
+                  pick the closest geometry with respect to the centroids
+                  (should work with any geometry whose centroid is defined)
+
+                The default is "centroids"
+
+            if callable :
+                A callable that is used to identify the picked geometry.
+                The call-signature is:
+
+                >>> def picker(artist, mouseevent):
+                >>>     # if the pick is NOT successful:
+                >>>     return False, dict()
+                >>>     ...
+                >>>     # if the pick is successful:
+                >>>     return True, dict(ID, pos, val, ind)
+
+                The default is "contains"
+
+        val_key : str
+            The dataframe-column used to identify values for pick-callbacks.
+            The default is None.
+        layer : int, str or None
+            The name of the layer at which the dataset will be plotted.
+
+            - If "all": the corresponding feature will be added to ALL layers
+            - If None, the layer assigned to the Maps-object is used (e.g. `m.layer`)
+
+            The default is None.
+        temporary_picker : str, optional
+            The name of the picker that should be used to make the geometry
+            temporary (e.g. remove it after each pick-event)
+        clip : str or False
+            This feature can help with re-projection issues for non-global crs.
+            (see example below)
+
+            Indicator if geometries should be clipped prior to plotting or not.
+
+            - if "crs": clip with respect to the boundary-shape of the crs
+            - if "crs_bounds" : clip with respect to a rectangular crs boundary
+            - if "extent": clip with respect to the current extent of the plot-axis.
+            - if the 'gdal' python-bindings are installed, you can use gdal to clip
+              the shapes with respect to the crs-boundary. (slower but more robust)
+              The following logical operations are supported:
+
+              - "gdal_SymDifference" : symmetric difference
+              - "gdal_Intersection" : intersection
+              - "gdal_Difference" : difference
+              - "gdal_Union" : union
+
+            If a suffix "_invert" is added to the clip-string (e.g. "crs_invert"
+            or "gdal_Intersection_invert") the obtained (clipped) polygons will be
+            inverted.
+
+
+            >>> mg = MapsGrid(2, 3, crs=3035)
+            >>> mg.m_0_0.add_feature.preset.ocean(use_gpd=True)
+            >>> mg.m_0_1.add_feature.preset.ocean(use_gpd=True, clip="crs")
+            >>> mg.m_0_2.add_feature.preset.ocean(use_gpd=True, clip="extent")
+            >>> mg.m_1_0.add_feature.preset.ocean(use_gpd=False)
+            >>> mg.m_1_1.add_feature.preset.ocean(use_gpd=False, clip="crs")
+            >>> mg.m_1_2.add_feature.preset.ocean(use_gpd=False, clip="extent")
+
+        reproject : str, optional
+            Similar to "clip" this feature mainly addresses issues in the way how
+            re-projected geometries are displayed in certain coordinate-systems.
+            (see example below)
+
+            - if "gpd": geopandas is used to re-project the geometries
+            - if "cartopy": cartopy is used to re-project the geometries
+              (slower but generally more robust than "gpd")
+
+            >>> mg = MapsGrid(2, 1, crs=Maps.CRS.Stereographic())
+            >>> mg.m_0_0.add_feature.preset.ocean(reproject="gpd")
+            >>> mg.m_1_0.add_feature.preset.ocean(reproject="cartopy")
+
+            The default is "gpd"
+        verbose : bool, optional
+            Indicator if a progressbar should be printed when re-projecting
+            geometries with "use_gpd=False".
+            The default is False.
+        kwargs :
+            all remaining kwargs are passed to `geopandas.GeoDataFrame.plot(**kwargs)`
+
+        Returns
+        -------
+        new_artists : matplotlib.Artist
+            The matplotlib-artists added to the plot
+
+        """
+        assert pick_method in ["centroids", "contains"], (
+            f"EOmaps: '{pick_method}' is not a valid GeoDataFrame pick-method! "
+            + "... use one of ['contains', 'centroids']"
+        )
+
+        assert _register_geopandas(), (
+            "EOmaps: Missing dependency `geopandas`!\n"
+            + "please install '(conda install -c conda-forge geopandas)'"
+            + "to use `m.add_gdf()`."
+        )
+
+        try:
+            # explode the GeoDataFrame to avoid picking multi-part geometries
+            gdf = gdf.explode(index_parts=False)
+        except Exception:
+            # geopandas sometimes has problems exploding geometries...
+            # if it does not work, just continue with the Multi-geometries!
+            pass
+
+        if clip:
+            gdf = self._clip_gdf(gdf, clip)
+        if reproject == "gpd":
+            gdf = gdf.to_crs(self.crs_plot)
+        elif reproject == "cartopy":
+            # optionally use cartopy's re-projection routines to re-project
+            # geometries
+            if self.ax.projection != self._get_cartopy_crs(gdf.crs):
+                # select only polygons that actually intersect with the CRS-boundary
+                mask = gdf.intersects(
+                    gpd.GeoDataFrame(
+                        geometry=[self.ax.projection.domain], crs=self.ax.projection
                     )
+                    .to_crs(gdf.crs)
+                    .to_crs(gdf.crs)
+                    .geometry[0]
+                )
+                gdf = gdf.copy()[mask]
 
-            if picker_name is not None:
-                if pick_method is not None:
-                    if isinstance(pick_method, str):
-                        if pick_method == "contains":
+                geoms = gdf.geometry
+                if len(geoms) > 0:
+                    proj_geoms = []
 
-                            def picker(artist, mouseevent):
-                                try:
-                                    query = getattr(gdf, pick_method)(
-                                        gpd.points_from_xy(
-                                            [mouseevent.xdata], [mouseevent.ydata]
-                                        )[0]
-                                    )
-                                    if query.any():
-                                        return True, dict(
-                                            ID=gdf.index[query][0],
-                                            ind=query.values.nonzero()[0][0],
-                                            val=(
-                                                gdf[query][val_key].iloc[0]
-                                                if val_key
-                                                else None
-                                            ),
-                                        )
-                                    else:
-                                        return False, dict()
-                                except:
-                                    return False, dict()
-
-                        elif pick_method == "centroids":
-                            tree = cKDTree(
-                                list(map(lambda x: (x.x, x.y), gdf.geometry.centroid))
+                    if verbose:
+                        for g in progressbar(geoms, "EOmaps: re-projecting... ", 20):
+                            proj_geoms.append(
+                                self.ax.projection.project_geometry(
+                                    g, ccrs.CRS(gdf.crs)
+                                )
+                            )
+                    else:
+                        for g in geoms:
+                            proj_geoms.append(
+                                self.ax.projection.project_geometry(
+                                    g, ccrs.CRS(gdf.crs)
+                                )
                             )
 
-                            def picker(artist, mouseevent):
-                                try:
-                                    dist, ind = tree.query(
-                                        (mouseevent.xdata, mouseevent.ydata), 1
+                    gdf.geometry = proj_geoms
+                    gdf.set_crs(self.ax.projection, allow_override=True)
+        else:
+            raise AssertionError(
+                f"EOmaps: '{reproject}' is not a valid reproject-argument."
+            )
+        # plot gdf and identify newly added collections
+        # (geopandas always uses collections)
+        colls = [id(i) for i in self.ax.collections]
+        artists, prefixes = [], []
+        for geomtype, geoms in gdf.groupby(gdf.geom_type):
+            gdf.plot(ax=self.ax, aspect=self.ax.get_aspect(), **kwargs)
+            artists = [i for i in self.ax.collections if id(i) not in colls]
+            for i in artists:
+                prefixes.append(f"_{i.__class__.__name__.replace('Collection', '')}")
+
+        if picker_name is not None:
+            if pick_method is not None:
+                if isinstance(pick_method, str):
+                    if pick_method == "contains":
+
+                        def picker(artist, mouseevent):
+                            try:
+                                query = getattr(gdf, pick_method)(
+                                    gpd.points_from_xy(
+                                        [mouseevent.xdata], [mouseevent.ydata]
+                                    )[0]
+                                )
+                                if query.any():
+                                    return True, dict(
+                                        ID=gdf.index[query][0],
+                                        ind=query.values.nonzero()[0][0],
+                                        val=(
+                                            gdf[query][val_key].iloc[0]
+                                            if val_key
+                                            else None
+                                        ),
                                     )
-
-                                    ID = gdf.index[ind]
-                                    val = gdf.iloc[ind][val_key] if val_key else None
-                                    pos = tree.data[ind].tolist()
-                                except:
+                                else:
                                     return False, dict()
+                            except:
+                                return False, dict()
 
-                                return True, dict(ID=ID, pos=pos, val=val, ind=ind)
-
-                    elif callable(pick_method):
-                        picker = pick_method
-                    else:
-                        print(
-                            "EOmaps: I don't know what to do with the provided pick_method"
+                    elif pick_method == "centroids":
+                        tree = cKDTree(
+                            list(map(lambda x: (x.x, x.y), gdf.geometry.centroid))
                         )
 
-                    if len(artists) > 1:
-                        warnings.warn(
-                            "EOmaps: Multiple geometry types encountered in `m.add_gdf`. "
-                            + "The pick containers are re-named to"
-                            + f"{[picker_name + prefix for prefix in prefixes]}"
-                        )
-                    else:
-                        prefixes = [""]
+                        def picker(artist, mouseevent):
+                            try:
+                                dist, ind = tree.query(
+                                    (mouseevent.xdata, mouseevent.ydata), 1
+                                )
 
-                    for artist, prefix in zip(artists, prefixes):
-                        # make the newly added collection pickable
-                        self.cb.add_picker(picker_name + prefix, artist, picker=picker)
+                                ID = gdf.index[ind]
+                                val = gdf.iloc[ind][val_key] if val_key else None
+                                pos = tree.data[ind].tolist()
+                            except:
+                                return False, dict()
 
-                        # attach the re-projected GeoDataFrame to the pick-container
-                        self.cb.pick[picker_name + prefix].data = gdf
+                            return True, dict(ID=ID, pos=pos, val=val, ind=ind)
 
-            if layer is None:
-                layer = self.layer
-
-            if temporary_picker is not None:
-                if temporary_picker == "default":
-                    for art, prefix in zip(artists, prefixes):
-                        self.cb.pick.add_temporary_artist(art)
+                elif callable(pick_method):
+                    picker = pick_method
                 else:
-                    for art, prefix in zip(artists, prefixes):
-                        self.cb.pick[temporary_picker].add_temporary_artist(art)
+                    print(
+                        "EOmaps: I don't know what to do with the provided pick_method"
+                    )
+
+                if len(artists) > 1:
+                    warnings.warn(
+                        "EOmaps: Multiple geometry types encountered in `m.add_gdf`. "
+                        + "The pick containers are re-named to"
+                        + f"{[picker_name + prefix for prefix in prefixes]}"
+                    )
+                else:
+                    prefixes = [""]
+
+                for artist, prefix in zip(artists, prefixes):
+                    # make the newly added collection pickable
+                    self.cb.add_picker(picker_name + prefix, artist, picker=picker)
+
+                    # attach the re-projected GeoDataFrame to the pick-container
+                    self.cb.pick[picker_name + prefix].data = gdf
+
+        if layer is None:
+            layer = self.layer
+
+        if temporary_picker is not None:
+            if temporary_picker == "default":
+                for art, prefix in zip(artists, prefixes):
+                    self.cb.pick.add_temporary_artist(art)
             else:
                 for art, prefix in zip(artists, prefixes):
-                    self.BM.add_bg_artist(art, layer)
-            return artists
+                    self.cb.pick[temporary_picker].add_temporary_artist(art)
+        else:
+            for art, prefix in zip(artists, prefixes):
+                self.BM.add_bg_artist(art, layer)
+        return artists
 
     def add_marker(
         self,
@@ -2427,6 +2484,7 @@ class Maps(object):
         radius=None,
         shape="ellipses",
         buffer=1,
+        layer=None,
         **kwargs,
     ):
         """
@@ -2464,6 +2522,10 @@ class Maps(object):
             The default is "circle".
         buffer : float, optional
             A factor to scale the size of the shape. The default is 1.
+        layer : str, int or None
+            The name of the layer at which the marker should be drawn.
+            If None, the layer associated with the used Maps-object (e.g. m.layer)
+            is used. The default is None.
         kwargs :
             kwargs passed to the matplotlib patch.
             (e.g. `facecolor`, `edgecolor`, `linewidth`, `alpha` etc.)
@@ -2496,9 +2558,21 @@ class Maps(object):
 
         # add marker
         marker = self.cb.click._cb.mark(
-            ID=ID, pos=xy, radius=radius, ind=None, shape=shape, buffer=buffer, **kwargs
+            ID=ID,
+            pos=xy,
+            radius=radius,
+            ind=None,
+            shape=shape,
+            buffer=buffer,
+            layer=layer,
+            **kwargs,
         )
-        self.BM.update(clear=False)
+
+        try:
+            # this will fail if no initial draw was performed!
+            self.BM._draw_animated(artists=[marker])
+        except Exception:
+            self.BM.update()
 
         return marker
 
@@ -2775,7 +2849,7 @@ class Maps(object):
             kwargs passed to `datashader.mpl_ext.dsshow`
 
         """
-        assert _ds_OK, (
+        assert _register_datashader(), (
             "EOmaps: Missing dependency: 'datashader' \n ... please install"
             + " (conda install -c conda-forge datashader) to use the plot-shapes "
             + "'shade_points' and 'shade_raster'"
@@ -2870,15 +2944,17 @@ class Maps(object):
 
         # the shape is always set after _prepare data!
         if self.shape.name == "shade_raster":
-            assert _xar_OK, "EOmaps: missing dependency `xarray` for 'shade_raster'"
+            assert (
+                _register_xarray()
+            ), "EOmaps: missing dependency `xarray` for 'shade_raster'"
             if len(zdata.shape) == 2:
                 if (zdata.shape == props["x0"].shape) and (
                     zdata.shape == props["y0"].shape
                 ):
                     # use a curvilinear QuadMesh
-                    self.shape.glyph = glyphs.QuadMeshCurvilinear("x", "y", "val")
-
+                    self.shape.glyph = ds.glyphs.QuadMeshCurvilinear("x", "y", "val")
                     # 2D coordinates and 2D raster
+
                     df = xar.Dataset(
                         data_vars=dict(val=(["xx", "yy"], zdata)),
                         # dims=["x", "y"],
@@ -2886,6 +2962,7 @@ class Maps(object):
                             x=(["xx", "yy"], props["x0"]), y=(["xx", "yy"], props["y0"])
                         ),
                     )
+
                 elif (
                     ((zdata.shape[1],) == props["x0"].shape)
                     and ((zdata.shape[0],) == props["y0"].shape)
@@ -2909,7 +2986,8 @@ class Maps(object):
                     (zdata.shape[1],) == props["y0"].shape
                 ):
                     # use a rectangular QuadMesh
-                    self.shape.glyph = glyphs.QuadMeshRectilinear("x", "y", "val")
+                    self.shape.glyph = ds.glyphs.QuadMeshRectilinear("x", "y", "val")
+
                     # 1D coordinates and 2D data
                     df = xar.DataArray(
                         data=zdata,
@@ -2948,7 +3026,7 @@ class Maps(object):
                     xg, yg = transformer.transform(xg, yg)
 
                 # use a curvilinear QuadMesh
-                self.shape.glyph = glyphs.QuadMeshCurvilinear("x", "y", "val")
+                self.shape.glyph = ds.glyphs.QuadMeshCurvilinear("x", "y", "val")
 
                 df = xar.Dataset(
                     data_vars=dict(val=(["xx", "yy"], df.val.values.T)),
@@ -2977,7 +3055,7 @@ class Maps(object):
             x_range = (x0, x1)
             y_range = (y0, y1)
 
-        coll = dsshow(
+        coll = mpl_ext.dsshow(
             df,
             glyph=self.shape.glyph,
             aggregator=self.shape.aggregator,
@@ -3267,8 +3345,12 @@ class Maps(object):
             if self.shape.name in ["raster"]:
                 # if input-data is 1D, try to convert data to 2D (required for raster)
                 # TODO make an explicit data-conversion function for 2D-only shapes
-                if (
-                    _pd_OK
+                if len(props["xorig"].shape) == 2 and len(props["yorig"].shape) == 2:
+                    coll = self.shape.get_coll(
+                        props["xorig"], props["yorig"], "in", **args
+                    )
+                elif (
+                    _register_pandas()
                     and isinstance(self.data, pd.DataFrame)
                     and isinstance(self.data_specs.x, str)
                     and isinstance(self.data_specs.y, str)
@@ -3292,10 +3374,6 @@ class Maps(object):
                         args["array"] = df.values.T
 
                     coll = self.shape.get_coll(xg, yg, "in", **args)
-                elif len(props["xorig"].shape) == 2 and len(props["yorig"].shape) == 2:
-                    coll = self.shape.get_coll(
-                        props["xorig"], props["yorig"], "in", **args
-                    )
                 else:
                     raise AssertionError(
                         "EOmaps: using 'raster' is only possible if "
@@ -3898,7 +3976,7 @@ class Maps(object):
         vmin = coll.norm.vmin
         vmax = coll.norm.vmax
 
-        if _ds_OK and isinstance(coll, ScalarDSArtist):
+        if _register_datashader() and isinstance(coll, mpl_ext.ScalarDSArtist):
             aggname = self.shape.aggregator.__class__.__name__
             if aggname in ["first", "last", "max", "min", "mean", "mode"]:
                 pass
@@ -4099,66 +4177,74 @@ class Maps(object):
             **kwargs,
         )
 
-    if _gpd_OK:
+    @staticmethod
+    def _make_rect_poly(x0, y0, x1, y1, crs=None, npts=100):
+        """
+        return a geopandas.GeoDataFrame with a rectangle in the given crs
 
-        @staticmethod
-        def _make_rect_poly(x0, y0, x1, y1, crs=None, npts=100):
-            """
-            return a geopandas.GeoDataFrame with a rectangle in the given crs
+        Parameters
+        ----------
+        x0, y0, y1, y1 : float
+            the boundaries of the shape
+        npts : int, optional
+            The number of points used to draw the polygon-lines. The default is 100.
+        crs : any, optional
+            a coordinate-system identifier.  (e.g. output of `m.get_crs(crs)`)
+            The default is None.
 
-            Parameters
-            ----------
-            x0, y0, y1, y1 : float
-                the boundaries of the shape
-            npts : int, optional
-                The number of points used to draw the polygon-lines. The default is 100.
-            crs : any, optional
-                a coordinate-system identifier.  (e.g. output of `m.get_crs(crs)`)
-                The default is None.
+        Returns
+        -------
+        gdf : geopandas.GeoDataFrame
+            the geodataframe with the shape and crs defined
 
-            Returns
-            -------
-            gdf : geopandas.GeoDataFrame
-                the geodataframe with the shape and crs defined
+        """
 
-            """
-            from shapely.geometry import Polygon
+        assert _register_geopandas(), (
+            "EOmaps: Missing dependency `geopandas`!\n"
+            + "please install '(conda install -c conda-forge geopandas)'"
+        )
 
-            xs, ys = np.linspace([x0, y0], [x1, y1], npts).T
-            x0, y0, x1, y1, xs, ys = np.broadcast_arrays(x0, y0, x1, y1, xs, ys)
-            verts = np.column_stack(
-                ((x0, ys), (xs, y1), (x1, ys[::-1]), (xs[::-1], y0))
-            ).T
+        from shapely.geometry import Polygon
 
-            gdf = gpd.GeoDataFrame(geometry=[Polygon(verts)])
-            gdf.set_crs(crs, inplace=True)
+        xs, ys = np.linspace([x0, y0], [x1, y1], npts).T
+        x0, y0, x1, y1, xs, ys = np.broadcast_arrays(x0, y0, x1, y1, xs, ys)
+        verts = np.column_stack(((x0, ys), (xs, y1), (x1, ys[::-1]), (xs[::-1], y0))).T
 
-            return gdf
+        gdf = gpd.GeoDataFrame(geometry=[Polygon(verts)])
+        gdf.set_crs(crs, inplace=True)
 
-        def indicate_extent(self, x0, y0, x1, y1, crs=4326, npts=100, **kwargs):
-            """
-            Indicate a rectangular extent in a given crs on the map.
-            (the rectangle is drawn as a polygon where each line is divided by "npts"
-            points to ensure correct re-projection of the shape to other crs)
+        return gdf
 
-            Parameters
-            ----------
-            x0, y0, y1, y1 : float
-                the boundaries of the shape
-            npts : int, optional
-                The number of points used to draw the polygon-lines.
-                (e.g. to correctly display curvature in projected coordinate-systems)
-                The default is 100.
-            crs : any, optional
-                a coordinate-system identifier.
-                The default is 4326 (e.g. lon/lat).
-            kwargs :
-                additional keyword-arguments passed to `m.add_gdf()`.
+    def indicate_extent(self, x0, y0, x1, y1, crs=4326, npts=100, **kwargs):
+        """
+        Indicate a rectangular extent in a given crs on the map.
+        (the rectangle is drawn as a polygon where each line is divided by "npts"
+        points to ensure correct re-projection of the shape to other crs)
 
-            """
+        Parameters
+        ----------
+        x0, y0, y1, y1 : float
+            the boundaries of the shape
+        npts : int, optional
+            The number of points used to draw the polygon-lines.
+            (e.g. to correctly display curvature in projected coordinate-systems)
+            The default is 100.
+        crs : any, optional
+            a coordinate-system identifier.
+            The default is 4326 (e.g. lon/lat).
+        kwargs :
+            additional keyword-arguments passed to `m.add_gdf()`.
 
-            gdf = self._make_rect_poly(x0, y0, x1, y1, self.get_crs(crs), npts)
-            self.add_gdf(gdf, **kwargs)
+        """
+
+        assert _register_geopandas(), (
+            "EOmaps: Missing dependency `geopandas`!\n"
+            + "please install '(conda install -c conda-forge geopandas)'"
+            + "to use `m.indicate_extent()`."
+        )
+
+        gdf = self._make_rect_poly(x0, y0, x1, y1, self.get_crs(crs), npts)
+        self.add_gdf(gdf, **kwargs)
 
     def add_logo(self, filepath=None, position="lr", size=0.12, pad=0.1):
         """
@@ -4321,7 +4407,7 @@ class Maps(object):
 
     def fetch_layers(self, layers=None, verbose=True):
         """
-        Fetch (and cache) layers of a map.
+        Fetch (and cache) the layers of a map.
 
         This is particularly useful if you want to use sliders or buttons to quickly
         switch between the layers (e.g. once the backgrounds are cached, switching

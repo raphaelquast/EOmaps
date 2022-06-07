@@ -4,9 +4,12 @@
 
 .. include:: introduction.rst
 
+.. _configuring_the_editor:
 
 💻 Configuring the editor (IDE)
 *******************************
+
+.. _config_spyder:
 
 🕷 Spyder IDE
 -------------
@@ -19,6 +22,7 @@ the plot-settings must be adjusted to ensure that ``matplotlib`` plots remain in
 
 .. image:: _static/spyder_preferences.png
 
+.. _config_pycharm:
 
 🗖 PyCharm IDE
 --------------
@@ -49,6 +53,7 @@ in the **Python Scientific** preferences since it forces plots to be rendered as
 
 .. image:: _static/pycharm_preferences_2.png
 
+.. _config_jupyter_notebook:
 
 📓 Jupyter Notebooks
 --------------------

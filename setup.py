@@ -6,6 +6,7 @@ For COPYING and LICENSE details, please refer to the LICENSE file
 """
 from setuptools import setup, find_packages
 from pathlib import Path
+import re
 
 # add the README as long-description
 this_directory = Path(__file__).parent
@@ -14,7 +15,12 @@ try:
 except Exception:
     long_description = "A library to create interactive maps of geographical datasets."
 
-version = "4.2"
+# get version-number from _version.py
+try:
+    with open(this_directory / "_version.py") as file:
+        (version,) = re.findall('__version__ = "(.*)"', file.read())
+except Exception:
+    version = "undefined"
 
 setup(
     name="EOmaps",
