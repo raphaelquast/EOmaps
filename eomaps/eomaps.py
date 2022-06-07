@@ -1488,7 +1488,8 @@ class Maps(object):
         # identify all other types except for pandas.DataFrames
 
         # lazily check if pandas was used
-        for iname, i in zip(("x", "y", "data"), (x, y, z_data)):
+        pandas_series_data = False
+        for iname, i in zip(("x", "y", "data"), (x, y, data)):
             if iname == "data" and i is None:
                 # allow empty datasets
                 continue
@@ -1498,6 +1499,9 @@ class Maps(object):
                     raise AssertionError(
                         f"{iname} values must be a list, numpy-array or pandas.Series"
                     )
+
+                    if iname == "data":
+                        pandas_series_data = True
 
         # get the data-coordinates
         xorig = np.asanyarray(x)
@@ -1517,7 +1521,7 @@ class Maps(object):
                 z_data = np.full((xorig.shape[0], yorig.shape[0]), np.nan)
 
         # get the index-values
-        if isinstance(data, pd.Series):
+        if pandas_series_data is True:
             # use actual index values if pd.Series was passed as "data"
             ids = data.index.values
         else:
