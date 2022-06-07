@@ -17,7 +17,7 @@ except Exception:
 
 # get version-number from _version.py
 try:
-    with open(this_directory / "_version.py") as file:
+    with open(this_directory / "eomaps" / "_version.py") as file:
         (version,) = re.findall('__version__ = "(.*)"', file.read())
 except Exception:
     version = "undefined"
