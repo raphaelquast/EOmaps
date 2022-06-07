@@ -39,12 +39,17 @@ def _register_pandas():
     return True
 
 
-try:
-    import geopandas as gpd
+gpd = None
 
-    _gpd_OK = True
-except ImportError:
-    _gpd_OK = False
+
+def _register_geopandas():
+    global gpd
+    try:
+        import geopandas as gpd
+    except ImportError:
+        return False
+
+    return True
 
 
 mapclassify = None
@@ -858,7 +863,7 @@ class NaturalEarth_features(object):
     class _feature:
         def __init__(self, m, category, name, scale):
             self._m = m
-            if not _gpd_OK:
+            if not _register_geopandas():
                 # use cartopy to add the features
                 self.feature = cfeature.NaturalEarthFeature(
                     category=category, name=name, scale=scale
@@ -868,7 +873,7 @@ class NaturalEarth_features(object):
                 # geopandas to add the feature (provides more flexibility!)
                 self.feature = dict(resolution=scale, category=category, name=name)
 
-            if not _gpd_OK:
+            if not _register_geopandas():
                 self.__doc__ = dedent(
                     f"""
                     NaturalEarth feature:  {scale} | {category} | {name}
@@ -1016,7 +1021,7 @@ class NaturalEarth_features(object):
         def __call__(self, layer=None, **kwargs):
             from . import MapsGrid  # do this here to avoid circular imports!
 
-            if not _gpd_OK:
+            if not _register_geopandas():
                 for m in self._m if isinstance(self._m, MapsGrid) else [self._m]:
                     if layer is None:
                         uselayer = m.layer
@@ -1038,20 +1043,23 @@ class NaturalEarth_features(object):
 
                     m.add_gdf(s, layer=uselayer, **kwargs)
 
-        if _gpd_OK:
+        def get_gdf(self):
+            """
+            Get a geopandas.GeoDataFrame for the selected NaturalEarth feature
 
-            def get_gdf(self):
-                """
-                Get a geopandas.GeoDataFrame for the selected NaturalEarth feature
+            Returns
+            -------
+            gdf : geopandas.GeoDataFrame
+                A GeoDataFrame with all geometries and properties of the feature
+            """
 
-                Returns
-                -------
-                gdf : geopandas.GeoDataFrame
-                    A GeoDataFrame with all geometries and properties of the feature
-                """
-                gdf = gpd.read_file(shapereader.natural_earth(**self.feature))
-                gdf.set_crs(ccrs.PlateCarree(), inplace=True, allow_override=True)
-                return gdf
+            assert (
+                _register_geopandas()
+            ), "EOmaps: Missing dependency `geopandas` for `feature.get_gdf()`"
+
+            gdf = gpd.read_file(shapereader.natural_earth(**self.feature))
+            gdf.set_crs(ccrs.PlateCarree(), inplace=True, allow_override=True)
+            return gdf
 
 
 # avoid defining containers if import is not OK
