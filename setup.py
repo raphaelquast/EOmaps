@@ -15,8 +15,7 @@ try:
 except Exception:
     long_description = "A library to create interactive maps of geographical datasets."
 
-version = "4.2"
-
+# get version-number from _version.py
 try:
     with open(this_directory / "_version.py") as file:
         (version,) = re.findall('__version__ = "(.*)"', file.read())
