@@ -2562,7 +2562,11 @@ class Maps(object):
             **kwargs,
         )
 
-        self.BM._draw_animated(artists=[marker])
+        try:
+            # this will fail if no initial draw was performed!
+            self.BM._draw_animated(artists=[marker])
+        except Exception:
+            self.BM.update()
 
         return marker
 
