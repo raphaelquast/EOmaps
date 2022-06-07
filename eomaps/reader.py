@@ -3,12 +3,17 @@ import numpy as np
 from pyproj import CRS
 from pathlib import Path
 
-try:
-    import pandas as pd
+pd = None
 
-    _pd_OK = True
-except ImportError:
-    _pd_OK = False
+
+def _register_pandas():
+    global pd
+    try:
+        import pandas as pd
+    except ImportError:
+        return False
+
+    return True
 
 
 xar = None
@@ -502,7 +507,7 @@ class read_file:
             A dict that contains the data required for plotting.
 
         """
-        assert _pd_OK, (
+        assert _register_pandas(), (
             "EOmaps: missing dependency for read_csv: 'pandas'\n"
             + "To install, use 'conda install -c conda-forge pandas'"
         )

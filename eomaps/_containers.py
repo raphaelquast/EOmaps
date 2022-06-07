@@ -26,12 +26,18 @@ if _import_OK:
         _xyz_tile_service,
     )
 
-try:
-    import pandas as pd
+pd = None
 
-    _pd_OK = True
-except ImportError:
-    _pd_OK = False
+
+def _register_pandas():
+    global pd
+    try:
+        import pandas as pd
+    except ImportError:
+        return False
+
+    return True
+
 
 try:
     import geopandas as gpd
@@ -439,7 +445,12 @@ class data_specs(object):
 
     @parameter.getter
     def parameter(self):
-        if _pd_OK and isinstance(self.data, pd.DataFrame) and self._parameter is None:
+
+        if (
+            self._parameter is None
+            and _register_pandas()
+            and isinstance(self.data, pd.DataFrame)
+        ):
             if self.data is not None and self.x is not None and self.y is not None:
 
                 try:
@@ -465,9 +476,9 @@ class data_specs(object):
         if encoding not in [None, False]:
             assert isinstance(encoding, dict), "EOmaps: encoding must be a dictionary!"
 
-            assert all(
-                i in ["scale_factor", "add_offset"] for i in encoding
-            ), "EOmaps: encoding accepts only 'scale_factor' and 'add_offset' as keys!"
+            # assert all(
+            #     i in ["scale_factor", "add_offset"] for i in encoding
+            # ), "EOmaps: encoding accepts only 'scale_factor' and 'add_offset' as keys!"
 
         self._encoding = encoding
 
