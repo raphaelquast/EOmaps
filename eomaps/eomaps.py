@@ -14,12 +14,17 @@ import gc
 import numpy as np
 
 
-try:
-    import pandas as pd
+pd = None
 
-    _pd_OK = True
-except ImportError:
-    _pd_OK = False
+
+def _register_pandas():
+    global pd
+    try:
+        import pandas as pd
+    except ImportError:
+        return False
+
+    return True
 
 
 gpd = None
@@ -1445,59 +1450,62 @@ class Maps(object):
             y = self.data_specs.y
         if parameter is None:
             parameter = self.data_specs.parameter
-        if data is not None and _pd_OK and isinstance(data, pd.DataFrame):
-            if parameter is not None:
-                # get the data-values
-                z_data = data[parameter].values
-            else:
-                z_data = np.repeat(np.nan, len(data))
 
-            # get the index-values
-            ids = data.index.values
+        # check other types before pandas to avoid unnecessary import
+        if data is not None and not isinstance(data, (list, tuple, np.ndarray)):
+            if _register_pandas() and isinstance(data, pd.DataFrame):
 
-            if isinstance(x, str) and isinstance(y, str):
-                # get the data-coordinates
-                xorig = data[x].values
-                yorig = data[y].values
-            else:
-                assert isinstance(x, (list, np.ndarray, pd.Series)), (
-                    "'x' must be either a column-name, or explicit values "
-                    " specified as a list, a numpy-array or a pandas"
-                    + f" Series object if you provide the data as '{type(data)}'"
-                )
-                assert isinstance(y, (list, np.ndarray, pd.Series)), (
-                    "'y' must be either a column-name, or explicit values "
-                    " specified as a list, a numpy-array or a pandas"
-                    + f" Series object if you provide the data as '{type(data)}'"
-                )
+                if parameter is not None:
+                    # get the data-values
+                    z_data = data[parameter].values
+                else:
+                    z_data = np.repeat(np.nan, len(data))
 
-                xorig = np.asanyarray(x)
-                yorig = np.asanyarray(y)
+                # get the index-values
+                ids = data.index.values
+
+                if isinstance(x, str) and isinstance(y, str):
+                    # get the data-coordinates
+                    xorig = data[x].values
+                    yorig = data[y].values
+                else:
+                    assert isinstance(x, (list, np.ndarray, pd.Series)), (
+                        "'x' must be either a column-name, or explicit values "
+                        " specified as a list, a numpy-array or a pandas"
+                        + f" Series object if you provide the data as '{type(data)}'"
+                    )
+                    assert isinstance(y, (list, np.ndarray, pd.Series)), (
+                        "'y' must be either a column-name, or explicit values "
+                        " specified as a list, a numpy-array or a pandas"
+                        + f" Series object if you provide the data as '{type(data)}'"
+                    )
+
+                    xorig = np.asanyarray(x)
+                    yorig = np.asanyarray(y)
 
             return z_data, xorig, yorig, ids, parameter
 
         # identify all other types except for pandas.DataFrames
 
-        # check for explicit 1D value lists
-        types = (list, np.ndarray)
-        if _pd_OK:
-            types += (pd.Series,)
+        # lazily check if pandas was used
+        for iname, i in zip(("x", "y", "data"), (x, y, z_data)):
+            if iname == "data" and i is None:
+                # allow empty datasets
+                continue
 
-        assert isinstance(
-            x, types
-        ), "'x' coordinates must be provided as list, numpy-array or pandas.Series"
-        assert isinstance(
-            y, types
-        ), "'y' coordinates must be provided as list, numpy-array or pandas.Series"
+            if not isinstance(i, (list, np.ndarray)):
+                if _register_pandas() and not isinstance(i, pd.Series):
+                    raise AssertionError(
+                        f"{iname} values must be a list, numpy-array or pandas.Series"
+                    )
 
         # get the data-coordinates
         xorig = np.asanyarray(x)
         yorig = np.asanyarray(y)
 
         if data is not None:
-            if isinstance(data, types):
-                # get the data-values
-                z_data = np.asanyarray(data)
+            # get the data-values
+            z_data = np.asanyarray(data)
         else:
             if xorig.shape == yorig.shape:
                 z_data = np.full(xorig.shape, np.nan)
@@ -3323,8 +3331,12 @@ class Maps(object):
             if self.shape.name in ["raster"]:
                 # if input-data is 1D, try to convert data to 2D (required for raster)
                 # TODO make an explicit data-conversion function for 2D-only shapes
-                if (
-                    _pd_OK
+                if len(props["xorig"].shape) == 2 and len(props["yorig"].shape) == 2:
+                    coll = self.shape.get_coll(
+                        props["xorig"], props["yorig"], "in", **args
+                    )
+                elif (
+                    _register_pandas()
                     and isinstance(self.data, pd.DataFrame)
                     and isinstance(self.data_specs.x, str)
                     and isinstance(self.data_specs.y, str)
@@ -3348,10 +3360,6 @@ class Maps(object):
                         args["array"] = df.values.T
 
                     coll = self.shape.get_coll(xg, yg, "in", **args)
-                elif len(props["xorig"].shape) == 2 and len(props["yorig"].shape) == 2:
-                    coll = self.shape.get_coll(
-                        props["xorig"], props["yorig"], "in", **args
-                    )
                 else:
                     raise AssertionError(
                         "EOmaps: using 'raster' is only possible if "
@@ -4385,7 +4393,7 @@ class Maps(object):
 
     def fetch_layers(self, layers=None, verbose=True):
         """
-        Fetch (and cache) layers of a map.
+        Fetch (and cache) the layers of a map.
 
         This is particularly useful if you want to use sliders or buttons to quickly
         switch between the layers (e.g. once the backgrounds are cached, switching
