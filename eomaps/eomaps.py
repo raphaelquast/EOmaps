@@ -3381,6 +3381,10 @@ class Maps(object):
                         + "arrays or as a 1D pandas.DataFrame (which "
                         + "will be converted to 2D internally)"
                     )
+
+                # convert values to 1D for callbacks etc.
+                self._1Dprops(props)
+
             else:
                 # convert input to 1D
                 coll = self.shape.get_coll(
