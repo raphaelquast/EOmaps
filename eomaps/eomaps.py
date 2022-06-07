@@ -132,7 +132,7 @@ if plt.isinteractive():
         warnings.warn(
             "EOmaps disables matplotlib's interactive mode (e.g. 'plt.ioff()') "
             + "when using the 'ipympl' backend to avoid recursions during callbacks!"
-            + "call `plt.show() to show the map!"
+            + "call `plt.show()` or `m.show()` to show the map!"
         )
         plt.ioff()
     else:
@@ -479,10 +479,16 @@ class Maps(object):
     def show(self):
         """
         Make the layer of this `Maps`-object visible.
-        (just a shortcut for `m.show_layer(m.layer)`)
+        (a shortcut for `m.show_layer(m.layer)`)
+
+        If matploltib is used in non-interactive mode, (e.g. `plt.ioff()`)
+        `plt.show()` is called as well!
         """
 
         self.show_layer(self.layer)
+
+        if not plt.isinteractive():
+            plt.show()
 
     @property
     def ax(self):
