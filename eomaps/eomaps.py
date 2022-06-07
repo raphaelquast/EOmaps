@@ -1483,7 +1483,7 @@ class Maps(object):
                     xorig = np.asanyarray(x)
                     yorig = np.asanyarray(y)
 
-            return z_data, xorig, yorig, ids, parameter
+                return z_data, xorig, yorig, ids, parameter
 
         # identify all other types except for pandas.DataFrames
 
