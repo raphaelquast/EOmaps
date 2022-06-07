@@ -13,8 +13,6 @@ from matplotlib.pyplot import get_cmap
 from matplotlib.gridspec import SubplotSpec
 from matplotlib.colors import rgb2hex
 
-import mapclassify
-
 import cartopy.feature as cfeature
 from cartopy.io import shapereader
 from cartopy import crs as ccrs
@@ -41,6 +39,19 @@ try:
     _gpd_OK = True
 except ImportError:
     _gpd_OK = False
+
+
+mapclassify = None
+
+
+def _register_mapclassify():
+    global mapclassify
+    try:
+        import mapclassify
+    except ImportError:
+        return False
+
+    return True
 
 
 def combdoc(*args):
@@ -551,6 +562,11 @@ class classify_specs(object):
 
     def _get_default_args(self):
         if hasattr(self, "_scheme") and self._scheme is not None:
+            assert _register_mapclassify(), (
+                "EOmaps: Missing dependency: 'mapclassify' \n ... please install"
+                + " (conda install -c conda-forge mapclassify) to use data-classifications."
+            )
+
             assert self._scheme in mapclassify.CLASSIFIERS, (
                 f"the classification-scheme '{self._scheme}' is not valid... "
                 + " use one of:"
@@ -592,6 +608,11 @@ class classify_specs(object):
         """
         accessor for possible classification schemes
         """
+        assert _register_mapclassify(), (
+            "EOmaps: Missing dependency: 'mapclassify' \n ... please install"
+            + " (conda install -c conda-forge mapclassify) to use data-classifications."
+        )
+
         return SimpleNamespace(
             **dict(zip(mapclassify.CLASSIFIERS, mapclassify.CLASSIFIERS))
         )
