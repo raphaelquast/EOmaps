@@ -1411,7 +1411,13 @@ else:
             **LICENSE-info (without any warranty for correctness!!)**
 
             Make sure to check the usage-policies at
-            https://wiki.openstreetmap.org/wiki/WMS
+
+            - https://operations.osmfoundation.org/policies/tiles/
+            - https://www.openstreetmap.org/copyright
+
+            - for OSM_terrestis: https://www.terrestris.de/en/openstreetmap-wms/
+            - for OSM_mundialis: https://www.mundialis.de/en/ows-mundialis/
+
             """
 
             WMS = self._OpenStreetMap(self._m)
