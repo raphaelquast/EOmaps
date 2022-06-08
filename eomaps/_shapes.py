@@ -1074,7 +1074,12 @@ class shapes(object):
 
         @property
         def mask_radius(self):
-            return shapes._get_radius(self._m, self._mask_radius, self.mask_radius_crs)
+            if self.masked:
+                return shapes._get_radius(
+                    self._m, self._mask_radius, self.mask_radius_crs
+                )
+            else:
+                return None
 
         @mask_radius.setter
         def mask_radius(self, val):
