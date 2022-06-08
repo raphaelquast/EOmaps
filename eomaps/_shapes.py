@@ -102,6 +102,8 @@ class shapes(object):
                     print(f"EOmaps: radius: {radiusx:.4f}")
                 else:
                     print(f"EOmaps: radius: ({radiusx:.4f}, {radiusy:.4f})")
+                radius = (radiusx, radiusy)
+                # remember estimated radius to avoid re-calculating it all the time
                 m._estimated_radius = (radiusx, radiusy)
             else:
                 radius = m._estimated_radius
