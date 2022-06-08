@@ -1429,12 +1429,37 @@ else:
             (global) OpenStreetMap WebMap layers
             https://wiki.openstreetmap.org/wiki/WMS
 
+            Available styles are:
+
+                - default: standard OSM layer
+                - default_german: standard OSM layer in german
+                - standard: standard OSM layer
+                - stamen_toner: Black and white style by stamen
+                    - stamen_toner_lines
+                    - stamen_toner_background
+                    - stamen_toner_lite
+                    - stamen_toner_hybrid
+                    - stamen_toner_labels
+                - stamen_watercolor: a watercolor-like style by stamen
+                - stamen_terrain: a terrain layer by stamen
+                    - stamen_terrain_lines
+                    - stamen_terrain_labels
+                    - stamen_terrain_background
+                - OSM_terrestis: Styles hosted as free WMS service by Terrestis
+                - OSM_mundialis: Styles hosted as free WMS service by Mundialis
+
             Note
             ----
             **LICENSE-info (without any warranty for correctness!!)**
 
             Make sure to check the usage-policies at
-            https://wiki.openstreetmap.org/wiki/WMS
+
+            - https://operations.osmfoundation.org/policies/tiles/
+            - https://www.openstreetmap.org/copyright
+
+            - for OSM_terrestis: https://www.terrestris.de/en/openstreetmap-wms/
+            - for OSM_mundialis: https://www.mundialis.de/en/ows-mundialis/
+
             """
 
             def __init__(self, m):
