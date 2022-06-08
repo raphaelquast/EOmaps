@@ -97,19 +97,36 @@ class searchtree:
         ----------
         m : eomaps.Maps, optional
             the maps-object. The default is None.
-        pick_distance : int, optional
+        pick_distance : int, float or str optional
             used to limit the number of pixels in the search to
-            a rectangle of (pick_distance * estimated radius in plot_crs)
+            - if a number is provided:
+              use a rectangle of (pick_distance * estimated radius in plot_crs)
+            - if a string is provided:
+              use a rectangle with r=float(pick_distance) in plot_crs
+
             The default is 50.
         """
         self._m = m
         self._pick_distance = pick_distance
 
-        if self._m.shape.radius_crs != "out":
-            radius = self._m.set_shape._estimate_radius(self._m, "out", np.max)
-        else:
-            radius = self._m.shape.radius
-        self.d = max(radius) * self._pick_distance
+        if isinstance(pick_distance, (int, float, np.number)):
+            # evaluate an appropriate pick-distance
+            if self._m.shape.radius_crs != "out":
+                try:
+                    radius = self._m.set_shape._estimate_radius(self._m, "out", np.max)
+                except AssertionError:
+                    print(
+                        "EOmaps... unable to estimate 'pick_distance' radius... "
+                        + "Defaulting to `np.inf`. See docstring of m.plot_map() for "
+                        + "more details on how to set the pick_distance!"
+                    )
+                    radius = [np.inf]
+            else:
+                radius = self._m.shape.radius
+
+            self.d = max(radius) * self._pick_distance
+        elif isinstance(pick_distance, str):
+            self.d = float(pick_distance)
 
         self._misses = 0
 

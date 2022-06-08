@@ -3447,18 +3447,25 @@ class Maps(object):
 
         Parameters
         ----------
-        pick_distance : int or None
-            If None, NO pick-callbacks will be assigned (e.g. 'm.cb.pick' will not work)
-            (useful for very large datasets to speed up plotting and save memory)
+        pick_distance : int, float, str or None
 
-            If int, it will be used to determine the search-area used to identify
-            clicked pixels (e.g. a rectangle with a edge-size of
-            `pick_distance * estimated radius`).
+            - If None, NO pick-callbacks will be assigned ('m.cb.pick' will not work!!)
+              (useful for very large datasets to speed up plotting and save memory)
+            - If a number is provided, it will be used to determine the search-area
+              used to identify clicked pixels (e.g. a rectangle with a edge-size of
+              `pick_distance * estimated radius`).
+            - If a string is provided, it will be directly assigned as pick-radius
+              (without multiplying by the estimated radius). This is useful for datasets
+              whose radius cannot be determined (e.g. singular points etc.)
+
+              The provided number is identified as radius in the plot-crs!
+
+              The string must be convertible to a number, e.g. `float("40.5")`
 
             The default is 100.
         layer : int, str or None
             The layer at which the dataset will be plotted.
-            ONLY relevant if dynamic = False!
+            ONLY relevant if `dynamic = False`!
 
             - If "all": the corresponding feature will be added to ALL layers
             - If None, the layer assigned to the Maps object is used (e.g. `m.layer`)
