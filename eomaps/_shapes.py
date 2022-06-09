@@ -1303,10 +1303,18 @@ class shapes(object):
 
             - Using a raster-based shading is only possible if:
                 - the data can be converted to rectangular 2D arrays
-                - the crs of the data and the plot-crs are equal!
 
             This function is based on the functionalities of `datashader.mpl_ext.dsshow`
             provided by the matplotlib-extension for datashader.
+
+            Note
+            ----
+            The shade_raster-shape uses a QuadMesh to represent the datapoints.
+
+            As a requirement for correct identification of the pixels, the
+            **data must be sorted by coordinates**!
+            (see `assume_sorted` argument of `m.plot_map()` for more details.)
+
 
             Parameters
             ----------
@@ -1396,6 +1404,11 @@ class shapes(object):
             Note
             ----
             The raster-shape uses a QuadMesh to represent the datapoints.
+
+            - As a requirement for correct identification of the pixels, the
+              **data must be sorted by coordinates**!
+              (see `assume_sorted` argument of `m.plot_map()` for more details.)
+
             This considerably speeds up plotting of large datasets but it has the
             disadvantage that only the vertices of the rectangles will be reprojected
             to the plot-crs while the curvature of the edges is NOT considerd!
