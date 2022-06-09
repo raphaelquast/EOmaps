@@ -1597,18 +1597,35 @@ class Maps(object):
         # this is required to avoid glitches in "raster" and "shade_raster"
         # since QuadMesh requires sorted coordinates!
         # (currently only implemented for 1D coordinates and 2D data)
-        if assume_sorted is False and used_shape.name in ["raster", "shade_raster"]:
-            if (
-                len(xorig.shape) == 1
-                and len(yorig.shape) == 1
-                and len(z_data.shape) == 2
-            ):
+        if assume_sorted is False:
+            if used_shape.name in ["raster", "shade_raster"]:
+                if (
+                    len(xorig.shape) == 1
+                    and len(yorig.shape) == 1
+                    and len(z_data.shape) == 2
+                ):
 
-                xs, ys = np.argsort(xorig), np.argsort(yorig)
-                np.take(xorig, xs, out=xorig, mode="wrap")
-                np.take(yorig, ys, out=yorig, mode="wrap")
-                np.take(
-                    np.take(z_data, xs, 0), indices=ys, axis=1, out=z_data, mode="wrap"
+                    xs, ys = np.argsort(xorig), np.argsort(yorig)
+                    np.take(xorig, xs, out=xorig, mode="wrap")
+                    np.take(yorig, ys, out=yorig, mode="wrap")
+                    np.take(
+                        np.take(z_data, xs, 0),
+                        indices=ys,
+                        axis=1,
+                        out=z_data,
+                        mode="wrap",
+                    )
+                else:
+                    print(
+                        "EOmaps: using 'assume_sorted=False' is only possible"
+                        + "if you use 1D coordinates + 2D data!"
+                        + "...continuing without sorting."
+                    )
+            else:
+                print(
+                    "EOmaps: using 'assume_sorted=False' is only relevant for "
+                    + "the shapes ['raster', 'shade_raster']! "
+                    + "...continuing without sorting."
                 )
 
         if crs1 == crs2:
