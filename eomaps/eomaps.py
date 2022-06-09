@@ -1549,6 +1549,7 @@ class Maps(object):
         x=None,
         y=None,
         buffer=None,
+        assume_sorted=True,
     ):
         if in_crs is None:
             in_crs = self.data_specs.crs
@@ -1592,6 +1593,41 @@ class Maps(object):
         # invoke the shape-setter to make sure a shape is set
         used_shape = self.shape
 
+        # --------- sort by coordinates
+        # this is required to avoid glitches in "raster" and "shade_raster"
+        # since QuadMesh requires sorted coordinates!
+        # (currently only implemented for 1D coordinates and 2D data)
+        if assume_sorted is False:
+            if used_shape.name in ["raster", "shade_raster"]:
+                if (
+                    len(xorig.shape) == 1
+                    and len(yorig.shape) == 1
+                    and len(z_data.shape) == 2
+                ):
+
+                    xs, ys = np.argsort(xorig), np.argsort(yorig)
+                    np.take(xorig, xs, out=xorig, mode="wrap")
+                    np.take(yorig, ys, out=yorig, mode="wrap")
+                    np.take(
+                        np.take(z_data, xs, 0),
+                        indices=ys,
+                        axis=1,
+                        out=z_data,
+                        mode="wrap",
+                    )
+                else:
+                    print(
+                        "EOmaps: using 'assume_sorted=False' is only possible"
+                        + "if you use 1D coordinates + 2D data!"
+                        + "...continuing without sorting."
+                    )
+            else:
+                print(
+                    "EOmaps: using 'assume_sorted=False' is only relevant for "
+                    + "the shapes ['raster', 'shade_raster']! "
+                    + "...continuing without sorting."
+                )
+
         if crs1 == crs2:
             if used_shape.name in ["raster"]:
                 # convert 1D data to 2D (required for QuadMeshes)
@@ -1600,6 +1636,7 @@ class Maps(object):
                     and len(yorig.shape) == 1
                     and len(z_data.shape) == 2
                 ):
+
                     xorig, yorig = np.meshgrid(xorig, yorig, copy=False)
                     z_data = z_data.T
 
@@ -2830,6 +2867,7 @@ class Maps(object):
         layer=None,
         dynamic=False,
         set_extent=True,
+        assume_sorted=True,
         **kwargs,
     ):
         """
@@ -2867,7 +2905,7 @@ class Maps(object):
         if verbose:
             print("EOmaps: Preparing the data")
         # ---------------------- prepare the data
-        props = self._prepare_data()
+        props = self._prepare_data(assume_sorted=assume_sorted)
         if len(props["z_data"]) == 0:
             print("EOmaps: there was no data to plot")
             return
@@ -2998,6 +3036,10 @@ class Maps(object):
             else:
                 # first convert 1D inputs to 2D, then reproject the grid and use
                 # a curvilinear QuadMesh to display the data
+                assert _register_pandas(), (
+                    "EOmaps: missing dependency 'pandas' to convert 1D"
+                    + "datasets to 2D as required for 'shade_raster'"
+                )
 
                 # use pandas to convert to 2D
                 df = (
@@ -3037,6 +3079,10 @@ class Maps(object):
             self._1Dprops(props)
 
         else:
+            assert (
+                _register_pandas()
+            ), f"EOmaps: missing dependency 'pandas' for {self.shape.name}"
+
             df = pd.DataFrame(
                 dict(x=props["x0"].ravel(), y=props["y0"].ravel(), val=zdata.ravel()),
                 copy=False,
@@ -3268,6 +3314,7 @@ class Maps(object):
         layer=None,
         dynamic=False,
         set_extent=True,
+        assume_sorted=True,
         **kwargs,
     ):
 
@@ -3302,7 +3349,7 @@ class Maps(object):
             #     return
 
             # ---------------------- prepare the data
-            props = self._prepare_data()
+            props = self._prepare_data(assume_sorted=assume_sorted)
 
             # remember props for later use
             self._props = props
@@ -3374,6 +3421,7 @@ class Maps(object):
                         args["array"] = df.values.T
 
                     coll = self.shape.get_coll(xg, yg, "in", **args)
+
                 else:
                     raise AssertionError(
                         "EOmaps: using 'raster' is only possible if "
@@ -3381,6 +3429,10 @@ class Maps(object):
                         + "arrays or as a 1D pandas.DataFrame (which "
                         + "will be converted to 2D internally)"
                     )
+
+                # convert values to 1D for callbacks etc.
+                self._1Dprops(props)
+
             else:
                 # convert input to 1D
                 coll = self.shape.get_coll(
@@ -3427,6 +3479,7 @@ class Maps(object):
         dynamic=False,
         set_extent=True,
         memmap=False,
+        assume_sorted=True,
         **kwargs,
     ):
         """
@@ -3443,18 +3496,25 @@ class Maps(object):
 
         Parameters
         ----------
-        pick_distance : int or None
-            If None, NO pick-callbacks will be assigned (e.g. 'm.cb.pick' will not work)
-            (useful for very large datasets to speed up plotting and save memory)
+        pick_distance : int, float, str or None
 
-            If int, it will be used to determine the search-area used to identify
-            clicked pixels (e.g. a rectangle with a edge-size of
-            `pick_distance * estimated radius`).
+            - If None, NO pick-callbacks will be assigned ('m.cb.pick' will not work!!)
+              (useful for very large datasets to speed up plotting and save memory)
+            - If a number is provided, it will be used to determine the search-area
+              used to identify clicked pixels (e.g. a rectangle with a edge-size of
+              `pick_distance * estimated radius`).
+            - If a string is provided, it will be directly assigned as pick-radius
+              (without multiplying by the estimated radius). This is useful for datasets
+              whose radius cannot be determined (e.g. singular points etc.)
+
+              The provided number is identified as radius in the plot-crs!
+
+              The string must be convertible to a number, e.g. `float("40.5")`
 
             The default is 100.
         layer : int, str or None
             The layer at which the dataset will be plotted.
-            ONLY relevant if dynamic = False!
+            ONLY relevant if `dynamic = False`!
 
             - If "all": the corresponding feature will be added to ALL layers
             - If None, the layer assigned to the Maps object is used (e.g. `m.layer`)
@@ -3490,6 +3550,15 @@ class Maps(object):
             The location of the tempfolder is accessible via `m._tempfolder`
 
             The default is False.
+        assume_sorted : bool, optional
+            ONLY relevant for the shapes "raster" and "shade_raster"
+            (and only if coordinates are provided as 1D arrays and data is a 2D array)
+
+            Sort values with respect to the coordinates prior to plotting
+            (required for QuadMesh if unsorted coordinates are provided)
+
+            The default is True.
+
 
         Other Parameters:
         -----------------
@@ -3529,6 +3598,7 @@ class Maps(object):
                 layer=layer,
                 dynamic=dynamic,
                 set_extent=set_extent,
+                assume_sorted=assume_sorted,
                 **kwargs,
             )
         else:
@@ -3537,6 +3607,7 @@ class Maps(object):
                 layer=layer,
                 dynamic=dynamic,
                 set_extent=set_extent,
+                assume_sorted=assume_sorted,
                 **kwargs,
             )
 

@@ -90,9 +90,23 @@ class shapes(object):
     @staticmethod
     def _get_radius(m, radius, radius_crs):
         if (isinstance(radius, str) and radius == "estimate") or radius is None:
-            # make sure props are defined otherwise we can't estimate the radius!
-            if not hasattr(m, "_props"):
-                m._props = m._prepare_data()
+            if m._estimated_radius is None:
+                # make sure props are defined otherwise we can't estimate the radius!
+                if not hasattr(m, "_props"):
+                    m._props = m._prepare_data()
+
+                print("EOmaps: estimating radius...")
+                radiusx, radiusy = shapes._estimate_radius(m, radius_crs)
+
+                if radiusx == radiusy:
+                    print(f"EOmaps: radius: {radiusx:.4f}")
+                else:
+                    print(f"EOmaps: radius: ({radiusx:.4f}, {radiusy:.4f})")
+                radius = (radiusx, radiusy)
+                # remember estimated radius to avoid re-calculating it all the time
+                m._estimated_radius = (radiusx, radiusy)
+            else:
+                radius = m._estimated_radius
         else:
             if isinstance(radius, (list, np.ndarray)):
                 radiusx = radiusy = tuple(radius)
@@ -102,121 +116,67 @@ class shapes(object):
             elif isinstance(radius, (int, float, np.number)):
                 radiusx = radiusy = radius
 
-            # we need an immutuable object for the lru_cache!
-            # (if radius is passed as list we need to convert it to a hashable object)
-            try:
-                hash(radiusx)
-                hash(radiusy)
-            except TypeError:
-                radiusx = tuple(radiusx)
-                radiusy = tuple(radiusy)
-
-            radius = tuple((radiusx, radiusy))
-
-        return shapes._get_radius_cache(m=m, radius=radius, radius_crs=radius_crs)
-
-    @staticmethod
-    def _get_radius_cache(m, radius, radius_crs):
-        # get the radius for plotting
-        if (isinstance(radius, str) and radius == "estimate") or radius is None:
-            if m._estimated_radius is None:
-                print("EOmaps: estimating radius...")
-                radiusx, radiusy = shapes._estimate_radius(m, radius_crs)
-                if radiusx == radiusy:
-                    print(f"EOmaps: radius: {radiusx:.4f}")
-                else:
-                    print(f"EOmaps: radius: ({radiusx:.4f}, {radiusy:.4f})")
-                m._estimated_radius = (radiusx, radiusy)
-            else:
-                (radiusx, radiusy) = m._estimated_radius
-
-        else:
-            radiusx, radiusy = radius
-
-        return (radiusx, radiusy)
+            radius = (radiusx, radiusy)
+        return radius
 
     @staticmethod
     def _estimate_radius(m, radius_crs, method=np.median):
+
         if radius_crs == "in":
-            if (
-                isinstance(m.data_specs.x, np.ndarray)
-                and len(m.data_specs.x.shape) == 2
-            ):
-                radiusx = (
-                    np.nanmedian(
-                        np.diff(m._props["xorig"].reshape(m.data_specs.x.shape), axis=1)
-                    )
-                    / 2
-                )
-                radiusy = (
-                    np.nanmedian(
-                        np.diff(m._props["yorig"].reshape(m.data_specs.y.shape), axis=0)
-                    )
-                    / 2
-                )
-            else:
-                from scipy.spatial import cKDTree
-
-                in_tree = cKDTree(
-                    np.stack(
-                        [
-                            m._props["xorig"].flat[
-                                : m.set_shape.radius_estimation_range
-                            ],
-                            m._props["yorig"].flat[
-                                : m.set_shape.radius_estimation_range
-                            ],
-                        ],
-                        axis=1,
-                    ),
-                    compact_nodes=False,
-                    balanced_tree=False,
-                )
-
-                dists, pts = in_tree.query(in_tree.data, 3)
-
-                radiusx = radiusy = method(dists) / 2
-
+            x, y = m._props["xorig"], m._props["yorig"]
         elif radius_crs == "out":
-            if (
-                isinstance(m.data_specs.x, np.ndarray)
-                and len(m.data_specs.x.shape) == 2
-            ):
-                radiusx = (
-                    np.nanmedian(
-                        np.diff(m._props["x0"].reshape(m.data_specs.x.shape), axis=1)
-                    )
-                    / 2
-                )
-                radiusy = (
-                    np.nanmedian(
-                        np.diff(m._props["y0"].reshape(m.data_specs.y.shape), axis=0)
-                    )
-                    / 2
-                )
-            else:
-                from scipy.spatial import cKDTree
-
-                tree = cKDTree(
-                    np.stack(
-                        [
-                            m._props["x0"].flat[: m.set_shape.radius_estimation_range],
-                            m._props["y0"].flat[: m.set_shape.radius_estimation_range],
-                        ],
-                        axis=1,
-                    ),
-                    compact_nodes=False,
-                    balanced_tree=False,
-                )
-
-                dists, pts = tree.query(tree.data, 3)
-                radiusx = radiusy = method(dists) / 2
+            x, y = m._props["x0"], m._props["y0"]
         else:
             raise AssertionError(
                 "radius can only be estimated if radius_crs is 'in' or 'out'!"
             )
 
-        return (radiusx, radiusy)
+        radius = None
+
+        # try to estimate radius for 2D datasets
+        if isinstance(m.data_specs.x, np.ndarray) and len(m.data_specs.x.shape) == 2:
+            radiusx = np.nanmedian(np.diff(x.reshape(m.data_specs.x.shape), axis=1)) / 2
+            radiusy = np.nanmedian(np.diff(y.reshape(m.data_specs.y.shape), axis=0)) / 2
+
+            radius = (radiusx, radiusy)
+
+            if not np.isfinite(radius).all() or not all(i > 0 for i in radius):
+                radius = None
+
+        # for 1D datasets (or if 2D radius-estimation fails), use the median distance
+        # of 3 neighbours of the first N datapoints (N=shape.radius_estimation_range)
+        if radius is None:
+            from scipy.spatial import cKDTree
+
+            in_tree = cKDTree(
+                np.stack(
+                    [
+                        x.flat[: m.set_shape.radius_estimation_range],
+                        y.flat[: m.set_shape.radius_estimation_range],
+                    ],
+                    axis=1,
+                ),
+                compact_nodes=False,
+                balanced_tree=False,
+            )
+
+            dists, pts = in_tree.query(in_tree.data, 3)
+
+            radiusxy = method(dists) / 2
+
+            if not np.isfinite(radiusxy) or not (radiusxy > 0):
+                radius = None
+            else:
+                radius = (radiusxy, radiusxy)
+
+        assert radius is not None, (
+            "EOmaps: Radius estimation failed... either there's somethign wrong with "
+            + "the provided coordinates or you can try to increase the number of "
+            + "datapoints used to evaluate the radius by increasing "
+            + "`m.set_shape.radius_estimation_range`."
+        )
+
+        return radius
 
     @staticmethod
     def _get_colors_and_array(kwargs, mask):
@@ -1114,7 +1074,12 @@ class shapes(object):
 
         @property
         def mask_radius(self):
-            return shapes._get_radius(self._m, self._mask_radius, self.mask_radius_crs)
+            if self.masked:
+                return shapes._get_radius(
+                    self._m, self._mask_radius, self.mask_radius_crs
+                )
+            else:
+                return None
 
         @mask_radius.setter
         def mask_radius(self, val):
@@ -1338,10 +1303,18 @@ class shapes(object):
 
             - Using a raster-based shading is only possible if:
                 - the data can be converted to rectangular 2D arrays
-                - the crs of the data and the plot-crs are equal!
 
             This function is based on the functionalities of `datashader.mpl_ext.dsshow`
             provided by the matplotlib-extension for datashader.
+
+            Note
+            ----
+            The shade_raster-shape uses a QuadMesh to represent the datapoints.
+
+            As a requirement for correct identification of the pixels, the
+            **data must be sorted by coordinates**!
+            (see `assume_sorted` argument of `m.plot_map()` for more details.)
+
 
             Parameters
             ----------
@@ -1431,6 +1404,11 @@ class shapes(object):
             Note
             ----
             The raster-shape uses a QuadMesh to represent the datapoints.
+
+            - As a requirement for correct identification of the pixels, the
+              **data must be sorted by coordinates**!
+              (see `assume_sorted` argument of `m.plot_map()` for more details.)
+
             This considerably speeds up plotting of large datasets but it has the
             disadvantage that only the vertices of the rectangles will be reprojected
             to the plot-crs while the curvature of the edges is NOT considerd!
