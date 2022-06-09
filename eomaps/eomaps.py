@@ -1549,6 +1549,7 @@ class Maps(object):
         x=None,
         y=None,
         buffer=None,
+        assume_sorted=True,
     ):
         if in_crs is None:
             in_crs = self.data_specs.crs
@@ -1592,6 +1593,24 @@ class Maps(object):
         # invoke the shape-setter to make sure a shape is set
         used_shape = self.shape
 
+        # --------- sort by coordinates
+        # this is required to avoid glitches in "raster" and "shade_raster"
+        # since QuadMesh requires sorted coordinates!
+        # (currently only implemented for 1D coordinates and 2D data)
+        if assume_sorted is False and used_shape.name in ["raster", "shade_raster"]:
+            if (
+                len(xorig.shape) == 1
+                and len(yorig.shape) == 1
+                and len(z_data.shape) == 2
+            ):
+
+                xs, ys = np.argsort(xorig), np.argsort(yorig)
+                np.take(xorig, xs, out=xorig, mode="wrap")
+                np.take(yorig, ys, out=yorig, mode="wrap")
+                np.take(
+                    np.take(z_data, xs, 0), indices=ys, axis=1, out=z_data, mode="wrap"
+                )
+
         if crs1 == crs2:
             if used_shape.name in ["raster"]:
                 # convert 1D data to 2D (required for QuadMeshes)
@@ -1600,6 +1619,7 @@ class Maps(object):
                     and len(yorig.shape) == 1
                     and len(z_data.shape) == 2
                 ):
+
                     xorig, yorig = np.meshgrid(xorig, yorig, copy=False)
                     z_data = z_data.T
 
@@ -2830,6 +2850,7 @@ class Maps(object):
         layer=None,
         dynamic=False,
         set_extent=True,
+        assume_sorted=True,
         **kwargs,
     ):
         """
@@ -2867,7 +2888,7 @@ class Maps(object):
         if verbose:
             print("EOmaps: Preparing the data")
         # ---------------------- prepare the data
-        props = self._prepare_data()
+        props = self._prepare_data(assume_sorted=assume_sorted)
         if len(props["z_data"]) == 0:
             print("EOmaps: there was no data to plot")
             return
@@ -3268,6 +3289,7 @@ class Maps(object):
         layer=None,
         dynamic=False,
         set_extent=True,
+        assume_sorted=True,
         **kwargs,
     ):
 
@@ -3302,7 +3324,7 @@ class Maps(object):
             #     return
 
             # ---------------------- prepare the data
-            props = self._prepare_data()
+            props = self._prepare_data(assume_sorted=assume_sorted)
 
             # remember props for later use
             self._props = props
@@ -3374,6 +3396,7 @@ class Maps(object):
                         args["array"] = df.values.T
 
                     coll = self.shape.get_coll(xg, yg, "in", **args)
+
                 else:
                     raise AssertionError(
                         "EOmaps: using 'raster' is only possible if "
@@ -3431,6 +3454,7 @@ class Maps(object):
         dynamic=False,
         set_extent=True,
         memmap=False,
+        assume_sorted=True,
         **kwargs,
     ):
         """
@@ -3501,6 +3525,15 @@ class Maps(object):
             The location of the tempfolder is accessible via `m._tempfolder`
 
             The default is False.
+        assume_sorted : bool, optional
+            ONLY relevant for the shapes "raster" and "shade_raster"
+            (and only if coordinates are provided as 1D arrays and data is a 2D array)
+
+            Sort values with respect to the coordinates prior to plotting
+            (required for QuadMesh if unsorted coordinates are provided)
+
+            The default is True.
+
 
         Other Parameters:
         -----------------
@@ -3540,6 +3573,7 @@ class Maps(object):
                 layer=layer,
                 dynamic=dynamic,
                 set_extent=set_extent,
+                assume_sorted=assume_sorted,
                 **kwargs,
             )
         else:
@@ -3548,6 +3582,7 @@ class Maps(object):
                 layer=layer,
                 dynamic=dynamic,
                 set_extent=set_extent,
+                assume_sorted=assume_sorted,
                 **kwargs,
             )
 
