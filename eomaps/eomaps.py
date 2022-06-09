@@ -3036,6 +3036,10 @@ class Maps(object):
             else:
                 # first convert 1D inputs to 2D, then reproject the grid and use
                 # a curvilinear QuadMesh to display the data
+                assert _register_pandas(), (
+                    "EOmaps: missing dependency 'pandas' to convert 1D"
+                    + "datasets to 2D as required for 'shade_raster'"
+                )
 
                 # use pandas to convert to 2D
                 df = (
@@ -3075,6 +3079,10 @@ class Maps(object):
             self._1Dprops(props)
 
         else:
+            assert (
+                _register_pandas()
+            ), f"EOmaps: missing dependency 'pandas' for {self.shape.name}"
+
             df = pd.DataFrame(
                 dict(x=props["x0"].ravel(), y=props["y0"].ravel(), val=zdata.ravel()),
                 copy=False,
