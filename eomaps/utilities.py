@@ -482,6 +482,9 @@ class _layer_selector:
             raise TypeError(f"'{self._method}' is not a valid layer-selector method")
 
 
+from .draw import shape_drawer
+
+
 class utilities:
     """
     A collection of utility tools that can be added to EOmaps plots
@@ -491,6 +494,7 @@ class utilities:
         self._m = m
 
         self._layer_selector = _layer_selector(m)
+        self._shape_drawer = shape_drawer(m)
 
     @property
     @wraps(_layer_selector._new_selector)
@@ -501,3 +505,8 @@ class utilities:
     @wraps(_layer_selector._new_slider)
     def layer_slider(self):
         return self._layer_selector._new_slider
+
+    @property
+    @wraps(shape_drawer)
+    def draw(self):
+        return self._shape_drawer
