@@ -395,7 +395,7 @@ import eomaps._shapes as eoshp
 
 
 class shape_drawer:
-    def __init__(self, m, savepath=None):
+    def __init__(self, m, layer=None, savepath=None):
         """
         Container class for draw-shapes
 
@@ -403,6 +403,10 @@ class shape_drawer:
         ----------
         m : eomaps.Maps
             the maps-object.
+        layer : str or int
+            The layer-name to put the shapes on.
+            If None, the currently active layer will be used.
+            The default is None.
         savepath : str, optional
             A path to a folder that will be used to store the drawn shapes
             as shapefiles.
@@ -410,6 +414,7 @@ class shape_drawer:
 
         """
         self._m = m
+        self._layer = layer
 
         if self._m.crs_plot == ccrs.PlateCarree():
             # temporary workaround for geopandas issue with WKT2 strings
@@ -472,7 +477,12 @@ class shape_drawer:
                 pts = np.column_stack((x_new, y_new))
 
             (ph,) = self._m.ax.fill(pts[:, 0], pts[:, 1], **kwargs)
-            self._m.BM.add_bg_artist(ph)
+
+            if self._layer is None:
+                self._m.BM.add_bg_artist(ph, layer=self._m.BM._bg_layer)
+            else:
+                self._m.BM.add_bg_artist(ph, layer=self._layer)
+
             self._m.BM.update()
 
             if self._savepath:
@@ -532,7 +542,12 @@ class shape_drawer:
             )
 
             (ph,) = self._m.ax.fill(pts[0][0], pts[1][0], **kwargs)
-            self._m.BM.add_bg_artist(ph)
+
+            if self._layer is None:
+                self._m.BM.add_bg_artist(ph, layer=self._m.BM._bg_layer)
+            else:
+                self._m.BM.add_bg_artist(ph, layer=self._layer)
+
             self._m.BM.update()
 
             if self._savepath:
@@ -586,7 +601,12 @@ class shape_drawer:
             )[0][0]
 
             (ph,) = self._m.ax.fill(pts[:, 0], pts[:, 1], **kwargs)
-            self._m.BM.add_bg_artist(ph)
+
+            if self._layer is None:
+                self._m.BM.add_bg_artist(ph, layer=self._m.BM._bg_layer)
+            else:
+                self._m.BM.add_bg_artist(ph, layer=self._layer)
+
             self._m.BM.update()
 
             if self._savepath:
