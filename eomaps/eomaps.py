@@ -3836,15 +3836,17 @@ class Maps(object):
             >>>     return f"{x} m"
 
             The default is None.
-        add_extend_arrows : str
+        add_extend_arrows : str or False
             Set if extension-arrows should be drawn. (e.g. to indicate that there are
             some data-values outside the colorbar-range)
 
-            - Can be one of: ("auto", "upper", "lower", "both")
+            - Can be one of: ("auto", "upper", "lower", "both" or False)
+            - If False: NO extension-arrows will be drawn.
             - If "auto": extension-arrows are only drawn if values outside the color
               boundaries are encoundered. The default is "auto"
 
             Note: The range of the colors is set with `m.plot_map(vmin=..., vmax=...)`
+            The default is "auto".
         extend_frac : float or None
             The fraction of the colorbar to use for adding "extension-arrows" to
             indicate out-of-bounds values.
@@ -4182,9 +4184,13 @@ class Maps(object):
         self.BM.add_bg_artist(self._ax_cb, layer)
         self.BM.add_bg_artist(self._ax_cb_plot, layer)
 
-        ax_cb_extend = self._add_cb_extend_arrows(
-            cb, orientation, extend_frac=extend_frac, which=add_extend_arrows
-        )
+        if add_extend_arrows is not False:
+            ax_cb_extend = self._add_cb_extend_arrows(
+                cb, orientation, extend_frac=extend_frac, which=add_extend_arrows
+            )
+        else:
+            ax_cb_extend = None
+
         # remember colorbar for later (so that we can update its position etc.)
         self._colorbar = [
             layer,
