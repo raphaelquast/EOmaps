@@ -1857,13 +1857,16 @@ class Maps(object):
         else:
             ax_cb_plot.set_axis_off()
 
-        # identify position of color-splits in the colorbar
-        if isinstance(n_cmap.cmap, LinearSegmentedColormap):
-            # for LinearSegmentedcolormap N is the number of quantizations!
-            splitpos = np.linspace(vmin, vmax, n_cmap.cmap.N)
+        if bins is None:
+            # identify position of color-splits in the colorbar
+            if isinstance(n_cmap.cmap, LinearSegmentedColormap):
+                # for LinearSegmentedcolormap N is the number of quantizations!
+                splitpos = np.linspace(vmin, vmax, n_cmap.cmap.N)
+            else:
+                # for ListedColormap N is the number of colors
+                splitpos = np.linspace(vmin, vmax, n_cmap.cmap.N + 1)
         else:
-            # for ListedColormap N is the number of colors
-            splitpos = np.linspace(vmin, vmax, n_cmap.cmap.N + 1)
+            splitpos = bins
 
         # color the histogram patches
         for patch in list(ax_cb_plot.patches):
