@@ -218,7 +218,7 @@ class _layer_selector:
 
             Some useful arguments are:
 
-            - ncol: the numer of columns to use
+            - ncol: the number of columns to use
             - size: the size of the markers
             - fontsize: the fontsize of the labels
             - loc: the position of the widget with respect to the figure.
