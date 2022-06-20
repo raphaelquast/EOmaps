@@ -406,7 +406,7 @@ class _click_callbacks(object):
             if self.m.figure.coll is not None:
                 radius = "pixel"
             else:
-                # make a dot with 1/20 of the widht & height of the figure
+                # make a dot with 1/20 of the width & height of the figure
                 t = self.m.figure.ax.bbox.transformed(
                     self.m.figure.ax.transData.inverted()
                 )

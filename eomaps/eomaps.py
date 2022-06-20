@@ -383,7 +383,7 @@ class Maps(object):
 
     def cleanup(self):
         """
-        Cleanup all references to the object so that it can be savely deleted.
+        Cleanup all references to the object so that it can be safely deleted.
         (primarily used internally to clear objects if the figure is closed)
 
         Note
@@ -1880,7 +1880,7 @@ class Maps(object):
                 height = patch.get_height()
                 maxval = minval + width
 
-            # ----------- take care of histogram-bins that have splitted colors
+            # ----------- take care of histogram-bins that have split colors
             # identify bins that extend beyond a color-change
             splitbins = [
                 minval,
@@ -3858,7 +3858,7 @@ class Maps(object):
 
         Notes
         -----
-        Here's how the padding looks like as a scetch:
+        Here's how the padding looks like as a sketch:
 
         >>> _________________________________________________________
         >>> |[ - - - - - - - - - - - - - - - - - - - - - - - - - - ]|
@@ -4216,7 +4216,7 @@ class Maps(object):
         Parameters
         ----------
         radius : float, optional
-            The readius to use for plotting the indicators for the masked
+            The radius to use for plotting the indicators for the masked
             points. The unit of the radius is map-pixels! The default is 1.
         **kwargs :
             additional kwargs passed to `m.plot_map(**kwargs)`.

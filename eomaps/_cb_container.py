@@ -34,7 +34,7 @@ class _cb_container(object):
         self._event = None
 
     def _getobj(self, m):
-        """get the equivalent callback container on anoter maps object"""
+        """get the equivalent callback container on another maps object"""
         return getattr(m.cb, self._method, None)
 
     @property
@@ -730,7 +730,7 @@ class cb_pick_container(_click_container):
 
     Note
     ----
-    you can set a treshold for the default picker via the `pick_distance`
+    you can set a threshold for the default picker via the `pick_distance`
     `m.plot_map(pick_distance=20)` to specify the maximal distance (in pixels)
     that is used to identify the closest datapoint
 

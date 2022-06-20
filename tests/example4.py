@@ -25,7 +25,7 @@ m.add_feature.preset.ocean()  # add ocean-coloring in the background
 m.add_feature.preset.coastline()  # add coastlines on top
 m.plot_map()
 
-# --------- attach pre-defined CALLBACK funcitons ---------
+# --------- attach pre-defined CALLBACK functions ---------
 
 ### add a temporary annotation and a marker if you left-click on a pixel
 m.cb.pick.attach.mark(

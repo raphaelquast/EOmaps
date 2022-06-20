@@ -170,7 +170,7 @@ class shapes(object):
                 radius = (radiusxy, radiusxy)
 
         assert radius is not None, (
-            "EOmaps: Radius estimation failed... either there's somethign wrong with "
+            "EOmaps: Radius estimation failed... either there's something wrong with "
             + "the provided coordinates or you can try to increase the number of "
             + "datapoints used to evaluate the radius by increasing "
             + "`m.set_shape.radius_estimation_range`."
@@ -584,7 +584,7 @@ class shapes(object):
             # mask any point that is in a different quadrant than the center point
             maskx = pts_quadrants != quadrants[:, np.newaxis]
             # take care of points that are on the center line (e.g. don't mask them)
-            # (use a +- 10 degree around 0 as treshold)
+            # (use a +- 10 degree around 0 as threshold)
             cpoints = np.broadcast_to(
                 np.isclose(xp, xc, atol=10)[:, np.newaxis], xs.shape
             )
@@ -1411,7 +1411,7 @@ class shapes(object):
 
             This considerably speeds up plotting of large datasets but it has the
             disadvantage that only the vertices of the rectangles will be reprojected
-            to the plot-crs while the curvature of the edges is NOT considerd!
+            to the plot-crs while the curvature of the edges is NOT considered!
             (e.g. the effective shape is a distorted rectangle with straight edges)
 
             - use `m.set_shape.rectangles()` if you need "curved" edges!

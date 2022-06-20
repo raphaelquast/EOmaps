@@ -745,7 +745,7 @@ and ``< LAYER >`` indicates the actual layer-name.
     |     # ... for more advanced                                                                    |                                         |
     |     layer = mg.m_1_0.add_wms.ISRIC_SoilGrids.nitrogen.add_layer.nitrogen_0_5cm_mean            |                                         |
     |     layer.set_extent_to_bbox() # set the extent according to the boundingBox                   |                                         |
-    |     layer.info                 # the "info" property provides useful informations on the layer |                                         |
+    |     layer.info                 # the "info" property provides useful information on the layer  |                                         |
     |     layer()                    # call the layer to add it to the map                           |                                         |
     |     layer.add_legend()         # if a legend is provided, you can add it to the map!           |                                         |
     |                                                                                                |                                         |
