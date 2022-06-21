@@ -70,7 +70,12 @@ Consider supporting the development and add a citation to your publication!
 
 Found a bug or got an idea for an interesting feature?  
 Open an [issue](https://github.com/raphaelquast/EOmaps/issues) or start a [discussion](https://github.com/raphaelquast/EOmaps/discussions), and I'll see what I can do!  
-(I'm of course also happy about actual pull requests on features and bug-fixes!)
+
+Interested in actively contributing to the library?
+- Any contributions are welcome! (new features, enhancements, fixes, documentation updates, outreach etc.)
+- Have a look at this [🌟 overview project](https://github.com/users/raphaelquast/projects/5/views/8) to get an overview of existing ideas that could use some help.
+- Get in touch by opening a discussion in the [🐜 Contribution](https://github.com/raphaelquast/EOmaps/discussions/categories/contribution) section!
+
 
 ---------------
 <table>
