@@ -1306,7 +1306,7 @@ class BlitManager:
                 action()
 
         # let the GUI event loop process anything it has to do
-        # don't do this! it is causing infinit loops
+        # don't do this! it is causing infinite loops
         # cv.flush_events()
 
     def _get_overlay_name(self, layer=None, bg_layer=None):
