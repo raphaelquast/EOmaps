@@ -2113,8 +2113,15 @@ class Maps(object):
         points = dict(
             left=[[0, 0.5], [x0, 1], [x0 + ovx, 1], [x0 + ovx, 0], [x0, 0], [0, 0.5]],
             right=[[1, 0.5], [x1, 1], [x1 - ovx, 1], [x1 - ovx, 0], [x1, 0], [1, 0.5]],
-            top=[[0.5, 1], [0, y1 - ovy], [1, y1 - ovy], [0.5, 1]],
-            bottom=[[0.5, 0], [0, y0 + ovy], [1, y0 + ovy], [0.5, 0]],
+            top=[[0.5, 1], [0, y1], [0, y1 - ovy], [1, y1 - ovy], [1, y1], [0.5, 1]],
+            bottom=[
+                [0.5, 0],
+                [0, y0],
+                [0, y0 + ovy],
+                [1, y0 + ovy],
+                [1, y0],
+                [0.5, ovy],
+            ],
         )
 
         cmap = self.figure.coll.cmap
