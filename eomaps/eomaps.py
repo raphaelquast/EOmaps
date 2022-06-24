@@ -555,6 +555,7 @@ class Maps(object):
         xy_crs=4326,
         radius_crs=4326,
         inset_crs=4326,
+        layer="all",
         edgecolor="r",
         linewidth=2,
         shape="ellipses",
@@ -603,6 +604,15 @@ class Maps(object):
         inset_crs : any, optional
             The crs that is used in the inset-map.
             The default is 4326.
+        layer : str, optional
+            The layer associated with the inset-map.
+            Note: If you specify a dedicated layer for the inset-map, the contents
+            of the inset-map will only be visible on that specific layer!
+            To create different views of an inset-map for different layers,
+            simply create a child-layer from the inset-map (see examples below).
+            By default the "all" layer is used so that the contents of the inset-map
+            are visible independent of the currently visible layer.
+            The default is "all".
         edgecolor : str or tuple, optional
             The edgecolor of the boundary. The default is "r".
         linewidth : TYPE, optional
@@ -667,6 +677,23 @@ class Maps(object):
         >>> m2.add_annotation(ID=1)
         >>> m2.indicate_inset_extent(m, ec="g", fc=(0,1,0,.25))
 
+        Multi-layer inset-maps:
+
+        >>> m = Maps(layer="first")
+        >>> m.add_feature.preset.coastline()
+        >>> m3 = m.new_layer("second")
+        >>> m3.add_feature.preset.ocean()
+        >>> # create an inset-map on the "first" layer
+        >>> m2 = m.new_inset_map(layer="first")
+        >>> m2.add_feature.preset.coastline()
+        >>> # create a new layer of the inset-map that will be
+        >>> # visible if the "second" layer is visible
+        >>> m3 = m2.new_layer(layer="second")
+        >>> m3.add_feature.preset.coastline()
+        >>> m3.add_feature.preset.land()
+
+        >>> m.util.layer_selector()
+
         """
 
         x, y = xy
@@ -682,7 +709,7 @@ class Maps(object):
             right=plot_x + plot_size / 2,
         )[0]
         # initialize a new maps-object with a new axis
-        m2 = Maps(inset_crs, parent=self, gs_ax=gs)
+        m2 = Maps(inset_crs, parent=self, gs_ax=gs, layer=layer)
 
         # get the boundary of a ellipse in the inset_crs
         possible_shapes = ["ellipses", "rectangles", "geod_circles"]
