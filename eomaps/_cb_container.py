@@ -1120,6 +1120,12 @@ class keypress_container(_cb_container):
                 the ID of the attached callback
 
             """
+
+            if not isinstance(key, str):
+                raise TypeError(
+                    "EOmaps: The 'key' for keypress-callbacks must be a string!"
+                )
+
             return self._parent._add_callback(f, key, **kwargs)
 
     class _get:
