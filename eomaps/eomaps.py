@@ -2151,6 +2151,38 @@ class Maps(object):
         axcb2.add_collection(collection)
         return axcb2
 
+    def _update_cb_extend_pos(self):
+        # update the position of the axis holding the colorbar extension arrows
+        # TODO the colorbar should be merged into a single artist
+        #      to avoid having to update the axes separately!
+        [
+            layer,
+            cbgs,
+            ax_cb,
+            ax_cb_plot,
+            ax_cb_extend,
+            extend_frac,
+            orientation,
+            cb,
+        ] = self._colorbar
+
+        if ax_cb_extend is None:
+            return
+
+        bbox = ax_cb.bbox.transformed(self.figure.f.transFigure.inverted())
+        if orientation == "horizontal":
+            frac = extend_frac * (bbox.width)
+            ax_cb_extend.set_position(
+                (bbox.x0 - frac / 2, bbox.y0, bbox.width + frac, bbox.height),
+            )
+        elif orientation == "vertical":
+            frac = extend_frac * (bbox.height)
+            ax_cb_extend.set_position(
+                (bbox.x0, bbox.y0 - frac / 2, bbox.width, bbox.height + frac),
+            )
+        else:
+            raise TypeError(f"'{orientation}' is not a valid colorbar orientation!")
+
     @property
     @wraps(NaturalEarth_features)
     def add_feature(self):
@@ -4498,6 +4530,10 @@ class Maps(object):
         self.parent.figure.gridspec.update(**kwargs)
         # after changing margins etc. a redraw is required
         # to fetch the updated background!
+
+        # make sure the position of the axis holding the colorbar-extension-arrows
+        # is properly updated
+        self._update_cb_extend_pos()
         self.redraw()
 
     def _get_layers(self, exclude=None):
