@@ -308,7 +308,7 @@ class _wmts_layer(_WebMap_layer):
         super().__init__(*args, **kwargs)
         pass
 
-    def __call__(self, layer=None, zorder=0, **kwargs):
+    def __call__(self, layer=None, zorder=0, alpha=1, **kwargs):
         """
         Add the WMTS layer to the map
 
@@ -324,19 +324,33 @@ class _wmts_layer(_WebMap_layer):
         zorder : float
             The zorder of the artist (e.g. the stacking level of overlapping artists)
             The default is 0
+        alpha : float, optional
+            The alpha-transparency of the image.
+            NOTE: This changes the global transparency of the images... it does
+            not control whether the images are served with included transparency!
+            (check the "transparent" kwarg)
         **kwargs :
             additional kwargs passed to the WebMap service request.
             (e.g. transparent=True, time='2020-02-05', etc.)
+
+        Additional Parameters
+        ---------------------
+        transparent : bool, optional
+            Indicator if the WMS images should be read as RGB or RGBA
+            (e.g. with or without transparency). The default is False.
+
         """
         from . import MapsGrid  # do this here to avoid circular imports!
 
-        style = self._set_style(kwargs.get("styles", None))
+        self._style = self._set_style(kwargs.get("styles", None))
         if self._style is not None:
             kwargs["styles"] = [self._style]
 
+        self._zorder = zorder
+        self._kwargs = kwargs
+        self._alpha = alpha
+
         for m in self._m if isinstance(self._m, MapsGrid) else [self._m]:
-            self._zorder = zorder
-            self._kwargs = kwargs
             if layer is None:
                 self._layer = m.layer
             else:
@@ -344,11 +358,11 @@ class _wmts_layer(_WebMap_layer):
 
             if self._layer == "all" or self._m.BM.bg_layer == self._layer:
                 # add the layer immediately if the layer is already active
-                self._do_add_layer(self._m, self._layer, zorder=zorder, kwargs=kwargs)
+                self._do_add_layer(self._m, self._layer)
             else:
                 # delay adding the layer until it is effectively activated
                 self._m.BM.on_layer(
-                    partial(self._do_add_layer, zorder=zorder, kwargs=kwargs),
+                    partial(self._do_add_layer),
                     layer=self._layer,
                     persistent=False,
                     m=m,
@@ -372,7 +386,7 @@ class _wmts_layer(_WebMap_layer):
             ax.add_image(img)
         return img
 
-    def _do_add_layer(self, m, l, zorder, kwargs):
+    def _do_add_layer(self, m, l):
         # actually add the layer to the map.
         print(f"EOmaps: Adding wmts-layer: {self.name}")
 
@@ -381,9 +395,10 @@ class _wmts_layer(_WebMap_layer):
             m.ax,
             self._wms,
             self.name,
-            wms_kwargs=kwargs,
+            wms_kwargs=self._kwargs,
             interpolation="spline36",
-            zorder=zorder,
+            zorder=self._zorder,
+            alpha=self._alpha,
         )
 
         # art = m.figure.ax.add_wmts(
@@ -401,7 +416,7 @@ class _wms_layer(_WebMap_layer):
         super().__init__(*args, **kwargs)
         pass
 
-    def __call__(self, layer=None, zorder=0, **kwargs):
+    def __call__(self, layer=None, zorder=0, alpha=1, **kwargs):
         """
         Add the WMS layer to the map
 
@@ -417,19 +432,33 @@ class _wms_layer(_WebMap_layer):
         zorder : float
             The zorder of the artist (e.g. the stacking level of overlapping artists)
             The default is 0
+        alpha : float, optional
+            The alpha-transparency of the image.
+            NOTE: This changes the global transparency of the images... it does
+            not control whether the images are served with included transparency!
+            (check the "transparent" kwarg)
         **kwargs :
             additional kwargs passed to the WebMap service request.
             (e.g. transparent=True, time='2020-02-05', etc.)
+
+        Additional Parameters
+        ---------------------
+        transparent : bool, optional
+            Indicator if the WMS images should be read as RGB or RGBA
+            (e.g. with or without transparency). The default is False.
+
         """
         from . import MapsGrid  # do this here to avoid circular imports!
 
-        style = self._set_style(kwargs.get("styles", None))
+        self._style = self._set_style(kwargs.get("styles", None))
         if self._style is not None:
             kwargs["styles"] = [self._style]
 
+        self._kwargs = kwargs
+        self._zorder = zorder
+        self._alpha = alpha
+
         for m in self._m if isinstance(self._m, MapsGrid) else [self._m]:
-            self._kwargs = kwargs
-            self._zorder = zorder
 
             if layer is None:
                 self._layer = m.layer
@@ -438,18 +467,11 @@ class _wms_layer(_WebMap_layer):
 
             if self._layer == "all" or m.BM.bg_layer == self._layer:
                 # add the layer immediately if the layer is already active
-                self._do_add_layer(m, self._layer, zorder=zorder, kwargs=kwargs)
+                self._do_add_layer(m, self._layer)
             else:
-                # self._do_add_layer(m, self._layer)
-
                 # delay adding the layer until it is effectively activated
-
-                # m.BM.on_layer(
-                #     func=self._do_add_layer, layer=self._layer, persistent=False, m=m
-                # )
-
                 m.BM.on_layer(
-                    func=partial(self._do_add_layer, zorder=zorder, kwargs=kwargs),
+                    func=partial(self._do_add_layer),
                     layer=layer,
                     persistent=False,
                     m=m,
@@ -475,7 +497,7 @@ class _wms_layer(_WebMap_layer):
 
         return img
 
-    def _do_add_layer(self, m, l, zorder, kwargs):
+    def _do_add_layer(self, m, l):
         # actually add the layer to the map.
         print(f"EOmaps: ... adding wms-layer {self.name}")
 
@@ -484,9 +506,10 @@ class _wms_layer(_WebMap_layer):
             m.ax,
             self._wms,
             self.name,
-            wms_kwargs=kwargs,
+            wms_kwargs=self._kwargs,
             interpolation="spline36",
-            zorder=zorder,
+            zorder=self._zorder,
+            alpha=self._alpha,
         )
 
         # art = m.figure.ax.add_wms(

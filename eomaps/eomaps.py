@@ -383,7 +383,7 @@ class Maps(object):
 
     def cleanup(self):
         """
-        Cleanup all references to the object so that it can be savely deleted.
+        Cleanup all references to the object so that it can be safely deleted.
         (primarily used internally to clear objects if the figure is closed)
 
         Note
@@ -555,6 +555,7 @@ class Maps(object):
         xy_crs=4326,
         radius_crs=4326,
         inset_crs=4326,
+        layer="all",
         edgecolor="r",
         linewidth=2,
         shape="ellipses",
@@ -603,6 +604,15 @@ class Maps(object):
         inset_crs : any, optional
             The crs that is used in the inset-map.
             The default is 4326.
+        layer : str, optional
+            The layer associated with the inset-map.
+            Note: If you specify a dedicated layer for the inset-map, the contents
+            of the inset-map will only be visible on that specific layer!
+            To create different views of an inset-map for different layers,
+            simply create a child-layer from the inset-map (see examples below).
+            By default the "all" layer is used so that the contents of the inset-map
+            are visible independent of the currently visible layer.
+            The default is "all".
         edgecolor : str or tuple, optional
             The edgecolor of the boundary. The default is "r".
         linewidth : TYPE, optional
@@ -667,6 +677,23 @@ class Maps(object):
         >>> m2.add_annotation(ID=1)
         >>> m2.indicate_inset_extent(m, ec="g", fc=(0,1,0,.25))
 
+        Multi-layer inset-maps:
+
+        >>> m = Maps(layer="first")
+        >>> m.add_feature.preset.coastline()
+        >>> m3 = m.new_layer("second")
+        >>> m3.add_feature.preset.ocean()
+        >>> # create an inset-map on the "first" layer
+        >>> m2 = m.new_inset_map(layer="first")
+        >>> m2.add_feature.preset.coastline()
+        >>> # create a new layer of the inset-map that will be
+        >>> # visible if the "second" layer is visible
+        >>> m3 = m2.new_layer(layer="second")
+        >>> m3.add_feature.preset.coastline()
+        >>> m3.add_feature.preset.land()
+
+        >>> m.util.layer_selector()
+
         """
 
         x, y = xy
@@ -682,7 +709,7 @@ class Maps(object):
             right=plot_x + plot_size / 2,
         )[0]
         # initialize a new maps-object with a new axis
-        m2 = Maps(inset_crs, parent=self, gs_ax=gs)
+        m2 = Maps(inset_crs, parent=self, gs_ax=gs, layer=layer)
 
         # get the boundary of a ellipse in the inset_crs
         possible_shapes = ["ellipses", "rectangles", "geod_circles"]
@@ -1857,13 +1884,16 @@ class Maps(object):
         else:
             ax_cb_plot.set_axis_off()
 
-        # identify position of color-splits in the colorbar
-        if isinstance(n_cmap.cmap, LinearSegmentedColormap):
-            # for LinearSegmentedcolormap N is the number of quantizations!
-            splitpos = np.linspace(vmin, vmax, n_cmap.cmap.N)
+        if bins is None:
+            # identify position of color-splits in the colorbar
+            if isinstance(n_cmap.cmap, LinearSegmentedColormap):
+                # for LinearSegmentedcolormap N is the number of quantizations!
+                splitpos = np.linspace(vmin, vmax, n_cmap.cmap.N)
+            else:
+                # for ListedColormap N is the number of colors
+                splitpos = np.linspace(vmin, vmax, n_cmap.cmap.N + 1)
         else:
-            # for ListedColormap N is the number of colors
-            splitpos = np.linspace(vmin, vmax, n_cmap.cmap.N + 1)
+            splitpos = bins
 
         # color the histogram patches
         for patch in list(ax_cb_plot.patches):
@@ -1880,7 +1910,7 @@ class Maps(object):
                 height = patch.get_height()
                 maxval = minval + width
 
-            # ----------- take care of histogram-bins that have splitted colors
+            # ----------- take care of histogram-bins that have split colors
             # identify bins that extend beyond a color-change
             splitbins = [
                 minval,
@@ -2083,8 +2113,15 @@ class Maps(object):
         points = dict(
             left=[[0, 0.5], [x0, 1], [x0 + ovx, 1], [x0 + ovx, 0], [x0, 0], [0, 0.5]],
             right=[[1, 0.5], [x1, 1], [x1 - ovx, 1], [x1 - ovx, 0], [x1, 0], [1, 0.5]],
-            top=[[0.5, 1], [0, y1 - ovy], [1, y1 - ovy], [0.5, 1]],
-            bottom=[[0.5, 0], [0, y0 + ovy], [1, y0 + ovy], [0.5, 0]],
+            top=[[0.5, 1], [0, y1], [0, y1 - ovy], [1, y1 - ovy], [1, y1], [0.5, 1]],
+            bottom=[
+                [0.5, 0],
+                [0, y0],
+                [0, y0 + ovy],
+                [1, y0 + ovy],
+                [1, y0],
+                [0.5, ovy],
+            ],
         )
 
         cmap = self.figure.coll.cmap
@@ -2113,6 +2150,38 @@ class Maps(object):
 
         axcb2.add_collection(collection)
         return axcb2
+
+    def _update_cb_extend_pos(self):
+        # update the position of the axis holding the colorbar extension arrows
+        # TODO the colorbar should be merged into a single artist
+        #      to avoid having to update the axes separately!
+        [
+            layer,
+            cbgs,
+            ax_cb,
+            ax_cb_plot,
+            ax_cb_extend,
+            extend_frac,
+            orientation,
+            cb,
+        ] = self._colorbar
+
+        if ax_cb_extend is None:
+            return
+
+        bbox = ax_cb.bbox.transformed(self.figure.f.transFigure.inverted())
+        if orientation == "horizontal":
+            frac = extend_frac * (bbox.width)
+            ax_cb_extend.set_position(
+                (bbox.x0 - frac / 2, bbox.y0, bbox.width + frac, bbox.height),
+            )
+        elif orientation == "vertical":
+            frac = extend_frac * (bbox.height)
+            ax_cb_extend.set_position(
+                (bbox.x0, bbox.y0 - frac / 2, bbox.width, bbox.height + frac),
+            )
+        else:
+            raise TypeError(f"'{orientation}' is not a valid colorbar orientation!")
 
     @property
     @wraps(NaturalEarth_features)
@@ -3836,15 +3905,17 @@ class Maps(object):
             >>>     return f"{x} m"
 
             The default is None.
-        add_extend_arrows : str
+        add_extend_arrows : str or False
             Set if extension-arrows should be drawn. (e.g. to indicate that there are
             some data-values outside the colorbar-range)
 
-            - Can be one of: ("auto", "upper", "lower", "both")
+            - Can be one of: ("auto", "upper", "lower", "both" or False)
+            - If False: NO extension-arrows will be drawn.
             - If "auto": extension-arrows are only drawn if values outside the color
               boundaries are encoundered. The default is "auto"
 
             Note: The range of the colors is set with `m.plot_map(vmin=..., vmax=...)`
+            The default is "auto".
         extend_frac : float or None
             The fraction of the colorbar to use for adding "extension-arrows" to
             indicate out-of-bounds values.
@@ -3858,7 +3929,7 @@ class Maps(object):
 
         Notes
         -----
-        Here's how the padding looks like as a scetch:
+        Here's how the padding looks like as a sketch:
 
         >>> _________________________________________________________
         >>> |[ - - - - - - - - - - - - - - - - - - - - - - - - - - ]|
@@ -4182,9 +4253,13 @@ class Maps(object):
         self.BM.add_bg_artist(self._ax_cb, layer)
         self.BM.add_bg_artist(self._ax_cb_plot, layer)
 
-        ax_cb_extend = self._add_cb_extend_arrows(
-            cb, orientation, extend_frac=extend_frac, which=add_extend_arrows
-        )
+        if add_extend_arrows is not False:
+            ax_cb_extend = self._add_cb_extend_arrows(
+                cb, orientation, extend_frac=extend_frac, which=add_extend_arrows
+            )
+        else:
+            ax_cb_extend = None
+
         # remember colorbar for later (so that we can update its position etc.)
         self._colorbar = [
             layer,
@@ -4216,7 +4291,7 @@ class Maps(object):
         Parameters
         ----------
         radius : float, optional
-            The readius to use for plotting the indicators for the masked
+            The radius to use for plotting the indicators for the masked
             points. The unit of the radius is map-pixels! The default is 1.
         **kwargs :
             additional kwargs passed to `m.plot_map(**kwargs)`.
@@ -4455,6 +4530,10 @@ class Maps(object):
         self.parent.figure.gridspec.update(**kwargs)
         # after changing margins etc. a redraw is required
         # to fetch the updated background!
+
+        # make sure the position of the axis holding the colorbar-extension-arrows
+        # is properly updated
+        self._update_cb_extend_pos()
         self.redraw()
 
     def _get_layers(self, exclude=None):

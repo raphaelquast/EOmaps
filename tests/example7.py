@@ -7,7 +7,7 @@ import geopandas as gpd
 
 # geopandas is used internally... the import is just here to show that!
 
-# While this example focusses on "m.add_feature", it works completely similar
+# While this example focuses on "m.add_feature", it works completely similar
 # with a custom GeoDataFrame by replacing "m.add_feature..." with "m.add_gdf()"
 # (the functionalities and arguments are completely similar)
 
