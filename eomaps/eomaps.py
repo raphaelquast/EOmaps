@@ -544,6 +544,8 @@ class Maps(object):
             layer=layer,
         )
 
+        # re-initialize all sliders and buttons to include the new layer
+        self.util._reinit_widgets()
         return m
 
     def new_inset_map(
