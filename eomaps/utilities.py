@@ -535,7 +535,7 @@ class utilities:
         self._m = m
 
         self._shape_drawer = shape_drawer(m)
-        
+
         self._selectors = dict()
         self._sliders = dict()
 
