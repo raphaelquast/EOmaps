@@ -4540,7 +4540,7 @@ class Maps(object):
 
     def _get_layers(self, exclude=None):
         # return a list of all (empty and non-empty) layer-names
-        layers = set((m.layer for m in self.parent._children))
+        layers = set((m.layer for m in (self.parent, *self.parent._children)))
         # add layers that are not yet activated (but have an activation
         # method defined...)
         layers = layers.union(set(self.BM._on_layer_activation))
