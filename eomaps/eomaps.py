@@ -711,7 +711,7 @@ class Maps(object):
             right=plot_x + plot_size / 2,
         )[0]
         # initialize a new maps-object with a new axis
-        m2 = Maps(inset_crs, parent=self, gs_ax=gs, layer=layer)
+        m2 = Maps(inset_crs, parent=self.parent, gs_ax=gs, layer=layer)
 
         # get the boundary of a ellipse in the inset_crs
         possible_shapes = ["ellipses", "rectangles", "geod_circles"]
