@@ -41,6 +41,7 @@ class SelectorButtons(Artist):
 
         self.activecolor = activecolor
         self.inactive_color = inactive_color
+        self.marker_size = size
         self.value_selected = None
 
         self._active = None
@@ -52,7 +53,7 @@ class SelectorButtons(Artist):
             p = Line2D(
                 [],
                 [],
-                markersize=size,
+                markersize=self.marker_size,
                 marker="o",
                 markeredgecolor="black",
                 markerfacecolor=inactive_color,
@@ -149,43 +150,12 @@ class DraggableLegend_new(DraggableLegend):
             self.canvas.mpl_disconnect(self._c1)
 
 
-class _layer_selector:
-    def __init__(self, m):
-        self._m = m
-
-        self._sliders = []
-        self._selectors = []
-
-        # register a function to update all associated widgets on a layer-chance
-        self._m.BM.on_layer(lambda m, l: self._update_widgets(l), persistent=True)
-
-    def _update_widgets(self, l):
-        # this function is called whenever the background-layer changed
-        # to synchronize changes across all selectors and sliders
-        # see setter for   helpers.BM._bg_layer
-        for s in self._sliders:
-            try:
-                s.eventson = False
-                s.set_val(s._labels.index(l))
-                s.eventson = True
-            except ValueError:
-                pass
-            except IndexError:
-                pass
-            finally:
-                s.eventson = True
-
-        for s in self._selectors:
-            try:
-                s.set_active(s.circles[s.labels.index(l)])
-            except ValueError:
-                pass
-            except IndexError:
-                pass
-
-    def _new_selector(self, layers=None, draggable=True, exclude_layers=None, **kwargs):
+class LayerSelector(SelectorButtons):
+    def __init__(
+        self, m, layers=None, draggable=True, exclude_layers=None, name=None, **kwargs
+    ):
         """
-        Get a button-widget that can be used to select the displayed plot-layer.
+        A button-widget that can be used to select the displayed plot-layer.
 
         Note
         ----
@@ -213,6 +183,9 @@ class _layer_selector:
             Only relevant if `layers=None` is used.
             The default is None in which case only the "all" layer is excluded.
             (Same as `exclude = ["all"]`. Use `exclude=[]` to get all available layers.)
+        name : str
+            The name of the slider (used to identify the object)
+            If None, a unique identifier is used.
         kwargs :
             All additional arguments are passed to `plt.legend`
 
@@ -246,69 +219,112 @@ class _layer_selector:
 
         """
 
+        self._init_args = {
+            "layers": layers,
+            "draggable": draggable,
+            "exclude_layers": exclude_layers,
+            **kwargs,
+        }
+
         if layers is None:
             if exclude_layers is None:
                 exclude_layers = ["all"]
-            layers = self._m._get_layers(exclude=exclude_layers)
+            layers = m._get_layers(exclude=exclude_layers)
 
         assert (
             len(layers) > 0
         ), "EOmaps: There are no layers with artists available.. plot something first!"
 
-        s = SelectorButtons(self._m.figure.f, layers, **kwargs)
+        super().__init__(m.figure.f, layers, **kwargs)
 
-        def update(val):
-            l = layers[int(val)]
+        self.set_draggable(draggable, m=m)
+        self._m = m
 
-            # make sure we re-fetch the artist states on a layer change during
-            # draggable-axes
-            drag = self._m.parent._draggable_axes
-            d = False
-            if drag._modifier_pressed:
-                drag._undo_draggable()
-                d = True
+        self.set_zorder(9999)  # make sure the widget is on top of other artists
+        self.figure = self._m.figure.f  # make sure the figure is set for the artist
+        self.set_animated(True)
 
-            self._m.BM.bg_layer = l
-
-            if d:
-                drag._make_draggable()
-            else:
-                self._m.BM.update(blit=False)
-                self._m.BM.canvas.draw_idle()
-
-        s.on_clicked = update
-        s.set_draggable(draggable, m=self._m)
-
-        def remove():
-            self._m.BM.remove_artist(s.leg)
-            s.leg.remove()
-            if s in self._selectors:
-                self._selectors.remove(s)
-
-        s.remove = remove
-        s.set_zorder(9999)  # make sure the widget is on top of other artists
-        s.figure = self._m.figure.f  # make sure the figure is set for the artist
-        s.set_animated(True)
-
-        if not draggable:
-            self._m.BM.add_artist(s)
-        else:
-            self._m.BM.add_artist(s.leg)
+        self._m.BM.add_artist(self.leg)
 
         # keep a reference to the buttons to make sure they stay interactive
-        self._selectors.append(s)
+        if name is None:
+            keys = (
+                key for key in self._m.util._selectors if key.startswith("selector_")
+            )
+            ns = []
+            for key in keys:
+                try:
+                    ns.append(int(key[9:]))
+                except:
+                    pass
 
-        # update widgets to make sure the right layer is selected
-        self._update_widgets(self._m.BM.bg_layer)
+            name = f"selector_{max(ns) + 1 if ns else 0}"
 
-        return s
+        self._init_args["name"] = name
+        self._m.util._selectors[name] = self
 
-    def _new_slider(
+    def on_clicked(self, val):
+        l = self.labels[int(val)]
+
+        # make sure we re-fetch the artist states on a layer change during
+        # draggable-axes
+        drag = self._m.parent._draggable_axes
+        d = False
+        if drag._modifier_pressed:
+            drag._undo_draggable()
+            d = True
+
+        self._m.BM.bg_layer = l
+
+        if d:
+            drag._make_draggable()
+        else:
+            self._m.BM.update(blit=False)
+            self._m.BM.canvas.draw_idle()
+
+    def _reinit(self):
+        """
+        re-initialize the widget (to update layers etc.)
+
+        Returns
+        -------
+        s : LayerSelector
+            The new selector object (the old one is deleted!)
+
+        """
+
+        if self._init_args["draggable"] is True:
+            # get the current position of the offsetbox and use it as loc when
+            # initializing the new legend
+            if hasattr(self._draggable_box, "offsetbox_x"):
+                self._draggable_box.save_offset()
+                loc = self._draggable_box.get_loc_in_canvas()
+                loc = set(self._m.figure.f.transFigure.inverted().transform(loc))
+                self._init_args.update(dict(loc=loc))
+
+        self.remove()
+
+        self.__init__(m=self._m, **self._init_args)
+        self._m.util._update_widgets()
+        self._m.BM.update()
+
+    def remove(self):
+        self._m.BM.remove_artist(self.leg)
+        self.leg.remove()
+
+        del self._m.util._selectors[self._init_args["name"]]
+        self._m.BM.update()
+
+
+class LayerSlider(Slider):
+    def __init__(
         self,
+        m,
         layers=None,
         pos=None,
         txt_patch_props=None,
         exclude_layers=None,
+        name=None,
         **kwargs,
     ):
         """
@@ -352,6 +368,9 @@ class _layer_selector:
             Only relevant if `layers=None` is used.
             The default is None in which case only the "all" layer is excluded.
             (Same as `exclude = ["all"]`. Use `exclude=[]` to get all available layers.)
+        name : str
+            The name of the slider (used to identify the object)
+            If None, a unique identifier is used.
         kwargs :
             Additional kwargs are passed to matplotlib.widgets.Slider
 
@@ -382,6 +401,15 @@ class _layer_selector:
         >>> s.remove()
 
         """
+        self._m = m
+
+        self._init_args = {
+            "layers": layers,
+            "txt_patch_props": txt_patch_props,
+            "exclude_layers": exclude_layers,
+            **kwargs,
+        }
+
         if layers is None:
             if exclude_layers is None:
                 exclude_layers = ["all"]
@@ -409,16 +437,17 @@ class _layer_selector:
         kwargs.setdefault("handle_style", dict(facecolor=".8", edgecolor="k", size=7))
         kwargs.setdefault("label", None)
 
-        s = Slider(
+        super().__init__(
             ax_slider, valmin=0, valmax=len(layers) - 1, valinit=0, valstep=1, **kwargs
         )
-        s.drawon = False
 
-        s._labels = layers
+        self.drawon = False
+
+        self._labels = layers
 
         # add some background-patch style for the text
         if txt_patch_props is not None:
-            s.valtext.set_bbox(txt_patch_props)
+            self.valtext.set_bbox(txt_patch_props)
 
         def fmt(val):
             if val < len(layers):
@@ -426,60 +455,72 @@ class _layer_selector:
             else:
                 return "---"
 
-        s._format = fmt
-        s._handle.set_marker("D")
+        self._format = fmt
+        self._handle.set_marker("D")
 
-        s.track.set_edgecolor("none")
-        h = s.track.get_height() / 2
-        s.track.set_height(h)
-        s.track.set_y(s.track.get_y() + h / 2)
-
-        def update(val):
-            l = layers[int(val)]
-
-            # make sure we re-fetch the artist states on a layer change during
-            # draggable-axes
-            drag = self._m.parent._draggable_axes
-            d = False
-            if drag._modifier_pressed:
-                drag._undo_draggable()
-                d = True
-
-            self._m.BM.bg_layer = l
-
-            if d:
-                drag._make_draggable()
+        self.track.set_edgecolor("none")
+        h = self.track.get_height() / 2
+        self.track.set_height(h)
+        self.track.set_y(self.track.get_y() + h / 2)
 
         self._m.BM.add_artist(ax_slider)
 
-        s.on_changed(update)
+        self.on_changed(self._on_changed)
 
         # keep a reference to the slider to make sure it stays interactive
-        self._sliders.append(s)
+        if name is None:
+            keys = (key for key in self._m.util._sliders if key.startswith("slider_"))
+            ns = []
+            for key in keys:
+                try:
+                    ns.append(int(key[7:]))
+                except:
+                    pass
 
-        def remove():
-            self._m.BM.remove_artist(ax_slider)
-            s.disconnect_events()
-            ax_slider.remove()
-            if s in self._sliders:
-                self._sliders.remove(s)
-            self._m.BM.update()
+            name = f"slider_{max(ns) if ns else 0}"
 
-        s.remove = remove
+        self._init_args["name"] = name
+        self._m.util._sliders[name] = self
 
-        # update widgets to make sure the right layer is selected
-        self._update_widgets(self._m.BM.bg_layer)
+    def _reinit(self):
+        """
+        re-initialize the widget (to update layers etc.)
 
-        return s
+        Returns
+        -------
+        s : LayerSlider
+            The new slider object (the old one is deleted!)
 
-    @wraps(_new_selector)
-    def __call__(self, method, *args, **kwargs):
-        if method == "buttons":
-            self._new_selector(*args, **kwargs)
-        elif method == "slider":
-            self._new_slider(*args, **kwargs)
-        else:
-            raise TypeError(f"'{self._method}' is not a valid layer-selector method")
+        """
+        self.remove()
+
+        self.__init__(m=self._m, pos=self.ax.get_position(), **self._init_args)
+        self._m.util._update_widgets()
+        self._m.BM.update()
+
+    def _on_changed(self, val):
+        l = self._labels[int(val)]
+        # make sure we re-fetch the artist states on a layer change during
+        # draggable-axes
+        drag = self._m.parent._draggable_axes
+        d = False
+        if drag._modifier_pressed:
+            drag._undo_draggable()
+            d = True
+
+        self._m.BM.bg_layer = l
+
+        if d:
+            drag._make_draggable()
+
+    def remove(self):
+        self._m.BM.remove_artist(self.ax)
+        self.disconnect_events()
+        self.ax.remove()
+
+        del self._m.util._sliders[self._init_args["name"]]
+
+        self._m.BM.update()
 
 
 from .draw import shape_drawer
@@ -493,20 +534,85 @@ class utilities:
     def __init__(self, m):
         self._m = m
 
-        self._layer_selector = _layer_selector(m)
         self._shape_drawer = shape_drawer(m)
+        
+        self._selectors = dict()
+        self._sliders = dict()
 
-    @property
-    @wraps(_layer_selector._new_selector)
-    def layer_selector(self):
-        return self._layer_selector._new_selector
-
-    @property
-    @wraps(_layer_selector._new_slider)
-    def layer_slider(self):
-        return self._layer_selector._new_slider
+        # register a function to update all associated widgets on a layer-chance
+        self._m.BM.on_layer(lambda m, l: self._update_widgets(l), persistent=True)
 
     @property
     @wraps(shape_drawer)
     def draw(self):
         return self._shape_drawer
+
+    def _update_widgets(self, l=None):
+        if l is None:
+            l = self._m.BM._bg_layer
+
+        # this function is called whenever the background-layer changed
+        # to synchronize changes across all selectors and sliders
+        # see setter for   helpers.BM._bg_layer
+        for s in self._sliders.values():
+            try:
+                s.eventson = False
+                s.set_val(s._labels.index(l))
+                s.eventson = True
+            except ValueError:
+                pass
+            except IndexError:
+                pass
+            finally:
+                s.eventson = True
+
+        for s in self._selectors.values():
+            try:
+                s.set_active(s.circles[s.labels.index(l)])
+            except ValueError:
+                s.set_active(None)
+            except IndexError:
+                s.set_active(None)
+
+    def _reinit_widgets(self):
+        # re-initialize ALL sliders and button widgets to update the available layers
+
+        for s in (*self._sliders.values(), *self._selectors.values()):
+            s._reinit()
+
+    def remove(self, name=None, what="all"):
+        # TODO doc
+        if name is not None:
+            if name in self._sliders:
+                self._sliders[name].remove()
+            elif name in self._selectors:
+                self._selectors[name].remove()
+            return
+
+        if what == "sliders":
+            for s in self._sliders.values():
+                s.remove()
+        elif what == "selectors":
+            for s in self._selectors.values():
+                s.remove()
+        elif what == "all":
+            for s in (*self._sliders.values(), *self._selectors.values()):
+                s.remove()
+        else:
+            raise TypeError(
+                "EOmaps: 'what' must be one of 'sliders', 'selectors' or 'all'"
+            )
+
+    @wraps(LayerSelector.__init__)
+    def layer_selector(self, **kwargs):
+        s = LayerSelector(m=self._m, **kwargs)
+        # update widgets to make sure the right layer is selected
+        self._update_widgets()
+        return s
+
+    @wraps(LayerSlider.__init__)
+    def layer_slider(self, **kwargs):
+        s = LayerSlider(m=self._m, **kwargs)
+        # update widgets to make sure the right layer is selected
+        self._update_widgets()
+        return s
