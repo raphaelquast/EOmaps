@@ -77,7 +77,8 @@ class SelectorButtons(Artist):
         self._draggable_box = None
 
         if active is None:
-            self.set_active(self.circles[0])
+            if len(self.circles) > 0:
+                self.set_active(self.circles[0])
         else:
             self.set_active(self.circles[self.labels.index(active)])
 
@@ -231,9 +232,9 @@ class LayerSelector(SelectorButtons):
                 exclude_layers = ["all"]
             layers = m._get_layers(exclude=exclude_layers)
 
-        assert (
-            len(layers) > 0
-        ), "EOmaps: There are no layers with artists available.. plot something first!"
+        # assert (
+        #     len(layers) > 0
+        # ), "EOmaps: There are no layers with artists available.. plot something first!"
 
         super().__init__(m.figure.f, layers, **kwargs)
 
@@ -415,9 +416,9 @@ class LayerSlider(Slider):
                 exclude_layers = ["all"]
             layers = self._m._get_layers(exclude=exclude_layers)
 
-        assert (
-            len(layers) > 0
-        ), "EOmaps: There are no layers with artists available.. plot something first!"
+        # assert (
+        #     len(layers) > 0
+        # ), "EOmaps: There are no layers with artists available.. plot something first!"
 
         if pos is None:
             ax_slider = self._m.figure.f.add_axes(
