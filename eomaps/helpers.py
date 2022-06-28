@@ -9,6 +9,7 @@ from collections import defaultdict
 from itertools import chain
 from matplotlib.transforms import Bbox
 import matplotlib.pyplot as plt
+from matplotlib.lines import Line2D
 
 
 def pairwise(iterable, pairs=2):
@@ -208,6 +209,9 @@ class draggable_axes:
         self._artists_visible = dict()
 
         self._ax_visible = dict()
+
+        # the snap-to-grid interval (0 means no snapping)
+        self._snap = 0
 
     def clear_annotations(self):
         while len(self._annotations) > 0:
@@ -457,8 +461,13 @@ class draggable_axes:
                 return
             if not event.button:
                 return
+
             w, h = ax.bbox.width, ax.bbox.height
-            x0, y0 = event.x - w / 2, event.y - h / 2
+            x0, y0 = (
+                self._start_ax_position[ax][0] + (event.x - self._start_position[0]),
+                self._start_ax_position[ax][1] + (event.y - self._start_position[1]),
+            )
+
             # make sure that we don't move the axis outside the figure
             # avoid this since cartopy axis can be bigger than the canvas!
             # fbbox = self.f.bbox
@@ -470,6 +479,10 @@ class draggable_axes:
             #     y0 = fbbox.y0
             # if y0 + h >= fbbox.y1:
             #     y0 = fbbox.y1 - h
+
+            if self._snap > 0:
+                x0 = x0 - x0 % self._snap
+                y0 = y0 - y0 % self._snap
 
             bbox = Bbox.from_bounds(x0, y0, w, h).transformed(
                 self.f.transFigure.inverted()
@@ -522,7 +535,21 @@ class draggable_axes:
                     spine.set_linestyle(":")
                     spine.set_linewidth(1)
 
+    def _set_startpos(self, event):
+        self._start_position = (event.x, event.y)
+        if self._ax_picked:
+            self._start_ax_position = {
+                i: (i.bbox.x0, i.bbox.y0) for i in self._ax_picked
+            }
+        else:
+            self._start_ax_position = {}
+
+    def cb_release(self, event):
+        self._set_startpos(event)
+        self._remove_snap_grid()
+
     def cb_pick(self, event):
+        self._show_snap_grid()
 
         if not self._modifier_pressed:
             return
@@ -589,6 +616,7 @@ class draggable_axes:
 
         if self._m_picked is not None:
             if self._m_picked is _m_picked and self._cb_picked == _cb_picked:
+                self._set_startpos(event)
                 return
 
         self._ax_picked = _ax_picked
@@ -598,6 +626,8 @@ class draggable_axes:
         self._color_axes()
 
         self.set_annotations()
+        self._set_startpos(event)
+
         self.m.BM.canvas.draw()
 
     def cb_scroll(self, event):
@@ -606,8 +636,6 @@ class draggable_axes:
         if self.modifier is not None:
             if not self._modifier_pressed:
                 return False
-
-        steps = event.step
 
         if self._ax_picked is None:
             return
@@ -618,38 +646,36 @@ class draggable_axes:
             if ax is None:
                 return
 
-            pos = ax.get_position()
+            w, h = ax.bbox.width, ax.bbox.height
+            x0, y0 = ax.bbox.x0, ax.bbox.y0
 
-            wstep = steps * pos.width * 0.025
-            hstep = steps * pos.height * 0.025
+            w = w + max(0.1, self._snap) * event.step
+            h = h + max(0.1, self._snap) * event.step
+
+            if self._snap > 0:
+                w = w - w % self._snap
+                h = h - h % self._snap
+                x0 = x0 - x0 % self._snap
+                y0 = y0 - y0 % self._snap
+
+            bbox = Bbox.from_bounds(x0, y0, w, h).transformed(
+                self.f.transFigure.inverted()
+            )
 
             if not self._cb_picked:
-                ax.set_position(
-                    (
-                        pos.x0 - wstep / 2,
-                        pos.y0 - hstep / 2,
-                        pos.width + wstep,
-                        pos.height + hstep,
-                    )
-                )
+                ax.set_position(bbox)
             else:
                 orientation = self._m_picked._colorbar[-2]
                 if orientation == "horizontal":
-                    b = [
-                        pos.x0 - wstep / 2,
-                        pos.y0 - hstep / 2,
-                        pos.width + wstep,
-                        b[3] + pos.height + hstep,
-                    ]
+                    b = [bbox.x0, bbox.y0, bbox.width, b[3] + bbox.height]
                 elif orientation == "vertical":
-                    b = [
-                        pos.x0 - wstep / 2,
-                        pos.y0 - hstep / 2,
-                        b[2] + pos.width + wstep,
-                        pos.height + hstep,
-                    ]
+                    b = [bbox.x0, bbox.y0, b[2] + bbox.width, bbox.height]
 
-        if self._cb_picked and self._m_picked is not None:
+        if (
+            self._cb_picked
+            and (self._m_picked is not None)
+            and (self._ax_picked is not None)
+        ):
             self._m_picked.figure.set_colorbar_position(b)
 
         self._color_axes()
@@ -664,13 +690,28 @@ class draggable_axes:
                 self._undo_draggable()
             else:
                 self._make_draggable()
+            return
+
+        if self._modifier_pressed:
+            if event.key in map(str, range(10)):
+                self._snap = int(event.key) * 2
+                print("snapping to", self._snap)
+
+            if self._snap > 0:
+                self._show_snap_grid(self._snap)
+            else:
+                self._remove_snap_grid()
 
     def _undo_draggable(self):
         print("EOmaps: Making axes interactive again...")
 
-        for ax, frameQ, spine_vis in zip(
-            self.all_axes, self._frameon, self._spines_visible
+        for ax, frameQ, spine_vis, patch_props in zip(
+            self.all_axes, self._frameon, self._spines_visible, self._patchprops
         ):
+            pvis, pcolor, palpha = patch_props
+            ax.patch.set_visible(pvis)
+            ax.patch.set_alpha(palpha)
+            ax.patch.set_facecolor(pcolor)
 
             ax.set_frame_on(frameQ)
             for key, spine in ax.spines.items():
@@ -707,6 +748,8 @@ class draggable_axes:
         self._modifier_pressed = False
         self.m._ignore_cb_events = False
 
+        # make sure the snap-grid is removed
+        self._remove_snap_grid()
         self.m.redraw()
 
     def _make_draggable(self):
@@ -736,11 +779,19 @@ class draggable_axes:
         # remember which spines were visible before
         self._spines_visible = self.get_spines_visible()
         self._frameon = [i.get_frame_on() for i in self.all_axes]
+        self._patchprops = [
+            (i.patch.get_visible(), i.patch.get_facecolor(), i.patch.get_alpha())
+            for i in self.all_axes
+        ]
 
         self._modifier_pressed = True
         self.m._ignore_cb_events = True
 
         for ax in self.all_axes:
+            ax.patch.set_visible(True)
+            ax.patch.set_facecolor("w")
+            ax.patch.set_alpha(0.75)
+
             if ax not in self.m.BM._bg_artists[self.m.BM.bg_layer]:
                 continue
             ax.set_visible(True)
@@ -756,6 +807,11 @@ class draggable_axes:
             self.cids.append(
                 self.f.canvas.mpl_connect("button_press_event", self.cb_pick)
             )
+
+            self.cids.append(
+                self.f.canvas.mpl_connect("button_release_event", self.cb_release)
+            )
+
             self.cids.append(
                 self.f.canvas.mpl_connect("motion_notify_event", self.cb_move)
             )
@@ -765,6 +821,31 @@ class draggable_axes:
             )
 
         self.set_annotations()
+        self.m.redraw()
+
+    def _show_snap_grid(self, snap=None):
+        if snap is None:
+            snap = self._snap
+
+        if snap == 0:
+            return
+
+        self._remove_snap_grid()
+
+        bbox = self.m.figure.f.bbox
+        t = self.m.figure.f.transFigure.inverted()
+
+        gx, gy = np.mgrid[0 : int(bbox.width) : snap, 0 : int(bbox.height) : snap]
+        g = t.transform(np.column_stack((gx.flat, gy.flat)))
+
+        l = Line2D(*g.T, color="k", lw=0, marker=".", ms=1)
+        self._snap_grid_artist = self.m.figure.f.add_artist(l)
+
+    def _remove_snap_grid(self):
+        if hasattr(self, "_snap_grid_artist"):
+            self.m.BM.remove_bg_artist(self._snap_grid_artist)
+            self._snap_grid_artist.remove()
+            del self._snap_grid_artist
         self.m.redraw()
 
 
