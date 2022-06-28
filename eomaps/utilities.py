@@ -165,16 +165,18 @@ class LayerSelector(SelectorButtons):
 
         - Depending on the complexity (WebMaps, Overlays, very large datasets etc.) this
           might take a few seconds.
-        - Once the layer has been drawn, it is cached and switching between arbitrarily
-          complex layers should be fast.
-        - If the extent of the map changes (e.g. pan/zoom) or a new feature is added to
+        - Once the layer has been drawn, it is cached and switching even between
+          layers with many features should be fast.
+        - If the extent of the map changes (e.g. pan/zoom) or new features are added to
           the layer, it will be re-drawn.
 
         Parameters
         ----------
         layers : list or None, optional
             A list of layer-names that should appear in the selector.
-            If None, all available layers (except the "all" layer) are shown.
+            If None, all available layers (except the "all" layer) are shown, and the
+            layers are automatically updated whenever a new layer is created on the map.
+            (check the 'exclude_layers' parameter for excluding specific layers)
             The default is None.
         draggable : bool, optional
             Indicator if the widget should be draggable or not.
@@ -200,11 +202,6 @@ class LayerSelector(SelectorButtons):
               ["left", "right", "center"] is possible.
             - bbox_to_anchor: offset from the loc-position in figure coordinates
               e.g.: (loc="upper center", bbox_to_anchor=(0.5, 1.1))
-
-        Returns
-        -------
-        s : SelectorButtons
-            The SelectorButtons instance. To remove the widget, use `s.remove()`
 
         Examples
         --------
@@ -310,6 +307,10 @@ class LayerSelector(SelectorButtons):
         self._m.BM.update()
 
     def remove(self):
+        """
+        Remove the widget from the map
+        """
+
         self._m.BM.remove_artist(self.leg)
         self.leg.remove()
 
@@ -331,6 +332,8 @@ class LayerSlider(Slider):
         """
         Get a slider-widget that can be used to switch between layers.
 
+        By default, the widget will auto-update itself if new layers are created!
+
         Note
         ----
         In general, layers are only drawn "on demand", so if you switch to a layer that
@@ -338,16 +341,18 @@ class LayerSlider(Slider):
 
         - Depending on the complexity (WebMaps, Overlays, very large datasets etc.) this
           might take a few seconds.
-        - Once the layer has been drawn, it is cached and switching between arbitrarily
-          complex layers should be fast.
-        - If the extent of the map changes (e.g. pan/zoom) or a new feature is added to
+        - Once the layer has been drawn, it is cached and switching even between
+          layers with many features should be fast.
+        - If the extent of the map changes (e.g. pan/zoom) or new features are added to
           the layer, it will be re-drawn.
 
         Parameters
         ----------
         layers : list or None, optional
             A list of layer-names that should appear in the selector.
-            If None, all available layers (except the "all" layer) are shown.
+            If None, all available layers (except the "all" layer) are shown, and the
+            layers are automatically updated whenever a new layer is created on the map.
+            (check the 'exclude_layers' parameter for excluding specific layers)
             The default is None.
         pos : list or None, optional
             The position of the slider in figure-coordinates, provided as:
@@ -382,12 +387,6 @@ class LayerSlider(Slider):
             >>>      track_color="0.8",
             >>>      color="0.2"
             >>>      )
-
-
-        Returns
-        -------
-        s : Slider
-            The slider instance. To remove the widget, use `s.remove()`
 
         Examples
         --------
@@ -515,6 +514,10 @@ class LayerSlider(Slider):
             drag._make_draggable()
 
     def remove(self):
+        """
+        Remove the widget from the map
+        """
+
         self._m.BM.remove_artist(self.ax)
         self.disconnect_events()
         self.ax.remove()
