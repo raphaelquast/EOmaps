@@ -314,7 +314,6 @@ class LayerSelector(SelectorButtons):
 
         del self._m.util._selectors[self._init_args["name"]]
         self._m.BM.update()
-        print("done")
 
 
 class LayerSlider(Slider):
