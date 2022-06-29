@@ -74,11 +74,6 @@ class TestDraggableAxes(unittest.TestCase):
         cv.key_press_event("up")
         cv.key_press_event("down")
 
-        cv.key_press_event("alt+left")
-        cv.key_press_event("alt+right")
-        cv.key_press_event("alt+up")
-        cv.key_press_event("alt+down")
-
         # release the mouse
         cv.button_release_event(0, 0, 1, False)
 
@@ -94,10 +89,6 @@ class TestDraggableAxes(unittest.TestCase):
         cv.key_press_event("right")
         cv.key_press_event("up")
         cv.key_press_event("down")
-        cv.key_press_event("alt+left")
-        cv.key_press_event("alt+right")
-        cv.key_press_event("alt+up")
-        cv.key_press_event("alt+down")
 
         # move it around with the mouse
         cv.motion_notify_event(x0, y0, False)
@@ -105,14 +96,6 @@ class TestDraggableAxes(unittest.TestCase):
         # resize it
         cv.scroll_event(x1, y1, 10)
 
-        # hide histogram
-        cv.key_press_event("ctrl+up")
-        # hide colorbar
-        cv.key_press_event("ctrl+down")
-
-        # show histogram and colorbar again
-        cv.key_press_event("ctrl+up")
-        cv.key_press_event("ctrl+down")
         # release the mouse
         cv.button_release_event(0, 0, 1, False)
 

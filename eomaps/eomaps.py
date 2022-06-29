@@ -5178,3 +5178,11 @@ class MapsGrid:
     @wraps(Maps.subplots_adjust)
     def subplots_adjust(self, **kwargs):
         return self.parent.subplots_adjust(**kwargs)
+
+    @wraps(Maps.get_layout)
+    def get_layout(self, **kwargs):
+        return self.parent.get_layout(**kwargs)
+
+    @wraps(Maps.apply_layout)
+    def apply_layout(self, **kwargs):
+        return self.parent.apply_layout(**kwargs)
