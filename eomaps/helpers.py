@@ -539,7 +539,8 @@ class LayoutEditor:
     def roundto(x, base=10):
         if base == 0:
             return x
-        return base * np.round(x / base)
+
+        return x - x % base
 
     def cb_scroll(self, event):
         if (self.f.canvas.toolbar is not None) and self.f.canvas.toolbar.mode != "":
@@ -638,12 +639,13 @@ class LayoutEditor:
 
     @property
     def _snap(self):
-        # number of gridpoints
+        # grid-separation distance
         if self._snap_id == 0:
             snap = (0, 0)
         else:
-            n = 10 * (15 - self._snap_id)
-            snap = (self.f.bbox.width // n, self.f.bbox.height // n)
+            n = self.f.bbox.width / (20 * (15 - self._snap_id))
+
+            snap = (n, n)
 
         return snap
 
