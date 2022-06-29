@@ -312,7 +312,7 @@ class Maps(object):
             crs=4326,
         )
 
-        self._axpicker = None
+        self._layout_editor = None
 
         self._figure = map_objects(weakref.proxy(self))
         self._cb = cb_container(weakref.proxy(self))  # accessor for the callbacks
@@ -712,6 +712,7 @@ class Maps(object):
             top=plot_y + plot_size / 2,
             right=plot_x + plot_size / 2,
         )[0]
+
         # initialize a new maps-object with a new axis
         m2 = Maps(inset_crs, parent=self.parent, gs_ax=gs, layer=layer)
 
@@ -970,8 +971,6 @@ class Maps(object):
             # self.figure.ax.callbacks.connect("ylim_changed", ylims_change)
 
         if newfig:  # only if a new figure has been initialized
-            _ = self._draggable_axes
-
             # attach a callback that is executed when the figure is closed
             self._cid_onclose = self.figure.f.canvas.mpl_connect(
                 "close_event", self._on_close
@@ -980,6 +979,10 @@ class Maps(object):
             self._cid_resize = self.figure.f.canvas.mpl_connect(
                 "resize_event", self._on_resize
             )
+
+        # if we haven't attached an axpicker so far, do it!
+        if self.parent._layout_editor is None:
+            self.parent._layout_editor = LayoutEditor(self.parent, modifier="alt+d")
 
         if newfig:
             # we only need to call show if a new figure has been created!
@@ -1038,15 +1041,6 @@ class Maps(object):
             self.parent._BM._bg_layer = m.parent.layer
         return self.parent._BM
 
-    @property
-    def _draggable_axes(self):
-        if self.parent._axpicker is None:
-            # make the axes draggable
-            self.parent._axpicker = LayoutEditor(self.parent, modifier="alt+d")
-            return self.parent._axpicker
-
-        return self.parent._axpicker
-
     def edit_layout(self, filepath=None):
         """
         Activate the "layout-editor" to quickly re-arrange the positions of subplots.
@@ -1067,7 +1061,7 @@ class Maps(object):
             The default is None.
 
         """
-        self._draggable_axes._make_draggable(filepath=filepath)
+        self._layout_editor._make_draggable(filepath=filepath)
 
     def _add_child(self, m):
         self.parent._children.add(m)

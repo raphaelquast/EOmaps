@@ -1074,7 +1074,7 @@ class BlitManager:
 
         cv.mpl_disconnect(self.cid)
 
-        if not self._m._draggable_axes._modifier_pressed:
+        if not self._m._layout_editor._modifier_pressed:
             # make all artists of the corresponding layer visible
             for l in self._bg_artists:
                 if l not in [layer, "all", *overlay_layers]:

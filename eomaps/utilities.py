@@ -262,23 +262,15 @@ class LayerSelector(SelectorButtons):
         self._m.util._selectors[name] = self
 
     def on_clicked(self, val):
-        l = self.labels[int(val)]
+        if self._m.parent._layout_editor._modifier_pressed:
+            return
 
-        # make sure we re-fetch the artist states on a layer change during
-        # draggable-axes
-        drag = self._m.parent._draggable_axes
-        d = False
-        if drag._modifier_pressed:
-            drag._undo_draggable()
-            d = True
+        l = self.labels[int(val)]
 
         self._m.BM.bg_layer = l
 
-        if d:
-            drag._make_draggable()
-        else:
-            self._m.BM.update(blit=False)
-            self._m.BM.canvas.draw_idle()
+        self._m.BM.update(blit=False)
+        self._m.BM.canvas.draw_idle()
 
     def _reinit(self):
         """
@@ -499,19 +491,11 @@ class LayerSlider(Slider):
         self._m.BM.update()
 
     def _on_changed(self, val):
+        if self._m.parent._layout_editor._modifier_pressed:
+            return
+
         l = self._labels[int(val)]
-        # make sure we re-fetch the artist states on a layer change during
-        # draggable-axes
-        drag = self._m.parent._draggable_axes
-        d = False
-        if drag._modifier_pressed:
-            drag._undo_draggable()
-            d = True
-
         self._m.BM.bg_layer = l
-
-        if d:
-            drag._make_draggable()
 
     def remove(self):
         """
