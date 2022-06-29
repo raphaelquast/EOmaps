@@ -24,6 +24,8 @@ class TestDraggableAxes(unittest.TestCase):
         mg.plot_map()
         mg.add_colorbar()
 
+        initial_layout = mg.get_layout()
+
         cv = mg.f.canvas
 
         # activate draggable axes
@@ -127,3 +129,20 @@ class TestDraggableAxes(unittest.TestCase):
         # deactivate draggable axes
         cv.key_press_event("alt+d")
         cv.key_release_event("alt+d")
+
+        # save the new layout
+        new_layout = mg.get_layout()
+
+        # restore the initial layout
+        mg.apply_layout(initial_layout)
+        restored_layout = mg.get_layout()
+        for key, val in restored_layout.items():
+            # check if all positions have been properly restored
+            self.assertTrue(np.allclose(val, initial_layout[key]))
+
+        # restore the new layout
+        mg.apply_layout(new_layout)
+        restored_layout = mg.get_layout()
+        for key, val in restored_layout.items():
+            # check if all positions have been properly restored
+            self.assertTrue(np.allclose(val, new_layout[key]))
