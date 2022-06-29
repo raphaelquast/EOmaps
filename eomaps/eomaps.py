@@ -1041,28 +1041,6 @@ class Maps(object):
             self.parent._BM._bg_layer = m.parent.layer
         return self.parent._BM
 
-    def edit_layout(self, filepath=None):
-        """
-        Activate the "layout-editor" to quickly re-arrange the positions of subplots.
-
-        - This is the same as pressing "alt + d" on the keyboard!
-        - To exit the editor, press "escape" or "alt + d" on the keyboard!
-
-        Parameters
-        ----------
-        filepath : str, pathlib.Path or None, optional
-            A path to a file that will be used to store the layout after you exit
-            the layout-editor.
-            This file can then be used to apply the layout to the map with
-
-            >>> m.apply_layout(filepath=filepath)
-
-            NOTE: The file will be overwritten if it already exists!!
-            The default is None.
-
-        """
-        self._layout_editor._make_draggable(filepath=filepath)
-
     def _add_child(self, m):
         self.parent._children.add(m)
 
@@ -4722,6 +4700,28 @@ class Maps(object):
 
         self.redraw()
 
+    def edit_layout(self, filepath=None):
+        """
+        Activate the "layout-editor" to quickly re-arrange the positions of subplots.
+
+        - This is the same as pressing "alt + d" on the keyboard!
+        - To exit the editor, press "escape" or "alt + d" on the keyboard!
+
+        Parameters
+        ----------
+        filepath : str, pathlib.Path or None, optional
+            A path to a file that will be used to store the layout after you exit
+            the layout-editor.
+            This file can then be used to apply the layout to the map with
+
+            >>> m.apply_layout(filepath=filepath)
+
+            NOTE: The file will be overwritten if it already exists!!
+            The default is None.
+
+        """
+        self._layout_editor._make_draggable(filepath=filepath)
+
 
 class MapsGrid:
     """
@@ -5202,3 +5202,7 @@ class MapsGrid:
     @wraps(Maps.apply_layout)
     def apply_layout(self, *args, **kwargs):
         return self.parent.apply_layout(*args, **kwargs)
+
+    @wraps(Maps.edit_layout)
+    def edit_layout(self, *args, **kwargs):
+        return self.parent.edit_layout(*args, **kwargs)
