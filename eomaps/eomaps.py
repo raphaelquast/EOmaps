@@ -982,7 +982,7 @@ class Maps(object):
 
         # if we haven't attached an axpicker so far, do it!
         if self.parent._layout_editor is None:
-            self.parent._layout_editor = LayoutEditor(self.parent, modifier="alt+d")
+            self.parent._layout_editor = LayoutEditor(self.parent, modifier="alt+l")
 
         if newfig:
             # we only need to call show if a new figure has been created!
