@@ -211,7 +211,7 @@ class draggable_axes:
         self._ax_visible = dict()
 
         # the snap-to-grid interval (0 means no snapping)
-        self._snap = 0
+        self._snap_id = 5
 
     def clear_annotations(self):
         while len(self._annotations) > 0:
@@ -480,9 +480,10 @@ class draggable_axes:
             # if y0 + h >= fbbox.y1:
             #     y0 = fbbox.y1 - h
 
-            if self._snap > 0:
-                x0 = x0 - x0 % self._snap
-                y0 = y0 - y0 % self._snap
+            if self._snap_id > 0:
+                sx, sy = self._snap
+                x0 = self.roundto(x0, sx)
+                y0 = self.roundto(y0, sy)
 
             bbox = Bbox.from_bounds(x0, y0, w, h).transformed(
                 self.f.transFigure.inverted()
@@ -549,12 +550,12 @@ class draggable_axes:
         self._remove_snap_grid()
 
     def cb_pick(self, event):
-        self._show_snap_grid()
-
         if not self._modifier_pressed:
             return
         if (self.f.canvas.toolbar is not None) and self.f.canvas.toolbar.mode != "":
             return False
+
+        self._show_snap_grid()
 
         eventax = event.inaxes
 
@@ -630,6 +631,10 @@ class draggable_axes:
 
         self.m.BM.canvas.draw()
 
+    @staticmethod
+    def roundto(x, base=10):
+        return base * np.round(x / base)
+
     def cb_scroll(self, event):
         if (self.f.canvas.toolbar is not None) and self.f.canvas.toolbar.mode != "":
             return False
@@ -649,22 +654,27 @@ class draggable_axes:
             w, h = ax.bbox.width, ax.bbox.height
             x0, y0 = ax.bbox.x0, ax.bbox.y0
 
-            w = w + max(0.1, self._snap) * event.step
-            h = h + max(0.1, self._snap) * event.step
+            if self._snap_id > 0:
+                sx, sy = self._snap
+                w = w + max(0.1, sx) * event.step
+                h = h + max(0.1, sy) * event.step
 
-            if self._snap > 0:
-                w = w - w % self._snap
-                h = h - h % self._snap
-                x0 = x0 - x0 % self._snap
-                y0 = y0 - y0 % self._snap
+                w = self.roundto(w, sx)
+                h = self.roundto(h, sy)
+                x0 = self.roundto(x0, sx)
+                y0 = self.roundto(y0, sy)
 
             bbox = Bbox.from_bounds(x0, y0, w, h).transformed(
                 self.f.transFigure.inverted()
             )
 
+            if bbox.width <= 0 or bbox.height <= 0:
+                return
+
             if not self._cb_picked:
                 ax.set_position(bbox)
             else:
+                # TODO fix colorbar positioning
                 orientation = self._m_picked._colorbar[-2]
                 if orientation == "horizontal":
                     b = [bbox.x0, bbox.y0, bbox.width, b[3] + bbox.height]
@@ -685,22 +695,47 @@ class draggable_axes:
         if (self.f.canvas.toolbar is not None) and self.f.canvas.toolbar.mode != "":
             return False
 
-        if event.key == self.modifier:
-            if self._modifier_pressed:
-                self._undo_draggable()
-            else:
-                self._make_draggable()
+        if (event.key == self.modifier) and (not self._modifier_pressed):
+            self._make_draggable()
             return
+        elif (event.key == self.modifier or event.key == "escape") and (
+            self._modifier_pressed
+        ):
+            self._undo_draggable()
+            return
+        else:
+            if not self._modifier_pressed:
+                # only continue if  modifier is pressed!
+                return
 
-        if self._modifier_pressed:
-            if event.key in map(str, range(10)):
-                self._snap = int(event.key) * 2
-                print("snapping to", self._snap)
+        # assign snaps with keys 0-9
+        if event.key in map(str, range(10)):
+            self._snap_id = int(event.key)
 
-            if self._snap > 0:
-                self._show_snap_grid(self._snap)
-            else:
-                self._remove_snap_grid()
+            print("snapping to", self._snap_id)
+
+        # assign snaps with keys 0-9
+        if event.key in ["+", "-"]:
+
+            class dummyevent:
+                pass
+
+            d = dummyevent()
+            d.key = event.key
+            d.step = 1 * {"+": 1, "-": -1}[event.key]
+
+            self.cb_scroll(d)
+
+        if self._snap_id > 0:
+            self._show_snap_grid()
+        else:
+            self._remove_snap_grid()
+
+    @property
+    def _snap(self):
+        # number of gridpoints
+        n = 10 * (15 - self._snap_id)
+        return (self.f.bbox.width // n, self.f.bbox.height // n)
 
     def _undo_draggable(self):
         print("EOmaps: Making axes interactive again...")
@@ -754,7 +789,7 @@ class draggable_axes:
 
     def _make_draggable(self):
         # all ordinary callbacks will not execute if" self._modifier_pressed" is True!
-        print("EOmaps: Making axis draggable...")
+        print("EOmaps: Making axes draggable...")
 
         # remember the visibility state of the axes
         # do this as the first thing since axes might be artists as well!
@@ -824,21 +859,28 @@ class draggable_axes:
         self.m.redraw()
 
     def _show_snap_grid(self, snap=None):
-        if snap is None:
-            snap = self._snap
+        # snap = (snapx, snapy)
 
-        if snap == 0:
-            return
+        if snap is None:
+            if self._snap_id == 0:
+                return
+            else:
+                snapx, snapy = self._snap
+        else:
+            snapx, snapy = snap
 
         self._remove_snap_grid()
 
         bbox = self.m.figure.f.bbox
         t = self.m.figure.f.transFigure.inverted()
 
-        gx, gy = np.mgrid[0 : int(bbox.width) : snap, 0 : int(bbox.height) : snap]
+        gx, gy = np.mgrid[
+            0 : int(bbox.width) + int(snapx) : snapx,
+            0 : int(bbox.height) + int(snapy) : snapy,
+        ]
         g = t.transform(np.column_stack((gx.flat, gy.flat)))
 
-        l = Line2D(*g.T, color="k", lw=0, marker=".", ms=1)
+        l = Line2D(*g.T, color="k", lw=0, marker=".", ms=(snapx + snapy) / 10)
         self._snap_grid_artist = self.m.figure.f.add_artist(l)
 
     def _remove_snap_grid(self):
