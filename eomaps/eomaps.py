@@ -105,7 +105,7 @@ from .helpers import (
     pairwise,
     cmap_alpha,
     BlitManager,
-    DraggableAxes,
+    LayoutEditor,
     progressbar,
     searchtree,
 )
@@ -1042,7 +1042,7 @@ class Maps(object):
     def _draggable_axes(self):
         if self.parent._axpicker is None:
             # make the axes draggable
-            self.parent._axpicker = DraggableAxes(self.parent, modifier="alt+d")
+            self.parent._axpicker = LayoutEditor(self.parent, modifier="alt+d")
             return self.parent._axpicker
 
         return self.parent._axpicker

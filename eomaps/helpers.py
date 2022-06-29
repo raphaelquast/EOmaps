@@ -182,7 +182,7 @@ class searchtree:
         return None, i
 
 
-class DraggableAxes:
+class LayoutEditor:
     def __init__(self, m, modifier="alt+d", cb_modifier="control"):
         self.modifier = modifier
         self.cb_modifier = cb_modifier
