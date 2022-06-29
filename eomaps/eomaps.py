@@ -1047,6 +1047,28 @@ class Maps(object):
 
         return self.parent._axpicker
 
+    def edit_layout(self, filepath=None):
+        """
+        Activate the "layout-editor" to quickly re-arrange the positions of subplots.
+
+        - This is the same as pressing "alt + d" on the keyboard!
+        - To exit the editor, press "escape" or "alt + d" on the keyboard!
+
+        Parameters
+        ----------
+        filepath : str, pathlib.Path or None, optional
+            A path to a file that will be used to store the layout after you exit
+            the layout-editor.
+            This file can then be used to apply the layout to the map with
+
+            >>> m.apply_layout(filepath=filepath)
+
+            NOTE: The file will be overwritten if it already exists!!
+            The default is None.
+
+        """
+        self._draggable_axes._make_draggable(filepath=filepath)
+
     def _add_child(self, m):
         self.parent._children.add(m)
 
@@ -4656,7 +4678,7 @@ class Maps(object):
             ), f"The file {filepath} already exists! Use override=True to relace it."
             with open(filepath, "w") as file:
                 json.dump(layout, file)
-            print(f"EOmaps: Layout saved to {filepath}")
+            print("EOmaps: Layout saved to:\n       ", filepath)
 
         return layout
 

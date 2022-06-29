@@ -213,6 +213,10 @@ class DraggableAxes:
         # the snap-to-grid interval (0 means no snapping)
         self._snap_id = 5
 
+        # an optional filepath that will be used to store the layout once the
+        # editor exits
+        self._filepath = None
+
     def clear_annotations(self):
         while len(self._annotations) > 0:
             a = self._annotations.pop(-1)
@@ -644,7 +648,15 @@ class DraggableAxes:
         return snap
 
     def _undo_draggable(self):
-        print("EOmaps: Making axes interactive again...")
+        print("EOmaps: Exiting layout-editor mode...")
+        if self._filepath:
+            try:
+                self.m.get_layout(filepath=self._filepath, override=True)
+            except Exception:
+                print(
+                    "EOmaps WARNING: The layout could not be saved to the provided "
+                    + f"filepath: '{self._filepath}'."
+                )
 
         for ax, frameQ, spine_vis, patch_props in zip(
             self.all_axes, self._frameon, self._spines_visible, self._patchprops
@@ -693,9 +705,13 @@ class DraggableAxes:
         self._remove_snap_grid()
         self.m.redraw()
 
-    def _make_draggable(self):
+    def _make_draggable(self, filepath=None):
+        self._filepath = filepath
+
         # all ordinary callbacks will not execute if" self._modifier_pressed" is True!
-        print("EOmaps: Making axes draggable...")
+        print("EOmaps: Activating layout-editor mode...")
+        if filepath:
+            print(f"EOmaps: On exit, the layout will be saved to:\n       ", filepath)
 
         # remember the visibility state of the axes
         # do this as the first thing since axes might be artists as well!
