@@ -10,6 +10,7 @@ from pathlib import Path
 import weakref
 from tempfile import TemporaryDirectory, TemporaryFile
 import gc
+import json
 
 import numpy as np
 
@@ -104,7 +105,7 @@ from .helpers import (
     pairwise,
     cmap_alpha,
     BlitManager,
-    draggable_axes,
+    DraggableAxes,
     progressbar,
     searchtree,
 )
@@ -315,6 +316,7 @@ class Maps(object):
 
         self._figure = map_objects(weakref.proxy(self))
         self._cb = cb_container(weakref.proxy(self))  # accessor for the callbacks
+
         self._init_figure(gs_ax=gs_ax, plot_crs=crs, **kwargs)
         self._utilities = utilities(weakref.proxy(self))
         self._wms_container = wms_container(weakref.proxy(self))
@@ -1040,7 +1042,7 @@ class Maps(object):
     def _draggable_axes(self):
         if self.parent._axpicker is None:
             # make the axes draggable
-            self.parent._axpicker = draggable_axes(self.parent, modifier="alt+d")
+            self.parent._axpicker = DraggableAxes(self.parent, modifier="alt+d")
             return self.parent._axpicker
 
         return self.parent._axpicker
@@ -4608,6 +4610,101 @@ class Maps(object):
 
         self.show_layer(active_layer)
         self.BM.update()
+
+    def get_layout(self, filepath=None, override=False):
+        """
+        Get the positions of all axes within the current plot.
+
+        To re-apply a layout, use:
+
+            >>> l = m.get_layout()
+            >>> m.set_layout(l)
+
+        Note
+        ----
+        The returned list is only a snapshot of the current layout.
+        It can only be re-applied to a given figure if the order at which the axes are
+        created remains the same!
+
+        Parameters
+        ----------
+        filepath : str or pathlib.Path, optional
+            If provided, a json-file will be created at the specified destination that
+            can be used in conjunction with `m.set_layout(...)` to apply the layout:
+
+            >>> m.get_layout(filepath=<FILEPATH>, override=True)
+            >>> m.apply_layout_layout(<FILEPATH>)
+
+            You can also manually read-in the layout-dict via:
+            >>> import json
+            >>> layout = json.load(<FILEPATH>)
+
+        Returns
+        -------
+        layout : dict or None
+            A dict of the positons of all axes, e.g.: {1:(x0, y0, width height), ...}
+        """
+
+        layout = dict()
+        for i, ax in enumerate(self.figure.f.axes):
+            layout[str(i)] = ax.get_position().bounds
+
+        if filepath is not None:
+            filepath = Path(filepath)
+            assert (
+                not filepath.exists() or override
+            ), f"The file {filepath} already exists! Use override=True to relace it."
+            with open(filepath, "w") as file:
+                json.dump(layout, file)
+            print(f"EOmaps: Layout saved to {filepath}")
+
+        return layout
+
+    def apply_layout(self, layout):
+        """
+        Set the positions of all axes within the current plot based on a previously
+        defined layout.
+
+        To apply a layout, use:
+
+            >>> l = m.get_layout()
+            >>> m.set_layout(l)
+
+        To save a layout to disc and apply it at a later stage, use
+            >>> m.get_layout(filepath=<FILEPATH>)
+            >>> m.set_layout(<FILEPATH>)
+
+
+        Note
+        ----
+        The returned list is only a snapshot of the current layout.
+        It can only be re-applied to a given figure if the order at which the axes are
+        created remains the same!
+
+        Parameters
+        ----------
+        layout : dict, str or pathlib.Path
+            If a dict is provided, it is directly used to define the layout.
+
+            If a string or a pathlib.Path object is provided, it will be used to
+            read a previously dumped layout (e.g. with `m.get_layout(filepath)`)
+
+        """
+        if isinstance(layout, (str, Path)):
+            with open(layout, "r") as file:
+                layout = json.load(file)
+
+        nl = len(layout)
+        na = len(self.figure.f.axes)
+        assert nl == na, (
+            f"EOmaps: Layout specifies dimensions for {nl} axes but there are {na} "
+            + "axes present in the figure!"
+        )
+
+        for i, ax in enumerate(self.figure.f.axes):
+            ax.set_position(layout[str(i)])
+
+        self.redraw()
 
 
 class MapsGrid:

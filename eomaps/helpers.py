@@ -182,7 +182,7 @@ class searchtree:
         return None, i
 
 
-class draggable_axes:
+class DraggableAxes:
     def __init__(self, m, modifier="alt+d", cb_modifier="control"):
         self.modifier = modifier
         self.cb_modifier = cb_modifier
@@ -294,150 +294,50 @@ class draggable_axes:
             return
 
         key = event.key
-        if key.startswith("alt+"):
-            key = key[4:]
-            interval = 10
-            method = 0  # e.g. zoom
-        elif key.startswith("ctrl+"):
-            key = key[5:]
-            interval = 1
-            method = 1  # e.g. change rate
-        else:
-            interval = 1
-            method = 0  # e.g. zoom
 
         if key not in ["left", "right", "up", "down"]:
             return
 
-        if method == 0:  # e.g. key pressed
-            for ax in self._ax_picked:
-                if key == "left":
-                    bbox = Bbox.from_bounds(
-                        int(ax.bbox.x0 - interval),
-                        ax.bbox.y0,
-                        ax.bbox.width,
-                        ax.bbox.height,
-                    )
-                elif key == "right":
-                    bbox = Bbox.from_bounds(
-                        int(ax.bbox.x0 + interval),
-                        ax.bbox.y0,
-                        ax.bbox.width,
-                        ax.bbox.height,
-                    )
-                elif key == "up":
-                    bbox = Bbox.from_bounds(
-                        ax.bbox.x0,
-                        int(ax.bbox.y0 + interval),
-                        ax.bbox.width,
-                        ax.bbox.height,
-                    )
-                elif key == "down":
-                    bbox = Bbox.from_bounds(
-                        ax.bbox.x0,
-                        int(ax.bbox.y0 - interval),
-                        ax.bbox.width,
-                        ax.bbox.height,
-                    )
+        snapx, snapy = self._snap
+        intervalx, intervaly = (
+            max(0.001 * self.f.bbox.width, snapx),
+            max(0.001 * self.f.bbox.height, snapy),
+        )
 
-                bbox = bbox.transformed(self.f.transFigure.inverted())
+        for ax in self._ax_picked:
+            if key == "left":
+                bbox = Bbox.from_bounds(
+                    self.roundto(ax.bbox.x0 - intervalx, snapx),
+                    ax.bbox.y0,
+                    ax.bbox.width,
+                    ax.bbox.height,
+                )
+            elif key == "right":
+                bbox = Bbox.from_bounds(
+                    self.roundto(ax.bbox.x0 + intervalx, snapx),
+                    ax.bbox.y0,
+                    ax.bbox.width,
+                    ax.bbox.height,
+                )
+            elif key == "up":
+                bbox = Bbox.from_bounds(
+                    ax.bbox.x0,
+                    self.roundto(ax.bbox.y0 + intervaly, snapy),
+                    ax.bbox.width,
+                    ax.bbox.height,
+                )
+            elif key == "down":
+                bbox = Bbox.from_bounds(
+                    ax.bbox.x0,
+                    self.roundto(ax.bbox.y0 - intervaly, snapy),
+                    ax.bbox.width,
+                    ax.bbox.height,
+                )
 
-                ax.set_position(bbox)
-        if method == 1:  # e.g. ctrl + key pressed
-            if self._cb_picked:
-                orientation = self._m_picked._colorbar[-2]
-                if orientation == "horizontal":
-                    ratio = (
-                        self._m_picked.figure.ax_cb_plot.bbox.height
-                        / self._m_picked.figure.ax_cb.bbox.height
-                    )
-                elif orientation == "vertical":
-                    ratio = (
-                        self._m_picked.figure.ax_cb_plot.bbox.width
-                        / self._m_picked.figure.ax_cb.bbox.width
-                    )
+            bbox = bbox.transformed(self.f.transFigure.inverted())
 
-                ratio = np.round(ratio, 1)
-                if key == "left":
-                    ratio += 0.5
-                    self._m_picked.figure.set_colorbar_position(
-                        ratio=ratio if ratio < 15 else 1000
-                    )
-                elif key == "right":
-                    if ratio > 900:
-                        ratio = 15
-                    self._m_picked.figure.set_colorbar_position(
-                        ratio=max(ratio - 0.5, 0)
-                    )
-                elif key == "up":
-                    # toggle ax_cb_plot and make the ticks visible
-                    if self._m_picked.figure.ax_cb_plot in self._ax_visible:
-                        vis = not self._ax_visible[self._m_picked.figure.ax_cb_plot]
-                    else:
-                        vis = not self._m_picked.figure.ax_cb_plot.get_visible()
+            ax.set_position(bbox)
 
-                    # self._m_picked.figure.ax_cb_plot.set_visible(vis)
-                    self._ax_visible[self._m_picked.figure.ax_cb_plot] = vis
-
-                elif key == "down":
-                    # toggle ax_cb and make the ticks visible
-                    if self._m_picked.figure.ax_cb in self._ax_visible:
-                        vis = not self._ax_visible[self._m_picked.figure.ax_cb]
-                    else:
-                        vis = not self._m_picked.figure.ax_cb.get_visible()
-                    # self._m_picked.figure.ax_cb.set_visible(vis)
-                    self._ax_visible[self._m_picked.figure.ax_cb] = vis
-
-                # fix the visible ticks
-                orientation = self._m_picked._colorbar[-2]
-                if self._m_picked.figure.ax_cb.get_visible() is False:
-                    if orientation == "vertical":
-                        self._m_picked.figure.ax_cb_plot.tick_params(
-                            right=True,
-                            labelright=True,
-                            bottom=True,
-                            labelbottom=True,
-                            left=False,
-                            labelleft=False,
-                            top=False,
-                            labeltop=False,
-                        )
-                    elif orientation == "horizontal":
-                        self._m_picked.figure.ax_cb_plot.tick_params(
-                            bottom=True,
-                            labelbottom=True,
-                            left=True,
-                            labelleft=True,
-                            top=False,
-                            labeltop=False,
-                            right=False,
-                            labelright=False,
-                        )
-                else:
-                    if orientation == "vertical":
-                        self._m_picked.figure.ax_cb_plot.tick_params(
-                            right=False,
-                            labelright=False,
-                            bottom=True,
-                            labelbottom=True,
-                            left=False,
-                            labelleft=False,
-                            top=False,
-                            labeltop=False,
-                        )
-                    elif orientation == "horizontal":
-                        self._m_picked.figure.ax_cb_plot.tick_params(
-                            bottom=False,
-                            labelbottom=False,
-                            left=True,
-                            labelleft=True,
-                            top=False,
-                            labeltop=False,
-                            right=False,
-                            labelright=False,
-                        )
-            else:
-                pass
         self.set_annotations()
         self._color_axes()
         self.m.BM._refetch_bg = True
@@ -633,6 +533,8 @@ class draggable_axes:
 
     @staticmethod
     def roundto(x, base=10):
+        if base == 0:
+            return x
         return base * np.round(x / base)
 
     def cb_scroll(self, event):
@@ -711,7 +613,6 @@ class draggable_axes:
         # assign snaps with keys 0-9
         if event.key in map(str, range(10)):
             self._snap_id = int(event.key)
-
             print("snapping to", self._snap_id)
 
         # assign snaps with keys 0-9
@@ -734,8 +635,13 @@ class draggable_axes:
     @property
     def _snap(self):
         # number of gridpoints
-        n = 10 * (15 - self._snap_id)
-        return (self.f.bbox.width // n, self.f.bbox.height // n)
+        if self._snap_id == 0:
+            snap = (0, 0)
+        else:
+            n = 10 * (15 - self._snap_id)
+            snap = (self.f.bbox.width // n, self.f.bbox.height // n)
+
+        return snap
 
     def _undo_draggable(self):
         print("EOmaps: Making axes interactive again...")
@@ -880,8 +786,18 @@ class draggable_axes:
         ]
         g = t.transform(np.column_stack((gx.flat, gy.flat)))
 
-        l = Line2D(*g.T, color="k", lw=0, marker=".", ms=(snapx + snapy) / 10)
+        l = Line2D(
+            *g.T,
+            lw=0,
+            marker=".",
+            markerfacecolor="k",
+            markeredgecolor="none",
+            ms=(snapx + snapy) / 6,
+        )
         self._snap_grid_artist = self.m.figure.f.add_artist(l)
+
+        self.f.draw_artist(self._snap_grid_artist)
+        self.f.canvas.blit()
 
     def _remove_snap_grid(self):
         if hasattr(self, "_snap_grid_artist"):
