@@ -304,8 +304,8 @@ class LayoutEditor:
 
         snapx, snapy = self._snap
         intervalx, intervaly = (
-            max(0.001 * self.f.bbox.width, snapx),
-            max(0.001 * self.f.bbox.height, snapy),
+            max(0.25, snapx),
+            max(0.25, snapy),
         )
 
         for ax in self._ax_picked:
@@ -561,15 +561,14 @@ class LayoutEditor:
             w, h = ax.bbox.width, ax.bbox.height
             x0, y0 = ax.bbox.x0, ax.bbox.y0
 
-            if self._snap_id > 0:
-                sx, sy = self._snap
-                w = w + max(0.1, sx) * event.step
-                h = h + max(0.1, sy) * event.step
+            sx, sy = self._snap
+            w = w + max(0.25, sx) * event.step
+            h = h + max(0.25, sy) * event.step
 
-                w = self.roundto(w, sx)
-                h = self.roundto(h, sy)
-                x0 = self.roundto(x0, sx)
-                y0 = self.roundto(y0, sy)
+            w = self.roundto(w, sx)
+            h = self.roundto(h, sy)
+            x0 = self.roundto(x0, sx)
+            y0 = self.roundto(y0, sy)
 
             bbox = Bbox.from_bounds(x0, y0, w, h).transformed(
                 self.f.transFigure.inverted()
@@ -819,9 +818,9 @@ class LayoutEditor:
 
     def _remove_snap_grid(self):
         if hasattr(self, "_snap_grid_artist"):
-            self.m.BM.remove_bg_artist(self._snap_grid_artist)
             self._snap_grid_artist.remove()
             del self._snap_grid_artist
+
         self.m.redraw()
 
 
