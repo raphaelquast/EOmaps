@@ -414,19 +414,19 @@ class TestBasicPlotting(unittest.TestCase):
         m.set_data_specs(x="x", y="y", in_crs=3857, parameter="value")
         data = m._prepare_data()
 
-    def test_draggable_axes(self):
+    def test_layout_editor(self):
 
         mgrid = MapsGrid(2, 2, crs=[[4326, 4326], [3857, 3857]])
 
         for m in mgrid:
             m.add_feature.preset.coastline()
-        mgrid.parent._draggable_axes._make_draggable()
-        mgrid.parent._draggable_axes._undo_draggable()
+        mgrid.parent._layout_editor._make_draggable()
+        mgrid.parent._layout_editor._undo_draggable()
 
         m = Maps()
         m.add_feature.preset.coastline()
-        m._draggable_axes._make_draggable()
-        m._draggable_axes._undo_draggable()
+        m._layout_editor._make_draggable()
+        m._layout_editor._undo_draggable()
 
     def test_add_colorbar(self):
         gs = GridSpec(2, 2)

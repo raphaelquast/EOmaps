@@ -10,11 +10,11 @@ import matplotlib.pyplot as plt
 from eomaps import Maps, MapsGrid
 
 
-class TestDraggableAxes(unittest.TestCase):
+class TestLayoutEditor(unittest.TestCase):
     def setUp(self):
         pass
 
-    def test_draggable_axes(self):
+    def test_layout_editor(self):
         # %%
         lon, lat = np.meshgrid(np.linspace(20, 50, 50), np.linspace(20, 50, 50))
         data = pd.DataFrame(dict(lon=lon.flat, lat=lat.flat, value=1))
