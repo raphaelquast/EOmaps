@@ -2075,6 +2075,7 @@ class Maps(object):
             axcb2 = self.figure.f.add_axes(
                 (bbox.x0 - frac / 2, bbox.y0, bbox.width + frac, bbox.height),
                 zorder=-99,
+                label="ax_cb_extend",
             )
             axcb2.get_shared_y_axes().join(axcb2, self.figure.ax_cb)
             # set the limits to (0, 1) so we can directly use the fractions
