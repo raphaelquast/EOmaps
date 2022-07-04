@@ -674,14 +674,20 @@ class _NaturalEarth_presets:
 
         # convert color to hex to avoid issues with geopandas
         color = rgb2hex(cfeature.COLORS["water"])
+
+        kwargs = dict()
+        if str(self._m.crs_plot.__class__.__name__) in [
+            "Stereographic",
+            "Orthographic",
+        ]:
+            # use cartopy for stereographic reprojections but not for others
+            # (somehow geopandas can't handle Stereographic and Orthographic
+            # reprojection while cartopy can't handle Robinson...)
+            # TODO what's the reason for this???
+            kwargs["reproject"] = "cartopy"
+
         return self._feature(
-            self._m,
-            "physical",
-            "ocean",
-            fc=color,
-            ec="none",
-            zorder=-1,
-            reproject="cartopy",
+            self._m, "physical", "ocean", fc=color, ec="none", zorder=-1, **kwargs
         )
 
     @property
@@ -700,14 +706,19 @@ class _NaturalEarth_presets:
 
         # convert color to hex to avoid issues with geopandas
         color = rgb2hex(cfeature.COLORS["land"])
+        kwargs = dict()
+        if str(self._m.crs_plot.__class__.__name__) in [
+            "Stereographic",
+            "Orthographic",
+        ]:
+            # use cartopy for stereographic reprojections but not for others
+            # (somehow geopandas can't handle Stereographic and Orthographic
+            # reprojection while cartopy can't handle Robinson...)
+            # TODO what's the reason for this???
+            kwargs["reproject"] = "cartopy"
 
         return self._feature(
-            self._m,
-            "physical",
-            "land",
-            fc=color,
-            ec="none",
-            zorder=-1,
+            self._m, "physical", "land", fc=color, ec="none", zorder=-1, **kwargs
         )
 
     @property
@@ -723,6 +734,16 @@ class _NaturalEarth_presets:
         - fc="none", ec=".5", lw=0.5, zorder=99
 
         """
+        kwargs = dict()
+        if str(self._m.crs_plot.__class__.__name__) in [
+            "Stereographic",
+            "Orthographic",
+        ]:
+            # use cartopy for stereographic reprojections but not for others
+            # (somehow geopandas can't handle Stereographic and Orthographic
+            # reprojection while cartopy can't handle Robinson...)
+            # TODO what's the reason for this???
+            kwargs["reproject"] = "cartopy"
 
         return self._feature(
             self._m,
@@ -732,6 +753,7 @@ class _NaturalEarth_presets:
             ec=".5",
             lw=0.5,
             zorder=99,
+            **kwargs,
         )
 
     class _feature:
