@@ -1567,27 +1567,6 @@ Make sure to checkout the :ref:`layout_editor` which can be used to quickly re-p
     new_inset_map
 
 
-📦 Reading data (NetCDF, GeoTIFF, CSV...)
------------------------------------------
-
-EOmaps provides some basic capabilities to read and plot directly from commonly used file-types.
-
-By default, the ``Maps.from_file`` and ``m.new_layer_from_file`` functions try to plot the data
-with ``shade_raster`` (if it fails it will fallback to ``shade_points`` and finally to ``ellipses``).
-
-
-.. note::
-
-    At the moment, the readers are intended as a "shortcut" to read well-structured datasets!
-    If they fail, simply read the data manually and then set the data as usual via ``m.set_data(...)``.
-
-    Under the hood, EOmaps uses the following libraries to read data:
-
-    - GeoTIFF (``rioxarray`` + ``xarray.open_dataset``)
-    - NetCDF (``xarray.open_dataset``)
-    - CSV (``pandas.read_csv``)
-
-
 .. _layout_editor:
 
 🏗️ Layout Editor
@@ -1655,6 +1634,28 @@ It is also possible to enter the **Layout Editor** and save the layout automatic
     get_layout
     apply_layout
     edit_layout
+
+
+
+📦 Reading data (NetCDF, GeoTIFF, CSV...)
+-----------------------------------------
+
+EOmaps provides some basic capabilities to read and plot directly from commonly used file-types.
+
+By default, the ``Maps.from_file`` and ``m.new_layer_from_file`` functions try to plot the data
+with ``shade_raster`` (if it fails it will fallback to ``shade_points`` and finally to ``ellipses``).
+
+
+.. note::
+
+    At the moment, the readers are intended as a "shortcut" to read well-structured datasets!
+    If they fail, simply read the data manually and then set the data as usual via ``m.set_data(...)``.
+
+    Under the hood, EOmaps uses the following libraries to read data:
+
+    - GeoTIFF (``rioxarray`` + ``xarray.open_dataset``)
+    - NetCDF (``xarray.open_dataset``)
+    - CSV (``pandas.read_csv``)
 
 
 Read relevant data from a file
