@@ -620,11 +620,11 @@ class Maps(object):
     def new_inset_map(
         self,
         xy=(45, 45),
+        xy_crs=4326,
         radius=5,
+        radius_crs=None,
         plot_position=(0.5, 0.5),
         plot_size=0.5,
-        xy_crs=4326,
-        radius_crs=4326,
         inset_crs=4326,
         layer="all",
         boundary=True,
@@ -655,22 +655,29 @@ class Maps(object):
             The center-coordinates of the area to indicate.
             (provided in the xy_crs projection)
             The default is (45., 45.).
+        xy_crs : any, optional
+            The crs used for specifying the center position of the inset-map.
+            (can be any crs definition supported by PyProj)
+            The default is 4326 (e.g. lon/lat).
         radius : float or tuple, optional
             The radius of the extent to indicate.
             (provided in units of the radius_crs projection)
             The default is 5.
+        radius_crs : None or a crs-definition, optional
+            The crs used for specifying the radius. (can be any crs definition
+            supported by PyProj)
+
+            - If None:  The crs provided as "xy_crs" is used
+            - If shape == "geod_circles", "radius_crs" must be None since the radius
+              of a geodesic circle is defined in meters!
+
+            The default is None.
         plot_position : tuple, optional
             The center-position of the inset map in relative units (0-1) with respect to
             the figure size. The default is (.5,.5).
         plot_size : float, optional
             The relative size of the inset-map compared to the figure width.
             The default is 0.5.
-        xy_crs : any, optional
-            The crs used for specifying the xy-position.
-            The default is 4326.
-        radius_crs : any, optional
-            The crs used for specifying the radius.
-            The default is 4326.
         inset_crs : any, optional
             The crs that is used in the inset-map.
             The default is 4326.
@@ -710,7 +717,7 @@ class Maps(object):
 
         See also
         --------
-        The following additional methods are defined on inset `Maps` objects
+        The following additional methods are defined on `_InsetMaps` objects
 
         m.indicate_inset_extent :
             Plot a polygon representing the extent of the inset map on another Maps
