@@ -630,6 +630,7 @@ class Maps(object):
         boundary=True,
         shape="ellipses",
         indicate_extent=True,
+        **kwargs,
     ):
         """
         Create a new (empty) inset-map that shows a zoomed-in view on a given extent.
@@ -776,6 +777,20 @@ class Maps(object):
         >>> m.util.layer_selector()
 
         """
+
+        if "edgecolor" in kwargs or "linewidth" in kwargs:
+            warnings.warn(
+                "EOmaps: 'edgecolor' and 'linewidth' kwargs for `m.new_inset_map()`"
+                + " are depreciated! use `boundary=dict(ec='r', lw=1)` instead!",
+                category=DeprecationWarning,
+                stacklevel=2,
+            )
+
+            ec = kwargs.pop("edgecolor", "r")
+            lw = kwargs.pop("linewidth", 1)
+
+            boundary = dict(ec=ec, lw=lw)
+            boundary.update(kwargs.pop("boundary", dict()))
 
         m2 = _InsetMaps(
             crs=inset_crs,
