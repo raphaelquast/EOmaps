@@ -217,6 +217,12 @@ class LayoutEditor:
         # editor exits
         self._filepath = None
 
+        # indicator if scaling should be in horizontal or vertical direction
+        self._scale_direction = "vertical"
+
+        # indicator if colorbar-ratio should be scaled or not
+        self._scale_cb_ratio = False
+
     def clear_annotations(self):
         while len(self._annotations) > 0:
             a = self._annotations.pop(-1)
@@ -464,27 +470,6 @@ class LayoutEditor:
         eventax = event.inaxes
 
         if eventax not in self.all_axes:
-            # TODO this needs some update...
-            # check if we clicked on a hidden ax, and if so make it visible again
-            # hidden_ax, hidden_ann = None, None
-            # for ax, ann in zip(self._hiddenax, self._annotations):
-            #     bbox = ax.bbox
-            #     if (
-            #         (event.x > bbox.x0)
-            #         & (event.x < bbox.x1)
-            #         & (event.y > bbox.y0)
-            #         & (event.y < bbox.y1)
-            #     ):
-            #         hidden_ax = ax
-            #         hidden_ann = ann
-            #         break
-            # if hidden_ax is not None:
-            #     hidden_ax.set_visible(True)
-            #     hidden_ann.set_visible(False)
-            #     self.m.BM.update(artists=[hidden_ax] + self._annotations)
-            #     self.set_annotations()
-            #     return
-
             # if no axes is clicked "unpick" previously picked axes
             prev_pick = self._ax_picked
             if prev_pick is None:
@@ -495,7 +480,7 @@ class LayoutEditor:
             self._m_picked = None
             self._cb_picked = False
             self._color_axes()
-            self.m.BM.canvas.draw()
+            self.m.redraw()
             return
 
         _m_picked = False
@@ -533,14 +518,16 @@ class LayoutEditor:
         self.set_annotations()
         self._set_startpos(event)
 
-        self.m.BM.canvas.draw()
+        self.m.redraw()
 
     @staticmethod
     def roundto(x, base=10):
         if base == 0:
             return x
-
-        return x - x % base
+        if x % base <= base / 2:
+            return x - x % base
+        else:
+            return x + (base - x % base)
 
     def cb_scroll(self, event):
         if (self.f.canvas.toolbar is not None) and self.f.canvas.toolbar.mode != "":
@@ -552,50 +539,104 @@ class LayoutEditor:
         if self._ax_picked is None:
             return
 
-        b = [0, 0, 0, 0]
-
-        for ax in self._ax_picked:
-            if ax is None:
-                return
-
-            w, h = ax.bbox.width, ax.bbox.height
-            x0, y0 = ax.bbox.x0, ax.bbox.y0
-
-            sx, sy = self._snap
-            w = w + max(0.25, sx) * event.step
-            h = h + max(0.25, sy) * event.step
-
-            w = self.roundto(w, sx)
-            h = self.roundto(h, sy)
-            x0 = self.roundto(x0, sx)
-            y0 = self.roundto(y0, sy)
-
-            bbox = Bbox.from_bounds(x0, y0, w, h).transformed(
-                self.f.transFigure.inverted()
-            )
-
-            if bbox.width <= 0 or bbox.height <= 0:
-                return
-
-            if not self._cb_picked:
-                ax.set_position(bbox)
-            else:
-                # TODO fix colorbar positioning
+        if self._cb_picked:
+            if self._scale_cb_ratio:
                 orientation = self._m_picked._colorbar[-2]
                 if orientation == "horizontal":
-                    b = [bbox.x0, bbox.y0, bbox.width, b[3] + bbox.height]
+                    ratio = (
+                        self._ax_picked[1].bbox.height / self._ax_picked[0].bbox.height
+                    )
+                    ratio += ratio * 0.1 * event.step
                 elif orientation == "vertical":
-                    b = [bbox.x0, bbox.y0, b[2] + bbox.width, bbox.height]
+                    ratio = (
+                        self._ax_picked[1].bbox.width / self._ax_picked[0].bbox.width
+                    )
+                    ratio += ratio * 0.1 * event.step
 
-        if (
-            self._cb_picked
-            and (self._m_picked is not None)
-            and (self._ax_picked is not None)
-        ):
-            self._m_picked.figure.set_colorbar_position(b)
+                if ratio <= 0:
+                    return
+                if ratio >= 99:
+                    return
 
-        self._color_axes()
-        self.m.redraw()
+                self._m_picked.figure.set_colorbar_position(ratio=ratio)
+                self._color_axes()
+                self.m.redraw()
+                return
+
+            # colorbar picked
+            b = [1e6, 1e6, 0, 0]
+            for ax in self._ax_picked:
+                if ax is None:
+                    return
+                orientation = self._m_picked._colorbar[-2]
+
+                w, h = ax.bbox.width, ax.bbox.height
+                x0, y0 = ax.bbox.x0, ax.bbox.y0
+
+                sx, sy = self._snap
+
+                x0 = self.roundto(x0, sx)
+                y0 = self.roundto(y0, sy)
+
+                if self._scale_direction == "vertical":
+                    w = w + max(0.25, sx) * event.step
+                    w = self.roundto(w, sx)
+                else:
+                    h = h + max(0.25, sy) * event.step
+                    h = self.roundto(h, sy)
+
+                bbox = Bbox.from_bounds(x0, y0, w, h).transformed(
+                    self.f.transFigure.inverted()
+                )
+
+                if orientation == "horizontal":
+                    b = [bbox.x0, min(b[1], bbox.y0), bbox.width, b[3] + bbox.height]
+                elif orientation == "vertical":
+                    b = [min(b[0], bbox.x0), bbox.y0, b[2] + bbox.width, bbox.height]
+
+            if (
+                any(i <= 0.01 for i in b)
+                or b[0] >= self.f.bbox.width
+                or b[1] >= self.f.bbox.height
+            ):
+                return
+            else:
+                self._m_picked.figure.set_colorbar_position(b)
+                self._color_axes()
+                self.m.redraw()
+                return
+        else:
+            # ordinary axes picked
+            for ax in self._ax_picked:
+                if ax is None:
+                    return
+
+                w, h = ax.bbox.width, ax.bbox.height
+                x0, y0 = ax.bbox.x0, ax.bbox.y0
+
+                sx, sy = self._snap
+                w = w + max(0.25, sx) * event.step
+                w = self.roundto(w, sx)
+
+                h = h + max(0.25, sy) * event.step
+                h = self.roundto(h, sy)
+                if h <= 0 or w <= 0:
+                    return
+
+                x0 = self.roundto(x0, sx)
+                y0 = self.roundto(y0, sy)
+
+                bbox = Bbox.from_bounds(x0, y0, w, h).transformed(
+                    self.f.transFigure.inverted()
+                )
+
+                if any(i < 0 for i in bbox.bounds):
+                    return
+
+                ax.set_position(bbox)
+
+            self._color_axes()
+            self.m.redraw()
 
     def cb_key_press(self, event):
         if (self.f.canvas.toolbar is not None) and self.f.canvas.toolbar.mode != "":
@@ -614,10 +655,15 @@ class LayoutEditor:
                 # only continue if  modifier is pressed!
                 return
 
+        if event.key == "shift":
+            self._scale_direction = "horizontal"
+        if event.key == "h":
+            self._scale_cb_ratio = True
+
         # assign snaps with keys 0-9
         if event.key in map(str, range(10)):
             self._snap_id = int(event.key)
-            print("snapping to", self._snap_id)
+            self._show_snap_grid()
 
         # assign snaps with keys 0-9
         if event.key in ["+", "-"]:
@@ -631,10 +677,11 @@ class LayoutEditor:
 
             self.cb_scroll(d)
 
-        if self._snap_id > 0:
-            self._show_snap_grid()
-        else:
-            self._remove_snap_grid()
+    def cb_key_release(self, event):
+        if event.key == "shift":
+            self._scale_direction = "vertical"
+        if event.key == "h":
+            self._scale_cb_ratio = False
 
     @property
     def _snap(self):
@@ -642,7 +689,7 @@ class LayoutEditor:
         if self._snap_id == 0:
             snap = (0, 0)
         else:
-            n = self.f.bbox.width / (20 * (15 - self._snap_id))
+            n = (self.f.bbox.width / 400) * (self._snap_id)
 
             snap = (n, n)
 
@@ -712,7 +759,7 @@ class LayoutEditor:
         # all ordinary callbacks will not execute if" self._modifier_pressed" is True!
         print("EOmaps: Activating layout-editor mode...")
         if filepath:
-            print(f"EOmaps: On exit, the layout will be saved to:\n       ", filepath)
+            print("EOmaps: On exit, the layout will be saved to:\n       ", filepath)
 
         # remember the visibility state of the axes
         # do this as the first thing since axes might be artists as well!
@@ -776,6 +823,10 @@ class LayoutEditor:
 
             self.cids.append(
                 self.f.canvas.mpl_connect("key_press_event", self.cb_move_with_key)
+            )
+
+            self.cids.append(
+                self.f.canvas.mpl_connect("key_release_event", self.cb_key_release)
             )
 
         self.set_annotations()
