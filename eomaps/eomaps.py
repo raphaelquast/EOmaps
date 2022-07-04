@@ -780,17 +780,16 @@ class Maps(object):
         m2 = _InsetMaps(
             crs=inset_crs,
             parent=self,
-            xy=(45, 45),
-            radius=5,
-            plot_position=(0.5, 0.5),
-            plot_size=0.5,
-            xy_crs=4326,
-            radius_crs=4326,
-            layer="all",
-            edgecolor="r",
-            linewidth=2,
-            shape="ellipses",
-            indicate_extent=True,
+            layer=layer,
+            xy=xy,
+            radius=radius,
+            plot_position=plot_position,
+            plot_size=plot_size,
+            xy_crs=xy_crs,
+            radius_crs=radius_crs,
+            boundary=boundary,
+            shape=shape,
+            indicate_extent=indicate_extent,
         )
 
         return m2
@@ -4739,11 +4738,11 @@ class _InsetMaps(Maps):
         )
 
         if indicate_extent:
-            self.indicate_inset_extent(self, **indicate_extent)
+            self.indicate_inset_extent(self.parent, **indicate_extent)
 
     def plot_map(self, *args, **kwargs):
         set_extent = kwargs.pop("set_extent", False)
-        self.plot_map(*args, **kwargs, set_extent=set_extent)
+        super().plot_map(*args, **kwargs, set_extent=set_extent)
 
     # add a convenience-method to add a boundary-polygon to a map
     def indicate_inset_extent(self, m, n=100, **kwargs):
