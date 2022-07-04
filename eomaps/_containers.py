@@ -2286,6 +2286,7 @@ else:
               from Sentinel-2
 
               - https://land.copernicus.eu/imagery-in-situ/global-image-mosaics/
+
               >>> url = "https://s2gm-wms.brockmann-consult.de/cgi-bin/qgis_mapserv.fcgi?MAP=/home/qgis/projects/s2gm-wms_mosaics_vrt.qgs&service=WMS&request=GetCapabilities&version=1.1.1"
               >>> s = m.add_wms.get_service(url, "wms")
 
