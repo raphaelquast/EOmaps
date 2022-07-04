@@ -699,8 +699,8 @@ class Maps(object):
             - If a dict is provided, it will be used to update the appearance of the
               added polygon (e.g. facecolor, edgecolor, linewidth etc.)
 
-            NOTE: you can also use `m.indicate_inset_extent(...)` to manually indicate
-            the inset-shape on arbitrary Maps-objects.
+            NOTE: you can also use `m_inset.indicate_inset_extent(...)` to manually
+            indicate the inset-shape on arbitrary Maps-objects.
 
         Returns
         -------
