@@ -1462,10 +1462,13 @@ To simplify switching between layers, there are currently 2 widgets available:
 - ``m.util.layer_selector()`` : Add a set of clickable buttons to the map that activates the corresponding layers.
 - ``m.util.layer_slider()`` : Add a slider to the map that iterates through the available layers.
 
-By default the widgets will show all available layers (except the "all" layer).
+By default, the widgets will show all available layers (except the "all" layer) and the widget will be
+automatically updated whenever a new layer is created on the map.
 
-- To show only a subset of layers, use ``layers=[...layer names...]``.
+- To show only a subset of layers, provide an explicit list via: ``layers=[...layer names...]``.
 - To exclude certain layers from the widget, use ``exclude_layers=[...layer-names to exclude...]``
+- To remove a previously created widget ``s`` from the map, simply use ``s.remove()``
+
 
 .. currentmodule:: eomaps.utilities.utilities
 
@@ -1492,7 +1495,7 @@ By default the widgets will show all available layers (except the "all" layer).
     |   m2 = m.new_layer(layer="ocean")  |                                                 |
     |   m2.add_feature.preset.ocean()    |                                                 |
     |                                    |                                                 |
-    |   m.util.layer_selector()          |                                                 |
+    |   s = m.util.layer_selector()      |                                                 |
     +------------------------------------+-------------------------------------------------+
 
 
