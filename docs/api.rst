@@ -1575,15 +1575,81 @@ with ``shade_raster`` (if it fails it will fallback to ``shade_points`` and fina
 
 .. note::
 
-    The readers are intended for well-structured datasets!
-    If they fail, simply read and extract the data manually and
-    then set the data as usual via ``m.set_data(...)``.
+    At the moment, the readers are intended as a "shortcut" to read well-structured datasets!
+    If they fail, simply read the data manually and then set the data as usual via ``m.set_data(...)``.
 
     Under the hood, EOmaps uses the following libraries to read data:
 
     - GeoTIFF (``rioxarray`` + ``xarray.open_dataset``)
     - NetCDF (``xarray.open_dataset``)
     - CSV (``pandas.read_csv``)
+
+
+🏗️ Layout Editor
+----------------
+
+EOmaps provides a **Layout Editor** that can be used to quickly re-arrange the positions of all axes of a figure.
+You can use it to simply drag the axes the mouse to the desired locations and change their size with the scroll-wheel.
+
+**Keyboard shortcuts** are assigned as follows:
+
+.. table::
+    :widths: 52 45
+    :align: center
+
+    +-----------------------------------------------------------------------------------------+-----------------------------------------------+
+    | ``ALT + L``: enter the **Layout Editor** mode                                           | .. image:: _static/minigifs/layout_editor.gif |
+    |                                                                                         |     :align: center                            |
+    | - press ``ALT + L`` again or `escape` to exit the **Layout Editor**                     |                                               |
+    |                                                                                         |                                               |
+    | **Pick** and **re-arrange** the axes as you like with the mouse                         |                                               |
+    |                                                                                         |                                               |
+    | - **Resize** picked axes with the **scroll-wheel** (or with the ``+`` and ``-`` keys)   |                                               |
+    | - For **"histogram-colorbars"**:                                                        |                                               |
+    |                                                                                         |                                               |
+    |   - Hold down ``shift`` to change horizontal/vertical size                              |                                               |
+    |   - Hold down ``h`` to change ratio between colorbar and histogram                      |                                               |
+    |                                                                                         |                                               |
+    | Press keys ``1-9`` to set the grid-spacing for the **"snap-to-grid"** functionality     |                                               |
+    |                                                                                         |                                               |
+    | - Press ``0`` to deactivate **"snap-to-grid"**                                          |                                               |
+    |                                                                                         |                                               |
+    +-----------------------------------------------------------------------------------------+-----------------------------------------------+
+
+
+
+Save and restore layouts
+~~~~~~~~~~~~~~~~~~~~~~~~
+
+Once a layout (e.g. the desired position of the axes within a figure) has been arranged,
+the layout can be saved and re-applied with:
+
+- 🌟``m.get_layout()``: get the current layout (or dump the layout as a json-file)
+- 🌟``m.apply_layout()``: apply a given layout (or load and apply the layout from a json-file)
+
+
+It is also possible to enter the **Layout Editor** and save the layout automatically on exit with:
+
+- 🌟``m.edit_layout(filepath=...)``: enter LayoutEditor and save layout as a json-file on exit
+
+
+.. note::
+
+    A layout can only be restored if the number (and order) of the axes remains the same!
+    In other words:
+    - you always need to save a new layout-file after adding additional axes (or colorbars!) to a map
+
+
+.. currentmodule:: eomaps.Maps
+
+.. autosummary::
+    :toctree: generated
+    :nosignatures:
+    :template: only_names_in_toc.rst
+
+    get_layout
+    apply_layout
+    edit_layout
 
 
 Read relevant data from a file
