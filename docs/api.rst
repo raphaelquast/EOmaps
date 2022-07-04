@@ -410,6 +410,8 @@ and provides convenience-functions to perform actions on all maps of the figure.
     mg.subplots_adjust(left=0.1, right=0.9, bottom=0.05, top=0.95, hspace=0.1, wspace=0.05)
 
 
+Make sure to checkout the :ref:`layout_editor` which greatly simplifies the arrangement of multiple axes within a figure!
+
 Custom grids and mixed axes
 ***************************
 
@@ -1527,6 +1529,7 @@ For convenience, inset-map objects have the following special methods defined:
 
 Checkout the associated example on how to use inset-maps: :ref:`EOmaps_examples_inset_maps`
 
+Make sure to checkout the :ref:`layout_editor` which can be used to quickly re-position (and re-size) inset-maps with the mouse!
 
 .. table::
     :widths: 60 40
@@ -1584,6 +1587,8 @@ with ``shade_raster`` (if it fails it will fallback to ``shade_points`` and fina
     - NetCDF (``xarray.open_dataset``)
     - CSV (``pandas.read_csv``)
 
+
+.. _layout_editor:
 
 🏗️ Layout Editor
 ----------------
