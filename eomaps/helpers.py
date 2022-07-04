@@ -706,19 +706,28 @@ class LayoutEditor:
                     + f"filepath: '{self._filepath}'."
                 )
 
-        for ax, frameQ, spine_vis, patch_props in zip(
-            self.all_axes, self._frameon, self._spines_visible, self._patchprops
+        for ax, frameQ, spine_vis, patch_props, spine_props in zip(
+            self.all_axes,
+            self._frameon,
+            self._spines_visible,
+            self._patchprops,
+            self._spineprops,
         ):
-            pvis, pcolor, palpha = patch_props
+            pvis, pfc, pec, plw, palpha = patch_props
             ax.patch.set_visible(pvis)
+            ax.patch.set_fc(pfc)
+            ax.patch.set_ec(pec)
+            ax.patch.set_lw(plw)
             ax.patch.set_alpha(palpha)
-            ax.patch.set_facecolor(pcolor)
 
             ax.set_frame_on(frameQ)
-            for key, spine in ax.spines.items():
-                spine.set_visible(spine_vis[key])
-                spine.set_edgecolor("k")
-                spine.set_linewidth(0.5)
+
+            for key, (svis, sfc, sec, slw, salpha) in spine_props.items():
+                ax.spines[key].set_visible(svis)
+                ax.spines[key].set_fc(sfc)
+                ax.spines[key].set_ec(sec)
+                ax.spines[key].set_lw(slw)
+                ax.spines[key].set_alpha(salpha)
 
             while len(self.cids) > 0:
                 cid = self.cids.pop(-1)
@@ -785,7 +794,27 @@ class LayoutEditor:
         self._spines_visible = self.get_spines_visible()
         self._frameon = [i.get_frame_on() for i in self.all_axes]
         self._patchprops = [
-            (i.patch.get_visible(), i.patch.get_facecolor(), i.patch.get_alpha())
+            (
+                i.patch.get_visible(),
+                i.patch.get_fc(),
+                i.patch.get_ec(),
+                i.patch.get_lw(),
+                i.patch.get_alpha(),
+            )
+            for i in self.all_axes
+        ]
+
+        self._spineprops = [
+            {
+                name: (
+                    s.get_visible(),
+                    s.get_fc(),
+                    s.get_ec(),
+                    s.get_lw(),
+                    s.get_alpha(),
+                )
+                for name, s in i.spines.items()
+            }
             for i in self.all_axes
         ]
 
