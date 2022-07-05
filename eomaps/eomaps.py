@@ -360,6 +360,22 @@ class Maps(object):
         self.cleanup()
         gc.collect()
 
+    def __getattribute__(self, key):
+        if key == "plot_specs":
+            raise AttributeError(
+                "EOmaps: 'm.plot_specs' has been removed in v4.0!\n For instructions "
+                + "on how to quickly port your script to EOmaps >= 4.0, see: \n"
+                + r"https://eomaps.readthedocs.io/en/latest/FAQ.html#port-script-from-eomaps-v3-x-to-v4-x"
+            )
+        elif key == "set_plot_specs":
+            raise AttributeError(
+                "EOmaps: 'm.set_plot_specs' has been removed in v4.0!\n For instructions "
+                + "on how to quickly port your script to EOmaps >= 4.0, see: \n"
+                + r"https://eomaps.readthedocs.io/en/latest/FAQ.html#port-script-from-eomaps-v3-x-to-v4-x"
+            )
+        else:
+            return object.__getattribute__(self, key)
+
     @staticmethod
     def _proxy(obj):
         # create a proxy if the object is not yet a proxy
@@ -367,21 +383,6 @@ class Maps(object):
             return weakref.proxy(obj)
         else:
             return obj
-
-    @property
-    def plot_specs(self):
-        raise AssertionError(
-            "EOmaps: 'm.plot_specs' has been removed in v4.0!\n For instructions "
-            + "on how to quickly port your script to EOmaps >= 4.0, see: \n"
-            + r"https://eomaps.readthedocs.io/en/latest/FAQ.html#port-script-from-eomaps-v3-x-to-v4-x"
-        )
-
-    def set_plot_specs(self, *args, **kwargs):
-        raise AssertionError(
-            "EOmaps: 'm.set_plot_specs' has been removed in v4.0!\n For instructions "
-            + "on how to quickly port your script to EOmaps >= 4.0, see: \n"
-            + r"https://eomaps.readthedocs.io/en/latest/FAQ.html#port-script-from-eomaps-v3-x-to-v4-x"
-        )
 
     def cleanup(self):
         """
