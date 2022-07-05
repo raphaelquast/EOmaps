@@ -1247,8 +1247,6 @@ class cb_container:
 
     - **keypress** : Execute functions if you press a key on the keyboard
 
-    - **dynamic** : Execute functions on events (e.g. zoom)
-
     """
 
     def __init__(self, m):
@@ -1301,11 +1299,6 @@ class cb_container:
     @wraps(keypress_container)
     def keypress(self):
         return self._keypress
-
-    @property
-    @wraps(dynamic_callbacks)
-    def dynamic(self):
-        return self._dynamic
 
     def add_picker(self, name, artist, picker):
         """
