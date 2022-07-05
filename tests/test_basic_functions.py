@@ -48,6 +48,7 @@ class TestBasicPlotting(unittest.TestCase):
         # rectangles
         m.set_data(usedata, x="x", y="y", in_crs=3857)
         m.set_shape.geod_circles(radius=100000)
+        m.set_classify.Quantiles(k=5)
         m.plot_map()
         m.indicate_masked_points()
 
@@ -58,6 +59,7 @@ class TestBasicPlotting(unittest.TestCase):
         # rectangles
         m = Maps(4326)
         m.set_data(usedata, x="x", y="y", in_crs=3857)
+        m.set_classify.EqualInterval(k=5)
         m.set_shape.rectangles()
         m.plot_map()
         m.add_feature.preset.ocean(ec="k", scale="110m")

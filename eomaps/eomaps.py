@@ -1306,10 +1306,89 @@ class Maps(object):
 
     set_data = set_data_specs
 
+    def _get_mcl_subclass(self, s):
+        # get a subclass that inherits the docstring from the corresponding
+        # mapclassify classifier
+
+        class scheme:
+            @wraps(s)
+            def __init__(_, *args, **kwargs):
+                pass
+
+            def __new__(cls, **kwargs):
+                if "y" in kwargs:
+                    print(
+                        "EOmaps: The values (e.g. the 'y' parameter) are "
+                        + "assigned internally... only provide additional "
+                        + "parameters that specify the classification scheme!"
+                    )
+                    kwargs.pop("y")
+
+                self.classify_specs._set_scheme_and_args(scheme=s.__name__, **kwargs)
+
+        scheme.__doc__ = s.__doc__
+        return scheme
+
+    @property
+    def set_classify(self):
+        from textwrap import dedent
+
+        assert _register_mapclassify(), (
+            "EOmaps: Missing dependency: 'mapclassify' \n ... please install"
+            + " (conda install -c conda-forge mapclassify) to use data-classifications."
+        )
+
+        s = SimpleNamespace(
+            **{
+                i: self._get_mcl_subclass(getattr(mapclassify, i))
+                for i in mapclassify.CLASSIFIERS
+            }
+        )
+        s.__doc__ = dedent(
+            """
+            Interface to the classifiers provided by the 'mapclassify' module.
+
+            To set a classification scheme for a given Maps-object, simply use:
+
+            >>> m.set_classify.<SCHEME>(...)
+
+            Where `<SCHEME>` is the name of the desired classification and additional
+            parameters are passed in the call. (check docstrings for more info!)
+
+
+            Note
+            ----
+            The following calls have the same effect:
+
+            >>> m.set_classify.Quantiles(k=5)
+            >>> m.set_classify_specs(scheme="Quantiles", k=5)
+
+            Using `m.set_classify()` is the same as using `m.set_classify_specs()`!
+            However, `m.set_classify()` will provide autocompletion and proper
+            docstrings once the Maps-object is initialized which greatly enhances
+            the usability.
+
+            """
+        )
+
+        return s
+
     def set_classify_specs(self, scheme=None, **kwargs):
         """
         Set classification specifications for the data.
         (classification is performed by the `mapclassify` module)
+
+        Note
+        ----
+        The following calls have the same effect:
+
+        >>> m.set_classify.Quantiles(k=5)
+        >>> m.set_classify_specs(scheme="Quantiles", k=5)
+
+        Using `m.set_classify()` is the same as using `m.set_classify_specs()`!
+        However, `m.set_classify()` will provide autocompletion and proper
+        docstrings once the Maps-object is initialized which greatly enhances
+        the usability.
 
         Parameters
         ----------

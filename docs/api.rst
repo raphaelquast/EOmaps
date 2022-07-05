@@ -1582,7 +1582,7 @@ You can use it to simply drag the axes the mouse to the desired locations and ch
     :align: center
 
     +-----------------------------------------------------------------------------------------+-----------------------------------------------+
-    | ``ALT + L``: enter the **Layout Editor** mode                                           | .. image:: _static/minigifs/layout_editor.gif |
+    | press ``ALT + L``: enter the **Layout Editor** mode                                     | .. image:: _static/minigifs/layout_editor.gif |
     |                                                                                         |     :align: center                            |
     | - press ``ALT + L`` again or `escape` to exit the **Layout Editor**                     |                                               |
     |                                                                                         |                                               |
