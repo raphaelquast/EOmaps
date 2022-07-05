@@ -410,6 +410,8 @@ and provides convenience-functions to perform actions on all maps of the figure.
     mg.subplots_adjust(left=0.1, right=0.9, bottom=0.05, top=0.95, hspace=0.1, wspace=0.05)
 
 
+Make sure to checkout the :ref:`layout_editor` which greatly simplifies the arrangement of multiple axes within a figure!
+
 Custom grids and mixed axes
 ***************************
 
@@ -1462,10 +1464,13 @@ To simplify switching between layers, there are currently 2 widgets available:
 - ``m.util.layer_selector()`` : Add a set of clickable buttons to the map that activates the corresponding layers.
 - ``m.util.layer_slider()`` : Add a slider to the map that iterates through the available layers.
 
-By default the widgets will show all available layers (except the "all" layer).
+By default, the widgets will show all available layers (except the "all" layer) and the widget will be
+**automatically updated** whenever a new layer is created on the map.
 
-- To show only a subset of layers, use ``layers=[...layer names...]``.
+- To show only a subset of layers, provide an explicit list via: ``layers=[...layer names...]``.
 - To exclude certain layers from the widget, use ``exclude_layers=[...layer-names to exclude...]``
+- To remove a previously created widget ``s`` from the map, simply use ``s.remove()``
+
 
 .. currentmodule:: eomaps.utilities.utilities
 
@@ -1492,7 +1497,7 @@ By default the widgets will show all available layers (except the "all" layer).
     |   m2 = m.new_layer(layer="ocean")  |                                                 |
     |   m2.add_feature.preset.ocean()    |                                                 |
     |                                    |                                                 |
-    |   m.util.layer_selector()          |                                                 |
+    |   s = m.util.layer_selector()      |                                                 |
     +------------------------------------+-------------------------------------------------+
 
 
@@ -1524,6 +1529,7 @@ For convenience, inset-map objects have the following special methods defined:
 
 Checkout the associated example on how to use inset-maps: :ref:`EOmaps_examples_inset_maps`
 
+Make sure to checkout the :ref:`layout_editor` which can be used to quickly re-position (and re-size) inset-maps with the mouse!
 
 .. table::
     :widths: 60 40
@@ -1561,6 +1567,76 @@ Checkout the associated example on how to use inset-maps: :ref:`EOmaps_examples_
     new_inset_map
 
 
+.. _layout_editor:
+
+🏗️ Layout Editor
+-----------------
+
+EOmaps provides a **Layout Editor** that can be used to quickly re-arrange the positions of all axes of a figure.
+You can use it to simply drag the axes the mouse to the desired locations and change their size with the scroll-wheel.
+
+**Keyboard shortcuts** are assigned as follows:
+
+.. table::
+    :widths: 52 45
+    :align: center
+
+    +-----------------------------------------------------------------------------------------+-----------------------------------------------+
+    | press ``ALT + L``: enter the **Layout Editor** mode                                     | .. image:: _static/minigifs/layout_editor.gif |
+    |                                                                                         |     :align: center                            |
+    | - press ``ALT + L`` again or `escape` to exit the **Layout Editor**                     |                                               |
+    |                                                                                         |                                               |
+    | **Pick** and **re-arrange** the axes as you like with the mouse                         |                                               |
+    |                                                                                         |                                               |
+    | - **Resize** picked axes with the **scroll-wheel** (or with the ``+`` and ``-`` keys)   |                                               |
+    | - For **"histogram-colorbars"**:                                                        |                                               |
+    |                                                                                         |                                               |
+    |   - Hold down ``shift`` to change horizontal/vertical size                              |                                               |
+    |   - Hold down ``h`` to change ratio between colorbar and histogram                      |                                               |
+    |                                                                                         |                                               |
+    | Press keys ``1-9`` to set the grid-spacing for the **"snap-to-grid"** functionality     |                                               |
+    |                                                                                         |                                               |
+    | - Press ``0`` to deactivate **"snap-to-grid"**                                          |                                               |
+    |                                                                                         |                                               |
+    +-----------------------------------------------------------------------------------------+-----------------------------------------------+
+
+
+
+Save and restore layouts
+~~~~~~~~~~~~~~~~~~~~~~~~
+
+Once a layout (e.g. the desired position of the axes within a figure) has been arranged,
+the layout can be saved and re-applied with:
+
+- 🌟``m.get_layout()``: get the current layout (or dump the layout as a json-file)
+- 🌟``m.apply_layout()``: apply a given layout (or load and apply the layout from a json-file)
+
+
+It is also possible to enter the **Layout Editor** and save the layout automatically on exit with:
+
+- 🌟``m.edit_layout(filepath=...)``: enter LayoutEditor and save layout as a json-file on exit
+
+
+.. note::
+
+    A layout can only be restored if the number (and order) of the axes remains the same!
+    In other words:
+    - you always need to save a new layout-file after adding additional axes (or colorbars!) to a map
+
+
+.. currentmodule:: eomaps.Maps
+
+.. autosummary::
+    :toctree: generated
+    :nosignatures:
+    :template: only_names_in_toc.rst
+
+    get_layout
+    apply_layout
+    edit_layout
+
+
+
 📦 Reading data (NetCDF, GeoTIFF, CSV...)
 -----------------------------------------
 
@@ -1572,9 +1648,8 @@ with ``shade_raster`` (if it fails it will fallback to ``shade_points`` and fina
 
 .. note::
 
-    The readers are intended for well-structured datasets!
-    If they fail, simply read and extract the data manually and
-    then set the data as usual via ``m.set_data(...)``.
+    At the moment, the readers are intended as a "shortcut" to read well-structured datasets!
+    If they fail, simply read the data manually and then set the data as usual via ``m.set_data(...)``.
 
     Under the hood, EOmaps uses the following libraries to read data:
 

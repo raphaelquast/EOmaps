@@ -674,14 +674,9 @@ class _NaturalEarth_presets:
 
         # convert color to hex to avoid issues with geopandas
         color = rgb2hex(cfeature.COLORS["water"])
+
         return self._feature(
-            self._m,
-            "physical",
-            "ocean",
-            fc=color,
-            ec="none",
-            zorder=-1,
-            reproject="cartopy",
+            self._m, "physical", "ocean", fc=color, ec="none", zorder=-1
         )
 
     @property
@@ -702,12 +697,7 @@ class _NaturalEarth_presets:
         color = rgb2hex(cfeature.COLORS["land"])
 
         return self._feature(
-            self._m,
-            "physical",
-            "land",
-            fc=color,
-            ec="none",
-            zorder=-1,
+            self._m, "physical", "land", fc=color, ec="none", zorder=-1
         )
 
     @property
@@ -1018,6 +1008,54 @@ class NaturalEarth_features(object):
                     """
                 )
 
+        @staticmethod
+        def _preferred_reproject_method(m):
+            """
+            Temporary fix for reprojection issues with geopandas and/or cartopy.
+
+            This function just hard-codes the preferred way of reprojecting shapes
+            for given projections (you can always overrride this behaviour by
+            explicitly passing `reproject="..."` to the feature-call)
+
+            Parameters
+            ----------
+            m : eomaps.Maps
+                The maps-object to use.
+
+            Returns
+            -------
+            method : str
+                the reproject-method to use as default.
+
+            Examples
+            --------
+            The following examples have known issues that can be resolved by
+            switching the reprojection-method:
+
+            >>> m = Maps(crs = Maps.CRS.Robinson())
+            >>> #gdf = m.add_feature.preset.ocean(reproject="cartopy")
+            >>> gdf = m.add_feature.preset.ocean(reproject="gpd")
+
+            >>> m = Maps(crs = Maps.CRS.Stereographic())
+            >>> #gdf = m.add_feature.preset.ocean(reproject="gpd")
+            >>> gdf = m.add_feature.preset.ocean(reproject="cartopy")
+
+            """
+
+            # use cartopy for stereographic reprojections but not for others
+            # (somehow geopandas can't handle Stereographic and Orthographic
+            # reprojection while cartopy can't handle Robinson...)
+            # TODO what's the reason for this???
+
+            if str(m.crs_plot.__class__.__name__) in [
+                "Stereographic",
+                "Orthographic",
+            ]:
+                method = "cartopy"
+            else:
+                method = "gpd"
+            return method
+
         def __call__(self, layer=None, **kwargs):
             from . import MapsGrid  # do this here to avoid circular imports!
 
@@ -1033,14 +1071,13 @@ class NaturalEarth_features(object):
                     m.BM.add_bg_artist(art, layer=uselayer)
             else:
                 s = self.get_gdf()
-                for m in (
-                    self._m if self._m.__class__.__name__ == "MapsGrid" else [self._m]
-                ):
+                for m in self._m if isinstance(self._m, MapsGrid) else [self._m]:
                     if layer is None:
                         uselayer = m.layer
                     else:
                         uselayer = layer
-
+                    # set preferred reprojection method (if not provided explicitly)
+                    kwargs.setdefault("reproject", self._preferred_reproject_method(m))
                     m.add_gdf(s, layer=uselayer, **kwargs)
 
         def get_gdf(self):
@@ -2286,6 +2323,7 @@ else:
               from Sentinel-2
 
               - https://land.copernicus.eu/imagery-in-situ/global-image-mosaics/
+
               >>> url = "https://s2gm-wms.brockmann-consult.de/cgi-bin/qgis_mapserv.fcgi?MAP=/home/qgis/projects/s2gm-wms_mosaics_vrt.qgs&service=WMS&request=GetCapabilities&version=1.1.1"
               >>> s = m.add_wms.get_service(url, "wms")
 

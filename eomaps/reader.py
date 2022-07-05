@@ -544,7 +544,7 @@ def _from_file(
     shape=None,
     classify_specs=None,
     val_transform=None,
-    coastline=True,
+    coastline=False,
     parent=None,
     figsize=None,
     layer=None,
@@ -592,7 +592,7 @@ def _from_file(
         >>>     return a / 10
     coastline: bool
         Indicator if a coastline should be added or not.
-        The default is True
+        The default is False
     parent : eomaps.Maps
         The parent Maps object to use (e.g. `parent.new_layer()` will be used
         to create a Maps-object for the dataset)
@@ -683,7 +683,7 @@ class from_file:
         shape=None,
         classify_specs=None,
         val_transform=None,
-        coastline=True,
+        coastline=False,
         mask_and_scale=False,
         **kwargs,
     ):
@@ -764,7 +764,7 @@ class from_file:
             >>>     return a / 10
         coastline: bool
             Indicator if a coastline should be added or not.
-            The default is True
+            The default is False
         mask_and_scale : bool
             Indicator if the data should be masked and scaled with respect to the
             file-attributes *_FillValue*, *scale_factor* and *add_offset*.
@@ -859,7 +859,7 @@ class from_file:
         shape=None,
         classify_specs=None,
         val_transform=None,
-        coastline=True,
+        coastline=False,
         mask_and_scale=False,
         **kwargs,
     ):
@@ -928,7 +928,7 @@ class from_file:
             >>>     return a / 10
         coastline: bool
             Indicator if a coastline should be added or not.
-            The default is True
+            The default is False
         mask_and_scale : bool
             Indicator if the data should be masked and scaled with respect to the
             file-attributes *_FillValue*, *scale_factor* and *add_offset*.
@@ -1019,7 +1019,7 @@ class from_file:
         shape=None,
         classify_specs=None,
         val_transform=None,
-        coastline=True,
+        coastline=False,
         **kwargs,
     ):
         """
@@ -1076,7 +1076,7 @@ class from_file:
             >>>     return a / 10
         coastline: bool
             Indicator if a coastline should be added or not.
-            The default is True
+            The default is False
         kwargs :
             Keyword-arguments passed to `m.plot_map()`
 
