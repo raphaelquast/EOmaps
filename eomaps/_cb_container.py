@@ -1277,8 +1277,6 @@ class cb_container:
             method="keypress",
         )
 
-        self._dynamic = dynamic_callbacks(m=self._m)
-
     @property
     @wraps(cb_click_container)
     def click(self):
