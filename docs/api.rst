@@ -1680,13 +1680,13 @@ Save and restore layouts
 Once a layout (e.g. the desired position of the axes within a figure) has been arranged,
 the layout can be saved and re-applied with:
 
-- 🌟``m.get_layout()``: get the current layout (or dump the layout as a json-file)
-- 🌟``m.apply_layout()``: apply a given layout (or load and apply the layout from a json-file)
+- 🌟 ``m.get_layout()``: get the current layout (or dump the layout as a json-file)
+- 🌟 ``m.apply_layout()``: apply a given layout (or load and apply the layout from a json-file)
 
 
 It is also possible to enter the **Layout Editor** and save the layout automatically on exit with:
 
-- 🌟``m.edit_layout(filepath=...)``: enter LayoutEditor and save layout as a json-file on exit
+- 🌟 ``m.edit_layout(filepath=...)``: enter LayoutEditor and save layout as a json-file on exit
 
 
 .. note::
