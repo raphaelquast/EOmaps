@@ -1182,28 +1182,35 @@ class SlippyImageArtist_NEW(AxesImage):
     def draw(self, renderer, *args, **kwargs):
         if not self.get_visible():
             return
+        try:
+            ax = self.axes
+            window_extent = ax.get_window_extent()
+            [x1, y1], [x2, y2] = ax.viewLim.get_points()
+            # if not self.user_is_interacting:
+            #     located_images = self.raster_source.fetch_raster(
+            #         ax.projection, extent=[x1, x2, y1, y2],
+            #         target_resolution=(window_extent.width, window_extent.height))
+            #     self.cache = located_images
 
-        ax = self.axes
-        window_extent = ax.get_window_extent()
-        [x1, y1], [x2, y2] = ax.viewLim.get_points()
-        # if not self.user_is_interacting:
-        #     located_images = self.raster_source.fetch_raster(
-        #         ax.projection, extent=[x1, x2, y1, y2],
-        #         target_resolution=(window_extent.width, window_extent.height))
-        #     self.cache = located_images
+            located_images = self.raster_source.fetch_raster(
+                ax.projection,
+                extent=[x1, x2, y1, y2],
+                target_resolution=(window_extent.width, window_extent.height),
+            )
+            self.cache = located_images
 
-        located_images = self.raster_source.fetch_raster(
-            ax.projection,
-            extent=[x1, x2, y1, y2],
-            target_resolution=(window_extent.width, window_extent.height),
-        )
-        self.cache = located_images
+            for img, extent in self.cache:
+                self.set_array(img)
+                with ax.hold_limits():
+                    self.set_extent(extent)
+                super().draw(renderer, *args, **kwargs)
 
-        for img, extent in self.cache:
-            self.set_array(img)
-            with ax.hold_limits():
-                self.set_extent(extent)
-            super().draw(renderer, *args, **kwargs)
+            self.set_visible(True)
+        except:
+            print("EOmaps: ... could not fetch WebMap service")
+
+            if self in self.axes._mouseover_set:
+                self.axes._mouseover_set.remove(self)
 
     def can_composite(self):
         # As per https://github.com/SciTools/cartopy/issues/689, disable
