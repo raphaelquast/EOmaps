@@ -360,6 +360,9 @@ class _wmts_layer(_WebMap_layer):
                 # add the layer immediately if the layer is already active
                 self._do_add_layer(self._m, self._layer)
             else:
+                if self._layer not in self._m._get_layers():
+                    # create a new (empty) layer so that utility-widgets get updated!
+                    self._m.new_layer(layer=self._layer)
                 # delay adding the layer until it is effectively activated
                 self._m.BM.on_layer(
                     partial(self._do_add_layer),
@@ -469,6 +472,9 @@ class _wms_layer(_WebMap_layer):
                 # add the layer immediately if the layer is already active
                 self._do_add_layer(m, self._layer)
             else:
+                if self._layer not in self._m._get_layers():
+                    # create a new (empty) layer so that utility-widgets get updated!
+                    self._m.new_layer(layer=self._layer)
                 # delay adding the layer until it is effectively activated
                 m.BM.on_layer(
                     func=partial(self._do_add_layer),
@@ -1090,6 +1096,9 @@ class _xyz_tile_service:
                 # add the layer immediately if the layer is already active
                 self._do_add_layer(self._m, self._layer)
             else:
+                if self._layer not in self._m._get_layers():
+                    # create a new (empty) layer so that utility-widgets get updated!
+                    self._m.new_layer(layer=self._layer)
                 # delay adding the layer until it is effectively activated
                 self._m.BM.on_layer(
                     func=self._do_add_layer,
