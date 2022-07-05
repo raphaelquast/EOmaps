@@ -2468,17 +2468,19 @@ class Maps(object):
         elif reproject == "cartopy":
             # optionally use cartopy's re-projection routines to re-project
             # geometries
-            if self.ax.projection != self._get_cartopy_crs(gdf.crs):
+
+            cartopy_crs = self._get_cartopy_crs(gdf.crs)
+            if self.ax.projection != cartopy_crs:
+                # TODO this results in problems and sometimes masks way too much!!
                 # select only polygons that actually intersect with the CRS-boundary
-                mask = gdf.intersects(
-                    gpd.GeoDataFrame(
-                        geometry=[self.ax.projection.domain], crs=self.ax.projection
-                    )
-                    .to_crs(gdf.crs)
-                    .to_crs(gdf.crs)
-                    .geometry[0]
-                )
-                gdf = gdf.copy()[mask]
+                # mask = gdf.buffer(1).intersects(
+                #     gpd.GeoDataFrame(
+                #         geometry=[self.ax.projection.domain], crs=self.ax.projection
+                #     )
+                #     .to_crs(gdf.crs)
+                #     .geometry[0]
+                # )
+                # gdf = gdf.copy()[mask]
 
                 geoms = gdf.geometry
                 if len(geoms) > 0:
@@ -2487,20 +2489,17 @@ class Maps(object):
                     if verbose:
                         for g in progressbar(geoms, "EOmaps: re-projecting... ", 20):
                             proj_geoms.append(
-                                self.ax.projection.project_geometry(
-                                    g, ccrs.CRS(gdf.crs)
-                                )
+                                self.ax.projection.project_geometry(g, cartopy_crs)
                             )
                     else:
                         for g in geoms:
                             proj_geoms.append(
-                                self.ax.projection.project_geometry(
-                                    g, ccrs.CRS(gdf.crs)
-                                )
+                                self.ax.projection.project_geometry(g, cartopy_crs)
                             )
 
                     gdf.geometry = proj_geoms
                     gdf.set_crs(self.ax.projection, allow_override=True)
+                gdf = gdf[~gdf.is_empty]
         else:
             raise AssertionError(
                 f"EOmaps: '{reproject}' is not a valid reproject-argument."

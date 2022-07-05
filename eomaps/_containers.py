@@ -1065,8 +1065,6 @@ class NaturalEarth_features(object):
                         uselayer = m.layer
                     else:
                         uselayer = layer
-                    # set preferred reprojection method (if not provided explicitly)
-                    kwargs.setdefault("reproject", self._preferred_reproject_method(m))
                     self.feature._kwargs.update(kwargs)
                     art = m.figure.ax.add_feature(self.feature)
 
