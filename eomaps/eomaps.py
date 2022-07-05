@@ -2329,8 +2329,12 @@ class Maps(object):
 
         Parameters
         ----------
-        gdf : geopandas.GeoDataFrame
+        gdf : geopandas.GeoDataFrame, str or pathlib.Path
             A GeoDataFrame that should be added to the plot.
+
+            If a string (or pathlib.Path) is provided, it is identified as the path to
+            a file that should be read with `geopandas.read_file(gdf)`.
+
         picker_name : str or None
             A unique name that is used to identify the pick-method.
 
@@ -2452,6 +2456,9 @@ class Maps(object):
             + "please install '(conda install -c conda-forge geopandas)'"
             + "to use `m.add_gdf()`."
         )
+
+        if isinstance(gdf, (str, Path)):
+            gdf = gpd.read_file(gdf)
 
         try:
             # explode the GeoDataFrame to avoid picking multi-part geometries
