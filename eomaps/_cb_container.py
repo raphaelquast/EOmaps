@@ -2,7 +2,6 @@ from eomaps.callbacks import (
     click_callbacks,
     pick_callbacks,
     keypress_callbacks,
-    dynamic_callbacks,
 )
 from types import SimpleNamespace
 
@@ -1247,8 +1246,6 @@ class cb_container:
 
     - **keypress** : Execute functions if you press a key on the keyboard
 
-    - **dynamic** : Execute functions on events (e.g. zoom)
-
     """
 
     def __init__(self, m):
@@ -1280,8 +1277,6 @@ class cb_container:
             method="keypress",
         )
 
-        self._dynamic = dynamic_callbacks(m=self._m)
-
     @property
     @wraps(cb_click_container)
     def click(self):
@@ -1301,11 +1296,6 @@ class cb_container:
     @wraps(keypress_container)
     def keypress(self):
         return self._keypress
-
-    @property
-    @wraps(dynamic_callbacks)
-    def dynamic(self):
-        return self._dynamic
 
     def add_picker(self, name, artist, picker):
         """

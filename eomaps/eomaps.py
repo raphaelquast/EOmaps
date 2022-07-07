@@ -10,6 +10,7 @@ from pathlib import Path
 import weakref
 from tempfile import TemporaryDirectory, TemporaryFile
 import gc
+import json
 
 import numpy as np
 
@@ -104,7 +105,7 @@ from .helpers import (
     pairwise,
     cmap_alpha,
     BlitManager,
-    draggable_axes,
+    LayoutEditor,
     progressbar,
     searchtree,
 )
@@ -311,10 +312,11 @@ class Maps(object):
             crs=4326,
         )
 
-        self._axpicker = None
+        self._layout_editor = None
 
         self._figure = map_objects(weakref.proxy(self))
         self._cb = cb_container(weakref.proxy(self))  # accessor for the callbacks
+
         self._init_figure(gs_ax=gs_ax, plot_crs=crs, **kwargs)
         self._utilities = utilities(weakref.proxy(self))
         self._wms_container = wms_container(weakref.proxy(self))
@@ -358,6 +360,22 @@ class Maps(object):
         self.cleanup()
         gc.collect()
 
+    def __getattribute__(self, key):
+        if key == "plot_specs":
+            raise AttributeError(
+                "EOmaps: 'm.plot_specs' has been removed in v4.0!\n For instructions "
+                + "on how to quickly port your script to EOmaps >= 4.0, see: \n"
+                + r"https://eomaps.readthedocs.io/en/latest/FAQ.html#port-script-from-eomaps-v3-x-to-v4-x"
+            )
+        elif key == "set_plot_specs":
+            raise AttributeError(
+                "EOmaps: 'm.set_plot_specs' has been removed in v4.0!\n For instructions "
+                + "on how to quickly port your script to EOmaps >= 4.0, see: \n"
+                + r"https://eomaps.readthedocs.io/en/latest/FAQ.html#port-script-from-eomaps-v3-x-to-v4-x"
+            )
+        else:
+            return object.__getattribute__(self, key)
+
     @staticmethod
     def _proxy(obj):
         # create a proxy if the object is not yet a proxy
@@ -365,21 +383,6 @@ class Maps(object):
             return weakref.proxy(obj)
         else:
             return obj
-
-    @property
-    def plot_specs(self):
-        raise AssertionError(
-            "EOmaps: 'm.plot_specs' has been removed in v4.0!\n For instructions "
-            + "on how to quickly port your script to EOmaps >= 4.0, see: \n"
-            + r"https://eomaps.readthedocs.io/en/latest/FAQ.html#port-script-from-eomaps-v3-x-to-v4-x"
-        )
-
-    def set_plot_specs(self, *args, **kwargs):
-        raise AssertionError(
-            "EOmaps: 'm.set_plot_specs' has been removed in v4.0!\n For instructions "
-            + "on how to quickly port your script to EOmaps >= 4.0, see: \n"
-            + r"https://eomaps.readthedocs.io/en/latest/FAQ.html#port-script-from-eomaps-v3-x-to-v4-x"
-        )
 
     def cleanup(self):
         """
@@ -548,20 +551,87 @@ class Maps(object):
         self.util._reinit_widgets()
         return m
 
+    def _get_inset_boundary(self, x, y, xy_crs, radius, radius_crs, shape, n=100):
+        """
+        get inset map boundary
+
+
+        Parameters
+        ----------
+        x : TYPE
+            DESCRIPTION.
+        y : TYPE
+            DESCRIPTION.
+        xy_crs : TYPE
+            DESCRIPTION.
+        radius : TYPE
+            DESCRIPTION.
+        radius_crs : TYPE
+            DESCRIPTION.
+        shape : TYPE
+            DESCRIPTION.
+        n : TYPE, optional
+            DESCRIPTION. The default is 100.
+
+        Returns
+        -------
+        boundary : TYPE
+            DESCRIPTION.
+
+        """
+
+        shp = self.set_shape._get(shape)
+
+        if shape == "ellipses":
+            shp_pts = shp._get_ellipse_points(
+                x=np.atleast_1d(x),
+                y=np.atleast_1d(y),
+                crs=xy_crs,
+                radius=radius,
+                radius_crs=radius_crs,
+                n=n,
+            )
+            bnd_verts = np.stack(shp_pts[:2], axis=2)[0]
+
+        elif shape == "rectangles":
+            shp_pts = shp._get_rectangle_verts(
+                x=np.atleast_1d(x),
+                y=np.atleast_1d(y),
+                crs=xy_crs,
+                radius=radius,
+                radius_crs=radius_crs,
+                n=n,
+            )
+            bnd_verts = shp_pts[0][0]
+
+        elif shape == "geod_circles":
+            shp_pts = shp._get_geod_circle_points(
+                x=np.atleast_1d(x),
+                y=np.atleast_1d(y),
+                crs=xy_crs,
+                radius=radius,
+                # radius_crs=radius_crs,
+                n=n,
+            )
+            bnd_verts = np.stack(shp_pts[:2], axis=2).squeeze()
+        boundary = mpl.path.Path(bnd_verts)
+
+        return boundary, bnd_verts
+
     def new_inset_map(
         self,
         xy=(45, 45),
+        xy_crs=4326,
         radius=5,
+        radius_crs=None,
         plot_position=(0.5, 0.5),
         plot_size=0.5,
-        xy_crs=4326,
-        radius_crs=4326,
         inset_crs=4326,
         layer="all",
-        edgecolor="r",
-        linewidth=2,
+        boundary=True,
         shape="ellipses",
         indicate_extent=True,
+        **kwargs,
     ):
         """
         Create a new (empty) inset-map that shows a zoomed-in view on a given extent.
@@ -587,22 +657,29 @@ class Maps(object):
             The center-coordinates of the area to indicate.
             (provided in the xy_crs projection)
             The default is (45., 45.).
+        xy_crs : any, optional
+            The crs used for specifying the center position of the inset-map.
+            (can be any crs definition supported by PyProj)
+            The default is 4326 (e.g. lon/lat).
         radius : float or tuple, optional
             The radius of the extent to indicate.
             (provided in units of the radius_crs projection)
             The default is 5.
+        radius_crs : None or a crs-definition, optional
+            The crs used for specifying the radius. (can be any crs definition
+            supported by PyProj)
+
+            - If None:  The crs provided as "xy_crs" is used
+            - If shape == "geod_circles", "radius_crs" must be None since the radius
+              of a geodesic circle is defined in meters!
+
+            The default is None.
         plot_position : tuple, optional
             The center-position of the inset map in relative units (0-1) with respect to
             the figure size. The default is (.5,.5).
         plot_size : float, optional
             The relative size of the inset-map compared to the figure width.
             The default is 0.5.
-        xy_crs : any, optional
-            The crs used for specifying the xy-position.
-            The default is 4326.
-        radius_crs : any, optional
-            The crs used for specifying the radius.
-            The default is 4326.
         inset_crs : any, optional
             The crs that is used in the inset-map.
             The default is 4326.
@@ -615,10 +692,14 @@ class Maps(object):
             By default the "all" layer is used so that the contents of the inset-map
             are visible independent of the currently visible layer.
             The default is "all".
-        edgecolor : str or tuple, optional
-            The edgecolor of the boundary. The default is "r".
-        linewidth : TYPE, optional
-            The linewidth of the boundary. The default is 2.
+        boundary: bool or dict, optional
+            - If True: indicate the boundary of the inset-map with default colors
+              (e.g.: {"ec":"r", "lw":2})
+            - If False: don't add edgecolors to the boundary of the inset-map
+            - if dict: use the provided values for "ec" (e.g. edgecolor) and
+              "lw" (e.g. linewidth)
+
+            The default is True.
         shape : str, optional
             The shape to use. Can be either "ellipses", "rectangles" or "geod_circles".
             The default is "ellipses".
@@ -627,8 +708,8 @@ class Maps(object):
             - If a dict is provided, it will be used to update the appearance of the
               added polygon (e.g. facecolor, edgecolor, linewidth etc.)
 
-            NOTE: you can also use `m.indicate_inset_extent(...)` to manually indicate
-            the inset-shape on arbitrary Maps-objects.
+            NOTE: you can also use `m_inset.indicate_inset_extent(...)` to manually
+            indicate the inset-shape on arbitrary Maps-objects.
 
         Returns
         -------
@@ -638,7 +719,7 @@ class Maps(object):
 
         See also
         --------
-        The following additional methods are defined on inset `Maps` objects
+        The following additional methods are defined on `_InsetMaps` objects
 
         m.indicate_inset_extent :
             Plot a polygon representing the extent of the inset map on another Maps
@@ -698,173 +779,34 @@ class Maps(object):
 
         """
 
-        x, y = xy
-        plot_x, plot_y = plot_position
-
-        # setup a gridspec at the desired position
-        gs = GridSpec(
-            1,
-            1,
-            left=plot_x - plot_size / 2,
-            bottom=plot_y - plot_size / 2,
-            top=plot_y + plot_size / 2,
-            right=plot_x + plot_size / 2,
-        )[0]
-        # initialize a new maps-object with a new axis
-        m2 = Maps(inset_crs, parent=self, gs_ax=gs, layer=layer)
-
-        # get the boundary of a ellipse in the inset_crs
-        possible_shapes = ["ellipses", "rectangles", "geod_circles"]
-        assert (
-            shape in possible_shapes
-        ), f"EOmaps: the inset shape can only be one of {possible_shapes}"
-
-        shp = m2.set_shape._get(shape)
-        if shape == "ellipses":
-            shp_pts = shp._get_ellipse_points(
-                x=np.atleast_1d(x),
-                y=np.atleast_1d(y),
-                crs=xy_crs,
-                radius=radius,
-                radius_crs=radius_crs,
-                n=100,
-            )
-            bnd_verts = np.stack(shp_pts[:2], axis=2)[0]
-
-        elif shape == "rectangles":
-            shp_pts = shp._get_rectangle_verts(
-                x=np.atleast_1d(x),
-                y=np.atleast_1d(y),
-                crs=xy_crs,
-                radius=radius,
-                radius_crs=radius_crs,
-                n=100,
-            )
-            bnd_verts = shp_pts[0][0]
-
-        elif shape == "geod_circles":
-            shp_pts = shp._get_geod_circle_points(
-                x=np.atleast_1d(x),
-                y=np.atleast_1d(y),
-                crs=xy_crs,
-                radius=radius,
-                # radius_crs=radius_crs,
-                n=100,
-            )
-            bnd_verts = np.stack(shp_pts[:2], axis=2).squeeze()
-
-        boundary = mpl.path.Path(bnd_verts)
-
-        # set the map boundary
-        m2.ax.set_boundary(boundary)
-        # set the plot-extent to the envelope of the shape
-        (x0, y0), (x1, y1) = bnd_verts.min(axis=0), bnd_verts.max(axis=0)
-        m2.ax.set_extent((x0, x1, y0, y1), crs=m2.ax.projection)
-
-        # TODO turn off navigation until the matpltolib pull-request on
-        # zoom-events in overlapping axes is resolved
-        # https://github.com/matplotlib/matplotlib/pull/22347
-        m2.ax.set_navigate(False)
-
-        # set style of the inset-boundary
-        m2.ax.spines["geo"].set_edgecolor(edgecolor)
-        m2.ax.spines["geo"].set_lw(linewidth)
-
-        # ------------
-
-        # turn off set_extent for plot_map by default to avoid resetting the plot-extent
-        from functools import partial
-
-        m2.plot_map = partial(m2.plot_map, set_extent=False)
-
-        # add a convenience-method to add a boundary-polygon to a map
-        def indicate_inset_extent(self, m, **kwargs):
-            """
-            Add a polygon to a  map that indicates the extent of the inset-map.
-
-            Parameters
-            ----------
-            m : eomaps.Maps
-                The Maps-object that will be used to draw the marker.
-                (e.g. the map on which the extent of the inset should be indicated)
-            kwargs :
-                additional keyword-arguments passed to `m.add_marker`
-                (e.g. "facecolor", "edgecolor" etc.)
-            """
-            if not any((i in kwargs for i in ["fc", "facecolor"])):
-                kwargs["fc"] = "none"
-            if not any((i in kwargs for i in ["ec", "edgecolor"])):
-                kwargs["ec"] = edgecolor
-            if not any((i in kwargs for i in ["lw", "linewidth"])):
-                kwargs["lw"] = linewidth
-
-            m.add_marker(
-                shape=shape,
-                xy=xy,
-                xy_crs=xy_crs,
-                radius=radius,
-                radius_crs=radius_crs,
-                n=100,
-                **kwargs,
+        if "edgecolor" in kwargs or "linewidth" in kwargs:
+            warnings.warn(
+                "EOmaps: 'edgecolor' and 'linewidth' kwargs for `m.new_inset_map()`"
+                + " are depreciated! use `boundary=dict(ec='r', lw=1)` instead!",
+                category=DeprecationWarning,
+                stacklevel=2,
             )
 
-        m2.indicate_inset_extent = indicate_inset_extent.__get__(m2)
+            ec = kwargs.pop("edgecolor", "r")
+            lw = kwargs.pop("linewidth", 1)
 
-        if indicate_extent is True:
-            m2.indicate_inset_extent(self, edgecolor=edgecolor)
-        elif isinstance(indicate_extent, dict):
-            if not any((i in indicate_extent for i in ["ec", "edgecolor"])):
-                m2.indicate_inset_extent(self, **indicate_extent, edgecolor=edgecolor)
-            else:
-                m2.indicate_inset_extent(self, **indicate_extent)
+            boundary = dict(ec=ec, lw=lw)
+            boundary.update(kwargs.pop("boundary", dict()))
 
-        # add a convenience-method to set the position based on the center of the axis
-        def set_inset_position(self, x=None, y=None, size=None):
-            """
-            Set the (center) position and size of the inset-map.
-
-            Parameters
-            ----------
-            x, y : int or float, optional
-                The center position in relative units (0-1) with respect to the figure.
-                If None, the existing position is used.
-                The default is None.
-            size : float, optional
-                The relative radius (0-1) of the inset in relation to the figure width.
-                If None, the existing size is used.
-                The default is None.
-            """
-
-            y0, y1, x0, x1 = self.figure.gridspec.get_grid_positions(self.figure.f)
-
-            if self.figure.cb_gridspec is not None:
-                y0cb, y1cb, x0cb, x1cb = self.figure.cb_gridspec.get_grid_positions(
-                    self.figure.f
-                )
-
-                x0 = min(*x0, *x0cb)
-                x1 = max(*x1, *x1cb)
-                y0 = min(*y0, *y0cb)
-                y1 = max(*y1, *y1cb)
-
-            if size is None:
-                size = abs(x1 - x0)
-
-            if x is None:
-                x = (x0 + x1) / 2
-            if y is None:
-                y = (y0 + y1) / 2
-
-            self.figure.gridspec.update(
-                left=x - size / 2,
-                bottom=y - size / 2,
-                right=x + size / 2,
-                top=y + size / 2,
-            )
-
-            self.redraw()
-
-        m2.set_inset_position = set_inset_position.__get__(m2)
+        m2 = _InsetMaps(
+            crs=inset_crs,
+            parent=self,
+            layer=layer,
+            xy=xy,
+            radius=radius,
+            plot_position=plot_position,
+            plot_size=plot_size,
+            xy_crs=xy_crs,
+            radius_crs=radius_crs,
+            boundary=boundary,
+            shape=shape,
+            indicate_extent=indicate_extent,
+        )
 
         return m2
 
@@ -904,6 +846,7 @@ class Maps(object):
         return cartopy_proj
 
     def _init_figure(self, gs_ax=None, plot_crs=None, **kwargs):
+
         if self.parent.figure.f is None:
             self._f = plt.figure(**kwargs)
             newfig = True
@@ -968,8 +911,6 @@ class Maps(object):
             # self.figure.ax.callbacks.connect("ylim_changed", ylims_change)
 
         if newfig:  # only if a new figure has been initialized
-            _ = self._draggable_axes
-
             # attach a callback that is executed when the figure is closed
             self._cid_onclose = self.figure.f.canvas.mpl_connect(
                 "close_event", self._on_close
@@ -978,6 +919,10 @@ class Maps(object):
             self._cid_resize = self.figure.f.canvas.mpl_connect(
                 "resize_event", self._on_resize
             )
+
+        # if we haven't attached an axpicker so far, do it!
+        if self.parent._layout_editor is None:
+            self.parent._layout_editor = LayoutEditor(self.parent, modifier="alt+l")
 
         if newfig:
             # we only need to call show if a new figure has been created!
@@ -1035,15 +980,6 @@ class Maps(object):
             self.parent._BM = BlitManager(m)
             self.parent._BM._bg_layer = m.parent.layer
         return self.parent._BM
-
-    @property
-    def _draggable_axes(self):
-        if self.parent._axpicker is None:
-            # make the axes draggable
-            self.parent._axpicker = draggable_axes(self.parent, modifier="alt+d")
-            return self.parent._axpicker
-
-        return self.parent._axpicker
 
     def _add_child(self, m):
         self.parent._children.add(m)
@@ -1371,10 +1307,89 @@ class Maps(object):
 
     set_data = set_data_specs
 
+    def _get_mcl_subclass(self, s):
+        # get a subclass that inherits the docstring from the corresponding
+        # mapclassify classifier
+
+        class scheme:
+            @wraps(s)
+            def __init__(_, *args, **kwargs):
+                pass
+
+            def __new__(cls, **kwargs):
+                if "y" in kwargs:
+                    print(
+                        "EOmaps: The values (e.g. the 'y' parameter) are "
+                        + "assigned internally... only provide additional "
+                        + "parameters that specify the classification scheme!"
+                    )
+                    kwargs.pop("y")
+
+                self.classify_specs._set_scheme_and_args(scheme=s.__name__, **kwargs)
+
+        scheme.__doc__ = s.__doc__
+        return scheme
+
+    @property
+    def set_classify(self):
+        from textwrap import dedent
+
+        assert _register_mapclassify(), (
+            "EOmaps: Missing dependency: 'mapclassify' \n ... please install"
+            + " (conda install -c conda-forge mapclassify) to use data-classifications."
+        )
+
+        s = SimpleNamespace(
+            **{
+                i: self._get_mcl_subclass(getattr(mapclassify, i))
+                for i in mapclassify.CLASSIFIERS
+            }
+        )
+        s.__doc__ = dedent(
+            """
+            Interface to the classifiers provided by the 'mapclassify' module.
+
+            To set a classification scheme for a given Maps-object, simply use:
+
+            >>> m.set_classify.<SCHEME>(...)
+
+            Where `<SCHEME>` is the name of the desired classification and additional
+            parameters are passed in the call. (check docstrings for more info!)
+
+
+            Note
+            ----
+            The following calls have the same effect:
+
+            >>> m.set_classify.Quantiles(k=5)
+            >>> m.set_classify_specs(scheme="Quantiles", k=5)
+
+            Using `m.set_classify()` is the same as using `m.set_classify_specs()`!
+            However, `m.set_classify()` will provide autocompletion and proper
+            docstrings once the Maps-object is initialized which greatly enhances
+            the usability.
+
+            """
+        )
+
+        return s
+
     def set_classify_specs(self, scheme=None, **kwargs):
         """
         Set classification specifications for the data.
         (classification is performed by the `mapclassify` module)
+
+        Note
+        ----
+        The following calls have the same effect:
+
+        >>> m.set_classify.Quantiles(k=5)
+        >>> m.set_classify_specs(scheme="Quantiles", k=5)
+
+        Using `m.set_classify()` is the same as using `m.set_classify_specs()`!
+        However, `m.set_classify()` will provide autocompletion and proper
+        docstrings once the Maps-object is initialized which greatly enhances
+        the usability.
 
         Parameters
         ----------
@@ -2079,6 +2094,7 @@ class Maps(object):
             axcb2 = self.figure.f.add_axes(
                 (bbox.x0 - frac / 2, bbox.y0, bbox.width + frac, bbox.height),
                 zorder=-99,
+                label="ax_cb_extend",
             )
             axcb2.get_shared_y_axes().join(axcb2, self.figure.ax_cb)
             # set the limits to (0, 1) so we can directly use the fractions
@@ -2314,8 +2330,12 @@ class Maps(object):
 
         Parameters
         ----------
-        gdf : geopandas.GeoDataFrame
+        gdf : geopandas.GeoDataFrame, str or pathlib.Path
             A GeoDataFrame that should be added to the plot.
+
+            If a string (or pathlib.Path) is provided, it is identified as the path to
+            a file that should be read with `geopandas.read_file(gdf)`.
+
         picker_name : str or None
             A unique name that is used to identify the pick-method.
 
@@ -2438,6 +2458,9 @@ class Maps(object):
             + "to use `m.add_gdf()`."
         )
 
+        if isinstance(gdf, (str, Path)):
+            gdf = gpd.read_file(gdf)
+
         try:
             # explode the GeoDataFrame to avoid picking multi-part geometries
             gdf = gdf.explode(index_parts=False)
@@ -2453,17 +2476,19 @@ class Maps(object):
         elif reproject == "cartopy":
             # optionally use cartopy's re-projection routines to re-project
             # geometries
-            if self.ax.projection != self._get_cartopy_crs(gdf.crs):
+
+            cartopy_crs = self._get_cartopy_crs(gdf.crs)
+            if self.ax.projection != cartopy_crs:
+                # TODO this results in problems and sometimes masks way too much!!
                 # select only polygons that actually intersect with the CRS-boundary
-                mask = gdf.intersects(
-                    gpd.GeoDataFrame(
-                        geometry=[self.ax.projection.domain], crs=self.ax.projection
-                    )
-                    .to_crs(gdf.crs)
-                    .to_crs(gdf.crs)
-                    .geometry[0]
-                )
-                gdf = gdf.copy()[mask]
+                # mask = gdf.buffer(1).intersects(
+                #     gpd.GeoDataFrame(
+                #         geometry=[self.ax.projection.domain], crs=self.ax.projection
+                #     )
+                #     .to_crs(gdf.crs)
+                #     .geometry[0]
+                # )
+                # gdf = gdf.copy()[mask]
 
                 geoms = gdf.geometry
                 if len(geoms) > 0:
@@ -2472,20 +2497,17 @@ class Maps(object):
                     if verbose:
                         for g in progressbar(geoms, "EOmaps: re-projecting... ", 20):
                             proj_geoms.append(
-                                self.ax.projection.project_geometry(
-                                    g, ccrs.CRS(gdf.crs)
-                                )
+                                self.ax.projection.project_geometry(g, cartopy_crs)
                             )
                     else:
                         for g in geoms:
                             proj_geoms.append(
-                                self.ax.projection.project_geometry(
-                                    g, ccrs.CRS(gdf.crs)
-                                )
+                                self.ax.projection.project_geometry(g, cartopy_crs)
                             )
 
                     gdf.geometry = proj_geoms
                     gdf.set_crs(self.ax.projection, allow_override=True)
+                gdf = gdf[~gdf.is_empty]
         else:
             raise AssertionError(
                 f"EOmaps: '{reproject}' is not a valid reproject-argument."
@@ -4609,6 +4631,301 @@ class Maps(object):
         self.show_layer(active_layer)
         self.BM.update()
 
+    def get_layout(self, filepath=None, override=False):
+        """
+        Get the positions of all axes within the current plot.
+
+        To re-apply a layout, use:
+
+            >>> l = m.get_layout()
+            >>> m.set_layout(l)
+
+        Note
+        ----
+        The returned list is only a snapshot of the current layout.
+        It can only be re-applied to a given figure if the order at which the axes are
+        created remains the same!
+
+        Parameters
+        ----------
+        filepath : str or pathlib.Path, optional
+            If provided, a json-file will be created at the specified destination that
+            can be used in conjunction with `m.set_layout(...)` to apply the layout:
+
+            >>> m.get_layout(filepath=<FILEPATH>, override=True)
+            >>> m.apply_layout_layout(<FILEPATH>)
+
+            You can also manually read-in the layout-dict via:
+            >>> import json
+            >>> layout = json.load(<FILEPATH>)
+
+        Returns
+        -------
+        layout : dict or None
+            A dict of the positons of all axes, e.g.: {1:(x0, y0, width height), ...}
+        """
+
+        layout = dict()
+        for i, ax in enumerate(self.figure.f.axes):
+            layout[str(i)] = ax.get_position().bounds
+
+        if filepath is not None:
+            filepath = Path(filepath)
+            assert (
+                not filepath.exists() or override
+            ), f"The file {filepath} already exists! Use override=True to relace it."
+            with open(filepath, "w") as file:
+                json.dump(layout, file)
+            print("EOmaps: Layout saved to:\n       ", filepath)
+
+        return layout
+
+    def apply_layout(self, layout):
+        """
+        Set the positions of all axes within the current plot based on a previously
+        defined layout.
+
+        To apply a layout, use:
+
+            >>> l = m.get_layout()
+            >>> m.set_layout(l)
+
+        To save a layout to disc and apply it at a later stage, use
+            >>> m.get_layout(filepath=<FILEPATH>)
+            >>> m.set_layout(<FILEPATH>)
+
+
+        Note
+        ----
+        The returned list is only a snapshot of the current layout.
+        It can only be re-applied to a given figure if the order at which the axes are
+        created remains the same!
+
+        Parameters
+        ----------
+        layout : dict, str or pathlib.Path
+            If a dict is provided, it is directly used to define the layout.
+
+            If a string or a pathlib.Path object is provided, it will be used to
+            read a previously dumped layout (e.g. with `m.get_layout(filepath)`)
+
+        """
+        if isinstance(layout, (str, Path)):
+            with open(layout, "r") as file:
+                layout = json.load(file)
+
+        nl = len(layout)
+        na = len(self.figure.f.axes)
+        assert nl == na, (
+            f"EOmaps: Layout specifies dimensions for {nl} axes but there are {na} "
+            + "axes present in the figure!"
+        )
+
+        for i, ax in enumerate(self.figure.f.axes):
+            ax.set_position(layout[str(i)])
+
+        self.redraw()
+
+    def edit_layout(self, filepath=None):
+        """
+        Activate the "layout-editor" to quickly re-arrange the positions of subplots.
+
+        - This is the same as pressing "alt + d" on the keyboard!
+        - To exit the editor, press "escape" or "alt + d" on the keyboard!
+
+        Parameters
+        ----------
+        filepath : str, pathlib.Path or None, optional
+            A path to a file that will be used to store the layout after you exit
+            the layout-editor.
+            This file can then be used to apply the layout to the map with
+
+            >>> m.apply_layout(filepath=filepath)
+
+            NOTE: The file will be overwritten if it already exists!!
+            The default is None.
+
+        """
+        self._layout_editor._make_draggable(filepath=filepath)
+
+
+class _InsetMaps(Maps):
+    # a subclass of Maps that includes some special functions for inset maps
+
+    def __init__(
+        self,
+        parent,
+        crs=4326,
+        layer="all",
+        xy=(45, 45),
+        xy_crs=4326,
+        radius=5,
+        radius_crs=None,
+        plot_position=(0.5, 0.5),
+        plot_size=0.5,
+        shape="ellipses",
+        indicate_extent=True,
+        boundary=True,
+        **kwargs,
+    ):
+
+        possible_shapes = ["ellipses", "rectangles", "geod_circles"]
+        assert (
+            shape in possible_shapes
+        ), f"EOmaps: the inset shape can only be one of {possible_shapes}"
+
+        if shape == "geod_circles":
+            assert radius_crs is None, (
+                "EOmaps: Using 'radius_crs' is not possible if 'geod_circles' is "
+                + "used as shape! (the radius for `geod_circles` is always in meters!)"
+            )
+
+        if radius_crs is None:
+            radius_crs = xy_crs
+
+        if indicate_extent is True:
+            indicate_extent = dict(fc="none", ec="r", lw=1)
+
+        if boundary is True:
+            boundary = dict(ec="r", lw=2)
+        elif boundary in (False, None):
+            pass
+        elif isinstance(boundary, dict):
+            nonkeys = set(boundary.keys()).difference({"ec", "lw"})
+            assert (
+                len(nonkeys) == 0
+            ), "EOmaps: only 'ec' and 'lw' keys are allowed for the 'boundary' dict!"
+        else:
+            raise TypeError("EOmaps: 'boundary' must be either True, False or a dict!")
+
+        x, y = xy
+        plot_x, plot_y = plot_position
+
+        # setup a gridspec at the desired position
+        gs = GridSpec(
+            1,
+            1,
+            left=plot_x - plot_size / 2,
+            bottom=plot_y - plot_size / 2,
+            top=plot_y + plot_size / 2,
+            right=plot_x + plot_size / 2,
+        )[0]
+
+        # initialize a new maps-object with a new axis
+        super().__init__(crs=crs, parent=parent, gs_ax=gs, layer=layer, **kwargs)
+
+        # get the boundary of a ellipse in the inset_crs
+        bnd, bnd_verts = self._get_inset_boundary(
+            x, y, xy_crs, radius, radius_crs, shape
+        )
+
+        # set the map boundary
+        self.ax.set_boundary(bnd)
+        # set the plot-extent to the envelope of the shape
+        (x0, y0), (x1, y1) = bnd_verts.min(axis=0), bnd_verts.max(axis=0)
+        self.ax.set_extent((x0, x1, y0, y1), crs=self.ax.projection)
+
+        # TODO turn off navigation until the matpltolib pull-request on
+        # zoom-events in overlapping axes is resolved
+        # https://github.com/matplotlib/matplotlib/pull/22347
+        self.ax.set_navigate(False)
+
+        # set style of the inset-boundary
+        self.ax.spines["geo"].set_edgecolor(boundary["ec"])
+        self.ax.spines["geo"].set_lw(boundary["lw"])
+
+        self._inset_props = dict(
+            xy=xy, xy_crs=xy_crs, radius=radius, radius_crs=radius_crs, shape=shape
+        )
+
+        if indicate_extent:
+            self.indicate_inset_extent(self.parent, **indicate_extent)
+
+    def plot_map(self, *args, **kwargs):
+        set_extent = kwargs.pop("set_extent", False)
+        super().plot_map(*args, **kwargs, set_extent=set_extent)
+
+    # add a convenience-method to add a boundary-polygon to a map
+    def indicate_inset_extent(self, m, n=100, **kwargs):
+        """
+        Add a polygon to a  map that indicates the extent of the inset-map.
+
+        Parameters
+        ----------
+        m : eomaps.Maps
+            The Maps-object that will be used to draw the marker.
+            (e.g. the map on which the extent of the inset should be indicated)
+        n : int
+            The number of points used to represent the polygon.
+            The default is 100.
+        kwargs :
+            additional keyword-arguments passed to `m.add_marker`
+            (e.g. "facecolor", "edgecolor" etc.)
+        """
+
+        if not any((i in kwargs for i in ["fc", "facecolor"])):
+            kwargs["fc"] = "none"
+        if not any((i in kwargs for i in ["ec", "edgecolor"])):
+            kwargs["ec"] = "r"
+        if not any((i in kwargs for i in ["lw", "linewidth"])):
+            kwargs["lw"] = 1
+
+        m.add_marker(
+            shape=self._inset_props["shape"],
+            xy=self._inset_props["xy"],
+            xy_crs=self._inset_props["xy_crs"],
+            radius=self._inset_props["radius"],
+            radius_crs=self._inset_props["radius_crs"],
+            n=n,
+            **kwargs,
+        )
+
+    # add a convenience-method to set the position based on the center of the axis
+    def set_inset_position(self, x=None, y=None, size=None):
+        """
+        Set the (center) position and size of the inset-map.
+
+        Parameters
+        ----------
+        x, y : int or float, optional
+            The center position in relative units (0-1) with respect to the figure.
+            If None, the existing position is used.
+            The default is None.
+        size : float, optional
+            The relative radius (0-1) of the inset in relation to the figure width.
+            If None, the existing size is used.
+            The default is None.
+        """
+
+        y0, y1, x0, x1 = self.figure.gridspec.get_grid_positions(self.figure.f)
+
+        if self.figure.cb_gridspec is not None:
+            y0cb, y1cb, x0cb, x1cb = self.figure.cb_gridspec.get_grid_positions(
+                self.figure.f
+            )
+
+            x0 = min(*x0, *x0cb)
+            x1 = max(*x1, *x1cb)
+            y0 = min(*y0, *y0cb)
+            y1 = max(*y1, *y1cb)
+
+        if size is None:
+            size = abs(x1 - x0)
+
+        if x is None:
+            x = (x0 + x1) / 2
+        if y is None:
+            y = (y0 + y1) / 2
+
+        self.figure.gridspec.update(
+            left=x - size / 2,
+            bottom=y - size / 2,
+            right=x + size / 2,
+            top=y + size / 2,
+        )
+
+        self.redraw()
+
 
 class MapsGrid:
     """
@@ -5081,3 +5398,15 @@ class MapsGrid:
     @wraps(Maps.subplots_adjust)
     def subplots_adjust(self, **kwargs):
         return self.parent.subplots_adjust(**kwargs)
+
+    @wraps(Maps.get_layout)
+    def get_layout(self, *args, **kwargs):
+        return self.parent.get_layout(*args, **kwargs)
+
+    @wraps(Maps.apply_layout)
+    def apply_layout(self, *args, **kwargs):
+        return self.parent.apply_layout(*args, **kwargs)
+
+    @wraps(Maps.edit_layout)
+    def edit_layout(self, *args, **kwargs):
+        return self.parent.edit_layout(*args, **kwargs)

@@ -77,7 +77,8 @@ class SelectorButtons(Artist):
         self._draggable_box = None
 
         if active is None:
-            self.set_active(self.circles[0])
+            if len(self.circles) > 0:
+                self.set_active(self.circles[0])
         else:
             self.set_active(self.circles[self.labels.index(active)])
 
@@ -164,16 +165,18 @@ class LayerSelector(SelectorButtons):
 
         - Depending on the complexity (WebMaps, Overlays, very large datasets etc.) this
           might take a few seconds.
-        - Once the layer has been drawn, it is cached and switching between arbitrarily
-          complex layers should be fast.
-        - If the extent of the map changes (e.g. pan/zoom) or a new feature is added to
+        - Once the layer has been drawn, it is cached and switching even between
+          layers with many features should be fast.
+        - If the extent of the map changes (e.g. pan/zoom) or new features are added to
           the layer, it will be re-drawn.
 
         Parameters
         ----------
         layers : list or None, optional
             A list of layer-names that should appear in the selector.
-            If None, all available layers (except the "all" layer) are shown.
+            If None, all available layers (except the "all" layer) are shown, and the
+            layers are automatically updated whenever a new layer is created on the map.
+            (check the 'exclude_layers' parameter for excluding specific layers)
             The default is None.
         draggable : bool, optional
             Indicator if the widget should be draggable or not.
@@ -199,11 +202,6 @@ class LayerSelector(SelectorButtons):
               ["left", "right", "center"] is possible.
             - bbox_to_anchor: offset from the loc-position in figure coordinates
               e.g.: (loc="upper center", bbox_to_anchor=(0.5, 1.1))
-
-        Returns
-        -------
-        s : SelectorButtons
-            The SelectorButtons instance. To remove the widget, use `s.remove()`
 
         Examples
         --------
@@ -231,9 +229,9 @@ class LayerSelector(SelectorButtons):
                 exclude_layers = ["all"]
             layers = m._get_layers(exclude=exclude_layers)
 
-        assert (
-            len(layers) > 0
-        ), "EOmaps: There are no layers with artists available.. plot something first!"
+        # assert (
+        #     len(layers) > 0
+        # ), "EOmaps: There are no layers with artists available.. plot something first!"
 
         super().__init__(m.figure.f, layers, **kwargs)
 
@@ -264,23 +262,15 @@ class LayerSelector(SelectorButtons):
         self._m.util._selectors[name] = self
 
     def on_clicked(self, val):
-        l = self.labels[int(val)]
+        if self._m.parent._layout_editor._modifier_pressed:
+            return
 
-        # make sure we re-fetch the artist states on a layer change during
-        # draggable-axes
-        drag = self._m.parent._draggable_axes
-        d = False
-        if drag._modifier_pressed:
-            drag._undo_draggable()
-            d = True
+        l = self.labels[int(val)]
 
         self._m.BM.bg_layer = l
 
-        if d:
-            drag._make_draggable()
-        else:
-            self._m.BM.update(blit=False)
-            self._m.BM.canvas.draw_idle()
+        self._m.BM.update(blit=False)
+        self._m.BM.canvas.draw_idle()
 
     def _reinit(self):
         """
@@ -309,6 +299,10 @@ class LayerSelector(SelectorButtons):
         self._m.BM.update()
 
     def remove(self):
+        """
+        Remove the widget from the map
+        """
+
         self._m.BM.remove_artist(self.leg)
         self.leg.remove()
 
@@ -330,6 +324,8 @@ class LayerSlider(Slider):
         """
         Get a slider-widget that can be used to switch between layers.
 
+        By default, the widget will auto-update itself if new layers are created!
+
         Note
         ----
         In general, layers are only drawn "on demand", so if you switch to a layer that
@@ -337,16 +333,18 @@ class LayerSlider(Slider):
 
         - Depending on the complexity (WebMaps, Overlays, very large datasets etc.) this
           might take a few seconds.
-        - Once the layer has been drawn, it is cached and switching between arbitrarily
-          complex layers should be fast.
-        - If the extent of the map changes (e.g. pan/zoom) or a new feature is added to
+        - Once the layer has been drawn, it is cached and switching even between
+          layers with many features should be fast.
+        - If the extent of the map changes (e.g. pan/zoom) or new features are added to
           the layer, it will be re-drawn.
 
         Parameters
         ----------
         layers : list or None, optional
             A list of layer-names that should appear in the selector.
-            If None, all available layers (except the "all" layer) are shown.
+            If None, all available layers (except the "all" layer) are shown, and the
+            layers are automatically updated whenever a new layer is created on the map.
+            (check the 'exclude_layers' parameter for excluding specific layers)
             The default is None.
         pos : list or None, optional
             The position of the slider in figure-coordinates, provided as:
@@ -382,12 +380,6 @@ class LayerSlider(Slider):
             >>>      color="0.2"
             >>>      )
 
-
-        Returns
-        -------
-        s : Slider
-            The slider instance. To remove the widget, use `s.remove()`
-
         Examples
         --------
         >>> from eomaps import Maps
@@ -415,9 +407,9 @@ class LayerSlider(Slider):
                 exclude_layers = ["all"]
             layers = self._m._get_layers(exclude=exclude_layers)
 
-        assert (
-            len(layers) > 0
-        ), "EOmaps: There are no layers with artists available.. plot something first!"
+        # assert (
+        #     len(layers) > 0
+        # ), "EOmaps: There are no layers with artists available.. plot something first!"
 
         if pos is None:
             ax_slider = self._m.figure.f.add_axes(
@@ -499,21 +491,17 @@ class LayerSlider(Slider):
         self._m.BM.update()
 
     def _on_changed(self, val):
-        l = self._labels[int(val)]
-        # make sure we re-fetch the artist states on a layer change during
-        # draggable-axes
-        drag = self._m.parent._draggable_axes
-        d = False
-        if drag._modifier_pressed:
-            drag._undo_draggable()
-            d = True
+        if self._m.parent._layout_editor._modifier_pressed:
+            return
 
+        l = self._labels[int(val)]
         self._m.BM.bg_layer = l
 
-        if d:
-            drag._make_draggable()
-
     def remove(self):
+        """
+        Remove the widget from the map
+        """
+
         self._m.BM.remove_artist(self.ax)
         self.disconnect_events()
         self.ax.remove()

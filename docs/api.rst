@@ -85,7 +85,6 @@ Possible ways for specifying the crs for plotting are:
     Maps.fetch_layers
 
 
-
 🔵 Setting the data and plot-shape
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -334,8 +333,30 @@ To create an RGB or RGBA composite from 3 (or 4) datasets, pass the datasets as 
 📊 Data classification
 ~~~~~~~~~~~~~~~~~~~~~~~
 
-EOmaps provides an interface for `mapclassify <https://github.com/pysal/mapclassify>`_ to classify datasets prior to plotting
-via ``m.set_classify_specs``. Available classifiers that can be used are accessible via `Maps.CLASSIFIERS`:
+EOmaps provides an interface for `mapclassify <https://github.com/pysal/mapclassify>`_ to classify datasets prior to plotting.
+
+There are 2 (synonymous) ways to assign a classification-scheme:
+
+- ``m.set_classify_specs(scheme=..., ...)``: set classification scheme by providing name and relevant parameters.
+- ``m.set_classify.<SCHEME>(...)``: use autocompletion to get available classification schemes (with appropriate docstrings)
+
+  - The big advantage of this method is that it supports autocompletion (once the Maps-object has been instantiated)
+    and provides relevant docstrings to get additional information on the classification schemes.
+
+Available classifier names are also accessible via ``Maps.CLASSIFIERS``.
+
+
+The preferred way for assigning a classification-scheme to a ``Maps`` object is:
+
+.. code-block:: python
+
+    m = Maps()
+    m.set_data(...)
+    m.set_shape.ellipses(...)
+    m.set_classify.Quantiles(k=5)
+    m.plot_map()
+
+Alternatively, one can also use ``m.set_classify_specs`` to assign a classification scheme:
 
 .. code-block:: python
 
@@ -343,8 +364,9 @@ via ``m.set_classify_specs``. Available classifiers that can be used are accessi
     m.set_data(...)
     m.set_shape.ellipses(...)
 
-    m.set_classify_specs(Maps.CLASSFIERS.Quantiles, k=5)
+    m.set_classify_specs(scheme="Quantiles", k=5)
     m.classify_specs.k = 10 # alternative way for setting classify-specs
+    m.plot_map()
 
 .. currentmodule:: eomaps
 
@@ -353,26 +375,27 @@ via ``m.set_classify_specs``. Available classifiers that can be used are accessi
     :nosignatures:
     :template: only_names_in_toc.rst
 
+    Maps.set_classify
     Maps.set_classify_specs
 
 
 Currently available classification-schemes are (see `mapclassify <https://github.com/pysal/mapclassify>`_ for details):
 
-    - BoxPlot (hinge)
-    - EqualInterval (k)
-    - FisherJenks (k)
-    - FisherJenksSampled (k, pct, truncate)
-    - HeadTailBreaks ()
-    - JenksCaspall (k)
-    - JenksCaspallForced (k)
-    - JenksCaspallSampled (k, pct)
-    - MaxP (k, initial)
-    - MaximumBreaks (k, mindiff)
-    - NaturalBreaks (k, initial)
-    - Quantiles (k)
-    - Percentiles (pct)
-    - StdMean (multiples)
-    - UserDefined (bins)
+- BoxPlot (hinge)
+- EqualInterval (k)
+- FisherJenks (k)
+- FisherJenksSampled (k, pct, truncate)
+- HeadTailBreaks ()
+- JenksCaspall (k)
+- JenksCaspallForced (k)
+- JenksCaspallSampled (k, pct)
+- MaxP (k, initial)
+- MaximumBreaks (k, mindiff)
+- NaturalBreaks (k, initial)
+- Quantiles (k)
+- Percentiles (pct)
+- StdMean (multiples)
+- UserDefined (bins)
 
 
 
@@ -409,6 +432,8 @@ and provides convenience-functions to perform actions on all maps of the figure.
     # set the margins of the plot-grid
     mg.subplots_adjust(left=0.1, right=0.9, bottom=0.05, top=0.95, hspace=0.1, wspace=0.05)
 
+
+Make sure to checkout the :ref:`layout_editor` which greatly simplifies the arrangement of multiple axes within a figure!
 
 Custom grids and mixed axes
 ***************************
@@ -495,6 +520,71 @@ The individual ``Maps``-objects and ``matpltolib-Axes`` are then accessible via:
     MapsGrid.add_gdf
 
 
+🧱 Naming conventions and autocompletion
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The goal of EOmaps is to provide a comprehensive, yet easy-to-use interface.
+
+To avoid having to remember a lot of names, a concise naming-convention is applied so
+that autocompletion can quickly narrow-down the search to relevant functions and properties.
+
+Once a few basics keywords have been remembered, finding the right functions and properties should be quick and easy.
+
+.. note::
+
+    EOmaps works best in conjunction with "dynamic autocompletion", e.g. by using an interactive
+    console where you instantiate a ``Maps`` object first and then access dynamically updated properties
+    and docstrings on the object.
+
+    To clarify a bit more:
+
+    - First, execute ``m = Maps()`` in an interactive console
+    - then (inside the console, not inside the editor!) use autocompletion on ``m.`` to get
+      autocompletion for dynamically updated attributes.
+
+    For example the following accessors only work properly after the ``Maps`` object has been initialized:
+    - ``m.add_wms``: browse available WebMap services
+    - ``m.set_classify``: browse available classification schemes
+
+
+The following list provides an overview of the naming-conventions used within EOmaps:
+
+Add features to a map - "m.add_"
+********************************
+All functions that add features to a map start with ``add_``, e.g.:
+- ``m.add_feature``, ``m.add_wms``, ``m.add_annotation``, ``m.add_marker``, ``m.add_gdf``, ...
+
+WebMap services (e.g. ``m.add_wms``) are fetched dynamically from the respective APIs.
+Therefore the structure can vary from one WMS to another.
+The used convention is the following:
+- You can navigate into the structure of the API by using "dot-access" continuously
+- once you reach a level that provides layers that can be added to the map, the ``.add_layer.`` directive will be visible
+- any ``<LAYER>`` returned by ``.add_layer.<LAYER>`` can be added to the map by simply calling it, e.g.:
+
+   - ``m.add_wms.OpenStreetMap.add_layer.default()``
+   - ``m.add_wms.OpenStreetMap.OSM_mundialis.add_layer.OSM_WMS()``
+
+Set data specifications - "m.set_"
+**********************************
+All functions that set properties of the associated dataset start with ``set_``, e.g.:
+- ``m.set_data``, ``m.set_classify``, ``m.set_shape``, ...
+
+Create new Maps-objects - "m.new_"
+**********************************
+Actions that result in a new ``Maps`` objects start with ``new_``.
+- ``m.new_layer``, ``m.new_inset_map``, ...
+
+Callbacks - "m.cb."
+*******************
+Everything related to callbacks is grouped under the ``cb`` accessor.
+
+- use ``m.cb.<METHOD>.attach.<CALLBACK>()`` to attach pre-defined callbacks
+
+  - ``<METHOD>`` hereby can be one of ``click``, ``pick`` or ``keypress``
+    (but there's no need to remember since autocompletion will do the job!).
+
+- use ``m.cb.<METHOD>.attach(custom_cb)`` to attach a custom callback
+
 
 .. _callbacks:
 
@@ -522,7 +612,6 @@ They can be attached to a map via:
     click
     pick
     keypress
-    dynamic
 
 
 `< CALLBACK >` indicates the action you want to assign o the event.
@@ -614,21 +703,6 @@ Callbacks that can be used with `m.cb.keypress`
 
     switch_layer
     fetch_layers
-
-Pre-defined dynamic callbacks
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-Callbacks that can be used with `m.cb.dynamic`
-
-.. currentmodule:: eomaps.callbacks.dynamic_callbacks
-
-.. autosummary::
-    :toctree: generated
-    :nosignatures:
-    :template: only_names_in_toc.rst
-
-    indicate_extent
-
 
 Custom callbacks
 ~~~~~~~~~~~~~~~~
@@ -1462,10 +1536,13 @@ To simplify switching between layers, there are currently 2 widgets available:
 - ``m.util.layer_selector()`` : Add a set of clickable buttons to the map that activates the corresponding layers.
 - ``m.util.layer_slider()`` : Add a slider to the map that iterates through the available layers.
 
-By default the widgets will show all available layers (except the "all" layer).
+By default, the widgets will show all available layers (except the "all" layer) and the widget will be
+**automatically updated** whenever a new layer is created on the map.
 
-- To show only a subset of layers, use ``layers=[...layer names...]``.
+- To show only a subset of layers, provide an explicit list via: ``layers=[...layer names...]``.
 - To exclude certain layers from the widget, use ``exclude_layers=[...layer-names to exclude...]``
+- To remove a previously created widget ``s`` from the map, simply use ``s.remove()``
+
 
 .. currentmodule:: eomaps.utilities.utilities
 
@@ -1492,7 +1569,7 @@ By default the widgets will show all available layers (except the "all" layer).
     |   m2 = m.new_layer(layer="ocean")  |                                                 |
     |   m2.add_feature.preset.ocean()    |                                                 |
     |                                    |                                                 |
-    |   m.util.layer_selector()          |                                                 |
+    |   s = m.util.layer_selector()      |                                                 |
     +------------------------------------+-------------------------------------------------+
 
 
@@ -1524,6 +1601,7 @@ For convenience, inset-map objects have the following special methods defined:
 
 Checkout the associated example on how to use inset-maps: :ref:`EOmaps_examples_inset_maps`
 
+Make sure to checkout the :ref:`layout_editor` which can be used to quickly re-position (and re-size) inset-maps with the mouse!
 
 .. table::
     :widths: 60 40
@@ -1561,6 +1639,76 @@ Checkout the associated example on how to use inset-maps: :ref:`EOmaps_examples_
     new_inset_map
 
 
+.. _layout_editor:
+
+🏗️ Layout Editor
+-----------------
+
+EOmaps provides a **Layout Editor** that can be used to quickly re-arrange the positions of all axes of a figure.
+You can use it to simply drag the axes the mouse to the desired locations and change their size with the scroll-wheel.
+
+**Keyboard shortcuts** are assigned as follows:
+
+.. table::
+    :widths: 52 45
+    :align: center
+
+    +-----------------------------------------------------------------------------------------+-----------------------------------------------+
+    | press ``ALT + L``: enter the **Layout Editor** mode                                     | .. image:: _static/minigifs/layout_editor.gif |
+    |                                                                                         |     :align: center                            |
+    | - press ``ALT + L`` again or `escape` to exit the **Layout Editor**                     |                                               |
+    |                                                                                         |                                               |
+    | **Pick** and **re-arrange** the axes as you like with the mouse                         |                                               |
+    |                                                                                         |                                               |
+    | - **Resize** picked axes with the **scroll-wheel** (or with the ``+`` and ``-`` keys)   |                                               |
+    | - For **"histogram-colorbars"**:                                                        |                                               |
+    |                                                                                         |                                               |
+    |   - Hold down ``shift`` to change horizontal/vertical size                              |                                               |
+    |   - Hold down ``h`` to change ratio between colorbar and histogram                      |                                               |
+    |                                                                                         |                                               |
+    | Press keys ``1-9`` to set the grid-spacing for the **"snap-to-grid"** functionality     |                                               |
+    |                                                                                         |                                               |
+    | - Press ``0`` to deactivate **"snap-to-grid"**                                          |                                               |
+    |                                                                                         |                                               |
+    +-----------------------------------------------------------------------------------------+-----------------------------------------------+
+
+
+
+Save and restore layouts
+~~~~~~~~~~~~~~~~~~~~~~~~
+
+Once a layout (e.g. the desired position of the axes within a figure) has been arranged,
+the layout can be saved and re-applied with:
+
+- 🌟 ``m.get_layout()``: get the current layout (or dump the layout as a json-file)
+- 🌟 ``m.apply_layout()``: apply a given layout (or load and apply the layout from a json-file)
+
+
+It is also possible to enter the **Layout Editor** and save the layout automatically on exit with:
+
+- 🌟 ``m.edit_layout(filepath=...)``: enter LayoutEditor and save layout as a json-file on exit
+
+
+.. note::
+
+    A layout can only be restored if the number (and order) of the axes remains the same!
+    In other words:
+    - you always need to save a new layout-file after adding additional axes (or colorbars!) to a map
+
+
+.. currentmodule:: eomaps.Maps
+
+.. autosummary::
+    :toctree: generated
+    :nosignatures:
+    :template: only_names_in_toc.rst
+
+    get_layout
+    apply_layout
+    edit_layout
+
+
+
 📦 Reading data (NetCDF, GeoTIFF, CSV...)
 -----------------------------------------
 
@@ -1572,9 +1720,8 @@ with ``shade_raster`` (if it fails it will fallback to ``shade_points`` and fina
 
 .. note::
 
-    The readers are intended for well-structured datasets!
-    If they fail, simply read and extract the data manually and
-    then set the data as usual via ``m.set_data(...)``.
+    At the moment, the readers are intended as a "shortcut" to read well-structured datasets!
+    If they fail, simply read the data manually and then set the data as usual via ``m.set_data(...)``.
 
     Under the hood, EOmaps uses the following libraries to read data:
 

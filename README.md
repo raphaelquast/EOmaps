@@ -70,7 +70,12 @@ Consider supporting the development and add a citation to your publication!
 
 Found a bug or got an idea for an interesting feature?  
 Open an [issue](https://github.com/raphaelquast/EOmaps/issues) or start a [discussion](https://github.com/raphaelquast/EOmaps/discussions), and I'll see what I can do!  
-(I'm of course also happy about actual pull requests on features and bug-fixes!)
+
+Interested in actively contributing to the library?
+- Any contributions are welcome! (new features, enhancements, fixes, documentation updates, outreach etc.)
+- Have a look at this [🌟 overview project](https://github.com/users/raphaelquast/projects/5/views/8) to get an overview of existing ideas that could use some help.
+- Get in touch by opening a discussion in the [🐜 Contribution](https://github.com/raphaelquast/EOmaps/discussions/categories/contribution) section!
+
 
 ---------------
 <table>
@@ -95,19 +100,18 @@ Open an [issue](https://github.com/raphaelquast/EOmaps/issues) or start a [discu
         <img src="https://github.com/raphaelquast/EOmaps/blob/dev/docs/_static/fig9.gif?raw=true" alt="EOmaps example 9">
     </td>
     <td valign="center">
-        <img src="https://github.com/raphaelquast/EOmaps/blob/dev/docs/_static/fig4.gif?raw=true" alt="EOmaps example 4">
+        <img src="https://github.com/raphaelquast/EOmaps/blob/dev/docs/_static/inset_maps.png?raw=true" alt="EOmaps example 4">
     </td>
   </tr>
   <tr>
     <td valign="center">
-        <img src="https://github.com/raphaelquast/EOmaps/blob/dev/docs/_static/inset_maps.png?raw=true" alt="EOmaps inset-maps">
+        <img src="https://github.com/raphaelquast/EOmaps/blob/master/docs/_static/minigifs/layout_editor.gif?raw=true" alt="EOmaps inset-maps">
     </td>
     <td valign="center">
         <img src="https://github.com/raphaelquast/EOmaps/blob/dev/docs/_static/fig8.gif?raw=true" alt="EOmaps example 3">
     </td>
   </tr>
 </table>
-
 
 
 ## 🌳 Basic usage

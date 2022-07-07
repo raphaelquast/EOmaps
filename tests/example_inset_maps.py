@@ -13,7 +13,7 @@ m2 = m.new_inset_map(
     plot_position=(0.75, 0.4),
     plot_size=0.5,
     inset_crs=4326,
-    edgecolor="r",
+    boundary=dict(ec="r", lw=1),
     indicate_extent=dict(fc=(1, 0, 0, 0.25)),
 )
 
@@ -32,7 +32,7 @@ m3 = m.new_inset_map(
     plot_position=(0.25, 0.4),
     plot_size=0.5,
     inset_crs=3035,
-    edgecolor="g",
+    boundary=dict(ec="g", lw=2),
     indicate_extent=dict(fc=(0, 1, 0, 0.25)),
 )
 
