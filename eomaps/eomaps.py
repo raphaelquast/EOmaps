@@ -5558,6 +5558,13 @@ class MapsGrid:
 
     add_gdf.__doc__ = _doc_prefix + add_gdf.__doc__
 
+    @wraps(Maps.add_line)
+    def add_line(self, *args, **kwargs):
+        for m in self:
+            m.add_line(*args, **kwargs)
+
+    add_line.__doc__ = _doc_prefix + add_line.__doc__
+
     @wraps(ScaleBar.__init__)
     def add_scalebar(self, *args, **kwargs):
         for m in self:
