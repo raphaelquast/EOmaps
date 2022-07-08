@@ -1693,6 +1693,7 @@ It is also possible to enter the **Layout Editor** and save the layout automatic
 
     A layout can only be restored if the number (and order) of the axes remains the same!
     In other words:
+
     - you always need to save a new layout-file after adding additional axes (or colorbars!) to a map
 
 
