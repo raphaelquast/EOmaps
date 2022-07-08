@@ -34,3 +34,6 @@ class TestExamples(unittest.TestCase):
 
     def test_example_row_col_selector(self):
         import example_row_col_selector
+
+    def test_example_lines(self):
+        import example_lines
