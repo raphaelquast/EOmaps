@@ -4,6 +4,7 @@ from eomaps import Maps
 
 m = Maps(Maps.CRS.Mollweide(), figsize=(8, 4))
 m.add_feature.preset.ocean()
+m.add_feature.preset.land()
 
 # get a few points for some basic lines
 l1 = [(-135, 50), (45, 45), (123, 76)]
