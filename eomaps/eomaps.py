@@ -2944,6 +2944,231 @@ class Maps(object):
         def add_wms(self):
             return self._wms_container
 
+    def add_line(
+        self,
+        xy,
+        xy_crs=4326,
+        connect="geod",
+        n=None,
+        del_s=None,
+        mark_points=False,
+        layer=None,
+        **kwargs,
+    ):
+        """
+        Draw a line by connecting a set of anchor-points.
+
+        The points can be connected with either "geodesic-lines", "straight lines" or
+        "projected straight lines with respect to a given crs" (see `connect` kwarg).
+
+        Parameters
+        ----------
+        xy : list, set or numpy.ndarray
+            The coordinates of the anchor-points that define the line.
+            Expected shape:  [(x0, y0), (x1, y1), ...]
+        xy_crs : any, optional
+            The crs of the anchor-point coordinates.
+            (can be any crs definition supported by PyProj)
+            The default is 4326 (e.g. lon/lat).
+        connect : str, optional
+            The connection-method used to draw the segments between the anchor-points.
+
+            - "geod": Connect the anchor-points with geodesic lines
+            - "straight": Connect the anchor-points with straight lines
+            - "straight_crs": Connect the anchor-points with straight lines in the
+              `xy_crs` projection and reproject those lines to the plot-crs.
+
+            The default is "geod".
+        n : int, list or None optional
+            The number of intermediate points to use for each line-segment.
+
+            - If an integer is provided, each segment is equally divided into n parts.
+            - If a list is provided, it is used to specify "n" for each line-segment
+              individually.
+
+              (NOTE: The number of segments is 1 less than the number of anchor-points!)
+
+            If both n and del_s is None, n=100 is used by default!
+
+            The default is None.
+        del_s : int, float or None, optional
+            Only relevant if `connect="geod"`!
+
+            The target-distance in meters between the subdivisions of the line-segments.
+
+            - If a number is provided, each segment is equally divided.
+            - If a list is provided, it is used to specify "del_s" for each line-segment
+              individually.
+
+              (NOTE: The number of segments is 1 less than the number of anchor-points!)
+
+            The default is None.
+        mark_points : str, dict or None, optional
+            Set the marker-style for the anchor-points.
+
+            - If a string is provided, it is identified as a matploltib "format-string",
+              e.g. "r." for red dots, "gx" for green x markers etc.
+            - if a dict is provided, it will be used to set the style of the markers
+              e.g.: dict(marker="o", facecolor="orange", edgecolor="g")
+
+            See https://matplotlib.org/stable/gallery/lines_bars_and_markers/marker_reference.html
+            for more details
+
+            The default is False.
+        layer : str, int or None
+            The name of the layer at which the line should be drawn.
+            If None, the layer associated with the used Maps-object (e.g. m.layer)
+            is used. Use "all" to add the line to all layers!
+            The default is None.
+        kwargs :
+            additional keyword-arguments passed to plt.plot(), e.g.
+            "c" (or "color"), "lw" (or "linewidth"), "ls" (or "linestyle"),
+            "markevery", etc.
+
+            See https://matplotlib.org/stable/api/_as_gen/matplotlib.axes.Axes.plot.html
+            for more details.
+
+        Returns
+        -------
+        out_d_int : list
+            Only relevant for `connect="geod"`! (An empty ist is returned otherwise.)
+            A list of the subdivision distances of the line-segments (in meters).
+        out_d_tot : list
+            Only relevant for `connect="geod"` (An empty ist is returned otherwise.)
+            A list of total distances of the line-segments (in meters).
+
+        """
+
+        if layer is None:
+            layer = self.layer
+
+        # intermediate and total distances
+        out_d_int, out_d_tot = [], []
+
+        if len(xy) <= 1:
+            print("you must provide at least 2 points")
+
+        if n is not None:
+            assert del_s is None, "EOmaps: Provide either `del_s` or `n`, not both!"
+            del_s = 0  # pyproj's geod uses 0 as identifier!
+
+            if not isinstance(n, int):
+                assert len(n) == len(xy) - 1, (
+                    "EOmaps: The number of subdivisions per line segment (n) must be"
+                    + " 1 less than the number of points!"
+                )
+
+        if del_s is not None:
+            assert n is None, "EOmaps: Provide either `del_s` or `n`, not both!"
+            n = 0  # pyproj's geod uses 0 as identifier!
+
+            assert connect in ["geod"], (
+                "EOmaps: Setting a fixed subdivision-distance (e.g. `del_s`) is only "
+                + "possible for `geod` lines! Use `n` instead!"
+            )
+
+            if not isinstance(del_s, (int, float, np.number)):
+                assert len(del_s) == len(xy) - 1, (
+                    "EOmaps: The number of subdivision-distances per line segment "
+                    + "(`del_s`) must be 1 less than the number of points!"
+                )
+
+        if n is None and del_s is None:
+            # use 100 subdivisions by default
+            n = 100
+            del_s = 0
+
+        t_xy_plot = Transformer.from_crs(
+            self.get_crs(xy_crs), self.crs_plot, always_xy=True
+        )
+        xplot, yplot = t_xy_plot.transform(*zip(*xy))
+
+        if connect == "geod":
+            # connect points via geodesic lines
+            if xy_crs != 4326:
+                t = Transformer.from_crs(
+                    self.get_crs(xy_crs), self.get_crs(4326), always_xy=True
+                )
+                x, y = t.transform(*zip(*xy))
+            else:
+                x, y = zip(*xy)
+
+            geod = self.crs_plot.get_geod()
+
+            if n is None or isinstance(n, int):
+                n = repeat(n)
+
+            if del_s is None or isinstance(del_s, (int, float, np.number)):
+                del_s = repeat(del_s)
+
+            xs, ys = [], []
+            for (x0, x1), (y0, y1), ni, di in zip(pairwise(x), pairwise(y), n, del_s):
+
+                npts, d_int, d_tot, lon, lat, _ = geod.inv_intermediate(
+                    x0, y0, x1, y1, del_s=di, npts=ni, initial_idx=0, terminus_idx=0
+                )
+
+                out_d_int.append(d_int)
+                out_d_tot.append(d_tot)
+
+                lon, lat = lon.tolist(), lat.tolist()
+                xi, yi = self._transf_lonlat_to_plot.transform(lon, lat)
+                xs += xi
+                ys += yi
+            (art,) = self.ax.plot(xs, ys, **kwargs)
+
+        elif connect == "straight":
+            (art,) = self.ax.plot(xplot, yplot, **kwargs)
+
+        elif connect == "straight_crs":
+            # draw a straight line that is defined in a given crs
+
+            x, y = zip(*xy)
+            if isinstance(n, int):
+                # use same number of points for all segments
+                xs = np.linspace(x[:-1], x[1:], n).T.ravel()
+                ys = np.linspace(y[:-1], y[1:], n).T.ravel()
+            else:
+                # use different number of points for individual segments
+                from itertools import chain
+
+                xs = list(
+                    chain(
+                        *(np.linspace(a, b, ni) for (a, b), ni in zip(pairwise(x), n))
+                    )
+                )
+                ys = list(
+                    chain(
+                        *(np.linspace(a, b, ni) for (a, b), ni in zip(pairwise(y), n))
+                    )
+                )
+
+            x, y = t_xy_plot.transform(xs, ys)
+
+            (art,) = self.ax.plot(x, y, **kwargs)
+        else:
+            raise TypeError(f"EOmaps: '{connect}' is not a valid connection-method!")
+
+        self.BM.add_bg_artist(art, layer)
+
+        if mark_points:
+            zorder = kwargs.get("zorder", None)
+
+            if isinstance(mark_points, dict):
+                # only use zorder of the line if no explicit zorder is provided
+                mark_points["zorder"] = mark_points.get("zorder", zorder)
+
+                art2 = self.ax.scatter(xplot, yplot, **mark_points)
+
+            elif isinstance(mark_points, str):
+                # use matplotlib's single-string style identifiers,
+                # (e.g. "r.", "go", "C0x" etc.)
+                (art2,) = self.ax.plot(xplot, yplot, mark_points, zorder=zorder, lw=0)
+
+            self.BM.add_bg_artist(art2, layer)
+
+        return out_d_int, out_d_tot
+
     @wraps(plt.savefig)
     def savefig(self, *args, **kwargs):
         # clear all cached background layers before saving to make sure they
