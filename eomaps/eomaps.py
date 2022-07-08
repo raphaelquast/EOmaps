@@ -2951,7 +2951,7 @@ class Maps(object):
         connect="geod",
         n=None,
         del_s=None,
-        mark_points=False,
+        mark_points=None,
         layer=None,
         **kwargs,
     ):
@@ -3014,7 +3014,8 @@ class Maps(object):
             See https://matplotlib.org/stable/gallery/lines_bars_and_markers/marker_reference.html
             for more details
 
-            The default is False.
+            The default is "o"
+
         layer : str, int or None
             The name of the layer at which the line should be drawn.
             If None, the layer associated with the used Maps-object (e.g. m.layer)
@@ -3058,7 +3059,7 @@ class Maps(object):
                     + " 1 less than the number of points!"
                 )
 
-        else:
+        elif del_s is not None:
             assert n is None, "EOmaps: Provide either `del_s` or `n`, not both!"
             n = 0  # pyproj's geod uses 0 as identifier!
 
@@ -3072,8 +3073,7 @@ class Maps(object):
                     "EOmaps: The number of subdivision-distances per line segment "
                     + "(`del_s`) must be 1 less than the number of points!"
                 )
-
-        if n is None and del_s is None:
+        else:
             # use 100 subdivisions by default
             n = 100
             del_s = 0
