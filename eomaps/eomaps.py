@@ -3058,7 +3058,7 @@ class Maps(object):
                     + " 1 less than the number of points!"
                 )
 
-        if del_s is not None:
+        else:
             assert n is None, "EOmaps: Provide either `del_s` or `n`, not both!"
             n = 0  # pyproj's geod uses 0 as identifier!
 
