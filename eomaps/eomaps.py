@@ -3152,7 +3152,7 @@ class Maps(object):
         self.BM.add_bg_artist(art, layer)
 
         if mark_points:
-            zorder = kwargs.get("zorder", None)
+            zorder = kwargs.get("zorder", 10)
 
             if isinstance(mark_points, dict):
                 # only use zorder of the line if no explicit zorder is provided
