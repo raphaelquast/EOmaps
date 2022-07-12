@@ -550,7 +550,7 @@ Once a few basics keywords have been remembered, finding the right functions and
 The following list provides an overview of the naming-conventions used within EOmaps:
 
 Add features to a map - "m.add\_"
-********************************
+*********************************
 All functions that add features to a map start with ``add_``, e.g.:
 - ``m.add_feature``, ``m.add_wms``, ``m.add_annotation``, ``m.add_marker``, ``m.add_gdf``, ...
 
@@ -565,12 +565,12 @@ The used convention is the following:
    - ``m.add_wms.OpenStreetMap.OSM_mundialis.add_layer.OSM_WMS()``
 
 Set data specifications - "m.set\_"
-**********************************
+***********************************
 All functions that set properties of the associated dataset start with ``set_``, e.g.:
 - ``m.set_data``, ``m.set_classify``, ``m.set_shape``, ...
 
 Create new Maps-objects - "m.new\_"
-**********************************
+***********************************
 Actions that result in a new ``Maps`` objects start with ``new_``.
 - ``m.new_layer``, ``m.new_inset_map``, ...
 
@@ -1264,7 +1264,7 @@ Static annotations can be added to the map via ``m.add_annotation()``.
 🚲 Lines
 ~~~~~~~~~
 
-Lines can be added to a map with ``m.add_line()``
+Lines can be added to a map with ``m.add_line()``.
 
 - A line is defined by a list of **anchor-points** and a **connection-method**
 
@@ -1272,21 +1272,22 @@ Lines can be added to a map with ``m.add_line()``
 
 - Possible **connection-methods** are:
 
-- ``connect="straight"``: connect points via **straight **lines**
-- ``connect="straight_crs"``: connect points with reprojected lines that are **straight in a given projection**
+  - ``connect="geod"``: connect points via **geodesic lines** (the default)
 
-    -  use ``n=10`` to calculate 10 (equally-spaced) intermediate points between each anchor-point
+      -  use ``n=10`` to calculate 10 intermediate points between each anchor-point
+      -  or use ``del_s=1000`` to calculate intermediate points (approximately) every 1000 meters
 
-- ``connect="geod"``: connect points via **geodesic lines**
+         - check the return-values of ``m.add_line()`` to get the actual distances used in each line-segment
 
-    -  use ``n=10`` to calculate 10 intermediate points between each anchor-point
-    -  or use ``del_s=1000`` to calculate intermediate points (approximately) every 1000 meters
+  - ``connect="straight"``: connect points via **straight **lines**
+  - ``connect="straight_crs"``: connect points with reprojected lines that are **straight in a given projection**
 
-    - the return-values will provide the actual distances used for each line-segment
+      -  use ``n=10`` to calculate 10 (equally-spaced) intermediate points between each anchor-point
+
 
 - Additional keyword-arguments are passed to matpltolib's ``plt.plot``
 
-- This gives a lot of flexibility to style the lines!
+  - This gives a lot of flexibility to style the lines!
 
 
 .. table::
@@ -1294,9 +1295,10 @@ Lines can be added to a map with ``m.add_line()``
     :align: center
 
     +-----------------------------------------------------------------+---------------------------------------+
-    | ..code-block:: python                                           | .. image:: _static/minigifs/lines.png |
+    | .. code-block:: python                                          | .. image:: _static/minigifs/lines.png |
     |                                                                 |     :align: center                    |
     |     from eomaps import Maps                                     |                                       |
+    |     import matplotlib.patheffects as path_effects               |                                       |
     |                                                                 |                                       |
     |     m = Maps(Maps.CRS.Sinusoidal(), figsize=(8, 4))             |                                       |
     |     m.add_feature.preset.ocean()                                |                                       |
@@ -1304,6 +1306,7 @@ Lines can be added to a map with ``m.add_line()``
     |     p0 = [(-100,10), (34, -56), (125, 57)]                      |                                       |
     |     p1 = [(-120,50), (-42, 63), (45, 57)]                       |                                       |
     |     p2 = [(-20,-45), (-20, 45), (45, 45), (45, -20), (-20,-45)] |                                       |
+    |                                                                 |                                       |
     |                                                                 |                                       |
     |     m.add_line(p0, connect="geod", del_s=100000,                |                                       |
     |                lw=0.5, c="k", mark_points="rs",                 |                                       |
@@ -1313,7 +1316,13 @@ Lines can be added to a map with ``m.add_line()``
     |                mark_points=dict(fc="y", ec="k", lw=.5))         |                                       |
     |                                                                 |                                       |
     |     m.add_line(p2, connect="straight_crs", c="r",               |                                       |
-    |                n=5, marker="x", lw=0.25, ms=5)                  |                                       |
+    |                n=5, lw=0.25, ms=5,                              |                                       |
+    |                path_effects=[                                   |                                       |
+    |                    path_effects.withStroke(linewidth=3,         |                                       |
+    |                                            foreground="gold"),  |                                       |
+    |                    path_effects.TickedStroke(angle=90,          |                                       |
+    |                                              linewidth=1,       |                                       |
+    |                                              length=0.5)])      |                                       |
     +-----------------------------------------------------------------+---------------------------------------+
 
 
