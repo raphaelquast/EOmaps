@@ -5008,20 +5008,20 @@ class _InsetMaps(Maps):
         if radius_crs is None:
             radius_crs = xy_crs
 
-        if indicate_extent is True:
-            indicate_extent = dict(fc="none", ec="r", lw=1)
+        extent_kwargs = dict(ec="r", lw=1, fc="none")
+        boundary_kwargs = dict(ec="r", lw=2)
 
-        if boundary is True:
-            boundary = dict(ec="r", lw=2)
-        elif boundary in (False, None):
-            pass
-        elif isinstance(boundary, dict):
-            nonkeys = set(boundary.keys()).difference({"ec", "lw"})
+        if isinstance(boundary, dict):
             assert (
-                len(nonkeys) == 0
+                len(set(boundary.keys()).difference({"ec", "lw"})) == 0
             ), "EOmaps: only 'ec' and 'lw' keys are allowed for the 'boundary' dict!"
-        else:
-            raise TypeError("EOmaps: 'boundary' must be either True, False or a dict!")
+
+            boundary_kwargs.update(boundary)
+            # use same edgecolor for boundary and indicator by default
+            extent_kwargs["ec"] = boundary["ec"]
+
+        if isinstance(indicate_extent, dict):
+            extent_kwargs.update(indicate_extent)
 
         x, y = xy
         plot_x, plot_y = plot_position
@@ -5056,15 +5056,16 @@ class _InsetMaps(Maps):
         self.ax.set_navigate(False)
 
         # set style of the inset-boundary
-        self.ax.spines["geo"].set_edgecolor(boundary["ec"])
-        self.ax.spines["geo"].set_lw(boundary["lw"])
+        if boundary is not False:
+            self.ax.spines["geo"].set_edgecolor(boundary_kwargs["ec"])
+            self.ax.spines["geo"].set_lw(boundary_kwargs["lw"])
 
         self._inset_props = dict(
             xy=xy, xy_crs=xy_crs, radius=radius, radius_crs=radius_crs, shape=shape
         )
 
-        if indicate_extent:
-            self.indicate_inset_extent(self.parent, **indicate_extent)
+        if indicate_extent is not False:
+            self.indicate_inset_extent(self.parent, **extent_kwargs)
 
     def plot_map(self, *args, **kwargs):
         set_extent = kwargs.pop("set_extent", False)
