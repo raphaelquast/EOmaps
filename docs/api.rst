@@ -1416,14 +1416,14 @@ To indicate rectangular areas in any given crs, simply use ``m.indicate_extent``
         m2.add_colorbar()  # this colorbar is only visible on the "data" layer
 
 
-.. currentmodule:: eomaps
+.. currentmodule:: eomaps.Maps
 
 .. autosummary::
     :toctree: generated
     :nosignatures:
     :template: only_names_in_toc.rst
 
-    Maps.add_colorbar
+    add_colorbar
 
 .. table::
     :widths: 70 30
@@ -1494,14 +1494,14 @@ distribution of the shaded pixels within the current field of view by setting ``
 
 A scalebar can be added to a map via ``s = m.add_scalebar()``:
 
-.. currentmodule:: eomaps
+.. currentmodule:: eomaps.Maps
 
 .. autosummary::
     :toctree: generated
     :nosignatures:
     :template: only_names_in_toc.rst
 
-    Maps.add_scalebar
+    add_scalebar
 
 .. table::
     :widths: 70 30
@@ -1556,14 +1556,14 @@ The returned ``ScaleBar`` object provides the following useful methods:
 
 A compass can be added to the map via ``m.add_compass()``:
 
-.. currentmodule:: eomaps
+.. currentmodule:: eomaps.Maps
 
 .. autosummary::
     :toctree: generated
     :nosignatures:
     :template: only_names_in_toc.rst
 
-    Maps.add_compass
+    add_compass
 
 .. table::
     :widths: 70 30
