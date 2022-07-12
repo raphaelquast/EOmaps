@@ -1203,6 +1203,15 @@ Static annotations can be added to the map via ``m.add_annotation()``.
 
 🛸 For dynamic annotations checkout ``m.cb.click.attach.annotate()`` or ``m.cb.pick.attach.annotate()``
 
+.. currentmodule:: eomaps.Maps
+
+.. autosummary::
+    :toctree: generated
+    :nosignatures:
+    :template: only_names_in_toc.rst
+
+    add_annotation
+
 
 .. table::
     :widths: 50 50
@@ -1288,6 +1297,15 @@ Lines can be added to a map with ``m.add_line()``.
 - Additional keyword-arguments are passed to matpltolib's ``plt.plot``
 
   - This gives a lot of flexibility to style the lines!
+
+.. currentmodule:: eomaps.Maps
+
+.. autosummary::
+    :toctree: generated
+    :nosignatures:
+    :template: only_names_in_toc.rst
+
+    add_line
 
 
 .. table::
