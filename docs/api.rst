@@ -536,7 +536,7 @@ Once a few basics keywords have been remembered, finding the right functions and
     console where you instantiate a ``Maps`` object first and then access dynamically updated properties
     and docstrings on the object.
 
-    To clarify a bit more:
+    To clarify:
 
     - First, execute ``m = Maps()`` in an interactive console
     - then (inside the console, not inside the editor!) use autocompletion on ``m.`` to get
@@ -549,7 +549,7 @@ Once a few basics keywords have been remembered, finding the right functions and
 
 The following list provides an overview of the naming-conventions used within EOmaps:
 
-Add features to a map - "m.add_"
+Add features to a map - "m.add\_"
 ********************************
 All functions that add features to a map start with ``add_``, e.g.:
 - ``m.add_feature``, ``m.add_wms``, ``m.add_annotation``, ``m.add_marker``, ``m.add_gdf``, ...
@@ -564,12 +564,12 @@ The used convention is the following:
    - ``m.add_wms.OpenStreetMap.add_layer.default()``
    - ``m.add_wms.OpenStreetMap.OSM_mundialis.add_layer.OSM_WMS()``
 
-Set data specifications - "m.set_"
+Set data specifications - "m.set\_"
 **********************************
 All functions that set properties of the associated dataset start with ``set_``, e.g.:
 - ``m.set_data``, ``m.set_classify``, ``m.set_shape``, ...
 
-Create new Maps-objects - "m.new_"
+Create new Maps-objects - "m.new\_"
 **********************************
 Actions that result in a new ``Maps`` objects start with ``new_``.
 - ``m.new_layer``, ``m.new_inset_map``, ...
@@ -1102,8 +1102,8 @@ The most commonly used features are available under the ``preset`` category:
 
 .. _annotations_and_markers:
 
-🏕 Annotations and Markers
---------------------------
+🏕 Annotations, Markers, Lines etc.
+-----------------------------------
 
 🔴 Markers
 ~~~~~~~~~~~
@@ -1261,6 +1261,62 @@ Static annotations can be added to the map via ``m.add_annotation()``.
     +-----------------------------------------------------------------------------------+---------------------------------------------+
 
 
+🚲 Lines
+~~~~~~~~~
+
+Lines can be added to a map with ``m.add_line()``
+
+- A line is defined by a list of **anchor-points** and a **connection-method**
+
+- The coordinates of the anchor-points can be provided in any crs
+
+- Possible **connection-methods** are:
+
+- ``connect="straight"``: connect points via **straight **lines**
+- ``connect="straight_crs"``: connect points with reprojected lines that are **straight in a given projection**
+
+    -  use ``n=10`` to calculate 10 (equally-spaced) intermediate points between each anchor-point
+
+- ``connect="geod"``: connect points via **geodesic lines**
+
+    -  use ``n=10`` to calculate 10 intermediate points between each anchor-point
+    -  or use ``del_s=1000`` to calculate intermediate points (approximately) every 1000 meters
+
+    - the return-values will provide the actual distances used for each line-segment
+
+- Additional keyword-arguments are passed to matpltolib's ``plt.plot``
+
+- This gives a lot of flexibility to style the lines!
+
+
+.. table::
+    :widths: 50 50
+    :align: center
+
+    +-----------------------------------------------------------------+---------------------------------------+
+    | ..code-block:: python                                           | .. image:: _static/minigifs/lines.png |
+    |                                                                 |     :align: center                    |
+    |     from eomaps import Maps                                     |                                       |
+    |                                                                 |                                       |
+    |     m = Maps(Maps.CRS.Sinusoidal(), figsize=(8, 4))             |                                       |
+    |     m.add_feature.preset.ocean()                                |                                       |
+    |                                                                 |                                       |
+    |     p0 = [(-100,10), (34, -56), (125, 57)]                      |                                       |
+    |     p1 = [(-120,50), (-42, 63), (45, 57)]                       |                                       |
+    |     p2 = [(-20,-45), (-20, 45), (45, 45), (45, -20), (-20,-45)] |                                       |
+    |                                                                 |                                       |
+    |     m.add_line(p0, connect="geod", del_s=100000,                |                                       |
+    |                lw=0.5, c="k", mark_points="rs",                 |                                       |
+    |                marker=".", markevery=10)                        |                                       |
+    |                                                                 |                                       |
+    |     m.add_line(p1, connect="straight", c="b", ls="--",          |                                       |
+    |                mark_points=dict(fc="y", ec="k", lw=.5))         |                                       |
+    |                                                                 |                                       |
+    |     m.add_line(p2, connect="straight_crs", c="r",               |                                       |
+    |                n=5, marker="x", lw=0.25, ms=5)                  |                                       |
+    +-----------------------------------------------------------------+---------------------------------------+
+
+
 ▭ Rectangular areas
 ~~~~~~~~~~~~~~~~~~~
 
@@ -1308,6 +1364,7 @@ To indicate rectangular areas in any given crs, simply use ``m.indicate_extent``
     |     except:                                                           |                                                 |
     |         pass                                                          |                                                 |
     +-----------------------------------------------------------------------+-------------------------------------------------+
+
 
 .. _colorbar:
 
