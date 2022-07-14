@@ -952,7 +952,7 @@ class Maps(object):
                 del m.tree
 
             if hasattr(m.figure, "coll"):
-                del m.figure.coll
+                m.figure.coll = None
 
             m.data_specs.delete()
             m.cleanup()
