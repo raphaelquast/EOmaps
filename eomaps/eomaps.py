@@ -2614,6 +2614,7 @@ class Maps(object):
         radius=None,
         shape="ellipses",
         buffer=1,
+        n=100,
         layer=None,
         **kwargs,
     ):
@@ -2652,13 +2653,16 @@ class Maps(object):
             The default is "circle".
         buffer : float, optional
             A factor to scale the size of the shape. The default is 1.
+        n : int
+            The number of points to calculate for the shape.
+            The default is 100.
         layer : str, int or None
             The name of the layer at which the marker should be drawn.
             If None, the layer associated with the used Maps-object (e.g. m.layer)
             is used. The default is None.
         kwargs :
             kwargs passed to the matplotlib patch.
-            (e.g. `facecolor`, `edgecolor`, `linewidth`, `alpha` etc.)
+            (e.g. `zorder`, `facecolor`, `edgecolor`, `linewidth`, `alpha` etc.)
 
         Examples
         --------
@@ -2696,6 +2700,7 @@ class Maps(object):
             ind=None,
             shape=shape,
             buffer=buffer,
+            n=n,
             layer=layer,
             **kwargs,
         )
