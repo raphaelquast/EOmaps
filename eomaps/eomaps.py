@@ -2686,6 +2686,8 @@ class Maps(object):
                 # transform coordinates
                 xy = transformer.transform(*xy)
 
+        kwargs.setdefault("permanent", True)
+
         # add marker
         marker = self.cb.click._cb.mark(
             ID=ID,
@@ -2816,8 +2818,7 @@ class Maps(object):
             # transform coordinates
             xy = transformer.transform(*xy)
 
-        defaultargs = dict(permanent=True)
-        defaultargs.update(kwargs)
+        kwargs.setdefault("permanent", True)
 
         if isinstance(text, str) or callable(text):
             text = repeat(text)
@@ -2836,7 +2837,7 @@ class Maps(object):
                 val=vali,
                 ind=indi,
                 text=texti,
-                **defaultargs,
+                **kwargs,
             )
         self.BM.update(clear=False)
 
