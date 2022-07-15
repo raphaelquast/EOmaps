@@ -123,6 +123,8 @@ class _click_container(_cb_container):
         # (e.g. to remove "_move" and "click" cbs in one go)
         self._connected_move_cbs = dict()
 
+        self._sticky_modifiers = []
+
     class _attach:
         """
         Attach custom or pre-defined callbacks to the map.
@@ -179,7 +181,7 @@ class _click_container(_cb_container):
                     ),
                 )
 
-        def __call__(self, f, double_click=False, button=1, **kwargs):
+        def __call__(self, f, double_click=False, button=1, modifier=None, **kwargs):
             """
             add a custom callback-function to the map
 
@@ -208,6 +210,15 @@ class _click_container(_cb_container):
                     - RIGHT = 3
                     - BACK = 8
                     - FORWARD = 9
+            modifier : str, list or None
+                Define a keypress-modifier to execute the callback only if the
+                corresponding key is pressed on the keyboard.
+
+                - If a list is provided, the callback will be executed on any of the
+                  provided keys.
+                - If None, the callback is executed if no key is pressed.
+
+                The default is None.
             **kwargs :
                 kwargs passed to the callback-function
                 For documentation of the individual functions check the docs in `m.cb`
@@ -224,7 +235,11 @@ class _click_container(_cb_container):
                 ), "you can only attach pick-callbacks after calling `plot_map()`!"
 
             return self._parent._add_callback(
-                callback=f, double_click=double_click, button=button, **kwargs
+                callback=f,
+                double_click=double_click,
+                button=button,
+                modifier=modifier,
+                **kwargs,
             )
 
     class _get:
@@ -292,14 +307,15 @@ class _click_container(_cb_container):
 
         if callback is not None:
             s = callback.split("__")
-            name, layer, ds, b = s
+            name, layer, ds, b, m = s
 
         cbname = name + "__" + layer
-
+        bname = f"{b}__{m}"
         dsdict = self.get.cbs.get(ds, None)
+
         if dsdict is not None:
-            if int(b) in dsdict:
-                bdict = dsdict.get(int(b))
+            if bname in dsdict:
+                bdict = dsdict.get(bname)
             else:
                 print(f"EOmaps: there is no callback named {callback}")
                 return
@@ -318,8 +334,48 @@ class _click_container(_cb_container):
             else:
                 print(f"EOmaps: there is no callback named {callback}")
 
+    def set_sticky_modifiers(self, *args):
+        """
+        Define keys on the keyboard that should be treated as "sticky modifiers".
+
+        "sticky modifiers" are used in click- and pick- callbacks to define
+        modifiers that should remain active even if the corresponding key on the
+        keyboard is released.
+
+        - a "sticky modifier" <KEY> will remain activated until
+
+          - "ctrl + <KEY>" is pressed to deactivate the sticky modifier
+          - another sticky modifier key is pressed on the keyboard
+
+        Parameters
+        ----------
+        args : str
+            Any positional argument passed to this function will be used as
+            sticky-modifier, e.g.:
+
+            >>> m.cb.click.set_sticky_modifiers("a", "1", "x")
+
+        Examples
+        --------
+        >>> m = Maps()
+        >>> m.cb.click.attach.annotate(modifier="1")
+        >>> m.cb.click.set_sticky_modifiers("1")
+
+        """
+
+        self._sticky_modifiers = list(map(str, args))
+
+        if self._method == "click":
+            self._m.cb._move._sticky_modifiers = args
+
     def _add_callback(
-        self, *args, callback=None, double_click=False, button=1, **kwargs
+        self,
+        *args,
+        callback=None,
+        double_click=False,
+        button=1,
+        modifier=None,
+        **kwargs,
     ):
         """
         Attach a callback to the plot that will be executed if a pixel is clicked
@@ -405,6 +461,7 @@ class _click_container(_cb_container):
                 callback=callback,
                 double_click=double_click,
                 button=button,
+                modifier=modifier,
                 **kwargs,
             )
         elif on_motion is True:
@@ -429,7 +486,10 @@ class _click_container(_cb_container):
         else:
             btn_key = "single"
 
-        d = self.get.cbs[btn_key][button]
+        # check for modifiers
+        button_modifier = f"{button}__{modifier}"
+
+        d = self.get.cbs[btn_key][button_modifier]
 
         # get a unique name for the callback
         # name_idx__layer
@@ -447,7 +507,7 @@ class _click_container(_cb_container):
         d[cbkey] = partial(callback, *args, **kwargs)
 
         # add mouse-button assignment as suffix to the name (with __ separator)
-        cbname = cbkey + f"__{btn_key}__{button}"  # TODO
+        cbname = cbkey + f"__{btn_key}__{button}__{modifier}"  # TODO
 
         if movecb_name is not None:
             self._connected_move_cbs[cbname] = [movecb_name]
@@ -474,6 +534,8 @@ class cb_click_container(_click_container):
 
     share_events : share events between connected maps-objects (e.g. forward both ways)
 
+    set_sticky_modifiers : define keypress-modifiers that remain active after release
+
     """
 
     def __init__(self, *args, **kwargs):
@@ -498,6 +560,7 @@ class cb_click_container(_click_container):
         return clickdict
 
     def _onclick(self, event):
+
         clickdict = self._get_clickdict(event)
 
         if event.dblclick:
@@ -505,8 +568,22 @@ class cb_click_container(_click_container):
         else:
             cbs = self.get.cbs["single"]
 
-        if event.button in cbs:
-            bcbs = cbs[event.button]
+        # check for keypress-modifiers
+        if (
+            event.key is None
+            and self._sticky_modifiers
+            and (self._m.cb.keypress._modifier is not None)
+        ):
+            # in case sticky_modifiers are defined, use the last pressed modifier
+            event_key = self._m.cb.keypress._modifier
+        else:
+            event_key = event.key
+
+        button_modifier = f"{event.button}__{event_key}"
+
+        if button_modifier in cbs:
+            bcbs = cbs[button_modifier]
+
             for key in self._sort_cbs(bcbs):
                 layer = key.split("__")[1]
                 if layer != "all" and layer != str(self._m.BM.bg_layer):
@@ -519,8 +596,19 @@ class cb_click_container(_click_container):
     def _onrelease(self, event):
         cbs = self.get.cbs["release"]
 
-        if event.button in cbs:
-            bcbs = cbs[event.button]
+        # check for keypress-modifiers
+        if event.key is not None:
+            button_modifier = f"{event.button}__{event.key}"
+        elif (str(event.key) in self._sticky_modifiers) and (
+            self._m.cb.keypress._modifier is not None
+        ):
+            # in case sticky_modifiers are defined, use the last pressed modifier
+            button_modifier = f"{event.button}__{self._m.cb.keypress._modifier}"
+        else:
+            button_modifier = event.button
+
+        if button_modifier in cbs:
+            bcbs = cbs[button_modifier]
             for cb in bcbs.values():
                 cb()
 
@@ -553,7 +641,6 @@ class cb_click_container(_click_container):
 
                 # execute onclick on the maps object that belongs to the clicked axis
                 # and forward the event to all forwarded maps-objects
-
                 for obj in self._objs:
                     obj._onclick(event)
                     obj._m.BM._after_update_actions.append(obj._clear_temporary_artists)
@@ -631,6 +718,7 @@ class cb_click_container(_click_container):
                     button=event.button,
                     xdata=xdata,
                     ydata=ydata,
+                    key=event.key
                     # x=event.mouseevent.x,
                     # y=event.mouseevent.y,
                 )
@@ -662,6 +750,8 @@ class cb_move_container(cb_click_container):
     forward_events : forward events to connected maps-objects
 
     share_events : share events between connected maps-objects (e.g. forward both ways)
+
+    set_sticky_modifiers : define keypress-modifiers that remain active after release
 
     """
 
@@ -746,6 +836,8 @@ class cb_pick_container(_click_container):
     forward_events : forward events to connected maps-objects
 
     share_events : share events between connected maps-objects (e.g. forward both ways)
+
+    set_sticky_modifiers : define keypress-modifiers that remain active after release
 
     """
 
@@ -869,8 +961,22 @@ class cb_pick_container(_click_container):
         else:
             cbs = self.get.cbs["single"]
 
-        if event.mouseevent.button in cbs:
-            bcbs = cbs[event.mouseevent.button]
+        # check for keypress-modifiers
+        if (
+            event.mouseevent.key is None
+            and self._sticky_modifiers
+            and (self._m.cb.keypress._modifier is not None)
+        ):
+            # in case sticky_modifiers are defined, use the last pressed modifier
+            event_key = self._m.cb.keypress._modifier
+        else:
+            event_key = event.mouseevent.key
+
+        button_modifier = f"{event.mouseevent.button}__{event_key}"
+
+        if button_modifier in cbs:
+            bcbs = cbs[button_modifier]
+
             for key in self._sort_cbs(bcbs):
                 layer = key.split("__")[1]
                 if layer != "all" and layer != str(self._m.BM.bg_layer):
@@ -963,6 +1069,7 @@ class cb_pick_container(_click_container):
                 button=event.mouseevent.button,
                 xdata=xdata,
                 ydata=ydata,
+                key=event.mouseevent.key,
                 # x=event.mouseevent.x,
                 # y=event.mouseevent.y,
             )
@@ -1018,6 +1125,9 @@ class keypress_container(_cb_container):
 
         self._cid_keypress_event = None
 
+        # remember last pressed key (for use as "sticky_modifier")
+        self._modifier = None
+
     def _init_cbs(self):
         if self._m.parent is self._m:
             self._initialize_callbacks()
@@ -1030,8 +1140,31 @@ class keypress_container(_cb_container):
     def _initialize_callbacks(self):
         def _onpress(event):
             try:
+                if self._m.parent._layout_editor._modifier_pressed:
+                    return
+
                 self._event = event
 
+                # remember keypress event in case sticky modifiers are used for
+                # click or pick callbacks
+                k = str(event.key)
+
+                if self._modifier is not None and k == "ctrl+" + self._modifier:
+                    self._modifier = None
+                    print("EOmaps: modifier released")
+                elif (
+                    k
+                    in (
+                        *self._m.cb.click._sticky_modifiers,
+                        *self._m.cb.pick._sticky_modifiers,
+                        *self._m.cb.move._sticky_modifiers,
+                    )
+                    and self._modifier != k
+                ):
+                    print("EOmaps: sticky modifier: ", k)
+                    self._modifier = k
+
+                update = False
                 for obj in self._objs:
                     # only trigger callbacks on the right layer
                     if (obj._m.layer != "all") and (
@@ -1039,7 +1172,7 @@ class keypress_container(_cb_container):
                     ):
                         continue
                     if event.key in obj.get.cbs:
-
+                        update = True
                         # do this to allow deleting callbacks with a callback
                         # otherwise modifying a dict during iteration is problematic!
                         cbs = obj.get.cbs[event.key]
@@ -1047,8 +1180,8 @@ class keypress_container(_cb_container):
                         for name in names:
                             if name in cbs:
                                 cbs[name](key=event.key)
-
-                self._m.parent.BM.update(clear=self._method)
+                if update:
+                    self._m.parent.BM.update(clear=self._method)
             except ReferenceError:
                 pass
 
