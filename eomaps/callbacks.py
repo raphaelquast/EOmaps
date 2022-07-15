@@ -313,7 +313,7 @@ class _click_callbacks(object):
         radius_crs=None,
         shape=None,
         buffer=1,
-        permanent=True,
+        permanent=False,
         n=20,
         zorder=10,
         layer=None,
