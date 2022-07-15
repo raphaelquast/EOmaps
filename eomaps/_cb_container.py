@@ -144,6 +144,21 @@ class _click_container(_cb_container):
                 - FORWARD = 9
 
             The default is 1
+        modifier : str or None
+            Define a keypress-modifier to execute the callback only if the
+            corresponding key is pressed on the keyboard.
+
+            - If None, the callback is executed if no modifier is activated.
+
+            The default is None.
+        on_motion : bool
+            !! Only relevant for "click" callbacks !!
+
+            - True: Continuously execute the callback if the mouse is moved while the
+              assigned button is pressed.
+            - False: Only execute the callback on clicks.
+
+            The default is True.
 
         For additional keyword-arguments check the doc of the callback-functions!
 
@@ -210,16 +225,22 @@ class _click_container(_cb_container):
                     - RIGHT = 3
                     - BACK = 8
                     - FORWARD = 9
-            modifier : str, list or None
+            modifier : str or None
                 Define a keypress-modifier to execute the callback only if the
                 corresponding key is pressed on the keyboard.
 
-                - If a list is provided, the callback will be executed on any of the
-                  provided keys.
-                - If None, the callback is executed if no key is pressed.
+                - If None, the callback is executed if no modifier is activated.
 
                 The default is None.
-            **kwargs :
+            on_motion : bool
+                !! Only relevant for "click" callbacks !!
+
+                - True: Continuously execute the callback if the mouse is moved while the
+                  assigned button is pressed.
+                - False: Only execute the callback on clicks.
+
+                The default is True.
+            kwargs :
                 kwargs passed to the callback-function
                 For documentation of the individual functions check the docs in `m.cb`
 
@@ -425,6 +446,13 @@ class _click_container(_cb_container):
                 - RIGHT = 3
                 - BACK = 8
                 - FORWARD = 9
+        modifier : str or None
+            Define a keypress-modifier to execute the callback only if the
+            corresponding key is pressed on the keyboard.
+
+            - If None, the callback is executed if no modifier is activated.
+
+            The default is None.
         on_motion : bool
             !! Only relevant for "click" callbacks !!
 
