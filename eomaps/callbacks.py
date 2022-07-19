@@ -831,7 +831,7 @@ class pick_callbacks(_click_callbacks):
 
     def highlight_geometry(self, permanent=False, **kwargs):
         """
-        Temporarily highlite the picked geometry.
+        Temporarily highlite the picked geometry of a GeoDataFrame.
 
         Parameters
         ----------
