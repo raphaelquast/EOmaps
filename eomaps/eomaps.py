@@ -2170,6 +2170,8 @@ class Maps(object):
         return axcb2
 
     def _update_cb_extend_pos(self):
+        if not hasattr(self, "_colorbar"):
+            return
         # update the position of the axis holding the colorbar extension arrows
         # TODO the colorbar should be merged into a single artist
         #      to avoid having to update the axes separately!
