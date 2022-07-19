@@ -146,9 +146,9 @@ class Maps(object):
 
     See Also
     --------
-    - MapsGrid : Initialize a grid of Maps objects
-    - m.new_layer : get a Maps-object that represents a new layer of a map
-    - m.copy : copy an existing Maps object
+    MapsGrid : Initialize a grid of Maps objects
+
+    Maps.new_layer : get a Maps-object that represents a new layer of a map
 
     Parameters
     ----------

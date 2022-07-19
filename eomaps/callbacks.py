@@ -869,6 +869,22 @@ class click_callbacks(_click_callbacks):
         super().__init__(*args, **kwargs)
 
 
+class move_callbacks(_click_callbacks):
+    """
+    A collection of callback functions that are executed on mouse-movement.
+    """
+
+    _cb_list = [
+        "print_to_console",
+        "annotate",
+        "mark",
+        "peek_layer",
+    ]
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+
 class keypress_callbacks:
     """
     A collection of callback functions that are executed when the assigned

@@ -2,6 +2,7 @@ from eomaps.callbacks import (
     click_callbacks,
     pick_callbacks,
     keypress_callbacks,
+    move_callbacks,
 )
 from types import SimpleNamespace
 
@@ -85,10 +86,31 @@ class _cb_container(object):
         return txt
 
     def forward_events(self, *args):
+        """
+        Forward callback-events from this Maps-object to other Maps-objects
+
+        (e.g. share events one-way)
+
+        Parameters
+        ----------
+        args : eomaps.Maps
+            The Maps-objects that should execute the callback.
+        """
         for m in args:
             self._fwd_cbs[id(m)] = m
 
     def share_events(self, *args):
+        """
+        Share callback-events between this Maps-object and all other Maps-objects
+
+        (e.g. share events both ways)
+
+        Parameters
+        ----------
+        args : eomaps.Maps
+            The Maps-objects that should execute the callback.
+        """
+
         for m1 in (self._m, *args):
             for m2 in (self._m, *args):
                 if m1 is not m2:
@@ -96,8 +118,7 @@ class _cb_container(object):
 
     def add_temporary_artist(self, artist):
         """
-        make an artist temporary
-        (e.g. remove it from the map at the next event)
+        Make an artist temporary (remove it from the map at the next event)
 
         Parameters
         ----------
@@ -276,6 +297,10 @@ class _click_container(_cb_container):
             )
 
     class _get:
+        """
+        Accessor for objects generated/retrieved by callbacks.
+        """
+
         def __init__(self, parent):
             self.m = parent._m
             self.cb = parent._cb
@@ -324,13 +349,14 @@ class _click_container(_cb_container):
 
     def remove(self, callback=None):
         """
-        remove an attached callback from the figure
+        Remove previously attached callbacks from the map.
 
         Parameters
         ----------
-        callback : int, str or tuple
-            if str: the name of the callback to remove
-                    (`<function_name>_<count>__<layer>__<double/single>__<button_ID>`)
+        callback : str
+            the name of the callback to remove
+            (e.g. the return-value of `m.cb.<method>.attach.<callback>()`)
+
         """
         # remove motion callbacks connected to click-callbacks
         if self._method == "click":
@@ -562,6 +588,9 @@ class cb_click_container(_click_container):
     """
     Callbacks that are executed if you click anywhere on the Map.
 
+    NOTE: you can use "on_motion=False" when attaching a callback to avoid triggering
+    the callback if the mouse is moved while a button is pressed.
+
     Methods
     -------
 
@@ -781,7 +810,7 @@ class cb_click_container(_click_container):
 
 class cb_move_container(cb_click_container):
     """
-    Callbacks that are executed if you move the mouse while holding down a button.
+    Callbacks that are executed if you move the mouse without holding down a button.
 
     Methods
     -------
@@ -1468,7 +1497,7 @@ class cb_container:
 
         self._move = cb_move_container(
             m=self._m,
-            cb_cls=click_callbacks,
+            cb_cls=move_callbacks,
             method="move",
             button_down=False,
             default_button=None,
