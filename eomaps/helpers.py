@@ -1321,16 +1321,15 @@ class BlitManager:
 
     def _clear_temp_artists(self, method, forward=True):
         # clear artists from connected methods
-        if method == "move" and forward:
+        if method == "_click_move" and forward:
             self._clear_temp_artists("click", False)
         elif method == "click" and forward:
-            self._clear_temp_artists("move", False)
+            self._clear_temp_artists("_click_move", False)
         elif method == "pick" and forward:
-            self._clear_temp_artists("click", False)
-            self._clear_temp_artists("move", False)
+            self._clear_temp_artists("click", True)
         elif method == "on_layer_change" and forward:
             self._clear_temp_artists("pick", False)
-            self._clear_temp_artists("click", False)
+            self._clear_temp_artists("click", True)
             self._clear_temp_artists("move", False)
 
         if method == "on_layer_change":

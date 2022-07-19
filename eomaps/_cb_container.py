@@ -17,9 +17,13 @@ import numpy as np
 class _cb_container(object):
     """base-class for callback containers"""
 
-    def __init__(self, m, cb_class=None, method="click"):
+    def __init__(self, m, cb_class=None, method="click", tmp_artists=None):
         self._m = m
-        self._temporary_artists = []
+
+        if tmp_artists is None:
+            self._temporary_artists = []
+        else:
+            self._temporary_artists = tmp_artists
 
         self._cb = cb_class(m, self._temporary_artists)
         self._cb_list = cb_class._cb_list
@@ -116,14 +120,17 @@ class _click_container(_cb_container):
 
     """
 
-    def __init__(self, m, cb_cls=None, method="pick"):
-        super().__init__(m, cb_cls, method)
+    def __init__(self, m, cb_cls=None, method="pick", default_button=1, **kwargs):
+        super().__init__(m, cb_cls, method, **kwargs)
 
         # a dict to identify connected _move callbacks
         # (e.g. to remove "_move" and "click" cbs in one go)
         self._connected_move_cbs = dict()
 
         self._sticky_modifiers = []
+
+        # the default button to use when attaching callbacks
+        self._default_button = default_button
 
     class _attach:
         """
@@ -143,7 +150,7 @@ class _click_container(_cb_container):
                 - BACK = 8
                 - FORWARD = 9
 
-            The default is 1
+            The default is None in which case 1 (e.g. LEFT is used)
         modifier : str or None
             Define a keypress-modifier to execute the callback only if the
             corresponding key is pressed on the keyboard.
@@ -196,7 +203,7 @@ class _click_container(_cb_container):
                     ),
                 )
 
-        def __call__(self, f, double_click=False, button=1, modifier=None, **kwargs):
+        def __call__(self, f, double_click=False, button=None, modifier=None, **kwargs):
             """
             add a custom callback-function to the map
 
@@ -225,6 +232,7 @@ class _click_container(_cb_container):
                     - RIGHT = 3
                     - BACK = 8
                     - FORWARD = 9
+                The default is None in which case 1 (e.g. the LEFT button) is used
             modifier : str or None
                 Define a keypress-modifier to execute the callback only if the
                 corresponding key is pressed on the keyboard.
@@ -250,6 +258,10 @@ class _click_container(_cb_container):
                 the ID of the attached callback
 
             """
+
+            if button is None:
+                button = self._parent._default_button
+
             if self._parent._method == "pick":
                 assert (
                     self._parent._m.figure.coll is not None
@@ -324,7 +336,7 @@ class _click_container(_cb_container):
         if self._method == "click":
             if callback in self._connected_move_cbs:
                 for i in self._connected_move_cbs[callback]:
-                    self._m.cb._move.remove(i)
+                    self._m.cb._click_move.remove(i)
 
         if callback is not None:
             s = callback.split("__")
@@ -387,14 +399,14 @@ class _click_container(_cb_container):
         self._sticky_modifiers = list(map(str, args))
 
         if self._method == "click":
-            self._m.cb._move._sticky_modifiers = args
+            self._m.cb._click_move._sticky_modifiers = args
 
     def _add_callback(
         self,
         *args,
         callback=None,
         double_click=False,
-        button=1,
+        button=None,
         modifier=None,
         **kwargs,
     ):
@@ -446,6 +458,7 @@ class _click_container(_cb_container):
                 - RIGHT = 3
                 - BACK = 8
                 - FORWARD = 9
+            The default is None in which case 1 (e.g. LEFT is used)
         modifier : str or None
             Define a keypress-modifier to execute the callback only if the
             corresponding key is pressed on the keyboard.
@@ -472,6 +485,8 @@ class _click_container(_cb_container):
             (to remove the callback, use `m.cb.remove(cbname)`)
 
         """
+        if button is None:
+            button = self._default_button
 
         if self._method == "pick":
             assert self._m.figure.coll is not None, (
@@ -484,7 +499,7 @@ class _click_container(_cb_container):
         # set on_motion True for "click" callbacks and False otherwise
         on_motion = kwargs.pop("on_motion", True if self._method == "click" else False)
         if self._method == "click" and on_motion is True:
-            movecb_name = self._m.cb._move._add_callback(
+            movecb_name = self._m.cb._click_move._add_callback(
                 *args,
                 callback=callback,
                 double_click=double_click,
@@ -670,8 +685,12 @@ class cb_click_container(_click_container):
                 # execute onclick on the maps object that belongs to the clicked axis
                 # and forward the event to all forwarded maps-objects
                 for obj in self._objs:
+                    # clear temporary artists before executing new callbacks to avoid
+                    # having old artists around when callbacks are triggered again
+                    obj._clear_temporary_artists()
+                    self._m.BM._clear_temp_artists(self._method)
                     obj._onclick(event)
-                    obj._m.BM._after_update_actions.append(obj._clear_temporary_artists)
+
                     # forward callbacks to the connected maps-objects
                     obj._fwd_cb(event)
 
@@ -693,6 +712,9 @@ class cb_click_container(_click_container):
                 # execute onclick on the maps object that belongs to the clicked axis
                 # and forward the event to all forwarded maps-objects
                 for obj in self._objs:
+                    # don't clear temporary artists in here since we want
+                    # click (or click+move) artists to remain on the plot when the
+                    # button is released!
                     obj._onrelease(event)
                     # forward callbacks to the connected maps-objects
                     obj._fwd_cb(event)
@@ -760,9 +782,6 @@ class cb_click_container(_click_container):
 class cb_move_container(cb_click_container):
     """
     Callbacks that are executed if you move the mouse while holding down a button.
-    (used internally to make click-callbacks motion-sensitive, but it can be
-     used just as any other callback with `m.cb._move.attach...`)
-
 
     Methods
     -------
@@ -785,10 +804,12 @@ class cb_move_container(cb_click_container):
 
     # this is just a copy of cb_click_container to manage motion-sensitive callbacks
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, button_down=False, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
         self._cid_motion_event = None
+
+        self._button_down = button_down
 
     def _init_cbs(self):
         if self._m.parent is self._m:
@@ -806,8 +827,9 @@ class cb_move_container(cb_click_container):
 
                 # only execute movecb if a mouse-button is holded down
                 # and only if the motion is happening inside the axes
-                if not event.button:  # or (event.inaxes != self._m.figure.ax):
-                    return
+                if self._button_down:
+                    if not event.button:  # or (event.inaxes != self._m.figure.ax):
+                        return
 
                 # ignore callbacks while dragging axes
                 if self._m._ignore_cb_events:
@@ -821,8 +843,12 @@ class cb_move_container(cb_click_container):
                 # execute onclick on the maps object that belongs to the clicked axis
                 # and forward the event to all forwarded maps-objects
                 for obj in self._objs:
+                    # clear temporary artists before executing new callbacks to avoid
+                    # having old artists around when callbacks are triggered again
+                    obj._clear_temporary_artists()
+                    self._m.BM._clear_temp_artists(self._method)
                     obj._onclick(event)
-                    obj._m.BM._after_update_actions.append(obj._clear_temporary_artists)
+
                     # forward callbacks to the connected maps-objects
                     obj._fwd_cb(event)
 
@@ -1045,8 +1071,18 @@ class cb_pick_container(_click_container):
                 if not self._artist is event.artist:
                     return
 
+                # make sure temporary artists are cleared before executing new callbacks
+                # to avoid having old artists around when callbacks are triggered again
+                self._m.BM._clear_temp_artists(self._method)
+
                 self._event = event
                 # check if the artists has a custom picker assigned
+
+                # clear temporary artists before executing new callbacks to avoid
+                # having old artists around when callbacks are triggered again
+                for obj in self._objs:
+                    obj._clear_temporary_artists()
+                self._m.BM._clear_temp_artists(self._method)
 
                 # execute "_onpick" on the maps-object that belongs to the clicked axes
                 # and forward the event to all forwarded maps-objects
@@ -1177,9 +1213,11 @@ class keypress_container(_cb_container):
                 # click or pick callbacks
                 k = str(event.key)
 
-                if self._modifier is not None and k == "ctrl+" + self._modifier:
+                if self._modifier is not None and (
+                    k == "ctrl+" + self._modifier or k == "escape"
+                ):
                     self._modifier = None
-                    print("EOmaps: modifier released")
+                    print("EOmaps: sticky modifier: None")
                 elif (
                     k
                     in (
@@ -1412,18 +1450,28 @@ class cb_container:
     def __init__(self, m):
         self._m = m
 
-        self._methods = ["click", "move", "keypress"]
+        self._methods = ["click", "move", "keypress", "_click_move"]
 
         self._click = cb_click_container(
             m=self._m,
             cb_cls=click_callbacks,
             method="click",
         )
+        # a move-container that shares temporary artists with the click-container
+        self._click_move = cb_move_container(
+            m=self._m,
+            cb_cls=click_callbacks,
+            method="_click_move",
+            tmp_artists=self._click._temporary_artists,
+            button_down=True,
+        )
 
         self._move = cb_move_container(
             m=self._m,
             cb_cls=click_callbacks,
             method="move",
+            button_down=False,
+            default_button=None,
         )
 
         self._pick = cb_pick_container(

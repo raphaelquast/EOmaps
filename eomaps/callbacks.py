@@ -662,7 +662,7 @@ class _click_callbacks(object):
 
         def doit():
             self.m.BM._artists_to_clear["click"].append(marker)
-            self.m.BM._artists_to_clear["move"].append(marker)
+            self.m.BM._artists_to_clear["_click_move"].append(marker)
             self.m.BM._artists_to_clear["on_layer_change"].append(marker)
 
         self.m.BM._after_restore_actions.append(doit)
