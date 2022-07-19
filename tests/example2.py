@@ -47,8 +47,8 @@ mg.m_0_2.set_classify_specs(
 mg.plot_map()
 mg.add_colorbar()
 
-# clip the ocean shape by the plot-extent to avoid re-projection issues
-mg.add_feature.preset.ocean()
+# use cartopy to reproject the ocean to avoid glitches
+mg.add_feature.preset.ocean(reproject="cartopy")
 mg.add_feature.preset.land()
 mg.add_feature.preset.coastline(layer="all")  # add the coastline to all layers
 
