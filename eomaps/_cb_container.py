@@ -195,9 +195,11 @@ class _click_container(_cb_container):
         Get a (temporary) annotation on a LEFT-double-click:
 
             >>> m.cb.click.attach.annotate(double_click=True, button=1, permanent=False)
+
         Permanently color LEFT-clicked pixels red with a black border:
 
             >>> m.cb.pick.attach.mark(facecolor="r", edgecolor="k", permanent=True)
+
         Attach a customly defined callback
 
             >>> def some_callback(self, asdf, **kwargs):
@@ -208,6 +210,7 @@ class _click_container(_cb_container):
             >>>     print("the plot-crs is:", self.crs_plot)
 
             >>> m.cb.pick.attach(some_callback, double_click=False, button=1, asdf=1)
+
         """
 
         def __init__(self, parent):
@@ -253,6 +256,7 @@ class _click_container(_cb_container):
                     - RIGHT = 3
                     - BACK = 8
                     - FORWARD = 9
+
                 The default is None in which case 1 (e.g. the LEFT button) is used
             modifier : str or None
                 Define a keypress-modifier to execute the callback only if the
@@ -397,7 +401,7 @@ class _click_container(_cb_container):
         """
         Define keys on the keyboard that should be treated as "sticky modifiers".
 
-        "sticky modifiers" are used in click- and pick- callbacks to define
+        "sticky modifiers" are used in "click"- "pick"- and "move" callbacks to define
         modifiers that should remain active even if the corresponding key on the
         keyboard is released.
 
@@ -588,7 +592,9 @@ class cb_click_container(_click_container):
     """
     Callbacks that are executed if you click anywhere on the Map.
 
-    NOTE: you can use "on_motion=False" when attaching a callback to avoid triggering
+    NOTE
+    ----
+    You can use `on_motion=False` when attaching a callback to avoid triggering
     the callback if the mouse is moved while a button is pressed.
 
     Methods
@@ -902,9 +908,9 @@ class cb_pick_container(_click_container):
 
     Note
     ----
-    you can set a threshold for the default picker via the `pick_distance`
-    `m.plot_map(pick_distance=20)` to specify the maximal distance (in pixels)
-    that is used to identify the closest datapoint
+    The threshold for the default picker can be set via the `pick_distance` argument.
+    Use `m.plot_map(pick_distance=20)` to specify the maximal distance (in pixels)
+    that is used to identify the closest datapoint.
 
     Methods
     --------
@@ -1210,6 +1216,8 @@ class keypress_container(_cb_container):
     forward_events : forward events to connected maps-objects
 
     share_events : share events between connected maps-objects (e.g. forward both ways)
+
+    set_sticky_modifiers : define keypress-modifiers that remain active after release
 
     """
 
