@@ -2307,6 +2307,14 @@ class Maps(object):
         else:
             raise TypeError(f"EOmaps: '{how}' is not a valid clipping method")
 
+        clip_shp = clip_shp.buffer(0)  # use this to make sure the geometry is valid
+
+        # add 1% of the extent-diameter as buffer
+        bnd = clip_shp.boundary.bounds
+        d = np.sqrt((bnd.maxx - bnd.minx) ** 2 + (bnd.maxy - bnd.miny) ** 2)
+        clip_shp = clip_shp.buffer(d / 100)
+
+        # clip the geo-dataframe with the buffered clipping shape
         clipgdf = gdf.clip(clip_shp)
 
         if how.endswith("_invert"):
@@ -2465,10 +2473,11 @@ class Maps(object):
 
         try:
             # explode the GeoDataFrame to avoid picking multi-part geometries
-            gdf = gdf.explode(index_parts=False)
+            gdf = gdf[gdf.is_valid].explode(index_parts=False)
         except Exception:
             # geopandas sometimes has problems exploding geometries...
             # if it does not work, just continue with the Multi-geometries!
+            print("EOmaps: Exploding geometries did not work!")
             pass
 
         if clip:
