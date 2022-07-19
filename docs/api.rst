@@ -692,56 +692,6 @@ In addition, each callback-container supports the following useful methods:
     add_temporary_artist
 
 
-👾 Using modifiers for pick- click- and move callbacks
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-It is possible to trigger ``pick``, ``click`` or ``move`` callbacks **only if a specific key is pressed on the keyboard**.
-
-This is achieved by specifying a ``modifier`` when attaching a callback, e.g.:
-
-.. code-block:: python
-
-    m = Maps()
-    m.add_feature.preset.coastline()
-    # a callback that is executed if NO modifier is pressed
-    m.cb.move.attach.mark(radius=5)
-    # a callback that is executed if 1 is pressed while moving the mouse
-    m.cb.move.attach.mark(modifier="1", radius=10, fc="r", ec="g")
-    # a callback that is executed if 2 is pressed while moving the mouse
-    m.cb.move.attach.mark(modifier="2", radius=15, fc="none", ec="b")
-
-
-To keep the last pressed modifier active until a new modifier is activated,
-you can make it "sticky" by using ``m.cb.move.set_sticky_modifiers()``.
-
-- "Sticky modifiers" remain activated until
-
-  - A new (sticky) modifier is activated
-  - ``ctrl + <current (sticky) modifier>`` is pressed
-  - ``escape`` is pressed
-
-NOTE: sticky modifiers are defined for each callback method individually!
-(e.g. sticky modifiers are unique for click, pick and move callbacks)
-
-.. code-block:: python
-
-    m = Maps()
-    m.add_feature.preset.coastline()
-
-    # a callback that is executed if 1 is pressed while clicking on the map
-    m.cb.click.attach.annotate(modifier="1", text="modifier 1 active")
-    # a callback that is executed if 2 is pressed while clicking on the map
-    m.cb.click.attach.annotate(modifier="2", text="modifier 2 active")
-
-    # make the modifiers 1 and 2 sticky for click callbacks
-    m.cb.click.set_sticky_modifiers("1", "2")
-
-    # note that the modifier 1 is not sticky for move callbacks!
-    # m.cb.move.set_sticky_modifiers("1")  # (uncomment to make it sticky)
-    m.cb.move.attach.mark(radius=5)
-    m.cb.move.attach.mark(modifier="1", radius=5, fc="r")
-
-
 Pre-defined click, pick and move callbacks
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -826,6 +776,56 @@ Custom callback functions can be attached to the map via:
 
 - ❗ for click callbacks the kwargs ``ID`` and ``val`` are set to ``None``!
 - ❗ for keypress callbacks the kwargs ``ID`` and ``val`` and ``pos`` are set to ``None``!
+
+
+👾 Using modifiers for pick- click- and move callbacks
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+It is possible to trigger ``pick``, ``click`` or ``move`` callbacks **only if a specific key is pressed on the keyboard**.
+
+This is achieved by specifying a ``modifier`` when attaching a callback, e.g.:
+
+.. code-block:: python
+
+    m = Maps()
+    m.add_feature.preset.coastline()
+    # a callback that is executed if NO modifier is pressed
+    m.cb.move.attach.mark(radius=5)
+    # a callback that is executed if 1 is pressed while moving the mouse
+    m.cb.move.attach.mark(modifier="1", radius=10, fc="r", ec="g")
+    # a callback that is executed if 2 is pressed while moving the mouse
+    m.cb.move.attach.mark(modifier="2", radius=15, fc="none", ec="b")
+
+
+To keep the last pressed modifier active until a new modifier is activated,
+you can make it "sticky" by using ``m.cb.move.set_sticky_modifiers()``.
+
+- "Sticky modifiers" remain activated until
+
+  - A new (sticky) modifier is activated
+  - ``ctrl + <current (sticky) modifier>`` is pressed
+  - ``escape`` is pressed
+
+NOTE: sticky modifiers are defined for each callback method individually!
+(e.g. sticky modifiers are unique for click, pick and move callbacks)
+
+.. code-block:: python
+
+    m = Maps()
+    m.add_feature.preset.coastline()
+
+    # a callback that is executed if 1 is pressed while clicking on the map
+    m.cb.click.attach.annotate(modifier="1", text="modifier 1 active")
+    # a callback that is executed if 2 is pressed while clicking on the map
+    m.cb.click.attach.annotate(modifier="2", text="modifier 2 active")
+
+    # make the modifiers 1 and 2 sticky for click callbacks
+    m.cb.click.set_sticky_modifiers("1", "2")
+
+    # note that the modifier 1 is not sticky for move callbacks!
+    # m.cb.move.set_sticky_modifiers("1")  # (uncomment to make it sticky)
+    m.cb.move.attach.mark(radius=5)
+    m.cb.move.attach.mark(modifier="1", radius=5, fc="r")
 
 
 Picking a dataset without plotting it first
