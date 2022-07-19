@@ -1113,10 +1113,6 @@ class cb_pick_container(_click_container):
                 self._event = event
                 # check if the artists has a custom picker assigned
 
-                # clear temporary artists before executing new callbacks to avoid
-                # having old artists around when callbacks are triggered again
-                for obj in self._objs:
-                    obj._clear_temporary_artists()
                 self._m.BM._clear_temp_artists(self._method)
 
                 # execute "_onpick" on the maps-object that belongs to the clicked axes
