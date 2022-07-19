@@ -45,29 +45,35 @@ m2.plot_map(cmap="magma")
 m3 = m.new_layer(copy_classify_specs=False)
 m3.data_specs.data = data_OK.sample(1000)
 m3.set_shape.ellipses(radius=25000, radius_crs=3857)
-# plot the map and assign a "dynamic_layer_idx" to allow dynamic updates of the collection
 
+# plot the map and set dynamic=True to allow continuous updates of the collection
 m3.plot_map(cmap="gist_ncar", edgecolor="w", linewidth=0.25, layer=10, dynamic=True)
 
-# --------- define a callback that will change the position and data-values of the additional layer
+# --------- define a callback that will change the values of the previously plotted dataset
 #           NOTE: this is not possible for the shapes:  "shade_points" and "shade_raster" !
 def callback(m, **kwargs):
-    selection = np.random.randint(0, len(m3.data), 1000)
+    selection = np.random.randint(0, len(m.data), 1000)
     m.figure.coll.set_array(data_OK.param.iloc[selection])
 
 
-# attach the callback to the second Maps object such that it triggers when we click on the masked-area
-m2.cb.click.attach(callback, m=m3)
+# attach the callback (to update the dataset plotted on the Maps object "m3")
+m.cb.click.attach(callback, m=m3)
 
 # --------- add some basic overlays from NaturalEarth
 
-m.add_feature.preset.coastline("10m", zorder=101)
-m.add_feature.physical_10m.lakes(ec="none", fc="b", zorder=100)
+# clip the features by the current map extent and use geopandas for reprojections
+# since it works for the selected map-extent and it is usually faster than cartopy
+args = dict(reproject="gpd", clip="extent")
+
+m.add_feature.preset.coastline("10m", zorder=101, **args)
+m.add_feature.physical_10m.lakes(ec="none", fc="b", zorder=100, **args)
 m.add_feature.physical_10m.rivers_lake_centerlines(
-    ec="b", fc="none", lw=0.5, zorder=100
+    ec="b", fc="none", lw=0.5, zorder=100, **args
 )
-m.add_feature.cultural_10m.admin_0_countries(ec=".75", fc="none", lw=0.5, zorder=100)
-m.add_feature.cultural_10m.urban_areas(ec="none", fc="r")
+m.add_feature.cultural_10m.admin_0_countries(
+    ec=".75", fc="none", lw=0.5, zorder=100, **args
+)
+m.add_feature.cultural_10m.urban_areas(ec="none", fc="r", **args)
 
 # add a customized legend
 leg = m.figure.ax.legend(
