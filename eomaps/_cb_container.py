@@ -674,20 +674,23 @@ class cb_click_container(_click_container):
         cbs = self.get.cbs["release"]
 
         # check for keypress-modifiers
-        if event.key is not None:
-            button_modifier = f"{event.button}__{event.key}"
-        elif (str(event.key) in self._sticky_modifiers) and (
-            self._m.cb.keypress._modifier is not None
+        if (
+            event.key is None
+            and self._sticky_modifiers
+            and (self._m.cb.keypress._modifier is not None)
         ):
             # in case sticky_modifiers are defined, use the last pressed modifier
-            button_modifier = f"{event.button}__{self._m.cb.keypress._modifier}"
+            event_key = self._m.cb.keypress._modifier
         else:
-            button_modifier = event.button
+            event_key = event.key
+
+        button_modifier = f"{event.button}__{event_key}"
 
         if button_modifier in cbs:
+            clickdict = self._get_clickdict(event)
             bcbs = cbs[button_modifier]
             for cb in bcbs.values():
-                cb()
+                cb(**clickdict)
 
     def _reset_cids(self):
         if self._cid_button_press_event:
@@ -718,6 +721,7 @@ class cb_click_container(_click_container):
 
                 # execute onclick on the maps object that belongs to the clicked axis
                 # and forward the event to all forwarded maps-objects
+
                 for obj in self._objs:
                     # clear temporary artists before executing new callbacks to avoid
                     # having old artists around when callbacks are triggered again
@@ -743,6 +747,9 @@ class cb_click_container(_click_container):
                 ) and self._m.figure.f.canvas.toolbar.mode != "":
                     return
 
+                # clear temporary click artists when the mouse-button is released
+                self._m.BM._clear_temp_artists(self._method)
+
                 # execute onclick on the maps object that belongs to the clicked axis
                 # and forward the event to all forwarded maps-objects
                 for obj in self._objs:
@@ -752,6 +759,7 @@ class cb_click_container(_click_container):
                     obj._onrelease(event)
                     # forward callbacks to the connected maps-objects
                     obj._fwd_cb(event)
+
             except ReferenceError:
                 # ignore errors caused by no-longer existing weakrefs
                 pass
@@ -862,9 +870,17 @@ class cb_move_container(cb_click_container):
                 # and only if the motion is happening inside the axes
                 if self._button_down:
                     if not event.button:  # or (event.inaxes != self._m.figure.ax):
+                        # always clear temporary move-artists
+                        for obj in self._objs:
+                            obj._clear_temporary_artists()
+                        self._m.BM._clear_temp_artists(self._method)
                         return
                 else:
                     if event.button:  # or (event.inaxes != self._m.figure.ax):
+                        # always clear temporary move-artists
+                        for obj in self._objs:
+                            obj._clear_temporary_artists()
+                        self._m.BM._clear_temp_artists(self._method)
                         return
 
                 # ignore callbacks while dragging axes
