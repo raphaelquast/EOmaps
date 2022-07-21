@@ -766,7 +766,7 @@ class LayoutEditor:
         self._filepath = filepath
 
         # all ordinary callbacks will not execute if" self._modifier_pressed" is True!
-        print("EOmaps: Activating layout-editor mode...")
+        print("EOmaps: Activating layout-editor mode (press 'esc' to exit)")
         if filepath:
             print("EOmaps: On exit, the layout will be saved to:\n       ", filepath)
 
