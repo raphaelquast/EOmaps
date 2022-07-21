@@ -828,8 +828,8 @@ NOTE: sticky modifiers are defined for each callback method individually!
     m.cb.move.attach.mark(modifier="1", radius=5, fc="r")
 
 
-Picking a dataset without plotting it first
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+📍 Picking a dataset without plotting it first
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 It is possible to attach ``pick`` callbacks to a ``Maps`` object without plotting the data first
 by using ``m.make_dataset_pickable()``.
 
