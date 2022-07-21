@@ -638,7 +638,6 @@ class cb_click_container(_click_container):
         return clickdict
 
     def _onclick(self, event):
-
         clickdict = self._get_clickdict(event)
 
         if event.dblclick:
@@ -859,11 +858,13 @@ class cb_move_container(cb_click_container):
         def movecb(event):
             try:
                 self._event = event
-
                 # only execute movecb if a mouse-button is holded down
                 # and only if the motion is happening inside the axes
                 if self._button_down:
                     if not event.button:  # or (event.inaxes != self._m.figure.ax):
+                        return
+                else:
+                    if event.button:  # or (event.inaxes != self._m.figure.ax):
                         return
 
                 # ignore callbacks while dragging axes
