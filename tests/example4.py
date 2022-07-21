@@ -175,10 +175,11 @@ _ = m.figure.f.text(
     bbox=dict(facecolor="w", alpha=0.75),
 )
 
-m.cb.click.attach.mark(
+# add a basic "target-indicator" on mouse-movement
+m.cb.move.attach.mark(
     fc="r", ec="none", radius=10000, shape="geod_circles", permanent=False
 )
-m.cb.click.attach.mark(
+m.cb.move.attach.mark(
     fc="none", ec="r", radius=50000, shape="geod_circles", permanent=False
 )
 
