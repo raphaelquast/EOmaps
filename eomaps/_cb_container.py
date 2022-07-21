@@ -871,16 +871,18 @@ class cb_move_container(cb_click_container):
                 if self._button_down:
                     if not event.button:  # or (event.inaxes != self._m.figure.ax):
                         # always clear temporary move-artists
-                        for obj in self._objs:
-                            obj._clear_temporary_artists()
-                        self._m.BM._clear_temp_artists(self._method)
+                        if self._method == "move":
+                            for obj in self._objs:
+                                obj._clear_temporary_artists()
+                            self._m.BM._clear_temp_artists(self._method)
                         return
                 else:
                     if event.button:  # or (event.inaxes != self._m.figure.ax):
                         # always clear temporary move-artists
-                        for obj in self._objs:
-                            obj._clear_temporary_artists()
-                        self._m.BM._clear_temp_artists(self._method)
+                        if self._method == "move":
+                            for obj in self._objs:
+                                obj._clear_temporary_artists()
+                            self._m.BM._clear_temp_artists(self._method)
                         return
 
                 # ignore callbacks while dragging axes
