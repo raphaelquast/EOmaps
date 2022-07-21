@@ -21,8 +21,9 @@ m.set_shape.rectangles()
 m.shape.radius = (m.shape.radius[0] * 2, m.shape.radius[1])
 
 m.set_classify_specs(scheme="EqualInterval", k=5)
-m.add_feature.preset.ocean()  # add ocean-coloring in the background
-m.add_feature.preset.coastline()  # add coastlines on top
+# add ocean-coloring in the background and clip by extent to avoid re-projection issues
+m.add_feature.preset.ocean(clip="extent")
+m.add_feature.preset.coastline(clip="extent")  # add coastlines on top
 m.plot_map()
 
 # --------- attach pre-defined CALLBACK functions ---------
@@ -175,10 +176,11 @@ _ = m.figure.f.text(
     bbox=dict(facecolor="w", alpha=0.75),
 )
 
-m.cb.click.attach.mark(
+# add a basic "target-indicator" on mouse-movement
+m.cb.move.attach.mark(
     fc="r", ec="none", radius=10000, shape="geod_circles", permanent=False
 )
-m.cb.click.attach.mark(
+m.cb.move.attach.mark(
     fc="none", ec="r", radius=50000, shape="geod_circles", permanent=False
 )
 

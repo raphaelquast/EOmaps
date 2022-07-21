@@ -313,7 +313,7 @@ class _click_callbacks(object):
         radius_crs=None,
         shape=None,
         buffer=1,
-        permanent=True,
+        permanent=False,
         n=20,
         zorder=10,
         layer=None,
@@ -662,7 +662,7 @@ class _click_callbacks(object):
 
         def doit():
             self.m.BM._artists_to_clear["click"].append(marker)
-            self.m.BM._artists_to_clear["move"].append(marker)
+            self.m.BM._artists_to_clear["_click_move"].append(marker)
             self.m.BM._artists_to_clear["on_layer_change"].append(marker)
 
         self.m.BM._after_restore_actions.append(doit)
@@ -831,7 +831,7 @@ class pick_callbacks(_click_callbacks):
 
     def highlight_geometry(self, permanent=False, **kwargs):
         """
-        Temporarily highlite the picked geometry.
+        Temporarily highlite the picked geometry of a GeoDataFrame.
 
         Parameters
         ----------
@@ -863,6 +863,22 @@ class click_callbacks(_click_callbacks):
         "peek_layer",
         "clear_annotations",
         "clear_markers",
+    ]
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+
+class move_callbacks(_click_callbacks):
+    """
+    A collection of callback functions that are executed on mouse-movement.
+    """
+
+    _cb_list = [
+        "print_to_console",
+        "annotate",
+        "mark",
+        "peek_layer",
     ]
 
     def __init__(self, *args, **kwargs):

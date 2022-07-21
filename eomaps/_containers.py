@@ -1050,6 +1050,7 @@ class NaturalEarth_features(object):
             if str(m.crs_plot.__class__.__name__) in [
                 "Stereographic",
                 "Orthographic",
+                "RotatedPole",
             ]:
                 method = "cartopy"
             else:

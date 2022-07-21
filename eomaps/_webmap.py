@@ -1142,7 +1142,6 @@ class _xyz_tile_service:
 # The only changes are that user-interaction is handled internally by EOmaps
 # instead of using the self.user_is_interacting sentinel.
 
-# To keep changes clear, original code is kept in-place but commented out
 # ------------------------------------------------------------------------------
 
 from matplotlib.image import AxesImage
@@ -1167,19 +1166,8 @@ class SlippyImageArtist_NEW(AxesImage):
         super().__init__(ax, **kwargs)
         self.cache = []
 
-        # ax.figure.canvas.mpl_connect('button_press_event', self.on_press)
-        # ax.figure.canvas.mpl_connect('button_release_event', self.on_release)
-
         ax.callbacks.connect("xlim_changed", self.on_xlim)
-
-        # self.on_release()
-
-    # def on_press(self, event=None):
-    #     self.user_is_interacting = True
-
-    # def on_release(self, event=None):
-    #     self.user_is_interacting = False
-    #     self.stale = True
+        self._prev_extent = (0, 0)
 
     def on_xlim(self, *args, **kwargs):
         self.stale = True
@@ -1191,22 +1179,21 @@ class SlippyImageArtist_NEW(AxesImage):
     def draw(self, renderer, *args, **kwargs):
         if not self.get_visible():
             return
+
         try:
             ax = self.axes
             window_extent = ax.get_window_extent()
             [x1, y1], [x2, y2] = ax.viewLim.get_points()
-            # if not self.user_is_interacting:
-            #     located_images = self.raster_source.fetch_raster(
-            #         ax.projection, extent=[x1, x2, y1, y2],
-            #         target_resolution=(window_extent.width, window_extent.height))
-            #     self.cache = located_images
 
-            located_images = self.raster_source.fetch_raster(
-                ax.projection,
-                extent=[x1, x2, y1, y2],
-                target_resolution=(window_extent.width, window_extent.height),
-            )
-            self.cache = located_images
+            if self._prev_extent != (x1, x2, y1, y2) or len(self.cache) == 0:
+                # only re-fetch tiles if the extent has changed
+                located_images = self.raster_source.fetch_raster(
+                    ax.projection,
+                    extent=[x1, x2, y1, y2],
+                    target_resolution=(window_extent.width, window_extent.height),
+                )
+                self.cache = located_images
+                self._prev_extent = (x1, x2, y1, y2)
 
             for img, extent in self.cache:
                 self.set_array(img)
@@ -1214,7 +1201,7 @@ class SlippyImageArtist_NEW(AxesImage):
                     self.set_extent(extent)
                 super().draw(renderer, *args, **kwargs)
 
-            self.set_visible(True)
+            self.stale = False
         except:
             print("EOmaps: ... could not fetch WebMap service")
 

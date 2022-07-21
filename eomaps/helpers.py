@@ -766,7 +766,7 @@ class LayoutEditor:
         self._filepath = filepath
 
         # all ordinary callbacks will not execute if" self._modifier_pressed" is True!
-        print("EOmaps: Activating layout-editor mode...")
+        print("EOmaps: Activating layout-editor mode (press 'esc' to exit)")
         if filepath:
             print("EOmaps: On exit, the layout will be saved to:\n       ", filepath)
 
@@ -1108,7 +1108,6 @@ class BlitManager:
         # add this to the zorder of the overlay-artists prior to plotting
         # to ensure that they appear on top of other artists
         overlay_zorder_bias = 1000
-
         cv = self.canvas
         if layer is None:
             layer = self.bg_layer
@@ -1154,7 +1153,6 @@ class BlitManager:
         # while we re-draw the artists
 
         cv.mpl_disconnect(self.cid)
-
         if not self._m._layout_editor._modifier_pressed:
             # make all artists of the corresponding layer visible
             for l in self._bg_artists:
@@ -1163,7 +1161,6 @@ class BlitManager:
                     # make all artists of other layers are invisible
                     for art in self._bg_artists[l]:
                         art.set_visible(False)
-
             for art in allartists:
                 if art not in self._hidden_axes:
                     art.set_visible(True)
@@ -1173,6 +1170,14 @@ class BlitManager:
 
         if overlay_layers:
             self._bg_layers[overlay_name] = cv.copy_from_bbox(bbox)
+            # make all overlay-artists invisible again
+            # (to avoid re-fetching webmap services after an overlay action etc.)
+            for l in overlay_layers:
+                if l == self.bg_layer:
+                    continue
+                for art in self._bg_artists[l]:
+                    art.set_visible(False)
+
         else:
             self._bg_layers[layer] = cv.copy_from_bbox(bbox)
 
@@ -1186,7 +1191,6 @@ class BlitManager:
     def on_draw(self, event):
         """Callback to register with 'draw_event'."""
         cv = self.canvas
-
         if event is not None:
             if event.canvas != cv:
                 raise RuntimeError
@@ -1321,16 +1325,15 @@ class BlitManager:
 
     def _clear_temp_artists(self, method, forward=True):
         # clear artists from connected methods
-        if method == "move" and forward:
+        if method == "_click_move" and forward:
             self._clear_temp_artists("click", False)
         elif method == "click" and forward:
-            self._clear_temp_artists("move", False)
+            self._clear_temp_artists("_click_move", False)
         elif method == "pick" and forward:
-            self._clear_temp_artists("click", False)
-            self._clear_temp_artists("move", False)
+            self._clear_temp_artists("click", True)
         elif method == "on_layer_change" and forward:
             self._clear_temp_artists("pick", False)
-            self._clear_temp_artists("click", False)
+            self._clear_temp_artists("click", True)
             self._clear_temp_artists("move", False)
 
         if method == "on_layer_change":
