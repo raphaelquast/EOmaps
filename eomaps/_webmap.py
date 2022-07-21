@@ -342,13 +342,9 @@ class _wmts_layer(_WebMap_layer):
         """
         from . import MapsGrid  # do this here to avoid circular imports!
 
-        self._style = self._set_style(kwargs.get("styles", None))
-        if self._style is not None:
-            kwargs["styles"] = [self._style]
-
-        self._zorder = zorder
-        self._kwargs = kwargs
-        self._alpha = alpha
+        styles = self._set_style(kwargs.get("styles", None))
+        if styles is not None:
+            kwargs["styles"] = styles
 
         for m in self._m if isinstance(self._m, MapsGrid) else [self._m]:
             if layer is None:
@@ -452,9 +448,9 @@ class _wms_layer(_WebMap_layer):
         """
         from . import MapsGrid  # do this here to avoid circular imports!
 
-        self._style = self._set_style(kwargs.get("styles", None))
-        if self._style is not None:
-            kwargs["styles"] = [self._style]
+        styles = self._set_style(kwargs.get("styles", None))
+        if styles is not None:
+            kwargs["styles"] = styles
 
         for m in self._m if isinstance(self._m, MapsGrid) else [self._m]:
 
