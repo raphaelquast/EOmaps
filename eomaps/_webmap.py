@@ -342,13 +342,9 @@ class _wmts_layer(_WebMap_layer):
         """
         from . import MapsGrid  # do this here to avoid circular imports!
 
-        self._style = self._set_style(kwargs.get("styles", None))
-        if self._style is not None:
-            kwargs["styles"] = [self._style]
-
-        self._zorder = zorder
-        self._kwargs = kwargs
-        self._alpha = alpha
+        styles = self._set_style(kwargs.get("styles", None))
+        if styles is not None:
+            kwargs["styles"] = styles
 
         for m in self._m if isinstance(self._m, MapsGrid) else [self._m]:
             if layer is None:
@@ -365,7 +361,12 @@ class _wmts_layer(_WebMap_layer):
                     self._m.new_layer(layer=self._layer)
                 # delay adding the layer until it is effectively activated
                 self._m.BM.on_layer(
-                    partial(self._do_add_layer),
+                    func=partial(
+                        self._do_add_layer,
+                        wms_kwargs=kwargs,
+                        zorder=zorder,
+                        alpha=alpha,
+                    ),
                     layer=self._layer,
                     persistent=False,
                     m=m,
@@ -389,19 +390,13 @@ class _wmts_layer(_WebMap_layer):
             ax.add_image(img)
         return img
 
-    def _do_add_layer(self, m, l):
+    def _do_add_layer(self, m, l, **kwargs):
         # actually add the layer to the map.
         print(f"EOmaps: Adding wmts-layer: {self.name}")
 
         # use slightly adapted implementation of cartopy's ax.add_wmts
         art = self._add_wmts(
-            m.ax,
-            self._wms,
-            self.name,
-            wms_kwargs=self._kwargs,
-            interpolation="spline36",
-            zorder=self._zorder,
-            alpha=self._alpha,
+            m.ax, self._wms, self.name, interpolation="spline36", **kwargs
         )
 
         # art = m.figure.ax.add_wmts(
@@ -453,13 +448,9 @@ class _wms_layer(_WebMap_layer):
         """
         from . import MapsGrid  # do this here to avoid circular imports!
 
-        self._style = self._set_style(kwargs.get("styles", None))
-        if self._style is not None:
-            kwargs["styles"] = [self._style]
-
-        self._kwargs = kwargs
-        self._zorder = zorder
-        self._alpha = alpha
+        styles = self._set_style(kwargs.get("styles", None))
+        if styles is not None:
+            kwargs["styles"] = styles
 
         for m in self._m if isinstance(self._m, MapsGrid) else [self._m]:
 
@@ -477,7 +468,12 @@ class _wms_layer(_WebMap_layer):
                     self._m.new_layer(layer=self._layer)
                 # delay adding the layer until it is effectively activated
                 m.BM.on_layer(
-                    func=partial(self._do_add_layer),
+                    func=partial(
+                        self._do_add_layer,
+                        wms_kwargs=kwargs,
+                        zorder=zorder,
+                        alpha=alpha,
+                    ),
                     layer=layer,
                     persistent=False,
                     m=m,
@@ -503,28 +499,14 @@ class _wms_layer(_WebMap_layer):
 
         return img
 
-    def _do_add_layer(self, m, l):
+    def _do_add_layer(self, m, l, **kwargs):
         # actually add the layer to the map.
         print(f"EOmaps: ... adding wms-layer {self.name}")
 
         # use slightly adapted implementation of cartopy's ax.add_wms
         art = self._add_wms(
-            m.ax,
-            self._wms,
-            self.name,
-            wms_kwargs=self._kwargs,
-            interpolation="spline36",
-            zorder=self._zorder,
-            alpha=self._alpha,
+            m.ax, self._wms, self.name, interpolation="spline36", **kwargs
         )
-
-        # art = m.figure.ax.add_wms(
-        #     self._wms,
-        #     self.name,
-        #     wms_kwargs=kwargs,
-        #     interpolation="spline36",
-        #     zorder=zorder,
-        # )
 
         m.BM.add_bg_artist(art, l)
 
@@ -1086,28 +1068,27 @@ class _xyz_tile_service:
                 )
         else:
 
-            self._kwargs = dict(
-                interpolation=interpolation, alpha=alpha, origin="lower"
-            )
-            self._kwargs.update(kwargs)
-            self._zorder = zorder
+            kwargs.setdefault("interpolation", interpolation)
+            kwargs.setdefault("zorder", zorder)
+            kwargs.setdefault("alpha", alpha)
+            kwargs.setdefault("origin", "lower")
 
             if self._layer == "all" or self._m.BM.bg_layer == self._layer:
                 # add the layer immediately if the layer is already active
-                self._do_add_layer(self._m, self._layer)
+                self._do_add_layer(self._m, self._layer, **kwargs)
             else:
                 if self._layer not in self._m._get_layers():
                     # create a new (empty) layer so that utility-widgets get updated!
                     self._m.new_layer(layer=self._layer)
                 # delay adding the layer until it is effectively activated
                 self._m.BM.on_layer(
-                    func=self._do_add_layer,
+                    func=partial(self._do_add_layer, **kwargs),
                     layer=self._layer,
                     persistent=False,
                     m=self._m,
                 )
 
-    def _do_add_layer(self, m, l):
+    def _do_add_layer(self, m, l, **kwargs):
         # actually add the layer to the map.
         print(f"EOmaps: ... adding wms-layer {self.name}")
 
@@ -1125,9 +1106,7 @@ class _xyz_tile_service:
         #         (only SlippyImageArtist has been subclassed)
 
         self._raster_source.validate_projection(m.ax.projection)
-        img = SlippyImageArtist_NEW(
-            m.ax, self._raster_source, zorder=self._zorder, **self._kwargs
-        )
+        img = SlippyImageArtist_NEW(m.ax, self._raster_source, **kwargs)
         with self._m.ax.hold_limits():
             m.ax.add_image(img)
         self._artist = img
@@ -1202,7 +1181,7 @@ class SlippyImageArtist_NEW(AxesImage):
                 super().draw(renderer, *args, **kwargs)
 
             self.stale = False
-        except:
+        except Exception:
             print("EOmaps: ... could not fetch WebMap service")
 
             if self in self.axes._mouseover_set:
