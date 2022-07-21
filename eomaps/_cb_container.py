@@ -648,8 +648,7 @@ class cb_click_container(_click_container):
         # check for keypress-modifiers
         if (
             event.key is None
-            and self._sticky_modifiers
-            and (self._m.cb.keypress._modifier is not None)
+            and self._m.cb.keypress._modifier in self._sticky_modifiers
         ):
             # in case sticky_modifiers are defined, use the last pressed modifier
             event_key = self._m.cb.keypress._modifier
@@ -676,8 +675,7 @@ class cb_click_container(_click_container):
         # check for keypress-modifiers
         if (
             event.key is None
-            and self._sticky_modifiers
-            and (self._m.cb.keypress._modifier is not None)
+            and self._m.cb.keypress._modifier in self._sticky_modifiers
         ):
             # in case sticky_modifiers are defined, use the last pressed modifier
             event_key = self._m.cb.keypress._modifier
@@ -1072,8 +1070,7 @@ class cb_pick_container(_click_container):
         # check for keypress-modifiers
         if (
             event.mouseevent.key is None
-            and self._sticky_modifiers
-            and (self._m.cb.keypress._modifier is not None)
+            and self._m.cb.keypress._modifier in self._sticky_modifiers
         ):
             # in case sticky_modifiers are defined, use the last pressed modifier
             event_key = self._m.cb.keypress._modifier
@@ -1270,17 +1267,20 @@ class keypress_container(_cb_container):
                 ):
                     self._modifier = None
                     print("EOmaps: sticky modifier: None")
-                elif (
-                    k
-                    in (
-                        *self._m.cb.click._sticky_modifiers,
-                        *self._m.cb.pick._sticky_modifiers,
-                        *self._m.cb.move._sticky_modifiers,
-                    )
-                    and self._modifier != k
-                ):
-                    print("EOmaps: sticky modifier: ", k)
-                    self._modifier = k
+                elif self._modifier != k:
+                    methods = []
+                    if k in self._m.cb.click._sticky_modifiers:
+                        methods.append("click")
+
+                    if k in self._m.cb.pick._sticky_modifiers:
+                        methods.append("pick")
+
+                    if k in self._m.cb.move._sticky_modifiers:
+                        methods.append("move")
+
+                    if methods:
+                        print(f"EOmaps: sticky modifier: {k} ({', '.join(methods)})")
+                        self._modifier = k
 
                 update = False
                 for obj in self._objs:
