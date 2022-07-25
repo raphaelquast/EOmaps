@@ -67,6 +67,7 @@ Possible ways for specifying the crs for plotting are:
     | Any callbacks, features or plots added to this layer will be **executed on all other layers** as well!
 
     You can add features and callbacks to the ``all`` layer via:
+
     - using the shortcut ``m.all. ...``
     - creating a dedicated ``Maps`` object via ``m_all = Maps(layer="all")`` or ``m_all = m.new_layer("all")``
     - using the "layer" kwarg of functions e.g. ``m.plot_map(layer="all")``
