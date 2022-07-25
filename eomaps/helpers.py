@@ -314,6 +314,7 @@ class LayoutEditor:
             max(0.25, snapy),
         )
 
+        b = [0, 0, 0, 0]
         for ax in self._ax_picked:
             if key == "left":
                 bbox = Bbox.from_bounds(
@@ -346,7 +347,34 @@ class LayoutEditor:
 
             bbox = bbox.transformed(self.f.transFigure.inverted())
 
-            ax.set_position(bbox)
+            # ax.set_position(bbox)
+            if not self._cb_picked:
+                ax.set_position(bbox)
+            else:
+                orientation = self._m_picked._colorbar[-2]
+                if orientation == "horizontal":
+                    b = [
+                        bbox.x0,
+                        min(b[1], bbox.y0) if b[1] > 0 else bbox.y0,
+                        bbox.width,
+                        b[3] + bbox.height,
+                    ]
+
+                elif orientation == "vertical":
+                    b = [
+                        min(b[0], bbox.x0) if b[0] > 0 else bbox.x0,
+                        bbox.y0,
+                        b[2] + bbox.width,
+                        bbox.height,
+                    ]
+
+        if (
+            self._cb_picked
+            and (self._m_picked is not None)
+            and (self._ax_picked is not None)
+            and not all((i == 0 for i in b))
+        ):
+            self._m_picked.figure.set_colorbar_position(b)
 
         self.set_annotations()
         self._color_axes()
