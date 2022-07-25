@@ -1,10 +1,3 @@
-try:
-    from equi7grid import equi7grid
-
-    equ7_OK = True
-except ImportError:
-    equ7_OK = False
-
 from pathlib import Path
 
 from shapely.geometry import shape
@@ -12,6 +5,18 @@ import shapefile
 
 from cartopy import crs as ccrs
 from pyproj import CRS
+
+equi7grid = None
+
+
+def _register_equi7grid():
+    global equi7grid
+    try:
+        from equi7grid import equi7grid
+    except ImportError:
+        return False
+
+    return True
 
 
 class Equi7Grid_projection(ccrs.Projection):
@@ -38,7 +43,7 @@ class Equi7Grid_projection(ccrs.Projection):
     subgrids = ["EU", "AF", "AS", "NA", "SA", "OC", "AN"]
 
     def __init__(self, subgrid="EU", *args, **kwargs):
-        assert equ7_OK, (
+        assert _register_equi7grid(), (
             "EOmaps: Missing dependency for Equi7Grid_projection: 'equi7grid'."
             + "To install, use `pip install equi7grid`"
         )
@@ -78,7 +83,7 @@ class Equi7Grid_projection(ccrs.Projection):
     def _pyproj_crs_generator(cls):
         # return a generator that yields Equi7Grid pyproj CRS instances
         # (used to properly identify Equi7Grid crs as cartopy crs)
-        if not equ7_OK:
+        if not _register_equi7grid():
             return
         for subgrid in cls.subgrids:
             yield (

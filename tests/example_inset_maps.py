@@ -13,7 +13,7 @@ m2 = m.new_inset_map(
     plot_position=(0.75, 0.4),
     plot_size=0.5,
     inset_crs=4326,
-    edgecolor="r",
+    boundary=dict(ec="r", lw=1),
     indicate_extent=dict(fc=(1, 0, 0, 0.25)),
 )
 
@@ -32,7 +32,7 @@ m3 = m.new_inset_map(
     plot_position=(0.25, 0.4),
     plot_size=0.5,
     inset_crs=3035,
-    edgecolor="g",
+    boundary=dict(ec="g", lw=2),
     indicate_extent=dict(fc=(0, 1, 0, 0.25)),
 )
 
@@ -53,7 +53,7 @@ for m_i in [m, m2, m3]:
 m3.add_annotation(ID=1, xytext=(-120, 80))
 
 # indicate the extent of the second inset on the first inset
-m3.indicate_inset_extent(m2)
+m3.indicate_inset_extent(m2, ec="g")
 
 # add some additional text to the inset-maps
 for m_i, txt, color in zip([m2, m3], ["epsg: 4326", "epsg: 3035"], ["r", "g"]):

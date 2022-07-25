@@ -4,9 +4,12 @@
 
 .. include:: introduction.rst
 
+.. _configuring_the_editor:
 
 💻 Configuring the editor (IDE)
 *******************************
+
+.. _config_spyder:
 
 🕷 Spyder IDE
 -------------
@@ -19,6 +22,7 @@ the plot-settings must be adjusted to ensure that ``matplotlib`` plots remain in
 
 .. image:: _static/spyder_preferences.png
 
+.. _config_pycharm:
 
 🗖 PyCharm IDE
 --------------
@@ -30,11 +34,11 @@ To my knowledge there are 2 possibilities to force ``pycharm`` to use the origin
 
 - | 🚲 The "manual" way:
   | Add the following lines to the start of each script:
-  | (for more info and alternative backends see `matpltolib docs <https://matplotlib.org/stable/users/explain/backends.html>`_)
+  | (for more info and alternative backends see `matplotlib docs <https://matplotlib.org/stable/users/explain/backends.html>`_)
 
   .. code-block:: python
 
-    import matpltolib
+    import matplotlib
     matplotlib.use("Qt5Agg")
 
 - | 🚗 The "automatic" way:
@@ -49,6 +53,7 @@ in the **Python Scientific** preferences since it forces plots to be rendered as
 
 .. image:: _static/pycharm_preferences_2.png
 
+.. _config_jupyter_notebook:
 
 📓 Jupyter Notebooks
 --------------------

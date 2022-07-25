@@ -382,16 +382,3 @@ class TestCallbacks(unittest.TestCase):
         m.cb.keypress.remove(cid0)
         m.cb.keypress.remove(cid1)
         plt.close("all")
-
-    def test_indicate_extent(self):
-        # test dynamic callbacks
-        mg = MapsGrid(2, 1, crs=Maps.CRS.Orthographic())
-
-        mg.m_0_0.add_feature.preset.ocean(ec="k", scale="110m")
-        mg.m_1_0.add_feature.preset.ocean(ec="k", scale="110m")
-
-        mg.m_0_0.figure.ax.set_extent((20, 40, 20, 40))
-        mg.m_1_0.figure.ax.set_extent((10, 140, 0, 60))
-
-        mg.m_1_0.cb.dynamic.indicate_extent(mg.m_0_0)
-        plt.close("all")

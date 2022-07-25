@@ -10,11 +10,11 @@ import matplotlib.pyplot as plt
 from eomaps import Maps, MapsGrid
 
 
-class TestDraggableAxes(unittest.TestCase):
+class TestLayoutEditor(unittest.TestCase):
     def setUp(self):
         pass
 
-    def test_draggable_axes(self):
+    def test_layout_editor(self):
         # %%
         lon, lat = np.meshgrid(np.linspace(20, 50, 50), np.linspace(20, 50, 50))
         data = pd.DataFrame(dict(lon=lon.flat, lat=lat.flat, value=1))
@@ -24,11 +24,13 @@ class TestDraggableAxes(unittest.TestCase):
         mg.plot_map()
         mg.add_colorbar()
 
+        initial_layout = mg.get_layout()
+
         cv = mg.f.canvas
 
         # activate draggable axes
-        cv.key_press_event("alt+d")
-        cv.key_release_event("alt+d")
+        cv.key_press_event("alt+l")
+        cv.key_release_event("alt+l")
 
         # ################ check handling axes
 
@@ -74,11 +76,6 @@ class TestDraggableAxes(unittest.TestCase):
         cv.key_press_event("up")
         cv.key_press_event("down")
 
-        cv.key_press_event("alt+left")
-        cv.key_press_event("alt+right")
-        cv.key_press_event("alt+up")
-        cv.key_press_event("alt+down")
-
         # release the mouse
         cv.button_release_event(0, 0, 1, False)
 
@@ -94,10 +91,6 @@ class TestDraggableAxes(unittest.TestCase):
         cv.key_press_event("right")
         cv.key_press_event("up")
         cv.key_press_event("down")
-        cv.key_press_event("alt+left")
-        cv.key_press_event("alt+right")
-        cv.key_press_event("alt+up")
-        cv.key_press_event("alt+down")
 
         # move it around with the mouse
         cv.motion_notify_event(x0, y0, False)
@@ -105,14 +98,6 @@ class TestDraggableAxes(unittest.TestCase):
         # resize it
         cv.scroll_event(x1, y1, 10)
 
-        # hide histogram
-        cv.key_press_event("ctrl+up")
-        # hide colorbar
-        cv.key_press_event("ctrl+down")
-
-        # show histogram and colorbar again
-        cv.key_press_event("ctrl+up")
-        cv.key_press_event("ctrl+down")
         # release the mouse
         cv.button_release_event(0, 0, 1, False)
 
@@ -126,21 +111,28 @@ class TestDraggableAxes(unittest.TestCase):
         ) / 2
         cv.button_press_event(x5, y5, 1, False)
 
-        # hide histogram
-        cv.key_press_event("ctrl+up")
-        # click on the hidden histogram to make it visible again
-        cv.button_press_event(x5, y5, 1, False)
-
         # click on bottom right colorbar
         x6 = (mg.m_1_1.figure.ax_cb.bbox.x1 + mg.m_1_1.figure.ax_cb.bbox.x0) / 2
         y6 = (mg.m_1_1.figure.ax_cb.bbox.y1 + mg.m_1_1.figure.ax_cb.bbox.y0) / 2
         cv.button_press_event(x6, y6, 1, False)
 
-        # hide colorbar
-        cv.key_press_event("ctrl+down")
-        # click on the hidden colorbar to make it visible again
-        cv.button_press_event(x6, y6, 1, False)
-
         # deactivate draggable axes
-        cv.key_press_event("alt+d")
-        cv.key_release_event("alt+d")
+        cv.key_press_event("alt+l")
+        cv.key_release_event("alt+l")
+
+        # save the new layout
+        new_layout = mg.get_layout()
+
+        # restore the initial layout
+        mg.apply_layout(initial_layout)
+        restored_layout = mg.get_layout()
+        for key, val in restored_layout.items():
+            # check if all positions have been properly restored
+            self.assertTrue(np.allclose(val, initial_layout[key]))
+
+        # restore the new layout
+        mg.apply_layout(new_layout)
+        restored_layout = mg.get_layout()
+        for key, val in restored_layout.items():
+            # check if all positions have been properly restored
+            self.assertTrue(np.allclose(val, new_layout[key]))

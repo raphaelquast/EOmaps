@@ -13,8 +13,6 @@ from matplotlib.pyplot import get_cmap
 from matplotlib.gridspec import SubplotSpec
 from matplotlib.colors import rgb2hex
 
-import mapclassify
-
 import cartopy.feature as cfeature
 from cartopy.io import shapereader
 from cartopy import crs as ccrs
@@ -28,19 +26,43 @@ if _import_OK:
         _xyz_tile_service,
     )
 
-try:
-    import pandas as pd
+pd = None
 
-    _pd_OK = True
-except ImportError:
-    _pd_OK = False
 
-try:
-    import geopandas as gpd
+def _register_pandas():
+    global pd
+    try:
+        import pandas as pd
+    except ImportError:
+        return False
 
-    _gpd_OK = True
-except ImportError:
-    _gpd_OK = False
+    return True
+
+
+gpd = None
+
+
+def _register_geopandas():
+    global gpd
+    try:
+        import geopandas as gpd
+    except ImportError:
+        return False
+
+    return True
+
+
+mapclassify = None
+
+
+def _register_mapclassify():
+    global mapclassify
+    try:
+        import mapclassify
+    except ImportError:
+        return False
+
+    return True
 
 
 def combdoc(*args):
@@ -428,7 +450,12 @@ class data_specs(object):
 
     @parameter.getter
     def parameter(self):
-        if _pd_OK and isinstance(self.data, pd.DataFrame) and self._parameter is None:
+
+        if (
+            self._parameter is None
+            and _register_pandas()
+            and isinstance(self.data, pd.DataFrame)
+        ):
             if self.data is not None and self.x is not None and self.y is not None:
 
                 try:
@@ -454,9 +481,9 @@ class data_specs(object):
         if encoding not in [None, False]:
             assert isinstance(encoding, dict), "EOmaps: encoding must be a dictionary!"
 
-            assert all(
-                i in ["scale_factor", "add_offset"] for i in encoding
-            ), "EOmaps: encoding accepts only 'scale_factor' and 'add_offset' as keys!"
+            # assert all(
+            #     i in ["scale_factor", "add_offset"] for i in encoding
+            # ), "EOmaps: encoding accepts only 'scale_factor' and 'add_offset' as keys!"
 
         self._encoding = encoding
 
@@ -551,6 +578,11 @@ class classify_specs(object):
 
     def _get_default_args(self):
         if hasattr(self, "_scheme") and self._scheme is not None:
+            assert _register_mapclassify(), (
+                "EOmaps: Missing dependency: 'mapclassify' \n ... please install"
+                + " (conda install -c conda-forge mapclassify) to use data-classifications."
+            )
+
             assert self._scheme in mapclassify.CLASSIFIERS, (
                 f"the classification-scheme '{self._scheme}' is not valid... "
                 + " use one of:"
@@ -592,6 +624,11 @@ class classify_specs(object):
         """
         accessor for possible classification schemes
         """
+        assert _register_mapclassify(), (
+            "EOmaps: Missing dependency: 'mapclassify' \n ... please install"
+            + " (conda install -c conda-forge mapclassify) to use data-classifications."
+        )
+
         return SimpleNamespace(
             **dict(zip(mapclassify.CLASSIFIERS, mapclassify.CLASSIFIERS))
         )
@@ -637,14 +674,9 @@ class _NaturalEarth_presets:
 
         # convert color to hex to avoid issues with geopandas
         color = rgb2hex(cfeature.COLORS["water"])
+
         return self._feature(
-            self._m,
-            "physical",
-            "ocean",
-            fc=color,
-            ec="none",
-            zorder=-1,
-            reproject="cartopy",
+            self._m, "physical", "ocean", fc=color, ec="none", zorder=-1
         )
 
     @property
@@ -665,12 +697,7 @@ class _NaturalEarth_presets:
         color = rgb2hex(cfeature.COLORS["land"])
 
         return self._feature(
-            self._m,
-            "physical",
-            "land",
-            fc=color,
-            ec="none",
-            zorder=-1,
+            self._m, "physical", "land", fc=color, ec="none", zorder=-1
         )
 
     @property
@@ -826,7 +853,7 @@ class NaturalEarth_features(object):
     class _feature:
         def __init__(self, m, category, name, scale):
             self._m = m
-            if not _gpd_OK:
+            if not _register_geopandas():
                 # use cartopy to add the features
                 self.feature = cfeature.NaturalEarthFeature(
                     category=category, name=name, scale=scale
@@ -836,7 +863,7 @@ class NaturalEarth_features(object):
                 # geopandas to add the feature (provides more flexibility!)
                 self.feature = dict(resolution=scale, category=category, name=name)
 
-            if not _gpd_OK:
+            if not _register_geopandas():
                 self.__doc__ = dedent(
                     f"""
                     NaturalEarth feature:  {scale} | {category} | {name}
@@ -981,10 +1008,59 @@ class NaturalEarth_features(object):
                     """
                 )
 
+        @staticmethod
+        def _preferred_reproject_method(m):
+            """
+            Temporary fix for reprojection issues with geopandas and/or cartopy.
+
+            This function just hard-codes the preferred way of reprojecting shapes
+            for given projections (you can always overrride this behaviour by
+            explicitly passing `reproject="..."` to the feature-call)
+
+            Parameters
+            ----------
+            m : eomaps.Maps
+                The maps-object to use.
+
+            Returns
+            -------
+            method : str
+                the reproject-method to use as default.
+
+            Examples
+            --------
+            The following examples have known issues that can be resolved by
+            switching the reprojection-method:
+
+            >>> m = Maps(crs = Maps.CRS.Robinson())
+            >>> #gdf = m.add_feature.preset.ocean(reproject="cartopy")
+            >>> gdf = m.add_feature.preset.ocean(reproject="gpd")
+
+            >>> m = Maps(crs = Maps.CRS.Stereographic())
+            >>> #gdf = m.add_feature.preset.ocean(reproject="gpd")
+            >>> gdf = m.add_feature.preset.ocean(reproject="cartopy")
+
+            """
+
+            # use cartopy for stereographic reprojections but not for others
+            # (somehow geopandas can't handle Stereographic and Orthographic
+            # reprojection while cartopy can't handle Robinson...)
+            # TODO what's the reason for this???
+
+            if str(m.crs_plot.__class__.__name__) in [
+                "Stereographic",
+                "Orthographic",
+                "RotatedPole",
+            ]:
+                method = "cartopy"
+            else:
+                method = "gpd"
+            return method
+
         def __call__(self, layer=None, **kwargs):
             from . import MapsGrid  # do this here to avoid circular imports!
 
-            if not _gpd_OK:
+            if not _register_geopandas():
                 for m in self._m if isinstance(self._m, MapsGrid) else [self._m]:
                     if layer is None:
                         uselayer = m.layer
@@ -996,30 +1072,32 @@ class NaturalEarth_features(object):
                     m.BM.add_bg_artist(art, layer=uselayer)
             else:
                 s = self.get_gdf()
-                for m in (
-                    self._m if self._m.__class__.__name__ == "MapsGrid" else [self._m]
-                ):
+                for m in self._m if isinstance(self._m, MapsGrid) else [self._m]:
                     if layer is None:
                         uselayer = m.layer
                     else:
                         uselayer = layer
-
+                    # set preferred reprojection method (if not provided explicitly)
+                    kwargs.setdefault("reproject", self._preferred_reproject_method(m))
                     m.add_gdf(s, layer=uselayer, **kwargs)
 
-        if _gpd_OK:
+        def get_gdf(self):
+            """
+            Get a geopandas.GeoDataFrame for the selected NaturalEarth feature
 
-            def get_gdf(self):
-                """
-                Get a geopandas.GeoDataFrame for the selected NaturalEarth feature
+            Returns
+            -------
+            gdf : geopandas.GeoDataFrame
+                A GeoDataFrame with all geometries and properties of the feature
+            """
 
-                Returns
-                -------
-                gdf : geopandas.GeoDataFrame
-                    A GeoDataFrame with all geometries and properties of the feature
-                """
-                gdf = gpd.read_file(shapereader.natural_earth(**self.feature))
-                gdf.set_crs(ccrs.PlateCarree(), inplace=True, allow_override=True)
-                return gdf
+            assert (
+                _register_geopandas()
+            ), "EOmaps: Missing dependency `geopandas` for `feature.get_gdf()`"
+
+            gdf = gpd.read_file(shapereader.natural_earth(**self.feature))
+            gdf.set_crs(ccrs.PlateCarree(), inplace=True, allow_override=True)
+            return gdf
 
 
 # avoid defining containers if import is not OK
@@ -1371,7 +1449,13 @@ else:
             **LICENSE-info (without any warranty for correctness!!)**
 
             Make sure to check the usage-policies at
-            https://wiki.openstreetmap.org/wiki/WMS
+
+            - https://operations.osmfoundation.org/policies/tiles/
+            - https://www.openstreetmap.org/copyright
+
+            - for OSM_terrestis: https://www.terrestris.de/en/openstreetmap-wms/
+            - for OSM_mundialis: https://www.mundialis.de/en/ows-mundialis/
+
             """
 
             WMS = self._OpenStreetMap(self._m)
@@ -1383,12 +1467,37 @@ else:
             (global) OpenStreetMap WebMap layers
             https://wiki.openstreetmap.org/wiki/WMS
 
+            Available styles are:
+
+                - default: standard OSM layer
+                - default_german: standard OSM layer in german
+                - standard: standard OSM layer
+                - stamen_toner: Black and white style by stamen
+                    - stamen_toner_lines
+                    - stamen_toner_background
+                    - stamen_toner_lite
+                    - stamen_toner_hybrid
+                    - stamen_toner_labels
+                - stamen_watercolor: a watercolor-like style by stamen
+                - stamen_terrain: a terrain layer by stamen
+                    - stamen_terrain_lines
+                    - stamen_terrain_labels
+                    - stamen_terrain_background
+                - OSM_terrestis: Styles hosted as free WMS service by Terrestis
+                - OSM_mundialis: Styles hosted as free WMS service by Mundialis
+
             Note
             ----
             **LICENSE-info (without any warranty for correctness!!)**
 
             Make sure to check the usage-policies at
-            https://wiki.openstreetmap.org/wiki/WMS
+
+            - https://operations.osmfoundation.org/policies/tiles/
+            - https://www.openstreetmap.org/copyright
+
+            - for OSM_terrestis: https://www.terrestris.de/en/openstreetmap-wms/
+            - for OSM_mundialis: https://www.mundialis.de/en/ows-mundialis/
+
             """
 
             def __init__(self, m):
@@ -2215,6 +2324,7 @@ else:
               from Sentinel-2
 
               - https://land.copernicus.eu/imagery-in-situ/global-image-mosaics/
+
               >>> url = "https://s2gm-wms.brockmann-consult.de/cgi-bin/qgis_mapserv.fcgi?MAP=/home/qgis/projects/s2gm-wms_mosaics_vrt.qgs&service=WMS&request=GetCapabilities&version=1.1.1"
               >>> s = m.add_wms.get_service(url, "wms")
 

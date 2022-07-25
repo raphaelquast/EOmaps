@@ -36,8 +36,14 @@ This should make sure all required dependencies are correctly installed.
     mamba install -c conda-forge eomaps
 
 
-A quick tutorial on how to get started from scratch is available here: :ref:`quickstart_guide`
+A quick tutorial on how to **get started from scratch** is available here: :ref:`quickstart_guide`
 
+More details on how to **configure your favorite IDE** to work with EOmaps can be found in the FAQ section
+:ref:`configuring_the_editor`:
+
+- :ref:`config_spyder`
+- :ref:`config_pycharm`
+- :ref:`config_jupyter_notebook`
 
 🐜 optional dependencies
 ~~~~~~~~~~~~~~~~~~~~~~~~~

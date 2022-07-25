@@ -191,7 +191,6 @@ class _WebMap_layer:
                     return
 
                 pos = legax.get_position()
-
                 steps = event.step
 
                 legax.set_position(
@@ -210,7 +209,15 @@ class _WebMap_layer:
             self._m.figure.f.canvas.mpl_connect("button_release_event", cb_release)
             self._m.figure.f.canvas.mpl_connect("motion_notify_event", cb_move)
 
+            if not hasattr(self, "_layer"):
+                # use the currently active layer if the webmap service has not yet
+                # been added to the map
+                print("EOmaps: The WebMap for the legend is not yet added to the map!")
+                self._layer = self._m.BM._bg_layer
+            self._m.parent._wms_legend.setdefault(self._layer, list()).append(legax)
+
             self._m.BM.update()
+
             return legax
 
     def set_extent_to_bbox(self, shrink=False):
@@ -301,7 +308,7 @@ class _wmts_layer(_WebMap_layer):
         super().__init__(*args, **kwargs)
         pass
 
-    def __call__(self, layer=None, zorder=0, **kwargs):
+    def __call__(self, layer=None, zorder=0, alpha=1, **kwargs):
         """
         Add the WMTS layer to the map
 
@@ -317,19 +324,29 @@ class _wmts_layer(_WebMap_layer):
         zorder : float
             The zorder of the artist (e.g. the stacking level of overlapping artists)
             The default is 0
+        alpha : float, optional
+            The alpha-transparency of the image.
+            NOTE: This changes the global transparency of the images... it does
+            not control whether the images are served with included transparency!
+            (check the "transparent" kwarg)
         **kwargs :
             additional kwargs passed to the WebMap service request.
             (e.g. transparent=True, time='2020-02-05', etc.)
+
+        Additional Parameters
+        ---------------------
+        transparent : bool, optional
+            Indicator if the WMS images should be read as RGB or RGBA
+            (e.g. with or without transparency). The default is False.
+
         """
         from . import MapsGrid  # do this here to avoid circular imports!
 
-        style = self._set_style(kwargs.get("styles", None))
-        if self._style is not None:
-            kwargs["styles"] = [self._style]
+        styles = self._set_style(kwargs.get("styles", None))
+        if styles is not None:
+            kwargs["styles"] = styles
 
         for m in self._m if isinstance(self._m, MapsGrid) else [self._m]:
-            self._zorder = zorder
-            self._kwargs = kwargs
             if layer is None:
                 self._layer = m.layer
             else:
@@ -337,11 +354,19 @@ class _wmts_layer(_WebMap_layer):
 
             if self._layer == "all" or self._m.BM.bg_layer == self._layer:
                 # add the layer immediately if the layer is already active
-                self._do_add_layer(self._m, self._layer, zorder=zorder, kwargs=kwargs)
+                self._do_add_layer(self._m, self._layer)
             else:
+                if self._layer not in self._m._get_layers():
+                    # create a new (empty) layer so that utility-widgets get updated!
+                    self._m.new_layer(layer=self._layer)
                 # delay adding the layer until it is effectively activated
                 self._m.BM.on_layer(
-                    partial(self._do_add_layer, zorder=zorder, kwargs=kwargs),
+                    func=partial(
+                        self._do_add_layer,
+                        wms_kwargs=kwargs,
+                        zorder=zorder,
+                        alpha=alpha,
+                    ),
                     layer=self._layer,
                     persistent=False,
                     m=m,
@@ -363,21 +388,15 @@ class _wmts_layer(_WebMap_layer):
         img = SlippyImageArtist_NEW(ax, wms, **kwargs)
         with ax.hold_limits():
             ax.add_image(img)
-
         return img
 
-    def _do_add_layer(self, m, l, zorder, kwargs):
+    def _do_add_layer(self, m, l, **kwargs):
         # actually add the layer to the map.
         print(f"EOmaps: Adding wmts-layer: {self.name}")
 
         # use slightly adapted implementation of cartopy's ax.add_wmts
         art = self._add_wmts(
-            m.ax,
-            self._wms,
-            self.name,
-            wms_kwargs=kwargs,
-            interpolation="spline36",
-            zorder=zorder,
+            m.ax, self._wms, self.name, interpolation="spline36", **kwargs
         )
 
         # art = m.figure.ax.add_wmts(
@@ -387,7 +406,6 @@ class _wmts_layer(_WebMap_layer):
         #     interpolation="spline36",
         #     zorder=zorder,
         # )
-
         m.BM.add_bg_artist(art, l)
 
 
@@ -396,7 +414,7 @@ class _wms_layer(_WebMap_layer):
         super().__init__(*args, **kwargs)
         pass
 
-    def __call__(self, layer=None, zorder=0, **kwargs):
+    def __call__(self, layer=None, zorder=0, alpha=1, **kwargs):
         """
         Add the WMS layer to the map
 
@@ -412,19 +430,29 @@ class _wms_layer(_WebMap_layer):
         zorder : float
             The zorder of the artist (e.g. the stacking level of overlapping artists)
             The default is 0
+        alpha : float, optional
+            The alpha-transparency of the image.
+            NOTE: This changes the global transparency of the images... it does
+            not control whether the images are served with included transparency!
+            (check the "transparent" kwarg)
         **kwargs :
             additional kwargs passed to the WebMap service request.
             (e.g. transparent=True, time='2020-02-05', etc.)
+
+        Additional Parameters
+        ---------------------
+        transparent : bool, optional
+            Indicator if the WMS images should be read as RGB or RGBA
+            (e.g. with or without transparency). The default is False.
+
         """
         from . import MapsGrid  # do this here to avoid circular imports!
 
-        style = self._set_style(kwargs.get("styles", None))
-        if self._style is not None:
-            kwargs["styles"] = [self._style]
+        styles = self._set_style(kwargs.get("styles", None))
+        if styles is not None:
+            kwargs["styles"] = styles
 
         for m in self._m if isinstance(self._m, MapsGrid) else [self._m]:
-            self._kwargs = kwargs
-            self._zorder = zorder
 
             if layer is None:
                 self._layer = m.layer
@@ -433,18 +461,19 @@ class _wms_layer(_WebMap_layer):
 
             if self._layer == "all" or m.BM.bg_layer == self._layer:
                 # add the layer immediately if the layer is already active
-                self._do_add_layer(m, self._layer, zorder=zorder, kwargs=kwargs)
+                self._do_add_layer(m, self._layer)
             else:
-                # self._do_add_layer(m, self._layer)
-
+                if self._layer not in self._m._get_layers():
+                    # create a new (empty) layer so that utility-widgets get updated!
+                    self._m.new_layer(layer=self._layer)
                 # delay adding the layer until it is effectively activated
-
-                # m.BM.on_layer(
-                #     func=self._do_add_layer, layer=self._layer, persistent=False, m=m
-                # )
-
                 m.BM.on_layer(
-                    func=partial(self._do_add_layer, zorder=zorder, kwargs=kwargs),
+                    func=partial(
+                        self._do_add_layer,
+                        wms_kwargs=kwargs,
+                        zorder=zorder,
+                        alpha=alpha,
+                    ),
                     layer=layer,
                     persistent=False,
                     m=m,
@@ -470,27 +499,14 @@ class _wms_layer(_WebMap_layer):
 
         return img
 
-    def _do_add_layer(self, m, l, zorder, kwargs):
+    def _do_add_layer(self, m, l, **kwargs):
         # actually add the layer to the map.
         print(f"EOmaps: ... adding wms-layer {self.name}")
 
         # use slightly adapted implementation of cartopy's ax.add_wms
         art = self._add_wms(
-            m.ax,
-            self._wms,
-            self.name,
-            wms_kwargs=kwargs,
-            interpolation="spline36",
-            zorder=zorder,
+            m.ax, self._wms, self.name, interpolation="spline36", **kwargs
         )
-
-        # art = m.figure.ax.add_wms(
-        #     self._wms,
-        #     self.name,
-        #     wms_kwargs=kwargs,
-        #     interpolation="spline36",
-        #     zorder=zorder,
-        # )
 
         m.BM.add_bg_artist(art, l)
 
@@ -1052,25 +1068,27 @@ class _xyz_tile_service:
                 )
         else:
 
-            self._kwargs = dict(
-                interpolation=interpolation, alpha=alpha, origin="lower"
-            )
-            self._kwargs.update(kwargs)
-            self._zorder = zorder
+            kwargs.setdefault("interpolation", interpolation)
+            kwargs.setdefault("zorder", zorder)
+            kwargs.setdefault("alpha", alpha)
+            kwargs.setdefault("origin", "lower")
 
             if self._layer == "all" or self._m.BM.bg_layer == self._layer:
                 # add the layer immediately if the layer is already active
-                self._do_add_layer(self._m, self._layer)
+                self._do_add_layer(self._m, self._layer, **kwargs)
             else:
+                if self._layer not in self._m._get_layers():
+                    # create a new (empty) layer so that utility-widgets get updated!
+                    self._m.new_layer(layer=self._layer)
                 # delay adding the layer until it is effectively activated
                 self._m.BM.on_layer(
-                    func=self._do_add_layer,
+                    func=partial(self._do_add_layer, **kwargs),
                     layer=self._layer,
                     persistent=False,
                     m=self._m,
                 )
 
-    def _do_add_layer(self, m, l):
+    def _do_add_layer(self, m, l, **kwargs):
         # actually add the layer to the map.
         print(f"EOmaps: ... adding wms-layer {self.name}")
 
@@ -1088,9 +1106,7 @@ class _xyz_tile_service:
         #         (only SlippyImageArtist has been subclassed)
 
         self._raster_source.validate_projection(m.ax.projection)
-        img = SlippyImageArtist_NEW(
-            m.ax, self._raster_source, zorder=self._zorder, **self._kwargs
-        )
+        img = SlippyImageArtist_NEW(m.ax, self._raster_source, **kwargs)
         with self._m.ax.hold_limits():
             m.ax.add_image(img)
         self._artist = img
@@ -1105,7 +1121,6 @@ class _xyz_tile_service:
 # The only changes are that user-interaction is handled internally by EOmaps
 # instead of using the self.user_is_interacting sentinel.
 
-# To keep changes clear, original code is kept in-place but commented out
 # ------------------------------------------------------------------------------
 
 from matplotlib.image import AxesImage
@@ -1130,19 +1145,8 @@ class SlippyImageArtist_NEW(AxesImage):
         super().__init__(ax, **kwargs)
         self.cache = []
 
-        # ax.figure.canvas.mpl_connect('button_press_event', self.on_press)
-        # ax.figure.canvas.mpl_connect('button_release_event', self.on_release)
-
         ax.callbacks.connect("xlim_changed", self.on_xlim)
-
-        # self.on_release()
-
-    # def on_press(self, event=None):
-    #     self.user_is_interacting = True
-
-    # def on_release(self, event=None):
-    #     self.user_is_interacting = False
-    #     self.stale = True
+        self._prev_extent = (0, 0)
 
     def on_xlim(self, *args, **kwargs):
         self.stale = True
@@ -1155,27 +1159,33 @@ class SlippyImageArtist_NEW(AxesImage):
         if not self.get_visible():
             return
 
-        ax = self.axes
-        window_extent = ax.get_window_extent()
-        [x1, y1], [x2, y2] = ax.viewLim.get_points()
-        # if not self.user_is_interacting:
-        #     located_images = self.raster_source.fetch_raster(
-        #         ax.projection, extent=[x1, x2, y1, y2],
-        #         target_resolution=(window_extent.width, window_extent.height))
-        #     self.cache = located_images
+        try:
+            ax = self.axes
+            window_extent = ax.get_window_extent()
+            [x1, y1], [x2, y2] = ax.viewLim.get_points()
 
-        located_images = self.raster_source.fetch_raster(
-            ax.projection,
-            extent=[x1, x2, y1, y2],
-            target_resolution=(window_extent.width, window_extent.height),
-        )
-        self.cache = located_images
+            if self._prev_extent != (x1, x2, y1, y2) or len(self.cache) == 0:
+                # only re-fetch tiles if the extent has changed
+                located_images = self.raster_source.fetch_raster(
+                    ax.projection,
+                    extent=[x1, x2, y1, y2],
+                    target_resolution=(window_extent.width, window_extent.height),
+                )
+                self.cache = located_images
+                self._prev_extent = (x1, x2, y1, y2)
 
-        for img, extent in self.cache:
-            self.set_array(img)
-            with ax.hold_limits():
-                self.set_extent(extent)
-            super().draw(renderer, *args, **kwargs)
+            for img, extent in self.cache:
+                self.set_array(img)
+                with ax.hold_limits():
+                    self.set_extent(extent)
+                super().draw(renderer, *args, **kwargs)
+
+            self.stale = False
+        except Exception:
+            print("EOmaps: ... could not fetch WebMap service")
+
+            if self in self.axes._mouseover_set:
+                self.axes._mouseover_set.remove(self)
 
     def can_composite(self):
         # As per https://github.com/SciTools/cartopy/issues/689, disable

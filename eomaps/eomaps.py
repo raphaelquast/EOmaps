@@ -10,37 +10,80 @@ from pathlib import Path
 import weakref
 from tempfile import TemporaryDirectory, TemporaryFile
 import gc
+import json
 
 import numpy as np
 
-try:
-    import pandas as pd
 
-    _pd_OK = True
-except ImportError:
-    _pd_OK = False
+pd = None
 
-try:
-    import geopandas as gpd
 
-    _gpd_OK = True
-except ImportError:
-    _gpd_OK = False
+def _register_pandas():
+    global pd
+    try:
+        import pandas as pd
+    except ImportError:
+        return False
 
-try:
-    import xarray as xar
+    return True
 
-    _xar_OK = True
-except ImportError:
-    _xar_OK = False
 
-try:
-    from datashader import glyphs
-    from datashader.mpl_ext import dsshow, ScalarDSArtist
+gpd = None
 
-    _ds_OK = True
-except ImportError:
-    _ds_OK = False
+
+def _register_geopandas():
+    global gpd
+    try:
+        import geopandas as gpd
+    except ImportError:
+        return False
+
+    return True
+
+
+# ------- perform lazy delayed imports
+# (for optional dependencies that take long time to import)
+xar = None
+
+
+def _register_xarray():
+    global xar
+    try:
+        import xarray as xar
+    except ImportError:
+        return False
+
+    return True
+
+
+ds, mpl_ext = None, None
+
+
+def _register_datashader():
+    global ds
+    global mpl_ext
+
+    try:
+        import datashader as ds
+        from datashader import mpl_ext
+    except ImportError:
+        return False
+
+    return True
+
+
+mapclassify = None
+
+
+def _register_mapclassify():
+    global mapclassify
+    try:
+        import mapclassify
+    except ImportError:
+        return False
+
+    return True
+
 
 from scipy.spatial import cKDTree
 from pyproj import CRS, Transformer
@@ -62,7 +105,7 @@ from .helpers import (
     pairwise,
     cmap_alpha,
     BlitManager,
-    draggable_axes,
+    LayoutEditor,
     progressbar,
     searchtree,
 )
@@ -84,18 +127,13 @@ from .reader import read_file, from_file, new_layer_from_file
 
 from .utilities import utilities
 
-try:
-    import mapclassify
-except ImportError:
-    print("No module named 'mapclassify'... classification will not work!")
-
 
 if plt.isinteractive():
     if plt.get_backend() == "module://ipympl.backend_nbagg":
         warnings.warn(
             "EOmaps disables matplotlib's interactive mode (e.g. 'plt.ioff()') "
             + "when using the 'ipympl' backend to avoid recursions during callbacks!"
-            + "call `plt.show() to show the map!"
+            + "call `plt.show()` or `m.show()` to show the map!"
         )
         plt.ioff()
     else:
@@ -108,9 +146,9 @@ class Maps(object):
 
     See Also
     --------
-    - MapsGrid : Initialize a grid of Maps objects
-    - m.new_layer : get a Maps-object that represents a new layer of a map
-    - m.copy : copy an existing Maps object
+    MapsGrid : Initialize a grid of Maps objects
+
+    Maps.new_layer : get a Maps-object that represents a new layer of a map
 
     Parameters
     ----------
@@ -274,10 +312,11 @@ class Maps(object):
             crs=4326,
         )
 
-        self._axpicker = None
+        self._layout_editor = None
 
         self._figure = map_objects(weakref.proxy(self))
         self._cb = cb_container(weakref.proxy(self))  # accessor for the callbacks
+
         self._init_figure(gs_ax=gs_ax, plot_crs=crs, **kwargs)
         self._utilities = utilities(weakref.proxy(self))
         self._wms_container = wms_container(weakref.proxy(self))
@@ -311,12 +350,31 @@ class Maps(object):
         # Maps-objects can be garbage-collected
         self._cleanup_functions = set()
 
+        if not hasattr(self.parent, "_wms_legend"):
+            self.parent._wms_legend = dict()
+
     def __enter__(self):
         return self
 
     def __exit__(self, type, value, traceback):
         self.cleanup()
         gc.collect()
+
+    def __getattribute__(self, key):
+        if key == "plot_specs":
+            raise AttributeError(
+                "EOmaps: 'm.plot_specs' has been removed in v4.0!\n For instructions "
+                + "on how to quickly port your script to EOmaps >= 4.0, see: \n"
+                + r"https://eomaps.readthedocs.io/en/latest/FAQ.html#port-script-from-eomaps-v3-x-to-v4-x"
+            )
+        elif key == "set_plot_specs":
+            raise AttributeError(
+                "EOmaps: 'm.set_plot_specs' has been removed in v4.0!\n For instructions "
+                + "on how to quickly port your script to EOmaps >= 4.0, see: \n"
+                + r"https://eomaps.readthedocs.io/en/latest/FAQ.html#port-script-from-eomaps-v3-x-to-v4-x"
+            )
+        else:
+            return object.__getattribute__(self, key)
 
     @staticmethod
     def _proxy(obj):
@@ -326,24 +384,9 @@ class Maps(object):
         else:
             return obj
 
-    @property
-    def plot_specs(self):
-        raise AssertionError(
-            "EOmaps: 'm.plot_specs' has been removed in v4.0!\n For instructions "
-            + "on how to quickly port your script to EOmaps >= 4.0, see: \n"
-            + r"https://eomaps.readthedocs.io/en/latest/FAQ.html#port-script-from-eomaps-v3-x-to-v4-x"
-        )
-
-    def set_plot_specs(self, *args, **kwargs):
-        raise AssertionError(
-            "EOmaps: 'm.set_plot_specs' has been removed in v4.0!\n For instructions "
-            + "on how to quickly port your script to EOmaps >= 4.0, see: \n"
-            + r"https://eomaps.readthedocs.io/en/latest/FAQ.html#port-script-from-eomaps-v3-x-to-v4-x"
-        )
-
     def cleanup(self):
         """
-        Cleanup all references to the object so that it can be savely deleted.
+        Cleanup all references to the object so that it can be safely deleted.
         (primarily used internally to clear objects if the figure is closed)
 
         Note
@@ -376,16 +419,6 @@ class Maps(object):
         if self in self.parent._children:
             self.parent._children.remove(self)
 
-    def _check_gpd(self):
-        # raise an error if geopandas is not found
-        # (execute this in any function that requires geopandas!)
-        if not _gpd_OK:
-            raise ImportError(
-                "EOmaps: You need to install geopandas first!\n"
-                + "... with conda, simply use:  "
-                + "'conda install -c conda-forge geopandas'"
-            )
-
     from_file = from_file
     read_file = read_file
 
@@ -410,7 +443,7 @@ class Maps(object):
             if self.data is not None:
                 size = np.size(self.data)
                 if size > 500_000:
-                    if _ds_OK:
+                    if _register_datashader():
                         if len(self.data.shape) == 2:
                             # shade_raster requires 2D data!
                             self.set_shape.shade_raster()
@@ -449,10 +482,16 @@ class Maps(object):
     def show(self):
         """
         Make the layer of this `Maps`-object visible.
-        (just a shortcut for `m.show_layer(m.layer)`)
+        (a shortcut for `m.show_layer(m.layer)`)
+
+        If matploltib is used in non-interactive mode, (e.g. `plt.ioff()`)
+        `plt.show()` is called as well!
         """
 
         self.show_layer(self.layer)
+
+        if not plt.isinteractive():
+            plt.show()
 
     @property
     def ax(self):
@@ -508,21 +547,91 @@ class Maps(object):
             layer=layer,
         )
 
+        # re-initialize all sliders and buttons to include the new layer
+        self.util._reinit_widgets()
         return m
+
+    def _get_inset_boundary(self, x, y, xy_crs, radius, radius_crs, shape, n=100):
+        """
+        get inset map boundary
+
+
+        Parameters
+        ----------
+        x : TYPE
+            DESCRIPTION.
+        y : TYPE
+            DESCRIPTION.
+        xy_crs : TYPE
+            DESCRIPTION.
+        radius : TYPE
+            DESCRIPTION.
+        radius_crs : TYPE
+            DESCRIPTION.
+        shape : TYPE
+            DESCRIPTION.
+        n : TYPE, optional
+            DESCRIPTION. The default is 100.
+
+        Returns
+        -------
+        boundary : TYPE
+            DESCRIPTION.
+
+        """
+
+        shp = self.set_shape._get(shape)
+
+        if shape == "ellipses":
+            shp_pts = shp._get_ellipse_points(
+                x=np.atleast_1d(x),
+                y=np.atleast_1d(y),
+                crs=xy_crs,
+                radius=radius,
+                radius_crs=radius_crs,
+                n=n,
+            )
+            bnd_verts = np.stack(shp_pts[:2], axis=2)[0]
+
+        elif shape == "rectangles":
+            shp_pts = shp._get_rectangle_verts(
+                x=np.atleast_1d(x),
+                y=np.atleast_1d(y),
+                crs=xy_crs,
+                radius=radius,
+                radius_crs=radius_crs,
+                n=n,
+            )
+            bnd_verts = shp_pts[0][0]
+
+        elif shape == "geod_circles":
+            shp_pts = shp._get_geod_circle_points(
+                x=np.atleast_1d(x),
+                y=np.atleast_1d(y),
+                crs=xy_crs,
+                radius=radius,
+                # radius_crs=radius_crs,
+                n=n,
+            )
+            bnd_verts = np.stack(shp_pts[:2], axis=2).squeeze()
+        boundary = mpl.path.Path(bnd_verts)
+
+        return boundary, bnd_verts
 
     def new_inset_map(
         self,
         xy=(45, 45),
+        xy_crs=4326,
         radius=5,
+        radius_crs=None,
         plot_position=(0.5, 0.5),
         plot_size=0.5,
-        xy_crs=4326,
-        radius_crs=4326,
         inset_crs=4326,
-        edgecolor="r",
-        linewidth=2,
+        layer="all",
+        boundary=True,
         shape="ellipses",
         indicate_extent=True,
+        **kwargs,
     ):
         """
         Create a new (empty) inset-map that shows a zoomed-in view on a given extent.
@@ -548,29 +657,49 @@ class Maps(object):
             The center-coordinates of the area to indicate.
             (provided in the xy_crs projection)
             The default is (45., 45.).
+        xy_crs : any, optional
+            The crs used for specifying the center position of the inset-map.
+            (can be any crs definition supported by PyProj)
+            The default is 4326 (e.g. lon/lat).
         radius : float or tuple, optional
             The radius of the extent to indicate.
             (provided in units of the radius_crs projection)
             The default is 5.
+        radius_crs : None or a crs-definition, optional
+            The crs used for specifying the radius. (can be any crs definition
+            supported by PyProj)
+
+            - If None:  The crs provided as "xy_crs" is used
+            - If shape == "geod_circles", "radius_crs" must be None since the radius
+              of a geodesic circle is defined in meters!
+
+            The default is None.
         plot_position : tuple, optional
             The center-position of the inset map in relative units (0-1) with respect to
             the figure size. The default is (.5,.5).
         plot_size : float, optional
             The relative size of the inset-map compared to the figure width.
             The default is 0.5.
-        xy_crs : any, optional
-            The crs used for specifying the xy-position.
-            The default is 4326.
-        radius_crs : any, optional
-            The crs used for specifying the radius.
-            The default is 4326.
         inset_crs : any, optional
             The crs that is used in the inset-map.
             The default is 4326.
-        edgecolor : str or tuple, optional
-            The edgecolor of the boundary. The default is "r".
-        linewidth : TYPE, optional
-            The linewidth of the boundary. The default is 2.
+        layer : str, optional
+            The layer associated with the inset-map.
+            Note: If you specify a dedicated layer for the inset-map, the contents
+            of the inset-map will only be visible on that specific layer!
+            To create different views of an inset-map for different layers,
+            simply create a child-layer from the inset-map (see examples below).
+            By default the "all" layer is used so that the contents of the inset-map
+            are visible independent of the currently visible layer.
+            The default is "all".
+        boundary: bool or dict, optional
+            - If True: indicate the boundary of the inset-map with default colors
+              (e.g.: {"ec":"r", "lw":2})
+            - If False: don't add edgecolors to the boundary of the inset-map
+            - if dict: use the provided values for "ec" (e.g. edgecolor) and
+              "lw" (e.g. linewidth)
+
+            The default is True.
         shape : str, optional
             The shape to use. Can be either "ellipses", "rectangles" or "geod_circles".
             The default is "ellipses".
@@ -579,8 +708,8 @@ class Maps(object):
             - If a dict is provided, it will be used to update the appearance of the
               added polygon (e.g. facecolor, edgecolor, linewidth etc.)
 
-            NOTE: you can also use `m.indicate_inset_extent(...)` to manually indicate
-            the inset-shape on arbitrary Maps-objects.
+            NOTE: you can also use `m_inset.indicate_inset_extent(...)` to manually
+            indicate the inset-shape on arbitrary Maps-objects.
 
         Returns
         -------
@@ -590,7 +719,7 @@ class Maps(object):
 
         See also
         --------
-        The following additional methods are defined on inset `Maps` objects
+        The following additional methods are defined on `_InsetMaps` objects
 
         m.indicate_inset_extent :
             Plot a polygon representing the extent of the inset map on another Maps
@@ -631,175 +760,53 @@ class Maps(object):
         >>> m2.add_annotation(ID=1)
         >>> m2.indicate_inset_extent(m, ec="g", fc=(0,1,0,.25))
 
+        Multi-layer inset-maps:
+
+        >>> m = Maps(layer="first")
+        >>> m.add_feature.preset.coastline()
+        >>> m3 = m.new_layer("second")
+        >>> m3.add_feature.preset.ocean()
+        >>> # create an inset-map on the "first" layer
+        >>> m2 = m.new_inset_map(layer="first")
+        >>> m2.add_feature.preset.coastline()
+        >>> # create a new layer of the inset-map that will be
+        >>> # visible if the "second" layer is visible
+        >>> m3 = m2.new_layer(layer="second")
+        >>> m3.add_feature.preset.coastline()
+        >>> m3.add_feature.preset.land()
+
+        >>> m.util.layer_selector()
+
         """
 
-        x, y = xy
-        plot_x, plot_y = plot_position
-
-        # setup a gridspec at the desired position
-        gs = GridSpec(
-            1,
-            1,
-            left=plot_x - plot_size / 2,
-            bottom=plot_y - plot_size / 2,
-            top=plot_y + plot_size / 2,
-            right=plot_x + plot_size / 2,
-        )[0]
-        # initialize a new maps-object with a new axis
-        m2 = Maps(inset_crs, parent=self, gs_ax=gs)
-
-        # get the boundary of a ellipse in the inset_crs
-        possible_shapes = ["ellipses", "rectangles", "geod_circles"]
-        assert (
-            shape in possible_shapes
-        ), f"EOmaps: the inset shape can only be one of {possible_shapes}"
-
-        shp = m2.set_shape._get(shape)
-        if shape == "ellipses":
-            shp_pts = shp._get_ellipse_points(
-                x=np.atleast_1d(x),
-                y=np.atleast_1d(y),
-                crs=xy_crs,
-                radius=radius,
-                radius_crs=radius_crs,
-                n=100,
-            )
-            bnd_verts = np.stack(shp_pts[:2], axis=2)[0]
-
-        elif shape == "rectangles":
-            shp_pts = shp._get_rectangle_verts(
-                x=np.atleast_1d(x),
-                y=np.atleast_1d(y),
-                crs=xy_crs,
-                radius=radius,
-                radius_crs=radius_crs,
-                n=100,
-            )
-            bnd_verts = shp_pts[0][0]
-
-        elif shape == "geod_circles":
-            shp_pts = shp._get_geod_circle_points(
-                x=np.atleast_1d(x),
-                y=np.atleast_1d(y),
-                crs=xy_crs,
-                radius=radius,
-                # radius_crs=radius_crs,
-                n=100,
-            )
-            bnd_verts = np.stack(shp_pts[:2], axis=2).squeeze()
-
-        boundary = mpl.path.Path(bnd_verts)
-
-        # set the map boundary
-        m2.ax.set_boundary(boundary)
-        # set the plot-extent to the envelope of the shape
-        (x0, y0), (x1, y1) = bnd_verts.min(axis=0), bnd_verts.max(axis=0)
-        m2.ax.set_extent((x0, x1, y0, y1), crs=m2.ax.projection)
-
-        # TODO turn off navigation until the matpltolib pull-request on
-        # zoom-events in overlapping axes is resolved
-        # https://github.com/matplotlib/matplotlib/pull/22347
-        m2.ax.set_navigate(False)
-
-        # set style of the inset-boundary
-        m2.ax.spines["geo"].set_edgecolor(edgecolor)
-        m2.ax.spines["geo"].set_lw(linewidth)
-
-        # ------------
-
-        # turn off set_extent for plot_map by default to avoid resetting the plot-extent
-        from functools import partial
-
-        m2.plot_map = partial(m2.plot_map, set_extent=False)
-
-        # add a convenience-method to add a boundary-polygon to a map
-        def indicate_inset_extent(self, m, **kwargs):
-            """
-            Add a polygon to a  map that indicates the extent of the inset-map.
-
-            Parameters
-            ----------
-            m : eomaps.Maps
-                The Maps-object that will be used to draw the marker.
-                (e.g. the map on which the extent of the inset should be indicated)
-            kwargs :
-                additional keyword-arguments passed to `m.add_marker`
-                (e.g. "facecolor", "edgecolor" etc.)
-            """
-            if not any((i in kwargs for i in ["fc", "facecolor"])):
-                kwargs["fc"] = "none"
-            if not any((i in kwargs for i in ["ec", "edgecolor"])):
-                kwargs["ec"] = edgecolor
-            if not any((i in kwargs for i in ["lw", "linewidth"])):
-                kwargs["lw"] = linewidth
-
-            m.add_marker(
-                shape=shape,
-                xy=xy,
-                xy_crs=xy_crs,
-                radius=radius,
-                radius_crs=radius_crs,
-                n=100,
-                **kwargs,
+        if "edgecolor" in kwargs or "linewidth" in kwargs:
+            warnings.warn(
+                "EOmaps: 'edgecolor' and 'linewidth' kwargs for `m.new_inset_map()`"
+                + " are depreciated! use `boundary=dict(ec='r', lw=1)` instead!",
+                category=DeprecationWarning,
+                stacklevel=2,
             )
 
-        m2.indicate_inset_extent = indicate_inset_extent.__get__(m2)
+            ec = kwargs.pop("edgecolor", "r")
+            lw = kwargs.pop("linewidth", 1)
 
-        if indicate_extent is True:
-            m2.indicate_inset_extent(self, edgecolor=edgecolor)
-        elif isinstance(indicate_extent, dict):
-            if not any((i in indicate_extent for i in ["ec", "edgecolor"])):
-                m2.indicate_inset_extent(self, **indicate_extent, edgecolor=edgecolor)
-            else:
-                m2.indicate_inset_extent(self, **indicate_extent)
+            boundary = dict(ec=ec, lw=lw)
+            boundary.update(kwargs.pop("boundary", dict()))
 
-        # add a convenience-method to set the position based on the center of the axis
-        def set_inset_position(self, x=None, y=None, size=None):
-            """
-            Set the (center) position and size of the inset-map.
-
-            Parameters
-            ----------
-            x, y : int or float, optional
-                The center position in relative units (0-1) with respect to the figure.
-                If None, the existing position is used.
-                The default is None.
-            size : float, optional
-                The relative radius (0-1) of the inset in relation to the figure width.
-                If None, the existing size is used.
-                The default is None.
-            """
-
-            y0, y1, x0, x1 = self.figure.gridspec.get_grid_positions(self.figure.f)
-
-            if self.figure.cb_gridspec is not None:
-                y0cb, y1cb, x0cb, x1cb = self.figure.cb_gridspec.get_grid_positions(
-                    self.figure.f
-                )
-
-                x0 = min(*x0, *x0cb)
-                x1 = max(*x1, *x1cb)
-                y0 = min(*y0, *y0cb)
-                y1 = max(*y1, *y1cb)
-
-            if size is None:
-                size = abs(x1 - x0)
-
-            if x is None:
-                x = (x0 + x1) / 2
-            if y is None:
-                y = (y0 + y1) / 2
-
-            self.figure.gridspec.update(
-                left=x - size / 2,
-                bottom=y - size / 2,
-                right=x + size / 2,
-                top=y + size / 2,
-            )
-
-            self.redraw()
-
-        m2.set_inset_position = set_inset_position.__get__(m2)
+        m2 = _InsetMaps(
+            crs=inset_crs,
+            parent=self,
+            layer=layer,
+            xy=xy,
+            radius=radius,
+            plot_position=plot_position,
+            plot_size=plot_size,
+            xy_crs=xy_crs,
+            radius_crs=radius_crs,
+            boundary=boundary,
+            shape=shape,
+            indicate_extent=indicate_extent,
+        )
 
         return m2
 
@@ -839,6 +846,7 @@ class Maps(object):
         return cartopy_proj
 
     def _init_figure(self, gs_ax=None, plot_crs=None, **kwargs):
+
         if self.parent.figure.f is None:
             self._f = plt.figure(**kwargs)
             newfig = True
@@ -903,8 +911,6 @@ class Maps(object):
             # self.figure.ax.callbacks.connect("ylim_changed", ylims_change)
 
         if newfig:  # only if a new figure has been initialized
-            _ = self._draggable_axes
-
             # attach a callback that is executed when the figure is closed
             self._cid_onclose = self.figure.f.canvas.mpl_connect(
                 "close_event", self._on_close
@@ -913,6 +919,10 @@ class Maps(object):
             self._cid_resize = self.figure.f.canvas.mpl_connect(
                 "resize_event", self._on_resize
             )
+
+        # if we haven't attached an axpicker so far, do it!
+        if self.parent._layout_editor is None:
+            self.parent._layout_editor = LayoutEditor(self.parent, modifier="alt+l")
 
         if newfig:
             # we only need to call show if a new figure has been created!
@@ -942,7 +952,7 @@ class Maps(object):
                 del m.tree
 
             if hasattr(m.figure, "coll"):
-                del m.figure.coll
+                m.figure.coll = None
 
             m.data_specs.delete()
             m.cleanup()
@@ -970,15 +980,6 @@ class Maps(object):
             self.parent._BM = BlitManager(m)
             self.parent._BM._bg_layer = m.parent.layer
         return self.parent._BM
-
-    @property
-    def _draggable_axes(self):
-        if self.parent._axpicker is None:
-            # make the axes draggable
-            self.parent._axpicker = draggable_axes(self.parent, modifier="alt+d")
-            return self.parent._axpicker
-
-        return self.parent._axpicker
 
     def _add_child(self, m):
         self.parent._children.add(m)
@@ -1306,10 +1307,89 @@ class Maps(object):
 
     set_data = set_data_specs
 
+    def _get_mcl_subclass(self, s):
+        # get a subclass that inherits the docstring from the corresponding
+        # mapclassify classifier
+
+        class scheme:
+            @wraps(s)
+            def __init__(_, *args, **kwargs):
+                pass
+
+            def __new__(cls, **kwargs):
+                if "y" in kwargs:
+                    print(
+                        "EOmaps: The values (e.g. the 'y' parameter) are "
+                        + "assigned internally... only provide additional "
+                        + "parameters that specify the classification scheme!"
+                    )
+                    kwargs.pop("y")
+
+                self.classify_specs._set_scheme_and_args(scheme=s.__name__, **kwargs)
+
+        scheme.__doc__ = s.__doc__
+        return scheme
+
+    @property
+    def set_classify(self):
+        from textwrap import dedent
+
+        assert _register_mapclassify(), (
+            "EOmaps: Missing dependency: 'mapclassify' \n ... please install"
+            + " (conda install -c conda-forge mapclassify) to use data-classifications."
+        )
+
+        s = SimpleNamespace(
+            **{
+                i: self._get_mcl_subclass(getattr(mapclassify, i))
+                for i in mapclassify.CLASSIFIERS
+            }
+        )
+        s.__doc__ = dedent(
+            """
+            Interface to the classifiers provided by the 'mapclassify' module.
+
+            To set a classification scheme for a given Maps-object, simply use:
+
+            >>> m.set_classify.<SCHEME>(...)
+
+            Where `<SCHEME>` is the name of the desired classification and additional
+            parameters are passed in the call. (check docstrings for more info!)
+
+
+            Note
+            ----
+            The following calls have the same effect:
+
+            >>> m.set_classify.Quantiles(k=5)
+            >>> m.set_classify_specs(scheme="Quantiles", k=5)
+
+            Using `m.set_classify()` is the same as using `m.set_classify_specs()`!
+            However, `m.set_classify()` will provide autocompletion and proper
+            docstrings once the Maps-object is initialized which greatly enhances
+            the usability.
+
+            """
+        )
+
+        return s
+
     def set_classify_specs(self, scheme=None, **kwargs):
         """
         Set classification specifications for the data.
         (classification is performed by the `mapclassify` module)
+
+        Note
+        ----
+        The following calls have the same effect:
+
+        >>> m.set_classify.Quantiles(k=5)
+        >>> m.set_classify_specs(scheme="Quantiles", k=5)
+
+        Using `m.set_classify()` is the same as using `m.set_classify_specs()`!
+        However, `m.set_classify()` will provide autocompletion and proper
+        docstrings once the Maps-object is initialized which greatly enhances
+        the usability.
 
         Parameters
         ----------
@@ -1339,6 +1419,12 @@ class Maps(object):
             kwargs passed to the call to the respective mapclassify classifier
             (dependent on the selected scheme... see above)
         """
+
+        assert _register_mapclassify(), (
+            "EOmaps: Missing dependency: 'mapclassify' \n ... please install"
+            + " (conda install -c conda-forge mapclassify) to use data-classifications."
+        )
+
         self.classify_specs._set_scheme_and_args(scheme, **kwargs)
 
     def _set_cpos(self, x, y, radiusx, radiusy, cpos):
@@ -1414,59 +1500,66 @@ class Maps(object):
             y = self.data_specs.y
         if parameter is None:
             parameter = self.data_specs.parameter
-        if data is not None and _pd_OK and isinstance(data, pd.DataFrame):
-            if parameter is not None:
-                # get the data-values
-                z_data = data[parameter].values
-            else:
-                z_data = np.repeat(np.nan, len(data))
 
-            # get the index-values
-            ids = data.index.values
+        # check other types before pandas to avoid unnecessary import
+        if data is not None and not isinstance(data, (list, tuple, np.ndarray)):
+            if _register_pandas() and isinstance(data, pd.DataFrame):
 
-            if isinstance(x, str) and isinstance(y, str):
-                # get the data-coordinates
-                xorig = data[x].values
-                yorig = data[y].values
-            else:
-                assert isinstance(x, (list, np.ndarray, pd.Series)), (
-                    "'x' must be either a column-name, or explicit values "
-                    " specified as a list, a numpy-array or a pandas"
-                    + f" Series object if you provide the data as '{type(data)}'"
-                )
-                assert isinstance(y, (list, np.ndarray, pd.Series)), (
-                    "'y' must be either a column-name, or explicit values "
-                    " specified as a list, a numpy-array or a pandas"
-                    + f" Series object if you provide the data as '{type(data)}'"
-                )
+                if parameter is not None:
+                    # get the data-values
+                    z_data = data[parameter].values
+                else:
+                    z_data = np.repeat(np.nan, len(data))
 
-                xorig = np.asanyarray(x)
-                yorig = np.asanyarray(y)
+                # get the index-values
+                ids = data.index.values
 
-            return z_data, xorig, yorig, ids, parameter
+                if isinstance(x, str) and isinstance(y, str):
+                    # get the data-coordinates
+                    xorig = data[x].values
+                    yorig = data[y].values
+                else:
+                    assert isinstance(x, (list, np.ndarray, pd.Series)), (
+                        "'x' must be either a column-name, or explicit values "
+                        " specified as a list, a numpy-array or a pandas"
+                        + f" Series object if you provide the data as '{type(data)}'"
+                    )
+                    assert isinstance(y, (list, np.ndarray, pd.Series)), (
+                        "'y' must be either a column-name, or explicit values "
+                        " specified as a list, a numpy-array or a pandas"
+                        + f" Series object if you provide the data as '{type(data)}'"
+                    )
+
+                    xorig = np.asanyarray(x)
+                    yorig = np.asanyarray(y)
+
+                return z_data, xorig, yorig, ids, parameter
 
         # identify all other types except for pandas.DataFrames
 
-        # check for explicit 1D value lists
-        types = (list, np.ndarray)
-        if _pd_OK:
-            types += (pd.Series,)
+        # lazily check if pandas was used
+        pandas_series_data = False
+        for iname, i in zip(("x", "y", "data"), (x, y, data)):
+            if iname == "data" and i is None:
+                # allow empty datasets
+                continue
 
-        assert isinstance(
-            x, types
-        ), "'x' coordinates must be provided as list, numpy-array or pandas.Series"
-        assert isinstance(
-            y, types
-        ), "'y' coordinates must be provided as list, numpy-array or pandas.Series"
+            if not isinstance(i, (list, np.ndarray)):
+                if _register_pandas() and not isinstance(i, pd.Series):
+                    raise AssertionError(
+                        f"{iname} values must be a list, numpy-array or pandas.Series"
+                    )
+                else:
+                    if iname == "data":
+                        pandas_series_data = True
 
         # get the data-coordinates
         xorig = np.asanyarray(x)
         yorig = np.asanyarray(y)
 
         if data is not None:
-            if isinstance(data, types):
-                # get the data-values
-                z_data = np.asanyarray(data)
+            # get the data-values
+            z_data = np.asanyarray(data)
         else:
             if xorig.shape == yorig.shape:
                 z_data = np.full(xorig.shape, np.nan)
@@ -1478,7 +1571,7 @@ class Maps(object):
                 z_data = np.full((xorig.shape[0], yorig.shape[0]), np.nan)
 
         # get the index-values
-        if isinstance(data, pd.Series):
+        if pandas_series_data is True:
             # use actual index values if pd.Series was passed as "data"
             ids = data.index.values
         else:
@@ -1500,6 +1593,7 @@ class Maps(object):
         x=None,
         y=None,
         buffer=None,
+        assume_sorted=True,
     ):
         if in_crs is None:
             in_crs = self.data_specs.crs
@@ -1543,6 +1637,41 @@ class Maps(object):
         # invoke the shape-setter to make sure a shape is set
         used_shape = self.shape
 
+        # --------- sort by coordinates
+        # this is required to avoid glitches in "raster" and "shade_raster"
+        # since QuadMesh requires sorted coordinates!
+        # (currently only implemented for 1D coordinates and 2D data)
+        if assume_sorted is False:
+            if used_shape.name in ["raster", "shade_raster"]:
+                if (
+                    len(xorig.shape) == 1
+                    and len(yorig.shape) == 1
+                    and len(z_data.shape) == 2
+                ):
+
+                    xs, ys = np.argsort(xorig), np.argsort(yorig)
+                    np.take(xorig, xs, out=xorig, mode="wrap")
+                    np.take(yorig, ys, out=yorig, mode="wrap")
+                    np.take(
+                        np.take(z_data, xs, 0),
+                        indices=ys,
+                        axis=1,
+                        out=z_data,
+                        mode="wrap",
+                    )
+                else:
+                    print(
+                        "EOmaps: using 'assume_sorted=False' is only possible"
+                        + "if you use 1D coordinates + 2D data!"
+                        + "...continuing without sorting."
+                    )
+            else:
+                print(
+                    "EOmaps: using 'assume_sorted=False' is only relevant for "
+                    + "the shapes ['raster', 'shade_raster']! "
+                    + "...continuing without sorting."
+                )
+
         if crs1 == crs2:
             if used_shape.name in ["raster"]:
                 # convert 1D data to 2D (required for QuadMeshes)
@@ -1551,6 +1680,7 @@ class Maps(object):
                     and len(yorig.shape) == 1
                     and len(z_data.shape) == 2
                 ):
+
                     xorig, yorig = np.meshgrid(xorig, yorig, copy=False)
                     z_data = z_data.T
 
@@ -1594,6 +1724,11 @@ class Maps(object):
         vmax=None,
         classify_specs=None,
     ):
+
+        assert _register_mapclassify(), (
+            "EOmaps: Missing dependency: 'mapclassify' \n ... please install"
+            + " (conda install -c conda-forge mapclassify) to use data-classifications."
+        )
 
         if z_data is None:
             z_data = self._props["z_data"]
@@ -1766,13 +1901,16 @@ class Maps(object):
         else:
             ax_cb_plot.set_axis_off()
 
-        # identify position of color-splits in the colorbar
-        if isinstance(n_cmap.cmap, LinearSegmentedColormap):
-            # for LinearSegmentedcolormap N is the number of quantizations!
-            splitpos = np.linspace(vmin, vmax, n_cmap.cmap.N)
+        if bins is None:
+            # identify position of color-splits in the colorbar
+            if isinstance(n_cmap.cmap, LinearSegmentedColormap):
+                # for LinearSegmentedcolormap N is the number of quantizations!
+                splitpos = np.linspace(vmin, vmax, n_cmap.cmap.N)
+            else:
+                # for ListedColormap N is the number of colors
+                splitpos = np.linspace(vmin, vmax, n_cmap.cmap.N + 1)
         else:
-            # for ListedColormap N is the number of colors
-            splitpos = np.linspace(vmin, vmax, n_cmap.cmap.N + 1)
+            splitpos = bins
 
         # color the histogram patches
         for patch in list(ax_cb_plot.patches):
@@ -1789,7 +1927,7 @@ class Maps(object):
                 height = patch.get_height()
                 maxval = minval + width
 
-            # ----------- take care of histogram-bins that have splitted colors
+            # ----------- take care of histogram-bins that have split colors
             # identify bins that extend beyond a color-change
             splitbins = [
                 minval,
@@ -1956,6 +2094,7 @@ class Maps(object):
             axcb2 = self.figure.f.add_axes(
                 (bbox.x0 - frac / 2, bbox.y0, bbox.width + frac, bbox.height),
                 zorder=-99,
+                label="ax_cb_extend",
             )
             axcb2.get_shared_y_axes().join(axcb2, self.figure.ax_cb)
             # set the limits to (0, 1) so we can directly use the fractions
@@ -1992,8 +2131,15 @@ class Maps(object):
         points = dict(
             left=[[0, 0.5], [x0, 1], [x0 + ovx, 1], [x0 + ovx, 0], [x0, 0], [0, 0.5]],
             right=[[1, 0.5], [x1, 1], [x1 - ovx, 1], [x1 - ovx, 0], [x1, 0], [1, 0.5]],
-            top=[[0.5, 1], [0, y1 - ovy], [1, y1 - ovy], [0.5, 1]],
-            bottom=[[0.5, 0], [0, y0 + ovy], [1, y0 + ovy], [0.5, 0]],
+            top=[[0.5, 1], [0, y1], [0, y1 - ovy], [1, y1 - ovy], [1, y1], [0.5, 1]],
+            bottom=[
+                [0.5, 0],
+                [0, y0],
+                [0, y0 + ovy],
+                [1, y0 + ovy],
+                [1, y0],
+                [0.5, ovy],
+            ],
         )
 
         cmap = self.figure.coll.cmap
@@ -2023,401 +2169,453 @@ class Maps(object):
         axcb2.add_collection(collection)
         return axcb2
 
+    def _update_cb_extend_pos(self):
+        if not hasattr(self, "_colorbar"):
+            return
+        # update the position of the axis holding the colorbar extension arrows
+        # TODO the colorbar should be merged into a single artist
+        #      to avoid having to update the axes separately!
+        [
+            layer,
+            cbgs,
+            ax_cb,
+            ax_cb_plot,
+            ax_cb_extend,
+            extend_frac,
+            orientation,
+            cb,
+        ] = self._colorbar
+
+        if ax_cb_extend is None:
+            return
+
+        bbox = ax_cb.bbox.transformed(self.figure.f.transFigure.inverted())
+        if orientation == "horizontal":
+            frac = extend_frac * (bbox.width)
+            ax_cb_extend.set_position(
+                (bbox.x0 - frac / 2, bbox.y0, bbox.width + frac, bbox.height),
+            )
+        elif orientation == "vertical":
+            frac = extend_frac * (bbox.height)
+            ax_cb_extend.set_position(
+                (bbox.x0, bbox.y0 - frac / 2, bbox.width, bbox.height + frac),
+            )
+        else:
+            raise TypeError(f"'{orientation}' is not a valid colorbar orientation!")
+
     @property
     @wraps(NaturalEarth_features)
     def add_feature(self):
         return NaturalEarth_features(weakref.proxy(self))
 
-    if _gpd_OK:
+    def _clip_gdf(self, gdf, how="crs"):
+        """
+        Clip the shapes of a GeoDataFrame with respect to the boundaries
+        of the crs (or the plot-extent).
 
-        def _clip_gdf(self, gdf, how="crs"):
-            """
-            Clip the shapes of a GeoDataFrame with respect to the boundaries
-            of the crs (or the plot-extent).
+        Parameters
+        ----------
+        gdf : geopandas.GeoDataFrame
+            The GeoDataFrame containing the geometries.
+        how : str, optional
+            Identifier how the clipping should be performed.
 
-            Parameters
-            ----------
-            gdf : geopandas.GeoDataFrame
-                The GeoDataFrame containing the geometries.
-            how : str, optional
-                Identifier how the clipping should be performed.
+            If a suffix "_invert" is added to the string, the polygon will be
+            inverted (via a symmetric-difference to the clip-shape)
 
-                If a suffix "_invert" is added to the string, the polygon will be
-                inverted (via a symmetric-difference to the clip-shape)
+            - clipping with geopandas:
+              - "crs" : use the actual crs boundary polygon
+              - "crs_bounds" : use the boundary-envelope of the crs
+              - "extent" : use the current plot-extent
 
-                - clipping with geopandas:
-                  - "crs" : use the actual crs boundary polygon
-                  - "crs_bounds" : use the boundary-envelope of the crs
-                  - "extent" : use the current plot-extent
+            - clipping with gdal (always uses the crs domain as clip-shape):
+              - "gdal_Intersection"
+              - "gdal_SymDifference"
+              - "gdal_Difference"
+              - "gdal_Union"
 
-                - clipping with gdal (always uses the crs domain as clip-shape):
-                  - "gdal_Intersection"
-                  - "gdal_SymDifference"
-                  - "gdal_Difference"
-                  - "gdal_Union"
+            The default is "crs".
 
-                The default is "crs".
+        Returns
+        -------
+        gdf
+            A GeoDataFrame with the clipped geometries
+        """
+        assert _register_geopandas(), (
+            "EOmaps: Missing dependency `geopandas`!\n"
+            + "please install '(conda install -c conda-forge geopandas)'"
+            + "to use `m.add_gdf()`."
+        )
 
-            Returns
-            -------
-            gdf
-                A GeoDataFrame with the clipped geometries
-            """
-
-            if how.startswith("gdal"):
-                methods = ["SymDifference", "Intersection", "Difference", "Union"]
-                # "SymDifference", "Intersection", "Difference"
-                method = how.split("_")[1]
-                assert method in methods, "EOmaps: '{how}' is not a valid clip-method"
-                try:
-                    from osgeo import gdal
-                    from shapely import wkt
-                except ImportError:
-                    raise ImportError(
-                        "EOmaps: Missing dependency: 'osgeo'\n"
-                        + "...clipping with gdal requires 'osgeo.gdal'"
-                    )
-
-                e = self.ax.projection.domain
-                e2 = gdal.ogr.CreateGeometryFromWkt(e.wkt)
-                if not e2.IsValid():
-                    e2 = e2.MakeValid()
-
-                gdf = gdf.to_crs(self.crs_plot)
-                clipgeoms = []
-                for g in gdf.geometry:
-                    g2 = gdal.ogr.CreateGeometryFromWkt(g.wkt)
-
-                    if g2 is None:
-                        continue
-
-                    if not g2.IsValid():
-                        g2 = g2.MakeValid()
-
-                    i = getattr(g2, method)(e2)
-
-                    if how.endswith("_invert"):
-                        i = i.SymDifference(e2)
-
-                    gclip = wkt.loads(i.ExportToWkt())
-                    clipgeoms.append(gclip)
-
-                gdf = gpd.GeoDataFrame(geometry=clipgeoms, crs=self.crs_plot)
-
-                return gdf
-
-            if how == "crs" or how == "crs_invert":
-                clip_shp = gpd.GeoDataFrame(
-                    geometry=[self.ax.projection.domain], crs=self.crs_plot
-                ).to_crs(gdf.crs)
-            elif how == "extent" or how == "extent_invert":
-                self.BM.update()
-                x0, x1, y0, y1 = self.ax.get_extent()
-                clip_shp = self._make_rect_poly(x0, y0, x1, y1, self.crs_plot).to_crs(
-                    gdf.crs
-                )
-            elif how == "crs_bounds" or how == "crs_bounds_invert":
-                x0, x1, y0, y1 = self.ax.get_extent()
-                clip_shp = self._make_rect_poly(
-                    *self.crs_plot.boundary.bounds, self.crs_plot
-                ).to_crs(gdf.crs)
-            else:
-                raise TypeError(f"EOmaps: '{how}' is not a valid clipping method")
-
-            clipgdf = gdf.clip(clip_shp)
-
-            if how.endswith("_invert"):
-                clipgdf = clipgdf.symmetric_difference(clip_shp)
-
-            return clipgdf
-
-        def add_gdf(
-            self,
-            gdf,
-            picker_name=None,
-            pick_method="contains",
-            val_key=None,
-            layer=None,
-            temporary_picker=None,
-            clip=False,
-            reproject="gpd",
-            verbose=False,
-            **kwargs,
-        ):
-            """
-            Plot a `geopandas.GeoDataFrame` on the map.
-
-            Parameters
-            ----------
-            gdf : geopandas.GeoDataFrame
-                A GeoDataFrame that should be added to the plot.
-            picker_name : str or None
-                A unique name that is used to identify the pick-method.
-
-                If a `picker_name` is provided, a new pick-container will be
-                created that can be used to pick geometries of the GeoDataFrame.
-
-                The container can then be accessed via:
-                >>> m.cb.pick__<picker_name>
-                or
-                >>> m.cb.pick[picker_name]
-                and it can be used in the same way as `m.cb.pick...`
-
-            pick_method : str or callable
-                if str :
-                    The operation that is executed on the GeoDataFrame to identify
-                    the picked geometry.
-                    Possible values are:
-
-                    - "contains":
-                      pick a geometry only if it contains the clicked point
-                      (only works with polygons! (not with lines and points))
-                    - "centroids":
-                      pick the closest geometry with respect to the centroids
-                      (should work with any geometry whose centroid is defined)
-
-                    The default is "centroids"
-
-                if callable :
-                    A callable that is used to identify the picked geometry.
-                    The call-signature is:
-
-                    >>> def picker(artist, mouseevent):
-                    >>>     # if the pick is NOT successful:
-                    >>>     return False, dict()
-                    >>>     ...
-                    >>>     # if the pick is successful:
-                    >>>     return True, dict(ID, pos, val, ind)
-
-                    The default is "contains"
-
-            val_key : str
-                The dataframe-column used to identify values for pick-callbacks.
-                The default is None.
-            layer : int, str or None
-                The name of the layer at which the dataset will be plotted.
-
-                - If "all": the corresponding feature will be added to ALL layers
-                - If None, the layer assigned to the Maps-object is used (e.g. `m.layer`)
-
-                The default is None.
-            temporary_picker : str, optional
-                The name of the picker that should be used to make the geometry
-                temporary (e.g. remove it after each pick-event)
-            clip : str or False
-                This feature can help with re-projection issues for non-global crs.
-                (see example below)
-
-                Indicator if geometries should be clipped prior to plotting or not.
-
-                - if "crs": clip with respect to the boundary-shape of the crs
-                - if "crs_bounds" : clip with respect to a rectangular crs boundary
-                - if "extent": clip with respect to the current extent of the plot-axis.
-                - if the 'gdal' python-bindings are installed, you can use gdal to clip
-                  the shapes with respect to the crs-boundary. (slower but more robust)
-                  The following logical operations are supported:
-
-                  - "gdal_SymDifference" : symmetric difference
-                  - "gdal_Intersection" : intersection
-                  - "gdal_Difference" : difference
-                  - "gdal_Union" : union
-
-                If a suffix "_invert" is added to the clip-string (e.g. "crs_invert"
-                or "gdal_Intersection_invert") the obtained (clipped) polygons will be
-                inverted.
-
-
-                >>> mg = MapsGrid(2, 3, crs=3035)
-                >>> mg.m_0_0.add_feature.preset.ocean(use_gpd=True)
-                >>> mg.m_0_1.add_feature.preset.ocean(use_gpd=True, clip="crs")
-                >>> mg.m_0_2.add_feature.preset.ocean(use_gpd=True, clip="extent")
-                >>> mg.m_1_0.add_feature.preset.ocean(use_gpd=False)
-                >>> mg.m_1_1.add_feature.preset.ocean(use_gpd=False, clip="crs")
-                >>> mg.m_1_2.add_feature.preset.ocean(use_gpd=False, clip="extent")
-
-            reproject : str, optional
-                Similar to "clip" this feature mainly addresses issues in the way how
-                re-projected geometries are displayed in certain coordinate-systems.
-                (see example below)
-
-                - if "gpd": geopandas is used to re-project the geometries
-                - if "cartopy": cartopy is used to re-project the geometries
-                  (slower but generally more robust than "gpd")
-
-                >>> mg = MapsGrid(2, 1, crs=Maps.CRS.Stereographic())
-                >>> mg.m_0_0.add_feature.preset.ocean(reproject="gpd")
-                >>> mg.m_1_0.add_feature.preset.ocean(reproject="cartopy")
-
-                The default is "gpd"
-            verbose : bool, optional
-                Indicator if a progressbar should be printed when re-projecting
-                geometries with "use_gpd=False".
-                The default is False.
-            kwargs :
-                all remaining kwargs are passed to `geopandas.GeoDataFrame.plot(**kwargs)`
-
-            Returns
-            -------
-            new_artists : matplotlib.Artist
-                The matplotlib-artists added to the plot
-
-            """
-            assert pick_method in ["centroids", "contains"], (
-                f"EOmaps: '{pick_method}' is not a valid GeoDataFrame pick-method! "
-                + "... use one of ['contains', 'centroids']"
-            )
-
-            self._check_gpd()
-
+        if how.startswith("gdal"):
+            methods = ["SymDifference", "Intersection", "Difference", "Union"]
+            # "SymDifference", "Intersection", "Difference"
+            method = how.split("_")[1]
+            assert method in methods, "EOmaps: '{how}' is not a valid clip-method"
             try:
-                # explode the GeoDataFrame to avoid picking multi-part geometries
-                gdf = gdf.explode(index_parts=False)
-            except Exception:
-                # geopandas sometimes has problems exploding geometries...
-                # if it does not work, just continue with the Multi-geometries!
-                pass
-
-            if clip:
-                gdf = self._clip_gdf(gdf, clip)
-            if reproject == "gpd":
-                gdf = gdf.to_crs(self.crs_plot)
-            elif reproject == "cartopy":
-                # optionally use cartopy's re-projection routines to re-project
-                # geometries
-                if self.ax.projection != self._get_cartopy_crs(gdf.crs):
-                    # select only polygons that actually intersect with the CRS-boundary
-                    mask = gdf.intersects(
-                        gpd.GeoDataFrame(
-                            geometry=[self.ax.projection.domain], crs=self.ax.projection
-                        )
-                        .to_crs(gdf.crs)
-                        .to_crs(gdf.crs)
-                        .geometry[0]
-                    )
-                    gdf = gdf.copy()[mask]
-
-                    geoms = gdf.geometry
-                    if len(geoms) > 0:
-                        proj_geoms = []
-
-                        if verbose:
-                            for g in progressbar(
-                                geoms, "EOmaps: re-projecting... ", 20
-                            ):
-                                proj_geoms.append(
-                                    self.ax.projection.project_geometry(
-                                        g, ccrs.CRS(gdf.crs)
-                                    )
-                                )
-                        else:
-                            for g in geoms:
-                                proj_geoms.append(
-                                    self.ax.projection.project_geometry(
-                                        g, ccrs.CRS(gdf.crs)
-                                    )
-                                )
-
-                        gdf.geometry = proj_geoms
-                        gdf.set_crs(self.ax.projection, allow_override=True)
-            else:
-                raise AssertionError(
-                    f"EOmaps: '{reproject}' is not a valid reproject-argument."
+                from osgeo import gdal
+                from shapely import wkt
+            except ImportError:
+                raise ImportError(
+                    "EOmaps: Missing dependency: 'osgeo'\n"
+                    + "...clipping with gdal requires 'osgeo.gdal'"
                 )
-            # plot gdf and identify newly added collections
-            # (geopandas always uses collections)
-            colls = [id(i) for i in self.ax.collections]
-            artists, prefixes = [], []
-            for geomtype, geoms in gdf.groupby(gdf.geom_type):
-                gdf.plot(ax=self.ax, aspect=self.ax.get_aspect(), **kwargs)
-                artists = [i for i in self.ax.collections if id(i) not in colls]
-                for i in artists:
-                    prefixes.append(
-                        f"_{i.__class__.__name__.replace('Collection', '')}"
-                    )
 
-            if picker_name is not None:
-                if pick_method is not None:
-                    if isinstance(pick_method, str):
-                        if pick_method == "contains":
+            e = self.ax.projection.domain
+            e2 = gdal.ogr.CreateGeometryFromWkt(e.wkt)
+            if not e2.IsValid():
+                e2 = e2.MakeValid()
 
-                            def picker(artist, mouseevent):
-                                try:
-                                    query = getattr(gdf, pick_method)(
-                                        gpd.points_from_xy(
-                                            [mouseevent.xdata], [mouseevent.ydata]
-                                        )[0]
-                                    )
-                                    if query.any():
-                                        return True, dict(
-                                            ID=gdf.index[query][0],
-                                            ind=query.values.nonzero()[0][0],
-                                            val=(
-                                                gdf[query][val_key].iloc[0]
-                                                if val_key
-                                                else None
-                                            ),
-                                        )
-                                    else:
-                                        return False, dict()
-                                except:
-                                    return False, dict()
+            gdf = gdf.to_crs(self.crs_plot)
+            clipgeoms = []
+            for g in gdf.geometry:
+                g2 = gdal.ogr.CreateGeometryFromWkt(g.wkt)
 
-                        elif pick_method == "centroids":
-                            tree = cKDTree(
-                                list(map(lambda x: (x.x, x.y), gdf.geometry.centroid))
+                if g2 is None:
+                    continue
+
+                if not g2.IsValid():
+                    g2 = g2.MakeValid()
+
+                i = getattr(g2, method)(e2)
+
+                if how.endswith("_invert"):
+                    i = i.SymDifference(e2)
+
+                gclip = wkt.loads(i.ExportToWkt())
+                clipgeoms.append(gclip)
+
+            gdf = gpd.GeoDataFrame(geometry=clipgeoms, crs=self.crs_plot)
+
+            return gdf
+
+        if how == "crs" or how == "crs_invert":
+            clip_shp = gpd.GeoDataFrame(
+                geometry=[self.ax.projection.domain], crs=self.crs_plot
+            ).to_crs(gdf.crs)
+        elif how == "extent" or how == "extent_invert":
+            self.BM.update()
+            x0, x1, y0, y1 = self.ax.get_extent()
+            clip_shp = self._make_rect_poly(x0, y0, x1, y1, self.crs_plot).to_crs(
+                gdf.crs
+            )
+        elif how == "crs_bounds" or how == "crs_bounds_invert":
+            x0, x1, y0, y1 = self.ax.get_extent()
+            clip_shp = self._make_rect_poly(
+                *self.crs_plot.boundary.bounds, self.crs_plot
+            ).to_crs(gdf.crs)
+        else:
+            raise TypeError(f"EOmaps: '{how}' is not a valid clipping method")
+
+        clip_shp = clip_shp.buffer(0)  # use this to make sure the geometry is valid
+
+        # add 1% of the extent-diameter as buffer
+        bnd = clip_shp.boundary.bounds
+        d = np.sqrt((bnd.maxx - bnd.minx) ** 2 + (bnd.maxy - bnd.miny) ** 2)
+        clip_shp = clip_shp.buffer(d / 100)
+
+        # clip the geo-dataframe with the buffered clipping shape
+        clipgdf = gdf.clip(clip_shp)
+
+        if how.endswith("_invert"):
+            clipgdf = clipgdf.symmetric_difference(clip_shp)
+
+        return clipgdf
+
+    def add_gdf(
+        self,
+        gdf,
+        picker_name=None,
+        pick_method="contains",
+        val_key=None,
+        layer=None,
+        temporary_picker=None,
+        clip=False,
+        reproject="gpd",
+        verbose=False,
+        **kwargs,
+    ):
+        """
+        Plot a `geopandas.GeoDataFrame` on the map.
+
+        Parameters
+        ----------
+        gdf : geopandas.GeoDataFrame, str or pathlib.Path
+            A GeoDataFrame that should be added to the plot.
+
+            If a string (or pathlib.Path) is provided, it is identified as the path to
+            a file that should be read with `geopandas.read_file(gdf)`.
+
+        picker_name : str or None
+            A unique name that is used to identify the pick-method.
+
+            If a `picker_name` is provided, a new pick-container will be
+            created that can be used to pick geometries of the GeoDataFrame.
+
+            The container can then be accessed via:
+            >>> m.cb.pick__<picker_name>
+            or
+            >>> m.cb.pick[picker_name]
+            and it can be used in the same way as `m.cb.pick...`
+
+        pick_method : str or callable
+            if str :
+                The operation that is executed on the GeoDataFrame to identify
+                the picked geometry.
+                Possible values are:
+
+                - "contains":
+                  pick a geometry only if it contains the clicked point
+                  (only works with polygons! (not with lines and points))
+                - "centroids":
+                  pick the closest geometry with respect to the centroids
+                  (should work with any geometry whose centroid is defined)
+
+                The default is "centroids"
+
+            if callable :
+                A callable that is used to identify the picked geometry.
+                The call-signature is:
+
+                >>> def picker(artist, mouseevent):
+                >>>     # if the pick is NOT successful:
+                >>>     return False, dict()
+                >>>     ...
+                >>>     # if the pick is successful:
+                >>>     return True, dict(ID, pos, val, ind)
+
+                The default is "contains"
+
+        val_key : str
+            The dataframe-column used to identify values for pick-callbacks.
+            The default is None.
+        layer : int, str or None
+            The name of the layer at which the dataset will be plotted.
+
+            - If "all": the corresponding feature will be added to ALL layers
+            - If None, the layer assigned to the Maps-object is used (e.g. `m.layer`)
+
+            The default is None.
+        temporary_picker : str, optional
+            The name of the picker that should be used to make the geometry
+            temporary (e.g. remove it after each pick-event)
+        clip : str or False
+            This feature can help with re-projection issues for non-global crs.
+            (see example below)
+
+            Indicator if geometries should be clipped prior to plotting or not.
+
+            - if "crs": clip with respect to the boundary-shape of the crs
+            - if "crs_bounds" : clip with respect to a rectangular crs boundary
+            - if "extent": clip with respect to the current extent of the plot-axis.
+            - if the 'gdal' python-bindings are installed, you can use gdal to clip
+              the shapes with respect to the crs-boundary. (slower but more robust)
+              The following logical operations are supported:
+
+              - "gdal_SymDifference" : symmetric difference
+              - "gdal_Intersection" : intersection
+              - "gdal_Difference" : difference
+              - "gdal_Union" : union
+
+            If a suffix "_invert" is added to the clip-string (e.g. "crs_invert"
+            or "gdal_Intersection_invert") the obtained (clipped) polygons will be
+            inverted.
+
+
+            >>> mg = MapsGrid(2, 3, crs=3035)
+            >>> mg.m_0_0.add_feature.preset.ocean(use_gpd=True)
+            >>> mg.m_0_1.add_feature.preset.ocean(use_gpd=True, clip="crs")
+            >>> mg.m_0_2.add_feature.preset.ocean(use_gpd=True, clip="extent")
+            >>> mg.m_1_0.add_feature.preset.ocean(use_gpd=False)
+            >>> mg.m_1_1.add_feature.preset.ocean(use_gpd=False, clip="crs")
+            >>> mg.m_1_2.add_feature.preset.ocean(use_gpd=False, clip="extent")
+
+        reproject : str, optional
+            Similar to "clip" this feature mainly addresses issues in the way how
+            re-projected geometries are displayed in certain coordinate-systems.
+            (see example below)
+
+            - if "gpd": geopandas is used to re-project the geometries
+            - if "cartopy": cartopy is used to re-project the geometries
+              (slower but generally more robust than "gpd")
+
+            >>> mg = MapsGrid(2, 1, crs=Maps.CRS.Stereographic())
+            >>> mg.m_0_0.add_feature.preset.ocean(reproject="gpd")
+            >>> mg.m_1_0.add_feature.preset.ocean(reproject="cartopy")
+
+            The default is "gpd"
+        verbose : bool, optional
+            Indicator if a progressbar should be printed when re-projecting
+            geometries with "use_gpd=False".
+            The default is False.
+        kwargs :
+            all remaining kwargs are passed to `geopandas.GeoDataFrame.plot(**kwargs)`
+
+        Returns
+        -------
+        new_artists : matplotlib.Artist
+            The matplotlib-artists added to the plot
+
+        """
+        assert pick_method in ["centroids", "contains"], (
+            f"EOmaps: '{pick_method}' is not a valid GeoDataFrame pick-method! "
+            + "... use one of ['contains', 'centroids']"
+        )
+
+        assert _register_geopandas(), (
+            "EOmaps: Missing dependency `geopandas`!\n"
+            + "please install '(conda install -c conda-forge geopandas)'"
+            + "to use `m.add_gdf()`."
+        )
+
+        if isinstance(gdf, (str, Path)):
+            gdf = gpd.read_file(gdf)
+
+        try:
+            # explode the GeoDataFrame to avoid picking multi-part geometries
+            gdf = gdf[gdf.is_valid].explode(index_parts=False)
+        except Exception:
+            # geopandas sometimes has problems exploding geometries...
+            # if it does not work, just continue with the Multi-geometries!
+            print("EOmaps: Exploding geometries did not work!")
+            pass
+
+        if clip:
+            gdf = self._clip_gdf(gdf, clip)
+        if reproject == "gpd":
+            gdf = gdf.to_crs(self.crs_plot)
+        elif reproject == "cartopy":
+            # optionally use cartopy's re-projection routines to re-project
+            # geometries
+
+            cartopy_crs = self._get_cartopy_crs(gdf.crs)
+            if self.ax.projection != cartopy_crs:
+                # TODO this results in problems and sometimes masks way too much!!
+                # select only polygons that actually intersect with the CRS-boundary
+                # mask = gdf.buffer(1).intersects(
+                #     gpd.GeoDataFrame(
+                #         geometry=[self.ax.projection.domain], crs=self.ax.projection
+                #     )
+                #     .to_crs(gdf.crs)
+                #     .geometry[0]
+                # )
+                # gdf = gdf.copy()[mask]
+
+                geoms = gdf.geometry
+                if len(geoms) > 0:
+                    proj_geoms = []
+
+                    if verbose:
+                        for g in progressbar(geoms, "EOmaps: re-projecting... ", 20):
+                            proj_geoms.append(
+                                self.ax.projection.project_geometry(g, cartopy_crs)
+                            )
+                    else:
+                        for g in geoms:
+                            proj_geoms.append(
+                                self.ax.projection.project_geometry(g, cartopy_crs)
                             )
 
-                            def picker(artist, mouseevent):
-                                try:
-                                    dist, ind = tree.query(
-                                        (mouseevent.xdata, mouseevent.ydata), 1
+                    gdf.geometry = proj_geoms
+                    gdf.set_crs(self.ax.projection, allow_override=True)
+                gdf = gdf[~gdf.is_empty]
+        else:
+            raise AssertionError(
+                f"EOmaps: '{reproject}' is not a valid reproject-argument."
+            )
+        # plot gdf and identify newly added collections
+        # (geopandas always uses collections)
+        colls = [id(i) for i in self.ax.collections]
+        artists, prefixes = [], []
+        for geomtype, geoms in gdf.groupby(gdf.geom_type):
+            gdf.plot(ax=self.ax, aspect=self.ax.get_aspect(), **kwargs)
+            artists = [i for i in self.ax.collections if id(i) not in colls]
+            for i in artists:
+                prefixes.append(f"_{i.__class__.__name__.replace('Collection', '')}")
+
+        if picker_name is not None:
+            if pick_method is not None:
+                if isinstance(pick_method, str):
+                    if pick_method == "contains":
+
+                        def picker(artist, mouseevent):
+                            try:
+                                query = getattr(gdf, pick_method)(
+                                    gpd.points_from_xy(
+                                        [mouseevent.xdata], [mouseevent.ydata]
+                                    )[0]
+                                )
+                                if query.any():
+                                    return True, dict(
+                                        ID=gdf.index[query][0],
+                                        ind=query.values.nonzero()[0][0],
+                                        val=(
+                                            gdf[query][val_key].iloc[0]
+                                            if val_key
+                                            else None
+                                        ),
                                     )
-
-                                    ID = gdf.index[ind]
-                                    val = gdf.iloc[ind][val_key] if val_key else None
-                                    pos = tree.data[ind].tolist()
-                                except:
+                                else:
                                     return False, dict()
+                            except:
+                                return False, dict()
 
-                                return True, dict(ID=ID, pos=pos, val=val, ind=ind)
-
-                    elif callable(pick_method):
-                        picker = pick_method
-                    else:
-                        print(
-                            "EOmaps: I don't know what to do with the provided pick_method"
+                    elif pick_method == "centroids":
+                        tree = cKDTree(
+                            list(map(lambda x: (x.x, x.y), gdf.geometry.centroid))
                         )
 
-                    if len(artists) > 1:
-                        warnings.warn(
-                            "EOmaps: Multiple geometry types encountered in `m.add_gdf`. "
-                            + "The pick containers are re-named to"
-                            + f"{[picker_name + prefix for prefix in prefixes]}"
-                        )
-                    else:
-                        prefixes = [""]
+                        def picker(artist, mouseevent):
+                            try:
+                                dist, ind = tree.query(
+                                    (mouseevent.xdata, mouseevent.ydata), 1
+                                )
 
-                    for artist, prefix in zip(artists, prefixes):
-                        # make the newly added collection pickable
-                        self.cb.add_picker(picker_name + prefix, artist, picker=picker)
+                                ID = gdf.index[ind]
+                                val = gdf.iloc[ind][val_key] if val_key else None
+                                pos = tree.data[ind].tolist()
+                            except:
+                                return False, dict()
 
-                        # attach the re-projected GeoDataFrame to the pick-container
-                        self.cb.pick[picker_name + prefix].data = gdf
+                            return True, dict(ID=ID, pos=pos, val=val, ind=ind)
 
-            if layer is None:
-                layer = self.layer
-
-            if temporary_picker is not None:
-                if temporary_picker == "default":
-                    for art, prefix in zip(artists, prefixes):
-                        self.cb.pick.add_temporary_artist(art)
+                elif callable(pick_method):
+                    picker = pick_method
                 else:
-                    for art, prefix in zip(artists, prefixes):
-                        self.cb.pick[temporary_picker].add_temporary_artist(art)
+                    print(
+                        "EOmaps: I don't know what to do with the provided pick_method"
+                    )
+
+                if len(artists) > 1:
+                    warnings.warn(
+                        "EOmaps: Multiple geometry types encountered in `m.add_gdf`. "
+                        + "The pick containers are re-named to"
+                        + f"{[picker_name + prefix for prefix in prefixes]}"
+                    )
+                else:
+                    prefixes = [""]
+
+                for artist, prefix in zip(artists, prefixes):
+                    # make the newly added collection pickable
+                    self.cb.add_picker(picker_name + prefix, artist, picker=picker)
+
+                    # attach the re-projected GeoDataFrame to the pick-container
+                    self.cb.pick[picker_name + prefix].data = gdf
+
+        if layer is None:
+            layer = self.layer
+
+        if temporary_picker is not None:
+            if temporary_picker == "default":
+                for art, prefix in zip(artists, prefixes):
+                    self.cb.pick.add_temporary_artist(art)
             else:
                 for art, prefix in zip(artists, prefixes):
-                    self.BM.add_bg_artist(art, layer)
-            return artists
+                    self.cb.pick[temporary_picker].add_temporary_artist(art)
+        else:
+            for art, prefix in zip(artists, prefixes):
+                self.BM.add_bg_artist(art, layer)
+        return artists
 
     def add_marker(
         self,
@@ -2427,6 +2625,8 @@ class Maps(object):
         radius=None,
         shape="ellipses",
         buffer=1,
+        n=100,
+        layer=None,
         **kwargs,
     ):
         """
@@ -2464,9 +2664,16 @@ class Maps(object):
             The default is "circle".
         buffer : float, optional
             A factor to scale the size of the shape. The default is 1.
+        n : int
+            The number of points to calculate for the shape.
+            The default is 100.
+        layer : str, int or None
+            The name of the layer at which the marker should be drawn.
+            If None, the layer associated with the used Maps-object (e.g. m.layer)
+            is used. The default is None.
         kwargs :
             kwargs passed to the matplotlib patch.
-            (e.g. `facecolor`, `edgecolor`, `linewidth`, `alpha` etc.)
+            (e.g. `zorder`, `facecolor`, `edgecolor`, `linewidth`, `alpha` etc.)
 
         Examples
         --------
@@ -2494,11 +2701,26 @@ class Maps(object):
                 # transform coordinates
                 xy = transformer.transform(*xy)
 
+        kwargs.setdefault("permanent", True)
+
         # add marker
         marker = self.cb.click._cb.mark(
-            ID=ID, pos=xy, radius=radius, ind=None, shape=shape, buffer=buffer, **kwargs
+            ID=ID,
+            pos=xy,
+            radius=radius,
+            ind=None,
+            shape=shape,
+            buffer=buffer,
+            n=n,
+            layer=layer,
+            **kwargs,
         )
-        self.BM.update(clear=False)
+
+        try:
+            # this will fail if no initial draw was performed!
+            self.BM._draw_animated(artists=[marker])
+        except Exception:
+            self.BM.update()
 
         return marker
 
@@ -2612,8 +2834,7 @@ class Maps(object):
             # transform coordinates
             xy = transformer.transform(*xy)
 
-        defaultargs = dict(permanent=True)
-        defaultargs.update(kwargs)
+        kwargs.setdefault("permanent", True)
 
         if isinstance(text, str) or callable(text):
             text = repeat(text)
@@ -2632,7 +2853,7 @@ class Maps(object):
                 val=vali,
                 ind=indi,
                 text=texti,
-                **defaultargs,
+                **kwargs,
             )
         self.BM.update(clear=False)
 
@@ -2740,6 +2961,231 @@ class Maps(object):
         def add_wms(self):
             return self._wms_container
 
+    def add_line(
+        self,
+        xy,
+        xy_crs=4326,
+        connect="geod",
+        n=None,
+        del_s=None,
+        mark_points=None,
+        layer=None,
+        **kwargs,
+    ):
+        """
+        Draw a line by connecting a set of anchor-points.
+
+        The points can be connected with either "geodesic-lines", "straight lines" or
+        "projected straight lines with respect to a given crs" (see `connect` kwarg).
+
+        Parameters
+        ----------
+        xy : list, set or numpy.ndarray
+            The coordinates of the anchor-points that define the line.
+            Expected shape:  [(x0, y0), (x1, y1), ...]
+        xy_crs : any, optional
+            The crs of the anchor-point coordinates.
+            (can be any crs definition supported by PyProj)
+            The default is 4326 (e.g. lon/lat).
+        connect : str, optional
+            The connection-method used to draw the segments between the anchor-points.
+
+            - "geod": Connect the anchor-points with geodesic lines
+            - "straight": Connect the anchor-points with straight lines
+            - "straight_crs": Connect the anchor-points with straight lines in the
+              `xy_crs` projection and reproject those lines to the plot-crs.
+
+            The default is "geod".
+        n : int, list or None optional
+            The number of intermediate points to use for each line-segment.
+
+            - If an integer is provided, each segment is equally divided into n parts.
+            - If a list is provided, it is used to specify "n" for each line-segment
+              individually.
+
+              (NOTE: The number of segments is 1 less than the number of anchor-points!)
+
+            If both n and del_s is None, n=100 is used by default!
+
+            The default is None.
+        del_s : int, float or None, optional
+            Only relevant if `connect="geod"`!
+
+            The target-distance in meters between the subdivisions of the line-segments.
+
+            - If a number is provided, each segment is equally divided.
+            - If a list is provided, it is used to specify "del_s" for each line-segment
+              individually.
+
+              (NOTE: The number of segments is 1 less than the number of anchor-points!)
+
+            The default is None.
+        mark_points : str, dict or None, optional
+            Set the marker-style for the anchor-points.
+
+            - If a string is provided, it is identified as a matploltib "format-string",
+              e.g. "r." for red dots, "gx" for green x markers etc.
+            - if a dict is provided, it will be used to set the style of the markers
+              e.g.: dict(marker="o", facecolor="orange", edgecolor="g")
+
+            See https://matplotlib.org/stable/gallery/lines_bars_and_markers/marker_reference.html
+            for more details
+
+            The default is "o"
+
+        layer : str, int or None
+            The name of the layer at which the line should be drawn.
+            If None, the layer associated with the used Maps-object (e.g. m.layer)
+            is used. Use "all" to add the line to all layers!
+            The default is None.
+        kwargs :
+            additional keyword-arguments passed to plt.plot(), e.g.
+            "c" (or "color"), "lw" (or "linewidth"), "ls" (or "linestyle"),
+            "markevery", etc.
+
+            See https://matplotlib.org/stable/api/_as_gen/matplotlib.axes.Axes.plot.html
+            for more details.
+
+        Returns
+        -------
+        out_d_int : list
+            Only relevant for `connect="geod"`! (An empty ist is returned otherwise.)
+            A list of the subdivision distances of the line-segments (in meters).
+        out_d_tot : list
+            Only relevant for `connect="geod"` (An empty ist is returned otherwise.)
+            A list of total distances of the line-segments (in meters).
+
+        """
+
+        if layer is None:
+            layer = self.layer
+
+        # intermediate and total distances
+        out_d_int, out_d_tot = [], []
+
+        if len(xy) <= 1:
+            print("you must provide at least 2 points")
+
+        if n is not None:
+            assert del_s is None, "EOmaps: Provide either `del_s` or `n`, not both!"
+            del_s = 0  # pyproj's geod uses 0 as identifier!
+
+            if not isinstance(n, int):
+                assert len(n) == len(xy) - 1, (
+                    "EOmaps: The number of subdivisions per line segment (n) must be"
+                    + " 1 less than the number of points!"
+                )
+
+        elif del_s is not None:
+            assert n is None, "EOmaps: Provide either `del_s` or `n`, not both!"
+            n = 0  # pyproj's geod uses 0 as identifier!
+
+            assert connect in ["geod"], (
+                "EOmaps: Setting a fixed subdivision-distance (e.g. `del_s`) is only "
+                + "possible for `geod` lines! Use `n` instead!"
+            )
+
+            if not isinstance(del_s, (int, float, np.number)):
+                assert len(del_s) == len(xy) - 1, (
+                    "EOmaps: The number of subdivision-distances per line segment "
+                    + "(`del_s`) must be 1 less than the number of points!"
+                )
+        else:
+            # use 100 subdivisions by default
+            n = 100
+            del_s = 0
+
+        t_xy_plot = Transformer.from_crs(
+            self.get_crs(xy_crs), self.crs_plot, always_xy=True
+        )
+        xplot, yplot = t_xy_plot.transform(*zip(*xy))
+
+        if connect == "geod":
+            # connect points via geodesic lines
+            if xy_crs != 4326:
+                t = Transformer.from_crs(
+                    self.get_crs(xy_crs), self.get_crs(4326), always_xy=True
+                )
+                x, y = t.transform(*zip(*xy))
+            else:
+                x, y = zip(*xy)
+
+            geod = self.crs_plot.get_geod()
+
+            if n is None or isinstance(n, int):
+                n = repeat(n)
+
+            if del_s is None or isinstance(del_s, (int, float, np.number)):
+                del_s = repeat(del_s)
+
+            xs, ys = [], []
+            for (x0, x1), (y0, y1), ni, di in zip(pairwise(x), pairwise(y), n, del_s):
+
+                npts, d_int, d_tot, lon, lat, _ = geod.inv_intermediate(
+                    x0, y0, x1, y1, del_s=di, npts=ni, initial_idx=0, terminus_idx=0
+                )
+
+                out_d_int.append(d_int)
+                out_d_tot.append(d_tot)
+
+                lon, lat = lon.tolist(), lat.tolist()
+                xi, yi = self._transf_lonlat_to_plot.transform(lon, lat)
+                xs += xi
+                ys += yi
+            (art,) = self.ax.plot(xs, ys, **kwargs)
+
+        elif connect == "straight":
+            (art,) = self.ax.plot(xplot, yplot, **kwargs)
+
+        elif connect == "straight_crs":
+            # draw a straight line that is defined in a given crs
+
+            x, y = zip(*xy)
+            if isinstance(n, int):
+                # use same number of points for all segments
+                xs = np.linspace(x[:-1], x[1:], n).T.ravel()
+                ys = np.linspace(y[:-1], y[1:], n).T.ravel()
+            else:
+                # use different number of points for individual segments
+                from itertools import chain
+
+                xs = list(
+                    chain(
+                        *(np.linspace(a, b, ni) for (a, b), ni in zip(pairwise(x), n))
+                    )
+                )
+                ys = list(
+                    chain(
+                        *(np.linspace(a, b, ni) for (a, b), ni in zip(pairwise(y), n))
+                    )
+                )
+
+            x, y = t_xy_plot.transform(xs, ys)
+
+            (art,) = self.ax.plot(x, y, **kwargs)
+        else:
+            raise TypeError(f"EOmaps: '{connect}' is not a valid connection-method!")
+
+        self.BM.add_bg_artist(art, layer)
+
+        if mark_points:
+            zorder = kwargs.get("zorder", 10)
+
+            if isinstance(mark_points, dict):
+                # only use zorder of the line if no explicit zorder is provided
+                mark_points["zorder"] = mark_points.get("zorder", zorder)
+
+                art2 = self.ax.scatter(xplot, yplot, **mark_points)
+
+            elif isinstance(mark_points, str):
+                # use matplotlib's single-string style identifiers,
+                # (e.g. "r.", "go", "C0x" etc.)
+                (art2,) = self.ax.plot(xplot, yplot, mark_points, zorder=zorder, lw=0)
+
+            self.BM.add_bg_artist(art2, layer)
+
+        return out_d_int, out_d_tot
+
     @wraps(plt.savefig)
     def savefig(self, *args, **kwargs):
         # clear all cached background layers before saving to make sure they
@@ -2756,6 +3202,7 @@ class Maps(object):
         layer=None,
         dynamic=False,
         set_extent=True,
+        assume_sorted=True,
         **kwargs,
     ):
         """
@@ -2775,7 +3222,7 @@ class Maps(object):
             kwargs passed to `datashader.mpl_ext.dsshow`
 
         """
-        assert _ds_OK, (
+        assert _register_datashader(), (
             "EOmaps: Missing dependency: 'datashader' \n ... please install"
             + " (conda install -c conda-forge datashader) to use the plot-shapes "
             + "'shade_points' and 'shade_raster'"
@@ -2793,7 +3240,7 @@ class Maps(object):
         if verbose:
             print("EOmaps: Preparing the data")
         # ---------------------- prepare the data
-        props = self._prepare_data()
+        props = self._prepare_data(assume_sorted=assume_sorted)
         if len(props["z_data"]) == 0:
             print("EOmaps: there was no data to plot")
             return
@@ -2870,15 +3317,17 @@ class Maps(object):
 
         # the shape is always set after _prepare data!
         if self.shape.name == "shade_raster":
-            assert _xar_OK, "EOmaps: missing dependency `xarray` for 'shade_raster'"
+            assert (
+                _register_xarray()
+            ), "EOmaps: missing dependency `xarray` for 'shade_raster'"
             if len(zdata.shape) == 2:
                 if (zdata.shape == props["x0"].shape) and (
                     zdata.shape == props["y0"].shape
                 ):
                     # use a curvilinear QuadMesh
-                    self.shape.glyph = glyphs.QuadMeshCurvilinear("x", "y", "val")
-
+                    self.shape.glyph = ds.glyphs.QuadMeshCurvilinear("x", "y", "val")
                     # 2D coordinates and 2D raster
+
                     df = xar.Dataset(
                         data_vars=dict(val=(["xx", "yy"], zdata)),
                         # dims=["x", "y"],
@@ -2886,6 +3335,7 @@ class Maps(object):
                             x=(["xx", "yy"], props["x0"]), y=(["xx", "yy"], props["y0"])
                         ),
                     )
+
                 elif (
                     ((zdata.shape[1],) == props["x0"].shape)
                     and ((zdata.shape[0],) == props["y0"].shape)
@@ -2909,7 +3359,8 @@ class Maps(object):
                     (zdata.shape[1],) == props["y0"].shape
                 ):
                     # use a rectangular QuadMesh
-                    self.shape.glyph = glyphs.QuadMeshRectilinear("x", "y", "val")
+                    self.shape.glyph = ds.glyphs.QuadMeshRectilinear("x", "y", "val")
+
                     # 1D coordinates and 2D data
                     df = xar.DataArray(
                         data=zdata,
@@ -2920,6 +3371,10 @@ class Maps(object):
             else:
                 # first convert 1D inputs to 2D, then reproject the grid and use
                 # a curvilinear QuadMesh to display the data
+                assert _register_pandas(), (
+                    "EOmaps: missing dependency 'pandas' to convert 1D"
+                    + "datasets to 2D as required for 'shade_raster'"
+                )
 
                 # use pandas to convert to 2D
                 df = (
@@ -2948,7 +3403,7 @@ class Maps(object):
                     xg, yg = transformer.transform(xg, yg)
 
                 # use a curvilinear QuadMesh
-                self.shape.glyph = glyphs.QuadMeshCurvilinear("x", "y", "val")
+                self.shape.glyph = ds.glyphs.QuadMeshCurvilinear("x", "y", "val")
 
                 df = xar.Dataset(
                     data_vars=dict(val=(["xx", "yy"], df.val.values.T)),
@@ -2959,6 +3414,10 @@ class Maps(object):
             self._1Dprops(props)
 
         else:
+            assert (
+                _register_pandas()
+            ), f"EOmaps: missing dependency 'pandas' for {self.shape.name}"
+
             df = pd.DataFrame(
                 dict(x=props["x0"].ravel(), y=props["y0"].ravel(), val=zdata.ravel()),
                 copy=False,
@@ -2977,7 +3436,7 @@ class Maps(object):
             x_range = (x0, x1)
             y_range = (y0, y1)
 
-        coll = dsshow(
+        coll = mpl_ext.dsshow(
             df,
             glyph=self.shape.glyph,
             aggregator=self.shape.aggregator,
@@ -3190,6 +3649,7 @@ class Maps(object):
         layer=None,
         dynamic=False,
         set_extent=True,
+        assume_sorted=True,
         **kwargs,
     ):
 
@@ -3224,7 +3684,7 @@ class Maps(object):
             #     return
 
             # ---------------------- prepare the data
-            props = self._prepare_data()
+            props = self._prepare_data(assume_sorted=assume_sorted)
 
             # remember props for later use
             self._props = props
@@ -3267,8 +3727,12 @@ class Maps(object):
             if self.shape.name in ["raster"]:
                 # if input-data is 1D, try to convert data to 2D (required for raster)
                 # TODO make an explicit data-conversion function for 2D-only shapes
-                if (
-                    _pd_OK
+                if len(props["xorig"].shape) == 2 and len(props["yorig"].shape) == 2:
+                    coll = self.shape.get_coll(
+                        props["xorig"], props["yorig"], "in", **args
+                    )
+                elif (
+                    _register_pandas()
                     and isinstance(self.data, pd.DataFrame)
                     and isinstance(self.data_specs.x, str)
                     and isinstance(self.data_specs.y, str)
@@ -3292,10 +3756,7 @@ class Maps(object):
                         args["array"] = df.values.T
 
                     coll = self.shape.get_coll(xg, yg, "in", **args)
-                elif len(props["xorig"].shape) == 2 and len(props["yorig"].shape) == 2:
-                    coll = self.shape.get_coll(
-                        props["xorig"], props["yorig"], "in", **args
-                    )
+
                 else:
                     raise AssertionError(
                         "EOmaps: using 'raster' is only possible if "
@@ -3303,6 +3764,10 @@ class Maps(object):
                         + "arrays or as a 1D pandas.DataFrame (which "
                         + "will be converted to 2D internally)"
                     )
+
+                # convert values to 1D for callbacks etc.
+                self._1Dprops(props)
+
             else:
                 # convert input to 1D
                 coll = self.shape.get_coll(
@@ -3349,6 +3814,7 @@ class Maps(object):
         dynamic=False,
         set_extent=True,
         memmap=False,
+        assume_sorted=True,
         **kwargs,
     ):
         """
@@ -3365,18 +3831,25 @@ class Maps(object):
 
         Parameters
         ----------
-        pick_distance : int or None
-            If None, NO pick-callbacks will be assigned (e.g. 'm.cb.pick' will not work)
-            (useful for very large datasets to speed up plotting and save memory)
+        pick_distance : int, float, str or None
 
-            If int, it will be used to determine the search-area used to identify
-            clicked pixels (e.g. a rectangle with a edge-size of
-            `pick_distance * estimated radius`).
+            - If None, NO pick-callbacks will be assigned ('m.cb.pick' will not work!!)
+              (useful for very large datasets to speed up plotting and save memory)
+            - If a number is provided, it will be used to determine the search-area
+              used to identify clicked pixels (e.g. a rectangle with a edge-size of
+              `pick_distance * estimated radius`).
+            - If a string is provided, it will be directly assigned as pick-radius
+              (without multiplying by the estimated radius). This is useful for datasets
+              whose radius cannot be determined (e.g. singular points etc.)
+
+              The provided number is identified as radius in the plot-crs!
+
+              The string must be convertible to a number, e.g. `float("40.5")`
 
             The default is 100.
         layer : int, str or None
             The layer at which the dataset will be plotted.
-            ONLY relevant if dynamic = False!
+            ONLY relevant if `dynamic = False`!
 
             - If "all": the corresponding feature will be added to ALL layers
             - If None, the layer assigned to the Maps object is used (e.g. `m.layer`)
@@ -3412,6 +3885,15 @@ class Maps(object):
             The location of the tempfolder is accessible via `m._tempfolder`
 
             The default is False.
+        assume_sorted : bool, optional
+            ONLY relevant for the shapes "raster" and "shade_raster"
+            (and only if coordinates are provided as 1D arrays and data is a 2D array)
+
+            Sort values with respect to the coordinates prior to plotting
+            (required for QuadMesh if unsorted coordinates are provided)
+
+            The default is True.
+
 
         Other Parameters:
         -----------------
@@ -3451,6 +3933,7 @@ class Maps(object):
                 layer=layer,
                 dynamic=dynamic,
                 set_extent=set_extent,
+                assume_sorted=assume_sorted,
                 **kwargs,
             )
         else:
@@ -3459,6 +3942,7 @@ class Maps(object):
                 layer=layer,
                 dynamic=dynamic,
                 set_extent=set_extent,
+                assume_sorted=assume_sorted,
                 **kwargs,
             )
 
@@ -3687,15 +4171,17 @@ class Maps(object):
             >>>     return f"{x} m"
 
             The default is None.
-        add_extend_arrows : str
+        add_extend_arrows : str or False
             Set if extension-arrows should be drawn. (e.g. to indicate that there are
             some data-values outside the colorbar-range)
 
-            - Can be one of: ("auto", "upper", "lower", "both")
+            - Can be one of: ("auto", "upper", "lower", "both" or False)
+            - If False: NO extension-arrows will be drawn.
             - If "auto": extension-arrows are only drawn if values outside the color
               boundaries are encoundered. The default is "auto"
 
             Note: The range of the colors is set with `m.plot_map(vmin=..., vmax=...)`
+            The default is "auto".
         extend_frac : float or None
             The fraction of the colorbar to use for adding "extension-arrows" to
             indicate out-of-bounds values.
@@ -3709,7 +4195,7 @@ class Maps(object):
 
         Notes
         -----
-        Here's how the padding looks like as a scetch:
+        Here's how the padding looks like as a sketch:
 
         >>> _________________________________________________________
         >>> |[ - - - - - - - - - - - - - - - - - - - - - - - - - - ]|
@@ -3898,7 +4384,7 @@ class Maps(object):
         vmin = coll.norm.vmin
         vmax = coll.norm.vmax
 
-        if _ds_OK and isinstance(coll, ScalarDSArtist):
+        if _register_datashader() and isinstance(coll, mpl_ext.ScalarDSArtist):
             aggname = self.shape.aggregator.__class__.__name__
             if aggname in ["first", "last", "max", "min", "mean", "mode"]:
                 pass
@@ -4033,9 +4519,13 @@ class Maps(object):
         self.BM.add_bg_artist(self._ax_cb, layer)
         self.BM.add_bg_artist(self._ax_cb_plot, layer)
 
-        ax_cb_extend = self._add_cb_extend_arrows(
-            cb, orientation, extend_frac=extend_frac, which=add_extend_arrows
-        )
+        if add_extend_arrows is not False:
+            ax_cb_extend = self._add_cb_extend_arrows(
+                cb, orientation, extend_frac=extend_frac, which=add_extend_arrows
+            )
+        else:
+            ax_cb_extend = None
+
         # remember colorbar for later (so that we can update its position etc.)
         self._colorbar = [
             layer,
@@ -4067,7 +4557,7 @@ class Maps(object):
         Parameters
         ----------
         radius : float, optional
-            The readius to use for plotting the indicators for the masked
+            The radius to use for plotting the indicators for the masked
             points. The unit of the radius is map-pixels! The default is 1.
         **kwargs :
             additional kwargs passed to `m.plot_map(**kwargs)`.
@@ -4099,66 +4589,74 @@ class Maps(object):
             **kwargs,
         )
 
-    if _gpd_OK:
+    @staticmethod
+    def _make_rect_poly(x0, y0, x1, y1, crs=None, npts=100):
+        """
+        return a geopandas.GeoDataFrame with a rectangle in the given crs
 
-        @staticmethod
-        def _make_rect_poly(x0, y0, x1, y1, crs=None, npts=100):
-            """
-            return a geopandas.GeoDataFrame with a rectangle in the given crs
+        Parameters
+        ----------
+        x0, y0, y1, y1 : float
+            the boundaries of the shape
+        npts : int, optional
+            The number of points used to draw the polygon-lines. The default is 100.
+        crs : any, optional
+            a coordinate-system identifier.  (e.g. output of `m.get_crs(crs)`)
+            The default is None.
 
-            Parameters
-            ----------
-            x0, y0, y1, y1 : float
-                the boundaries of the shape
-            npts : int, optional
-                The number of points used to draw the polygon-lines. The default is 100.
-            crs : any, optional
-                a coordinate-system identifier.  (e.g. output of `m.get_crs(crs)`)
-                The default is None.
+        Returns
+        -------
+        gdf : geopandas.GeoDataFrame
+            the geodataframe with the shape and crs defined
 
-            Returns
-            -------
-            gdf : geopandas.GeoDataFrame
-                the geodataframe with the shape and crs defined
+        """
 
-            """
-            from shapely.geometry import Polygon
+        assert _register_geopandas(), (
+            "EOmaps: Missing dependency `geopandas`!\n"
+            + "please install '(conda install -c conda-forge geopandas)'"
+        )
 
-            xs, ys = np.linspace([x0, y0], [x1, y1], npts).T
-            x0, y0, x1, y1, xs, ys = np.broadcast_arrays(x0, y0, x1, y1, xs, ys)
-            verts = np.column_stack(
-                ((x0, ys), (xs, y1), (x1, ys[::-1]), (xs[::-1], y0))
-            ).T
+        from shapely.geometry import Polygon
 
-            gdf = gpd.GeoDataFrame(geometry=[Polygon(verts)])
-            gdf.set_crs(crs, inplace=True)
+        xs, ys = np.linspace([x0, y0], [x1, y1], npts).T
+        x0, y0, x1, y1, xs, ys = np.broadcast_arrays(x0, y0, x1, y1, xs, ys)
+        verts = np.column_stack(((x0, ys), (xs, y1), (x1, ys[::-1]), (xs[::-1], y0))).T
 
-            return gdf
+        gdf = gpd.GeoDataFrame(geometry=[Polygon(verts)])
+        gdf.set_crs(crs, inplace=True)
 
-        def indicate_extent(self, x0, y0, x1, y1, crs=4326, npts=100, **kwargs):
-            """
-            Indicate a rectangular extent in a given crs on the map.
-            (the rectangle is drawn as a polygon where each line is divided by "npts"
-            points to ensure correct re-projection of the shape to other crs)
+        return gdf
 
-            Parameters
-            ----------
-            x0, y0, y1, y1 : float
-                the boundaries of the shape
-            npts : int, optional
-                The number of points used to draw the polygon-lines.
-                (e.g. to correctly display curvature in projected coordinate-systems)
-                The default is 100.
-            crs : any, optional
-                a coordinate-system identifier.
-                The default is 4326 (e.g. lon/lat).
-            kwargs :
-                additional keyword-arguments passed to `m.add_gdf()`.
+    def indicate_extent(self, x0, y0, x1, y1, crs=4326, npts=100, **kwargs):
+        """
+        Indicate a rectangular extent in a given crs on the map.
+        (the rectangle is drawn as a polygon where each line is divided by "npts"
+        points to ensure correct re-projection of the shape to other crs)
 
-            """
+        Parameters
+        ----------
+        x0, y0, y1, y1 : float
+            the boundaries of the shape
+        npts : int, optional
+            The number of points used to draw the polygon-lines.
+            (e.g. to correctly display curvature in projected coordinate-systems)
+            The default is 100.
+        crs : any, optional
+            a coordinate-system identifier.
+            The default is 4326 (e.g. lon/lat).
+        kwargs :
+            additional keyword-arguments passed to `m.add_gdf()`.
 
-            gdf = self._make_rect_poly(x0, y0, x1, y1, self.get_crs(crs), npts)
-            self.add_gdf(gdf, **kwargs)
+        """
+
+        assert _register_geopandas(), (
+            "EOmaps: Missing dependency `geopandas`!\n"
+            + "please install '(conda install -c conda-forge geopandas)'"
+            + "to use `m.indicate_extent()`."
+        )
+
+        gdf = self._make_rect_poly(x0, y0, x1, y1, self.get_crs(crs), npts)
+        self.add_gdf(gdf, **kwargs)
 
     def add_logo(self, filepath=None, position="lr", size=0.12, pad=0.1):
         """
@@ -4298,11 +4796,15 @@ class Maps(object):
         self.parent.figure.gridspec.update(**kwargs)
         # after changing margins etc. a redraw is required
         # to fetch the updated background!
+
+        # make sure the position of the axis holding the colorbar-extension-arrows
+        # is properly updated
+        self._update_cb_extend_pos()
         self.redraw()
 
     def _get_layers(self, exclude=None):
         # return a list of all (empty and non-empty) layer-names
-        layers = set((m.layer for m in self.parent._children))
+        layers = set((m.layer for m in (self.parent, *self.parent._children)))
         # add layers that are not yet activated (but have an activation
         # method defined...)
         layers = layers.union(set(self.BM._on_layer_activation))
@@ -4321,7 +4823,7 @@ class Maps(object):
 
     def fetch_layers(self, layers=None, verbose=True):
         """
-        Fetch (and cache) layers of a map.
+        Fetch (and cache) the layers of a map.
 
         This is particularly useful if you want to use sliders or buttons to quickly
         switch between the layers (e.g. once the backgrounds are cached, switching
@@ -4370,6 +4872,302 @@ class Maps(object):
 
         self.show_layer(active_layer)
         self.BM.update()
+
+    def get_layout(self, filepath=None, override=False):
+        """
+        Get the positions of all axes within the current plot.
+
+        To re-apply a layout, use:
+
+            >>> l = m.get_layout()
+            >>> m.set_layout(l)
+
+        Note
+        ----
+        The returned list is only a snapshot of the current layout.
+        It can only be re-applied to a given figure if the order at which the axes are
+        created remains the same!
+
+        Parameters
+        ----------
+        filepath : str or pathlib.Path, optional
+            If provided, a json-file will be created at the specified destination that
+            can be used in conjunction with `m.set_layout(...)` to apply the layout:
+
+            >>> m.get_layout(filepath=<FILEPATH>, override=True)
+            >>> m.apply_layout_layout(<FILEPATH>)
+
+            You can also manually read-in the layout-dict via:
+            >>> import json
+            >>> layout = json.load(<FILEPATH>)
+
+        Returns
+        -------
+        layout : dict or None
+            A dict of the positons of all axes, e.g.: {1:(x0, y0, width height), ...}
+        """
+
+        layout = dict()
+        for i, ax in enumerate(self.figure.f.axes):
+            layout[str(i)] = ax.get_position().bounds
+
+        if filepath is not None:
+            filepath = Path(filepath)
+            assert (
+                not filepath.exists() or override
+            ), f"The file {filepath} already exists! Use override=True to relace it."
+            with open(filepath, "w") as file:
+                json.dump(layout, file)
+            print("EOmaps: Layout saved to:\n       ", filepath)
+
+        return layout
+
+    def apply_layout(self, layout):
+        """
+        Set the positions of all axes within the current plot based on a previously
+        defined layout.
+
+        To apply a layout, use:
+
+            >>> l = m.get_layout()
+            >>> m.set_layout(l)
+
+        To save a layout to disc and apply it at a later stage, use
+            >>> m.get_layout(filepath=<FILEPATH>)
+            >>> m.set_layout(<FILEPATH>)
+
+
+        Note
+        ----
+        The returned list is only a snapshot of the current layout.
+        It can only be re-applied to a given figure if the order at which the axes are
+        created remains the same!
+
+        Parameters
+        ----------
+        layout : dict, str or pathlib.Path
+            If a dict is provided, it is directly used to define the layout.
+
+            If a string or a pathlib.Path object is provided, it will be used to
+            read a previously dumped layout (e.g. with `m.get_layout(filepath)`)
+
+        """
+        if isinstance(layout, (str, Path)):
+            with open(layout, "r") as file:
+                layout = json.load(file)
+
+        nl = len(layout)
+        na = len(self.figure.f.axes)
+        assert nl == na, (
+            f"EOmaps: Layout specifies dimensions for {nl} axes but there are {na} "
+            + "axes present in the figure!"
+        )
+
+        for i, ax in enumerate(self.figure.f.axes):
+            ax.set_position(layout[str(i)])
+
+        self.redraw()
+
+    def edit_layout(self, filepath=None):
+        """
+        Activate the "layout-editor" to quickly re-arrange the positions of subplots.
+
+        - This is the same as pressing "alt + d" on the keyboard!
+        - To exit the editor, press "escape" or "alt + d" on the keyboard!
+
+        Parameters
+        ----------
+        filepath : str, pathlib.Path or None, optional
+            A path to a file that will be used to store the layout after you exit
+            the layout-editor.
+            This file can then be used to apply the layout to the map with
+
+            >>> m.apply_layout(filepath=filepath)
+
+            NOTE: The file will be overwritten if it already exists!!
+            The default is None.
+
+        """
+        self._layout_editor._make_draggable(filepath=filepath)
+
+
+class _InsetMaps(Maps):
+    # a subclass of Maps that includes some special functions for inset maps
+
+    def __init__(
+        self,
+        parent,
+        crs=4326,
+        layer="all",
+        xy=(45, 45),
+        xy_crs=4326,
+        radius=5,
+        radius_crs=None,
+        plot_position=(0.5, 0.5),
+        plot_size=0.5,
+        shape="ellipses",
+        indicate_extent=True,
+        boundary=True,
+        **kwargs,
+    ):
+
+        possible_shapes = ["ellipses", "rectangles", "geod_circles"]
+        assert (
+            shape in possible_shapes
+        ), f"EOmaps: the inset shape can only be one of {possible_shapes}"
+
+        if shape == "geod_circles":
+            assert radius_crs is None, (
+                "EOmaps: Using 'radius_crs' is not possible if 'geod_circles' is "
+                + "used as shape! (the radius for `geod_circles` is always in meters!)"
+            )
+
+        if radius_crs is None:
+            radius_crs = xy_crs
+
+        extent_kwargs = dict(ec="r", lw=1, fc="none")
+        boundary_kwargs = dict(ec="r", lw=2)
+
+        if isinstance(boundary, dict):
+            assert (
+                len(set(boundary.keys()).difference({"ec", "lw"})) == 0
+            ), "EOmaps: only 'ec' and 'lw' keys are allowed for the 'boundary' dict!"
+
+            boundary_kwargs.update(boundary)
+            # use same edgecolor for boundary and indicator by default
+            extent_kwargs["ec"] = boundary["ec"]
+
+        if isinstance(indicate_extent, dict):
+            extent_kwargs.update(indicate_extent)
+
+        x, y = xy
+        plot_x, plot_y = plot_position
+
+        # setup a gridspec at the desired position
+        gs = GridSpec(
+            1,
+            1,
+            left=plot_x - plot_size / 2,
+            bottom=plot_y - plot_size / 2,
+            top=plot_y + plot_size / 2,
+            right=plot_x + plot_size / 2,
+        )[0]
+
+        # initialize a new maps-object with a new axis
+        super().__init__(crs=crs, parent=parent, gs_ax=gs, layer=layer, **kwargs)
+
+        # get the boundary of a ellipse in the inset_crs
+        bnd, bnd_verts = self._get_inset_boundary(
+            x, y, xy_crs, radius, radius_crs, shape
+        )
+
+        # set the map boundary
+        self.ax.set_boundary(bnd)
+        # set the plot-extent to the envelope of the shape
+        (x0, y0), (x1, y1) = bnd_verts.min(axis=0), bnd_verts.max(axis=0)
+        self.ax.set_extent((x0, x1, y0, y1), crs=self.ax.projection)
+
+        # TODO turn off navigation until the matpltolib pull-request on
+        # zoom-events in overlapping axes is resolved
+        # https://github.com/matplotlib/matplotlib/pull/22347
+        self.ax.set_navigate(False)
+
+        # set style of the inset-boundary
+        if boundary is not False:
+            self.ax.spines["geo"].set_edgecolor(boundary_kwargs["ec"])
+            self.ax.spines["geo"].set_lw(boundary_kwargs["lw"])
+
+        self._inset_props = dict(
+            xy=xy, xy_crs=xy_crs, radius=radius, radius_crs=radius_crs, shape=shape
+        )
+
+        if indicate_extent is not False:
+            self.indicate_inset_extent(self.parent, **extent_kwargs)
+
+    def plot_map(self, *args, **kwargs):
+        set_extent = kwargs.pop("set_extent", False)
+        super().plot_map(*args, **kwargs, set_extent=set_extent)
+
+    # add a convenience-method to add a boundary-polygon to a map
+    def indicate_inset_extent(self, m, n=100, **kwargs):
+        """
+        Add a polygon to a  map that indicates the extent of the inset-map.
+
+        Parameters
+        ----------
+        m : eomaps.Maps
+            The Maps-object that will be used to draw the marker.
+            (e.g. the map on which the extent of the inset should be indicated)
+        n : int
+            The number of points used to represent the polygon.
+            The default is 100.
+        kwargs :
+            additional keyword-arguments passed to `m.add_marker`
+            (e.g. "facecolor", "edgecolor" etc.)
+        """
+
+        if not any((i in kwargs for i in ["fc", "facecolor"])):
+            kwargs["fc"] = "none"
+        if not any((i in kwargs for i in ["ec", "edgecolor"])):
+            kwargs["ec"] = "r"
+        if not any((i in kwargs for i in ["lw", "linewidth"])):
+            kwargs["lw"] = 1
+
+        m.add_marker(
+            shape=self._inset_props["shape"],
+            xy=self._inset_props["xy"],
+            xy_crs=self._inset_props["xy_crs"],
+            radius=self._inset_props["radius"],
+            radius_crs=self._inset_props["radius_crs"],
+            n=n,
+            **kwargs,
+        )
+
+    # add a convenience-method to set the position based on the center of the axis
+    def set_inset_position(self, x=None, y=None, size=None):
+        """
+        Set the (center) position and size of the inset-map.
+
+        Parameters
+        ----------
+        x, y : int or float, optional
+            The center position in relative units (0-1) with respect to the figure.
+            If None, the existing position is used.
+            The default is None.
+        size : float, optional
+            The relative radius (0-1) of the inset in relation to the figure width.
+            If None, the existing size is used.
+            The default is None.
+        """
+
+        y0, y1, x0, x1 = self.figure.gridspec.get_grid_positions(self.figure.f)
+
+        if self.figure.cb_gridspec is not None:
+            y0cb, y1cb, x0cb, x1cb = self.figure.cb_gridspec.get_grid_positions(
+                self.figure.f
+            )
+
+            x0 = min(*x0, *x0cb)
+            x1 = max(*x1, *x1cb)
+            y0 = min(*y0, *y0cb)
+            y1 = max(*y1, *y1cb)
+
+        if size is None:
+            size = abs(x1 - x0)
+
+        if x is None:
+            x = (x0 + x1) / 2
+        if y is None:
+            y = (y0 + y1) / 2
+
+        self.figure.gridspec.update(
+            left=x - size / 2,
+            bottom=y - size / 2,
+            right=x + size / 2,
+            top=y + size / 2,
+        )
+
+        self.redraw()
 
 
 class MapsGrid:
@@ -4778,6 +5576,13 @@ class MapsGrid:
 
     add_gdf.__doc__ = _doc_prefix + add_gdf.__doc__
 
+    @wraps(Maps.add_line)
+    def add_line(self, *args, **kwargs):
+        for m in self:
+            m.add_line(*args, **kwargs)
+
+    add_line.__doc__ = _doc_prefix + add_line.__doc__
+
     @wraps(ScaleBar.__init__)
     def add_scalebar(self, *args, **kwargs):
         for m in self:
@@ -4804,7 +5609,7 @@ class MapsGrid:
         Share click events between all Maps objects of the grid
         """
         self.parent.cb.click.share_events(*self.children)
-        self.parent.cb._move.share_events(*self.children)
+        self.parent.cb._click_move.share_events(*self.children)
 
     def share_pick_events(self, name="default"):
         """
@@ -4843,3 +5648,15 @@ class MapsGrid:
     @wraps(Maps.subplots_adjust)
     def subplots_adjust(self, **kwargs):
         return self.parent.subplots_adjust(**kwargs)
+
+    @wraps(Maps.get_layout)
+    def get_layout(self, *args, **kwargs):
+        return self.parent.get_layout(*args, **kwargs)
+
+    @wraps(Maps.apply_layout)
+    def apply_layout(self, *args, **kwargs):
+        return self.parent.apply_layout(*args, **kwargs)
+
+    @wraps(Maps.edit_layout)
+    def edit_layout(self, *args, **kwargs):
+        return self.parent.edit_layout(*args, **kwargs)

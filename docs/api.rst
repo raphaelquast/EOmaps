@@ -86,7 +86,6 @@ Possible ways for specifying the crs for plotting are:
     Maps.fetch_layers
 
 
-
 🔵 Setting the data and plot-shape
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -335,8 +334,30 @@ To create an RGB or RGBA composite from 3 (or 4) datasets, pass the datasets as 
 📊 Data classification
 ~~~~~~~~~~~~~~~~~~~~~~~
 
-EOmaps provides an interface for `mapclassify <https://github.com/pysal/mapclassify>`_ to classify datasets prior to plotting
-via ``m.set_classify_specs``. Available classifiers that can be used are accessible via `Maps.CLASSIFIERS`:
+EOmaps provides an interface for `mapclassify <https://github.com/pysal/mapclassify>`_ to classify datasets prior to plotting.
+
+There are 2 (synonymous) ways to assign a classification-scheme:
+
+- ``m.set_classify_specs(scheme=..., ...)``: set classification scheme by providing name and relevant parameters.
+- ``m.set_classify.<SCHEME>(...)``: use autocompletion to get available classification schemes (with appropriate docstrings)
+
+  - The big advantage of this method is that it supports autocompletion (once the Maps-object has been instantiated)
+    and provides relevant docstrings to get additional information on the classification schemes.
+
+Available classifier names are also accessible via ``Maps.CLASSIFIERS``.
+
+
+The preferred way for assigning a classification-scheme to a ``Maps`` object is:
+
+.. code-block:: python
+
+    m = Maps()
+    m.set_data(...)
+    m.set_shape.ellipses(...)
+    m.set_classify.Quantiles(k=5)
+    m.plot_map()
+
+Alternatively, one can also use ``m.set_classify_specs`` to assign a classification scheme:
 
 .. code-block:: python
 
@@ -344,8 +365,9 @@ via ``m.set_classify_specs``. Available classifiers that can be used are accessi
     m.set_data(...)
     m.set_shape.ellipses(...)
 
-    m.set_classify_specs(Maps.CLASSFIERS.Quantiles, k=5)
+    m.set_classify_specs(scheme="Quantiles", k=5)
     m.classify_specs.k = 10 # alternative way for setting classify-specs
+    m.plot_map()
 
 .. currentmodule:: eomaps
 
@@ -354,26 +376,27 @@ via ``m.set_classify_specs``. Available classifiers that can be used are accessi
     :nosignatures:
     :template: only_names_in_toc.rst
 
+    Maps.set_classify
     Maps.set_classify_specs
 
 
 Currently available classification-schemes are (see `mapclassify <https://github.com/pysal/mapclassify>`_ for details):
 
-    - BoxPlot (hinge)
-    - EqualInterval (k)
-    - FisherJenks (k)
-    - FisherJenksSampled (k, pct, truncate)
-    - HeadTailBreaks ()
-    - JenksCaspall (k)
-    - JenksCaspallForced (k)
-    - JenksCaspallSampled (k, pct)
-    - MaxP (k, initial)
-    - MaximumBreaks (k, mindiff)
-    - NaturalBreaks (k, initial)
-    - Quantiles (k)
-    - Percentiles (pct)
-    - StdMean (multiples)
-    - UserDefined (bins)
+- BoxPlot (hinge)
+- EqualInterval (k)
+- FisherJenks (k)
+- FisherJenksSampled (k, pct, truncate)
+- HeadTailBreaks ()
+- JenksCaspall (k)
+- JenksCaspallForced (k)
+- JenksCaspallSampled (k, pct)
+- MaxP (k, initial)
+- MaximumBreaks (k, mindiff)
+- NaturalBreaks (k, initial)
+- Quantiles (k)
+- Percentiles (pct)
+- StdMean (multiples)
+- UserDefined (bins)
 
 
 
@@ -410,6 +433,8 @@ and provides convenience-functions to perform actions on all maps of the figure.
     # set the margins of the plot-grid
     mg.subplots_adjust(left=0.1, right=0.9, bottom=0.05, top=0.95, hspace=0.1, wspace=0.05)
 
+
+Make sure to checkout the :ref:`layout_editor` which greatly simplifies the arrangement of multiple axes within a figure!
 
 Custom grids and mixed axes
 ***************************
@@ -496,6 +521,71 @@ The individual ``Maps``-objects and ``matpltolib-Axes`` are then accessible via:
     MapsGrid.add_gdf
 
 
+🧱 Naming conventions and autocompletion
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The goal of EOmaps is to provide a comprehensive, yet easy-to-use interface.
+
+To avoid having to remember a lot of names, a concise naming-convention is applied so
+that autocompletion can quickly narrow-down the search to relevant functions and properties.
+
+Once a few basics keywords have been remembered, finding the right functions and properties should be quick and easy.
+
+.. note::
+
+    EOmaps works best in conjunction with "dynamic autocompletion", e.g. by using an interactive
+    console where you instantiate a ``Maps`` object first and then access dynamically updated properties
+    and docstrings on the object.
+
+    To clarify:
+
+    - First, execute ``m = Maps()`` in an interactive console
+    - then (inside the console, not inside the editor!) use autocompletion on ``m.`` to get
+      autocompletion for dynamically updated attributes.
+
+    For example the following accessors only work properly after the ``Maps`` object has been initialized:
+    - ``m.add_wms``: browse available WebMap services
+    - ``m.set_classify``: browse available classification schemes
+
+
+The following list provides an overview of the naming-conventions used within EOmaps:
+
+Add features to a map - "m.add\_"
+*********************************
+All functions that add features to a map start with ``add_``, e.g.:
+- ``m.add_feature``, ``m.add_wms``, ``m.add_annotation``, ``m.add_marker``, ``m.add_gdf``, ...
+
+WebMap services (e.g. ``m.add_wms``) are fetched dynamically from the respective APIs.
+Therefore the structure can vary from one WMS to another.
+The used convention is the following:
+- You can navigate into the structure of the API by using "dot-access" continuously
+- once you reach a level that provides layers that can be added to the map, the ``.add_layer.`` directive will be visible
+- any ``<LAYER>`` returned by ``.add_layer.<LAYER>`` can be added to the map by simply calling it, e.g.:
+
+   - ``m.add_wms.OpenStreetMap.add_layer.default()``
+   - ``m.add_wms.OpenStreetMap.OSM_mundialis.add_layer.OSM_WMS()``
+
+Set data specifications - "m.set\_"
+***********************************
+All functions that set properties of the associated dataset start with ``set_``, e.g.:
+- ``m.set_data``, ``m.set_classify``, ``m.set_shape``, ...
+
+Create new Maps-objects - "m.new\_"
+***********************************
+Actions that result in a new ``Maps`` objects start with ``new_``.
+- ``m.new_layer``, ``m.new_inset_map``, ...
+
+Callbacks - "m.cb."
+*******************
+Everything related to callbacks is grouped under the ``cb`` accessor.
+
+- use ``m.cb.<METHOD>.attach.<CALLBACK>()`` to attach pre-defined callbacks
+
+  - ``<METHOD>`` hereby can be one of ``click``, ``pick`` or ``keypress``
+    (but there's no need to remember since autocompletion will do the job!).
+
+- use ``m.cb.<METHOD>.attach(custom_cb)`` to attach a custom callback
+
 
 .. _callbacks:
 
@@ -504,7 +594,7 @@ The individual ``Maps``-objects and ``matpltolib-Axes`` are then accessible via:
 
 Callbacks are used to execute functions when you click on the map.
 
-They can be attached to a map via:
+They can be attached to a map via the ``.attach`` directive:
 
 .. code-block:: python
 
@@ -512,23 +602,60 @@ They can be attached to a map via:
     ...
     m.cb.< METHOD >.attach.< CALLBACK >( **kwargs )
 
-`< METHOD >` defines the way how callbacks are executed.
+``< METHOD >`` defines the way how callbacks are executed.
 
-.. currentmodule:: eomaps._cb_container.cb_container
+.. table::
+    :width: 100 %
+    :widths: auto
 
-.. autosummary::
-    :nosignatures:
-    :template: only_names_in_toc.rst
+    +--------------------------------------------------------------+----------------------------------------------------------------------------------+
+    | :class:`click <eomaps._cb_container.cb_click_container>`     | Callbacks that are executed if you click anywhere on the Map.                    |
+    +--------------------------------------------------------------+----------------------------------------------------------------------------------+
+    | :class:`pick <eomaps._cb_container.cb_pick_container>`       | Callbacks that select the nearest datapoint if you click on the map.             |
+    +--------------------------------------------------------------+----------------------------------------------------------------------------------+
+    | :class:`move <eomaps._cb_container.cb_move_container>`       | Callbacks that are executed if you press a key on the keyboard.                  |
+    +--------------------------------------------------------------+----------------------------------------------------------------------------------+
+    | :class:`keypress <eomaps._cb_container.keypress_container>`  | Callbacks that are executed if you move the mouse without holding down a button. |
+    +--------------------------------------------------------------+----------------------------------------------------------------------------------+
 
-    click
-    pick
-    keypress
-    dynamic
 
-
-`< CALLBACK >` indicates the action you want to assign o the event.
+``< CALLBACK >`` indicates the action you want to assign to the event.
 There are many pre-defined callbacks, but it is also possible to define custom
-functions and attach them to the map.
+functions and attach them to the map (see below).
+
+
+.. table::
+    :width: 100 %
+    :widths: auto
+
+    +-----------------------------------------------------------------------------------+--------------------------------------------------+
+    | .. code-block:: python                                                            | .. image:: _static/minigifs/simple_callbacks.gif |
+    |                                                                                   |   :align: center                                 |
+    |     from eomaps import Maps                                                       |                                                  |
+    |     import numpy as np                                                            |                                                  |
+    |     x, y = np.mgrid[-45:45, 20:60]                                                |                                                  |
+    |                                                                                   |                                                  |
+    |     m = Maps(Maps.CRS.Orthographic())                                             |                                                  |
+    |     m.all.add_feature.preset.coastline()                                          |                                                  |
+    |     m.set_data(data=x+y**2, x=x, y=y, crs=4326)                                   |                                                  |
+    |     m.plot_map(pick_distance=10)                                                  |                                                  |
+    |                                                                                   |                                                  |
+    |     m2 = m.new_layer(copy_data_specs=True, layer="second_layer")                  |                                                  |
+    |     m2.plot_map(cmap="tab10")                                                     |                                                  |
+    |                                                                                   |                                                  |
+    |     # get an annotation if you RIGHT-click anywhere on the map                    |                                                  |
+    |     m.cb.click.attach.annotate(xytext=(-60, -60),                                 |                                                  |
+    |                                bbox=dict(boxstyle="round", fc="r"))               |                                                  |
+    |                                                                                   |                                                  |
+    |     # pick the nearest datapoint if you click on the MIDDLE mouse button          |                                                  |
+    |     m.cb.pick.attach.annotate(button=2)                                           |                                                  |
+    |     m.cb.pick.attach.mark(buffer=1, permanent=False, fc="none", ec="r", button=2) |                                                  |
+    |     m.cb.pick.attach.mark(buffer=4, permanent=False, fc="none", ec="r", button=2) |                                                  |
+    |                                                                                   |                                                  |
+    |     # peek at the second layer if you LEFT-click on the map                       |                                                  |
+    |     m.cb.click.attach.peek_layer("second_layer", how=.25, button=3)               |                                                  |
+    +-----------------------------------------------------------------------------------+--------------------------------------------------+
+
 
 .. Note::
 
@@ -539,40 +666,37 @@ functions and attach them to the map.
     layer using something like ``m.all.cb.click.attach.annotate()``.
 
 
+In addition, each callback-container supports the following useful methods:
 
-+-----------------------------------------------------------------------------------+--------------------------------------------------+
-| .. code-block:: python                                                            | .. image:: _static/minigifs/simple_callbacks.gif |
-|                                                                                   |   :align: center                                 |
-|     from eomaps import Maps                                                       |                                                  |
-|     import numpy as np                                                            |                                                  |
-|     x, y = np.mgrid[-45:45, 20:60]                                                |                                                  |
-|                                                                                   |                                                  |
-|     m = Maps(Maps.CRS.Orthographic())                                             |                                                  |
-|     m.all.add_feature.preset.coastline()                                          |                                                  |
-|     m.set_data(data=x+y**2, x=x, y=y, crs=4326)                                   |                                                  |
-|     m.plot_map(pick_distance=10)                                                  |                                                  |
-|                                                                                   |                                                  |
-|     m2 = m.new_layer(copy_data_specs=True, layer="second_layer")                  |                                                  |
-|     m2.plot_map(cmap="tab10")                                                     |                                                  |
-|                                                                                   |                                                  |
-|     # get an annotation if you RIGHT-click anywhere on the map                    |                                                  |
-|     m.cb.click.attach.annotate(xytext=(-60, -60),                                 |                                                  |
-|                                bbox=dict(boxstyle="round", fc="r"))               |                                                  |
-|                                                                                   |                                                  |
-|     # pick the nearest datapoint if you click on the MIDDLE mouse button          |                                                  |
-|     m.cb.pick.attach.annotate(button=2)                                           |                                                  |
-|     m.cb.pick.attach.mark(buffer=1, permanent=False, fc="none", ec="r", button=2) |                                                  |
-|     m.cb.pick.attach.mark(buffer=4, permanent=False, fc="none", ec="r", button=2) |                                                  |
-|                                                                                   |                                                  |
-|     # peek at the second layer if you LEFT-click on the map                       |                                                  |
-|     m.cb.click.attach.peek_layer("second_layer", how=.25, button=3)               |                                                  |
-+-----------------------------------------------------------------------------------+--------------------------------------------------+
+.. table::
+    :width: 100 %
+    :widths: auto
+
+    +---------------------------------------------------------------------------------------------+---------------------------------------------------------------------------+
+    | :class:`attach <eomaps._cb_container._click_container._attach>`                             | Attach custom or pre-defined callbacks to the map.                        |
+    +---------------------------------------------------------------------------------------------+---------------------------------------------------------------------------+
+    | :class:`remove <eomaps._cb_container._click_container.remove>`                              | Remove previously attached callbacks from the map.                        |
+    +---------------------------------------------------------------------------------------------+---------------------------------------------------------------------------+
+    | :class:`get <eomaps._cb_container._click_container._get>`                                   | Accessor for objects generated/retrieved by callbacks.                    |
+    +---------------------------------------------------------------------------------------------+---------------------------------------------------------------------------+
+    | :class:`set_sticky_modifiers <eomaps._cb_container._click_container.set_sticky_modifiers>`  | Define keys on the keyboard that should be treated as "sticky modifiers". |
+    +---------------------------------------------------------------------------------------------+---------------------------------------------------------------------------+
+
+.. currentmodule:: eomaps._cb_container._cb_container
+
+.. autosummary::
+    :nosignatures:
+    :template: only_names_in_toc.rst
+
+    share_events
+    forward_events
+    add_temporary_artist
 
 
-Pre-defined click & pick callbacks
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Pre-defined click, pick and move callbacks
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Callbacks that can be used with both `m.cb.click` and `m.cb.pick`:
+Callbacks that can be used with ``m.cb.click``, ``m.cb.pick`` and ``m.cb.move``:
 
 .. currentmodule:: eomaps.callbacks.click_callbacks
 
@@ -583,13 +707,25 @@ Callbacks that can be used with both `m.cb.click` and `m.cb.pick`:
 
     peek_layer
     annotate
-    clear_annotations
     mark
-    clear_markers
-    get_values
     print_to_console
 
-Callbacks that can be used only with `m.cb.pick`:
+
+Callbacks that can be used with ``m.cb.click`` or ``m.cb.pick``:
+
+.. currentmodule:: eomaps.callbacks.click_callbacks
+
+.. autosummary::
+    :toctree: generated
+    :nosignatures:
+    :template: only_names_in_toc.rst
+
+    get_values
+    clear_annotations
+    clear_markers
+
+
+Callbacks that can be used only with ``m.cb.pick``:
 
 .. currentmodule:: eomaps.callbacks.pick_callbacks
 
@@ -601,10 +737,11 @@ Callbacks that can be used only with `m.cb.pick`:
     load
     highlight_geometry
 
+
 Pre-defined keypress callbacks
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Callbacks that can be used with `m.cb.keypress`
+Callbacks that can be used with ``m.cb.keypress``
 
 .. currentmodule:: eomaps.callbacks.keypress_callbacks
 
@@ -616,23 +753,8 @@ Callbacks that can be used with `m.cb.keypress`
     switch_layer
     fetch_layers
 
-Pre-defined dynamic callbacks
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-Callbacks that can be used with `m.cb.dynamic`
-
-.. currentmodule:: eomaps.callbacks.dynamic_callbacks
-
-.. autosummary::
-    :toctree: generated
-    :nosignatures:
-    :template: only_names_in_toc.rst
-
-    indicate_extent
-
-
-Custom callbacks
-~~~~~~~~~~~~~~~~
+👽 Custom callbacks
+~~~~~~~~~~~~~~~~~~~
 
 Custom callback functions can be attached to the map via:
 
@@ -657,8 +779,58 @@ Custom callback functions can be attached to the map via:
 - ❗ for keypress callbacks the kwargs ``ID`` and ``val`` and ``pos`` are set to ``None``!
 
 
-Picking a dataset without plotting it first
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+👾 Using modifiers for pick- click- and move callbacks
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+It is possible to trigger ``pick``, ``click`` or ``move`` callbacks **only if a specific key is pressed on the keyboard**.
+
+This is achieved by specifying a ``modifier`` when attaching a callback, e.g.:
+
+.. code-block:: python
+
+    m = Maps()
+    m.add_feature.preset.coastline()
+    # a callback that is executed if NO modifier is pressed
+    m.cb.move.attach.mark(radius=5)
+    # a callback that is executed if 1 is pressed while moving the mouse
+    m.cb.move.attach.mark(modifier="1", radius=10, fc="r", ec="g")
+    # a callback that is executed if 2 is pressed while moving the mouse
+    m.cb.move.attach.mark(modifier="2", radius=15, fc="none", ec="b")
+
+
+To keep the last pressed modifier active until a new modifier is activated,
+you can make it "sticky" by using ``m.cb.move.set_sticky_modifiers()``.
+
+- "Sticky modifiers" remain activated until
+
+  - A new (sticky) modifier is activated
+  - ``ctrl + <current (sticky) modifier>`` is pressed
+  - ``escape`` is pressed
+
+NOTE: sticky modifiers are defined for each callback method individually!
+(e.g. sticky modifiers are unique for click, pick and move callbacks)
+
+.. code-block:: python
+
+    m = Maps()
+    m.add_feature.preset.coastline()
+
+    # a callback that is executed if 1 is pressed while clicking on the map
+    m.cb.click.attach.annotate(modifier="1", text="modifier 1 active")
+    # a callback that is executed if 2 is pressed while clicking on the map
+    m.cb.click.attach.annotate(modifier="2", text="modifier 2 active")
+
+    # make the modifiers 1 and 2 sticky for click callbacks
+    m.cb.click.set_sticky_modifiers("1", "2")
+
+    # note that the modifier 1 is not sticky for move callbacks!
+    # m.cb.move.set_sticky_modifiers("1")  # (uncomment to make it sticky)
+    m.cb.move.attach.mark(radius=5)
+    m.cb.move.attach.mark(modifier="1", radius=5, fc="r")
+
+
+📍 Picking a dataset without plotting it first
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 It is possible to attach ``pick`` callbacks to a ``Maps`` object without plotting the data first
 by using ``m.make_dataset_pickable()``.
 
@@ -746,7 +918,7 @@ and ``< LAYER >`` indicates the actual layer-name.
     |     # ... for more advanced                                                                    |                                         |
     |     layer = mg.m_1_0.add_wms.ISRIC_SoilGrids.nitrogen.add_layer.nitrogen_0_5cm_mean            |                                         |
     |     layer.set_extent_to_bbox() # set the extent according to the boundingBox                   |                                         |
-    |     layer.info                 # the "info" property provides useful informations on the layer |                                         |
+    |     layer.info                 # the "info" property provides useful information on the layer  |                                         |
     |     layer()                    # call the layer to add it to the map                           |                                         |
     |     layer.add_legend()         # if a legend is provided, you can add it to the map!           |                                         |
     |                                                                                                |                                         |
@@ -1029,8 +1201,8 @@ The most commonly used features are available under the ``preset`` category:
 
 .. _annotations_and_markers:
 
-🏕 Annotations and Markers
---------------------------
+🏕 Annotations, Markers, Lines etc.
+-----------------------------------
 
 🔴 Markers
 ~~~~~~~~~~~
@@ -1130,6 +1302,15 @@ Static annotations can be added to the map via ``m.add_annotation()``.
 
 🛸 For dynamic annotations checkout ``m.cb.click.attach.annotate()`` or ``m.cb.pick.attach.annotate()``
 
+.. currentmodule:: eomaps.Maps
+
+.. autosummary::
+    :toctree: generated
+    :nosignatures:
+    :template: only_names_in_toc.rst
+
+    add_annotation
+
 
 .. table::
     :widths: 50 50
@@ -1188,6 +1369,80 @@ Static annotations can be added to the map via ``m.add_annotation()``.
     +-----------------------------------------------------------------------------------+---------------------------------------------+
 
 
+🚲 Lines
+~~~~~~~~~
+
+Lines can be added to a map with ``m.add_line()``.
+
+- A line is defined by a list of **anchor-points** and a **connection-method**
+
+- The coordinates of the anchor-points can be provided in any crs
+
+- Possible **connection-methods** are:
+
+  - ``connect="geod"``: connect points via **geodesic lines** (the default)
+
+      -  use ``n=10`` to calculate 10 intermediate points between each anchor-point
+      -  or use ``del_s=1000`` to calculate intermediate points (approximately) every 1000 meters
+
+         - check the return-values of ``m.add_line()`` to get the actual distances used in each line-segment
+
+  - ``connect="straight"``: connect points via **straight **lines**
+  - ``connect="straight_crs"``: connect points with reprojected lines that are **straight in a given projection**
+
+      -  use ``n=10`` to calculate 10 (equally-spaced) intermediate points between each anchor-point
+
+
+- Additional keyword-arguments are passed to matpltolib's ``plt.plot``
+
+  - This gives a lot of flexibility to style the lines!
+
+.. currentmodule:: eomaps.Maps
+
+.. autosummary::
+    :toctree: generated
+    :nosignatures:
+    :template: only_names_in_toc.rst
+
+    add_line
+
+
+.. table::
+    :widths: 50 50
+    :align: center
+
+    +-----------------------------------------------------------------+---------------------------------------+
+    | .. code-block:: python                                          | .. image:: _static/minigifs/lines.png |
+    |                                                                 |     :align: center                    |
+    |     from eomaps import Maps                                     |                                       |
+    |     import matplotlib.patheffects as path_effects               |                                       |
+    |                                                                 |                                       |
+    |     m = Maps(Maps.CRS.Sinusoidal(), figsize=(8, 4))             |                                       |
+    |     m.add_feature.preset.ocean()                                |                                       |
+    |                                                                 |                                       |
+    |     p0 = [(-100,10), (34, -56), (125, 57)]                      |                                       |
+    |     p1 = [(-120,50), (-42, 63), (45, 57)]                       |                                       |
+    |     p2 = [(-20,-45), (-20, 45), (45, 45), (45, -20), (-20,-45)] |                                       |
+    |                                                                 |                                       |
+    |                                                                 |                                       |
+    |     m.add_line(p0, connect="geod", del_s=100000,                |                                       |
+    |                lw=0.5, c="k", mark_points="rs",                 |                                       |
+    |                marker=".", markevery=10)                        |                                       |
+    |                                                                 |                                       |
+    |     m.add_line(p1, connect="straight", c="b", ls="--",          |                                       |
+    |                mark_points=dict(fc="y", ec="k", lw=.5))         |                                       |
+    |                                                                 |                                       |
+    |     m.add_line(p2, connect="straight_crs", c="r",               |                                       |
+    |                n=5, lw=0.25, ms=5,                              |                                       |
+    |                path_effects=[                                   |                                       |
+    |                    path_effects.withStroke(linewidth=3,         |                                       |
+    |                                            foreground="gold"),  |                                       |
+    |                    path_effects.TickedStroke(angle=90,          |                                       |
+    |                                              linewidth=1,       |                                       |
+    |                                              length=0.5)])      |                                       |
+    +-----------------------------------------------------------------+---------------------------------------+
+
+
 ▭ Rectangular areas
 ~~~~~~~~~~~~~~~~~~~
 
@@ -1236,6 +1491,7 @@ To indicate rectangular areas in any given crs, simply use ``m.indicate_extent``
     |         pass                                                          |                                                 |
     +-----------------------------------------------------------------------+-------------------------------------------------+
 
+
 .. _colorbar:
 
 🌈 Colorbars (with a histogram)
@@ -1259,14 +1515,14 @@ To indicate rectangular areas in any given crs, simply use ``m.indicate_extent``
         m2.add_colorbar()  # this colorbar is only visible on the "data" layer
 
 
-.. currentmodule:: eomaps
+.. currentmodule:: eomaps.Maps
 
 .. autosummary::
     :toctree: generated
     :nosignatures:
     :template: only_names_in_toc.rst
 
-    Maps.add_colorbar
+    add_colorbar
 
 .. table::
     :widths: 70 30
@@ -1337,14 +1593,14 @@ distribution of the shaded pixels within the current field of view by setting ``
 
 A scalebar can be added to a map via ``s = m.add_scalebar()``:
 
-.. currentmodule:: eomaps
+.. currentmodule:: eomaps.Maps
 
 .. autosummary::
     :toctree: generated
     :nosignatures:
     :template: only_names_in_toc.rst
 
-    Maps.add_scalebar
+    add_scalebar
 
 .. table::
     :widths: 70 30
@@ -1399,14 +1655,14 @@ The returned ``ScaleBar`` object provides the following useful methods:
 
 A compass can be added to the map via ``m.add_compass()``:
 
-.. currentmodule:: eomaps
+.. currentmodule:: eomaps.Maps
 
 .. autosummary::
     :toctree: generated
     :nosignatures:
     :template: only_names_in_toc.rst
 
-    Maps.add_compass
+    add_compass
 
 .. table::
     :widths: 70 30
@@ -1463,10 +1719,13 @@ To simplify switching between layers, there are currently 2 widgets available:
 - ``m.util.layer_selector()`` : Add a set of clickable buttons to the map that activates the corresponding layers.
 - ``m.util.layer_slider()`` : Add a slider to the map that iterates through the available layers.
 
-By default the widgets will show all available layers (except the "all" layer).
+By default, the widgets will show all available layers (except the "all" layer) and the widget will be
+**automatically updated** whenever a new layer is created on the map.
 
-- To show only a subset of layers, use ``layers=[...layer names...]``.
+- To show only a subset of layers, provide an explicit list via: ``layers=[...layer names...]``.
 - To exclude certain layers from the widget, use ``exclude_layers=[...layer-names to exclude...]``
+- To remove a previously created widget ``s`` from the map, simply use ``s.remove()``
+
 
 .. currentmodule:: eomaps.utilities.utilities
 
@@ -1493,7 +1752,7 @@ By default the widgets will show all available layers (except the "all" layer).
     |   m2 = m.new_layer(layer="ocean")  |                                                 |
     |   m2.add_feature.preset.ocean()    |                                                 |
     |                                    |                                                 |
-    |   m.util.layer_selector()          |                                                 |
+    |   s = m.util.layer_selector()      |                                                 |
     +------------------------------------+-------------------------------------------------+
 
 
@@ -1525,6 +1784,7 @@ For convenience, inset-map objects have the following special methods defined:
 
 Checkout the associated example on how to use inset-maps: :ref:`EOmaps_examples_inset_maps`
 
+Make sure to checkout the :ref:`layout_editor` which can be used to quickly re-position (and re-size) inset-maps with the mouse!
 
 .. table::
     :widths: 60 40
@@ -1562,6 +1822,77 @@ Checkout the associated example on how to use inset-maps: :ref:`EOmaps_examples_
     new_inset_map
 
 
+.. _layout_editor:
+
+🏗️ Layout Editor
+-----------------
+
+EOmaps provides a **Layout Editor** that can be used to quickly re-arrange the positions of all axes of a figure.
+You can use it to simply drag the axes the mouse to the desired locations and change their size with the scroll-wheel.
+
+**Keyboard shortcuts** are assigned as follows:
+
+.. table::
+    :widths: 52 45
+    :align: center
+
+    +-----------------------------------------------------------------------------------------+-----------------------------------------------+
+    | press ``ALT + L``: enter the **Layout Editor** mode                                     | .. image:: _static/minigifs/layout_editor.gif |
+    |                                                                                         |     :align: center                            |
+    | - press ``ALT + L`` again or `escape` to exit the **Layout Editor**                     |                                               |
+    |                                                                                         |                                               |
+    | **Pick** and **re-arrange** the axes as you like with the mouse                         |                                               |
+    |                                                                                         |                                               |
+    | - **Resize** picked axes with the **scroll-wheel** (or with the ``+`` and ``-`` keys)   |                                               |
+    | - For **"histogram-colorbars"**:                                                        |                                               |
+    |                                                                                         |                                               |
+    |   - Hold down ``shift`` to change horizontal/vertical size                              |                                               |
+    |   - Hold down ``h`` to change ratio between colorbar and histogram                      |                                               |
+    |                                                                                         |                                               |
+    | Press keys ``1-9`` to set the grid-spacing for the **"snap-to-grid"** functionality     |                                               |
+    |                                                                                         |                                               |
+    | - Press ``0`` to deactivate **"snap-to-grid"**                                          |                                               |
+    |                                                                                         |                                               |
+    +-----------------------------------------------------------------------------------------+-----------------------------------------------+
+
+
+
+Save and restore layouts
+~~~~~~~~~~~~~~~~~~~~~~~~
+
+Once a layout (e.g. the desired position of the axes within a figure) has been arranged,
+the layout can be saved and re-applied with:
+
+- 🌟 ``m.get_layout()``: get the current layout (or dump the layout as a json-file)
+- 🌟 ``m.apply_layout()``: apply a given layout (or load and apply the layout from a json-file)
+
+
+It is also possible to enter the **Layout Editor** and save the layout automatically on exit with:
+
+- 🌟 ``m.edit_layout(filepath=...)``: enter LayoutEditor and save layout as a json-file on exit
+
+
+.. note::
+
+    A layout can only be restored if the number (and order) of the axes remains the same!
+    In other words:
+
+    - you always need to save a new layout-file after adding additional axes (or colorbars!) to a map
+
+
+.. currentmodule:: eomaps.Maps
+
+.. autosummary::
+    :toctree: generated
+    :nosignatures:
+    :template: only_names_in_toc.rst
+
+    get_layout
+    apply_layout
+    edit_layout
+
+
+
 📦 Reading data (NetCDF, GeoTIFF, CSV...)
 -----------------------------------------
 
@@ -1573,9 +1904,8 @@ with ``shade_raster`` (if it fails it will fallback to ``shade_points`` and fina
 
 .. note::
 
-    The readers are intended for well-structured datasets!
-    If they fail, simply read and extract the data manually and
-    then set the data as usual via ``m.set_data(...)``.
+    At the moment, the readers are intended as a "shortcut" to read well-structured datasets!
+    If they fail, simply read the data manually and then set the data as usual via ``m.set_data(...)``.
 
     Under the hood, EOmaps uses the following libraries to read data:
 

@@ -48,6 +48,7 @@ class TestBasicPlotting(unittest.TestCase):
         # rectangles
         m.set_data(usedata, x="x", y="y", in_crs=3857)
         m.set_shape.geod_circles(radius=100000)
+        m.set_classify.Quantiles(k=5)
         m.plot_map()
         m.indicate_masked_points()
 
@@ -58,6 +59,7 @@ class TestBasicPlotting(unittest.TestCase):
         # rectangles
         m = Maps(4326)
         m.set_data(usedata, x="x", y="y", in_crs=3857)
+        m.set_classify.EqualInterval(k=5)
         m.set_shape.rectangles()
         m.plot_map()
         m.add_feature.preset.ocean(ec="k", scale="110m")
@@ -172,40 +174,53 @@ class TestBasicPlotting(unittest.TestCase):
         m.plot_map()
 
         # attach all pick callbacks
-        double_click, mouse_button = True, 1
         for n, cb in enumerate(m.cb.pick._cb_list):
             if n == 1:
                 mouse_button = 1
                 double_click = False
-            if n == 2:
+                modifier = "a"
+            elif n == 2:
                 mouse_button = 2
                 double_click = False
+                modifier = "b"
+            else:
+                mouse_button = 1
+                double_click = True
+                modifier = None
 
-            cbID = m.cb.pick.attach(cb, double_click=double_click, button=mouse_button)
-
+            cbID = m.cb.pick.attach(
+                cb, double_click=double_click, button=mouse_button, modifier=modifier
+            )
             self.assertTrue(
                 cbID
-                == f"{cb}_0__{m.layer}__{'double' if double_click else 'single'}__{mouse_button}"
+                == f"{cb}_0__{m.layer}__{'double' if double_click else 'single'}__{mouse_button}__{modifier}"
             )
             self.assertTrue(len(m.cb.pick.get.attached_callbacks) == 1)
             m.cb.pick.remove(cbID)
             self.assertTrue(len(m.cb.pick.get.attached_callbacks) == 0)
 
         # attach all click callbacks
-        double_click, mouse_button = True, 1
         for n, cb in enumerate(m.cb.click._cb_list):
             if n == 1:
                 mouse_button = 1
                 double_click = False
-            if n == 2:
+                modifier = "a"
+            elif n == 2:
                 mouse_button = 2
                 double_click = False
+                modifier = "b"
+            else:
+                mouse_button = 1
+                double_click = True
+                modifier = None
 
-            cbID = m.cb.click.attach(cb, double_click=double_click, button=mouse_button)
+            cbID = m.cb.click.attach(
+                cb, double_click=double_click, button=mouse_button, modifier=modifier
+            )
 
             self.assertTrue(
                 cbID
-                == f"{cb}_0__{m.layer}__{'double' if double_click else 'single'}__{mouse_button}"
+                == f"{cb}_0__{m.layer}__{'double' if double_click else 'single'}__{mouse_button}__{modifier}"
             )
             self.assertTrue(len(m.cb.click.get.attached_callbacks) == 1)
             m.cb.click.remove(cbID)
@@ -414,19 +429,19 @@ class TestBasicPlotting(unittest.TestCase):
         m.set_data_specs(x="x", y="y", in_crs=3857, parameter="value")
         data = m._prepare_data()
 
-    def test_draggable_axes(self):
+    def test_layout_editor(self):
 
         mgrid = MapsGrid(2, 2, crs=[[4326, 4326], [3857, 3857]])
 
         for m in mgrid:
             m.add_feature.preset.coastline()
-        mgrid.parent._draggable_axes._make_draggable()
-        mgrid.parent._draggable_axes._undo_draggable()
+        mgrid.parent._layout_editor._make_draggable()
+        mgrid.parent._layout_editor._undo_draggable()
 
         m = Maps()
         m.add_feature.preset.coastline()
-        m._draggable_axes._make_draggable()
-        m._draggable_axes._undo_draggable()
+        m._layout_editor._make_draggable()
+        m._layout_editor._undo_draggable()
 
     def test_add_colorbar(self):
         gs = GridSpec(2, 2)

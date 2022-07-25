@@ -3,26 +3,41 @@ import numpy as np
 from pyproj import CRS
 from pathlib import Path
 
-try:
-    import pandas as pd
+pd = None
 
-    _pd_OK = True
-except ImportError:
-    _pd_OK = False
 
-try:
-    import xarray as xar
+def _register_pandas():
+    global pd
+    try:
+        import pandas as pd
+    except ImportError:
+        return False
 
-    _xar_OK = True
-except ImportError:
-    _xar_OK = False
+    return True
 
-try:
-    import rioxarray
 
-    _rioxar_OK = True
-except ImportError:
-    _rioxar_OK = False
+xar = None
+
+
+def _register_xarray():
+    global xar
+    try:
+        import xarray as xar
+    except ImportError:
+        return False
+    return True
+
+
+rioxarray = None
+
+
+def _register_rioxarray():
+    global rioxarray
+    try:
+        import rioxarray
+    except ImportError:
+        return False
+    return True
 
 
 class read_file:
@@ -123,7 +138,7 @@ class read_file:
 
         """
 
-        assert _xar_OK and _rioxar_OK, (
+        assert _register_xarray() and _register_rioxarray(), (
             "EOmaps: missing dependency for read_GeoTIFF: 'xarray' 'rioxarray'\n"
             + "To install, use 'conda install -c conda-forge xarray'"
             + "To install, use 'conda install -c conda-forge rioxarray'"
@@ -319,7 +334,7 @@ class read_file:
 
         """
 
-        assert _xar_OK, (
+        assert _register_xarray(), (
             "EOmaps: missing dependency for read_GeoTIFF: 'xarray'\n"
             + "To install, use 'conda install -c conda-forge xarray'"
         )
@@ -492,7 +507,7 @@ class read_file:
             A dict that contains the data required for plotting.
 
         """
-        assert _pd_OK, (
+        assert _register_pandas(), (
             "EOmaps: missing dependency for read_csv: 'pandas'\n"
             + "To install, use 'conda install -c conda-forge pandas'"
         )
@@ -529,7 +544,7 @@ def _from_file(
     shape=None,
     classify_specs=None,
     val_transform=None,
-    coastline=True,
+    coastline=False,
     parent=None,
     figsize=None,
     layer=None,
@@ -577,7 +592,7 @@ def _from_file(
         >>>     return a / 10
     coastline: bool
         Indicator if a coastline should be added or not.
-        The default is True
+        The default is False
     parent : eomaps.Maps
         The parent Maps object to use (e.g. `parent.new_layer()` will be used
         to create a Maps-object for the dataset)
@@ -668,7 +683,7 @@ class from_file:
         shape=None,
         classify_specs=None,
         val_transform=None,
-        coastline=True,
+        coastline=False,
         mask_and_scale=False,
         **kwargs,
     ):
@@ -749,7 +764,7 @@ class from_file:
             >>>     return a / 10
         coastline: bool
             Indicator if a coastline should be added or not.
-            The default is True
+            The default is False
         mask_and_scale : bool
             Indicator if the data should be masked and scaled with respect to the
             file-attributes *_FillValue*, *scale_factor* and *add_offset*.
@@ -802,7 +817,7 @@ class from_file:
 
         """
 
-        assert _xar_OK, (
+        assert _register_xarray(), (
             "EOmaps: missing dependency for read_NetCDF: 'xarray'\n"
             + "To install, use 'conda install -c conda-forge xarray'"
         )
@@ -844,7 +859,7 @@ class from_file:
         shape=None,
         classify_specs=None,
         val_transform=None,
-        coastline=True,
+        coastline=False,
         mask_and_scale=False,
         **kwargs,
     ):
@@ -913,7 +928,7 @@ class from_file:
             >>>     return a / 10
         coastline: bool
             Indicator if a coastline should be added or not.
-            The default is True
+            The default is False
         mask_and_scale : bool
             Indicator if the data should be masked and scaled with respect to the
             file-attributes *_FillValue*, *scale_factor* and *add_offset*.
@@ -963,7 +978,7 @@ class from_file:
 
         """
 
-        assert _xar_OK and _rioxar_OK, (
+        assert _register_xarray() and _register_rioxarray(), (
             "EOmaps: missing dependency for read_GeoTIFF: 'xarray' 'rioxarray'\n"
             + "To install, use 'conda install -c conda-forge xarray'"
             + "To install, use 'conda install -c conda-forge rioxarray'"
@@ -1004,7 +1019,7 @@ class from_file:
         shape=None,
         classify_specs=None,
         val_transform=None,
-        coastline=True,
+        coastline=False,
         **kwargs,
     ):
         """
@@ -1061,7 +1076,7 @@ class from_file:
             >>>     return a / 10
         coastline: bool
             Indicator if a coastline should be added or not.
-            The default is True
+            The default is False
         kwargs :
             Keyword-arguments passed to `m.plot_map()`
 

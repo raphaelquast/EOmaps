@@ -313,9 +313,10 @@ class _click_callbacks(object):
         radius_crs=None,
         shape=None,
         buffer=1,
-        permanent=True,
+        permanent=False,
         n=20,
         zorder=10,
+        layer=None,
         **kwargs,
     ):
         """
@@ -369,6 +370,12 @@ class _click_callbacks(object):
             For details, have a look at:
 
             - https://matplotlib.org/stable/gallery/misc/zorder_demo.html
+
+        layer : str or None, optional
+            ONLY relevant if "permanent=True" !
+            The layer to put the marker on.
+            If None, the layer associated with the used Maps-object (e.g. `m.layer`)
+            The default is None
         kwargs :
             kwargs passed to the matplotlib patch.
             (e.g. `facecolor`, `edgecolor`, `linewidth`, `alpha` etc.)
@@ -399,7 +406,7 @@ class _click_callbacks(object):
             if self.m.figure.coll is not None:
                 radius = "pixel"
             else:
-                # make a dot with 1/20 of the widht & height of the figure
+                # make a dot with 1/20 of the width & height of the figure
                 t = self.m.figure.ax.bbox.transformed(
                     self.m.figure.ax.transData.inverted()
                 )
@@ -480,8 +487,14 @@ class _click_callbacks(object):
 
         if permanent is True:
             self.permanent_markers.append(marker)
-            self.m.BM.add_bg_artist(marker, self.m.layer)
+            if layer is None:
+                layer = self.m.layer
+            self.m.BM.add_bg_artist(marker, layer)
         elif permanent is False:
+            if layer is not None:
+                warnings.warn(
+                    "EOmaps: `m.add_marker(layer=...)` is ignored if `permanent=False`"
+                )
             self._temporary_artists.append(marker)
             self.m.BM.add_artist(marker)
 
@@ -649,7 +662,7 @@ class _click_callbacks(object):
 
         def doit():
             self.m.BM._artists_to_clear["click"].append(marker)
-            self.m.BM._artists_to_clear["move"].append(marker)
+            self.m.BM._artists_to_clear["_click_move"].append(marker)
             self.m.BM._artists_to_clear["on_layer_change"].append(marker)
 
         self.m.BM._after_restore_actions.append(doit)
@@ -818,7 +831,7 @@ class pick_callbacks(_click_callbacks):
 
     def highlight_geometry(self, permanent=False, **kwargs):
         """
-        Temporarily highlite the picked geometry.
+        Temporarily highlite the picked geometry of a GeoDataFrame.
 
         Parameters
         ----------
@@ -850,6 +863,22 @@ class click_callbacks(_click_callbacks):
         "peek_layer",
         "clear_annotations",
         "clear_markers",
+    ]
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+
+class move_callbacks(_click_callbacks):
+    """
+    A collection of callback functions that are executed on mouse-movement.
+    """
+
+    _cb_list = [
+        "print_to_console",
+        "annotate",
+        "mark",
+        "peek_layer",
     ]
 
     def __init__(self, *args, **kwargs):
@@ -928,88 +957,3 @@ class keypress_callbacks:
         """
 
         self._m.fetch_layers(layers=layers, verbose=verbose)
-
-
-class dynamic_callbacks:
-    """
-    Callbacks that are triggered by events in the map (e.g. draw, zoom, etc.).
-
-    Note
-    ----
-
-    This is still an experimental feature!
-
-
-    A collection of callback functions that are executed on triggered events.
-    (e.g. draw, zoom etc.)
-    """
-
-    def __init__(self, m):
-        self._m = m
-
-    def indicate_extent(self, m=None, **kwargs):
-        """
-        Indicate the plot-extent of another maps object.
-
-        NOTE: This feature is not fully mature... some projections might not work
-
-        Parameters
-        ----------
-        m : eomaps.Maps, optional
-            The maps-object whose extent should be indicated.
-            The default is None.
-        **kwargs :
-            kwargs passed to the projected rectangle patch that is used to
-            indicate the plot-extent. The default is {fc="none", ec="r", n=100}
-            (see "m.cb.click.attach.mark()" for details on possible kwargs)
-
-        """
-        self._extent_marker = None
-        self._last_extent = (1, 2, 1, 2)
-
-        def indicate(event=None):
-            if event is not None and event.inaxes != m.figure.ax:
-                return
-
-            try:
-                last_extent = m.figure.ax.get_extent()
-                if self._last_extent == last_extent:
-                    return
-
-                self._last_extent = last_extent
-
-                if self._extent_marker is not None:
-                    self.m.BM.remove_artist(self._extent_marker)
-                    self._extent_marker.remove()
-                    self._extent_marker = None
-
-                x0, x1, y0, y1 = self._last_extent
-
-                w, h = (abs(x0 - x1) / 2, abs(y0 - y1) / 2)
-
-                args = dict(n=100, fc="none", ec="r")
-                args.update(kwargs)
-
-                self._extent_marker = self._m.add_marker(
-                    xy=((x0 + x1) / 2, (y0 + y1) / 2),
-                    xy_crs=m.crs_plot,
-                    layer=999,
-                    shape="rectangles",
-                    radius=(w, h),
-                    radius_crs=m.crs_plot,
-                    permanent=True,
-                    **args,
-                )
-                print("done")
-            except:
-                warnings.warn("EOmaps: Extent could not be indicated.")
-
-        cid = f"_indicate_cid_{id(m)}"
-        if not hasattr(self, cid):
-            setattr(
-                self,
-                cid,
-                m.figure.f.canvas.mpl_connect("button_release_event", indicate),
-            )
-
-        indicate()
