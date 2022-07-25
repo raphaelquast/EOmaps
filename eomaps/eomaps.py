@@ -1890,7 +1890,7 @@ class Maps(object):
         # (only if the axis has a finite size)
         if ax_cb_plot.bbox.width > 0 and ax_cb_plot.bbox.height > 0:
             ax_cb_plot.set_axis_on()
-            _ = ax_cb_plot.hist(
+            h = ax_cb_plot.hist(
                 z_data.clip(vmin, vmax) if (vmin or vmax) else z_data,
                 orientation=orientation,
                 bins=bins if (classified and histbins == "bins") else histbins,
@@ -1902,7 +1902,11 @@ class Maps(object):
             if show_outline:
                 if show_outline is True:
                     show_outline = dict(color="k", lw=1)
-                ax_cb_plot.step(_[1][1:], _[0], **show_outline)
+
+                if orientation == "vertical":
+                    ax_cb_plot.step(h[1], [h[0][0], *h[0]], **show_outline)
+                elif orientation == "horizontal":
+                    ax_cb_plot.step([h[0][0], *h[0]], h[1], **show_outline)
 
         else:
             ax_cb_plot.set_axis_off()
