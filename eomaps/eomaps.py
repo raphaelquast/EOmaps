@@ -1801,6 +1801,7 @@ class Maps(object):
         orientation="vertical",
         log=False,
         tick_formatter=None,
+        show_outline=False,
     ):
 
         if ax_cb is None:
@@ -1898,6 +1899,11 @@ class Maps(object):
                 range=(vmin, vmax) if (vmin and vmax) else None,
                 density=density,
             )
+            if show_outline:
+                if show_outline is True:
+                    show_outline = dict(color="k", lw=1)
+                ax_cb_plot.step(_[1][1:], _[0], **show_outline)
+
         else:
             ax_cb_plot.set_axis_off()
 
@@ -4079,6 +4085,7 @@ class Maps(object):
         dynamic_shade_indicator=False,
         add_extend_arrows="auto",
         extend_frac=0.025,
+        show_outline=False,
     ):
         """
         Add a colorbar to an existing figure.
@@ -4187,6 +4194,17 @@ class Maps(object):
             indicate out-of-bounds values.
             If None, no extension arrows will be drawn.
             The default is 0.015
+        show_outline : bool or dict
+            Indicator if an outline should be added to the histogram.
+            (e.g. a line encompassing the histogram)
+
+            If a dict is provided, it is passed to `plt.step()` to style the line.
+            (e.g. with ordinary matplotlib parameters such as color, lw, ls etc.)
+            If True, the following properties are used:
+
+            - {"color": "k", "lw": 1}
+
+            The default is False.
 
         See Also
         --------
@@ -4484,6 +4502,7 @@ class Maps(object):
             histbins=histbins,
             log=log,
             tick_formatter=tick_formatter,
+            show_outline=show_outline,
         )
 
         # hide the colorbar if it is not added to the currently visible layer
