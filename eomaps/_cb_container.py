@@ -984,7 +984,7 @@ class cb_pick_container(_click_container):
     def _default_picker(self, artist, event):
 
         # make sure that objects are only picked if we are on the right layer
-        if self._m.layer != self._m.BM.bg_layer:
+        if self._m.layer != "all" and self._m.layer != self._m.BM.bg_layer:
             return False, None
 
         try:
@@ -1051,7 +1051,7 @@ class cb_pick_container(_click_container):
 
         # only execute onpick if the correct layer is visible
         # (relevant for forwarded callbacks)
-        if self._m.layer != self._m.BM.bg_layer:
+        if self._m.layer != "all" and self._m.layer != self._m.BM.bg_layer:
             return
 
         # don't execute callbacks if a toolbar-action is active
@@ -1106,7 +1106,7 @@ class cb_pick_container(_click_container):
             try:
 
                 # make sure pickcb is only executed if we are on the right layer
-                if self._m.layer != self._m.BM.bg_layer:
+                if self._m.layer != "all" and self._m.layer != self._m.BM.bg_layer:
                     return
 
                 # check if we want to ignore callbacks

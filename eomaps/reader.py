@@ -158,6 +158,11 @@ class read_file:
             elif isinstance(path_or_dataset, xar.Dataset):
                 # if an xar.Dataset is provided, use it
                 ncfile = path_or_dataset
+            else:
+                raise ValueError(
+                    "EOmaps: `m.read_file.GeoTIFF` accepts only a path "
+                    + "to a GeoTIFF file or an `xarray.Dataset` object!"
+                )
 
             if sel is not None:
                 usencfile = ncfile.sel(**sel)
@@ -348,6 +353,11 @@ class read_file:
             elif isinstance(path_or_dataset, xar.Dataset):
                 # if an xar.Dataset is provided, use it
                 ncfile = path_or_dataset
+            else:
+                raise ValueError(
+                    "EOmaps: `m.read_file.NetCDF` accepts only a path "
+                    + "to a NetCDF file or an `xarray.Dataset` object!"
+                )
 
             if sel is not None:
                 usencfile = ncfile.sel(**sel)

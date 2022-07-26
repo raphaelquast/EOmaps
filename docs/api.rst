@@ -1794,10 +1794,10 @@ Make sure to checkout the :ref:`layout_editor` which can be used to quickly re-p
     | .. code-block:: python                                         | .. image:: _static/minigifs/inset_maps.png |
     |                                                                |   :align: center                           |
     |     m = Maps(Maps.CRS.PlateCarree(central_longitude=-60))      |                                            |
-    |     m.add_feature.preset.ocean()                               |                                            |
+    |     m.add_feature.preset.ocean(reproject="cartopy")            |                                            |
     |     m2 = m.new_inset_map(xy=(5, 45), radius=10,                |                                            |
     |                          plot_position=(.3, .5), plot_size=.7, |                                            |
-    |                          edgecolor="r", linewidth=4,           |                                            |
+    |                          boundary=dict(ec="r", lw=4),          |                                            |
     |                          indicate_extent=dict(fc=(1,0,0,.5),   |                                            |
     |                                               ec="r", lw=1)    |                                            |
     |                          )                                     |                                            |
