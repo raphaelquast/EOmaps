@@ -298,7 +298,7 @@ class _WebMap_layer:
             ), f"EOmaps: WebMap style {style} is not available, use one of {styles}"
             self._style = style[0]
         else:
-            style = self._style
+            style = [self._style]
 
         return style
 
@@ -474,7 +474,7 @@ class _wms_layer(_WebMap_layer):
                         zorder=zorder,
                         alpha=alpha,
                     ),
-                    layer=layer,
+                    layer=self._layer,
                     persistent=False,
                     m=m,
                 )
