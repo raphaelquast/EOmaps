@@ -511,6 +511,9 @@ class LayerSlider(Slider):
         self._m.BM.update()
 
 
+from .draw import shape_drawer
+
+
 class utilities:
     """
     A collection of utility tools that can be added to EOmaps plots
@@ -519,11 +522,18 @@ class utilities:
     def __init__(self, m):
         self._m = m
 
+        self._shape_drawer = shape_drawer(m)
+
         self._selectors = dict()
         self._sliders = dict()
 
         # register a function to update all associated widgets on a layer-chance
         self._m.BM.on_layer(lambda m, l: self._update_widgets(l), persistent=True)
+
+    @property
+    @wraps(shape_drawer)
+    def draw(self):
+        return self._shape_drawer
 
     def _update_widgets(self, l=None):
         if l is None:
