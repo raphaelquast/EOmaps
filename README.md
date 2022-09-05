@@ -63,7 +63,7 @@ Make sure to have a look at the <a href=https://eomaps.readthedocs.io/en/latest>
 Did EOmaps help in your research?  
 Consider supporting the development and add a citation to your publication!
 
-[![https://doi.org/10.5281/zenodo.6459598](https://zenodo.org/badge/410829039.svg)](https://zenodo.org/badge/latestdoi/410829039)
+[![https://doi.org/10.5281/zenodo.6459598](https://zenodo.org/badge/410829039.svg)](https://zenodo.org/badge/latestdoi/410829039) [![Join the chat at https://gitter.im/EOmaps/community](https://badges.gitter.im/EOmaps/community.svg)](https://gitter.im/EOmaps/community?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
 
 
 ## 🚀 Contribute
