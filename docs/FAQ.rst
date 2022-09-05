@@ -34,11 +34,11 @@ To my knowledge there are 2 possibilities to force ``pycharm`` to use the origin
 
 - | 🚲 The "manual" way:
   | Add the following lines to the start of each script:
-  | (for more info and alternative backends see `matpltolib docs <https://matplotlib.org/stable/users/explain/backends.html>`_)
+  | (for more info and alternative backends see `matplotlib docs <https://matplotlib.org/stable/users/explain/backends.html>`_)
 
   .. code-block:: python
 
-    import matpltolib
+    import matplotlib
     matplotlib.use("Qt5Agg")
 
 - | 🚗 The "automatic" way:

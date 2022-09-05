@@ -174,40 +174,53 @@ class TestBasicPlotting(unittest.TestCase):
         m.plot_map()
 
         # attach all pick callbacks
-        double_click, mouse_button = True, 1
         for n, cb in enumerate(m.cb.pick._cb_list):
             if n == 1:
                 mouse_button = 1
                 double_click = False
-            if n == 2:
+                modifier = "a"
+            elif n == 2:
                 mouse_button = 2
                 double_click = False
+                modifier = "b"
+            else:
+                mouse_button = 1
+                double_click = True
+                modifier = None
 
-            cbID = m.cb.pick.attach(cb, double_click=double_click, button=mouse_button)
-
+            cbID = m.cb.pick.attach(
+                cb, double_click=double_click, button=mouse_button, modifier=modifier
+            )
             self.assertTrue(
                 cbID
-                == f"{cb}_0__{m.layer}__{'double' if double_click else 'single'}__{mouse_button}"
+                == f"{cb}_0__{m.layer}__{'double' if double_click else 'single'}__{mouse_button}__{modifier}"
             )
             self.assertTrue(len(m.cb.pick.get.attached_callbacks) == 1)
             m.cb.pick.remove(cbID)
             self.assertTrue(len(m.cb.pick.get.attached_callbacks) == 0)
 
         # attach all click callbacks
-        double_click, mouse_button = True, 1
         for n, cb in enumerate(m.cb.click._cb_list):
             if n == 1:
                 mouse_button = 1
                 double_click = False
-            if n == 2:
+                modifier = "a"
+            elif n == 2:
                 mouse_button = 2
                 double_click = False
+                modifier = "b"
+            else:
+                mouse_button = 1
+                double_click = True
+                modifier = None
 
-            cbID = m.cb.click.attach(cb, double_click=double_click, button=mouse_button)
+            cbID = m.cb.click.attach(
+                cb, double_click=double_click, button=mouse_button, modifier=modifier
+            )
 
             self.assertTrue(
                 cbID
-                == f"{cb}_0__{m.layer}__{'double' if double_click else 'single'}__{mouse_button}"
+                == f"{cb}_0__{m.layer}__{'double' if double_click else 'single'}__{mouse_button}__{modifier}"
             )
             self.assertTrue(len(m.cb.click.get.attached_callbacks) == 1)
             m.cb.click.remove(cbID)

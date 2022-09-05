@@ -260,7 +260,9 @@ Use custom callback functions to perform arbitrary tasks on the data when clicki
 Quickly create nice inset-maps to show details for specific regions.
 
 - the location and extent of the inset can be defined in any given crs
+
   - (or as a geodesic circle with a radius defined in meters)
+
 - the inset-map can have a different crs than the "parent" map
 
 (requires EOmaps >= v4.1)
@@ -273,4 +275,29 @@ Quickly create nice inset-maps to show details for specific regions.
 
 
 .. image:: _static/example_inset_maps.png
+  :width: 75%
+
+
+🚲 Lines and Annotations
+-------------------------
+
+Draw lines defined by a set of anchor-points and add some nice annotations.
+
+Connect the anchor-points via:
+
+- geodesic lines
+- straight lines
+- reprojected straight lines defined in a given projection
+
+
+(requires EOmaps >= v4.3.1)
+
+|toggleStart|
+
+.. literalinclude:: ../tests/example_lines.py
+
+|toggleEnd|
+
+
+.. image:: _static/example_lines.png
   :width: 75%
