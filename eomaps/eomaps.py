@@ -230,6 +230,14 @@ class Maps(object):
     CRS = ccrs
     CRS.Equi7Grid_projection = Equi7Grid_projection
 
+    CRS.Equi7_EU = Equi7Grid_projection("EU")
+    CRS.Equi7_AF = Equi7Grid_projection("AF")
+    CRS.Equi7_AS = Equi7Grid_projection("AS")
+    CRS.Equi7_NA = Equi7Grid_projection("NA")
+    CRS.Equi7_SA = Equi7Grid_projection("SA")
+    CRS.Equi7_OC = Equi7Grid_projection("OC")
+    CRS.Equi7_AN = Equi7Grid_projection("AN")
+
     # mapclassify.CLASSIFIERS
     _classifiers = (
         "BoxPlot",
