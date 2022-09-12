@@ -1484,7 +1484,7 @@ class BlitManager:
 
         return "__overlay_" + str(bg_layer) + "_" + "_".join(map(str, layer))
 
-    def _get_restore_bg_action(self, layer, bbox_bounds=None):
+    def _get_restore_bg_action(self, layer, bbox_bounds=None, alpha=1):
         """
         Update a part of the screen with a different background
         (intended as after-restore action)
@@ -1495,7 +1495,7 @@ class BlitManager:
         if bbox_bounds is None:
             bbox_bounds = self.figure.bbox.bounds
 
-        name = self._get_overlay_name(bg_layer=layer)
+        name = self._get_overlay_name(layer=[self.bg_layer], bg_layer=layer)
 
         def action():
             if self.bg_layer == layer:
@@ -1516,27 +1516,51 @@ class BlitManager:
                 self.fetch_bg(initial_layer)
                 self._m.show_layer(initial_layer)
 
-            # restore the region of interest
-            self.canvas.restore_region(
-                self._bg_layers[name],
-                bbox=(
-                    x0,
-                    self.figure.bbox.height - y0 - h,
-                    x0 + w,
-                    self.figure.bbox.height - y0,
-                ),
-                xy=(0, 0),
+            # convert the buffer to rgba so that we can add transparency
+            buffer = self._bg_layers[name]
+
+            x = buffer.get_extents()
+            ncols, nrows = x[2] - x[0], x[3] - x[1]
+
+            argb = (
+                np.frombuffer(buffer, dtype=np.uint8).reshape((nrows, ncols, 4)).copy()
             )
+            argb = argb[::-1, :, :]
+
+            argb[:, :, -1] = int(255 * alpha)  # argb[:,:, -1] // 2
+
+            gc = self.canvas.renderer.new_gc()
+            gc.set_clip_rectangle(self.canvas.figure.bbox)
+            self.canvas.renderer.draw_image(
+                gc,
+                int(x0),
+                int(y0),
+                argb[int(y0) : int(y0 + h), int(x0) : int(x0 + w), :],
+            )
+            gc.restore()
+
+            # # alternative (intransparent) version
+            # self.canvas.restore_region(
+            #     self._bg_layers[name],
+            #     bbox=(
+            #         x0,
+            #         self.figure.bbox.height - y0 - h,
+            #         x0 + w,
+            #         self.figure.bbox.height - y0,
+            #     ),
+            #     xy=(0, 0),
+            # )
 
         return action
 
-    def _get_overlay_bg_action(self, layer, bbox_bounds=None):
+    def _get_overlay_bg_action(self, layer, bbox_bounds=None, alpha=1):
         """
         Overlay a part of the screen with a different background
         (intended as after-restore action)
 
         bbox_bounds = (x, y, width, height)
         """
+
         if not isinstance(layer, (list, tuple)):
             layer = [layer]
 
@@ -1562,15 +1586,39 @@ class BlitManager:
 
             # restore the region of interest
             if name in self._bg_layers:
-                self.canvas.restore_region(
-                    self._bg_layers[name],
-                    bbox=(
-                        x0,
-                        self.figure.bbox.height - y0 - h,
-                        x0 + w,
-                        self.figure.bbox.height - y0,
-                    ),
-                    xy=(0, 0),
+
+                # convert the buffer to rgba to add transparency
+                buffer = self._bg_layers[name]
+
+                x = buffer.get_extents()
+                ncols, nrows = x[2] - x[0], x[3] - x[1]
+
+                argb = (
+                    np.frombuffer(buffer, dtype=np.uint8)
+                    .reshape((nrows, ncols, 4))
+                    .copy()
                 )
+                argb = argb[::-1, :, :]
+
+                argb[:, :, -1] = int(255 * alpha)  # argb[:,:, -1] // 2
+
+                gc = self.canvas.renderer.new_gc()
+                gc.set_clip_rectangle(self.canvas.figure.bbox)
+                self.canvas.renderer.draw_image(
+                    gc, x0, y0, argb[int(y0) : int(y0 + h), int(x0) : int(x0 + w), :]
+                )
+                gc.restore()
+
+                # # alternative (intransparent) version
+                # self.canvas.restore_region(
+                #     self._bg_layers[name],
+                #     bbox=(
+                #         x0,
+                #         self.figure.bbox.height - y0 - h,
+                #         x0 + w,
+                #         self.figure.bbox.height - y0,
+                #     ),
+                #     xy=(0, 0),
+                # )
 
         return action
