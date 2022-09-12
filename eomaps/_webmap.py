@@ -42,7 +42,7 @@ class _WebMap_layer:
 
         styles = list(self.wms_layer.styles)
         if len(styles) == 0:
-            self._style = None
+            self._style = ""
         else:
             self._style = "default" if "default" in styles else styles[0]
 
