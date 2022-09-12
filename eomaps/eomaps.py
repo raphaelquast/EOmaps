@@ -122,7 +122,7 @@ from ._containers import (
 
 from ._cb_container import cb_container
 from .scalebar import ScaleBar, Compass
-from .projections import Equi7Grid_projection
+from .projections import Equi7Grid_projection, _register_equi7grid
 from .reader import read_file, from_file, new_layer_from_file
 
 from .utilities import utilities
@@ -230,13 +230,14 @@ class Maps(object):
     CRS = ccrs
     CRS.Equi7Grid_projection = Equi7Grid_projection
 
-    CRS.Equi7_EU = Equi7Grid_projection("EU")
-    CRS.Equi7_AF = Equi7Grid_projection("AF")
-    CRS.Equi7_AS = Equi7Grid_projection("AS")
-    CRS.Equi7_NA = Equi7Grid_projection("NA")
-    CRS.Equi7_SA = Equi7Grid_projection("SA")
-    CRS.Equi7_OC = Equi7Grid_projection("OC")
-    CRS.Equi7_AN = Equi7Grid_projection("AN")
+    if _register_equi7grid():
+        CRS.Equi7_EU = Equi7Grid_projection("EU")
+        CRS.Equi7_AF = Equi7Grid_projection("AF")
+        CRS.Equi7_AS = Equi7Grid_projection("AS")
+        CRS.Equi7_NA = Equi7Grid_projection("NA")
+        CRS.Equi7_SA = Equi7Grid_projection("SA")
+        CRS.Equi7_OC = Equi7Grid_projection("OC")
+        CRS.Equi7_AN = Equi7Grid_projection("AN")
 
     # mapclassify.CLASSIFIERS
     _classifiers = (
