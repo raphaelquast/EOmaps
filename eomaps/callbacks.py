@@ -514,7 +514,7 @@ class _click_callbacks(object):
     def _mark_cleanup(self):
         self.clear_markers()
 
-    def peek_layer(self, layer=1, how=(0.4, 0.4), overlay=False, **kwargs):
+    def peek_layer(self, layer=1, how=(0.4, 0.4), overlay=False, alpha=1, **kwargs):
         """
         Swipe between data- or WebMap layers or peek a layers through a rectangle.
 
@@ -536,6 +536,10 @@ class _click_callbacks(object):
                   specified as percentage of the axis-size (0-1)
 
             The default is "left".
+        alpha : float, optional
+            The transparency of the peeked layer.
+            (must be between 0 and 1)
+            The default is 1.
         overlay : bool, optional
             Indicator if only the selected layers should be shown (False) or if the
             layers should be used as an "overlay" on top of the current layer (True).
@@ -669,11 +673,15 @@ class _click_callbacks(object):
 
         if overlay:
             self.m.BM._after_restore_actions.append(
-                self.m.BM._get_overlay_bg_action(layer, (x0, y0, blitw, blith))
+                self.m.BM._get_overlay_bg_action(
+                    layer, (x0, y0, blitw, blith), alpha=alpha
+                )
             )
         else:
             self.m.BM._after_restore_actions.append(
-                self.m.BM._get_restore_bg_action(layer, (x0, y0, blitw, blith))
+                self.m.BM._get_restore_bg_action(
+                    layer, (x0, y0, blitw, blith), alpha=alpha
+                )
             )
 
     def load(
