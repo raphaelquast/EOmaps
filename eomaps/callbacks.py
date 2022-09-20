@@ -530,6 +530,7 @@ class _click_callbacks(object):
 
                 - "left" (→), "right" (←), "top" (↓), "bottom" (↑):
                   swipe the layer at the mouse-position.
+                - "full": overlay the layer on the whole figure
                 - if float: peek a square at the mouse-position, specified as
                   percentage of the axis-width (0-1)
                 - if tuple: (width, height) peek a rectangle at the mouse-position,
@@ -595,20 +596,28 @@ class _click_callbacks(object):
 
                 blitw = ax.bbox.width
                 blith = y - y0
+            elif how == "full":
+                x0, y0 = ax.transAxes.transform((0, 0))
+                blitw = ax.bbox.width
+                blith = ax.bbox.height
+
             else:
                 raise TypeError(f"EOmaps: '{how}' is not a valid input for 'how'")
 
-            x0m, y0m = ax.transData.inverted().transform((x0, y0))
-            x1m, y1m = ax.transData.inverted().transform((x0 + blitw, y0 + blith))
-            w, h = abs(x1m - x0m), abs(y1m - y0m)
-            marker = self.mark(
-                pos=((x0m + x1m) / 2, (y0m + y1m) / 2),
-                radius_crs="out",
-                shape="rectangles",
-                radius=(w / 2, h / 2),
-                permanent=False,
-                **args,
-            )
+            if how != "full":
+                x0m, y0m = ax.transData.inverted().transform((x0, y0))
+                x1m, y1m = ax.transData.inverted().transform((x0 + blitw, y0 + blith))
+                w, h = abs(x1m - x0m), abs(y1m - y0m)
+                marker = self.mark(
+                    pos=((x0m + x1m) / 2, (y0m + y1m) / 2),
+                    radius_crs="out",
+                    shape="rectangles",
+                    radius=(w / 2, h / 2),
+                    permanent=False,
+                    **args,
+                )
+            else:
+                marker = None
 
         elif isinstance(how, (float, list, tuple)):
             if isinstance(how, float):
@@ -664,12 +673,14 @@ class _click_callbacks(object):
         else:
             raise TypeError(f"EOmaps: {how} is not a valid peek method!")
 
-        def doit():
-            self.m.BM._artists_to_clear["click"].append(marker)
-            self.m.BM._artists_to_clear["_click_move"].append(marker)
-            self.m.BM._artists_to_clear["on_layer_change"].append(marker)
+        if marker is not None:
 
-        self.m.BM._after_restore_actions.append(doit)
+            def doit():
+                self.m.BM._artists_to_clear["click"].append(marker)
+                self.m.BM._artists_to_clear["_click_move"].append(marker)
+                self.m.BM._artists_to_clear["on_layer_change"].append(marker)
+
+            self.m.BM._after_restore_actions.append(doit)
 
         if overlay:
             self.m.BM._after_restore_actions.append(
