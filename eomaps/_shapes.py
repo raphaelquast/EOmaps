@@ -1439,10 +1439,7 @@ class shapes(object):
 
         @property
         def _initargs(self):
-            return dict(
-                radius=self._radius,
-                radius_crs=self.radius_crs,
-            )
+            return dict()
 
         @property
         def radius(self):
