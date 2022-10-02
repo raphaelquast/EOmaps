@@ -623,14 +623,15 @@ class _click_callbacks(object):
             if isinstance(how, float):
                 w0, h0 = self.m.figure.ax.transAxes.transform((0, 0))
                 w1, h1 = self.m.figure.ax.transAxes.transform((how, how))
-                blitw, blith = (w1 - w0, w1 - w0)
+                blitw, blith = [min(w1 - w0, h1 - h0)] * 2
+
             else:
                 w0, h0 = self.m.figure.ax.transAxes.transform((0, 0))
                 w1, h1 = self.m.figure.ax.transAxes.transform(how)
                 blitw, blith = (w1 - w0, h1 - h0)
 
             x0, y0 = ax.transData.transform((pos[0], pos[1]))
-            x0, y0 = x0 - blitw / 2.0, y0 - blith / 2
+            x0, y0 = x0 - blitw / 2, y0 - blith / 2
 
             # make sure that we don't blit outside the axis
             bbox = self.m.figure.ax.bbox
