@@ -159,9 +159,9 @@ class Maps(object):
         A list for easy-accses is available as `Maps.CRS`
 
         The default is 4326.
-    layer : int or str, optional
+    layer : str, optional
         The name of the plot-layer assigned to this Maps-object.
-        The default is 0.
+        The default is "base".
 
     Other Parameters:
     -----------------
