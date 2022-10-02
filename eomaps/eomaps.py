@@ -394,6 +394,49 @@ class Maps(object):
         else:
             return object.__getattribute__(self, key)
 
+    def open_widget(self, show_hide_key="w"):
+        """
+        Create and show the EOmaps Qt companion widget.
+
+        Note
+        ----
+        The companion-widget requires using matplotlib with the Qt5Agg backend!
+        To activate, use: `plt.switch_backend("Qt5Agg")`
+
+        Parameters
+        ----------
+        show_hide_key : str or None, optional
+            The keyboard-shortcut that is assigned to show/hide the widget.
+            The default is "w".
+        """
+
+        if plt.get_backend() != "Qt5Agg":
+            print(
+                "EOmaps: Using m.open_widget() is only possible if you use matplotlibs"
+                + f" 'Qt5Agg' backend! (active backend: '{plt.get_backend()}')"
+            )
+            return
+
+        from .qtcompanion.app import MenuWindow
+
+        if self._widget is not None:
+            print("EOmaps: There is already an existing widget for this Maps-object!")
+            self._widget.show()
+            return
+
+        self._widget = MenuWindow(m=self)
+        # make sure that we clear the colormap-pixmap cache on startup
+        self._widget.cmapsChanged.emit()
+
+        # attach a callback to show/hide the window with the "w" key
+        def cb(*args, **kwargs):
+            if self._widget.isVisible():
+                self._widget.hide()
+            else:
+                self._widget.show()
+
+        self.all.cb.keypress.attach(cb, key="w")
+
     @staticmethod
     def _proxy(obj):
         # create a proxy if the object is not yet a proxy
@@ -978,6 +1021,10 @@ class Maps(object):
         # delete the tempfolder containing the memmaps
         if hasattr(self.parent, "_tmpfolder"):
             self.parent._tmpfolder.cleanup()
+
+        # close the pyqt widget if there is one
+        if self._widget is not None:
+            self._widget.close()
 
         # de-register colormaps
         for cmap in self._registered_cmaps:
@@ -1797,6 +1844,8 @@ class Maps(object):
             )
 
             plt.register_cmap(name=cmapname, cmap=cbcmap)
+            if self._widget is not None:
+                self._widget.cmapsChanged.emit()
             # remember registered colormaps (to de-register on close)
             self._registered_cmaps.append(cmapname)
 
