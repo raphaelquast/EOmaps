@@ -42,7 +42,7 @@ def _sanitize(s, prefix="layer_"):
     return s
 
 
-def cmap_alpha(cmap, alpha, interpolate=False):
+def cmap_alpha(cmap, alpha, interpolate=False, name="new_cmap"):
     """
     add transparency to an existing colormap
 
@@ -55,7 +55,9 @@ def cmap_alpha(cmap, alpha, interpolate=False):
     interpolate : bool
         indicator if a listed colormap (False) or a interpolated colormap (True)
         should be generated. The default is False
-
+    name : str
+        the name of the new colormap
+        The default is "new_cmap"
     Returns
     -------
     new_cmap : matplotlib.colormap
@@ -64,10 +66,12 @@ def cmap_alpha(cmap, alpha, interpolate=False):
     cmap = plt.get_cmap(cmap)
     new_cmap = cmap(np.arange(cmap.N))
     new_cmap[:, -1] = alpha
+
     if interpolate:
-        new_cmap = LinearSegmentedColormap("new_cmap", new_cmap)
+        new_cmap = LinearSegmentedColormap(name, new_cmap)
     else:
-        new_cmap = ListedColormap(new_cmap)
+        new_cmap = ListedColormap(new_cmap, name=name)
+
     return new_cmap
 
 
