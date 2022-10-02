@@ -4820,13 +4820,15 @@ class Maps(object):
 
         Parameters
         ----------
-        name : str or int, optional
+        name : str
             The name of the layer to activate.
-            The default is None.
         """
         layers = self._get_layers()
 
-        name = str(name)
+        if not isinstance(name, str):
+            print("EOmaps v5.0 Warning: All layer-names are converted to strings!")
+            name = str(name)
+
         if "|" in name:
             # take special care of "_" to allow 'private' (e.g. hidden) multi-layers
             names = [i.strip() for i in name.split("|") if i != "_"]
