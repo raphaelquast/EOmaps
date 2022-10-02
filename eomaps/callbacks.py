@@ -514,14 +514,14 @@ class _click_callbacks(object):
     def _mark_cleanup(self):
         self.clear_markers()
 
-    def peek_layer(self, layer=1, how=(0.4, 0.4), overlay=False, alpha=1, **kwargs):
+    def peek_layer(self, layer="1", how=(0.4, 0.4), overlay=False, alpha=1, **kwargs):
         """
         Swipe between data- or WebMap layers or peek a layers through a rectangle.
 
         Parameters
         ----------
-        layer : int, str or list
-            - if int or str: The name of the layer you want to peek at.
+        layer : str or list
+            - if str: The name of the layer you want to peek at.
             - if list: A list of layer-names to peek at.
 
         how : str , float or tuple, optional
@@ -563,6 +563,11 @@ class _click_callbacks(object):
         >>> m2.plot_map()
         >>> m.peek_layer(layer="the layer name")
         """
+
+        if not isinstance(layer, str):
+            print("EOmaps v5.0 Warning: All layer-names are converted to strings!")
+            layer = str(layer)
+
         ID, pos, val, ind, picker_name = self._popargs(kwargs)
 
         ax = self.m.figure.ax
