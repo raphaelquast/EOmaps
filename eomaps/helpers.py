@@ -988,6 +988,9 @@ class BlitManager:
         self._on_layer_change = dict()
         self._on_layer_activation = defaultdict(dict)
 
+        self._on_add_bg_artist = list()
+        self._on_remove_bg_artist = list()
+
     @property
     def figure(self):
         return self._m.figure.f
@@ -1255,7 +1258,6 @@ class BlitManager:
                 self._bg_layers = dict()
             if self.bg_layer not in self._bg_layers:
                 self.fetch_bg()
-
             # workaround for nbagg backend to avoid glitches
             # it's slow but at least it works...
             # check progress of the following issuse
@@ -1328,16 +1330,26 @@ class BlitManager:
         self._bg_artists[layer].append(art)
         self._m.BM._refetch_layer(layer)
 
+        for f in self._on_add_bg_artist:
+            f()
+
     def remove_bg_artist(self, art, layer=None):
+        removed = False
         if layer is None:
             for key, val in self._bg_artists.items():
                 if art in val:
                     art.set_animated(False)
                     val.remove(art)
+                    removed = True
         else:
             if art in self._bg_artists[layer]:
                 art.set_animated(False)
                 self._bg_artists[layer].remove(art)
+                removed = True
+
+        if removed:
+            for f in self._on_remove_bg_artist:
+                f()
 
     def remove_artist(self, art, layer=None):
         # this only removes the artist from the blit-manager,
