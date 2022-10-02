@@ -1137,6 +1137,7 @@ class BlitManager:
 
     def get_bg_artists(self, layer):
         # get all relevant artists for combined background layers
+        layer = str(layer)  # make sure we convert non-string layer names to string!
 
         # get artists defined on the layer itself
         # Note: it's possible to create explicit multi-layers and attach
