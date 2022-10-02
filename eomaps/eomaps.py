@@ -289,6 +289,9 @@ class Maps(object):
 
         self._layer = layer
 
+        # a list to remember newly registered colormaps
+        self._registered_cmaps = []
+
         self.parent = parent  # invoke the setter!
 
         # preferred way of accessing WMS services (used in the WMS container)
@@ -974,6 +977,10 @@ class Maps(object):
         # delete the tempfolder containing the memmaps
         if hasattr(self.parent, "_tmpfolder"):
             self.parent._tmpfolder.cleanup()
+
+        # de-register colormaps
+        for cmap in self._registered_cmaps:
+            plt.cm._cmap_registry.pop(cmap, None)
 
         # run garbage-collection to immediately free memory
         gc.collect
@@ -1779,9 +1786,18 @@ class Maps(object):
             colors = cmap(np.linspace(0, 1, nbins))
 
             # initialize the classified colormap
-            cbcmap = LinearSegmentedColormap.from_list(
-                "cmapname", colors=colors, N=len(colors)
+            # get a unique cmap name (to make the colormap accessible from outside)
+            ncmaps = len(
+                [None for i in plt.cm._cmap_registry if i.startswith("EOmaps_")]
             )
+            cmapname = f"EOmaps_classified_{ncmaps}"
+            cbcmap = LinearSegmentedColormap.from_list(
+                cmapname, colors=colors, N=len(colors)
+            )
+
+            plt.register_cmap(name=cmapname, cmap=cbcmap)
+            self._registered_cmaps.append(cmapname)
+
             if cmap._rgba_bad:
                 cbcmap.set_bad(cmap._rgba_bad)
             if cmap._rgba_over:
@@ -3942,10 +3958,23 @@ class Maps(object):
         # make sure the colormap is properly set and transparencys are assigned
         cmap = kwargs.setdefault("cmap", "viridis")
         if "alpha" in kwargs and kwargs["alpha"] < 1:
-            kwargs["cmap"] = cmap_alpha(
-                cmap,
-                kwargs["alpha"],
+            # get a unique name for the colormap
+            ncmaps = len(
+                [None for i in plt.cm._cmap_registry if i.startswith("EOmaps_alpha_")]
             )
+            cmapname = f"EOmaps_alpha_{ncmaps}"
+
+            kwargs["cmap"] = cmap_alpha(
+                cmap=cmap,
+                alpha=kwargs["alpha"],
+                name=cmapname,
+            )
+
+            plt.register_cmap(name=cmapname, cmap=kwargs["cmap"])
+            if self._widget is not None:
+                self._widget.cmapsChanged.emit()
+            # remember registered colormaps (to de-register on close)
+            self._registered_cmaps.append(cmapname)
 
         # make sure zorder is set to 1 by default
         # (by default shading would use 0 while ordinary collections use 1)
