@@ -264,7 +264,7 @@ class Maps(object):
         self,
         crs=None,
         parent=None,
-        layer=0,
+        layer="base",
         f=None,
         gs_ax=None,
         preferred_wms_service="wms",
@@ -282,6 +282,11 @@ class Maps(object):
 
         self._BM = None
         self._children = set()  # weakref.WeakSet()
+
+        if not isinstance(layer, str):
+            print("EOmaps v5.0 Warning: All layer-names are converted to strings!")
+            layer = str(layer)
+
         self._layer = layer
 
         self.parent = parent  # invoke the setter!
