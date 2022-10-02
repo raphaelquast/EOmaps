@@ -1099,8 +1099,8 @@ class BlitManager:
                     def inner(*args, **kwargs):
                         try:
                             func(*args, **kwargs)
-                            if inner in self._on_layer_change[layer]:
-                                self._on_layer_change[layer].pop(inner)
+                            if inner in self._on_layer_change:
+                                self._on_layer_change.pop(inner)
                         except IndexError:
                             pass
 
