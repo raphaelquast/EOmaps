@@ -654,8 +654,8 @@ class _NaturalEarth_presets:
             self._m,
             "physical",
             "coastline",
-            fc="none",
-            ec="k",
+            facecolor="none",
+            edgecolor="k",
             zorder=100,
         )
 
@@ -676,7 +676,7 @@ class _NaturalEarth_presets:
         color = rgb2hex(cfeature.COLORS["water"])
 
         return self._feature(
-            self._m, "physical", "ocean", fc=color, ec="none", zorder=-1
+            self._m, "physical", "ocean", facecolor=color, edgecolor="none", zorder=-1
         )
 
     @property
@@ -697,7 +697,7 @@ class _NaturalEarth_presets:
         color = rgb2hex(cfeature.COLORS["land"])
 
         return self._feature(
-            self._m, "physical", "land", fc=color, ec="none", zorder=-1
+            self._m, "physical", "land", facecolor=color, edgecolor="none", zorder=-1
         )
 
     @property
@@ -718,9 +718,9 @@ class _NaturalEarth_presets:
             self._m,
             "cultural",
             "admin_0_countries",
-            fc="none",
-            ec=".5",
-            lw=0.5,
+            facecolor="none",
+            edgecolor=".5",
+            linewidth=0.5,
             zorder=99,
         )
 
@@ -751,13 +751,11 @@ class _NaturalEarth_presets:
         def __call__(self, scale="50m", **kwargs):
             k = dict(**self.kwargs)
             k.update(kwargs)
-
             self.feature = getattr(
                 getattr(self._m.add_feature, f"{self.category}_{scale}"), self.name
             )
 
             self.__doc__ = self.feature.__doc__
-
             return self.feature(**k)
 
 
