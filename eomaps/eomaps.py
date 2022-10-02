@@ -289,6 +289,7 @@ class Maps(object):
 
         self._layer = layer
 
+        self._widget = None  # slot for the pyqt widget
         # a list to remember newly registered colormaps
         self._registered_cmaps = []
 
