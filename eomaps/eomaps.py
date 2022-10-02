@@ -4825,13 +4825,21 @@ class Maps(object):
         """
         layers = self._get_layers()
 
-        if name not in layers:
-            lstr = " - " + "\n - ".join(map(str, layers))
+        name = str(name)
+        if "|" in name:
+            # take special care of "_" to allow 'private' (e.g. hidden) multi-layers
+            names = [i.strip() for i in name.split("|") if i != "_"]
+        else:
+            names = [name]
 
-            raise AssertionError(
-                f"EOmaps: The layer '{name}' does not exist...\n"
-                + f"Use one of: \n{lstr}"
-            )
+        for i in names:
+            if i not in layers:
+                lstr = " - " + "\n - ".join(map(str, layers))
+
+                raise AssertionError(
+                    f"EOmaps: The layer '{i}' does not exist...\n"
+                    + f"Use one of: \n{lstr}"
+                )
 
         # invoke the bg_layer setter of the blit-manager
         self.BM.bg_layer = name

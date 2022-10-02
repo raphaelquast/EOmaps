@@ -128,6 +128,41 @@ class _cb_container(object):
         self._m.BM.add_artist(artist)
         self._temporary_artists.append(artist)
 
+    def _execute_cb(self, layer):
+        """
+        Get bool if a callback assigned on "layer" should be executed
+
+        - True if the callback is assigned to the "all" layer
+        - True if the corresponding layer is currently active
+        - True if the corresponding layer is part of a currently active "multi-layer"
+          (e.g.  "layer|layer2" )
+
+        Parameters
+        ----------
+        layer : str
+            The name of the layer to which the callback is attached.
+
+        Returns
+        -------
+        bool
+            Indicator if the callback should be executed on the currently visible
+            layer or not.
+        """
+        visible_layer = self._m.BM.bg_layer
+
+        if layer == "all":
+            # the all layer is always executed
+            return True
+        elif "|" in visible_layer:
+            if layer == visible_layer:
+                # return true for the multi-layer itself
+                return True
+            else:
+                # return true for layers that are part of the multi-layer
+                return any(i.strip() == layer for i in visible_layer.split("|"))
+        else:
+            return layer == visible_layer
+
 
 class _click_container(_cb_container):
     """
@@ -662,7 +697,7 @@ class cb_click_container(_click_container):
 
             for key in self._sort_cbs(bcbs):
                 layer = key.split("__")[1]
-                if layer != "all" and layer != str(self._m.BM.bg_layer):
+                if not self._execute_cb(layer):
                     return
 
                 cb = bcbs[key]
@@ -982,9 +1017,8 @@ class cb_pick_container(_click_container):
         self._add_pick_callback()
 
     def _default_picker(self, artist, event):
-
         # make sure that objects are only picked if we are on the right layer
-        if self._m.layer != "all" and self._m.layer != self._m.BM.bg_layer:
+        if not self._execute_cb(self._m.layer):
             return False, None
 
         try:
@@ -1051,7 +1085,7 @@ class cb_pick_container(_click_container):
 
         # only execute onpick if the correct layer is visible
         # (relevant for forwarded callbacks)
-        if self._m.layer != "all" and self._m.layer != self._m.BM.bg_layer:
+        if not self._execute_cb(self._m.layer):
             return
 
         # don't execute callbacks if a toolbar-action is active
@@ -1084,8 +1118,7 @@ class cb_pick_container(_click_container):
 
             for key in self._sort_cbs(bcbs):
                 layer = key.split("__")[1]
-                if layer != "all" and layer != str(self._m.BM.bg_layer):
-                    # TODO
+                if not self._execute_cb(layer):
                     # only execute callbacks if the layer name of the associated
                     # maps-object is active
                     return
@@ -1103,10 +1136,10 @@ class cb_pick_container(_click_container):
         # execute onpick and forward the event to all connected Maps-objects
 
         def pickcb(event):
-            try:
 
+            try:
                 # make sure pickcb is only executed if we are on the right layer
-                if self._m.layer != "all" and self._m.layer != self._m.BM.bg_layer:
+                if not self._execute_cb(self._m.layer):
                     return
 
                 # check if we want to ignore callbacks
@@ -1285,9 +1318,7 @@ class keypress_container(_cb_container):
                 update = False
                 for obj in self._objs:
                     # only trigger callbacks on the right layer
-                    if (obj._m.layer != "all") and (
-                        obj._m.layer != self._m.BM.bg_layer
-                    ):
+                    if not self._execute_cb(obj._m.layer):
                         continue
                     if event.key in obj.get.cbs:
                         update = True

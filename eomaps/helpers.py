@@ -1037,8 +1037,7 @@ class BlitManager:
                     orientation,
                     cb,
                 ] = m._colorbar
-
-                if layer != val:
+                if layer not in val.split("|"):
                     ax_cb.set_visible(False)
                     ax_cb_plot.set_visible(False)
                     if ax_cb_extend:
@@ -1136,9 +1135,31 @@ class BlitManager:
             if layer in self._bg_layers:
                 del self._bg_layers[layer]
 
+    def get_bg_artists(self, layer):
+        # get all relevant artists for combined background layers
+
+        # get artists defined on the layer itself
+        # Note: it's possible to create explicit multi-layers and attach
+        # artists that are only visible if both layers are visible! (e.g. "l1|l2")
+        artists = [*self._bg_artists[layer]]
+
+        # get all artists of the sub-layers (if we deal with a multi-layer)
+        if "|" in layer:
+            for l in layer.split("|"):
+                if l in ["_", ""]:
+                    continue
+                layer_artists = self._bg_artists.get(l, None)
+                if layer_artists is None:
+                    print("EOmaps: Problem while fetching artists for the layer", l)
+                else:
+                    artists += layer_artists
+
+        return artists
+
     def fetch_bg(self, layer=None, bbox=None, overlay=None):
         # add this to the zorder of the overlay-artists prior to plotting
         # to ensure that they appear on top of other artists
+
         overlay_zorder_bias = 1000
         cv = self.canvas
         if layer is None:
@@ -1152,10 +1173,10 @@ class BlitManager:
         for l in overlay_layers:
             self._do_on_layer_change(l)
 
-        allartists = list(chain(*(self._bg_artists[i] for i in [layer, "all"])))
+        allartists = list(chain(*(self.get_bg_artists(i) for i in [layer, "all"])))
         allartists.sort(key=lambda x: getattr(x, "zorder", -1))
 
-        overlay_artists = list(chain(*(self._bg_artists[i] for i in overlay_layers)))
+        overlay_artists = list(chain(*(self.get_bg_artists(i) for i in overlay_layers)))
         overlay_artists.sort(key=lambda x: getattr(x, "zorder", -1))
 
         for a in overlay_artists:
@@ -1185,13 +1206,14 @@ class BlitManager:
         # while we re-draw the artists
 
         cv.mpl_disconnect(self.cid)
+
         if not self._m._layout_editor._modifier_pressed:
             # make all artists of the corresponding layer visible
             for l in self._bg_artists:
                 if l not in [layer, "all", *overlay_layers]:
                     # artists on "all" are always visible!
-                    # make all artists of other layers are invisible
-                    for art in self._bg_artists[l]:
+                    # make all artists of other layers invisible
+                    for art in self.get_bg_artists(l):
                         art.set_visible(False)
             for art in allartists:
                 if art not in self._hidden_axes:
@@ -1207,7 +1229,7 @@ class BlitManager:
             for l in overlay_layers:
                 if l == self.bg_layer:
                     continue
-                for art in self._bg_artists[l]:
+                for art in self.get_bg_artists(l):
                     art.set_visible(False)
 
         else:
@@ -1301,6 +1323,7 @@ class BlitManager:
             return
 
         # art.set_animated(True)
+
         self._bg_artists[layer].append(art)
         self._m.BM._refetch_layer(layer)
 
@@ -1441,6 +1464,7 @@ class BlitManager:
         if bg_layer not in self._bg_layers or self._bg_layers[bg_layer] is None:
             self.on_draw(None)
         else:
+
             if clear:
                 self._clear_temp_artists(clear)
             # restore the background
