@@ -1796,6 +1796,7 @@ class Maps(object):
             )
 
             plt.register_cmap(name=cmapname, cmap=cbcmap)
+            # remember registered colormaps (to de-register on close)
             self._registered_cmaps.append(cmapname)
 
             if cmap._rgba_bad:
