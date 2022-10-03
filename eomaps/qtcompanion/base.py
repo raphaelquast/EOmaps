@@ -1,244 +1,6 @@
-from PyQt5 import QtWidgets, QtCore
+from PyQt5 import QtWidgets, QtCore, QtGui
 from PyQt5.QtCore import Qt
 
-
-class ResizableWindow(QtWidgets.QMainWindow):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-
-        self.press_control = 0
-
-        self.setWindowFlags(Qt.FramelessWindowHint)
-        self.catch_cursor = 0
-        self.installEventFilter(self)
-
-        self.top_drag_margin = 30
-
-    def eventFilter(self, source, event):
-        if event.type() == QtCore.QEvent.HoverMove:
-            if self.press_control == 0:
-                self.set_cursor(event)
-
-        elif event.type() == QtCore.QEvent.MouseButtonPress:
-            self.press_control = 1
-            self.press_pos = event.pos()
-            self.origin = self.mapToGlobal(event.pos())
-            self.ori_geo = self.geometry()
-
-        elif event.type() == QtCore.QEvent.MouseButtonRelease:
-            self.press_control = 0
-            self.set_cursor(event)
-
-        elif event.type() == QtCore.QEvent.MouseMove:
-            if event.buttons() == QtCore.Qt.NoButton:
-                self.set_cursor(event)
-            elif not hasattr(self, "press_pos"):
-                pass
-            elif self.cursor().shape() != Qt.ArrowCursor:
-                self.resizing(self.origin, event, self.ori_geo, self.catch_cursor)
-            elif self.catch_cursor == 0:
-                if self.isMaximized():
-                    # minimize the window and position it centered
-                    self.showNormal()
-                    self.move(self.press_pos)
-                    self.press_pos = QtCore.QPoint(int(self.sizeHint().width() / 2), 0)
-                else:
-                    self.move(self.pos() + (event.pos() - self.press_pos))
-
-        return super().eventFilter(source, event)
-
-    def set_cursor(self, e):
-
-        rect = self.rect()
-        top_left = rect.topLeft()
-        top_right = rect.topRight()
-        bottom_left = rect.bottomLeft()
-        bottom_right = rect.bottomRight()
-        pos = e.pos()
-
-        margin = 5
-
-        # catch top rectangle used for dragging
-        if pos in QtCore.QRect(
-            QtCore.QPoint(top_left.x() + margin * 2, top_left.y() + margin),
-            QtCore.QPoint(
-                top_right.x() - margin * 2, top_right.y() + self.top_drag_margin
-            ),
-        ):
-            self.setCursor(Qt.ArrowCursor)
-            self.catch_cursor = 0
-
-        # catch if window is maximized and ignore resizing
-        elif self.isMaximized():
-            self.catch_cursor = -1
-            self.setCursor(Qt.ArrowCursor)
-            return
-
-        # top catch
-        elif pos in QtCore.QRect(
-            QtCore.QPoint(top_left.x() + margin, top_left.y()),
-            QtCore.QPoint(top_right.x() - margin, top_right.y() + margin),
-        ):
-            self.setCursor(Qt.ArrowCursor)
-            self.catch_cursor = 0
-
-        # bottom catch
-        elif pos in QtCore.QRect(
-            QtCore.QPoint(bottom_left.x() + margin, bottom_left.y()),
-            QtCore.QPoint(bottom_right.x() - margin, bottom_right.y() - margin),
-        ):
-            self.setCursor(Qt.SizeVerCursor)
-            self.catch_cursor = 2
-
-        # right catch
-        elif pos in QtCore.QRect(
-            QtCore.QPoint(top_right.x() - margin, top_right.y() + margin),
-            QtCore.QPoint(bottom_right.x(), bottom_right.y() - margin),
-        ):
-            self.setCursor(Qt.SizeHorCursor)
-            self.catch_cursor = 3
-
-        # left catch
-        elif pos in QtCore.QRect(
-            QtCore.QPoint(top_left.x() + margin, top_left.y() + margin),
-            QtCore.QPoint(bottom_left.x(), bottom_left.y() - margin),
-        ):
-            self.setCursor(Qt.SizeHorCursor)
-            self.catch_cursor = 4
-
-        # top_right catch
-        elif pos in QtCore.QRect(
-            QtCore.QPoint(top_right.x(), top_right.y()),
-            QtCore.QPoint(top_right.x() - margin, top_right.y() + margin),
-        ):
-            self.setCursor(Qt.SizeBDiagCursor)
-            self.catch_cursor = 5
-
-        # botom_left catch
-        elif pos in QtCore.QRect(
-            QtCore.QPoint(bottom_left.x(), bottom_left.y()),
-            QtCore.QPoint(bottom_left.x() + margin, bottom_left.y() - margin),
-        ):
-            self.setCursor(Qt.SizeBDiagCursor)
-            self.catch_cursor = 6
-
-        # top_left catch
-        elif pos in QtCore.QRect(
-            QtCore.QPoint(top_left.x(), top_left.y()),
-            QtCore.QPoint(top_left.x() + margin, top_left.y() + margin),
-        ):
-            self.setCursor(Qt.SizeFDiagCursor)
-            self.catch_cursor = 7
-
-        # bottom_right catch
-        elif pos in QtCore.QRect(
-            QtCore.QPoint(bottom_right.x(), bottom_right.y()),
-            QtCore.QPoint(bottom_right.x() - margin, bottom_right.y() - margin),
-        ):
-            self.setCursor(Qt.SizeFDiagCursor)
-            self.catch_cursor = 8
-
-        # default
-        else:
-            self.catch_cursor = -1
-            self.setCursor(Qt.ArrowCursor)
-
-    def resizing(self, ori, e, geo, value):
-        if self.isMaximized():
-            return
-
-        # top_resize
-        if self.catch_cursor == 1:
-            last = self.mapToGlobal(e.pos()) - ori
-            first = geo.height()
-            first -= last.y()
-            Y = geo.y()
-            Y += last.y()
-
-            if first > self.minimumHeight():
-                self.setGeometry(geo.x(), Y, geo.width(), first)
-
-        # bottom_resize
-        if self.catch_cursor == 2:
-            last = self.mapToGlobal(e.pos()) - ori
-            first = geo.height()
-            first += last.y()
-            self.resize(geo.width(), first)
-
-        # right_resize
-        if self.catch_cursor == 3:
-            last = self.mapToGlobal(e.pos()) - ori
-            first = geo.width()
-            first += last.x()
-            self.resize(first, geo.height())
-
-        # left_resize
-        if self.catch_cursor == 4:
-            last = self.mapToGlobal(e.pos()) - ori
-            first = geo.width()
-            first -= last.x()
-            X = geo.x()
-            X += last.x()
-
-            if first > self.minimumWidth():
-                self.setGeometry(X, geo.y(), first, geo.height())
-
-        # top_right_resize
-        if self.catch_cursor == 5:
-            last = self.mapToGlobal(e.pos()) - ori
-            first_width = geo.width()
-            first_height = geo.height()
-            first_Y = geo.y()
-            first_width += last.x()
-            first_height -= last.y()
-            first_Y += last.y()
-
-            if first_height > self.minimumHeight():
-                self.setGeometry(geo.x(), first_Y, first_width, first_height)
-
-        # bottom_right_resize
-        if self.catch_cursor == 6:
-            last = self.mapToGlobal(e.pos()) - ori
-            first_width = geo.width()
-            first_height = geo.height()
-            first_X = geo.x()
-            first_width -= last.x()
-            first_height += last.y()
-            first_X += last.x()
-
-            if first_width > self.minimumWidth():
-                self.setGeometry(first_X, geo.y(), first_width, first_height)
-
-        # top_left_resize
-        if self.catch_cursor == 7:
-            last = self.mapToGlobal(e.pos()) - ori
-            first_width = geo.width()
-            first_height = geo.height()
-            first_X = geo.x()
-            first_Y = geo.y()
-            first_width -= last.x()
-            first_height -= last.y()
-            first_X += last.x()
-            first_Y += last.y()
-
-            if (
-                first_height > self.minimumHeight()
-                and first_width > self.minimumWidth()
-            ):
-                self.setGeometry(first_X, first_Y, first_width, first_height)
-
-        # bottom_right_resize
-        if self.catch_cursor == 8:
-            last = self.mapToGlobal(e.pos()) - ori
-            first_width = geo.width()
-            first_height = geo.height()
-            first_width += last.x()
-            first_height += last.y()
-
-            self.setGeometry(geo.x(), geo.y(), first_width, first_height)
-
-
-from PyQt5 import QtGui
 from .common import iconpath
 
 
@@ -247,16 +9,19 @@ def get_dummy_spacer():
     space.setSizePolicy(
         QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Expanding
     )
+    space.setAttribute(Qt.WA_TransparentForMouseEvents)
     return space
 
 
-class NewWindowToolBar(QtWidgets.QToolBar):
-    def __init__(self, *args, title=None, **kwargs):
+class ToolBar(QtWidgets.QToolBar):
+    def __init__(self, *args, m=None, left_widget=None, title=None, **kwargs):
         super().__init__(*args, **kwargs)
+
+        self.m = m
 
         logo = QtGui.QPixmap(str(iconpath / "logo.png"))
         logolabel = QtWidgets.QLabel()
-        logolabel.setMaximumHeight(20)
+        logolabel.setMaximumHeight(25)
         logolabel.setAlignment(Qt.AlignBottom | Qt.AlignRight)
         logolabel.setPixmap(
             logo.scaled(logolabel.size(), Qt.KeepAspectRatio, Qt.SmoothTransformation)
@@ -274,13 +39,22 @@ class NewWindowToolBar(QtWidgets.QToolBar):
         self.b_minmax.setText("🗖")
         self.b_minmax.clicked.connect(self.maximize_button_callback)
 
+        if left_widget:
+            self.addWidget(left_widget)
+
         if title is not None:
             titlewidget = QtWidgets.QLabel(f"<b>{title}</b>")
+            titlewidget.setAttribute(Qt.WA_TransparentForMouseEvents)
             self.addWidget(get_dummy_spacer())
             self.addWidget(titlewidget)
 
         self.addWidget(get_dummy_spacer())
 
+        if m is not None:
+            from .utils import AutoUpdateLayerMenuButton
+
+            showlayer = AutoUpdateLayerMenuButton(m=self.m)
+            self.addWidget(showlayer)
         self.addWidget(logolabel)
         self.addWidget(self.b_minmax)
         self.addWidget(b_close)
@@ -294,6 +68,8 @@ class NewWindowToolBar(QtWidgets.QToolBar):
         )
         self.setContentsMargins(0, 0, 0, 0)
 
+        self.press_pos = None
+
     def close_button_callback(self):
         self.window().close()
 
@@ -305,14 +81,34 @@ class NewWindowToolBar(QtWidgets.QToolBar):
             self.window().showNormal()
             self.b_minmax.setText("🗖")
 
+    def mousePressEvent(self, event):
+        if event.button() == QtCore.Qt.LeftButton:
+            self.press_pos = event.pos()
 
-class NewWindow(ResizableWindow):
+    def mouseReleaseEvent(self, event):
+        if event.button() == QtCore.Qt.LeftButton:
+            self.press_pos = None
+
+    def mouseMoveEvent(self, event):
+        if not self.press_pos:
+            return
+
+        if self.window().isMaximized():
+            # minimize the window and position it centered
+            self.window().showNormal()
+            self.window().move(self.press_pos)
+            self.press_pos = QtCore.QPoint(int(self.window().sizeHint().width() / 2), 0)
+        else:
+            self.window().move(self.window().pos() + (event.pos() - self.press_pos))
+
+
+class NewWindow(QtWidgets.QMainWindow):
     def __init__(self, *args, m=None, title=None, **kwargs):
         super().__init__(*args, **kwargs)
         self.m = m
         self.setWindowTitle("OpenFile")
 
-        toolbar = NewWindowToolBar(title=title)
+        toolbar = ToolBar(title=title)
         self.addToolBar(toolbar)
 
         self.layout = QtWidgets.QVBoxLayout()
@@ -330,3 +126,47 @@ class NewWindow(ResizableWindow):
 
     def on_close(self, e):
         self.close()
+
+
+class transparentWindow(QtWidgets.QMainWindow):
+    def __init__(self, *args, m=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.out_alpha = 0.25
+        self.m = m
+
+        # make sure the window does not steal focus from the matplotlib-canvas
+        # on show (otherwise callbacks are inactive as long as the window is focused!)
+        self.setAttribute(Qt.WA_ShowWithoutActivating)
+        self.setWindowFlags(
+            Qt.FramelessWindowHint | Qt.Dialog | Qt.WindowStaysOnTopHint
+        )
+
+        self.transparentQ = QtWidgets.QToolButton()
+        self.transparentQ.setStyleSheet("border:none")
+        self.transparentQ.setToolTip("Make window semi-transparent.")
+        self.transparentQ.setIcon(QtGui.QIcon(str(iconpath / "eye_closed.png")))
+
+        self.toolbar = ToolBar(m=self.m, left_widget=self.transparentQ)
+        self.transparentQ.clicked.connect(self.cb_transparentQ)
+
+        self.addToolBar(self.toolbar)
+
+    def cb_transparentQ(self):
+        if self.out_alpha == 1:
+            self.out_alpha = 0.25
+            self.setFocus()
+            self.transparentQ.setIcon(QtGui.QIcon(str(iconpath / "eye_closed.png")))
+
+        else:
+            self.out_alpha = 1
+            self.setFocus()
+            self.transparentQ.setIcon(QtGui.QIcon(str(iconpath / "eye_open.png")))
+
+    def focusInEvent(self, e):
+        self.setWindowOpacity(1)
+        super().focusInEvent(e)
+
+    def focusOutEvent(self, e):
+        if not self.isActiveWindow():
+            self.setWindowOpacity(self.out_alpha)
+        super().focusInEvent(e)

@@ -1,7 +1,7 @@
 from PyQt5 import QtWidgets, QtGui, QtCore
 from PyQt5.QtCore import Qt, pyqtSignal
 
-from .base import ResizableWindow
+from .base import transparentWindow
 from .common import iconpath
 
 from .widgets.peek import PeekTabs
@@ -83,79 +83,6 @@ class ControlTabs(QtWidgets.QTabWidget):
         self.tab_open.starttab.dropEvent(e)
 
 
-class ToolBar(QtWidgets.QToolBar):
-    def __init__(self, *args, m=None, **kwargs):
-        super().__init__(*args, **kwargs)
-
-        self.m = m
-
-        logo = QtGui.QPixmap(str(iconpath / "logo.png"))
-        logolabel = QtWidgets.QLabel()
-        logolabel.setMaximumHeight(25)
-        logolabel.setAlignment(Qt.AlignBottom | Qt.AlignRight)
-        logolabel.setPixmap(
-            logo.scaled(logolabel.size(), Qt.KeepAspectRatio, Qt.SmoothTransformation)
-        )
-
-        showlayer = AutoUpdateLayerMenuButton(m=self.m)
-
-        b_close = QtWidgets.QToolButton()
-        b_close.setAutoRaise(True)
-        b_close.setFixedSize(25, 25)
-        b_close.setText("🞫")
-        b_close.clicked.connect(self.close_button_callback)
-
-        self.transparentQ = QtWidgets.QToolButton()
-        self.transparentQ.setStyleSheet("border:none")
-        self.transparentQ.setToolTip("Make window semi-transparent.")
-        self.transparentQ.setIcon(QtGui.QIcon(str(iconpath / "eye_closed.png")))
-
-        space = QtWidgets.QWidget()
-        space.setSizePolicy(
-            QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Expanding
-        )
-
-        self.addWidget(self.transparentQ)
-        self.addWidget(space)
-        self.addWidget(showlayer)
-        self.addWidget(logolabel)
-        self.addWidget(b_close)
-
-        self.setMovable(False)
-
-        self.setStyleSheet(
-            "QToolBar{border: none; spacing:20px;}"
-            'QToolButton[autoRaise="true"]{text-align:center; color: red;}'
-            "QPushButton{border:none;}"
-        )
-        self.setContentsMargins(5, 0, 0, 5)
-
-    def close_button_callback(self):
-        self.window().close()
-
-
-class transparentWindow(ResizableWindow):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.out_alpha = 0.25
-
-        # make sure the window does not steal focus from the matplotlib-canvas
-        # on show (otherwise callbacks are inactive as long as the window is focused!)
-        self.setAttribute(Qt.WA_ShowWithoutActivating)
-        self.setWindowFlags(
-            Qt.FramelessWindowHint | Qt.Dialog | Qt.WindowStaysOnTopHint
-        )
-
-    def focusInEvent(self, e):
-        self.setWindowOpacity(1)
-        super().focusInEvent(e)
-
-    def focusOutEvent(self, e):
-        if not self.isActiveWindow():
-            self.setWindowOpacity(self.out_alpha)
-        super().focusInEvent(e)
-
-
 class MenuWindow(transparentWindow):
 
     cmapsChanged = pyqtSignal()
@@ -167,10 +94,6 @@ class MenuWindow(transparentWindow):
         # clear the colormaps-dropdown pixmap cache if the colormaps have changed
         # (the pyqtSignal is emmited by Maps-objects if a new colormap is registered)
         self.cmapsChanged.connect(lambda: get_cmap_pixmaps.cache_clear())
-
-        self.toolbar = ToolBar(m=self.m)
-        self.toolbar.transparentQ.clicked.connect(self.cb_transparentQ)
-        self.addToolBar(self.toolbar)
 
         tabs = ControlTabs(parent=self)
         tabs.setMouseTracking(True)
@@ -199,18 +122,3 @@ class MenuWindow(transparentWindow):
         self.setContextMenuPolicy(Qt.NoContextMenu)
 
         self.setCentralWidget(menu_widget)
-
-    def cb_transparentQ(self):
-        if self.out_alpha == 1:
-            self.out_alpha = 0.25
-            self.setFocus()
-            self.toolbar.transparentQ.setIcon(
-                QtGui.QIcon(str(iconpath / "eye_closed.png"))
-            )
-
-        else:
-            self.out_alpha = 1
-            self.setFocus()
-            self.toolbar.transparentQ.setIcon(
-                QtGui.QIcon(str(iconpath / "eye_open.png"))
-            )
