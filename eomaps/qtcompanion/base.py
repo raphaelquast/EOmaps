@@ -320,23 +320,3 @@ class NewWindow(ResizableWindow):
     @property
     def m(self):
         return self.parent.m
-
-
-class FloatingButtonWidget(QtWidgets.QPushButton):  # 1
-    def __init__(self, parent):
-        super().__init__(parent)
-        self.paddingLeft = 0
-        self.paddingTop = 0
-
-    def update_position(self):
-        parent_rect = self.parent().size()
-        if not parent_rect:
-            return
-
-        x = parent_rect.width() - self.width() - self.paddingLeft
-        y = self.paddingTop  # 3
-        self.setGeometry(x, y, self.width(), self.height())
-
-    def resizeEvent(self, event):  # 2
-        super().resizeEvent(event)
-        self.update_position()
