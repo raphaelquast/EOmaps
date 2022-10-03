@@ -1,11 +1,11 @@
 from PyQt5 import QtCore, QtWidgets, QtGui
+from PyQt5.QtCore import Qt
 
-from .wms import AddWMSMenuButton
-from .utils import GetColorWidget, AlphaSlider
+from matplotlib.colors import to_rgba_array
 
 from ..common import iconpath
-
-from PyQt5.QtCore import Qt
+from .wms import AddWMSMenuButton
+from .utils import GetColorWidget, AlphaSlider
 
 
 class AddFeaturesMenuButton(QtWidgets.QPushButton):
@@ -418,11 +418,10 @@ class ArtistEditor(QtWidgets.QWidget):
             l_lw, b_lw = None, None
 
         # color
-        from .utils import GetColorWidget
 
         try:
-            facecolor = a.get_facecolor()
-            edgecolor = a.get_edgecolor()
+            facecolor = to_rgba_array(a.get_facecolor())
+            edgecolor = to_rgba_array(a.get_edgecolor())
             if facecolor.shape[0] != 1:
                 facecolor = (0, 0, 0, 0)
                 use_cmap = True
