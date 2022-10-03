@@ -23,7 +23,14 @@ class WMS_S2_cloudless:
 
     def __init__(self, m=None):
         self.m = m
-        self.wmslayers = sorted(self.m.add_wms.S2_cloudless.layers)
+        wmslayers = sorted(self.m.add_wms.S2_cloudless.layers)
+
+        if self.m.crs_plot == self.m.CRS.GOOGLE_MERCATOR:
+            wmslayers = [i for i in wmslayers if i.endswith("3857")]
+        else:
+            wmslayers = [i for i in wmslayers if not i.endswith("3857")]
+
+        self.wmslayers = wmslayers
 
     def do_add_layer(self, wmslayer, layer):
         getattr(self.m.add_wms.S2_cloudless.add_layer, wmslayer)(layer=layer)
