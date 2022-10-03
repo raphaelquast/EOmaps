@@ -17,10 +17,36 @@ from .utils import (
 from ..base import NewWindow
 
 
-class ShapeSelector(QtWidgets.QWidget):
+def _none_or_val(val):
+    if val == "None":
+        return None
+    else:
+        return val
+
+
+def _identify_radius(r):
+    r = r.replace(" ", "")
+    try:
+        # try to identify tuples
+        if r.startswith("(") and r.endswith(")"):
+            rx, ry = map(float, r.lstrip("(").rstrip(")").split(","))
+        else:
+            r = float(r)
+            rx = ry = r
+        return rx, ry
+    except:
+        return r
+
+
+class ShapeSelector(QtWidgets.QFrame):
     _ignoreargs = ["shade_hook", "agg_hook"]
 
-    _argspecials = dict(aggregator={"None": None}, mask_radius={"None": None})
+    # special treatment of arguments
+    _argspecials = dict(
+        aggregator=_none_or_val,
+        mask_radius=_none_or_val,
+        radius=_identify_radius,
+    )
 
     _argtypes = dict(
         radius=(float, str),
@@ -35,6 +61,7 @@ class ShapeSelector(QtWidgets.QWidget):
 
     def __init__(self, *args, m=None, default_shape="shade_raster", **kwargs):
         super().__init__(*args, **kwargs)
+
         self.m = m
         self.shape = default_shape
 
@@ -61,8 +88,8 @@ class ShapeSelector(QtWidgets.QWidget):
 
     def argparser(self, key, val):
         special = self._argspecials.get(key, None)
-        if special and val in special:
-            return special[val]
+        if special is not None:
+            return special(val)
 
         convtype = self._argtypes.get(key, (str,))
 
@@ -189,10 +216,10 @@ class PlotFileWidget(QtWidgets.QWidget):
         scroll.setWidgetResizable(True)
         self.file_info = QtWidgets.QLabel()
         self.file_info.setWordWrap(True)
-        # self.file_info.setAlignment(Qt.AlignLeft | Qt.AlignTop)
         self.file_info.setTextInteractionFlags(Qt.TextSelectableByMouse)
         scroll.setWidget(self.file_info)
 
+        # annotate callback
         self.cb_annotate = QtWidgets.QCheckBox("Annotate on click")
         self.cb_annotate.stateChanged.connect(self.b_add_annotate_cb)
 
@@ -200,35 +227,40 @@ class PlotFileWidget(QtWidgets.QWidget):
         self.annotate_modifier = QtWidgets.QLineEdit()
         self.annotate_modifier.textEdited.connect(self.b_add_annotate_cb)
 
+        annotate_layout = QtWidgets.QHBoxLayout()
+        annotate_layout.addWidget(self.cb_annotate, 1)
+        annotate_layout.addWidget(self.modifier_label, 0)
+        annotate_layout.addWidget(self.annotate_modifier, 1)
+
+        # add colorbar checkbox
         self.cb_colorbar = QtWidgets.QCheckBox("Add colorbar")
 
-        self.blayer = QtWidgets.QCheckBox()
-        self._blayer_text = ""
-        self.blayer.stateChanged.connect(self.b_layer_checkbox)
-        self.t1_label = QtWidgets.QLabel("Layer:")
-        self.t1 = QtWidgets.QLineEdit()
-        self.t1.setPlaceholderText(str(self.m.BM.bg_layer))
+        # layer
+        self.layer_label = QtWidgets.QLabel("<b>Layer:</b>")
+        self.layer = LineEditComplete()
+        self.layer.setPlaceholderText(str(self.m.BM.bg_layer))
 
-        self.shape_selector = ShapeSelector(m=self.m, default_shape=self.default_shape)
-
-        self.setlayername = QtWidgets.QWidget()
+        setlayername = QtWidgets.QWidget()
         layername = QtWidgets.QHBoxLayout()
-        layername.addWidget(self.blayer)
-        layername.addWidget(self.t1_label)
-        layername.addWidget(self.t1)
-        self.setlayername.setLayout(layername)
+        layername.addWidget(self.layer_label)
+        layername.addWidget(self.layer)
+        setlayername.setLayout(layername)
 
+        # shape selector (with shape options)
+        self.shape_selector = ShapeSelector(m=self.m, default_shape=self.default_shape)
+        self.setStyleSheet("ShapeSelector{border:1px dashed;}")
+
+        # colormaps
         self.cmaps = CmapDropdown()
 
         validator = QtGui.QDoubleValidator()
         # make sure the validator uses . as separator
         validator.setLocale(QLocale("en_US"))
 
-        vminlabel = QtWidgets.QLabel("vmin=")
-        self.vmin = QtWidgets.QLineEdit()
+        # vmin / vmax
+        vminlabel, vmaxlabel = QtWidgets.QLabel("vmin="), QtWidgets.QLabel("vmax=")
+        self.vmin, self.vmax = QtWidgets.QLineEdit(), QtWidgets.QLineEdit()
         self.vmin.setValidator(validator)
-        vmaxlabel = QtWidgets.QLabel("vmax=")
-        self.vmax = QtWidgets.QLineEdit()
         self.vmax.setValidator(validator)
 
         self.minmaxupdate = QtWidgets.QPushButton("🗘")
@@ -242,15 +274,10 @@ class PlotFileWidget(QtWidgets.QWidget):
         minmaxlayout.addWidget(self.vmax)
         minmaxlayout.addWidget(self.minmaxupdate, Qt.AlignRight)
 
-        annotate_layout = QtWidgets.QHBoxLayout()
-        annotate_layout.addWidget(self.cb_annotate, 1)
-        annotate_layout.addWidget(self.modifier_label, 0)
-        annotate_layout.addWidget(self.annotate_modifier, 1)
-
         options = QtWidgets.QVBoxLayout()
         options.addLayout(annotate_layout)
         options.addWidget(self.cb_colorbar)
-        options.addWidget(self.setlayername)
+        options.addWidget(setlayername)
         options.addWidget(self.shape_selector)
         options.addWidget(self.cmaps)
         options.addLayout(minmaxlayout)
@@ -312,25 +339,11 @@ class PlotFileWidget(QtWidgets.QWidget):
         return self.parent.m
 
     def get_layer(self):
-        layer = self.m.BM.bg_layer
-
-        if self.blayer.isChecked():
-            layer = self.t1.text()
-            if len(layer) == 0 and self.file_path is not None:
-                layer = self.file_path.stem
-                self.t1.setText(layer)
+        layer = self.layer.text()
+        if layer == "":
+            layer = self.layer.placeholderText()
 
         return layer
-
-    def b_layer_checkbox(self):
-        if self.blayer.isChecked():
-            self.t1.setReadOnly(False)
-            if len(self.t1.text()) == 0 and self.file_path is not None:
-                layer = self.file_path.stem
-                self.t1.setText(layer)
-        else:
-            self.t1.setReadOnly(True)
-            self.t1.setText("")
 
     def b_add_annotate_cb(self):
         modifier = self.annotate_modifier.text()
@@ -364,23 +377,26 @@ class PlotFileWidget(QtWidgets.QWidget):
                 return
 
         if file_path is not None:
-            if self.blayer.isChecked():
-                self.t1.setText(file_path.stem)
             self.file_path = file_path
 
         if info is not None:
             self.file_info.setText(info)
 
-        self.window = NewWindow(parent=self.parent, title="Plot File")
-        self.window.statusBar().showMessage(str(self.file_path))
+        self.layer.set_complete_vals(
+            [file_path.name]
+            + [i for i in self.m._get_layers() if not i.startswith("_")]
+        )
 
-        self.window.setWindowFlags(
+        self.newwindow = NewWindow(m=self.parent.m, title="Plot File")
+        self.newwindow.statusBar().showMessage(str(self.file_path))
+
+        self.newwindow.setWindowFlags(
             Qt.FramelessWindowHint | Qt.Dialog | Qt.WindowStaysOnTopHint
         )
 
-        self.window.layout.addWidget(self)
-        self.window.resize(800, 500)
-        self.window.show()
+        self.newwindow.layout.addWidget(self)
+        self.newwindow.resize(800, 500)
+        self.newwindow.show()
 
     def b_plot_file(self):
         try:
@@ -408,7 +424,7 @@ class PlotFileWidget(QtWidgets.QWidget):
             return
 
         if self.close_on_plot:
-            self.window.close()
+            self.newwindow.close()
 
         if self.attach_tab_after_plot:
             self.attach_as_tab()
@@ -447,7 +463,7 @@ class PlotFileWidget(QtWidgets.QWidget):
 
         self.title.setText("<b>Variables used for plotting:</b>")
 
-        self.t1.setReadOnly(True)
+        self.layer.setReadOnly(True)
         self.x.setReadOnly(True)
         self.y.setReadOnly(True)
         self.parameter.setReadOnly(True)
@@ -458,7 +474,7 @@ class PlotFileWidget(QtWidgets.QWidget):
         self.minmaxupdate.setEnabled(False)
         self.cmaps.setEnabled(False)
         self.shape_selector.setEnabled(False)
-        self.setlayername.setEnabled(False)
+        self.layer.setEnabled(False)
         self.cb_colorbar.setEnabled(False)
 
         self.b_plot.close()
@@ -835,22 +851,19 @@ class PlotShapeFileWidget(QtWidgets.QWidget):
         zorder_layout = QtWidgets.QHBoxLayout()
         zorder_layout.addWidget(zorder_label)
         zorder_layout.addWidget(self.zorder)
-        zorder_label.setAlignment(Qt.AlignRight | Qt.AlignCenter)
+        zorder_layout.setAlignment(Qt.AlignRight | Qt.AlignCenter)
 
         # layer
-        self.blayer = QtWidgets.QCheckBox()
-        self._blayer_text = ""
-        self.blayer.stateChanged.connect(self.b_layer_checkbox)
         layerlabel = QtWidgets.QLabel("Layer:")
-        self.layer = QtWidgets.QLineEdit()
+        self.layer = LineEditComplete()
         self.layer.setPlaceholderText(str(self.m.BM.bg_layer))
 
-        self.setlayername = QtWidgets.QWidget()
+        setlayername = QtWidgets.QWidget()
         layername = QtWidgets.QHBoxLayout()
-        layername.addWidget(self.blayer)
         layername.addWidget(layerlabel)
         layername.addWidget(self.layer)
-        self.setlayername.setLayout(layername)
+        layername.addLayout(zorder_layout)
+        setlayername.setLayout(layername)
 
         # -----------------------
 
@@ -858,14 +871,14 @@ class PlotShapeFileWidget(QtWidgets.QWidget):
         props.addWidget(self.colorselector, 0, 0, 2, 1)
         props.addWidget(self.alphaslider, 0, 1)
         props.addWidget(self.linewidthslider, 1, 1)
-        props.addLayout(zorder_layout, 0, 2)
+        # props.addLayout(zorder_layout, 0, 2)
         # set stretch factor to expand the color-selector first
         props.setColumnStretch(0, 1)
         props.setAlignment(Qt.AlignLeft | Qt.AlignTop)
 
         options = QtWidgets.QVBoxLayout()
         options.addLayout(props)
-        options.addWidget(self.setlayername)
+        options.addWidget(setlayername)
         options.addWidget(b_plot, 0, Qt.AlignRight)
         options.setAlignment(Qt.AlignLeft | Qt.AlignTop)
 
@@ -883,11 +896,16 @@ class PlotShapeFileWidget(QtWidgets.QWidget):
         if self.file_path is None:
             return
 
+        layer = self.layer.text()
+        if layer == "":
+            layer = self.layer.placeholderText()
+
         self.m.add_gdf(
             self.file_path,
             **self.plot_props,
+            layer=layer,
         )
-        self.window.close()
+        self.window().close()
 
     def do_open_file(self, file_path=None):
         self.file_path = file_path
@@ -911,17 +929,21 @@ class PlotShapeFileWidget(QtWidgets.QWidget):
         self.do_open_file(file_path)
 
         self.update_props()
+        self.layer.set_complete_vals(
+            [file_path.name]
+            + [i for i in self.m._get_layers() if not i.startswith("_")]
+        )
 
-        self.window = NewWindow(parent=self.parent, title="Open ShapeFile")
-        self.window.statusBar().showMessage(str(self.file_path))
+        self.newwindow = NewWindow(m=self.parent.m, title="Open ShapeFile")
+        self.newwindow.statusBar().showMessage(str(self.file_path))
 
-        self.window.setWindowFlags(
+        self.newwindow.setWindowFlags(
             Qt.FramelessWindowHint | Qt.Dialog | Qt.WindowStaysOnTopHint
         )
 
-        self.window.layout.addWidget(self)
+        self.newwindow.layout.addWidget(self)
         # self.window.resize(800, 500)
-        self.window.show()
+        self.newwindow.show()
 
     def update_on_color_selection(self):
         self.update_alphaslider()
@@ -932,25 +954,18 @@ class PlotShapeFileWidget(QtWidgets.QWidget):
         self.alphaslider.setValue(-(-self.colorselector.alpha * 100 // 1))
 
     def update_props(self):
+        if self.zorder.text():
+            zorder = int(self.zorder.text())
+
         self.plot_props.update(
             dict(
                 facecolor=self.colorselector.facecolor.getRgbF(),
                 edgecolor=self.colorselector.edgecolor.getRgbF(),
                 linewidth=self.linewidthslider.alpha * 5,
-                zorder=int(self.zorder.text()),
+                zorder=zorder,
                 # alpha = self.alphaslider.alpha,   # don't specify alpha! it interferes with the alpha of the colors!
             )
         )
-
-    def b_layer_checkbox(self):
-        if self.blayer.isChecked():
-            self.layer.setReadOnly(False)
-            if len(self.layer.text()) == 0 and self.file_path is not None:
-                layer = self.file_path.stem
-                self.layer.setText(layer)
-        else:
-            self.layer.setReadOnly(True)
-            self.layer.setText("")
 
 
 class OpenDataStartTab(QtWidgets.QWidget):
@@ -1016,12 +1031,13 @@ class OpenDataStartTab(QtWidgets.QWidget):
 
         global plc
         ending = file_path.suffix.lower()
+        # TODO remove obsolete tab/parent args
         if ending in [".nc"]:
-            plc = PlotNetCDFWidget(parent=self.parent, tab=self)
+            plc = PlotNetCDFWidget(parent=self.parent, tab=self.parent)
         elif ending in [".csv"]:
-            plc = PlotCSVWidget(parent=self.parent, tab=self)
+            plc = PlotCSVWidget(parent=self.parent, tab=self.parent)
         elif ending in [".tif", ".tiff"]:
-            plc = PlotGeoTIFFWidget(parent=self.parent, tab=self)
+            plc = PlotGeoTIFFWidget(parent=self.parent, tab=self.parent)
         elif ending in [".shp"]:
             plc = PlotShapeFileWidget(parent=self.parent)
         else:
