@@ -183,14 +183,13 @@ class MenuWindow(transparentWindow):
         )
         self.cb_transparentQ()
 
-        sizegrip = QtWidgets.QSizeGrip(self)
-
         menu_layout = QtWidgets.QVBoxLayout()
         menu_layout.addWidget(tabs)
-        menu_layout.addWidget(sizegrip, 0, QtCore.Qt.AlignBottom | QtCore.Qt.AlignRight)
-
         menu_widget = QtWidgets.QWidget()
         menu_widget.setLayout(menu_layout)
+
+        statusbar = QtWidgets.QStatusBar(self)
+        self.setStatusBar(statusbar)
 
         # prevent context-menu's from appearing to avoid the "hide toolbar"
         # context menu when right-clicking the toolbar
