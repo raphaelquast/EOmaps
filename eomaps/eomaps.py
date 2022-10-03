@@ -410,7 +410,7 @@ class Maps(object):
             The default is "w".
         """
 
-        if plt.get_backend() in ["Qt5Agg", "QtAgg"]:
+        if plt.get_backend() not in ["Qt5Agg", "QtAgg"]:
             print(
                 "EOmaps: Using m.open_widget() is only possible if you use matplotlibs"
                 + f" 'Qt5Agg' backend! (active backend: '{plt.get_backend()}')"
