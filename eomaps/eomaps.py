@@ -381,7 +381,7 @@ class Maps(object):
             self.parent._wms_legend = dict()
 
         if self.parent == self and self._companion_widget is None:
-            # try to attach the Qt companion widget
+            # attach the Qt companion widget
             self._init_companion_widget(show_hide_key=self._companion_widget_key)
 
     def __enter__(self):
