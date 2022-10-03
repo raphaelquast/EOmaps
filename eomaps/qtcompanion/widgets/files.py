@@ -10,6 +10,8 @@ from .utils import (
     to_float_none,
     get_crs,
     str_to_bool,
+    GetColorWidget,
+    AlphaSlider,
 )
 
 from ..base import NewWindow
@@ -368,7 +370,9 @@ class PlotFileWidget(QtWidgets.QWidget):
         if info is not None:
             self.file_info.setText(info)
 
-        self.window = NewWindow(parent=self.parent)
+        self.window = NewWindow(parent=self.parent, title="Plot File")
+        self.window.statusBar().showMessage(str(self.file_path))
+
         self.window.setWindowFlags(
             Qt.FramelessWindowHint | Qt.Dialog | Qt.WindowStaysOnTopHint
         )
@@ -771,6 +775,183 @@ class PlotCSVWidget(PlotFileWidget):
             )
 
 
+class OpenShapeFileWidget(QtWidgets.QWidget):
+    def __init__(self, *args, parent=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.parent = parent
+        self.file_endings = [".shp"]
+
+        self.file_path = None
+
+        self.plot_props = dict()
+
+        scroll = QtWidgets.QScrollArea()
+        scroll.setWidgetResizable(True)
+        self.file_info = QtWidgets.QLabel()
+        self.file_info.setWordWrap(True)
+        # self.file_info.setAlignment(Qt.AlignLeft | Qt.AlignTop)
+        self.file_info.setTextInteractionFlags(Qt.TextSelectableByMouse)
+        scroll.setWidget(self.file_info)
+
+        b_plot = QtWidgets.QPushButton("Plot")
+        b_plot.clicked.connect(self.plot_file)
+
+        # color
+        self.colorselector = GetColorWidget()
+        self.colorselector.cb_colorselected = self.update_on_color_selection
+
+        # alpha of facecolor
+        self.alphaslider = AlphaSlider(Qt.Horizontal)
+        self.alphaslider.setValue(100)
+        self.alphaslider.valueChanged.connect(
+            lambda i: self.colorselector.set_alpha(i / 100)
+        )
+        self.alphaslider.valueChanged.connect(self.update_props)
+
+        # linewidth
+        self.linewidthslider = AlphaSlider(Qt.Horizontal)
+        self.linewidthslider.setValue(10)
+        self.linewidthslider.valueChanged.connect(
+            lambda i: self.colorselector.set_linewidth(i / 10)
+        )
+        self.linewidthslider.valueChanged.connect(self.update_props)
+
+        # zorder
+        self.zorder = QtWidgets.QLineEdit("0")
+        validator = QtGui.QIntValidator()
+        self.zorder.setValidator(validator)
+        self.zorder.setMaximumWidth(30)
+        self.zorder.setSizePolicy(
+            QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Minimum
+        )
+        self.zorder.textChanged.connect(self.update_props)
+
+        zorder_label = QtWidgets.QLabel("zorder: ")
+        zorder_label.setSizePolicy(
+            QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Minimum
+        )
+
+        zorder_layout = QtWidgets.QHBoxLayout()
+        zorder_layout.addWidget(zorder_label)
+        zorder_layout.addWidget(self.zorder)
+        zorder_label.setAlignment(Qt.AlignRight | Qt.AlignCenter)
+
+        # layer
+        self.blayer = QtWidgets.QCheckBox()
+        self._blayer_text = ""
+        self.blayer.stateChanged.connect(self.b_layer_checkbox)
+        layerlabel = QtWidgets.QLabel("Layer:")
+        self.layer = QtWidgets.QLineEdit()
+        self.layer.setPlaceholderText(str(self.m.BM.bg_layer))
+
+        self.setlayername = QtWidgets.QWidget()
+        layername = QtWidgets.QHBoxLayout()
+        layername.addWidget(self.blayer)
+        layername.addWidget(layerlabel)
+        layername.addWidget(self.layer)
+        self.setlayername.setLayout(layername)
+
+        # -----------------------
+
+        props = QtWidgets.QGridLayout()
+        props.addWidget(self.colorselector, 0, 0, 2, 1)
+        props.addWidget(self.alphaslider, 0, 1)
+        props.addWidget(self.linewidthslider, 1, 1)
+        props.addLayout(zorder_layout, 0, 2)
+        # set stretch factor to expand the color-selector first
+        props.setColumnStretch(0, 1)
+        props.setAlignment(Qt.AlignLeft)
+
+        options = QtWidgets.QVBoxLayout()
+        options.addLayout(props)
+        options.addWidget(self.setlayername)
+
+        options.addWidget(b_plot)
+
+        layout = QtWidgets.QHBoxLayout()
+        layout.addWidget(scroll)
+        layout.addLayout(options)
+
+        self.setLayout(layout)
+
+    @property
+    def m(self):
+        return self.parent.m
+
+    def plot_file(self):
+        if self.file_path is None:
+            return
+
+        self.m.add_gdf(
+            self.file_path,
+            **self.plot_props,
+        )
+        self.window.close()
+
+    def do_open_file(self, file_path=None):
+        self.file_path = file_path
+
+        import geopandas as gpd
+
+        self.gdf = gpd.read_file(self.file_path)
+
+        self.file_info.setText(self.gdf.__repr__())
+
+    def open_file(self, file_path=None):
+
+        if self.file_endings is not None:
+            if file_path.suffix.lower() not in self.file_endings:
+                self.file_info.setText(
+                    f"the file {self.file_path.name} is not a valid file"
+                )
+                self.file_path = None
+                return
+
+        self.do_open_file(file_path)
+
+        self.update_props()
+
+        self.window = NewWindow(parent=self.parent, title="Open ShapeFile")
+        self.window.statusBar().showMessage(str(self.file_path))
+
+        self.window.setWindowFlags(
+            Qt.FramelessWindowHint | Qt.Dialog | Qt.WindowStaysOnTopHint
+        )
+
+        self.window.layout.addWidget(self)
+        # self.window.resize(800, 500)
+        self.window.show()
+
+    def update_on_color_selection(self):
+        self.update_alphaslider()
+        self.update_props()
+
+    def update_alphaslider(self):
+        # to always round up to closest int use -(-x//1)
+        self.alphaslider.setValue(-(-self.colorselector.alpha * 100 // 1))
+
+    def update_props(self):
+        self.plot_props.update(
+            dict(
+                facecolor=self.colorselector.facecolor.getRgbF(),
+                edgecolor=self.colorselector.edgecolor.getRgbF(),
+                linewidth=self.linewidthslider.alpha * 5,
+                zorder=int(self.zorder.text()),
+                # alpha = self.alphaslider.alpha,   # don't specify alpha! it interferes with the alpha of the colors!
+            )
+        )
+
+    def b_layer_checkbox(self):
+        if self.blayer.isChecked():
+            self.layer.setReadOnly(False)
+            if len(self.t1.text()) == 0 and self.file_path is not None:
+                layer = self.file_path.stem
+                self.layer.setText(layer)
+        else:
+            self.layer.setReadOnly(True)
+            self.layer.setText("")
+
+
 class OpenDataStartTab(QtWidgets.QWidget):
     def __init__(self, *args, parent=None, **kwargs):
         super().__init__(*args, **kwargs)
@@ -851,6 +1032,8 @@ class OpenDataStartTab(QtWidgets.QWidget):
                 plc = PlotCSVWidget(parent=self.tab.parent, tab=self.tab)
             elif ending in [".tif", ".tiff"]:
                 plc = PlotGeoTIFFWidget(parent=self.tab.parent, tab=self.tab)
+            elif ending in [".shp"]:
+                plc = OpenShapeFileWidget(parent=self.tab.parent)
             else:
                 print("unknown file extension")
 

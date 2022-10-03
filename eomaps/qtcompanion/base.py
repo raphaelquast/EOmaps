@@ -238,47 +238,84 @@ class ResizableWindow(QtWidgets.QMainWindow):
             self.setGeometry(geo.x(), geo.y(), first_width, first_height)
 
 
-class NewWindow(ResizableWindow):
-    def __init__(self, *args, parent=None, **kwargs):
+from PyQt5 import QtGui
+from .common import iconpath
+
+
+def get_dummy_spacer():
+    space = QtWidgets.QWidget()
+    space.setSizePolicy(
+        QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Expanding
+    )
+    return space
+
+
+class NewWindowToolBar(QtWidgets.QToolBar):
+    def __init__(self, *args, title=None, **kwargs):
         super().__init__(*args, **kwargs)
-        self.parent = parent
-        self.setWindowTitle("OpenFile")
 
-        self.layout = QtWidgets.QVBoxLayout()
-        self.layout.setContentsMargins(5, 20, 5, 5)
+        logo = QtGui.QPixmap(str(iconpath / "logo.png"))
+        logolabel = QtWidgets.QLabel()
+        logolabel.setMaximumHeight(20)
+        logolabel.setAlignment(Qt.AlignBottom | Qt.AlignRight)
+        logolabel.setPixmap(
+            logo.scaled(logolabel.size(), Qt.KeepAspectRatio, Qt.SmoothTransformation)
+        )
 
-        widget = QtWidgets.QWidget()
-        widget.setLayout(self.layout)
-        self.setCentralWidget(widget)
+        b_close = QtWidgets.QToolButton()
+        b_close.setAutoRaise(True)
+        b_close.setFixedSize(25, 25)
+        b_close.setText("🞫")
+        b_close.clicked.connect(self.close_button_callback)
 
-        # a exit-button (add it as the last object to make sure it's on top)
-        self.floatb = FloatingButtonWidget(self)
-        self.floatb.setFixedSize(30, 30)
-        self.floatb.setText("\u274C")
-        self.floatb.setStyleSheet("text-align:top;border:none;")
-        self.floatb.clicked.connect(self.close_button_callback)
-        self.floatb.move(0, 0)
+        if title is not None:
+            titlewidget = QtWidgets.QLabel(f"<b>{title}</b>")
+            self.addWidget(get_dummy_spacer())
+            self.addWidget(titlewidget)
 
-        self.floatb2 = FloatingButtonWidget(self)
-        self.floatb2.setFixedSize(30, 30)
-        self.floatb2.setText("\u25a0")
-        self.floatb2.setStyleSheet("text-align:top;border:none;")
-        self.floatb2.clicked.connect(self.maximize_button_callback)
-        self.floatb2.paddingLeft = 30
+        self.addWidget(get_dummy_spacer())
 
-    def resizeEvent(self, event):  # 2
-        super().resizeEvent(event)
-        self.floatb.update_position()
-        self.floatb2.update_position()
+        self.addWidget(logolabel)
+        self.addWidget(b_close)
+
+        self.setMovable(False)
+
+        self.setStyleSheet(
+            "QToolBar{border: none; spacing:20px;}"
+            'QToolButton[autoRaise="true"]{text-align:center; color: red;}'
+            "QPushButton{border:none;}"
+        )
+        self.setContentsMargins(5, 0, 0, 5)
 
     def close_button_callback(self):
-        self.close()
+        self.window().close()
 
     def maximize_button_callback(self):
+        # TODO
         if not self.isMaximized():
             self.showMaximized()
         else:
             self.showNormal()
+
+
+class NewWindow(ResizableWindow):
+    def __init__(self, *args, parent=None, title=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.parent = parent
+        self.setWindowTitle("OpenFile")
+
+        toolbar = NewWindowToolBar(title=title)
+        self.addToolBar(toolbar)
+
+        self.layout = QtWidgets.QVBoxLayout()
+        self.layout.setContentsMargins(5, 20, 5, 5)
+
+        statusBar = QtWidgets.QStatusBar()
+        self.setStatusBar(statusBar)
+
+        widget = QtWidgets.QWidget()
+        widget.setLayout(self.layout)
+        self.setCentralWidget(widget)
 
     @property
     def m(self):
