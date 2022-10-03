@@ -307,9 +307,9 @@ class NewWindowToolBar(QtWidgets.QToolBar):
 
 
 class NewWindow(ResizableWindow):
-    def __init__(self, *args, parent=None, title=None, **kwargs):
+    def __init__(self, *args, m=None, title=None, **kwargs):
         super().__init__(*args, **kwargs)
-        self.parent = parent
+        self.m = m
         self.setWindowTitle("OpenFile")
 
         toolbar = NewWindowToolBar(title=title)
@@ -325,6 +325,8 @@ class NewWindow(ResizableWindow):
         widget.setLayout(self.layout)
         self.setCentralWidget(widget)
 
-    @property
-    def m(self):
-        return self.parent.m
+        # make sure that we close all remaining windows if the figure is closed
+        self.m.figure.f.canvas.mpl_connect("close_event", self.on_close)
+
+    def on_close(self, e):
+        self.close()
