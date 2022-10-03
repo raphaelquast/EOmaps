@@ -51,7 +51,7 @@ class ToolBar(QtWidgets.QToolBar):
         self.addWidget(get_dummy_spacer())
 
         if m is not None:
-            from .utils import AutoUpdateLayerMenuButton
+            from .widgets.layer import AutoUpdateLayerMenuButton
 
             showlayer = AutoUpdateLayerMenuButton(m=self.m)
             self.addWidget(showlayer)

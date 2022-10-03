@@ -15,14 +15,14 @@ from .widgets.utils import get_cmap_pixmaps
 
 
 class ControlTabs(QtWidgets.QTabWidget):
-    def __init__(self, *args, parent=None, **kwargs):
+    def __init__(self, *args, m=None, **kwargs):
         super().__init__(*args, **kwargs)
-        self.parent = parent
+        self.m = m
 
         tab1 = QtWidgets.QWidget()
         tab1layout = QtWidgets.QVBoxLayout()
 
-        peektabs = PeekTabs(parent=self.parent)
+        peektabs = PeekTabs(m=self.m)
         tab1layout.addWidget(peektabs)
 
         try:
@@ -32,13 +32,13 @@ class ControlTabs(QtWidgets.QTabWidget):
         tab1layout.addWidget(addwms)
 
         tab1layout.addStretch(1)
-        tab1layout.addWidget(SaveFileWidget(parent=self.parent))
+        tab1layout.addWidget(SaveFileWidget(m=self.m))
 
         tab1.setLayout(tab1layout)
 
         self.tab1 = tab1
-        self.tab_open = OpenFileTabs(parent=self.parent)
-        self.tab3 = DrawerWidget(parent=self.parent)
+        self.tab_open = OpenFileTabs(m=self.m)
+        self.tab3 = DrawerWidget(m=self.m)
 
         self.tab_edit = ArtistEditor(m=self.m)
 
@@ -69,18 +69,14 @@ class ControlTabs(QtWidgets.QTabWidget):
             except StopIteration:
                 pass
 
-    @property
-    def m(self):
-        return self.parent.m
-
     def dragEnterEvent(self, e):
-        self.tab_open.starttab.dragEnterEvent(e)
+        self.tab_open.dragEnterEvent(e)
 
     def dragLeaveEvent(self, e):
-        self.tab_open.starttab.dragLeaveEvent(e)
+        self.tab_open.dragLeaveEvent(e)
 
     def dropEvent(self, e):
-        self.tab_open.starttab.dropEvent(e)
+        self.tab_open.dropEvent(e)
 
 
 class MenuWindow(transparentWindow):
@@ -88,14 +84,17 @@ class MenuWindow(transparentWindow):
     cmapsChanged = pyqtSignal()
 
     def __init__(self, *args, m=None, **kwargs):
-        super().__init__(*args, **kwargs)
+        # assign m before calling the init of the transparentWindow
+        # to show the layer-selector!
         self.m = m
+
+        super().__init__(*args, m=self.m, **kwargs)
 
         # clear the colormaps-dropdown pixmap cache if the colormaps have changed
         # (the pyqtSignal is emmited by Maps-objects if a new colormap is registered)
         self.cmapsChanged.connect(lambda: get_cmap_pixmaps.cache_clear())
 
-        tabs = ControlTabs(parent=self)
+        tabs = ControlTabs(m=self.m)
         tabs.setMouseTracking(True)
 
         self.setStyleSheet(

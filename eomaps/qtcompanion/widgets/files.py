@@ -173,7 +173,7 @@ class PlotFileWidget(QtWidgets.QWidget):
     def __init__(
         self,
         *args,
-        parent=None,
+        m=None,
         close_on_plot=True,
         attach_tab_after_plot=True,
         tab=None,
@@ -198,7 +198,7 @@ class PlotFileWidget(QtWidgets.QWidget):
         """
         super().__init__(*args, **kwargs)
 
-        self.parent = parent
+        self.m = m
         self.tab = tab
 
         self.attach_tab_after_plot = attach_tab_after_plot
@@ -334,10 +334,6 @@ class PlotFileWidget(QtWidgets.QWidget):
 
         self.setLayout(self.layout)
 
-    @property
-    def m(self):
-        return self.parent.m
-
     def get_layer(self):
         layer = self.layer.text()
         if layer == "":
@@ -387,7 +383,7 @@ class PlotFileWidget(QtWidgets.QWidget):
             + [i for i in self.m._get_layers() if not i.startswith("_")]
         )
 
-        self.newwindow = NewWindow(m=self.parent.m, title="Plot File")
+        self.newwindow = NewWindow(m=self.m, title="Plot File")
         self.newwindow.statusBar().showMessage(str(self.file_path))
 
         self.newwindow.setWindowFlags(
@@ -793,9 +789,9 @@ class PlotCSVWidget(PlotFileWidget):
 
 
 class PlotShapeFileWidget(QtWidgets.QWidget):
-    def __init__(self, *args, parent=None, **kwargs):
+    def __init__(self, *args, m=None, **kwargs):
         super().__init__(*args, **kwargs)
-        self.parent = parent
+        self.m = m
         self.file_endings = [".shp"]
 
         self.file_path = None
@@ -888,10 +884,6 @@ class PlotShapeFileWidget(QtWidgets.QWidget):
 
         self.setLayout(layout)
 
-    @property
-    def m(self):
-        return self.parent.m
-
     def plot_file(self):
         if self.file_path is None:
             return
@@ -934,7 +926,7 @@ class PlotShapeFileWidget(QtWidgets.QWidget):
             + [i for i in self.m._get_layers() if not i.startswith("_")]
         )
 
-        self.newwindow = NewWindow(m=self.parent.m, title="Open ShapeFile")
+        self.newwindow = NewWindow(m=self.m, title="Open ShapeFile")
         self.newwindow.statusBar().showMessage(str(self.file_path))
 
         self.newwindow.setWindowFlags(
@@ -969,20 +961,19 @@ class PlotShapeFileWidget(QtWidgets.QWidget):
 
 
 class OpenDataStartTab(QtWidgets.QWidget):
-    def __init__(self, *args, parent=None, **kwargs):
+    def __init__(self, *args, m=None, **kwargs):
         super().__init__(*args, **kwargs)
 
-        self.parent = parent
+        self.m = m
 
         self.t1 = QtWidgets.QLabel()
         self.t1.setAlignment(Qt.AlignBottom | Qt.AlignCenter)
         self.set_std_text()
 
-        self.b1 = QtWidgets.QPushButton("Open File")
-        self.b1.clicked.connect(lambda: self.new_file_tab(file_path=None))
+        self.open_button = QtWidgets.QPushButton("Open File")
 
         layout = QtWidgets.QGridLayout()
-        layout.addWidget(self.b1, 0, 0)
+        layout.addWidget(self.open_button, 0, 0)
         layout.addWidget(self.t1, 3, 0)
 
         layout.setAlignment(Qt.AlignCenter)
@@ -998,76 +989,17 @@ class OpenDataStartTab(QtWidgets.QWidget):
             + "    NetCDF | GeoTIFF | CSV"
         )
 
-    def dragEnterEvent(self, e):
-        if e.mimeData().hasUrls():
-            urls = e.mimeData().urls()
-
-            if len(urls) > 1:
-                self.window().statusBar().showMessage(
-                    "Dropping more than 1 file is not supported!"
-                )
-                e.accept()  # if we ignore the event, dragLeaveEvent is also ignored!
-            else:
-                self.window().statusBar().showMessage("DROP IT!")
-                e.accept()
-        else:
-            e.ignore()
-
-    def dragLeaveEvent(self, e):
-        self.window().statusBar().clearMessage()
-
-    def dropEvent(self, e):
-        urls = e.mimeData().urls()
-        if len(urls) > 1:
-            return
-
-        self.new_file_tab(urls[0].toLocalFile())
-
-    def new_file_tab(self, file_path=None):
-        if file_path is None:
-            file_path = Path(QtWidgets.QFileDialog.getOpenFileName()[0])
-        elif isinstance(file_path, str):
-            file_path = Path(file_path)
-
-        global plc
-        ending = file_path.suffix.lower()
-        # TODO remove obsolete tab/parent args
-        if ending in [".nc"]:
-            plc = PlotNetCDFWidget(parent=self.parent, tab=self.parent)
-        elif ending in [".csv"]:
-            plc = PlotCSVWidget(parent=self.parent, tab=self.parent)
-        elif ending in [".tif", ".tiff"]:
-            plc = PlotGeoTIFFWidget(parent=self.parent, tab=self.parent)
-        elif ending in [".shp"]:
-            plc = PlotShapeFileWidget(parent=self.parent)
-        else:
-            self.window().statusBar().showMessage(
-                f"Unknown file extension {ending}", 5000
-            )
-            return
-
-        self.window().statusBar().clearMessage()
-
-        try:
-            plc.open_file(file_path)
-        except Exception:
-            self.window().statusBar().showMessage("File could not be opened...", 5000)
-            import traceback
-
-            show_error_popup(
-                text="There was an error while trying to open the file.",
-                title="Unable to open file.",
-                details=traceback.format_exc(),
-            )
-
 
 class OpenFileTabs(QtWidgets.QTabWidget):
-    def __init__(self, *args, parent=None, **kwargs):
+    def __init__(self, *args, m=None, **kwargs):
         super().__init__(*args, **kwargs)
 
-        self.parent = parent
+        self.m = m
 
-        self.starttab = OpenDataStartTab(parent=self)
+        self.starttab = OpenDataStartTab(m=self.m)
+        self.starttab.open_button.clicked.connect(
+            lambda: self.new_file_tab(file_path=None)
+        )
 
         self.setTabsClosable(True)
         self.tabCloseRequested.connect(self.close_handler)
@@ -1118,6 +1050,63 @@ class OpenFileTabs(QtWidgets.QTabWidget):
 
         self.removeTab(index)
 
-    @property
-    def m(self):
-        return self.parent.m
+    def dragEnterEvent(self, e):
+        if e.mimeData().hasUrls():
+            urls = e.mimeData().urls()
+
+            if len(urls) > 1:
+                self.window().statusBar().showMessage(
+                    "Dropping more than 1 file is not supported!"
+                )
+                e.accept()  # if we ignore the event, dragLeaveEvent is also ignored!
+            else:
+                self.window().statusBar().showMessage("DROP IT!")
+                e.accept()
+        else:
+            e.ignore()
+
+    def dragLeaveEvent(self, e):
+        self.window().statusBar().clearMessage()
+
+    def dropEvent(self, e):
+        urls = e.mimeData().urls()
+        if len(urls) > 1:
+            return
+
+        self.new_file_tab(urls[0].toLocalFile())
+
+    def new_file_tab(self, file_path=None):
+        if file_path is None:
+            file_path = Path(QtWidgets.QFileDialog.getOpenFileName()[0])
+        elif isinstance(file_path, str):
+            file_path = Path(file_path)
+
+        global plc
+        ending = file_path.suffix.lower()
+        if ending in [".nc"]:
+            plc = PlotNetCDFWidget(m=self.m, tab=self)
+        elif ending in [".csv"]:
+            plc = PlotCSVWidget(m=self.m, tab=self)
+        elif ending in [".tif", ".tiff"]:
+            plc = PlotGeoTIFFWidget(m=self.m, tab=self)
+        elif ending in [".shp"]:
+            plc = PlotShapeFileWidget(m=self.m)
+        else:
+            self.window().statusBar().showMessage(
+                f"Unknown file extension {ending}", 5000
+            )
+            return
+
+        self.window().statusBar().clearMessage()
+
+        try:
+            plc.open_file(file_path)
+        except Exception:
+            self.window().statusBar().showMessage("File could not be opened...", 5000)
+            import traceback
+
+            show_error_popup(
+                text="There was an error while trying to open the file.",
+                title="Unable to open file.",
+                details=traceback.format_exc(),
+            )

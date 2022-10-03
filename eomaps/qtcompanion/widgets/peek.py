@@ -130,7 +130,7 @@ class PeekMethodButtons(QtWidgets.QWidget):
 
 class PeekLayerWidget(QtWidgets.QWidget):
     def __init__(
-        self, *args, parent=None, layers=None, exclude=None, how=(0.5, 0.5), **kwargs
+        self, *args, m=None, layers=None, exclude=None, how=(0.5, 0.5), **kwargs
     ):
         """
         A dropdown-list that attaches a peek-callback to look at the selected layer
@@ -151,7 +151,7 @@ class PeekLayerWidget(QtWidgets.QWidget):
         """
         super().__init__(*args, **kwargs)
 
-        self.parent = parent
+        self.m = m
         self._layers = layers
         self._exclude = exclude
 
@@ -197,10 +197,6 @@ class PeekLayerWidget(QtWidgets.QWidget):
 
         self.setLayout(layout)
 
-    @property
-    def m(self):
-        return self.parent.m
-
     def set_layer_callback(self, l):
         self.remove_peek_cb()
         if self.cid is not None:
@@ -245,14 +241,14 @@ class PeekLayerWidget(QtWidgets.QWidget):
 
 
 class PeekTabs(QtWidgets.QTabWidget):
-    def __init__(self, *args, parent=None, **kwargs):
+    def __init__(self, *args, m=None, **kwargs):
         super().__init__(*args, **kwargs)
-        self.parent = parent
+        self.m = m
 
         self.setTabsClosable(True)
         self.tabCloseRequested.connect(self.close_handler)
 
-        w = PeekLayerWidget(parent=self.parent)
+        w = PeekLayerWidget(m=self.m)
         self.addTab(w, "    ")
 
         # update the tab title with the modifier key
@@ -275,7 +271,7 @@ class PeekTabs(QtWidgets.QTabWidget):
 
     def tabbar_clicked(self, index):
         if self.tabText(index) == "+":
-            w = PeekLayerWidget(parent=self.parent)
+            w = PeekLayerWidget(m=self.m)
             self.insertTab(self.count() - 1, w, "    ")
 
             # update the tab title with the modifier key

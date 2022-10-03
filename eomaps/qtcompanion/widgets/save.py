@@ -5,9 +5,9 @@ from .utils import EditLayoutButton
 
 
 class SaveFileWidget(QtWidgets.QWidget):
-    def __init__(self, *args, parent=None, **kwargs):
+    def __init__(self, *args, m=None, **kwargs):
         super().__init__(*args, **kwargs)
-        self.parent = parent
+        self.m = m
 
         b_edit = EditLayoutButton("Edit layout", m=self.m)
         width = b_edit.fontMetrics().boundingRect(b_edit.text()).width()
@@ -49,10 +49,6 @@ class SaveFileWidget(QtWidgets.QWidget):
         layout.setAlignment(Qt.AlignBottom)
 
         self.setLayout(layout)
-
-    @property
-    def m(self):
-        return self.parent.m
 
     def save_file(self):
         savepath = QtWidgets.QFileDialog.getSaveFileName()[0]

@@ -12,11 +12,11 @@ class DrawerWidget(QtWidgets.QWidget):
         "Circle": "circle",
     }
 
-    def __init__(self, parent=None):
+    def __init__(self, m=None):
 
         super().__init__()
 
-        self.parent = parent
+        self.m = m
 
         self.shapeselector = QtWidgets.QComboBox()
 
@@ -70,7 +70,3 @@ class DrawerWidget(QtWidgets.QWidget):
             alpha=self.alphaslider.alpha,
             linewidth=self.linewidthslider.alpha * 10,
         )
-
-    @property
-    def m(self):
-        return self.parent.m
