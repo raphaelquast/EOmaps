@@ -192,7 +192,7 @@ class AutoUpdateLayerMenuButton(QtWidgets.QPushButton):
         if not (modifiers == Qt.ShiftModifier or modifiers == Qt.ControlModifier):
 
             self.m.show_layer(text)
-            self.checkorder = [text]
+            self.checked_layers = [text]
             return
 
         if isinstance(actionwidget, QtWidgets.QCheckBox):
