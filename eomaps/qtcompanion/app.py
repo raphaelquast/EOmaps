@@ -37,14 +37,14 @@ class ControlTabs(QtWidgets.QTabWidget):
         tab1.setLayout(tab1layout)
 
         self.tab1 = tab1
-        self.tab2 = OpenFileTabs(parent=self.parent)
+        self.tab_open = OpenFileTabs(parent=self.parent)
         self.tab3 = DrawerWidget(parent=self.parent)
 
-        self.tab6 = ArtistEditor(m=self.m)
+        self.tab_edit = ArtistEditor(m=self.m)
 
         self.addTab(self.tab1, "Compare")
-        self.addTab(self.tab6, "Edit")
-        self.addTab(self.tab2, "Open Files")
+        self.addTab(self.tab_edit, "Edit")
+        self.addTab(self.tab_open, "Open Files")
         if hasattr(self.m.util, "draw"):  # for future "draw" capabilities
             self.addTab(self.tab3, "Draw Shapes")
 
@@ -54,18 +54,18 @@ class ControlTabs(QtWidgets.QTabWidget):
         self.setAcceptDrops(True)
 
     def tabchanged(self):
-        if self.currentWidget() == self.tab6:
-            self.tab6.populate()
-            self.tab6.populate_layer()
+        if self.currentWidget() == self.tab_edit:
+            self.tab_edit.populate()
+            self.tab_edit.populate_layer()
 
             # activate the currently visible layer in the editor-tabs
             try:
                 idx = next(
                     i
-                    for i in range(self.tab6.tabs.count())
-                    if self.tab6.tabs.tabText(i) == self.m.BM._bg_layer
+                    for i in range(self.tab_edit.tabs.count())
+                    if self.tab_edit.tabs.tabText(i) == self.m.BM._bg_layer
                 )
-                self.tab6.tabs.setCurrentIndex(idx)
+                self.tab_edit.tabs.setCurrentIndex(idx)
             except StopIteration:
                 pass
 
@@ -74,10 +74,13 @@ class ControlTabs(QtWidgets.QTabWidget):
         return self.parent.m
 
     def dragEnterEvent(self, e):
-        # switch to open-file-tab on drag-enter
-        # (the open-file-tab takes over from there!)
-        self.setCurrentWidget(self.tab2)
-        self.tab2.setCurrentIndex(0)
+        self.tab_open.starttab.dragEnterEvent(e)
+
+    def dragLeaveEvent(self, e):
+        self.tab_open.starttab.dragLeaveEvent(e)
+
+    def dropEvent(self, e):
+        self.tab_open.starttab.dropEvent(e)
 
 
 class ToolBar(QtWidgets.QToolBar):

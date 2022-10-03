@@ -988,24 +988,25 @@ class OpenDataStartTab(QtWidgets.QWidget):
             urls = e.mimeData().urls()
 
             if len(urls) > 1:
-                self.t1.setText("Dropping more than 1 file is not supported!")
+                self.window().statusBar().showMessage(
+                    "Dropping more than 1 file is not supported!"
+                )
                 e.accept()  # if we ignore the event, dragLeaveEvent is also ignored!
             else:
-                self.t1.setText("DROP IT!")
+                self.window().statusBar().showMessage("DROP IT!")
                 e.accept()
         else:
             e.ignore()
-            self.set_std_text()
 
     def dragLeaveEvent(self, e):
-        self.set_std_text()
+        self.window().statusBar().clearMessage()
 
     def dropEvent(self, e):
         urls = e.mimeData().urls()
         if len(urls) > 1:
             return
 
-        self.b1.new_file_tab(urls[0].toLocalFile())
+        self.new_file_tab(urls[0].toLocalFile())
 
     def new_file_tab(self, file_path=None):
         if file_path is None:
@@ -1024,12 +1025,17 @@ class OpenDataStartTab(QtWidgets.QWidget):
         elif ending in [".shp"]:
             plc = PlotShapeFileWidget(parent=self.parent)
         else:
-            print("unknown file extension")
+            self.window().statusBar().showMessage(
+                f"Unknown file extension {ending}", 5000
+            )
+            return
+
+        self.window().statusBar().clearMessage()
 
         try:
             plc.open_file(file_path)
         except Exception:
-            self.t1.setText("File could not be opened...")
+            self.window().statusBar().showMessage("File could not be opened...", 5000)
             import traceback
 
             show_error_popup(
@@ -1045,12 +1051,12 @@ class OpenFileTabs(QtWidgets.QTabWidget):
 
         self.parent = parent
 
-        t1 = OpenDataStartTab(parent=self)
+        self.starttab = OpenDataStartTab(parent=self)
 
         self.setTabsClosable(True)
         self.tabCloseRequested.connect(self.close_handler)
 
-        self.addTab(t1, "NEW")
+        self.addTab(self.starttab, "NEW")
         # don't show the close button for this tab
         self.tabBar().setTabButton(self.count() - 1, self.tabBar().RightSide, None)
 
