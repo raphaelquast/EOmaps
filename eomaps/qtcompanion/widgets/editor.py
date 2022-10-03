@@ -426,13 +426,13 @@ class ArtistEditor(QtWidgets.QWidget):
                 facecolor = (0, 0, 0, 0)
                 use_cmap = True
             else:
-                facecolor = (facecolor.squeeze() * 255).tolist()
+                facecolor = (facecolor.squeeze() * 255).astype(int).tolist()
                 use_cmap = False
 
             if edgecolor.shape[0] != 1:
                 edgecolor = (0, 0, 0, 0)
             else:
-                edgecolor = (edgecolor.squeeze() * 255).tolist()
+                edgecolor = (edgecolor.squeeze() * 255).astype(int).tolist()
 
             b_c = GetColorWidget(facecolor=facecolor, edgecolor=edgecolor)
             b_c.cb_colorselected = self.set_color(
