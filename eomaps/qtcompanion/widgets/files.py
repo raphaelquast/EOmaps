@@ -171,6 +171,7 @@ class PlotFileWidget(QtWidgets.QWidget):
 
         self.parent = parent
         self.tab = tab
+
         self.attach_tab_after_plot = attach_tab_after_plot
         self.close_on_plot = close_on_plot
 
@@ -190,11 +191,14 @@ class PlotFileWidget(QtWidgets.QWidget):
         self.file_info.setTextInteractionFlags(Qt.TextSelectableByMouse)
         scroll.setWidget(self.file_info)
 
-        self.cb1 = QtWidgets.QCheckBox("Annotate on click")
-        self.cb1.stateChanged.connect(self.b_add_annotate_cb)
+        self.cb_annotate = QtWidgets.QCheckBox("Annotate on click")
+        self.cb_annotate.stateChanged.connect(self.b_add_annotate_cb)
 
-        self.cb2 = QtWidgets.QCheckBox("Add colorbar")
-        self.cb2.stateChanged.connect(self.b_add_colorbar)
+        self.modifier_label = QtWidgets.QLabel("Modifier:")
+        self.annotate_modifier = QtWidgets.QLineEdit()
+        self.annotate_modifier.textEdited.connect(self.b_add_annotate_cb)
+
+        self.cb_colorbar = QtWidgets.QCheckBox("Add colorbar")
 
         self.blayer = QtWidgets.QCheckBox()
         self._blayer_text = ""
@@ -225,8 +229,8 @@ class PlotFileWidget(QtWidgets.QWidget):
         self.vmax = QtWidgets.QLineEdit()
         self.vmax.setValidator(validator)
 
-        minmaxupdate = QtWidgets.QPushButton("🗘")
-        minmaxupdate.clicked.connect(self.do_update_vals)
+        self.minmaxupdate = QtWidgets.QPushButton("🗘")
+        self.minmaxupdate.clicked.connect(self.do_update_vals)
 
         minmaxlayout = QtWidgets.QHBoxLayout()
         minmaxlayout.setAlignment(Qt.AlignLeft)
@@ -234,11 +238,15 @@ class PlotFileWidget(QtWidgets.QWidget):
         minmaxlayout.addWidget(self.vmin)
         minmaxlayout.addWidget(vmaxlabel)
         minmaxlayout.addWidget(self.vmax)
-        minmaxlayout.addWidget(minmaxupdate, Qt.AlignRight)
+        minmaxlayout.addWidget(self.minmaxupdate, Qt.AlignRight)
 
         options = QtWidgets.QVBoxLayout()
-        options.addWidget(self.cb1)
-        options.addWidget(self.cb2)
+        annotate_layout = QtWidgets.QHBoxLayout()
+        annotate_layout.addWidget(self.cb_annotate, 1)
+        annotate_layout.addWidget(self.modifier_label, 0)
+        annotate_layout.addWidget(self.annotate_modifier, 1)
+        options.addLayout(annotate_layout)
+        options.addWidget(self.cb_colorbar)
         options.addWidget(self.setlayername)
         options.addWidget(self.shape_selector)
         options.addWidget(self.cmaps)
@@ -321,27 +329,21 @@ class PlotFileWidget(QtWidgets.QWidget):
             self.t1.setReadOnly(True)
             self.t1.setText("")
 
-    def b_add_colorbar(self):
-        if self.m2 is None:
-            return
-
-        if self.cb2.isChecked():
-            cb = self.m2.add_colorbar()
-            cb[2].patch.set_color("none")
-            cb[3].patch.set_color("none")
-        else:
-            try:
-                self.m2._remove_colorbar()
-            except:
-                pass
-
     def b_add_annotate_cb(self):
+        modifier = self.annotate_modifier.text()
+        if modifier == "":
+            modifier = None
+
         if self.m2 is None:
             return
 
-        if self.cb1.isChecked():
+        if self.cb_annotate.isChecked():
             if self.cid_annotate is None:
-                self.cid_annotate = self.m2.cb.pick.attach.annotate()
+                self.cid_annotate = self.m2.cb.pick.attach.annotate(modifier=modifier)
+            else:
+                # re-attach the callback (in case the modifier changed)
+                self.m2.cb.pick.remove(self.cid_annotate)
+                self.cid_annotate = self.m2.cb.pick.attach.annotate(modifier=modifier)
         else:
             if self.cid_annotate is not None:
                 self.m2.cb.pick.remove(self.cid_annotate)
@@ -378,6 +380,18 @@ class PlotFileWidget(QtWidgets.QWidget):
     def b_plot_file(self):
         try:
             self.do_plot_file()
+
+            # fetch the min/max values if no explicit values were provided
+            vmin, vmax = self.vmin.text(), self.vmax.text()
+            if vmin != "" and vmax != "":
+                pass
+            else:
+                self.do_update_vals()
+                if vmin != "":
+                    self.vmin.setText(vmin)
+                if vmax != "":
+                    self.vmax.setText(vmax)
+
         except Exception:
             import traceback
 
@@ -436,9 +450,12 @@ class PlotFileWidget(QtWidgets.QWidget):
         self.vmin.setReadOnly(True)
         self.vmax.setReadOnly(True)
 
+        self.minmaxupdate.setEnabled(False)
         self.cmaps.setEnabled(False)
         self.shape_selector.setEnabled(False)
         self.setlayername.setEnabled(False)
+        self.cb_colorbar.setEnabled(False)
+
         self.b_plot.close()
 
 
@@ -486,7 +503,8 @@ class PlotGeoTIFFWidget(PlotFileWidget):
             vmax=to_float_none(self.vmax.text()),
         )
 
-        m2.cb.pick.attach.annotate(modifier=1)
+        if self.cb_colorbar.isChecked():
+            m2.add_colorbar()
 
         m2.show_layer(m2.layer)
 
@@ -641,7 +659,8 @@ class PlotNetCDFWidget(PlotFileWidget):
             vmax=to_float_none(self.vmax.text()),
         )
 
-        m2.cb.pick.attach.annotate(modifier=1)
+        if self.cb_colorbar.isChecked():
+            m2.add_colorbar()
 
         m2.show_layer(m2.layer)
 
@@ -720,6 +739,9 @@ class PlotCSVWidget(PlotFileWidget):
             vmax=to_float_none(self.vmax.text()),
         )
 
+        if self.cb_colorbar.isChecked():
+            m2.add_colorbar()
+
         m2.show_layer(m2.layer)
 
         self.m2 = m2
@@ -778,8 +800,14 @@ class OpenDataStartTab(QtWidgets.QWidget):
 
     def dragEnterEvent(self, e):
         if e.mimeData().hasUrls():
-            e.accept()
-            self.t1.setText("DROP IT!")
+            urls = e.mimeData().urls()
+
+            if len(urls) > 1:
+                self.t1.setText("Dropping more than 1 file is not supported!")
+                e.accept()  # if we ignore the event, dragLeaveEvent is also ignored!
+            else:
+                self.t1.setText("DROP IT!")
+                e.accept()
         else:
             e.ignore()
             self.set_std_text()
@@ -847,7 +875,55 @@ class OpenFileTabs(QtWidgets.QTabWidget):
         self.parent = parent
 
         t1 = OpenDataStartTab(parent=self)
+
+        self.setTabsClosable(True)
+        self.tabCloseRequested.connect(self.close_handler)
+
         self.addTab(t1, "NEW")
+        # don't show the close button for this tab
+        self.tabBar().setTabButton(self.count() - 1, self.tabBar().RightSide, None)
+
+    def close_handler(self, index):
+        widget = self.widget(index)
+
+        path = widget.file_path
+
+        self._msg = QtWidgets.QMessageBox(self)
+        self._msg.setIcon(QtWidgets.QMessageBox.Question)
+        self._msg.setText(f"Do you really want to close the dataset \n\n '{path}'?")
+        self._msg.setWindowTitle("Close dataset?")
+
+        self._msg.setStandardButtons(
+            QtWidgets.QMessageBox.Yes | QtWidgets.QMessageBox.No
+        )
+        self._msg.buttonClicked.connect(lambda: self.do_close_tab(index))
+
+        self._msg.show()
+
+    def do_close_tab(self, index):
+        # TODO create a proper method to completely clear a Maps-object from a map
+        if self._msg.standardButton(self._msg.clickedButton()) != self._msg.Yes:
+            return
+
+        widget = self.widget(index)
+        try:
+            if widget.m2.figure.coll in self.m.BM._bg_artists[widget.m2.layer]:
+                self.m.BM.remove_bg_artist(widget.m2.figure.coll, layer=widget.m2.layer)
+                widget.m2.figure.coll.remove()
+        except Exception:
+            print("EOmaps_companion: unable to remove dataset artist.")
+
+        widget.m2.cleanup()
+
+        # make sure all temporary pick-artists have been cleared
+        widget.m2.BM._clear_temp_artists("pick")
+        # redraw if the layer was currently visible
+        if widget.m2.layer in self.m.BM._bg_layer.split("|"):
+            self.m.redraw()
+
+        del widget.m2
+
+        self.removeTab(index)
 
     @property
     def m(self):
