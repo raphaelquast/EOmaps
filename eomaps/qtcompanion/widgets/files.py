@@ -605,14 +605,17 @@ class PlotNetCDFWidget(PlotFileWidget):
         def cb():
             selected_dims = [self.x.text(), self.y.text()]
             if d in selected_dims:
-                self.sel_title.hide()
                 self.sel_inputs[d]["label"].hide()
                 self.sel_inputs[d]["inp"].hide()
 
             else:
-                self.sel_title.show()
                 self.sel_inputs[d]["label"].show()
                 self.sel_inputs[d]["inp"].show()
+
+            if any(i["inp"].isVisible() for i in self.sel_inputs.values()):
+                self.sel_title.show()
+            else:
+                self.sel_title.hide()
 
         return cb
 
