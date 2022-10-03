@@ -65,11 +65,12 @@ class WMS_S1GBM:
 
 
 class AddWMSMenuButton(QtWidgets.QPushButton):
-    def __init__(self, *args, m=None, new_layer=False, **kwargs):
+    def __init__(self, *args, m=None, new_layer=False, show_layer=False, **kwargs):
         super().__init__(*args, **kwargs)
 
         self.m = m
         self._new_layer = new_layer
+        self._show_layer = show_layer
 
         wms_dict = {
             "OpenStreetMap": WMS_OSM,
@@ -121,7 +122,7 @@ class AddWMSMenuButton(QtWidgets.QPushButton):
 
             wms.do_add_layer(wmslayer, layer=layer)
 
-            if self._new_layer:
+            if self._show_layer:
                 self.m.show_layer(layer)
 
         return wms_cb
