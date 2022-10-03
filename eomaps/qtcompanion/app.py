@@ -58,6 +58,17 @@ class ControlTabs(QtWidgets.QTabWidget):
             self.tab6.populate()
             self.tab6.populate_layer()
 
+            # activate the currently visible layer in the editor-tabs
+            try:
+                idx = next(
+                    i
+                    for i in range(self.tab6.tabs.count())
+                    if self.tab6.tabs.tabText(i) == self.m.BM._bg_layer
+                )
+                self.tab6.tabs.setCurrentIndex(idx)
+            except StopIteration:
+                pass
+
     @property
     def m(self):
         return self.parent.m
