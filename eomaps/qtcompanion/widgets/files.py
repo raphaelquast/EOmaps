@@ -1,6 +1,7 @@
 from PyQt5 import QtWidgets, QtGui
 from PyQt5.QtCore import Qt, QLocale
 from pathlib import Path
+import io
 
 from .utils import (
     LineEditComplete,
@@ -302,13 +303,14 @@ class PlotFileWidget(QtWidgets.QWidget):
         self.x = LineEditComplete("x")
         self.y = LineEditComplete("y")
         self.parameter = LineEditComplete("param")
-
+        self.ID = LineEditComplete("ID")
         self.crs = InputCRS()
 
         tx = QtWidgets.QLabel("x:")
         ty = QtWidgets.QLabel("y:")
         tparam = QtWidgets.QLabel("parameter:")
         tcrs = QtWidgets.QLabel("crs:")
+        self.tID = QtWidgets.QLabel("ID:")
 
         plotargs = QtWidgets.QHBoxLayout()
         plotargs.addWidget(tx)
@@ -319,6 +321,8 @@ class PlotFileWidget(QtWidgets.QWidget):
         plotargs.addWidget(self.parameter)
         plotargs.addWidget(tcrs)
         plotargs.addWidget(self.crs)
+        plotargs.addWidget(self.tID)
+        plotargs.addWidget(self.ID)
 
         plotargs.addWidget(self.b_plot)
 
@@ -459,13 +463,19 @@ class PlotFileWidget(QtWidgets.QWidget):
 
         self.title.setText("<b>Variables used for plotting:</b>")
 
-        self.layer.setReadOnly(True)
-        self.x.setReadOnly(True)
-        self.y.setReadOnly(True)
-        self.parameter.setReadOnly(True)
-        self.crs.setReadOnly(True)
-        self.vmin.setReadOnly(True)
-        self.vmax.setReadOnly(True)
+        self.layer.setEnabled(False)
+        self.x.setEnabled(False)
+        self.y.setEnabled(False)
+        self.parameter.setEnabled(False)
+        self.crs.setEnabled(False)
+        self.ID.setEnabled(False)
+
+        # self.vmin.setReadOnly(True)
+        # self.vmax.setReadOnly(True)
+        self.vmin.setCursorPosition(0)
+        self.vmin.setEnabled(False)
+        self.vmax.setCursorPosition(0)
+        self.vmax.setEnabled(False)
 
         self.minmaxupdate.setEnabled(False)
         self.cmaps.setEnabled(False)
@@ -479,6 +489,14 @@ class PlotFileWidget(QtWidgets.QWidget):
 class PlotGeoTIFFWidget(PlotFileWidget):
 
     file_endings = (".tif", ".tiff")
+
+    def __init__(self, *args, **kwargs):
+
+        super().__init__(*args, **kwargs)
+
+        # hide ID inputs... not supported for GeoTIFF
+        self.tID.hide()
+        self.ID.hide()
 
     def do_open_file(self, file_path):
         import xarray as xar
@@ -558,56 +576,92 @@ class PlotNetCDFWidget(PlotFileWidget):
 
         super().__init__(*args, **kwargs)
 
+        # hide ID inputs... not (yet) supported for NetCDF
+        self.tID.hide()
+        self.ID.hide()
+
         l = QtWidgets.QHBoxLayout()
-        self.sel = QtWidgets.QLineEdit("")
 
         tsel = QtWidgets.QLabel("isel:")
 
         l.addWidget(tsel)
-        l.addWidget(self.sel)
 
         withtitle = QtWidgets.QWidget()
         withtitlelayout = QtWidgets.QVBoxLayout()
-
         withtitlelayout.addLayout(l)
-
         withtitle.setLayout(withtitlelayout)
+
         withtitle.setMaximumHeight(60)
 
         self.layout.addWidget(withtitle)
 
+    def _deactivate_sel_factory(self, d):
+        def cb():
+            selected_dims = [self.x.text(), self.y.text()]
+            if d in selected_dims:
+                self.sel_inputs[d]["label"].hide()
+                self.sel_inputs[d]["inp"].hide()
+
+            else:
+                self.sel_inputs[d]["label"].show()
+                self.sel_inputs[d]["inp"].show()
+
+        return cb
+
+    def get_sel_layout(self, f):
+
+        layout = QtWidgets.QHBoxLayout()
+        dims = list(f.dims)
+
+        self.sel_inputs = dict()
+        # get completion values
+        for d in dims:
+            vals = f[d].values.astype(str)
+
+            label = QtWidgets.QLabel(f"{d}:")
+            inp = LineEditComplete(options=vals)
+
+            layout.addWidget(label)
+            layout.addWidget(inp)
+
+            self.sel_inputs[d] = dict(inp=inp, label=label, dtype=f[d].dtype)
+
+            self.x.textEdited.connect(self._deactivate_sel_factory(d))
+            self.x.textChanged.connect(self._deactivate_sel_factory(d))
+            self.y.textEdited.connect(self._deactivate_sel_factory(d))
+            self.y.textChanged.connect(self._deactivate_sel_factory(d))
+
+        return layout
+
+    def get_sel_args(self):
+
+        s = dict()
+
+        for key, val in self.sel_inputs.items():
+            sel = val["inp"].text()
+            if val["inp"].isVisible() and sel != "":
+                # convert to the correct dtype
+                import numpy as np
+
+                sel = np.array(sel).astype(val["dtype"])
+
+                s[key] = sel
+        return s
+
     def get_crs(self):
         return get_crs(self.crs.text())
-
-    def get_sel(self):
-        import ast
-
-        try:
-            sel = self.sel.text()
-            if len(sel) == 0:
-                return
-
-            return ast.literal_eval("{'date':1}")
-        except Exception:
-            import traceback
-
-            show_error_popup(
-                text=f"{sel} is not a valid selection",
-                title="Invalid selection args",
-                details=traceback.format_exc(),
-            )
 
     def do_open_file(self, file_path):
         import xarray as xar
 
         with xar.open_dataset(file_path) as f:
-            import io
 
             info = io.StringIO()
             f.info(info)
 
             coords = list(f.coords)
             variables = list(f.variables)
+
             if len(coords) >= 2:
                 self.x.setText(coords[0])
                 self.y.setText(coords[1])
@@ -631,6 +685,9 @@ class PlotNetCDFWidget(PlotFileWidget):
 
             self.parameter.set_complete_vals(cols)
 
+            sel_layout = self.get_sel_layout(f)
+            self.layout.addLayout(sel_layout)
+
         return info.getvalue()
 
     def do_update_vals(self):
@@ -638,13 +695,8 @@ class PlotNetCDFWidget(PlotFileWidget):
 
         try:
             with xar.open_dataset(self.file_path) as f:
-                isel = self.get_sel()
-                if isel is not None:
-                    vmin = f.isel(**isel)[self.parameter.text()].min()
-                    vmax = f.isel(**isel)[self.parameter.text()].max()
-                else:
-                    vmin = f[self.parameter.text()].min()
-                    vmax = f[self.parameter.text()].max()
+                vmin = f[self.parameter.text()].min()
+                vmax = f[self.parameter.text()].max()
 
                 self.vmin.setText(str(float(vmin)))
                 self.vmax.setText(str(float(vmax)))
@@ -662,19 +714,27 @@ class PlotNetCDFWidget(PlotFileWidget):
         if self.file_path is None:
             return
 
-        m2 = self.m.new_layer_from_file.NetCDF(
-            self.file_path,
-            shape=self.shape_selector.shape_args,
-            coastline=False,
-            layer=self.get_layer(),
-            coords=(self.x.text(), self.y.text()),
-            parameter=self.parameter.text(),
-            data_crs=self.get_crs(),
-            isel=self.get_sel(),
-            cmap=self.cmaps.currentText(),
-            vmin=to_float_none(self.vmin.text()),
-            vmax=to_float_none(self.vmax.text()),
-        )
+        import xarray as xar
+
+        with xar.open_dataset(self.file_path) as f:
+            selargs = self.get_sel_args()
+            usef = f.sel(**self.get_sel_args())
+            if len(selargs) > 0:
+                self.file_info.setText(usef.__repr__())
+
+            m2 = self.m.new_layer_from_file.NetCDF(
+                usef,
+                shape=self.shape_selector.shape_args,
+                coastline=False,
+                layer=self.get_layer(),
+                coords=(self.x.text(), self.y.text()),
+                parameter=self.parameter.text(),
+                data_crs=self.get_crs(),
+                # sel=self.get_sel_args(),
+                cmap=self.cmaps.currentText(),
+                vmin=to_float_none(self.vmin.text()),
+                vmax=to_float_none(self.vmax.text()),
+            )
 
         if self.cb_colorbar.isChecked():
             m2.add_colorbar()
@@ -708,6 +768,7 @@ class PlotCSVWidget(PlotFileWidget):
         self.x.set_complete_vals(cols)
         self.y.set_complete_vals(cols)
         self.parameter.set_complete_vals(cols)
+        self.ID.set_complete_vals(cols)
 
         if len(cols) == 3:
 
@@ -722,7 +783,14 @@ class PlotCSVWidget(PlotFileWidget):
                 self.x.setText(cols[1])
 
             self.parameter.setText(cols[2])
+
+            # if there are only 3 columns there is no column left to use as ID!
+            self.ID.hide()
+            self.tID.hide()
+
         if len(cols) > 3:
+
+            self.ID.setText(cols[0])
 
             if "lon" in cols:
                 self.x.setText("lon")
@@ -742,6 +810,12 @@ class PlotCSVWidget(PlotFileWidget):
         if self.file_path is None:
             return
 
+        ID = self.ID.text()
+        if self.ID.isVisible() and ID != "":
+            read_kwargs = dict(index_col=ID)
+        else:
+            read_kwargs = dict()
+
         m2 = self.m.new_layer_from_file.CSV(
             self.file_path,
             shape=self.shape_selector.shape_args,
@@ -754,6 +828,7 @@ class PlotCSVWidget(PlotFileWidget):
             cmap=self.cmaps.currentText(),
             vmin=to_float_none(self.vmin.text()),
             vmax=to_float_none(self.vmax.text()),
+            read_kwargs=read_kwargs,
         )
 
         if self.cb_colorbar.isChecked():
@@ -984,9 +1059,9 @@ class OpenDataStartTab(QtWidgets.QWidget):
     def set_std_text(self):
         self.t1.setText(
             "\n"
-            + "Open or DRAG & DROP files!\n\n"
-            + "Currently supported filetypes are:\n"
-            + "    NetCDF | GeoTIFF | CSV"
+            + "Open or DRAG & DROP files!\n\n\n\n"
+            + "Supported filetypes:\n"
+            + "NetCDF | GeoTIFF | CSV | Shapefile"
         )
 
 
