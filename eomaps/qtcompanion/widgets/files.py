@@ -957,11 +957,14 @@ class OpenDataStartTab(QtWidgets.QWidget):
     def __init__(self, *args, parent=None, **kwargs):
         super().__init__(*args, **kwargs)
 
+        self.parent = parent
+
         self.t1 = QtWidgets.QLabel()
         self.t1.setAlignment(Qt.AlignBottom | Qt.AlignCenter)
         self.set_std_text()
 
-        self.b1 = self.FileButton("Open File", tab=parent, txt=self.t1)
+        self.b1 = QtWidgets.QPushButton("Open File")
+        self.b1.clicked.connect(lambda: self.new_file_tab(file_path=None))
 
         layout = QtWidgets.QGridLayout()
         layout.addWidget(self.b1, 0, 0)
@@ -1004,52 +1007,36 @@ class OpenDataStartTab(QtWidgets.QWidget):
 
         self.b1.new_file_tab(urls[0].toLocalFile())
 
-    class FileButton(QtWidgets.QPushButton):
-        def __init__(self, *args, tab=None, txt=None, **kwargs):
-            super().__init__(*args, **kwargs)
-            self.tab = tab
-            self.clicked.connect(lambda: self.new_file_tab())
-            self.txt = txt
+    def new_file_tab(self, file_path=None):
+        if file_path is None:
+            file_path = Path(QtWidgets.QFileDialog.getOpenFileName()[0])
+        elif isinstance(file_path, str):
+            file_path = Path(file_path)
 
-        @property
-        def m(self):
-            return self.tab.m
+        global plc
+        ending = file_path.suffix.lower()
+        if ending in [".nc"]:
+            plc = PlotNetCDFWidget(parent=self.parent, tab=self)
+        elif ending in [".csv"]:
+            plc = PlotCSVWidget(parent=self.parent, tab=self)
+        elif ending in [".tif", ".tiff"]:
+            plc = PlotGeoTIFFWidget(parent=self.parent, tab=self)
+        elif ending in [".shp"]:
+            plc = PlotShapeFileWidget(parent=self.parent)
+        else:
+            print("unknown file extension")
 
-        def new_file_tab(self, file_path=None):
+        try:
+            plc.open_file(file_path)
+        except Exception:
+            self.t1.setText("File could not be opened...")
+            import traceback
 
-            if self.txt:
-                self.txt.setText("")
-
-            if file_path is None:
-                file_path = Path(QtWidgets.QFileDialog.getOpenFileName()[0])
-            elif isinstance(file_path, str):
-                file_path = Path(file_path)
-
-            global plc
-            ending = file_path.suffix.lower()
-            if ending in [".nc"]:
-                plc = PlotNetCDFWidget(parent=self.tab.parent, tab=self.tab)
-            elif ending in [".csv"]:
-                plc = PlotCSVWidget(parent=self.tab.parent, tab=self.tab)
-            elif ending in [".tif", ".tiff"]:
-                plc = PlotGeoTIFFWidget(parent=self.tab.parent, tab=self.tab)
-            elif ending in [".shp"]:
-                plc = PlotShapeFileWidget(parent=self.tab.parent)
-            else:
-                print("unknown file extension")
-
-            try:
-                plc.open_file(file_path)
-            except Exception:
-                if self.txt:
-                    self.txt.setText("File could not be opened...")
-                import traceback
-
-                show_error_popup(
-                    text="There was an error while trying to open the file.",
-                    title="Unable to open file.",
-                    details=traceback.format_exc(),
-                )
+            show_error_popup(
+                text="There was an error while trying to open the file.",
+                title="Unable to open file.",
+                details=traceback.format_exc(),
+            )
 
 
 class OpenFileTabs(QtWidgets.QTabWidget):
