@@ -27,7 +27,7 @@ class AddFeaturesMenuButton(QtWidgets.QPushButton):
         # self.setMaximumWidth(200)
 
         width = self.fontMetrics().boundingRect(self.text()).width()
-        self.setFixedWidth(width * 1.6)
+        self.setFixedWidth(width + 30)
 
         feature_menu = QtWidgets.QMenu()
         feature_menu.setStyleSheet("QMenu { menu-scrollable: 1;}")
