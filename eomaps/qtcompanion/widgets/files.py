@@ -498,6 +498,9 @@ class PlotGeoTIFFWidget(PlotFileWidget):
         self.tID.hide()
         self.ID.hide()
 
+    def get_crs(self):
+        return get_crs(self.crs.text())
+
     def do_open_file(self, file_path):
         import xarray as xar
 
@@ -510,7 +513,9 @@ class PlotGeoTIFFWidget(PlotFileWidget):
             coords = list(f.coords)
             variables = list(f.variables)
 
-            self.crs.setText(f.rio.crs.to_string())
+            crs = f.rio.crs
+            if crs is not None:
+                self.crs.setText(crs.to_string())
             self.parameter.setText(next((i for i in variables if i not in coords)))
 
         self.x.setText("x")
@@ -536,6 +541,7 @@ class PlotGeoTIFFWidget(PlotFileWidget):
             cmap=self.cmaps.currentText(),
             vmin=to_float_none(self.vmin.text()),
             vmax=to_float_none(self.vmax.text()),
+            data_crs=self.get_crs(),
         )
 
         if self.cb_colorbar.isChecked():
@@ -582,9 +588,9 @@ class PlotNetCDFWidget(PlotFileWidget):
 
         l = QtWidgets.QHBoxLayout()
 
-        tsel = QtWidgets.QLabel("isel:")
+        self.sel_title = QtWidgets.QLabel("<b>Select index-labels to plot:</b>")
 
-        l.addWidget(tsel)
+        l.addWidget(self.sel_title)
 
         withtitle = QtWidgets.QWidget()
         withtitlelayout = QtWidgets.QVBoxLayout()
@@ -599,10 +605,12 @@ class PlotNetCDFWidget(PlotFileWidget):
         def cb():
             selected_dims = [self.x.text(), self.y.text()]
             if d in selected_dims:
+                self.sel_title.hide()
                 self.sel_inputs[d]["label"].hide()
                 self.sel_inputs[d]["inp"].hide()
 
             else:
+                self.sel_title.show()
                 self.sel_inputs[d]["label"].show()
                 self.sel_inputs[d]["inp"].show()
 
@@ -619,17 +627,21 @@ class PlotNetCDFWidget(PlotFileWidget):
             vals = f[d].values.astype(str)
 
             label = QtWidgets.QLabel(f"{d}:")
-            inp = LineEditComplete(options=vals)
+            inp = LineEditComplete()
+            inp.set_complete_vals(vals)
 
             layout.addWidget(label)
             layout.addWidget(inp)
 
             self.sel_inputs[d] = dict(inp=inp, label=label, dtype=f[d].dtype)
 
-            self.x.textEdited.connect(self._deactivate_sel_factory(d))
-            self.x.textChanged.connect(self._deactivate_sel_factory(d))
-            self.y.textEdited.connect(self._deactivate_sel_factory(d))
-            self.y.textChanged.connect(self._deactivate_sel_factory(d))
+            deactivate_func = self._deactivate_sel_factory(d)
+            deactivate_func()
+
+            self.x.textEdited.connect(deactivate_func)
+            self.x.completer().activated.connect(deactivate_func)
+            self.y.textEdited.connect(deactivate_func)
+            self.y.completer().activated.connect(deactivate_func)
 
         return layout
 
@@ -666,8 +678,6 @@ class PlotNetCDFWidget(PlotFileWidget):
                 self.x.setText(coords[0])
                 self.y.setText(coords[1])
 
-            self.parameter.setText(next((i for i in variables if i not in coords)))
-
             # set values for autocompletion
             cols = sorted(set(variables + coords))
             self.x.set_complete_vals(cols)
@@ -675,15 +685,28 @@ class PlotNetCDFWidget(PlotFileWidget):
 
             if "lon" in cols:
                 self.x.setText("lon")
+            elif "x" in cols:
+                self.x.setText("x")
             else:
                 self.x.setText(cols[0])
 
             if "lat" in cols:
                 self.y.setText("lat")
+            elif "y" in cols:
+                self.y.setText("y")
             else:
                 self.x.setText(cols[1])
 
             self.parameter.set_complete_vals(cols)
+            self.parameter.setText(
+                next(
+                    (
+                        i
+                        for i in variables
+                        if (i != self.x.text() and i != self.y.text())
+                    )
+                )
+            )
 
             sel_layout = self.get_sel_layout(f)
             self.layout.addLayout(sel_layout)
