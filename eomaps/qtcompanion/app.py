@@ -187,8 +187,6 @@ class MenuWindow(transparentWindow):
 
         self.setCentralWidget(menu_widget)
 
-        self.show()
-
     def cb_transparentQ(self):
         if self.out_alpha == 1:
             self.out_alpha = 0.25
