@@ -268,6 +268,12 @@ class NewWindowToolBar(QtWidgets.QToolBar):
         b_close.setText("🞫")
         b_close.clicked.connect(self.close_button_callback)
 
+        self.b_minmax = QtWidgets.QToolButton()
+        self.b_minmax.setAutoRaise(True)
+        self.b_minmax.setFixedSize(25, 25)
+        self.b_minmax.setText("🗖")
+        self.b_minmax.clicked.connect(self.maximize_button_callback)
+
         if title is not None:
             titlewidget = QtWidgets.QLabel(f"<b>{title}</b>")
             self.addWidget(get_dummy_spacer())
@@ -276,26 +282,28 @@ class NewWindowToolBar(QtWidgets.QToolBar):
         self.addWidget(get_dummy_spacer())
 
         self.addWidget(logolabel)
+        self.addWidget(self.b_minmax)
         self.addWidget(b_close)
 
         self.setMovable(False)
 
         self.setStyleSheet(
-            "QToolBar{border: none; spacing:20px;}"
-            'QToolButton[autoRaise="true"]{text-align:center; color: red;}'
+            "QToolBar{border: none; spacing:5px;}"
+            'QToolButton[autoRaise="true"]{text-align:center;}'
             "QPushButton{border:none;}"
         )
-        self.setContentsMargins(5, 0, 0, 5)
+        self.setContentsMargins(0, 0, 0, 0)
 
     def close_button_callback(self):
         self.window().close()
 
     def maximize_button_callback(self):
-        # TODO
-        if not self.isMaximized():
-            self.showMaximized()
+        if not self.window().isMaximized():
+            self.window().showMaximized()
+            self.b_minmax.setText("🗗")
         else:
-            self.showNormal()
+            self.window().showNormal()
+            self.b_minmax.setText("🗖")
 
 
 class NewWindow(ResizableWindow):

@@ -242,17 +242,19 @@ class PlotFileWidget(QtWidgets.QWidget):
         minmaxlayout.addWidget(self.vmax)
         minmaxlayout.addWidget(self.minmaxupdate, Qt.AlignRight)
 
-        options = QtWidgets.QVBoxLayout()
         annotate_layout = QtWidgets.QHBoxLayout()
         annotate_layout.addWidget(self.cb_annotate, 1)
         annotate_layout.addWidget(self.modifier_label, 0)
         annotate_layout.addWidget(self.annotate_modifier, 1)
+
+        options = QtWidgets.QVBoxLayout()
         options.addLayout(annotate_layout)
         options.addWidget(self.cb_colorbar)
         options.addWidget(self.setlayername)
         options.addWidget(self.shape_selector)
         options.addWidget(self.cmaps)
         options.addLayout(minmaxlayout)
+        options.setAlignment(Qt.AlignLeft | Qt.AlignTop)
 
         optionwidget = QtWidgets.QWidget()
         optionwidget.setLayout(options)
@@ -260,7 +262,6 @@ class PlotFileWidget(QtWidgets.QWidget):
         optionscroll = QtWidgets.QScrollArea()
         optionscroll.setWidgetResizable(True)
         optionscroll.setMinimumWidth(200)
-
         optionscroll.setWidget(optionwidget)
 
         options_split = QtWidgets.QSplitter(Qt.Horizontal)
@@ -775,7 +776,7 @@ class PlotCSVWidget(PlotFileWidget):
             )
 
 
-class OpenShapeFileWidget(QtWidgets.QWidget):
+class PlotShapeFileWidget(QtWidgets.QWidget):
     def __init__(self, *args, parent=None, **kwargs):
         super().__init__(*args, **kwargs)
         self.parent = parent
@@ -860,13 +861,13 @@ class OpenShapeFileWidget(QtWidgets.QWidget):
         props.addLayout(zorder_layout, 0, 2)
         # set stretch factor to expand the color-selector first
         props.setColumnStretch(0, 1)
-        props.setAlignment(Qt.AlignLeft)
+        props.setAlignment(Qt.AlignLeft | Qt.AlignTop)
 
         options = QtWidgets.QVBoxLayout()
         options.addLayout(props)
         options.addWidget(self.setlayername)
-
-        options.addWidget(b_plot)
+        options.addWidget(b_plot, 0, Qt.AlignRight)
+        options.setAlignment(Qt.AlignLeft | Qt.AlignTop)
 
         layout = QtWidgets.QHBoxLayout()
         layout.addWidget(scroll)
@@ -944,7 +945,7 @@ class OpenShapeFileWidget(QtWidgets.QWidget):
     def b_layer_checkbox(self):
         if self.blayer.isChecked():
             self.layer.setReadOnly(False)
-            if len(self.t1.text()) == 0 and self.file_path is not None:
+            if len(self.layer.text()) == 0 and self.file_path is not None:
                 layer = self.file_path.stem
                 self.layer.setText(layer)
         else:
@@ -1033,7 +1034,7 @@ class OpenDataStartTab(QtWidgets.QWidget):
             elif ending in [".tif", ".tiff"]:
                 plc = PlotGeoTIFFWidget(parent=self.tab.parent, tab=self.tab)
             elif ending in [".shp"]:
-                plc = OpenShapeFileWidget(parent=self.tab.parent)
+                plc = PlotShapeFileWidget(parent=self.tab.parent)
             else:
                 print("unknown file extension")
 
