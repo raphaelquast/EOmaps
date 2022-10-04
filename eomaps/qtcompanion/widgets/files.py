@@ -178,6 +178,7 @@ class PlotFileWidget(QtWidgets.QWidget):
         close_on_plot=True,
         attach_tab_after_plot=True,
         tab=None,
+        window_title="Plot File",
         **kwargs,
     ):
         """
@@ -201,6 +202,7 @@ class PlotFileWidget(QtWidgets.QWidget):
 
         self.m = m
         self.tab = tab
+        self.window_title = window_title
 
         self.attach_tab_after_plot = attach_tab_after_plot
         self.close_on_plot = close_on_plot
@@ -387,7 +389,7 @@ class PlotFileWidget(QtWidgets.QWidget):
             + [i for i in self.m._get_layers() if not i.startswith("_")]
         )
 
-        self.newwindow = NewWindow(m=self.m, title="Plot File")
+        self.newwindow = NewWindow(m=self.m, title=self.window_title)
         self.newwindow.statusBar().showMessage(str(self.file_path))
 
         self.newwindow.setWindowFlags(
@@ -490,7 +492,7 @@ class PlotGeoTIFFWidget(PlotFileWidget):
 
     file_endings = (".tif", ".tiff")
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, window_title="Plot GeoTIFF FIle", **kwargs):
 
         super().__init__(*args, **kwargs)
 
@@ -580,7 +582,7 @@ class PlotNetCDFWidget(PlotFileWidget):
 
     def __init__(self, *args, **kwargs):
 
-        super().__init__(*args, **kwargs)
+        super().__init__(*args, window_title="Plot NetCDF FIle", **kwargs)
 
         # hide ID inputs... not (yet) supported for NetCDF
         self.tID.hide()
@@ -779,7 +781,7 @@ class PlotCSVWidget(PlotFileWidget):
 
     def __init__(self, *args, **kwargs):
 
-        super().__init__(*args, **kwargs)
+        super().__init__(*args, window_title="Plot CSV FIle", **kwargs)
 
     def get_crs(self):
         return get_crs(self.crs.text())
@@ -1027,7 +1029,7 @@ class PlotShapeFileWidget(QtWidgets.QWidget):
             + [i for i in self.m._get_layers() if not i.startswith("_")]
         )
 
-        self.newwindow = NewWindow(m=self.m, title="Open ShapeFile")
+        self.newwindow = NewWindow(m=self.m, title="Plot ShapeFile")
         self.newwindow.statusBar().showMessage(str(self.file_path))
 
         self.newwindow.setWindowFlags(
@@ -1069,7 +1071,12 @@ class OpenDataStartTab(QtWidgets.QWidget):
 
         self.t1 = QtWidgets.QLabel()
         self.t1.setAlignment(Qt.AlignBottom | Qt.AlignCenter)
-        self.set_std_text()
+        self.t1.setText(
+            "\n"
+            + "Open or DRAG & DROP files!\n\n\n\n"
+            + "Supported filetypes:\n"
+            + "NetCDF | GeoTIFF | CSV | Shapefile"
+        )
 
         self.open_button = QtWidgets.QPushButton("Open File")
 
@@ -1081,14 +1088,6 @@ class OpenDataStartTab(QtWidgets.QWidget):
         self.setLayout(layout)
 
         self.setAcceptDrops(True)
-
-    def set_std_text(self):
-        self.t1.setText(
-            "\n"
-            + "Open or DRAG & DROP files!\n\n\n\n"
-            + "Supported filetypes:\n"
-            + "NetCDF | GeoTIFF | CSV | Shapefile"
-        )
 
 
 class OpenFileTabs(QtWidgets.QTabWidget):
@@ -1178,7 +1177,13 @@ class OpenFileTabs(QtWidgets.QTabWidget):
 
     def new_file_tab(self, file_path=None):
         if file_path is None:
-            file_path = Path(QtWidgets.QFileDialog.getOpenFileName()[0])
+            file_path = Path(
+                QtWidgets.QFileDialog.getOpenFileName(
+                    filter=(
+                        "Supported Files (*.nc *.tif *tiff *.csv *.shp);;" "all (*)"
+                    )
+                )[0]
+            )
         elif isinstance(file_path, str):
             file_path = Path(file_path)
 
