@@ -1007,11 +1007,12 @@ class BlitManager:
                 action(self._on_layer_change[action], layer)
 
         # individual callables executed if a specific layer is activated
-        activate_action = self._on_layer_activation.get(layer, None)
-        if activate_action is not None:
-            actions = list(activate_action)
-            for action in actions:
-                action(activate_action[action], layer)
+        for l in layer.split("|"):
+            activate_action = self._on_layer_activation.get(l, None)
+            if activate_action is not None:
+                actions = list(activate_action)
+                for action in actions:
+                    action(activate_action[action], l)
 
     @property
     def bg_layer(self):
