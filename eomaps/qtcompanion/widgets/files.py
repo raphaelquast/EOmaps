@@ -87,6 +87,10 @@ class ShapeSelector(QtWidgets.QFrame):
         self.shape_selector.setCurrentIndex(self.shape_selector.findText(self.shape))
         self.shape_changed(self.shape)
 
+    def set_shape(self, shape):
+        self.shape_selector.setCurrentIndex(self.shape_selector.findText(shape))
+        self.shape_changed(shape)
+
     def argparser(self, key, val):
         special = self._argspecials.get(key, None)
         if special is not None:
@@ -523,6 +527,9 @@ class PlotGeoTIFFWidget(PlotFileWidget):
         self.x.setText("x")
         self.y.setText("y")
 
+        # set layer-name to filename by default
+        self.layer.setPlaceholderText(file_path.stem)
+
         # set values for autocompletion
         cols = sorted(set(variables + coords))
         self.x.set_complete_vals(cols)
@@ -716,6 +723,9 @@ class PlotNetCDFWidget(PlotFileWidget):
             sel_layout = self.get_sel_layout(f)
             self.layout.addLayout(sel_layout)
 
+        # set layer-name to filename by default
+        self.layer.setPlaceholderText(file_path.stem)
+
         return info.getvalue()
 
     def do_update_vals(self):
@@ -789,8 +799,13 @@ class PlotCSVWidget(PlotFileWidget):
     def do_open_file(self, file_path):
         import pandas as pd
 
-        head = pd.read_csv(file_path, nrows=50)
-        cols = head.columns
+        df = pd.read_csv(file_path)
+
+        if len(df) > 50000:
+            # use "shade_points" as default shape if more than 50000 columns are found
+            self.shape_selector.set_shape("shade_points")
+
+        cols = df.columns
 
         # set values for autocompletion
         self.x.set_complete_vals(cols)
@@ -832,7 +847,10 @@ class PlotCSVWidget(PlotFileWidget):
 
             self.parameter.setText(cols[3])
 
-        return head.__repr__()
+        # set layer-name to filename by default
+        self.layer.setPlaceholderText(file_path.stem)
+
+        return df.__repr__()
 
     def do_plot_file(self):
         if self.file_path is None:
