@@ -57,15 +57,16 @@ class AddFeaturesMenuButton(QtWidgets.QPushButton):
 
     def menu_callback_factory(self, featuretype, feature):
         def cb():
-            if self.m.BM.bg_layer.startswith("_"):
-                print(
-                    "Adding features to temporary multi-layers is not supported!"
-                    "Create a specific multi-layer (e.g. 'layer1|layer2' first!"
+            layer = self.m.BM.bg_layer
+            if layer.startswith("_") and "|" in layer:
+                self.window().statusBar().showMessage(
+                    "Adding features to temporary multi-layers is not supported!", 3000
                 )
+
                 return
             try:
                 getattr(getattr(self.m.add_feature, featuretype), feature)(
-                    layer=self.m.BM.bg_layer, **self.props
+                    layer=layer, **self.props
                 )
 
                 self.m.BM.update()
