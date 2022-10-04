@@ -17,6 +17,34 @@ class WMS_GEBCO:
         getattr(self.m.add_wms.GEBCO.add_layer, wmslayer)(layer=layer)
 
 
+class WMS_NASA_GIBS:
+    layer_prefix = "NASA_GIBS_"
+    name = "NASA_GIBS"
+
+    def __init__(self, m=None):
+        self.m = m
+
+        if self.m.get_crs(3857) == m.crs_plot:
+            self.usewms = self.m.add_wms.NASA_GIBS.EPSG_3857
+        elif self.m.get_crs(3031) == m.crs_plot:
+            self.usewms = self.m.add_wms.NASA_GIBS.EPSG_3031
+        elif self.m.get_crs(3413) == m.crs_plot:
+            self.usewms = self.m.add_wms.NASA_GIBS.EPSG_3413
+        elif self.m.get_crs(4326) == m.crs_plot:
+            self.usewms = self.m.add_wms.NASA_GIBS.EPSG_4326
+        else:
+            self.usewms = self.m.add_wms.NASA_GIBS.EPSG_3857
+
+        self.wmslayers = [
+            key
+            for key in self.usewms.add_layer.__dict__.keys()
+            if not (key in ["m"] or key.startswith("_"))
+        ]
+
+    def do_add_layer(self, wmslayer, layer):
+        getattr(self.usewms.add_layer, wmslayer)(layer=layer)
+
+
 class WMS_OSM:
     layer_prefix = "OSM_"
     name = "OpenStreetMap"
@@ -94,6 +122,7 @@ class AddWMSMenuButton(QtWidgets.QPushButton):
             "ESA WorldCover": WMS_ESA_WorldCover,
             "S1GBM:": WMS_S1GBM,
             "GEBCO:": WMS_GEBCO,
+            "NASA GIBS:": WMS_NASA_GIBS,
         }
 
         if self._new_layer:
@@ -114,19 +143,32 @@ class AddWMSMenuButton(QtWidgets.QPushButton):
         )
 
     def populate_menu(self):
-        for wmsname, wmsclass in self.wms_dict.items():
-            try:
-                wms = wmsclass(m=self.m)
-                sub_menu = self.feature_menu.addMenu(wmsname)
-
-                sub_features = wms.wmslayers
-                for wmslayer in sub_features:
-                    action = sub_menu.addAction(wmslayer)
-                    action.triggered.connect(self.menu_callback_factory(wms, wmslayer))
-            except:
-                print("there was a problem while fetching the WMS layer", wmsname)
+        self.sub_menus = dict()
+        for wmsname in self.wms_dict:
+            self.sub_menus[wmsname] = self.feature_menu.addMenu(wmsname)
+            self.sub_menus[wmsname].aboutToShow.connect(self.populate_submenu)
 
         self.feature_menu.aboutToShow.disconnect()
+
+    def populate_submenu(self):
+        if not isinstance(self.sender(), QtWidgets.QMenu):
+            return
+
+        wmsname = self.sender().title()
+
+        try:
+            wmsclass = self.wms_dict[wmsname]
+            wms = wmsclass(m=self.m)
+            sub_features = wms.wmslayers
+            for wmslayer in sub_features:
+                action = self.sub_menus[wmsname].addAction(wmslayer)
+                action.triggered.connect(self.menu_callback_factory(wms, wmslayer))
+        except:
+            self.window().statusBar().showMessage(
+                "There was a problem while fetching the WMS layer: " + wmsname
+            )
+
+        self.sub_menus[wmsname].aboutToShow.disconnect()
 
     def menu_callback_factory(self, wms, wmslayer):
         layer = self.m.BM.bg_layer
