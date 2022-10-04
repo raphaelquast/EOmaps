@@ -99,12 +99,14 @@ class AddFeatureWidget(QtWidgets.QFrame):
             lambda i: self.colorselector.set_alpha(i / 100)
         )
         self.alphaslider.valueChanged.connect(self.update_props)
+        self.alphaslider.setToolTip("facecolor opacity")
 
         self.linewidthslider = AlphaSlider(Qt.Horizontal)
         self.linewidthslider.valueChanged.connect(
             lambda i: self.colorselector.set_linewidth(i / 10)
         )
         self.linewidthslider.valueChanged.connect(self.update_props)
+        self.linewidthslider.setToolTip("linewidth")
 
         self.zorder = QtWidgets.QLineEdit("0")
         validator = QtGui.QIntValidator()
