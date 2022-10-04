@@ -107,6 +107,7 @@ class AddFeatureWidget(QtWidgets.QFrame):
         )
         self.linewidthslider.valueChanged.connect(self.update_props)
         self.linewidthslider.setToolTip("linewidth")
+        self.set_linewidth_slider_stylesheet()
 
         self.zorder = QtWidgets.QLineEdit("0")
         validator = QtGui.QIntValidator()
@@ -146,6 +147,57 @@ class AddFeatureWidget(QtWidgets.QFrame):
 
         self.update_props()
 
+    def set_linewidth_slider_stylesheet(self):
+        self.linewidthslider.setStyleSheet(
+            """
+            QSlider::handle:horizontal {{
+                background-color: black;
+                border: none;
+                border-radius: 0px;
+                height: 10px;
+                width: 5px;
+                margin: -10px 0;
+                padding: -10px 0px;
+            }}
+            QSlider::groove:horizontal {{
+                border-radius: 1px;
+                height: 1px;
+                margin: 5px;
+                background-color: rgba(0,0,0,50);
+            }}
+            QSlider::groove:horizontal:hover {{
+                background-color: rgba(0,0,0,255);
+            }}
+
+            """
+        )
+
+    def set_alpha_slider_stylesheet(self):
+        a = self.alphaslider.alpha * 255
+        s = 12
+        self.alphaslider.setStyleSheet(
+            f"""
+            QSlider::handle:horizontal {{
+                background-color: rgba(0,0,0,{a});
+                border: 1px solid black;
+                border-radius: {s//2}px;
+                height: {s}px;
+                width: {s}px;
+                margin: -{s//2}px 0px;
+                padding: -{s//2}px 0px;
+            }}
+            QSlider::groove:horizontal {{
+                border-radius: 1px;
+                height: 1px;
+                margin: 5px;
+                background-color: rgba(0,0,0,50);
+            }}
+            QSlider::groove:horizontal:hover {{
+                background-color: rgba(0,0,0,255);
+            }}
+            """
+        )
+
     def update_on_color_selection(self):
         self.update_alphaslider()
         self.update_props()
@@ -155,6 +207,8 @@ class AddFeatureWidget(QtWidgets.QFrame):
         self.alphaslider.setValue(-(-self.colorselector.alpha * 100 // 1))
 
     def update_props(self):
+        self.set_alpha_slider_stylesheet()
+
         self.selector.props.update(
             dict(
                 facecolor=self.colorselector.facecolor.getRgbF(),

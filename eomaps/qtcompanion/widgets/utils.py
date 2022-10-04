@@ -197,12 +197,13 @@ class GetColorWidget(QtWidgets.QFrame):
 
         self.setStyleSheet(
             """QToolTip {
-                           font-family: "SansSerif";
-                           font-size:10;
-                           background-color: rgb(53, 53, 53);
-                           color: white;
-                           border: none;
-                           }"""
+            font-family: "SansSerif";
+            font-size:10;
+            background-color: rgb(53, 53, 53);
+            color: white;
+            border: none;
+            }
+            """
         )
 
     def resizeEvent(self, e):
@@ -333,14 +334,36 @@ class AlphaSlider(QtWidgets.QSlider):
 
         self.setToolTip("Opacity")
 
+        s = 14
         self.setStyleSheet(
-            """QToolTip {
-                           font-family: "SansSerif";
-                           font-size:10;
-                           background-color: rgb(53, 53, 53);
-                           color: white;
-                           border: none;
-                           }"""
+            f"""
+            QToolTip {{
+               font-family: "SansSerif";
+               font-size:10;
+               background-color: rgb(53, 53, 53);
+               color: white;
+               border: none;
+               }}
+            QSlider::handle:horizontal {{
+                background-color: rgba(0,0,0,255);
+                border: none;
+                border-radius: {s/2}px;
+                height: {s}px;
+                width: {s}px;
+                margin: -{s//2}px 0;
+                padding: -{s//2}px 0px;
+            }}
+            QSlider::groove:horizontal {{
+                border-radius: 1px;
+                height: 1px;
+                margin: 5px;
+                background-color: rgba(0,0,0,50);
+            }}
+            QSlider::groove:horizontal:hover {{
+                background-color: rgba(0,0,0,255);
+            }}
+
+            """
         )
 
     def value_changed(self, i):

@@ -144,11 +144,11 @@ class PeekMethodButtons(QtWidgets.QWidget):
             QSlider::handle:horizontal {{
                 background-color: rgba(0,0,0,{a});
                 border: 1px solid black;
-                border-radius: {s/2}px;
+                border-radius: {s//2}px;
                 height: {s}px;
                 width: {s}px;
-                margin: -{s/2}px 0;
-                padding: -{s/2}px 0px;
+                margin: -{s//2}px 0px;
+                padding: -{s//2}px 0px;
             }}
             QSlider::groove:horizontal {{
                 border-radius: 1px;
