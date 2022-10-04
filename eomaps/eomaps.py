@@ -299,6 +299,7 @@ class Maps(object):
         self._layer = layer
 
         self._companion_widget = None  # slot for the pyqt widget
+        self._cid_companion_key = None  # callback id for the companion-cb
         # a list to remember newly registered colormaps
         self._registered_cmaps = []
 
@@ -380,9 +381,9 @@ class Maps(object):
         if not hasattr(self.parent, "_wms_legend"):
             self.parent._wms_legend = dict()
 
-        if self.parent == self and self._companion_widget is None:
+        if self.parent == self and self._cid_companion_key is None:
             # attach the Qt companion widget
-            self._init_companion_widget(show_hide_key=self._companion_widget_key)
+            self._add_companion_cb(show_hide_key=self._companion_widget_key)
 
     def __enter__(self):
         return self
@@ -406,6 +407,20 @@ class Maps(object):
             )
         else:
             return object.__getattribute__(self, key)
+
+    def _add_companion_cb(self, show_hide_key="w"):
+        # attach a callback to show/hide the window with the "w" key
+        def cb(*args, **kwargs):
+            if self._companion_widget is None:
+                print("EOmaps: Initializing companion-widget...")
+                self._init_companion_widget()
+
+            if self._companion_widget.isVisible():
+                self._companion_widget.hide()
+            else:
+                self._companion_widget.show()
+
+        self._cid_companion_key = self.all.cb.keypress.attach(cb, key=show_hide_key)
 
     def _init_companion_widget(self, show_hide_key="w"):
         """
@@ -444,14 +459,6 @@ class Maps(object):
             # make sure that we clear the colormap-pixmap cache on startup
             self._companion_widget.cmapsChanged.emit()
 
-            # attach a callback to show/hide the window with the "w" key
-            def cb(*args, **kwargs):
-                if self._companion_widget.isVisible():
-                    self._companion_widget.hide()
-                else:
-                    self._companion_widget.show()
-
-            self._cid_companion_key = self.all.cb.keypress.attach(cb, key=show_hide_key)
         except Exception:
             print("EOmaps: Unable to initialize companion widget.")
 
