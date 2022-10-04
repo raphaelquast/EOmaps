@@ -150,7 +150,7 @@ class AddFeatureWidget(QtWidgets.QFrame):
     def set_linewidth_slider_stylesheet(self):
         self.linewidthslider.setStyleSheet(
             """
-            QSlider::handle:horizontal {{
+            QSlider::handle:horizontal {
                 background-color: black;
                 border: none;
                 border-radius: 0px;
@@ -158,17 +158,16 @@ class AddFeatureWidget(QtWidgets.QFrame):
                 width: 5px;
                 margin: -10px 0;
                 padding: -10px 0px;
-            }}
-            QSlider::groove:horizontal {{
+            }
+            QSlider::groove:horizontal {
                 border-radius: 1px;
                 height: 1px;
                 margin: 5px;
                 background-color: rgba(0,0,0,50);
-            }}
-            QSlider::groove:horizontal:hover {{
+            }
+            QSlider::groove:horizontal:hover {
                 background-color: rgba(0,0,0,255);
-            }}
-
+            }
             """
         )
 
