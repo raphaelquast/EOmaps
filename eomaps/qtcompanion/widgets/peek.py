@@ -33,18 +33,22 @@ class PeekMethodButtons(QtWidgets.QWidget):
 
             self.buttons[method] = b
 
-        self.slider = QtWidgets.QSlider(Qt.Horizontal)
-        self.slider.valueChanged.connect(self.sider_value_changed)
-        self.slider.setToolTip("Set rectangle size")
-        self.slider.setRange(0, 100)
-        self.slider.setSingleStep(1)
-        self.slider.setTickPosition(QtWidgets.QSlider.NoTicks)
-        self.slider.setValue(50)
-        self.slider.setMinimumWidth(50)
+        self.rectangle_slider = QtWidgets.QSlider(Qt.Horizontal)
+        self.rectangle_slider.valueChanged.connect(self.rectangle_sider_value_changed)
+        self.rectangle_slider.setToolTip("Rectangle size")
+        self.rectangle_slider.setRange(2, 100)
+        self.rectangle_slider.setSingleStep(1)
+        self.rectangle_slider.setTickPosition(QtWidgets.QSlider.NoTicks)
+        self.rectangle_slider.setValue(50)
+        self.rectangle_slider.setMinimumWidth(50)
+        sp = self.rectangle_slider.sizePolicy()
+        sp.setRetainSizeWhenHidden(True)
+        self.rectangle_slider.setSizePolicy(sp)
+        self.set_rectangle_slider_stylesheet()
 
         self.alphaslider = QtWidgets.QSlider(Qt.Horizontal)
         self.alphaslider.valueChanged.connect(self.alpha_changed)
-        self.alphaslider.setToolTip("Set transparency")
+        self.alphaslider.setToolTip("Overlay transparency")
         self.alphaslider.setRange(0, 100)
         self.alphaslider.setSingleStep(1)
         self.alphaslider.setTickPosition(QtWidgets.QSlider.NoTicks)
@@ -60,11 +64,13 @@ class PeekMethodButtons(QtWidgets.QWidget):
         buttons.addWidget(self.buttons["right"])
         buttons.addWidget(self.buttons["left"])
         buttons.addWidget(self.buttons["rectangle"])
-        buttons.addWidget(self.slider, 1)
+        buttons.addWidget(self.rectangle_slider, 1)
 
         layout = QtWidgets.QVBoxLayout()
+
         layout.addLayout(buttons)
         layout.addWidget(self.alphaslider)
+        layout.setAlignment(Qt.AlignLeft | Qt.AlignCenter)
 
         self.setLayout(layout)
 
@@ -91,16 +97,75 @@ class PeekMethodButtons(QtWidgets.QWidget):
 
         self.methodChanged.emit(method)
 
-    def sider_value_changed(self, i):
+    def rectangle_sider_value_changed(self, i):
         self.rectangle_size = i / 100
         if self._method in ["rectangle", "square"]:
             self.methodChanged.emit(self._method)
         else:
             self.methodChanged.emit("rectangle")
 
+        self.set_rectangle_slider_stylesheet()
+
+    def set_rectangle_slider_stylesheet(self):
+        s = 5 + self.rectangle_size * 15
+        border = (
+            "2px solid black"
+            if self.rectangle_size < 0.99
+            else "2px solid rgb(200,200,200)"
+        )
+
+        self.rectangle_slider.setStyleSheet(
+            f"""
+            QSlider::handle:horizontal {{
+                background-color: rgb(200,200,200);
+                border: {border};
+                height: {s}px;
+                width: {s}px;
+                margin: -{s/2}px 0;
+                padding: -{s/2}px 0px;
+            }}
+            QSlider::groove:horizontal {{
+                border-radius: 1px;
+                height: 1px;
+                margin: 5px;
+                background-color: rgba(0,0,0,50);
+            }}
+            QSlider::groove:horizontal:hover {{
+                background-color: rgba(0,0,0,255);
+            }}
+            """
+        )
+
+    def set_alpha_slider_stylesheet(self):
+        a = self.alpha * 255
+        s = 12
+        self.alphaslider.setStyleSheet(
+            f"""
+            QSlider::handle:horizontal {{
+                background-color: rgba(0,0,0,{a});
+                border: 1px solid black;
+                border-radius: {s/2}px;
+                height: {s}px;
+                width: {s}px;
+                margin: -{s/2}px 0;
+                padding: -{s/2}px 0px;
+            }}
+            QSlider::groove:horizontal {{
+                border-radius: 1px;
+                height: 1px;
+                margin: 5px;
+                background-color: rgba(0,0,0,50);
+            }}
+            QSlider::groove:horizontal:hover {{
+                background-color: rgba(0,0,0,255);
+            }}
+            """
+        )
+
     def alpha_changed(self, i):
         self.alpha = i / 100
         self.methodChanged.emit(self._method)
+        self.set_alpha_slider_stylesheet()
 
     def method_changed(self, method):
         self._method = method
@@ -111,20 +176,21 @@ class PeekMethodButtons(QtWidgets.QWidget):
             else:
                 val.setStyleSheet("")
 
-        if method == "square":
-            self.buttons["rectangle"].setStyleSheet("QToolButton {color: red; }")
-
         if method == "rectangle":
+            self.rectangle_slider.show()
             if self.rectangle_size < 0.99:
                 self.how = (self.rectangle_size, self.rectangle_size)
             else:
                 self.how = "full"
         elif method == "square":
+            self.rectangle_slider.show()
+            self.buttons["rectangle"].setStyleSheet("QToolButton {color: red; }")
             if self.rectangle_size < 0.99:
                 self.how = self.rectangle_size
             else:
                 self.how = "full"
         else:
+            self.rectangle_slider.hide()
             self.how = method
 
 
@@ -189,11 +255,14 @@ class PeekLayerWidget(QtWidgets.QWidget):
         selectorlayout.addWidget(modifier_widget)
         selectorlayout.setAlignment(Qt.AlignTop)
 
+        selectorwidget = QtWidgets.QWidget()
+        selectorwidget.setLayout(selectorlayout)
+
         layout = QtWidgets.QHBoxLayout()
-        layout.addLayout(selectorlayout)
+        layout.addWidget(selectorwidget)
         layout.addWidget(self.buttons)
 
-        layout.setAlignment(Qt.AlignTop)
+        layout.setAlignment(Qt.AlignCenter | Qt.AlignLeft)
 
         self.setLayout(layout)
 
