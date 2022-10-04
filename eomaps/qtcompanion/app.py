@@ -99,12 +99,12 @@ class MenuWindow(transparentWindow):
 
         self.setStyleSheet(
             """QToolTip {
-                                font-family: "SansSerif";
-                                font-size:10;
-                                background-color: rgb(53, 53, 53);
-                                color: white;
-                                border: none;
-                                }"""
+            font-family: "SansSerif";
+            font-size:10;
+            background-color: rgb(53, 53, 53);
+            color: white;
+            border: none;
+            }"""
         )
         self.cb_transparentQ()
 
