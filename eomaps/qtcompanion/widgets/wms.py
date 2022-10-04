@@ -117,6 +117,11 @@ class AddWMSMenuButton(QtWidgets.QPushButton):
         def wms_cb():
             if self._new_layer:
                 layer = wms.name + "_" + wmslayer
+                # indicate creation of new layer in statusbar
+                self.window().statusBar().showMessage(
+                    f"New WebMap layer '{layer}' created!", 2000
+                )
+
             else:
                 layer = self.m.BM._bg_layer
 
