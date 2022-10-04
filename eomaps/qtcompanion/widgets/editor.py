@@ -60,7 +60,7 @@ class AddFeaturesMenuButton(QtWidgets.QPushButton):
             layer = self.m.BM.bg_layer
             if layer.startswith("_") and "|" in layer:
                 self.window().statusBar().showMessage(
-                    "Adding features to temporary multi-layers is not supported!", 3000
+                    "Adding features to temporary multi-layers is not supported!", 5000
                 )
 
                 return

@@ -17,6 +17,22 @@ class WMS_GEBCO:
         getattr(self.m.add_wms.GEBCO.add_layer, wmslayer)(layer=layer)
 
 
+class WMS_CAMS:
+    layer_prefix = "CAMS_"
+    name = "CAMS"
+
+    def __init__(self, m=None):
+        self.m = m
+        self.wmslayers = [
+            key
+            for key in self.m.add_wms.CAMS.add_layer.__dict__.keys()
+            if not (key in ["m"] or key.startswith("_"))
+        ]
+
+    def do_add_layer(self, wmslayer, layer):
+        getattr(self.m.add_wms.CAMS.add_layer, wmslayer)(layer=layer)
+
+
 class WMS_NASA_GIBS:
     layer_prefix = "NASA_GIBS_"
     name = "NASA_GIBS"
@@ -123,6 +139,7 @@ class AddWMSMenuButton(QtWidgets.QPushButton):
             "S1GBM:": WMS_S1GBM,
             "GEBCO:": WMS_GEBCO,
             "NASA GIBS:": WMS_NASA_GIBS,
+            "CAMS:": WMS_CAMS,
         }
 
         if self._new_layer:
@@ -174,7 +191,7 @@ class AddWMSMenuButton(QtWidgets.QPushButton):
         layer = self.m.BM.bg_layer
         if layer.startswith("_") and "|" in layer:
             self.window().statusBar().showMessage(
-                "Adding features to temporary multi-layers is not supported!", 3000
+                "Adding features to temporary multi-layers is not supported!", 5000
             )
             return
 
@@ -183,7 +200,7 @@ class AddWMSMenuButton(QtWidgets.QPushButton):
                 layer = wms.name + "_" + wmslayer
                 # indicate creation of new layer in statusbar
                 self.window().statusBar().showMessage(
-                    f"New WebMap layer '{layer}' created!", 2000
+                    f"New WebMap layer '{layer}' created!", 5000
                 )
 
             else:
@@ -191,7 +208,7 @@ class AddWMSMenuButton(QtWidgets.QPushButton):
                 if layer.startswith("_") and "|" in layer:
                     self.window().statusBar().showMessage(
                         "Adding features to temporary multi-layers is not supported!",
-                        3000,
+                        5000,
                     )
 
                 layer = self.m.BM._bg_layer
