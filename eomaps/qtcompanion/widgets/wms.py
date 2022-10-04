@@ -1,6 +1,22 @@
 from PyQt5 import QtWidgets
 
 
+class WMS_GEBCO:
+    layer_prefix = "GEBCO_"
+    name = "GEBCO"
+
+    def __init__(self, m=None):
+        self.m = m
+        self.wmslayers = [
+            key
+            for key in self.m.add_wms.GEBCO.add_layer.__dict__.keys()
+            if not (key in ["m"] or key.startswith("_"))
+        ]
+
+    def do_add_layer(self, wmslayer, layer):
+        getattr(self.m.add_wms.GEBCO.add_layer, wmslayer)(layer=layer)
+
+
 class WMS_OSM:
     layer_prefix = "OSM_"
     name = "OpenStreetMap"
@@ -72,11 +88,12 @@ class AddWMSMenuButton(QtWidgets.QPushButton):
         self._new_layer = new_layer
         self._show_layer = show_layer
 
-        wms_dict = {
+        self.wms_dict = {
             "OpenStreetMap": WMS_OSM,
             "S2 Cloudless": WMS_S2_cloudless,
             "ESA WorldCover": WMS_ESA_WorldCover,
             "S1GBM:": WMS_S1GBM,
+            "GEBCO:": WMS_GEBCO,
         }
 
         if self._new_layer:
@@ -87,13 +104,20 @@ class AddWMSMenuButton(QtWidgets.QPushButton):
         width = self.fontMetrics().boundingRect(self.text()).width()
         self.setFixedWidth(width + 30)
 
-        feature_menu = QtWidgets.QMenu()
-        feature_menu.setStyleSheet("QMenu { menu-scrollable: 1;}")
+        self.feature_menu = QtWidgets.QMenu()
+        self.feature_menu.setStyleSheet("QMenu { menu-scrollable: 1;}")
+        self.feature_menu.aboutToShow.connect(self.populate_menu)
 
-        for wmsname, wmsclass in wms_dict.items():
+        self.setMenu(self.feature_menu)
+        self.clicked.connect(
+            lambda: self.feature_menu.popup(self.mapToGlobal(self.menu_button.pos()))
+        )
+
+    def populate_menu(self):
+        for wmsname, wmsclass in self.wms_dict.items():
             try:
                 wms = wmsclass(m=self.m)
-                sub_menu = feature_menu.addMenu(wmsname)
+                sub_menu = self.feature_menu.addMenu(wmsname)
 
                 sub_features = wms.wmslayers
                 for wmslayer in sub_features:
@@ -101,10 +125,8 @@ class AddWMSMenuButton(QtWidgets.QPushButton):
                     action.triggered.connect(self.menu_callback_factory(wms, wmslayer))
             except:
                 print("there was a problem while fetching the WMS layer", wmsname)
-        self.setMenu(feature_menu)
-        self.clicked.connect(
-            lambda: feature_menu.popup(self.mapToGlobal(self.menu_button.pos()))
-        )
+
+        self.feature_menu.aboutToShow.disconnect()
 
     def menu_callback_factory(self, wms, wmslayer):
         layer = self.m.BM.bg_layer
