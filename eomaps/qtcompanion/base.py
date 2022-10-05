@@ -134,12 +134,17 @@ class transparentWindow(QtWidgets.QMainWindow):
         self.out_alpha = 0.25
         self.m = m
 
+        # get the current PyQt app and connect the focus-change callback
+        self.app = QtWidgets.QApplication([]).instance()
+        self.app.focusChanged.connect(self.on_window_focus)
+
         # make sure the window does not steal focus from the matplotlib-canvas
         # on show (otherwise callbacks are inactive as long as the window is focused!)
         self.setAttribute(Qt.WA_ShowWithoutActivating)
         self.setWindowFlags(
             Qt.FramelessWindowHint | Qt.Dialog | Qt.WindowStaysOnTopHint
         )
+        self.setFocusPolicy(Qt.StrongFocus)
 
         self.transparentQ = QtWidgets.QToolButton()
         self.transparentQ.setStyleSheet("border:none")
@@ -162,11 +167,22 @@ class transparentWindow(QtWidgets.QMainWindow):
             self.setFocus()
             self.transparentQ.setIcon(QtGui.QIcon(str(iconpath / "eye_open.png")))
 
-    def focusInEvent(self, e):
-        self.setWindowOpacity(1)
-        super().focusInEvent(e)
+    def on_window_focus(self, old, new):
+        if new is not None:
+            if new is self or hasattr(new, "window") and new.window() is self:
+                self.setWindowOpacity(1)
 
-    def focusOutEvent(self, e):
-        if not self.isActiveWindow():
-            self.setWindowOpacity(self.out_alpha)
-        super().focusInEvent(e)
+                # Uncheck avtive pan/zoom actions of the matplotlib toolbar.
+                # This is done to avoid capturing of draw-events during pan/zoom
+                # so that draw-events triggered by the companion take effect immediately
+
+                toolbar = getattr(self.m.BM.canvas, "toolbar", None)
+                if toolbar is not None:
+                    for key in ["pan", "zoom"]:
+                        val = toolbar._actions.get(key, None)
+                        if val is not None and val.isCheckable() and val.isChecked():
+                            val.trigger()
+            else:
+                self.setWindowOpacity(self.out_alpha)
+        else:
+            self.setWindowOpacity(1)
