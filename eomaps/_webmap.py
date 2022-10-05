@@ -135,6 +135,12 @@ class _WebMap_layer:
 
         legend = self.fetch_legend()
         if legend is not None:
+            if not hasattr(self, "_layer"):
+                # use the currently active layer if the webmap service has not yet
+                # been added to the map
+                print("EOmaps: The WebMap for the legend is not yet added to the map!")
+                self._layer = self._m.BM._bg_layer
+
             axpos = self._m.figure.ax.get_position()
             legax = self._m.figure.f.add_axes((axpos.x0, axpos.y0, 0.25, 0.5))
 
@@ -145,6 +151,10 @@ class _WebMap_layer:
             legax.set_frame_on(False)
             legax.set_aspect(1, anchor="SW")
             legax.imshow(legend)
+
+            # hide the legend if the corresponding layer is not active at the moment
+            if self._layer not in self._m.BM._bg_layer.split("|"):
+                legax.set_visible(False)
 
             self._m.BM.add_artist(legax)
 
@@ -186,6 +196,8 @@ class _WebMap_layer:
                     legax.set_frame_on(False)
                     self._legend_picked = False
 
+            # TODO add keypress callback to remove legend!
+
             def cb_scroll(event):
                 if not self._legend_picked:
                     return
@@ -209,11 +221,6 @@ class _WebMap_layer:
             self._m.figure.f.canvas.mpl_connect("button_release_event", cb_release)
             self._m.figure.f.canvas.mpl_connect("motion_notify_event", cb_move)
 
-            if not hasattr(self, "_layer"):
-                # use the currently active layer if the webmap service has not yet
-                # been added to the map
-                print("EOmaps: The WebMap for the legend is not yet added to the map!")
-                self._layer = self._m.BM._bg_layer
             self._m.parent._wms_legend.setdefault(self._layer, list()).append(legax)
 
             self._m.BM.update()
