@@ -98,16 +98,17 @@ class _WebMap_layer:
 
                 except ImportError:
                     warn("EOmaps: the legend is '.svg'... please install 'cairosvg'")
+                    return None
             else:
                 img = legend.content
 
             img = Image.open(BytesIO(img))
         except Exception:
             warn("EOmaps: could not fetch the legend")
-            img = None
+            return None
         return img
 
-    def add_legend(self, style=None):
+    def add_legend(self, style=None, img=None):
         """
         Add a legend to the plot (if available)
 
@@ -119,7 +120,8 @@ class _WebMap_layer:
         ----------
         style : str, optional
             The style to use. The default is "default".
-
+        img : BytesIO
+            A pre-fetched legend (if provided the "style" kwarg is ignored!)
         Returns
         -------
         legax : matpltolib.axes
@@ -132,8 +134,11 @@ class _WebMap_layer:
             style = self._style
 
         self._legend_picked = False
+        if img is None:
+            legend = self.fetch_legend()
+        else:
+            legend = img
 
-        legend = self.fetch_legend()
         if legend is not None:
             if not hasattr(self, "_layer"):
                 # use the currently active layer if the webmap service has not yet
