@@ -415,10 +415,11 @@ class Maps(object):
                 print("EOmaps: Initializing companion-widget...")
                 self._init_companion_widget()
 
-            if self._companion_widget.isVisible():
-                self._companion_widget.hide()
-            else:
-                self._companion_widget.show()
+            if self._companion_widget is not None:
+                if self._companion_widget.isVisible():
+                    self._companion_widget.hide()
+                else:
+                    self._companion_widget.show()
 
         self._cid_companion_key = self.all.cb.keypress.attach(cb, key=show_hide_key)
 
