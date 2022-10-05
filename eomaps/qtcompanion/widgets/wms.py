@@ -57,7 +57,7 @@ class WMS_NASA_GIBS:
             if not (key in ["m"] or key.startswith("_"))
         ]
 
-    def ask_for_legend(self, wms, wmslayer):
+    def ask_for_legend(self, wms, wmslayer, img=None):
         self._msg = QtWidgets.QMessageBox()
         self._msg.setIcon(QtWidgets.QMessageBox.Question)
         self._msg.setWindowTitle("Add a legend?")
@@ -66,16 +66,16 @@ class WMS_NASA_GIBS:
         self._msg.setStandardButtons(
             QtWidgets.QMessageBox.Yes | QtWidgets.QMessageBox.No
         )
-        self._msg.buttonClicked.connect(lambda: self._cb_add_legend(wms))
+        self._msg.buttonClicked.connect(lambda: self._cb_add_legend(wms, img))
         self._msg.show()
 
-    def _cb_add_legend(self, wms):
+    def _cb_add_legend(self, wms, img):
         if self._msg.standardButton(self._msg.clickedButton()) != self._msg.Yes:
             return
 
         if hasattr(wms, "add_legend"):
             try:
-                leg = wms.add_legend()
+                leg = wms.add_legend(img=img)
             except:
                 pass
 
@@ -84,7 +84,9 @@ class WMS_NASA_GIBS:
         wms(layer=layer, transparent=True)
         if hasattr(wms, "add_legend"):
             try:
-                self.ask_for_legend(wms, wmslayer)
+                img = wms.fetch_legend()
+                if img is not None:
+                    self.ask_for_legend(wms, wmslayer, img)
             except:
                 pass
 
