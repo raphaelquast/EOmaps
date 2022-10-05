@@ -1,4 +1,4 @@
-from PyQt5 import QtWidgets
+from PyQt5 import QtWidgets, QtCore
 
 
 class WMS_GEBCO:
@@ -57,8 +57,36 @@ class WMS_NASA_GIBS:
             if not (key in ["m"] or key.startswith("_"))
         ]
 
+    def ask_for_legend(self, wms, wmslayer):
+        self._msg = QtWidgets.QMessageBox()
+        self._msg.setIcon(QtWidgets.QMessageBox.Question)
+        self._msg.setWindowTitle("Add a legend?")
+        self._msg.setText(f"Do you want a legend for {wmslayer}?")
+        self._msg.setWindowFlags(QtCore.Qt.WindowStaysOnTopHint)
+        self._msg.setStandardButtons(
+            QtWidgets.QMessageBox.Yes | QtWidgets.QMessageBox.No
+        )
+        self._msg.buttonClicked.connect(lambda: self._cb_add_legend(wms))
+        self._msg.show()
+
+    def _cb_add_legend(self, wms):
+        if self._msg.standardButton(self._msg.clickedButton()) != self._msg.Yes:
+            return
+
+        if hasattr(wms, "add_legend"):
+            try:
+                leg = wms.add_legend()
+            except:
+                pass
+
     def do_add_layer(self, wmslayer, layer):
-        getattr(self.usewms.add_layer, wmslayer)(layer=layer)
+        wms = getattr(self.usewms.add_layer, wmslayer)
+        wms(layer=layer, transparent=True)
+        if hasattr(wms, "add_legend"):
+            try:
+                self.ask_for_legend(wms, wmslayer)
+            except:
+                pass
 
 
 class WMS_OSM:
