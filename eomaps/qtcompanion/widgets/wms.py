@@ -1,7 +1,43 @@
 from PyQt5 import QtWidgets, QtCore
 
 
-class WMS_GEBCO:
+class WMSBase:
+    def __init__(self):
+        pass
+
+    def ask_for_legend(self, wms, wmslayer):
+        if hasattr(wms, "add_legend"):
+            try:
+                img = wms.fetch_legend(silent=True)
+                if img is not None:
+                    self._ask_for_legend(wms, wmslayer, img)
+            except:
+                pass
+
+    def _ask_for_legend(self, wms, wmslayer, img=None):
+        self._msg = QtWidgets.QMessageBox()
+        self._msg.setIcon(QtWidgets.QMessageBox.Question)
+        self._msg.setWindowTitle("Add a legend?")
+        self._msg.setText(f"Do you want a legend for {wmslayer}?")
+        self._msg.setWindowFlags(QtCore.Qt.WindowStaysOnTopHint)
+        self._msg.setStandardButtons(
+            QtWidgets.QMessageBox.Yes | QtWidgets.QMessageBox.No
+        )
+        self._msg.buttonClicked.connect(lambda: self._cb_add_legend(wms, img))
+        self._msg.show()
+
+    def _cb_add_legend(self, wms, img):
+        if self._msg.standardButton(self._msg.clickedButton()) != self._msg.Yes:
+            return
+
+        if hasattr(wms, "add_legend"):
+            try:
+                wms.add_legend(img=img)
+            except:
+                pass
+
+
+class WMS_GEBCO(WMSBase):
     layer_prefix = "GEBCO_"
     name = "GEBCO"
 
@@ -14,10 +50,12 @@ class WMS_GEBCO:
         ]
 
     def do_add_layer(self, wmslayer, layer):
-        getattr(self.m.add_wms.GEBCO.add_layer, wmslayer)(layer=layer)
+        wms = getattr(self.m.add_wms.GEBCO.add_layer, wmslayer)
+        wms(layer=layer)
+        self.ask_for_legend(wms, wmslayer)
 
 
-class WMS_CAMS:
+class WMS_CAMS(WMSBase):
     layer_prefix = "CAMS_"
     name = "CAMS"
 
@@ -30,10 +68,12 @@ class WMS_CAMS:
         ]
 
     def do_add_layer(self, wmslayer, layer):
-        getattr(self.m.add_wms.CAMS.add_layer, wmslayer)(layer=layer)
+        wms = getattr(self.m.add_wms.CAMS.add_layer, wmslayer)
+        wms(layer=layer)
+        self.ask_for_legend(wms, wmslayer)
 
 
-class WMS_NASA_GIBS:
+class WMS_NASA_GIBS(WMSBase):
     layer_prefix = "NASA_GIBS_"
     name = "NASA_GIBS"
 
@@ -57,41 +97,13 @@ class WMS_NASA_GIBS:
             if not (key in ["m"] or key.startswith("_"))
         ]
 
-    def ask_for_legend(self, wms, wmslayer, img=None):
-        self._msg = QtWidgets.QMessageBox()
-        self._msg.setIcon(QtWidgets.QMessageBox.Question)
-        self._msg.setWindowTitle("Add a legend?")
-        self._msg.setText(f"Do you want a legend for {wmslayer}?")
-        self._msg.setWindowFlags(QtCore.Qt.WindowStaysOnTopHint)
-        self._msg.setStandardButtons(
-            QtWidgets.QMessageBox.Yes | QtWidgets.QMessageBox.No
-        )
-        self._msg.buttonClicked.connect(lambda: self._cb_add_legend(wms, img))
-        self._msg.show()
-
-    def _cb_add_legend(self, wms, img):
-        if self._msg.standardButton(self._msg.clickedButton()) != self._msg.Yes:
-            return
-
-        if hasattr(wms, "add_legend"):
-            try:
-                leg = wms.add_legend(img=img)
-            except:
-                pass
-
     def do_add_layer(self, wmslayer, layer):
         wms = getattr(self.usewms.add_layer, wmslayer)
         wms(layer=layer, transparent=True)
-        if hasattr(wms, "add_legend"):
-            try:
-                img = wms.fetch_legend()
-                if img is not None:
-                    self.ask_for_legend(wms, wmslayer, img)
-            except:
-                pass
+        self.ask_for_legend(wms, wmslayer)
 
 
-class WMS_OSM:
+class WMS_OSM(WMSBase):
     layer_prefix = "OSM_"
     name = "OpenStreetMap"
 
@@ -104,10 +116,12 @@ class WMS_OSM:
         ]
 
     def do_add_layer(self, wmslayer, layer):
-        getattr(self.m.add_wms.OpenStreetMap.add_layer, wmslayer)(layer=layer)
+        wms = getattr(self.m.add_wms.OpenStreetMap.add_layer, wmslayer)
+        wms(layer=layer)
+        self.ask_for_legend(wms, wmslayer)
 
 
-class WMS_S2_cloudless:
+class WMS_S2_cloudless(WMSBase):
     layer_prefix = "S2_"
     name = "S2 cloudless"
 
@@ -123,10 +137,12 @@ class WMS_S2_cloudless:
         self.wmslayers = wmslayers
 
     def do_add_layer(self, wmslayer, layer):
-        getattr(self.m.add_wms.S2_cloudless.add_layer, wmslayer)(layer=layer)
+        wms = getattr(self.m.add_wms.S2_cloudless.add_layer, wmslayer)
+        wms(layer=layer)
+        self.ask_for_legend(wms, wmslayer)
 
 
-class WMS_ESA_WorldCover:
+class WMS_ESA_WorldCover(WMSBase):
     layer_prefix = ""
     name = "ESA WorldCover"
 
@@ -139,10 +155,12 @@ class WMS_ESA_WorldCover:
         ]
 
     def do_add_layer(self, wmslayer, layer):
-        getattr(self.m.add_wms.ESA_WorldCover.add_layer, wmslayer)(layer=layer)
+        wms = getattr(self.m.add_wms.ESA_WorldCover.add_layer, wmslayer)
+        wms(layer=layer)
+        self.ask_for_legend(wms, wmslayer)
 
 
-class WMS_S1GBM:
+class WMS_S1GBM(WMSBase):
     layer_prefix = "S1GBM_"
     name = "S1GBM"
 
@@ -151,7 +169,9 @@ class WMS_S1GBM:
         self.wmslayers = ["vv", "vh"]
 
     def do_add_layer(self, wmslayer, layer):
-        getattr(self.m.add_wms.S1GBM.add_layer, wmslayer)(layer=layer)
+        wms = getattr(self.m.add_wms.S1GBM.add_layer, wmslayer)
+        wms(layer=layer)
+        self.ask_for_legend(wms, wmslayer)
 
 
 class AddWMSMenuButton(QtWidgets.QPushButton):
