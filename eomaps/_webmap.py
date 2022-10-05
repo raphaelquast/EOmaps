@@ -82,11 +82,10 @@ class _WebMap_layer:
 
         print(f"\n LEGEND available: {legQ}\n\n" + txt)
 
-    def fetch_legend(self, style=None):
+    def fetch_legend(self, style=None, silent=True):
         if style is None:
             style = self._style
         try:
-
             url = self.wms_layer.styles[style]["legend"]
             legend = requests.get(url)
 
@@ -104,7 +103,8 @@ class _WebMap_layer:
 
             img = Image.open(BytesIO(img))
         except Exception:
-            warn("EOmaps: could not fetch the legend")
+            if not silent:
+                warn("EOmaps: could not fetch the legend")
             return None
         return img
 
