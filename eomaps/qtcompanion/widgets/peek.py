@@ -1,7 +1,16 @@
-from PyQt5 import QtWidgets
-from PyQt5.QtCore import Qt, pyqtSignal
+from PyQt5 import QtWidgets, QtGui
+from PyQt5.QtCore import Qt, pyqtSignal, QSize
 
 from .layer import AutoUpdateLayerDropdown, AutoUpdateLayerMenuButton
+from ..common import iconpath
+
+peek_methods = ("top", "bottom", "left", "right", "rectangle", "square")
+peek_icons = dict()
+for method in peek_methods:
+    peek_icons[method] = QtGui.QIcon(str(iconpath / f"peek_{method}.png"))
+    peek_icons[method + "_active"] = QtGui.QIcon(
+        str(iconpath / f"peek_{method}_active.png")
+    )
 
 
 class PeekMethodButtons(QtWidgets.QWidget):
@@ -15,23 +24,20 @@ class PeekMethodButtons(QtWidgets.QWidget):
         self.how = (self.rectangle_size, self.rectangle_size)
         self.alpha = 1
 
-        self.symbols = dict(
-            zip(
-                ("🡇", "🡅", "🡆", "🡄", "⛋", "🞑"),
-                ("top", "bottom", "left", "right", "rectangle", "square"),
-            )
-        )
-
-        self.symbols_inverted = {v: k for k, v in self.symbols.items()}
-
         self.buttons = dict()
-        for symbol, method in self.symbols.items():
+        self.rect_button = (
+            QtWidgets.QStackedWidget()
+        )  # stacked buttons for rectangle/square
+        for method in peek_methods:
             b = QtWidgets.QToolButton()
-            b.setText(symbol)
+            b.setIcon(peek_icons[method])
+            b.setIconSize(QSize(12, 12))
             b.setAutoRaise(True)
-            b.clicked.connect(self.button_clicked)
-
+            b.clicked.connect(self.button_clicked(method))
             self.buttons[method] = b
+
+            if method in ("rectangle", "square"):
+                self.rect_button.addWidget(b)
 
         self.rectangle_slider = QtWidgets.QSlider(Qt.Horizontal)
         self.rectangle_slider.valueChanged.connect(self.rectangle_sider_value_changed)
@@ -63,7 +69,7 @@ class PeekMethodButtons(QtWidgets.QWidget):
         buttons.addWidget(self.buttons["bottom"])
         buttons.addWidget(self.buttons["right"])
         buttons.addWidget(self.buttons["left"])
-        buttons.addWidget(self.buttons["rectangle"])
+        buttons.addWidget(self.rect_button)
         buttons.addWidget(self.rectangle_slider, 1)
 
         layout = QtWidgets.QVBoxLayout()
@@ -77,25 +83,23 @@ class PeekMethodButtons(QtWidgets.QWidget):
         self.methodChanged.connect(self.method_changed)
 
         self.methodChanged.emit("square")
-        self.buttons["rectangle"].setText(self.symbols_inverted["square"])
+        self.rect_button.setCurrentWidget(self.buttons["square"])
 
-    def button_clicked(self):
+        # self.buttons["rectangle"].setText(self.symbols_inverted["square"])
 
-        sender = self.sender().text()
-        if self._method in ["rectangle", "square"]:
-            if sender == self.symbols_inverted["square"]:
-                method = "rectangle"
-                self.buttons["rectangle"].setText(self.symbols_inverted["rectangle"])
-            elif sender == self.symbols_inverted["rectangle"]:
-                method = "square"
-                self.buttons["rectangle"].setText(self.symbols_inverted["square"])
+    def button_clicked(self, method):
+        def cb():
+            if method == "square":
+                m = "rectangle"
+                self.rect_button.setCurrentWidget(self.buttons["rectangle"])
+            elif method == "rectangle":
+                m = "square"
+                self.rect_button.setCurrentWidget(self.buttons["square"])
             else:
-                method = self.symbols[sender]
+                m = method
+            self.methodChanged.emit(m)
 
-        else:
-            method = self.symbols[sender]
-
-        self.methodChanged.emit(method)
+        return cb
 
     def rectangle_sider_value_changed(self, i):
         self.rectangle_size = i / 100
@@ -172,9 +176,9 @@ class PeekMethodButtons(QtWidgets.QWidget):
 
         for key, val in self.buttons.items():
             if key == method:
-                val.setStyleSheet("QToolButton {color: red; }")
+                val.setIcon(peek_icons[f"{key}_active"])
             else:
-                val.setStyleSheet("")
+                val.setIcon(peek_icons[f"{key}"])
 
         if method == "rectangle":
             self.rectangle_slider.show()
@@ -184,7 +188,6 @@ class PeekMethodButtons(QtWidgets.QWidget):
                 self.how = "full"
         elif method == "square":
             self.rectangle_slider.show()
-            self.buttons["rectangle"].setStyleSheet("QToolButton {color: red; }")
             if self.rectangle_size < 0.99:
                 self.how = self.rectangle_size
             else:
@@ -318,8 +321,8 @@ class PeekTabs(QtWidgets.QTabWidget):
         self.tabCloseRequested.connect(self.close_handler)
 
         w = PeekLayerWidget(m=self.m)
-        self.addTab(w, "    ")
-
+        self.addTab(w, peek_icons[w.buttons._method], "    ")
+        self.setIconSize(QSize(10, 10))
         # update the tab title with the modifier key
         cb = self.settxt_factory(w)
         w.modifier.textChanged.connect(cb)
@@ -330,12 +333,17 @@ class PeekTabs(QtWidgets.QTabWidget):
         w.buttons.methodChanged.emit(w.buttons._method)
 
         # a tab that is used to create new tabs
-        self.addTab(QtWidgets.QWidget(), "+")
+        newtabwidget = QtWidgets.QWidget()
+        newtablayout = QtWidgets.QHBoxLayout()
+        l = QtWidgets.QLabel("Click on <b>+</b> to open a new peek layer tab!")
+        newtablayout.addWidget(l)
+        newtabwidget.setLayout(newtablayout)
+
+        self.addTab(newtabwidget, "+")
         # don't show the close button for this tab
         self.tabBar().setTabButton(self.count() - 1, self.tabBar().RightSide, None)
 
         self.tabBarClicked.connect(self.tabbar_clicked)
-
         self.setCurrentIndex(0)
 
     def tabbar_clicked(self, index):
@@ -352,20 +360,24 @@ class PeekTabs(QtWidgets.QTabWidget):
             w.buttons.methodChanged.emit(w.buttons._method)
 
     def close_handler(self, index):
+        curridx = self.currentIndex()
         self.widget(index).remove_peek_cb()
         self.removeTab(index)
+        if index == curridx:
+            self.setCurrentIndex(index - 1)
 
     def settxt_factory(self, w):
         def settxt():
+            self.setTabIcon(self.indexOf(w), peek_icons[w.buttons._method])
+            mod = w.modifier.text().strip()
+
+            txt = ""
+            if mod != "":
+                txt += f"[{mod}] "
+
             self.setTabText(
                 self.indexOf(w),
-                w.buttons.symbols_inverted.get(w.buttons._method, "")
-                + (
-                    (" [" + w.modifier.text() + "]: ")
-                    if w.modifier.text().strip() != ""
-                    else ": "
-                )
-                + (w.current_layer if w.current_layer is not None else ""),
+                txt + (w.current_layer if w.current_layer is not None else ""),
             )
 
         return settxt
