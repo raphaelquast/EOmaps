@@ -1,5 +1,5 @@
-from matplotlib.collections import PolyCollection, QuadMesh
-from matplotlib.tri import TriMesh, Triangulation
+from matplotlib.collections import PolyCollection, QuadMesh, TriMesh
+from matplotlib.tri import Triangulation
 import numpy as np
 
 from pyproj import CRS, Transformer
