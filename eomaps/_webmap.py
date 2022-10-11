@@ -390,9 +390,9 @@ class _wmts_layer(_WebMap_layer):
     # for SlippyImageArtist
     @staticmethod
     def _add_wmts(ax, wms, layers, wms_kwargs=None, **kwargs):
-        from cartopy.io.ogc_clients import WMSRasterSource
+        from cartopy.io.ogc_clients import WMTSRasterSource
 
-        wms = WMSRasterSource(wms, layers, getmap_extra_kwargs=wms_kwargs)
+        wms = WMTSRasterSource(wms, layers, gettile_extra_kwargs=wms_kwargs)
 
         # Allow a fail-fast error if the raster source cannot provide
         # images in the current projection.
@@ -411,13 +411,6 @@ class _wmts_layer(_WebMap_layer):
             m.ax, self._wms, self.name, interpolation="spline36", **kwargs
         )
 
-        # art = m.figure.ax.add_wmts(
-        #     self._wms,
-        #     self.name,
-        #     wmts_kwargs=kwargs,
-        #     interpolation="spline36",
-        #     zorder=zorder,
-        # )
         m.BM.add_bg_artist(art, l)
 
 
