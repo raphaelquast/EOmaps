@@ -662,7 +662,9 @@ def _from_file(
         if isinstance(shape, str):
             getattr(m.set_shape, shape)()
         elif isinstance(shape, dict):
-            getattr(m.set_shape, shape.pop("shape"))(**shape)
+            getattr(m.set_shape, shape["shape"])(
+                **{k: v for k, v in shape.items() if k != "shape"}
+            )
 
     m.plot_map(**kwargs)
     return m
