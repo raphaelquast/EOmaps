@@ -12,6 +12,7 @@ from .widgets.save import SaveFileWidget
 from .widgets.files import OpenFileTabs
 from .widgets.layer import AutoUpdateLayerMenuButton
 from .widgets.utils import get_cmap_pixmaps
+from .widgets.extent import SetExtentToLocation
 
 
 class ControlTabs(QtWidgets.QTabWidget):
@@ -31,8 +32,12 @@ class ControlTabs(QtWidgets.QTabWidget):
             addwms = QtWidgets.QPushButton("WMS services unavailable")
         tab1layout.addWidget(addwms)
 
+        setextent = SetExtentToLocation(m=self.m)
+        tab1layout.addWidget(setextent)
+
         tab1layout.addStretch(1)
-        tab1layout.addWidget(SaveFileWidget(m=self.m))
+        save = SaveFileWidget(m=self.m)
+        tab1layout.addWidget(save)
 
         tab1.setLayout(tab1layout)
 
