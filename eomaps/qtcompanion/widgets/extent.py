@@ -10,7 +10,6 @@ class SetExtentToLocation(QtWidgets.QWidget):
         label = QtWidgets.QLabel("Set map-extent to location:")
         self.inp = QtWidgets.QLineEdit()
         self.inp.returnPressed.connect(self.set_extent)
-        self.inp.setToolTip("Query based on 'OpenStreetMap Nominatim' service.")
         layout = QtWidgets.QHBoxLayout()
         layout.addWidget(label)
         layout.addWidget(self.inp)
@@ -18,6 +17,17 @@ class SetExtentToLocation(QtWidgets.QWidget):
         self.setLayout(layout)
 
         self._lastquery = None
+
+    def enterEvent(self, e):
+        if self.window().showhelp is True:
+            QtWidgets.QToolTip.showText(
+                e.globalPos(),
+                "<h3>Location Query</h3>"
+                "Use the <p>OpenStreetMap Nominatim API</p> to query a location "
+                "and set the Map-extent to the bounding box of the found location."
+                "<p>"
+                "'location' can be a country-name, a city-name an address etc.",
+            )
 
     def set_extent(self):
         # make sure that queries have a couple of seconds delay
