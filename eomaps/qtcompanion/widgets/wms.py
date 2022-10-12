@@ -1,4 +1,6 @@
-from PyQt5 import QtWidgets, QtCore
+from PyQt5 import QtWidgets
+from PyQt5.QtCore import Qt, QThread, QObject, pyqtSignal
+from PyQt5.QtGui import QStatusTipEvent
 
 
 class WMSBase:
@@ -19,7 +21,7 @@ class WMSBase:
         self._msg.setIcon(QtWidgets.QMessageBox.Question)
         self._msg.setWindowTitle("Add a legend?")
         self._msg.setText(f"Do you want a legend for {wmslayer}?")
-        self._msg.setWindowFlags(QtCore.Qt.WindowStaysOnTopHint)
+        self._msg.setWindowFlags(Qt.WindowStaysOnTopHint)
         self._msg.setStandardButtons(
             QtWidgets.QMessageBox.Yes | QtWidgets.QMessageBox.No
         )
@@ -174,6 +176,15 @@ class WMS_S1GBM(WMSBase):
         self.ask_for_legend(wms, wmslayer)
 
 
+# an event-filter to catch StatusTipFilter events
+# (e.g. to avoid clearing the statusbar on mouse hoover over QMenu)
+class StatusTipFilter(QObject):
+    def eventFilter(self, watched, event):
+        if isinstance(event, QStatusTipEvent):
+            return True
+        return super().eventFilter(watched, event)
+
+
 class AddWMSMenuButton(QtWidgets.QPushButton):
     def __init__(self, *args, m=None, new_layer=False, show_layer=False, **kwargs):
         super().__init__(*args, **kwargs)
@@ -186,10 +197,10 @@ class AddWMSMenuButton(QtWidgets.QPushButton):
             "OpenStreetMap": WMS_OSM,
             "S2 Cloudless": WMS_S2_cloudless,
             "ESA WorldCover": WMS_ESA_WorldCover,
-            "S1GBM:": WMS_S1GBM,
-            "GEBCO:": WMS_GEBCO,
-            "NASA GIBS:": WMS_NASA_GIBS,
-            "CAMS:": WMS_CAMS,
+            "S1GBM": WMS_S1GBM,
+            "GEBCO": WMS_GEBCO,
+            "NASA GIBS": WMS_NASA_GIBS,
+            "CAMS": WMS_CAMS,
         }
 
         if self._new_layer:
@@ -209,33 +220,95 @@ class AddWMSMenuButton(QtWidgets.QPushButton):
             lambda: self.feature_menu.popup(self.mapToGlobal(self.menu_button.pos()))
         )
 
+        self._submenus = dict()
+
+        # set event-filter to avoid showing tooltips on hovver over QMenu items
+        self.installEventFilter(StatusTipFilter(self))
+
     def populate_menu(self):
         self.sub_menus = dict()
         for wmsname in self.wms_dict:
             self.sub_menus[wmsname] = self.feature_menu.addMenu(wmsname)
-            self.sub_menus[wmsname].aboutToShow.connect(self.populate_submenu)
-
+            self.sub_menus[wmsname].aboutToShow.connect(self.populate_submenu_thread)
         self.feature_menu.aboutToShow.disconnect()
 
-    def populate_submenu(self):
+    def populate_submenu_thread(self):
+        #
+
+        class Worker(QObject):
+            finished = pyqtSignal()
+            progress = pyqtSignal(int)
+
+            def __init__(self, *args, x=None, wmsname=None, **kwargs):
+                super().__init__(*args, **kwargs)
+
+                self.x = x
+                self.wmsname = wmsname
+
+            def run(self):
+                self.x.fetch_submenu(wmsname=self.wmsname)
+                self.finished.emit()
+
         if not isinstance(self.sender(), QtWidgets.QMenu):
             return
 
         wmsname = self.sender().title()
 
-        try:
+        if not hasattr(self, "threads"):
+            self.threads = dict()
+            self.workers = dict()
+
+        if wmsname not in self.threads:
+            thread = QThread()
+            worker = Worker(x=self, wmsname=wmsname)
+            worker.moveToThread(thread)
+            thread.started.connect(worker.run)
+
+            def doit():
+                self.populate_submenu(wmsname)
+
+            thread.finished.connect(doit)
+            worker.finished.connect(thread.quit)
+            worker.finished.connect(worker.deleteLater)
+            thread.finished.connect(thread.deleteLater)
+
+            self.threads[wmsname] = thread
+            self.workers[wmsname] = worker
+
+            thread.start()
+
+    def fetch_submenu(self, wmsname):
+        self.window().statusBar().showMessage(f"... fetching WMS layers for: {wmsname}")
+
+        # disconnect callbacks to avoid recursions
+        self.sub_menus[wmsname].aboutToShow.disconnect()
+
+        wmsclass = self.wms_dict[wmsname]
+        wms = wmsclass(m=self.m)
+        sub_features = wms.wmslayers
+        self._submenus[wmsname] = sub_features
+
+    def populate_submenu(self, wmsname=None):
+        if wmsname not in self._submenus:
+            print("No layers found for the WMS: {wmsname}")
+            return
+        else:
             wmsclass = self.wms_dict[wmsname]
             wms = wmsclass(m=self.m)
-            sub_features = wms.wmslayers
+            sub_features = self._submenus[wmsname]
+
+        try:
             for wmslayer in sub_features:
                 action = self.sub_menus[wmsname].addAction(wmslayer)
                 action.triggered.connect(self.menu_callback_factory(wms, wmslayer))
         except:
             self.window().statusBar().showMessage(
-                "There was a problem while fetching the WMS layer: " + wmsname
+                "There was a problem with the WMS: " + wmsname
             )
 
-        self.sub_menus[wmsname].aboutToShow.disconnect()
+        self.window().statusBar().showMessage(
+            f"Done fetching WMS layers for: {wmsname}"
+        )
 
     def menu_callback_factory(self, wms, wmslayer):
         layer = self.m.BM.bg_layer
