@@ -18,8 +18,7 @@ class RectangleSlider(QtWidgets.QSlider):
         if self.window().showhelp is True:
             QtWidgets.QToolTip.showText(
                 e.globalPos(),
-                "<h3>Set Peek-Rectangle Size</h3>"
-                "Set the size of the peek-rectangle.",
+                "<h3>Peek-Rectangle Size</h3>" "Set the size of the peek-rectangle.",
             )
 
 
@@ -28,7 +27,7 @@ class TransparencySlider(QtWidgets.QSlider):
         if self.window().showhelp is True:
             QtWidgets.QToolTip.showText(
                 e.globalPos(),
-                "<h3>Set Peek-Overlay Transparency</h3>"
+                "<h3>Peek-Overlay Transparency</h3>"
                 "Set the transparency of the peek-overlay.",
             )
 
@@ -38,7 +37,7 @@ class ButtonWidget(QtWidgets.QWidget):
         if self.window().showhelp is True:
             QtWidgets.QToolTip.showText(
                 e.globalPos(),
-                "<h3>Set Peek-Method</h3>"
+                "<h3>Peek-Method</h3>"
                 "Set the method that is used to overlay the peek-layer."
                 "<ul>"
                 "<li><b>up/down/left/right:</b> show the layer from the map-boundary to the "
