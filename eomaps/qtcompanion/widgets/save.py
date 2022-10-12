@@ -4,6 +4,39 @@ from PyQt5.QtCore import Qt
 from .utils import EditLayoutButton
 
 
+class DpiInput(QtWidgets.QLineEdit):
+    def enterEvent(self, e):
+        if self.window().showhelp is True:
+            QtWidgets.QToolTip.showText(
+                e.globalPos(),
+                "<h3>Output DPI</h3>" "Set the DPI used for exporting png images.",
+            )
+
+
+class TransparentCheckBox(QtWidgets.QCheckBox):
+    def enterEvent(self, e):
+        if self.window().showhelp is True:
+            QtWidgets.QToolTip.showText(
+                e.globalPos(),
+                "<h3>Frame transparency</h3>"
+                "Toggle the transparency of the axis-frame."
+                "<p>"
+                "If checked, the map will be exported with a transparent background.",
+            )
+
+
+class SaveButton(QtWidgets.QPushButton):
+    def enterEvent(self, e):
+        if self.window().showhelp is True:
+            QtWidgets.QToolTip.showText(
+                e.globalPos(),
+                "<h3>Save the figure</h3>"
+                "Open a file-dialog to save the figure."
+                "<p>"
+                "The specified file-ending will be used to determine the export-type!",
+            )
+
+
 class SaveFileWidget(QtWidgets.QFrame):
     def __init__(self, *args, m=None, **kwargs):
         super().__init__(*args, **kwargs)
@@ -13,7 +46,7 @@ class SaveFileWidget(QtWidgets.QFrame):
         width = b_edit.fontMetrics().boundingRect(b_edit.text()).width()
         b_edit.setFixedWidth(width + 30)
 
-        b1 = QtWidgets.QPushButton("Save!")
+        b1 = SaveButton("Save!")
         width = b1.fontMetrics().boundingRect(b1.text()).width()
         b1.setFixedWidth(width + 30)
 
@@ -24,14 +57,14 @@ class SaveFileWidget(QtWidgets.QFrame):
         width = l1.fontMetrics().boundingRect(l1.text()).width()
         l1.setFixedWidth(width + 5)
 
-        self.dpi_input = QtWidgets.QLineEdit()
+        self.dpi_input = DpiInput()
         self.dpi_input.setMaximumWidth(50)
         validator = QtGui.QIntValidator()
         self.dpi_input.setValidator(validator)
         self.dpi_input.setText("200")
 
         # transparent
-        self.transp_cb = QtWidgets.QCheckBox()
+        self.transp_cb = TransparentCheckBox()
         transp_label = QtWidgets.QLabel("Tranparent")
         width = transp_label.fontMetrics().boundingRect(transp_label.text()).width()
         transp_label.setFixedWidth(width + 5)
@@ -51,11 +84,11 @@ class SaveFileWidget(QtWidgets.QFrame):
         self.setLayout(layout)
         self.setStyleSheet(
             """
-                           SaveFileWidget{
-                               border: 1px solid rgb(200,200,200);
-                               border-radius: 10px;
-                               };
-                           """
+            SaveFileWidget{
+                border: 1px solid rgb(200,200,200);
+                border-radius: 10px;
+                };
+            """
         )
 
     def save_file(self):

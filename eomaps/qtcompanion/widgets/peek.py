@@ -13,6 +13,43 @@ for method in peek_methods:
     )
 
 
+class RectangleSlider(QtWidgets.QSlider):
+    def enterEvent(self, e):
+        if self.window().showhelp is True:
+            QtWidgets.QToolTip.showText(
+                e.globalPos(),
+                "<h3>Set Peek-Rectangle Size</h3>"
+                "Set the size of the peek-rectangle.",
+            )
+
+
+class TransparencySlider(QtWidgets.QSlider):
+    def enterEvent(self, e):
+        if self.window().showhelp is True:
+            QtWidgets.QToolTip.showText(
+                e.globalPos(),
+                "<h3>Set Peek-Overlay Transparency</h3>"
+                "Set the transparency of the peek-overlay.",
+            )
+
+
+class ButtonWidget(QtWidgets.QWidget):
+    def enterEvent(self, e):
+        if self.window().showhelp is True:
+            QtWidgets.QToolTip.showText(
+                e.globalPos(),
+                "<h3>Set Peek-Method</h3>"
+                "Set the method that is used to overlay the peek-layer."
+                "<ul>"
+                "<li><b>up/down/left/right:</b> show the layer from the map-boundary to the "
+                "mouse-position</li>"
+                "<li><b>rectangle:</b> show a rectangular region of the layer centered "
+                "at the mouse-position. <br>"
+                "(click twice to toggle between using a rectangular or square region!)"
+                "</li></ul>",
+            )
+
+
 class PeekMethodButtons(QtWidgets.QWidget):
     methodChanged = pyqtSignal(str)
 
@@ -39,9 +76,8 @@ class PeekMethodButtons(QtWidgets.QWidget):
             if method in ("rectangle", "square"):
                 self.rect_button.addWidget(b)
 
-        self.rectangle_slider = QtWidgets.QSlider(Qt.Horizontal)
+        self.rectangle_slider = RectangleSlider(Qt.Horizontal)
         self.rectangle_slider.valueChanged.connect(self.rectangle_sider_value_changed)
-        self.rectangle_slider.setToolTip("Rectangle size")
         self.rectangle_slider.setRange(2, 100)
         self.rectangle_slider.setSingleStep(1)
         self.rectangle_slider.setTickPosition(QtWidgets.QSlider.NoTicks)
@@ -52,9 +88,8 @@ class PeekMethodButtons(QtWidgets.QWidget):
         self.rectangle_slider.setSizePolicy(sp)
         self.set_rectangle_slider_stylesheet()
 
-        self.alphaslider = QtWidgets.QSlider(Qt.Horizontal)
+        self.alphaslider = TransparencySlider(Qt.Horizontal)
         self.alphaslider.valueChanged.connect(self.alpha_changed)
-        self.alphaslider.setToolTip("Overlay transparency")
         self.alphaslider.setRange(0, 100)
         self.alphaslider.setSingleStep(1)
         self.alphaslider.setTickPosition(QtWidgets.QSlider.NoTicks)
@@ -63,18 +98,20 @@ class PeekMethodButtons(QtWidgets.QWidget):
 
         # -------------------------
 
-        buttons = QtWidgets.QHBoxLayout()
-        buttons.setAlignment(Qt.AlignLeft | Qt.AlignTop)
-        buttons.addWidget(self.buttons["top"])
-        buttons.addWidget(self.buttons["bottom"])
-        buttons.addWidget(self.buttons["right"])
-        buttons.addWidget(self.buttons["left"])
-        buttons.addWidget(self.rect_button)
-        buttons.addWidget(self.rectangle_slider, 1)
+        buttonlayout = QtWidgets.QHBoxLayout()
+        buttonlayout.setAlignment(Qt.AlignLeft | Qt.AlignTop)
+        buttonlayout.addWidget(self.buttons["top"])
+        buttonlayout.addWidget(self.buttons["bottom"])
+        buttonlayout.addWidget(self.buttons["right"])
+        buttonlayout.addWidget(self.buttons["left"])
+        buttonlayout.addWidget(self.rect_button)
+        buttonlayout.addWidget(self.rectangle_slider, 1)
+        buttons = ButtonWidget()
+        buttons.setLayout(buttonlayout)
 
         layout = QtWidgets.QVBoxLayout()
 
-        layout.addLayout(buttons)
+        layout.addWidget(buttons)
         layout.addWidget(self.alphaslider)
         layout.setAlignment(Qt.AlignLeft | Qt.AlignCenter)
 
@@ -86,20 +123,6 @@ class PeekMethodButtons(QtWidgets.QWidget):
         self.rect_button.setCurrentWidget(self.buttons["square"])
 
         # self.buttons["rectangle"].setText(self.symbols_inverted["square"])
-
-    def enterEvent(self, e):
-        if self.window().showhelp is True:
-            QtWidgets.QToolTip.showText(
-                e.globalPos(),
-                "<h3>Peek Layer Controls</h3>"
-                "Select the peek-method and the transparency of the overlay."
-                "<ul>"
-                "<li>up/down/left/right: show the layer from the map-boundary to the "
-                "mouse-position</li>"
-                "<li>rectangle: show a rectangular region of the layer centered "
-                "at the mouse-position. "
-                "(use the slider to adjust the size of the rectangle)</li>",
-            )
 
     def button_clicked(self, method):
         def cb():

@@ -305,6 +305,21 @@ class EditLayoutButton(QtWidgets.QPushButton):
 
         self.clicked.connect(self.callback)
 
+    def enterEvent(self, e):
+        if self.window().showhelp is True:
+            QtWidgets.QToolTip.showText(
+                e.globalPos(),
+                "<h3>Layout Editor</h3>"
+                "Toggle the EOmaps LayoutEditor to re-arrange the position and size"
+                "of the axes in the figure."
+                "<ul>"
+                "<li>Pick axes with the mouse to drag the position.</li>"
+                "<li>Use the scroll-wheel while an axis is picked (e.g. green) to "
+                "change the size of the axis</li>"
+                "<li>Press <b>escape</b> to exit the LayoutEditor</li>"
+                "</ul>",
+            )
+
     def callback(self):
         if not self.m._layout_editor._modifier_pressed:
             self.m.edit_layout()

@@ -23,7 +23,7 @@ class SetExtentToLocation(QtWidgets.QWidget):
             QtWidgets.QToolTip.showText(
                 e.globalPos(),
                 "<h3>Location Query</h3>"
-                "Use the <p>OpenStreetMap Nominatim API</p> to query a location "
+                "Use the <b>OpenStreetMap Nominatim API</b> to query a location "
                 "and set the Map-extent to the bounding box of the found location."
                 "<p>"
                 "'location' can be a country-name, a city-name an address etc.",
