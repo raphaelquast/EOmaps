@@ -14,6 +14,9 @@ class AddFeaturesMenuButton(QtWidgets.QPushButton):
 
         self.m = m
 
+        # the layer to which features are added
+        self.layer = None
+
         self.props = dict(
             # alpha = 1,
             facecolor="r",
@@ -55,9 +58,17 @@ class AddFeaturesMenuButton(QtWidgets.QPushButton):
             lambda: feature_menu.popup(self.mapToGlobal(self.menu_button.pos()))
         )
 
+    def set_layer(self, layer):
+        self.layer = layer
+
     def menu_callback_factory(self, featuretype, feature):
         def cb():
-            layer = self.m.BM.bg_layer
+            # TODO set the layer !!!!
+            if self.layer is None:
+                layer = self.m.BM.bg_layer
+            else:
+                layer = self.layer
+
             if layer.startswith("_") and "|" in layer:
                 self.window().statusBar().showMessage(
                     "Adding features to temporary multi-layers is not supported!", 5000
@@ -234,21 +245,22 @@ class NewLayerWidget(QtWidgets.QFrame):
         self.new_layer_name.returnPressed.connect(self.new_layer)
 
         try:
-            addwms = AddWMSMenuButton(m=self.m, new_layer=False)
+            self.addwms = AddWMSMenuButton(m=self.m, new_layer=False)
         except:
-            addwms = QtWidgets.QPushButton("WMS services unavailable")
+            self.addwms = None
 
         newlayer = QtWidgets.QHBoxLayout()
         newlayer.setAlignment(Qt.AlignLeft)
 
-        newlayer.addWidget(addwms)
+        if self.addwms is not None:
+            newlayer.addWidget(self.addwms)
         newlayer.addStretch(1)
         newlayer.addWidget(self.new_layer_name)
 
-        addfeature = AddFeatureWidget(m=self.m)
+        # addfeature = AddFeatureWidget(m=self.m)
 
         layout = QtWidgets.QVBoxLayout()
-        layout.addWidget(addfeature)
+        # layout.addWidget(addfeature)
         layout.addLayout(newlayer)
         self.setLayout(layout)
 
@@ -277,11 +289,18 @@ class ArtistEditor(QtWidgets.QWidget):
 
         self.tabs = QtWidgets.QTabWidget()
 
-        newlayer = NewLayerWidget(m=self.m)
-        newlayer.new_layer_name.returnPressed.connect(self.populate)
+        self.newlayer = NewLayerWidget(m=self.m)
+        self.newlayer.new_layer_name.returnPressed.connect(self.populate)
+
+        self.addfeature = AddFeatureWidget(m=self.m)
+
+        topwidget = QtWidgets.QWidget()
+        topwidget.setLayout(QtWidgets.QVBoxLayout())
+        topwidget.layout().addWidget(self.addfeature)
+        topwidget.layout().addWidget(self.newlayer)
 
         splitter = QtWidgets.QSplitter(Qt.Vertical)
-        splitter.addWidget(newlayer)
+        splitter.addWidget(topwidget)
         splitter.addWidget(self.tabs)
         splitter.setStretchFactor(0, 0)
         splitter.setStretchFactor(1, 1)
@@ -305,6 +324,17 @@ class ArtistEditor(QtWidgets.QWidget):
 
         self.m.BM._on_add_bg_artist.append(self.populate)
         self.m.BM._on_remove_bg_artist.append(self.populate)
+
+        # connect a callback to update the layer of the feature-button
+        # with respect to the currently selected layer-tab
+        self.tabs.currentChanged.connect(self.set_layer)
+        self.set_layer()
+
+    def set_layer(self):
+        layer = self.tabs.tabText(self.tabs.currentIndex())
+        self.addfeature.selector.set_layer(layer)
+        if self.newlayer.addwms is not None:
+            self.newlayer.addwms.set_layer(layer)
 
     def close_handler(self, index):
         layer = self.tabs.tabText(index)

@@ -192,6 +192,7 @@ class AddWMSMenuButton(QtWidgets.QPushButton):
         self.m = m
         self._new_layer = new_layer
         self._show_layer = show_layer
+        self.layer = None
 
         self.wms_dict = {
             "OpenStreetMap": WMS_OSM,
@@ -224,6 +225,9 @@ class AddWMSMenuButton(QtWidgets.QPushButton):
 
         # set event-filter to avoid showing tooltips on hovver over QMenu items
         self.installEventFilter(StatusTipFilter(self))
+
+    def set_layer(self, layer):
+        self.layer = layer
 
     def populate_menu(self):
         self.sub_menus = dict()
@@ -302,22 +306,13 @@ class AddWMSMenuButton(QtWidgets.QPushButton):
                 action = self.sub_menus[wmsname].addAction(wmslayer)
                 action.triggered.connect(self.menu_callback_factory(wms, wmslayer))
         except:
-            self.window().statusBar().showMessage(
-                "There was a problem with the WMS: " + wmsname
-            )
+            print("There was a problem with the WMS: " + wmsname)
 
         self.window().statusBar().showMessage(
             f"Done fetching WMS layers for: {wmsname}"
         )
 
     def menu_callback_factory(self, wms, wmslayer):
-        layer = self.m.BM.bg_layer
-        if layer.startswith("_") and "|" in layer:
-            self.window().statusBar().showMessage(
-                "Adding features to temporary multi-layers is not supported!", 5000
-            )
-            return
-
         def wms_cb():
             if self._new_layer:
                 layer = wms.name + "_" + wmslayer
@@ -327,18 +322,19 @@ class AddWMSMenuButton(QtWidgets.QPushButton):
                 )
 
             else:
-                layer = self.m.BM.bg_layer
+                layer = self.layer
                 if layer.startswith("_") and "|" in layer:
                     self.window().statusBar().showMessage(
                         "Adding features to temporary multi-layers is not supported!",
                         5000,
                     )
 
-                layer = self.m.BM._bg_layer
-
             wms.do_add_layer(wmslayer, layer=layer)
-
             if self._show_layer:
                 self.m.show_layer(layer)
+            else:
+                self.m.BM._do_on_layer_change(layer)
+                if layer in self.m.BM._bg_layer.split("|"):
+                    self.m.redraw()
 
         return wms_cb
