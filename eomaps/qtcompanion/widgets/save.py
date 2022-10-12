@@ -4,7 +4,7 @@ from PyQt5.QtCore import Qt
 from .utils import EditLayoutButton
 
 
-class SaveFileWidget(QtWidgets.QWidget):
+class SaveFileWidget(QtWidgets.QFrame):
     def __init__(self, *args, m=None, **kwargs):
         super().__init__(*args, **kwargs)
         self.m = m
@@ -49,6 +49,14 @@ class SaveFileWidget(QtWidgets.QWidget):
         layout.setAlignment(Qt.AlignBottom)
 
         self.setLayout(layout)
+        self.setStyleSheet(
+            """
+                           SaveFileWidget{
+                               border: 1px solid rgb(200,200,200);
+                               border-radius: 10px;
+                               };
+                           """
+        )
 
     def save_file(self):
         savepath = QtWidgets.QFileDialog.getSaveFileName()[0]
