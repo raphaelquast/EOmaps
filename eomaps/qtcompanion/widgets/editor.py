@@ -106,6 +106,34 @@ class AddFeaturesMenuButton(QtWidgets.QPushButton):
         return cb
 
 
+class ZorderInput(QtWidgets.QLineEdit):
+    def enterEvent(self, e):
+        if self.window().showhelp is True:
+            QtWidgets.QToolTip.showText(
+                e.globalPos(),
+                "<h3>Zorder</h3> Set the zorder of the feature (e.g. the vertical "
+                "stacking order with respect to other artists)",
+            )
+
+
+class TransparencySlider(AlphaSlider):
+    def enterEvent(self, e):
+        if self.window().showhelp is True:
+            QtWidgets.QToolTip.showText(
+                e.globalPos(),
+                "<h3>Facecolor Transparency</h3> "
+                "Set the transparency for the facecolor of the feature.",
+            )
+
+
+class LinewidthSlider(AlphaSlider):
+    def enterEvent(self, e):
+        if self.window().showhelp is True:
+            QtWidgets.QToolTip.showText(
+                e.globalPos(), "<h3>Linewidth</h3> Set the linewidth of the feature"
+            )
+
+
 class AddFeatureWidget(QtWidgets.QFrame):
     def __init__(self, m=None):
 
@@ -120,22 +148,20 @@ class AddFeatureWidget(QtWidgets.QFrame):
         self.colorselector = GetColorWidget()
         self.colorselector.cb_colorselected = self.update_on_color_selection
 
-        self.alphaslider = AlphaSlider(Qt.Horizontal)
+        self.alphaslider = TransparencySlider(Qt.Horizontal)
         self.alphaslider.valueChanged.connect(
             lambda i: self.colorselector.set_alpha(i / 100)
         )
         self.alphaslider.valueChanged.connect(self.update_props)
-        self.alphaslider.setToolTip("facecolor opacity")
 
-        self.linewidthslider = AlphaSlider(Qt.Horizontal)
+        self.linewidthslider = LinewidthSlider(Qt.Horizontal)
         self.linewidthslider.valueChanged.connect(
             lambda i: self.colorselector.set_linewidth(i / 10)
         )
         self.linewidthslider.valueChanged.connect(self.update_props)
-        self.linewidthslider.setToolTip("linewidth")
         self.set_linewidth_slider_stylesheet()
 
-        self.zorder = QtWidgets.QLineEdit("0")
+        self.zorder = ZorderInput("0")
         validator = QtGui.QIntValidator()
         self.zorder.setValidator(validator)
         self.zorder.setMaximumWidth(30)

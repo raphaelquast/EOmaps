@@ -206,6 +206,15 @@ class GetColorWidget(QtWidgets.QFrame):
             """
         )
 
+    def enterEvent(self, e):
+        if self.window().showhelp is True:
+            QtWidgets.QToolTip.showText(
+                e.globalPos(),
+                "<h3>Facecolor / Edgecolor</h3>"
+                "<ul><li><b>click</b> to set the facecolor</li>"
+                "<li><b>alt+click</b> to set the edgecolor</li></ul>",
+            )
+
     def resizeEvent(self, e):
         # make frame rectangular
         self.setMaximumHeight(self.width())
@@ -346,8 +355,6 @@ class AlphaSlider(QtWidgets.QSlider):
         )
 
         self.valueChanged.connect(self.value_changed)
-
-        self.setToolTip("Opacity")
 
         s = 14
         self.setStyleSheet(
