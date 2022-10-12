@@ -132,7 +132,7 @@ class AutoUpdateLayerMenuButton(QtWidgets.QPushButton):
                 "Select the currently visible layer."
                 "<p>"
                 "<ul>"
-                "<li><b>control</b>+click to select multiple layers!</li>"
+                "<li><b>control+click</b> to select multiple layers!</li>"
                 "</ul>",
             )
 

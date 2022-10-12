@@ -313,8 +313,8 @@ class MyTabWidget(QtWidgets.QTabWidget):
                 "Each tab represents a layer of the map."
                 "The tab-entries show all individual artists of the selected layer."
                 "<ul>"
-                "<li><b>control</b>+click on a tab to make it the visible layer.</li>"
-                "<li><b>shift</b>+click on tabs to make multiple layers visible.</li>"
+                "<li><b>control+click</b> on a tab to make it the visible layer.</li>"
+                "<li><b>shift+click</b> on tabs to make multiple layers visible.</li>"
                 "</ul>"
                 "Feature and WebMap artists created with the controls above are always "
                 "added to the <b>currently selected tab</b> (NOT the visible layer)!",

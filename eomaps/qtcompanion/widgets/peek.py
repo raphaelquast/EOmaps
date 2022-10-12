@@ -18,7 +18,7 @@ class RectangleSlider(QtWidgets.QSlider):
         if self.window().showhelp is True:
             QtWidgets.QToolTip.showText(
                 e.globalPos(),
-                "<h3>Peek-Rectangle Size</h3>" "Set the size of the peek-rectangle.",
+                "<h3>Peek-Rectangle Size</h3> Set the size of the peek-rectangle.",
             )
 
 
