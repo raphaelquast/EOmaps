@@ -58,6 +58,20 @@ class AddFeaturesMenuButton(QtWidgets.QPushButton):
             lambda: feature_menu.popup(self.mapToGlobal(self.menu_button.pos()))
         )
 
+    def enterEvent(self, e):
+        if self.window().showhelp is True:
+            QtWidgets.QToolTip.showText(
+                e.globalPos(),
+                "<h3>NaturalEarth Features</h3>"
+                "Add NaturalEarth features to the map."
+                "The feature will be added to the <b>currently selected tab</b> "
+                "in the tab-bar below."
+                "<p>"
+                "NOTE: this is not necessarily the visible layer!",
+            )
+
+        super().enterEvent(e)
+
     def set_layer(self, layer):
         self.layer = layer
 
@@ -231,6 +245,17 @@ class AddFeatureWidget(QtWidgets.QFrame):
         )
 
 
+class NewLayerLineEdit(QtWidgets.QLineEdit):
+    def enterEvent(self, e):
+        if self.window().showhelp is True:
+            QtWidgets.QToolTip.showText(
+                e.globalPos(),
+                "<h3>New Layer</h3>"
+                "Enter a layer-name and press <b>enter</b> to create"
+                "a new (empty) layer on the map!",
+            )
+
+
 class NewLayerWidget(QtWidgets.QFrame):
     def __init__(self, *args, m=None, **kwargs):
 
@@ -238,7 +263,7 @@ class NewLayerWidget(QtWidgets.QFrame):
 
         self.m = m
 
-        self.new_layer_name = QtWidgets.QLineEdit()
+        self.new_layer_name = NewLayerLineEdit()
         self.new_layer_name.setMaximumWidth(300)
         self.new_layer_name.setPlaceholderText("Create a new layer")
 
@@ -279,6 +304,23 @@ class NewLayerWidget(QtWidgets.QFrame):
         return m2
 
 
+class MyTabWidget(QtWidgets.QTabWidget):
+    def enterEvent(self, e):
+        if self.window().showhelp is True:
+            QtWidgets.QToolTip.showText(
+                e.globalPos(),
+                "<h3>Layers and Artists</h3>"
+                "Each tab represents a layer of the map."
+                "The tab-entries show all individual artists of the selected layer."
+                "<ul>"
+                "<li><b>control</b>+click on a tab to make it the visible layer.</li>"
+                "<li><b>shift</b>+click on tabs to make multiple layers visible.</li>"
+                "</ul>"
+                "Feature and WebMap artists created with the controls above are always "
+                "added to the <b>currently selected tab</b> (NOT the visible layer)!",
+            )
+
+
 class ArtistEditor(QtWidgets.QWidget):
     def __init__(self, m=None):
 
@@ -287,7 +329,7 @@ class ArtistEditor(QtWidgets.QWidget):
         self.m = m
         self._hidden_artists = dict()
 
-        self.tabs = QtWidgets.QTabWidget()
+        self.tabs = MyTabWidget()
 
         self.newlayer = NewLayerWidget(m=self.m)
         self.newlayer.new_layer_name.returnPressed.connect(self.populate)

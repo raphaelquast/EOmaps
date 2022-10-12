@@ -2,7 +2,7 @@ from PyQt5 import QtWidgets
 from PyQt5.QtCore import Qt
 
 
-class AutoUpdateLayerDropdown(QtWidgets.QComboBox):
+class AutoUpdatePeekLayerDropdown(QtWidgets.QComboBox):
     def __init__(
         self,
         *args,
@@ -32,6 +32,18 @@ class AutoUpdateLayerDropdown(QtWidgets.QComboBox):
         self.setSizeAdjustPolicy(self.AdjustToContents)
 
         self.activated.connect(self.set_last_active)
+
+    def enterEvent(self, e):
+        if self.window().showhelp is True:
+            QtWidgets.QToolTip.showText(
+                e.globalPos(),
+                "<h3>Peek Layer</h3>"
+                "Select a layer to peek on."
+                "<p>"
+                "An overlay of the selected layer will be printed on top of the "
+                "currently visible layer. The controls on the side can be used to "
+                "select the peek-method as well as the transparency of the overlay.",
+            )
 
     def set_last_active(self):
         self._last_active = self.currentText()
@@ -104,8 +116,6 @@ class AutoUpdateLayerMenuButton(QtWidgets.QPushButton):
 
         self._last_layers = []
 
-        self.checked_layers = []
-
         menu = QtWidgets.QMenu()
         menu.aboutToShow.connect(self.update_layers)
         self.setMenu(menu)
@@ -114,7 +124,17 @@ class AutoUpdateLayerMenuButton(QtWidgets.QPushButton):
         self.m.BM.on_layer(self.update_visible_layer, persistent=True)
         self.update_layers()
 
-        self.setToolTip("Use (control + click) to select multiple layers!")
+    def enterEvent(self, e):
+        if self.window().showhelp is True:
+            QtWidgets.QToolTip.showText(
+                e.globalPos(),
+                "<h3>Visible Layer</h3>"
+                "Select the currently visible layer."
+                "<p>"
+                "<ul>"
+                "<li><b>control</b>+click to select multiple layers!</li>"
+                "</ul>",
+            )
 
     def get_uselayer(self):
         active_layers = []
@@ -171,12 +191,12 @@ class AutoUpdateLayerMenuButton(QtWidgets.QPushButton):
     def update_visible_layer(self, m, l):
         # make sure to re-fetch layers first
         self.update_layers()
-
         self.update_display_text(l)
 
-        self.checked_layers = sorted([i for i in l.split("|") if i != "_"])
-
     def actionClicked(self):
+
+        checked_layers = [l for l in self.m.BM.bg_layer.split("|") if l != "_"]
+
         # check if a keyboard modifier is pressed
         modifiers = QtWidgets.QApplication.keyboardModifiers()
 
@@ -186,36 +206,35 @@ class AutoUpdateLayerMenuButton(QtWidgets.QPushButton):
             return
 
         actionwidget = action.defaultWidget()
-        text = action.text()
+        selected_layer = action.text()
+        selected_layers = [l for l in action.text().split("|") if l != "_"]
 
         # if no relevant modifier is pressed, just select single layers!
         if not (modifiers == Qt.ShiftModifier or modifiers == Qt.ControlModifier):
-
-            self.m.show_layer(text)
-            self.checked_layers = [text]
+            self.m.show_layer(selected_layer)
             return
 
         if isinstance(actionwidget, QtWidgets.QCheckBox):
             if actionwidget.isChecked():
-                for l in (i for i in text.split("|") if i != "_"):
-                    if l not in self.checked_layers:
-                        self.checked_layers.append(l)
+                for l in selected_layers:
+                    if l not in checked_layers:
+                        checked_layers.append(l)
             else:
-                if text in self.checked_layers:
-                    self.checked_layers.remove(text)
+                for l in selected_layers:
+                    if l in checked_layers and len(checked_layers) > 1:
+                        checked_layers.remove(l)
 
             uselayer = "???"
-            if len(self.checked_layers) > 1:
-                uselayer = "_|" + "|".join(sorted(self.checked_layers))
-            elif len(self.checked_layers) == 1:
-                uselayer = self.checked_layers[0]
+            if len(checked_layers) > 1:
+                uselayer = "_|" + "|".join(sorted(checked_layers))
+            elif len(checked_layers) == 1:
+                uselayer = checked_layers[0]
 
             # collect all checked items and set the associated layer
             if uselayer != "???":
                 self.m.show_layer(uselayer)
         else:
-            self.m.show_layer(text)
-            self.checked_layers = []
+            self.m.show_layer(selected_layer)
 
     def update_checkstatus(self):
         currlayer = str(self.m.BM.bg_layer)

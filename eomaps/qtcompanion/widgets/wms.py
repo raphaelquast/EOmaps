@@ -226,6 +226,26 @@ class AddWMSMenuButton(QtWidgets.QPushButton):
         # set event-filter to avoid showing tooltips on hovver over QMenu items
         self.installEventFilter(StatusTipFilter(self))
 
+    def enterEvent(self, e):
+        if self.window().showhelp is True:
+            if self._new_layer:
+                QtWidgets.QToolTip.showText(
+                    e.globalPos(),
+                    "<h3>New WebMap Layer</h3>"
+                    "Create a new layer (<i>''service_layer''</i>) and add the "
+                    "selected WebMap service to it.",
+                )
+            else:
+                QtWidgets.QToolTip.showText(
+                    e.globalPos(),
+                    "<h3>Add WebMap Service</h3>"
+                    "Add the selected WebMap service to the "
+                    "<b>currently selected layer-tab</b> "
+                    "in the tab-bar below."
+                    "<p>"
+                    "NOTE: This is not necessarily the currently visible layer!",
+                )
+
     def set_layer(self, layer):
         self.layer = layer
 

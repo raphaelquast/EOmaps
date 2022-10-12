@@ -1,7 +1,7 @@
 from PyQt5 import QtWidgets, QtGui
 from PyQt5.QtCore import Qt, pyqtSignal, QSize
 
-from .layer import AutoUpdateLayerDropdown, AutoUpdateLayerMenuButton
+from .layer import AutoUpdatePeekLayerDropdown, AutoUpdateLayerMenuButton
 from ..common import iconpath
 
 peek_methods = ("top", "bottom", "left", "right", "rectangle", "square")
@@ -86,6 +86,20 @@ class PeekMethodButtons(QtWidgets.QWidget):
         self.rect_button.setCurrentWidget(self.buttons["square"])
 
         # self.buttons["rectangle"].setText(self.symbols_inverted["square"])
+
+    def enterEvent(self, e):
+        if self.window().showhelp is True:
+            QtWidgets.QToolTip.showText(
+                e.globalPos(),
+                "<h3>Peek Layer Controls</h3>"
+                "Select the peek-method and the transparency of the overlay."
+                "<ul>"
+                "<li>up/down/left/right: show the layer from the map-boundary to the "
+                "mouse-position</li>"
+                "<li>rectangle: show a rectangular region of the layer centered "
+                "at the mouse-position. "
+                "(use the slider to adjust the size of the rectangle)</li>",
+            )
 
     def button_clicked(self, method):
         def cb():
@@ -197,6 +211,18 @@ class PeekMethodButtons(QtWidgets.QWidget):
             self.how = method
 
 
+class ModifierInput(QtWidgets.QLineEdit):
+    def enterEvent(self, e):
+        if self.window().showhelp is True:
+            QtWidgets.QToolTip.showText(
+                e.globalPos(),
+                "<h3>Peek Layer Modifier</h3>"
+                "Assign a keyboard-modifier to the peek-callback. "
+                "If used, the peek-callback will <b>only</b> be executed if the "
+                "corresponding button is pressed on the keyboard!",
+            )
+
+
 class PeekLayerWidget(QtWidgets.QWidget):
     def __init__(
         self, *args, m=None, layers=None, exclude=None, how=(0.5, 0.5), **kwargs
@@ -227,7 +253,7 @@ class PeekLayerWidget(QtWidgets.QWidget):
         self.cid = None
         self.current_layer = None
 
-        self.layerselector = AutoUpdateLayerDropdown(
+        self.layerselector = AutoUpdatePeekLayerDropdown(
             m=self.m, layers=layers, exclude=exclude
         )
         self.layerselector.update_layers()  # do this before attaching the callback!
@@ -238,7 +264,7 @@ class PeekLayerWidget(QtWidgets.QWidget):
         self.buttons.methodChanged.connect(self.method_changed)
 
         modifier_label = QtWidgets.QLabel("Modifier:")
-        self.modifier = QtWidgets.QLineEdit()
+        self.modifier = ModifierInput()
         self.modifier.setMaximumWidth(50)
         self.modifier.textChanged.connect(self.method_changed)
 
@@ -345,6 +371,21 @@ class PeekTabs(QtWidgets.QTabWidget):
 
         self.tabBarClicked.connect(self.tabbar_clicked)
         self.setCurrentIndex(0)
+
+    def enterEvent(self, e):
+        if self.window().showhelp is True:
+            QtWidgets.QToolTip.showText(
+                e.globalPos(),
+                "<h3>Peek Layer Tabs</h3>"
+                "Each tab represents a peek-layer callback for the map. "
+                "Click on the '+' to create a new tab. "
+                "The tabs can be used to specify multiple peek callbacks "
+                "to quickly compare several different layers."
+                "<p>"
+                "Assign <b>modifiers</b> to the individual peek-callbacks to "
+                "switch between the peek-callbacks by holding the corresponding keys"
+                "on the keyboard.",
+            )
 
     def tabbar_clicked(self, index):
         if self.tabText(index) == "+":

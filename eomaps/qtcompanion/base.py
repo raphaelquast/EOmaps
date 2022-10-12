@@ -39,6 +39,13 @@ class ToolBar(QtWidgets.QToolBar):
         self.b_minmax.setText("🗖")
         self.b_minmax.clicked.connect(self.maximize_button_callback)
 
+        self.b_showhelp = QtWidgets.QToolButton()
+        self.b_showhelp.setText("?")
+        self.b_showhelp.setCheckable(True)
+        self.b_showhelp.setAutoRaise(True)
+        self.b_showhelp.toggled.connect(self.toggle_show_help)
+        self.b_showhelp.setToolTip("Toggle showing help-tooltips.")
+
         if left_widget:
             self.addWidget(left_widget)
 
@@ -48,6 +55,8 @@ class ToolBar(QtWidgets.QToolBar):
             self.addWidget(get_dummy_spacer())
             self.addWidget(titlewidget)
 
+        self.addWidget(self.b_showhelp)
+
         self.addWidget(get_dummy_spacer())
 
         if m is not None:
@@ -55,6 +64,7 @@ class ToolBar(QtWidgets.QToolBar):
 
             showlayer = AutoUpdateLayerMenuButton(m=self.m)
             self.addWidget(showlayer)
+
         self.addWidget(logolabel)
         self.addWidget(self.b_minmax)
         self.addWidget(b_close)
@@ -69,6 +79,14 @@ class ToolBar(QtWidgets.QToolBar):
         self.setContentsMargins(0, 0, 0, 0)
 
         self.press_pos = None
+
+    def toggle_show_help(self):
+        if self.b_showhelp.isChecked():
+            self.window().showhelp = True
+            self.b_showhelp.setText("Help tooltips active!")
+        else:
+            self.window().showhelp = False
+            self.b_showhelp.setText("?")
 
     def close_button_callback(self):
         self.window().close()

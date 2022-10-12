@@ -93,6 +93,10 @@ class MenuWindow(transparentWindow):
         # to show the layer-selector!
         self.m = m
 
+        # indicator if help-tooltips should be displayed or not
+        # (toggled by a toolbar checkbox)
+        self.showhelp = False
+
         super().__init__(*args, m=self.m, **kwargs)
 
         # clear the colormaps-dropdown pixmap cache if the colormaps have changed
