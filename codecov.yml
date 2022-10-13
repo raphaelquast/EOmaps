@@ -1,4 +1,6 @@
 coverage:
+  ignore:
+    - "eomaps/qtcompanion" # ignore qtcompanion gui for now (it's untested)
   status:
     project:
       default:

@@ -1007,11 +1007,12 @@ class BlitManager:
                 action(self._on_layer_change[action], layer)
 
         # individual callables executed if a specific layer is activated
-        activate_action = self._on_layer_activation.get(layer, None)
-        if activate_action is not None:
-            actions = list(activate_action)
-            for action in actions:
-                action(activate_action[action], layer)
+        for l in layer.split("|"):
+            activate_action = self._on_layer_activation.get(l, None)
+            if activate_action is not None:
+                actions = list(activate_action)
+                for action in actions:
+                    action(activate_action[action], l)
 
     @property
     def bg_layer(self):
@@ -1027,6 +1028,8 @@ class BlitManager:
         # a general callable to be called on every layer change
         self._do_on_layer_change(layer=val)
 
+        layer_names = val.split("|")
+
         # hide all colorbars that are not no the visible layer
         for m in [self._m.parent, *self._m.parent._children]:
             if getattr(m, "_colorbar", None) is not None:
@@ -1040,7 +1043,7 @@ class BlitManager:
                     orientation,
                     cb,
                 ] = m._colorbar
-                if layer not in val.split("|"):
+                if layer not in layer_names:
                     ax_cb.set_visible(False)
                     ax_cb_plot.set_visible(False)
                     if ax_cb_extend:
@@ -1054,7 +1057,7 @@ class BlitManager:
         # hide all wms_legends that are not on the visible layer
         if hasattr(self._m.parent, "_wms_legend"):
             for layer, legends in self._m.parent._wms_legend.items():
-                if self._bg_layer == layer:
+                if layer in layer_names:
                     for i in legends:
                         i.set_visible(True)
                 else:

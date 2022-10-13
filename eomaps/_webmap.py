@@ -82,11 +82,10 @@ class _WebMap_layer:
 
         print(f"\n LEGEND available: {legQ}\n\n" + txt)
 
-    def fetch_legend(self, style=None):
+    def fetch_legend(self, style=None, silent=True):
         if style is None:
             style = self._style
         try:
-
             url = self.wms_layer.styles[style]["legend"]
             legend = requests.get(url)
 
@@ -98,16 +97,18 @@ class _WebMap_layer:
 
                 except ImportError:
                     warn("EOmaps: the legend is '.svg'... please install 'cairosvg'")
+                    return None
             else:
                 img = legend.content
 
             img = Image.open(BytesIO(img))
         except Exception:
-            warn("EOmaps: could not fetch the legend")
-            img = None
+            if not silent:
+                warn("EOmaps: could not fetch the legend")
+            return None
         return img
 
-    def add_legend(self, style=None):
+    def add_legend(self, style=None, img=None):
         """
         Add a legend to the plot (if available)
 
@@ -119,7 +120,8 @@ class _WebMap_layer:
         ----------
         style : str, optional
             The style to use. The default is "default".
-
+        img : BytesIO
+            A pre-fetched legend (if provided the "style" kwarg is ignored!)
         Returns
         -------
         legax : matpltolib.axes
@@ -132,9 +134,18 @@ class _WebMap_layer:
             style = self._style
 
         self._legend_picked = False
+        if img is None:
+            legend = self.fetch_legend()
+        else:
+            legend = img
 
-        legend = self.fetch_legend()
         if legend is not None:
+            if not hasattr(self, "_layer"):
+                # use the currently active layer if the webmap service has not yet
+                # been added to the map
+                print("EOmaps: The WebMap for the legend is not yet added to the map!")
+                self._layer = self._m.BM._bg_layer
+
             axpos = self._m.figure.ax.get_position()
             legax = self._m.figure.f.add_axes((axpos.x0, axpos.y0, 0.25, 0.5))
 
@@ -145,6 +156,10 @@ class _WebMap_layer:
             legax.set_frame_on(False)
             legax.set_aspect(1, anchor="SW")
             legax.imshow(legend)
+
+            # hide the legend if the corresponding layer is not active at the moment
+            if self._layer not in self._m.BM._bg_layer.split("|"):
+                legax.set_visible(False)
 
             self._m.BM.add_artist(legax)
 
@@ -186,6 +201,8 @@ class _WebMap_layer:
                     legax.set_frame_on(False)
                     self._legend_picked = False
 
+            # TODO add keypress callback to remove legend!
+
             def cb_scroll(event):
                 if not self._legend_picked:
                     return
@@ -209,11 +226,6 @@ class _WebMap_layer:
             self._m.figure.f.canvas.mpl_connect("button_release_event", cb_release)
             self._m.figure.f.canvas.mpl_connect("motion_notify_event", cb_move)
 
-            if not hasattr(self, "_layer"):
-                # use the currently active layer if the webmap service has not yet
-                # been added to the map
-                print("EOmaps: The WebMap for the legend is not yet added to the map!")
-                self._layer = self._m.BM._bg_layer
             self._m.parent._wms_legend.setdefault(self._layer, list()).append(legax)
 
             self._m.BM.update()
@@ -378,9 +390,9 @@ class _wmts_layer(_WebMap_layer):
     # for SlippyImageArtist
     @staticmethod
     def _add_wmts(ax, wms, layers, wms_kwargs=None, **kwargs):
-        from cartopy.io.ogc_clients import WMSRasterSource
+        from cartopy.io.ogc_clients import WMTSRasterSource
 
-        wms = WMSRasterSource(wms, layers, getmap_extra_kwargs=wms_kwargs)
+        wms = WMTSRasterSource(wms, layers, gettile_extra_kwargs=wms_kwargs)
 
         # Allow a fail-fast error if the raster source cannot provide
         # images in the current projection.
@@ -399,13 +411,6 @@ class _wmts_layer(_WebMap_layer):
             m.ax, self._wms, self.name, interpolation="spline36", **kwargs
         )
 
-        # art = m.figure.ax.add_wmts(
-        #     self._wms,
-        #     self.name,
-        #     wmts_kwargs=kwargs,
-        #     interpolation="spline36",
-        #     zorder=zorder,
-        # )
         m.BM.add_bg_artist(art, l)
 
 

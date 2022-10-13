@@ -11,6 +11,8 @@ import weakref
 from tempfile import TemporaryDirectory, TemporaryFile
 import gc
 import json
+import requests
+from textwrap import fill
 
 import numpy as np
 
@@ -127,6 +129,7 @@ from .reader import read_file, from_file, new_layer_from_file
 
 from .utilities import utilities
 
+from ._version import __version__
 
 if plt.isinteractive():
     if plt.get_backend() == "module://ipympl.backend_nbagg":
@@ -221,11 +224,20 @@ class Maps(object):
         Set the preferred way for accessing WebMap services if both WMS and WMTS
         capabilities are possible.
         The default is "wms"
-
     kwargs :
         additional kwargs are passed to matplotlib.pyplot.figure()
         - e.g. figsize=(10,5)
+
+    Attributes
+    ----------
+
+    CRS : Accessor for available projections (Supercharged version of cartopy.crs)
+    CLASSIFIERS : Accessor for available classifiers (provided by mapclassify)
+    _companion_widget_key : Keyboard shortcut assigned to show/hide the companion-widget.
+
     """
+
+    __version__ = __version__
 
     CRS = ccrs
     CRS.Equi7Grid_projection = Equi7Grid_projection
@@ -260,6 +272,8 @@ class Maps(object):
 
     CLASSIFIERS = SimpleNamespace(**dict(zip(_classifiers, _classifiers)))
 
+    _companion_widget_key = "w"
+
     def __init__(
         self,
         crs=None,
@@ -289,7 +303,8 @@ class Maps(object):
 
         self._layer = layer
 
-        self._widget = None  # slot for the pyqt widget
+        self._companion_widget = None  # slot for the pyqt widget
+        self._cid_companion_key = None  # callback id for the companion-cb
         # a list to remember newly registered colormaps
         self._registered_cmaps = []
 
@@ -371,6 +386,10 @@ class Maps(object):
         if not hasattr(self.parent, "_wms_legend"):
             self.parent._wms_legend = dict()
 
+        if self.parent == self and self._cid_companion_key is None:
+            # attach the Qt companion widget
+            self._add_companion_cb(show_hide_key=self._companion_widget_key)
+
     def __enter__(self):
         return self
 
@@ -393,6 +412,61 @@ class Maps(object):
             )
         else:
             return object.__getattribute__(self, key)
+
+    def _add_companion_cb(self, show_hide_key="w"):
+        # attach a callback to show/hide the window with the "w" key
+        def cb(*args, **kwargs):
+            if self._companion_widget is None:
+                print("EOmaps: Initializing companion-widget...")
+                self._init_companion_widget()
+
+            if self._companion_widget is not None:
+                if self._companion_widget.isVisible():
+                    self._companion_widget.hide()
+                else:
+                    self._companion_widget.show()
+
+        self._cid_companion_key = self.all.cb.keypress.attach(cb, key=show_hide_key)
+
+    def _init_companion_widget(self, show_hide_key="w"):
+        """
+        Create and show the EOmaps Qt companion widget.
+
+        Note
+        ----
+        The companion-widget requires using matplotlib with the Qt5Agg backend!
+        To activate, use: `plt.switch_backend("Qt5Agg")`
+
+        Parameters
+        ----------
+        show_hide_key : str or None, optional
+            The keyboard-shortcut that is assigned to show/hide the widget.
+            The default is "w".
+        """
+
+        try:
+            if plt.get_backend() not in ["Qt5Agg", "QtAgg"]:
+                print(
+                    "EOmaps: Using m.open_widget() is only possible if you use matplotlibs"
+                    + f" 'Qt5Agg' backend! (active backend: '{plt.get_backend()}')"
+                )
+                return
+
+            from .qtcompanion.app import MenuWindow
+
+            if self._companion_widget is not None:
+                print(
+                    "EOmaps: There is already an existing companinon widget for this"
+                    " Maps-object!"
+                )
+                return
+
+            self._companion_widget = MenuWindow(m=self)
+            # make sure that we clear the colormap-pixmap cache on startup
+            self._companion_widget.cmapsChanged.emit()
+
+        except Exception:
+            print("EOmaps: Unable to initialize companion widget.")
 
     @staticmethod
     def _proxy(obj):
@@ -978,6 +1052,10 @@ class Maps(object):
         # delete the tempfolder containing the memmaps
         if hasattr(self.parent, "_tmpfolder"):
             self.parent._tmpfolder.cleanup()
+
+        # close the pyqt widget if there is one
+        if self._companion_widget is not None:
+            self._companion_widget.close()
 
         # de-register colormaps
         for cmap in self._registered_cmaps:
@@ -1797,6 +1875,8 @@ class Maps(object):
             )
 
             plt.register_cmap(name=cmapname, cmap=cbcmap)
+            if self._companion_widget is not None:
+                self._companion_widget.cmapsChanged.emit()
             # remember registered colormaps (to de-register on close)
             self._registered_cmaps.append(cmapname)
 
@@ -3973,8 +4053,8 @@ class Maps(object):
             )
 
             plt.register_cmap(name=cmapname, cmap=kwargs["cmap"])
-            if self._widget is not None:
-                self._widget.cmapsChanged.emit()
+            if self._companion_widget is not None:
+                self._companion_widget.cmapsChanged.emit()
             # remember registered colormaps (to de-register on close)
             self._registered_cmaps.append(cmapname)
 
@@ -5067,6 +5147,91 @@ class Maps(object):
 
         """
         self._layout_editor._make_draggable(filepath=filepath)
+
+    @lru_cache()
+    def _get_nominatim_response(self, q, user_agent=None):
+        print(f"Querying {q}")
+        if user_agent is None:
+            user_agent = f"EOMaps v{Maps.__version__}"
+
+        headers = {
+            "User-Agent": user_agent,
+        }
+
+        resp = requests.get(
+            rf"https://nominatim.openstreetmap.org/search/{q}?format=json&addressdetails=1&limit=1",
+            headers=headers,
+        ).json()
+
+        if len(resp) == 0:
+            raise TypeError(f"Unable to resolve the location: {q}")
+
+        return resp[0]
+
+    def set_extent_to_location(self, location, annotate=False, user_agent=None):
+        """
+        Set the map-extent based on a given location string.
+        The bounding-box is hereby resolved via the OpenStreetMap Nominatim service.
+
+        Note
+        ----
+        The OSM Nominatim service has a strict usage policy that explicitly
+        disallows "heavy usage" (e.g.: an absolute maximum of 1 request per second).
+
+        EOMaps caches requests so using a location multiple times in the same
+        session does not cause multiple requests!
+
+        For more details, see:
+            https://operations.osmfoundation.org/policies/nominatim/
+            https://openstreetmap.org/copyright
+
+        Parameters
+        ----------
+        location : str
+            An arbitrary string used to identify the region of interest.
+            (e.g. a country, district, address etc.)
+
+            For example:
+                "Austria", "Vienna"
+
+        annotate : bool, optional
+            Indicator if an annotation should be added to the center of the identified
+            location or not. The default is False.
+        user_agent: str, optional
+            The user-agent used for the Nominatim request
+
+        Examples
+        --------
+
+        >>> m = Maps()
+        >>> m.set_extent_to_location("Austria")
+        >>> m.add_feature.preset.countries()
+
+        >>> m = Maps(Maps.CRS.GOOGLE_MERCATOR)
+        >>> m.set_extent_to_location("Vienna")
+        >>> m.add_wms.OpenStreetMap.add_layer.default()
+
+        """
+        r = self._get_nominatim_response(location)
+
+        # get bbox of found location
+        lon0, lon1, lat0, lat1 = map(float, r["boundingbox"])
+
+        # set extent to found bbox
+        self.ax.set_extent((lat0, lat1, lon0, lon1), crs=Maps.CRS.PlateCarree())
+
+        # add annotation
+        if annotate is not False:
+            if isinstance(annotate, str):
+                text = annotate
+            else:
+                text = fill(r["display_name"], 20)
+
+            self.add_annotation(
+                xy=(r["lon"], r["lat"]), xy_crs=4326, text=text, fontsize=8
+            )
+        else:
+            print("Centering Map to:\n    ", r["display_name"])
 
 
 class _InsetMaps(Maps):
