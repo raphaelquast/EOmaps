@@ -1107,6 +1107,26 @@ class OpenDataStartTab(QtWidgets.QWidget):
 
         self.setAcceptDrops(True)
 
+    def enterEvent(self, e):
+        if self.window().showhelp is True:
+            QtWidgets.QToolTip.showText(
+                e.globalPos(),
+                "<h3>Plot Data from Files</h3>"
+                "Simply drag-and-drop one of the supported filetypes to get a new "
+                "window where you can specify how you want to visualize your data."
+                "<p>"
+                "<b>NOTE:</b> This capability is primarily intended as an easy way to "
+                "get a <i>quick-look</i> at your results."
+                "<p>"
+                "Some additional notes:"
+                "<ul>"
+                "<li>Make sure that the projection of the data-coordinates "
+                "has been identified correctly prior to plotting!</li>"
+                "<li>Be aware that re-projecting large datasets might take quite some "
+                "time and can require a lot of memory!</li>"
+                "</ul>",
+            )
+
 
 class OpenFileTabs(QtWidgets.QTabWidget):
     def __init__(self, *args, m=None, **kwargs):
