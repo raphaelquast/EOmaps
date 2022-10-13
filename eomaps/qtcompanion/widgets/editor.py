@@ -111,8 +111,8 @@ class ZorderInput(QtWidgets.QLineEdit):
         if self.window().showhelp is True:
             QtWidgets.QToolTip.showText(
                 e.globalPos(),
-                "<h3>Zorder</h3> Set the zorder of the feature (e.g. the vertical "
-                "stacking order with respect to other artists)",
+                "<h3>Zorder</h3> Set the zorder of the artist (e.g. the vertical "
+                "stacking order with respect to other artists in the figure)",
             )
 
 
@@ -131,6 +131,44 @@ class LinewidthSlider(AlphaSlider):
         if self.window().showhelp is True:
             QtWidgets.QToolTip.showText(
                 e.globalPos(), "<h3>Linewidth</h3> Set the linewidth of the feature"
+            )
+
+
+class RemoveArtistToolButton(QtWidgets.QToolButton):
+    def enterEvent(self, e):
+        if self.window().showhelp is True:
+            QtWidgets.QToolTip.showText(
+                e.globalPos(),
+                "<h3>Remove Artist</h3>"
+                "Remove the artist from the axis. (This <b>can not</b> be undone!)",
+            )
+
+
+class ShowHideToolButton(QtWidgets.QToolButton):
+    def enterEvent(self, e):
+        if self.window().showhelp is True:
+            QtWidgets.QToolTip.showText(
+                e.globalPos(),
+                "<h3>Show/Hide Artist</h3>"
+                "Make the corresponding artist visible (eye open) or invisible (eye closed).",
+            )
+
+
+class LineWidthInput(QtWidgets.QLineEdit):
+    def enterEvent(self, e):
+        if self.window().showhelp is True:
+            QtWidgets.QToolTip.showText(
+                e.globalPos(),
+                "<h3>Linewidth</h3>" "Set the linewidth of the corresponding artist.",
+            )
+
+
+class AlphaInput(QtWidgets.QLineEdit):
+    def enterEvent(self, e):
+        if self.window().showhelp is True:
+            QtWidgets.QToolTip.showText(
+                e.globalPos(),
+                "<h3>Transparency</h3>" "Set the alpha-transparency of the artist.",
             )
 
 
@@ -495,14 +533,14 @@ class ArtistEditor(QtWidgets.QWidget):
         label.setMaximumHeight(25)
 
         # remove
-        b_r = QtWidgets.QToolButton()
+        b_r = RemoveArtistToolButton()
         b_r.setText("🞪")
         b_r.setAutoRaise(True)
         b_r.setStyleSheet("QToolButton {color: red;}")
         b_r.clicked.connect(self.remove(artist=a, layer=layer))
 
         # show / hide
-        b_sh = QtWidgets.QToolButton()
+        b_sh = ShowHideToolButton()
         b_sh.setAutoRaise(True)
 
         # #b_sh.setStyleSheet("background-color : #79a76e")
@@ -515,8 +553,7 @@ class ArtistEditor(QtWidgets.QWidget):
 
         # zorder
         l_z = QtWidgets.QLabel("zoder:")
-        b_z = QtWidgets.QLineEdit()
-        b_z.setToolTip("zorder")
+        b_z = ZorderInput()
         b_z.setMinimumWidth(25)
         b_z.setMaximumWidth(25)
         validator = QtGui.QIntValidator()
@@ -528,8 +565,7 @@ class ArtistEditor(QtWidgets.QWidget):
         alpha = a.get_alpha()
         if alpha is not None:
             l_a = QtWidgets.QLabel("alpha:")
-            b_a = QtWidgets.QLineEdit()
-            b_a.setToolTip("alpha")
+            b_a = AlphaInput()
 
             b_a.setMinimumWidth(25)
             b_a.setMaximumWidth(50)
@@ -553,8 +589,7 @@ class ArtistEditor(QtWidgets.QWidget):
 
             if lw is not None:
                 l_lw = QtWidgets.QLabel("linewidth:")
-                b_lw = QtWidgets.QLineEdit()
-                b_lw.setToolTip("linewidth")
+                b_lw = LineWidthInput()
 
                 b_lw.setMinimumWidth(25)
                 b_lw.setMaximumWidth(50)
@@ -572,7 +607,6 @@ class ArtistEditor(QtWidgets.QWidget):
             l_lw, b_lw = None, None
 
         # color
-
         try:
             facecolor = to_rgba_array(a.get_facecolor())
             edgecolor = to_rgba_array(a.get_edgecolor())
@@ -699,11 +733,6 @@ class ArtistEditor(QtWidgets.QWidget):
                 tabbar = self.tabs.tabBar()
                 # don't show the close button for this tab
                 tabbar.setTabButton(self.tabs.count() - 1, tabbar.RightSide, None)
-
-        for i in range(self.tabs.count()):
-            self.tabs.setTabToolTip(
-                i, "Use (control + click) to switch the visible layer!"
-            )
 
         try:
             # restore the previously opened tab

@@ -13,6 +13,17 @@ def get_dummy_spacer():
     return space
 
 
+class TransparentQToolButton(QtWidgets.QToolButton):
+    def enterEvent(self, e):
+        if self.window().showhelp is True:
+            QtWidgets.QToolTip.showText(
+                e.globalPos(),
+                "<h3>Toggle window Transparency</h3>"
+                "If activated, the companion-widget will get semi-transparent if it "
+                "is out of focus.",
+            )
+
+
 class ToolBar(QtWidgets.QToolBar):
     def __init__(self, *args, m=None, left_widget=None, title=None, **kwargs):
         super().__init__(*args, **kwargs)
@@ -164,9 +175,8 @@ class transparentWindow(QtWidgets.QMainWindow):
         )
         self.setFocusPolicy(Qt.StrongFocus)
 
-        self.transparentQ = QtWidgets.QToolButton()
+        self.transparentQ = TransparentQToolButton()
         self.transparentQ.setStyleSheet("border:none")
-        self.transparentQ.setToolTip("Make window semi-transparent.")
         self.transparentQ.setIcon(QtGui.QIcon(str(iconpath / "eye_closed.png")))
 
         self.toolbar = ToolBar(m=self.m, left_widget=self.transparentQ)
