@@ -86,6 +86,11 @@ class ToolBar(QtWidgets.QToolBar):
             "QToolBar{border: none; spacing:5px;}"
             'QToolButton[autoRaise="true"]{text-align:center;}'
             "QPushButton{border:none;}"
+            """
+            QToolButton:checked {background-color:rgba(255,50,50, 150);
+            border: none;
+            border-radius: 5px;}
+            """
         )
         self.setContentsMargins(0, 0, 0, 0)
 
