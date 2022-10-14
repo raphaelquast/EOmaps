@@ -129,10 +129,11 @@ class AutoUpdateLayerMenuButton(QtWidgets.QPushButton):
             QtWidgets.QToolTip.showText(
                 e.globalPos(),
                 "<h3>Visible Layer</h3>"
-                "Select the currently visible layer."
+                "Get a dropdown-list of all currently available map-layers."
                 "<p>"
                 "<ul>"
-                "<li><b>control+click</b> to select multiple layers!</li>"
+                "<li><b>click</b> to switch to the selected layer</li>"
+                "<li><b>control+click</b> to overlay multiple layers</li>"
                 "</ul>",
             )
 

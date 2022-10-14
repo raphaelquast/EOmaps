@@ -1,5 +1,5 @@
 from PyQt5 import QtCore, QtWidgets, QtGui
-from PyQt5.QtCore import Qt
+from PyQt5.QtCore import Qt, pyqtSignal
 
 from matplotlib.colors import to_rgba_array
 
@@ -316,11 +316,16 @@ class NewLayerLineEdit(QtWidgets.QLineEdit):
                 e.globalPos(),
                 "<h3>New Layer</h3>"
                 "Enter a layer-name and press <b>enter</b> to create"
-                "a new (empty) layer on the map!",
+                "a new (empty) layer on the map!"
+                "<p>"
+                "NTOE: The tab of the new layer will be activated once the layer is "
+                "created, but it is NOT automatically set as the visible layer!",
             )
 
 
 class NewLayerWidget(QtWidgets.QFrame):
+    NewLayerCreated = pyqtSignal(str)
+
     def __init__(self, *args, m=None, **kwargs):
 
         super().__init__(*args, **kwargs)
@@ -363,7 +368,8 @@ class NewLayerWidget(QtWidgets.QFrame):
             return
 
         m2 = self.m.new_layer(layer)
-        self.m.show_layer(layer)
+        self.NewLayerCreated.emit(layer)
+        # self.m.show_layer(layer)
 
         return m2
 
@@ -397,6 +403,10 @@ class ArtistEditor(QtWidgets.QWidget):
 
         self.newlayer = NewLayerWidget(m=self.m)
         self.newlayer.new_layer_name.returnPressed.connect(self.populate)
+        # re-populate layers on new layer creation
+        self.newlayer.NewLayerCreated.connect(self.populate)
+        # set active tab to the new tab on layer creation
+        self.newlayer.NewLayerCreated[str].connect(self.set_current_tab_by_name)
 
         self.addfeature = AddFeatureWidget(m=self.m)
 
@@ -430,7 +440,6 @@ class ArtistEditor(QtWidgets.QWidget):
 
         self.m.BM._on_add_bg_artist.append(self.populate)
         self.m.BM._on_remove_bg_artist.append(self.populate)
-
         # connect a callback to update the layer of the feature-button
         # with respect to the currently selected layer-tab
         self.tabs.currentChanged.connect(self.set_layer)
@@ -734,28 +743,24 @@ class ArtistEditor(QtWidgets.QWidget):
                 # don't show the close button for this tab
                 tabbar.setTabButton(self.tabs.count() - 1, tabbar.RightSide, None)
 
-        try:
-            # restore the previously opened tab
-            found = False
-            ntabs = self.tabs.count()
-            if ntabs > 0 and self._current_tab_name != "":
-                for i in range(ntabs):
-                    if self.tabs.tabText(i) == self._current_tab_name:
-                        self.tabs.setCurrentIndex(self._current_tab_idx)
-                        found = True
-                        break
-
-                if found is False:
-                    print(
-                        "Unable to restore previously opened tab "
-                        + f"'{self._current_tab_name}'!"
-                    )
-                    self.tabs.setCurrentIndex(self.m.BM._bg_layer)
-        except:
-            print("unable to activate tab")
-            pass
+        # try to restore the previously opened tab
+        self.set_current_tab_by_name(self._current_tab_name)
 
         self.color_active_tab()
+
+    def set_current_tab_by_name(self, layer):
+        found = False
+        ntabs = self.tabs.count()
+        if ntabs > 0 and self._current_tab_name != "":
+            for i in range(ntabs):
+                if self.tabs.tabText(i) == layer:
+                    self.tabs.setCurrentIndex(i)
+                    found = True
+                    break
+
+            if found is False:
+                print(f"Unable to activate the tab '{self._current_tab_name}'!")
+                self.tabs.setCurrentIndex(0)
 
     def tabchanged(self, index):
         # TODO
