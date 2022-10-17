@@ -387,7 +387,8 @@ class MyTabWidget(QtWidgets.QTabWidget):
                 "<li><b>shift+click</b> on tabs to make multiple layers visible.</li>"
                 "</ul>"
                 "Feature and WebMap artists created with the controls above are always "
-                "added to the <b>currently selected tab</b> (NOT the visible layer)!",
+                "<b>added to the currently selected tab</b>!<br>"
+                "(indicated by a <b><font color=#c80000>red border</font></b>)",
             )
 
 
@@ -444,6 +445,50 @@ class ArtistEditor(QtWidgets.QWidget):
         # with respect to the currently selected layer-tab
         self.tabs.currentChanged.connect(self.set_layer)
         self.set_layer()
+
+        stylesheet = """
+            QTabWidget::pane { /* The tab widget frame */
+                border-top: 0px solid rgb(100,100,100);
+            }
+
+            QTabWidget::tab-bar {
+                left: 5px; /* move to the right by 5px */
+            }
+
+            QTabBar::tab {
+                background: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1,
+                                            stop: 0 #E1E1E1, stop: 0.4 #DDDDDD,
+                                            stop: 0.5 #D8D8D8, stop: 1.0 #D3D3D3);
+                border-bottom-color: none;
+                border-top-left-radius: 2px;
+                border-top-right-radius: 2px;
+                min-width: 12ex;
+                padding: 1px;
+                margin: 1px;
+            }
+
+            QTabBar::tab:selected, QTabBar::tab:hover {
+                border: 1px solid black;
+                background: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1,
+                                            stop: 0 #fafafa, stop: 0.4 #f4f4f4,
+                                            stop: 0.5 #e7e7e7, stop: 1.0 #fafafa);
+            }
+
+            QTabBar::tab:selected {
+                padding: 0px;
+                border: 2px solid rgb(200,0,0);
+                border-top-left-radius: 4px;
+                border-top-right-radius: 4px;
+                border-bottom-color: rgb(100,100,100); /* same as pane color */
+            }
+
+            QTabBar::tab:!selected {
+                border: 1px solid rgb(200,200,200);
+                margin-top: 4px; /* make non-selected tabs look smaller */
+            }
+            """
+
+        self.setStyleSheet(stylesheet)
 
     def set_layer(self):
         layer = self.tabs.tabText(self.tabs.currentIndex())
