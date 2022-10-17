@@ -800,6 +800,8 @@ class ArtistEditor(QtWidgets.QWidget):
                 uselayer = "_|" + "|".join(sorted(currlayers))
 
                 self.m.show_layer(uselayer)
+            elif len(currlayers) == 1:
+                self.m.show_layer(currlayers[0])
             else:
                 self.m.show_layer(layer)
             # TODO this is a workaround since modifier-releases are not
