@@ -99,7 +99,7 @@ class ToolBar(QtWidgets.QToolBar):
     def toggle_show_help(self):
         if self.b_showhelp.isChecked():
             self.window().showhelp = True
-            self.b_showhelp.setText("Help tooltips active!")
+            self.b_showhelp.setText("Click here to hide help tooltips")
         else:
             self.window().showhelp = False
             self.b_showhelp.setText("?")
@@ -141,6 +141,8 @@ class NewWindow(QtWidgets.QMainWindow):
         super().__init__(*args, **kwargs)
         self.m = m
         self.setWindowTitle("OpenFile")
+
+        self.showhelp = False
 
         toolbar = ToolBar(title=title)
         self.addToolBar(toolbar)
