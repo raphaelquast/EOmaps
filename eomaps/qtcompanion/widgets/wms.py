@@ -302,8 +302,6 @@ class AddWMSMenuButton(QtWidgets.QPushButton):
             thread.start()
 
     def fetch_submenu(self, wmsname):
-        self.window().statusBar().showMessage(f"... fetching WMS layers for: {wmsname}")
-
         # disconnect callbacks to avoid recursions
         self.sub_menus[wmsname].aboutToShow.disconnect()
 
@@ -328,10 +326,6 @@ class AddWMSMenuButton(QtWidgets.QPushButton):
         except:
             print("There was a problem with the WMS: " + wmsname)
 
-        self.window().statusBar().showMessage(
-            f"Done fetching WMS layers for: {wmsname}"
-        )
-
     def menu_callback_factory(self, wms, wmslayer):
         def wms_cb():
             if self._new_layer:
@@ -348,6 +342,7 @@ class AddWMSMenuButton(QtWidgets.QPushButton):
                         "Adding features to temporary multi-layers is not supported!",
                         5000,
                     )
+                    return
 
             wms.do_add_layer(wmslayer, layer=layer)
             if self._show_layer:
