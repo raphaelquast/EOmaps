@@ -11,6 +11,8 @@ import weakref
 from tempfile import TemporaryDirectory, TemporaryFile
 import gc
 import json
+import requests
+from textwrap import fill
 
 import numpy as np
 
@@ -127,6 +129,7 @@ from .reader import read_file, from_file, new_layer_from_file
 
 from .utilities import utilities
 
+from ._version import __version__
 
 if plt.isinteractive():
     if plt.get_backend() == "module://ipympl.backend_nbagg":
@@ -159,9 +162,9 @@ class Maps(object):
         A list for easy-accses is available as `Maps.CRS`
 
         The default is 4326.
-    layer : int or str, optional
+    layer : str, optional
         The name of the plot-layer assigned to this Maps-object.
-        The default is 0.
+        The default is "base".
 
     Other Parameters:
     -----------------
@@ -221,11 +224,20 @@ class Maps(object):
         Set the preferred way for accessing WebMap services if both WMS and WMTS
         capabilities are possible.
         The default is "wms"
-
     kwargs :
         additional kwargs are passed to matplotlib.pyplot.figure()
         - e.g. figsize=(10,5)
+
+    Attributes
+    ----------
+
+    CRS : Accessor for available projections (Supercharged version of cartopy.crs)
+    CLASSIFIERS : Accessor for available classifiers (provided by mapclassify)
+    _companion_widget_key : Keyboard shortcut assigned to show/hide the companion-widget.
+
     """
+
+    __version__ = __version__
 
     CRS = ccrs
     CRS.Equi7Grid_projection = Equi7Grid_projection
@@ -260,11 +272,13 @@ class Maps(object):
 
     CLASSIFIERS = SimpleNamespace(**dict(zip(_classifiers, _classifiers)))
 
+    _companion_widget_key = "w"
+
     def __init__(
         self,
         crs=None,
         parent=None,
-        layer=0,
+        layer="base",
         f=None,
         gs_ax=None,
         preferred_wms_service="wms",
@@ -282,7 +296,17 @@ class Maps(object):
 
         self._BM = None
         self._children = set()  # weakref.WeakSet()
+
+        if not isinstance(layer, str):
+            print("EOmaps v5.0 Warning: All layer-names are converted to strings!")
+            layer = str(layer)
+
         self._layer = layer
+
+        self._companion_widget = None  # slot for the pyqt widget
+        self._cid_companion_key = None  # callback id for the companion-cb
+        # a list to remember newly registered colormaps
+        self._registered_cmaps = []
 
         self.parent = parent  # invoke the setter!
 
@@ -362,6 +386,10 @@ class Maps(object):
         if not hasattr(self.parent, "_wms_legend"):
             self.parent._wms_legend = dict()
 
+        if self.parent == self and self._cid_companion_key is None:
+            # attach the Qt companion widget
+            self._add_companion_cb(show_hide_key=self._companion_widget_key)
+
     def __enter__(self):
         return self
 
@@ -384,6 +412,61 @@ class Maps(object):
             )
         else:
             return object.__getattribute__(self, key)
+
+    def _add_companion_cb(self, show_hide_key="w"):
+        # attach a callback to show/hide the window with the "w" key
+        def cb(*args, **kwargs):
+            if self._companion_widget is None:
+                print("EOmaps: Initializing companion-widget...")
+                self._init_companion_widget()
+
+            if self._companion_widget is not None:
+                if self._companion_widget.isVisible():
+                    self._companion_widget.hide()
+                else:
+                    self._companion_widget.show()
+
+        self._cid_companion_key = self.all.cb.keypress.attach(cb, key=show_hide_key)
+
+    def _init_companion_widget(self, show_hide_key="w"):
+        """
+        Create and show the EOmaps Qt companion widget.
+
+        Note
+        ----
+        The companion-widget requires using matplotlib with the Qt5Agg backend!
+        To activate, use: `plt.switch_backend("Qt5Agg")`
+
+        Parameters
+        ----------
+        show_hide_key : str or None, optional
+            The keyboard-shortcut that is assigned to show/hide the widget.
+            The default is "w".
+        """
+
+        try:
+            if plt.get_backend() not in ["Qt5Agg", "QtAgg"]:
+                print(
+                    "EOmaps: Using m.open_widget() is only possible if you use matplotlibs"
+                    + f" 'Qt5Agg' backend! (active backend: '{plt.get_backend()}')"
+                )
+                return
+
+            from .qtcompanion.app import MenuWindow
+
+            if self._companion_widget is not None:
+                print(
+                    "EOmaps: There is already an existing companinon widget for this"
+                    " Maps-object!"
+                )
+                return
+
+            self._companion_widget = MenuWindow(m=self)
+            # make sure that we clear the colormap-pixmap cache on startup
+            self._companion_widget.cmapsChanged.emit()
+
+        except Exception:
+            print("EOmaps: Unable to initialize companion widget.")
 
     @staticmethod
     def _proxy(obj):
@@ -969,6 +1052,14 @@ class Maps(object):
         # delete the tempfolder containing the memmaps
         if hasattr(self.parent, "_tmpfolder"):
             self.parent._tmpfolder.cleanup()
+
+        # close the pyqt widget if there is one
+        if self._companion_widget is not None:
+            self._companion_widget.close()
+
+        # de-register colormaps
+        for cmap in self._registered_cmaps:
+            plt.cm._cmap_registry.pop(cmap, None)
 
         # run garbage-collection to immediately free memory
         gc.collect
@@ -1774,9 +1865,21 @@ class Maps(object):
             colors = cmap(np.linspace(0, 1, nbins))
 
             # initialize the classified colormap
-            cbcmap = LinearSegmentedColormap.from_list(
-                "cmapname", colors=colors, N=len(colors)
+            # get a unique cmap name (to make the colormap accessible from outside)
+            ncmaps = len(
+                [None for i in plt.cm._cmap_registry if i.startswith("EOmaps_")]
             )
+            cmapname = f"EOmaps_classified_{ncmaps}"
+            cbcmap = LinearSegmentedColormap.from_list(
+                cmapname, colors=colors, N=len(colors)
+            )
+
+            plt.register_cmap(name=cmapname, cmap=cbcmap)
+            if self._companion_widget is not None:
+                self._companion_widget.cmapsChanged.emit()
+            # remember registered colormaps (to de-register on close)
+            self._registered_cmaps.append(cmapname)
+
             if cmap._rgba_bad:
                 cbcmap.set_bad(cmap._rgba_bad)
             if cmap._rgba_over:
@@ -3490,7 +3593,7 @@ class Maps(object):
             self.cb._methods.append("pick")
 
         if dynamic is True:
-            self.BM.add_artist(coll)
+            self.BM.add_artist(coll, layer)
         else:
             self.BM.add_bg_artist(coll, layer)
 
@@ -3807,7 +3910,7 @@ class Maps(object):
                 self.cb._methods.append("pick")
 
             if dynamic is True:
-                self.BM.add_artist(coll)
+                self.BM.add_artist(coll, layer)
             else:
                 self.BM.add_bg_artist(coll, layer)
 
@@ -3937,10 +4040,23 @@ class Maps(object):
         # make sure the colormap is properly set and transparencys are assigned
         cmap = kwargs.setdefault("cmap", "viridis")
         if "alpha" in kwargs and kwargs["alpha"] < 1:
-            kwargs["cmap"] = cmap_alpha(
-                cmap,
-                kwargs["alpha"],
+            # get a unique name for the colormap
+            ncmaps = len(
+                [None for i in plt.cm._cmap_registry if i.startswith("EOmaps_alpha_")]
             )
+            cmapname = f"EOmaps_alpha_{ncmaps}"
+
+            kwargs["cmap"] = cmap_alpha(
+                cmap=cmap,
+                alpha=kwargs["alpha"],
+                name=cmapname,
+            )
+
+            plt.register_cmap(name=cmapname, cmap=kwargs["cmap"])
+            if self._companion_widget is not None:
+                self._companion_widget.cmapsChanged.emit()
+            # remember registered colormaps (to de-register on close)
+            self._registered_cmaps.append(cmapname)
 
         # make sure zorder is set to 1 by default
         # (by default shading would use 0 while ordinary collections use 1)
@@ -4690,7 +4806,7 @@ class Maps(object):
         gdf = self._make_rect_poly(x0, y0, x1, y1, self.get_crs(crs), npts)
         self.add_gdf(gdf, **kwargs)
 
-    def add_logo(self, filepath=None, position="lr", size=0.12, pad=0.1):
+    def add_logo(self, filepath=None, position="lr", size=0.12, pad=0.1, layer="all"):
         """
         Add a small image (png, jpeg etc.) to the map whose position is dynamically
         updated if the plot is resized or zoomed.
@@ -4712,6 +4828,8 @@ class Maps(object):
             Padding between the axis-edge and the logo as a fraction of the logo-width.
             If a tuple is passed, (x-pad, y-pad)
             The default is 0.1.
+        layer : str, optional
+            The layer at which the logo should be visible. The default is "all".
         """
 
         if filepath is None:
@@ -4739,8 +4857,8 @@ class Maps(object):
         figax = self.figure.f.add_axes(**getpos(self.ax.get_position()))
         figax.set_navigate(False)
         figax.set_axis_off()
-        art = figax.imshow(im, aspect="equal", zorder=999)
-        self.BM.add_artist(art)
+        _ = figax.imshow(im, aspect="equal", zorder=999)
+        self.BM.add_artist(figax, layer)
 
         def setlim(*args, **kwargs):
             figax.set_position(getpos(self.ax.get_position())["rect"])
@@ -4784,19 +4902,29 @@ class Maps(object):
 
         Parameters
         ----------
-        name : str or int, optional
+        name : str
             The name of the layer to activate.
-            The default is None.
         """
         layers = self._get_layers()
 
-        if name not in layers:
-            lstr = " - " + "\n - ".join(map(str, layers))
+        if not isinstance(name, str):
+            print("EOmaps v5.0 Warning: All layer-names are converted to strings!")
+            name = str(name)
 
-            raise AssertionError(
-                f"EOmaps: The layer '{name}' does not exist...\n"
-                + f"Use one of: \n{lstr}"
-            )
+        if "|" in name:
+            # take special care of "_" to allow 'private' (e.g. hidden) multi-layers
+            names = [i.strip() for i in name.split("|") if i != "_"]
+        else:
+            names = [name]
+
+        for i in names:
+            if i not in layers:
+                lstr = " - " + "\n - ".join(map(str, layers))
+
+                raise AssertionError(
+                    f"EOmaps: The layer '{i}' does not exist...\n"
+                    + f"Use one of: \n{lstr}"
+                )
 
         # invoke the bg_layer setter of the blit-manager
         self.BM.bg_layer = name
@@ -5021,6 +5149,91 @@ class Maps(object):
 
         """
         self._layout_editor._make_draggable(filepath=filepath)
+
+    @lru_cache()
+    def _get_nominatim_response(self, q, user_agent=None):
+        print(f"Querying {q}")
+        if user_agent is None:
+            user_agent = f"EOMaps v{Maps.__version__}"
+
+        headers = {
+            "User-Agent": user_agent,
+        }
+
+        resp = requests.get(
+            rf"https://nominatim.openstreetmap.org/search/{q}?format=json&addressdetails=1&limit=1",
+            headers=headers,
+        ).json()
+
+        if len(resp) == 0:
+            raise TypeError(f"Unable to resolve the location: {q}")
+
+        return resp[0]
+
+    def set_extent_to_location(self, location, annotate=False, user_agent=None):
+        """
+        Set the map-extent based on a given location string.
+        The bounding-box is hereby resolved via the OpenStreetMap Nominatim service.
+
+        Note
+        ----
+        The OSM Nominatim service has a strict usage policy that explicitly
+        disallows "heavy usage" (e.g.: an absolute maximum of 1 request per second).
+
+        EOMaps caches requests so using a location multiple times in the same
+        session does not cause multiple requests!
+
+        For more details, see:
+            https://operations.osmfoundation.org/policies/nominatim/
+            https://openstreetmap.org/copyright
+
+        Parameters
+        ----------
+        location : str
+            An arbitrary string used to identify the region of interest.
+            (e.g. a country, district, address etc.)
+
+            For example:
+                "Austria", "Vienna"
+
+        annotate : bool, optional
+            Indicator if an annotation should be added to the center of the identified
+            location or not. The default is False.
+        user_agent: str, optional
+            The user-agent used for the Nominatim request
+
+        Examples
+        --------
+
+        >>> m = Maps()
+        >>> m.set_extent_to_location("Austria")
+        >>> m.add_feature.preset.countries()
+
+        >>> m = Maps(Maps.CRS.GOOGLE_MERCATOR)
+        >>> m.set_extent_to_location("Vienna")
+        >>> m.add_wms.OpenStreetMap.add_layer.default()
+
+        """
+        r = self._get_nominatim_response(location)
+
+        # get bbox of found location
+        lon0, lon1, lat0, lat1 = map(float, r["boundingbox"])
+
+        # set extent to found bbox
+        self.ax.set_extent((lat0, lat1, lon0, lon1), crs=Maps.CRS.PlateCarree())
+
+        # add annotation
+        if annotate is not False:
+            if isinstance(annotate, str):
+                text = annotate
+            else:
+                text = fill(r["display_name"], 20)
+
+            self.add_annotation(
+                xy=(r["lon"], r["lat"]), xy_crs=4326, text=text, fontsize=8
+            )
+        else:
+            print("Centering Map to:\n    ", r["display_name"])
 
 
 class _InsetMaps(Maps):

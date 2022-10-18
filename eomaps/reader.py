@@ -662,7 +662,9 @@ def _from_file(
         if isinstance(shape, str):
             getattr(m.set_shape, shape)()
         elif isinstance(shape, dict):
-            getattr(m.set_shape, shape.pop("shape"))(**shape)
+            getattr(m.set_shape, shape["shape"])(
+                **{k: v for k, v in shape.items() if k != "shape"}
+            )
 
     m.plot_map(**kwargs)
     return m
@@ -1030,6 +1032,7 @@ class from_file:
         classify_specs=None,
         val_transform=None,
         coastline=False,
+        read_kwargs=None,
         **kwargs,
     ):
         """
@@ -1087,6 +1090,10 @@ class from_file:
         coastline: bool
             Indicator if a coastline should be added or not.
             The default is False
+        read_kwargs : dict
+            Additional kwargs passed to pandas.read_file()
+            (e.g. to set index_col etc.)
+            The default is None
         kwargs :
             Keyword-arguments passed to `m.plot_map()`
 
@@ -1096,14 +1103,12 @@ class from_file:
             The created Maps object.
 
         """
+        if read_kwargs is None:
+            read_kwargs = dict()
 
         # read data
         data = read_file.CSV(
-            path=path,
-            parameter=parameter,
-            x=x,
-            y=y,
-            crs=data_crs,
+            path=path, parameter=parameter, x=x, y=y, crs=data_crs, **read_kwargs
         )
 
         return _from_file(

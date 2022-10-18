@@ -1,5 +1,5 @@
-from matplotlib.collections import PolyCollection, QuadMesh
-from matplotlib.tri import TriMesh, Triangulation
+from matplotlib.collections import PolyCollection, QuadMesh, TriMesh
+from matplotlib.tri import Triangulation
 import numpy as np
 
 from pyproj import CRS, Transformer
@@ -1439,10 +1439,7 @@ class shapes(object):
 
         @property
         def _initargs(self):
-            return dict(
-                radius=self._radius,
-                radius_crs=self.radius_crs,
-            )
+            return dict()
 
         @property
         def radius(self):

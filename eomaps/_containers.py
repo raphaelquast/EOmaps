@@ -654,8 +654,8 @@ class _NaturalEarth_presets:
             self._m,
             "physical",
             "coastline",
-            fc="none",
-            ec="k",
+            facecolor="none",
+            edgecolor="k",
             zorder=100,
         )
 
@@ -676,7 +676,7 @@ class _NaturalEarth_presets:
         color = rgb2hex(cfeature.COLORS["water"])
 
         return self._feature(
-            self._m, "physical", "ocean", fc=color, ec="none", zorder=-1
+            self._m, "physical", "ocean", facecolor=color, edgecolor="none", zorder=-1
         )
 
     @property
@@ -697,7 +697,7 @@ class _NaturalEarth_presets:
         color = rgb2hex(cfeature.COLORS["land"])
 
         return self._feature(
-            self._m, "physical", "land", fc=color, ec="none", zorder=-1
+            self._m, "physical", "land", facecolor=color, edgecolor="none", zorder=-1
         )
 
     @property
@@ -718,9 +718,9 @@ class _NaturalEarth_presets:
             self._m,
             "cultural",
             "admin_0_countries",
-            fc="none",
-            ec=".5",
-            lw=0.5,
+            facecolor="none",
+            edgecolor=".5",
+            linewidth=0.5,
             zorder=99,
         )
 
@@ -751,13 +751,11 @@ class _NaturalEarth_presets:
         def __call__(self, scale="50m", **kwargs):
             k = dict(**self.kwargs)
             k.update(kwargs)
-
             self.feature = getattr(
                 getattr(self._m.add_feature, f"{self.category}_{scale}"), self.name
             )
 
             self.__doc__ = self.feature.__doc__
-
             return self.feature(**k)
 
 
@@ -1733,6 +1731,103 @@ else:
 
                     ... this service is hosted by Mundialis... check:
                     https://www.mundialis.de/en/ows-mundialis/
+                    """,
+                )
+                return WMS
+
+            @property
+            @lru_cache()
+            def OSM_wms(self):
+                WMS = _WebServiec_collection(
+                    m=self._m,
+                    service_type="wms",
+                    url=r"https://maps.heigit.org/osm-wms/service?REQUEST=GetCapabilities&SERVICE=WMS",
+                )
+                WMS.__doc__ = combdoc(
+                    type(self).__doc__,
+                    """
+                    The first version of osm-wms.de was put online at 13th of February
+                    2009. Since these days it serves OpenStreetMap based maps. As the
+                    name indicates it does provide the maps via the OGC-WMS format
+                    other than the usual map tile providers. This increases the
+                    flexibility of the usage of this service as you are able to use the
+                    map not only by using this website, but also by registering the wms
+                    service in any GIS software that supports the standard protocol of
+                    the OpenGeospatialConsortium OGC-WMS.
+
+                    Note
+                    ----
+                    **LICENSE-info (without any warranty for correctness!!)**
+
+                    Terms of Use
+                    The usage for non-commercial, scientific or personal use is free.
+                    If you use our services, please acknowledge and refer to our
+                    website: osm-wms.de
+
+                    Acknowledgements:
+
+                    This work has kindly been supported by the Klaus Tschira Foundation
+                    (KTS) Heidelberg in the context of establishing the Heidelberg
+                    Institute for Geoinformation Technology (HeiGIT).
+
+                    Attributions:
+
+                    OSM Data: Licensed under ODbL, © OpenStreetMap contributors
+                    Original Data for Hillshade: CIAT-CSI SRTM
+                    Terms of use from CIAT: Users are prohibited from any commercial,
+                    non-free resale, or redistribution without explicit written
+                    permission from CIAT. Original data by Jarvis A., H.I. Reuter,
+                    A. Nelson, E. Guevara, 2008, Hole-filled seamless SRTM data V4,
+                    International Centre for Tropical Agriculture (CIAT), available
+                    from https://srtm.csi.cgiar.org.
+
+                    For more details, please visit:
+                    https://osm-wms.de
+                    """,
+                )
+                return WMS
+
+            @property
+            @lru_cache()
+            def OSM_landuse(self):
+                WMS = _WebServiec_collection(
+                    m=self._m,
+                    service_type="wms",
+                    url=r"https://maps.heigit.org/osmlanduse/service?REQUEST=GetCapabilities",
+                )
+                WMS.__doc__ = combdoc(
+                    type(self).__doc__,
+                    """
+                    OSM Landuse Landcover is a WebGIS application to explore the
+                    OpenStreetMap database specifically in terms of landuse and
+                    landcover information. Land use tags were predicted when absent
+                    using belows (Schultz et al. 2020 in prep, Schultz et al. 2017)
+                    method. This was first addressed for Germany (2017) and now (2020)
+                    - with the improved methods - for all EU countries.
+
+                    Note
+                    ----
+                    **LICENSE-info (without any warranty for correctness!!)**
+
+                    Terms of use:
+
+                    Overlay tiles of "OSM Landuse Landcover" can be used freely and
+                    without charge by any individuals through this website.
+                    If you intend to use tiles or statistics from
+                    "OSM Landuse Landcover" services in your own applications please
+                    contact us.
+                    Commercial usage of the services provided by "OSM Landuse Landcover"
+                    does need approval!
+                    OpenStreetMap data is available under the Open Database License.
+
+                    Acknowledgements:
+
+                    This work is supported by Heidelberg Institute for Geoinformation
+                    Technology (https://heigit.org)
+
+
+                    For more details, plese visit:
+                    https://osmlanduse.org
                     """,
                 )
                 return WMS

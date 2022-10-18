@@ -119,6 +119,7 @@ class _click_callbacks(object):
         permanent=False,
         text=None,
         zorder=10,
+        layer=None,
         **kwargs,
     ):
         """
@@ -159,6 +160,10 @@ class _click_callbacks(object):
             For details, have a look at:
 
             - https://matplotlib.org/stable/gallery/misc/zorder_demo.html
+        layer : str or None, optional
+            The layer to put the marker on.
+            If None, the layer associated with the used Maps-object (e.g. `m.layer`)
+            The default is None
 
         kwargs
             kwargs passed to matplotlib.pyplot.annotate(). The default is:
@@ -170,6 +175,9 @@ class _click_callbacks(object):
             >>>     )
 
         """
+
+        if layer is None:
+            layer = self.m.layer
 
         ID, pos, val, ind, picker_name = self._popargs(kwargs)
 
@@ -248,18 +256,19 @@ class _click_callbacks(object):
 
             styledict.update(**kwargs)
             annotation = ax.annotate("", xy=pos, **styledict)
+            annotation.set_zorder(zorder)
 
             if not permanent:
                 # make the annotation temporary
                 self._temporary_artists.append(annotation)
+                self.m.BM.add_artist(annotation)
             else:
+                self.m.BM.add_artist(annotation, layer=layer)
+
                 if not hasattr(self, "permanent_annotations"):
                     self.permanent_annotations = [annotation]
                 else:
                     self.permanent_annotations.append(annotation)
-
-            annotation.set_zorder(zorder)
-            self.m.BM.add_artist(annotation)
 
             annotation.set_visible(True)
             annotation.xy = pos
@@ -372,7 +381,6 @@ class _click_callbacks(object):
             - https://matplotlib.org/stable/gallery/misc/zorder_demo.html
 
         layer : str or None, optional
-            ONLY relevant if "permanent=True" !
             The layer to put the marker on.
             If None, the layer associated with the used Maps-object (e.g. `m.layer`)
             The default is None
@@ -491,12 +499,8 @@ class _click_callbacks(object):
                 layer = self.m.layer
             self.m.BM.add_bg_artist(marker, layer)
         elif permanent is False:
-            if layer is not None:
-                warnings.warn(
-                    "EOmaps: `m.add_marker(layer=...)` is ignored if `permanent=False`"
-                )
             self._temporary_artists.append(marker)
-            self.m.BM.add_artist(marker)
+            self.m.BM.add_artist(marker, layer)
 
         return marker
 
@@ -514,14 +518,14 @@ class _click_callbacks(object):
     def _mark_cleanup(self):
         self.clear_markers()
 
-    def peek_layer(self, layer=1, how=(0.4, 0.4), overlay=False, alpha=1, **kwargs):
+    def peek_layer(self, layer="1", how=(0.4, 0.4), overlay=False, alpha=1, **kwargs):
         """
         Swipe between data- or WebMap layers or peek a layers through a rectangle.
 
         Parameters
         ----------
-        layer : int, str or list
-            - if int or str: The name of the layer you want to peek at.
+        layer : str or list
+            - if str: The name of the layer you want to peek at.
             - if list: A list of layer-names to peek at.
 
         how : str , float or tuple, optional
@@ -530,6 +534,7 @@ class _click_callbacks(object):
 
                 - "left" (→), "right" (←), "top" (↓), "bottom" (↑):
                   swipe the layer at the mouse-position.
+                - "full": overlay the layer on the whole figure
                 - if float: peek a square at the mouse-position, specified as
                   percentage of the axis-width (0-1)
                 - if tuple: (width, height) peek a rectangle at the mouse-position,
@@ -562,6 +567,11 @@ class _click_callbacks(object):
         >>> m2.plot_map()
         >>> m.peek_layer(layer="the layer name")
         """
+
+        if not isinstance(layer, str):
+            print("EOmaps v5.0 Warning: All layer-names are converted to strings!")
+            layer = str(layer)
+
         ID, pos, val, ind, picker_name = self._popargs(kwargs)
 
         ax = self.m.figure.ax
@@ -595,33 +605,42 @@ class _click_callbacks(object):
 
                 blitw = ax.bbox.width
                 blith = y - y0
+            elif how == "full":
+                x0, y0 = ax.transAxes.transform((0, 0))
+                blitw = ax.bbox.width
+                blith = ax.bbox.height
+
             else:
                 raise TypeError(f"EOmaps: '{how}' is not a valid input for 'how'")
 
-            x0m, y0m = ax.transData.inverted().transform((x0, y0))
-            x1m, y1m = ax.transData.inverted().transform((x0 + blitw, y0 + blith))
-            w, h = abs(x1m - x0m), abs(y1m - y0m)
-            marker = self.mark(
-                pos=((x0m + x1m) / 2, (y0m + y1m) / 2),
-                radius_crs="out",
-                shape="rectangles",
-                radius=(w / 2, h / 2),
-                permanent=False,
-                **args,
-            )
+            if how != "full":
+                x0m, y0m = ax.transData.inverted().transform((x0, y0))
+                x1m, y1m = ax.transData.inverted().transform((x0 + blitw, y0 + blith))
+                w, h = abs(x1m - x0m), abs(y1m - y0m)
+                marker = self.mark(
+                    pos=((x0m + x1m) / 2, (y0m + y1m) / 2),
+                    radius_crs="out",
+                    shape="rectangles",
+                    radius=(w / 2, h / 2),
+                    permanent=False,
+                    **args,
+                )
+            else:
+                marker = None
 
         elif isinstance(how, (float, list, tuple)):
             if isinstance(how, float):
                 w0, h0 = self.m.figure.ax.transAxes.transform((0, 0))
                 w1, h1 = self.m.figure.ax.transAxes.transform((how, how))
-                blitw, blith = (w1 - w0, w1 - w0)
+                blitw, blith = [min(w1 - w0, h1 - h0)] * 2
+
             else:
                 w0, h0 = self.m.figure.ax.transAxes.transform((0, 0))
                 w1, h1 = self.m.figure.ax.transAxes.transform(how)
                 blitw, blith = (w1 - w0, h1 - h0)
 
             x0, y0 = ax.transData.transform((pos[0], pos[1]))
-            x0, y0 = x0 - blitw / 2.0, y0 - blith / 2
+            x0, y0 = x0 - blitw / 2, y0 - blith / 2
 
             # make sure that we don't blit outside the axis
             bbox = self.m.figure.ax.bbox
@@ -658,18 +677,21 @@ class _click_callbacks(object):
                 shape="rectangles",
                 radius=(w / 1.99, h / 1.99),  # 1.99 to be larger than the blit-region
                 permanent=False,
+                layer="all",
                 **args,
             )
 
         else:
             raise TypeError(f"EOmaps: {how} is not a valid peek method!")
 
-        def doit():
-            self.m.BM._artists_to_clear["click"].append(marker)
-            self.m.BM._artists_to_clear["_click_move"].append(marker)
-            self.m.BM._artists_to_clear["on_layer_change"].append(marker)
+        if marker is not None:
 
-        self.m.BM._after_restore_actions.append(doit)
+            def doit():
+                self.m.BM._artists_to_clear["click"].append(marker)
+                self.m.BM._artists_to_clear["_click_move"].append(marker)
+                self.m.BM._artists_to_clear["on_layer_change"].append(marker)
+
+            self.m.BM._after_restore_actions.append(doit)
 
         if overlay:
             self.m.BM._after_restore_actions.append(

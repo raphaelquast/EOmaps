@@ -42,7 +42,7 @@ def _sanitize(s, prefix="layer_"):
     return s
 
 
-def cmap_alpha(cmap, alpha, interpolate=False):
+def cmap_alpha(cmap, alpha, interpolate=False, name="new_cmap"):
     """
     add transparency to an existing colormap
 
@@ -55,7 +55,9 @@ def cmap_alpha(cmap, alpha, interpolate=False):
     interpolate : bool
         indicator if a listed colormap (False) or a interpolated colormap (True)
         should be generated. The default is False
-
+    name : str
+        the name of the new colormap
+        The default is "new_cmap"
     Returns
     -------
     new_cmap : matplotlib.colormap
@@ -64,10 +66,12 @@ def cmap_alpha(cmap, alpha, interpolate=False):
     cmap = plt.get_cmap(cmap)
     new_cmap = cmap(np.arange(cmap.N))
     new_cmap[:, -1] = alpha
+
     if interpolate:
-        new_cmap = LinearSegmentedColormap("new_cmap", new_cmap)
+        new_cmap = LinearSegmentedColormap(name, new_cmap)
     else:
-        new_cmap = ListedColormap(new_cmap)
+        new_cmap = ListedColormap(new_cmap, name=name)
+
     return new_cmap
 
 
@@ -950,7 +954,7 @@ class BlitManager:
         self._m = m
 
         self._bg = None
-        self._artists = defaultdict(list)
+        self._artists = dict()
 
         self._bg_artists = defaultdict(list)
         self._bg_layers = dict()
@@ -984,6 +988,9 @@ class BlitManager:
         self._on_layer_change = dict()
         self._on_layer_activation = defaultdict(dict)
 
+        self._on_add_bg_artist = list()
+        self._on_remove_bg_artist = list()
+
     @property
     def figure(self):
         return self._m.figure.f
@@ -1000,11 +1007,12 @@ class BlitManager:
                 action(self._on_layer_change[action], layer)
 
         # individual callables executed if a specific layer is activated
-        activate_action = self._on_layer_activation.get(layer, None)
-        if activate_action is not None:
-            actions = list(activate_action)
-            for action in actions:
-                action(activate_action[action], layer)
+        for l in layer.split("|"):
+            activate_action = self._on_layer_activation.get(l, None)
+            if activate_action is not None:
+                actions = list(activate_action)
+                for action in actions:
+                    action(activate_action[action], l)
 
     @property
     def bg_layer(self):
@@ -1020,6 +1028,8 @@ class BlitManager:
         # a general callable to be called on every layer change
         self._do_on_layer_change(layer=val)
 
+        layer_names = val.split("|")
+
         # hide all colorbars that are not no the visible layer
         for m in [self._m.parent, *self._m.parent._children]:
             if getattr(m, "_colorbar", None) is not None:
@@ -1033,8 +1043,7 @@ class BlitManager:
                     orientation,
                     cb,
                 ] = m._colorbar
-
-                if layer != val:
+                if layer not in layer_names:
                     ax_cb.set_visible(False)
                     ax_cb_plot.set_visible(False)
                     if ax_cb_extend:
@@ -1048,7 +1057,7 @@ class BlitManager:
         # hide all wms_legends that are not on the visible layer
         if hasattr(self._m.parent, "_wms_legend"):
             for layer, legends in self._m.parent._wms_legend.items():
-                if self._bg_layer == layer:
+                if layer in layer_names:
                     for i in legends:
                         i.set_visible(True)
                 else:
@@ -1096,8 +1105,8 @@ class BlitManager:
                     def inner(*args, **kwargs):
                         try:
                             func(*args, **kwargs)
-                            if inner in self._on_layer_change[layer]:
-                                self._on_layer_change[layer].pop(inner)
+                            if inner in self._on_layer_change:
+                                self._on_layer_change.pop(inner)
                         except IndexError:
                             pass
 
@@ -1132,9 +1141,29 @@ class BlitManager:
             if layer in self._bg_layers:
                 del self._bg_layers[layer]
 
+    def get_bg_artists(self, layer):
+        # get all relevant artists for combined background layers
+        layer = str(layer)  # make sure we convert non-string layer names to string!
+
+        # get artists defined on the layer itself
+        # Note: it's possible to create explicit multi-layers and attach
+        # artists that are only visible if both layers are visible! (e.g. "l1|l2")
+        artists = [*self._bg_artists[layer]]
+
+        # get all artists of the sub-layers (if we deal with a multi-layer)
+        if "|" in layer:
+            for l in layer.split("|"):
+                if l in ["_", ""]:
+                    continue
+                layer_artists = self._bg_artists.get(l, [])
+                artists += layer_artists
+
+        return artists
+
     def fetch_bg(self, layer=None, bbox=None, overlay=None):
         # add this to the zorder of the overlay-artists prior to plotting
         # to ensure that they appear on top of other artists
+
         overlay_zorder_bias = 1000
         cv = self.canvas
         if layer is None:
@@ -1148,10 +1177,10 @@ class BlitManager:
         for l in overlay_layers:
             self._do_on_layer_change(l)
 
-        allartists = list(chain(*(self._bg_artists[i] for i in [layer, "all"])))
+        allartists = list(chain(*(self.get_bg_artists(i) for i in [layer, "all"])))
         allartists.sort(key=lambda x: getattr(x, "zorder", -1))
 
-        overlay_artists = list(chain(*(self._bg_artists[i] for i in overlay_layers)))
+        overlay_artists = list(chain(*(self.get_bg_artists(i) for i in overlay_layers)))
         overlay_artists.sort(key=lambda x: getattr(x, "zorder", -1))
 
         for a in overlay_artists:
@@ -1181,13 +1210,14 @@ class BlitManager:
         # while we re-draw the artists
 
         cv.mpl_disconnect(self.cid)
+
         if not self._m._layout_editor._modifier_pressed:
             # make all artists of the corresponding layer visible
             for l in self._bg_artists:
                 if l not in [layer, "all", *overlay_layers]:
                     # artists on "all" are always visible!
-                    # make all artists of other layers are invisible
-                    for art in self._bg_artists[l]:
+                    # make all artists of other layers invisible
+                    for art in self.get_bg_artists(l):
                         art.set_visible(False)
             for art in allartists:
                 if art not in self._hidden_axes:
@@ -1203,7 +1233,7 @@ class BlitManager:
             for l in overlay_layers:
                 if l == self.bg_layer:
                     continue
-                for art in self._bg_artists[l]:
+                for art in self.get_bg_artists(l):
                     art.set_visible(False)
 
         else:
@@ -1228,7 +1258,6 @@ class BlitManager:
                 self._bg_layers = dict()
             if self.bg_layer not in self._bg_layers:
                 self.fetch_bg()
-
             # workaround for nbagg backend to avoid glitches
             # it's slow but at least it works...
             # check progress of the following issuse
@@ -1242,7 +1271,7 @@ class BlitManager:
             # we need to catch exceptions since QT does not like them...
             pass
 
-    def add_artist(self, art):
+    def add_artist(self, art, layer=None):
         """
         Add an artist to be managed.
 
@@ -1254,15 +1283,21 @@ class BlitManager:
             to be safe).  *art* must be in the figure associated with
             the canvas this class is managing.
         """
+        zorder = art.get_zorder()
+        if layer is None:
+            layer = self._m.layer
 
-        layer = art.get_zorder()
+        self._artists.setdefault(layer, dict())
+        self._artists[layer].setdefault(zorder, list())
+
         if art.figure != self.figure:
             raise RuntimeError
-        if art in self._artists[layer]:
+
+        if art in self._artists[layer][zorder]:
             return
         else:
             art.set_animated(True)
-            self._artists[layer].append(art)
+            self._artists[layer][zorder].append(art)
 
     def add_bg_artist(self, art, layer=0):
         """
@@ -1297,59 +1332,75 @@ class BlitManager:
             return
 
         # art.set_animated(True)
+
         self._bg_artists[layer].append(art)
         self._m.BM._refetch_layer(layer)
 
+        for f in self._on_add_bg_artist:
+            f()
+
     def remove_bg_artist(self, art, layer=None):
+        removed = False
         if layer is None:
             for key, val in self._bg_artists.items():
                 if art in val:
                     art.set_animated(False)
                     val.remove(art)
+                    removed = True
         else:
             if art in self._bg_artists[layer]:
                 art.set_animated(False)
                 self._bg_artists[layer].remove(art)
+                removed = True
+
+        if removed:
+            for f in self._on_remove_bg_artist:
+                f()
 
     def remove_artist(self, art, layer=None):
         # this only removes the artist from the blit-manager,
         # it does not clear it from the plot!
+        zorder = art.get_zorder()
+
         if layer is None:
-            for key, val in self._artists.items():
-                if art in val:
+            for key, layerartists in self._artists.items():
+                if art in layerartists.get(zorder, []):
                     art.set_animated(False)
-                    val.remove(art)
+                    layerartists[zorder].remove(art)
         else:
-            if art in self._artists[layer]:
+            if art in self._artists[layer][zorder]:
                 art.set_animated(False)
-                self._artists[layer].remove(art)
+                self._artists[layer][zorder].remove(art)
 
     def _draw_animated(self, layers=None, artists=None):
         """
         Draw animated artists
 
-        - if layers is None and artists is None: all layers will be re-drawn
+        - if layers is None and artists is None: active layer artists will be re-drawn
         - if layers is not None: all artists from the selected layers will be re-drawn
         - if artists is not None: all provided artists will be redrawn
 
         """
         fig = self.canvas.figure
-
-        if layers is None and artists is None:
-            # redraw all layers
-            for l in sorted(list(self._artists)):
-                for a in self._artists[l]:
-                    fig.draw_artist(a)
+        if layers is None:
+            layers = set(self.bg_layer.split("|"))
         else:
-            if layers is not None:
-                # redraw artists from the selected layers
-                for l in layers:
-                    for a in self._artists[l]:
+            layers = set(chain(*(i.split("|") for i in layers)))
+
+        # always redraw artists from the "all" layer
+        layers.add("all")
+        # redraw artists from the selected layers
+        for l in layers:
+            if l in self._artists:
+                zorder_artists = self._artists[l]
+                zorders = sorted(list(zorder_artists))
+                for zorder in zorders:
+                    for a in zorder_artists[zorder]:
                         fig.draw_artist(a)
-            if artists is not None:
-                # redraw provided artists
-                for a in artists:
-                    fig.draw_artist(a)
+        if artists is not None:
+            # redraw provided artists
+            for a in artists:
+                fig.draw_artist(a)
 
     def _clear_temp_artists(self, method, forward=True):
         # clear artists from connected methods
@@ -1437,6 +1488,7 @@ class BlitManager:
         if bg_layer not in self._bg_layers or self._bg_layers[bg_layer] is None:
             self.on_draw(None)
         else:
+
             if clear:
                 self._clear_temp_artists(clear)
             # restore the background

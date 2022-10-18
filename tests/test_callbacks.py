@@ -274,6 +274,10 @@ class TestCallbacks(unittest.TestCase):
         self.click_ax_center(m)
         m.cb.click.remove(cid)
 
+        cid = m.cb.click.attach.peek_layer(layer=2, how="full")
+        self.click_ax_center(m)
+        m.cb.click.remove(cid)
+
         cid = m.cb.click.attach.peek_layer(layer=2, how=(0.25))
         self.click_ax_center(m)
         m.cb.click.remove(cid)
