@@ -12,12 +12,12 @@ class DrawerWidget(QtWidgets.QWidget):
         "Circle": "circle",
     }
 
-    def __init__(self, m=None):
+    def __init__(self, m=None, *args, **kwargs):
 
-        super().__init__()
+        super().__init__(*args, **kwargs)
 
         self.m = m
-
+        self.new_poly = self.m.util.draw.new_poly()
         self.shapeselector = QtWidgets.QComboBox()
 
         self.shapeselector.setMinimumWidth(50)
@@ -58,15 +58,43 @@ class DrawerWidget(QtWidgets.QWidget):
         layout.setAlignment(Qt.AlignCenter)
         self.setLayout(layout)
 
+    def enterEvent(self, e):
+        if self.window().showhelp is True:
+            QtWidgets.QToolTip.showText(
+                e.globalPos(),
+                "<h3>Draw Shapes on the Map</h3>"
+                "A widget to draw simple shapes on the map."
+                "<p>"
+                "<ul>"
+                "<li>use the <b>left</b> mouse button to <b>draw</b> points</li>"
+                "<li>use the <b>right</b> mouse button to <b>erase</b> points</li>"
+                "<li>use the <b>middle</b> mouse button to <b>finish</b> drawing</li>"
+                "</ul>"
+                "<p>"
+                "For <b>circles</b> and <b>rectangles</b> the first click determines "
+                "the center-point, and the size is determined by the position of the "
+                "mouse when clicking the middle mouse button."
+                "<p>"
+                "For <b>polygons</b>, points can be added by successively clicking on "
+                "the map with the left mouse button (or by holding the button and "
+                "dragging the mouse). The polygon is finalized by clicking the "
+                "middle mouse button."
+                "<p>"
+                "For any shape, the added points can be undone by successively "
+                "clicking the right mouse button.",
+            )
+
     def set_poly_type(self, s):
         self._use_poly_type = self._polynames[s]
 
     def draw_shape_callback(self):
+        self.window().hide()
+        self.m.figure.f.canvas.show()
+        self.m.figure.f.canvas.setFocus()
 
-        p = self.m.util.draw.new_poly()
-        getattr(p, self._use_poly_type)(
-            facecolor=self.colorselector.facecolor.name(),
-            edgecolor=self.colorselector.edgecolor.name(),
-            alpha=self.alphaslider.alpha,
+        getattr(self.new_poly, self._use_poly_type)(
+            facecolor=self.colorselector.facecolor.getRgbF(),
+            edgecolor=self.colorselector.edgecolor.getRgbF(),
+            # alpha=self.alphaslider.alpha,
             linewidth=self.linewidthslider.alpha * 10,
         )
