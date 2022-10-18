@@ -110,22 +110,26 @@ class InputCRS(LineEditComplete):
         A QtWidgets.QLineEdit widget with autocompletion for available CRS
         """
         super().__init__(*args, **kwargs)
-
-        crs_options = [
-            "Maps.CRS." + key
+        ignore = ["Projection"]
+        self.crs_options = [
+            key
             for key, val in Maps.CRS.__dict__.items()
             if not key.startswith("_")
             and (isinstance(val, Maps.CRS.ABCMeta) or isinstance(val, Maps.CRS.CRS))
+            and key not in ignore
         ]
-        self.set_complete_vals(crs_options)
+        self.set_complete_vals(self.crs_options)
         self.setPlaceholderText("4326")
 
     def text(self):
         t = super().text()
         if len(t) == 0:
-            return self.placeholderText()
-        else:
-            return t
+            t = self.placeholderText()
+
+        if t in self.crs_options:
+            t = "Maps.CRS." + t
+
+        return t
 
 
 class CmapDropdown(QtWidgets.QComboBox):
