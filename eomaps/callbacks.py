@@ -119,6 +119,7 @@ class _click_callbacks(object):
         permanent=False,
         text=None,
         zorder=10,
+        layer=None,
         **kwargs,
     ):
         """
@@ -159,6 +160,10 @@ class _click_callbacks(object):
             For details, have a look at:
 
             - https://matplotlib.org/stable/gallery/misc/zorder_demo.html
+        layer : str or None, optional
+            The layer to put the marker on.
+            If None, the layer associated with the used Maps-object (e.g. `m.layer`)
+            The default is None
 
         kwargs
             kwargs passed to matplotlib.pyplot.annotate(). The default is:
@@ -170,6 +175,9 @@ class _click_callbacks(object):
             >>>     )
 
         """
+
+        if layer is None:
+            layer = self.m.layer
 
         ID, pos, val, ind, picker_name = self._popargs(kwargs)
 
@@ -248,18 +256,19 @@ class _click_callbacks(object):
 
             styledict.update(**kwargs)
             annotation = ax.annotate("", xy=pos, **styledict)
+            annotation.set_zorder(zorder)
 
             if not permanent:
                 # make the annotation temporary
                 self._temporary_artists.append(annotation)
+                self.m.BM.add_artist(annotation)
             else:
+                self.m.BM.add_artist(annotation, layer=layer)
+
                 if not hasattr(self, "permanent_annotations"):
                     self.permanent_annotations = [annotation]
                 else:
                     self.permanent_annotations.append(annotation)
-
-            annotation.set_zorder(zorder)
-            self.m.BM.add_artist(annotation)
 
             annotation.set_visible(True)
             annotation.xy = pos
@@ -372,7 +381,6 @@ class _click_callbacks(object):
             - https://matplotlib.org/stable/gallery/misc/zorder_demo.html
 
         layer : str or None, optional
-            ONLY relevant if "permanent=True" !
             The layer to put the marker on.
             If None, the layer associated with the used Maps-object (e.g. `m.layer`)
             The default is None
@@ -491,12 +499,8 @@ class _click_callbacks(object):
                 layer = self.m.layer
             self.m.BM.add_bg_artist(marker, layer)
         elif permanent is False:
-            if layer is not None:
-                warnings.warn(
-                    "EOmaps: `m.add_marker(layer=...)` is ignored if `permanent=False`"
-                )
             self._temporary_artists.append(marker)
-            self.m.BM.add_artist(marker)
+            self.m.BM.add_artist(marker, layer)
 
         return marker
 
@@ -673,6 +677,7 @@ class _click_callbacks(object):
                 shape="rectangles",
                 radius=(w / 1.99, h / 1.99),  # 1.99 to be larger than the blit-region
                 permanent=False,
+                layer="all",
                 **args,
             )
 

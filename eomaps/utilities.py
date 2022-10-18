@@ -242,7 +242,7 @@ class LayerSelector(SelectorButtons):
         self.figure = self._m.figure.f  # make sure the figure is set for the artist
         self.set_animated(True)
 
-        self._m.BM.add_artist(self.leg)
+        self._m.BM.add_artist(self.leg, layer="all")
 
         # keep a reference to the buttons to make sure they stay interactive
         if name is None:
@@ -455,7 +455,7 @@ class LayerSlider(Slider):
         self.track.set_height(h)
         self.track.set_y(self.track.get_y() + h / 2)
 
-        self._m.BM.add_artist(ax_slider)
+        self._m.BM.add_artist(ax_slider, layer="all")
 
         self.on_changed(self._on_changed)
 

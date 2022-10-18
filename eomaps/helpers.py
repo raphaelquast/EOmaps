@@ -954,7 +954,7 @@ class BlitManager:
         self._m = m
 
         self._bg = None
-        self._artists = defaultdict(list)
+        self._artists = dict()
 
         self._bg_artists = defaultdict(list)
         self._bg_layers = dict()
@@ -1155,11 +1155,8 @@ class BlitManager:
             for l in layer.split("|"):
                 if l in ["_", ""]:
                     continue
-                layer_artists = self._bg_artists.get(l, None)
-                if layer_artists is None:
-                    print("EOmaps: Problem while fetching artists for the layer", l)
-                else:
-                    artists += layer_artists
+                layer_artists = self._bg_artists.get(l, [])
+                artists += layer_artists
 
         return artists
 
@@ -1274,7 +1271,7 @@ class BlitManager:
             # we need to catch exceptions since QT does not like them...
             pass
 
-    def add_artist(self, art):
+    def add_artist(self, art, layer=None):
         """
         Add an artist to be managed.
 
@@ -1286,15 +1283,21 @@ class BlitManager:
             to be safe).  *art* must be in the figure associated with
             the canvas this class is managing.
         """
+        zorder = art.get_zorder()
+        if layer is None:
+            layer = self._m.layer
 
-        layer = art.get_zorder()
+        self._artists.setdefault(layer, dict())
+        self._artists[layer].setdefault(zorder, list())
+
         if art.figure != self.figure:
             raise RuntimeError
-        if art in self._artists[layer]:
+
+        if art in self._artists[layer][zorder]:
             return
         else:
             art.set_animated(True)
-            self._artists[layer].append(art)
+            self._artists[layer][zorder].append(art)
 
     def add_bg_artist(self, art, layer=0):
         """
@@ -1357,42 +1360,47 @@ class BlitManager:
     def remove_artist(self, art, layer=None):
         # this only removes the artist from the blit-manager,
         # it does not clear it from the plot!
+        zorder = art.get_zorder()
+
         if layer is None:
-            for key, val in self._artists.items():
-                if art in val:
+            for key, layerartists in self._artists.items():
+                if art in layerartists.get(zorder, []):
                     art.set_animated(False)
-                    val.remove(art)
+                    layerartists[zorder].remove(art)
         else:
-            if art in self._artists[layer]:
+            if art in self._artists[layer][zorder]:
                 art.set_animated(False)
-                self._artists[layer].remove(art)
+                self._artists[layer][zorder].remove(art)
 
     def _draw_animated(self, layers=None, artists=None):
         """
         Draw animated artists
 
-        - if layers is None and artists is None: all layers will be re-drawn
+        - if layers is None and artists is None: active layer artists will be re-drawn
         - if layers is not None: all artists from the selected layers will be re-drawn
         - if artists is not None: all provided artists will be redrawn
 
         """
         fig = self.canvas.figure
-
-        if layers is None and artists is None:
-            # redraw all layers
-            for l in sorted(list(self._artists)):
-                for a in self._artists[l]:
-                    fig.draw_artist(a)
+        if layers is None:
+            layers = set(self.bg_layer.split("|"))
         else:
-            if layers is not None:
-                # redraw artists from the selected layers
-                for l in layers:
-                    for a in self._artists[l]:
+            layers = set(chain(*(i.split("|") for i in layers)))
+
+        # always redraw artists from the "all" layer
+        layers.add("all")
+        # redraw artists from the selected layers
+        for l in layers:
+            if l in self._artists:
+                zorder_artists = self._artists[l]
+                zorders = sorted(list(zorder_artists))
+                for zorder in zorders:
+                    for a in zorder_artists[zorder]:
                         fig.draw_artist(a)
-            if artists is not None:
-                # redraw provided artists
-                for a in artists:
-                    fig.draw_artist(a)
+        if artists is not None:
+            # redraw provided artists
+            for a in artists:
+                fig.draw_artist(a)
 
     def _clear_temp_artists(self, method, forward=True):
         # clear artists from connected methods
