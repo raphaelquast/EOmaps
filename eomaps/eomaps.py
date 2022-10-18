@@ -4806,7 +4806,7 @@ class Maps(object):
         gdf = self._make_rect_poly(x0, y0, x1, y1, self.get_crs(crs), npts)
         self.add_gdf(gdf, **kwargs)
 
-    def add_logo(self, filepath=None, position="lr", size=0.12, pad=0.1):
+    def add_logo(self, filepath=None, position="lr", size=0.12, pad=0.1, layer="all"):
         """
         Add a small image (png, jpeg etc.) to the map whose position is dynamically
         updated if the plot is resized or zoomed.
@@ -4828,6 +4828,8 @@ class Maps(object):
             Padding between the axis-edge and the logo as a fraction of the logo-width.
             If a tuple is passed, (x-pad, y-pad)
             The default is 0.1.
+        layer : str, optional
+            The layer at which the logo should be visible. The default is "all".
         """
 
         if filepath is None:
@@ -4856,7 +4858,7 @@ class Maps(object):
         figax.set_navigate(False)
         figax.set_axis_off()
         art = figax.imshow(im, aspect="equal", zorder=999)
-        self.BM.add_artist(art)
+        self.BM.add_artist(art, layer)
 
         def setlim(*args, **kwargs):
             figax.set_position(getpos(self.ax.get_position())["rect"])
