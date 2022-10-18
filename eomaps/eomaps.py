@@ -3593,7 +3593,7 @@ class Maps(object):
             self.cb._methods.append("pick")
 
         if dynamic is True:
-            self.BM.add_artist(coll)
+            self.BM.add_artist(coll, layer)
         else:
             self.BM.add_bg_artist(coll, layer)
 
@@ -3910,7 +3910,7 @@ class Maps(object):
                 self.cb._methods.append("pick")
 
             if dynamic is True:
-                self.BM.add_artist(coll)
+                self.BM.add_artist(coll, layer)
             else:
                 self.BM.add_bg_artist(coll, layer)
 
