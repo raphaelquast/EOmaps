@@ -4857,8 +4857,8 @@ class Maps(object):
         figax = self.figure.f.add_axes(**getpos(self.ax.get_position()))
         figax.set_navigate(False)
         figax.set_axis_off()
-        art = figax.imshow(im, aspect="equal", zorder=999)
-        self.BM.add_artist(art, layer)
+        _ = figax.imshow(im, aspect="equal", zorder=999)
+        self.BM.add_artist(figax, layer)
 
         def setlim(*args, **kwargs):
             figax.set_position(getpos(self.ax.get_position())["rect"])
