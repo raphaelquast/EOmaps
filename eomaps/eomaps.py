@@ -1059,7 +1059,7 @@ class Maps(object):
 
         # de-register colormaps
         for cmap in self._registered_cmaps:
-            plt.cm._cmap_registry.pop(cmap, None)
+            plt.cm.unregister_cmap(cmap)
 
         # run garbage-collection to immediately free memory
         gc.collect
@@ -1866,9 +1866,7 @@ class Maps(object):
 
             # initialize the classified colormap
             # get a unique cmap name (to make the colormap accessible from outside)
-            ncmaps = len(
-                [None for i in plt.cm._cmap_registry if i.startswith("EOmaps_")]
-            )
+            ncmaps = len([None for i in plt.colormaps() if i.startswith("EOmaps_")])
             cmapname = f"EOmaps_classified_{ncmaps}"
             cbcmap = LinearSegmentedColormap.from_list(
                 cmapname, colors=colors, N=len(colors)
@@ -4042,7 +4040,7 @@ class Maps(object):
         if "alpha" in kwargs and kwargs["alpha"] < 1:
             # get a unique name for the colormap
             ncmaps = len(
-                [None for i in plt.cm._cmap_registry if i.startswith("EOmaps_alpha_")]
+                [None for i in plt.colormaps() if i.startswith("EOmaps_alpha_")]
             )
             cmapname = f"EOmaps_alpha_{ncmaps}"
 
