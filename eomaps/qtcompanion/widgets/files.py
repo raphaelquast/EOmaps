@@ -982,6 +982,9 @@ class PlotShapeFileWidget(QtWidgets.QWidget):
         layername.addLayout(zorder_layout)
         setlayername.setLayout(layername)
 
+        self.alphaslider.setValue(50)
+        self.linewidthslider.setValue(10)
+
         # -----------------------
 
         props = QtWidgets.QGridLayout()
