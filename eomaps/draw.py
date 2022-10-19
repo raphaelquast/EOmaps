@@ -1,35 +1,6 @@
 """
-This is a first proove-of-concept on how to implement basic drawing
-capabilities in EOmaps.
-
-It is NOT YET MATURE and needs further work before going officially into EOmaps!
-
-
-The idea is to provide a simple interface to quickly draw geo-coded shapes on a map.
-
-
-TODO's:
--------
-- general concept... what is feasible, what is too much?
-
-- come up with ideas for a proper user-interface
-  - how to start/stop/reset a shape
-  - how to select shapes
-  - undo / redo operations
-
-  - add capabilities to
-    - delete shapes on click?
-    - move shapes
-    - edit shapes
-
-- what basic shapes to provide?  currently there are:
-  - rectangle
-  - circle
-  - polygon
-
-
-Issues:
--------
+Known Issues:
+-------------
 
 It can happen that geopandas silently ignores the crs when writing shapefiles
 (in case WKT2 strings are required to represent the crs)
@@ -39,25 +10,17 @@ It can happen that geopandas silently ignores the crs when writing shapefiles
 https://github.com/geopandas/geopandas/issues/2387
 
 """
+from contextlib import contextmanager
 
-from cartopy import crs as ccrs
 import numpy as np
-import matplotlib.pyplot as plt
-
-from matplotlib.backend_bases import MouseButton
 import matplotlib as mpl
+import matplotlib.pyplot as plt
+from matplotlib.backend_bases import MouseButton
 
 from shapely.geometry import Polygon
 import geopandas as gpd
-from scipy.interpolate import splprep, splev
 
-
-# This is basically a copy of matplotlib's ginput function adapted to work with EOmaps
-# matplotlib's original ginput function is here:
-# https://matplotlib.org/stable/api/_as_gen/matplotlib.pyplot.ginput.html
-
-
-from contextlib import contextmanager
+import eomaps._shapes as eoshp
 
 
 @contextmanager
@@ -71,10 +34,8 @@ def autoscale_turned_off(ax=None):
 
 # ----------------------------------------------------------------------------------
 
-import eomaps._shapes as eoshp
 
-
-class shape_drawer:
+class ShapeDrawer:
     def __init__(self, m, layer=None, savepath=None):
         """
         Container class for draw-shapes
@@ -96,7 +57,7 @@ class shape_drawer:
         self._m = m
         self._layer = layer
 
-        if self._m.crs_plot == ccrs.PlateCarree():
+        if self._m.crs_plot == self._m.CRS.PlateCarree():
             # temporary workaround for geopandas issue with WKT2 strings
             # https://github.com/geopandas/geopandas/issues/2387
             self._crs = 4326
@@ -112,7 +73,31 @@ class shape_drawer:
         self.marks = []
         self.endline = []
 
-    def finish_drawing(self, cb=None):
+        self.on_new_poly = []
+
+        self._artists = dict()
+
+    def set_layer(self, layer):
+        """
+        Set the layer to which the final shape will be added.
+
+        Parameters
+        ----------
+        layer : str
+            The layer name.
+        """
+        self._layer = layer
+
+    def _finish_drawing(self, cb=None):
+        """
+        Stop the current draw, cleanup all temporary artists and execute
+        an optional callback provided as "cb".
+
+        Parameters
+        ----------
+        cb : callable, optional
+            A callable executed after finishing the draw. The default is None.
+        """
         while len(self.cids) > 0:
             self._m.figure.f.canvas.mpl_disconnect(self.cids.pop())
 
@@ -135,7 +120,11 @@ class shape_drawer:
         self._m.BM.update()
 
     # TODO update docstrings
-    def ginput(
+
+    # This is basically a copy of matplotlib's ginput function adapted for EOmaps
+    # matplotlib's original ginput function is here:
+    # https://matplotlib.org/stable/api/_as_gen/matplotlib.pyplot.ginput.html
+    def _ginput(
         self,
         n=1,
         timeout=30,
@@ -192,13 +181,13 @@ class shape_drawer:
         """
 
         # make sure all active drawings are finished before starting a new one
-        self.finish_drawing()
+        self._finish_drawing()
 
         canvas = self._m.BM.canvas
 
         def handler(event):
             if event.name == "close_event":
-                self.finish_drawing(cb=cb)
+                self._finish_drawing(cb=cb)
                 return
 
             if (canvas.toolbar is not None) and canvas.toolbar.mode != "":
@@ -219,7 +208,7 @@ class shape_drawer:
                 or is_key
                 and event.key in ["escape", "enter"]
             ):
-                self.finish_drawing(cb=cb)
+                self._finish_drawing(cb=cb)
 
             # Pop last click.
             elif (
@@ -267,7 +256,7 @@ class shape_drawer:
                         event.inaxes.add_line(line)
                         self.marks.append(line)
 
-                        self._m.BM.add_artist(line, self._m.BM._bg_layer)
+                        self._m.BM.add_artist(line, "all")
 
                         if len(self.clicks) > 2:
                             self.endline.append(
@@ -281,14 +270,12 @@ class shape_drawer:
                             )
                             event.inaxes.add_line(self.endline[-1])
 
-                            self._m.BM.add_artist(
-                                self.endline[-1], self._m.BM._bg_layer
-                            )
+                            self._m.BM.add_artist(self.endline[-1], "all")
 
                         self._m.BM.update()
 
             if len(self.clicks) == n and n > 0:
-                self.finish_drawing(cb=cb)
+                self._finish_drawing(cb=cb)
 
         eventnames = ["button_press_event", "key_press_event", "close_event"]
         if draw_on_drag:
@@ -299,7 +286,11 @@ class shape_drawer:
 
     # TODO update docstrings
     # draw only a single point and draw a second point on escape
-    def ginput2(
+    # This is basically a copy of matplotlib's ginput function adapted for EOmaps
+    # matplotlib's original ginput function is here:
+    # https://matplotlib.org/stable/api/_as_gen/matplotlib.pyplot.ginput.html
+
+    def _ginput2(
         self,
         n=1,
         timeout=30,
@@ -359,13 +350,13 @@ class shape_drawer:
         """
 
         # make sure all active drawings are finished before starting a new one
-        self.finish_drawing()
+        self._finish_drawing()
 
         canvas = self._m.BM.canvas
 
         def handler(event):
             if event.name == "close_event":
-                self.finish_drawing(cb=cb)
+                self._finish_drawing(cb=cb)
                 return
 
             if (canvas.toolbar is not None) and canvas.toolbar.mode != "":
@@ -386,9 +377,9 @@ class shape_drawer:
 
             if is_button and event.button == mouse_stop:
                 self.clicks.append((event.xdata, event.ydata))
-                self.finish_drawing(cb=cb)
+                self._finish_drawing(cb=cb)
             elif is_key and event.key in ["escape", "enter"]:
-                self.finish_drawing(cb=cb)
+                self._finish_drawing(cb=cb)
 
             # Pop last click.
             elif (
@@ -442,7 +433,7 @@ class shape_drawer:
                         event.inaxes.add_line(line)
                         self.marks.append(line)
 
-                        self._m.BM.add_artist(line, self._m.BM._bg_layer)
+                        self._m.BM.add_artist(line, "all")
 
                         if len(self.clicks) > 2:
                             self.endline.append(
@@ -456,9 +447,7 @@ class shape_drawer:
                             )
                             event.inaxes.add_line(self.endline[-1])
 
-                            self._m.BM.add_artist(
-                                self.endline[-1], self._m.BM._bg_layer
-                            )
+                            self._m.BM.add_artist(self.endline[-1], "all")
 
                         self._m.BM.update()
 
@@ -470,6 +459,22 @@ class shape_drawer:
             self.cids.append(canvas.mpl_connect(event, handler))
 
     def new_poly(self, **kwargs):
+        """
+        Initialize a new ShapeDrawer
+        (e.g. reset all properties, paths etc. and start new)
+
+        Parameters
+        ----------
+        kwargs :
+            kwargs passed to the initialization of ShapeDrawer.
+
+        Returns
+        -------
+        TYPE
+            DESCRIPTION.
+
+        """
+
         return self.__class__(self._m, **kwargs)
 
     def polygon(self, smooth=False, draw_on_drag=True, **kwargs):
@@ -483,22 +488,6 @@ class shape_drawer:
 
         Parameters
         ----------
-        smooth : int or float, optional
-
-            # TODO
-            # copied from "scipy.interpolate.fitpack.splprep"
-
-            A smoothing condition. The amount of smoothness is determined by
-            satisfying the conditions: sum((w * (y - g))**2,axis=0) <= s, where g(x)
-            is the smoothed interpolation of (x,y). The user can use s to control
-            the trade-off between closeness and smoothness of fit. Larger s means
-            more smoothing while smaller values of s indicate less smoothing.
-            Recommended values of s depend on the weights, w. If the weights
-            represent the inverse of the standard-deviation of y, then a good
-            s value should be found in the range (m-sqrt(2*m),m+sqrt(2*m)),
-            where m is the number of data points in x, y, and w.
-
-            The default is False.
         draw_on_drag : bool, optional
             Continue adding points to the polygon on drag-events
             (e.g. mouse-button down + move).
@@ -508,27 +497,14 @@ class shape_drawer:
         """
 
         def cb():
-            self._polygon(smooth=False, **kwargs)
+            self._polygon(**kwargs)
 
-        self.ginput(-1, timeout=-1, draw_on_drag=draw_on_drag, cb=cb)
+        self._ginput(-1, timeout=-1, draw_on_drag=draw_on_drag, cb=cb)
 
-    def _polygon(self, smooth=False, **kwargs):
-        # pts = ginput(self._m, -1, timeout=-1, draw_on_drag=draw_on_drag)
+    def _polygon(self, **kwargs):
         pts = self.clicks
         if pts is not None and len(pts) > 2:
             pts = np.asarray(pts)
-
-            if smooth:
-                # TODO this does not yet work
-                # drawing smooth splines still needs a proper treatment!
-                if isinstance(smooth, (int, float, np.number)):
-                    s = smooth
-                else:
-                    s = 0.0
-                tck, u = splprep(pts.T, u=None, s=s, per=1)
-                u_new = np.linspace(u.min(), u.max(), 1000)
-                x_new, y_new = splev(u_new, tck, der=0)
-                pts = np.column_stack((x_new, y_new))
 
             with autoscale_turned_off(self._m.ax):
                 (ph,) = self._m.ax.fill(pts[:, 0], pts[:, 1], **kwargs)
@@ -538,12 +514,19 @@ class shape_drawer:
                 else:
                     self._m.BM.add_bg_artist(ph, layer=self._layer)
 
+                ID = max(self._artists) + 1 if self._artists else 0
+                self._artists[ID] = ph
+
             self._m.BM.update()
 
+            gdf = gpd.GeoDataFrame(index=[ID], geometry=[Polygon(pts)])
+            gdf = gdf.set_crs(crs=self._crs)
+            self.gdf = self.gdf.append(gdf)
+
+            for cb in self.on_new_poly:
+                cb()
+
             if self._savepath:
-                gdf = gpd.GeoDataFrame(geometry=[Polygon(pts)])
-                gdf = gdf.set_crs(crs=self._crs)
-                self.gdf = self.gdf.append(gdf)
                 self.gdf.to_file(self._savepath)
 
     def circle(self, **kwargs):
@@ -587,7 +570,7 @@ class shape_drawer:
                 self._m.ax.draw_artist(ph)
                 self._m.BM.update(artists=[ph])
 
-        self.ginput2(2, timeout=-1, draw_on_drag=True, movecb=movecb, cb=cb)
+        self._ginput2(2, timeout=-1, draw_on_drag=True, movecb=movecb, cb=cb)
 
     def _circle(self, **kwargs):
         pts = self.clicks
@@ -607,13 +590,20 @@ class shape_drawer:
                 else:
                     self._m.BM.add_bg_artist(ph, layer=self._layer)
 
-                self._m.BM.update()
+                ID = max(self._artists) + 1 if self._artists else 0
+                self._artists[ID] = ph
+
+            self._m.BM.update()
+
+            pts = np.column_stack((pts[0][0], pts[1][0]))
+            gdf = gpd.GeoDataFrame(index=[ID], geometry=[Polygon(pts)])
+            gdf = gdf.set_crs(crs=self._crs)
+            self.gdf = self.gdf.append(gdf)
+
+            for cb in self.on_new_poly:
+                cb()
 
             if self._savepath:
-                pts = np.column_stack((pts[0][0], pts[1][0]))
-                gdf = gpd.GeoDataFrame(geometry=[Polygon(pts)])
-                gdf = gdf.set_crs(crs=self._crs)
-                self.gdf = self.gdf.append(gdf)
                 self.gdf.to_file(self._savepath)
 
     def rectangle(self, **kwargs):
@@ -651,7 +641,7 @@ class shape_drawer:
                 self._m.ax.draw_artist(ph)
                 self._m.BM.update(artists=[ph])
 
-        self.ginput2(2, timeout=-1, draw_on_drag=True, movecb=movecb, cb=cb)
+        self._ginput2(2, timeout=-1, draw_on_drag=True, movecb=movecb, cb=cb)
 
     def _rectangle(self, **kwargs):
         pts = self.clicks
@@ -670,10 +660,17 @@ class shape_drawer:
                 else:
                     self._m.BM.add_bg_artist(ph, layer=self._layer)
 
-                self._m.BM.update()
+                ID = max(self._artists) + 1 if self._artists else 0
+                self._artists[ID] = ph
+
+            self._m.BM.update()
+
+            gdf = gpd.GeoDataFrame(index=[ID], geometry=[Polygon(pts)])
+            gdf = gdf.set_crs(crs=self._crs)
+            self.gdf = self.gdf.append(gdf)
+
+            for cb in self.on_new_poly:
+                cb()
 
             if self._savepath:
-                gdf = gpd.GeoDataFrame(geometry=[Polygon(pts)])
-                gdf = gdf.set_crs(crs=self._crs)
-                self.gdf = self.gdf.append(gdf)
                 self.gdf.to_file(self._savepath)
