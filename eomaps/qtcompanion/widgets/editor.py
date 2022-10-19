@@ -183,7 +183,7 @@ class AddFeatureWidget(QtWidgets.QFrame):
         self.selector = AddFeaturesMenuButton(m=self.m)
         self.selector.clicked.connect(self.update_props)
 
-        self.colorselector = GetColorWidget()
+        self.colorselector = GetColorWidget(facecolor="#aaaa7f")
         self.colorselector.cb_colorselected = self.update_on_color_selection
 
         self.alphaslider = TransparencySlider(Qt.Horizontal)
@@ -332,9 +332,10 @@ class NewLayerWidget(QtWidgets.QFrame):
 
         self.m = m
 
+        new_layer_label = QtWidgets.QLabel("<b>Create a new layer:</b>")
         self.new_layer_name = NewLayerLineEdit()
         self.new_layer_name.setMaximumWidth(300)
-        self.new_layer_name.setPlaceholderText("Create a new layer")
+        self.new_layer_name.setPlaceholderText("my_layer")
 
         self.new_layer_name.returnPressed.connect(self.new_layer)
 
@@ -349,6 +350,7 @@ class NewLayerWidget(QtWidgets.QFrame):
         if self.addwms is not None:
             newlayer.addWidget(self.addwms)
         newlayer.addStretch(1)
+        newlayer.addWidget(new_layer_label)
         newlayer.addWidget(self.new_layer_name)
 
         # addfeature = AddFeatureWidget(m=self.m)
