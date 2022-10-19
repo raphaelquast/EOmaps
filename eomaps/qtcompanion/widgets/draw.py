@@ -40,17 +40,6 @@ class DrawerWidget(QtWidgets.QWidget):
         )
         self.linewidthslider.setValue(20)
 
-        # self.savepath_label = QtWidgets.QLabel()
-        # self.savepath_button = QtWidgets.QPushButton("Set Savepath")
-        # self.savepath_button.clicked.connect(self.set_savepath)
-        # self.savepath_clear_button = QtWidgets.QToolButton()
-        # self.savepath_clear_button.setText("x")
-        # self.savepath_clear_button.clicked.connect(self.clear_savepath)
-
-        # savepath_layout = QtWidgets.QHBoxLayout()
-        # savepath_layout.addWidget(self.savepath_button)
-        # savepath_layout.addWidget(self.savepath_clear_button)
-
         self.save_button = QtWidgets.QPushButton("Save 999 Polygons")
         self.save_button.setMaximumSize(self.save_button.sizeHint())
         self.save_button.clicked.connect(self.save_polygons)
@@ -61,7 +50,7 @@ class DrawerWidget(QtWidgets.QWidget):
         self.remove_button.clicked.connect(self.remove_last_poly)
         self.remove_button.setVisible(False)
 
-        save_layout = QtWidgets.QHBoxLayout()
+        save_layout = QtWidgets.QVBoxLayout()
         save_layout.addWidget(self.save_button)
         save_layout.addWidget(self.remove_button)
 
@@ -73,12 +62,8 @@ class DrawerWidget(QtWidgets.QWidget):
         layout.addWidget(self.colorselector, 0, 0, 2, 1)
         layout.addWidget(self.alphaslider, 0, 1)
         layout.addWidget(self.linewidthslider, 1, 1)
-        # layout.addWidget(self.shapeselector, 0, 2)
-        # layout.addWidget(b1, 1, 2)
-        layout.addLayout(b_layout, 0, 2, 3, 1)
-        # layout.addLayout(savepath_layout, 2, 0)
-        # layout.addWidget(self.savepath_label, 2, 1, 1, 2)
-        layout.addLayout(save_layout, 2, 0, 1, 2, Qt.AlignLeft)
+        layout.addLayout(b_layout, 0, 2, 2, 1)
+        layout.addLayout(save_layout, 0, 3, 2, 1)
 
         layout.setAlignment(Qt.AlignCenter | Qt.AlignTop)
         self.setLayout(layout)
@@ -129,19 +114,6 @@ class DrawerWidget(QtWidgets.QWidget):
         # update button text and visibility (same as if a new poly was created)
         self._on_new_poly()
 
-    # def set_savepath(self):
-    #     save_path, widget = QtWidgets.QFileDialog.getSaveFileName(
-    #         caption="Save Shapes", directory="shapes.shp", filter="Shapefiles (*.shp)"
-    #     )
-    #     if len(save_path) > 0:
-    #         self._new_poly(save_path)
-    #         self.savepath_label.setText(
-    #             "<b>Shapefiles are saved to:</b><br>" + save_path
-    #         )
-    # def clear_savepath(self):
-    #     self._new_poly()
-    #     self.savepath_label.setText("")
-
     def save_polygons(self):
         save_path, widget = QtWidgets.QFileDialog.getSaveFileName(
             caption="Save Shapes", directory="shapes.shp", filter="Shapefiles (*.shp)"
@@ -188,7 +160,6 @@ class DrawerWidget(QtWidgets.QWidget):
             getattr(self.new_poly, poly)(
                 facecolor=self.colorselector.facecolor.getRgbF(),
                 edgecolor=self.colorselector.edgecolor.getRgbF(),
-                # alpha=self.alphaslider.alpha,
                 linewidth=self.linewidthslider.alpha * 10,
             )
 
