@@ -2,6 +2,7 @@ from PyQt5 import QtWidgets
 from PyQt5.QtCore import Qt
 
 from .utils import GetColorWidget, AlphaSlider
+from .editor import AddAnnotationInput
 
 
 class DrawerWidget(QtWidgets.QWidget):
@@ -17,7 +18,6 @@ class DrawerWidget(QtWidgets.QWidget):
         super().__init__(*args, **kwargs)
 
         self.m = m
-        self.new_poly = self.m.util.draw.new_poly()
         self.shapeselector = QtWidgets.QComboBox()
 
         self.shapeselector.setMinimumWidth(50)
@@ -38,7 +38,7 @@ class DrawerWidget(QtWidgets.QWidget):
         self.alphaslider.valueChanged.connect(
             lambda i: self.colorselector.set_alpha(i / 100)
         )
-        self.alphaslider.setValue(100)
+        self.alphaslider.setValue(50)
 
         self.linewidthslider = AlphaSlider(Qt.Horizontal)
         self.linewidthslider.valueChanged.connect(
@@ -46,17 +46,46 @@ class DrawerWidget(QtWidgets.QWidget):
         )
         self.linewidthslider.setValue(20)
 
-        layout = QtWidgets.QGridLayout()
+        self.savepath_label = QtWidgets.QLabel()
+        self.savepath_button = QtWidgets.QPushButton("Set Savepath")
+        self.savepath_button.clicked.connect(self.set_savepath)
+        self.savepath_clear_button = QtWidgets.QToolButton()
+        self.savepath_clear_button.setText("x")
+        self.savepath_clear_button.clicked.connect(self.clear_savepath)
 
+        savepath_layout = QtWidgets.QHBoxLayout()
+        savepath_layout.addWidget(self.savepath_button)
+        savepath_layout.addWidget(self.savepath_clear_button)
+
+        layout = QtWidgets.QGridLayout()
         layout.addWidget(self.colorselector, 0, 0, 2, 1)
         layout.addWidget(self.alphaslider, 0, 1)
         layout.addWidget(self.linewidthslider, 1, 1)
-
         layout.addWidget(self.shapeselector, 0, 2)
         layout.addWidget(b1, 1, 2)
+        layout.addLayout(savepath_layout, 2, 0)
+        layout.addWidget(self.savepath_label, 2, 1, 1, 2)
 
         layout.setAlignment(Qt.AlignCenter)
         self.setLayout(layout)
+
+        self.new_poly = self.m.util.draw.new_poly()
+
+    def set_savepath(self):
+        save_path, widget = QtWidgets.QFileDialog.getSaveFileName(
+            caption="Save Shapes", directory="shapes.shp", filter="Shapefiles (*.shp)"
+        )
+        if len(save_path) > 0:
+            self.save_path = save_path
+            self.new_poly = self.m.util.draw.new_poly(savepath=self.save_path)
+            self.savepath_label.setText(
+                "<b>Shapefiles are saved to:</b><br>" + save_path
+            )
+
+    def clear_savepath(self):
+        self.save_path = None
+        self.new_poly = self.m.util.draw.new_poly()
+        self.savepath_label.setText("")
 
     def enterEvent(self, e):
         if self.window().showhelp is True:
