@@ -38,7 +38,7 @@ def autoscale_turned_off(ax=None):
 class ShapeDrawer:
     def __init__(self, m, layer=None, savepath=None):
         """
-        Container class for draw-shapes
+        Base-class for drawing shapes on a map.
 
         Parameters
         ----------
@@ -531,7 +531,7 @@ class ShapeDrawer:
         Draw a circle.
 
         - RIGHT click to set the center
-        - move the mouse to set the radius
+        - MOVE the mouse to set the radius
         - MIDDLE click to fix the circle
         - LEFT click to abort
 
@@ -608,7 +608,7 @@ class ShapeDrawer:
         Draw a rectangle.
 
         - RIGHT click to set the center
-        - move the mouse to set the radius
+        - MOVE the mouse to set the radius
         - MIDDLE click to fix the circle
         - LEFT click to abort
 
