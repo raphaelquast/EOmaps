@@ -5,6 +5,88 @@ from .utils import GetColorWidget, AlphaSlider
 from .editor import AddAnnotationInput
 
 
+class TransparencySlider(AlphaSlider):
+    def enterEvent(self, e):
+        if self.window().showhelp is True:
+            QtWidgets.QToolTip.showText(
+                e.globalPos(),
+                "<h3>Transparency</h3> Set the transparency of the facecolor.",
+            )
+
+
+class LineWidthSlider(AlphaSlider):
+    def enterEvent(self, e):
+        if self.window().showhelp is True:
+            QtWidgets.QToolTip.showText(
+                e.globalPos(),
+                "<h3>Linewidth</h3> Set the linewidth of the shape boundary.",
+            )
+
+
+class SaveButton(QtWidgets.QPushButton):
+    def enterEvent(self, e):
+        if self.window().showhelp is True:
+            QtWidgets.QToolTip.showText(
+                e.globalPos(),
+                "<h3>Save Polygons</h3> Save the created polygons as "
+                "geo-coded shapefile.",
+            )
+
+
+class RemoveButton(QtWidgets.QPushButton):
+    def enterEvent(self, e):
+        if self.window().showhelp is True:
+            QtWidgets.QToolTip.showText(
+                e.globalPos(),
+                "<h3>Remove Polygons</h3> Successivlely remove the most recently "
+                "created polygons from the map.",
+            )
+
+
+class PolyButton(QtWidgets.QPushButton):
+    def enterEvent(self, e):
+        if self.window().showhelp is True:
+            name = self.text()
+            if name == "Polygon":
+                txt = (
+                    "<h3>Draw a Polygon</h3>"
+                    "Draw an arbitrary polygon on the map."
+                    "<ul>"
+                    "<li><b>right click</b> on the map to add new points to the "
+                    "polygon (or move the mouse while pressing the right button)</li>"
+                    "<li><b>left click</b> to undo previously drawn points</li>"
+                    "<li><b>middle click</b> to finish drawing</li>"
+                    "</ul>"
+                )
+            elif name == "Rectangle":
+                txt = (
+                    "<h3>Draw a Rectangle</h3>"
+                    "Draw a rectangle on the map."
+                    "<ul>"
+                    "<li><b>right click</b> on the map to set the center point of "
+                    "the rectangle</li>"
+                    "<li><b>move</b> the mouse to set the size</li>"
+                    "<li><b>middle click</b> to finish drawing</li>"
+                    "</ul>"
+                )
+
+            elif name == "Circle":
+                txt = (
+                    "<h3>Draw a Circle</h3>"
+                    "Draw a circle on the map."
+                    "<ul>"
+                    "<li><b>right click</b> on the map to set the center point of "
+                    "the circle</li>"
+                    "<li><b>move</b> the mouse to set the size</li>"
+                    "<li><b>middle click</b> to finish drawing</li>"
+                    "</ul>"
+                )
+            else:
+                txt = ""
+
+            QtWidgets.QToolTip.showText(e.globalPos(), txt)
+
+
 class DrawerWidget(QtWidgets.QWidget):
 
     _polynames = {
@@ -21,31 +103,31 @@ class DrawerWidget(QtWidgets.QWidget):
 
         polybuttons = []
         for name, poly in self._polynames.items():
-            poly_b = QtWidgets.QPushButton(name)
+            poly_b = PolyButton(name)
             poly_b.clicked.connect(self.draw_shape_callback(poly=poly))
             poly_b.setMaximumWidth(100)
             polybuttons.append(poly_b)
 
         self.colorselector = GetColorWidget()
 
-        self.alphaslider = AlphaSlider(Qt.Horizontal)
+        self.alphaslider = TransparencySlider(Qt.Horizontal)
         self.alphaslider.valueChanged.connect(
             lambda i: self.colorselector.set_alpha(i / 100)
         )
         self.alphaslider.setValue(50)
 
-        self.linewidthslider = AlphaSlider(Qt.Horizontal)
+        self.linewidthslider = LineWidthSlider(Qt.Horizontal)
         self.linewidthslider.valueChanged.connect(
             lambda i: self.colorselector.set_linewidth(i / 10)
         )
         self.linewidthslider.setValue(20)
 
-        self.save_button = QtWidgets.QPushButton("Save 999 Polygons")
+        self.save_button = SaveButton("Save 999 Polygons")
         self.save_button.setMaximumSize(self.save_button.sizeHint())
         self.save_button.clicked.connect(self.save_polygons)
         self.save_button.setVisible(False)
 
-        self.remove_button = QtWidgets.QPushButton("Remove")
+        self.remove_button = RemoveButton("Remove")
         self.remove_button.setMaximumSize(self.remove_button.sizeHint())
         self.remove_button.clicked.connect(self.remove_last_poly)
         self.remove_button.setVisible(False)
