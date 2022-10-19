@@ -2,9 +2,23 @@ from matplotlib.legend import DraggableLegend
 from matplotlib.lines import Line2D
 from matplotlib.widgets import Slider
 from functools import wraps
-
-
 from matplotlib.pyplot import Artist
+
+gpd = None
+
+
+def _register_geopandas():
+    global gpd
+    try:
+        import geopandas as gpd
+    except ImportError:
+        return False
+
+    return True
+
+
+if _register_geopandas():
+    from .draw import ShapeDrawer
 
 
 class SelectorButtons(Artist):
@@ -511,9 +525,6 @@ class LayerSlider(Slider):
         self._m.BM.update()
 
 
-from .draw import shape_drawer
-
-
 class utilities:
     """
     A collection of utility tools that can be added to EOmaps plots
@@ -522,7 +533,10 @@ class utilities:
     def __init__(self, m):
         self._m = m
 
-        self._shape_drawer = shape_drawer(m)
+        if _register_geopandas():
+            self._shape_drawer = ShapeDrawer(m)
+        else:
+            self._shape_drawer = None
 
         self._selectors = dict()
         self._sliders = dict()
@@ -530,10 +544,13 @@ class utilities:
         # register a function to update all associated widgets on a layer-chance
         self._m.BM.on_layer(lambda m, l: self._update_widgets(l), persistent=True)
 
-    @property
-    @wraps(shape_drawer)
-    def draw(self):
-        return self._shape_drawer
+    if _register_geopandas():
+
+        @property
+        @wraps(ShapeDrawer)
+        def draw(self):
+            if self._shape_drawer is not None:
+                return self._shape_drawer
 
     def _update_widgets(self, l=None):
         if l is None:
