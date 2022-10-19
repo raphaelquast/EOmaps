@@ -60,7 +60,7 @@ class PolyButton(QtWidgets.QPushButton):
                     "The shape will be added to the <b>currently selected tab</b> "
                     "in the tab-bar below."
                     "<p>"
-                    "NOTE: this is not necessarily the visible layer!",
+                    "NOTE: this is not necessarily the visible layer!"
                 )
             elif name == "Rectangle":
                 txt = (
@@ -75,7 +75,7 @@ class PolyButton(QtWidgets.QPushButton):
                     "The shape will be added to the <b>currently selected tab</b> "
                     "in the tab-bar below."
                     "<p>"
-                    "NOTE: this is not necessarily the visible layer!",
+                    "NOTE: this is not necessarily the visible layer!"
                 )
 
             elif name == "Circle":
@@ -91,7 +91,7 @@ class PolyButton(QtWidgets.QPushButton):
                     "The shape will be added to the <b>currently selected tab</b> "
                     "in the tab-bar below."
                     "<p>"
-                    "NOTE: this is not necessarily the visible layer!",
+                    "NOTE: this is not necessarily the visible layer!"
                 )
             else:
                 txt = ""
