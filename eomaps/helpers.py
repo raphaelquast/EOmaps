@@ -1163,7 +1163,6 @@ class BlitManager:
     def fetch_bg(self, layer=None, bbox=None, overlay=None):
         # add this to the zorder of the overlay-artists prior to plotting
         # to ensure that they appear on top of other artists
-
         overlay_zorder_bias = 1000
         cv = self.canvas
         if layer is None:
@@ -1214,7 +1213,7 @@ class BlitManager:
         if not self._m._layout_editor._modifier_pressed:
             # make all artists of the corresponding layer visible
             for l in self._bg_artists:
-                if l not in [layer, "all", *overlay_layers]:
+                if l not in [layer, *layer.split("|"), "all", *overlay_layers]:
                     # artists on "all" are always visible!
                     # make all artists of other layers invisible
                     for art in self.get_bg_artists(l):
@@ -1334,7 +1333,12 @@ class BlitManager:
         # art.set_animated(True)
 
         self._bg_artists[layer].append(art)
-        self._m.BM._refetch_layer(layer)
+        self._refetch_layer(layer)
+
+        # make sure we re-fetch the currently visible layer if an artist was added
+        # on one of the sub-layers
+        if any(l in self.bg_layer.split("|") for l in layer.split("|")):
+            self._refetch_layer(self.bg_layer)
 
         for f in self._on_add_bg_artist:
             f()
