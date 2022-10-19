@@ -1,4 +1,6 @@
 """
+A class to draw shapes on maps created with EOmaps
+
 Known Issues:
 -------------
 
@@ -118,8 +120,6 @@ class ShapeDrawer:
 
         self.clicks.clear()
         self._m.BM.update()
-
-    # TODO update docstrings
 
     # This is basically a copy of matplotlib's ginput function adapted for EOmaps
     # matplotlib's original ginput function is here:
@@ -284,12 +284,10 @@ class ShapeDrawer:
         for event in eventnames:
             self.cids.append(canvas.mpl_connect(event, handler))
 
-    # TODO update docstrings
     # draw only a single point and draw a second point on escape
     # This is basically a copy of matplotlib's ginput function adapted for EOmaps
     # matplotlib's original ginput function is here:
     # https://matplotlib.org/stable/api/_as_gen/matplotlib.pyplot.ginput.html
-
     def _ginput2(
         self,
         n=1,
