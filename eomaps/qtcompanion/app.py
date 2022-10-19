@@ -2,15 +2,12 @@ from PyQt5 import QtWidgets, QtGui, QtCore
 from PyQt5.QtCore import Qt, pyqtSignal
 
 from .base import transparentWindow
-from .common import iconpath
 
 from .widgets.peek import PeekTabs
 from .widgets.editor import ArtistEditor
 from .widgets.wms import AddWMSMenuButton
-from .widgets.draw import DrawerWidget
 from .widgets.save import SaveFileWidget
 from .widgets.files import OpenFileTabs
-from .widgets.layer import AutoUpdateLayerMenuButton
 from .widgets.utils import get_cmap_pixmaps
 from .widgets.extent import SetExtentToLocation
 
@@ -43,15 +40,12 @@ class ControlTabs(QtWidgets.QTabWidget):
 
         self.tab1 = tab1
         self.tab_open = OpenFileTabs(m=self.m)
-        self.tab3 = DrawerWidget(m=self.m)
 
         self.tab_edit = ArtistEditor(m=self.m)
 
         self.addTab(self.tab1, "Compare")
         self.addTab(self.tab_edit, "Edit")
         self.addTab(self.tab_open, "Open Files")
-        if hasattr(self.m.util, "draw"):  # for future "draw" capabilities
-            self.addTab(self.tab3, "Draw Shapes")
 
         # re-populate artists on tab-change
         self.currentChanged.connect(self.tabchanged)
