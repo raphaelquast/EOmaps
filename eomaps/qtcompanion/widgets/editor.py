@@ -642,7 +642,7 @@ class ArtistEditor(QtWidgets.QWidget):
         self.addfeature = AddFeatureWidget(m=self.m)
         self.addannotation = AddAnnotationInput(m=self.m)
 
-        self.option_tabs.addTab(self.addfeature, "Add Features or WebMaps")
+        self.option_tabs.addTab(self.addfeature, "Add Features")
         self.option_tabs.addTab(self.addannotation, "Add Annotations")
 
         if hasattr(self.m.util, "draw"):
