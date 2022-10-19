@@ -57,6 +57,10 @@ class PolyButton(QtWidgets.QPushButton):
                     "<li><b>left click</b> to undo previously drawn points</li>"
                     "<li><b>middle click</b> to finish drawing</li>"
                     "</ul>"
+                    "The shape will be added to the <b>currently selected tab</b> "
+                    "in the tab-bar below."
+                    "<p>"
+                    "NOTE: this is not necessarily the visible layer!",
                 )
             elif name == "Rectangle":
                 txt = (
@@ -68,6 +72,10 @@ class PolyButton(QtWidgets.QPushButton):
                     "<li><b>move</b> the mouse to set the size</li>"
                     "<li><b>middle click</b> to finish drawing</li>"
                     "</ul>"
+                    "The shape will be added to the <b>currently selected tab</b> "
+                    "in the tab-bar below."
+                    "<p>"
+                    "NOTE: this is not necessarily the visible layer!",
                 )
 
             elif name == "Circle":
@@ -80,6 +88,10 @@ class PolyButton(QtWidgets.QPushButton):
                     "<li><b>move</b> the mouse to set the size</li>"
                     "<li><b>middle click</b> to finish drawing</li>"
                     "</ul>"
+                    "The shape will be added to the <b>currently selected tab</b> "
+                    "in the tab-bar below."
+                    "<p>"
+                    "NOTE: this is not necessarily the visible layer!",
                 )
             else:
                 txt = ""
