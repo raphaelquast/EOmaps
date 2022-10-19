@@ -410,9 +410,6 @@ class ShapeDrawer:
                 and event.key is not None
             ):
                 if len(self.clicks) >= n - 1:
-                    print(
-                        "EOmaps: Use RIGHT-click to remove, and MIDDLE-click to draw."
-                    )
                     return
 
                 if event.inaxes:

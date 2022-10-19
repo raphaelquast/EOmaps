@@ -18,19 +18,13 @@ class DrawerWidget(QtWidgets.QWidget):
         super().__init__(*args, **kwargs)
 
         self.m = m
-        self.shapeselector = QtWidgets.QComboBox()
 
-        self.shapeselector.setMinimumWidth(50)
-        self.shapeselector.setMaximumWidth(200)
-
-        names = list(self._polynames)
-        self._use_poly_type = self._polynames[names[0]]
-        for key in names:
-            self.shapeselector.addItem(key)
-        self.shapeselector.activated[str].connect(self.set_poly_type)
-
-        b1 = QtWidgets.QPushButton("Draw!")
-        b1.clicked.connect(self.draw_shape_callback)
+        polybuttons = []
+        for name, poly in self._polynames.items():
+            poly_b = QtWidgets.QPushButton(name)
+            poly_b.clicked.connect(self.draw_shape_callback(poly=poly))
+            poly_b.setMaximumWidth(100)
+            polybuttons.append(poly_b)
 
         self.colorselector = GetColorWidget()
 
@@ -71,12 +65,17 @@ class DrawerWidget(QtWidgets.QWidget):
         save_layout.addWidget(self.save_button)
         save_layout.addWidget(self.remove_button)
 
+        b_layout = QtWidgets.QVBoxLayout()
+        for b in polybuttons:
+            b_layout.addWidget(b)
+
         layout = QtWidgets.QGridLayout()
         layout.addWidget(self.colorselector, 0, 0, 2, 1)
         layout.addWidget(self.alphaslider, 0, 1)
         layout.addWidget(self.linewidthslider, 1, 1)
-        layout.addWidget(self.shapeselector, 0, 2)
-        layout.addWidget(b1, 1, 2)
+        # layout.addWidget(self.shapeselector, 0, 2)
+        # layout.addWidget(b1, 1, 2)
+        layout.addLayout(b_layout, 0, 2, 3, 1)
         # layout.addLayout(savepath_layout, 2, 0)
         # layout.addWidget(self.savepath_label, 2, 1, 1, 2)
         layout.addLayout(save_layout, 2, 0, 1, 2, Qt.AlignLeft)
@@ -104,6 +103,8 @@ class DrawerWidget(QtWidgets.QWidget):
             txt = f"Save {len(self.new_poly.gdf)} Polygons"
 
         self.save_button.setText(txt)
+
+        self.window().show()
 
     def _new_poly(self, save_path=None):
         self.save_path = save_path
@@ -178,14 +179,17 @@ class DrawerWidget(QtWidgets.QWidget):
     def set_poly_type(self, s):
         self._use_poly_type = self._polynames[s]
 
-    def draw_shape_callback(self):
-        self.window().hide()
-        self.m.figure.f.canvas.show()
-        self.m.figure.f.canvas.setFocus()
+    def draw_shape_callback(self, poly):
+        def cb():
+            self.window().hide()
+            self.m.figure.f.canvas.show()
+            self.m.figure.f.canvas.setFocus()
 
-        getattr(self.new_poly, self._use_poly_type)(
-            facecolor=self.colorselector.facecolor.getRgbF(),
-            edgecolor=self.colorselector.edgecolor.getRgbF(),
-            # alpha=self.alphaslider.alpha,
-            linewidth=self.linewidthslider.alpha * 10,
-        )
+            getattr(self.new_poly, poly)(
+                facecolor=self.colorselector.facecolor.getRgbF(),
+                edgecolor=self.colorselector.edgecolor.getRgbF(),
+                # alpha=self.alphaslider.alpha,
+                linewidth=self.linewidthslider.alpha * 10,
+            )
+
+        return cb
