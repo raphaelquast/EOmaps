@@ -228,7 +228,7 @@ class AddFeatureWidget(QtWidgets.QFrame):
         # set stretch factor to expand the color-selector first
         layout.setColumnStretch(0, 1)
 
-        layout.setAlignment(Qt.AlignLeft)
+        layout.setAlignment(Qt.AlignCenter | Qt.AlignTop)
         self.setLayout(layout)
 
         # do this at the end to ensure everything has already been set up properly
@@ -388,7 +388,8 @@ class AddAnnotationInput(QtWidgets.QWidget):
 
         label = QtWidgets.QLabel("Add Annotation\non next click:")
         self.text_inp = QtWidgets.QTextEdit()
-        self.text_inp.setMaximumHeight(50)
+        self.text_inp.setMaximumHeight(70)
+
         # self.text_inp.returnPressed.connect(self.doit)
 
         self.color = GetColorWidget(facecolor="white", edgecolor="black")
@@ -406,8 +407,8 @@ class AddAnnotationInput(QtWidgets.QWidget):
         self.b_rem.setFixedSize(self.b.sizeHint())
 
         blayout = QtWidgets.QVBoxLayout()
-        blayout.addWidget(self.b)
-        blayout.addWidget(self.b_rem)
+        blayout.addWidget(self.b, Qt.AlignTop)
+        blayout.addWidget(self.b_rem, Qt.AlignTop)
 
         self.dial = QtWidgets.QDial()
         self.dial.setRange(0, 360)
@@ -419,11 +420,12 @@ class AddAnnotationInput(QtWidgets.QWidget):
         self.dial.setValue(225)
 
         layout = QtWidgets.QHBoxLayout()
+        layout.setAlignment(Qt.AlignTop | Qt.AlignLeft)
         layout.addWidget(self.color)
         layout.addWidget(self.dial)
         layout.addWidget(label)
         layout.addWidget(self.text_inp)
-        layout.addLayout(blayout)
+        layout.addLayout(blayout, Qt.AlignTop)
 
         self.setLayout(layout)
 
@@ -505,6 +507,8 @@ class AddAnnotationInput(QtWidgets.QWidget):
         self.b.setText("Annotate")
 
     def add_annotation(self, text):
+        self.window().hide()
+
         def cb(pos, **kwargs):
             if len(self.cb_cids) > 0:
                 self.m.add_annotation(
@@ -542,84 +546,9 @@ class AddAnnotationInput(QtWidgets.QWidget):
             self.window().statusBar().showMessage("There is no annotation to remove!")
 
 
-class MyTabWidget(QtWidgets.QTabWidget):
-    def enterEvent(self, e):
-        if self.window().showhelp is True:
-            QtWidgets.QToolTip.showText(
-                e.globalPos(),
-                "<h3>Background Layers and Artists</h3>"
-                "Each tab represents a layer of the map."
-                "The tab-entries show all individual <b>background</b> artists of the "
-                "selected layer. (background artists are static map-elements that are "
-                "only re-drawn on pan/zoom or resize events)"
-                "<ul>"
-                "<li><b>control+click</b> on a tab to make it the visible layer.</li>"
-                "<li><b>shift+click</b> on tabs to make multiple layers visible.</li>"
-                "</ul>"
-                "Feature and WebMap artists created with the controls above are always "
-                "<b>added to the currently selected tab</b>!<br>"
-                "(indicated by a <b><font color=#c80000>red border</font></b>)",
-            )
-
-
-class ArtistEditor(QtWidgets.QWidget):
-    def __init__(self, m=None):
-
-        super().__init__()
-
-        self.m = m
-        self._hidden_artists = dict()
-
-        self.tabs = MyTabWidget()
-
-        self.newlayer = NewLayerWidget(m=self.m)
-        self.newlayer.new_layer_name.returnPressed.connect(self.populate)
-        # re-populate layers on new layer creation
-        self.newlayer.NewLayerCreated.connect(self.populate)
-        # set active tab to the new tab on layer creation
-        self.newlayer.NewLayerCreated[str].connect(self.set_current_tab_by_name)
-
-        self.addfeature = AddFeatureWidget(m=self.m)
-
-        topwidget = QtWidgets.QWidget()
-        topwidget.setLayout(QtWidgets.QVBoxLayout())
-        topwidget.layout().addWidget(self.addfeature)
-        topwidget.layout().addWidget(self.newlayer)
-
-        splitter = QtWidgets.QSplitter(Qt.Vertical)
-        splitter.addWidget(topwidget)
-        splitter.addWidget(self.tabs)
-
-        self.addannotation = AddAnnotationInput(m=self.m)
-        splitter.addWidget(self.addannotation)
-
-        splitter.setStretchFactor(0, 0)
-        splitter.setStretchFactor(1, 1)
-
-        layout = QtWidgets.QVBoxLayout()
-        layout.addWidget(splitter)
-
-        self.setLayout(layout)
-
-        self.populate()
-
-        self.tabs.tabBarClicked.connect(self.tabchanged)
-        self.tabs.currentChanged.connect(self.populate_layer)
-        self.tabs.setTabsClosable(True)
-        self.tabs.tabCloseRequested.connect(self.close_handler)
-
-        self._current_tab_idx = None
-        self._current_tab_name = None
-
-        self.m.BM.on_layer(self.color_active_tab, persistent=True)
-
-        self.m.BM._on_add_bg_artist.append(self.populate)
-        self.m.BM._on_remove_bg_artist.append(self.populate)
-        # connect a callback to update the layer of the feature-button
-        # with respect to the currently selected layer-tab
-        self.tabs.currentChanged.connect(self.set_layer)
-        self.set_layer()
-
+class LayerArtistTabs(QtWidgets.QTabWidget):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
         stylesheet = """
             QTabWidget::pane { /* The tab widget frame */
                 border-top: 0px solid rgb(100,100,100);
@@ -664,9 +593,104 @@ class ArtistEditor(QtWidgets.QWidget):
 
         self.setStyleSheet(stylesheet)
 
+    def enterEvent(self, e):
+        if self.window().showhelp is True:
+            QtWidgets.QToolTip.showText(
+                e.globalPos(),
+                "<h3>Background Layers and Artists</h3>"
+                "Each tab represents a layer of the map."
+                "The tab-entries show all individual <b>background</b> artists of the "
+                "selected layer. (background artists are static map-elements that are "
+                "only re-drawn on pan/zoom or resize events)"
+                "<ul>"
+                "<li><b>control+click</b> on a tab to make it the visible layer.</li>"
+                "<li><b>shift+click</b> on tabs to make multiple layers visible.</li>"
+                "</ul>"
+                "Feature and WebMap artists created with the controls above are always "
+                "<b>added to the currently selected tab</b>!<br>"
+                "(indicated by a <b><font color=#c80000>red border</font></b>)",
+            )
+
+
+class OptionTabs(QtWidgets.QTabWidget):
+    def enterEvent(self, e):
+        if self.window().showhelp is True:
+            QtWidgets.QToolTip.showText(
+                e.globalPos(),
+                "<h3>Add Features / Draw / Annotate</h3>" "Add features to the map.",
+            )
+
+
+class ArtistEditor(QtWidgets.QWidget):
+    def __init__(self, m=None):
+
+        super().__init__()
+
+        self.m = m
+        self._hidden_artists = dict()
+
+        self.tabs = LayerArtistTabs()
+        self.option_tabs = OptionTabs()
+
+        self.newlayer = NewLayerWidget(m=self.m)
+        self.newlayer.new_layer_name.returnPressed.connect(self.populate)
+        # re-populate layers on new layer creation
+        self.newlayer.NewLayerCreated.connect(self.populate)
+        # set active tab to the new tab on layer creation
+        self.newlayer.NewLayerCreated[str].connect(self.set_current_tab_by_name)
+
+        self.addfeature = AddFeatureWidget(m=self.m)
+        self.addannotation = AddAnnotationInput(m=self.m)
+
+        self.option_tabs.addTab(self.addfeature, "Add Features or WebMaps")
+        self.option_tabs.addTab(self.addannotation, "Add Annotations")
+
+        if hasattr(self.m.util, "draw"):
+            from .draw import DrawerWidget
+
+            self.draw = DrawerWidget(m=self.m)
+            self.option_tabs.addTab(self.draw, "Draw Shapes")
+        else:
+            self.draw = None
+
+        splitter = QtWidgets.QSplitter(Qt.Vertical)
+        splitter.addWidget(self.option_tabs)
+        splitter.addWidget(self.newlayer)
+        splitter.addWidget(self.tabs)
+
+        splitter.setStretchFactor(0, 0)
+        splitter.setStretchFactor(1, 1)
+
+        layout = QtWidgets.QVBoxLayout()
+        layout.addWidget(splitter)
+
+        self.setLayout(layout)
+
+        self.populate()
+
+        self.tabs.tabBarClicked.connect(self.tabchanged)
+        self.tabs.currentChanged.connect(self.populate_layer)
+        self.tabs.setTabsClosable(True)
+        self.tabs.tabCloseRequested.connect(self.close_handler)
+
+        self._current_tab_idx = None
+        self._current_tab_name = None
+
+        self.m.BM.on_layer(self.color_active_tab, persistent=True)
+
+        self.m.BM._on_add_bg_artist.append(self.populate)
+        self.m.BM._on_remove_bg_artist.append(self.populate)
+        # connect a callback to update the layer of the feature-button
+        # with respect to the currently selected layer-tab
+        self.tabs.currentChanged.connect(self.set_layer)
+        self.set_layer()
+
     def set_layer(self):
         layer = self.tabs.tabText(self.tabs.currentIndex())
         self.addfeature.selector.set_layer(layer)
+        if self.draw is not None:
+            self.draw.set_layer(layer)
+
         if self.newlayer.addwms is not None:
             self.newlayer.addwms.set_layer(layer)
 
