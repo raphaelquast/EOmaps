@@ -653,9 +653,14 @@ class ArtistEditor(QtWidgets.QWidget):
         else:
             self.draw = None
 
+        option_widget = QtWidgets.QWidget()
+        option_layout = QtWidgets.QVBoxLayout()
+        option_layout.addWidget(self.option_tabs)
+        option_layout.addWidget(self.newlayer)
+        option_widget.setLayout(option_layout)
+
         splitter = QtWidgets.QSplitter(Qt.Vertical)
-        splitter.addWidget(self.option_tabs)
-        splitter.addWidget(self.newlayer)
+        splitter.addWidget(option_widget)
         splitter.addWidget(self.tabs)
 
         splitter.setStretchFactor(0, 0)
