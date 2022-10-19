@@ -46,16 +46,30 @@ class DrawerWidget(QtWidgets.QWidget):
         )
         self.linewidthslider.setValue(20)
 
-        self.savepath_label = QtWidgets.QLabel()
-        self.savepath_button = QtWidgets.QPushButton("Set Savepath")
-        self.savepath_button.clicked.connect(self.set_savepath)
-        self.savepath_clear_button = QtWidgets.QToolButton()
-        self.savepath_clear_button.setText("x")
-        self.savepath_clear_button.clicked.connect(self.clear_savepath)
+        # self.savepath_label = QtWidgets.QLabel()
+        # self.savepath_button = QtWidgets.QPushButton("Set Savepath")
+        # self.savepath_button.clicked.connect(self.set_savepath)
+        # self.savepath_clear_button = QtWidgets.QToolButton()
+        # self.savepath_clear_button.setText("x")
+        # self.savepath_clear_button.clicked.connect(self.clear_savepath)
 
-        savepath_layout = QtWidgets.QHBoxLayout()
-        savepath_layout.addWidget(self.savepath_button)
-        savepath_layout.addWidget(self.savepath_clear_button)
+        # savepath_layout = QtWidgets.QHBoxLayout()
+        # savepath_layout.addWidget(self.savepath_button)
+        # savepath_layout.addWidget(self.savepath_clear_button)
+
+        self.save_button = QtWidgets.QPushButton("Save 999 Polygons")
+        self.save_button.setMaximumSize(self.save_button.sizeHint())
+        self.save_button.clicked.connect(self.save_polygons)
+        self.save_button.setVisible(False)
+
+        self.remove_button = QtWidgets.QPushButton("Remove")
+        self.remove_button.setMaximumSize(self.remove_button.sizeHint())
+        self.remove_button.clicked.connect(self.remove_last_poly)
+        self.remove_button.setVisible(False)
+
+        save_layout = QtWidgets.QHBoxLayout()
+        save_layout.addWidget(self.save_button)
+        save_layout.addWidget(self.remove_button)
 
         layout = QtWidgets.QGridLayout()
         layout.addWidget(self.colorselector, 0, 0, 2, 1)
@@ -63,29 +77,77 @@ class DrawerWidget(QtWidgets.QWidget):
         layout.addWidget(self.linewidthslider, 1, 1)
         layout.addWidget(self.shapeselector, 0, 2)
         layout.addWidget(b1, 1, 2)
-        layout.addLayout(savepath_layout, 2, 0)
-        layout.addWidget(self.savepath_label, 2, 1, 1, 2)
+        # layout.addLayout(savepath_layout, 2, 0)
+        # layout.addWidget(self.savepath_label, 2, 1, 1, 2)
+        layout.addLayout(save_layout, 2, 0, 1, 2, Qt.AlignLeft)
 
-        layout.setAlignment(Qt.AlignCenter)
+        layout.setAlignment(Qt.AlignCenter | Qt.AlignTop)
         self.setLayout(layout)
 
-        self.new_poly = self.m.util.draw.new_poly()
+        self._new_poly()
 
-    def set_savepath(self):
+    def set_layer(self, layer):
+        self.new_poly.set_layer(layer)
+
+    def _on_new_poly(self):
+        npoly = len(self.new_poly.gdf)
+        if npoly > 0:
+            self.save_button.setVisible(True)
+            self.remove_button.setVisible(True)
+        else:
+            self.save_button.setVisible(False)
+            self.remove_button.setVisible(False)
+
+        if npoly == 1:
+            txt = f"Save {len(self.new_poly.gdf)} Polygon"
+        else:
+            txt = f"Save {len(self.new_poly.gdf)} Polygons"
+
+        self.save_button.setText(txt)
+
+    def _new_poly(self, save_path=None):
+        self.save_path = save_path
+        self.new_poly = self.m.util.draw.new_poly(savepath=self.save_path)
+        self.save_button.setVisible(False)
+        self.remove_button.setVisible(False)
+
+        self.new_poly.on_new_poly.append(self._on_new_poly)
+
+    def remove_last_poly(self):
+        if len(self.new_poly.gdf) == 0:
+            return
+
+        ID = self.new_poly.gdf.index[-1]
+        a = self.new_poly._artists.pop(ID)
+        self.m.BM.remove_bg_artist(a)
+        a.remove()
+
+        self.new_poly.gdf = self.new_poly.gdf.drop(ID)
+        self.m.redraw()
+
+        # update button text and visibility (same as if a new poly was created)
+        self._on_new_poly()
+
+    # def set_savepath(self):
+    #     save_path, widget = QtWidgets.QFileDialog.getSaveFileName(
+    #         caption="Save Shapes", directory="shapes.shp", filter="Shapefiles (*.shp)"
+    #     )
+    #     if len(save_path) > 0:
+    #         self._new_poly(save_path)
+    #         self.savepath_label.setText(
+    #             "<b>Shapefiles are saved to:</b><br>" + save_path
+    #         )
+    # def clear_savepath(self):
+    #     self._new_poly()
+    #     self.savepath_label.setText("")
+
+    def save_polygons(self):
         save_path, widget = QtWidgets.QFileDialog.getSaveFileName(
             caption="Save Shapes", directory="shapes.shp", filter="Shapefiles (*.shp)"
         )
-        if len(save_path) > 0:
-            self.save_path = save_path
-            self.new_poly = self.m.util.draw.new_poly(savepath=self.save_path)
-            self.savepath_label.setText(
-                "<b>Shapefiles are saved to:</b><br>" + save_path
-            )
-
-    def clear_savepath(self):
-        self.save_path = None
-        self.new_poly = self.m.util.draw.new_poly()
-        self.savepath_label.setText("")
+        if save_path is not None and len(save_path) > 0:
+            self.new_poly.gdf.to_file(save_path)
+            self._new_poly(self.save_path)
 
     def enterEvent(self, e):
         if self.window().showhelp is True:
