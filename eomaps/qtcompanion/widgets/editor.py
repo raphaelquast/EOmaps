@@ -317,7 +317,7 @@ class NewLayerLineEdit(QtWidgets.QLineEdit):
             QtWidgets.QToolTip.showText(
                 e.globalPos(),
                 "<h3>New Layer</h3>"
-                "Enter a layer-name and press <b>enter</b> to create"
+                "Enter a layer-name and press <b>enter</b> to create "
                 "a new (empty) layer on the map!"
                 "<p>"
                 "NTOE: The tab of the new layer will be activated once the layer is "
