@@ -66,7 +66,8 @@ class AddFeaturesMenuButton(QtWidgets.QPushButton):
                 "<h3>NaturalEarth Features</h3>"
                 "Add NaturalEarth features to the map."
                 "<p>"
-                "The feature will be added to the <b>currently selected tab</b> "
+                "The feature will be added to the "
+                "<b><font color=#c80000>currently selected tab</font></b> "
                 "in the tab-bar below."
                 "<p>"
                 "NOTE: this is not necessarily the visible layer!",
@@ -439,7 +440,8 @@ class LayerArtistTabs(QtWidgets.QTabWidget):
                 "<li><b>shift+click</b> on tabs to make multiple layers visible.</li>"
                 "</ul>"
                 "Feature and WebMap artists created with the controls above are always "
-                "<b>added to the currently selected tab</b>!<br>"
+                "added to the "
+                "<b>currently selected tab</b>!<br>"
                 "(indicated by a <b><font color=#c80000>red border</font></b>)",
             )
 

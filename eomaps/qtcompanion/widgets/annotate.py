@@ -66,7 +66,8 @@ class AnnotateButton(QtWidgets.QToolButton):
                 "Push this button to add an annotation to the map the next time you "
                 "<b>left click</b> on the map."
                 "<p>"
-                "The annotation will be added to the <b>currently selected tab</b> "
+                "The annotation will be added to the "
+                "<b><font color=#c80000>currently selected tab</font></b> "
                 "in the tab-bar below."
                 "<p>"
                 "NOTE: this is not necessarily the visible layer!",
