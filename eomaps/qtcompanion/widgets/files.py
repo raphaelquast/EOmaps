@@ -951,7 +951,7 @@ class PlotShapeFileWidget(QtWidgets.QWidget):
         self.linewidthslider.valueChanged.connect(self.update_props)
 
         # zorder
-        self.zorder = QtWidgets.QLineEdit("0")
+        self.zorder = QtWidgets.QLineEdit("1")
         validator = QtGui.QIntValidator()
         self.zorder.setValidator(validator)
         self.zorder.setMaximumWidth(30)
@@ -981,6 +981,9 @@ class PlotShapeFileWidget(QtWidgets.QWidget):
         layername.addWidget(self.layer)
         layername.addLayout(zorder_layout)
         setlayername.setLayout(layername)
+
+        self.alphaslider.setValue(50)
+        self.linewidthslider.setValue(10)
 
         # -----------------------
 

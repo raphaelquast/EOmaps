@@ -232,8 +232,12 @@ class AddWMSMenuButton(QtWidgets.QPushButton):
                 QtWidgets.QToolTip.showText(
                     e.globalPos(),
                     "<h3>New WebMap Layer</h3>"
-                    "Create a new layer (<i>''service_layer''</i>) and add the "
-                    "selected WebMap service to it.",
+                    "Create a new layer (<i>''[wms service]_[wms layer]''</i>) and add "
+                    "the selected WebMap service to it."
+                    "<p>"
+                    "NOTE: The service is added to a new layer, <not> the "
+                    "currently visible layer! (this is particularly useful to compare "
+                    "existing layers to WebMap layers)",
                 )
             else:
                 QtWidgets.QToolTip.showText(

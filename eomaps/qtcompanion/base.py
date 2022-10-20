@@ -180,7 +180,7 @@ class transparentWindow(QtWidgets.QMainWindow):
         self.setWindowFlags(
             Qt.FramelessWindowHint | Qt.Dialog | Qt.WindowStaysOnTopHint
         )
-        self.setFocusPolicy(Qt.StrongFocus)
+        self.setFocusPolicy(Qt.ClickFocus)
 
         self.transparentQ = TransparentQToolButton()
         self.transparentQ.setStyleSheet("border:none")

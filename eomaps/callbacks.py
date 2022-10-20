@@ -261,7 +261,7 @@ class _click_callbacks(object):
             if not permanent:
                 # make the annotation temporary
                 self._temporary_artists.append(annotation)
-                self.m.BM.add_artist(annotation)
+                self.m.BM.add_artist(annotation, layer=layer)
             else:
                 self.m.BM.add_artist(annotation, layer=layer)
 
@@ -493,12 +493,13 @@ class _click_callbacks(object):
 
         marker.set_zorder(zorder)
 
+        if layer is None:
+            layer = self.m.layer
+
         if permanent is True:
             self.permanent_markers.append(marker)
-            if layer is None:
-                layer = self.m.layer
-            self.m.BM.add_bg_artist(marker, layer)
-        elif permanent is False:
+            self.m.BM.add_artist(marker, layer)
+        else:
             self._temporary_artists.append(marker)
             self.m.BM.add_artist(marker, layer)
 

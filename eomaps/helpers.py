@@ -1163,7 +1163,6 @@ class BlitManager:
     def fetch_bg(self, layer=None, bbox=None, overlay=None):
         # add this to the zorder of the overlay-artists prior to plotting
         # to ensure that they appear on top of other artists
-
         overlay_zorder_bias = 1000
         cv = self.canvas
         if layer is None:
@@ -1214,7 +1213,7 @@ class BlitManager:
         if not self._m._layout_editor._modifier_pressed:
             # make all artists of the corresponding layer visible
             for l in self._bg_artists:
-                if l not in [layer, "all", *overlay_layers]:
+                if l not in [layer, *layer.split("|"), "all", *overlay_layers]:
                     # artists on "all" are always visible!
                     # make all artists of other layers invisible
                     for art in self.get_bg_artists(l):
@@ -1273,7 +1272,8 @@ class BlitManager:
 
     def add_artist(self, art, layer=None):
         """
-        Add an artist to be managed.
+        Add a dynamic-artist to be managed.
+        (Dynamic artists are re-drawn on every update!)
 
         Parameters
         ----------
@@ -1282,10 +1282,19 @@ class BlitManager:
             The artist to be added.  Will be set to 'animated' (just
             to be safe).  *art* must be in the figure associated with
             the canvas this class is managing.
+        layer : str or None, optional
+            The layer name at which the artist should be drawn.
+
+            - If "all": the corresponding feature will be added to ALL layers
+
+            The default is None in which case the layer of the base-Maps object is used.
         """
         zorder = art.get_zorder()
         if layer is None:
             layer = self._m.layer
+
+        # make sure all layers are converted to string
+        layer = str(layer)
 
         self._artists.setdefault(layer, dict())
         self._artists[layer].setdefault(zorder, list())
@@ -1299,11 +1308,10 @@ class BlitManager:
             art.set_animated(True)
             self._artists[layer][zorder].append(art)
 
-    def add_bg_artist(self, art, layer=0):
+    def add_bg_artist(self, art, layer=None):
         """
         Add a background-artist to be managed.
-        (Background artists are only updated on zoom-events...
-         they are NOT animated!!)
+        (Background artists are only updated on zoom-events... they are NOT animated!)
 
         Parameters
         ----------
@@ -1312,13 +1320,19 @@ class BlitManager:
             The artist to be added.  Will be set to 'animated' (just
             to be safe).  *art* must be in the figure associated with
             the canvas this class is managing.
-        layer : int or str
+        layer : str or None, optional
             The layer name at which the artist should be drawn.
 
             - If "all": the corresponding feature will be added to ALL layers
 
-            The default is 0.
+            The default is None in which case the layer of the base-Maps object is used.
         """
+
+        if layer is None:
+            layer = self._m.layer
+
+        # make sure all layer names are converted to string
+        layer = str(layer)
 
         if not any(m.layer == layer for m in (self._m, *self._m._children)):
             print(f"creating a new Maps-object for the layer {layer}")
@@ -1334,7 +1348,12 @@ class BlitManager:
         # art.set_animated(True)
 
         self._bg_artists[layer].append(art)
-        self._m.BM._refetch_layer(layer)
+        self._refetch_layer(layer)
+
+        # make sure we re-fetch the currently visible layer if an artist was added
+        # on one of the sub-layers
+        if any(l in self.bg_layer.split("|") for l in layer.split("|")):
+            self._refetch_layer(self.bg_layer)
 
         for f in self._on_add_bg_artist:
             f()
