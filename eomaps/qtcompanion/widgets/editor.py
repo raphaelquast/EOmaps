@@ -452,8 +452,8 @@ class OptionTabs(QtWidgets.QTabWidget):
             QtWidgets.QToolTip.showText(
                 e.globalPos(),
                 "<h3>Add Features / Add Annotations / Draw Shapes</h3>"
-                "The tabs on the top provide a set of convenience-functionalities"
-                "to add basic features to the map."
+                "The tabs provide a set of convenience-functionalities to add basic "
+                "features to the map."
                 "<ul>"
                 "<li><b>Add Features:</b> Add NaturalEarth features to the map.</li>"
                 "<li><b>Add Annotations:</b> Add an arrow with a text-annotation "

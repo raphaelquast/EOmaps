@@ -7,9 +7,46 @@ from .widgets.peek import PeekTabs
 from .widgets.editor import ArtistEditor
 from .widgets.wms import AddWMSMenuButton
 from .widgets.save import SaveFileWidget
-from .widgets.files import OpenFileTabs
+from .widgets.files import OpenFileTabs, OpenDataStartTab
 from .widgets.utils import get_cmap_pixmaps
 from .widgets.extent import SetExtentToLocation
+
+
+class OpenFileButton(QtWidgets.QPushButton):
+    def enterEvent(self, e):
+        OpenDataStartTab.enterEvent(self, e)
+
+
+class Tab1(QtWidgets.QWidget):
+    def __init__(self, *args, m=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.m = m
+
+        peektabs = PeekTabs(m=self.m)
+        setextent = SetExtentToLocation(m=self.m)
+        save = SaveFileWidget(m=self.m)
+
+        try:
+            addwms = AddWMSMenuButton(m=self.m, new_layer=True)
+        except:
+            addwms = QtWidgets.QPushButton("WMS services unavailable")
+
+        self.open_file_button = OpenFileButton("Open File")
+        self.open_file_button.setFixedSize(self.open_file_button.sizeHint())
+
+        l2 = QtWidgets.QHBoxLayout()
+        l2.addWidget(addwms)
+        l2.addWidget(self.open_file_button)
+        l2.addStretch(1)
+
+        layout = QtWidgets.QVBoxLayout()
+        layout.addWidget(peektabs)
+        layout.addLayout(l2)
+        layout.addWidget(setextent)
+        layout.addStretch(1)
+        layout.addWidget(save)
+
+        self.setLayout(layout)
 
 
 class ControlTabs(QtWidgets.QTabWidget):
@@ -17,29 +54,13 @@ class ControlTabs(QtWidgets.QTabWidget):
         super().__init__(*args, **kwargs)
         self.m = m
 
-        tab1 = QtWidgets.QWidget()
-        tab1layout = QtWidgets.QVBoxLayout()
-
-        peektabs = PeekTabs(m=self.m)
-        tab1layout.addWidget(peektabs)
-
-        try:
-            addwms = AddWMSMenuButton(m=self.m, new_layer=True)
-        except:
-            addwms = QtWidgets.QPushButton("WMS services unavailable")
-        tab1layout.addWidget(addwms)
-
-        setextent = SetExtentToLocation(m=self.m)
-        tab1layout.addWidget(setextent)
-
-        tab1layout.addStretch(1)
-        save = SaveFileWidget(m=self.m)
-        tab1layout.addWidget(save)
-
-        tab1.setLayout(tab1layout)
-
-        self.tab1 = tab1
+        self.tab1 = Tab1(m=self.m)
         self.tab_open = OpenFileTabs(m=self.m)
+
+        # connect the open-file-button to the button from the "Open Files" tab
+        self.tab1.open_file_button.clicked.connect(
+            lambda: self.tab_open.starttab.open_button.clicked.emit()
+        )
 
         self.tab_edit = ArtistEditor(m=self.m)
 
