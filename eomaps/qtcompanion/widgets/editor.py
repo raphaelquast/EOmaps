@@ -7,6 +7,7 @@ from ..common import iconpath
 from .wms import AddWMSMenuButton
 from .utils import GetColorWidget, AlphaSlider
 from .annotate import AddAnnotationInput
+from .draw import DrawerTabs
 
 
 class AddFeaturesMenuButton(QtWidgets.QPushButton):
@@ -488,13 +489,8 @@ class ArtistEditor(QtWidgets.QWidget):
         self.option_tabs.addTab(self.addfeature, "Add Features")
         self.option_tabs.addTab(self.addannotation, "Add Annotations")
 
-        if hasattr(self.m.util, "draw"):
-            from .draw import DrawerTabs
-
-            self.draw = DrawerTabs(m=self.m)
-            self.option_tabs.addTab(self.draw, "Draw Shapes")
-        else:
-            self.draw = None
+        self.draw = DrawerTabs(m=self.m)
+        self.option_tabs.addTab(self.draw, "Draw Shapes")
 
         option_widget = QtWidgets.QWidget()
         option_layout = QtWidgets.QVBoxLayout()
