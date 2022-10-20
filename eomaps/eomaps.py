@@ -128,6 +128,7 @@ from .projections import Equi7Grid_projection, _register_equi7grid
 from .reader import read_file, from_file, new_layer_from_file
 
 from .utilities import utilities
+from .draw import ShapeDrawer
 
 from ._version import __version__
 
@@ -389,6 +390,9 @@ class Maps(object):
         if self.parent == self and self._cid_companion_key is None:
             # attach the Qt companion widget
             self._add_companion_cb(show_hide_key=self._companion_widget_key)
+
+        # initialize the shape-drawer
+        self._shape_drawer = ShapeDrawer(self)
 
     def __enter__(self):
         return self
@@ -911,6 +915,11 @@ class Maps(object):
     @wraps(utilities)
     def util(self):
         return self._utilities
+
+    @property
+    @wraps(ShapeDrawer)
+    def draw(self):
+        return self._shape_drawer
 
     @property
     @wraps(map_objects)

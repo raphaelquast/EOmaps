@@ -4,22 +4,6 @@ from matplotlib.widgets import Slider
 from functools import wraps
 from matplotlib.pyplot import Artist
 
-gpd = None
-
-
-def _register_geopandas():
-    global gpd
-    try:
-        import geopandas as gpd
-    except ImportError:
-        return False
-
-    return True
-
-
-if _register_geopandas():
-    from .draw import ShapeDrawer
-
 
 class SelectorButtons(Artist):
     # A custom button implementation that uses a legend as container-artist
@@ -533,24 +517,11 @@ class utilities:
     def __init__(self, m):
         self._m = m
 
-        if _register_geopandas():
-            self._shape_drawer = ShapeDrawer(m)
-        else:
-            self._shape_drawer = None
-
         self._selectors = dict()
         self._sliders = dict()
 
         # register a function to update all associated widgets on a layer-chance
         self._m.BM.on_layer(lambda m, l: self._update_widgets(l), persistent=True)
-
-    if _register_geopandas():
-
-        @property
-        @wraps(ShapeDrawer)
-        def draw(self):
-            if self._shape_drawer is not None:
-                return self._shape_drawer
 
     def _update_widgets(self, l=None):
         if l is None:

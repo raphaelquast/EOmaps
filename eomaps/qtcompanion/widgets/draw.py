@@ -264,7 +264,7 @@ class DrawerWidget(QtWidgets.QWidget):
         self.window().show()
 
     def _new_drawer(self):
-        self.drawer = self.m.util.draw.new_drawer()
+        self.drawer = self.m.draw.new_drawer()
         self.save_button.setEnabled(False)
         self.remove_button.setEnabled(False)
 
