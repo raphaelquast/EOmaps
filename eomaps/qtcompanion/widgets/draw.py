@@ -139,7 +139,7 @@ class DrawerTabs(QtWidgets.QTabWidget):
         w = DrawerWidget(m=self.m)
 
         def cb():
-            npoly = len(w.drawer.gdf)
+            npoly = len(w.drawer._artists)
             idx = self.indexOf(w)
             self.setTabText(idx, str(npoly))
 
@@ -246,7 +246,7 @@ class DrawerWidget(QtWidgets.QWidget):
 
     def _new_poly_cb(self):
         # callback executed on creation of a new polygon
-        npoly = len(self.drawer.gdf)
+        npoly = len(self.drawer._artists)
         if npoly > 0:
             self.save_button.setEnabled(True)
             self.remove_button.setEnabled(True)
@@ -255,9 +255,9 @@ class DrawerWidget(QtWidgets.QWidget):
             self.remove_button.setEnabled(False)
 
         if npoly == 1:
-            txt = f"Save {len(self.drawer.gdf)} Polygon"
+            txt = f"Save {npoly} Polygon"
         else:
-            txt = f"Save {len(self.drawer.gdf)} Polygons"
+            txt = f"Save {npoly} Polygons"
 
         self.save_button.setText(txt)
 
