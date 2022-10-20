@@ -1255,6 +1255,7 @@ class BlitManager:
             # reset all background-layers and re-fetch the default one
             if self._refetch_bg:
                 self._bg_layers = dict()
+
             if self.bg_layer not in self._bg_layers:
                 self.fetch_bg()
             # workaround for nbagg backend to avoid glitches
@@ -1348,10 +1349,10 @@ class BlitManager:
         # art.set_animated(True)
 
         self._bg_artists[layer].append(art)
-        self._refetch_layer(layer)
 
-        # make sure we re-fetch the currently visible layer if an artist was added
-        # on one of the sub-layers
+        # re-fetch the currently visible layer if an artist was added
+        # (and all relevant sub-layers)
+        self._refetch_layer(layer)
         if any(l in self.bg_layer.split("|") for l in layer.split("|")):
             self._refetch_layer(self.bg_layer)
 
@@ -1361,11 +1362,14 @@ class BlitManager:
     def remove_bg_artist(self, art, layer=None):
         removed = False
         if layer is None:
+            layers = []
             for key, val in self._bg_artists.items():
                 if art in val:
                     art.set_animated(False)
                     val.remove(art)
                     removed = True
+                    layers.append(key)
+                layer = "|".join(layers)
         else:
             if art in self._bg_artists[layer]:
                 art.set_animated(False)
@@ -1375,6 +1379,13 @@ class BlitManager:
         if removed:
             for f in self._on_remove_bg_artist:
                 f()
+
+            # re-fetch the currently visible layer if an artist was added
+            # (and all relevant sub-layers)
+            self._refetch_layer(layer)
+            if layer is not None:
+                if any(l in self.bg_layer.split("|") for l in layer.split("|")):
+                    self._refetch_layer(self.bg_layer)
 
     def remove_artist(self, art, layer=None):
         # this only removes the artist from the blit-manager,
