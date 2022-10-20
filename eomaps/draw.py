@@ -141,7 +141,7 @@ class ShapeDrawer:
         self._m.BM.update()
 
     @wraps(gpd.GeoDataFrame.to_file)
-    def save_polygons(self, filename, **kwargs):
+    def save_shapes(self, filename, **kwargs):
         if len(self.gdf) > 0:
             self.gdf.to_file(filename, **kwargs)
         else:

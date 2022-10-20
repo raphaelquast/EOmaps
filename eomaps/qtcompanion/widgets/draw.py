@@ -199,7 +199,7 @@ class DrawerWidget(QtWidgets.QWidget):
 
         self._new_drawer()
 
-        self.save_button.clicked.connect(self.save_polygons)
+        self.save_button.clicked.connect(self.save_shapes)
         self.remove_button.clicked.connect(self.remove_last_shape)
 
         polybuttons = []
@@ -271,12 +271,12 @@ class DrawerWidget(QtWidgets.QWidget):
         self.drawer._on_new_poly.append(self._new_poly_cb)
         self.drawer._on_poly_remove.append(self._new_poly_cb)
 
-    def save_polygons(self):
+    def save_shapes(self):
         save_path, widget = QtWidgets.QFileDialog.getSaveFileName(
             caption="Save Shapes", directory="shapes.shp", filter="Shapefiles (*.shp)"
         )
         if save_path is not None and len(save_path) > 0:
-            self.drawer.save_polygons(save_path)
+            self.drawer.save_shapes(save_path)
             # after saving the polygons, start with a new drawer
             self._new_drawer()
 
