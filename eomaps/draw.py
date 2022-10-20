@@ -16,14 +16,25 @@ from contextlib import contextmanager
 from functools import wraps
 
 import numpy as np
-import matplotlib as mpl
 import matplotlib.pyplot as plt
-from matplotlib.backend_bases import MouseButton
-
-from shapely.geometry import Polygon
-import geopandas as gpd
 
 import eomaps._shapes as eoshp
+
+gpd = None
+
+
+def _register_geopandas():
+    global gpd
+    try:
+        import geopandas as gpd
+    except ImportError:
+        return False
+
+    return True
+
+
+if _register_geopandas():
+    from shapely.geometry import Polygon
 
 
 @contextmanager
@@ -66,7 +77,10 @@ class ShapeDrawer:
         else:
             self._crs = self._m.crs_plot.to_wkt()
 
-        self.gdf = gpd.GeoDataFrame(geometry=[], crs=self._crs)
+        if _register_geopandas():
+            self.gdf = gpd.GeoDataFrame(geometry=[], crs=self._crs)
+        else:
+            self.gdf = None
 
         self._cids = []
 
@@ -140,27 +154,30 @@ class ShapeDrawer:
         self._clicks.clear()
         self._m.BM.update()
 
-    @wraps(gpd.GeoDataFrame.to_file)
-    def save_shapes(self, filename, **kwargs):
-        if len(self.gdf) > 0:
-            self.gdf.to_file(filename, **kwargs)
-        else:
-            print("EOmaps: There are no polygons to save!")
+    if _register_geopandas():
+
+        @wraps(gpd.GeoDataFrame.to_file)
+        def save_shapes(self, filename, **kwargs):
+            if len(self.gdf) > 0:
+                self.gdf.to_file(filename, **kwargs)
+            else:
+                print("EOmaps: There are no polygons to save!")
 
     def remove_last_shape(self):
         """
         Remove the most recently plotted polygon from the map.
         """
-        if len(self.gdf) == 0:
+        if len(self._artists) == 0:
             print("EOmaps: There is no shape to remove!")
             return
 
-        ID = self.gdf.index[-1]
+        ID = list(self._artists)[-1]
         a = self._artists.pop(ID)
         self._m.BM.remove_bg_artist(a)
         a.remove()
 
-        self.gdf = self.gdf.drop(ID)
+        if _register_geopandas():
+            self.gdf = self.gdf.drop(ID)
 
         for cb in self._on_poly_remove:
             cb()
@@ -174,9 +191,9 @@ class ShapeDrawer:
         timeout=30,
         show_clicks=True,
         draw_on_drag=True,
-        mouse_add=MouseButton.LEFT,
-        mouse_pop=MouseButton.RIGHT,
-        mouse_stop=MouseButton.MIDDLE,
+        mouse_add=plt.MouseButton.LEFT,
+        mouse_pop=plt.MouseButton.RIGHT,
+        mouse_stop=plt.MouseButton.MIDDLE,
         cb=None,
     ):
         """
@@ -296,7 +313,7 @@ class ShapeDrawer:
                             x, y = [i[0] for i in self._clicks], [
                                 i[1] for i in self._clicks
                             ]
-                        line = mpl.lines.Line2D(x, y, marker="+", color="r")
+                        line = plt.Line2D(x, y, marker="+", color="r")
                         event.inaxes.add_line(line)
                         self._marks.append(line)
 
@@ -304,7 +321,7 @@ class ShapeDrawer:
 
                         if len(self._clicks) > 2:
                             self._endline.append(
-                                mpl.lines.Line2D(
+                                plt.Line2D(
                                     [event.xdata, self._clicks[0][0]],
                                     [event.ydata, self._clicks[0][1]],
                                     color=".5",
@@ -338,9 +355,9 @@ class ShapeDrawer:
         timeout=30,
         show_clicks=True,
         draw_on_drag=True,
-        mouse_add=MouseButton.LEFT,
-        mouse_pop=MouseButton.RIGHT,
-        mouse_stop=MouseButton.MIDDLE,
+        mouse_add=plt.MouseButton.LEFT,
+        mouse_pop=plt.MouseButton.RIGHT,
+        mouse_stop=plt.MouseButton.MIDDLE,
         movecb=None,
         cb=None,
     ):
@@ -468,7 +485,7 @@ class ShapeDrawer:
                             x, y = [i[0] for i in self._clicks], [
                                 i[1] for i in self._clicks
                             ]
-                        line = mpl.lines.Line2D(x, y, marker="+", color="r")
+                        line = plt.Line2D(x, y, marker="+", color="r")
                         event.inaxes.add_line(line)
                         self._marks.append(line)
 
@@ -476,7 +493,7 @@ class ShapeDrawer:
 
                         if len(self._clicks) > 2:
                             self._endline.append(
-                                mpl.lines.Line2D(
+                                plt.Line2D(
                                     [event.xdata, self._clicks[0][0]],
                                     [event.ydata, self._clicks[0][1]],
                                     color=".5",
@@ -539,9 +556,10 @@ class ShapeDrawer:
 
             self._m.BM.update()
 
-            gdf = gpd.GeoDataFrame(index=[ID], geometry=[Polygon(pts)])
-            gdf = gdf.set_crs(crs=self._crs)
-            self.gdf = self.gdf.append(gdf)
+            if _register_geopandas():
+                gdf = gpd.GeoDataFrame(index=[ID], geometry=[Polygon(pts)])
+                gdf = gdf.set_crs(crs=self._crs)
+                self.gdf = self.gdf.append(gdf)
 
             for cb in self._on_new_poly:
                 cb()
@@ -612,10 +630,11 @@ class ShapeDrawer:
 
             self._m.BM.update()
 
-            pts = np.column_stack((pts[0][0], pts[1][0]))
-            gdf = gpd.GeoDataFrame(index=[ID], geometry=[Polygon(pts)])
-            gdf = gdf.set_crs(crs=self._crs)
-            self.gdf = self.gdf.append(gdf)
+            if _register_geopandas():
+                pts = np.column_stack((pts[0][0], pts[1][0]))
+                gdf = gpd.GeoDataFrame(index=[ID], geometry=[Polygon(pts)])
+                gdf = gdf.set_crs(crs=self._crs)
+                self.gdf = self.gdf.append(gdf)
 
             for cb in self._on_new_poly:
                 cb()
@@ -679,9 +698,10 @@ class ShapeDrawer:
 
             self._m.BM.update()
 
-            gdf = gpd.GeoDataFrame(index=[ID], geometry=[Polygon(pts)])
-            gdf = gdf.set_crs(crs=self._crs)
-            self.gdf = self.gdf.append(gdf)
+            if _register_geopandas():
+                gdf = gpd.GeoDataFrame(index=[ID], geometry=[Polygon(pts)])
+                gdf = gdf.set_crs(crs=self._crs)
+                self.gdf = self.gdf.append(gdf)
 
             for cb in self._on_new_poly:
                 cb()
