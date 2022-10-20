@@ -297,7 +297,7 @@ class AddFeatureWidget(QtWidgets.QFrame):
 
     def update_alphaslider(self):
         # to always round up to closest int use -(-x//1)
-        self.alphaslider.setValue(-(-self.colorselector.alpha * 100 // 1))
+        self.alphaslider.setValue(int(-(-self.colorselector.alpha * 100 // 1)))
 
     def update_props(self):
         self.set_alpha_slider_stylesheet()

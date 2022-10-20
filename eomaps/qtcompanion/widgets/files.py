@@ -1067,7 +1067,7 @@ class PlotShapeFileWidget(QtWidgets.QWidget):
 
     def update_alphaslider(self):
         # to always round up to closest int use -(-x//1)
-        self.alphaslider.setValue(-(-self.colorselector.alpha * 100 // 1))
+        self.alphaslider.setValue(int(-(-self.colorselector.alpha * 100 // 1)))
 
     def update_props(self):
         if self.zorder.text():
