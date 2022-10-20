@@ -489,9 +489,9 @@ class ArtistEditor(QtWidgets.QWidget):
         self.option_tabs.addTab(self.addannotation, "Add Annotations")
 
         if hasattr(self.m.util, "draw"):
-            from .draw import DrawerWidget
+            from .draw import DrawerTabs
 
-            self.draw = DrawerWidget(m=self.m)
+            self.draw = DrawerTabs(m=self.m)
             self.option_tabs.addTab(self.draw, "Draw Shapes")
         else:
             self.draw = None

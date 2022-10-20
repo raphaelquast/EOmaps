@@ -13,6 +13,7 @@ https://github.com/geopandas/geopandas/issues/2387
 
 """
 from contextlib import contextmanager
+from functools import wraps
 
 import numpy as np
 import matplotlib as mpl
@@ -38,7 +39,7 @@ def autoscale_turned_off(ax=None):
 
 
 class ShapeDrawer:
-    def __init__(self, m, layer=None, savepath=None):
+    def __init__(self, m, layer=None):
         """
         Base-class for drawing shapes on a map.
 
@@ -46,17 +47,16 @@ class ShapeDrawer:
         ----------
         m : eomaps.Maps
             the maps-object.
-        layer : str or int
+        layer : str
             The layer-name to put the shapes on.
             If None, the currently active layer will be used.
             The default is None.
-        savepath : str, optional
-            A path to a folder that will be used to store the drawn shapes
-            as shapefiles.
-            The default is None (e.g. no shapefiles are saved).
-
         """
+
         self._m = m
+
+        if layer is None:
+            layer = self._m.BM.bg_layer
         self._layer = layer
 
         if self._m.crs_plot == self._m.CRS.PlateCarree():
@@ -66,18 +66,37 @@ class ShapeDrawer:
         else:
             self._crs = self._m.crs_plot.to_wkt()
 
-        self._savepath = savepath
         self.gdf = gpd.GeoDataFrame(geometry=[], crs=self._crs)
 
-        self.cids = []
+        self._cids = []
 
-        self.clicks = []
-        self.marks = []
-        self.endline = []
+        self._clicks = []
+        self._marks = []
+        self._endline = []
 
-        self.on_new_poly = []
+        self._on_new_poly = []
+        self._on_poly_remove = []
 
         self._artists = dict()
+
+    def new_drawer(self, layer=None):
+        """
+        Initialize a new ShapeDrawer.
+
+        Parameters
+        ----------
+        layer : str
+            The layer-name to put the shapes on.
+            If None, the currently active layer will be used.
+            The default is None.
+
+        Returns
+        -------
+        ShapeDrawer
+            A new instance of the ShapeDrawer that can be used to draw shapes.
+        """
+
+        return self.__class__(self._m, layer=layer)
 
     def set_layer(self, layer):
         """
@@ -100,26 +119,51 @@ class ShapeDrawer:
         cb : callable, optional
             A callable executed after finishing the draw. The default is None.
         """
-        while len(self.cids) > 0:
-            self._m.figure.f.canvas.mpl_disconnect(self.cids.pop())
+        while len(self._cids) > 0:
+            self._m.figure.f.canvas.mpl_disconnect(self._cids.pop())
 
         # Cleanup.
         if plt.fignum_exists(self._m.figure.f.number):
-            while len(self.marks) > 0:
-                a = self.marks.pop()
+            while len(self._marks) > 0:
+                a = self._marks.pop()
                 self._m.BM.remove_artist(a)
                 a.remove()
 
-            while len(self.endline) > 0:
-                a = self.endline.pop()
+            while len(self._endline) > 0:
+                a = self._endline.pop()
                 self._m.BM.remove_artist(a)
                 a.remove()
 
         if cb is not None:
             cb()
 
-        self.clicks.clear()
+        self._clicks.clear()
         self._m.BM.update()
+
+    @wraps(gpd.GeoDataFrame.to_file)
+    def save_polygons(self, filename, **kwargs):
+        if len(self.gdf) > 0:
+            self.gdf.to_file(filename, **kwargs)
+        else:
+            print("EOmaps: There are no polygons to save!")
+
+    def remove_last_shape(self):
+        """
+        Remove the most recently plotted polygon from the map.
+        """
+        if len(self.gdf) == 0:
+            print("EOmaps: There is no shape to remove!")
+            return
+
+        ID = self.gdf.index[-1]
+        a = self._artists.pop(ID)
+        self._m.BM.remove_bg_artist(a)
+        a.remove()
+
+        self.gdf = self.gdf.drop(ID)
+
+        for cb in self._on_poly_remove:
+            cb()
 
     # This is basically a copy of matplotlib's ginput function adapted for EOmaps
     # matplotlib's original ginput function is here:
@@ -142,7 +186,7 @@ class ShapeDrawer:
         the callback provided as "cb".
 
         Wait until the user clicks *n* times on the figure, and add the
-        coordinates of each click to "self.clicks"
+        coordinates of each click to "self._clicks"
 
         There are three possible interactions:
         - Add a point.
@@ -217,16 +261,16 @@ class ShapeDrawer:
                 or is_key
                 and event.key in ["backspace", "delete"]
             ):
-                if self.clicks:
-                    self.clicks.pop()
+                if self._clicks:
+                    self._clicks.pop()
                     if show_clicks:
-                        lastmark = self.marks.pop()
+                        lastmark = self._marks.pop()
                         self._m.BM.remove_artist(lastmark)
                         lastmark.remove()
                         self._m.BM.update()
 
-                        while len(self.endline) > 0:
-                            el = self.endline.pop()
+                        while len(self._endline) > 0:
+                            el = self._endline.pop()
                             self._m.BM.remove_artist(el)
                             el.remove()
 
@@ -239,42 +283,42 @@ class ShapeDrawer:
                 and event.key is not None
             ):
                 if event.inaxes:
-                    while len(self.endline) > 0:
-                        el = self.endline.pop()
+                    while len(self._endline) > 0:
+                        el = self._endline.pop()
                         self._m.BM.remove_artist(el)
                         el.remove()
 
-                    self.clicks.append((event.xdata, event.ydata))
+                    self._clicks.append((event.xdata, event.ydata))
                     if show_clicks:
-                        if len(self.clicks) < 2:
+                        if len(self._clicks) < 2:
                             x, y = [event.xdata], [event.ydata]
                         else:
-                            x, y = [i[0] for i in self.clicks], [
-                                i[1] for i in self.clicks
+                            x, y = [i[0] for i in self._clicks], [
+                                i[1] for i in self._clicks
                             ]
                         line = mpl.lines.Line2D(x, y, marker="+", color="r")
                         event.inaxes.add_line(line)
-                        self.marks.append(line)
+                        self._marks.append(line)
 
                         self._m.BM.add_artist(line, "all")
 
-                        if len(self.clicks) > 2:
-                            self.endline.append(
+                        if len(self._clicks) > 2:
+                            self._endline.append(
                                 mpl.lines.Line2D(
-                                    [event.xdata, self.clicks[0][0]],
-                                    [event.ydata, self.clicks[0][1]],
+                                    [event.xdata, self._clicks[0][0]],
+                                    [event.ydata, self._clicks[0][1]],
                                     color=".5",
                                     lw=0.5,
                                     ls="--",
                                 )
                             )
-                            event.inaxes.add_line(self.endline[-1])
+                            event.inaxes.add_line(self._endline[-1])
 
-                            self._m.BM.add_artist(self.endline[-1], "all")
+                            self._m.BM.add_artist(self._endline[-1], "all")
 
                         self._m.BM.update()
 
-            if len(self.clicks) == n and n > 0:
+            if len(self._clicks) == n and n > 0:
                 self._finish_drawing(cb=cb)
 
         eventnames = ["button_press_event", "key_press_event", "close_event"]
@@ -282,7 +326,7 @@ class ShapeDrawer:
             eventnames.append("motion_notify_event")
 
         for event in eventnames:
-            self.cids.append(canvas.mpl_connect(event, handler))
+            self._cids.append(canvas.mpl_connect(event, handler))
 
     # draw only a single point and draw a second point on escape
     # This is basically a copy of matplotlib's ginput function adapted for EOmaps
@@ -362,7 +406,7 @@ class ShapeDrawer:
 
             if event.name == "motion_notify_event":
                 if movecb:
-                    movecb(event, self.clicks)
+                    movecb(event, self._clicks)
 
             is_button = (
                 event.name == "button_press_event"
@@ -374,7 +418,7 @@ class ShapeDrawer:
             # test how many points were actually returned before using data).
 
             if is_button and event.button == mouse_stop:
-                self.clicks.append((event.xdata, event.ydata))
+                self._clicks.append((event.xdata, event.ydata))
                 self._finish_drawing(cb=cb)
             elif is_key and event.key in ["escape", "enter"]:
                 self._finish_drawing(cb=cb)
@@ -386,16 +430,16 @@ class ShapeDrawer:
                 or is_key
                 and event.key in ["backspace", "delete"]
             ):
-                if self.clicks:
-                    self.clicks.pop()
+                if self._clicks:
+                    self._clicks.pop()
                     if show_clicks:
-                        lastmark = self.marks.pop()
+                        lastmark = self._marks.pop()
                         self._m.BM.remove_artist(lastmark)
                         lastmark.remove()
                         self._m.BM.update()
 
-                        while len(self.endline) > 0:
-                            el = self.endline.pop()
+                        while len(self._endline) > 0:
+                            el = self._endline.pop()
                             self._m.BM.remove_artist(el)
                             el.remove()
 
@@ -407,42 +451,42 @@ class ShapeDrawer:
                 or is_key
                 and event.key is not None
             ):
-                if len(self.clicks) >= n - 1:
+                if len(self._clicks) >= n - 1:
                     return
 
                 if event.inaxes:
-                    while len(self.endline) > 0:
-                        el = self.endline.pop()
+                    while len(self._endline) > 0:
+                        el = self._endline.pop()
                         self._m.BM.remove_artist(el)
                         el.remove()
 
-                    self.clicks.append((event.xdata, event.ydata))
+                    self._clicks.append((event.xdata, event.ydata))
                     if show_clicks:
-                        if len(self.clicks) < 2:
+                        if len(self._clicks) < 2:
                             x, y = [event.xdata], [event.ydata]
                         else:
-                            x, y = [i[0] for i in self.clicks], [
-                                i[1] for i in self.clicks
+                            x, y = [i[0] for i in self._clicks], [
+                                i[1] for i in self._clicks
                             ]
                         line = mpl.lines.Line2D(x, y, marker="+", color="r")
                         event.inaxes.add_line(line)
-                        self.marks.append(line)
+                        self._marks.append(line)
 
                         self._m.BM.add_artist(line, "all")
 
-                        if len(self.clicks) > 2:
-                            self.endline.append(
+                        if len(self._clicks) > 2:
+                            self._endline.append(
                                 mpl.lines.Line2D(
-                                    [event.xdata, self.clicks[0][0]],
-                                    [event.ydata, self.clicks[0][1]],
+                                    [event.xdata, self._clicks[0][0]],
+                                    [event.ydata, self._clicks[0][1]],
                                     color=".5",
                                     lw=0.5,
                                     ls="--",
                                 )
                             )
-                            event.inaxes.add_line(self.endline[-1])
+                            event.inaxes.add_line(self._endline[-1])
 
-                            self._m.BM.add_artist(self.endline[-1], "all")
+                            self._m.BM.add_artist(self._endline[-1], "all")
 
                         self._m.BM.update()
 
@@ -451,26 +495,7 @@ class ShapeDrawer:
             eventnames.append("motion_notify_event")
 
         for event in eventnames:
-            self.cids.append(canvas.mpl_connect(event, handler))
-
-    def new_poly(self, **kwargs):
-        """
-        Initialize a new ShapeDrawer
-        (e.g. reset all properties, paths etc. and start new)
-
-        Parameters
-        ----------
-        kwargs :
-            kwargs passed to the initialization of ShapeDrawer.
-
-        Returns
-        -------
-        TYPE
-            DESCRIPTION.
-
-        """
-
-        return self.__class__(self._m, **kwargs)
+            self._cids.append(canvas.mpl_connect(event, handler))
 
     def polygon(self, smooth=False, draw_on_drag=True, **kwargs):
         """
@@ -497,7 +522,7 @@ class ShapeDrawer:
         self._ginput(-1, timeout=-1, draw_on_drag=draw_on_drag, cb=cb)
 
     def _polygon(self, **kwargs):
-        pts = self.clicks
+        pts = self._clicks
         if pts is not None and len(pts) > 2:
             pts = np.asarray(pts)
 
@@ -518,11 +543,8 @@ class ShapeDrawer:
             gdf = gdf.set_crs(crs=self._crs)
             self.gdf = self.gdf.append(gdf)
 
-            for cb in self.on_new_poly:
+            for cb in self._on_new_poly:
                 cb()
-
-            if self._savepath:
-                self.gdf.to_file(self._savepath)
 
     def circle(self, **kwargs):
         """
@@ -568,7 +590,7 @@ class ShapeDrawer:
         self._ginput2(2, timeout=-1, draw_on_drag=True, movecb=movecb, cb=cb)
 
     def _circle(self, **kwargs):
-        pts = self.clicks
+        pts = self._clicks
         if pts is not None and len(pts) == 2:
             pts = np.asarray(pts)
 
@@ -595,11 +617,8 @@ class ShapeDrawer:
             gdf = gdf.set_crs(crs=self._crs)
             self.gdf = self.gdf.append(gdf)
 
-            for cb in self.on_new_poly:
+            for cb in self._on_new_poly:
                 cb()
-
-            if self._savepath:
-                self.gdf.to_file(self._savepath)
 
     def rectangle(self, **kwargs):
         """
@@ -639,7 +658,7 @@ class ShapeDrawer:
         self._ginput2(2, timeout=-1, draw_on_drag=True, movecb=movecb, cb=cb)
 
     def _rectangle(self, **kwargs):
-        pts = self.clicks
+        pts = self._clicks
         if pts is not None and len(pts) == 2:
             r = abs(pts[1][0] - pts[0][0]), abs(pts[1][1] - pts[0][1])
 
@@ -664,8 +683,5 @@ class ShapeDrawer:
             gdf = gdf.set_crs(crs=self._crs)
             self.gdf = self.gdf.append(gdf)
 
-            for cb in self.on_new_poly:
+            for cb in self._on_new_poly:
                 cb()
-
-            if self._savepath:
-                self.gdf.to_file(self._savepath)
