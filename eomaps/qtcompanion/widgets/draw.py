@@ -270,7 +270,7 @@ class DrawerWidget(QtWidgets.QWidget):
         def cb():
             self.window().hide()
             self.m.figure.f.canvas.show()
-            self.m.figure.f.canvas.setFocus()
+            self.m.figure.f.canvas.activateWindow()
 
             getattr(self.drawer, poly)(
                 facecolor=self.colorselector.facecolor.getRgbF(),
@@ -297,8 +297,6 @@ class DrawerWidget(QtWidgets.QWidget):
             txt = f"Save {npoly} Polygons"
 
         self.save_button.setText(txt)
-
-        self.window().show()
 
     @pyqtSlot()
     def save_shapes(self):

@@ -228,7 +228,6 @@ class AddAnnotationInput(QtWidgets.QWidget):
                     **self.annotate_props,
                 )
                 self.stop()
-                self.window().show()
 
         # remove old callback if it is still attached
         self.stop()
