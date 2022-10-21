@@ -1,5 +1,6 @@
 from PyQt5 import QtWidgets
 from PyQt5.QtCore import Qt, pyqtSignal, pyqtSlot
+from PyQt5.QtGui import QKeySequence
 
 from .base import transparentWindow
 
@@ -151,6 +152,18 @@ class MenuWindow(transparentWindow):
 
         sh = self.sizeHint()
         self.resize(int(sh.width() * 1.35), sh.height())
+
+        # make sure show/hide shortcut also works if the widget is active
+        self.shortcut = QtWidgets.QShortcut(QKeySequence("w"), self)
+        self.shortcut.activated.connect(self.toggle_show)
+
+    @pyqtSlot()
+    def toggle_show(self):
+        if self.isVisible():
+            self.hide()
+        else:
+            self.show()
+            self.activateWindow()
 
     @pyqtSlot()
     def clear_pixmap_cache(self):
