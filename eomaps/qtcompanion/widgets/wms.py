@@ -1,5 +1,5 @@
 from PyQt5 import QtWidgets
-from PyQt5.QtCore import Qt, QThread, QObject, pyqtSignal
+from PyQt5.QtCore import Qt, QThread, QObject, pyqtSignal, pyqtSlot
 from PyQt5.QtGui import QStatusTipEvent
 
 
@@ -217,9 +217,7 @@ class AddWMSMenuButton(QtWidgets.QPushButton):
         self.feature_menu.aboutToShow.connect(self.populate_menu)
 
         self.setMenu(self.feature_menu)
-        self.clicked.connect(
-            lambda: self.feature_menu.popup(self.mapToGlobal(self.menu_button.pos()))
-        )
+        self.clicked.connect(self.show_menu)
 
         self._submenus = dict()
 
@@ -253,6 +251,11 @@ class AddWMSMenuButton(QtWidgets.QPushButton):
     def set_layer(self, layer):
         self.layer = layer
 
+    @pyqtSlot()
+    def show_menu(self):
+        self.feature_menu.popup(self.mapToGlobal(self.menu_button.pos()))
+
+    @pyqtSlot()
     def populate_menu(self):
         self.sub_menus = dict()
         for wmsname in self.wms_dict:
@@ -260,6 +263,7 @@ class AddWMSMenuButton(QtWidgets.QPushButton):
             self.sub_menus[wmsname].aboutToShow.connect(self.populate_submenu_thread)
         self.feature_menu.aboutToShow.disconnect()
 
+    @pyqtSlot()
     def populate_submenu_thread(self):
         #
 
@@ -292,6 +296,7 @@ class AddWMSMenuButton(QtWidgets.QPushButton):
             worker.moveToThread(thread)
             thread.started.connect(worker.run)
 
+            @pyqtSlot()
             def doit():
                 self.populate_submenu(wmsname)
 
@@ -331,6 +336,7 @@ class AddWMSMenuButton(QtWidgets.QPushButton):
             print("There was a problem with the WMS: " + wmsname)
 
     def menu_callback_factory(self, wms, wmslayer):
+        @pyqtSlot()
         def wms_cb():
             if self._new_layer:
                 layer = wms.name + "_" + wmslayer
