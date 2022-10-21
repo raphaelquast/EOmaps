@@ -429,7 +429,11 @@ class Maps(object):
                     self._companion_widget.hide()
                 else:
                     self._companion_widget.show()
-                    self._companion_widget.activateWindow()
+                    # Do NOT activate the companion widget in here!!
+                    # Activating the window during the callback steals focus and
+                    # as a consequence the key-released-event is never triggered
+                    # on the figure and "w" would remain activated permanently.
+                    # self._companion_widget.activateWindow()
 
         self._cid_companion_key = self.all.cb.keypress.attach(cb, key=show_hide_key)
 
