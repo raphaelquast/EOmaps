@@ -1,5 +1,5 @@
 from PyQt5 import QtWidgets
-from PyQt5.QtCore import Qt
+from PyQt5.QtCore import Qt, pyqtSlot
 
 
 class AutoUpdatePeekLayerDropdown(QtWidgets.QComboBox):
@@ -45,6 +45,7 @@ class AutoUpdatePeekLayerDropdown(QtWidgets.QComboBox):
                 "select the peek-method as well as the transparency of the overlay.",
             )
 
+    @pyqtSlot()
     def set_last_active(self):
         self._last_active = self.currentText()
 
@@ -194,6 +195,7 @@ class AutoUpdateLayerMenuButton(QtWidgets.QPushButton):
         self.update_layers()
         self.update_display_text(self.m.BM._bg_layer)
 
+    @pyqtSlot()
     def actionClicked(self):
 
         checked_layers = [l for l in self.m.BM.bg_layer.split("|") if l != "_"]
@@ -260,6 +262,7 @@ class AutoUpdateLayerMenuButton(QtWidgets.QPushButton):
                 # re connect action trigger
                 w.stateChanged.connect(action.trigger)
 
+    @pyqtSlot()
     def update_layers(self):
         layers = self.layers
         if layers == self._last_layers:

@@ -1,5 +1,5 @@
 from PyQt5 import QtCore, QtWidgets, QtGui
-from PyQt5.QtCore import Qt, pyqtSignal
+from PyQt5.QtCore import Qt, pyqtSignal, pyqtSlot
 
 from matplotlib.colors import to_rgba_array
 
@@ -34,12 +34,12 @@ class AddFeaturesMenuButton(QtWidgets.QPushButton):
         width = self.fontMetrics().boundingRect(self.text()).width()
         self.setFixedWidth(width + 30)
 
-        feature_menu = QtWidgets.QMenu()
-        feature_menu.setStyleSheet("QMenu { menu-scrollable: 1;}")
+        self.feature_menu = QtWidgets.QMenu()
+        self.feature_menu.setStyleSheet("QMenu { menu-scrollable: 1;}")
 
         for featuretype in feature_types:
             try:
-                sub_menu = feature_menu.addMenu(featuretype)
+                sub_menu = self.feature_menu.addMenu(featuretype)
 
                 sub_features = [
                     i
@@ -55,10 +55,8 @@ class AddFeaturesMenuButton(QtWidgets.QPushButton):
                 print("there was a problem with the NaturalEarth feature", featuretype)
                 continue
 
-        self.setMenu(feature_menu)
-        self.clicked.connect(
-            lambda: feature_menu.popup(self.mapToGlobal(self.menu_button.pos()))
-        )
+        self.setMenu(self.feature_menu)
+        self.clicked.connect(self.show_menu)
 
     def enterEvent(self, e):
         if self.window().showhelp is True:
@@ -76,10 +74,15 @@ class AddFeaturesMenuButton(QtWidgets.QPushButton):
 
         super().enterEvent(e)
 
+    @pyqtSlot()
+    def show_menu(self):
+        self.feature_menu.popup(self.mapToGlobal(self.menu_button.pos()))
+
     def set_layer(self, layer):
         self.layer = layer
 
     def menu_callback_factory(self, featuretype, feature):
+        @pyqtSlot()
         def cb():
             # TODO set the layer !!!!
             if self.layer is None:
@@ -191,15 +194,11 @@ class AddFeatureWidget(QtWidgets.QFrame):
         self.colorselector.cb_colorselected = self.update_on_color_selection
 
         self.alphaslider = TransparencySlider(Qt.Horizontal)
-        self.alphaslider.valueChanged.connect(
-            lambda i: self.colorselector.set_alpha(i / 100)
-        )
+        self.alphaslider.valueChanged.connect(self.set_alpha_with_slider)
         self.alphaslider.valueChanged.connect(self.update_props)
 
         self.linewidthslider = LinewidthSlider(Qt.Horizontal)
-        self.linewidthslider.valueChanged.connect(
-            lambda i: self.colorselector.set_linewidth(i / 10)
-        )
+        self.linewidthslider.valueChanged.connect(self.set_linewidth_with_slider)
         self.linewidthslider.valueChanged.connect(self.update_props)
         self.set_linewidth_slider_stylesheet()
 
@@ -240,6 +239,28 @@ class AddFeatureWidget(QtWidgets.QFrame):
         self.linewidthslider.setValue(20)
 
         self.update_props()
+
+    @pyqtSlot(int)
+    def set_alpha_with_slider(self, i):
+        self.colorselector.set_alpha(i / 100)
+
+    @pyqtSlot(int)
+    def set_linewidth_with_slider(self, i):
+        self.colorselector.set_linewidth(i / 10)
+
+    @pyqtSlot()
+    def update_props(self):
+        self.set_alpha_slider_stylesheet()
+
+        self.selector.props.update(
+            dict(
+                facecolor=self.colorselector.facecolor.getRgbF(),
+                edgecolor=self.colorselector.edgecolor.getRgbF(),
+                linewidth=self.linewidthslider.alpha * 5,
+                zorder=int(self.zorder.text()),
+                # alpha = self.alphaslider.alpha,   # don't specify alpha! it interferes with the alpha of the colors!
+            )
+        )
 
     def set_linewidth_slider_stylesheet(self):
         self.linewidthslider.setStyleSheet(
@@ -299,19 +320,6 @@ class AddFeatureWidget(QtWidgets.QFrame):
         # to always round up to closest int use -(-x//1)
         self.alphaslider.setValue(int(-(-self.colorselector.alpha * 100 // 1)))
 
-    def update_props(self):
-        self.set_alpha_slider_stylesheet()
-
-        self.selector.props.update(
-            dict(
-                facecolor=self.colorselector.facecolor.getRgbF(),
-                edgecolor=self.colorselector.edgecolor.getRgbF(),
-                linewidth=self.linewidthslider.alpha * 5,
-                zorder=int(self.zorder.text()),
-                # alpha = self.alphaslider.alpha,   # don't specify alpha! it interferes with the alpha of the colors!
-            )
-        )
-
 
 class NewLayerLineEdit(QtWidgets.QLineEdit):
     def enterEvent(self, e):
@@ -364,6 +372,7 @@ class NewLayerWidget(QtWidgets.QFrame):
         layout.addLayout(newlayer)
         self.setLayout(layout)
 
+    @pyqtSlot()
     def new_layer(self):
         layer = self.new_layer_name.text()
         if len(layer) == 0:
@@ -529,6 +538,7 @@ class ArtistEditor(QtWidgets.QWidget):
         self.tabs.currentChanged.connect(self.set_layer)
         self.set_layer()
 
+    @pyqtSlot()
     def set_layer(self):
         layer = self.tabs.tabText(self.tabs.currentIndex())
         self.addfeature.selector.set_layer(layer)
@@ -540,6 +550,7 @@ class ArtistEditor(QtWidgets.QWidget):
 
         self.addannotation.set_layer(layer)
 
+    @pyqtSlot(int)
     def close_handler(self, index):
         layer = self.tabs.tabText(index)
 
@@ -551,11 +562,18 @@ class ArtistEditor(QtWidgets.QWidget):
         self._msg.setStandardButtons(
             QtWidgets.QMessageBox.Yes | QtWidgets.QMessageBox.No
         )
-        self._msg.buttonClicked.connect(lambda: self.do_close_tab(index))
+        self._msg.buttonClicked.connect(self.get_close_tab_cb(index))
 
-        ret = self._msg.show()
+        _ = self._msg.show()
 
-    def do_close_tab(self, index):
+    def get_close_tab_cb(self, index):
+        @pyqtSlot()
+        def cb():
+            self._do_close_tab(index)
+
+        return cb
+
+    def _do_close_tab(self, index):
 
         if self._msg.standardButton(self._msg.clickedButton()) != self._msg.Yes:
             return
@@ -772,6 +790,7 @@ class ArtistEditor(QtWidgets.QWidget):
 
         return layout
 
+    @pyqtSlot()
     def populate_layer(self):
         layer = self.tabs.tabText(self.tabs.currentIndex())
         widget = self.tabs.currentWidget()
@@ -803,6 +822,7 @@ class ArtistEditor(QtWidgets.QWidget):
 
         widget.setWidget(tabwidget)
 
+    @pyqtSlot()
     def populate(self):
         self._current_tab_idx = self.tabs.currentIndex()
         self._current_tab_name = self.tabs.tabText(self._current_tab_idx)
@@ -837,6 +857,7 @@ class ArtistEditor(QtWidgets.QWidget):
 
         self.color_active_tab()
 
+    @pyqtSlot(str)
     def set_current_tab_by_name(self, layer):
         found = False
         ntabs = self.tabs.count()
@@ -851,6 +872,7 @@ class ArtistEditor(QtWidgets.QWidget):
                 print(f"Unable to activate the tab '{self._current_tab_name}'!")
                 self.tabs.setCurrentIndex(0)
 
+    @pyqtSlot(int)
     def tabchanged(self, index):
         # TODO
         # modifiers are only released if the canvas has focus while the event happens!!
@@ -921,6 +943,7 @@ class ArtistEditor(QtWidgets.QWidget):
         self.m.redraw()
 
     def remove(self, artist, layer):
+        @pyqtSlot()
         def cb():
             self._msg = QtWidgets.QMessageBox(self)
             self._msg.setIcon(QtWidgets.QMessageBox.Question)
@@ -940,6 +963,7 @@ class ArtistEditor(QtWidgets.QWidget):
         return cb
 
     def show_hide(self, artist, layer):
+        @pyqtSlot()
         def cb():
             if artist in self.m.BM._bg_artists[layer]:
                 self._hidden_artists.setdefault(layer, []).append(artist)
@@ -963,6 +987,7 @@ class ArtistEditor(QtWidgets.QWidget):
         return cb
 
     def set_zorder(self, artist, layer, widget):
+        @pyqtSlot()
         def cb():
             val = widget.text()
             if len(val) > 0:
@@ -973,6 +998,7 @@ class ArtistEditor(QtWidgets.QWidget):
         return cb
 
     def set_alpha(self, artist, layer, widget):
+        @pyqtSlot()
         def cb():
             val = widget.text()
             if len(val) > 0:
@@ -983,6 +1009,7 @@ class ArtistEditor(QtWidgets.QWidget):
         return cb
 
     def set_linewidth(self, artist, layer, widget):
+        @pyqtSlot()
         def cb():
             val = widget.text()
             if len(val) > 0:
@@ -993,6 +1020,7 @@ class ArtistEditor(QtWidgets.QWidget):
         return cb
 
     def set_cmap(self, artist, layer, widget):
+        @pyqtSlot()
         def cb():
             val = widget.currentText()
             if len(val) > 0:

@@ -1,5 +1,5 @@
 from PyQt5 import QtWidgets, QtCore, QtGui
-from PyQt5.QtCore import Qt
+from PyQt5.QtCore import Qt, pyqtSlot
 
 from .common import iconpath
 
@@ -96,6 +96,7 @@ class ToolBar(QtWidgets.QToolBar):
 
         self.press_pos = None
 
+    @pyqtSlot()
     def toggle_show_help(self):
         if self.b_showhelp.isChecked():
             self.window().showhelp = True
@@ -104,9 +105,11 @@ class ToolBar(QtWidgets.QToolBar):
             self.window().showhelp = False
             self.b_showhelp.setText("?")
 
+    @pyqtSlot()
     def close_button_callback(self):
         self.window().close()
 
+    @pyqtSlot()
     def maximize_button_callback(self):
         if not self.window().isMaximized():
             self.window().showMaximized()
@@ -160,6 +163,7 @@ class NewWindow(QtWidgets.QMainWindow):
         # make sure that we close all remaining windows if the figure is closed
         self.m.figure.f.canvas.mpl_connect("close_event", self.on_close)
 
+    @pyqtSlot()
     def on_close(self, e):
         self.close()
 
@@ -191,6 +195,7 @@ class transparentWindow(QtWidgets.QMainWindow):
 
         self.addToolBar(self.toolbar)
 
+    @pyqtSlot()
     def cb_transparentQ(self):
         if self.out_alpha == 1:
             self.out_alpha = 0.25
@@ -202,6 +207,7 @@ class transparentWindow(QtWidgets.QMainWindow):
             self.setFocus()
             self.transparentQ.setIcon(QtGui.QIcon(str(iconpath / "eye_open.png")))
 
+    @pyqtSlot("QWidget*", "QWidget*")
     def on_window_focus(self, old, new):
         if new is not None:
             if new is self or hasattr(new, "window") and new.window() is self:

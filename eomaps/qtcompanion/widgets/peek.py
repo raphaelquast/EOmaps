@@ -1,5 +1,5 @@
 from PyQt5 import QtWidgets, QtGui
-from PyQt5.QtCore import Qt, pyqtSignal, QSize
+from PyQt5.QtCore import Qt, pyqtSignal, QSize, pyqtSlot
 
 from .layer import AutoUpdatePeekLayerDropdown, AutoUpdateLayerMenuButton
 from ..common import iconpath
@@ -124,6 +124,7 @@ class PeekMethodButtons(QtWidgets.QWidget):
         # self.buttons["rectangle"].setText(self.symbols_inverted["square"])
 
     def button_clicked(self, method):
+        @pyqtSlot()
         def cb():
             if method == "square":
                 m = "rectangle"
@@ -137,6 +138,7 @@ class PeekMethodButtons(QtWidgets.QWidget):
 
         return cb
 
+    @pyqtSlot(int)
     def rectangle_sider_value_changed(self, i):
         self.rectangle_size = i / 100
         if self._method in ["rectangle", "square"]:
@@ -202,11 +204,13 @@ class PeekMethodButtons(QtWidgets.QWidget):
             """
         )
 
+    @pyqtSlot(int)
     def alpha_changed(self, i):
         self.alpha = i / 100
         self.methodChanged.emit(self._method)
         self.set_alpha_slider_stylesheet()
 
+    @pyqtSlot(str)
     def method_changed(self, method):
         self._method = method
 
@@ -317,6 +321,7 @@ class PeekLayerWidget(QtWidgets.QWidget):
 
         self.setLayout(layout)
 
+    @pyqtSlot(str)
     def set_layer_callback(self, l):
         self.remove_peek_cb()
         if self.cid is not None:
@@ -334,6 +339,7 @@ class PeekLayerWidget(QtWidgets.QWidget):
         )
         self.current_layer = l
 
+    @pyqtSlot(str)
     def method_changed(self, method):
         self.add_peek_cb()
 
@@ -409,6 +415,7 @@ class PeekTabs(QtWidgets.QTabWidget):
                 "on the keyboard.",
             )
 
+    @pyqtSlot(int)
     def tabbar_clicked(self, index):
         if self.tabText(index) == "+":
             w = PeekLayerWidget(m=self.m)
@@ -422,6 +429,7 @@ class PeekTabs(QtWidgets.QTabWidget):
             # emit pyqtSignal to set text
             w.buttons.methodChanged.emit(w.buttons._method)
 
+    @pyqtSlot(int)
     def close_handler(self, index):
         curridx = self.currentIndex()
         self.widget(index).remove_peek_cb()
@@ -430,6 +438,7 @@ class PeekTabs(QtWidgets.QTabWidget):
             self.setCurrentIndex(index - 1)
 
     def settxt_factory(self, w):
+        @pyqtSlot()
         def settxt():
             self.setTabIcon(self.indexOf(w), peek_icons[w.buttons._method])
             mod = w.modifier.text().strip()

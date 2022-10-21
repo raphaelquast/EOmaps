@@ -1,5 +1,5 @@
 from PyQt5 import QtWidgets, QtGui
-from PyQt5.QtCore import Qt
+from PyQt5.QtCore import Qt, pyqtSlot
 
 from .utils import EditLayoutButton
 
@@ -91,6 +91,7 @@ class SaveFileWidget(QtWidgets.QFrame):
             """
         )
 
+    @pyqtSlot()
     def save_file(self):
         savepath = QtWidgets.QFileDialog.getSaveFileName()[0]
 

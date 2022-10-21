@@ -1,5 +1,5 @@
 from PyQt5 import QtWidgets, QtGui
-from PyQt5.QtCore import Qt, QRectF, QSize
+from PyQt5.QtCore import Qt, QRectF, QSize, pyqtSlot
 from eomaps import Maps
 from functools import lru_cache
 
@@ -333,6 +333,7 @@ class EditLayoutButton(QtWidgets.QPushButton):
                 "</ul>",
             )
 
+    @pyqtSlot()
     def callback(self):
         if not self.m._layout_editor._modifier_pressed:
             self.m.edit_layout()
@@ -392,5 +393,6 @@ class AlphaSlider(QtWidgets.QSlider):
             """
         )
 
+    @pyqtSlot(int)
     def value_changed(self, i):
         self.alpha = i / 100

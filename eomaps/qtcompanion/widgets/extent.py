@@ -1,5 +1,6 @@
 from datetime import datetime
 from PyQt5 import QtWidgets
+from PyQt5.QtCore import pyqtSlot
 
 
 class SetExtentToLocation(QtWidgets.QWidget):
@@ -29,6 +30,7 @@ class SetExtentToLocation(QtWidgets.QWidget):
                 "'location' can be a country-name, a city-name an address etc.",
             )
 
+    @pyqtSlot()
     def set_extent(self):
         # make sure that queries have a couple of seconds delay
         # to comply to OpenStreetMap Nominatim Usage Policy

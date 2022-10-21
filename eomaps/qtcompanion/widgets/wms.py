@@ -248,9 +248,6 @@ class AddWMSMenuButton(QtWidgets.QPushButton):
                     "NOTE: This is not necessarily the currently visible layer!",
                 )
 
-    def set_layer(self, layer):
-        self.layer = layer
-
     @pyqtSlot()
     def show_menu(self):
         self.feature_menu.popup(self.mapToGlobal(self.menu_button.pos()))
@@ -309,6 +306,9 @@ class AddWMSMenuButton(QtWidgets.QPushButton):
             self.workers[wmsname] = worker
 
             thread.start()
+
+    def set_layer(self, layer):
+        self.layer = layer
 
     def fetch_submenu(self, wmsname):
         # disconnect callbacks to avoid recursions

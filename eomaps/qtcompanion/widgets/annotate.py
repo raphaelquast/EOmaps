@@ -1,5 +1,5 @@
 from PyQt5 import QtWidgets
-from PyQt5.QtCore import Qt
+from PyQt5.QtCore import Qt, pyqtSlot
 from .utils import GetColorWidget
 
 
@@ -94,7 +94,7 @@ class AddAnnotationInput(QtWidgets.QWidget):
         self.color.setMaximumSize(35, 35)
 
         self.b = AnnotateButton()
-        self.b.clicked.connect(self.doit)
+        self.b.clicked.connect(self.do_add_annotation)
         self.b.setFixedSize(self.b.sizeHint())
 
         self.b_rem = RemoveButton()
@@ -121,6 +121,26 @@ class AddAnnotationInput(QtWidgets.QWidget):
 
         self._annotation_active = False
 
+    def enterEvent(self, e):
+        if self.window().showhelp is True:
+            QtWidgets.QToolTip.showText(
+                e.globalPos(),
+                "<h3>Add Annotation</h3>"
+                "Type some text and press <b>Annotate</b> to add a permanent annotation"
+                " the next time you click on the map."
+                "<p>"
+                "<ul>"
+                "<li>Use the <b>dial</b> to set the location of the text "
+                "relative to the annotation position.</li>"
+                "<li>Click <b>Stop</b> to abort adding an annotation.</li>"
+                "</ul>"
+                "<p>"
+                "NOTE: Annotations are 'dynamic' artists (e.g. artists that do not"
+                "require a re-draw of the background-layer) so they will NOT appear"
+                "in the list of background-artists!",
+            )
+
+    @pyqtSlot(int)
     def dial_value_changed(self, i):
         from math import sin, cos, radians
 
@@ -151,6 +171,23 @@ class AddAnnotationInput(QtWidgets.QWidget):
             self._relpos[1] = 0
             self.annotate_props["verticalalignment"] = "bottom"
 
+    @pyqtSlot()
+    def do_add_annotation(self):
+        if self._annotation_active is True:
+            self.stop()
+        else:
+            self.add_annotation(text=self.text_inp.toPlainText())
+
+    @pyqtSlot()
+    def remove_last_annotation(self):
+        if self.m.cb.click.get.permanent_annotations:
+            last_ann = self.m.cb.click.get.permanent_annotations.pop(-1)
+            self.m.BM.remove_artist(last_ann)
+            last_ann.remove()
+            self.m.BM.update()
+        else:
+            self.window().statusBar().showMessage("There is no annotation to remove!")
+
     def colorselected(self):
         self.annotate_props["bbox"] = dict(
             boxstyle="round",
@@ -161,31 +198,6 @@ class AddAnnotationInput(QtWidgets.QWidget):
     def set_layer(self, layer):
         self.stop()
         self.layer = layer
-
-    def enterEvent(self, e):
-        if self.window().showhelp is True:
-            QtWidgets.QToolTip.showText(
-                e.globalPos(),
-                "<h3>Add Annotation</h3>"
-                "Type some text and press <b>Annotate</b> to add a permanent annotation"
-                " the next time you click on the map."
-                "<p>"
-                "<ul>"
-                "<li>Use the <b>dial</b> to set the location of the text "
-                "relative to the annotation position.</li>"
-                "<li>Click <b>Stop</b> to abort adding an annotation.</li>"
-                "</ul>"
-                "<p>"
-                "NOTE: Annotations are 'dynamic' artists (e.g. artists that do not"
-                "require a re-draw of the background-layer) so they will NOT appear"
-                "in the list of background-artists!",
-            )
-
-    def doit(self):
-        if self._annotation_active is True:
-            self.stop()
-        else:
-            self.add_annotation(text=self.text_inp.toPlainText())
 
     def stop(self):
         while len(self.cb_cids) > 0:
@@ -226,12 +238,3 @@ class AddAnnotationInput(QtWidgets.QWidget):
         self._annotation_active = True
         self.text_inp.setEnabled(False)
         self.b.setText("Stop")
-
-    def remove_last_annotation(self):
-        if self.m.cb.click.get.permanent_annotations:
-            last_ann = self.m.cb.click.get.permanent_annotations.pop(-1)
-            self.m.BM.remove_artist(last_ann)
-            last_ann.remove()
-            self.m.BM.update()
-        else:
-            self.window().statusBar().showMessage("There is no annotation to remove!")

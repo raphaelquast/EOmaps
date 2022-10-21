@@ -1,5 +1,5 @@
 from PyQt5 import QtWidgets
-from PyQt5.QtCore import Qt
+from PyQt5.QtCore import Qt, pyqtSlot
 
 from .utils import GetColorWidget, AlphaSlider
 from .editor import AddAnnotationInput
@@ -135,29 +135,13 @@ class DrawerTabs(QtWidgets.QTabWidget):
                 "are removed from the map.",
             )
 
-    def _get_new_drawer(self):
-        w = DrawerWidget(m=self.m)
-
-        def cb():
-            npoly = len(w.drawer._artists)
-            idx = self.indexOf(w)
-            self.setTabText(idx, str(npoly))
-
-        w.drawer._on_new_poly.append(cb)
-        w.drawer._on_poly_remove.append(cb)
-
-        return w
-
+    @pyqtSlot(int)
     def tabbar_clicked(self, index):
         if self.tabText(index) == "+":
             w = self._get_new_drawer()
             self.insertTab(self.count() - 1, w, "0")
 
-    def set_layer(self, layer):
-        for i in range(self.count()):
-            if self.tabText(i) != "+":
-                self.widget(i).set_layer(layer)
-
+    @pyqtSlot(int)
     def close_handler(self, index):
         curridx = self.currentIndex()
         drawerwidget = self.widget(index)
@@ -173,6 +157,24 @@ class DrawerTabs(QtWidgets.QTabWidget):
         self.removeTab(index)
         if index == curridx:
             self.setCurrentIndex(index - 1)
+
+    def _get_new_drawer(self):
+        w = DrawerWidget(m=self.m)
+
+        def cb():
+            npoly = len(w.drawer._artists)
+            idx = self.indexOf(w)
+            self.setTabText(idx, str(npoly))
+
+        w.drawer._on_new_poly.append(cb)
+        w.drawer._on_poly_remove.append(cb)
+
+        return w
+
+    def set_layer(self, layer):
+        for i in range(self.count()):
+            if self.tabText(i) != "+":
+                self.widget(i).set_layer(layer)
 
 
 class DrawerWidget(QtWidgets.QWidget):
@@ -212,15 +214,11 @@ class DrawerWidget(QtWidgets.QWidget):
         self.colorselector = GetColorWidget()
 
         self.alphaslider = TransparencySlider(Qt.Horizontal)
-        self.alphaslider.valueChanged.connect(
-            lambda i: self.colorselector.set_alpha(i / 100)
-        )
+        self.alphaslider.valueChanged.connect(self.set_alpha_with_slider)
         self.alphaslider.setValue(50)
 
         self.linewidthslider = LineWidthSlider(Qt.Horizontal)
-        self.linewidthslider.valueChanged.connect(
-            lambda i: self.colorselector.set_linewidth(i / 10)
-        )
+        self.linewidthslider.valueChanged.connect(self.set_linewidth_with_slider)
         self.linewidthslider.setValue(20)
 
         save_layout = QtWidgets.QVBoxLayout()
@@ -240,50 +238,6 @@ class DrawerWidget(QtWidgets.QWidget):
 
         layout.setAlignment(Qt.AlignCenter | Qt.AlignTop)
         self.setLayout(layout)
-
-    def set_layer(self, layer):
-        self.drawer.set_layer(layer)
-
-    def _new_poly_cb(self):
-        # callback executed on creation of a new polygon
-        npoly = len(self.drawer._artists)
-        if npoly > 0:
-            self.save_button.setEnabled(True)
-            self.remove_button.setEnabled(True)
-        else:
-            self.save_button.setEnabled(False)
-            self.remove_button.setEnabled(False)
-
-        if npoly == 1:
-            txt = f"Save {npoly} Polygon"
-        else:
-            txt = f"Save {npoly} Polygons"
-
-        self.save_button.setText(txt)
-
-        self.window().show()
-
-    def _new_drawer(self):
-        self.drawer = self.m.draw.new_drawer()
-        self.save_button.setEnabled(False)
-        self.remove_button.setEnabled(False)
-
-        self.drawer._on_new_poly.append(self._new_poly_cb)
-        self.drawer._on_poly_remove.append(self._new_poly_cb)
-
-    def save_shapes(self):
-        save_path, widget = QtWidgets.QFileDialog.getSaveFileName(
-            caption="Save Shapes", directory="shapes.shp", filter="Shapefiles (*.shp)"
-        )
-        if save_path is not None and len(save_path) > 0:
-            self.drawer.save_shapes(save_path)
-            # after saving the polygons, start with a new drawer
-            self._new_drawer()
-
-    def remove_last_shape(self):
-        self.drawer.remove_last_shape()
-        # update to make sure the changes are reflected on the map immediately
-        self.m.BM.update()
 
     def enterEvent(self, e):
         if self.window().showhelp is True:
@@ -311,10 +265,8 @@ class DrawerWidget(QtWidgets.QWidget):
                 "clicking the right mouse button.",
             )
 
-    def set_poly_type(self, s):
-        self._use_poly_type = self._polynames[s]
-
     def draw_shape_callback(self, poly):
+        @pyqtSlot()
         def cb():
             self.window().hide()
             self.m.figure.f.canvas.show()
@@ -327,3 +279,58 @@ class DrawerWidget(QtWidgets.QWidget):
             )
 
         return cb
+
+    @pyqtSlot()
+    def _new_poly_cb(self):
+        # callback executed on creation of a new polygon
+        npoly = len(self.drawer._artists)
+        if npoly > 0:
+            self.save_button.setEnabled(True)
+            self.remove_button.setEnabled(True)
+        else:
+            self.save_button.setEnabled(False)
+            self.remove_button.setEnabled(False)
+
+        if npoly == 1:
+            txt = f"Save {npoly} Polygon"
+        else:
+            txt = f"Save {npoly} Polygons"
+
+        self.save_button.setText(txt)
+
+        self.window().show()
+
+    @pyqtSlot()
+    def save_shapes(self):
+        save_path, widget = QtWidgets.QFileDialog.getSaveFileName(
+            caption="Save Shapes", directory="shapes.shp", filter="Shapefiles (*.shp)"
+        )
+        if save_path is not None and len(save_path) > 0:
+            self.drawer.save_shapes(save_path)
+            # after saving the polygons, start with a new drawer
+            self._new_drawer()
+
+    @pyqtSlot()
+    def remove_last_shape(self):
+        self.drawer.remove_last_shape()
+        # update to make sure the changes are reflected on the map immediately
+        self.m.BM.update()
+
+    @pyqtSlot(int)
+    def set_alpha_with_slider(self, i):
+        self.colorselector.set_alpha(i / 100)
+
+    @pyqtSlot(int)
+    def set_linewidth_with_slider(self, i):
+        self.colorselector.set_linewidth(i / 10)
+
+    def _new_drawer(self):
+        self.drawer = self.m.draw.new_drawer()
+        self.save_button.setEnabled(False)
+        self.remove_button.setEnabled(False)
+
+        self.drawer._on_new_poly.append(self._new_poly_cb)
+        self.drawer._on_poly_remove.append(self._new_poly_cb)
+
+    def set_layer(self, layer):
+        self.drawer.set_layer(layer)

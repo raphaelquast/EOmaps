@@ -1,5 +1,5 @@
-from PyQt5 import QtWidgets, QtGui, QtCore
-from PyQt5.QtCore import Qt, pyqtSignal
+from PyQt5 import QtWidgets
+from PyQt5.QtCore import Qt, pyqtSignal, pyqtSlot
 
 from .base import transparentWindow
 
@@ -58,9 +58,7 @@ class ControlTabs(QtWidgets.QTabWidget):
         self.tab_open = OpenFileTabs(m=self.m)
 
         # connect the open-file-button to the button from the "Open Files" tab
-        self.tab1.open_file_button.clicked.connect(
-            lambda: self.tab_open.starttab.open_button.clicked.emit()
-        )
+        self.tab1.open_file_button.clicked.connect(self.trigger_open_file_button)
 
         self.tab_edit = ArtistEditor(m=self.m)
 
@@ -73,6 +71,11 @@ class ControlTabs(QtWidgets.QTabWidget):
 
         self.setAcceptDrops(True)
 
+    @pyqtSlot()
+    def trigger_open_file_button(self):
+        self.tab_open.starttab.open_button.clicked.emit()
+
+    @pyqtSlot()
     def tabchanged(self):
         if self.currentWidget() == self.tab_edit:
             self.tab_edit.populate()
@@ -116,7 +119,7 @@ class MenuWindow(transparentWindow):
 
         # clear the colormaps-dropdown pixmap cache if the colormaps have changed
         # (the pyqtSignal is emmited by Maps-objects if a new colormap is registered)
-        self.cmapsChanged.connect(lambda: get_cmap_pixmaps.cache_clear())
+        self.cmapsChanged.connect(self.clear_pixmap_cache)
 
         tabs = ControlTabs(m=self.m)
         tabs.setMouseTracking(True)
@@ -148,3 +151,7 @@ class MenuWindow(transparentWindow):
 
         sh = self.sizeHint()
         self.resize(int(sh.width() * 1.35), sh.height())
+
+    @pyqtSlot()
+    def clear_pixmap_cache(self):
+        get_cmap_pixmaps.cache_clear()
