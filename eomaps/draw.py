@@ -65,6 +65,9 @@ class ShapeDrawer:
         """
 
         self._m = m
+        # add a slot to remember active drawers
+        # (used to make sure that 2 ShapeDrawer instances do not draw at the same time)
+        self._m._active_drawer = None
 
         if layer is None:
             layer = self._m.BM.bg_layer
@@ -133,26 +136,36 @@ class ShapeDrawer:
         cb : callable, optional
             A callable executed after finishing the draw. The default is None.
         """
-        while len(self._cids) > 0:
-            self._m.figure.f.canvas.mpl_disconnect(self._cids.pop())
+
+        active_drawer = self._m._active_drawer
+        if active_drawer is None:
+            return
+
+        while len(active_drawer._cids) > 0:
+            active_drawer._m.figure.f.canvas.mpl_disconnect(active_drawer._cids.pop())
 
         # Cleanup.
-        if plt.fignum_exists(self._m.figure.f.number):
-            while len(self._marks) > 0:
-                a = self._marks.pop()
-                self._m.BM.remove_artist(a)
+        if plt.fignum_exists(active_drawer._m.figure.f.number):
+            while len(active_drawer._marks) > 0:
+                a = active_drawer._marks.pop()
+                active_drawer._m.BM.remove_artist(a)
                 a.remove()
 
-            while len(self._endline) > 0:
-                a = self._endline.pop()
-                self._m.BM.remove_artist(a)
+            while len(active_drawer._endline) > 0:
+                a = active_drawer._endline.pop()
+                active_drawer._m.BM.remove_artist(a)
                 a.remove()
 
         if cb is not None:
-            cb()
+            try:
+                cb()
+            except Exception:
+                print("EOmaps: There was a problem while executing a draw-callback!")
 
-        self._clicks.clear()
+        active_drawer._clicks.clear()
+
         self._m.BM.update()
+        self._m._active_drawer = None
 
     if _register_geopandas():
 
@@ -243,6 +256,7 @@ class ShapeDrawer:
 
         # make sure all active drawings are finished before starting a new one
         self._finish_drawing()
+        self._m._active_drawer = self
 
         canvas = self._m.BM.canvas
 
@@ -410,6 +424,7 @@ class ShapeDrawer:
 
         # make sure all active drawings are finished before starting a new one
         self._finish_drawing()
+        self._m._active_drawer = self
 
         canvas = self._m.BM.canvas
 
