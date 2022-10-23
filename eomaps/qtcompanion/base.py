@@ -41,13 +41,13 @@ class ToolBar(QtWidgets.QToolBar):
         b_close = QtWidgets.QToolButton()
         b_close.setAutoRaise(True)
         b_close.setFixedSize(25, 25)
-        b_close.setText("🞫")
+        b_close.setIcon(QtGui.QIcon(str(iconpath / "close.png")))
         b_close.clicked.connect(self.close_button_callback)
 
         self.b_minmax = QtWidgets.QToolButton()
         self.b_minmax.setAutoRaise(True)
         self.b_minmax.setFixedSize(25, 25)
-        self.b_minmax.setText("🗖")
+        self.b_minmax.setIcon(QtGui.QIcon(str(iconpath / "maximize.png")))
         self.b_minmax.clicked.connect(self.maximize_button_callback)
 
         self.b_showhelp = QtWidgets.QToolButton()
