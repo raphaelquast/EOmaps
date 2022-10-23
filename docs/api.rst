@@ -587,6 +587,56 @@ Everything related to callbacks is grouped under the ``cb`` accessor.
 - use ``m.cb.<METHOD>.attach(custom_cb)`` to attach a custom callback
 
 
+.. _companion_widget:
+
+🧰 Companion Widget
+--------------------
+
+Starting with v5.0, EOmaps provides a **companion widget** which greatly
+simplifies using the awesome interactive capabilities.
+
+
+- | To activate the widget, press ``w`` on the keyboard while the mouse is hoovering the figure.
+  | (Once the widget is initialized, pressing ``w`` will show/hide the widget.)
+
+|
+
+.. image:: _static/minigifs/companion_widget.gif
+    :align: center
+
+|
+
+It is intended to provide easy-access to features that usually don't need to go into
+a python-script, such as:
+
+- Compare layers (e.g. peek-callbacks)
+- Switch between existing layers
+- Quickly create new WebMap layers (or add WebMap services to existing layers)
+- Draw shapes, add Annotations and NaturalEarth features to the map
+- Quick-edit existing map-artists
+  (show/hide, remove or set basic properties color, linewidth, zorder)
+- Save the current state of the map to a file (at the desired dpi setting)
+- A basic interface to plot data from files (with drag-and-drop support)
+  (csv, NetCDF, GeoTIFF, shapefile)
+
+
+The widget is intended to be as self-explanatory as possible...
+To get information on how the individual controls work, click on the ``?`` symbol
+in the top left corner of the widget.
+
+.. note::
+
+    The companion-widget is written in ``PyQt5`` and therefore **only** works when using
+    the `matplotlib qt5agg` backend!
+
+    To activate the backend, execute the following lines at the start of your script:
+
+    .. code-block:: python
+
+        import matplotlib
+        matplotlib.use("qt5agg")
+
+
 .. _callbacks:
 
 🛸 Callbacks - make the map interactive!
@@ -1821,6 +1871,57 @@ Make sure to checkout the :ref:`layout_editor` which can be used to quickly re-p
 
     new_inset_map
 
+.. _shape_drawer:
+
+✏️ Draw Shapes on the map
+-------------------------
+Starting with EOmaps v5.0 it is possible to draw simple shapes on the map using ``m.draw``.
+
+- | The shapes can be saved to disk as geo-coded shapefiles using ``m.draw.save_shapes(filepath)``.
+  | (Saving shapes requires the ``geopandas`` module!)
+
+- To remove the most recently drawn shape use ``m.draw.remove_last_shape()``.
+
+.. table::
+    :widths: 60 40
+    :align: center
+
+    +--------------------------------------+---------------------------------------------+
+    | .. code-block:: python               | .. image:: _static/minigifs/draw_shapes.gif |
+    |                                      |   :align: center                            |
+    |     m = Maps()                       |                                             |
+    |     m.add_feature.preset.coastline() |                                             |
+    |     m.draw.polygon()                 |                                             |
+    +--------------------------------------+---------------------------------------------+
+
+.. note::
+
+    Drawing capabilities are fully integrated in the :ref:`companion_widget`.
+    In most cases it is much more convenient to draw shapes with the widget
+    instead of executing the commands in a console!
+
+    In case you still stick to using the commands for drawing shape,
+    it is important to know that the calls for drawing shapes are
+    **non-blocking** and starting a new draw will silently cancel
+    active draws!
+
+
+
+.. currentmodule:: eomaps.draw
+
+.. autosummary::
+    :toctree: generated
+    :nosignatures:
+    :template: only_names_in_toc.rst
+
+    ShapeDrawer.new_drawer
+    ShapeDrawer.rectangle
+    ShapeDrawer.circle
+    ShapeDrawer.polygon
+    ShapeDrawer.save_shapes
+    ShapeDrawer.remove_last_shape
+
+
 
 .. _layout_editor:
 
@@ -2015,6 +2116,7 @@ some additional functions and properties that might come in handy:
     :toctree: generated
     :nosignatures:
 
+    Maps.set_extent_to_location
     Maps.join_limits
     Maps.get_crs
     Maps.indicate_masked_points
