@@ -5252,6 +5252,40 @@ class Maps(object):
         else:
             print("Centering Map to:\n    ", r["display_name"])
 
+    def _get_snapshot(self):
+        buf = self.figure.f.canvas.print_to_buffer()
+        x = np.frombuffer(buf[0], dtype=np.uint8).reshape(buf[1][1], buf[1][0], 4)
+        return x
+
+    def snapshot(self, clear=False):
+        """
+        Print a static image of the current figure to the active IPython display.
+        (e.g. the active Jupyter Notebook cell or the active IPython console)
+
+        ONLY use this if you work in an interactive IPython terminal, a Jupyter
+        Notebook or a Jupyter Lab environment!
+
+        Parameters
+        ----------
+
+        clear: bool
+            Indicator if the current cell-output should be cleared prior
+            to showing the snapshot or not. The default is False
+
+        Examples
+        --------
+        >>> m = Maps()
+        >>> m.add_feature.preset.coastline()
+        >>> m.snapshot(clear=True)
+
+        """
+        from PIL import Image
+        from IPython.display import display
+
+        sn = self._get_snapshot()
+
+        display(Image.fromarray(sn, "RGBA"), display_id=True, clear=clear)
+
 
 class _InsetMaps(Maps):
     # a subclass of Maps that includes some special functions for inset maps
