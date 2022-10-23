@@ -4145,13 +4145,15 @@ class Maps(object):
         # redraw a dynamic_shade_indicator colorbar
         if hasattr(self, "_colorbar") and hasattr(self, "_cb_kwargs"):
             if self._cb_kwargs["dynamic_shade_indicator"] is True:
-
+                patchcolors = dict()
                 # remove the axes but NOT the gridspec definition (self._cb_gridspec)
                 # (It will be used to initialize new axes!)
                 if hasattr(self, "_ax_cb"):
+                    patchcolors["_ax_cb"] = self._ax_cb.patch.get_facecolor()
                     self._ax_cb.remove()
                     del self._ax_cb
                 if hasattr(self, "_ax_cb_plot"):
+                    patchcolors["_ax_cb_plot"] = self._ax_cb_plot.patch.get_facecolor()
                     self._ax_cb_plot.remove()
                     del self._ax_cb_plot
 
@@ -4161,6 +4163,9 @@ class Maps(object):
                 except Exception:
                     pass
                 self.add_colorbar(**self._cb_kwargs)
+
+                for key, val in patchcolors.items():
+                    getattr(self, key).patch.set_facecolor(val)
 
     def _decode_values(self, val):
         """
