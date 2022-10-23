@@ -2140,8 +2140,6 @@ some additional functions and properties that might come in handy:
     Maps.get_crs
     Maps.indicate_masked_points
     Maps.BM
-    Maps.parent
-    Maps.crs_plot
-    Maps.add_colorbar
     Maps.show
     Maps.show_layer
+    Maps.snapshot
