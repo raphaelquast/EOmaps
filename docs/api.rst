@@ -72,6 +72,25 @@ Possible ways for specifying the crs for plotting are:
     - creating a dedicated ``Maps`` object via ``m_all = Maps(layer="all")`` or ``m_all = m.new_layer("all")``
     - using the "layer" kwarg of functions e.g. ``m.plot_map(layer="all")``
 
+.. admonition:: Combining multiple layers
+
+    | To create layers that represent a **combination of multiple existing layers**, separate the individual layer-names
+    | with a ``"|"`` character. (e.g. ``"layer1|layer2"`` )
+    | The layer will then always show **all** features of ``"layer1`` and ``layer2`` (in addition to the features
+    | that were explicitly added to the combined-layer).
+
+
+    .. code-block:: python
+
+        m = Maps(layer="first")
+        m.add_feature.preset.coastline()
+
+        m2 = m.new_layer("second")
+        m2.add_feature.preset.ocean()
+
+        m_combined = m.new_layer("first|second")
+        m_combined.show()
+
 .. currentmodule:: eomaps
 
 .. autosummary::
