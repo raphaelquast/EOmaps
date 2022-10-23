@@ -1817,12 +1817,14 @@ class Maps(object):
 
             x0, y0 = transformer.transform(xorig, yorig)
 
-        props["xorig"] = xorig
-        props["yorig"] = yorig
-        props["ids"] = ids
-        props["z_data"] = z_data
-        props["x0"] = x0
-        props["y0"] = y0
+        # use np.asanyarray to ensure that the output is a proper numpy-array
+        # (relevant for categorical dtypes in pandas.DataFrames)
+        props["xorig"] = np.asanyarray(xorig)
+        props["yorig"] = np.asanyarray(yorig)
+        props["ids"] = np.asanyarray(ids)
+        props["z_data"] = np.asanyarray(z_data)
+        props["x0"] = np.asanyarray(x0)
+        props["y0"] = np.asanyarray(y0)
 
         # convert the data to 1D for shapes that accept unstructured data
         if used_shape.name not in ["shade_raster", "raster"]:
