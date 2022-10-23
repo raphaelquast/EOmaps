@@ -936,7 +936,6 @@ class PlotShapeFileWidget(QtWidgets.QWidget):
 
         # alpha of facecolor
         self.alphaslider = AlphaSlider(Qt.Horizontal)
-        self.alphaslider.setValue(100)
         self.alphaslider.valueChanged.connect(
             lambda i: self.colorselector.set_alpha(i / 100)
         )
@@ -944,7 +943,6 @@ class PlotShapeFileWidget(QtWidgets.QWidget):
 
         # linewidth
         self.linewidthslider = AlphaSlider(Qt.Horizontal)
-        self.linewidthslider.setValue(10)
         self.linewidthslider.valueChanged.connect(
             lambda i: self.colorselector.set_linewidth(i / 10)
         )
@@ -1091,21 +1089,28 @@ class OpenDataStartTab(QtWidgets.QWidget):
         self.m = m
 
         self.t1 = QtWidgets.QLabel()
-        self.t1.setAlignment(Qt.AlignBottom | Qt.AlignCenter)
+        # self.t1.setAlignment(Qt.AlignBottom | Qt.AlignCenter)
         self.t1.setText(
-            "\n"
-            + "Open or DRAG & DROP files!\n\n\n\n"
-            + "Supported filetypes:\n"
-            + "NetCDF | GeoTIFF | CSV | Shapefile"
+            "<h3>Open or DRAG & DROP files!</h3>"
+            "<p>"
+            "Supported filetypes:"
+            "<ul>"
+            "<li>NetCDF: <code>[.nc]<code></li>"
+            "<li>GeoTIFF: <code>[.tif, .tiff]<code></li>"
+            "<li>CSV: <code>[.csv]<code></li>"
+            "<li>Shapefile: <code>[.shp]<code></li>"
+            "</ul>"
         )
 
         self.open_button = QtWidgets.QPushButton("Open File")
 
-        layout = QtWidgets.QGridLayout()
-        layout.addWidget(self.open_button, 0, 0)
-        layout.addWidget(self.t1, 3, 0)
+        layout = QtWidgets.QVBoxLayout()
+        layout.addSpacing(10)
+        layout.addWidget(self.t1)
+        layout.addSpacing(10)
+        layout.addWidget(self.open_button)
 
-        layout.setAlignment(Qt.AlignCenter)
+        layout.setAlignment(Qt.AlignCenter | Qt.AlignTop)
         self.setLayout(layout)
 
         self.setAcceptDrops(True)
@@ -1115,11 +1120,20 @@ class OpenDataStartTab(QtWidgets.QWidget):
             QtWidgets.QToolTip.showText(
                 e.globalPos(),
                 "<h3>Plot Data from Files</h3>"
-                "Simply drag-and-drop one of the supported filetypes to get a new "
-                "window where you can specify how you want to visualize your data."
+                "Click on the 'Open File' button or simply drag-and-drop one of the "
+                "supported filetypes to get a popup window where you can specify how "
+                "you want to visualize the data."
                 "<p>"
+                "Supported filetypes:"
+                "<ul>"
+                "<li>NetCDF: <code>[.nc]<code></li>"
+                "<li>GeoTIFF: <code>[.tif, .tiff]<code></li>"
+                "<li>CSV: <code>[.csv]<code></li>"
+                "<li>Shapefile: <code>[.shp]<code></li>"
+                "</ul>"
                 "<b>NOTE:</b> This capability is primarily intended as an easy way to "
-                "get a <i>quick-look</i> at your results."
+                "get a <i>quick-look</i> at some data for comparison. It does not "
+                "provide access to all plotting features of EOmaps!"
                 "<p>"
                 "Some additional notes:"
                 "<ul>"
