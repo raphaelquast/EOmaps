@@ -2174,8 +2174,13 @@ class Maps(object):
         else:
             limsetfunc = ax_cb.set_ylim
 
-        limsetfunc(vmin, vmax)
-
+        if vmin != vmax:
+            limsetfunc(vmin, vmax)
+        else:
+            print(
+                "EOMaps-Warning: Attempting to set identical upper and "
+                + "lower limits for the colorbar... limits will be ignored!"
+            )
         return cb
 
     def _add_cb_extend_arrows(self, cb, orientation, extend_frac=0.025, which="auto"):
@@ -4673,13 +4678,26 @@ class Maps(object):
 
         if orientation == "horizontal":
             if vmin and vmax:
-                ax_cb_plot.set_xlim(vmin, vmax)
+                if vmin != vmax:
+                    ax_cb_plot.set_xlim(vmin, vmax)
+                else:
+                    print(
+                        "EOMaps-Warning: Attempting to set identical upper and "
+                        + "lower limits for the colorbar... limits will be ignored!"
+                    )
             # else:
             #     ax_cb_plot.autoscale_view(tight=True)
 
         if orientation == "vertical":
             if vmin and vmax:
-                ax_cb_plot.set_ylim(vmin, vmax)
+                if vmin and vmax:
+                    if vmin != vmax:
+                        ax_cb_plot.set_ylim(vmin, vmax)
+                    print(
+                        "EOMaps-Warning: Attempting to set identical upper and "
+                        + "lower limits for the colorbar... limits will be ignored!"
+                    )
+
             # else:
             #     ax_cb_plot.autoscale_view(tight=True)
 
