@@ -903,7 +903,7 @@ class ArtistEditor(QtWidgets.QWidget):
         elif modifiers == Qt.ShiftModifier:
             # The all layer should not be combined with other layers...
             # (it is already visible anyways)
-            if layer == "all":
+            if layer == "all" or "|" in layer:
                 return
             currlayers = [i for i in self.m.BM._bg_layer.split("|") if i != "_"]
 

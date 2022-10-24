@@ -197,19 +197,16 @@ class AutoUpdateLayerMenuButton(QtWidgets.QPushButton):
 
     @pyqtSlot()
     def actionClicked(self):
-
-        checked_layers = [l for l in self.m.BM.bg_layer.split("|") if l != "_"]
-
-        # check if a keyboard modifier is pressed
-        modifiers = QtWidgets.QApplication.keyboardModifiers()
-
         action = self.sender()
         if not isinstance(action, QtWidgets.QWidgetAction):
             # sometimes the sender is the button... ignore those events!
-            print("ui")
             return
 
+        # check if a keyboard modifier is pressed
+        modifiers = QtWidgets.QApplication.keyboardModifiers()
         actionwidget = action.defaultWidget()
+
+        checked_layers = [l for l in self.m.BM.bg_layer.split("|") if l != "_"]
         selected_layer = action.text()
         selected_layers = [l for l in action.text().split("|") if l != "_"]
 
@@ -222,6 +219,7 @@ class AutoUpdateLayerMenuButton(QtWidgets.QPushButton):
         # (workaround since we use a checkbox to avoid closing the menu on click)
         if selected_layer == "all" or "|" in selected_layer:
             if modifiers == Qt.ShiftModifier or modifiers == Qt.ControlModifier:
+                self.update_checkstatus()
                 return
             else:
                 self.m.show_layer(selected_layer)
@@ -253,9 +251,9 @@ class AutoUpdateLayerMenuButton(QtWidgets.QPushButton):
         currlayer = str(self.m.BM.bg_layer)
         if "|" in currlayer:
             active_layers = {i for i in currlayer.split("|") if i != "_"}
+            active_layers.add(currlayer)
         else:
             active_layers = {currlayer}
-        active_layers.add(self.m.BM.bg_layer)
 
         for action in self.menu().actions():
             key = action.text()
@@ -263,7 +261,7 @@ class AutoUpdateLayerMenuButton(QtWidgets.QPushButton):
             if isinstance(w, QtWidgets.QCheckBox):
 
                 # temporarily disconnect triggering the action on state-changes
-                w.stateChanged.disconnect(action.trigger)
+                w.clicked.disconnect(action.trigger)
 
                 if key in active_layers:
                     w.setChecked(True)
@@ -271,7 +269,7 @@ class AutoUpdateLayerMenuButton(QtWidgets.QPushButton):
                     w.setChecked(False)
 
                 # re connect action trigger
-                w.stateChanged.connect(action.trigger)
+                w.clicked.connect(action.trigger)
 
     @pyqtSlot()
     def update_layers(self):
@@ -286,6 +284,7 @@ class AutoUpdateLayerMenuButton(QtWidgets.QPushButton):
 
         for key in layers:
             checkBox = QtWidgets.QCheckBox(key, self.menu())
+            # checkBox.setCheckable(False)
             action = QtWidgets.QWidgetAction(self.menu())
             action.setDefaultWidget(checkBox)
             action.setText(key)
@@ -304,7 +303,7 @@ class AutoUpdateLayerMenuButton(QtWidgets.QPushButton):
                 )
 
             # connect the action of the checkbox to the action of the menu
-            checkBox.stateChanged.connect(action.trigger)
+            checkBox.clicked.connect(action.trigger)
             action.triggered.connect(self.actionClicked)
             self.menu().addAction(action)
 
