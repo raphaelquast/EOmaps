@@ -29,42 +29,53 @@ Possible ways for specifying the crs for plotting are:
   - 4326 hereby defaults to `PlateCarree` projection
 
 - All other CRS usable for plotting are accessible via ``Maps.CRS``,
-  e.g.: ``crs=Maps.CRS.Orthographic()``, ``crs=Maps.CRS.GOOGLE_MERCATOR`` or ``crs=Maps.CRS.Equi7Grid_projection("EU")``.
-  (``Maps.CRS`` is just an accessor for ``cartopy.crs``)
+  e.g.: ``crs=Maps.CRS.Orthographic()``, ``crs=Maps.CRS.GOOGLE_MERCATOR`` or ``crs=Maps.CRS.Equi7_EU``.
+  (``Maps.CRS`` is just an accessor for ``cartopy.crs``.
+
+  - For a full list of available projections see: `Cartopy projections <https://scitools.org.uk/cartopy/docs/v0.15/crs/projections.html>`_)
 
 ▤ Layers
 ~~~~~~~~~
 
-| Each ``Maps`` object represents an individual plot-layer of the map.
-| Once you have created your first ``Maps`` object, you can create **additional layers on the same map** by using:
+| A map can have multiple plot-layers.
+| Each ``Maps`` object represents a collection of features on the assigned layer.
 
-.. code-block:: python
+Once you have created your first ``Maps`` object, you can:
 
-    m = Maps()                           # same as `m = Maps(layer=0)`
-    m2 = m.new_layer()                   # "m2" is just another Maps-object on the same layer as "m"!
+- Create **additional** ``Maps`` ** objects on the same layer** by using ``m2 = m.new_layer()``
 
-    m_ocean = m.new_layer(layer="ocean") # create a new layer named "ocean"
-    m_ocean.add_feature.preset.ocean()   # features on this layer will only be visible if the "ocean" layer is visible!
-    m.show_layer("ocean")                # show the "ocean" layer
+  - If no explicit layer-name is provided, ``m2`` will use the same layer as ``m``
+  - This is especially useful if you want to plot multiple datasets **on the same layer**
 
-    m.all.add_feature.preset.coastline() # to add a feature to all layers, simply add it to the `all` layer with `m.all...`
-
-    m.util.layer_selector()              # get a utility widget to simplify switching between existing layers
-
-- ``m2``, ``m_ocean`` and ``m.all`` are just ordinary ``Maps`` objects that share the figure and plot-axes with ``m``
-- If you don't provide an explicit layer name, the new Maps-object will use the same layer as its parent!
-  (you can have multiple ``Maps`` objects on the same layer!)
-
+- Create **a NEW layer** named ``"my_layer"`` by using ``m2 = m.new_layer("my_layer")``
 
 .. admonition:: Map-features and colorbars are layer-sensitive!
 
     Features, datasets, colormaps etc. added to a ``Maps`` object are only visible if the associated layer is visible!
-    To manually switch between layers, use ``m.show_layer("the layer name")``, call ``m.show()`` or have a look at the :ref:`utility`.
+    To manually switch between layers, use ``m.show_layer("the layer name")``, call ``m.show()`` or have a look at the :ref:`utility` and the :ref:`companion_widget`.
+
+.. code-block:: python
+
+    m = Maps()                           # same as `m = Maps(layer="base")`
+    m.add_feature.preset.coastline()     # add some coastlines
+
+    m_ocean = m.new_layer(layer="ocean") # create a new layer named "ocean"
+    m_ocean.add_feature.preset.ocean()   # features on this layer will only be visible if the "ocean" layer is visible!
+
+    m2 = m_ocean.new_layer()             # "m2" is just another Maps-object on the same layer as "m_ocean"!
+    m2.set_data(data=[.14,.25,.38],
+                x=[1,2,3], y=[3,5,7],
+                crs=4326)
+    m2.set_shape.ellipses(n=100)
+    m2.plot_map()
+
+    m.show_layer("ocean")                # show the "ocean" layer
+    m.util.layer_selector()              # get a utility widget to quickly switch between existing layers
 
 .. admonition:: The "all" layer
 
     | There is one layer-name that has a special meaning... the ``"all"`` layer.
-    | Any callbacks, features or plots added to this layer will be **executed on all other layers** as well!
+    | Any callbacks and features added to this layer will be **executed on ALL other layers** as well!
 
     You can add features and callbacks to the ``all`` layer via:
 
@@ -72,23 +83,38 @@ Possible ways for specifying the crs for plotting are:
     - creating a dedicated ``Maps`` object via ``m_all = Maps(layer="all")`` or ``m_all = m.new_layer("all")``
     - using the "layer" kwarg of functions e.g. ``m.plot_map(layer="all")``
 
+    .. code-block:: python
+
+        m = Maps()
+        m.all.add_feature.preset.coastline() # add some coastlines to ALL layers of the map
+
+        m_ocean = m.new_layer(layer="ocean") # create a new layer named "ocean"
+        m_ocean.add_feature.preset.ocean()
+        m.show_layer("ocean")                # show the "ocean" layer (note that it has coastlines as well!)
+
+
 .. admonition:: Combining multiple layers
 
     | To create layers that represent a **combination of multiple existing layers**, separate the individual layer-names
     | with a ``"|"`` character. (e.g. ``"layer1|layer2"`` )
     | The layer will then always show **all** features of ``"layer1`` and ``layer2`` (in addition to the features
-    that were explicitly added to the combined-layer).
+    that were explicitly added to the ``Maps`` object of the combined-layer).
 
+    - The *vertical stacking* of features is controlled by the ``zorder`` property, not by the order of the layers!
 
     .. code-block:: python
 
         m = Maps(layer="first")
-        m.add_feature.preset.coastline()
+        m.add_feature.preset.ocean(alpha=0.75, zorder=2)
 
-        m2 = m.new_layer("second")
-        m2.add_feature.preset.ocean()
+        m2 = m.new_layer("second")                # create a new layer and plot some data
+        m2.set_data(data=[.14,.25,.38],
+                    x=[1,2,3], y=[3,5,7],
+                    crs=4326)
+        m2.set_shape.ellipses(n=100)
+        m2.plot_map(zorder=1)                     # plot the data "below" the ocean
 
-        m_combined = m.new_layer("first|second")
+        m_combined = m.new_layer("first|second")  # show all features of the two layers
         m_combined.show()
 
 .. currentmodule:: eomaps
