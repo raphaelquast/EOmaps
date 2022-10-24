@@ -1569,7 +1569,7 @@ class Maps(object):
 
     def get_crs(self, crs):
         """
-        get the pyproj CRS instance of a given crs specification
+        Get the pyproj CRS instance of a given crs specification
 
         Parameters
         ----------
@@ -5212,7 +5212,7 @@ class Maps(object):
 
     def set_extent_to_location(self, location, annotate=False, user_agent=None):
         """
-        Set the map-extent based on a given location string.
+        Set the map-extent based on a given location query.
         The bounding-box is hereby resolved via the OpenStreetMap Nominatim service.
 
         Note

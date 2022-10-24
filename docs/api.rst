@@ -617,6 +617,8 @@ simplifies using the awesome interactive capabilities.
 
 - | To activate the widget, press ``w`` on the keyboard while the mouse is hoovering the figure.
   | (Once the widget is initialized, pressing ``w`` will show/hide the widget.)
+- | The widget is intended to be self-explanatory.
+  | To get information on how the individual controls work, simply click on the ``?`` symbol in the top left corner of the widget.
 
 |
 
@@ -625,11 +627,11 @@ simplifies using the awesome interactive capabilities.
 
 |
 
-It is intended to provide easy-access to features that usually don't need to go into
+The main purpose of the widget is to provide easy-access to features that usually don't need to go into
 a python-script, such as:
 
 - Compare layers (e.g. peek-callbacks)
-- Switch between existing layers
+- Switch between existing layers (or combine existing layers)
 - Quickly create new WebMap layers (or add WebMap services to existing layers)
 - Draw shapes, add Annotations and NaturalEarth features to the map
 - Quick-edit existing map-artists
@@ -639,9 +641,6 @@ a python-script, such as:
   (csv, NetCDF, GeoTIFF, shapefile)
 
 
-The widget is intended to be as self-explanatory as possible...
-To get information on how the individual controls work, click on the ``?`` symbol
-in the top left corner of the widget.
 
 .. note::
 
