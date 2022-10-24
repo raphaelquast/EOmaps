@@ -621,7 +621,9 @@ class ArtistEditor(QtWidgets.QWidget):
         for i in range(self.tabs.count()):
             layer = self.tabs.tabText(i)
 
-            active_layers = self.m.BM._bg_layer.split("|")
+            active_layers = set(self.m.BM._bg_layer.split("|"))
+            active_layers.add(self.m.BM._bg_layer)
+
             color = activecolor if len(active_layers) == 1 else multicolor
             if layer in active_layers:
                 self.tabs.tabBar().setTabTextColor(i, color)
@@ -899,6 +901,10 @@ class ArtistEditor(QtWidgets.QWidget):
                 self.m.figure.f.canvas.key_release_event("control")
 
         elif modifiers == Qt.ShiftModifier:
+            # The all layer should not be combined with other layers...
+            # (it is already visible anyways)
+            if layer == "all":
+                return
             currlayers = [i for i in self.m.BM._bg_layer.split("|") if i != "_"]
 
             for l in (i for i in layer.split("|") if i != "_"):

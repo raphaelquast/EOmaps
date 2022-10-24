@@ -183,7 +183,7 @@ class AutoUpdateLayerMenuButton(QtWidgets.QPushButton):
             # txt = txt[:50] + " ..."
 
         if l.startswith("_"):
-            txt = "⧉  " + txt
+            txt = "overlay:  " + txt
             self.setStyleSheet("QPushButton{color: rgb(200,50,50)}")
         else:
             self.setStyleSheet("QPushButton{color: rgb(50,200,50)}")
@@ -197,7 +197,6 @@ class AutoUpdateLayerMenuButton(QtWidgets.QPushButton):
 
     @pyqtSlot()
     def actionClicked(self):
-
         checked_layers = [l for l in self.m.BM.bg_layer.split("|") if l != "_"]
 
         # check if a keyboard modifier is pressed
@@ -216,6 +215,15 @@ class AutoUpdateLayerMenuButton(QtWidgets.QPushButton):
         if not (modifiers == Qt.ShiftModifier or modifiers == Qt.ControlModifier):
             self.m.show_layer(selected_layer)
             return
+
+        # if the "all" layer was selected, just select it and no other layer!
+        # (workaround since we use a checkbox to avoid closing the menu on click)
+        if selected_layer == "all":
+            if modifiers == Qt.ShiftModifier or modifiers == Qt.ControlModifier:
+                return
+            else:
+                self.m.show_layer(selected_layer)
+                return
 
         if isinstance(actionwidget, QtWidgets.QCheckBox):
             if actionwidget.isChecked():
@@ -242,9 +250,10 @@ class AutoUpdateLayerMenuButton(QtWidgets.QPushButton):
     def update_checkstatus(self):
         currlayer = str(self.m.BM.bg_layer)
         if "|" in currlayer:
-            active_layers = [i for i in currlayer.split("|") if i != "_"]
+            active_layers = {i for i in currlayer.split("|") if i != "_"}
         else:
-            active_layers = [currlayer]
+            active_layers = {currlayer}
+        active_layers.add(self.m.BM.bg_layer)
 
         for action in self.menu().actions():
             key = action.text()
@@ -281,28 +290,33 @@ class AutoUpdateLayerMenuButton(QtWidgets.QPushButton):
             active_layers = [currlayer]
 
         for key in layers:
-            if key == "all" or "|" in key:
-                label = QtWidgets.QLabel(key)
-                action = QtWidgets.QWidgetAction(self.menu())
-                action.setDefaultWidget(label)
-                action.setText(key)
+            checkBox = QtWidgets.QCheckBox(key, self.menu())
+            action = QtWidgets.QWidgetAction(self.menu())
+            action.setDefaultWidget(checkBox)
+            action.setText(key)
 
-                action.triggered.connect(self.actionClicked)
+            if key == "all":
+                # use a transparent checkbox to avoid closing the menu on click
+                checkBox.setStyleSheet(
+                    "QCheckBox::indicator {border: none;}"
+                    "QCheckBox::indicator::checked {background:rgb(255,50,50)}"
+                )
+            elif "|" in key:
+                # use a transparent checkbox to avoid closing the menu on click
+                checkBox.setStyleSheet(
+                    "QCheckBox::indicator {border: none;}"
+                    "QCheckBox::indicator::checked {background:rgb(50,100,50)}"
+                )
             else:
-                checkBox = QtWidgets.QCheckBox(key, self.menu())
-                action = QtWidgets.QWidgetAction(self.menu())
-                action.setDefaultWidget(checkBox)
-                action.setText(key)
-
                 if key in active_layers:
                     checkBox.setChecked(True)
-                else:
+                elif key != currlayer:
                     checkBox.setChecked(False)
 
-                # connect the action of the checkbox to the action of the menu
-                checkBox.stateChanged.connect(action.trigger)
+            # connect the action of the checkbox to the action of the menu
+            checkBox.stateChanged.connect(action.trigger)
 
-                action.triggered.connect(self.actionClicked)
+            action.triggered.connect(self.actionClicked)
 
             self.menu().addAction(action)
 
