@@ -266,7 +266,7 @@ To adjust the margins of the subplots, use ``m.subplots_adjust``, e.g.:
 
 You can then continue to add :ref:`colorbar`, :ref:`annotations_and_markers`,
 :ref:`scalebar`, :ref:`compass`,  :ref:`webmap_layers` or :ref:`geodataframe` to the map,
-or you can start to add :ref:`utility` and :ref:`callbacks`.
+or you can start to :ref:`shape_drawer`, add :ref:`utility` and :ref:`callbacks`.
 
 Once the map is ready, a snapshot of the map can be saved at any time by using:
 
@@ -671,7 +671,7 @@ a python-script, such as:
 .. note::
 
     The companion-widget is written in ``PyQt5`` and therefore **only** works when using
-    the `matplotlib qt5agg` backend!
+    the ``matplotlib qt5agg`` backend!
 
     To activate the backend, execute the following lines at the start of your script:
 
