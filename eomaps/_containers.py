@@ -1469,7 +1469,6 @@ else:
 
                 - default: standard OSM layer
                 - default_german: standard OSM layer in german
-                - standard: standard OSM layer
                 - stamen_toner: Black and white style by stamen
                     - stamen_toner_lines
                     - stamen_toner_background
@@ -1481,8 +1480,11 @@ else:
                     - stamen_terrain_lines
                     - stamen_terrain_labels
                     - stamen_terrain_background
+
                 - OSM_terrestis: Styles hosted as free WMS service by Terrestis
                 - OSM_mundialis: Styles hosted as free WMS service by Mundialis
+                - OSM_wms and OSM_landuse: WMS hosted by Heidelberg Institute for
+                  Geoinformation Technology
 
             Note
             ----
@@ -1495,6 +1497,7 @@ else:
 
             - for OSM_terrestis: https://www.terrestris.de/en/openstreetmap-wms/
             - for OSM_mundialis: https://www.mundialis.de/en/ows-mundialis/
+            - for OSM_wms and OSM_landuse : https://heigit.org
 
             """
 
