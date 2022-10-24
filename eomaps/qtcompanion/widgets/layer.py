@@ -197,6 +197,7 @@ class AutoUpdateLayerMenuButton(QtWidgets.QPushButton):
 
     @pyqtSlot()
     def actionClicked(self):
+
         checked_layers = [l for l in self.m.BM.bg_layer.split("|") if l != "_"]
 
         # check if a keyboard modifier is pressed
@@ -205,6 +206,7 @@ class AutoUpdateLayerMenuButton(QtWidgets.QPushButton):
         action = self.sender()
         if not isinstance(action, QtWidgets.QWidgetAction):
             # sometimes the sender is the button... ignore those events!
+            print("ui")
             return
 
         actionwidget = action.defaultWidget()
@@ -218,7 +220,7 @@ class AutoUpdateLayerMenuButton(QtWidgets.QPushButton):
 
         # if the "all" layer was selected, just select it and no other layer!
         # (workaround since we use a checkbox to avoid closing the menu on click)
-        if selected_layer == "all":
+        if selected_layer == "all" or "|" in selected_layer:
             if modifiers == Qt.ShiftModifier or modifiers == Qt.ControlModifier:
                 return
             else:
@@ -276,18 +278,11 @@ class AutoUpdateLayerMenuButton(QtWidgets.QPushButton):
         layers = self.layers
         if layers == self._last_layers:
             self.update_checkstatus()
-
             return
 
         # only clear and re-draw the whole tabbar if it is necessary
         # (e.g. if the number of layers has changed)
         self.menu().clear()
-
-        currlayer = str(self.m.BM.bg_layer)
-        if "|" in currlayer:
-            active_layers = [i for i in currlayer.split("|") if i != "_"]
-        else:
-            active_layers = [currlayer]
 
         for key in layers:
             checkBox = QtWidgets.QCheckBox(key, self.menu())
@@ -307,19 +302,13 @@ class AutoUpdateLayerMenuButton(QtWidgets.QPushButton):
                     "QCheckBox::indicator {border: none;}"
                     "QCheckBox::indicator::checked {background:rgb(50,100,50)}"
                 )
-            else:
-                if key in active_layers:
-                    checkBox.setChecked(True)
-                elif key != currlayer:
-                    checkBox.setChecked(False)
 
             # connect the action of the checkbox to the action of the menu
             checkBox.stateChanged.connect(action.trigger)
-
             action.triggered.connect(self.actionClicked)
-
             self.menu().addAction(action)
 
         self.update_display_text(self.m.BM._bg_layer)
 
         self._last_layers = layers
+        self.update_checkstatus()
