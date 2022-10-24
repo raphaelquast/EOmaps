@@ -1414,19 +1414,21 @@ class BlitManager:
         fig = self.canvas.figure
         if layers is None:
             layers = set(self.bg_layer.split("|"))
+            layers.add(self.bg_layer)
         else:
             layers = set(chain(*(i.split("|") for i in layers)))
-
+            for l in layers:
+                layers.add(l)
         # always redraw artists from the "all" layer
         layers.add("all")
+
         # redraw artists from the selected layers
-        for l in layers:
-            if l in self._artists:
-                zorder_artists = self._artists[l]
-                zorders = sorted(list(zorder_artists))
-                for zorder in zorders:
-                    for a in zorder_artists[zorder]:
-                        fig.draw_artist(a)
+        for l in layers.intersection(self._artists):
+            zorder_artists = self._artists[l]
+            zorders = sorted(list(zorder_artists))
+            for zorder in zorders:
+                for a in zorder_artists[zorder]:
+                    fig.draw_artist(a)
         if artists is not None:
             # redraw provided artists
             for a in artists:
