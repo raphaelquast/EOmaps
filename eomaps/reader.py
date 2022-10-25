@@ -349,7 +349,9 @@ class read_file:
             if isinstance(path_or_dataset, (str, Path)):
                 # if a path is provided, open the file (and close it in the end)
                 opened = True
-                ncfile = xar.open_dataset(path_or_dataset)
+                ncfile = xar.open_dataset(
+                    path_or_dataset, mask_and_scale=mask_and_scale
+                )
             elif isinstance(path_or_dataset, xar.Dataset):
                 # if an xar.Dataset is provided, use it
                 ncfile = path_or_dataset
@@ -443,8 +445,15 @@ class read_file:
             # only use masked arrays if mask_and_scale is False!
             # (otherwise the mask is already applied as NaN's in the float-array)
             # Using masked-arrays ensures that we can deal with integers as well!
+
+            data = data.values
+
             if mask_and_scale is False:
-                encoding = usencfile.attrs
+                encoding = dict(
+                    scale_factor=getattr(usencfile[parameter], "scale_factor", 1),
+                    add_offset=getattr(usencfile[parameter], "add_offset", 0),
+                    _FillValue=getattr(usencfile[parameter], "_FillValue", None),
+                )
                 fill_value = encoding.get("_FillValue", None)
                 if fill_value:
                     data = np.ma.masked_where(data == fill_value, data, copy=False)
@@ -453,7 +462,7 @@ class read_file:
 
             if set_data is not None:
                 set_data.set_data(
-                    data=data.values.T if transpose else data.values,
+                    data=data.T if transpose else data,
                     x=x.values,
                     y=y.values,
                     crs=data_crs,
@@ -462,7 +471,7 @@ class read_file:
                 )
             else:
                 return dict(
-                    data=data.values.T if transpose else data.values,
+                    data=data.T if transpose else data,
                     x=x.values,
                     y=y.values,
                     crs=data_crs,
