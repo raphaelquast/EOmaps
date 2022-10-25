@@ -3613,7 +3613,11 @@ class Maps(object):
 
         if z_data is None:
             z_data = self._props["z_data"]
-        z_data = z_data.ravel()
+
+        if isinstance(z_data, np.ma.masked_array):
+            z_data = z_data.compressed()
+        else:
+            z_data = z_data.ravel()
 
         if label is None:
             label = self.data_specs["parameter"]
