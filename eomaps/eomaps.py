@@ -5313,6 +5313,58 @@ class Maps(object):
 
         display(Image.fromarray(sn, "RGBA"), display_id=True, clear=clear)
 
+    def on_layer_activation(self, func, persistent=False, **kwargs):
+        """
+        Attach a callback that is executed if the associated layer is activated.
+
+        Useful to "lazily" populate layers with features that are expensive to
+        create (e.g. fetching data from files etc.).
+
+        Parameters
+        ----------
+        func : callable
+            The callable to use.
+            The call-signature is:
+
+            >>> def func(m, **kwargs):
+            >>>    # m... the Maps-object used for calling this function
+
+        persistent : bool, optional
+            Indicator if the function should be called only once (False) or if it
+            should be called each time the layer is activated (True).
+            The default is False.
+        kwargs :
+            Additional keyword-arguments passed to the call of the function.
+
+        See Also
+        --------
+        m.layer : The layer-name associated with the Maps-object
+        m.fetch_layers() : Fetch and cache all layers of the map
+
+        Examples
+        --------
+
+        >>> m = Maps()
+        >>> m.add_feature.preset.coastline()
+        >>>
+        >>> def f(m, ocean_color, coastline_color):
+        >>>     print(f"EOmaps: creating features for the layer {m.layer}")
+        >>>     m.add_feature.preset.coastline(ec=coastline_color)
+        >>>     m.add_feature.preset.ocean(fc=ocean_color)
+        >>>
+        >>> # create a new (initially empty) layer "ocean"
+        >>> m2 = m.new_layer("ocean")
+        >>> # add features to the layer only if it is activated
+        >>> m2.on_layer_activation(f, ocean_color="b", coastline_color="r")
+        >>> s = m.util.layer_selector()
+
+        """
+
+        def cb(m, l):
+            func(m=m, **kwargs)
+
+        self.BM.on_layer(func=cb, layer=self.layer, persistent=persistent, m=self)
+
 
 class _InsetMaps(Maps):
     # a subclass of Maps that includes some special functions for inset maps
