@@ -372,21 +372,10 @@ class LayoutEditor:
 
     def _color_picked(self, ax):
         for spine in ax.spines.values():
-            spine.set_edgecolor("green")
-
-            if ax in self._ax_visible and self._ax_visible[ax]:
-                spine.set_linestyle("-")
-                spine.set_linewidth(2)
-            else:
-                spine.set_linestyle(":")
-                spine.set_linewidth(1)
-
-    def _color_not_editable(self, ax):
-        for spine in ax.spines.values():
             spine.set_edgecolor("r")
 
             if ax in self._ax_visible and self._ax_visible[ax]:
-                spine.set_linestyle(":")
+                spine.set_linestyle("-")
                 spine.set_linewidth(2)
             else:
                 spine.set_linestyle(":")
@@ -406,10 +395,7 @@ class LayoutEditor:
 
         for cb in self._cb_picked:
             for ax in (cb.ax_cb, cb.ax_cb_plot):
-                if cb.ax.get_axes_locator() is not None:
-                    self._color_not_editable(ax)
-                else:
-                    self._color_picked(ax)
+                self._color_picked(ax)
 
     def _set_startpos(self, event):
         self._start_position = (event.x, event.y)
