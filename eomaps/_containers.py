@@ -108,16 +108,28 @@ class map_objects(object):
         return ax
 
     @property
+    def gridspec(self):
+        return getattr(self._m, "_gridspec", None)
+
+    @property
     def ax_cb(self):
-        return getattr(self._m, "_ax_cb", None)
+        warn(
+            "EOmaps: Using `m.figure.ax_cb` is depreciated in EOmaps v5.0."
+            "Use `m.colorbar.ax_cb` instead!"
+        )
+        colorbar = getattr(self._m, "colorbar", None)
+        if colorbar is not None:
+            return colorbar.ax_cb
 
     @property
     def ax_cb_plot(self):
-        return getattr(self._m, "_ax_cb_plot", None)
-
-    @property
-    def gridspec(self):
-        return getattr(self._m, "_gridspec", None)
+        warn(
+            "EOmaps: Using `m.figure.ax_cb_plot` is depreciated in EOmaps v5.0."
+            "Use `m.colorbar.ax_cb_plot` instead!"
+        )
+        colorbar = getattr(self._m, "colorbar", None)
+        if colorbar is not None:
+            return colorbar.ax_cb_plot
 
     @property
     def cb_gridspec(self):

@@ -135,4 +135,5 @@ class TestLayoutEditor(unittest.TestCase):
         restored_layout = mg.get_layout()
         for key, val in restored_layout.items():
             # check if all positions have been properly restored
-            self.assertTrue(np.allclose(val, new_layout[key]))
+            print(key, val, new_layout[key])
+            self.assertTrue(np.allclose(val, new_layout[key], atol=0.001))

@@ -18,7 +18,7 @@ m = Maps(
 m.add_feature.preset.ocean(fc="lightsteelblue")
 m.add_feature.preset.coastline(lw=0.25)
 m.set_data(
-    data=data,
+    data=data,  #
     x="lon",
     y="lat",
     in_crs=4326,
@@ -44,9 +44,7 @@ m.plot_map(
 )  # pass some additional arguments to the plotted collection
 
 # ------------------ add a colorbar and change it's appearance
-m.add_colorbar(
-    histbins="bins", label="some parameter", density=True, histogram_size=999
-)
+m.add_colorbar(histbins="bins", label="some parameter", density=True, histogram_size=1)
 
 # add a y-label to the histogram
 _ = m.figure.ax_cb_plot.set_ylabel("The Y label")
@@ -54,7 +52,7 @@ _ = m.figure.ax_cb_plot.set_ylabel("The Y label")
 # adjust the padding of the subplots
 m.subplots_adjust(bottom=0.1, top=0.95, left=0.075, right=0.95, hspace=0.2)
 # manually re-position the colorbar
-m.figure.set_colorbar_position(pos=[0.125, 0.1, 0.83, 0.15])
+# m.colorbar.ax.set_position([0.125, 0.1, 0.83, 0.15])
 
 # add a logo to the plot
 m.add_logo(position="lr", pad=(-1.1, 0), size=0.1)

@@ -112,6 +112,7 @@ from .helpers import (
     searchtree,
 )
 from ._shapes import shapes
+from .colorbar import ColorBar
 
 from ._containers import (
     data_specs,
@@ -298,6 +299,8 @@ class Maps(object):
         self._BM = None
         self._children = set()  # weakref.WeakSet()
 
+        self.colorbar = None
+
         if not isinstance(layer, str):
             print("EOmaps v5.0 Warning: All layer-names are converted to strings!")
             layer = str(layer)
@@ -413,6 +416,11 @@ class Maps(object):
                 "EOmaps: 'm.set_plot_specs' has been removed in v4.0!\n For instructions "
                 + "on how to quickly port your script to EOmaps >= 4.0, see: \n"
                 + r"https://eomaps.readthedocs.io/en/latest/FAQ.html#port-script-from-eomaps-v3-x-to-v4-x"
+            )
+        elif key == "set_layout":
+            raise AttributeError(
+                "'Maps' object has no attribute 'set_layout'... "
+                "did you mean 'apply_layout'?"
             )
         else:
             return object.__getattribute__(self, key)
@@ -1014,7 +1022,11 @@ class Maps(object):
             projection = self._get_cartopy_crs(plot_crs)
 
             ax = self.figure.f.add_subplot(
-                gsspec, projection=projection, aspect="equal", adjustable="box"
+                gsspec,
+                projection=projection,
+                aspect="equal",
+                adjustable="box",
+                label="map",
             )
 
         self._ax = ax
@@ -1967,40 +1979,6 @@ class Maps(object):
             norm = mpl.colors.Normalize(vmin, vmax)
 
         return cbcmap, norm, bins, classified
-
-    def _update_cb_extend_pos(self):
-        if not hasattr(self, "_colorbar"):
-            return
-        # update the position of the axis holding the colorbar extension arrows
-        # TODO the colorbar should be merged into a single artist
-        #      to avoid having to update the axes separately!
-        [
-            layer,
-            cbgs,
-            ax_cb,
-            ax_cb_plot,
-            ax_cb_extend,
-            extend_frac,
-            orientation,
-            cb,
-        ] = self._colorbar
-
-        if ax_cb_extend is None:
-            return
-
-        bbox = ax_cb.bbox.transformed(self.figure.f.transFigure.inverted())
-        if orientation == "horizontal":
-            frac = extend_frac * (bbox.width)
-            ax_cb_extend.set_position(
-                (bbox.x0 - frac / 2, bbox.y0, bbox.width + frac, bbox.height),
-            )
-        elif orientation == "vertical":
-            frac = extend_frac * (bbox.height)
-            ax_cb_extend.set_position(
-                (bbox.x0, bbox.y0 - frac / 2, bbox.width, bbox.height + frac),
-            )
-        else:
-            raise TypeError(f"'{orientation}' is not a valid colorbar orientation!")
 
     @property
     @wraps(NaturalEarth_features)
@@ -3070,925 +3048,27 @@ class Maps(object):
 
         self._logo_cids.add(self.figure.f.canvas.mpl_connect("resize_event", setlim))
 
-    def add_colorbar(
-        self,
-        gs=0.2,
-        orientation="horizontal",
-        label=None,
-        density=False,
-        histbins=256,
-        tick_precision=3,
-        top=0.05,
-        bottom=0.1,
-        left=0.1,
-        right=0.05,
-        histogram_size=9,
-        layer=None,
-        log=False,
-        tick_formatter=None,
-        dynamic_shade_indicator=False,
-        add_extend_arrows="auto",
-        extend_frac=0.025,
-        show_outline=False,
-    ):
+    @wraps(ColorBar.__init__)
+    def add_colorbar(self, *args, **kwargs):
         """
-        Add a colorbar to an existing figure.
-
-        The colorbar always represents the data of the associated Maps-object
-        that was assigned in the last call to `m.plot_map()`.
-
-        By default, the colorbar will only be visible on the layer of the associated
-        Maps-object (you can override this by providing an explicit "layer"-name).
-
-        To change the position of the colorbar after it has been created, use:
-
-            >>> cb = m.add_colorbar()
-            >>> m.figure.set_colorbar_position(pos=[.1, .05, .8, .2], ratio=10, cb=cb)
-
-        Parameters
-        ----------
-        gs : float or matpltolib.gridspec.SubplotSpec
-            The relative size of the colorbar (or an explicit GridSpec definition)
-
-            - if float: The fraction of the the parent axes to use for the colorbar.
-              (The colorbar will "steal" some space from the parent axes.)
-            - if SubplotSpec : A SubplotSpec instance that will be used to initialize
-              the colorbar.
-
-            The default is 0.2.
-        orientation : str
-            The orientation of the colorbar ("horizontal" or "vertical")
-            The default is "horizontal"
-        label : str or None
-            The label of the colorbar.
-            If None, the parameter-name (e.g. `m.data_specs.parameter`) is used.
-            The default is None.
-        density : bool or None
-            Indicator if the y-axis of the histogram should represent the
-            probability-density (True) or the number of counts per bin (False)
-            The default is False.
-        histbins : int, list, tuple, array or "bins", optional
-            - If int: The number of histogram-bins to use for the colorbar.
-            - If list, tuple or numpy-array: the bins to use
-            - If "bins": use the bins obtained from the classification
-              (ONLY possible if a classification scheme is used!)
-
-            The default is 256.
-        tick_precision : int or None
-            The precision of the tick-labels in the colorbar.
-            The default is 3.
-        top, bottom, left, right : float
-            The padding between the colorbar and the parent axes (as fraction of the
-            plot-height (if "horizontal") or plot-width (if "vertical")
-            The default is (0.05, 0.1, 0.1, 0.05)
-        histogram_size : float
-            Set the relative size of the histogram compared to the colorbar, e.g.:
-
-            `<size of histogram> = histogram_size * <size of colorbar>`
-
-            - 0 = NO histogram (e.g. a "plain" colorbar)
-            - 1 = histogram and colorbar have the same size
-            - 999 = NO colorbar (e.g. a "plain" histogram)
-
-            The default is 9.
-        layer : int, str or None, optional
-            The layer to put the colorbar on.
-            To make the colorbar visible on all layers, use `layer="all"`
-            If None, the layer of the associated Maps-object is used.
-            The default is None.
-        log : bool, optional
-            Indicator if the y-axis of the plot should be logarithmic or not.
-            The default is False
-        dynamic_shade_indicator : bool
-            ONLY relevant if data-shading is used! ("shade_raster" or "shade_points")
-
-            - False: The colorbar represents the actual (full) dataset
-            - True: The colorbar is dynamically updated and represents the density of
-              the shaded pixel values within the current field of view.
-
-            The default is False.
-        tick_formatter : callable
-            A function that will be used to format the ticks of the colorbar.
-
-            The function will be used with matpltlibs `set_major_formatter`...
-            For details, see:
-            https://matplotlib.org/stable/api/_as_gen/matplotlib.axis.Axis.set_major_formatter.html
-
-            Call-signagure:
-
-            >>> def tick_formatter(x, pos):
-            >>>     # x ... the tick-value
-            >>>     # pos ... the tick-position
-            >>>     return f"{x} m"
-
-            The default is None.
-        add_extend_arrows : str or False
-            Set if extension-arrows should be drawn. (e.g. to indicate that there are
-            some data-values outside the colorbar-range)
-
-            - Can be one of: ("auto", "upper", "lower", "both" or False)
-            - If False: NO extension-arrows will be drawn.
-            - If "auto": extension-arrows are only drawn if values outside the color
-              boundaries are encoundered. The default is "auto"
-
-            Note: The range of the colors is set with `m.plot_map(vmin=..., vmax=...)`
-            The default is "auto".
-        extend_frac : float or None
-            The fraction of the colorbar to use for adding "extension-arrows" to
-            indicate out-of-bounds values.
-            If None, no extension arrows will be drawn.
-            The default is 0.015
-        show_outline : bool or dict
-            Indicator if an outline should be added to the histogram.
-            (e.g. a line encompassing the histogram)
-
-            If a dict is provided, it is passed to `plt.step()` to style the line.
-            (e.g. with ordinary matplotlib parameters such as color, lw, ls etc.)
-            If True, the following properties are used:
-
-            - {"color": "k", "lw": 1}
-
-            The default is False.
-
-        See Also
-        --------
-        - m.figure.set_colorbar_position :
-            Adjust the position and ratio of existing colorbars
-
-        Notes
-        -----
-        Here's how the padding looks like as a sketch:
-
-        >>> _________________________________________________________
-        >>> |[ - - - - - - - - - - - - - - - - - - - - - - - - - - ]|
-        >>> |[ - - - - - - - - - - - - MAP - - - - - - - - - - - - ]|
-        >>> |[ - - - - - - - - - - - - - - - - - - - - - - - - - - ]|
-        >>> |                                                       |
-        >>> |                         (top)                         |
-        >>> |                                                       |
-        >>> |                  [ -  HISTOGRAM  - ]                  |
-        >>> |      (left)       [ - COLORBAR  - ]      (right)      |
-        >>> |                                                       |
-        >>> |                       (bottom)                        |
-        >>> |_______________________________________________________|
-
+        Add a colorbar to the map.
+        (docstring inherited from ColorBar.__init__)
         """
 
-        if self.data is None:
-            print(
-                "EOmaps: There is no data for the colorbar! Use m.set_data(data=...)"
-                + "to set the data."
+        if self.colorbar is not None:
+            warnings.warn(
+                "EOmaps: A Maps-object can only have a single colorbar!\n"
+                "To update the colorbar, use `m.colorbar.update(...)`\n"
+                "To remove the colorbar, use `m.colorbar.remove()`"
             )
             return
-
-        assert hasattr(
-            self.classify_specs, "_bins"
-        ), "EOmaps: you need to call `m.plot_map()` before adding a colorbar!"
-
-        if histbins == "bins":
-            assert (
-                self.classify_specs._classified
-            ), "EOmaps: using histbins='bins' is only possible for classified data!"
-
-        if layer is None:
-            layer = self.layer
-
-        self._cb_kwargs = dict(
-            orientation=orientation,
-            label=label,
-            density=density,
-            histbins=histbins,
-            tick_precision=tick_precision,
-            layer=layer,
-            log=log,
-            dynamic_shade_indicator=dynamic_shade_indicator,
-            tick_formatter=tick_formatter,
+        self.colorbar = ColorBar(
+            self,
+            *args,
+            **kwargs,
         )
 
-        parent_m_for_cb = None
-        if isinstance(gs, (int, float)):
-            if hasattr(self, "_colorbar"):
-                print(
-                    "EOmaps: A colorbar already exists for this Maps-object!\n"
-                    + "...use a new layer if you want multiple colorbars or use "
-                    + "`m._remove_colorbar() to remove the existing colorbar."
-                )
-                return
-
-            # check if there is already an existing colorbar in another axis
-            # and if we find one, use its specs instead of creating a new one
-
-            if hasattr(self, "_cb_gridspec"):
-                parent_m_for_cb = self
-            else:
-                # check if self is actually just another layer of an existing Maps object
-                # that already has a colorbar assigned
-                for m in [self.parent, *self.parent._children]:
-                    if m is not self and m.ax is self.ax:
-                        if hasattr(m, "_cb_gridspec"):
-                            parent_m_for_cb = m
-                            break
-
-        if parent_m_for_cb:
-            try:
-                if (
-                    parent_m_for_cb._cb_gridspec.nrows == 2
-                    and parent_m_for_cb._cb_gridspec.ncols == 1
-                ):
-                    cb_orientation = "vertical"
-                else:
-                    cb_orientation = "horizontal"
-            except AttributeError:
-                print(
-                    "EOmaps: could not add colorbar... maybe a colorbar for the"
-                    f"layer {layer} already exists?"
-                )
-                return
-
-        if parent_m_for_cb is None:
-            # initialize colorbar axes
-            if isinstance(gs, float):
-                frac = gs
-                gs = self.figure.ax.get_subplotspec()
-
-                # get the original subplot-spec of the axes, and divide it based on
-                # the fraction that is intended for the colorbar
-                if orientation == "horizontal":
-                    gs = GridSpecFromSubplotSpec(
-                        4,
-                        3,
-                        gs,
-                        height_ratios=(1, top, frac, bottom),
-                        width_ratios=(left, 1, right),
-                        wspace=0,
-                        hspace=0,
-                    )
-                    self.figure.ax.set_subplotspec(gs[0, :])
-                    gsspec = gs[2, 1]
-
-                elif orientation == "vertical":
-                    gs = GridSpecFromSubplotSpec(
-                        3,
-                        4,
-                        gs,
-                        width_ratios=(1, top, frac, bottom),
-                        height_ratios=(left, 1, right),
-                        hspace=0,
-                        wspace=0,
-                    )
-                    self.figure.ax.set_subplotspec(gs[:, 0])
-                    gsspec = gs[1, 2]
-
-                else:
-                    raise AssertionError("'{orientation}' is not a valid orientation")
-            else:
-                gsspec = gs
-
-            if orientation == "horizontal":
-                # sub-gridspec for the colorbar
-                cbgs = GridSpecFromSubplotSpec(
-                    nrows=2,
-                    ncols=1,
-                    subplot_spec=gsspec,
-                    hspace=0,
-                    wspace=0,
-                    height_ratios=[histogram_size, 1],
-                )
-
-                # "_add_colorbar" orientation is opposite to the colorbar-orientation!
-                cb_orientation = "vertical"
-
-            elif orientation == "vertical":
-                # sub-gridspec for the colorbar
-                cbgs = GridSpecFromSubplotSpec(
-                    nrows=1,
-                    ncols=2,
-                    subplot_spec=gsspec,
-                    hspace=0,
-                    wspace=0,
-                    width_ratios=[histogram_size, 1],
-                )
-
-                # "_add_colorbar" orientation is opposite to the colorbar-orientation!
-                cb_orientation = "horizontal"
-        else:
-            cbgs = parent_m_for_cb._cb_gridspec
-            # cbgs = [
-            #     parent_m_for_cb.figure.ax_cb.get_gridspec()[0],
-            #     parent_m_for_cb.figure.ax_cb_plot.get_gridspec()[1],
-            # ]
-
-        ax_cb = self.figure.f.add_subplot(
-            cbgs[1],
-            frameon=False,
-            label="ax_cb",
-        )
-        ax_cb_plot = self.figure.f.add_subplot(
-            cbgs[0],
-            frameon=True,
-            label="ax_cb_plot",
-        )
-        # keep the background of the plot-axis but remove the outer frame
-        ax_cb_plot.spines["top"].set_visible(False)
-        ax_cb_plot.spines["right"].set_visible(False)
-        ax_cb_plot.spines["bottom"].set_visible(False)
-        ax_cb_plot.spines["left"].set_visible(False)
-
-        # join colorbar and histogram axes
-        if cb_orientation == "horizontal":
-            ax_cb_plot.get_shared_y_axes().join(ax_cb_plot, ax_cb)
-        elif cb_orientation == "vertical":
-            ax_cb_plot.get_shared_x_axes().join(ax_cb_plot, ax_cb)
-
-        coll = self.figure.coll
-
-        renorm = False
-        vmin = coll.norm.vmin
-        vmax = coll.norm.vmax
-
-        if _register_datashader() and isinstance(coll, mpl_ext.ScalarDSArtist):
-            aggname = self.shape.aggregator.__class__.__name__
-            if aggname in ["first", "last", "max", "min", "mean", "mode"]:
-                pass
-            else:
-                renorm = True
-
-                if not dynamic_shade_indicator:
-                    print(
-                        "EOmaps: Only dynamic colorbars are possible when using"
-                        + f" '{aggname}' as datashader-aggregation reduction method "
-                        + "...creating a 'dynamic_shade_indicator' colorbar instead."
-                    )
-                    dynamic_shade_indicator = True
-
-            if dynamic_shade_indicator:
-                try:
-                    z_data = coll.get_ds_data().values
-                    # z_data = coll.norm(z_data)
-                    # z_data = self.classify_specs._norm(z_data)
-                except:
-                    self.redraw()
-                    z_data = coll.get_ds_data().values
-                    # z_data = coll.norm(z_data)
-                    # z_data = self.classify_specs._norm(z_data)
-
-                if "count" in aggname:
-                    # make sure we don't count empty pixels
-                    z_data = z_data[~(z_data == 0)]
-
-                # datashader sets None to 0 by default!
-                # z_data = z_data[z_data > 0]
-
-                bins = self.classify_specs._bins
-                # bins = None
-
-                cmap = self.classify_specs._cbcmap
-                # cmap = coll.get_cmap()
-
-                if renorm:
-                    z_data = z_data[~np.isnan(z_data)]
-                    norm = coll.norm
-                    # make sure the norm clips with respect to vmin/vmax
-                    # (only clip if either vmin or vmax is not None)
-                    # if vmin or vmax:
-                    #     z_data = z_data.clip(vmin, vmax)
-                    cmap = coll.get_cmap()
-                else:
-                    norm = self.classify_specs._norm
-
-                def redraw(*args, **kwargs):
-                    self._redraw_colorbar()
-
-                # TODO remove cid on figure close
-                if not hasattr(self, "_cid_colorbar"):
-                    self._cid_colorbar = self.figure.coll.add_callback(redraw)
-                    # TODO colorbar not properly updated on layer change after zoom
-                    self.BM.on_layer(redraw, layer=self.layer, persistent=True, m=self)
-            else:
-                z_data = None
-                bins = self.classify_specs._bins
-                cmap = self.classify_specs._cbcmap
-                norm = self.classify_specs._norm
-
-        else:
-            if dynamic_shade_indicator:
-                print(
-                    "EOmaps: using 'dynamic_shade_indicator=True' is only possible "
-                    + " with 'shade' shapes (e.g. 'shade_raster' or 'shade_points'"
-                )
-                dynamic_shade_indicator = False
-
-            z_data = None
-            bins = self.classify_specs._bins
-            cmap = self.classify_specs._cbcmap
-            norm = self.classify_specs._norm
-
-        # reflect changes to the dynamic_shade_indicator in the saved kwargs
-        self._cb_kwargs["dynamic_shade_indicator"] = dynamic_shade_indicator
-
-        cb = self._add_colorbar(
-            ax_cb=ax_cb,
-            ax_cb_plot=ax_cb_plot,
-            bins=bins,
-            cmap=cmap,
-            norm=norm,
-            z_data=z_data,
-            vmin=vmin,
-            vmax=vmax,
-            # bins=self.classify_specs._bins,
-            # cmap=self.classify_specs._cbcmap,
-            # norm=self.classify_specs._norm,
-            classified=self.classify_specs._classified,
-            orientation=cb_orientation,
-            label=label,
-            density=density,
-            tick_precision=tick_precision,
-            histbins=histbins,
-            log=log,
-            tick_formatter=tick_formatter,
-            show_outline=show_outline,
-        )
-
-        # hide the colorbar if it is not added to the currently visible layer
-        if layer not in [self.BM._bg_layer, "all"]:
-            ax_cb.set_visible(False)
-            ax_cb_plot.set_visible(False)
-            self.BM._hidden_axes.add(ax_cb)
-            self.BM._hidden_axes.add(ax_cb_plot)
-
-        self._ax_cb = ax_cb
-        self._ax_cb_plot = ax_cb_plot
-        self._cb_gridspec = cbgs
-
-        if dynamic_shade_indicator:
-            ax_cb_plot.set_ylabel(
-                ("logarithmic\n" if log else "")
-                + f"shaded pixel\n{'density' if density else 'bin count'}"
-            )
-            ax_cb_plot.tick_params(labelleft=False, which="both")
-
-        if orientation == "horizontal":
-            if vmin and vmax:
-                if vmin != vmax:
-                    ax_cb_plot.set_xlim(vmin, vmax)
-                else:
-                    print(
-                        "EOMaps-Warning: Attempting to set identical upper and "
-                        + "lower limits for the colorbar... limits will be ignored!"
-                    )
-            # else:
-            #     ax_cb_plot.autoscale_view(tight=True)
-
-        if orientation == "vertical":
-            if vmin and vmax:
-                if vmin and vmax:
-                    if vmin != vmax:
-                        ax_cb_plot.set_ylim(vmin, vmax)
-                    print(
-                        "EOMaps-Warning: Attempting to set identical upper and "
-                        + "lower limits for the colorbar... limits will be ignored!"
-                    )
-
-            # else:
-            #     ax_cb_plot.autoscale_view(tight=True)
-
-        self.BM.add_bg_artist(self._ax_cb, layer)
-        self.BM.add_bg_artist(self._ax_cb_plot, layer)
-
-        if add_extend_arrows is not False:
-            ax_cb_extend = self._add_cb_extend_arrows(
-                cb, orientation, extend_frac=extend_frac, which=add_extend_arrows
-            )
-        else:
-            ax_cb_extend = None
-
-        # remember colorbar for later (so that we can update its position etc.)
-        self._colorbar = [
-            layer,
-            cbgs,
-            ax_cb,
-            ax_cb_plot,
-            ax_cb_extend,
-            extend_frac,
-            orientation,
-            cb,
-        ]
-
-        return [
-            layer,
-            cbgs,
-            ax_cb,
-            ax_cb_plot,
-            ax_cb_extend,
-            extend_frac,
-            orientation,
-            cb,
-        ]
-
-    def _add_colorbar(
-        self,
-        ax_cb=None,
-        ax_cb_plot=None,
-        z_data=None,
-        label=None,
-        bins=None,
-        histbins=256,
-        cmap="viridis",
-        norm=None,
-        classified=False,
-        vmin=None,
-        vmax=None,
-        tick_precision=3,
-        density=False,
-        orientation="vertical",
-        log=False,
-        tick_formatter=None,
-        show_outline=False,
-    ):
-
-        if ax_cb is None:
-            ax_cb = self.figure.ax_cb
-        if ax_cb_plot is None:
-            ax_cb_plot = self.figure.ax_cb_plot
-
-        if z_data is None:
-            z_data = self._props["z_data"]
-
-        if isinstance(z_data, np.ma.masked_array):
-            z_data = z_data.compressed()
-        else:
-            z_data = z_data.ravel()
-
-        if label is None:
-            label = self.data_specs["parameter"]
-
-        if tick_formatter is None:
-            tick_formatter = partial(
-                self._default_cb_tick_formatter, precision=tick_precision
-            )
-
-        if orientation == "horizontal":
-            cb_orientation = "vertical"
-
-            if log:
-                ax_cb_plot.set_xscale("log")
-
-        elif orientation == "vertical":
-            cb_orientation = "horizontal"
-
-            if log:
-                ax_cb_plot.set_yscale("log")
-
-        # TODO deepcopy is required to avoid issues with datashader?
-        norm = copy.deepcopy(norm)
-        n_cmap = cm.ScalarMappable(cmap=cmap, norm=norm)
-        valid_zdata = z_data[np.isfinite(z_data)]
-
-        # skip drawing the colorbar in case no data is available
-        # and show a notification that there's no data instead
-        # (relevant for dynamic colorbars if you pan to a region without data)
-        if self.data is not None and len(valid_zdata) == 0:
-            ax_cb.set_visible(False)
-            ax_cb_plot.set_visible(False)
-            if ax_cb not in self.BM._hidden_axes:
-                self.BM._hidden_axes.add(ax_cb)
-            if ax_cb_plot not in self.BM._hidden_axes:
-                self.BM._hidden_axes.add(ax_cb_plot)
-
-            if not hasattr(self, "_cb_nodata_txt"):
-                axpos = ax_cb_plot.get_position()
-                self._cb_nodata_txt = self.ax.text(
-                    (axpos.x1 + axpos.x0) / 2,
-                    (axpos.y1 + axpos.y0) / 2,
-                    "... no dynamic colorbar data ...",
-                    transform=self.figure.f.transFigure,
-                    horizontalalignment="center",
-                    verticalalignment="center",
-                    fontsize=8,
-                    bbox=dict(
-                        facecolor="lightcoral",
-                        edgecolor="k",
-                        linewidth=0.35,
-                        alpha=0.5,
-                        boxstyle="round,pad=.35",
-                    ),
-                )
-                self.BM.add_bg_artist(self._cb_nodata_txt, self.layer)
-
-            return
-        else:
-            # remove the no-data indicator if it is still here
-            if hasattr(self, "_cb_nodata_txt"):
-                self.BM.remove_bg_artist(self._cb_nodata_txt)
-                self._cb_nodata_txt.remove()
-                del self._cb_nodata_txt
-
-        n_cmap.set_array(valid_zdata)
-        cb = plt.colorbar(
-            n_cmap,
-            cax=ax_cb,
-            label=label,
-            extend="neither",
-            spacing="proportional",
-            orientation=cb_orientation,
-        )
-        # plot the histogram
-        # (only if the axis has a finite size)
-        if ax_cb_plot.bbox.width > 0 and ax_cb_plot.bbox.height > 0:
-            ax_cb_plot.set_axis_on()
-            h = ax_cb_plot.hist(
-                z_data.clip(vmin, vmax) if (vmin or vmax) else z_data,
-                orientation=orientation,
-                bins=bins if (classified and histbins == "bins") else histbins,
-                color="k",
-                align="mid",
-                range=(vmin, vmax) if (vmin and vmax) else None,
-                density=density,
-            )
-            if show_outline:
-                if show_outline is True:
-                    show_outline = dict(color="k", lw=1)
-
-                if orientation == "vertical":
-                    ax_cb_plot.step(h[1], [h[0][0], *h[0]], **show_outline)
-                elif orientation == "horizontal":
-                    ax_cb_plot.step([h[0][0], *h[0]], h[1], **show_outline)
-
-        else:
-            ax_cb_plot.set_axis_off()
-
-        if bins is None:
-            # identify position of color-splits in the colorbar
-            if isinstance(n_cmap.cmap, LinearSegmentedColormap):
-                # for LinearSegmentedcolormap N is the number of quantizations!
-                splitpos = np.linspace(vmin, vmax, n_cmap.cmap.N)
-            else:
-                # for ListedColormap N is the number of colors
-                splitpos = np.linspace(vmin, vmax, n_cmap.cmap.N + 1)
-        else:
-            splitpos = bins
-
-        # color the histogram patches
-        for patch in list(ax_cb_plot.patches):
-            # the list is important!! since otherwise we change ax.patches
-            # as we iterate over it... which is not a good idea...
-            if orientation == "horizontal":
-                minval = np.atleast_1d(patch.get_y())[0]
-                width = patch.get_width()
-                height = patch.get_height()
-                maxval = minval + height
-            elif orientation == "vertical":
-                minval = np.atleast_1d(patch.get_x())[0]
-                width = patch.get_width()
-                height = patch.get_height()
-                maxval = minval + width
-
-            # ----------- take care of histogram-bins that have split colors
-            # identify bins that extend beyond a color-change
-            splitbins = [
-                minval,
-                *splitpos[(splitpos > minval) & (maxval > splitpos)],
-                maxval,
-            ]
-
-            if len(splitbins) > 2:
-                patch.remove()
-                # add in-between patches
-                for b0, b1 in pairwise(splitbins):
-                    if orientation == "horizontal":
-                        pi = mpl.patches.Rectangle(
-                            (0, b0),
-                            width,
-                            (b1 - b0),
-                            facecolor=cmap(norm((b0 + b1) / 2)),
-                        )
-                    elif orientation == "vertical":
-                        pi = mpl.patches.Rectangle(
-                            (b0, 0),
-                            (b1 - b0),
-                            height,
-                            facecolor=cmap(norm((b0 + b1) / 2)),
-                        )
-
-                    ax_cb_plot.add_patch(pi)
-            else:
-                patch.set_facecolor(cmap(norm((minval + maxval) / 2)))
-
-        # setup appearance of histogram
-        if orientation == "horizontal":
-            ax_cb_plot.invert_xaxis()
-
-            ax_cb_plot.tick_params(
-                left=False,
-                labelleft=False,
-                bottom=False,
-                top=False,
-                labelbottom=True,
-                labeltop=False,
-            )
-            ax_cb_plot.grid(axis="x", dashes=[5, 5], c="k", alpha=0.5)
-            # add a line that indicates 0 histogram level
-            ax_cb_plot.plot(
-                [1, 1], [0, 1], "k--", alpha=0.5, transform=ax_cb_plot.transAxes
-            )
-            # make sure lower x-limit is 0
-            if log is False:
-                ax_cb_plot.xaxis.set_major_locator(plt.MaxNLocator(5))
-                ax_cb_plot.set_xlim(None, 0)
-
-        elif orientation == "vertical":
-            ax_cb_plot.tick_params(
-                left=False,
-                labelleft=True,
-                bottom=False,
-                top=False,
-                labelbottom=False,
-                labeltop=False,
-            )
-            ax_cb_plot.grid(axis="y", dashes=[5, 5], c="k", alpha=0.5)
-            # add a line that indicates 0 histogram level
-            ax_cb_plot.plot(
-                [0, 1], [0, 0], "k--", alpha=0.5, transform=ax_cb_plot.transAxes
-            )
-            # make sure lower y-limit is 0
-            if log is False:
-                ax_cb_plot.yaxis.set_major_locator(plt.MaxNLocator(5))
-                ax_cb_plot.set_ylim(0)
-
-        cb.outline.set_visible(False)
-
-        # ensure that ticklabels are correct if a classification is used
-        if classified:
-            cb.set_ticks([i for i in bins if i >= vmin and i <= vmax])
-
-            if orientation == "vertical":
-                labelsetfunc = "set_xticklabels"
-            elif orientation == "horizontal":
-                labelsetfunc = "set_yticklabels"
-
-            getattr(cb.ax, labelsetfunc)(
-                [
-                    np.format_float_positional(i, precision=tick_precision, trim="-")
-                    for i in bins
-                    if i >= vmin and i <= vmax
-                ]
-            )
-        else:
-            cb.set_ticks(cb.get_ticks())
-
-        if tick_formatter:
-            if orientation == "vertical":
-                cb.ax.xaxis.set_major_formatter(tick_formatter)
-            elif orientation == "horizontal":
-                cb.ax.yaxis.set_major_formatter(tick_formatter)
-
-        # format position of scientific exponent for colorbar ticks
-        if cb_orientation == "vertical":
-            ot = ax_cb.yaxis.get_offset_text()
-            ot.set_horizontalalignment("center")
-            ot.set_position((1, 0))
-
-        # make sure axis limits are correct
-        if orientation == "vertical":
-            limsetfunc = ax_cb.set_xlim
-        else:
-            limsetfunc = ax_cb.set_ylim
-
-        if vmin != vmax:
-            limsetfunc(vmin, vmax)
-        else:
-            print(
-                "EOMaps-Warning: Attempting to set identical upper and "
-                + "lower limits for the colorbar... limits will be ignored!"
-            )
-        return cb
-
-    def _add_cb_extend_arrows(self, cb, orientation, extend_frac=0.025, which="auto"):
-        """
-        Add a new axis that holds extension-triangles for the colorbar.
-
-        Parameters
-        ----------
-        cb : matplotilb.colorbar
-            the colorbar to use
-        orientation : str
-            "vertical" or "horizontal"
-        extend_frac : float, optional
-            the fraction of the axis to use for the extension-triangles.
-            (NOTE: triangles will be drawn OUTSIDE the axes!!)
-            The default is 0.03.
-        which : str
-            Indicator which triangles should be drawn
-            (one of "auto", "upper", "lower" or "both").
-            The default is "auto" in which case only relevant arrows are drawn
-            (e.g. "upper" is only drawn if there are values > vmax).
-        """
-
-        if which == "auto":
-            a = cb.mappable.get_array()
-            vmin, vmax = cb.mappable.norm.vmin, cb.mappable.norm.vmax
-
-            if (a > vmax).any():
-                which = "upper"
-            if (a < vmin).any():
-                if which == "upper":
-                    which = "both"
-                else:
-                    which = "lower"
-
-            if which == "auto":
-                # (no extension arrows necessary)
-                return
-
-        # get the bounding box of the current colorbar axis
-        bbox = self.figure.ax_cb.bbox.transformed(self.figure.f.transFigure.inverted())
-
-        if orientation == "horizontal":
-            if which == "both":
-                which = "left right"
-            elif which == "upper":
-                which = "right"
-            elif which == "lower":
-                which = "left"
-
-            frac = extend_frac * (bbox.width)
-            axcb2 = self.figure.f.add_axes(
-                (bbox.x0 - frac / 2, bbox.y0, bbox.width + frac, bbox.height),
-                zorder=-99,
-                label="ax_cb_extend",
-            )
-            axcb2.get_shared_y_axes().join(axcb2, self.figure.ax_cb)
-            # set the limits to (0, 1) so we can directly use the fractions
-            axcb2.set_xlim(0, 1)
-
-        else:
-            if which == "both":
-                which = "top bottom"
-            elif which == "upper":
-                which = "top"
-            elif which == "lower":
-                which = "bottom"
-            frac = extend_frac * (bbox.height)
-            axcb2 = self.figure.f.add_axes(
-                (bbox.x0, bbox.y0 - frac / 2, bbox.width, bbox.height + frac),
-                zorder=-99,
-            )
-            axcb2.get_shared_x_axes().join(axcb2, self.figure.ax_cb)
-            # set the limits to (0, 1) so we can directly use the fractions
-            axcb2.set_ylim(0, 1)
-
-        axcb2.set_axis_off()
-
-        # get the coordinates of the colorbar in units of axcb2
-
-        bbox_transf = self.figure.ax_cb.bbox.transformed(axcb2.transAxes.inverted())
-
-        x0, x1, y0, y1 = bbox_transf.x0, bbox_transf.x1, bbox_transf.y0, bbox_transf.y1
-
-        # make sure the arrow overlapps a little bit with the parent cb-axes
-        # to avoid gaps between the arrow and the colorbar
-        ovx, ovy = bbox_transf.width * 0.1, bbox_transf.height * 0.1
-
-        points = dict(
-            left=[[0, 0.5], [x0, 1], [x0 + ovx, 1], [x0 + ovx, 0], [x0, 0], [0, 0.5]],
-            right=[[1, 0.5], [x1, 1], [x1 - ovx, 1], [x1 - ovx, 0], [x1, 0], [1, 0.5]],
-            top=[[0.5, 1], [0, y1], [0, y1 - ovy], [1, y1 - ovy], [1, y1], [0.5, 1]],
-            bottom=[
-                [0.5, 0],
-                [0, y0],
-                [0, y0 + ovy],
-                [1, y0 + ovy],
-                [1, y0],
-                [0.5, ovy],
-            ],
-        )
-
-        cmap = self.figure.coll.cmap
-        colors = dict(
-            left=cmap.get_under(),
-            right=cmap.get_over(),
-            top=cmap.get_over(),
-            bottom=cmap.get_under(),
-        )
-
-        patches = []
-        use_colors = []
-        for w in which.split(" "):
-            p = points[w]
-            Path = mpath.Path
-            path_data = [
-                (Path.MOVETO, p[0]),
-                *[(Path.LINETO, pi) for pi in p[1:-1]],
-                (Path.CLOSEPOLY, p[-1]),
-            ]
-            codes, verts = zip(*path_data)
-            path = mpath.Path(verts, codes)
-            patches.append(mpatches.PathPatch(path))
-            use_colors.append(colors[w])
-        collection = PatchCollection(patches, fc=use_colors, ec="none", lw=0)
-
-        axcb2.add_collection(collection)
-        return axcb2
+        self.colorbar.plot_colorbar()
 
     @wraps(plt.savefig)
     def savefig(self, *args, **kwargs):
@@ -3998,6 +3078,340 @@ class Maps(object):
         self.figure.f.savefig(*args, **kwargs)
         # redraw after the save to ensure that backgrounds are correctly cached
         self.redraw()
+
+    def plot_map(
+        self,
+        pick_distance=100,
+        layer=None,
+        dynamic=False,
+        set_extent=True,
+        memmap=False,
+        assume_sorted=True,
+        **kwargs,
+    ):
+        """
+        Actually generate the map-plot based on the data provided as `m.data` and the
+        specifications defined in "data_specs" and "classify_specs".
+
+        NOTE
+        ----
+        Each call to plot_map will replace the collection used for picking!
+        (only the last collection remains interactive on multiple calls to `m.plot_map()`)
+
+        If you need multiple responsive datasets, use a new layer for each dataset!
+        (e.g. via `m2 = m.new_layer()`)
+
+        Parameters
+        ----------
+        pick_distance : int, float, str or None
+
+            - If None, NO pick-callbacks will be assigned ('m.cb.pick' will not work!!)
+              (useful for very large datasets to speed up plotting and save memory)
+            - If a number is provided, it will be used to determine the search-area
+              used to identify clicked pixels (e.g. a rectangle with a edge-size of
+              `pick_distance * estimated radius`).
+            - If a string is provided, it will be directly assigned as pick-radius
+              (without multiplying by the estimated radius). This is useful for datasets
+              whose radius cannot be determined (e.g. singular points etc.)
+
+              The provided number is identified as radius in the plot-crs!
+
+              The string must be convertible to a number, e.g. `float("40.5")`
+
+            The default is 100.
+        layer : int, str or None
+            The layer at which the dataset will be plotted.
+            ONLY relevant if `dynamic = False`!
+
+            - If "all": the corresponding feature will be added to ALL layers
+            - If None, the layer assigned to the Maps object is used (e.g. `m.layer`)
+
+            The default is None.
+        dynamic : bool
+            If True, the collection will be dynamically updated.
+        set_extent : bool
+            Set the plot-extent to the data-extent.
+
+            - if True: The plot-extent will be set to the extent of the data-coordinates
+            - if False: The plot-extent is kept as-is
+
+            The default is True
+        memmap : bool, str or pathlib.Path
+            Use memory-mapping to save some memory by storing intermediate datasets
+            (e.g. projected coordinates, indexes & the data) in a temporary folder on
+            disc rather than keeping everything in memory.
+            This causes a slight performance penalty when identifying clicked points but
+            it can provide a reduction in memory-usage for very large datasets
+            (or for a very large number of interactive layers).
+
+            - If None: memory-mapping is only used if "shade_raster" or "shade_points"
+              is used as plot-shape.
+            - if False: memory-mapping is disabled
+            - if True: memory-mapping is used with an automatically located tempfolder
+            - if str or pathlib.Path: memory-mapping is used and the provided folder
+              is used as location for the temporary files (stored in a temp-subfolder).
+
+            NOTE: The tempfolder and all files will be deleted if the figure is closed,
+            the Maps-object is deleted or the kernel is interrupted!
+
+            The location of the tempfolder is accessible via `m._tempfolder`
+
+            The default is False.
+        assume_sorted : bool, optional
+            ONLY relevant for the shapes "raster" and "shade_raster"
+            (and only if coordinates are provided as 1D arrays and data is a 2D array)
+
+            Sort values with respect to the coordinates prior to plotting
+            (required for QuadMesh if unsorted coordinates are provided)
+
+            The default is True.
+
+
+        Other Parameters:
+        -----------------
+        vmin, vmax : float, optional
+            Min- and max. values assigned to the colorbar. The default is None.
+        zorder : float
+            The zorder of the artist (e.g. the stacking level of overlapping artists)
+            The default is 1
+        kwargs
+            kwargs passed to the initialization of the matpltolib collection
+            (dependent on the plot-shape) [linewidth, edgecolor, facecolor, ...]
+
+            For "shade_points" or "shade_raster" shapes, kwargs are passed to
+            `datashader.mpl_ext.dsshow`
+        """
+
+        if layer is None:
+            layer = self.layer
+
+        useshape = self.shape  # invoke the setter to set the default shape
+
+        # make sure the colormap is properly set and transparencys are assigned
+        cmap = kwargs.setdefault("cmap", "viridis")
+        if "alpha" in kwargs and kwargs["alpha"] < 1:
+            # get a unique name for the colormap
+            ncmaps = len(
+                [None for i in plt.colormaps() if i.startswith("EOmaps_alpha_")]
+            )
+            cmapname = f"EOmaps_alpha_{ncmaps}"
+
+            kwargs["cmap"] = cmap_alpha(
+                cmap=cmap,
+                alpha=kwargs["alpha"],
+                name=cmapname,
+            )
+
+            plt.register_cmap(name=cmapname, cmap=kwargs["cmap"])
+            if self._companion_widget is not None:
+                self._companion_widget.cmapsChanged.emit()
+            # remember registered colormaps (to de-register on close)
+            self._registered_cmaps.append(cmapname)
+
+        # make sure zorder is set to 1 by default
+        # (by default shading would use 0 while ordinary collections use 1)
+        kwargs.setdefault("zorder", 1)
+
+        if useshape.name.startswith("shade"):
+            self._shade_map(
+                pick_distance=pick_distance,
+                layer=layer,
+                dynamic=dynamic,
+                set_extent=set_extent,
+                assume_sorted=assume_sorted,
+                **kwargs,
+            )
+        else:
+            self._plot_map(
+                pick_distance=pick_distance,
+                layer=layer,
+                dynamic=dynamic,
+                set_extent=set_extent,
+                assume_sorted=assume_sorted,
+                **kwargs,
+            )
+
+        # after plotting, use memory-mapping to store datasets required by
+        # callbacks etc. so that we don't need to keep them in memory.
+        if memmap:
+            self._memmap_props(dir=memmap)
+
+        if hasattr(self, "_data_mask") and not np.all(self._data_mask):
+            print("EOmaps: Warning: some datapoints could not be drawn!")
+
+        x0, y0, x1, y1 = self.crs_plot.boundary.bounds
+
+        if (
+            np.any(self._props["x0"] < x0)
+            or np.any(self._props["x0"] > x1)
+            or np.any(self._props["y0"] < y0)
+            or np.any(self._props["y0"] > y1)
+        ):
+            print("EOmaps: Warning: some points are outside the CRS bounds!")
+
+    def _plot_map(
+        self,
+        pick_distance=100,
+        layer=None,
+        dynamic=False,
+        set_extent=True,
+        assume_sorted=True,
+        **kwargs,
+    ):
+
+        if "coastlines" in kwargs:
+            kwargs.pop("coastlines")
+            warnings.warn(
+                "EOmaps: the 'coastlines' kwarg for 'plot_map' is depreciated!"
+                + "Instead use "
+                + "\n    m.add_feature.preset.ocean()"
+                + "\n    m.add_feature.preset.coastline()"
+                + " instead!"
+            )
+
+        ax = self.figure.ax
+
+        cmap = kwargs.pop("cmap", "viridis")
+        vmin = kwargs.pop("vmin", None)
+        vmax = kwargs.pop("vmax", None)
+
+        for key in ("array", "norm"):
+            assert (
+                key not in kwargs
+            ), f"The key '{key}' is assigned internally by EOmaps!"
+
+        try:
+            # remove previously fetched backgrounds for the used layer
+            if layer in self.BM._bg_layers and dynamic is False:
+                del self.BM._bg_layers[layer]
+                # self.BM._refetch_bg = True
+
+            # if self.data is None:
+            #     return
+
+            # ---------------------- prepare the data
+            props = self._prepare_data(assume_sorted=assume_sorted)
+
+            # remember props for later use
+            self._props = props
+
+            if vmin is None and self.data is not None:
+                vmin = np.nanmin(props["z_data"])
+            if vmax is None and self.data is not None:
+                vmax = np.nanmax(props["z_data"])
+
+            # clip the data to properly account for vmin and vmax
+            # (do this only if we don't intend to use the full dataset!)
+            # if vmin or vmax:
+            #     props["z_data"] = props["z_data"].clip(vmin, vmax)
+
+            # ---------------------- classify the data
+            cbcmap, norm, bins, classified = self._classify_data(
+                vmin=vmin,
+                vmax=vmax,
+                cmap=cmap,
+                classify_specs=self.classify_specs,
+            )
+
+            self.classify_specs._cbcmap = cbcmap
+            self.classify_specs._norm = norm
+            self.classify_specs._bins = bins
+            self.classify_specs._classified = classified
+
+            # ------------- plot the data
+
+            # don't pass the array if explicit facecolors are set
+            if (
+                ("color" in kwargs and kwargs["color"] is not None)
+                or ("facecolor" in kwargs and kwargs["facecolor"] is not None)
+                or ("fc" in kwargs and kwargs["fc"] is not None)
+            ):
+                args = dict(array=None, cmap=None, norm=None, **kwargs)
+            else:
+                args = dict(array=props["z_data"], cmap=cbcmap, norm=norm, **kwargs)
+
+            if self.shape.name in ["raster"]:
+                # if input-data is 1D, try to convert data to 2D (required for raster)
+                # TODO make an explicit data-conversion function for 2D-only shapes
+                if len(props["xorig"].shape) == 2 and len(props["yorig"].shape) == 2:
+                    coll = self.shape.get_coll(
+                        props["xorig"], props["yorig"], "in", **args
+                    )
+                elif (
+                    _register_pandas()
+                    and isinstance(self.data, pd.DataFrame)
+                    and isinstance(self.data_specs.x, str)
+                    and isinstance(self.data_specs.y, str)
+                    and len(props["z_data"].shape) == 1
+                ):
+
+                    df = (
+                        pd.DataFrame(
+                            dict(
+                                x=props["xorig"].ravel(),
+                                y=props["yorig"].ravel(),
+                                val=props["z_data"].ravel(),
+                            ),
+                            copy=False,
+                        ).set_index(["x", "y"])
+                    )["val"].unstack("y")
+
+                    xg, yg = np.meshgrid(df.index.values, df.columns.values)
+
+                    if args["array"] is not None:
+                        args["array"] = df.values.T
+
+                    coll = self.shape.get_coll(xg, yg, "in", **args)
+
+                else:
+                    raise AssertionError(
+                        "EOmaps: using 'raster' is only possible if "
+                        + "you provide coordinates and data as 2D "
+                        + "arrays or as a 1D pandas.DataFrame (which "
+                        + "will be converted to 2D internally)"
+                    )
+
+                # convert values to 1D for callbacks etc.
+                self._1Dprops(props)
+
+            else:
+                # convert input to 1D
+                coll = self.shape.get_coll(
+                    props["xorig"].ravel(), props["yorig"].ravel(), "in", **args
+                )
+
+            coll.set_clim(vmin, vmax)
+            ax.add_collection(coll)
+
+            self.figure.coll = coll
+
+            if pick_distance is not None:
+                self.tree = searchtree(m=self._proxy(self), pick_distance=pick_distance)
+
+                self.cb.pick._set_artist(coll)
+                self.cb.pick._init_cbs()
+                self.cb.pick._pick_distance = pick_distance
+                self.cb._methods.append("pick")
+
+            if dynamic is True:
+                self.BM.add_artist(coll, layer)
+            else:
+                self.BM.add_bg_artist(coll, layer)
+
+            if set_extent:
+                # set the image extent
+                # get the extent of the added collection
+                b = self.figure.coll.get_datalim(ax.transData)
+                ymin, ymax = ax.projection.y_limits
+                xmin, xmax = ax.projection.x_limits
+                # set the axis-extent
+                ax.set_xlim(max(b.xmin, xmin), min(b.xmax, xmax))
+                ax.set_ylim(max(b.ymin, ymin), min(b.ymax, ymax))
+
+            self.figure.f.canvas.draw_idle()
+
+        except Exception as ex:
+            raise ex
 
     def _shade_map(
         self,
@@ -4391,396 +3805,6 @@ class Maps(object):
             self.cb.pick._pick_distance = pick_distance
             self.cb._methods.append("pick")
 
-    def _plot_map(
-        self,
-        pick_distance=100,
-        layer=None,
-        dynamic=False,
-        set_extent=True,
-        assume_sorted=True,
-        **kwargs,
-    ):
-
-        if "coastlines" in kwargs:
-            kwargs.pop("coastlines")
-            warnings.warn(
-                "EOmaps: the 'coastlines' kwarg for 'plot_map' is depreciated!"
-                + "Instead use "
-                + "\n    m.add_feature.preset.ocean()"
-                + "\n    m.add_feature.preset.coastline()"
-                + " instead!"
-            )
-
-        ax = self.figure.ax
-
-        cmap = kwargs.pop("cmap", "viridis")
-        vmin = kwargs.pop("vmin", None)
-        vmax = kwargs.pop("vmax", None)
-
-        for key in ("array", "norm"):
-            assert (
-                key not in kwargs
-            ), f"The key '{key}' is assigned internally by EOmaps!"
-
-        try:
-            # remove previously fetched backgrounds for the used layer
-            if layer in self.BM._bg_layers and dynamic is False:
-                del self.BM._bg_layers[layer]
-                # self.BM._refetch_bg = True
-
-            # if self.data is None:
-            #     return
-
-            # ---------------------- prepare the data
-            props = self._prepare_data(assume_sorted=assume_sorted)
-
-            # remember props for later use
-            self._props = props
-
-            if vmin is None and self.data is not None:
-                vmin = np.nanmin(props["z_data"])
-            if vmax is None and self.data is not None:
-                vmax = np.nanmax(props["z_data"])
-
-            # clip the data to properly account for vmin and vmax
-            # (do this only if we don't intend to use the full dataset!)
-            # if vmin or vmax:
-            #     props["z_data"] = props["z_data"].clip(vmin, vmax)
-
-            # ---------------------- classify the data
-            cbcmap, norm, bins, classified = self._classify_data(
-                vmin=vmin,
-                vmax=vmax,
-                cmap=cmap,
-                classify_specs=self.classify_specs,
-            )
-
-            self.classify_specs._cbcmap = cbcmap
-            self.classify_specs._norm = norm
-            self.classify_specs._bins = bins
-            self.classify_specs._classified = classified
-
-            # ------------- plot the data
-
-            # don't pass the array if explicit facecolors are set
-            if (
-                ("color" in kwargs and kwargs["color"] is not None)
-                or ("facecolor" in kwargs and kwargs["facecolor"] is not None)
-                or ("fc" in kwargs and kwargs["fc"] is not None)
-            ):
-                args = dict(array=None, cmap=None, norm=None, **kwargs)
-            else:
-                args = dict(array=props["z_data"], cmap=cbcmap, norm=norm, **kwargs)
-
-            if self.shape.name in ["raster"]:
-                # if input-data is 1D, try to convert data to 2D (required for raster)
-                # TODO make an explicit data-conversion function for 2D-only shapes
-                if len(props["xorig"].shape) == 2 and len(props["yorig"].shape) == 2:
-                    coll = self.shape.get_coll(
-                        props["xorig"], props["yorig"], "in", **args
-                    )
-                elif (
-                    _register_pandas()
-                    and isinstance(self.data, pd.DataFrame)
-                    and isinstance(self.data_specs.x, str)
-                    and isinstance(self.data_specs.y, str)
-                    and len(props["z_data"].shape) == 1
-                ):
-
-                    df = (
-                        pd.DataFrame(
-                            dict(
-                                x=props["xorig"].ravel(),
-                                y=props["yorig"].ravel(),
-                                val=props["z_data"].ravel(),
-                            ),
-                            copy=False,
-                        ).set_index(["x", "y"])
-                    )["val"].unstack("y")
-
-                    xg, yg = np.meshgrid(df.index.values, df.columns.values)
-
-                    if args["array"] is not None:
-                        args["array"] = df.values.T
-
-                    coll = self.shape.get_coll(xg, yg, "in", **args)
-
-                else:
-                    raise AssertionError(
-                        "EOmaps: using 'raster' is only possible if "
-                        + "you provide coordinates and data as 2D "
-                        + "arrays or as a 1D pandas.DataFrame (which "
-                        + "will be converted to 2D internally)"
-                    )
-
-                # convert values to 1D for callbacks etc.
-                self._1Dprops(props)
-
-            else:
-                # convert input to 1D
-                coll = self.shape.get_coll(
-                    props["xorig"].ravel(), props["yorig"].ravel(), "in", **args
-                )
-
-            coll.set_clim(vmin, vmax)
-            ax.add_collection(coll)
-
-            self.figure.coll = coll
-
-            if pick_distance is not None:
-                self.tree = searchtree(m=self._proxy(self), pick_distance=pick_distance)
-
-                self.cb.pick._set_artist(coll)
-                self.cb.pick._init_cbs()
-                self.cb.pick._pick_distance = pick_distance
-                self.cb._methods.append("pick")
-
-            if dynamic is True:
-                self.BM.add_artist(coll, layer)
-            else:
-                self.BM.add_bg_artist(coll, layer)
-
-            if set_extent:
-                # set the image extent
-                # get the extent of the added collection
-                b = self.figure.coll.get_datalim(ax.transData)
-                ymin, ymax = ax.projection.y_limits
-                xmin, xmax = ax.projection.x_limits
-                # set the axis-extent
-                ax.set_xlim(max(b.xmin, xmin), min(b.xmax, xmax))
-                ax.set_ylim(max(b.ymin, ymin), min(b.ymax, ymax))
-
-            self.figure.f.canvas.draw_idle()
-
-        except Exception as ex:
-            raise ex
-
-    def plot_map(
-        self,
-        pick_distance=100,
-        layer=None,
-        dynamic=False,
-        set_extent=True,
-        memmap=False,
-        assume_sorted=True,
-        **kwargs,
-    ):
-        """
-        Actually generate the map-plot based on the data provided as `m.data` and the
-        specifications defined in "data_specs" and "classify_specs".
-
-        NOTE
-        ----
-        Each call to plot_map will replace the collection used for picking!
-        (only the last collection remains interactive on multiple calls to `m.plot_map()`)
-
-        If you need multiple responsive datasets, use a new layer for each dataset!
-        (e.g. via `m2 = m.new_layer()`)
-
-        Parameters
-        ----------
-        pick_distance : int, float, str or None
-
-            - If None, NO pick-callbacks will be assigned ('m.cb.pick' will not work!!)
-              (useful for very large datasets to speed up plotting and save memory)
-            - If a number is provided, it will be used to determine the search-area
-              used to identify clicked pixels (e.g. a rectangle with a edge-size of
-              `pick_distance * estimated radius`).
-            - If a string is provided, it will be directly assigned as pick-radius
-              (without multiplying by the estimated radius). This is useful for datasets
-              whose radius cannot be determined (e.g. singular points etc.)
-
-              The provided number is identified as radius in the plot-crs!
-
-              The string must be convertible to a number, e.g. `float("40.5")`
-
-            The default is 100.
-        layer : int, str or None
-            The layer at which the dataset will be plotted.
-            ONLY relevant if `dynamic = False`!
-
-            - If "all": the corresponding feature will be added to ALL layers
-            - If None, the layer assigned to the Maps object is used (e.g. `m.layer`)
-
-            The default is None.
-        dynamic : bool
-            If True, the collection will be dynamically updated.
-        set_extent : bool
-            Set the plot-extent to the data-extent.
-
-            - if True: The plot-extent will be set to the extent of the data-coordinates
-            - if False: The plot-extent is kept as-is
-
-            The default is True
-        memmap : bool, str or pathlib.Path
-            Use memory-mapping to save some memory by storing intermediate datasets
-            (e.g. projected coordinates, indexes & the data) in a temporary folder on
-            disc rather than keeping everything in memory.
-            This causes a slight performance penalty when identifying clicked points but
-            it can provide a reduction in memory-usage for very large datasets
-            (or for a very large number of interactive layers).
-
-            - If None: memory-mapping is only used if "shade_raster" or "shade_points"
-              is used as plot-shape.
-            - if False: memory-mapping is disabled
-            - if True: memory-mapping is used with an automatically located tempfolder
-            - if str or pathlib.Path: memory-mapping is used and the provided folder
-              is used as location for the temporary files (stored in a temp-subfolder).
-
-            NOTE: The tempfolder and all files will be deleted if the figure is closed,
-            the Maps-object is deleted or the kernel is interrupted!
-
-            The location of the tempfolder is accessible via `m._tempfolder`
-
-            The default is False.
-        assume_sorted : bool, optional
-            ONLY relevant for the shapes "raster" and "shade_raster"
-            (and only if coordinates are provided as 1D arrays and data is a 2D array)
-
-            Sort values with respect to the coordinates prior to plotting
-            (required for QuadMesh if unsorted coordinates are provided)
-
-            The default is True.
-
-
-        Other Parameters:
-        -----------------
-        vmin, vmax : float, optional
-            Min- and max. values assigned to the colorbar. The default is None.
-        zorder : float
-            The zorder of the artist (e.g. the stacking level of overlapping artists)
-            The default is 1
-        kwargs
-            kwargs passed to the initialization of the matpltolib collection
-            (dependent on the plot-shape) [linewidth, edgecolor, facecolor, ...]
-
-            For "shade_points" or "shade_raster" shapes, kwargs are passed to
-            `datashader.mpl_ext.dsshow`
-        """
-
-        if layer is None:
-            layer = self.layer
-
-        useshape = self.shape  # invoke the setter to set the default shape
-
-        # make sure the colormap is properly set and transparencys are assigned
-        cmap = kwargs.setdefault("cmap", "viridis")
-        if "alpha" in kwargs and kwargs["alpha"] < 1:
-            # get a unique name for the colormap
-            ncmaps = len(
-                [None for i in plt.colormaps() if i.startswith("EOmaps_alpha_")]
-            )
-            cmapname = f"EOmaps_alpha_{ncmaps}"
-
-            kwargs["cmap"] = cmap_alpha(
-                cmap=cmap,
-                alpha=kwargs["alpha"],
-                name=cmapname,
-            )
-
-            plt.register_cmap(name=cmapname, cmap=kwargs["cmap"])
-            if self._companion_widget is not None:
-                self._companion_widget.cmapsChanged.emit()
-            # remember registered colormaps (to de-register on close)
-            self._registered_cmaps.append(cmapname)
-
-        # make sure zorder is set to 1 by default
-        # (by default shading would use 0 while ordinary collections use 1)
-        kwargs.setdefault("zorder", 1)
-
-        if useshape.name.startswith("shade"):
-            self._shade_map(
-                pick_distance=pick_distance,
-                layer=layer,
-                dynamic=dynamic,
-                set_extent=set_extent,
-                assume_sorted=assume_sorted,
-                **kwargs,
-            )
-        else:
-            self._plot_map(
-                pick_distance=pick_distance,
-                layer=layer,
-                dynamic=dynamic,
-                set_extent=set_extent,
-                assume_sorted=assume_sorted,
-                **kwargs,
-            )
-
-        # after plotting, use memory-mapping to store datasets required by
-        # callbacks etc. so that we don't need to keep them in memory.
-        if memmap:
-            self._memmap_props(dir=memmap)
-
-        if hasattr(self, "_data_mask") and not np.all(self._data_mask):
-            print("EOmaps: Warning: some datapoints could not be drawn!")
-
-        x0, y0, x1, y1 = self.crs_plot.boundary.bounds
-
-        if (
-            np.any(self._props["x0"] < x0)
-            or np.any(self._props["x0"] > x1)
-            or np.any(self._props["y0"] < y0)
-            or np.any(self._props["y0"] > y1)
-        ):
-            print("EOmaps: Warning: some points are outside the CRS bounds!")
-
-    def _remove_colorbar(self):
-        if hasattr(self, "_ax_cb"):
-            self._ax_cb.cla()
-            self._ax_cb.remove()
-            del self._ax_cb
-        if hasattr(self, "_ax_cb_plot"):
-            self._ax_cb_plot.cla()
-            self._ax_cb_plot.remove()
-            del self._ax_cb_plot
-        # if hasattr(self, "_cb_gridspec"):
-        #     del self._cb_gridspec
-
-        del self._colorbar
-
-        self.redraw()
-
-    def _redraw_colorbar(self):
-        # redraw for interactively updated colorbars
-
-        if hasattr(self.figure, "coll") and self.figure.coll:
-            if not hasattr(self, "_ds_data"):
-                self._ds_data = self.figure.coll.get_ds_data()
-        else:
-            return
-
-        # TODO requires numpy > 1.10.0
-        if np.allclose(self._ds_data, self.figure.coll.get_ds_data(), equal_nan=True):
-            return
-        else:
-            self._ds_data = self.figure.coll.get_ds_data()
-
-        # redraw a dynamic_shade_indicator colorbar
-        if hasattr(self, "_colorbar") and hasattr(self, "_cb_kwargs"):
-            if self._cb_kwargs["dynamic_shade_indicator"] is True:
-                patchcolors = dict()
-                # remove the axes but NOT the gridspec definition (self._cb_gridspec)
-                # (It will be used to initialize new axes!)
-                if hasattr(self, "_ax_cb"):
-                    patchcolors["_ax_cb"] = self._ax_cb.patch.get_facecolor()
-                    self._ax_cb.remove()
-                    del self._ax_cb
-                if hasattr(self, "_ax_cb_plot"):
-                    patchcolors["_ax_cb_plot"] = self._ax_cb_plot.patch.get_facecolor()
-                    self._ax_cb_plot.remove()
-                    del self._ax_cb_plot
-
-                del self._colorbar
-                try:
-                    self.BM._draw_animated(artists=[self.figure.coll])
-                except Exception:
-                    pass
-                self.add_colorbar(**self._cb_kwargs)
-
-                for key, val in patchcolors.items():
-                    getattr(self, key).patch.set_facecolor(val)
-
     def _decode_values(self, val):
         """
         Decode data-values with respect to the provided "scale_factor" and "add_offset"
@@ -4817,14 +3841,6 @@ class Maps(object):
                 return val
         else:
             return val
-
-    def _default_cb_tick_formatter(self, x, pos, precision=None):
-        """
-        A formatter to format the tick-labels of the colorbar for encoded datasets.
-        (used in xaxis.set_major_formatter() )
-        """
-        # if precision=None the shortest representation of the number is used
-        return np.format_float_positional(self._decode_values(x), precision)
 
     def indicate_masked_points(self, radius=1.0, **kwargs):
         """
@@ -5001,9 +4017,6 @@ class Maps(object):
         # after changing margins etc. a redraw is required
         # to fetch the updated background!
 
-        # make sure the position of the axis holding the colorbar-extension-arrows
-        # is properly updated
-        self._update_cb_extend_pos()
         self.redraw()
 
     def _get_layers(self, exclude=None):
@@ -5077,7 +4090,7 @@ class Maps(object):
         self.show_layer(active_layer)
         self.BM.update()
 
-    def get_layout(self, filepath=None, override=False):
+    def get_layout(self, filepath=None, override=False, precision=5):
         """
         Get the positions of all axes within the current plot.
 
@@ -5104,16 +4117,48 @@ class Maps(object):
             You can also manually read-in the layout-dict via:
             >>> import json
             >>> layout = json.load(<FILEPATH>)
-
+        override: bool
+            Indicator if the file specified as 'filepath' should be overwritten if it
+            already exists.
+            The default is False.
+        precision : int or None
+            The precision of the returned floating-point numbers.
+            If None, all available digits are returned
+            The default is 5
         Returns
         -------
         layout : dict or None
             A dict of the positons of all axes, e.g.: {1:(x0, y0, width height), ...}
         """
+        axes = [
+            a
+            for a in self.figure.f.axes
+            if a.get_label() not in ["EOmaps_cb", "EOmaps_cb_hist"]
+        ]
+
+        # identify relevant colorbars
+        colorbars = [
+            getattr(m, "colorbar", None) for m in (self.parent, *self.parent._children)
+        ]
+        cbaxes = [getattr(cb, "ax", None) for cb in colorbars]
+        cbs = [(colorbars[cbaxes.index(a)] if a in cbaxes else None) for a in axes]
+        # -----------
 
         layout = dict()
-        for i, ax in enumerate(self.figure.f.axes):
-            layout[str(i)] = ax.get_position().bounds
+        for i, ax in enumerate(axes):
+            if cbs[i] is not None:
+                if cbs[i].ax.get_axes_locator() is not None:
+                    continue
+
+            label = ax.get_label()
+            name = f"{i}_{label}"
+            if precision is not None:
+                layout[name] = np.round(ax.get_position().bounds, precision).tolist()
+            else:
+                layout[name] = ax.get_position().bounds
+
+            if cbs[i] is not None:
+                layout[f"{name}_histogram_size"] = cbs[i].hist_size
 
         if filepath is not None:
             filepath = Path(filepath)
@@ -5140,7 +4185,6 @@ class Maps(object):
             >>> m.get_layout(filepath=<FILEPATH>)
             >>> m.set_layout(<FILEPATH>)
 
-
         Note
         ----
         The returned list is only a snapshot of the current layout.
@@ -5160,15 +4204,37 @@ class Maps(object):
             with open(layout, "r") as file:
                 layout = json.load(file)
 
-        nl = len(layout)
-        na = len(self.figure.f.axes)
-        assert nl == na, (
-            f"EOmaps: Layout specifies dimensions for {nl} axes but there are {na} "
-            + "axes present in the figure!"
-        )
+        axes = [
+            a
+            for a in self.figure.f.axes
+            if a.get_label() not in ["EOmaps_cb", "EOmaps_cb_hist"]
+        ]
 
-        for i, ax in enumerate(self.figure.f.axes):
-            ax.set_position(layout[str(i)])
+        # identify relevant colorbars
+        colorbars = [
+            getattr(m, "colorbar", None) for m in (self.parent, *self.parent._children)
+        ]
+        cbaxes = [getattr(cb, "ax", None) for cb in colorbars]
+        cbs = [(colorbars[cbaxes.index(a)] if a in cbaxes else None) for a in axes]
+
+        # check if all relevant axes are specified in the layout
+        valid_keys = set(self.get_layout())
+        if valid_keys != set(layout):
+            warnings.warn(
+                "EOmaps: The the layout does not match the expected structure! "
+                "Layout might not be properly restored. "
+                "Invalid or missing keys:\n"
+                f"{sorted(valid_keys.symmetric_difference(set(layout)))}\n"
+            )
+
+        for key in valid_keys.intersection(set(layout)):
+            val = layout[key]
+
+            i = int(key[: key.find("_")])
+            if key.endswith("_histogram_size"):
+                cbs[i].set_hist_size(val)
+            else:
+                axes[i].set_position(val)
 
         self.redraw()
 

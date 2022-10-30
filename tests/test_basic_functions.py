@@ -452,8 +452,6 @@ class TestBasicPlotting(unittest.TestCase):
         cb1 = m.add_colorbar(
             gs[1, 0],
             orientation="horizontal",
-            add_extend_arrows="left",
-            extend_frac=0.4,
         )
         cb2 = m.add_colorbar(gs[0, 1], orientation="vertical")
 
@@ -466,11 +464,6 @@ class TestBasicPlotting(unittest.TestCase):
             add_extend_arrows="both",
             extend_frac=0.4,
         )
-        m.figure.set_colorbar_position(cb=cb1, ratio=10)
-        m.figure.set_colorbar_position(cb=cb2, ratio=20)
-        m.figure.set_colorbar_position((0.625, 0.25, 0.2, 0.1), cb=cb3)
-
-        m.figure.set_colorbar_position((0.625, 0.25, 0.2, 0.1))
 
     def test_MapsGrid(self):
         mg = MapsGrid(2, 2, crs=4326)

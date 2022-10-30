@@ -168,6 +168,7 @@ class MapsGrid:
                             figsize=figsize,
                             layer=layer,
                         )
+                        mij.ax.set_label("mg_map_0_0")
                         self.parent = mij
                     else:
                         mij = Maps(
@@ -176,7 +177,7 @@ class MapsGrid:
                             gs_ax=self.gridspec[i, j],
                             layer=layer,
                         )
-
+                        mij.ax.set_label(f"mg_map_{i}_{j}")
                     self._Maps.append(mij)
                     name = f"{i}_{j}"
                     self._names["Maps"].append(name)
@@ -208,6 +209,7 @@ class MapsGrid:
                             figsize=figsize,
                             layer=layer,
                         )
+                        mi.ax.set_label(f"mg_map_{key}")
                         self.parent = mi
                     else:
                         mi = Maps(
@@ -216,6 +218,7 @@ class MapsGrid:
                             gs_ax=self.gridspec[val],
                             layer=layer,
                         )
+                        mi.ax.set_label(f"mg_map_{key}")
 
                     name = str(key)
                     self._names["Maps"].append(name)
@@ -336,7 +339,7 @@ class MapsGrid:
                 name.isidentifier()
             ), f"the provided name {name} is not a valid identifier"
 
-        ax = self.f.add_subplot(self.gridspec[ax_init])
+        ax = self.f.add_subplot(self.gridspec[ax_init], label=f"mg_ax_{name}")
 
         self._names["Axes"].append(name)
         setattr(self, f"ax_{name}", ax)

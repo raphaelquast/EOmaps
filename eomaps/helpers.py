@@ -194,9 +194,9 @@ class LayoutEditor:
         self.m = m
         self.f = self.m.parent.figure.f
 
-        self._ax_picked = None
-        self._m_picked = None
-        self._cb_picked = False
+        self._ax_picked = []
+        self._m_picked = []
+        self._cb_picked = []
 
         self._modifier_pressed = False
 
@@ -207,11 +207,7 @@ class LayoutEditor:
 
         self.f.canvas.mpl_connect("key_press_event", self.cb_key_press)
 
-        self._annotations = []
-        self._hiddenax = []
-
         self._artists_visible = dict()
-
         self._ax_visible = dict()
 
         # the snap-to-grid interval (0 means no snapping)
@@ -222,39 +218,10 @@ class LayoutEditor:
         self._filepath = None
 
         # indicator if scaling should be in horizontal or vertical direction
-        self._scale_direction = "vertical"
+        self._scale_direction = "both"
 
-        # indicator if colorbar-ratio should be scaled or not
-        self._scale_cb_ratio = False
-
-    def clear_annotations(self):
-        while len(self._annotations) > 0:
-            a = self._annotations.pop(-1)
-            a.remove()
-
-        self._hiddenax = []
-
-    def set_annotations(self):
-        self.clear_annotations()
-
-        for cb in self.cbs:
-            for ax in cb:
-                if ax is None:
-                    continue
-                if not ax.get_visible():
-                    x = ax.bbox.x0 + ax.bbox.width / 2
-                    y = ax.bbox.y0 + ax.bbox.height / 2
-
-                    a = self.m.figure.ax.annotate(
-                        r"$\bullet$",
-                        xy=(x, y),
-                        xycoords="figure pixels",
-                        annotation_clip=False,
-                        color="r",
-                        fontsize=18,
-                    )
-                    self._annotations.append(a)
-                    self._hiddenax.append(ax)
+        # indicator if multiple-axis select key is pressed or not (e.g. "shift")
+        self._shift_pressed = False
 
     @property
     def ms(self):
@@ -265,11 +232,21 @@ class LayoutEditor:
         return [m.figure.ax for m in self.ms]
 
     @property
+    def cbaxes(self):
+        axes = []
+        for m in self.ms:
+            if m.colorbar is not None:
+                axes.append(m.colorbar.ax)
+        return axes
+
+    @property
     def axes(self):
-        # get all axes (and child-axes)
-        # return [i.figure.ax for i in self.ms if i.figure.ax is not None]
-        cbaxes = [i for cb in self.cbs for i in cb]
-        return [i for i in self.all_axes if i not in cbaxes]
+        # TODO
+        return self.all_axes
+        # # get all axes (and child-axes)
+        # # return [i.figure.ax for i in self.ms if i.figure.ax is not None]
+        # cbaxes = [i for cb in self.cbs for i in cb]
+        # return [i for i in self.all_axes if i not in cbaxes]
 
     @property
     def all_axes(self):
@@ -284,208 +261,172 @@ class LayoutEditor:
 
     @property
     def cbs(self):
-        # get all axes (and child-axes)
+        # get all colorbars
         cbs = list()
-        for i in self.ms:
-            cbis = list()
-            if hasattr(i.figure, "ax_cb"):
-                cbis.append(i.figure.ax_cb)
-            if hasattr(i.figure, "ax_cb_plot"):
-                cbis.append(i.figure.ax_cb_plot)
-
-            if len(cbis) > 0:
-                cbs.append(cbis)
-            else:
-                cbs.append((None, None))
+        for m in self.ms:
+            cb = m.colorbar
+            if cb is not None:
+                cbs.append(cb)
         return cbs
 
-    def cb_move_with_key(self, event):
-        if not self._modifier_pressed:
-            return
-        if (self.f.canvas.toolbar is not None) and self.f.canvas.toolbar.mode != "":
-            return False
-        if self._ax_picked is None:
-            return
+    @staticmethod
+    def roundto(x, base=10):
+        if base == 0:
+            return x
+        if x % base <= base / 2:
+            return x - x % base
+        else:
+            return x + (base - x % base)
 
-        key = event.key
-
-        if key not in ["left", "right", "up", "down"]:
-            return
-
+    def _get_move_with_key_bbox(self, ax, key):
         snapx, snapy = self._snap
         intervalx, intervaly = (
             max(0.25, snapx),
             max(0.25, snapy),
         )
 
-        b = [0, 0, 0, 0]
-        for ax in self._ax_picked:
-            if key == "left":
-                bbox = Bbox.from_bounds(
-                    self.roundto(ax.bbox.x0 - intervalx, snapx),
-                    ax.bbox.y0,
-                    ax.bbox.width,
-                    ax.bbox.height,
-                )
-            elif key == "right":
-                bbox = Bbox.from_bounds(
-                    self.roundto(ax.bbox.x0 + intervalx, snapx),
-                    ax.bbox.y0,
-                    ax.bbox.width,
-                    ax.bbox.height,
-                )
-            elif key == "up":
-                bbox = Bbox.from_bounds(
-                    ax.bbox.x0,
-                    self.roundto(ax.bbox.y0 + intervaly, snapy),
-                    ax.bbox.width,
-                    ax.bbox.height,
-                )
-            elif key == "down":
-                bbox = Bbox.from_bounds(
-                    ax.bbox.x0,
-                    self.roundto(ax.bbox.y0 - intervaly, snapy),
-                    ax.bbox.width,
-                    ax.bbox.height,
-                )
-
-            bbox = bbox.transformed(self.f.transFigure.inverted())
-
-            # ax.set_position(bbox)
-            if not self._cb_picked:
-                ax.set_position(bbox)
-            else:
-                orientation = self._m_picked._colorbar[-2]
-                if orientation == "horizontal":
-                    b = [
-                        bbox.x0,
-                        min(b[1], bbox.y0) if b[1] > 0 else bbox.y0,
-                        bbox.width,
-                        b[3] + bbox.height,
-                    ]
-
-                elif orientation == "vertical":
-                    b = [
-                        min(b[0], bbox.x0) if b[0] > 0 else bbox.x0,
-                        bbox.y0,
-                        b[2] + bbox.width,
-                        bbox.height,
-                    ]
-
-        if (
-            self._cb_picked
-            and (self._m_picked is not None)
-            and (self._ax_picked is not None)
-            and not all((i == 0 for i in b))
-        ):
-            self._m_picked.figure.set_colorbar_position(b)
-
-        self.set_annotations()
-        self._color_axes()
-        self.m.BM._refetch_bg = True
-        self.m.BM.canvas.draw()
-
-    def cb_move(self, event):
-        if (self.f.canvas.toolbar is not None) and self.f.canvas.toolbar.mode != "":
-            return False
-        if self.modifier is not None:
-            if not self._modifier_pressed:
-                return False
-        if self._ax_picked is None:
-            return
-
-        if event.button != 1:
-            return
-
-        b = [0, 0, 0, 0]
-        for ax in self._ax_picked:
-            if ax is None:
-                return
-            if not event.button:
-                return
-
-            w, h = ax.bbox.width, ax.bbox.height
-            x0, y0 = (
-                self._start_ax_position[ax][0] + (event.x - self._start_position[0]),
-                self._start_ax_position[ax][1] + (event.y - self._start_position[1]),
+        if key == "left":
+            bbox = Bbox.from_bounds(
+                self.roundto(ax.bbox.x0 - intervalx, snapx),
+                ax.bbox.y0,
+                ax.bbox.width,
+                ax.bbox.height,
+            )
+        elif key == "right":
+            bbox = Bbox.from_bounds(
+                self.roundto(ax.bbox.x0 + intervalx, snapx),
+                ax.bbox.y0,
+                ax.bbox.width,
+                ax.bbox.height,
+            )
+        elif key == "up":
+            bbox = Bbox.from_bounds(
+                ax.bbox.x0,
+                self.roundto(ax.bbox.y0 + intervaly, snapy),
+                ax.bbox.width,
+                ax.bbox.height,
+            )
+        elif key == "down":
+            bbox = Bbox.from_bounds(
+                ax.bbox.x0,
+                self.roundto(ax.bbox.y0 - intervaly, snapy),
+                ax.bbox.width,
+                ax.bbox.height,
             )
 
-            # make sure that we don't move the axis outside the figure
-            # avoid this since cartopy axis can be bigger than the canvas!
-            # fbbox = self.f.bbox
-            # if x0 <= fbbox.x0:
-            #     x0 = fbbox.x0
-            # if x0 + w >= fbbox.x1:
-            #     x0 = fbbox.x1 - w
-            # if y0 <= fbbox.y0:
-            #     y0 = fbbox.y0
-            # if y0 + h >= fbbox.y1:
-            #     y0 = fbbox.y1 - h
+        bbox = bbox.transformed(self.f.transFigure.inverted())
+        return bbox
 
-            if self._snap_id > 0:
-                sx, sy = self._snap
-                x0 = self.roundto(x0, sx)
-                y0 = self.roundto(y0, sy)
+    def _get_move_bbox(self, ax, x, y):
+        w, h = ax.bbox.width, ax.bbox.height
+        x0, y0 = (
+            self._start_ax_position[ax][0] + (x - self._start_position[0]),
+            self._start_ax_position[ax][1] + (y - self._start_position[1]),
+        )
 
-            bbox = Bbox.from_bounds(x0, y0, w, h).transformed(
-                self.f.transFigure.inverted()
-            )
+        if self._snap_id > 0:
+            sx, sy = self._snap
+            x0 = self.roundto(x0, sx)
+            y0 = self.roundto(y0, sy)
 
-            if not self._cb_picked:
-                ax.set_position(bbox)
+        bbox = Bbox.from_bounds(x0, y0, w, h).transformed(self.f.transFigure.inverted())
+
+        return bbox
+
+    def _get_resize_bbox(self, ax, step):
+        origw, origh = ax.bbox.width, ax.bbox.height
+        x0, y0 = ax.bbox.x0, ax.bbox.y0
+
+        sx, sy = self._snap
+
+        if self._scale_direction == "horizontal":
+            w = origw + max(0.25, sx) * step
+            w = self.roundto(w, sx)
+        elif self._scale_direction == "vertical":
+            h = origh + max(0.25, sy) * step
+            h = self.roundto(h, sy)
+        else:
+            w = origw + max(0.25, sx) * step
+            w = self.roundto(w, sx)
+
+            h = origh + max(0.25, sy) * step
+            h = self.roundto(h, sy)
+
+        if h <= 0 or w <= 0:
+            return
+
+        # x0 = self.roundto(x0, sx)
+        # y0 = self.roundto(y0, sy)
+
+        # keep the center-position of the scaled axis
+        x0 = x0 + (origw - w) / 2
+        y0 = y0 + (origh - h) / 2
+
+        bbox = Bbox.from_bounds(x0, y0, w, h).transformed(self.f.transFigure.inverted())
+
+        # if any(i < 0 for i in bbox.bounds):
+        #     return
+
+        return bbox
+
+    def _color_unpicked(self, ax):
+        for spine in ax.spines.values():
+            spine.set_edgecolor(".4")
+
+            if ax in self._ax_visible and self._ax_visible[ax]:
+                spine.set_linestyle("-")
+                spine.set_linewidth(1)
             else:
-                orientation = self._m_picked._colorbar[-2]
-                if orientation == "horizontal":
-                    b = [bbox.x0, bbox.y0, bbox.width, b[3] + bbox.height]
-                elif orientation == "vertical":
-                    b = [bbox.x0, bbox.y0, b[2] + bbox.width, bbox.height]
+                spine.set_linestyle(":")
+                spine.set_linewidth(1)
 
-        if (
-            self._cb_picked
-            and (self._m_picked is not None)
-            and (self._ax_picked is not None)
-        ):
-            self._m_picked.figure.set_colorbar_position(b)
+    def _color_picked(self, ax):
+        for spine in ax.spines.values():
+            spine.set_edgecolor("green")
 
-        self.set_annotations()
+            if ax in self._ax_visible and self._ax_visible[ax]:
+                spine.set_linestyle("-")
+                spine.set_linewidth(2)
+            else:
+                spine.set_linestyle(":")
+                spine.set_linewidth(1)
 
-        self.m.BM._refetch_bg = True
-        self.m.BM.canvas.draw()
+    def _color_not_editable(self, ax):
+        for spine in ax.spines.values():
+            spine.set_edgecolor("r")
+
+            if ax in self._ax_visible and self._ax_visible[ax]:
+                spine.set_linestyle(":")
+                spine.set_linewidth(2)
+            else:
+                spine.set_linestyle(":")
+                spine.set_linewidth(1)
 
     def _color_axes(self):
         for ax in self.all_axes:
-            for spine in ax.spines.values():
-                spine.set_edgecolor("red")
+            self._color_unpicked(ax)
 
-                if ax in self._ax_visible and self._ax_visible[ax]:
-                    spine.set_linestyle("-")
-                    spine.set_linewidth(2)
+        for cb in self.cbs:
+            for ax in (cb.ax_cb, cb.ax_cb_plot):
+                self._color_unpicked(ax)
+
+        for ax in self._ax_picked:
+            if ax is not None:
+                self._color_picked(ax)
+
+        for cb in self._cb_picked:
+            for ax in (cb.ax_cb, cb.ax_cb_plot):
+                if cb.ax.get_axes_locator() is not None:
+                    self._color_not_editable(ax)
                 else:
-                    spine.set_linestyle(":")
-                    spine.set_linewidth(1)
-
-        if self._ax_picked is not None:
-            for ax in self._ax_picked:
-                if ax is None:
-                    continue
-                for spine in ax.spines.values():
-                    spine.set_edgecolor("green")
-
-                if ax in self._ax_visible and self._ax_visible[ax]:
-                    spine.set_linestyle("-")
-                    spine.set_linewidth(2)
-                else:
-                    spine.set_linestyle(":")
-                    spine.set_linewidth(1)
+                    self._color_picked(ax)
 
     def _set_startpos(self, event):
         self._start_position = (event.x, event.y)
-        if self._ax_picked:
-            self._start_ax_position = {
-                i: (i.bbox.x0, i.bbox.y0) for i in self._ax_picked
-            }
-        else:
-            self._start_ax_position = {}
+        self._start_ax_position = {
+            i: (i.bbox.x0, i.bbox.y0)
+            for i in (*self._ax_picked, *(cb.ax for cb in self._cb_picked))
+        }
 
     def cb_release(self, event):
         self._set_startpos(event)
@@ -497,69 +438,123 @@ class LayoutEditor:
         if (self.f.canvas.toolbar is not None) and self.f.canvas.toolbar.mode != "":
             return False
 
-        self._show_snap_grid()
-
         eventax = event.inaxes
 
         if eventax not in self.all_axes:
             # if no axes is clicked "unpick" previously picked axes
-            prev_pick = self._ax_picked
-            if prev_pick is None:
-                # if there was no ax picked there's nothing to do...
+            if len(self._ax_picked) + len(self._cb_picked) == 0:
+                # if there was nothing picked there's nothing to do...
                 return
 
-            self._ax_picked = None
-            self._m_picked = None
-            self._cb_picked = False
+            self._ax_picked = []
+            self._cb_picked = []
+            self._m_picked = []
             self._color_axes()
             self.m.redraw()
             return
 
-        _m_picked = False
-        _cb_picked = False
-        _ax_picked = [eventax]
-
-        if eventax in self.axes:
-            _ax_picked = [eventax]
+        if self._shift_pressed:
             if eventax in self.maxes:
-                _m_picked = self.ms[self.maxes.index(eventax)]
+                m = self.ms[self.maxes.index(eventax)]
+                if eventax in self._ax_picked:
+                    self._ax_picked.remove(eventax)
+                else:
+                    self._ax_picked.append(eventax)
+
+                if m in self._m_picked:
+                    self._m_picked.remove(m)
+                else:
+                    self._m_picked.append(m)
+            elif eventax in self.cbaxes:
+                cb = self.cbs[self.cbaxes.index(eventax)]
+                if cb in self._cb_picked:
+                    self._cb_picked.remove(cb)
+                else:
+                    self._cb_picked.append(cb)
             else:
-                _m_picked = None
-            _cb_picked = False
+                if eventax in self._ax_picked:
+                    self._ax_picked.remove(eventax)
+                else:
+                    self._ax_picked.append(eventax)
         else:
-            # check if we picked a colorbar
-            for i, cbi in enumerate(self.cbs):
-                if eventax in cbi:
-                    if all(i is not None for i in cbi):
-                        _cb_picked = True
-                        _m_picked = self.ms[i]
-                        _ax_picked = cbi
-                    break
+            selected = eventax in self._ax_picked
+            if eventax in self.cbaxes:
+                selected = (
+                    selected or self.cbs[self.cbaxes.index(eventax)] in self._cb_picked
+                )
 
-        if self._m_picked is not None:
-            if self._m_picked is _m_picked and self._cb_picked == _cb_picked:
-                self._set_startpos(event)
-                return
+            if not selected:
+                self._m_picked = []
+                self._cb_picked = []
+                self._ax_picked = []
 
-        self._ax_picked = _ax_picked
-        self._m_picked = _m_picked
-        self._cb_picked = _cb_picked
+                if eventax in self.axes:
+                    if eventax in self.maxes:
+                        self._ax_picked.append(eventax)
+                        self._m_picked.append(self.ms[self.maxes.index(eventax)])
+                    elif eventax in self.cbaxes:
+                        self._cb_picked.append(self.cbs[self.cbaxes.index(eventax)])
+                    else:
+                        self._m_picked = []
+                        self._cb_picked = []
+                        self._ax_picked.append(eventax)
+
+                    self._show_snap_grid()
+
+            else:
+                self._show_snap_grid()
 
         self._color_axes()
-
-        self.set_annotations()
         self._set_startpos(event)
-
         self.m.redraw()
 
-    @staticmethod
-    def roundto(x, base=10):
-        if base == 0:
-            return x
-        if x % base <= base / 2:
-            return x - x % base
-        else:
-            return x + (base - x % base)
+    def cb_move_with_key(self, event):
+        if not self._modifier_pressed:
+            return
+        if (self.f.canvas.toolbar is not None) and self.f.canvas.toolbar.mode != "":
+            return False
+
+        if event.key not in ["left", "right", "up", "down"]:
+            return
+
+        for ax in self._ax_picked:
+            bbox = self._get_move_with_key_bbox(ax, event.key)
+            ax.set_position(bbox)
+
+        for cb in self._cb_picked:
+            bbox = self._get_move_with_key_bbox(cb.ax, event.key)
+            cb.set_position(bbox)
+
+        self._color_axes()
+        self.m.BM._refetch_bg = True
+        self.m.BM.canvas.draw()
+
+    def cb_move(self, event):
+        if (self.f.canvas.toolbar is not None) and self.f.canvas.toolbar.mode != "":
+            return False
+        if self.modifier is not None:
+            if not self._modifier_pressed:
+                return False
+
+        if event.button != 1:
+            return
+
+        for ax in self._ax_picked:
+            if ax is None:
+                return
+
+            bbox = self._get_move_bbox(ax, event.x, event.y)
+            ax.set_position(bbox)
+
+        for cb in self._cb_picked:
+            if cb is None:
+                return
+
+            bbox = self._get_move_bbox(cb.ax, event.x, event.y)
+            cb.set_position(bbox)
+
+        self.m.BM._refetch_bg = True
+        self.m.BM.canvas.draw()
 
     def cb_scroll(self, event):
         if (self.f.canvas.toolbar is not None) and self.f.canvas.toolbar.mode != "":
@@ -568,109 +563,35 @@ class LayoutEditor:
             if not self._modifier_pressed:
                 return False
 
-        if self._ax_picked is None:
-            return
-
-        if self._cb_picked:
-            if self._scale_cb_ratio:
-                orientation = self._m_picked._colorbar[-2]
-                if orientation == "horizontal":
-                    ratio = (
-                        self._ax_picked[1].bbox.height / self._ax_picked[0].bbox.height
-                    )
-                    ratio += ratio * 0.1 * event.step
-                elif orientation == "vertical":
-                    ratio = (
-                        self._ax_picked[1].bbox.width / self._ax_picked[0].bbox.width
-                    )
-                    ratio += ratio * 0.1 * event.step
-
-                if ratio <= 0:
-                    return
-                if ratio >= 99:
-                    return
-
-                self._m_picked.figure.set_colorbar_position(ratio=ratio)
-                self._color_axes()
-                self.m.redraw()
-                return
-
-            # colorbar picked
-            b = [1e6, 1e6, 0, 0]
+        # ordinary axes picked
+        if self._scale_direction not in ["set_hist_size"]:
             for ax in self._ax_picked:
                 if ax is None:
-                    return
-                orientation = self._m_picked._colorbar[-2]
+                    continue
+                resize_bbox = self._get_resize_bbox(ax, event.step)
+                if resize_bbox is not None:
+                    ax.set_position(resize_bbox)
 
-                w, h = ax.bbox.width, ax.bbox.height
-                x0, y0 = ax.bbox.x0, ax.bbox.y0
+        for cb in self._cb_picked:
+            if cb is None:
+                continue
 
-                sx, sy = self._snap
-
-                x0 = self.roundto(x0, sx)
-                y0 = self.roundto(y0, sy)
-
-                if self._scale_direction == "vertical":
-                    w = w + max(0.25, sx) * event.step
-                    w = self.roundto(w, sx)
-                else:
-                    h = h + max(0.25, sy) * event.step
-                    h = self.roundto(h, sy)
-
-                bbox = Bbox.from_bounds(x0, y0, w, h).transformed(
-                    self.f.transFigure.inverted()
-                )
-
-                if orientation == "horizontal":
-                    b = [bbox.x0, min(b[1], bbox.y0), bbox.width, b[3] + bbox.height]
-                elif orientation == "vertical":
-                    b = [min(b[0], bbox.x0), bbox.y0, b[2] + bbox.width, bbox.height]
-
-            if (
-                any(i <= 0.01 for i in b)
-                or b[0] >= self.f.bbox.width
-                or b[1] >= self.f.bbox.height
-            ):
-                return
+            if self._scale_direction == "set_hist_size":
+                start_size = cb.hist_size
+                new_size = np.clip(start_size + event.step * 0.05, 0.0, 1.0)
+                cb.set_hist_size(new_size)
             else:
-                self._m_picked.figure.set_colorbar_position(b)
-                self._color_axes()
-                self.m.redraw()
-                return
-        else:
-            # ordinary axes picked
-            for ax in self._ax_picked:
-                if ax is None:
-                    return
+                resize_bbox = self._get_resize_bbox(cb.ax, event.step)
+                if resize_bbox is not None:
+                    cb.set_position(resize_bbox)
 
-                w, h = ax.bbox.width, ax.bbox.height
-                x0, y0 = ax.bbox.x0, ax.bbox.y0
-
-                sx, sy = self._snap
-                w = w + max(0.25, sx) * event.step
-                w = self.roundto(w, sx)
-
-                h = h + max(0.25, sy) * event.step
-                h = self.roundto(h, sy)
-                if h <= 0 or w <= 0:
-                    return
-
-                x0 = self.roundto(x0, sx)
-                y0 = self.roundto(y0, sy)
-
-                bbox = Bbox.from_bounds(x0, y0, w, h).transformed(
-                    self.f.transFigure.inverted()
-                )
-
-                if any(i < 0 for i in bbox.bounds):
-                    return
-
-                ax.set_position(bbox)
-
-            self._color_axes()
-            self.m.redraw()
+        self._color_axes()
+        self.m.redraw()
 
     def cb_key_press(self, event):
+        # release shift key on every keypress
+        self._shift_pressed = False
+
         if (self.f.canvas.toolbar is not None) and self.f.canvas.toolbar.mode != "":
             return False
 
@@ -687,10 +608,15 @@ class LayoutEditor:
                 # only continue if  modifier is pressed!
                 return
 
-        if event.key == "shift":
-            self._scale_direction = "horizontal"
         if event.key == "h":
-            self._scale_cb_ratio = True
+            self._scale_direction = "horizontal"
+        elif event.key == "v":
+            self._scale_direction = "vertical"
+        elif event.key == "control":
+            self._scale_direction = "set_hist_size"
+
+        elif event.key == "shift":
+            self._shift_pressed = True
 
         # assign snaps with keys 0-9
         if event.key in map(str, range(10)):
@@ -710,10 +636,11 @@ class LayoutEditor:
             self.cb_scroll(d)
 
     def cb_key_release(self, event):
-        if event.key == "shift":
-            self._scale_direction = "vertical"
-        if event.key == "h":
-            self._scale_cb_ratio = False
+        # reset scale direction on every key release event
+        if event.key in ["h", "v", "control"]:
+            self._scale_direction = "both"
+        if event.key in ["shift"]:
+            self._shift_pressed = False
 
     @property
     def _snap(self):
@@ -728,6 +655,11 @@ class LayoutEditor:
         return snap
 
     def _undo_draggable(self):
+        # clear all picks on exit
+        self._ax_picked = []
+        self._cb_picked = []
+        self._m_picked = []
+
         print("EOmaps: Exiting layout-editor mode...")
         if self._filepath:
             try:
@@ -765,8 +697,6 @@ class LayoutEditor:
                 cid = self.cids.pop(-1)
                 self.f.canvas.mpl_disconnect(cid)
 
-        self.clear_annotations()
-
         for a, visQ in self._artists_visible.items():
             a.set_visible(visQ)
         self._artists_visible.clear()
@@ -783,6 +713,11 @@ class LayoutEditor:
             else:
                 if ax in self.m.BM._hidden_axes:
                     self.m.BM._hidden_axes.remove(ax)
+
+        for cb in self.cbs:
+            if cb is not None:
+                for p in cb.ax_cb_plot.patches:
+                    p.set_visible(True)
 
         self._ax_visible.clear()
 
@@ -821,6 +756,11 @@ class LayoutEditor:
             if not isinstance(a, plt.Axes):
                 self._artists_visible[a] = a.get_visible()
                 a.set_visible(False)
+
+        for cb in self.cbs:
+            if cb is not None:
+                for p in cb.ax_cb_plot.patches:
+                    p.set_visible(False)
 
         # remember which spines were visible before
         self._spines_visible = self.get_spines_visible()
@@ -890,7 +830,6 @@ class LayoutEditor:
                 self.f.canvas.mpl_connect("key_release_event", self.cb_key_release)
             )
 
-        self.set_annotations()
         self.m.redraw()
 
     def _show_snap_grid(self, snap=None):
@@ -1032,27 +971,11 @@ class BlitManager:
 
         # hide all colorbars that are not no the visible layer
         for m in [self._m.parent, *self._m.parent._children]:
-            if getattr(m, "_colorbar", None) is not None:
-                [
-                    layer,
-                    cbgs,
-                    ax_cb,
-                    ax_cb_plot,
-                    ax_cb_extend,
-                    extend_frac,
-                    orientation,
-                    cb,
-                ] = m._colorbar
-                if layer not in layer_names:
-                    ax_cb.set_visible(False)
-                    ax_cb_plot.set_visible(False)
-                    if ax_cb_extend:
-                        ax_cb_extend.set_visible(False)
+            if m.colorbar is not None:
+                if m.layer not in layer_names:
+                    m.colorbar.set_visible(False)
                 else:
-                    ax_cb.set_visible(True)
-                    ax_cb_plot.set_visible(True)
-                    if ax_cb_extend:
-                        ax_cb_extend.set_visible(True)
+                    m.colorbar.set_visible(True)
 
         # hide all wms_legends that are not on the visible layer
         if hasattr(self._m.parent, "_wms_legend"):
@@ -1070,6 +993,8 @@ class BlitManager:
     def on_layer(self, func, layer=None, persistent=False, m=None):
         """
         Add callables that are executed whenever the visible layer changes.
+
+        NOTE: if m is None this function always falls back to the parent Maps-object!!
 
         Parameters
         ----------
@@ -1221,6 +1146,12 @@ class BlitManager:
             for art in allartists:
                 if art not in self._hidden_axes:
                     art.set_visible(True)
+
+                    # TODO this needs a proper re-work!
+                    # draw artists here to ensure correct order for multilayer
+                    # artists at the same zorder
+                    # (e.g. to draw multilayer artists based on the order of the layers)
+                    # self.figure.draw_artist(art)
 
             cv._force_full = True
             cv.draw()
