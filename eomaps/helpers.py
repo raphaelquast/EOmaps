@@ -241,22 +241,12 @@ class LayoutEditor:
 
     @property
     def axes(self):
-        # TODO
-        return self.all_axes
-        # # get all axes (and child-axes)
-        # # return [i.figure.ax for i in self.ms if i.figure.ax is not None]
-        # cbaxes = [i for cb in self.cbs for i in cb]
-        # return [i for i in self.all_axes if i not in cbaxes]
-
-    @property
-    def all_axes(self):
         return self.f.axes
-        # return self.axes + [ax for caxes in self.cbs for ax in caxes if ax is not None]
 
     def get_spines_visible(self):
         return [
             {key: val.get_visible() for key, val in ax.spines.items()}
-            for ax in self.all_axes
+            for ax in self.axes
         ]
 
     @property
@@ -403,7 +393,7 @@ class LayoutEditor:
                 spine.set_linewidth(1)
 
     def _color_axes(self):
-        for ax in self.all_axes:
+        for ax in self.axes:
             self._color_unpicked(ax)
 
         for cb in self.cbs:
@@ -440,7 +430,7 @@ class LayoutEditor:
 
         eventax = event.inaxes
 
-        if eventax not in self.all_axes:
+        if eventax not in self.axes:
             # if no axes is clicked "unpick" previously picked axes
             if len(self._ax_picked) + len(self._cb_picked) == 0:
                 # if there was nothing picked there's nothing to do...
@@ -671,7 +661,7 @@ class LayoutEditor:
                 )
 
         for ax, frameQ, spine_vis, patch_props, spine_props in zip(
-            self.all_axes,
+            self.axes,
             self._frameon,
             self._spines_visible,
             self._patchprops,
@@ -739,7 +729,7 @@ class LayoutEditor:
 
         # remember the visibility state of the axes
         # do this as the first thing since axes might be artists as well!
-        for ax in self.all_axes:
+        for ax in self.axes:
             self._ax_visible[ax] = ax.get_visible()
 
         # make all artists invisible (and remember their visibility state for later)
@@ -764,7 +754,7 @@ class LayoutEditor:
 
         # remember which spines were visible before
         self._spines_visible = self.get_spines_visible()
-        self._frameon = [i.get_frame_on() for i in self.all_axes]
+        self._frameon = [i.get_frame_on() for i in self.axes]
         self._patchprops = [
             (
                 i.patch.get_visible(),
@@ -773,7 +763,7 @@ class LayoutEditor:
                 i.patch.get_lw(),
                 i.patch.get_alpha(),
             )
-            for i in self.all_axes
+            for i in self.axes
         ]
 
         self._spineprops = [
@@ -787,13 +777,13 @@ class LayoutEditor:
                 )
                 for name, s in i.spines.items()
             }
-            for i in self.all_axes
+            for i in self.axes
         ]
 
         self._modifier_pressed = True
         self.m._ignore_cb_events = True
 
-        for ax in self.all_axes:
+        for ax in self.axes:
             ax.patch.set_visible(True)
             ax.patch.set_facecolor("w")
             ax.patch.set_alpha(0.75)
@@ -1017,7 +1007,6 @@ class BlitManager:
             Indicator if the function should be called only once (False) or if it
             should be called whenever a layer is activated.
             The default is False.
-
 
         """
         if m is None:
