@@ -108,6 +108,7 @@ class ToolBar(QtWidgets.QToolBar):
     @pyqtSlot()
     def close_button_callback(self):
         self.window().close()
+        self.m._indicate_companion_map(False)
 
     @pyqtSlot()
     def maximize_button_callback(self):

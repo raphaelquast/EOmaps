@@ -390,7 +390,7 @@ class Maps(object):
         if not hasattr(self.parent, "_wms_legend"):
             self.parent._wms_legend = dict()
 
-        if self.parent == self and self._cid_companion_key is None:
+        if self._cid_companion_key is None:
             # attach the Qt companion widget
             self._add_companion_cb(show_hide_key=self._companion_widget_key)
 
@@ -425,25 +425,69 @@ class Maps(object):
         else:
             return object.__getattribute__(self, key)
 
+    def _indicate_companion_map(self, visible):
+        from matplotlib.patches import PathPatch
+        from matplotlib.patches import Rectangle
+        from matplotlib.offsetbox import AnnotationBbox, AuxTransformBox
+
+        if hasattr(self, "_companion_map_indicator"):
+            self.BM.remove_artist(self._companion_map_indicator)
+            self._companion_map_indicator.remove()
+            del self._companion_map_indicator
+        if visible:
+
+            x, y, w, h = self.ax.get_position().bounds
+            r = Rectangle((x, y), w, h, fc="none", ec="r", lw=0)
+
+            offsetbox = AuxTransformBox(self.figure.f.transFigure)
+            offsetbox.add_artist(r)
+            self._companion_map_indicator = AnnotationBbox(
+                offsetbox,
+                (x + w / 2.0, y + h / 2.0),
+                boxcoords="data",
+                pad=0.25,
+                bboxprops=dict(facecolor="none", edgecolor="g", lw=1, ls="--"),
+            )
+
+            self.ax.add_artist(self._companion_map_indicator)
+            self.BM.add_artist(self._companion_map_indicator)
+
+        self.BM.update()
+
     def _add_companion_cb(self, show_hide_key="w"):
         # attach a callback to show/hide the window with the "w" key
         def cb(event):
             if event.key != show_hide_key:
                 return
+
+            if event.inaxes != self.ax:
+                return
+
+            # hide all other companion-widgets
+            for m in (self.parent, *self.parent._children):
+                if m is self:
+                    continue
+                if m._companion_widget is not None and m._companion_widget.isVisible():
+                    m._companion_widget.hide()
+                    m._indicate_companion_map(False)
+
             if self._companion_widget is None:
                 print("EOmaps: Initializing companion-widget...")
                 self._init_companion_widget()
 
-            if self._companion_widget is not None:
-                if self._companion_widget.isVisible():
-                    self._companion_widget.hide()
-                else:
-                    self._companion_widget.show()
-                    # Do NOT activate the companion widget in here!!
-                    # Activating the window during the callback steals focus and
-                    # as a consequence the key-released-event is never triggered
-                    # on the figure and "w" would remain activated permanently.
-                    # self._companion_widget.activateWindow()
+            if self._companion_widget.isVisible():
+                self._companion_widget.hide()
+                self._indicate_companion_map(False)
+            else:
+                self._companion_widget.show()
+                self._indicate_companion_map(True)
+
+                # Do NOT activate the companion widget in here!!
+                # Activating the window during the callback steals focus and
+                # as a consequence the key-released-event is never triggered
+                # on the figure and "w" would remain activated permanently.
+                self.figure.f.canvas.key_release_event("w")
+                self._companion_widget.activateWindow()
 
         self._cid_companion_key = self.figure.f.canvas.mpl_connect(
             "key_press_event", cb
@@ -3087,6 +3131,8 @@ class Maps(object):
 
     @wraps(plt.savefig)
     def savefig(self, *args, **kwargs):
+        # hide companion-widget indicator
+        self._indicate_companion_map(False)
         # clear all cached background layers before saving to make sure they
         # are re-drawn with the correct dpi-settings
         self.BM._bg_layers = dict()
@@ -4389,6 +4435,9 @@ class Maps(object):
         """
         from PIL import Image
         from IPython.display import display
+
+        # hide companion-widget indicator
+        self._indicate_companion_map(False)
 
         sn = self._get_snapshot()
 
