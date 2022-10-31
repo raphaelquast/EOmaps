@@ -100,7 +100,6 @@ import matplotlib.path as mpath
 import matplotlib.patches as mpatches
 from matplotlib.collections import PatchCollection
 
-
 from cartopy import crs as ccrs
 
 from .helpers import (
@@ -426,31 +425,39 @@ class Maps(object):
             return object.__getattribute__(self, key)
 
     def _indicate_companion_map(self, visible):
-        from matplotlib.patches import PathPatch
-        from matplotlib.patches import Rectangle
-        from matplotlib.offsetbox import AnnotationBbox, AuxTransformBox
-
         if hasattr(self, "_companion_map_indicator"):
             self.BM.remove_artist(self._companion_map_indicator)
             self._companion_map_indicator.remove()
             del self._companion_map_indicator
+
+        if self._companion_widget is None:
+            return
+
         if visible:
+            # from matplotlib.patches import Rectangle
+            # from matplotlib.offsetbox import AnnotationBbox, AuxTransformBox
+            # import matplotlib.patheffects as path_effects
 
-            x, y, w, h = self.ax.get_position().bounds
-            r = Rectangle((x, y), w, h, fc="none", ec="r", lw=0)
+            # x, y, w, h = self.ax.get_position().bounds
+            # r = Rectangle((x, y), w, h, fc="none", ec="r", lw=0)
 
-            offsetbox = AuxTransformBox(self.figure.f.transFigure)
-            offsetbox.add_artist(r)
-            self._companion_map_indicator = AnnotationBbox(
-                offsetbox,
-                (x + w / 2.0, y + h / 2.0),
-                boxcoords="data",
-                pad=0.25,
-                bboxprops=dict(facecolor="none", edgecolor="g", lw=1, ls="--"),
+            # offsetbox = AuxTransformBox(self.figure.f.transFigure)
+            # offsetbox.add_artist(r)
+            # self._companion_map_indicator = AnnotationBbox(
+            #     offsetbox,
+            #     (x + w / 2.0, y + h / 2.0),
+            #     boxcoords="data",
+            #     pad=0.25,
+            #     bboxprops=dict(facecolor="none", edgecolor="g", lw=3, ls="--"),
+            # )
+
+            path = self.ax.patch.get_path()
+            self._companion_map_indicator = mpatches.PathPatch(
+                path, fc="none", ec="g", lw=5, zorder=9999
             )
 
             self.ax.add_artist(self._companion_map_indicator)
-            self.BM.add_artist(self._companion_map_indicator)
+            self.BM.add_artist(self._companion_map_indicator, "all")
 
         self.BM.update()
 
