@@ -329,17 +329,19 @@ class LayoutEditor:
 
         sx, sy = self._snap
 
+        h, w = origh, origw
+
         if self._scale_direction == "horizontal":
-            w = origw + max(0.25, sx) * step
+            w += max(0.25, sx) * step
             w = self.roundto(w, sx)
         elif self._scale_direction == "vertical":
-            h = origh + max(0.25, sy) * step
+            h += max(0.25, sy) * step
             h = self.roundto(h, sy)
         else:
-            w = origw + max(0.25, sx) * step
+            w += max(0.25, sx) * step
             w = self.roundto(w, sx)
 
-            h = origh + max(0.25, sy) * step
+            h += max(0.25, sy) * step
             h = self.roundto(h, sy)
 
         if h <= 0 or w <= 0:
@@ -354,8 +356,8 @@ class LayoutEditor:
 
         bbox = Bbox.from_bounds(x0, y0, w, h).transformed(self.f.transFigure.inverted())
 
-        # if any(i < 0 for i in bbox.bounds):
-        #     return
+        if bbox.width <= 0 or bbox.height <= 0:
+            return
 
         return bbox
 
@@ -554,8 +556,10 @@ class LayoutEditor:
 
             if self._scale_direction == "set_hist_size":
                 start_size = cb.hist_size
-                new_size = np.clip(start_size + event.step * 0.05, 0.0, 1.0)
+
+                new_size = np.clip(start_size + event.step * 0.02, 0.0, 1.0)
                 cb.set_hist_size(new_size)
+                self._ax_visible[cb.ax_cb_plot] = cb.ax_cb_plot.get_visible()
             else:
                 resize_bbox = self._get_resize_bbox(cb.ax, event.step)
                 if resize_bbox is not None:
@@ -631,6 +635,18 @@ class LayoutEditor:
         return snap
 
     def _undo_draggable(self):
+
+        toolbar = getattr(self.m.figure.f, "toolbar", None)
+        if toolbar is not None:
+            # Reset the axes stack to make sure the "home" "back" and "forward" buttons
+            # of the toolbar do not reset axis positions
+            # see "matplotlib.backend_bases.NavigationToolbar2.update"
+            if hasattr(toolbar, "update"):
+                try:
+                    toolbar.update()
+                except Exception:
+                    print("EOmaps: Error while trying to reset the axes stack!")
+
         # clear all picks on exit
         self._ax_picked = []
         self._cb_picked = []
@@ -723,6 +739,7 @@ class LayoutEditor:
         #     for a in l:
         #         self._artists_visible[a] = a.get_visible()
         #         a.set_visible(False)
+
         dyn_artists = list(chain(*self.m.BM._artists.values()))
         for a in set(
             [*self.m.figure.f.artists, *chain(*self.m.BM._bg_artists.values())]
@@ -945,7 +962,7 @@ class BlitManager:
 
         layer_names = val.split("|")
 
-        # hide all colorbars that are not no the visible layer
+        # hide all colorbars that are not on the visible layer
         for m in [self._m.parent, *self._m.parent._children]:
             if m.colorbar is not None:
                 if m.layer not in layer_names:

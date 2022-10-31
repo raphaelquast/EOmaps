@@ -3068,7 +3068,8 @@ class Maps(object):
             **kwargs,
         )
 
-        self.colorbar.plot_colorbar()
+        self.colorbar._plot_histogram()
+        self.colorbar._plot_colorbar()
 
     @wraps(plt.savefig)
     def savefig(self, *args, **kwargs):
