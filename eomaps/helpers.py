@@ -961,11 +961,13 @@ class BlitManager:
 
         # hide all colorbars that are not on the visible layer
         for m in [self._m.parent, *self._m.parent._children]:
-            if m.colorbar is not None:
-                if m.layer not in layer_names:
-                    m.colorbar.set_visible(False)
-                else:
+            layer_visible = m.layer in layer_names
+
+            for cb in m._colorbars:
+                if layer_visible:
                     m.colorbar.set_visible(True)
+                else:
+                    m.colorbar.set_visible(False)
 
         # hide all wms_legends that are not on the visible layer
         if hasattr(self._m.parent, "_wms_legend"):
