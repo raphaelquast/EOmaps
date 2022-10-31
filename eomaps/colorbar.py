@@ -424,11 +424,19 @@ class ColorBar:
         # use it to set the position of the colorbar.
         if self._inherit_position:
             if self._parent_cb is not None:
-                self.ax = self.m.figure.f.add_subplot(
-                    self._parent_cb.ax.get_subplotspec(),
-                    label="cb",
-                    zorder=9999,
-                )
+
+                try:
+                    self.ax = self.m.figure.f.add_subplot(
+                        self._parent_cb.ax.get_subplotspec(),
+                        label="cb",
+                        zorder=9999,
+                    )
+                except AttributeError:
+                    self.ax = self.m.figure.f.add_axes(
+                        self._parent_cb.ax.get_position(),
+                        label="cb",
+                        zorder=9999,
+                    )
 
                 # inherit axis-position from the parent axis position
                 # (e.g. it can no longer be freely moved... its position is determined
@@ -924,8 +932,8 @@ class ColorBar:
                 self.m.BM.remove_artist(ax)
             else:
                 self.m.BM.remove_bg_artist(ax)
-
-        self.m._colorbars.pop(self, None)
+        if self in self.m._colorbars:
+            self.m._colorbars.pop(self.m._colorbars.index(self))
 
     def set_position(self, pos):
         """

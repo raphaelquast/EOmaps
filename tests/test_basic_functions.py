@@ -453,17 +453,70 @@ class TestBasicPlotting(unittest.TestCase):
             gs[1, 0],
             orientation="horizontal",
         )
+        self.assertTrue(len(m._colorbars) == 1)
+        self.assertTrue(m.colorbar is cb1)
+
         cb2 = m.add_colorbar(gs[0, 1], orientation="vertical")
+        self.assertTrue(len(m._colorbars) == 2)
+        self.assertTrue(m.colorbar is cb2)
 
         cb3 = m.add_colorbar(
             gs[1, 1],
             orientation="horizontal",
-            density=True,
+            hist_kwargs=dict(density=True),
             label="naseawas",
-            histbins=5,
-            add_extend_arrows="both",
+            hist_bins=5,
             extend_frac=0.4,
         )
+        self.assertTrue(len(m._colorbars) == 3)
+        self.assertTrue(m.colorbar is cb3)
+
+        cb4 = m.add_colorbar(
+            0.2,
+            orientation="horizontal",
+            hist_kwargs=dict(density=True),
+            log=True,
+            label="naseawas",
+            hist_bins=5,
+            extend_frac=0.4,
+        )
+        self.assertTrue(len(m._colorbars) == 4)
+        self.assertTrue(m.colorbar is cb4)
+
+        cb4.remove()
+        self.assertTrue(len(m._colorbars) == 3)
+
+        cb4 = m.add_colorbar(
+            (0.1, 0.1, 0.7, 0.2),
+            inherit_position=False,
+            orientation="horizontal",
+            hist_kwargs=dict(density=False),
+            label="naseawas",
+            mask_out_of_range_vals=True,
+            hist_bins=5,
+            extend_frac=0.4,
+            show_outline=dict(color="r", lw=4),
+        )
+        self.assertTrue(len(m._colorbars) == 4)
+        self.assertTrue(m.colorbar is cb4)
+
+        m2 = m.new_layer("asdf")
+        m2.set_data_specs(data=self.data, x="x", y="y", in_crs=3857)
+        m2.set_classify.Quantiles(k=4)
+        m2.plot_map()
+        cb5 = m2.add_colorbar()
+
+        m.redraw()
+
+        self.assertTrue(all(cb.ax.get_visible() for cb in m._colorbars))
+        self.assertFalse(m2.colorbar.ax.get_visible())
+        m.show_layer("asdf")
+        self.assertTrue(m2.colorbar.ax.get_visible())
+
+        self.assertTrue(len(m2._colorbars) == 1)
+        self.assertTrue(all(not cb.ax.get_visible() for cb in m._colorbars))
+
+        self.assertTrue(m2.colorbar is cb5)
 
     def test_MapsGrid(self):
         mg = MapsGrid(2, 2, crs=4326)

@@ -3078,6 +3078,7 @@ class Maps(object):
         colorbar._plot_colorbar()
 
         self._colorbars.append(colorbar)
+        return colorbar
 
     @wraps(plt.savefig)
     def savefig(self, *args, **kwargs):
