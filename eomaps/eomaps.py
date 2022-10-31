@@ -427,7 +427,9 @@ class Maps(object):
 
     def _add_companion_cb(self, show_hide_key="w"):
         # attach a callback to show/hide the window with the "w" key
-        def cb(*args, **kwargs):
+        def cb(event):
+            if event.key != show_hide_key:
+                return
             if self._companion_widget is None:
                 print("EOmaps: Initializing companion-widget...")
                 self._init_companion_widget()
@@ -443,7 +445,10 @@ class Maps(object):
                     # on the figure and "w" would remain activated permanently.
                     # self._companion_widget.activateWindow()
 
-        self._cid_companion_key = self.all.cb.keypress.attach(cb, key=show_hide_key)
+        self._cid_companion_key = self.figure.f.canvas.mpl_connect(
+            "key_press_event", cb
+        )
+        # self._cid_companion_key = self.all.cb.keypress.attach(cb, key=show_hide_key)
 
     def _init_companion_widget(self, show_hide_key="w"):
         """
