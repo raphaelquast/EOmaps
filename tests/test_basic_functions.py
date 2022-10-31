@@ -769,11 +769,13 @@ class TestBasicPlotting(unittest.TestCase):
             getattr(m.set_shape, i[0])(**i[1])
 
             m.plot_map(edgecolor="none", pick_distance=5)
-            m.cb.click.attach.annotate()
+            m.cb.click.attach.annotate(fontsize=6)
+            m.add_feature.preset.coastline(lw=0.5)
             m.add_colorbar()
-        mgrid.parent.cb.click.share_events(*mgrid.children)
 
-        m.figure.gridspec.update(left=0.05, top=0.95, bottom=0.05, right=0.95)
+        mgrid.share_click_events()
+
+        m.subplots_adjust(left=0.05, top=0.95, bottom=0.05, right=0.95)
         # %%
         plt.close(m.figure.f)
 
