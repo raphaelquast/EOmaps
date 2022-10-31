@@ -15,6 +15,7 @@ class AddFeaturesMenuButton(QtWidgets.QPushButton):
         super().__init__(*args, **kwargs)
 
         self.m = m
+        self._menu_fetched = False
 
         # the layer to which features are added
         self.layer = None
@@ -27,7 +28,6 @@ class AddFeaturesMenuButton(QtWidgets.QPushButton):
             zorder=0,
         )
 
-        feature_types = [i for i in dir(self.m.add_feature) if not i.startswith("_")]
         self.setText("Add Feature")
         # self.setMaximumWidth(200)
 
@@ -36,6 +36,16 @@ class AddFeaturesMenuButton(QtWidgets.QPushButton):
 
         self.feature_menu = QtWidgets.QMenu()
         self.feature_menu.setStyleSheet("QMenu { menu-scrollable: 1;}")
+        self.feature_menu.aboutToShow.connect(self.fetch_menu)
+
+        self.setMenu(self.feature_menu)
+        self.clicked.connect(self.show_menu)
+
+    def fetch_menu(self):
+        if self._menu_fetched:
+            return
+
+        feature_types = [i for i in dir(self.m.add_feature) if not i.startswith("_")]
 
         for featuretype in feature_types:
             try:
@@ -55,8 +65,7 @@ class AddFeaturesMenuButton(QtWidgets.QPushButton):
                 print("there was a problem with the NaturalEarth feature", featuretype)
                 continue
 
-        self.setMenu(self.feature_menu)
-        self.clicked.connect(self.show_menu)
+        self._menu_fetched = True
 
     def enterEvent(self, e):
         if self.window().showhelp is True:
@@ -807,7 +816,7 @@ class ArtistEditor(QtWidgets.QWidget):
         # make sure that we don't create an empty entry in the defaultdict!
         # TODO avoid using defaultdicts!!
         if layer in self.m.BM._bg_artists:
-            artists = self.m.BM._bg_artists[layer]
+            artists = [a for a in self.m.BM._bg_artists[layer] if a.axes is self.m.ax]
         else:
             artists = []
 
