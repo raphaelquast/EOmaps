@@ -1987,15 +1987,17 @@ You can use it to simply drag the axes the mouse to the desired locations and ch
     +-----------------------------------------------------------------------------------------+-----------------------------------------------+
     | press ``ALT + L``: enter the **Layout Editor** mode                                     | .. image:: _static/minigifs/layout_editor.gif |
     |                                                                                         |     :align: center                            |
-    | - press ``ALT + L`` again or `escape` to exit the **Layout Editor**                     |                                               |
+    | - press ``ALT + L`` again or ``escape`` to exit the **Layout Editor**                   |                                               |
     |                                                                                         |                                               |
-    | **Pick** and **re-arrange** the axes as you like with the mouse                         |                                               |
+    | **Pick** and **re-arrange** the axes as you like with the mouse.                        |                                               |
     |                                                                                         |                                               |
+    | - To pick **multiple axes**, hold down ``shift``!                                       |                                               |
     | - **Resize** picked axes with the **scroll-wheel** (or with the ``+`` and ``-`` keys)   |                                               |
-    | - For **"histogram-colorbars"**:                                                        |                                               |
     |                                                                                         |                                               |
-    |   - Hold down ``shift`` to change horizontal/vertical size                              |                                               |
-    |   - Hold down ``h`` to change ratio between colorbar and histogram                      |                                               |
+    | For **"colorbars"** there are some special options:                                     |                                               |
+    |                                                                                         |                                               |
+    | - Hold down ``h`` or ``v`` to change horizontal/vertical size                           |                                               |
+    | - Hold down ``control`` to change ratio between colorbar and histogram                  |                                               |
     |                                                                                         |                                               |
     | Press keys ``1-9`` to set the grid-spacing for the **"snap-to-grid"** functionality     |                                               |
     |                                                                                         |                                               |
