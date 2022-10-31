@@ -153,17 +153,25 @@ class MenuWindow(transparentWindow):
         sh = self.sizeHint()
         self.resize(int(sh.width() * 1.35), sh.height())
 
+    def show(self):
+        super().show()
         # make sure show/hide shortcut also works if the widget is active
+        # we need to re-assign this on show to make sure it is always assigned
+        # when the window is shown
         self.shortcut = QtWidgets.QShortcut(QKeySequence("w"), self)
+        self.shortcut.setContext(Qt.WindowShortcut)
         self.shortcut.activated.connect(self.toggle_show)
+        self.shortcut.activatedAmbiguously.connect(self.toggle_show)
 
     @pyqtSlot()
     def toggle_show(self):
         if self.isVisible():
             self.hide()
+            self.m._indicate_companion_map(False)
         else:
             self.show()
             self.activateWindow()
+            self.m._indicate_companion_map(True)
 
     @pyqtSlot()
     def clear_pixmap_cache(self):
