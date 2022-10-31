@@ -60,6 +60,7 @@ class ColorBar:
         self,
         m,
         pos=0.4,
+        inherit_position=None,
         margin=None,
         hist_size=0.8,
         hist_bins=256,
@@ -98,7 +99,23 @@ class ColorBar:
               Absolute position at which the colorbar should be placed in units.
               In this case, existing axes are NOT automatically re-positioned!
 
+            Note: By default, multiple colorbars on different layers share their
+            position! To force placement of a colorbar, use "inherit_position=False".
+
             The default is 0.4.
+        inherit_position : bool or None optional
+            Indicator if the colorbar should share its position with other colorbars
+            that represent datasets on the same plot-axis.
+
+            - If True, and there is already another colorbar for the given plot-axis,
+              the value of "pos" will be ignored and the new colorbar will share its
+              position with the parent-colorbar. (e.g. all colorbars for a given axis will
+              overlap and moving a colorbar in one layer will move all other relevant
+              colorbars accordingly).
+            - If None: If the colorbar is added on a different layer than the parent
+              colorbar, use "inherit_position=True", else use "inherit_position=False".
+
+            The default is None
         hist_size : float or None
             The fraction of the colorbar occupied by the histogram.
 
@@ -163,11 +180,39 @@ class ColorBar:
         kwargs :
             All additional kwargs are passed to the creation of the colorbar
             (e.g. `plt.colorbar()`)
+
+        Examples
+        --------
+
+        >>> x = y = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+        >>> data = [1, 2, 6, 6, 6, 8, 7, 3, 9, 10]
+        >>> m = Maps()
+        >>> m.set_data(data, x, y)
+        >>> m.plot_map()
+        >>> m.add_colorbar(label="some data")
+
+        >>> x = y = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+        >>> data = [1, 2, 6, 6, 6, 8, 7, 3, 9, 10]
+        >>> m = Maps()
+        >>> m.set_data(data, x, y)
+        >>> m.set_classify.Quantiles(k=6)
+        >>> m.plot_map()
+        >>> m.add_colorbar(hist_bins="bins", label="some data")
+
         """
         self.m = m
         self.pos = pos
         self.margin = margin
-        self._parent_cb = None
+
+        self._parent_cb = self._identify_parent_cb()
+
+        if inherit_position is None:
+            if not self.m.colorbar:
+                inherit_position = True
+            else:
+                inherit_position = False
+
+        self._inherit_position = inherit_position
 
         self.hist_size = hist_size
         self.hist_bins = hist_bins
@@ -341,15 +386,14 @@ class ColorBar:
         self.m.BM._refetch_layer(self.m.layer)
         self.m.BM.update(artists=self._axes)
 
-    def _get_parent_cb_pos(self):
+    def _identify_parent_cb(self):
         parent_cb = None
         # check if there is already an existing colorbar for a Maps-object that shares
         # the same plot-axis.
         # If yes, use the position of this colorbar to creat a new one
 
         if self.m.colorbar is not None:
-            print("There is already a colorbar for this Maps-object!")
-            parent_cb = self.m.colorbar
+            parent_cb = None  # self.m.colorbar
         else:
             # check if self is actually just another layer of an existing Maps object
             # that already has a colorbar assigned
@@ -378,24 +422,27 @@ class ColorBar:
 
         # check if one of the parent colorbars has a colorbar, and if so,
         # use it to set the position of the colorbar.
-        parent_cb = self._get_parent_cb_pos()
-        if parent_cb is not None:
-            self.ax = self.m.figure.f.add_subplot(
-                parent_cb.ax.get_subplotspec(),
-                label="cb",
-                zorder=9999,
-            )
+        if self._inherit_position:
+            if self._parent_cb is not None:
+                self.ax = self.m.figure.f.add_subplot(
+                    self._parent_cb.ax.get_subplotspec(),
+                    label="cb",
+                    zorder=9999,
+                )
 
-            # inherit axis-position from the parent axis position
-            # (e.g. it can no longer be freely moved... its position is determined
-            # by the position of the parent-colorbar axis)
-            self.ax.set_axes_locator(
-                _TransformedBoundsLocator((0, 0, 1, 1), parent_cb.ax.transAxes)
-            )
+                # inherit axis-position from the parent axis position
+                # (e.g. it can no longer be freely moved... its position is determined
+                # by the position of the parent-colorbar axis)
+                self.ax.set_axes_locator(
+                    _TransformedBoundsLocator(
+                        (0, 0, 1, 1), self._parent_cb.ax.transAxes
+                    )
+                )
 
-            self._parent_cb = parent_cb
+            else:
+                self._inherit_position = False
 
-        else:
+        if not self._inherit_position:
             if isinstance(self.pos, float):
                 add_margins = True
                 if horizontal:
@@ -492,26 +539,23 @@ class ColorBar:
         if add_margins or self.margin is not None:
             if self.margin is None:
                 if self.orientation == "horizontal":
-                    self.margin = dict(left=0.05, right=0.05, bottom=0.3, top=0.05)
+                    self.margin = dict(left=0.1, right=0.1, bottom=0.3, top=0.0)
                 else:
-                    self.margin = dict(left=0.05, right=0.3, bottom=0.05, top=0.05)
+                    self.margin = dict(left=0.0, right=0.3, bottom=0.1, top=0.1)
 
             axpos = self.ax.get_position()
             w, h = axpos.width, axpos.height
             l, r = (self.margin.get(k, 0) * w for k in ["left", "right"])
             b, t = (self.margin.get(k, 0) * h for k in ["bottom", "top"])
 
-            for a in self._axes:
-                op = a.get_position()
-
-                a.set_position(
-                    [
-                        op.x0 + l,
-                        op.y0 + b,
-                        op.width - l - r,
-                        op.height - b - t,
-                    ]
-                )
+            self.ax.set_position(
+                [
+                    axpos.x0 + l,
+                    axpos.y0 + b,
+                    axpos.width - l - r,
+                    axpos.height - b - t,
+                ]
+            )
 
         # add all axes as background-artists
         for a in self._axes:
@@ -880,6 +924,8 @@ class ColorBar:
                 self.m.BM.remove_artist(ax)
             else:
                 self.m.BM.remove_bg_artist(ax)
+
+        self.m._colorbars.pop(self, None)
 
     def set_position(self, pos):
         """

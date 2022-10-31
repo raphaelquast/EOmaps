@@ -233,10 +233,9 @@ class LayoutEditor:
 
     @property
     def cbaxes(self):
-        axes = []
+        axes = list()
         for m in self.ms:
-            if m.colorbar is not None:
-                axes.append(m.colorbar.ax)
+            axes.extend((i.ax for i in m._colorbars))
         return axes
 
     @property
@@ -254,9 +253,7 @@ class LayoutEditor:
         # get all colorbars
         cbs = list()
         for m in self.ms:
-            cb = m.colorbar
-            if cb is not None:
-                cbs.append(cb)
+            cbs.extend(m._colorbars)
         return cbs
 
     @staticmethod

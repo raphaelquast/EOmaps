@@ -299,7 +299,7 @@ class Maps(object):
         self._BM = None
         self._children = set()  # weakref.WeakSet()
 
-        self.colorbar = None
+        self._colorbars = []
 
         if not isinstance(layer, str):
             print("EOmaps v5.0 Warning: All layer-names are converted to strings!")
@@ -605,6 +605,19 @@ class Maps(object):
     @property
     def ax(self):
         return self._ax
+
+    @property
+    def colorbar(self):
+        """
+        Get the most recently added colorbar
+
+        Returns
+        -------
+        ColorBar
+            EOmaps colorbar object.
+        """
+        if len(self._colorbars) > 0:
+            return self._colorbars[-1]
 
     @property
     @wraps(new_layer_from_file)
@@ -3055,21 +3068,16 @@ class Maps(object):
         (docstring inherited from ColorBar.__init__)
         """
 
-        if self.colorbar is not None:
-            warnings.warn(
-                "EOmaps: A Maps-object can only have a single colorbar!\n"
-                "To update the colorbar, use `m.colorbar.update(...)`\n"
-                "To remove the colorbar, use `m.colorbar.remove()`"
-            )
-            return
-        self.colorbar = ColorBar(
+        colorbar = ColorBar(
             self,
             *args,
             **kwargs,
         )
 
-        self.colorbar._plot_histogram()
-        self.colorbar._plot_colorbar()
+        colorbar._plot_histogram()
+        colorbar._plot_colorbar()
+
+        self._colorbars.append(colorbar)
 
     @wraps(plt.savefig)
     def savefig(self, *args, **kwargs):
