@@ -641,9 +641,12 @@ Starting with v5.0, EOmaps provides a **companion widget** which greatly
 simplifies using the awesome interactive capabilities.
 
 
-- | To activate the widget, press ``w`` on the keyboard while the mouse is hoovering the figure.
-  | (Once the widget is initialized, pressing ``w`` will show/hide the widget.)
-- | The widget is intended to be self-explanatory.
+- To activate the widget, press ``w`` on the keyboard while the mouse is over the map you want to edit.
+
+  - If multiple maps are present in the figure, a green border indicates the map that is currently targeted by the widget.
+  - Once the widget is initialized, pressing ``w`` will show/hide the widget.
+
+- | The widget is intended to be as self-explanatory as possible.
   | To get information on how the individual controls work, simply click on the ``?`` symbol in the top left corner of the widget.
 
 |

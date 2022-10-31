@@ -433,6 +433,10 @@ class Maps(object):
         if self._companion_widget is None:
             return
 
+        # don't draw an indicator if only one map is present in the figure
+        if all(m.ax == self.ax for m in (self.parent, *self.parent._children)):
+            return
+
         if visible:
             # from matplotlib.patches import Rectangle
             # from matplotlib.offsetbox import AnnotationBbox, AuxTransformBox
@@ -472,7 +476,7 @@ class Maps(object):
 
             # hide all other companion-widgets
             for m in (self.parent, *self.parent._children):
-                if m is self:
+                if m == self:
                     continue
                 if m._companion_widget is not None and m._companion_widget.isVisible():
                     m._companion_widget.hide()
