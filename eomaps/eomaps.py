@@ -389,10 +389,6 @@ class Maps(object):
         if not hasattr(self.parent, "_wms_legend"):
             self.parent._wms_legend = dict()
 
-        if self._cid_companion_key is None:
-            # attach the Qt companion widget
-            self._add_companion_cb(show_hide_key=self._companion_widget_key)
-
         # initialize the shape-drawer
         self._shape_drawer = ShapeDrawer(self)
 
@@ -438,23 +434,6 @@ class Maps(object):
             return
 
         if visible:
-            # from matplotlib.patches import Rectangle
-            # from matplotlib.offsetbox import AnnotationBbox, AuxTransformBox
-            # import matplotlib.patheffects as path_effects
-
-            # x, y, w, h = self.ax.get_position().bounds
-            # r = Rectangle((x, y), w, h, fc="none", ec="r", lw=0)
-
-            # offsetbox = AuxTransformBox(self.figure.f.transFigure)
-            # offsetbox.add_artist(r)
-            # self._companion_map_indicator = AnnotationBbox(
-            #     offsetbox,
-            #     (x + w / 2.0, y + h / 2.0),
-            #     boxcoords="data",
-            #     pad=0.25,
-            #     bboxprops=dict(facecolor="none", edgecolor="g", lw=3, ls="--"),
-            # )
-
             path = self.ax.patch.get_path()
             self._companion_map_indicator = mpatches.PathPatch(
                 path, fc="none", ec="g", lw=5, zorder=9999
@@ -467,6 +446,12 @@ class Maps(object):
 
     def _add_companion_cb(self, show_hide_key="w"):
         # attach a callback to show/hide the window with the "w" key
+
+        # NOTE the companion-widget is ONLY initialized on Maps-object that
+        # create NEW axes. This is required to make sure that any additional
+        # Maps-object on the same axes will then always use the same widget.
+        # (otherwise each layer would get its own widget)
+
         def cb(event):
             if event.key != show_hide_key:
                 return
@@ -1135,6 +1120,10 @@ class Maps(object):
                 "xlim_changed", xlims_change
             )
             # self.figure.ax.callbacks.connect("ylim_changed", ylims_change)
+
+            if self._cid_companion_key is None:
+                # attach the Qt companion widget
+                self._add_companion_cb(show_hide_key=self._companion_widget_key)
 
         if newfig:  # only if a new figure has been initialized
             # attach a callback that is executed when the figure is closed
