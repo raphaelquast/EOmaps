@@ -335,10 +335,10 @@ class EditLayoutButton(QtWidgets.QPushButton):
 
     @pyqtSlot()
     def callback(self):
-        if not self.m._layout_editor._modifier_pressed:
-            self.m.edit_layout()
+        if not self.m.parent._layout_editor._modifier_pressed:
+            self.m.parent.edit_layout()
         else:
-            self.m._layout_editor._undo_draggable()
+            self.m.parent._layout_editor._undo_draggable()
 
 
 class AlphaSlider(QtWidgets.QSlider):
