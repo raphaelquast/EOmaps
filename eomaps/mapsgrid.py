@@ -133,7 +133,7 @@ class MapsGrid:
         m_inits=None,
         ax_inits=None,
         figsize=None,
-        layer=0,
+        layer="base",
         **kwargs,
     ):
 
