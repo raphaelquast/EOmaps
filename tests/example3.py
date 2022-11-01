@@ -44,7 +44,12 @@ m.plot_map(
 )  # pass some additional arguments to the plotted collection
 
 # ------------------ add a colorbar and change it's appearance
-m.add_colorbar(histbins="bins", label="some parameter", density=True, histogram_size=1)
+m.add_colorbar(
+    label="some parameter",
+    hist_bins="bins",
+    hist_size=1,
+    hist_kwargs=dict(density=True),
+)
 
 # add a y-label to the histogram
 _ = m.figure.ax_cb_plot.set_ylabel("The Y label")
