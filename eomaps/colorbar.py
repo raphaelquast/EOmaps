@@ -365,23 +365,24 @@ class ColorBar:
         # NOTE: labels are used to hide those axes from the layout-manager!
         if histpos.width > 1e-4 and histpos.height > 1e-4:
             self.ax_cb_plot.set_visible(True)
-            self.ax_cb_plot.set_axes_locator(
-                _TransformedBoundsLocator(histpos.bounds, self.ax.transAxes)
-            )
         else:
             self.ax_cb_plot.set_visible(False)
 
-        if cbpos.width > 0 and cbpos.height > 0:
+        self.ax_cb_plot.set_axes_locator(
+            _TransformedBoundsLocator(histpos.bounds, self.ax.transAxes)
+        )
+
+        if cbpos.width > 1e-4 and cbpos.height > 1e-4:
             self.ax_cb.set_visible(True)
             [i.set_visible(True) for i in self.ax_cb.patches]
             [i.set_visible(True) for i in self.ax_cb.collections]
-
-            self.ax_cb.set_axes_locator(
-                _TransformedBoundsLocator(cbpos.bounds, self.ax.transAxes)
-            )
         else:
             [i.set_visible(False) for i in self.ax_cb.patches]
             [i.set_visible(False) for i in self.ax_cb.collections]
+
+        self.ax_cb.set_axes_locator(
+            _TransformedBoundsLocator(cbpos.bounds, self.ax.transAxes)
+        )
 
         self.m.BM._refetch_layer(self.m.layer)
         self.m.BM.update(artists=self._axes)
