@@ -360,7 +360,7 @@ class LayoutEditor:
 
     def _color_unpicked(self, ax):
         for spine in ax.spines.values():
-            spine.set_edgecolor(".4")
+            spine.set_edgecolor("b")
 
             if ax in self._ax_visible and self._ax_visible[ax]:
                 spine.set_linestyle("-")
