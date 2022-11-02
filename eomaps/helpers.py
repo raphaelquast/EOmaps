@@ -1138,10 +1138,11 @@ class BlitManager:
                 if art not in self._hidden_axes:
                     art.set_visible(True)
 
-                    # TODO this needs a proper re-work!
-                    # draw artists here to ensure correct order for multilayer
-                    # artists at the same zorder
-                    # (e.g. to draw multilayer artists based on the order of the layers)
+                    # TODO at the moment the layer-order has no effect on the order
+                    # at which artists are drawn in multi-layers!
+                    # (e.g. stacking is solely defined by the zorder property)
+                    # maybe implement drawing multilayer artists based on the order
+                    # of the layers?
                     # self.figure.draw_artist(art)
 
             cv._force_full = True
