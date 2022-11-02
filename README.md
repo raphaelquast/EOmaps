@@ -18,28 +18,23 @@
 
 ----
 
-### A library to create interactive maps of geographical datasets.
+# EOmaps - Interactive maps in python!
 
-<ul type="none">
-  <li>🌍 EOmaps provides a simple and intuitive interface to visualize and interact with geographical datasets.</li>
-  <ul type="none">
-    <li>⬥ Data can be provided as 1D or 2D <code>lists</code>, <code>numpy-arrays</code>, <code>pandas.DataFrames</code></li>
-    <li>  &nbsp; &nbsp; &nbsp; or directly from GeoTIFFs,  NetCDFs and csv-files.</li>
-    <li>  &nbsp; &nbsp; &nbsp; ... usable also for large datasets with millions of datapoints!</li>
-    <li>⬥ WebMap layers, annotations, markers can be added with a single line of code</li>
-    <li>⬥ EOmaps is built on top of <code>matplotlib</code> and <code>cartopy</code> and integrates well <code>pandas</code> and <code>geopandas</code></li>
-  </ul>
-  <li>🌎 Quickly turn your maps into powerful interactive data-analysis widgets</li>
-  <ul type="none">
-    <li>⬥ use callback functions to interact with the data (or an underlying database) </li>
-    <li>⬥ compare multiple data-layers, WebMaps etc.</li>
-  </ul>
-</ul>
-<br/>
+EOmaps is a Python package to visualize and analyze geographical datasets.
 
+It is built on top of `matplotlib` and `cartopy` and aims to provide an
+intuitive and easy-to-use interface to handle the following tasks:
 
-> ❗ update notice: [⚙ Port script from EOmaps v3.x to v4.x](https://eomaps.readthedocs.io/en/latest/FAQ.html#port-script-from-eomaps-v3-x-to-v4-x)
-
+- Speed up and simplify the creation and comparison of maps
+- Visualize small datasets as well as millions of datapoints
+- Handle 1D and 2D datasets and create plots from NetCDF, GeoTIFF or CSV files
+- Take care of re-projecting the data
+- Compare or overlay different plot-layers and WebMap services
+- Use the maps as interactive data-analysis widgets (e.g. execute functions if you click on the map)
+- Provide a versatile set of tools to customize the maps
+- Arrange multiple maps in one figure
+- Get a nice colorbar with a histogram on top
+- Export high resolution images
 
 ## 🔨 Installation
 
@@ -57,7 +52,7 @@ For more information, have a look at the [installation instructions](https://eom
 
 ## 📖 Documentation
 
-Make sure to have a look at the <a href=https://eomaps.readthedocs.io/en/latest><b>🌳 documentation 🌳</b></a> which provides a lot of <a href=https://eomaps.readthedocs.io/en/latest/EOmaps_examples.html><b>examples</b></a> on how to create awesome interactive maps (incl. source code)!
+Make sure to have a look at the <a href=https://eomaps.readthedocs.io/en/latest><b>🌳 documentation 🌳</b></a> which provides a lot of <a href=https://eomaps.readthedocs.io/en/latest/EOmaps_examples.html><b>examples</b></a> on how to create awesome interactive maps (incl. 🐍 source code)!
 
 ## ✔️ Citation
 Did EOmaps help in your research?  
@@ -89,19 +84,19 @@ Interested in actively contributing to the library?
   </tr>
   <tr>
     <td valign="center">
+        <img src="https://github.com/raphaelquast/EOmaps/blob/dev/docs/_static/fig9.gif?raw=true" alt="EOmaps example 9">
+    </td>
+    <td valign="center">
+        <img src="https://github.com/raphaelquast/EOmaps/blob/master/docs/_static/fig4.gif?raw=true" alt="EOmaps example 4">
+    </td>
+  </tr>
+  <tr>
+    <td valign="center">
         <img src="https://github.com/raphaelquast/EOmaps/blob/dev/docs/_static/fig7.gif?raw=true" alt="EOmaps example 7">
       </td>
     <td valign="center">
         <img src="https://github.com/raphaelquast/EOmaps/blob/dev/docs/_static/fig2.gif?raw=true" alt="EOmaps example 8">
       </td>
-  </tr>
-  <tr>
-    <td valign="center">
-        <img src="https://github.com/raphaelquast/EOmaps/blob/dev/docs/_static/fig9.gif?raw=true" alt="EOmaps example 9">
-    </td>
-    <td valign="center">
-        <img src="https://github.com/raphaelquast/EOmaps/blob/dev/docs/_static/inset_maps.png?raw=true" alt="EOmaps example 4">
-    </td>
   </tr>
   <tr>
     <td valign="center">
@@ -111,23 +106,23 @@ Interested in actively contributing to the library?
         <img src="https://github.com/raphaelquast/EOmaps/blob/dev/docs/_static/fig8.gif?raw=true" alt="EOmaps example 3">
     </td>
   </tr>
+  <tr>
+    <td valign="center">
+        <img src="https://github.com/raphaelquast/EOmaps/blob/master/docs/_static/example_lines.png?raw=true" alt="EOmaps example 9">
+    </td>
+    <td valign="center">
+        <img src="https://github.com/raphaelquast/EOmaps/blob/dev/docs/_static/inset_maps.png?raw=true" alt="EOmaps example 4">
+    </td>
+  </tr>
 </table>
+
+
+
 
 
 ## 🌳 Basic usage
 
-🛸 **Checkout the [documentation](https://eomaps.readthedocs.io/en/latest/api.html)!** 🛸
-
-- A list of coordinates and values is all you need as input!
-  - plots of large (>1M datapoints) irregularly sampled datasets are generated in a few seconds!
-- Represent your data
-  - as shapes with actual geographic dimensions (ellipses, rectangles, geodetic circles)
-  - via Voroni diagrams and Delaunay triangulations to get interpolated contour-plots
-  - via dynamic data-shading to speed up plots of extremely large datasets
-- Re-project the data to any crs supported by <a href=https://scitools.org.uk/cartopy/docs/latest/reference/crs.html#coordinate-reference-systems-crs>cartopy</a>
-- Quickly add features and additional layers to the plot
-  - Markers, Annotations, WebMap Layers, NaturalEarth features, Scalebars, Compasses (or North-arrows) etc.
-- Interact with the data via callback-functions.
+**Checkout the  [🚀 Basics](https://eomaps.readthedocs.io/en/latest/api.html)**  in the documentation!
 
 ```python
 from eomaps import Maps
@@ -135,11 +130,11 @@ from eomaps import Maps
 # initialize Maps object
 m = Maps(crs=Maps.CRS.Orthographic())
 
-# add basic map-features from NaturalEarth
+# add map-features from NaturalEarth
 m.add_feature.preset.coastline()
 m.add_feature.cultural_50m.admin_0_countries(fc="none", ec="g")
 
-# easily visualize both structured and unstructured datasets
+# assign a dataset
 m.set_data(data=[1, 2, 3, 4], x=[45, 46, 47, 42], y=[23, 24, 25, 26], crs=4326)
 # set the shape you want to use to represent the data-points
 m.set_shape.geod_circles(radius=10000) # (e.g. geodetic circles with 10km radius)
@@ -155,18 +150,21 @@ m.add_scalebar()
 # add a compass (or north-arrow)
 m.add_compass()
 
-# add imagery from a variety of open-access WebMap services
+# add imagery from a open-access WebMap services
 m.add_wms.OpenStreetMap.add_layer.default()
 
-# use callback functions to interact with the map!
+# use callback functions to interact with the map
 m.cb.pick.attach.annotate()
 
-# use multiple layers to compare and analyze different datasets!
+# use multiple layers to compare and analyze different datasets
 m3 = m.new_layer(layer="layer 2")
 m3.add_feature.preset.ocean()
 
 # attach a callback to peek on layer 1 if you click on the map
 m.cb.click.attach.peek_layer(layer="layer 2", how=0.4)
+# attach a callback to show an annotation while you move the mouse
+# (and simultaneously press "a" on the keyboard)
+m.cb.move.attach.annotate(modifier="a")
 # attach callbacks to switch between the layers with the keyboard
 m.cb.keypress.attach.switch_layer(layer=0, key="0")
 m.cb.keypress.attach.switch_layer(layer="layer 2", key="1")

@@ -452,25 +452,72 @@ class TestBasicPlotting(unittest.TestCase):
         cb1 = m.add_colorbar(
             gs[1, 0],
             orientation="horizontal",
-            add_extend_arrows="left",
-            extend_frac=0.4,
         )
+        self.assertTrue(len(m._colorbars) == 1)
+        self.assertTrue(m.colorbar is cb1)
+
         cb2 = m.add_colorbar(gs[0, 1], orientation="vertical")
+        self.assertTrue(len(m._colorbars) == 2)
+        self.assertTrue(m.colorbar is cb2)
 
         cb3 = m.add_colorbar(
             gs[1, 1],
             orientation="horizontal",
-            density=True,
+            hist_kwargs=dict(density=True),
             label="naseawas",
-            histbins=5,
-            add_extend_arrows="both",
+            hist_bins=5,
             extend_frac=0.4,
         )
-        m.figure.set_colorbar_position(cb=cb1, ratio=10)
-        m.figure.set_colorbar_position(cb=cb2, ratio=20)
-        m.figure.set_colorbar_position((0.625, 0.25, 0.2, 0.1), cb=cb3)
+        self.assertTrue(len(m._colorbars) == 3)
+        self.assertTrue(m.colorbar is cb3)
 
-        m.figure.set_colorbar_position((0.625, 0.25, 0.2, 0.1))
+        cb4 = m.add_colorbar(
+            0.2,
+            orientation="horizontal",
+            hist_kwargs=dict(density=True),
+            log=True,
+            label="naseawas",
+            out_of_range_vals="clip",
+            hist_bins=5,
+            extend_frac=0.4,
+        )
+        self.assertTrue(len(m._colorbars) == 4)
+        self.assertTrue(m.colorbar is cb4)
+
+        cb4.remove()
+        self.assertTrue(len(m._colorbars) == 3)
+
+        cb4 = m.add_colorbar(
+            (0.1, 0.1, 0.7, 0.2),
+            inherit_position=False,
+            orientation="horizontal",
+            hist_kwargs=dict(density=False),
+            label="naseawas",
+            out_of_range_vals="mask",
+            hist_bins=5,
+            extend_frac=0.4,
+            show_outline=dict(color="r", lw=4),
+        )
+        self.assertTrue(len(m._colorbars) == 4)
+        self.assertTrue(m.colorbar is cb4)
+
+        m2 = m.new_layer("asdf")
+        m2.set_data_specs(data=self.data, x="x", y="y", in_crs=3857)
+        m2.set_classify.Quantiles(k=4)
+        m2.plot_map()
+        cb5 = m2.add_colorbar()
+
+        m.redraw()
+
+        self.assertTrue(all(cb.ax.get_visible() for cb in m._colorbars))
+        self.assertFalse(m2.colorbar.ax.get_visible())
+        m.show_layer("asdf")
+        self.assertTrue(m2.colorbar.ax.get_visible())
+
+        self.assertTrue(len(m2._colorbars) == 1)
+        self.assertTrue(all(not cb.ax.get_visible() for cb in m._colorbars))
+
+        self.assertTrue(m2.colorbar is cb5)
 
     def test_MapsGrid(self):
         mg = MapsGrid(2, 2, crs=4326)
@@ -723,11 +770,13 @@ class TestBasicPlotting(unittest.TestCase):
             getattr(m.set_shape, i[0])(**i[1])
 
             m.plot_map(edgecolor="none", pick_distance=5)
-            m.cb.click.attach.annotate()
+            m.cb.click.attach.annotate(fontsize=6)
+            m.add_feature.preset.coastline(lw=0.5)
             m.add_colorbar()
-        mgrid.parent.cb.click.share_events(*mgrid.children)
 
-        m.figure.gridspec.update(left=0.05, top=0.95, bottom=0.05, right=0.95)
+        mgrid.share_click_events()
+
+        m.subplots_adjust(left=0.05, top=0.95, bottom=0.05, right=0.95)
         # %%
         plt.close(m.figure.f)
 

@@ -77,6 +77,18 @@ reasonably well if you want the figures embedded in a Jupyter Notebook.
 - This way the plots will NOT be embedded in the notebook but they are created as separate widgets.
 
 
+.. note::
+
+  It is possible to plot **static snapshots** of a map to a Jupyter Notebook
+  irrespective of the used backend by using `m.snapshot()`, e.g.:
+
+  .. code-block:: python
+
+    m = Maps()
+    m.add_feature.preset.coastline()
+    m.snapshot()
+
+
 Checkout the `matplotlib doc <https://matplotlib.org/stable/users/explain/interactive.html#jupyter-notebooks-jupyterlab>`_
 for more info!
 

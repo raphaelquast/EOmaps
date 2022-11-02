@@ -47,13 +47,14 @@ m3.data_specs.data = data_OK.sample(1000)
 m3.set_shape.ellipses(radius=25000, radius_crs=3857)
 
 # plot the map and set dynamic=True to allow continuous updates of the collection
-m3.plot_map(cmap="gist_ncar", edgecolor="w", linewidth=0.25, layer=10, dynamic=True)
+m3.plot_map(cmap="gist_ncar", edgecolor="w", linewidth=0.25, dynamic=True)
 
 # --------- define a callback that will change the values of the previously plotted dataset
 #           NOTE: this is not possible for the shapes:  "shade_points" and "shade_raster" !
 def callback(m, **kwargs):
     selection = np.random.randint(0, len(m.data), 1000)
     m.figure.coll.set_array(data_OK.param.iloc[selection])
+    m.BM.update(artists=[m.figure.coll])
 
 
 # attach the callback (to update the dataset plotted on the Maps object "m3")

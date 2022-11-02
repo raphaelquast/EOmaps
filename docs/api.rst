@@ -22,55 +22,103 @@
   (e.g.: ``figsize``, ``frameon``, ``edgecolor`` etc).
 
 
-Possible ways for specifying the crs for plotting are:
+Possible ways for specifying the ``crs`` for plotting are:
 
 - If you provide an integer, it is identified as an epsg-code (e.g. ``4326``, ``3035``, etc.)
 
   - 4326 hereby defaults to `PlateCarree` projection
 
 - All other CRS usable for plotting are accessible via ``Maps.CRS``,
-  e.g.: ``crs=Maps.CRS.Orthographic()``, ``crs=Maps.CRS.GOOGLE_MERCATOR`` or ``crs=Maps.CRS.Equi7Grid_projection("EU")``.
-  (``Maps.CRS`` is just an accessor for ``cartopy.crs``)
+  e.g.: ``crs=Maps.CRS.Orthographic()``, ``crs=Maps.CRS.GOOGLE_MERCATOR`` or ``crs=Maps.CRS.Equi7_EU``.
+  (``Maps.CRS`` is just an accessor for ``cartopy.crs``.
+
+  - For a full list of available projections see: `Cartopy projections <https://scitools.org.uk/cartopy/docs/v0.15/crs/projections.html>`_)
 
 ▤ Layers
 ~~~~~~~~~
 
-| Each ``Maps`` object represents an individual plot-layer of the map.
-| Once you have created your first ``Maps`` object, you can create **additional layers on the same map** by using:
+| A map can have multiple plot-layers.
+| Each ``Maps`` object represents a collection of features **on the assigned layer**.
 
-.. code-block:: python
+Once you have created your first ``Maps`` object, you can:
 
-    m = Maps()                           # same as `m = Maps(layer=0)`
-    m2 = m.new_layer()                   # "m2" is just another Maps-object on the same layer as "m"!
+- Create **additional** ``Maps`` ** objects on the same layer** by using ``m2 = m.new_layer()``
 
-    m_ocean = m.new_layer(layer="ocean") # create a new layer named "ocean"
-    m_ocean.add_feature.preset.ocean()   # features on this layer will only be visible if the "ocean" layer is visible!
-    m.show_layer("ocean")                # show the "ocean" layer
+  - If no explicit layer-name is provided, ``m2`` will use the same layer as ``m``
+  - This is especially useful if you want to plot multiple datasets **on the same layer**
 
-    m.all.add_feature.preset.coastline() # to add a feature to all layers, simply add it to the `all` layer with `m.all...`
-
-    m.util.layer_selector()              # get a utility widget to simplify switching between existing layers
-
-- ``m2``, ``m_ocean`` and ``m.all`` are just ordinary ``Maps`` objects that share the figure and plot-axes with ``m``
-- If you don't provide an explicit layer name, the new Maps-object will use the same layer as its parent!
-  (you can have multiple ``Maps`` objects on the same layer!)
-
+- Create **a NEW layer** named ``"my_layer"`` by using ``m2 = m.new_layer("my_layer")``
 
 .. admonition:: Map-features and colorbars are layer-sensitive!
 
-    Features, datasets, colormaps etc. added to a ``Maps`` object are only visible if the associated layer is visible!
-    To manually switch between layers, use ``m.show_layer("the layer name")``, call ``m.show()`` or have a look at the :ref:`utility`.
+    Features, datasets, colorbars etc. added to a ``Maps`` object are only visible if the associated layer is visible!
+    To manually switch between layers, use ``m.show_layer("the layer name")``, call ``m.show()`` or have a look at the :ref:`utility` and the :ref:`companion_widget`.
+
+.. code-block:: python
+
+    m = Maps()                           # same as `m = Maps(layer="base")`
+    m.add_feature.preset.coastline()     # add some coastlines
+
+    m_ocean = m.new_layer(layer="ocean") # create a new layer named "ocean"
+    m_ocean.add_feature.preset.ocean()   # features on this layer will only be visible if the "ocean" layer is visible!
+
+    m2 = m_ocean.new_layer()             # "m2" is just another Maps-object on the same layer as "m_ocean"!
+    m2.set_data(data=[.14,.25,.38],
+                x=[1,2,3], y=[3,5,7],
+                crs=4326)
+    m2.set_shape.ellipses(n=100)
+    m2.plot_map()
+
+    m.show_layer("ocean")                # show the "ocean" layer
+    m.util.layer_selector()              # get a utility widget to quickly switch between existing layers
 
 .. admonition:: The "all" layer
 
     | There is one layer-name that has a special meaning... the ``"all"`` layer.
-    | Any callbacks, features or plots added to this layer will be **executed on all other layers** as well!
+    | Any callbacks and features added to this layer will be **executed on ALL other layers** as well!
 
     You can add features and callbacks to the ``all`` layer via:
 
     - using the shortcut ``m.all. ...``
     - creating a dedicated ``Maps`` object via ``m_all = Maps(layer="all")`` or ``m_all = m.new_layer("all")``
     - using the "layer" kwarg of functions e.g. ``m.plot_map(layer="all")``
+
+    .. code-block:: python
+
+        m = Maps()
+        m.all.add_feature.preset.coastline() # add some coastlines to ALL layers of the map
+
+        m_ocean = m.new_layer(layer="ocean") # create a new layer named "ocean"
+        m_ocean.add_feature.preset.ocean()
+        m.show_layer("ocean")                # show the "ocean" layer (note that it has coastlines as well!)
+
+.. admonition:: Combining multiple layers
+
+    | To create a layer that represents a **combination of multiple existing layers**, separate the individual layer-names
+    | with a ``"|"`` character (e.g. ``"layer1|layer2"``).
+    The layer will then always show **all features** of ``"layer1`` **and** ``layer2``.
+
+    - NOTE: The *vertical stacking* of features is controlled by the ``zorder`` property, not by the order of the layers!
+
+    .. code-block:: python
+
+        m = Maps(layer="first")
+        m.add_feature.preset.ocean(alpha=0.75, zorder=2)
+
+        m2 = m.new_layer("second")                # create a new layer and plot some data
+        m2.set_data(data=[.14,.25,.38],
+                    x=[1,2,3], y=[3,5,7],
+                    crs=4326)
+        m2.set_shape.ellipses(n=100)
+        m2.plot_map(zorder=1)                     # plot the data "below" the ocean
+
+        m.show_layer("first|second")  # show all features of the two layers
+
+        # you can even create Maps-objects representing combined layers!
+        # (the features will only be visible if all sub-layers are visible)
+        m_combined = m.new_layer("first|second")
+        m_combined.add_annotation(xy=(2, 5), xy_crs=4326, text="some text")
+
 
 .. currentmodule:: eomaps
 
@@ -90,15 +138,27 @@ Possible ways for specifying the crs for plotting are:
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 To assign a dataset to a ``Maps`` object, use ``m.set_data(...)``.
-The shapes that are used to represent the data-points are then assigned via ``m.set_shape``.
+A dataset is hereby fully specified by setting its coordinates (``x`` and ``y``), the coordinate-reference-system (``crs``) and the data-values (``data``).
 
-.. admonition:: What's used by default?
+EOmaps hereby accepts the following data-types as input:
 
-    By default, the plot-shape is assigned based on the associated dataset.
+- ``data``: ``pandas.DataFrame``
 
-    - For datasets with less than 500 000 pixels, ``m.set_shape.ellipses()`` is used.
-    - | For larger 2D datasets ``m.set_shape.shade_raster()`` is used
-      | ... and ``m.set_shape.shade_points()`` is used for the rest.
+  - ``x``, ``y``: The column-names to use as coordinates (``string``)
+  - ``parameter``: The column-name to use as data-values (``string``)
+
+- ``data``, ``x``, ``y``: ``pandas.Series``
+
+  - all series must have the same size!
+
+- ``data``, ``x``, ``y``: ``numpy.ndarray`` or ``list``
+
+  - equal-size **1D** or **2D** arrays for data and coordinates
+  - | **2D** data and **1D** coordinates:
+    | ``data``: (n, m), ``x``: (n,), ``y``: (m,)
+
+To specify how the data is represented on the map, you have to set the *"plot-shape"* via ``m.set_shape``.
+(e.g. plot ellipses, rectangles, perform dynamic shading to speed up plotting, ...)
 
 .. code-block:: python
 
@@ -106,7 +166,6 @@ The shapes that are used to represent the data-points are then assigned via ``m.
     m.set_data(data1, x, y, crs, ...)         # assign some data to the Maps-object
     m.set_shape.geod_circles(radius=1000,     # draw geodetic circles with 1km radius
                              n=100)           # use 100 intermediate points to represent the shape
-
     m.plot_map()                              # plot the data
 
     m2 = m.new_layer()                        # create a new Maps-object on the same layer
@@ -128,7 +187,7 @@ The shapes that are used to represent the data-points are then assigned via ``m.
     Maps.set_data
     Maps.set_shape
 
-Possible shapes that work nicely for datasets with up to 1M data-points:
+Possible shapes that work nicely for datasets with up to ~500 000 data-points:
 
 .. currentmodule:: eomaps._shapes.shapes
 
@@ -144,9 +203,11 @@ Possible shapes that work nicely for datasets with up to 1M data-points:
     delaunay_triangulation
     raster
 
-While ``raster`` still works nicely for large datasets , for extremely large datasets
-(several million datapoints), it is recommended to use "shading" instead of representing
-each data-point with a projected polygon.
+While ``raster`` still works nicely even for millions of datapoints, extremely large datasets
+(several million datapoints), it is recommended to use "shading" instead of actually plotting
+each individual datapoint.
+If shading is used, a dynamic averaging of the data based on the screen-resolution and the
+currently visible plot-extent is performed (resampling based on the mean-value is used by default).
 
 Possible shapes that can be used to quickly generate a plot for millions of datapoints are:
 
@@ -158,14 +219,19 @@ Possible shapes that can be used to quickly generate a plot for millions of data
     shade_points
     shade_raster
 
-If shading is used, a dynamic averaging of the data based on the screen-resolution and the
-currently visible plot-extent is performed (resampling based on the mean-value is used by default).
-
 .. note::
 
     The "shade"-shapes require the additional ``datashader`` dependency!
     You can install it via:
     ``conda install -c conda-forge datashader``
+
+.. admonition:: What's used by default?
+
+    By default, the plot-shape is assigned based on the associated dataset.
+
+    - For datasets with less than 500 000 pixels, ``m.set_shape.ellipses()`` is used.
+    - | For larger 2D datasets ``m.set_shape.shade_raster()`` is used
+      | ... and ``m.set_shape.shade_points()`` is used for the rest.
 
 To get an overview of the existing shapes and their main use-cases, here's a simple decision-tree:
 
@@ -186,6 +252,8 @@ plot-command for the selected shape.
 
 Some useful arguments that are supported by most shapes (except "shade"-shapes) are:
 
+    - "cmap" : the colormap to use
+    - "vmin", "vmax" : the range of values used when assigning the colors
     - "fc" or "facecolor" : the face-color of the shapes
     - "ec" or "edgecolor" : the edge-color of the shapes
     - "lw" or "linewidth" : the linewidth of the shapes
@@ -197,8 +265,8 @@ Some useful arguments that are supported by most shapes (except "shade"-shapes) 
     m.add_feature.preset.coastline()
 
     m2 = m.new_layer("a data layer")
-    m2.set_data(...)
-    ...
+    m2.set_data([1,2,3,4,5], [1,2,3,4,5], [1,2,3,4,5], crs=4326)
+    m2.set_shape.ellipses(radius=.3, radius_crs=4326)
     m2.plot_map(cmap="viridis", ec="g", lw=2, alpha=0.5)
 
 
@@ -221,7 +289,7 @@ To adjust the margins of the subplots, use ``m.subplots_adjust``, e.g.:
 
 You can then continue to add :ref:`colorbar`, :ref:`annotations_and_markers`,
 :ref:`scalebar`, :ref:`compass`,  :ref:`webmap_layers` or :ref:`geodataframe` to the map,
-or you can start to add :ref:`utility` and :ref:`callbacks`.
+or you can start to :ref:`shape_drawer`, add :ref:`utility` and :ref:`callbacks`.
 
 Once the map is ready, a snapshot of the map can be saved at any time by using:
 
@@ -585,6 +653,58 @@ Everything related to callbacks is grouped under the ``cb`` accessor.
     (but there's no need to remember since autocompletion will do the job!).
 
 - use ``m.cb.<METHOD>.attach(custom_cb)`` to attach a custom callback
+
+
+.. _companion_widget:
+
+🧰 Companion Widget
+--------------------
+
+Starting with v5.0, EOmaps comes with an awesome **companion widget** that greatly
+simplifies using interactive capabilities.
+
+
+- To activate the widget, press ``w`` on the keyboard while the mouse is over the map you want to edit.
+
+  - If multiple maps are present in the figure, a green border indicates the map that is currently targeted by the widget.
+  - Once the widget is initialized, pressing ``w`` will show/hide the widget.
+
+- | The widget is intended to be as self-explanatory as possible.
+  | To get information on how the individual controls work, simply click on the ``?`` symbol in the top left corner of the widget.
+
+|
+
+.. image:: _static/minigifs/companion_widget.gif
+    :align: center
+
+|
+
+The main purpose of the widget is to provide easy-access to features that usually don't need to go into
+a python-script, such as:
+
+- Compare layers (e.g. peek-callbacks)
+- Switch between existing layers (or combine existing layers)
+- Quickly create new WebMap layers (or add WebMap services to existing layers)
+- Draw shapes, add Annotations and NaturalEarth features to the map
+- Quick-edit existing map-artists
+  (show/hide, remove or set basic properties color, linewidth, zorder)
+- Save the current state of the map to a file (at the desired dpi setting)
+- A basic interface to plot data from files (with drag-and-drop support)
+  (csv, NetCDF, GeoTIFF, shapefile)
+
+
+
+.. note::
+
+    The companion-widget is written in ``PyQt5`` and therefore **only** works when using
+    the ``matplotlib qt5agg`` backend!
+
+    To activate the backend, execute the following lines at the start of your script:
+
+    .. code-block:: python
+
+        import matplotlib
+        matplotlib.use("qt5agg")
 
 
 .. _callbacks:
@@ -1821,6 +1941,57 @@ Make sure to checkout the :ref:`layout_editor` which can be used to quickly re-p
 
     new_inset_map
 
+.. _shape_drawer:
+
+✏️ Draw Shapes on the map
+-------------------------
+Starting with EOmaps v5.0 it is possible to draw simple shapes on the map using ``m.draw``.
+
+- | The shapes can be saved to disk as geo-coded shapefiles using ``m.draw.save_shapes(filepath)``.
+  | (Saving shapes requires the ``geopandas`` module!)
+
+- To remove the most recently drawn shape use ``m.draw.remove_last_shape()``.
+
+.. table::
+    :widths: 60 40
+    :align: center
+
+    +--------------------------------------+---------------------------------------------+
+    | .. code-block:: python               | .. image:: _static/minigifs/draw_shapes.gif |
+    |                                      |   :align: center                            |
+    |     m = Maps()                       |                                             |
+    |     m.add_feature.preset.coastline() |                                             |
+    |     m.draw.polygon()                 |                                             |
+    +--------------------------------------+---------------------------------------------+
+
+.. note::
+
+    Drawing capabilities are fully integrated in the :ref:`companion_widget`.
+    In most cases it is much more convenient to draw shapes with the widget
+    instead of executing the commands in a console!
+
+    In case you still stick to using the commands for drawing shape,
+    it is important to know that the calls for drawing shapes are
+    **non-blocking** and starting a new draw will silently cancel
+    active draws!
+
+
+
+.. currentmodule:: eomaps.draw
+
+.. autosummary::
+    :toctree: generated
+    :nosignatures:
+    :template: only_names_in_toc.rst
+
+    ShapeDrawer.new_drawer
+    ShapeDrawer.rectangle
+    ShapeDrawer.circle
+    ShapeDrawer.polygon
+    ShapeDrawer.save_shapes
+    ShapeDrawer.remove_last_shape
+
+
 
 .. _layout_editor:
 
@@ -1839,15 +2010,17 @@ You can use it to simply drag the axes the mouse to the desired locations and ch
     +-----------------------------------------------------------------------------------------+-----------------------------------------------+
     | press ``ALT + L``: enter the **Layout Editor** mode                                     | .. image:: _static/minigifs/layout_editor.gif |
     |                                                                                         |     :align: center                            |
-    | - press ``ALT + L`` again or `escape` to exit the **Layout Editor**                     |                                               |
+    | - press ``ALT + L`` again or ``escape`` to exit the **Layout Editor**                   |                                               |
     |                                                                                         |                                               |
-    | **Pick** and **re-arrange** the axes as you like with the mouse                         |                                               |
+    | **Pick** and **re-arrange** the axes as you like with the mouse.                        |                                               |
     |                                                                                         |                                               |
+    | - To pick **multiple axes**, hold down ``shift``!                                       |                                               |
     | - **Resize** picked axes with the **scroll-wheel** (or with the ``+`` and ``-`` keys)   |                                               |
-    | - For **"histogram-colorbars"**:                                                        |                                               |
     |                                                                                         |                                               |
-    |   - Hold down ``shift`` to change horizontal/vertical size                              |                                               |
-    |   - Hold down ``h`` to change ratio between colorbar and histogram                      |                                               |
+    | For **"colorbars"** there are some special options:                                     |                                               |
+    |                                                                                         |                                               |
+    | - Hold down ``h`` or ``v`` to change horizontal/vertical size                           |                                               |
+    | - Hold down ``control`` to change ratio between colorbar and histogram                  |                                               |
     |                                                                                         |                                               |
     | Press keys ``1-9`` to set the grid-spacing for the **"snap-to-grid"** functionality     |                                               |
     |                                                                                         |                                               |
@@ -2000,6 +2173,7 @@ Similar to ``Maps.from_file``, a new layer based on a file can be added to an ex
     :nosignatures:
     :template: only_names_in_toc.rst
 
+
     new_layer_from_file.GeoTIFF
     new_layer_from_file.NetCDF
     new_layer_from_file.CSV
@@ -2015,12 +2189,12 @@ some additional functions and properties that might come in handy:
     :toctree: generated
     :nosignatures:
 
-    Maps.join_limits
+    Maps.on_layer_activation
+    Maps.set_extent_to_location
     Maps.get_crs
     Maps.indicate_masked_points
-    Maps.BM
-    Maps.parent
-    Maps.crs_plot
-    Maps.add_colorbar
     Maps.show
     Maps.show_layer
+    Maps.BM
+    Maps.join_limits
+    Maps.snapshot

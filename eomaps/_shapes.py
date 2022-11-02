@@ -71,6 +71,7 @@ class shapes(object):
         "geod_circles",
         "ellipses",
         "rectangles",
+        "raster",
         "voronoi_diagram",
         "delaunay_triangulation",
         "shade_points",
@@ -239,7 +240,7 @@ class shapes(object):
         def __init__(self, m):
             self._m = m
 
-        def __call__(self, radius, n=20):
+        def __call__(self, radius=1000, n=20):
             """
             Draw geodesic circles with a radius defined in meters.
 
@@ -1394,8 +1395,9 @@ class shapes(object):
         def __init__(self, m):
             self._m = m
             self._radius = None
+            self.radius_crs = "in"
 
-        def __call__(self, radius="estimate", radius_crs="in"):
+        def __call__(self):
             """
             Draw 2D datasets as rectangles (only 2D datasets, but possibly large ones)
 
@@ -1433,16 +1435,11 @@ class shapes(object):
             for m in self._m if isinstance(self._m, MapsGrid) else [self._m]:
                 shape = self.__class__(m)
 
-                shape._radius = radius
-                shape.radius_crs = radius_crs
                 m._shape = shape
 
         @property
         def _initargs(self):
-            return dict(
-                radius=self._radius,
-                radius_crs=self.radius_crs,
-            )
+            return dict()
 
         @property
         def radius(self):

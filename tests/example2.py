@@ -84,8 +84,8 @@ mg.util.layer_selector(ncol=2, loc="lower center", draggable=False)
 
 # --------- rotate the ticks of the colorbars
 for m in mg:
-    m.figure.ax_cb.tick_params(rotation=90, labelsize=8)
-m2.figure.ax_cb.tick_params(rotation=90, labelsize=8)
+    m.colorbar.ax_cb.tick_params(rotation=90, labelsize=8)
+m2.colorbar.ax_cb.tick_params(rotation=90, labelsize=8)
 
 # add logos to all maps
 mg.add_logo(size=0.05)
