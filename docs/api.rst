@@ -2184,11 +2184,12 @@ some additional functions and properties that might come in handy:
     :toctree: generated
     :nosignatures:
 
+    Maps.on_layer_activation
     Maps.set_extent_to_location
-    Maps.join_limits
     Maps.get_crs
     Maps.indicate_masked_points
-    Maps.BM
     Maps.show
     Maps.show_layer
+    Maps.BM
+    Maps.join_limits
     Maps.snapshot
