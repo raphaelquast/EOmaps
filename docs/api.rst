@@ -22,7 +22,7 @@
   (e.g.: ``figsize``, ``frameon``, ``edgecolor`` etc).
 
 
-Possible ways for specifying the crs for plotting are:
+Possible ways for specifying the ``crs`` for plotting are:
 
 - If you provide an integer, it is identified as an epsg-code (e.g. ``4326``, ``3035``, etc.)
 
@@ -38,7 +38,7 @@ Possible ways for specifying the crs for plotting are:
 ~~~~~~~~~
 
 | A map can have multiple plot-layers.
-| Each ``Maps`` object represents a collection of features on the assigned layer.
+| Each ``Maps`` object represents a collection of features **on the assigned layer**.
 
 Once you have created your first ``Maps`` object, you can:
 
@@ -51,7 +51,7 @@ Once you have created your first ``Maps`` object, you can:
 
 .. admonition:: Map-features and colorbars are layer-sensitive!
 
-    Features, datasets, colormaps etc. added to a ``Maps`` object are only visible if the associated layer is visible!
+    Features, datasets, colorbars etc. added to a ``Maps`` object are only visible if the associated layer is visible!
     To manually switch between layers, use ``m.show_layer("the layer name")``, call ``m.show()`` or have a look at the :ref:`utility` and the :ref:`companion_widget`.
 
 .. code-block:: python
@@ -92,15 +92,14 @@ Once you have created your first ``Maps`` object, you can:
         m_ocean.add_feature.preset.ocean()
         m.show_layer("ocean")                # show the "ocean" layer (note that it has coastlines as well!)
 
-
 .. admonition:: Combining multiple layers
 
-    | To create layers that represent a **combination of multiple existing layers**, separate the individual layer-names
+    | To create a layer that represents a **combination of multiple existing layers**, separate the individual layer-names
     | with a ``"|"`` character. (e.g. ``"layer1|layer2"`` )
-    | The layer will then always show **all** features of ``"layer1`` and ``layer2`` (in addition to the features
+    | The layer will then always show **all features** of ``"layer1`` and ``layer2`` (in addition to the features
     that were explicitly added to the ``Maps`` object of the combined-layer).
 
-    - The *vertical stacking* of features is controlled by the ``zorder`` property, not by the order of the layers!
+    - NOTE: The *vertical stacking* of features is controlled by the ``zorder`` property, not by the order of the layers!
 
     .. code-block:: python
 
@@ -135,15 +134,27 @@ Once you have created your first ``Maps`` object, you can:
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 To assign a dataset to a ``Maps`` object, use ``m.set_data(...)``.
-The shapes that are used to represent the data-points are then assigned via ``m.set_shape``.
+A dataset is hereby fully specified by setting its coordinates (``x`` and ``y``), the coordinate-reference-system (``crs``) and the data-values (``data``).
 
-.. admonition:: What's used by default?
+EOmaps hereby accepts the following data-types as input:
 
-    By default, the plot-shape is assigned based on the associated dataset.
+- ``data``: ``pandas.DataFrame``
 
-    - For datasets with less than 500 000 pixels, ``m.set_shape.ellipses()`` is used.
-    - | For larger 2D datasets ``m.set_shape.shade_raster()`` is used
-      | ... and ``m.set_shape.shade_points()`` is used for the rest.
+  - ``x``, ``y``: The column-names to use as coordinates (``string``)
+  - ``parameter``: The column-name to use as data-values (``string``)
+
+- ``data``, ``x``, ``y``: ``pandas.Series``
+
+  - all series must have the same size!
+
+- ``data``, ``x``, ``y``: ``numpy.ndarray`` or ``list``
+
+  - equal-size **1D** or **2D** arrays for data and coordinates
+  - | **2D** data and **1D** coordinates:
+    | ``data``: (n, m), ``x``: (n,), ``y``: (m,)
+
+To specify how the data is represented on the map, you have to set the *"plot-shape"* via ``m.set_shape``.
+(e.g. plot ellipses, rectangles, perform dynamic shading to speed up plotting, ...)
 
 .. code-block:: python
 
@@ -151,7 +162,6 @@ The shapes that are used to represent the data-points are then assigned via ``m.
     m.set_data(data1, x, y, crs, ...)         # assign some data to the Maps-object
     m.set_shape.geod_circles(radius=1000,     # draw geodetic circles with 1km radius
                              n=100)           # use 100 intermediate points to represent the shape
-
     m.plot_map()                              # plot the data
 
     m2 = m.new_layer()                        # create a new Maps-object on the same layer
@@ -173,7 +183,7 @@ The shapes that are used to represent the data-points are then assigned via ``m.
     Maps.set_data
     Maps.set_shape
 
-Possible shapes that work nicely for datasets with up to 1M data-points:
+Possible shapes that work nicely for datasets with up to ~500 000 data-points:
 
 .. currentmodule:: eomaps._shapes.shapes
 
@@ -189,9 +199,11 @@ Possible shapes that work nicely for datasets with up to 1M data-points:
     delaunay_triangulation
     raster
 
-While ``raster`` still works nicely for large datasets , for extremely large datasets
-(several million datapoints), it is recommended to use "shading" instead of representing
-each data-point with a projected polygon.
+While ``raster`` still works nicely even for millions of datapoints, extremely large datasets
+(several million datapoints), it is recommended to use "shading" instead of actually plotting
+each individual datapoint.
+If shading is used, a dynamic averaging of the data based on the screen-resolution and the
+currently visible plot-extent is performed (resampling based on the mean-value is used by default).
 
 Possible shapes that can be used to quickly generate a plot for millions of datapoints are:
 
@@ -203,14 +215,19 @@ Possible shapes that can be used to quickly generate a plot for millions of data
     shade_points
     shade_raster
 
-If shading is used, a dynamic averaging of the data based on the screen-resolution and the
-currently visible plot-extent is performed (resampling based on the mean-value is used by default).
-
 .. note::
 
     The "shade"-shapes require the additional ``datashader`` dependency!
     You can install it via:
     ``conda install -c conda-forge datashader``
+
+.. admonition:: What's used by default?
+
+    By default, the plot-shape is assigned based on the associated dataset.
+
+    - For datasets with less than 500 000 pixels, ``m.set_shape.ellipses()`` is used.
+    - | For larger 2D datasets ``m.set_shape.shade_raster()`` is used
+      | ... and ``m.set_shape.shade_points()`` is used for the rest.
 
 To get an overview of the existing shapes and their main use-cases, here's a simple decision-tree:
 
@@ -231,6 +248,8 @@ plot-command for the selected shape.
 
 Some useful arguments that are supported by most shapes (except "shade"-shapes) are:
 
+    - "cmap" : the colormap to use
+    - "vmin", "vmax" : the range of values used when assigning the colors
     - "fc" or "facecolor" : the face-color of the shapes
     - "ec" or "edgecolor" : the edge-color of the shapes
     - "lw" or "linewidth" : the linewidth of the shapes
@@ -242,8 +261,8 @@ Some useful arguments that are supported by most shapes (except "shade"-shapes) 
     m.add_feature.preset.coastline()
 
     m2 = m.new_layer("a data layer")
-    m2.set_data(...)
-    ...
+    m2.set_data([1,2,3,4,5], [1,2,3,4,5], [1,2,3,4,5], crs=4326)
+    m2.set_shape.ellipses(radius=.3, radius_crs=4326)
     m2.plot_map(cmap="viridis", ec="g", lw=2, alpha=0.5)
 
 
