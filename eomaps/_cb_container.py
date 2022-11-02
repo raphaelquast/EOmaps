@@ -1498,9 +1498,12 @@ class keypress_container(_cb_container):
             callback = getattr(self._cb, callback)
 
         cbdict = self.get.cbs[key]
+
         # get a unique name for the callback
         ncb = [
-            int(i.rsplit("_", 1)[1]) for i in cbdict if i.startswith(callback.__name__)
+            int(i.rsplit("__", 1)[0].rsplit("_", 1)[1])
+            for i in cbdict
+            if i.startswith(callback.__name__)
         ]
         cbkey = (
             callback.__name__
