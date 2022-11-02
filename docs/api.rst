@@ -95,9 +95,8 @@ Once you have created your first ``Maps`` object, you can:
 .. admonition:: Combining multiple layers
 
     | To create a layer that represents a **combination of multiple existing layers**, separate the individual layer-names
-    | with a ``"|"`` character. (e.g. ``"layer1|layer2"`` )
-    | The layer will then always show **all features** of ``"layer1`` and ``layer2`` (in addition to the features
-    that were explicitly added to the ``Maps`` object of the combined-layer).
+    | with a ``"|"`` character (e.g. ``"layer1|layer2"``).
+    The layer will then always show **all features** of ``"layer1`` **and** ``layer2``.
 
     - NOTE: The *vertical stacking* of features is controlled by the ``zorder`` property, not by the order of the layers!
 
