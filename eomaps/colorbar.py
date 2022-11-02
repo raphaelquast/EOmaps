@@ -71,7 +71,7 @@ class ColorBar:
         tick_precision=2,
         tick_formatter=None,
         log=False,
-        mask_out_of_range_vals=False,
+        out_of_range_vals="clip",
         hist_kwargs=None,
         **kwargs,
     ):
@@ -170,10 +170,17 @@ class ColorBar:
         log : bool, optional
             Indicator if the y-axis of the plot should be logarithmic or not.
             The default is False
-        mask_out_of_range_vals : bool
-            Indicator if out-of range values should be masked or not.
-            (e.g. the histogram only shows data within the colorbar-limits)
-            The default is False
+        out_of_range_vals : str or None
+
+
+            - if "mask": out-of range values will be masked.
+              (e.g. values outside the colorbar limits are not represented in the
+               histogram and NO extend-arrows are added)
+            - if "clip": out-of-range values will be clipped.
+              (e.g. values outside the colorbar limits will be represented in the
+               min/max bins of the histogram)
+
+            The default is "clip"
         hist_kwargs : dict
             A dictionary with keyword-arguments passed to the creation of the histogram
             (e.g. passed to `plt.hist()` )
@@ -231,7 +238,7 @@ class ColorBar:
         self.tick_precision = tick_precision
         self.tick_formatter = tick_formatter
         self.log = log
-        self.mask_out_of_range_vals = mask_out_of_range_vals
+        self.out_of_range_vals = out_of_range_vals
 
         self.kwargs = copy.deepcopy(kwargs)
 
@@ -251,7 +258,6 @@ class ColorBar:
         self._refetch_bg = False
 
         self._set_data()
-        self._set_extend()
         self._setup_axes()
 
     def set_visible(self, vis):
@@ -579,11 +585,11 @@ class ColorBar:
     def _axes(self):
         return (self.ax, self.ax_cb, self.ax_cb_plot)
 
-    def _set_extend(self):
+    def _set_extend(self, z_data):
         extend = "neither"
-        if (self.z_data > self.vmax).any():
+        if (z_data > self.vmax).any():
             extend = "max"
-        if (self.z_data < self.vmin).any():
+        if (z_data < self.vmin).any():
             if extend == "max":
                 extend = "both"
             else:
@@ -672,8 +678,16 @@ class ColorBar:
         # make sure we only consider valid values in the histogram
         z_data = z_data[np.isfinite(z_data)]
 
-        if self.mask_out_of_range_vals:
-            z_data = z_data[(z_data > self.vmin) & (z_data < self.vmax)]
+        self._set_extend(z_data)
+
+        if self.out_of_range_vals == "mask":
+            z_data = z_data[(z_data >= self.vmin) & (z_data <= self.vmax)]
+
+        # make sure the norm clips with respect to vmin/vmax
+        # (only clip if either vmin or vmax is not None)
+        if self.out_of_range_vals == "clip":
+            if self.vmin or self.vmax:
+                z_data = z_data.clip(self.vmin, self.vmax)
 
         self.z_data = z_data
         self.bins = bins
