@@ -656,8 +656,8 @@ Everything related to callbacks is grouped under the ``cb`` accessor.
 🧰 Companion Widget
 --------------------
 
-Starting with v5.0, EOmaps provides a **companion widget** which greatly
-simplifies using the awesome interactive capabilities.
+Starting with v5.0, EOmaps comes with an awesome **companion widget** that greatly
+simplifies using interactive capabilities.
 
 
 - To activate the widget, press ``w`` on the keyboard while the mouse is over the map you want to edit.
