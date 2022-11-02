@@ -477,6 +477,7 @@ class TestBasicPlotting(unittest.TestCase):
             hist_kwargs=dict(density=True),
             log=True,
             label="naseawas",
+            out_of_range_vals="clip",
             hist_bins=5,
             extend_frac=0.4,
         )
@@ -492,7 +493,7 @@ class TestBasicPlotting(unittest.TestCase):
             orientation="horizontal",
             hist_kwargs=dict(density=False),
             label="naseawas",
-            mask_out_of_range_vals=True,
+            out_of_range_vals="mask",
             hist_bins=5,
             extend_frac=0.4,
             show_outline=dict(color="r", lw=4),
