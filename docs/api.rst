@@ -113,8 +113,13 @@ Once you have created your first ``Maps`` object, you can:
         m2.set_shape.ellipses(n=100)
         m2.plot_map(zorder=1)                     # plot the data "below" the ocean
 
-        m_combined = m.new_layer("first|second")  # show all features of the two layers
-        m_combined.show()
+        m.show_layer("first|second")  # show all features of the two layers
+
+        # you can even create Maps-objects representing combined layers!
+        # (the features will only be visible if all sub-layers are visible)
+        m_combined = m.new_layer("first|second")
+        m_combined.add_annotation(xy=(2, 5), xy_crs=4326, text="some text")
+
 
 .. currentmodule:: eomaps
 
@@ -2168,6 +2173,7 @@ Similar to ``Maps.from_file``, a new layer based on a file can be added to an ex
     :toctree: generated
     :nosignatures:
     :template: only_names_in_toc.rst
+
 
     new_layer_from_file.GeoTIFF
     new_layer_from_file.NetCDF
