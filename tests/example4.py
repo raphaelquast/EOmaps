@@ -79,7 +79,7 @@ cid = m.cb.pick.attach.clear_markers(button=2)
 
 # --------- define a custom callback to update some text to the map
 # (use a high zorder to draw the texts above all other things)
-txt = m.figure.f.text(
+txt = m.ax.text(
     0.5,
     0.35,
     "You clicked on 0 pixels so far",
@@ -90,8 +90,9 @@ txt = m.figure.f.text(
     fontweight="bold",
     animated=True,
     zorder=99,
+    transform=m.ax.transAxes,
 )
-txt2 = m.figure.f.text(
+txt2 = m.ax.text(
     0.18,
     0.9,
     "   lon    /    lat " + "\n",
@@ -101,6 +102,7 @@ txt2 = m.figure.f.text(
     fontweight="bold",
     animated=True,
     zorder=99,
+    transform=m.ax.transAxes,
 )
 
 # add the custom text objects to the blit-manager (m.BM) to avoid re-drawing the whole
@@ -185,5 +187,5 @@ m.cb.move.attach.mark(
 )
 
 
-m.add_colorbar(histbins="bins", bottom=0.05)
+m.add_colorbar(hist_bins="bins")
 m.add_logo()

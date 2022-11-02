@@ -39,8 +39,8 @@ m = mg.m_map  # get the Maps-object
 m.set_data(data, lon, lat, parameter=name)
 m.set_classify_specs(Maps.CLASSIFIERS.NaturalBreaks, k=5)
 m.plot_map()
-m.add_colorbar(bottom=0.1, top=0)
-m.figure.ax_cb.tick_params(rotation=90)
+m.add_colorbar()
+m.colorbar.ax_cb.tick_params(rotation=90)
 m.add_feature.preset.coastline()
 
 # add some new layers that will be used to indicate rows and columns

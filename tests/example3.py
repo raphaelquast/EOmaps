@@ -52,12 +52,21 @@ m.add_colorbar(
 )
 
 # add a y-label to the histogram
-_ = m.figure.ax_cb_plot.set_ylabel("The Y label")
+_ = m.colorbar.ax_cb_plot.set_ylabel("The Y label")
 
 # adjust the padding of the subplots
-m.subplots_adjust(bottom=0.1, top=0.95, left=0.075, right=0.95, hspace=0.2)
+m.subplots_adjust(bottom=0.1, top=0.95, left=0.1, right=0.95, hspace=0.2)
 # manually re-position the colorbar
 # m.colorbar.ax.set_position([0.125, 0.1, 0.83, 0.15])
 
 # add a logo to the plot
 m.add_logo(position="lr", pad=(-1.1, 0), size=0.1)
+
+m.apply_layout(
+    {
+        "0_map": [0.13798, 0.27, 0.76154, 0.66926],
+        "1_cb": [0.2325, 0.09, 0.6, 0.135],
+        "1_cb_histogram_size": 1,
+        "2_": [0.8725, 0.2475, 0.075, 0.05569],
+    }
+)
