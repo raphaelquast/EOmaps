@@ -4098,7 +4098,8 @@ class Maps(object):
         # method defined...)
         layers = layers.union(set(self.BM._on_layer_activation))
         # add all (possibly still invisible) layers with artists defined
-        layers = layers.union(set(self.BM._bg_artists))
+        # (ONLY do this for unique layers... skip multi-layers )
+        layers = layers.union({i for i in self.BM._bg_artists if "|" not in i})
 
         if exclude:
             for l in exclude:

@@ -149,7 +149,7 @@ class AutoUpdateLayerMenuButton(QtWidgets.QPushButton):
         uselayer = "???"
 
         if len(active_layers) > 1:
-            uselayer = "_|" + "|".join(active_layers)
+            uselayer = "|".join(active_layers)
         elif len(active_layers) == 1:
             uselayer = active_layers[0]
 
@@ -175,20 +175,18 @@ class AutoUpdateLayerMenuButton(QtWidgets.QPushButton):
             ]
 
     def update_display_text(self, l):
-        # TODO properly indicate temporary multi-layers
-        txt = l.lstrip("_|")
         # make sure that we don't use too long labels as text
-        if len(txt) > 50:
-            txt = f"{len([1 for i in txt.split('|') if len(i) > 0])} layers visible"
+        if len(l) > 50:
+            l = f"{len([1 for i in l.split('|') if len(i) > 0])} layers visible"
             # txt = txt[:50] + " ..."
 
-        if l.startswith("_"):
-            txt = "overlay:  " + txt
+        if "|" in l:
+            l = "multi :   " + l
             self.setStyleSheet("QPushButton{color: rgb(200,50,50)}")
         else:
             self.setStyleSheet("QPushButton{color: rgb(50,200,50)}")
 
-        self.setText(txt)
+        self.setText(l)
 
     def update_visible_layer(self, m, l):
         # make sure to re-fetch layers first
@@ -237,7 +235,7 @@ class AutoUpdateLayerMenuButton(QtWidgets.QPushButton):
 
             uselayer = "???"
             if len(checked_layers) > 1:
-                uselayer = "_|" + "|".join(sorted(checked_layers))
+                uselayer = "|".join(sorted(checked_layers))
             elif len(checked_layers) == 1:
                 uselayer = checked_layers[0]
 
