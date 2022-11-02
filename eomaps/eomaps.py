@@ -1766,6 +1766,22 @@ class Maps(object):
             # use numeric index values for all other types
             ids = np.arange(z_data.size)
 
+        if len(xorig.shape) == 1 and len(yorig.shape) == 1 and len(z_data.shape) == 2:
+            assert (
+                z_data.shape[0] == xorig.shape[0] and z_data.shape[0] == xorig.shape[0]
+            ), (
+                "The shape of the coordinate-arrays is not valid! "
+                f"data={z_data.shape} expects x={(z_data.shape[0],)}, "
+                f"y={(z_data.shape[1],)}, but the provided shapes are:"
+                f"x={xorig.shape}, y={yorig.shape}"
+            )
+
+        if len(xorig.shape) == len(z_data.shape):
+            assert xorig.shape == z_data.shape and yorig.shape == z_data.shape, (
+                f"EOmaps: The data-shape {z_data.shape} and coordinate-shape "
+                + f"x={xorig.shape}, y={yorig.shape} do not match!"
+            )
+
         return z_data, xorig, yorig, ids, parameter
 
     def _prepare_data(
@@ -1815,13 +1831,6 @@ class Maps(object):
 
             xorig, yorig = self._set_cpos(xorig, yorig, rx, ry, cpos)
 
-        # transform center-points to the plot_crs
-        if len(xorig.shape) == len(z_data.shape):
-            assert xorig.shape == z_data.shape and yorig.shape == z_data.shape, (
-                f"EOmaps: The data-shape {z_data.shape} and coordinate-shape "
-                + f"x={xorig.shape}, y={yorig.shape} do not match!"
-            )
-
         # invoke the shape-setter to make sure a shape is set
         used_shape = self.shape
 
@@ -1829,6 +1838,7 @@ class Maps(object):
         # this is required to avoid glitches in "raster" and "shade_raster"
         # since QuadMesh requires sorted coordinates!
         # (currently only implemented for 1D coordinates and 2D data)
+
         if assume_sorted is False:
             if used_shape.name in ["raster", "shade_raster"]:
                 if (
@@ -1875,6 +1885,7 @@ class Maps(object):
             x0, y0 = xorig, yorig
 
         else:
+            # transform center-points to the plot_crs
             transformer = Transformer.from_crs(
                 crs1,
                 crs2,
