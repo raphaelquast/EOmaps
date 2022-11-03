@@ -2325,6 +2325,49 @@ else:
 
         @property
         @lru_cache()
+        def DLR_basemaps(self):
+            """
+            A collection of basemaps provided by the EOC Geoservice of the Earth
+            Observation Center (EOC) of the German Aerospace Center (DLR).
+
+            https://geoservice.dlr.de
+
+            Note
+            ----
+            **LICENSE-info (without any warranty for correctness!!)**
+
+            The background maps and overlays used on this site are created and published
+            by DLR for informational and illustration purposes only. The user assumes
+            the entire risk related to the use of these data. These maps may contain
+            errors and therefore users of these maps should review or consult the
+            primary data and information sources to ascertain the usability of the
+            information.
+
+            Disclaimer
+
+            Although DLR is making these maps available to others, DLR does not warrant,
+            endorse, or recommend the use of these maps for any given purpose. DLR is
+            providing these data "as is", and disclaims any and all warranties, whether
+            expressed or implied. In no event will DLR be liable to you or to any third
+            party for any direct, indirect, incidental, consequential, special, or
+            exemplary damages or lost profits resulting from any use or misuse of
+            these data. The user of these maps cannot claim any rights pertaining to
+            its usage.
+
+            (check: https://geoservice.dlr.de/web/about for full details)
+            """
+
+            WMS = _WebServiec_collection(
+                m=self._m,
+                service_type="wms",
+                url="https://geoservice.dlr.de/eoc/basemap/wms?SERVICE=WMS&REQUEST=GetCapabilities",
+            )
+
+            WMS.__doc__ = type(self).CAMS.__doc__
+            return WMS
+
+        @property
+        @lru_cache()
         def ESRI_ArcGIS(self):
             """
             Interface to the ERSI ArcGIS REST Services Directory

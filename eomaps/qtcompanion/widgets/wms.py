@@ -173,36 +173,6 @@ class WMS_OSM(WMSBase):
         self.ask_for_legend(wms, wmslayer)
 
 
-class WMS_ISRIC_SoilGrids(WMSBase):
-    layer_prefix = "ISRIC_SoilGrids_"
-    name = "ISRIC SoilGrids"
-
-    def __init__(self, m=None):
-        self.m = m
-
-        subs = [i for i in m.add_wms.ISRIC_SoilGrids.__dir__() if not i.startswith("_")]
-
-        self.wmslayers = []
-        for l in subs:
-            self.wmslayers.extend(
-                [
-                    key
-                    for key in getattr(
-                        self.m.add_wms.ISRIC_SoilGrids, l
-                    ).add_layer.__dict__.keys()
-                    if not (key in ["m"] or key.startswith("_"))
-                ]
-            )
-
-    def do_add_layer(self, wmslayer, layer):
-
-        sub = wmslayer.split("_", 1)[0]
-
-        wms = getattr(getattr(self.m.add_wms.ISRIC_SoilGrids, sub).add_layer, wmslayer)
-        wms(layer=layer)
-        self.ask_for_legend(wms, wmslayer)
-
-
 class WMS_S2_cloudless(WMSBase):
     layer_prefix = "S2_"
     name = "S2 cloudless"
@@ -256,6 +226,50 @@ class WMS_S1GBM(WMSBase):
         self.ask_for_legend(wms, wmslayer)
 
 
+class WMS_ISRIC_SoilGrids(WMSBase):
+    layer_prefix = "ISRIC_SoilGrids_"
+    name = "ISRIC SoilGrids"
+
+    def __init__(self, m=None):
+        self.m = m
+
+        subs = [i for i in m.add_wms.ISRIC_SoilGrids.__dir__() if not i.startswith("_")]
+
+        self.wmslayers = []
+        for l in subs:
+            self.wmslayers.extend(
+                [
+                    key
+                    for key in getattr(
+                        self.m.add_wms.ISRIC_SoilGrids, l
+                    ).add_layer.__dict__.keys()
+                    if not (key in ["m"] or key.startswith("_"))
+                ]
+            )
+
+    def do_add_layer(self, wmslayer, layer):
+
+        sub = wmslayer.split("_", 1)[0]
+
+        wms = getattr(getattr(self.m.add_wms.ISRIC_SoilGrids, sub).add_layer, wmslayer)
+        wms(layer=layer)
+        self.ask_for_legend(wms, wmslayer)
+
+
+class WMS_DLR_basemaps(WMSBase):
+    layer_prefix = "DLR_bm_"
+    name = "DLR basemaps"
+
+    def __init__(self, m=None):
+        self.m = m
+        self.wmslayers = self.m.add_wms.DLR_basemaps.layers
+
+    def do_add_layer(self, wmslayer, layer):
+        wms = getattr(self.m.add_wms.DLR_basemaps.add_layer, wmslayer)
+        wms(layer=layer)
+        self.ask_for_legend(wms, wmslayer)
+
+
 # an event-filter to catch StatusTipFilter events
 # (e.g. to avoid clearing the statusbar on mouse hoover over QMenu)
 class StatusTipFilter(QObject):
@@ -283,6 +297,7 @@ class AddWMSMenuButton(QtWidgets.QPushButton):
             "NASA GIBS": WMS_NASA_GIBS,
             "CAMS": WMS_CAMS,
             "ISRIC SoilGrids": WMS_ISRIC_SoilGrids,
+            "DLR Basemaps": WMS_DLR_basemaps,
         }
 
         if self._new_layer:
