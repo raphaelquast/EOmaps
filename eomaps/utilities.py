@@ -467,7 +467,7 @@ class LayerSlider(Slider):
                 except:
                     pass
 
-            name = f"slider_{max(ns) if ns else 0}"
+            name = f"slider_{max(ns) + 1 if ns else 0}"
 
         self._init_args["name"] = name
         self._m.util._sliders[name] = self
@@ -536,8 +536,10 @@ class utilities:
                 s.set_val(s._labels.index(l))
                 s.eventson = True
             except ValueError:
+                s.valtext.set_text("")
                 pass
             except IndexError:
+                s.valtext.set_text("")
                 pass
             finally:
                 s.eventson = True

@@ -296,6 +296,7 @@ class Maps(object):
         self._parent = None
 
         self._BM = None
+        self._util = None
         self._children = set()  # weakref.WeakSet()
 
         self._colorbars = []
@@ -354,7 +355,6 @@ class Maps(object):
         self._cb = cb_container(weakref.proxy(self))  # accessor for the callbacks
 
         self._init_figure(gs_ax=gs_ax, plot_crs=crs, **kwargs)
-        self._utilities = utilities(weakref.proxy(self))
         self._wms_container = wms_container(weakref.proxy(self))
         self._new_layer_from_file = new_layer_from_file(weakref.proxy(self))
 
@@ -985,7 +985,9 @@ class Maps(object):
     @property
     @wraps(utilities)
     def util(self):
-        return self._utilities
+        if self.parent._util is None:
+            self.parent._util = utilities(self.parent)
+        return self.parent._util
 
     @property
     @wraps(ShapeDrawer)
