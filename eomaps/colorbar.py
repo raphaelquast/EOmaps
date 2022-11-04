@@ -29,6 +29,42 @@ def _register_datashader():
     return True
 
 
+def get_named_bins_formatter(bins, names):
+    """
+    A formatter to format the tick-labels of the colorbar with respect to
+    labels for a given set of bins.
+
+    Parameters
+    ----------
+    bins : list of float
+        The (upper) bin-boundaries to use.
+    names : list of string
+        The names for ticks that are inside the bins.
+        Must be 1 longer than the provided bin-boundaries!
+
+    Examples
+    --------
+
+    bins = [10, 20, 30, 40, 50]
+    names =["below 10", "10-20", "20-30", "30-40", "40-50", "above 50"]
+
+
+    """
+
+    def formatter(x, pos):
+        if len(names) != len(bins) + 1:
+            raise AssertionError(
+                f"EOmaps: the provided number of names ({len(names)}) "
+                f"does not match! Expected {len(bins) + 1} names."
+            )
+
+        b = np.digitize(x, bins)
+
+        return names[b]
+
+    return formatter
+
+
 # class copied from matplotlib.axes
 class _TransformedBoundsLocator:
     """
@@ -69,6 +105,8 @@ class ColorBar:
         dynamic_shade_indicator=False,
         show_outline=False,
         tick_precision=2,
+        tick_bin_center=False,
+        tick_bin_labels=False,
         tick_formatter=None,
         log=False,
         out_of_range_vals="clip",
@@ -153,6 +191,26 @@ class ColorBar:
         tick_precision : int or None
             The precision of the tick-labels in the colorbar.
             The default is 3.
+        tick_bin_center : bool
+            Indicator if colorbar ticks should be positioned at the center of the bins.
+            The default is False.
+        tick_bin_labels : tuple
+            A tuple of (bins, labels) that will be used to label the colorbar ticks.
+            If provided, any tick located inside the provided bins will be assigned the
+            corresponding label.
+
+            - bins : a list of (lower) bin-boundaries
+            - names : a list of names (1 more than bins) that should be used to
+              label the bins
+
+            >>> bins = [1, 2, 3]
+            >>> names = ["smaller than 1",
+            >>>          "between 1 and 2",
+            >>>          "between 2 and 3",
+            >>>          "larger than 3"]
+            >>>
+            >>> m.add_colorbar(tick_bin_center=True, tick_bin_labels=(bins, names))
+
         tick_formatter : callable
             A function that will be used to format the ticks of the colorbar.
             The function will be used with matpltlibs `set_major_formatter`...
@@ -171,7 +229,6 @@ class ColorBar:
             Indicator if the y-axis of the plot should be logarithmic or not.
             The default is False
         out_of_range_vals : str or None
-
 
             - if "mask": out-of range values will be masked.
               (e.g. values outside the colorbar limits are not represented in the
@@ -237,6 +294,8 @@ class ColorBar:
         self.show_outline = show_outline
         self.tick_precision = tick_precision
         self.tick_formatter = tick_formatter
+        self.tick_bin_center = tick_bin_center
+        self.tick_bin_labels = tick_bin_labels
         self.log = log
         self.out_of_range_vals = out_of_range_vals
 
@@ -322,6 +381,19 @@ class ColorBar:
         """
         # if precision=None the shortest representation of the number is used
         return np.format_float_positional(self.m._decode_values(x), precision)
+
+    def _classified_cb_tick_formatter(self, x, pos, precision=None):
+        """
+        A formatter to format the tick-labels of the colorbar for classified datasets.
+        (used in xaxis.set_major_formatter() )
+        """
+        # if precision=None the shortest representation of the number is used
+        if x >= self.vmin and x <= self.vmax:
+            return np.format_float_positional(
+                self.m._decode_values(x), precision=self.tick_precision, trim="-"
+            )
+        else:
+            return ""
 
     def set_hist_size(self, size=None):
         """
@@ -735,22 +807,18 @@ class ColorBar:
         if self.classified and "ticks" not in self.kwargs:
             cb.set_ticks([i for i in self.bins if i >= self.vmin and i <= self.vmax])
 
-            if horizontal:
-                labelsetfunc = "set_xticklabels"
-            else:
-                labelsetfunc = "set_yticklabels"
+            if self.tick_formatter is None:
+                self.tick_formatter = self._classified_cb_tick_formatter
 
-            getattr(cb.ax, labelsetfunc)(
-                [
-                    np.format_float_positional(
-                        i, precision=self.tick_precision, trim="-"
-                    )
-                    for i in self.bins
-                    if i >= self.vmin and i <= self.vmax
-                ]
-            )
+            if self.tick_bin_center is not False:
+                cbticks = cb.get_ticks()
+                centerbins = cbticks[:-1] + (cbticks[1:] - cbticks[:-1]) / 2
+                cb.set_ticks(centerbins)
         else:
             cb.set_ticks(cb.get_ticks())
+
+        if self.tick_bin_labels is not None:
+            self.tick_formatter = get_named_bins_formatter(*self.tick_bin_labels)
 
         if self.tick_formatter is None:
             tick_formatter = partial(
