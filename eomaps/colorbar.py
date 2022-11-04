@@ -732,7 +732,7 @@ class ColorBar:
         cb.outline.set_visible(False)
 
         # ensure that ticklabels are correct if a classification is used
-        if self.classified:
+        if self.classified and "ticks" not in self.kwargs:
             cb.set_ticks([i for i in self.bins if i >= self.vmin and i <= self.vmax])
 
             if horizontal:
