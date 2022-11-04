@@ -760,9 +760,9 @@ class ColorBar:
             tick_formatter = self.tick_formatter
 
         if horizontal:
-            cb.ax.yaxis.set_major_formatter(tick_formatter)
-        else:
             cb.ax.xaxis.set_major_formatter(tick_formatter)
+        else:
+            cb.ax.yaxis.set_major_formatter(tick_formatter)
 
         # format position of scientific exponent for colorbar ticks
         if horizontal:
