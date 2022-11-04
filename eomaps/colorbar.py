@@ -106,7 +106,7 @@ class ColorBar:
         show_outline=False,
         tick_precision=2,
         tick_bin_center=False,
-        tick_bin_labels=False,
+        tick_bin_labels=None,
         tick_formatter=None,
         log=False,
         out_of_range_vals="clip",
