@@ -4233,7 +4233,7 @@ class Maps(object):
                 layout[name] = ax.get_position().bounds
 
             if cbs[i] is not None:
-                layout[f"{name}_histogram_size"] = cbs[i].hist_size
+                layout[f"{name}_histogram_size"] = cbs[i]._hist_size
 
         if filepath is not None:
             filepath = Path(filepath)

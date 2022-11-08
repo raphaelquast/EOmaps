@@ -235,7 +235,7 @@ class LayoutEditor:
     def cbaxes(self):
         axes = list()
         for m in self.ms:
-            axes.extend((i.ax for i in m._colorbars))
+            axes.extend((i._ax for i in m._colorbars))
         return axes
 
     @property
@@ -400,7 +400,7 @@ class LayoutEditor:
         self._start_position = (event.x, event.y)
         self._start_ax_position = {
             i: (i.bbox.x0, i.bbox.y0)
-            for i in (*self._ax_picked, *(cb.ax for cb in self._cb_picked))
+            for i in (*self._ax_picked, *(cb._ax for cb in self._cb_picked))
         }
 
     def cb_release(self, event):
@@ -497,7 +497,7 @@ class LayoutEditor:
             ax.set_position(bbox)
 
         for cb in self._cb_picked:
-            bbox = self._get_move_with_key_bbox(cb.ax, event.key)
+            bbox = self._get_move_with_key_bbox(cb._ax, event.key)
             cb.set_position(bbox)
 
         self._color_axes()
@@ -525,7 +525,7 @@ class LayoutEditor:
             if cb is None:
                 return
 
-            bbox = self._get_move_bbox(cb.ax, event.x, event.y)
+            bbox = self._get_move_bbox(cb._ax, event.x, event.y)
             cb.set_position(bbox)
 
         self.m.BM._refetch_bg = True
@@ -552,13 +552,13 @@ class LayoutEditor:
                 continue
 
             if self._scale_direction == "set_hist_size":
-                start_size = cb.hist_size
+                start_size = cb._hist_size
 
                 new_size = np.clip(start_size + event.step * 0.02, 0.0, 1.0)
                 cb.set_hist_size(new_size)
                 self._ax_visible[cb.ax_cb_plot] = cb.ax_cb_plot.get_visible()
             else:
-                resize_bbox = self._get_resize_bbox(cb.ax, event.step)
+                resize_bbox = self._get_resize_bbox(cb._ax, event.step)
                 if resize_bbox is not None:
                     cb.set_position(resize_bbox)
 
