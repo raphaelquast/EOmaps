@@ -519,6 +519,22 @@ class TestBasicPlotting(unittest.TestCase):
 
         self.assertTrue(m2.colorbar is cb5)
 
+        # test setting custom bins
+        bins = [-5e6, 5e6, 1e7]
+        labels = ["A", "b", "c", "d"]
+        m3 = m.new_layer("asdf")
+        m3.set_data_specs(data=self.data, x="x", y="y", in_crs=3857)
+        m3.set_classify.UserDefined(bins=bins)
+        m3.plot_map()
+        cb6 = m3.add_colorbar()
+        cb6.set_bin_labels(bins, labels)
+        m3.show()
+
+        self.assertTrue(labels == [i.get_text() for i in cb6.ax_cb.get_xticklabels()])
+
+        cb6.set_bin_labels(bins, labels, show_values=True)
+        cb6.tick_params(which="minor", rotation=90)
+
     def test_MapsGrid(self):
         mg = MapsGrid(2, 2, crs=4326)
         mg.set_data(

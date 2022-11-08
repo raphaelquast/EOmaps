@@ -4215,14 +4215,14 @@ class Maps(object):
         colorbars = [
             getattr(m, "colorbar", None) for m in (self.parent, *self.parent._children)
         ]
-        cbaxes = [getattr(cb, "ax", None) for cb in colorbars]
+        cbaxes = [getattr(cb, "_ax", None) for cb in colorbars]
         cbs = [(colorbars[cbaxes.index(a)] if a in cbaxes else None) for a in axes]
         # -----------
 
         layout = dict()
         for i, ax in enumerate(axes):
             if cbs[i] is not None:
-                if cbs[i].ax.get_axes_locator() is not None:
+                if cbs[i]._ax.get_axes_locator() is not None:
                     continue
 
             label = ax.get_label()
@@ -4289,7 +4289,7 @@ class Maps(object):
         colorbars = [
             getattr(m, "colorbar", None) for m in (self.parent, *self.parent._children)
         ]
-        cbaxes = [getattr(cb, "ax", None) for cb in colorbars]
+        cbaxes = [getattr(cb, "_ax", None) for cb in colorbars]
         cbs = [(colorbars[cbaxes.index(a)] if a in cbaxes else None) for a in axes]
 
         # check if all relevant axes are specified in the layout

@@ -1147,7 +1147,7 @@ class ColorBar:
         elif what == "histogram":
             self.ax_cb_plot.tick_params(**kwargs)
 
-        self._m.BM.update()
+        self._m.BM._refetch_layer(self._m.layer)
 
     tick_params.__doc__ = (
         "NOTE\n"
