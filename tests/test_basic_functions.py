@@ -509,13 +509,13 @@ class TestBasicPlotting(unittest.TestCase):
 
         m.redraw()
 
-        self.assertTrue(all(cb.ax.get_visible() for cb in m._colorbars))
-        self.assertFalse(m2.colorbar.ax.get_visible())
+        self.assertTrue(all(cb.ax_cb.get_visible() for cb in m._colorbars))
+        self.assertFalse(m2.colorbar.ax_cb.get_visible())
         m.show_layer("asdf")
-        self.assertTrue(m2.colorbar.ax.get_visible())
+        self.assertTrue(m2.colorbar.ax_cb.get_visible())
 
         self.assertTrue(len(m2._colorbars) == 1)
-        self.assertTrue(all(not cb.ax.get_visible() for cb in m._colorbars))
+        self.assertTrue(all(not cb.ax_cb.get_visible() for cb in m._colorbars))
 
         self.assertTrue(m2.colorbar is cb5)
 
