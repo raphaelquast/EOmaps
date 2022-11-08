@@ -307,6 +307,12 @@ class ColorBar:
 
         self.classified = self.m.classify_specs._classified
 
+        if self.hist_bins == "bins" and not self.classified:
+            raise AssertionError(
+                "EOmaps: Using hist_bins='bins' is only possible "
+                "for classified datasets!"
+            )
+
         self._redraw = False
         self.ax = None
         self.ax_cb = None
