@@ -534,6 +534,7 @@ class utilities:
             try:
                 s.eventson = False
                 s.set_val(s._labels.index(l))
+                s.valtext.set_text(l)
                 s.eventson = True
             except ValueError:
                 s.valtext.set_text("")
