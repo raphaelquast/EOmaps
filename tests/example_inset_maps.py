@@ -72,5 +72,5 @@ m3.add_colorbar(histbins=20, top=0.15)
 # move the inset map (and the colorbar) to a different location
 m3.set_inset_position(x=0.3)
 # set the y-ticks of the colorbar histogram
-m3.figure.ax_cb_plot.set_yticks([0, 1, 2])
+m3.colorbar.ax_cb_plot.set_yticks([0, 1, 2])
 m3.redraw()
