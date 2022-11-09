@@ -1107,6 +1107,18 @@ class ColorBar:
                 self.ax_cb.tick_params(
                     labelright=True, which="minor", labelsize="xx-small"
                 )
+        else:
+            if horizontal:
+                self.ax_cb.tick_params(
+                    labelbottom=False,
+                    which="minor",
+                )
+
+            else:
+                self.ax_cb.tick_params(
+                    labelright=False,
+                    which="minor",
+                )
 
         self.ax_cb_plot.tick_params(
             right=False, bottom=False, labelright=False, labelbottom=False, which="both"
