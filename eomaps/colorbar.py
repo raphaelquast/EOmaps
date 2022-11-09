@@ -1009,9 +1009,13 @@ class ColorBar:
             A list of (right) bin-boundaries used to set the label-positions.
             (e.g. `bins=[1, 2, 6]` will result in labels located at [1.5 and 4])
         names : list
-            A list of names (1 more than bins) that should be used as labels.
-            The first label is assigned to the values smaller than the provided bins
-            The last label is assigned to the values larger than the provided bins
+            A list of names that should be used as labels.
+
+            - The first name is assigned to the values smaller than bins[0]
+            - Names 1 to "len(bins)" are assigned to the intermediate bins
+            - The "len(bins) + 1" label is assigned to the values larger than bins[-1]
+              (if not available a "?" label will be used)
+
         tick_lines : str
             Set appearance of the tick-lines
 
@@ -1037,6 +1041,16 @@ class ColorBar:
         >>> m.label_bin_centers(bins, names)
 
         """
+        nnames, nbins = len(names), len(bins)
+
+        assert nnames in [nbins, nbins + 1], (
+            "The number of provided names is incorrect! "
+            f"Expected {nbins} (or {nbins + 1}) names but got {nnames}"
+        )
+
+        if nnames == nbins:
+            names = [*names, "?"]
+
         horizontal = self._orientation == "horizontal"
 
         cbticks = np.array(sorted({self._vmin, *bins, self._vmax}))
