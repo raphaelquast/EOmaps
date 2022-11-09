@@ -37,6 +37,8 @@ class TestFromFile(unittest.TestCase):
         )
         m2.show()
 
+        plt.close("all")
+
     def test_GeoTIFF(self):
         data = Maps.read_file.GeoTIFF(self.tiffpath)
         m = Maps.from_file.GeoTIFF(self.tiffpath)
@@ -45,6 +47,7 @@ class TestFromFile(unittest.TestCase):
             self.tiffpath, layer="second", cmap="cividis", shape="shade_points"
         )
         m2.show()
+        plt.close("all")
 
     def test_NetCDF(self):
         data = Maps.read_file.NetCDF(self.netcdfpath, data_crs=4326)
@@ -59,3 +62,4 @@ class TestFromFile(unittest.TestCase):
             shape="shade_points",
             data_crs=4326,
         )
+        plt.close("all")
