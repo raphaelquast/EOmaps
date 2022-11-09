@@ -16,6 +16,10 @@ dependencies:
   - pyepsg
   # --------------for data-shading
   - datashader
+  # --------------for GeoTIFF and NetCDF files
+  - netcdf4
+  - xarray
+  - rioxarray
   # --------------for WebMaps
   - owslib
   - requests
