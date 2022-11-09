@@ -1766,7 +1766,7 @@ class Maps(object):
             ids = data.index.values
         else:
             # use numeric index values for all other types
-            ids = np.arange(z_data.size)
+            ids = range(z_data.size)
 
         if len(xorig.shape) == 1 and len(yorig.shape) == 1 and len(z_data.shape) == 2:
             assert (
@@ -1908,7 +1908,7 @@ class Maps(object):
         # (relevant for categorical dtypes in pandas.DataFrames)
         props["xorig"] = np.asanyarray(xorig)
         props["yorig"] = np.asanyarray(yorig)
-        props["ids"] = np.asanyarray(ids)
+        props["ids"] = ids
         props["z_data"] = np.asanyarray(z_data)
         props["x0"] = np.asanyarray(x0)
         props["y0"] = np.asanyarray(y0)
@@ -2576,6 +2576,20 @@ class Maps(object):
 
         return marker
 
+    def _find_ID(self, ID):
+        # explicitly treat range-like indices (for very large datasets)
+        ids = self._props["ids"]
+        if isinstance(ids, range):
+            if ID in ids:
+                return [ID], [ID]
+            else:
+                return None, None
+        elif isinstance(ids, np.ndarray):
+            mask = np.isin(ids, ID)
+            ind = np.where(mask)[0]
+
+        return mask, ind
+
     def add_annotation(
         self,
         ID=None,
@@ -2659,10 +2673,14 @@ class Maps(object):
 
         if ID is not None:
             assert xy is None, "You can only provide 'ID' or 'pos' not both!"
-            mask = np.isin(self._props["ids"], ID)
+            # avoid using np.isin directly since it needs a lot of ram
+            # for very large datasets!
+            # mask = np.isin(self._props["ids"], ID)
+            # ind = np.where(mask)[0]
+            mask, ind = self._find_ID(ID)
+
             xy = (self._props["xorig"][mask], self._props["yorig"][mask])
             val = self._props["z_data"][mask]
-            ind = np.where(mask)[0]
             ID = np.atleast_1d(ID)
             xy_crs = self.data_specs.crs
         else:
@@ -3411,38 +3429,39 @@ class Maps(object):
                     coll = self.shape.get_coll(
                         props["xorig"], props["yorig"], "in", **args
                     )
-                elif (
-                    _register_pandas()
-                    and isinstance(self.data, pd.DataFrame)
-                    and isinstance(self.data_specs.x, str)
-                    and isinstance(self.data_specs.y, str)
-                    and len(props["z_data"].shape) == 1
-                ):
+                elif _register_pandas():
+                    if (
+                        (len(props["xorig"].shape) == 1)
+                        and (len(props["yorig"].shape) == 1)
+                        and (len(props["z_data"].shape) == 1)
+                        and (props["xorig"].size == props["yorig"].size)
+                        and (props["xorig"].size == props["z_data"].size)
+                    ):
 
-                    df = (
-                        pd.DataFrame(
-                            dict(
-                                x=props["xorig"].ravel(),
-                                y=props["yorig"].ravel(),
-                                val=props["z_data"].ravel(),
-                            ),
-                            copy=False,
-                        ).set_index(["x", "y"])
-                    )["val"].unstack("y")
+                        df = (
+                            pd.DataFrame(
+                                dict(
+                                    x=props["xorig"].ravel(),
+                                    y=props["yorig"].ravel(),
+                                    val=props["z_data"].ravel(),
+                                ),
+                                copy=False,
+                            ).set_index(["x", "y"])
+                        )["val"].unstack("y")
 
-                    xg, yg = np.meshgrid(df.index.values, df.columns.values)
+                        xg, yg = np.meshgrid(df.index.values, df.columns.values)
 
-                    if args["array"] is not None:
-                        args["array"] = df.values.T
+                        if args["array"] is not None:
+                            args["array"] = df.values.T
 
-                    coll = self.shape.get_coll(xg, yg, "in", **args)
+                        coll = self.shape.get_coll(xg, yg, "in", **args)
 
                 else:
                     raise AssertionError(
                         "EOmaps: using 'raster' is only possible if "
                         + "you provide coordinates and data as 2D "
-                        + "arrays or as a 1D pandas.DataFrame (which "
-                        + "will be converted to 2D internally)"
+                        + "arrays or as (equal-size) 1D arrays or pandas.DataFrames "
+                        + " (which will be converted to 2D internally)"
                     )
 
                 # convert values to 1D for callbacks etc.
@@ -3540,16 +3559,14 @@ class Maps(object):
         # remember props for later use
         self._props = props
 
-        z_finite = np.isfinite(props["z_data"])
-
         # get the name of the used aggretation reduction
         aggname = self.shape.aggregator.__class__.__name__
         if aggname in ["first", "last", "max", "min", "mean", "mode"]:
             # set vmin/vmax in case the aggregation still represents data-values
             if vmin is None:
-                vmin = np.min(props["z_data"][z_finite])
+                vmin = np.nanmin(props["z_data"])
             if vmax is None:
-                vmax = np.max(props["z_data"][z_finite])
+                vmax = np.nanmax(props["z_data"])
         else:
             # set vmin/vmax for aggregations that do NOT represent data values
 
@@ -3709,7 +3726,6 @@ class Maps(object):
             assert (
                 _register_pandas()
             ), f"EOmaps: missing dependency 'pandas' for {self.shape.name}"
-
             df = pd.DataFrame(
                 dict(x=props["x0"].ravel(), y=props["y0"].ravel(), val=zdata.ravel()),
                 copy=False,
