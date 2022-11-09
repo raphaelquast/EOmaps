@@ -1666,21 +1666,64 @@ To indicate rectangular areas in any given crs, simply use ``m.indicate_extent``
 
 .. note::
     | You must plot a dataset first! (e.g. by calling ``m.plot_map()``)
-    | The colorbar always represents the dataset that was used in the last call to ``m.°^^^^plot_map()``.
+    | The colorbar always represents the dataset that was used in the last call to ``m.plot_map()``.
     | If you need multiple colorbars, use an individual ``Maps`` object for each dataset! (e.g. via ``m2  = m.new_layer()``)
 
 
-To manually change the position of a previously created colorbar (or the relative size between the colorbar
-and the histogram), use `m.figure.set_colorbar_position()`.
 
-.. currentmodule:: eomaps._containers.map_objects
+Once the colorbar has been created, the colorbar-object can be accessed via ``m.colorbar``.
+It has the following useful methods defined:
+
+.. currentmodule:: eomaps.colorbar.ColorBar
 
 .. autosummary::
     :toctree: generated
     :nosignatures:
     :template: only_names_in_toc.rst
 
-    set_colorbar_position
+    set_position
+    set_hist_size
+    tick_params
+    set_visible
+    remove
+
+
+📎 Set colorbar tick labels based on bins
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+To label the colorbar with custom names for a given set of bins, use ``m.colorbar.set_bin_labels()``:
+
++-------------------------------------------------------------------------------+------------------------------------------------+
+| .. code-block:: python                                                        | .. image:: _static/minigifs/colorbar_ticks.png |
+|                                                                               |   :align: center                               |
+|     import numpy as np                                                        |                                                |
+|     from eomaps import Maps                                                   |                                                |
+|     # specify some random data                                                |                                                |
+|     lon, lat = np.mgrid[-45:45, -45:45]                                       |                                                |
+|     data = np.random.normal(0, 50, lon.shape)                                 |                                                |
+|                                                                               |                                                |
+|     # use a custom set of bins to classify the data                           |                                                |
+|     bins = np.array([-50, -30, -20, 20, 30, 40, 50])                          |                                                |
+|     names = np.array(["below -50", "A", "B", "C", "D", "E", "F", "above 50"]) |                                                |
+|                                                                               |                                                |
+|     m = Maps()                                                                |                                                |
+|     m.add_feature.preset.coastline()                                          |                                                |
+|     m.set_data(data, lon, lat)                                                |                                                |
+|     m.set_classify.UserDefined(bins=bins)                                     |                                                |
+|     m.plot_map(cmap="tab10")                                                  |                                                |
+|     m.add_colorbar()                                                          |                                                |
+|                                                                               |                                                |
+|     # set custom colorbar-ticks based on the bins                             |                                                |
+|     m.colorbar.set_bin_labels(bins, names)                                    |                                                |
++-------------------------------------------------------------------------------+------------------------------------------------+
+
+.. autosummary::
+    :toctree: generated
+    :nosignatures:
+    :template: only_names_in_toc.rst
+
+    set_bin_labels
+
 
 
 🌠 Using the colorbar as a "dynamic shade indicator"
