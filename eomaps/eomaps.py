@@ -4677,16 +4677,6 @@ class _InsetMaps(Maps):
 
         y0, y1, x0, x1 = self.figure.gridspec.get_grid_positions(self.figure.f)
 
-        if self.figure.cb_gridspec is not None:
-            y0cb, y1cb, x0cb, x1cb = self.figure.cb_gridspec.get_grid_positions(
-                self.figure.f
-            )
-
-            x0 = min(*x0, *x0cb)
-            x1 = max(*x1, *x1cb)
-            y0 = min(*y0, *y0cb)
-            y1 = max(*y1, *y1cb)
-
         if size is None:
             size = abs(x1 - x0)
 
