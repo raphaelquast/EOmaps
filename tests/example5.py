@@ -54,7 +54,6 @@ m3.plot_map(cmap="gist_ncar", edgecolor="w", linewidth=0.25, dynamic=True)
 def callback(m, **kwargs):
     selection = np.random.randint(0, len(m.data), 1000)
     m.figure.coll.set_array(data_OK.param.iloc[selection])
-    m.BM.update(artists=[m.figure.coll])
 
 
 # attach the callback (to update the dataset plotted on the Maps object "m3")
