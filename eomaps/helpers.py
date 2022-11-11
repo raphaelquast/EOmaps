@@ -139,49 +139,62 @@ class searchtree:
         if d is None:
             d = self.d
 
-        # select a rectangle around the pick-coordinates
-        # (provides tremendous speedups for very large datasets)
-        mx = np.logical_and(
-            self._m._props["x0"] > (x[0] - d), self._m._props["x0"] < (x[0] + d)
-        )
-        my = np.logical_and(
-            self._m._props["y0"] > (x[1] - d), self._m._props["y0"] < (x[1] + d)
-        )
-        m = np.logical_and(mx, my)
-        # get the indexes of the search-rectangle
-        idx = np.where(m.ravel())[0]
-        # evaluate the clicked pixel as the one with the smallest
-        # euclidean distance
-        if len(idx) > 0:
-            i = idx[
-                (
-                    (self._m._props["x0"][m].ravel() - x[0]) ** 2
-                    + (self._m._props["y0"][m].ravel() - x[1]) ** 2
-                ).argmin()
-            ]
+        i = None
+
+        # take care of 1D coordinates and 2D data
+        if self._m._1D2D:
+            # just perform a brute-force search for 1D coords
+            ix = np.argmin(np.abs(self._m._props["x0"] - x[0]))
+            iy = np.argmin(np.abs(self._m._props["y0"] - x[1]))
+
+            i = np.ravel_multi_index((ix, iy), self._m._zshape)
 
         else:
-            # show some warning if no points are found within the pick_distance
+            # select a rectangle around the pick-coordinates
+            # (provides tremendous speedups for very large datasets)
+            mx = np.logical_and(
+                self._m._props["x0"] > (x[0] - d), self._m._props["x0"] < (x[0] + d)
+            )
+            my = np.logical_and(
+                self._m._props["y0"] > (x[1] - d), self._m._props["y0"] < (x[1] + d)
+            )
+            m = np.logical_and(mx, my)
+            # get the indexes of the search-rectangle
+            idx = np.where(m.ravel())[0]
+            # evaluate the clicked pixel as the one with the smallest
+            # euclidean distance
+            if len(idx) > 0:
+                i = idx[
+                    (
+                        (self._m._props["x0"][m].ravel() - x[0]) ** 2
+                        + (self._m._props["y0"][m].ravel() - x[1]) ** 2
+                    ).argmin()
+                ]
 
-            if self._misses < 3:
-                self._misses += 1
+            else:
+                # show some warning if no points are found within the pick_distance
 
-                text = "Found no data here...\n Increase pick_distance?"
+                if self._misses < 3:
+                    self._misses += 1
 
-                self._m.cb.click._cb.annotate(
-                    pos=x,
-                    permanent=False,
-                    text=text,
-                    xytext=(0.98, 0.98),
-                    textcoords=self._m.figure.f.transFigure,
-                    horizontalalignment="right",
-                    verticalalignment="top",
-                    arrowprops=None,
-                    fontsize=7,
-                    bbox=dict(ec="r", fc=(1, 0.9, 0.9, 0.5), lw=0.25, boxstyle="round"),
-                )
+                    text = "Found no data here...\n Increase pick_distance?"
 
-            i = None
+                    self._m.cb.click._cb.annotate(
+                        pos=x,
+                        permanent=False,
+                        text=text,
+                        xytext=(0.98, 0.98),
+                        textcoords=self._m.figure.f.transFigure,
+                        horizontalalignment="right",
+                        verticalalignment="top",
+                        arrowprops=None,
+                        fontsize=7,
+                        bbox=dict(
+                            ec="r", fc=(1, 0.9, 0.9, 0.5), lw=0.25, boxstyle="round"
+                        ),
+                    )
+
+                i = None
 
         return None, i
 

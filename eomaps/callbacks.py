@@ -206,10 +206,7 @@ class _click_callbacks(object):
             if ID is not None and self.m.data is not None:
                 x, y = [
                     np.format_float_positional(i, trim="-", precision=pos_precision)
-                    for i in (
-                        self.m._props["xorig"].flat[ind],
-                        self.m._props["yorig"].flat[ind],
-                    )
+                    for i in self.m._get_xy_from_index(ind)
                 ]
                 x0, y0 = [
                     np.format_float_positional(i, trim="-", precision=pos_precision)
@@ -431,7 +428,7 @@ class _click_callbacks(object):
             if ind is None:
                 # ind = self.m.data.index.get_loc(ID)
                 ind = np.flatnonzero(np.isin(self.m._props["ids"], ID))
-            pos = (self.m._props["xorig"][ind], self.m._props["yorig"][ind])
+            pos = self.m._get_xy_from_index(ind)
             pos_crs = "in"
         else:
             pos_crs = "out"

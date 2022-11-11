@@ -1873,8 +1873,8 @@ class Maps(object):
                 )
 
         if crs1 == crs2:
-            if used_shape.name in ["raster"]:
-                # convert 1D data to 2D (required for QuadMeshes)
+            if used_shape.name not in ["shade_raster"]:
+                # convert 1D data to 2D (required for all shapes but shade_raster)
                 if (
                     len(xorig.shape) == 1
                     and len(yorig.shape) == 1
@@ -1913,67 +1913,25 @@ class Maps(object):
         props["x0"] = np.asanyarray(x0)
         props["y0"] = np.asanyarray(y0)
 
-        # convert the data to 1D for shapes that accept unstructured data
-        if used_shape.name not in ["shade_raster", "raster"]:
-            self._1Dprops(props)
+        # remember shapes for later use
+        self._xshape = props["x0"].shape
+        self._yshape = props["y0"].shape
+        self._zshape = props["z_data"].shape
+
+        if len(self._xshape) == 1 and len(self._yshape) == 1 and len(self._zshape) == 2:
+            self._1D2D = True
+        else:
+            self._1D2D = False
 
         return props
 
-    @staticmethod
-    def _1Dprops(props):
-
-        # convert all arrays in props to a proper 1D representation that will be used
-        # to index and identify points
-
-        # Note: _prepare_data already converts datasets to 1D if
-        #       a shape that accepts non-rectangular datasets is used!
-
-        # Note: both ravel and meshgrid return views!
-        n_coord_shape = len(props["xorig"].shape)
-
-        props["x0"], props["y0"] = (
-            props["x0"].ravel(),
-            props["y0"].ravel(),
-        )
-        props["xorig"], props["yorig"] = (
-            props["xorig"].ravel(),
-            props["yorig"].ravel(),
-        )
-
-        # in case 2D data and 1D coordinate arrays are provided, use a meshgrid
-        # to identify the coordinates
-        if n_coord_shape == 1 and len(props["z_data"].shape) == 2:
-
-            props["x0"], props["y0"] = [
-                i
-                for i in np.broadcast_arrays(
-                    *np.meshgrid(props["x0"], props["y0"], copy=False, sparse=True)
-                )
-            ]
-
-            props["xorig"], props["yorig"] = [
-                i
-                for i in np.broadcast_arrays(
-                    *np.meshgrid(
-                        props["xorig"], props["yorig"], copy=False, sparse=True
-                    )
-                )
-            ]
-
-            # props["x0"], props["y0"] = [
-            #     np.ravel(i) for i in np.meshgrid(props["x0"], props["y0"], copy=False)
-            # ]
-            # props["xorig"], props["yorig"] = [
-            #     np.ravel(i)
-            #     for i in np.meshgrid(props["xorig"], props["yorig"], copy=False)
-            # ]
-
-            # transpose since 1D coordinates are expected to be provided as (y, x)
-            # and NOT as (x, y)
-            props["z_data"] = props["z_data"].T.ravel()
-
+    def _get_xy_from_index(self, ind):
+        if self._1D2D:
+            xind, yind = np.unravel_index(ind, self._zshape)
         else:
-            props["z_data"] = props["z_data"].ravel()
+            xind = yind = ind
+
+        return (self._props["x0"].flat[xind], self._props["y0"].flat[yind])
 
     def _classify_data(
         self,
@@ -3402,24 +3360,24 @@ class Maps(object):
             if self.shape.name in ["raster"]:
                 # if input-data is 1D, try to convert data to 2D (required for raster)
                 # TODO make an explicit data-conversion function for 2D-only shapes
-                if len(props["xorig"].shape) == 2 and len(props["yorig"].shape) == 2:
+                if len(self._xshape) == 2 and len(self._yshape) == 2:
                     coll = self.shape.get_coll(
                         props["xorig"], props["yorig"], "in", **args
                     )
                 elif _register_pandas():
                     if (
-                        (len(props["xorig"].shape) == 1)
-                        and (len(props["yorig"].shape) == 1)
-                        and (len(props["z_data"].shape) == 1)
-                        and (props["xorig"].size == props["yorig"].size)
-                        and (props["xorig"].size == props["z_data"].size)
+                        (len(self._xshape) == 1)
+                        and (len(self._yshape) == 1)
+                        and (len(self._zshape) == 1)
+                        and (props["x0"].size == props["y0"].size)
+                        and (props["x0"].size == props["z_data"].size)
                     ):
 
                         df = (
                             pd.DataFrame(
                                 dict(
-                                    x=props["xorig"].ravel(),
-                                    y=props["yorig"].ravel(),
+                                    x=props["x0"].ravel(),
+                                    y=props["y0"].ravel(),
                                     val=props["z_data"].ravel(),
                                 ),
                                 copy=False,
@@ -3431,23 +3389,14 @@ class Maps(object):
                         if args["array"] is not None:
                             args["array"] = df.values.T
 
-                        coll = self.shape.get_coll(xg, yg, "in", **args)
-
-                else:
-                    raise AssertionError(
-                        "EOmaps: using 'raster' is only possible if "
-                        + "you provide coordinates and data as 2D "
-                        + "arrays or as (equal-size) 1D arrays or pandas.DataFrames "
-                        + " (which will be converted to 2D internally)"
-                    )
-
-                # convert values to 1D for callbacks etc.
-                self._1Dprops(props)
-
+                        coll = self.shape.get_coll(xg, yg, "out", **args)
             else:
-                # convert input to 1D
+                # convert to 1D for further processing
+                if args["array"] is not None:
+                    args["array"] = args["array"].ravel()
+
                 coll = self.shape.get_coll(
-                    props["xorig"].ravel(), props["yorig"].ravel(), "in", **args
+                    props["x0"].ravel(), props["y0"].ravel(), "out", **args
                 )
 
             coll.set_clim(vmin, vmax)
@@ -3602,7 +3551,17 @@ class Maps(object):
         props["y0"] = props["y0"].squeeze()
 
         # the shape is always set after _prepare data!
-        if self.shape.name == "shade_raster":
+        if self.shape.name == "shade_points" and not self._1D2D:
+            assert (
+                _register_pandas()
+            ), f"EOmaps: missing dependency 'pandas' for {self.shape.name}"
+
+            df = pd.DataFrame(
+                dict(x=props["x0"].ravel(), y=props["y0"].ravel(), val=zdata.ravel()),
+                copy=False,
+            )
+
+        else:
             assert (
                 _register_xarray()
             ), "EOmaps: missing dependency `xarray` for 'shade_raster'"
@@ -3610,9 +3569,13 @@ class Maps(object):
                 if (zdata.shape == props["x0"].shape) and (
                     zdata.shape == props["y0"].shape
                 ):
-                    # use a curvilinear QuadMesh
-                    self.shape.glyph = ds.glyphs.QuadMeshCurvilinear("x", "y", "val")
                     # 2D coordinates and 2D raster
+
+                    # use a curvilinear QuadMesh
+                    if self.shape.name == "shade_raster":
+                        self.shape.glyph = ds.glyphs.QuadMeshCurvilinear(
+                            "x", "y", "val"
+                        )
 
                     df = xar.Dataset(
                         data_vars=dict(val=(["xx", "yy"], zdata)),
@@ -3644,10 +3607,14 @@ class Maps(object):
                 elif ((zdata.shape[0],) == props["x0"].shape) and (
                     (zdata.shape[1],) == props["y0"].shape
                 ):
-                    # use a rectangular QuadMesh
-                    self.shape.glyph = ds.glyphs.QuadMeshRectilinear("x", "y", "val")
-
                     # 1D coordinates and 2D data
+
+                    # use a rectangular QuadMesh
+                    if self.shape.name == "shade_raster":
+                        self.shape.glyph = ds.glyphs.QuadMeshRectilinear(
+                            "x", "y", "val"
+                        )
+
                     df = xar.DataArray(
                         data=zdata,
                         dims=["x", "y"],
@@ -3689,24 +3656,16 @@ class Maps(object):
                     xg, yg = transformer.transform(xg, yg)
 
                 # use a curvilinear QuadMesh
-                self.shape.glyph = ds.glyphs.QuadMeshCurvilinear("x", "y", "val")
+                if self.shape.name == "shade_raster":
+                    self.shape.glyph = ds.glyphs.QuadMeshCurvilinear("x", "y", "val")
 
                 df = xar.Dataset(
                     data_vars=dict(val=(["xx", "yy"], df.val.values.T)),
                     coords=dict(x=(["xx", "yy"], xg), y=(["xx", "yy"], yg)),
                 )
 
-            # once the data is shaded, convert to 1D for further processing
-            self._1Dprops(props)
-
-        else:
-            assert (
-                _register_pandas()
-            ), f"EOmaps: missing dependency 'pandas' for {self.shape.name}"
-            df = pd.DataFrame(
-                dict(x=props["x0"].ravel(), y=props["y0"].ravel(), val=zdata.ravel()),
-                copy=False,
-            )
+            if self.shape.name == "shade_points":
+                df = df.to_dataframe().reset_index()
 
         if set_extent is True:
             # convert to a numpy-array to support 2D indexing with boolean arrays

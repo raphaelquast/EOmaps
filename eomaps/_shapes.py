@@ -133,11 +133,22 @@ class shapes(object):
             )
 
         radius = None
-
         # try to estimate radius for 2D datasets
-        if isinstance(m.data_specs.x, np.ndarray) and len(m.data_specs.x.shape) == 2:
-            radiusx = np.nanmedian(np.diff(x.reshape(m.data_specs.x.shape), axis=1)) / 2
-            radiusy = np.nanmedian(np.diff(y.reshape(m.data_specs.y.shape), axis=0)) / 2
+        if len(m._xshape) == 2 and len(m._yshape) == 2:
+            userange = int(np.sqrt(m.set_shape.radius_estimation_range))
+
+            radiusx = (
+                np.nanmedian(
+                    np.diff(x.reshape(m._xshape)[:userange, :userange], axis=1)
+                )
+                / 2
+            )
+            radiusy = (
+                np.nanmedian(
+                    np.diff(y.reshape(m._yshape)[:userange, :userange], axis=0)
+                )
+                / 2
+            )
 
             radius = (radiusx, radiusy)
 
@@ -148,6 +159,11 @@ class shapes(object):
         # of 3 neighbours of the first N datapoints (N=shape.radius_estimation_range)
         if radius is None:
             from scipy.spatial import cKDTree
+
+            # take care of 2D data with 1D coordinates
+            if m._1D2D:
+                userange = int(np.sqrt(m.set_shape.radius_estimation_range))
+                x, y = np.meshgrid(x[:userange], y[:userange])
 
             in_tree = cKDTree(
                 np.stack(
