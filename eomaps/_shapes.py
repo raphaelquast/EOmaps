@@ -1129,33 +1129,29 @@ class shapes(object):
                 maxdist = 4 * np.mean(np.sqrt(radiusx**2 + radiusy**2))
 
                 if radius_crs == "in":
-                    x, y = x[datamask][tri.triangles], y[datamask][tri.triangles]
-                    # get individual triangle side-lengths
-                    l = np.array(
-                        [
-                            np.sqrt(
-                                ((x[:, i] - x[:, j]) ** 2) + ((y[:, i] - y[:, j]) ** 2)
-                            )
-                            for i, j in ((0, 1), (0, 2), (1, 2))
-                        ]
-                    )
+                    # use input-coordinates for evaluating the mask
+                    mx = self._m._props["xorig"].ravel()
+                    my = self._m._props["yorig"].ravel()
                 elif radius_crs == "out":
-                    x0, y0 = x0[datamask][tri.triangles], y0[datamask][tri.triangles]
-
-                    # get individual triangle side-lengths
-                    l = np.array(
-                        [
-                            np.sqrt(
-                                ((x0[:, i] - x0[:, j]) ** 2)
-                                + ((y0[:, i] - y0[:, j]) ** 2)
-                            )
-                            for i, j in ((0, 1), (0, 2), (1, 2))
-                        ]
-                    )
+                    # use projected coordinates for evaluating the mask
+                    mx = x
+                    my = y
                 else:
                     assert (
                         False
                     ), f"the radius_crs '{radius_crs}' is not supported for delaunay-masking"
+
+                mx, my = mx[datamask][tri.triangles], my[datamask][tri.triangles]
+                # get individual triangle side-lengths
+                l = np.array(
+                    [
+                        np.sqrt(
+                            ((mx[:, i] - mx[:, j]) ** 2) + ((my[:, i] - my[:, j]) ** 2)
+                        )
+                        for i, j in ((0, 1), (0, 2), (1, 2))
+                    ]
+                )
+
                 # mask any triangle whose side-length exceeds maxdist
                 mask = np.any(l > maxdist, axis=0)
                 tri.set_mask(mask)
