@@ -94,7 +94,7 @@ class TestCallbacks(unittest.TestCase):
         self.assertEqual(len(m.cb.pick.get.picked_vals["ID"]), 2)
         self.assertEqual(len(m.cb.pick.get.picked_vals["val"]), 2)
 
-        self.assertTrue(m.cb.pick.get.picked_vals["ID"][0] == 317)
+        self.assertTrue(m.cb.pick.get.picked_vals["ID"][1] == 317)
 
         m.cb.click.remove(cid)
         plt.close("all")
