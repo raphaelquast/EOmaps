@@ -89,8 +89,13 @@ class _click_callbacks(object):
         """Print details on the clicked pixel to the console"""
         ID, pos, val, ind, picker_name = self._popargs(kwargs)
 
-        xlabel = self.m.data_specs.x
-        ylabel = self.m.data_specs.y
+        if isinstance(self.m.data_specs.x, str):
+            xlabel = self.m.data_specs.x
+            ylabel = self.m.data_specs.y
+        else:
+            xlabel = "x"
+            ylabel = "y"
+
         if ID is not None:
             printstr = ""
             x, y = [np.format_float_positional(i, trim="-", precision=4) for i in pos]
