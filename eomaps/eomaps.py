@@ -1925,13 +1925,16 @@ class Maps(object):
 
         return props
 
-    def _get_xy_from_index(self, ind):
+    def _get_xy_from_index(self, ind, reprojected=False):
         if self._1D2D:
             xind, yind = np.unravel_index(ind, self._zshape)
         else:
             xind = yind = ind
 
-        return (self._props["x0"].flat[xind], self._props["y0"].flat[yind])
+        if reprojected:
+            return (self._props["x0"].flat[xind], self._props["y0"].flat[yind])
+        else:
+            return (self._props["xorig"].flat[xind], self._props["yorig"].flat[yind])
 
     def _classify_data(
         self,
