@@ -35,7 +35,7 @@ class TestFromFile(unittest.TestCase):
             layer="second",
             cmap="cividis",
         )
-        m2.show()
+        m.show_layer(m2.layer)
 
         plt.close("all")
 
@@ -46,7 +46,7 @@ class TestFromFile(unittest.TestCase):
         m2 = m.new_layer_from_file.GeoTIFF(
             self.tiffpath, layer="second", cmap="cividis", shape="shade_points"
         )
-        m2.show()
+        m.show_layer(m2.layer)
         plt.close("all")
 
     def test_NetCDF(self):
