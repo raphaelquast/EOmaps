@@ -887,7 +887,7 @@ class ColorBar:
                 # for ListedColormap N is the number of colors
                 splitpos = np.linspace(self._vmin, self._vmax, n_cmap.cmap.N + 1)
         else:
-            splitpos = self._bins
+            splitpos = np.asanyarray(self._bins)
 
         # color the histogram patches
         for patch in list(self.ax_cb_plot.patches):

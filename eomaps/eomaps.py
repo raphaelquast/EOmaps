@@ -2001,42 +2001,21 @@ class Maps(object):
         if classify_specs is not None and classify_specs.scheme is not None:
             classified = True
 
-            if classify_specs.scheme == "UserDefined" and hasattr(
-                classify_specs, "bins"
-            ):
-                classifybins = np.array(classify_specs.bins)
-                binmask = (classifybins > np.nanmin(z_data)) & (
-                    classifybins < np.nanmax(z_data)
-                )
-                if np.any(binmask):
-                    classifybins = classifybins[binmask]
-                    warnings.warn(
-                        "EOmaps: classification bins outside of value-range..."
-                        + " bins have been updated!"
-                    )
-
-                    classify_specs.bins = classifybins
-
             mapc = getattr(mapclassify, classify_specs.scheme)(
                 z_data[~np.isnan(z_data)], **classify_specs
             )
-            bins = np.unique([mapc.y.min(), *mapc.bins])
-            nbins = len(bins)
-            norm = mpl.colors.BoundaryNorm(bins, nbins)
-            colors = cmap(np.linspace(0, 1, nbins))
+            bins = mapc.bins
+            if vmin < min(bins):
+                bins = [vmin, *bins]
 
-            # initialize the classified colormap
-            # get a unique cmap name (to make the colormap accessible from outside)
-            ncmaps = len([None for i in plt.colormaps() if i.startswith("EOmaps_")])
-            cmapname = f"EOmaps_classified_{ncmaps}"
-            cbcmap = LinearSegmentedColormap.from_list(
-                cmapname, colors=colors, N=len(colors)
-            )
+            if vmax > max(bins):
+                bins[np.argmax(bins)] = vmax
+
+            cbcmap = cmap
+            norm = mpl.colors.BoundaryNorm(bins, cmap.N)
 
             if self._companion_widget is not None:
                 self._companion_widget.cmapsChanged.emit()
-            # remember registered colormaps (to de-register on close)
-            self._registered_cmaps.append(cmapname)
 
             if cmap._rgba_bad:
                 cbcmap.set_bad(cmap._rgba_bad)
@@ -2044,8 +2023,6 @@ class Maps(object):
                 cbcmap.set_over(cmap._rgba_over)
             if cmap._rgba_under:
                 cbcmap.set_under(cmap._rgba_under)
-
-            plt.register_cmap(name=cmapname, cmap=cbcmap)
 
         else:
             classified = False
