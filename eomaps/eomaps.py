@@ -3422,13 +3422,14 @@ class Maps(object):
 
             if set_extent:
                 # set the image extent
-                # get the extent of the added collection
-                b = self.figure.coll.get_datalim(ax.transData)
+                x0min, x0max = self._props["x0"].min(), self._props["x0"].max()
+                y0min, y0max = self._props["y0"].min(), self._props["y0"].max()
+
                 ymin, ymax = ax.projection.y_limits
                 xmin, xmax = ax.projection.x_limits
                 # set the axis-extent
-                ax.set_xlim(max(b.xmin, xmin), min(b.xmax, xmax))
-                ax.set_ylim(max(b.ymin, ymin), min(b.ymax, ymax))
+                ax.set_xlim(max(x0min, xmin), min(x0max, xmax))
+                ax.set_ylim(max(y0min, ymin), min(y0max, ymax))
 
             self.figure.f.canvas.draw_idle()
 
