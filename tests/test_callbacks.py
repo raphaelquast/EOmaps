@@ -48,6 +48,13 @@ class TestCallbacks(unittest.TestCase):
         if release:
             cv.button_release_event(x + dx, y + dy, 1, False)
 
+    def click_ID(self, m, ID, release=True):
+        cv = m.figure.f.canvas
+        x, y = m.ax.transData.transform((self.data.lon[ID], self.data.lat[ID]))
+        cv.button_press_event(x, y, 1, False)
+        if release:
+            cv.button_release_event(x, y, 1, False)
+
     def test_get_values(self):
 
         # ---------- test as CLICK callback
@@ -72,18 +79,22 @@ class TestCallbacks(unittest.TestCase):
         # ---------- test as PICK callback
         m = self.create_basic_map()
         cid = m.cb.pick.attach.get_values()
+        m.cb.pick.attach.annotate()
+        m.cb.click.attach.mark(radius=0.1)
 
-        self.click_ax_center(m)
+        self.click_ID(m, 1225)
         self.assertEqual(len(m.cb.pick.get.picked_vals["pos"]), 1)
         self.assertEqual(len(m.cb.pick.get.picked_vals["ID"]), 1)
         self.assertEqual(len(m.cb.pick.get.picked_vals["val"]), 1)
 
         self.assertTrue(m.cb.pick.get.picked_vals["ID"][0] == 1225)
 
-        self.click_ax_center(m)
+        self.click_ID(m, 317)
         self.assertEqual(len(m.cb.pick.get.picked_vals["pos"]), 2)
         self.assertEqual(len(m.cb.pick.get.picked_vals["ID"]), 2)
         self.assertEqual(len(m.cb.pick.get.picked_vals["val"]), 2)
+
+        self.assertTrue(m.cb.pick.get.picked_vals["ID"][0] == 317)
 
         m.cb.click.remove(cid)
         plt.close("all")
