@@ -703,6 +703,18 @@ class TestBasicPlotting(unittest.TestCase):
         for si in [s, s1, s2, s3]:
             si.remove()
 
+    def test_set_extent_to_location(self):
+        m = Maps()
+        resp = m._get_nominatim_response("austria")
+
+        m.add_feature.preset.countries()
+        m.set_extent_to_location("Austria")
+
+        e = m.ax.get_extent()
+        bbox = list(map(float, resp["boundingbox"]))
+
+        self.assertTrue(np.allclose([e[2], e[3], e[0], e[1]], bbox, atol=0.1))
+
     def test_a_complex_figure(self):
         # %%
         lon, lat = np.linspace(-180, 180, 500), np.linspace(-90, 90, 500)
