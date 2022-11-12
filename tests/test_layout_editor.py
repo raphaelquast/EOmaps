@@ -82,8 +82,8 @@ class TestLayoutEditor(unittest.TestCase):
         # ################ check handling colorbars
 
         # click on top left colorbar
-        x4 = (mg.m_1_0.figure.ax_cb.bbox.x1 + mg.m_1_0.figure.ax_cb.bbox.x0) / 2
-        y4 = (mg.m_1_0.figure.ax_cb.bbox.y1 + mg.m_1_0.figure.ax_cb.bbox.y0) / 2
+        x4 = (mg.m_1_0.colorbar.ax_cb.bbox.x1 + mg.m_1_0.colorbar.ax_cb.bbox.x0) / 2
+        y4 = (mg.m_1_0.colorbar.ax_cb.bbox.y1 + mg.m_1_0.colorbar.ax_cb.bbox.y0) / 2
         cv.button_press_event(x4, y4, 1, False)
 
         # move it around with keys
@@ -104,16 +104,16 @@ class TestLayoutEditor(unittest.TestCase):
         # ------ test re-showing axes on click
         # click on bottom right histogram
         x5 = (
-            mg.m_1_1.figure.ax_cb_plot.bbox.x1 + mg.m_1_1.figure.ax_cb_plot.bbox.x0
+            mg.m_1_1.colorbar.ax_cb_plot.bbox.x1 + mg.m_1_1.colorbar.ax_cb_plot.bbox.x0
         ) / 2
         y5 = (
-            mg.m_1_1.figure.ax_cb_plot.bbox.y1 + mg.m_1_1.figure.ax_cb_plot.bbox.y0
+            mg.m_1_1.colorbar.ax_cb_plot.bbox.y1 + mg.m_1_1.colorbar.ax_cb_plot.bbox.y0
         ) / 2
         cv.button_press_event(x5, y5, 1, False)
 
         # click on bottom right colorbar
-        x6 = (mg.m_1_1.figure.ax_cb.bbox.x1 + mg.m_1_1.figure.ax_cb.bbox.x0) / 2
-        y6 = (mg.m_1_1.figure.ax_cb.bbox.y1 + mg.m_1_1.figure.ax_cb.bbox.y0) / 2
+        x6 = (mg.m_1_1.colorbar.ax_cb.bbox.x1 + mg.m_1_1.colorbar.ax_cb.bbox.x0) / 2
+        y6 = (mg.m_1_1.colorbar.ax_cb.bbox.y1 + mg.m_1_1.colorbar.ax_cb.bbox.y0) / 2
         cv.button_press_event(x6, y6, 1, False)
 
         # deactivate draggable axes
@@ -128,7 +128,7 @@ class TestLayoutEditor(unittest.TestCase):
         restored_layout = mg.get_layout()
         for key, val in restored_layout.items():
             # check if all positions have been properly restored
-            self.assertTrue(np.allclose(val, initial_layout[key]))
+            self.assertTrue(np.allclose(val, initial_layout[key], atol=0.001))
 
         # restore the new layout
         mg.apply_layout(new_layout)

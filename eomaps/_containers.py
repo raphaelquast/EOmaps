@@ -114,7 +114,7 @@ class map_objects(object):
     @property
     def ax_cb(self):
         warn(
-            "EOmaps: Using `m.figure.ax_cb` is depreciated in EOmaps v5.0."
+            "EOmaps: Using `m.figure.ax_cb` is depreciated in EOmaps v5.x."
             "Use `m.colorbar.ax_cb` instead!"
         )
         colorbar = getattr(self._m, "colorbar", None)
@@ -124,129 +124,25 @@ class map_objects(object):
     @property
     def ax_cb_plot(self):
         warn(
-            "EOmaps: Using `m.figure.ax_cb_plot` is depreciated in EOmaps v5.0."
+            "EOmaps: Using `m.figure.ax_cb_plot` is depreciated in EOmaps v5.x."
             "Use `m.colorbar.ax_cb_plot` instead!"
         )
         colorbar = getattr(self._m, "colorbar", None)
         if colorbar is not None:
             return colorbar.ax_cb_plot
 
-    @property
-    def cb_gridspec(self):
-        return getattr(self._m, "_cb_gridspec", None)
-
-    # @wraps(plt.Axes.set_position)
     def set_colorbar_position(self, pos=None, ratio=None, cb=None):
         """
-        Set the position (and ratio) of a previously created colorbar with a histogram.
+        This function is depreciated in EOmaps v5.x!
 
-        Parameters
-        ----------
-        pos : list    [left, bottom, width, height]
-            The bounding-box of the colorbar & histogram in relative
-            units [0,1] (with respect to the figure)
-            If None the current position is maintained.
-        ratio : float, optional
-            The ratio between the size of the colorbar and the size of the histogram.
-            'ratio=10' means that the histogram is 10 times as large as the colorbar!
-            The default is None in which case the current ratio is maintained.
-        cb : list, optional
-            The colorbar-objects (as returned by `m.add_colorbar()`)
-            If None, the existing colorbar will be used.
-
-        Examples
-        --------
-
-        Change both the position and the ratio between colorbar and histogram
-
-        >>> m.figure.set_colorbar_position(pos=[.1, .1, .8, .2], ratio=15)
-
-        Change only the ratio between colorbar and histogram
-
-        >>> m.figure.set_colorbar_position(ratio=999)
-
-        Change only the position of colorbar and histogram
-
-        >>> m.figure.set_colorbar_position(pos=[.1, .1, .8, .2])
-
+        Use the following methods instead:
+        - m.colorbar.set_position
+        - m.colorbar.set_hist_size
         """
-
-        if cb is None:
-            (
-                _,
-                _,
-                ax_cb,
-                ax_cb_plot,
-                ax_cb_extend,
-                extend_frac,
-                orientation,
-                _,
-            ) = self._m._colorbar
-        else:
-            _, _, ax_cb, ax_cb_plot, ax_cb_extend, extend_frac, orientation, _ = cb
-
-        if orientation == "horizontal":
-            pcb = ax_cb.get_position()
-            pcbp = ax_cb_plot.get_position()
-
-            if pos is None:
-                pos = [pcb.x0, pcb.y0, pcb.width, pcb.height + pcbp.height]
-            if ratio is None:
-                ratio = pcbp.height / pcb.height
-
-            hcb = pos[3] / (1 + ratio)
-            hp = ratio * hcb
-
-            ax_cb.set_position(
-                [pos[0], pos[1], pos[2], hcb],
-            )
-            ax_cb_plot.set_position(
-                [pos[0], pos[1] + hcb, pos[2], hp],
-            )
-
-            # adjust colorbar extension arrows
-            if ax_cb_extend:
-                frac = (
-                    ax_cb.bbox.transformed(ax_cb.figure.transFigure.inverted()).width
-                    * extend_frac
-                )
-                ax_cb_extend.set_position(
-                    [pos[0] - frac / 2, pos[1], pos[2] + frac, hcb],
-                )
-
-        elif orientation == "vertical":
-            pcb = ax_cb.get_position()
-            pcbp = ax_cb_plot.get_position()
-            if pos is None:
-                pos = [pcbp.x0, pcbp.y0, pcb.width + pcbp.width, pcb.height]
-            if ratio is None:
-                ratio = pcbp.width / pcb.width
-
-            wcb = pos[2] / (1 + ratio)
-            wp = ratio * wcb
-
-            ax_cb.set_position(
-                [pos[0] + wp, pos[1], wcb, pos[3]],
-            )
-            ax_cb_plot.set_position(
-                [pos[0], pos[1], wp, pos[3]],
-            )
-
-            # adjust colorbar extension arrows
-            if ax_cb_extend:
-                frac = (
-                    ax_cb.bbox.transformed(ax_cb.figure.transFigure.inverted()).height
-                    * extend_frac
-                )
-                ax_cb_extend.set_position(
-                    [pos[0] + wp, pos[1] - frac / 2, wcb, pos[3] + frac],
-                )
-
-        else:
-            raise TypeError(f"EOmaps: '{orientation}' is not a valid orientation")
-
-        # re-fetch the background layer to make changes visible
-        self._m.BM.fetch_bg(self._m.layer)
+        raise AssertionError(
+            "EOmaps: `m.figure.set_colorbar_position` is depreciated in EOmaps v5.x! "
+            "use `m.colorbar.set_position` and `m.colorbar.set_hist_size` instead."
+        )
 
 
 class data_specs(object):
@@ -2318,6 +2214,49 @@ else:
                 m=self._m,
                 service_type="wms",
                 url="https://eccharts.ecmwf.int/wms/?token=public",
+            )
+
+            WMS.__doc__ = type(self).CAMS.__doc__
+            return WMS
+
+        @property
+        @lru_cache()
+        def DLR_basemaps(self):
+            """
+            A collection of basemaps provided by the EOC Geoservice of the Earth
+            Observation Center (EOC) of the German Aerospace Center (DLR).
+
+            https://geoservice.dlr.de
+
+            Note
+            ----
+            **LICENSE-info (without any warranty for correctness!!)**
+
+            The background maps and overlays used on this site are created and published
+            by DLR for informational and illustration purposes only. The user assumes
+            the entire risk related to the use of these data. These maps may contain
+            errors and therefore users of these maps should review or consult the
+            primary data and information sources to ascertain the usability of the
+            information.
+
+            Disclaimer
+
+            Although DLR is making these maps available to others, DLR does not warrant,
+            endorse, or recommend the use of these maps for any given purpose. DLR is
+            providing these data "as is", and disclaims any and all warranties, whether
+            expressed or implied. In no event will DLR be liable to you or to any third
+            party for any direct, indirect, incidental, consequential, special, or
+            exemplary damages or lost profits resulting from any use or misuse of
+            these data. The user of these maps cannot claim any rights pertaining to
+            its usage.
+
+            (check: https://geoservice.dlr.de/web/about for full details)
+            """
+
+            WMS = _WebServiec_collection(
+                m=self._m,
+                service_type="wms",
+                url="https://geoservice.dlr.de/eoc/basemap/wms?SERVICE=WMS&REQUEST=GetCapabilities",
             )
 
             WMS.__doc__ = type(self).CAMS.__doc__

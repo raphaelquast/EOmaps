@@ -1053,17 +1053,40 @@ class cb_pick_container(_click_container):
 
         return False, None
 
+    def _get_id(self, ind):
+        """
+        Identify the ID from a 1D list or range object or a numpy.ndarray
+        (to avoid very large numpy-arrays if no explicit IDs are provided)
+
+        Parameters
+        ----------
+        ind : int
+            The index of the flattened array.
+
+        Returns
+        -------
+        ID : any
+            The corresponding data-ID.
+        """
+
+        ids = self._m._props["ids"]
+        if isinstance(ids, (list, range)):
+            ID = ids[ind]
+        elif isinstance(ids, np.ndarray):
+            ID = ids.flat[ind]
+        else:
+            ID = "?"
+
+        return ID
+
     def _get_pickdict(self, event):
         ind = event.ind
         if ind is not None:
             if self._m.figure.coll is not None and event.artist is self._m.figure.coll:
                 clickdict = dict(
-                    pos=(
-                        self._m._props["x0"].flat[ind],
-                        self._m._props["y0"].flat[ind],
-                    ),
-                    ID=self._m._props["ids"].flat[ind],
-                    val=self._m._props["z_data"][ind],
+                    pos=self._m._get_xy_from_index(ind, reprojected=True),
+                    ID=self._get_id(ind),
+                    val=self._m._props["z_data"].flat[ind],
                     ind=ind,
                     picker_name=self._picker_name,
                 )

@@ -296,6 +296,7 @@ class Maps(object):
         self._parent = None
 
         self._BM = None
+        self._util = None
         self._children = set()  # weakref.WeakSet()
 
         self._colorbars = []
@@ -354,7 +355,6 @@ class Maps(object):
         self._cb = cb_container(weakref.proxy(self))  # accessor for the callbacks
 
         self._init_figure(gs_ax=gs_ax, plot_crs=crs, **kwargs)
-        self._utilities = utilities(weakref.proxy(self))
         self._wms_container = wms_container(weakref.proxy(self))
         self._new_layer_from_file = new_layer_from_file(weakref.proxy(self))
 
@@ -985,7 +985,9 @@ class Maps(object):
     @property
     @wraps(utilities)
     def util(self):
-        return self._utilities
+        if self.parent._util is None:
+            self.parent._util = utilities(self.parent)
+        return self.parent._util
 
     @property
     @wraps(ShapeDrawer)
@@ -1764,7 +1766,7 @@ class Maps(object):
             ids = data.index.values
         else:
             # use numeric index values for all other types
-            ids = np.arange(z_data.size)
+            ids = range(z_data.size)
 
         if len(xorig.shape) == 1 and len(yorig.shape) == 1 and len(z_data.shape) == 2:
             assert (
@@ -1871,8 +1873,8 @@ class Maps(object):
                 )
 
         if crs1 == crs2:
-            if used_shape.name in ["raster"]:
-                # convert 1D data to 2D (required for QuadMeshes)
+            if used_shape.name not in ["shade_raster"]:
+                # convert 1D data to 2D (required for all shapes but shade_raster)
                 if (
                     len(xorig.shape) == 1
                     and len(yorig.shape) == 1
@@ -1906,72 +1908,33 @@ class Maps(object):
         # (relevant for categorical dtypes in pandas.DataFrames)
         props["xorig"] = np.asanyarray(xorig)
         props["yorig"] = np.asanyarray(yorig)
-        props["ids"] = np.asanyarray(ids)
+        props["ids"] = ids
         props["z_data"] = np.asanyarray(z_data)
         props["x0"] = np.asanyarray(x0)
         props["y0"] = np.asanyarray(y0)
 
-        # convert the data to 1D for shapes that accept unstructured data
-        if used_shape.name not in ["shade_raster", "raster"]:
-            self._1Dprops(props)
+        # remember shapes for later use
+        self._xshape = props["x0"].shape
+        self._yshape = props["y0"].shape
+        self._zshape = props["z_data"].shape
+
+        if len(self._xshape) == 1 and len(self._yshape) == 1 and len(self._zshape) == 2:
+            self._1D2D = True
+        else:
+            self._1D2D = False
 
         return props
 
-    @staticmethod
-    def _1Dprops(props):
-
-        # convert all arrays in props to a proper 1D representation that will be used
-        # to index and identify points
-
-        # Note: _prepare_data already converts datasets to 1D if
-        #       a shape that accepts non-rectangular datasets is used!
-
-        # Note: both ravel and meshgrid return views!
-        n_coord_shape = len(props["xorig"].shape)
-
-        props["x0"], props["y0"] = (
-            props["x0"].ravel(),
-            props["y0"].ravel(),
-        )
-        props["xorig"], props["yorig"] = (
-            props["xorig"].ravel(),
-            props["yorig"].ravel(),
-        )
-
-        # in case 2D data and 1D coordinate arrays are provided, use a meshgrid
-        # to identify the coordinates
-        if n_coord_shape == 1 and len(props["z_data"].shape) == 2:
-
-            props["x0"], props["y0"] = [
-                i
-                for i in np.broadcast_arrays(
-                    *np.meshgrid(props["x0"], props["y0"], copy=False, sparse=True)
-                )
-            ]
-
-            props["xorig"], props["yorig"] = [
-                i
-                for i in np.broadcast_arrays(
-                    *np.meshgrid(
-                        props["xorig"], props["yorig"], copy=False, sparse=True
-                    )
-                )
-            ]
-
-            # props["x0"], props["y0"] = [
-            #     np.ravel(i) for i in np.meshgrid(props["x0"], props["y0"], copy=False)
-            # ]
-            # props["xorig"], props["yorig"] = [
-            #     np.ravel(i)
-            #     for i in np.meshgrid(props["xorig"], props["yorig"], copy=False)
-            # ]
-
-            # transpose since 1D coordinates are expected to be provided as (y, x)
-            # and NOT as (x, y)
-            props["z_data"] = props["z_data"].T.ravel()
-
+    def _get_xy_from_index(self, ind, reprojected=False):
+        if self._1D2D:
+            xind, yind = np.unravel_index(ind, self._zshape)
         else:
-            props["z_data"] = props["z_data"].ravel()
+            xind = yind = ind
+
+        if reprojected:
+            return (self._props["x0"].flat[xind], self._props["y0"].flat[yind])
+        else:
+            return (self._props["xorig"].flat[xind], self._props["yorig"].flat[yind])
 
     def _classify_data(
         self,
@@ -1999,42 +1962,21 @@ class Maps(object):
         if classify_specs is not None and classify_specs.scheme is not None:
             classified = True
 
-            if classify_specs.scheme == "UserDefined" and hasattr(
-                classify_specs, "bins"
-            ):
-                classifybins = np.array(classify_specs.bins)
-                binmask = (classifybins > np.nanmin(z_data)) & (
-                    classifybins < np.nanmax(z_data)
-                )
-                if np.any(binmask):
-                    classifybins = classifybins[binmask]
-                    warnings.warn(
-                        "EOmaps: classification bins outside of value-range..."
-                        + " bins have been updated!"
-                    )
-
-                    classify_specs.bins = classifybins
-
             mapc = getattr(mapclassify, classify_specs.scheme)(
                 z_data[~np.isnan(z_data)], **classify_specs
             )
-            bins = np.unique([mapc.y.min(), *mapc.bins])
-            nbins = len(bins)
-            norm = mpl.colors.BoundaryNorm(bins, nbins)
-            colors = cmap(np.linspace(0, 1, nbins))
+            bins = mapc.bins
+            if vmin < min(bins):
+                bins = [vmin, *bins]
 
-            # initialize the classified colormap
-            # get a unique cmap name (to make the colormap accessible from outside)
-            ncmaps = len([None for i in plt.colormaps() if i.startswith("EOmaps_")])
-            cmapname = f"EOmaps_classified_{ncmaps}"
-            cbcmap = LinearSegmentedColormap.from_list(
-                cmapname, colors=colors, N=len(colors)
-            )
+            if vmax > max(bins):
+                bins[np.argmax(bins)] = vmax
+
+            cbcmap = cmap
+            norm = mpl.colors.BoundaryNorm(bins, cmap.N)
 
             if self._companion_widget is not None:
                 self._companion_widget.cmapsChanged.emit()
-            # remember registered colormaps (to de-register on close)
-            self._registered_cmaps.append(cmapname)
 
             if cmap._rgba_bad:
                 cbcmap.set_bad(cmap._rgba_bad)
@@ -2042,8 +1984,6 @@ class Maps(object):
                 cbcmap.set_over(cmap._rgba_over)
             if cmap._rgba_under:
                 cbcmap.set_under(cmap._rgba_under)
-
-            plt.register_cmap(name=cmapname, cmap=cbcmap)
 
         else:
             classified = False
@@ -2574,6 +2514,20 @@ class Maps(object):
 
         return marker
 
+    def _find_ID(self, ID):
+        # explicitly treat range-like indices (for very large datasets)
+        ids = self._props["ids"]
+        if isinstance(ids, range):
+            if ID in ids:
+                return [ID], [ID]
+            else:
+                return None, None
+        elif isinstance(ids, np.ndarray):
+            mask = np.isin(ids, ID)
+            ind = np.where(mask)[0]
+
+        return mask, ind
+
     def add_annotation(
         self,
         ID=None,
@@ -2657,10 +2611,14 @@ class Maps(object):
 
         if ID is not None:
             assert xy is None, "You can only provide 'ID' or 'pos' not both!"
-            mask = np.isin(self._props["ids"], ID)
+            # avoid using np.isin directly since it needs a lot of ram
+            # for very large datasets!
+            # mask = np.isin(self._props["ids"], ID)
+            # ind = np.where(mask)[0]
+            mask, ind = self._find_ID(ID)
+
             xy = (self._props["xorig"][mask], self._props["yorig"][mask])
             val = self._props["z_data"][mask]
-            ind = np.where(mask)[0]
             ID = np.atleast_1d(ID)
             xy_crs = self.data_specs.crs
         else:
@@ -3405,51 +3363,43 @@ class Maps(object):
             if self.shape.name in ["raster"]:
                 # if input-data is 1D, try to convert data to 2D (required for raster)
                 # TODO make an explicit data-conversion function for 2D-only shapes
-                if len(props["xorig"].shape) == 2 and len(props["yorig"].shape) == 2:
+                if len(self._xshape) == 2 and len(self._yshape) == 2:
                     coll = self.shape.get_coll(
                         props["xorig"], props["yorig"], "in", **args
                     )
-                elif (
-                    _register_pandas()
-                    and isinstance(self.data, pd.DataFrame)
-                    and isinstance(self.data_specs.x, str)
-                    and isinstance(self.data_specs.y, str)
-                    and len(props["z_data"].shape) == 1
-                ):
+                elif _register_pandas():
+                    if (
+                        (len(self._xshape) == 1)
+                        and (len(self._yshape) == 1)
+                        and (len(self._zshape) == 1)
+                        and (props["x0"].size == props["y0"].size)
+                        and (props["x0"].size == props["z_data"].size)
+                    ):
 
-                    df = (
-                        pd.DataFrame(
-                            dict(
-                                x=props["xorig"].ravel(),
-                                y=props["yorig"].ravel(),
-                                val=props["z_data"].ravel(),
-                            ),
-                            copy=False,
-                        ).set_index(["x", "y"])
-                    )["val"].unstack("y")
+                        df = (
+                            pd.DataFrame(
+                                dict(
+                                    x=props["x0"].ravel(),
+                                    y=props["y0"].ravel(),
+                                    val=props["z_data"].ravel(),
+                                ),
+                                copy=False,
+                            ).set_index(["x", "y"])
+                        )["val"].unstack("y")
 
-                    xg, yg = np.meshgrid(df.index.values, df.columns.values)
+                        xg, yg = np.meshgrid(df.index.values, df.columns.values)
 
-                    if args["array"] is not None:
-                        args["array"] = df.values.T
+                        if args["array"] is not None:
+                            args["array"] = df.values.T
 
-                    coll = self.shape.get_coll(xg, yg, "in", **args)
-
-                else:
-                    raise AssertionError(
-                        "EOmaps: using 'raster' is only possible if "
-                        + "you provide coordinates and data as 2D "
-                        + "arrays or as a 1D pandas.DataFrame (which "
-                        + "will be converted to 2D internally)"
-                    )
-
-                # convert values to 1D for callbacks etc.
-                self._1Dprops(props)
-
+                        coll = self.shape.get_coll(xg, yg, "out", **args)
             else:
-                # convert input to 1D
+                # convert to 1D for further processing
+                if args["array"] is not None:
+                    args["array"] = args["array"].ravel()
+
                 coll = self.shape.get_coll(
-                    props["xorig"].ravel(), props["yorig"].ravel(), "in", **args
+                    props["x0"].ravel(), props["y0"].ravel(), "out", **args
                 )
 
             coll.set_clim(vmin, vmax)
@@ -3472,13 +3422,14 @@ class Maps(object):
 
             if set_extent:
                 # set the image extent
-                # get the extent of the added collection
-                b = self.figure.coll.get_datalim(ax.transData)
+                x0min, x0max = self._props["x0"].min(), self._props["x0"].max()
+                y0min, y0max = self._props["y0"].min(), self._props["y0"].max()
+
                 ymin, ymax = ax.projection.y_limits
                 xmin, xmax = ax.projection.x_limits
                 # set the axis-extent
-                ax.set_xlim(max(b.xmin, xmin), min(b.xmax, xmax))
-                ax.set_ylim(max(b.ymin, ymin), min(b.ymax, ymax))
+                ax.set_xlim(max(x0min, xmin), min(x0max, xmax))
+                ax.set_ylim(max(y0min, ymin), min(y0max, ymax))
 
             self.figure.f.canvas.draw_idle()
 
@@ -3538,16 +3489,14 @@ class Maps(object):
         # remember props for later use
         self._props = props
 
-        z_finite = np.isfinite(props["z_data"])
-
         # get the name of the used aggretation reduction
         aggname = self.shape.aggregator.__class__.__name__
         if aggname in ["first", "last", "max", "min", "mean", "mode"]:
             # set vmin/vmax in case the aggregation still represents data-values
             if vmin is None:
-                vmin = np.min(props["z_data"][z_finite])
+                vmin = np.nanmin(props["z_data"])
             if vmax is None:
-                vmax = np.max(props["z_data"][z_finite])
+                vmax = np.nanmax(props["z_data"])
         else:
             # set vmin/vmax for aggregations that do NOT represent data values
 
@@ -3606,7 +3555,17 @@ class Maps(object):
         props["y0"] = props["y0"].squeeze()
 
         # the shape is always set after _prepare data!
-        if self.shape.name == "shade_raster":
+        if self.shape.name == "shade_points" and not self._1D2D:
+            assert (
+                _register_pandas()
+            ), f"EOmaps: missing dependency 'pandas' for {self.shape.name}"
+
+            df = pd.DataFrame(
+                dict(x=props["x0"].ravel(), y=props["y0"].ravel(), val=zdata.ravel()),
+                copy=False,
+            )
+
+        else:
             assert (
                 _register_xarray()
             ), "EOmaps: missing dependency `xarray` for 'shade_raster'"
@@ -3614,9 +3573,13 @@ class Maps(object):
                 if (zdata.shape == props["x0"].shape) and (
                     zdata.shape == props["y0"].shape
                 ):
-                    # use a curvilinear QuadMesh
-                    self.shape.glyph = ds.glyphs.QuadMeshCurvilinear("x", "y", "val")
                     # 2D coordinates and 2D raster
+
+                    # use a curvilinear QuadMesh
+                    if self.shape.name == "shade_raster":
+                        self.shape.glyph = ds.glyphs.QuadMeshCurvilinear(
+                            "x", "y", "val"
+                        )
 
                     df = xar.Dataset(
                         data_vars=dict(val=(["xx", "yy"], zdata)),
@@ -3648,10 +3611,14 @@ class Maps(object):
                 elif ((zdata.shape[0],) == props["x0"].shape) and (
                     (zdata.shape[1],) == props["y0"].shape
                 ):
-                    # use a rectangular QuadMesh
-                    self.shape.glyph = ds.glyphs.QuadMeshRectilinear("x", "y", "val")
-
                     # 1D coordinates and 2D data
+
+                    # use a rectangular QuadMesh
+                    if self.shape.name == "shade_raster":
+                        self.shape.glyph = ds.glyphs.QuadMeshRectilinear(
+                            "x", "y", "val"
+                        )
+
                     df = xar.DataArray(
                         data=zdata,
                         dims=["x", "y"],
@@ -3693,25 +3660,16 @@ class Maps(object):
                     xg, yg = transformer.transform(xg, yg)
 
                 # use a curvilinear QuadMesh
-                self.shape.glyph = ds.glyphs.QuadMeshCurvilinear("x", "y", "val")
+                if self.shape.name == "shade_raster":
+                    self.shape.glyph = ds.glyphs.QuadMeshCurvilinear("x", "y", "val")
 
                 df = xar.Dataset(
                     data_vars=dict(val=(["xx", "yy"], df.val.values.T)),
                     coords=dict(x=(["xx", "yy"], xg), y=(["xx", "yy"], yg)),
                 )
 
-            # once the data is shaded, convert to 1D for further processing
-            self._1Dprops(props)
-
-        else:
-            assert (
-                _register_pandas()
-            ), f"EOmaps: missing dependency 'pandas' for {self.shape.name}"
-
-            df = pd.DataFrame(
-                dict(x=props["x0"].ravel(), y=props["y0"].ravel(), val=zdata.ravel()),
-                copy=False,
-            )
+            if self.shape.name == "shade_points":
+                df = df.to_dataframe().reset_index()
 
         if set_extent is True:
             # convert to a numpy-array to support 2D indexing with boolean arrays
@@ -4213,14 +4171,14 @@ class Maps(object):
         colorbars = [
             getattr(m, "colorbar", None) for m in (self.parent, *self.parent._children)
         ]
-        cbaxes = [getattr(cb, "ax", None) for cb in colorbars]
+        cbaxes = [getattr(cb, "_ax", None) for cb in colorbars]
         cbs = [(colorbars[cbaxes.index(a)] if a in cbaxes else None) for a in axes]
         # -----------
 
         layout = dict()
         for i, ax in enumerate(axes):
             if cbs[i] is not None:
-                if cbs[i].ax.get_axes_locator() is not None:
+                if cbs[i]._ax.get_axes_locator() is not None:
                     continue
 
             label = ax.get_label()
@@ -4231,7 +4189,7 @@ class Maps(object):
                 layout[name] = ax.get_position().bounds
 
             if cbs[i] is not None:
-                layout[f"{name}_histogram_size"] = cbs[i].hist_size
+                layout[f"{name}_histogram_size"] = cbs[i]._hist_size
 
         if filepath is not None:
             filepath = Path(filepath)
@@ -4287,7 +4245,7 @@ class Maps(object):
         colorbars = [
             getattr(m, "colorbar", None) for m in (self.parent, *self.parent._children)
         ]
-        cbaxes = [getattr(cb, "ax", None) for cb in colorbars]
+        cbaxes = [getattr(cb, "_ax", None) for cb in colorbars]
         cbs = [(colorbars[cbaxes.index(a)] if a in cbaxes else None) for a in axes]
 
         # check if all relevant axes are specified in the layout
@@ -4658,16 +4616,6 @@ class _InsetMaps(Maps):
         """
 
         y0, y1, x0, x1 = self.figure.gridspec.get_grid_positions(self.figure.f)
-
-        if self.figure.cb_gridspec is not None:
-            y0cb, y1cb, x0cb, x1cb = self.figure.cb_gridspec.get_grid_positions(
-                self.figure.f
-            )
-
-            x0 = min(*x0, *x0cb)
-            x1 = max(*x1, *x1cb)
-            y0 = min(*y0, *y0cb)
-            y1 = max(*y1, *y1cb)
 
         if size is None:
             size = abs(x1 - x0)

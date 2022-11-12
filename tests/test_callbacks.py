@@ -48,6 +48,13 @@ class TestCallbacks(unittest.TestCase):
         if release:
             cv.button_release_event(x + dx, y + dy, 1, False)
 
+    def click_ID(self, m, ID, release=True):
+        cv = m.figure.f.canvas
+        x, y = m.ax.transData.transform((self.data.lon[ID], self.data.lat[ID]))
+        cv.button_press_event(x, y, 1, False)
+        if release:
+            cv.button_release_event(x, y, 1, False)
+
     def test_get_values(self):
 
         # ---------- test as CLICK callback
@@ -72,18 +79,22 @@ class TestCallbacks(unittest.TestCase):
         # ---------- test as PICK callback
         m = self.create_basic_map()
         cid = m.cb.pick.attach.get_values()
+        m.cb.pick.attach.annotate()
+        m.cb.click.attach.mark(radius=0.1)
 
-        self.click_ax_center(m)
+        self.click_ID(m, 1225)
         self.assertEqual(len(m.cb.pick.get.picked_vals["pos"]), 1)
         self.assertEqual(len(m.cb.pick.get.picked_vals["ID"]), 1)
         self.assertEqual(len(m.cb.pick.get.picked_vals["val"]), 1)
 
         self.assertTrue(m.cb.pick.get.picked_vals["ID"][0] == 1225)
 
-        self.click_ax_center(m)
+        self.click_ID(m, 317)
         self.assertEqual(len(m.cb.pick.get.picked_vals["pos"]), 2)
         self.assertEqual(len(m.cb.pick.get.picked_vals["ID"]), 2)
         self.assertEqual(len(m.cb.pick.get.picked_vals["val"]), 2)
+
+        self.assertTrue(m.cb.pick.get.picked_vals["ID"][1] == 317)
 
         m.cb.click.remove(cid)
         plt.close("all")
@@ -386,3 +397,26 @@ class TestCallbacks(unittest.TestCase):
         m.cb.keypress.remove(cid0)
         m.cb.keypress.remove(cid1)
         plt.close("all")
+
+    def test_make_dataset_pickable(self):
+        # ---------- test as CLICK callback
+        m = self.create_basic_map()
+
+        m2 = m.new_layer(copy_data_specs=True)
+
+        # adding pick callbacks is only possible after plotting data
+        with self.assertRaises(AssertionError):
+            m2.cb.pick.attach.annotate()
+
+        m2.make_dataset_pickable()
+        m2.cb.pick.attach.annotate()
+        m2.cb.pick.attach.mark(fc="r", ec="g", lw=2, ls="--")
+        m2.cb.pick.attach.print_to_console()
+        m2.cb.pick.attach.get_values()
+
+        self.click_ID(m2, 1225)
+
+        self.assertEqual(len(m2.cb.pick.get.picked_vals["pos"]), 1)
+        self.assertEqual(len(m2.cb.pick.get.picked_vals["ID"]), 1)
+        self.assertEqual(len(m2.cb.pick.get.picked_vals["val"]), 1)
+        self.assertTrue(m2.cb.pick.get.picked_vals["ID"][0] == 1225)

@@ -89,8 +89,13 @@ class _click_callbacks(object):
         """Print details on the clicked pixel to the console"""
         ID, pos, val, ind, picker_name = self._popargs(kwargs)
 
-        xlabel = self.m.data_specs.x
-        ylabel = self.m.data_specs.y
+        if isinstance(self.m.data_specs.x, str):
+            xlabel = self.m.data_specs.x
+            ylabel = self.m.data_specs.y
+        else:
+            xlabel = "x"
+            ylabel = "y"
+
         if ID is not None:
             printstr = ""
             x, y = [np.format_float_positional(i, trim="-", precision=4) for i in pos]
@@ -201,10 +206,7 @@ class _click_callbacks(object):
             if ID is not None and self.m.data is not None:
                 x, y = [
                     np.format_float_positional(i, trim="-", precision=pos_precision)
-                    for i in (
-                        self.m._props["xorig"].flat[ind],
-                        self.m._props["yorig"].flat[ind],
-                    )
+                    for i in self.m._get_xy_from_index(ind)
                 ]
                 x0, y0 = [
                     np.format_float_positional(i, trim="-", precision=pos_precision)
@@ -426,7 +428,7 @@ class _click_callbacks(object):
             if ind is None:
                 # ind = self.m.data.index.get_loc(ID)
                 ind = np.flatnonzero(np.isin(self.m._props["ids"], ID))
-            pos = (self.m._props["xorig"][ind], self.m._props["yorig"][ind])
+            pos = self.m._get_xy_from_index(ind)
             pos_crs = "in"
         else:
             pos_crs = "out"

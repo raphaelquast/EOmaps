@@ -509,15 +509,31 @@ class TestBasicPlotting(unittest.TestCase):
 
         m.redraw()
 
-        self.assertTrue(all(cb.ax.get_visible() for cb in m._colorbars))
-        self.assertFalse(m2.colorbar.ax.get_visible())
+        self.assertTrue(all(cb.ax_cb.get_visible() for cb in m._colorbars))
+        self.assertFalse(m2.colorbar.ax_cb.get_visible())
         m.show_layer("asdf")
-        self.assertTrue(m2.colorbar.ax.get_visible())
+        self.assertTrue(m2.colorbar.ax_cb.get_visible())
 
         self.assertTrue(len(m2._colorbars) == 1)
-        self.assertTrue(all(not cb.ax.get_visible() for cb in m._colorbars))
+        self.assertTrue(all(not cb.ax_cb.get_visible() for cb in m._colorbars))
 
         self.assertTrue(m2.colorbar is cb5)
+
+        # test setting custom bins
+        bins = [-5e6, 5e6, 1e7]
+        labels = ["A", "b", "c", "d"]
+        m3 = m.new_layer("asdf")
+        m3.set_data_specs(data=self.data, x="x", y="y", in_crs=3857)
+        m3.set_classify.UserDefined(bins=bins)
+        m3.plot_map()
+        cb6 = m3.add_colorbar()
+        cb6.set_bin_labels(bins, labels)
+        m.show_layer(m3.layer)
+
+        self.assertTrue(labels == [i.get_text() for i in cb6.ax_cb.get_xticklabels()])
+
+        cb6.set_bin_labels(bins, labels, show_values=True)
+        cb6.tick_params(which="minor", rotation=90)
 
     def test_MapsGrid(self):
         mg = MapsGrid(2, 2, crs=4326)
@@ -686,6 +702,18 @@ class TestBasicPlotting(unittest.TestCase):
 
         for si in [s, s1, s2, s3]:
             si.remove()
+
+    def test_set_extent_to_location(self):
+        m = Maps()
+        resp = m._get_nominatim_response("austria")
+
+        m.add_feature.preset.countries()
+        m.set_extent_to_location("Austria")
+
+        e = m.ax.get_extent()
+        bbox = list(map(float, resp["boundingbox"]))
+
+        self.assertTrue(np.allclose([e[2], e[3], e[0], e[1]], bbox, atol=0.1))
 
     def test_a_complex_figure(self):
         # %%

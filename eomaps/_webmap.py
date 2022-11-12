@@ -161,7 +161,7 @@ class _WebMap_layer:
             if self._layer not in self._m.BM._bg_layer.split("|"):
                 legax.set_visible(False)
 
-            self._m.BM.add_artist(legax)
+            self._m.BM.add_artist(legax, self._layer)
 
             def cb_move(event):
                 if not self._legend_picked:

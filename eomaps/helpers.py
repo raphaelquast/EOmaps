@@ -139,49 +139,62 @@ class searchtree:
         if d is None:
             d = self.d
 
-        # select a rectangle around the pick-coordinates
-        # (provides tremendous speedups for very large datasets)
-        mx = np.logical_and(
-            self._m._props["x0"] > (x[0] - d), self._m._props["x0"] < (x[0] + d)
-        )
-        my = np.logical_and(
-            self._m._props["y0"] > (x[1] - d), self._m._props["y0"] < (x[1] + d)
-        )
-        m = np.logical_and(mx, my)
-        # get the indexes of the search-rectangle
-        idx = np.where(m.ravel())[0]
-        # evaluate the clicked pixel as the one with the smallest
-        # euclidean distance
-        if len(idx) > 0:
-            i = idx[
-                (
-                    (self._m._props["x0"][m].ravel() - x[0]) ** 2
-                    + (self._m._props["y0"][m].ravel() - x[1]) ** 2
-                ).argmin()
-            ]
+        i = None
+
+        # take care of 1D coordinates and 2D data
+        if self._m._1D2D:
+            # just perform a brute-force search for 1D coords
+            ix = np.argmin(np.abs(self._m._props["x0"] - x[0]))
+            iy = np.argmin(np.abs(self._m._props["y0"] - x[1]))
+
+            i = np.ravel_multi_index((ix, iy), self._m._zshape)
 
         else:
-            # show some warning if no points are found within the pick_distance
+            # select a rectangle around the pick-coordinates
+            # (provides tremendous speedups for very large datasets)
+            mx = np.logical_and(
+                self._m._props["x0"] > (x[0] - d), self._m._props["x0"] < (x[0] + d)
+            )
+            my = np.logical_and(
+                self._m._props["y0"] > (x[1] - d), self._m._props["y0"] < (x[1] + d)
+            )
+            m = np.logical_and(mx, my)
+            # get the indexes of the search-rectangle
+            idx = np.where(m.ravel())[0]
+            # evaluate the clicked pixel as the one with the smallest
+            # euclidean distance
+            if len(idx) > 0:
+                i = idx[
+                    (
+                        (self._m._props["x0"][m].ravel() - x[0]) ** 2
+                        + (self._m._props["y0"][m].ravel() - x[1]) ** 2
+                    ).argmin()
+                ]
 
-            if self._misses < 3:
-                self._misses += 1
+            else:
+                # show some warning if no points are found within the pick_distance
 
-                text = "Found no data here...\n Increase pick_distance?"
+                if self._misses < 3:
+                    self._misses += 1
 
-                self._m.cb.click._cb.annotate(
-                    pos=x,
-                    permanent=False,
-                    text=text,
-                    xytext=(0.98, 0.98),
-                    textcoords=self._m.figure.f.transFigure,
-                    horizontalalignment="right",
-                    verticalalignment="top",
-                    arrowprops=None,
-                    fontsize=7,
-                    bbox=dict(ec="r", fc=(1, 0.9, 0.9, 0.5), lw=0.25, boxstyle="round"),
-                )
+                    text = "Found no data here...\n Increase pick_distance?"
 
-            i = None
+                    self._m.cb.click._cb.annotate(
+                        pos=x,
+                        permanent=False,
+                        text=text,
+                        xytext=(0.98, 0.98),
+                        textcoords=self._m.figure.f.transFigure,
+                        horizontalalignment="right",
+                        verticalalignment="top",
+                        arrowprops=None,
+                        fontsize=7,
+                        bbox=dict(
+                            ec="r", fc=(1, 0.9, 0.9, 0.5), lw=0.25, boxstyle="round"
+                        ),
+                    )
+
+                i = None
 
         return None, i
 
@@ -235,7 +248,7 @@ class LayoutEditor:
     def cbaxes(self):
         axes = list()
         for m in self.ms:
-            axes.extend((i.ax for i in m._colorbars))
+            axes.extend((i._ax for i in m._colorbars))
         return axes
 
     @property
@@ -400,7 +413,7 @@ class LayoutEditor:
         self._start_position = (event.x, event.y)
         self._start_ax_position = {
             i: (i.bbox.x0, i.bbox.y0)
-            for i in (*self._ax_picked, *(cb.ax for cb in self._cb_picked))
+            for i in (*self._ax_picked, *(cb._ax for cb in self._cb_picked))
         }
 
     def cb_release(self, event):
@@ -497,7 +510,7 @@ class LayoutEditor:
             ax.set_position(bbox)
 
         for cb in self._cb_picked:
-            bbox = self._get_move_with_key_bbox(cb.ax, event.key)
+            bbox = self._get_move_with_key_bbox(cb._ax, event.key)
             cb.set_position(bbox)
 
         self._color_axes()
@@ -525,7 +538,7 @@ class LayoutEditor:
             if cb is None:
                 return
 
-            bbox = self._get_move_bbox(cb.ax, event.x, event.y)
+            bbox = self._get_move_bbox(cb._ax, event.x, event.y)
             cb.set_position(bbox)
 
         self.m.BM._refetch_bg = True
@@ -552,13 +565,13 @@ class LayoutEditor:
                 continue
 
             if self._scale_direction == "set_hist_size":
-                start_size = cb.hist_size
+                start_size = cb._hist_size
 
                 new_size = np.clip(start_size + event.step * 0.02, 0.0, 1.0)
                 cb.set_hist_size(new_size)
                 self._ax_visible[cb.ax_cb_plot] = cb.ax_cb_plot.get_visible()
             else:
-                resize_bbox = self._get_resize_bbox(cb.ax, event.step)
+                resize_bbox = self._get_resize_bbox(cb._ax, event.step)
                 if resize_bbox is not None:
                     cb.set_position(resize_bbox)
 
