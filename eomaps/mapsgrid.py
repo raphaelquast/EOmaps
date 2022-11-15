@@ -57,6 +57,9 @@ class MapsGrid:
     layer : int or str
         The default layer to assign to all Maps-objects of the grid.
         The default is 0.
+    f : matplotlib.Figure or None
+        The matplotlib figure to use. If None, a new figure will be created.
+        The default is None.
     kwargs
         Additional keyword-arguments passed to the `matplotlib.gridspec.GridSpec()`
         function that is used to initialize the grid.
@@ -134,6 +137,7 @@ class MapsGrid:
         ax_inits=None,
         figsize=None,
         layer="base",
+        f=None,
         **kwargs,
     ):
 
@@ -167,6 +171,7 @@ class MapsGrid:
                             gs_ax=self.gridspec[0, 0],
                             figsize=figsize,
                             layer=layer,
+                            f=f,
                         )
                         mij.ax.set_label("mg_map_0_0")
                         self.parent = mij
@@ -217,6 +222,7 @@ class MapsGrid:
                             parent=self.parent,
                             gs_ax=self.gridspec[val],
                             layer=layer,
+                            f=f,
                         )
                         mi.ax.set_label(f"mg_map_{key}")
 
