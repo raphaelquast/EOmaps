@@ -1014,6 +1014,9 @@ class Maps(object):
         The parent-object to which this Maps-object is connected to.
         If None, `self` is returned!
         """
+        if getattr(self._f, "_EOmaps_parent", False):
+            return self._f._EOmaps_parent
+
         if self._parent is None:
             return weakref.proxy(self)
         else:
@@ -1058,9 +1061,12 @@ class Maps(object):
 
         if self.parent.figure.f is None:
             self._f = plt.figure(**kwargs)
+            self.parent.figure.f._EOmaps_parent = self.parent
             newfig = True
         else:
             newfig = False
+            if not hasattr(self.parent.figure.f, "_EOmaps_parent"):
+                self.parent.figure.f._EOmaps_parent = self.parent
 
         if isinstance(gs_ax, plt.Axes):
             # in case an axis is provided, attempt to use it
@@ -1127,7 +1133,9 @@ class Maps(object):
                 # attach the Qt companion widget
                 self._add_companion_cb(show_hide_key=self._companion_widget_key)
 
-        if newfig:  # only if a new figure has been initialized
+        if self.parent == self:  # use == instead of "is" since the parent is a proxy!
+            # only attach resize- and close-callbacks if we initialize a parent
+            # Maps-object
             # attach a callback that is executed when the figure is closed
             self._cid_onclose = self.figure.f.canvas.mpl_connect(
                 "close_event", self._on_close
@@ -1170,6 +1178,9 @@ class Maps(object):
 
             if hasattr(m.figure, "coll"):
                 m.figure.coll = None
+
+            if hasattr(m.figure.f, "_EOmaps_parent"):
+                m.figure.f._EOmaps_parent = None
 
             m.data_specs.delete()
             m.cleanup()
