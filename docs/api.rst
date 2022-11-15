@@ -1555,7 +1555,7 @@ Lines can be added to a map with ``m.add_line()``.
 
          - check the return-values of ``m.add_line()`` to get the actual distances used in each line-segment
 
-  - ``connect="straight"``: connect points via **straight **lines**
+  - ``connect="straight"``: connect points via **straight lines**
   - ``connect="straight_crs"``: connect points with reprojected lines that are **straight in a given projection**
 
       -  use ``n=10`` to calculate 10 (equally-spaced) intermediate points between each anchor-point
