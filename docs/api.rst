@@ -467,8 +467,8 @@ Currently available classification-schemes are (see `mapclassify <https://github
 - UserDefined (bins)
 
 
-Adding Maps to existing figures
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+◔ Adding Maps to existing figures
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 It is possible to add EOmaps maps to existing ``matplotlib`` figures.
 
