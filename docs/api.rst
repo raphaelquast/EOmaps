@@ -42,7 +42,7 @@ Possible ways for specifying the ``crs`` for plotting are:
 
 Once you have created your first ``Maps`` object, you can:
 
-- Create **additional** ``Maps`` ** objects on the same layer** by using ``m2 = m.new_layer()``
+- Create **additional** ``Maps`` **objects on the same layer** by using ``m2 = m.new_layer()``
 
   - If no explicit layer-name is provided, ``m2`` will use the same layer as ``m``
   - This is especially useful if you want to plot multiple datasets **on the same layer**
@@ -470,7 +470,7 @@ Currently available classification-schemes are (see `mapclassify <https://github
 ◔ Adding Maps to existing figures
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-It is possible to add EOmaps maps to existing ``matplotlib`` figures.
+It is possible to add (one or more) EOmaps maps to existing ``matplotlib`` figures.
 
 As soon as a ``Maps``-object is attached to a figure, EOmaps will handle re-drawing of the figure.
 Therefore any additional artists need to be added to the "blit-manager" to ensure that they are
