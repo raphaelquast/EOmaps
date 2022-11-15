@@ -510,7 +510,7 @@ class PlotGeoTIFFWidget(PlotFileWidget):
     def do_open_file(self, file_path):
         import xarray as xar
 
-        with xar.open_dataset(file_path) as f:
+        with xar.open_dataset(file_path, mask_and_scale=False) as f:
             import io
 
             info = io.StringIO()
@@ -678,7 +678,7 @@ class PlotNetCDFWidget(PlotFileWidget):
     def do_open_file(self, file_path):
         import xarray as xar
 
-        with xar.open_dataset(file_path) as f:
+        with xar.open_dataset(file_path, mask_and_scale=False) as f:
 
             info = io.StringIO()
             f.info(info)
