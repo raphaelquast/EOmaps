@@ -467,6 +467,54 @@ Currently available classification-schemes are (see `mapclassify <https://github
 - UserDefined (bins)
 
 
+Adding Maps to existing figures
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+It is possible to add EOmaps maps to existing ``matplotlib`` figures.
+
+As soon as a ``Maps``-object is attached to a figure, EOmaps will handle re-drawing of the figure.
+Therefore any additional artists need to be added to the "blit-manager" to ensure that they are
+correctly updated.
+
+- use ``m.BM.add_artist(artist, layer=...)`` if the artist should be re-drawn on any change in the figure
+- use ``m.BM.add_bg_artist(artist, layer=...)`` if the artist should **only** be re-drawn if the extent of the map changes
+
+In general, it should be sufficient to simply add the axes-object as artist via ``m.BM.add_artist(...)``
+This will ensure that all artists on the axes are updated.
+
+.. code-block:: python
+
+    import matplotlib.pyplot as plt
+    from eomaps import Maps
+
+    # create a normal matplotlib plot
+    f, ax = plt.subplots()
+    ax.plot([10, 20, 30, 40, 50], [10, 20, 30, 40, 50])
+
+    # initialize a new map and put it on the existing figure
+    m = Maps(f=f)
+    # add existing axes to the BlitManager so that they are properly updated
+    # (since EOmaps now handles when the figure needs to be re-drawn)
+    m.BM.add_artist(ax, layer=m.layer)
+
+    # add some features to the map
+    m.add_feature.preset.coastline()
+    m.add_feature.preset.ocean()
+
+    # attach a callback that plots markers on the axis if you click on the map
+    def cb(pos, **kwargs):
+        ax.plot(*pos, marker="o")
+
+    m.cb.click.attach(cb)
+
+    # use the "layout-manager" to re-position the individual axes as you like
+    # then, use m.get_layout() to get a dict that can be used to restore the layout
+    m.apply_layout(
+        {'0_': [0.1125, 0.08333, 0.8125, 0.35],
+        '1_map': [0.135, 0.46667, 0.75, 0.5]}
+        )
+
+
 
 𝄜 Multiple maps in one figure
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
