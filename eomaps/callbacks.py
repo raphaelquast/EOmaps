@@ -521,7 +521,7 @@ class _click_callbacks(object):
     def _mark_cleanup(self):
         self.clear_markers()
 
-    def peek_layer(self, layer="1", how=(0.4, 0.4), overlay=False, alpha=1, **kwargs):
+    def peek_layer(self, layer="1", how=(0.4, 0.4), alpha=1, **kwargs):
         """
         Swipe between data- or WebMap layers or peek a layers through a rectangle.
 
@@ -530,7 +530,8 @@ class _click_callbacks(object):
         layer : str or list
             - if str: The name of the layer you want to peek at.
             - if list: A list of layer-names to peek at.
-
+              (alternatively you can also separate individual layer-names with a "|"
+               character, e.g.: "layer1|layer2")
         how : str , float or tuple, optional
             The method you want to visualize the second layer.
             (e.g. swipe from a side or display a rectangle)
@@ -548,10 +549,6 @@ class _click_callbacks(object):
             The transparency of the peeked layer.
             (must be between 0 and 1)
             The default is 1.
-        overlay : bool, optional
-            Indicator if only the selected layers should be shown (False) or if the
-            layers should be used as an "overlay" on top of the current layer (True).
-            The default is False.
         **kwargs :
             additional kwargs passed to a rectangle-marker.
             the default is `(fc="none", ec="k", lw=1)`
@@ -571,9 +568,19 @@ class _click_callbacks(object):
         >>> m.peek_layer(layer="the layer name")
         """
 
-        if not isinstance(layer, str):
-            print("EOmaps v5.0 Warning: All layer-names are converted to strings!")
-            layer = str(layer)
+        if "overlay" in kwargs:
+            kwargs.pop("overlay")
+            warnings.warn(
+                "EOmaps: The 'overlay' argument of peek_layer is depreciated! "
+                "(It has no effect and can be removed.)"
+            )
+
+        if isinstance(layer, list):
+            layer = "|".join(map(str, layer))
+        else:
+            if not isinstance(layer, str):
+                print("EOmaps v5.0 Warning: All layer-names are converted to strings!")
+                layer = str(layer)
 
         ID, pos, val, ind, picker_name = self._popargs(kwargs)
 
@@ -688,26 +695,20 @@ class _click_callbacks(object):
             raise TypeError(f"EOmaps: {how} is not a valid peek method!")
 
         if marker is not None:
-
+            # make sure to clear the marker at the next update
+            # (e.g. to clear the marker on mouse-release)
             def doit():
-                self.m.BM._artists_to_clear["click"].append(marker)
-                self.m.BM._artists_to_clear["_click_move"].append(marker)
-                self.m.BM._artists_to_clear["on_layer_change"].append(marker)
+                self.m.BM._artists_to_clear["pick_cb"].append(marker)
 
             self.m.BM._after_restore_actions.append(doit)
 
-        if overlay:
-            self.m.BM._after_restore_actions.append(
-                self.m.BM._get_overlay_bg_action(
-                    layer, (x0, y0, blitw, blith), alpha=alpha
-                )
+            self.m.BM._after_update_actions.append(
+                lambda: self.m.BM._clear_temp_artists("pick_cb")
             )
-        else:
-            self.m.BM._after_restore_actions.append(
-                self.m.BM._get_restore_bg_action(
-                    layer, (x0, y0, blitw, blith), alpha=alpha
-                )
-            )
+
+        self.m.BM._after_restore_actions.append(
+            self.m.BM._get_restore_bg_action(layer, (x0, y0, blitw, blith), alpha=alpha)
+        )
 
     def load(
         self, database=None, load_method="load_fit", load_multiple=False, **kwargs
