@@ -472,16 +472,6 @@ Currently available classification-schemes are (see `mapclassify <https://github
 
 It is possible to add (one or more) EOmaps maps to existing ``matplotlib`` figures.
 
-As soon as a ``Maps``-object is attached to a figure, EOmaps will handle re-drawing of the figure.
-Therefore any additional artists need to be added to the "blit-manager" to ensure that they are
-correctly updated.
-
-- use ``m.BM.add_artist(artist, layer=...)`` if the artist should be re-drawn on any change in the figure
-- use ``m.BM.add_bg_artist(artist, layer=...)`` if the artist should **only** be re-drawn if the extent of the map changes
-
-In general, it should be sufficient to simply add the axes-object as artist via ``m.BM.add_artist(...)``
-This will ensure that all artists on the axes are updated.
-
 .. code-block:: python
 
     import matplotlib.pyplot as plt
@@ -517,6 +507,20 @@ This will ensure that all artists on the axes are updated.
 
     # share click events on the 2 maps
     m.cb.click.share_events(m2)
+
+
+.. admonition:: Dynamic updates of plots
+
+    As soon as a ``Maps``-object is attached to a figure, EOmaps will handle re-drawing of the figure.
+    Therefore **dynamically updated** artists must be added to the "blit-manager" (``m.BM``) to ensure
+    that they are correctly updated.
+
+    - use ``m.BM.add_artist(artist, layer=...)`` if the artist should be re-drawn on any change in the figure
+    - use ``m.BM.add_bg_artist(artist, layer=...)`` if the artist should **only** be re-drawn if the extent of the map changes
+
+    In general, it should be sufficient to simply add the axes-object as artist via ``m.BM.add_artist(...)``
+    This will ensure that all artists on the axes are updated.
+
 
 
 𝄜 Multiple maps in one figure
