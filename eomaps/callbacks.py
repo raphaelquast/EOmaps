@@ -696,15 +696,10 @@ class _click_callbacks(object):
 
         if marker is not None:
             # make sure to clear the marker at the next update
-            # (e.g. to clear the marker on mouse-release)
             def doit():
-                self.m.BM._artists_to_clear["pick_cb"].append(marker)
+                self.m.BM._artists_to_clear["move"].append(marker)
 
             self.m.BM._after_restore_actions.append(doit)
-
-            self.m.BM._after_update_actions.append(
-                lambda: self.m.BM._clear_temp_artists("pick_cb")
-            )
 
         self.m.BM._after_restore_actions.append(
             self.m.BM._get_restore_bg_action(layer, (x0, y0, blitw, blith), alpha=alpha)
