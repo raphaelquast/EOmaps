@@ -123,6 +123,9 @@ class _cb_container(object):
                 if m1 is not m2:
                     self._getobj(m1)._fwd_cbs[id(m2)] = m2
 
+        if self._method == "click":
+            self._m.cb._click_move.share_events(*args)
+
     def add_temporary_artist(self, artist):
         """
         Make an artist temporary (remove it from the map at the next event)
@@ -761,16 +764,16 @@ class cb_click_container(_click_container):
 
                 # execute onclick on the maps object that belongs to the clicked axis
                 # and forward the event to all forwarded maps-objects
-
                 for obj in self._objs:
                     # clear temporary artists before executing new callbacks to avoid
                     # having old artists around when callbacks are triggered again
                     obj._clear_temporary_artists()
-                    self._m.BM._clear_temp_artists(self._method)
                     obj._onclick(event)
 
                     # forward callbacks to the connected maps-objects
                     obj._fwd_cb(event)
+
+                self._m.BM._clear_temp_artists(self._method)
 
                 self._m.parent.BM.update(clear=self._method)
             except ReferenceError:
@@ -787,9 +790,6 @@ class cb_click_container(_click_container):
                 ) and self._m.figure.f.canvas.toolbar.mode != "":
                     return
 
-                # clear temporary click artists when the mouse-button is released
-                self._m.BM._clear_temp_artists(self._method)
-
                 # execute onclick on the maps object that belongs to the clicked axis
                 # and forward the event to all forwarded maps-objects
                 for obj in self._objs:
@@ -803,7 +803,6 @@ class cb_click_container(_click_container):
             except ReferenceError:
                 # ignore errors caused by no-longer existing weakrefs
                 pass
-            # self._m.parent.BM.update(clear=False)
 
         if self._cid_button_press_event is None:
             # ------------- add a callback
@@ -832,6 +831,8 @@ class cb_click_container(_click_container):
         else:
             for key, m in self._fwd_cbs.items():
                 obj = self._getobj(m)
+                # clear all temporary artists that are still around
+                obj._clear_temporary_artists()
                 if obj is None:
                     continue
 
@@ -856,9 +857,6 @@ class cb_click_container(_click_container):
                 )
 
                 obj._onclick(dummymouseevent)
-                # append clear-action again since it will already be executed
-                # by the first click!
-                m.BM._after_update_actions.append(obj._clear_temporary_artists)
 
 
 class cb_move_container(cb_click_container):
@@ -1222,6 +1220,7 @@ class cb_pick_container(_click_container):
 
         for key, m in self._fwd_cbs.items():
             obj = self._getobj(m)
+            obj._clear_temporary_artists()
             if obj is None:
                 continue
 
@@ -1270,7 +1269,6 @@ class cb_pick_container(_click_container):
                 dummyevent.dist = None
 
             obj._onpick(dummyevent)
-            m.BM._after_update_actions.append(obj._clear_temporary_artists)
 
 
 class keypress_container(_cb_container):
