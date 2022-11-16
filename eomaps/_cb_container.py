@@ -56,13 +56,20 @@ class _cb_container(object):
             else:
                 event = self._event
 
-            for m in [*self._m.parent._children, self._m.parent]:
-                # don't use "is" in here since Maps-children are proxies
-                # (and so are their attributes)!
-                if event.inaxes == m.figure.ax:
+            if self._method in ["keypress"]:
+                for m in [*self._m.parent._children, self._m.parent]:
+                    # always execute keypress callbacks irrespective of the mouse-pos
                     obj = self._getobj(m)
                     if obj is not None:
                         objs.append(obj)
+            else:
+                for m in [*self._m.parent._children, self._m.parent]:
+                    # don't use "is" in here since Maps-children are proxies
+                    # (and so are their attributes)!
+                    if event.inaxes == m.figure.ax:
+                        obj = self._getobj(m)
+                        if obj is not None:
+                            objs.append(obj)
         return objs
 
     def _clear_temporary_artists(self):
@@ -1343,11 +1350,12 @@ class keypress_container(_cb_container):
                     # only trigger callbacks on the right layer
                     if not self._execute_cb(obj._m.layer):
                         continue
-                    if event.key in obj.get.cbs:
+                    if any(i in obj.get.cbs for i in (event.key, None)):
                         update = True
                         # do this to allow deleting callbacks with a callback
                         # otherwise modifying a dict during iteration is problematic!
-                        cbs = obj.get.cbs[event.key]
+                        cbs = {**obj.get.cbs[event.key], **obj.get.cbs[None]}
+
                         names = list(cbs)
                         for name in names:
                             if name in cbs:
@@ -1368,16 +1376,27 @@ class keypress_container(_cb_container):
 
         Each callback takes 1 additional keyword-arguments:
 
-        key : str
-            the key to use
-            (modifiers are attached with a '+', e.g. "alt+d" )
+        key : str or None
+            The key to use.
+
+            - Modifiers are attached with a '+', e.g. "alt+d"
+            - If None, the callback will be fired on any key!
 
         For additional keyword-arguments check the doc of the callback-functions!
 
         Examples
         --------
 
+            Attach a pre-defined callback:
+
             >>> m.cb.keypress.attach.switch_layer(layer=1, key="1")
+
+            Attach a custom callback:
+
+            >>> def cb(**kwargs):
+            >>>     ... do something ...
+            >>>
+            >>> m.cb.keypress.attach(cb, key="3")
 
         """
 
@@ -1397,7 +1416,7 @@ class keypress_container(_cb_container):
 
         def __call__(self, f, key, **kwargs):
             """
-            add a custom callback-function to the map
+            Add a custom callback-function to the map
 
             Parameters
             ----------
@@ -1409,10 +1428,11 @@ class keypress_container(_cb_container):
                 >>>     print("hello world, asdf=", asdf)
                 >>>
                 >>> m.cb.attach(some_callback, asdf=1)
+            key : str or None
+                The key to use.
 
-            key : str
-                the key to use
-                (modifiers are attached with a '+', e.g. "alt+d" )
+                - Modifiers are attached with a '+', e.g. "alt+d"
+                - If None, the callback will be fired on any key!
 
             **kwargs :
                 kwargs passed to the callback-function
@@ -1425,7 +1445,7 @@ class keypress_container(_cb_container):
 
             """
 
-            if not isinstance(key, str):
+            if key is not None and not isinstance(key, str):
                 raise TypeError(
                     "EOmaps: The 'key' for keypress-callbacks must be a string!"
                 )
@@ -1496,9 +1516,11 @@ class keypress_container(_cb_container):
         callback : callable or str
             The callback-function to attach.
 
-        key : str
-            the key to use
-            (modifiers are attached with a '+', e.g. "alt+d" )
+        key : str or None
+            The key to use.
+
+            - Modifiers are attached with a '+', e.g. "alt+d"
+            - If None, the callback will be fired on any key!
 
         **kwargs :
             kwargs passed to the callback-function
