@@ -169,20 +169,6 @@ class Maps(object):
 
     Other Parameters:
     -----------------
-    parent : eomaps.Maps
-        The parent Maps-object to use.
-        Any maps-objects that share the same figure must be connected
-        to allow shared interactivity!
-
-        By default, also the axis used for plotting is shared between connected
-        Maps-objects, but this can be overridden if you explicitly specify
-        either a GridSpec or an Axis via `gs_ax`.
-
-        >>> m1 = Maps()
-        >>> m2 = Maps(parent=m1)
-
-        Note: Instead of specifying explicit axes, you might want to have a
-        look at `eomaps.MapsGrid` objects!
     f : matplotlib.Figure, optional
         Explicitly specify the matplotlib figure instance to use.
         (ONLY useful if you want to add a map to an already existing figure!)
@@ -192,35 +178,33 @@ class Maps(object):
             NOT need to specify it (just provide the parent and you're fine)!
 
         The default is None
-    gs_ax : matplotlib.axes or matplotlib.gridspec.SubplotSpec, optional
-        Explicitly specify the axes (or GridSpec) for plotting.
+    gs_ax : int, list, tuple, matplotlib.Axes, matplotlib.gridspec.SubplotSpec or None
+        Explicitly specify the position of the axes or use already existing axes.
 
         Possible values are:
 
-        * None:
-            Initialize a new axes (the default)
-        * `matplotilb.gridspec.SubplotSpec`:
+        - None:
+            Initialize a new axes at the center of the figure (the default)
+        - A tuple of 4 floats (*left*, *bottom*, *width*, *height*)
+            The absolute position of the axis in relative figure-coordinates
+            (e.g. in the range [0 , 1])
+            NOTE: since the axis-size is dependent on the plot-extent, the size of
+            the map will be adjusted to fit in the provided bounding-box.
+        - A tuple of 3 integers (*nrows*, *ncols*, *index*)
+            The map will be positioned at the *index* position of a grid
+            with *nrows* rows and *ncols* columns. *index* starts at 1 in the
+            upper left corner and increases to the right. *index* can also be
+            a two-tuple specifying the (*first*, *last*) indices (1-based, and
+            including *last*) of the subplot, e.g., ``gs_ax = (3, 1, (1, 2))``
+            makes a map that spans the upper 2/3 of the figure.
+        - A 3-digit integer
+            Same as using a tuple of three single-digit integers.
+            (e.g. 111 is the same as (1, 1, 1) )
+        - `matplotilb.gridspec.SubplotSpec`:
             Use the SubplotSpec for initializing the axes.
-            The SubplotSpec will be divided accordingly in case a colorbar
-            is plotted.
-
-                >>> import matplotlib.pyplot as plt
-                >>> from matplotlib.gridspec import GridSpec
-                >>> f = plt.figure()
-                >>> gs = GridSpec(2,2)
-                >>> m = Maps()
-                >>> ...
-                >>> m.plot_map(f_gs=gs[0,0])
-        * `matplotilb.Axes`:
+        - `matplotilb.Axes`:
             Directly use the provided figure and axes instances for plotting.
-            The axes MUST be a geo-axes with `m.crs_plot` projection.
-
-                >>> import matplotlib.pyplot as plt
-                >>> f = plt.figure()
-                >>> m = Maps()
-                >>> ...
-                >>> ax = f.add_subplot(projection=m.crs_plot)
-                >>> m.plot_map(ax_gs=ax)
+            NOTE: The axes MUST be a geo-axes with `m.crs_plot` projection!
     preferred_wms_service : str, optional
         Set the preferred way for accessing WebMap services if both WMS and WMTS
         capabilities are possible.
@@ -229,11 +213,67 @@ class Maps(object):
         additional kwargs are passed to matplotlib.pyplot.figure()
         - e.g. figsize=(10,5)
 
+    Examples
+    --------
+
+    Create a new figure and axes
+
+    >>> m = Maps()
+    >>> ...
+
+    Use an existing axis to create the Maps-object
+    (the associated figure is automatically detected)
+
+    >>> import matplotlib.pyplot as plt
+    >>> from eomaps import Maps
+    >>> f = plt.figure()
+    >>> ax = f.add_subplot(projection=Maps.CRS.Mollweide())
+    >>> m = Maps(gs_ax=ax)
+
+    Use an absolute position for the map (left, bottom, width, height)
+
+    >>> m = Maps(gs_ax=(.25, .5, .5, .5))
+
+    Use an absolute position within an existing figure
+
+    >>> import matplotlib.pyplot as plt
+    >>> from matplotlib.gridspec import GridSpec
+    >>> f = plt.figure()
+    >>> m = Maps(f=f, gs_ax=(.25, .5, .5, .5))
+
+    Use a 3-digit integer to set the grid-position of the map
+
+    >>> from matplotlib.gridspec import GridSpec
+    >>> m = Maps(gs_ax=221)
+
+    Use a tuple of 3 integers to set the grid-position of the map
+
+    >>> from matplotlib.gridspec import GridSpec
+    >>> m = Maps(gs_ax=(2, 2, 1))
+
+    Use a subplotspec to set the axis position
+
+    >>> from matplotlib.gridspec import GridSpec
+    >>> gs = GridSpec(2,2)
+    >>> m = Maps(gs_ax=gs[0,0])
+
+    Put the map at a grid-position of an existing figure
+
+    >>> import matplotlib.pyplot as plt
+    >>> f = plt.figure()
+    >>> ax = f.add_subplot(211)
+    >>> m = Maps(f=f, gs_ax=212)
+    >>> # add existing axes as artists to ensure correct updating
+    >>> m.BM.add_artist(ax)
+
+
     Attributes
     ----------
 
     CRS : Accessor for available projections (Supercharged version of cartopy.crs)
+
     CLASSIFIERS : Accessor for available classifiers (provided by mapclassify)
+
     _companion_widget_key : Keyboard shortcut assigned to show/hide the companion-widget.
 
     """
@@ -278,21 +318,33 @@ class Maps(object):
     def __init__(
         self,
         crs=None,
-        parent=None,
         layer="base",
         f=None,
         gs_ax=None,
         preferred_wms_service="wms",
         **kwargs,
     ):
-        # share the axes with the parent if no explicit axes is provided
-        if parent is not None:
-            assert (
-                f is None
-            ), "You cannot specify the figure for connected Maps-objects!"
 
-        self._f = f
-        self._ax = gs_ax
+        if "parent" in kwargs:
+            kwargs.pop("parent")
+            warnings.warn(
+                "EOmaps: The 'parent' argument for Maps() is depreciated! "
+                "It is sufficient to specify the figure (f) to which the "
+                "map should be added."
+            )
+
+        if hasattr(gs_ax, "figure"):
+            if isinstance(gs_ax.figure, plt.Figure):
+                if f is not None:
+                    assert (
+                        f == gs_ax.figure
+                    ), "EOmaps: The provided axis is in a different figure!"
+
+                self._f = gs_ax.figure
+        else:
+            self._f = f
+
+        self._ax = None
         self._parent = None
 
         self._BM = None
@@ -311,8 +363,6 @@ class Maps(object):
         self._cid_companion_key = None  # callback id for the companion-cb
         # a list to remember newly registered colormaps
         self._registered_cmaps = []
-
-        self.parent = parent  # invoke the setter!
 
         # preferred way of accessing WMS services (used in the WMS container)
         assert preferred_wms_service in [
@@ -532,6 +582,10 @@ class Maps(object):
 
     @staticmethod
     def _proxy(obj):
+        # None cannot be weak-referenced!
+        if obj is None:
+            return None
+
         # create a proxy if the object is not yet a proxy
         if type(obj) is not weakref.ProxyType:
             return weakref.proxy(obj)
@@ -709,7 +763,6 @@ class Maps(object):
             data_specs=copy_data_specs,
             classify_specs=copy_classify_specs,
             shape=copy_shape,
-            parent=self.parent,
             gs_ax=self.figure.ax,
             layer=layer,
         )
@@ -961,8 +1014,8 @@ class Maps(object):
             boundary.update(kwargs.pop("boundary", dict()))
 
         m2 = _InsetMaps(
+            f=self.figure.f,
             crs=inset_crs,
-            parent=self,
             layer=layer,
             xy=xy,
             radius=radius,
@@ -1014,24 +1067,25 @@ class Maps(object):
         The parent-object to which this Maps-object is connected to.
         If None, `self` is returned!
         """
-        if getattr(self._f, "_EOmaps_parent", False):
-            return self._f._EOmaps_parent
-
         if self._parent is None:
-            return weakref.proxy(self)
-        else:
-            return self._parent
+            self._set_parent()
 
-    @parent.setter
-    def parent(self, parent):
-        assert parent is not self, "EOmaps: A Maps-object cannot be its own parent!"
+        return self._parent
+
+    def _set_parent(self):
+        """
+        Identify the parent object
+        """
         assert self._parent is None, "EOmaps: There is already a parent Maps object!"
+        # check if the figure to which the Maps-object is added already has a parent
+        parent = None
+        if getattr(self._f, "_EOmaps_parent", False):
+            parent = self._f._EOmaps_parent
 
-        if parent is not None:
-            self._parent = self._proxy(parent)
-        else:
-            # None cannot be weak-referenced!
-            self._parent = None
+        if parent is None:
+            parent = self
+
+        self._parent = self._proxy(parent)
 
         if parent not in [self, None]:
             # add the child to the topmost parent-object
@@ -1058,7 +1112,6 @@ class Maps(object):
         return cartopy_proj
 
     def _init_figure(self, gs_ax=None, plot_crs=None, **kwargs):
-
         if self.parent.figure.f is None:
             self._f = plt.figure(**kwargs)
             self.parent.figure.f._EOmaps_parent = self.parent
@@ -1071,8 +1124,11 @@ class Maps(object):
         if isinstance(gs_ax, plt.Axes):
             # in case an axis is provided, attempt to use it
             ax = gs_ax
-            gs = gs_ax.get_gridspec()
-            newax = False
+            # check if the axis is already used by another maps-object
+            if gs_ax not in (i.ax for i in (self.parent, *self.parent._children)):
+                newax = True
+            else:
+                newax = False
         else:
             newax = True
             # create a new axis
@@ -1080,15 +1136,26 @@ class Maps(object):
                 gs = GridSpec(
                     nrows=1, ncols=1, left=0.01, right=0.99, bottom=0.05, top=0.95
                 )
-                gsspec = gs[:]
+                gsspec = [gs[:]]
             elif isinstance(gs_ax, SubplotSpec):
+                gsspec = [gs_ax]
+            elif isinstance(gs_ax, (list, tuple)) and len(gs_ax) == 4:
+                # absolute position
+                l, b, w, h = gs_ax
+
+                gs = GridSpec(
+                    nrows=1, ncols=1, left=l, bottom=b, right=l + w, top=b + h
+                )
+                gsspec = [gs[:]]
+            elif isinstance(gs_ax, int):
+                gsspec = [gs_ax]
+            elif isinstance(gs_ax, tuple) and len(gs_ax) == 3:
                 gsspec = gs_ax
-                gs = gsspec.get_gridspec()
 
             projection = self._get_cartopy_crs(plot_crs)
 
             ax = self.figure.f.add_subplot(
-                gsspec,
+                *gsspec,
                 projection=projection,
                 aspect="equal",
                 adjustable="box",
@@ -1097,7 +1164,7 @@ class Maps(object):
 
         self._ax = ax
 
-        self._gridspec = gs
+        self._gridspec = ax.get_gridspec()
 
         # initialize the callbacks
         self.cb._init_cbs()
@@ -4487,7 +4554,7 @@ class _InsetMaps(Maps):
 
     def __init__(
         self,
-        parent,
+        f,
         crs=4326,
         layer="all",
         xy=(45, 45),
@@ -4545,7 +4612,7 @@ class _InsetMaps(Maps):
         )[0]
 
         # initialize a new maps-object with a new axis
-        super().__init__(crs=crs, parent=parent, gs_ax=gs, layer=layer, **kwargs)
+        super().__init__(crs=crs, f=f, gs_ax=gs, layer=layer, **kwargs)
 
         # get the boundary of a ellipse in the inset_crs
         bnd, bnd_verts = self._get_inset_boundary(

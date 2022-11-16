@@ -178,7 +178,7 @@ class MapsGrid:
                     else:
                         mij = Maps(
                             crs=crsij,
-                            parent=self.parent,
+                            f=self.parent.figure.f,
                             gs_ax=self.gridspec[i, j],
                             layer=layer,
                         )
@@ -213,16 +213,16 @@ class MapsGrid:
                             gs_ax=self.gridspec[val],
                             figsize=figsize,
                             layer=layer,
+                            f=f,
                         )
                         mi.ax.set_label(f"mg_map_{key}")
                         self.parent = mi
                     else:
                         mi = Maps(
                             crs=crs[key],
-                            parent=self.parent,
                             gs_ax=self.gridspec[val],
                             layer=layer,
-                            f=f,
+                            f=self.parent.figure.f,
                         )
                         mi.ax.set_label(f"mg_map_{key}")
 
