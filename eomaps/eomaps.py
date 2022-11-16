@@ -178,7 +178,7 @@ class Maps(object):
             NOT need to specify it (just provide the parent and you're fine)!
 
         The default is None
-    gs_ax : int, list, tuple, matplotlib.Axes, matplotlib.gridspec.SubplotSpec or None
+    ax : int, list, tuple, matplotlib.Axes, matplotlib.gridspec.SubplotSpec or None
         Explicitly specify the position of the axes or use already existing axes.
 
         Possible values are:
@@ -195,7 +195,7 @@ class Maps(object):
             with *nrows* rows and *ncols* columns. *index* starts at 1 in the
             upper left corner and increases to the right. *index* can also be
             a two-tuple specifying the (*first*, *last*) indices (1-based, and
-            including *last*) of the subplot, e.g., ``gs_ax = (3, 1, (1, 2))``
+            including *last*) of the subplot, e.g., ``ax = (3, 1, (1, 2))``
             makes a map that spans the upper 2/3 of the figure.
         - A 3-digit integer
             Same as using a tuple of three single-digit integers.
@@ -228,41 +228,41 @@ class Maps(object):
     >>> from eomaps import Maps
     >>> f = plt.figure()
     >>> ax = f.add_subplot(projection=Maps.CRS.Mollweide())
-    >>> m = Maps(gs_ax=ax)
+    >>> m = Maps(ax=ax)
 
     Use an absolute position for the map (left, bottom, width, height)
 
-    >>> m = Maps(gs_ax=(.25, .5, .5, .5))
+    >>> m = Maps(ax=(.25, .5, .5, .5))
 
     Use an absolute position within an existing figure
 
     >>> import matplotlib.pyplot as plt
     >>> from matplotlib.gridspec import GridSpec
     >>> f = plt.figure()
-    >>> m = Maps(f=f, gs_ax=(.25, .5, .5, .5))
+    >>> m = Maps(f=f, ax=(.25, .5, .5, .5))
 
     Use a 3-digit integer to set the grid-position of the map
 
     >>> from matplotlib.gridspec import GridSpec
-    >>> m = Maps(gs_ax=221)
+    >>> m = Maps(ax=221)
 
     Use a tuple of 3 integers to set the grid-position of the map
 
     >>> from matplotlib.gridspec import GridSpec
-    >>> m = Maps(gs_ax=(2, 2, 1))
+    >>> m = Maps(ax=(2, 2, 1))
 
     Use a subplotspec to set the axis position
 
     >>> from matplotlib.gridspec import GridSpec
     >>> gs = GridSpec(2,2)
-    >>> m = Maps(gs_ax=gs[0,0])
+    >>> m = Maps(ax=gs[0,0])
 
     Put the map at a grid-position of an existing figure
 
     >>> import matplotlib.pyplot as plt
     >>> f = plt.figure()
     >>> ax = f.add_subplot(211)
-    >>> m = Maps(f=f, gs_ax=212)
+    >>> m = Maps(f=f, ax=212)
     >>> # add existing axes as artists to ensure correct updating
     >>> m.BM.add_artist(ax)
 
@@ -320,7 +320,7 @@ class Maps(object):
         crs=None,
         layer="base",
         f=None,
-        gs_ax=None,
+        ax=None,
         preferred_wms_service="wms",
         **kwargs,
     ):
@@ -333,14 +333,21 @@ class Maps(object):
                 "map should be added."
             )
 
-        if hasattr(gs_ax, "figure"):
-            if isinstance(gs_ax.figure, plt.Figure):
+        if "ax" in kwargs:
+            ax = kwargs.pop("gs_ax")
+            warnings.warn(
+                "EOmaps: The 'gs_ax=...' argument for Maps() is depreciated! "
+                "use 'ax=...' instead!"
+            )
+
+        if isinstance(ax, plt.Axes) and hasattr(ax, "figure"):
+            if isinstance(ax.figure, plt.Figure):
                 if f is not None:
                     assert (
-                        f == gs_ax.figure
+                        f == ax.figure
                     ), "EOmaps: The provided axis is in a different figure!"
 
-                self._f = gs_ax.figure
+                self._f = ax.figure
         else:
             self._f = f
 
@@ -372,16 +379,16 @@ class Maps(object):
         ], "preferred_wms_service must be either 'wms' or 'wmts' !"
         self._preferred_wms_service = preferred_wms_service
 
-        if isinstance(gs_ax, plt.Axes):
+        if isinstance(ax, plt.Axes):
             # set the plot_crs only if no explicit axes is provided
             if crs is not None:
                 raise AssertionError(
                     "You cannot set the crs if you already provide an explicit axes!"
                 )
-            if gs_ax.projection == Maps.CRS.PlateCarree():
+            if ax.projection == Maps.CRS.PlateCarree():
                 self._crs_plot = 4326
             else:
-                self._crs_plot = gs_ax.projection
+                self._crs_plot = ax.projection
         else:
             if crs is None or crs == Maps.CRS.PlateCarree():
                 crs = 4326
@@ -405,7 +412,7 @@ class Maps(object):
         self._figure = map_objects(weakref.proxy(self))
         self._cb = cb_container(weakref.proxy(self))  # accessor for the callbacks
 
-        self._init_figure(gs_ax=gs_ax, plot_crs=crs, **kwargs)
+        self._init_figure(ax=ax, plot_crs=crs, **kwargs)
         self._wms_container = wms_container(weakref.proxy(self))
         self._new_layer_from_file = new_layer_from_file(weakref.proxy(self))
 
@@ -775,7 +782,7 @@ class Maps(object):
             data_specs=copy_data_specs,
             classify_specs=copy_classify_specs,
             shape=copy_shape,
-            gs_ax=self.ax,
+            ax=self.ax,
             layer=layer,
         )
 
@@ -1125,7 +1132,7 @@ class Maps(object):
             raise AssertionError(f"EOmaps: cannot identify the CRS for: {crs}")
         return cartopy_proj
 
-    def _init_figure(self, gs_ax=None, plot_crs=None, **kwargs):
+    def _init_figure(self, ax=None, plot_crs=None, **kwargs):
         if self.parent.f is None:
             self._f = plt.figure(**kwargs)
             self.parent.f._EOmaps_parent = self.parent
@@ -1135,36 +1142,36 @@ class Maps(object):
             if not hasattr(self.parent.f, "_EOmaps_parent"):
                 self.parent.f._EOmaps_parent = self.parent
 
-        if isinstance(gs_ax, plt.Axes):
-            # in case an axis is provided, attempt to use it
-            ax = gs_ax
+        if isinstance(ax, plt.Axes):
             # check if the axis is already used by another maps-object
-            if gs_ax not in (i.ax for i in (self.parent, *self.parent._children)):
+            if ax not in (i.ax for i in (self.parent, *self.parent._children)):
                 newax = True
             else:
                 newax = False
         else:
             newax = True
             # create a new axis
-            if gs_ax is None:
+            if ax is None:
                 gs = GridSpec(
                     nrows=1, ncols=1, left=0.01, right=0.99, bottom=0.05, top=0.95
                 )
                 gsspec = [gs[:]]
-            elif isinstance(gs_ax, SubplotSpec):
-                gsspec = [gs_ax]
-            elif isinstance(gs_ax, (list, tuple)) and len(gs_ax) == 4:
+            elif isinstance(ax, SubplotSpec):
+                gsspec = [ax]
+            elif isinstance(ax, (list, tuple)) and len(ax) == 4:
                 # absolute position
-                l, b, w, h = gs_ax
+                l, b, w, h = ax
 
                 gs = GridSpec(
                     nrows=1, ncols=1, left=l, bottom=b, right=l + w, top=b + h
                 )
                 gsspec = [gs[:]]
-            elif isinstance(gs_ax, int):
-                gsspec = [gs_ax]
-            elif isinstance(gs_ax, tuple) and len(gs_ax) == 3:
-                gsspec = gs_ax
+            elif isinstance(ax, int) and len(str(ax)) == 3:
+                gsspec = [ax]
+            elif isinstance(ax, tuple) and len(ax) == 3:
+                gsspec = ax
+            else:
+                raise TypeError("EOmaps: The provided value for 'ax' is invalid.")
 
             projection = self._get_cartopy_crs(plot_crs)
 
@@ -1365,7 +1372,7 @@ class Maps(object):
 
         kwargs :
             Additional kwargs passed to `m = Maps(**kwargs)`
-            (e.g. crs, f, gs_ax, orientation, layer)
+            (e.g. crs, f, ax, orientation, layer)
         Returns
         -------
         copy_cls : eomaps.Maps object
@@ -4620,7 +4627,7 @@ class _InsetMaps(Maps):
         )[0]
 
         # initialize a new maps-object with a new axis
-        super().__init__(crs=crs, f=f, gs_ax=gs, layer=layer, **kwargs)
+        super().__init__(crs=crs, f=f, ax=gs, layer=layer, **kwargs)
 
         # get the boundary of a ellipse in the inset_crs
         bnd, bnd_verts = self._get_inset_boundary(

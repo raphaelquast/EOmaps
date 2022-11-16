@@ -168,7 +168,7 @@ class MapsGrid:
                         # (instead of numpy-dtypes)  ... check numpy.ndarray.item
                         mij = Maps(
                             crs=crsij,
-                            gs_ax=self.gridspec[0, 0],
+                            ax=self.gridspec[0, 0],
                             figsize=figsize,
                             layer=layer,
                             f=f,
@@ -179,7 +179,7 @@ class MapsGrid:
                         mij = Maps(
                             crs=crsij,
                             f=self.parent.f,
-                            gs_ax=self.gridspec[i, j],
+                            ax=self.gridspec[i, j],
                             layer=layer,
                         )
                         mij.ax.set_label(f"mg_map_{i}_{j}")
@@ -210,7 +210,7 @@ class MapsGrid:
                     if i == 0:
                         mi = Maps(
                             crs=crs[key],
-                            gs_ax=self.gridspec[val],
+                            ax=self.gridspec[val],
                             figsize=figsize,
                             layer=layer,
                             f=f,
@@ -220,7 +220,7 @@ class MapsGrid:
                     else:
                         mi = Maps(
                             crs=crs[key],
-                            gs_ax=self.gridspec[val],
+                            ax=self.gridspec[val],
                             layer=layer,
                             f=self.parent.f,
                         )

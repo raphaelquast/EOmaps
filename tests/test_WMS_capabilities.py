@@ -3,8 +3,6 @@ import matplotlib as mpl
 mpl.rcParams["toolbar"] = "None"
 
 import unittest
-import numpy as np
-import pandas as pd
 import matplotlib.pyplot as plt
 
 from eomaps import Maps
@@ -12,12 +10,7 @@ from eomaps import Maps
 
 class TestWMS(unittest.TestCase):
     def setUp(self):
-        x, y = np.meshgrid(
-            np.linspace(-19000000, 19000000, 50), np.linspace(-19000000, 19000000, 50)
-        )
-        x, y = x.ravel(), y.ravel()
-
-        self.data = pd.DataFrame(dict(x=x, y=y, value=y - x))
+        pass
 
     def test_WMS_OSM(self):
         m = Maps(Maps.CRS.GOOGLE_MERCATOR)

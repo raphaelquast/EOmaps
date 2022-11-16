@@ -391,7 +391,7 @@ class TestBasicPlotting(unittest.TestCase):
         m.plot_map()
 
         # plot on the same axes
-        m2 = m.copy(parent=m, data_specs=True, gs_ax=m.ax)
+        m2 = m.copy(parent=m, data_specs=True, ax=m.ax)
         m2.set_shape.ellipses()
         m2.plot_map(facecolor="none", edgecolor="r")
 
@@ -446,7 +446,7 @@ class TestBasicPlotting(unittest.TestCase):
     def test_add_colorbar(self):
         gs = GridSpec(2, 2)
 
-        m = Maps(gs_ax=gs[0, 0])
+        m = Maps(ax=gs[0, 0])
         m.set_data_specs(data=self.data, x="x", y="y", in_crs=3857)
         m.plot_map()
         cb1 = m.add_colorbar(
@@ -714,6 +714,47 @@ class TestBasicPlotting(unittest.TestCase):
         bbox = list(map(float, resp["boundingbox"]))
 
         self.assertTrue(np.allclose([e[2], e[3], e[0], e[1]], bbox, atol=0.1))
+
+    def test_adding_maps_to_existing_figures(self):
+        # use existing axes
+        f = plt.figure()
+        ax = f.add_subplot(projection=Maps.CRS.PlateCarree())
+        m = Maps(ax=ax)
+        m.add_feature.preset.coastline()
+
+        # absolute positioning
+        f = plt.figure()
+        m1 = Maps(f=f, ax=(0.4, 0.4, 0.5, 0.5))
+        m2 = Maps(f=f, ax=(0.05, 0.05, 0.4, 0.4))
+        m1.add_feature.preset.coastline()
+        m2.add_feature.preset.coastline()
+        plt.close(f)
+
+        # grid positioning
+        f, ax = plt.subplots()
+        m = Maps(f=f, ax=211)
+        m.add_feature.preset.coastline()
+        plt.close(f)
+
+        f, ax = plt.subplots()
+        m = Maps(f=f, ax=(2, 1, 1))
+        m.add_feature.preset.coastline()
+        plt.close(f)
+
+        gs = GridSpec(2, 2)
+        f, ax = plt.subplots()
+        m = Maps(f=f, ax=gs[1, 1])
+        m.add_feature.preset.coastline()
+        plt.close(f)
+
+        f = plt.figure()
+        ax = f.add_subplot(221)
+        ax2 = f.add_subplot(222)
+        m1 = Maps(f=f, ax=223)
+        m2 = Maps(f=f, ax=224)
+
+        m1.add_feature.preset.coastline()
+        m2.add_feature.preset.coastline()
 
     def test_a_complex_figure(self):
         # %%
