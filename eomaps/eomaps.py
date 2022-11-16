@@ -3435,7 +3435,7 @@ class Maps(object):
                 # set the image extent
                 x0min, y0min, x0max, y0max = self.figure.coll.get_datalim(
                     self.ax.transData
-                ).bounds
+                ).extents
 
                 ymin, ymax = ax.projection.y_limits
                 xmin, xmax = ax.projection.x_limits
