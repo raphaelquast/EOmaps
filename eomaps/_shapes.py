@@ -417,7 +417,7 @@ class shapes(object):
 
             coll = PolyCollection(
                 verts,
-                # transOffset=self._m.figure.ax.transData,
+                # transOffset=self._m.ax.transData,
                 **color_and_array,
                 **kwargs,
             )
@@ -637,7 +637,7 @@ class shapes(object):
 
             coll = PolyCollection(
                 verts,
-                # transOffset=self._m.figure.ax.transData,
+                # transOffset=self._m.ax.transData,
                 **color_and_array,
                 **kwargs,
             )
@@ -824,7 +824,7 @@ class shapes(object):
 
             coll = PolyCollection(
                 verts=verts,
-                # transOffset=self._m.figure.ax.transData,
+                # transOffset=self._m.ax.transData,
                 **color_and_array,
                 **kwargs,
             )
@@ -892,7 +892,7 @@ class shapes(object):
 
             coll = TriMesh(
                 tri,
-                # transOffset=self._m.figure.ax.transData,
+                # transOffset=self._m.ax.transData,
                 **color_and_array,
                 **kwargs,
             )
@@ -1018,7 +1018,7 @@ class shapes(object):
             coll = PolyCollection(
                 verts=verts,
                 **color_and_array,
-                # transOffset=self._m.figure.ax.transData,
+                # transOffset=self._m.ax.transData,
                 **kwargs,
             )
 
@@ -1187,7 +1187,7 @@ class shapes(object):
 
                 coll = TriMesh(
                     tri,
-                    # transOffset=self._m.figure.ax.transData,
+                    # transOffset=self._m.ax.transData,
                     **color_and_array,
                     **kwargs,
                 )
@@ -1206,7 +1206,7 @@ class shapes(object):
 
                 coll = PolyCollection(
                     verts=verts,
-                    # transOffset=self._m.figure.ax.transData,
+                    # transOffset=self._m.ax.transData,
                     **color_and_array,
                     **kwargs,
                 )

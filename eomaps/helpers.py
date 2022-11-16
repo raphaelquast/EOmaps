@@ -242,7 +242,7 @@ class LayoutEditor:
 
     @property
     def maxes(self):
-        return [m.figure.ax for m in self.ms]
+        return [m.ax for m in self.ms]
 
     @property
     def cbaxes(self):

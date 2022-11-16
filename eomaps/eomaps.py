@@ -706,6 +706,11 @@ class Maps(object):
         return self._ax
 
     @property
+    def f(self):
+        # always return the figure of the parent object
+        return self._m.parent._f
+
+    @property
     def colorbar(self):
         """
         Get the most recently added colorbar
@@ -763,7 +768,7 @@ class Maps(object):
             data_specs=copy_data_specs,
             classify_specs=copy_classify_specs,
             shape=copy_shape,
-            gs_ax=self.figure.ax,
+            gs_ax=self.ax,
             layer=layer,
         )
 
@@ -1191,10 +1196,8 @@ class Maps(object):
 
             # do this only on xlims and NOT on ylims to avoid recursion
             # (plot aspect ensures that y changes if x changes)
-            self._cid_xlim = self.figure.ax.callbacks.connect(
-                "xlim_changed", xlims_change
-            )
-            # self.figure.ax.callbacks.connect("ylim_changed", ylims_change)
+            self._cid_xlim = self.ax.callbacks.connect("xlim_changed", xlims_change)
+            # self.ax.callbacks.connect("ylim_changed", ylims_change)
 
             if self._cid_companion_key is None:
                 # attach the Qt companion widget
@@ -1292,47 +1295,47 @@ class Maps(object):
                 self._join_axis_limits(weakref.proxy(m))
 
     def _join_axis_limits(self, m):
-        if self.figure.ax.projection != m.figure.ax.projection:
+        if self.ax.projection != m.ax.projection:
             warnings.warn(
                 "EOmaps: joining axis-limits is only possible for "
                 + "axes with the same projection!"
             )
             return
 
-        self.figure.ax._EOmaps_joined_action = False
-        m.figure.ax._EOmaps_joined_action = False
+        self.ax._EOmaps_joined_action = False
+        m.ax._EOmaps_joined_action = False
 
         # Declare and register callbacks
         def child_xlims_change(event_ax):
-            if event_ax._EOmaps_joined_action is not m.figure.ax:
-                m.figure.ax._EOmaps_joined_action = event_ax
-                m.figure.ax.set_xlim(event_ax.get_xlim())
+            if event_ax._EOmaps_joined_action is not m.ax:
+                m.ax._EOmaps_joined_action = event_ax
+                m.ax.set_xlim(event_ax.get_xlim())
             event_ax._EOmaps_joined_action = False
 
         def child_ylims_change(event_ax):
-            if event_ax._EOmaps_joined_action is not m.figure.ax:
-                m.figure.ax._EOmaps_joined_action = event_ax
-                m.figure.ax.set_ylim(event_ax.get_ylim())
+            if event_ax._EOmaps_joined_action is not m.ax:
+                m.ax._EOmaps_joined_action = event_ax
+                m.ax.set_ylim(event_ax.get_ylim())
             event_ax._EOmaps_joined_action = False
 
         def parent_xlims_change(event_ax):
-            if event_ax._EOmaps_joined_action is not self.figure.ax:
-                self.figure.ax._EOmaps_joined_action = event_ax
-                self.figure.ax.set_xlim(event_ax.get_xlim())
+            if event_ax._EOmaps_joined_action is not self.ax:
+                self.ax._EOmaps_joined_action = event_ax
+                self.ax.set_xlim(event_ax.get_xlim())
             event_ax._EOmaps_joined_action = False
 
         def parent_ylims_change(event_ax):
-            if event_ax._EOmaps_joined_action is not self.figure.ax:
-                self.figure.ax._EOmaps_joined_action = event_ax
-                self.figure.ax.set_ylim(event_ax.get_ylim())
+            if event_ax._EOmaps_joined_action is not self.ax:
+                self.ax._EOmaps_joined_action = event_ax
+                self.ax.set_ylim(event_ax.get_ylim())
 
             event_ax._EOmaps_joined_action = False
 
-        self.figure.ax.callbacks.connect("xlim_changed", child_xlims_change)
-        self.figure.ax.callbacks.connect("ylim_changed", child_ylims_change)
+        self.ax.callbacks.connect("xlim_changed", child_xlims_change)
+        self.ax.callbacks.connect("ylim_changed", child_ylims_change)
 
-        m.figure.ax.callbacks.connect("xlim_changed", parent_xlims_change)
-        m.figure.ax.callbacks.connect("ylim_changed", parent_ylims_change)
+        m.ax.callbacks.connect("xlim_changed", parent_xlims_change)
+        m.ax.callbacks.connect("ylim_changed", parent_ylims_change)
 
     def copy(
         self,
@@ -3381,7 +3384,7 @@ class Maps(object):
                 + " instead!"
             )
 
-        ax = self.figure.ax
+        ax = self.ax
 
         cmap = kwargs.pop("cmap", "viridis")
         vmin = kwargs.pop("vmin", None)

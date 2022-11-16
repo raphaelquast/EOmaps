@@ -973,7 +973,7 @@ class NaturalEarth_features(object):
                     else:
                         uselayer = layer
                     self.feature._kwargs.update(kwargs)
-                    art = m.figure.ax.add_feature(self.feature)
+                    art = m.ax.add_feature(self.feature)
 
                     m.BM.add_bg_artist(art, layer=uselayer)
             else:

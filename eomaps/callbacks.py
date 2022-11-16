@@ -200,7 +200,7 @@ class _click_callbacks(object):
         else:
             parameter = self.m.data_specs.parameter
 
-        ax = self.m.figure.ax
+        ax = self.m.ax
 
         if text is None:
             if ID is not None and self.m.data is not None:
@@ -417,9 +417,7 @@ class _click_callbacks(object):
                 radius = "pixel"
             else:
                 # make a dot with 1/20 of the width & height of the figure
-                t = self.m.figure.ax.bbox.transformed(
-                    self.m.figure.ax.transData.inverted()
-                )
+                t = self.m.ax.bbox.transformed(self.m.ax.transData.inverted())
                 radius = (t.width / 10.0, t.height / 10.0)
 
         ID, pos, val, ind, picker_name = self._popargs(kwargs)
@@ -491,7 +489,7 @@ class _click_callbacks(object):
         if permanent is True and not hasattr(self, "permanent_markers"):
             self.permanent_markers = []
 
-        marker = self.m.figure.ax.add_collection(coll)
+        marker = self.m.ax.add_collection(coll)
 
         marker.set_zorder(zorder)
 
@@ -584,7 +582,7 @@ class _click_callbacks(object):
 
         ID, pos, val, ind, picker_name = self._popargs(kwargs)
 
-        ax = self.m.figure.ax
+        ax = self.m.ax
 
         # default boundary args
         args = dict(fc="none", ec="k", lw=1.1)
@@ -640,20 +638,20 @@ class _click_callbacks(object):
 
         elif isinstance(how, (float, list, tuple)):
             if isinstance(how, float):
-                w0, h0 = self.m.figure.ax.transAxes.transform((0, 0))
-                w1, h1 = self.m.figure.ax.transAxes.transform((how, how))
+                w0, h0 = self.m.ax.transAxes.transform((0, 0))
+                w1, h1 = self.m.ax.transAxes.transform((how, how))
                 blitw, blith = [min(w1 - w0, h1 - h0)] * 2
 
             else:
-                w0, h0 = self.m.figure.ax.transAxes.transform((0, 0))
-                w1, h1 = self.m.figure.ax.transAxes.transform(how)
+                w0, h0 = self.m.ax.transAxes.transform((0, 0))
+                w1, h1 = self.m.ax.transAxes.transform(how)
                 blitw, blith = (w1 - w0, h1 - h0)
 
             x0, y0 = ax.transData.transform((pos[0], pos[1]))
             x0, y0 = x0 - blitw / 2, y0 - blith / 2
 
             # make sure that we don't blit outside the axis
-            bbox = self.m.figure.ax.bbox
+            bbox = self.m.ax.bbox
             x1 = x0 + blitw
             y1 = y0 + blith
             if x0 < bbox.x0:

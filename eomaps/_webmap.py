@@ -146,7 +146,7 @@ class _WebMap_layer:
                 print("EOmaps: The WebMap for the legend is not yet added to the map!")
                 self._layer = self._m.BM._bg_layer
 
-            axpos = self._m.figure.ax.get_position()
+            axpos = self._m.ax.get_position()
             legax = self._m.figure.f.add_axes((axpos.x0, axpos.y0, 0.25, 0.5))
 
             legax.patch.set_visible(False)
@@ -296,8 +296,8 @@ class _WebMap_layer:
 
         (x0, x1), (y0, y1) = transformer.transform((x0, x1), (y0, y1))
 
-        self._m.figure.ax.set_xlim(x0, x1)
-        self._m.figure.ax.set_ylim(y0, y1)
+        self._m.ax.set_xlim(x0, x1)
+        self._m.ax.set_ylim(y0, y1)
 
     def _set_style(self, style=None):
         # style is a list with 1 entry!

@@ -66,7 +66,7 @@ class _cb_container(object):
                 for m in [*self._m.parent._children, self._m.parent]:
                     # don't use "is" in here since Maps-children are proxies
                     # (and so are their attributes)!
-                    if event.inaxes == m.figure.ax:
+                    if event.inaxes == m.ax:
                         obj = self._getobj(m)
                         if obj is not None:
                             objs.append(obj)
@@ -818,7 +818,7 @@ class cb_click_container(_click_container):
 
     def _fwd_cb(self, event):
         # click container events are MouseEvents!
-        if event.inaxes != self._m.figure.ax:
+        if event.inaxes != self._m.ax:
             return
 
         if event.name == "button_release_event":
@@ -846,7 +846,7 @@ class cb_click_container(_click_container):
                 xdata, ydata = transformer.transform(event.xdata, event.ydata)
 
                 dummymouseevent = SimpleNamespace(
-                    inaxes=m.figure.ax,
+                    inaxes=m.ax,
                     dblclick=event.dblclick,
                     button=event.button,
                     xdata=xdata,
@@ -907,7 +907,7 @@ class cb_move_container(cb_click_container):
                 # only execute movecb if a mouse-button is holded down
                 # and only if the motion is happening inside the axes
                 if self._button_down:
-                    if not event.button:  # or (event.inaxes != self._m.figure.ax):
+                    if not event.button:  # or (event.inaxes != self._m.ax):
                         # always clear temporary move-artists
                         if self._method == "move":
                             for obj in self._objs:
@@ -915,7 +915,7 @@ class cb_move_container(cb_click_container):
                             self._m.BM._clear_temp_artists(self._method)
                         return
                 else:
-                    if event.button:  # or (event.inaxes != self._m.figure.ax):
+                    if event.button:  # or (event.inaxes != self._m.ax):
                         # always clear temporary move-artists
                         if self._method == "move":
                             for obj in self._objs:
@@ -1215,7 +1215,7 @@ class cb_pick_container(_click_container):
 
     def _fwd_cb(self, event, picker_name):
         # PickEvents have a .mouseevent property for the associated MouseEvent!
-        if event.mouseevent.inaxes != self._m.figure.ax:
+        if event.mouseevent.inaxes != self._m.ax:
             return
 
         for key, m in self._fwd_cbs.items():
@@ -1237,7 +1237,7 @@ class cb_pick_container(_click_container):
             )
 
             dummymouseevent = SimpleNamespace(
-                inaxes=m.figure.ax,
+                inaxes=m.ax,
                 dblclick=event.mouseevent.dblclick,
                 button=event.mouseevent.button,
                 xdata=xdata,
@@ -1250,7 +1250,7 @@ class cb_pick_container(_click_container):
                 artist=obj._artist,
                 dblclick=event.mouseevent.dblclick,
                 button=event.mouseevent.button,
-                # inaxes=m.figure.ax,
+                # inaxes=m.ax,
                 mouseevent=dummymouseevent,
                 # picker_name=picker_name,
             )
