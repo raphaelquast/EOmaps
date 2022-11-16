@@ -187,10 +187,11 @@ class shapes(object):
                 radius = (radiusxy, radiusxy)
 
         assert radius is not None, (
-            "EOmaps: Radius estimation failed... either there's something wrong with "
-            + "the provided coordinates or you can try to increase the number of "
-            + "datapoints used to evaluate the radius by increasing "
-            + "`m.set_shape.radius_estimation_range`."
+            "EOmaps: Radius estimation failed... maybe there's something wrong with "
+            "the provided coordinates? "
+            "You can manually specify a radius with 'm.set_shape.<SHAPE>(radius=...)' "
+            "or you can increase the number of datapoints used to estimate the radius "
+            "by increasing `m.set_shape.radius_estimation_range`."
         )
 
         return radius
