@@ -706,7 +706,7 @@ class Maps(object):
     @property
     def f(self):
         # always return the figure of the parent object
-        return self._m.parent._f
+        return self.parent._f
 
     @property
     def colorbar(self):
