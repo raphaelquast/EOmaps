@@ -540,7 +540,7 @@ class ScaleBar:
             # if the object is within the canvas!
             try:
                 # get the widths of the text patches in data-coordinates
-                bbox = val.get_tightbbox(self._m.figure.f.canvas.get_renderer())
+                bbox = val.get_tightbbox(self._m.f.canvas.get_renderer())
                 bbox = bbox.transformed(self._m.ax.transData.inverted())
 
                 # use the max to account for rotated text objects
@@ -904,7 +904,7 @@ class ScaleBar:
         self.set_position()
 
     def _decorate_zooms(self):
-        toolbar = self._m.figure.f.canvas.toolbar
+        toolbar = self._m.f.canvas.toolbar
 
         if toolbar is not None:
             toolbar.release_zoom = self._zoom_decorator(toolbar.release_zoom)
@@ -1219,7 +1219,7 @@ class Compass:
             )
         )
         self._ax_cids.add(
-            self._m.figure.f.canvas.mpl_connect(
+            self._m.f.canvas.mpl_connect(
                 "resize_event", lambda *args: self._update_offset(None, None)
             )
         )

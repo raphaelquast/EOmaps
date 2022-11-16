@@ -496,13 +496,13 @@ class ColorBar:
             if self._parent_cb is not None:
 
                 try:
-                    self._ax = self._m.figure.f.add_subplot(
+                    self._ax = self._m.f.add_subplot(
                         self._parent_cb._ax.get_subplotspec(),
                         label="cb",
                         zorder=9999,
                     )
                 except AttributeError:
-                    self._ax = self._m.figure.f.add_axes(
+                    self._ax = self._m.f.add_axes(
                         self._parent_cb._ax.get_position(),
                         label="cb",
                         zorder=9999,
@@ -532,7 +532,7 @@ class ColorBar:
                     )
 
                     self._m.ax.set_subplotspec(gs[0, 0])
-                    self._ax = self._m.figure.f.add_subplot(
+                    self._ax = self._m.f.add_subplot(
                         gs[1, 0],
                         label="cb",
                         zorder=9999,
@@ -546,14 +546,14 @@ class ColorBar:
                     )
 
                     self._m.ax.set_subplotspec(gs[0, 0])
-                    self._ax = self._m.figure.f.add_subplot(
+                    self._ax = self._m.f.add_subplot(
                         gs[0, 1],
                         label="cb",
                         zorder=9999,
                     )
             elif isinstance(self._pos, SubplotSpec):
                 add_margins = True
-                self._ax = self._m.figure.f.add_subplot(
+                self._ax = self._m.f.add_subplot(
                     self._pos,
                     label="cb",
                     zorder=9999,
@@ -565,8 +565,8 @@ class ColorBar:
                 bbox = mtransforms.Bbox(((x0, y0), (x1, y1)))
 
                 # the parent axes holding the 2 child-axes
-                self._ax = plt.Axes(self._m.figure.f, bbox, label="cb", zorder=9999)
-                self._m.figure.f.add_axes(self._ax)
+                self._ax = plt.Axes(self._m.f, bbox, label="cb", zorder=9999)
+                self._m.f.add_axes(self._ax)
 
         # make all spines, labels etc. invisible for the base-axis
         self._ax.set_axis_off()

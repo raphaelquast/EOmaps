@@ -231,13 +231,13 @@ class LayerSelector(SelectorButtons):
         #     len(layers) > 0
         # ), "EOmaps: There are no layers with artists available.. plot something first!"
 
-        super().__init__(m.figure.f, layers, **kwargs)
+        super().__init__(m.f, layers, **kwargs)
 
         self.set_draggable(draggable, m=m)
         self._m = m
 
         self.set_zorder(9999)  # make sure the widget is on top of other artists
-        self.figure = self._m.figure.f  # make sure the figure is set for the artist
+        self.figure = self._m.f  # make sure the figure is set for the artist
         self.set_animated(True)
 
         self._m.BM.add_artist(self.leg, layer="all")
@@ -287,7 +287,7 @@ class LayerSelector(SelectorButtons):
             if hasattr(self._draggable_box, "offsetbox_x"):
                 self._draggable_box.save_offset()
                 loc = self._draggable_box.get_loc_in_canvas()
-                loc = set(self._m.figure.f.transFigure.inverted().transform(loc))
+                loc = set(self._m.f.transFigure.inverted().transform(loc))
                 self._init_args.update(dict(loc=loc))
 
         self.remove()
@@ -411,7 +411,7 @@ class LayerSlider(Slider):
         # ), "EOmaps: There are no layers with artists available.. plot something first!"
 
         if pos is None:
-            ax_slider = self._m.figure.f.add_axes(
+            ax_slider = self._m.f.add_axes(
                 [
                     self._m.ax.get_position().x0,
                     self._m.ax.get_position().y0 - 0.05,
@@ -420,7 +420,7 @@ class LayerSlider(Slider):
                 ]
             )
         else:
-            ax_slider = self._m.figure.f.add_axes(pos)
+            ax_slider = self._m.f.add_axes(pos)
 
         kwargs.setdefault("color", ".2")  # remove start-position marker
         kwargs.setdefault("track_color", ".8")  # remove start-position marker

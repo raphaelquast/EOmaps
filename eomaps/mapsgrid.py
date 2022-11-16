@@ -178,7 +178,7 @@ class MapsGrid:
                     else:
                         mij = Maps(
                             crs=crsij,
-                            f=self.parent.figure.f,
+                            f=self.parent.f,
                             gs_ax=self.gridspec[i, j],
                             layer=layer,
                         )
@@ -222,7 +222,7 @@ class MapsGrid:
                             crs=crs[key],
                             gs_ax=self.gridspec[val],
                             layer=layer,
-                            f=self.parent.figure.f,
+                            f=self.parent.f,
                         )
                         mi.ax.set_label(f"mg_map_{key}")
 
@@ -362,7 +362,7 @@ class MapsGrid:
 
     @property
     def f(self):
-        return self.parent.figure.f
+        return self.parent.f
 
     @wraps(Maps.plot_map)
     def plot_map(self, **kwargs):

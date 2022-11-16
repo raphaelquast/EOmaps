@@ -147,7 +147,7 @@ class _WebMap_layer:
                 self._layer = self._m.BM._bg_layer
 
             axpos = self._m.ax.get_position()
-            legax = self._m.figure.f.add_axes((axpos.x0, axpos.y0, 0.25, 0.5))
+            legax = self._m.f.add_axes((axpos.x0, axpos.y0, 0.25, 0.5))
 
             legax.patch.set_visible(False)
             legax.tick_params(
@@ -169,9 +169,9 @@ class _WebMap_layer:
 
                 # only execute action if no toolbar action is active
                 if (
-                    hasattr(self._m.figure.f.canvas, "toolbar")
-                    and self._m.figure.f.canvas.toolbar is not None
-                    and self._m.figure.f.canvas.toolbar.mode != ""
+                    hasattr(self._m.f.canvas, "toolbar")
+                    and self._m.f.canvas.toolbar is not None
+                    and self._m.f.canvas.toolbar.mode != ""
                 ):
                     return
 
@@ -186,7 +186,7 @@ class _WebMap_layer:
                     legax.bbox.height,
                 )
 
-                bbox = bbox.transformed(self._m.figure.f.transFigure.inverted())
+                bbox = bbox.transformed(self._m.f.transFigure.inverted())
                 legax.set_position(bbox)
 
             def cb_release(event):
@@ -221,10 +221,10 @@ class _WebMap_layer:
 
                 self._m.BM.update()
 
-            self._m.figure.f.canvas.mpl_connect("scroll_event", cb_scroll)
-            self._m.figure.f.canvas.mpl_connect("button_press_event", cb_pick)
-            self._m.figure.f.canvas.mpl_connect("button_release_event", cb_release)
-            self._m.figure.f.canvas.mpl_connect("motion_notify_event", cb_move)
+            self._m.f.canvas.mpl_connect("scroll_event", cb_scroll)
+            self._m.f.canvas.mpl_connect("button_press_event", cb_pick)
+            self._m.f.canvas.mpl_connect("button_release_event", cb_release)
+            self._m.f.canvas.mpl_connect("motion_notify_event", cb_move)
 
             self._m.parent._wms_legend.setdefault(self._layer, list()).append(legax)
 

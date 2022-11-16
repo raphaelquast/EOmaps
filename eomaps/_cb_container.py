@@ -737,15 +737,15 @@ class cb_click_container(_click_container):
 
     def _reset_cids(self):
         if self._cid_button_press_event:
-            self._m.figure.f.canvas.mpl_disconnect(self._cid_button_press_event)
+            self._m.f.canvas.mpl_disconnect(self._cid_button_press_event)
         self._cid_button_press_event = None
 
         if self._cid_motion_event:
-            self._m.figure.f.canvas.mpl_disconnect(self._cid_motion_event)
+            self._m.f.canvas.mpl_disconnect(self._cid_motion_event)
         self._cid_motion_event = None
 
         if self._cid_button_release_event:
-            self._m.figure.f.canvas.mpl_disconnect(self._cid_button_release_event)
+            self._m.f.canvas.mpl_disconnect(self._cid_button_release_event)
         self._cid_button_release_event = None
 
     def _add_click_callback(self):
@@ -758,8 +758,8 @@ class cb_click_container(_click_container):
                     return
                 # don't execute callbacks if a toolbar-action is active
                 if (
-                    self._m.figure.f.canvas.toolbar is not None
-                ) and self._m.figure.f.canvas.toolbar.mode != "":
+                    self._m.f.canvas.toolbar is not None
+                ) and self._m.f.canvas.toolbar.mode != "":
                     return
 
                 # execute onclick on the maps object that belongs to the clicked axis
@@ -786,8 +786,8 @@ class cb_click_container(_click_container):
                     return
                 # don't execute callbacks if a toolbar-action is active
                 if (
-                    self._m.figure.f.canvas.toolbar is not None
-                ) and self._m.figure.f.canvas.toolbar.mode != "":
+                    self._m.f.canvas.toolbar is not None
+                ) and self._m.f.canvas.toolbar.mode != "":
                     return
 
                 # execute onclick on the maps object that belongs to the clicked axis
@@ -806,13 +806,13 @@ class cb_click_container(_click_container):
 
         if self._cid_button_press_event is None:
             # ------------- add a callback
-            self._cid_button_press_event = self._m.figure.f.canvas.mpl_connect(
+            self._cid_button_press_event = self._m.f.canvas.mpl_connect(
                 "button_press_event", clickcb
             )
 
         if self._cid_button_release_event is None:
             # ------------- add a callback
-            self._cid_button_release_event = self._m.figure.f.canvas.mpl_connect(
+            self._cid_button_release_event = self._m.f.canvas.mpl_connect(
                 "button_release_event", releasecb
             )
 
@@ -897,7 +897,7 @@ class cb_move_container(cb_click_container):
 
     def _reset_cids(self):
         if self._cid_motion_event:
-            self._m.figure.f.canvas.mpl_disconnect(self._cid_motion_event)
+            self._m.f.canvas.mpl_disconnect(self._cid_motion_event)
         self._cid_motion_event = None
 
     def _add_move_callback(self):
@@ -928,8 +928,8 @@ class cb_move_container(cb_click_container):
                     return
                 # don't execute callbacks if a toolbar-action is active
                 if (
-                    self._m.figure.f.canvas.toolbar is not None
-                ) and self._m.figure.f.canvas.toolbar.mode != "":
+                    self._m.f.canvas.toolbar is not None
+                ) and self._m.f.canvas.toolbar.mode != "":
                     return
 
                 # execute onclick on the maps object that belongs to the clicked axis
@@ -950,7 +950,7 @@ class cb_move_container(cb_click_container):
 
         if self._cid_motion_event is None:
             # for click-callbacks, allow motion-detection
-            self._cid_motion_event = self._m.figure.f.canvas.mpl_connect(
+            self._cid_motion_event = self._m.f.canvas.mpl_connect(
                 "motion_notify_event", movecb
             )
 
@@ -1118,8 +1118,8 @@ class cb_pick_container(_click_container):
 
         # don't execute callbacks if a toolbar-action is active
         if (
-            self._m.figure.f.canvas.toolbar is not None
-        ) and self._m.figure.f.canvas.toolbar.mode != "":
+            self._m.f.canvas.toolbar is not None
+        ) and self._m.f.canvas.toolbar.mode != "":
             return
 
         clickdict = self._get_pickdict(event)
@@ -1157,7 +1157,7 @@ class cb_pick_container(_click_container):
 
     def _reset_cids(self):
         for method, cid in self._cid_pick_event.items():
-            self._m.figure.f.canvas.mpl_disconnect(cid)
+            self._m.f.canvas.mpl_disconnect(cid)
         self._cid_pick_event.clear()
 
     def _add_pick_callback(self):
@@ -1176,8 +1176,8 @@ class cb_pick_container(_click_container):
 
                 # don't execute callbacks if a toolbar-action is active
                 if (
-                    self._m.figure.f.canvas.toolbar is not None
-                ) and self._m.figure.f.canvas.toolbar.mode != "":
+                    self._m.f.canvas.toolbar is not None
+                ) and self._m.f.canvas.toolbar.mode != "":
                     return
 
                 if not self._artist is event.artist:
@@ -1209,7 +1209,7 @@ class cb_pick_container(_click_container):
 
         # attach the callbacks (only once per method!)
         if self._method not in self._cid_pick_event:
-            self._cid_pick_event[self._method] = self._m.figure.f.canvas.mpl_connect(
+            self._cid_pick_event[self._method] = self._m.f.canvas.mpl_connect(
                 "pick_event", pickcb
             )
 
@@ -1308,7 +1308,7 @@ class keypress_container(_cb_container):
 
     def _reset_cids(self):
         if self._cid_keypress_event:
-            self._m.figure.f.canvas.mpl_disconnect(self._cid_keypress_event)
+            self._m.f.canvas.mpl_disconnect(self._cid_keypress_event)
         self._cid_keypress_event = None
 
     def _initialize_callbacks(self):
@@ -1364,7 +1364,7 @@ class keypress_container(_cb_container):
                 pass
 
         if self._m is self._m.parent:
-            self._cid_keypress_event = self._m.figure.f.canvas.mpl_connect(
+            self._cid_keypress_event = self._m.f.canvas.mpl_connect(
                 "key_press_event", _onpress
             )
 

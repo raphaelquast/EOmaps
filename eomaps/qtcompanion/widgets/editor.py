@@ -907,7 +907,7 @@ class ArtistEditor(QtWidgets.QWidget):
                 self.m.show_layer(layer)
                 # TODO this is a workaround since modifier-releases are not
                 # forwarded to the canvas if it is not in focus
-                self.m.figure.f.canvas.key_release_event("control")
+                self.m.f.canvas.key_release_event("control")
 
         elif modifiers == Qt.ShiftModifier:
             # The all layer should not be combined with other layers...
@@ -932,7 +932,7 @@ class ArtistEditor(QtWidgets.QWidget):
                 self.m.show_layer(layer)
             # TODO this is a workaround since modifier-releases are not
             # forwarded to the canvas if it is not in focus
-            self.m.figure.f.canvas.key_release_event("shift")
+            self.m.f.canvas.key_release_event("shift")
 
     def set_color(self, artist, layer, colorwidget):
         def cb():

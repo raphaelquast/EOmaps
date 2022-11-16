@@ -184,7 +184,7 @@ class searchtree:
                         permanent=False,
                         text=text,
                         xytext=(0.98, 0.98),
-                        textcoords=self._m.figure.f.transFigure,
+                        textcoords=self._m.f.transFigure,
                         horizontalalignment="right",
                         verticalalignment="top",
                         arrowprops=None,
@@ -205,7 +205,7 @@ class LayoutEditor:
         self.cb_modifier = cb_modifier
 
         self.m = m
-        self.f = self.m.parent.figure.f
+        self.f = self.m.parent.f
 
         self._ax_picked = []
         self._m_picked = []
@@ -646,7 +646,7 @@ class LayoutEditor:
 
     def _undo_draggable(self):
 
-        toolbar = getattr(self.m.figure.f, "toolbar", None)
+        toolbar = getattr(self.m.f, "toolbar", None)
         if toolbar is not None:
             # Reset the axes stack to make sure the "home" "back" and "forward" buttons
             # of the toolbar do not reset axis positions
@@ -751,9 +751,7 @@ class LayoutEditor:
         #         a.set_visible(False)
 
         dyn_artists = list(chain(*self.m.BM._artists.values()))
-        for a in set(
-            [*self.m.figure.f.artists, *chain(*self.m.BM._bg_artists.values())]
-        ):
+        for a in set([*self.m.f.artists, *chain(*self.m.BM._bg_artists.values())]):
             if a in dyn_artists:
                 continue
             if not isinstance(a, plt.Axes):
@@ -848,8 +846,8 @@ class LayoutEditor:
 
         self._remove_snap_grid()
 
-        bbox = self.m.figure.f.bbox
-        t = self.m.figure.f.transFigure.inverted()
+        bbox = self.m.f.bbox
+        t = self.m.f.transFigure.inverted()
 
         gx, gy = np.mgrid[
             0 : int(bbox.width) + int(snapx) : snapx,
@@ -865,7 +863,7 @@ class LayoutEditor:
             markeredgecolor="none",
             ms=(snapx + snapy) / 6,
         )
-        self._snap_grid_artist = self.m.figure.f.add_artist(l)
+        self._snap_grid_artist = self.m.f.add_artist(l)
 
         self.f.draw_artist(self._snap_grid_artist)
         self.f.canvas.blit()
@@ -935,7 +933,7 @@ class BlitManager:
 
     @property
     def figure(self):
-        return self._m.figure.f
+        return self._m.f
 
     @property
     def canvas(self):

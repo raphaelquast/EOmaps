@@ -173,7 +173,7 @@ class Maps(object):
         Explicitly specify the matplotlib figure instance to use.
         (ONLY useful if you want to add a map to an already existing figure!)
 
-          - If None, a new figure will be created (accessible via m.figure.f)
+          - If None, a new figure will be created (accessible via m.f)
           - Connected maps-objects will always share the same figure! You do
             NOT need to specify it (just provide the parent and you're fine)!
 
@@ -532,12 +532,10 @@ class Maps(object):
                 # Activating the window during the callback steals focus and
                 # as a consequence the key-released-event is never triggered
                 # on the figure and "w" would remain activated permanently.
-                self.figure.f.canvas.key_release_event("w")
+                self.f.canvas.key_release_event("w")
                 self._companion_widget.activateWindow()
 
-        self._cid_companion_key = self.figure.f.canvas.mpl_connect(
-            "key_press_event", cb
-        )
+        self._cid_companion_key = self.f.canvas.mpl_connect("key_press_event", cb)
         # self._cid_companion_key = self.all.cb.keypress.attach(cb, key=show_hide_key)
 
     def _init_companion_widget(self, show_hide_key="w"):
@@ -612,7 +610,7 @@ class Maps(object):
 
         # disconnect all callbacks from attached logos
         for cid in self._logo_cids:
-            self.figure.f.canvas.mpl_disconnect(cid)
+            self.f.canvas.mpl_disconnect(cid)
         self._logo_cids.clear()
 
         # disconnect all click, pick and keypress callbacks
@@ -1019,7 +1017,7 @@ class Maps(object):
             boundary.update(kwargs.pop("boundary", dict()))
 
         m2 = _InsetMaps(
-            f=self.figure.f,
+            f=self.f,
             crs=inset_crs,
             layer=layer,
             xy=xy,
@@ -1117,14 +1115,14 @@ class Maps(object):
         return cartopy_proj
 
     def _init_figure(self, gs_ax=None, plot_crs=None, **kwargs):
-        if self.parent.figure.f is None:
+        if self.parent.f is None:
             self._f = plt.figure(**kwargs)
-            self.parent.figure.f._EOmaps_parent = self.parent
+            self.parent.f._EOmaps_parent = self.parent
             newfig = True
         else:
             newfig = False
-            if not hasattr(self.parent.figure.f, "_EOmaps_parent"):
-                self.parent.figure.f._EOmaps_parent = self.parent
+            if not hasattr(self.parent.f, "_EOmaps_parent"):
+                self.parent.f._EOmaps_parent = self.parent
 
         if isinstance(gs_ax, plt.Axes):
             # in case an axis is provided, attempt to use it
@@ -1159,7 +1157,7 @@ class Maps(object):
 
             projection = self._get_cartopy_crs(plot_crs)
 
-            ax = self.figure.f.add_subplot(
+            ax = self.f.add_subplot(
                 *gsspec,
                 projection=projection,
                 aspect="equal",
@@ -1185,7 +1183,7 @@ class Maps(object):
             def xlims_change(*args, **kwargs):
                 if self._ax_xlims != args[0].get_xlim():
                     self.BM._refetch_bg = True
-                    # self.figure.f.stale = True
+                    # self.f.stale = True
                     self._ax_xlims = args[0].get_xlim()
 
             # def ylims_change(*args, **kwargs):
@@ -1207,11 +1205,9 @@ class Maps(object):
             # only attach resize- and close-callbacks if we initialize a parent
             # Maps-object
             # attach a callback that is executed when the figure is closed
-            self._cid_onclose = self.figure.f.canvas.mpl_connect(
-                "close_event", self._on_close
-            )
+            self._cid_onclose = self.f.canvas.mpl_connect("close_event", self._on_close)
             # attach a callback that is executed if the figure canvas is resized
-            self._cid_resize = self.figure.f.canvas.mpl_connect(
+            self._cid_resize = self.f.canvas.mpl_connect(
                 "resize_event", self._on_resize
             )
 
@@ -1249,8 +1245,8 @@ class Maps(object):
             if hasattr(m.figure, "coll"):
                 m.figure.coll = None
 
-            if hasattr(m.figure.f, "_EOmaps_parent"):
-                m.figure.f._EOmaps_parent = None
+            if hasattr(m.f, "_EOmaps_parent"):
+                m.f._EOmaps_parent = None
 
             m.data_specs.delete()
             m.cleanup()
@@ -3123,7 +3119,7 @@ class Maps(object):
                 p = dict(rect=[pos.x0 + pwx, pos.y1 - s - pwy, s, s], anchor="NW")
             return p
 
-        figax = self.figure.f.add_axes(**getpos(self.ax.get_position()))
+        figax = self.f.add_axes(**getpos(self.ax.get_position()))
         figax.set_navigate(False)
         figax.set_axis_off()
         _ = figax.imshow(im, aspect="equal", zorder=999)
@@ -3143,7 +3139,7 @@ class Maps(object):
 
             return newf
 
-        toolbar = self.figure.f.canvas.toolbar
+        toolbar = self.f.canvas.toolbar
         if toolbar is not None:
             toolbar._update_view = update_decorator(toolbar._update_view)
             toolbar.release_zoom = update_decorator(toolbar.release_zoom)
@@ -3158,7 +3154,7 @@ class Maps(object):
         if toolbar is not None:
             self._cleanup_functions.add(cleanup)
 
-        self._logo_cids.add(self.figure.f.canvas.mpl_connect("resize_event", setlim))
+        self._logo_cids.add(self.f.canvas.mpl_connect("resize_event", setlim))
 
     @wraps(ColorBar.__init__)
     def add_colorbar(self, *args, **kwargs):
@@ -3186,7 +3182,7 @@ class Maps(object):
         # clear all cached background layers before saving to make sure they
         # are re-drawn with the correct dpi-settings
         self.BM._bg_layers = dict()
-        self.figure.f.savefig(*args, **kwargs)
+        self.f.savefig(*args, **kwargs)
         # redraw after the save to ensure that backgrounds are correctly cached
         self.redraw()
 
@@ -3517,7 +3513,7 @@ class Maps(object):
                 ax.set_xlim(max(x0min, xmin), min(x0max, xmax))
                 ax.set_ylim(max(y0min, ymin), min(y0max, ymax))
 
-            self.figure.f.canvas.draw_idle()
+            self.f.canvas.draw_idle()
 
         except Exception as ex:
             raise ex
@@ -4249,7 +4245,7 @@ class Maps(object):
         """
         axes = [
             a
-            for a in self.figure.f.axes
+            for a in self.f.axes
             if a.get_label() not in ["EOmaps_cb", "EOmaps_cb_hist"]
         ]
 
@@ -4323,7 +4319,7 @@ class Maps(object):
 
         axes = [
             a
-            for a in self.figure.f.axes
+            for a in self.f.axes
             if a.get_label() not in ["EOmaps_cb", "EOmaps_cb_hist"]
         ]
 
@@ -4463,7 +4459,7 @@ class Maps(object):
             print("Centering Map to:\n    ", r["display_name"])
 
     def _get_snapshot(self):
-        buf = self.figure.f.canvas.print_to_buffer()
+        buf = self.f.canvas.print_to_buffer()
         x = np.frombuffer(buf[0], dtype=np.uint8).reshape(buf[1][1], buf[1][0], 4)
         return x
 
@@ -4701,7 +4697,7 @@ class _InsetMaps(Maps):
             The default is None.
         """
 
-        y0, y1, x0, x1 = self.figure.gridspec.get_grid_positions(self.figure.f)
+        y0, y1, x0, x1 = self.figure.gridspec.get_grid_positions(self.f)
 
         if size is None:
             size = abs(x1 - x0)

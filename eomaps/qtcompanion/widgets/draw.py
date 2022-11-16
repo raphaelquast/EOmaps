@@ -269,8 +269,8 @@ class DrawerWidget(QtWidgets.QWidget):
         @pyqtSlot()
         def cb():
             self.window().hide()
-            self.m.figure.f.canvas.show()
-            self.m.figure.f.canvas.activateWindow()
+            self.m.f.canvas.show()
+            self.m.f.canvas.activateWindow()
 
             getattr(self.drawer, poly)(
                 facecolor=self.colorselector.facecolor.getRgbF(),

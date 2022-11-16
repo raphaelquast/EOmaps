@@ -163,7 +163,7 @@ class NewWindow(QtWidgets.QMainWindow):
         self.setCentralWidget(widget)
 
         # make sure that we close all remaining windows if the figure is closed
-        self.m.figure.f.canvas.mpl_connect("close_event", self.on_close)
+        self.m.f.canvas.mpl_connect("close_event", self.on_close)
 
     @pyqtSlot()
     def on_close(self, e):
