@@ -1187,9 +1187,9 @@ class OpenFileTabs(QtWidgets.QTabWidget):
 
         widget = self.widget(index)
         try:
-            if widget.m2.figure.coll in self.m.BM._bg_artists[widget.m2.layer]:
-                self.m.BM.remove_bg_artist(widget.m2.figure.coll, layer=widget.m2.layer)
-                widget.m2.figure.coll.remove()
+            if widget.m2.coll in self.m.BM._bg_artists[widget.m2.layer]:
+                self.m.BM.remove_bg_artist(widget.m2.coll, layer=widget.m2.layer)
+                widget.m2.coll.remove()
         except Exception:
             print("EOmaps_companion: unable to remove dataset artist.")
 

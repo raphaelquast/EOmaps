@@ -334,7 +334,7 @@ class _click_container(_cb_container):
 
             if self._parent._method == "pick":
                 assert (
-                    self._parent._m.figure.coll is not None
+                    self._parent._m.coll is not None
                 ), "you can only attach pick-callbacks after calling `plot_map()`!"
 
             return self._parent._add_callback(
@@ -564,7 +564,7 @@ class _click_container(_cb_container):
             button = self._default_button
 
         if self._method == "pick":
-            assert self._m.figure.coll is not None, (
+            assert self._m.coll is not None, (
                 "you can only attach pick-callbacks after plotting a dataset!"
                 + "... use `m.plot_map()` first."
             )
@@ -1087,7 +1087,7 @@ class cb_pick_container(_click_container):
     def _get_pickdict(self, event):
         ind = event.ind
         if ind is not None:
-            if self._m.figure.coll is not None and event.artist is self._m.figure.coll:
+            if self._m.coll is not None and event.artist is self._m.coll:
                 clickdict = dict(
                     pos=self._m._get_xy_from_index(ind, reprojected=True),
                     ID=self._get_id(ind),

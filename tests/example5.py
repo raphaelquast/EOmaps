@@ -53,7 +53,7 @@ m3.plot_map(cmap="gist_ncar", edgecolor="w", linewidth=0.25, dynamic=True)
 #           NOTE: this is not possible for the shapes:  "shade_points" and "shade_raster" !
 def callback(m, **kwargs):
     selection = np.random.randint(0, len(m.data), 1000)
-    m.figure.coll.set_array(data_OK.param.iloc[selection])
+    m.coll.set_array(data_OK.param.iloc[selection])
 
 
 # attach the callback (to update the dataset plotted on the Maps object "m3")

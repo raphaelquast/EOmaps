@@ -286,7 +286,7 @@ class ColorBar:
 
         self._kwargs = copy.deepcopy(kwargs)
 
-        self._coll = self._m.figure.coll
+        self._coll = self._m.coll
         self._vmin = self._coll.norm.vmin
         self._vmax = self._coll.norm.vmax
 

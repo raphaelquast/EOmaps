@@ -105,7 +105,7 @@ class map_objects(object):
     def coll(self):
         warn(
             "EOmaps: Using `m.figure.coll` is depreciated in EOmaps v5.x."
-            "Use `m.f` instead!"
+            "Use `m.coll` instead!"
         )
         return self._coll
 

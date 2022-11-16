@@ -352,6 +352,7 @@ class Maps(object):
         self._children = set()  # weakref.WeakSet()
 
         self._colorbars = []
+        self._coll = None  # slot for the collection created by m.plot_map()
 
         if not isinstance(layer, str):
             print("EOmaps v5.0 Warning: All layer-names are converted to strings!")
@@ -709,6 +710,14 @@ class Maps(object):
         return self.parent._f
 
     @property
+    def coll(self):
+        """
+        The collection representing the dataset that was used in the last call
+        to m.plot_map().
+        """
+        return self._coll
+
+    @property
     def colorbar(self):
         """
         Get the most recently added colorbar
@@ -1053,6 +1062,8 @@ class Maps(object):
     @property
     @wraps(map_objects)
     def figure(self):
+        warnings.warn("EOmaps: The use of 'm.figure...' is depreciated!")
+
         return self._figure
 
     @property
@@ -1234,6 +1245,7 @@ class Maps(object):
     def _on_close(self, event):
         # reset attributes that might use up a lot of memory when the figure is closed
         for m in [self.parent, *self.parent._children]:
+            m._coll = None
 
             if hasattr(m, "_props"):
                 m._props.clear()
@@ -1241,9 +1253,6 @@ class Maps(object):
 
             if hasattr(m, "tree"):
                 del m.tree
-
-            if hasattr(m.figure, "coll"):
-                m.figure.coll = None
 
             if hasattr(m.f, "_EOmaps_parent"):
                 m.f._EOmaps_parent = None
@@ -3486,7 +3495,7 @@ class Maps(object):
             coll.set_clim(vmin, vmax)
             ax.add_collection(coll)
 
-            self.figure.coll = coll
+            self._coll = coll
 
             if pick_distance is not None:
                 self.tree = searchtree(m=self._proxy(self), pick_distance=pick_distance)
@@ -3503,7 +3512,7 @@ class Maps(object):
 
             if set_extent:
                 # set the image extent
-                x0min, y0min, x0max, y0max = self.figure.coll.get_datalim(
+                x0min, y0min, x0max, y0max = self.coll.get_datalim(
                     self.ax.transData
                 ).extents
 
@@ -3787,7 +3796,7 @@ class Maps(object):
             **kwargs,
         )
 
-        self.figure.coll = coll
+        self._coll = coll
         if verbose:
             print("EOmaps: Indexing for pick-callbacks...")
 
@@ -3890,7 +3899,7 @@ class Maps(object):
         #     print("EOmaps: you must set the data first!")
         #     return
 
-        if hasattr(self.figure, "coll") and self.figure.coll:
+        if self.coll is not None:
             print(
                 "EOmaps: There is already a collection assigned to this Maps-object"
                 + "... make sure to use a new layer for the pickable dataset!"
@@ -3908,7 +3917,7 @@ class Maps(object):
         # use a transparent rectangle of the data-extent as artist for picking
         (art,) = self.ax.fill([x0, x1, x1, x0], [y0, y0, y1, y1], fc="none", ec="none")
 
-        self.figure.coll = art
+        self._coll = art
 
         if pick_distance is not None:
             self.tree = searchtree(m=self._proxy(self), pick_distance=pick_distance)
