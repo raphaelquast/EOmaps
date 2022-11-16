@@ -3160,7 +3160,7 @@ class Maps(object):
               The string must be convertible to a number, e.g. `float("40.5")`
 
             The default is 100.
-        layer : int, str or None
+        layer : str or None
             The layer at which the dataset will be plotted.
             ONLY relevant if `dynamic = False`!
 
@@ -3225,6 +3225,10 @@ class Maps(object):
 
         if layer is None:
             layer = self.layer
+        else:
+            if not isinstance(layer, str):
+                print("EOmaps: The layer-name has been converted to a string!")
+                layer = str(layer)
 
         useshape = self.shape  # invoke the setter to set the default shape
 
