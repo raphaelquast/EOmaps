@@ -20,7 +20,7 @@ jobs:
       # checkout the repository
       - uses: actions/checkout@v2
       # install miniconda environment
-      - uses: conda-incubator/setup-miniconda@v2.1.1
+      - uses: conda-incubator/setup-miniconda@v2.2
         with:
           environment-file: tests/test_env.yml
 
