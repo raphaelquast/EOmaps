@@ -39,11 +39,13 @@ m2.cb.pick.attach.annotate(zorder=100)  # use a high zorder to put it on top
 
 # on a left-click, show layers ("data", "OSM") in a rectangle
 # (with a size of 20% of the axis)
-m.all.cb.click.attach.peek_layer(layer="_|data|OSM", how=0.2)
+m.all.cb.click.attach.peek_layer(layer="data|OSM", how=0.2)
 
 # on a right-click, "swipe" the layers ("data", "S1GBM_vv") from the left
 m.all.cb.click.attach.peek_layer(
-    layer="_|data|S1GBM_vv", how="left", button=3, overlay=True
+    layer="data|S1GBM_vv",
+    how="left",
+    button=3,
 )
 
 # switch between the layers with the keys 0, 1 and 2
