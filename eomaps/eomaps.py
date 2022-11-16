@@ -4125,7 +4125,7 @@ class Maps(object):
 
     @wraps(GridSpec.update)
     def subplots_adjust(self, **kwargs):
-        self.parent.figure.gridspec.update(**kwargs)
+        self.parent._gridspec.update(**kwargs)
         # after changing margins etc. a redraw is required
         # to fetch the updated background!
 
@@ -4697,7 +4697,7 @@ class _InsetMaps(Maps):
             The default is None.
         """
 
-        y0, y1, x0, x1 = self.figure.gridspec.get_grid_positions(self.f)
+        y0, y1, x0, x1 = self._gridspec.get_grid_positions(self.f)
 
         if size is None:
             size = abs(x1 - x0)
@@ -4707,7 +4707,7 @@ class _InsetMaps(Maps):
         if y is None:
             y = (y0 + y1) / 2
 
-        self.figure.gridspec.update(
+        self._gridspec.update(
             left=x - size / 2,
             bottom=y - size / 2,
             right=x + size / 2,
