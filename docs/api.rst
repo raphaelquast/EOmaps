@@ -488,32 +488,35 @@ This will ensure that all artists on the axes are updated.
     from eomaps import Maps
 
     # create a normal matplotlib plot
-    f, ax = plt.subplots()
+    f = plt.figure(figsize=(10, 7))
+    # add a normal plot spanning the top rows of a 2x2 grid
+    ax = f.add_subplot(2,2,(1, 2))
     ax.plot([10, 20, 30, 40, 50], [10, 20, 30, 40, 50])
 
-    # initialize a new map and put it on the existing figure
-    m = Maps(f=f)
-    # add existing axes to the BlitManager so that they are properly updated
-    # (since EOmaps now handles when the figure needs to be re-drawn)
-    m.BM.add_artist(ax, layer=m.layer)
-
-    # add some features to the map
-    m.add_feature.preset.coastline()
-    m.add_feature.preset.ocean()
+    # put a map on the 3rd axis of a 2x2 grid (bottom left)
+    m = Maps(f=f, ax=(2,2,3))
+    m.ax.set_title("click me!")
+    m.add_wms.OpenStreetMap.add_layer.default()
+    m.cb.click.attach.mark(radius=20, fc="none", ec="r", lw=2)
 
     # attach a callback that plots markers on the axis if you click on the map
     def cb(pos, **kwargs):
         ax.plot(*pos, marker="o")
-
     m.cb.click.attach(cb)
 
-    # use the "layout-manager" to re-position the individual axes as you like
-    # then, use m.get_layout() to get a dict that can be used to restore the layout
-    m.apply_layout(
-        {'0_': [0.1125, 0.08333, 0.8125, 0.35],
-        '1_map': [0.135, 0.46667, 0.75, 0.5]}
-        )
+    # Since we want to dynamically update the plot on the axis, it must be
+    # added to the BlitManager to ensure that the artists are properly updated.
+    # (EOmaps handles interactive re-drawing of the figure)
+    m.BM.add_artist(ax, layer=m.layer)
 
+    # put a map on the 4th axis of a 2x2 grid (bottom right)
+    m2 = Maps(f=f, ax=(2,2,4), crs=Maps.CRS.Mollweide())
+    m2.add_feature.preset.coastline()
+    m2.add_feature.preset.ocean()
+    m2.cb.click.attach.mark(radius=20, fc="none", ec="r", lw=2, n=200)
+
+    # share click events on the 2 maps
+    m.cb.click.share_events(m2)
 
 
 𝄜 Multiple maps in one figure
