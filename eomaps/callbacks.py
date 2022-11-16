@@ -930,7 +930,7 @@ class keypress_callbacks:
         self._temporary_artists = temp_artists
         self._m = m
 
-    def switch_layer(self, layer=1, key="x"):
+    def switch_layer(self, layer, key="x"):
         """
         Change the default layer of the map.
 
@@ -939,8 +939,9 @@ class keypress_callbacks:
 
         Parameters
         ----------
-        layer : int, optional
-            The layer to use. The default is 1.
+        layer : str
+            The layer-name to use.
+            If a non-string value is provided, it will be converted to string!
 
         Additional Parameters
         ---------------------
@@ -950,7 +951,7 @@ class keypress_callbacks:
             The default is "x".
         """
 
-        self._m.BM.bg_layer = layer
+        self._m.BM.bg_layer = str(layer)
         self._m.BM.fetch_bg()
 
     def fetch_layers(self, layers=None, verbose=True, key="x"):
