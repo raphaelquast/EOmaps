@@ -35,13 +35,13 @@ class TestLayoutEditor(unittest.TestCase):
         # ################ check handling axes
 
         # click on top left axes
-        x0 = (mg.m_0_0.figure.ax.bbox.x1 + mg.m_0_0.figure.ax.bbox.x0) / 2
-        y0 = (mg.m_0_0.figure.ax.bbox.y1 + mg.m_0_0.figure.ax.bbox.y0) / 2
+        x0 = (mg.m_0_0.ax.bbox.x1 + mg.m_0_0.ax.bbox.x0) / 2
+        y0 = (mg.m_0_0.ax.bbox.y1 + mg.m_0_0.ax.bbox.y0) / 2
         cv.button_press_event(x0, y0, 1, False)
 
         # move the axes to the center
-        x1 = (mg.m_0_0.figure.f.bbox.x1 + mg.m_0_0.figure.f.bbox.x0) / 2
-        y1 = (mg.m_0_0.figure.f.bbox.y1 + mg.m_0_0.figure.f.bbox.y0) / 2
+        x1 = (mg.m_0_0.f.bbox.x1 + mg.m_0_0.f.bbox.x0) / 2
+        y1 = (mg.m_0_0.f.bbox.y1 + mg.m_0_0.f.bbox.y0) / 2
         cv.motion_notify_event(x1, y1, False)
 
         # release the mouse
@@ -51,8 +51,8 @@ class TestLayoutEditor(unittest.TestCase):
         cv.scroll_event(x1, y1, 10)
 
         # click on bottom right
-        x2 = (mg.m_1_1.figure.ax.bbox.x1 + mg.m_1_1.figure.ax.bbox.x0) / 2
-        y2 = (mg.m_1_1.figure.ax.bbox.y1 + mg.m_1_1.figure.ax.bbox.y0) / 2
+        x2 = (mg.m_1_1.ax.bbox.x1 + mg.m_1_1.ax.bbox.x0) / 2
+        y2 = (mg.m_1_1.ax.bbox.y1 + mg.m_1_1.ax.bbox.y0) / 2
         cv.button_press_event(x2, y2, 1, False)
 
         # move the axes to the top left
@@ -67,8 +67,8 @@ class TestLayoutEditor(unittest.TestCase):
         # ------------- check keystrokes
 
         # click on bottom left axis
-        x3 = (mg.m_1_0.figure.ax.bbox.x1 + mg.m_1_0.figure.ax.bbox.x0) / 2
-        y3 = (mg.m_1_0.figure.ax.bbox.y1 + mg.m_1_0.figure.ax.bbox.y0) / 2
+        x3 = (mg.m_1_0.ax.bbox.x1 + mg.m_1_0.ax.bbox.x0) / 2
+        y3 = (mg.m_1_0.ax.bbox.y1 + mg.m_1_0.ax.bbox.y0) / 2
         cv.button_press_event(x3, y3, 1, False)
 
         cv.key_press_event("left")

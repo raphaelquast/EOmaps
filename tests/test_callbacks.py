@@ -33,7 +33,7 @@ class TestCallbacks(unittest.TestCase):
             m.set_data(self.lon + self.lat, x=self.lon, y=self.lat)
 
         m.plot_map()
-        m.figure.f.canvas.draw()
+        m.f.canvas.draw()
 
         return m
 
@@ -41,15 +41,15 @@ class TestCallbacks(unittest.TestCase):
         return
 
     def click_ax_center(self, m, dx=0, dy=0, release=True):
-        ax = m.figure.ax
-        cv = m.figure.f.canvas
+        ax = m.ax
+        cv = m.f.canvas
         x, y = (ax.bbox.x0 + ax.bbox.x1) / 2, (ax.bbox.y0 + ax.bbox.y1) / 2
         cv.button_press_event(x + dx, y + dy, 1, False)
         if release:
             cv.button_release_event(x + dx, y + dy, 1, False)
 
     def click_ID(self, m, ID, release=True):
-        cv = m.figure.f.canvas
+        cv = m.f.canvas
         x, y = m.ax.transData.transform((self.data.lon[ID], self.data.lat[ID]))
         cv.button_press_event(x, y, 1, False)
         if release:
@@ -390,23 +390,23 @@ class TestCallbacks(unittest.TestCase):
         cid3 = m.cb.keypress.attach.switch_layer(layer="3", key="3")
 
         # switch to layer 2
-        m.figure.f.canvas.key_press_event("2")
-        m.figure.f.canvas.key_release_event("2")
+        m.f.canvas.key_press_event("2")
+        m.f.canvas.key_release_event("2")
         self.assertTrue(m.BM._bg_layer == "2")
 
         # the 3rd callback should not trigger
-        m.figure.f.canvas.key_press_event("3")
-        m.figure.f.canvas.key_release_event("3")
+        m.f.canvas.key_press_event("3")
+        m.f.canvas.key_release_event("3")
         self.assertTrue(m.BM._bg_layer == "2")
 
         # switch to the "base" layer
-        m.figure.f.canvas.key_press_event("0")
-        m.figure.f.canvas.key_release_event("0")
+        m.f.canvas.key_press_event("0")
+        m.f.canvas.key_release_event("0")
         self.assertTrue(m.BM._bg_layer == "base")
 
         # now the 3rd callback should trigger
-        m.figure.f.canvas.key_press_event("3")
-        m.figure.f.canvas.key_release_event("3")
+        m.f.canvas.key_press_event("3")
+        m.f.canvas.key_release_event("3")
         self.assertTrue(m.BM._bg_layer == "3")
 
         m.all.cb.keypress.remove(cid0)
@@ -447,10 +447,10 @@ class TestCallbacks(unittest.TestCase):
 
         m.all.cb.keypress.attach(cb, key=None)
 
-        m.figure.f.canvas.key_press_event("0")
-        m.figure.f.canvas.key_release_event("0")
+        m.f.canvas.key_press_event("0")
+        m.f.canvas.key_release_event("0")
         self.assertTrue(m.BM._bg_layer == "0")
 
-        m.figure.f.canvas.key_press_event("1")
-        m.figure.f.canvas.key_release_event("1")
+        m.f.canvas.key_press_event("1")
+        m.f.canvas.key_release_event("1")
         self.assertTrue(m.BM._bg_layer == "1")

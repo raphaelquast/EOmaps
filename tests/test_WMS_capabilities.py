@@ -22,12 +22,12 @@ class TestWMS(unittest.TestCase):
     def test_WMS_OSM(self):
         m = Maps(Maps.CRS.GOOGLE_MERCATOR)
         m.add_wms.OpenStreetMap.add_layer.default()
-        plt.close(m.figure.f)
+        plt.close(m.f)
 
     def test_WMS_S1GBM(self):
         m = Maps(Maps.CRS.GOOGLE_MERCATOR)
         m.add_wms.S1GBM.add_layer.vv()
-        plt.close(m.figure.f)
+        plt.close(m.f)
 
     def test_WMS_ESA_WorldCover(self):
         m = Maps(Maps.CRS.GOOGLE_MERCATOR)
@@ -38,14 +38,14 @@ class TestWMS(unittest.TestCase):
 
         ESA_layer()
 
-        plt.close(m.figure.f)
+        plt.close(m.f)
 
     def test_ArcGIS_REST_API(self):
         m = Maps(Maps.CRS.GOOGLE_MERCATOR)
         m.add_feature.preset.ocean(ec="k", zorder=100)
         hillshade = m.add_wms.ESRI_ArcGIS.Elevation.Elevation_World_Hillshade
         hillshade.add_layer.layer_Elevation_World_Hillshade()
-        plt.close(m.figure.f)
+        plt.close(m.f)
 
     def test_WMS_legend_capabilities_NASA_GIBS(self):
         m = Maps(4326)
@@ -62,25 +62,25 @@ class TestWMS(unittest.TestCase):
         NASA_layer(transparent=True)
         NASA_layer.add_legend()
 
-        legax = m.figure.f.axes[-1]
+        legax = m.f.axes[-1]
         leg_cpos = (
             (legax.bbox.x0 + legax.bbox.x1) / 2,
             (legax.bbox.y0 + legax.bbox.y1) / 2,
         )
 
         # pick up the the legend (e.g. click on it)
-        m.figure.f.canvas.button_press_event(*leg_cpos, 1, False)
+        m.f.canvas.button_press_event(*leg_cpos, 1, False)
 
         # resize the legend
-        m.figure.f.canvas.scroll_event(*leg_cpos, 20, False)
+        m.f.canvas.scroll_event(*leg_cpos, 20, False)
 
         # move the legend
-        m.figure.f.canvas.motion_notify_event(
-            (m.figure.ax.bbox.x0 + m.figure.ax.bbox.x1) / 2,
-            (m.figure.ax.bbox.y0 + m.figure.ax.bbox.y1) / 2,
+        m.f.canvas.motion_notify_event(
+            (m.ax.bbox.x0 + m.ax.bbox.x1) / 2,
+            (m.ax.bbox.y0 + m.ax.bbox.y1) / 2,
             None,
         )
 
         # release the legend
-        m.figure.f.canvas.button_press_event(0, 0, 1, False)
-        plt.close(m.figure.f)
+        m.f.canvas.button_press_event(0, 0, 1, False)
+        plt.close(m.f)

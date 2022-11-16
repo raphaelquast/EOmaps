@@ -76,7 +76,7 @@ m.add_feature.cultural_10m.admin_0_countries(
 m.add_feature.cultural_10m.urban_areas(ec="none", fc="r", **args)
 
 # add a customized legend
-leg = m.figure.ax.legend(
+leg = m.ax.legend(
     [
         Patch(fc="b"),
         plt.Line2D([], [], c="b"),

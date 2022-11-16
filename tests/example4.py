@@ -137,10 +137,10 @@ cid = m.cb.pick.attach(cb1, button=1, m=m)
 
 def cb2(m, pos, ID, val, **kwargs):
     # plot a marker at the pixel-position
-    (l,) = m.figure.ax.plot(*pos, marker="*", animated=True)
+    (l,) = m.ax.plot(*pos, marker="*", animated=True)
     # print the value at the pixel-position
     # use a low zorder so the text will be drawn below the temporary annotations
-    t = m.figure.ax.text(
+    t = m.ax.text(
         pos[0],
         pos[1] - 150000,
         f"{val:.2f}",
@@ -166,7 +166,7 @@ infotext = (
     + "Middle-click: clear permanent annotations"
 )
 
-_ = m.figure.f.text(
+_ = m.f.text(
     0.66,
     0.92,
     infotext,
