@@ -477,14 +477,19 @@ The syntax is hereby similar to matploltibs ``f.add_subplot()`` or ``f.add_axes`
 allowing one of the following options:
 
 - Four floats (left, bottom, width, height).
-  The absolute position of the map expressed in relative figure coordinates (e.g. ranging from 0 to 1)
 
-- Three integers (nrows, ncols, index). The map will take the index position on a grid with nrows rows and ncols columns.
-  index starts at 1 in the upper left corner and increases to the right. index can also be a two-tuple specifying the (first, last)
-  indices (1-based, and including last) of the map, e.g., Maps(ax=(3, 1, (1, 2))) makes a map that spans the upper 2/3 of the figure.
+  - The absolute position of the map expressed in relative figure coordinates (e.g. ranging from 0 to 1)
 
-- A 3-digit integer. The digits are interpreted as if given separately as three single-digit integers, i.e. Maps(ax=235) is the same as
-  Maps(ax=(2, 3, 5)). Note that this can only be used if there are no more than 9 subplots.
+- Three integers (nrows, ncols, index).
+
+  - The map will take the index position on a grid with nrows rows and ncols columns.
+    index starts at 1 in the upper left corner and increases to the right. index can also be a two-tuple specifying the (first, last)
+    indices (1-based, and including last) of the map, e.g., Maps(ax=(3, 1, (1, 2))) makes a map that spans the upper 2/3 of the figure.
+
+- A 3-digit integer.
+
+  - The digits are interpreted as if given separately as three single-digit integers, i.e. Maps(ax=235) is the same as
+    Maps(ax=(2, 3, 5)). Note that this can only be used if there are no more than 9 subplots.
 
 - An already existing ``matplotlib.Axes`` instance
 
