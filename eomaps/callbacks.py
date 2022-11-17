@@ -97,7 +97,7 @@ class _click_callbacks(object):
             ylabel = "y"
 
         if ID is not None:
-            printstr = ""
+            printstr = "---------------\n"
             x, y = [np.format_float_positional(i, trim="-", precision=4) for i in pos]
             printstr += f"{xlabel} = {x}\n{ylabel} = {y}\n"
             printstr += f"ID = {ID}\n"
@@ -113,10 +113,11 @@ class _click_callbacks(object):
             lon, lat = self.m._transf_plot_to_lonlat.transform(*pos)
 
             printstr = (
+                "---------------\n"
                 f"x = {pos[0]}\n"
-                + f"y = {pos[1]}\n"
-                + f"lon = {lon}\n"
-                + f"lat = {lat}"
+                f"y = {pos[1]}\n"
+                f"lon = {lon}\n"
+                f"lat = {lat}"
             )
 
         print(printstr)
