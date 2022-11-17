@@ -104,7 +104,11 @@ class _click_callbacks(object):
 
             if isinstance(val, (int, float)):
                 val = np.format_float_positional(val, trim="-", precision=4)
-            printstr += f"{self.m.data_specs.parameter} = {val}"
+
+            paramname = self.m.data_specs.parameter
+            if paramname is None:
+                paramname = "val"
+            printstr += f"{paramname} = {val}"
         else:
             lon, lat = self.m._transf_plot_to_lonlat.transform(*pos)
 
