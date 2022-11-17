@@ -221,6 +221,42 @@ class Maps(object):
     >>> m = Maps()
     >>> ...
 
+    Create a new figure and position the map at (left, bottom, width, height)
+
+    >>> m = Maps(ax=(.25, .5, .5, .5))
+
+    Use an existing figure and position the map at (left, bottom, width, height)
+
+    >>> import matplotlib.pyplot as plt
+    >>> from matplotlib.gridspec import GridSpec
+    >>> f = plt.figure()
+    >>> m = Maps(f=f, ax=(.25, .5, .5, .5))
+
+    Use a 3-digit integer to set the grid-position of the map
+    (nrows, ncols, index)
+
+    >>> from matplotlib.gridspec import GridSpec
+    >>> m = Maps(ax=221)
+
+    Use a tuple of 3 integers to set the grid-position of the map
+    (nrows, ncols, index)
+
+    >>> from matplotlib.gridspec import GridSpec
+    >>> m = Maps(ax=(2, 2, 1))
+
+    Put the map at a grid-position of an existing figure
+
+    >>> import matplotlib.pyplot as plt
+    >>> f = plt.figure()
+    >>> ax = f.add_subplot(211)
+    >>> m = Maps(f=f, ax=212)
+
+    Use a subplotspec to set the axis position
+
+    >>> from matplotlib.gridspec import GridSpec
+    >>> gs = GridSpec(2,2)
+    >>> m = Maps(ax=gs[0,0])
+
     Use an existing axis to create the Maps-object
     (the associated figure is automatically detected)
 
@@ -229,43 +265,6 @@ class Maps(object):
     >>> f = plt.figure()
     >>> ax = f.add_subplot(projection=Maps.CRS.Mollweide())
     >>> m = Maps(ax=ax)
-
-    Use an absolute position for the map (left, bottom, width, height)
-
-    >>> m = Maps(ax=(.25, .5, .5, .5))
-
-    Use an absolute position within an existing figure
-
-    >>> import matplotlib.pyplot as plt
-    >>> from matplotlib.gridspec import GridSpec
-    >>> f = plt.figure()
-    >>> m = Maps(f=f, ax=(.25, .5, .5, .5))
-
-    Use a 3-digit integer to set the grid-position of the map
-
-    >>> from matplotlib.gridspec import GridSpec
-    >>> m = Maps(ax=221)
-
-    Use a tuple of 3 integers to set the grid-position of the map
-
-    >>> from matplotlib.gridspec import GridSpec
-    >>> m = Maps(ax=(2, 2, 1))
-
-    Use a subplotspec to set the axis position
-
-    >>> from matplotlib.gridspec import GridSpec
-    >>> gs = GridSpec(2,2)
-    >>> m = Maps(ax=gs[0,0])
-
-    Put the map at a grid-position of an existing figure
-
-    >>> import matplotlib.pyplot as plt
-    >>> f = plt.figure()
-    >>> ax = f.add_subplot(211)
-    >>> m = Maps(f=f, ax=212)
-    >>> # add existing axes as artists to ensure correct updating
-    >>> m.BM.add_artist(ax)
-
 
     Attributes
     ----------

@@ -470,21 +470,41 @@ Currently available classification-schemes are (see `mapclassify <https://github
 ◔ Adding Maps to existing figures
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-It is possible to add (one or more) EOmaps maps to existing ``matplotlib`` figures.
+It is possible to add (one or more) EOmaps maps to existing ``matplotlib`` figures using ``Maps(f=<the figure instance>)``
+
+The position of the map can be set via the ``ax`` argument, e.g.: ``Maps(ax=<...>)``.
+The syntax is hereby similar to matploltibs ``f.add_subplot()`` or ``f.add_axes``,
+allowing one of the following options:
+
+- Four floats (left, bottom, width, height).
+  The absolute position of the map expressed in relative figure coordinates (e.g. ranging from 0 to 1)
+
+- Three integers (nrows, ncols, index). The map will take the index position on a grid with nrows rows and ncols columns.
+  index starts at 1 in the upper left corner and increases to the right. index can also be a two-tuple specifying the (first, last)
+  indices (1-based, and including last) of the map, e.g., Maps(ax=(3, 1, (1, 2))) makes a map that spans the upper 2/3 of the figure.
+
+- A 3-digit integer. The digits are interpreted as if given separately as three single-digit integers, i.e. Maps(ax=235) is the same as
+  Maps(ax=(2, 3, 5)). Note that this can only be used if there are no more than 9 subplots.
+
+- An already existing ``matplotlib.Axes`` instance
+
+  - NOTE: this MUST be a cartopy-``GeoAxes`` with the same projection as the Maps-object!
+
+- A ``matplotlib.SubplotSpec``
 
 .. code-block:: python
 
     import matplotlib.pyplot as plt
     from eomaps import Maps
 
-    # create a normal matplotlib plot
+    # create a matplotlib figure
     f = plt.figure(figsize=(10, 7))
-    # add a normal plot spanning the top rows of a 2x2 grid
-    ax = f.add_subplot(2,2,(1, 2))
+    # add a "normal" plot spanning the top rows of a 2x2 grid
+    ax = f.add_subplot(2, 2, (1, 2))
     ax.plot([10, 20, 30, 40, 50], [10, 20, 30, 40, 50])
 
     # put a map on the 3rd axis of a 2x2 grid (bottom left)
-    m = Maps(f=f, ax=(2,2,3))
+    m = Maps(f=f, ax=(2, 2, 3))
     m.ax.set_title("click me!")
     m.add_wms.OpenStreetMap.add_layer.default()
     m.cb.click.attach.mark(radius=20, fc="none", ec="r", lw=2)
@@ -500,7 +520,7 @@ It is possible to add (one or more) EOmaps maps to existing ``matplotlib`` figur
     m.BM.add_artist(ax, layer=m.layer)
 
     # put a map on the 4th axis of a 2x2 grid (bottom right)
-    m2 = Maps(f=f, ax=(2,2,4), crs=Maps.CRS.Mollweide())
+    m2 = Maps(f=f, ax=(2, 2, 4), crs=Maps.CRS.Mollweide())
     m2.add_feature.preset.coastline()
     m2.add_feature.preset.ocean()
     m2.cb.click.attach.mark(radius=20, fc="none", ec="r", lw=2, n=200)
