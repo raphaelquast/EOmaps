@@ -3321,7 +3321,7 @@ class Maps(object):
             ncmaps = len(
                 [None for i in plt.colormaps() if i.startswith("EOmaps_alpha_")]
             )
-            cmapname = f"EOmaps_alpha_{ncmaps}"
+            cmapname = f"EOmaps_alpha_{ncmaps + 1}"
 
             kwargs["cmap"] = cmap_alpha(
                 cmap=cmap,
