@@ -127,7 +127,7 @@ class _click_callbacks(object):
         val_precision=4,
         permanent=False,
         text=None,
-        zorder=10,
+        zorder=20,
         layer=None,
         **kwargs,
     ):
@@ -169,11 +169,12 @@ class _click_callbacks(object):
             For details, have a look at:
 
             - https://matplotlib.org/stable/gallery/misc/zorder_demo.html
+
+            The default is 20
         layer : str or None, optional
             The layer to put the marker on.
             If None, the layer associated with the used Maps-object (e.g. `m.layer`)
             The default is None
-
         kwargs
             kwargs passed to matplotlib.pyplot.annotate(). The default is:
 
@@ -386,6 +387,7 @@ class _click_callbacks(object):
 
             - https://matplotlib.org/stable/gallery/misc/zorder_demo.html
 
+            The default is 10
         layer : str or None, optional
             The layer to put the marker on.
             If None, the layer associated with the used Maps-object (e.g. `m.layer`)
