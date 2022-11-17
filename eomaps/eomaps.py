@@ -3994,7 +3994,7 @@ class Maps(object):
             print("EOmaps: There are no masked points to indicate!")
             return
 
-        mask = np.broadcast_to(self._data_mask, self._props["z_data"].shape)
+        mask = self._data_mask.reshape(self._zshape)
 
         if len(self._props["z_data"][~mask]) == 0:
             print("EOmaps: There are no masked points to indicate!")
@@ -4002,13 +4002,15 @@ class Maps(object):
 
         kwargs.setdefault("ec", "r")
 
-        self.ax.scatter(
+        a = self.ax.scatter(
             self._props["x0"][~mask],
             self._props["y0"][~mask],
             cmap=self.classify_specs._cbcmap,
             c=self._props["z_data"][~mask],
             **kwargs,
         )
+
+        self.BM.add_bg_artist(a, layer=self.layer)
 
     @staticmethod
     def _make_rect_poly(x0, y0, x1, y1, crs=None, npts=100):

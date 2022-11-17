@@ -602,18 +602,19 @@ class shapes(object):
             # mask any point that is in a different quadrant than the center point
             maskx = pts_quadrants != quadrants[:, np.newaxis]
             # take care of points that are on the center line (e.g. don't mask them)
-            # (use a +- 10 degree around 0 as threshold)
+            # (use a +- 25 degree around 0 as threshold)
             cpoints = np.broadcast_to(
-                np.isclose(xp, xc, atol=10)[:, np.newaxis], xs.shape
+                np.isclose(xp, xc, atol=25)[:, np.newaxis], xs.shape
             )
 
             maskx[cpoints] = False
             xs.mask[maskx] = True
-
             ys.mask = xs.mask
 
-            mask = ~np.all(maskx, axis=1) & np.isfinite(theta)
-
+            # mask any datapoint that has less than 4 of the ellipse-points unmasked
+            mask = ~(
+                n - np.count_nonzero(xs.mask, axis=1) <= min(n / 2, 4)
+            ) & np.isfinite(theta)
             return xs, ys, mask
 
         def get_coll(self, x, y, crs, **kwargs):
