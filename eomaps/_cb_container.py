@@ -412,6 +412,7 @@ class _click_container(_cb_container):
             if callback in self._connected_move_cbs:
                 for i in self._connected_move_cbs[callback]:
                     self._m.cb._click_move.remove(i)
+                self._connected_move_cbs.pop(callback)
 
         if callback is not None:
             s = callback.split("__")
