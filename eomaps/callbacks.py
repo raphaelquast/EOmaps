@@ -133,9 +133,6 @@ class _click_callbacks(object):
         Add a basic text-annotation to the plot at the position where the map
         was clicked.
 
-        If permanent = True, the generated annotations are stored in a list
-        which is accessible via `m.cb.[click/pick].get.permanent_annotations`
-
         Parameters
         ----------
         pos_precision : int
@@ -144,9 +141,16 @@ class _click_callbacks(object):
         val_precision : int
             The floating-point precision of the parameter-values (only used if
             "val_fmt=None"). The default is 4.
-        permanent : bool
-            Indicator if the annotation should be temporary (False) or
-            permanent (True). The default is False
+        permanent : bool or None
+            Indicator if the annotation should be temporary (False) or permanent (True).
+
+            If True, the generated annotations are stored in a list
+            which is accessible via `m.cb.[click/pick].get.permanent_annotations`
+
+            If None, the artists will be permanent but NOT added to the
+            `permanent_annotations` list!
+
+            The default is False
         text : callable or str, optional
             if str: the string to print
             if callable: A function that returns the string that should be
@@ -263,17 +267,18 @@ class _click_callbacks(object):
             annotation = ax.annotate("", xy=pos, **styledict)
             annotation.set_zorder(zorder)
 
-            if not permanent:
+            if permanent is False:
                 # make the annotation temporary
                 self._temporary_artists.append(annotation)
                 self.m.BM.add_artist(annotation, layer=layer)
             else:
                 self.m.BM.add_artist(annotation, layer=layer)
 
-                if not hasattr(self, "permanent_annotations"):
-                    self.permanent_annotations = [annotation]
-                else:
-                    self.permanent_annotations.append(annotation)
+                if permanent is True:
+                    if not hasattr(self, "permanent_annotations"):
+                        self.permanent_annotations = [annotation]
+                    else:
+                        self.permanent_annotations.append(annotation)
 
             annotation.set_visible(True)
             annotation.xy = pos
@@ -373,9 +378,16 @@ class _click_callbacks(object):
             if possible and else "ellipses".
         buffer : float, optional
             A factor to scale the size of the shape. The default is 1.
-        permanent : bool, optional
-            Indicator if the shapes should be permanent (True) or removed
-            on each new double-click (False).
+        permanent : bool or None
+            Indicator if the markers should be temporary (False) or permanent (True).
+
+            If True, the generated markers are stored in a list
+            which is accessible via `m.cb.[click/pick].get.permanent_markers`
+
+            If None, the artists will be permanent but NOT added to the
+            `permanent_markers` list!
+
+            The default is False
         n : int
             The number of points to calculate for the shape.
             The default is 20.
@@ -485,13 +497,10 @@ class _click_callbacks(object):
             )
         else:
             raise TypeError(f"EOmaps: '{shape}' is not a valid marker-shape")
-        x, y = np.atleast_1d(pos[0]), np.atleast_1d(pos[1])
+
         coll = shp.get_coll(
             np.atleast_1d(pos[0]), np.atleast_1d(pos[1]), pos_crs, **kwargs
         )
-
-        if permanent is True and not hasattr(self, "permanent_markers"):
-            self.permanent_markers = []
 
         marker = self.m.ax.add_collection(coll)
 
@@ -500,12 +509,18 @@ class _click_callbacks(object):
         if layer is None:
             layer = self.m.layer
 
-        if permanent is True:
-            self.permanent_markers.append(marker)
-            self.m.BM.add_artist(marker, layer)
-        else:
+        if permanent is False:
+            # make the annotation temporary
             self._temporary_artists.append(marker)
             self.m.BM.add_artist(marker, layer)
+        else:
+            self.m.BM.add_artist(marker, layer)
+
+            if permanent is True:
+                if not hasattr(self, "permanent_markers"):
+                    self.permanent_markers = [marker]
+                else:
+                    self.permanent_markers.append(marker)
 
         return marker
 

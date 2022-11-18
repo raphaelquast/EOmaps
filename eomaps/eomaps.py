@@ -2583,7 +2583,9 @@ class Maps(object):
                 # transform coordinates
                 xy = transformer.transform(*xy)
 
-        kwargs.setdefault("permanent", True)
+        # using permanent=None results in permanent makers that  are NOT added to the
+        # "m.cb.click.get.permanent_markers" list
+        kwargs.setdefault("permanent", None)
 
         # add marker
         marker = self.cb.click._cb.mark(
@@ -2734,7 +2736,7 @@ class Maps(object):
             # transform coordinates
             xy = transformer.transform(*xy)
 
-        kwargs.setdefault("permanent", True)
+        kwargs.setdefault("permanent", None)
 
         if isinstance(text, str) or callable(text):
             text = repeat(text)
