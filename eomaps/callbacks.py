@@ -98,12 +98,9 @@ class _click_callbacks(object):
 
         if ID is not None:
             printstr = "---------------\n"
-            x, y = [np.format_float_positional(i, trim="-", precision=4) for i in pos]
+            x, y = pos
             printstr += f"{xlabel} = {x}\n{ylabel} = {y}\n"
             printstr += f"ID = {ID}\n"
-
-            if isinstance(val, (int, float)):
-                val = np.format_float_positional(val, trim="-", precision=4)
 
             paramname = self.m.data_specs.parameter
             if paramname is None:
