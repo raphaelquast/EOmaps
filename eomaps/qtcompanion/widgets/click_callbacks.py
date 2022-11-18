@@ -194,6 +194,7 @@ class ClickCallbacks(QtWidgets.QFrame):
         b_mark.clicked.connect(self.button_clicked("mark"))
         self.radius_inp = MarkRadiusLineEdit()
         self.radius_inp.setText(str(self._kwargs["mark"]["radius"]))
+        self.radius_inp.setMaximumWidth(80)
         validator = QtGui.QDoubleValidator()
         self.radius_inp.setValidator(validator)
         self.radius_inp.textChanged.connect(self.radius_changed)
@@ -203,6 +204,7 @@ class ClickCallbacks(QtWidgets.QFrame):
         marklayout = QtWidgets.QHBoxLayout()
         marklayout.addWidget(t_rad)
         marklayout.addWidget(self.radius_inp)
+        marklayout.addStretch(1)
 
         # Annotate (PICK)
         b_ann2 = AnnotatePickButton("Annotate")
@@ -219,6 +221,15 @@ class ClickCallbacks(QtWidgets.QFrame):
         self.buttons["mark_pick"] = b_mark2
         b_mark2.clicked.connect(self.button_clicked("mark_pick"))
 
+        # checkbox if callbacks are permanent
+        self.permanent_cb = QtWidgets.QCheckBox("Permanent?")
+        self.permanent_cb.stateChanged.connect(self.set_permanent)
+
+        # button to clear permanent annotations/markers
+        bclear = ClearButton("Clear")
+        bclear.clicked.connect(self.clear_annotations_and_markers)
+        bclear.setFixedSize(bclear.sizeHint())
+
         blayout = QtWidgets.QGridLayout()
         blayout.addWidget(self.t_click, 0, 0)
         blayout.addWidget(self.t_pick, 1, 0)
@@ -231,18 +242,14 @@ class ClickCallbacks(QtWidgets.QFrame):
         blayout.addWidget(b_mark2, 1, 3, 1, 1, Qt.AlignLeft)
         blayout.addLayout(dropdown_layout, 1, 4, 1, 1, Qt.AlignLeft)
 
+        perm_layout = QtWidgets.QVBoxLayout()
+        perm_layout.addWidget(self.permanent_cb, Qt.AlignRight)
+        perm_layout.addWidget(bclear, Qt.AlignRight)
+
         layout = QtWidgets.QHBoxLayout()
         layout.addLayout(blayout)
         layout.addStretch(1)
-
-        self.permanent_cb = QtWidgets.QCheckBox("Permanent?")
-        self.permanent_cb.stateChanged.connect(self.set_permanent)
-        layout.addWidget(self.permanent_cb, Qt.AlignRight)
-
-        bclear = ClearButton("Clear")
-        bclear.clicked.connect(self.clear_annotations_and_markers)
-        bclear.setFixedSize(bclear.sizeHint())
-        layout.addWidget(bclear, Qt.AlignRight)
+        layout.addLayout(perm_layout)
 
         self.setLayout(layout)
 
