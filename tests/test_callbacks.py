@@ -320,7 +320,7 @@ class TestCallbacks(unittest.TestCase):
         # ---------- test as CLICK callback
         m = self.create_basic_map()
         m.cb.click.attach.mark(permanent=True)
-        self.click_ax_center()
+        self.click_ax_center(m)
         self.assertTrue(len(m.cb.click.get.permanent_markers) == 1)
 
         cid = m.cb.click.attach.clear_markers()
