@@ -1,6 +1,5 @@
 from PyQt5 import QtWidgets, QtGui
-from PyQt5.QtCore import Qt, pyqtSignal, QSize, pyqtSlot
-from collections import defaultdict
+from PyQt5.QtCore import Qt, pyqtSignal, pyqtSlot
 
 
 class AnnotateButton(QtWidgets.QPushButton):
@@ -276,6 +275,7 @@ class ClickCallbacks(QtWidgets.QFrame):
                 pickm.append(m)
         return pickm
 
+    @pyqtSlot()
     def clear_annotations_and_markers(self):
         # clear all annotations and markers from this axis
         # (irrespective of the visible layer!)
@@ -339,6 +339,7 @@ class ClickCallbacks(QtWidgets.QFrame):
         self.populate_dropdown()
         self.update_buttons()
 
+    @pyqtSlot()
     def update_buttons(self):
         if self._pick_map is None or self._pick_map.coll is None:
             self.t_pick.setEnabled(False)
@@ -410,6 +411,7 @@ class ClickCallbacks(QtWidgets.QFrame):
 
             self.cids[key] = (self.m.all, method(**self._kwargs.get(key, dict())))
 
+    @pyqtSlot()
     def radius_changed(self):
         try:
             radius = float(self.radius_inp.text())
@@ -420,6 +422,7 @@ class ClickCallbacks(QtWidgets.QFrame):
         self.update_buttons()
 
     def button_clicked(self, key):
+        @pyqtSlot()
         def cb():
             if self.cids.get(key, None) is not None:
                 self.remove_callback(key)
