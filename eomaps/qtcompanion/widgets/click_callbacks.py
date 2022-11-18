@@ -115,6 +115,18 @@ class PickMapDropdown(QtWidgets.QComboBox):
             )
 
 
+class ClearButton(QtWidgets.QPushButton):
+    def enterEvent(self, e):
+        if self.window().showhelp is True:
+            QtWidgets.QToolTip.showText(
+                e.globalPos(),
+                "<h3>Clear Annotations and Markers</h3>"
+                "Remove all (permanent) annotations and markers from the map. <p>"
+                "(This does not affect markers and annotations added with "
+                "<code>m.add_annotation()</code> or <code>m.add_marker()</code>",
+            )
+
+
 class ClickCallbacks(QtWidgets.QFrame):
     widgetShown = pyqtSignal()
 
@@ -228,8 +240,9 @@ class ClickCallbacks(QtWidgets.QFrame):
         self.permanent_cb.stateChanged.connect(self.set_permanent)
         layout.addWidget(self.permanent_cb, Qt.AlignRight)
 
-        bclear = QtWidgets.QPushButton("Clear")
+        bclear = ClearButton("Clear")
         bclear.clicked.connect(self.clear_annotations_and_markers)
+        bclear.setFixedSize(bclear.sizeHint())
         layout.addWidget(bclear, Qt.AlignRight)
 
         self.setLayout(layout)

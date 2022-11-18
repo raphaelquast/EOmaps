@@ -304,8 +304,8 @@ class TestCallbacks(unittest.TestCase):
     def test_clear_annotations(self):
         # ---------- test as CLICK callback
         m = self.create_basic_map()
-
-        m.add_annotation(xy=(20, 20))
+        m.cb.click.attach.annotate(permanent=True)
+        self.click_ax_center()
         self.assertTrue(len(m.cb.click.get.permanent_annotations) == 1)
 
         cid = m.cb.click.attach.clear_annotations()
@@ -319,8 +319,8 @@ class TestCallbacks(unittest.TestCase):
     def test_clear_markers(self):
         # ---------- test as CLICK callback
         m = self.create_basic_map()
-
-        m.add_marker(xy=(20, 20))
+        m.cb.click.attach.mark(permanent=True)
+        self.click_ax_center()
         self.assertTrue(len(m.cb.click.get.permanent_markers) == 1)
 
         cid = m.cb.click.attach.clear_markers()
