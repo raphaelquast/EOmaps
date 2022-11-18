@@ -294,8 +294,8 @@ class _click_callbacks(object):
                 self.m.BM.remove_artist(ann)
                 ann.remove()
 
-    def _annotate_cleanup(self):
-        self.clear_annotations()
+    # def _annotate_cleanup(self):
+    #     self.clear_annotations()
 
     def get_values(self, **kwargs):
         """
@@ -535,8 +535,8 @@ class _click_callbacks(object):
                 marker.remove()
             del self.permanent_markers
 
-    def _mark_cleanup(self):
-        self.clear_markers()
+    # def _mark_cleanup(self):
+    #     self.clear_markers()
 
     def peek_layer(self, layer="1", how=(0.4, 0.4), alpha=1, **kwargs):
         """
