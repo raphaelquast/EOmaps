@@ -640,9 +640,8 @@ class _click_container(_cb_container):
 
         # get a unique name for the callback
         # name_idx__layer
-
         ncb = [
-            int(self._parse_cid(i)[0].rsplit("_", 1)[1])
+            int(i.split("__")[0].rsplit("_", 1)[1])
             for i in d
             if i.startswith(callback.__name__)
         ]
