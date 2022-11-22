@@ -396,6 +396,35 @@ class _click_container(_cb_container):
 
             return cbs
 
+    def _parse_cid(self, cid):
+        """
+        get the
+
+        Parameters
+        ----------
+        cid : TYPE
+            DESCRIPTION.
+
+        Returns
+        -------
+        name : str
+            the callback name.
+        layer : str
+            the layer to which the callback is attached.
+        ds : str
+            indicator if double- or single-click is used.
+        b : str
+            the button (e.g. 1, 2, 3 for left, middle, right)
+        m : str
+            the keypress modifier.
+        """
+        # do this to allow double-underscores in the layer-name
+
+        name, rest = cid.split("__", 1)
+        layer, ds, b, m = rest.rsplit("__", 3)
+
+        return name, layer, ds, b, m
+
     def remove(self, callback=None):
         """
         Remove previously attached callbacks from the map.
@@ -415,8 +444,7 @@ class _click_container(_cb_container):
                 self._connected_move_cbs.pop(callback)
 
         if callback is not None:
-            s = callback.split("__")
-            name, layer, ds, b, m = s
+            name, layer, ds, b, m = self._parse_cid(callback)
 
         cbname = name + "__" + layer
         bname = f"{b}__{m}"
@@ -612,8 +640,9 @@ class _click_container(_cb_container):
 
         # get a unique name for the callback
         # name_idx__layer
+
         ncb = [
-            int(i.split("__", 1)[0].rsplit("_", 1)[1])
+            int(self._parse_cid(i)[0].rsplit("_", 1)[1])
             for i in d
             if i.startswith(callback.__name__)
         ]
@@ -707,7 +736,7 @@ class cb_click_container(_click_container):
             bcbs = cbs[button_modifier]
 
             for key in self._sort_cbs(bcbs):
-                layer = key.split("__")[1]
+                layer = key.split("__", 1)[1]
                 if not self._execute_cb(layer):
                     return
 
@@ -1146,7 +1175,7 @@ class cb_pick_container(_click_container):
             bcbs = cbs[button_modifier]
 
             for key in self._sort_cbs(bcbs):
-                layer = key.split("__")[1]
+                layer = key.split("__", 1)[1]
                 if not self._execute_cb(layer):
                     # only execute callbacks if the layer name of the associated
                     # maps-object is active
@@ -1359,8 +1388,8 @@ class keypress_container(_cb_container):
                         for name in names:
                             if name in cbs:
                                 cbs[name](key=event.key)
-                if update:
-                    self._m.parent.BM.update(clear=self._method)
+                # if update:
+                #     self._m.parent.BM.update(clear=self._method)
             except ReferenceError:
                 pass
 
@@ -1467,6 +1496,12 @@ class keypress_container(_cb_container):
 
             return cbs
 
+    def _parse_cid(self, cid):
+        name, rest = cid.split("__", 1)
+        layer, key = rest.rsplit("__", 1)
+
+        return name, layer, key
+
     def remove(self, callback=None):
         """
         remove an attached callback from the figure
@@ -1479,7 +1514,7 @@ class keypress_container(_cb_container):
         """
 
         if callback is not None:
-            name, layer, key = callback.split("__")
+            name, layer, key = self._parse_cid(callback)
 
         cbname = name + "__" + layer
 
