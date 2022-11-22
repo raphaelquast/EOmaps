@@ -455,6 +455,7 @@ class Maps(object):
     def __exit__(self, type, value, traceback):
         self.cleanup()
         gc.collect()
+        plt.close(self.f)
 
     def __getattribute__(self, key):
         if key == "plot_specs":
