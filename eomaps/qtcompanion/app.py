@@ -155,7 +155,7 @@ class MenuWindow(transparentWindow):
         self.setCentralWidget(menu_widget)
 
         sh = self.sizeHint()
-        self.resize(int(sh.width() * 1.35), sh.height())
+        # self.resize(int(sh.width() * 1.35), sh.height())
 
     def show(self):
         super().show()

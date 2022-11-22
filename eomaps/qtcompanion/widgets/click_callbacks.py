@@ -1,6 +1,5 @@
 from PyQt5 import QtWidgets, QtGui
-from PyQt5.QtCore import Qt, pyqtSignal, QSize, pyqtSlot
-from collections import defaultdict
+from PyQt5.QtCore import Qt, pyqtSignal, pyqtSlot
 
 
 class AnnotateButton(QtWidgets.QPushButton):
@@ -195,6 +194,7 @@ class ClickCallbacks(QtWidgets.QFrame):
         b_mark.clicked.connect(self.button_clicked("mark"))
         self.radius_inp = MarkRadiusLineEdit()
         self.radius_inp.setText(str(self._kwargs["mark"]["radius"]))
+        self.radius_inp.setMaximumWidth(80)
         validator = QtGui.QDoubleValidator()
         self.radius_inp.setValidator(validator)
         self.radius_inp.textChanged.connect(self.radius_changed)
@@ -204,6 +204,7 @@ class ClickCallbacks(QtWidgets.QFrame):
         marklayout = QtWidgets.QHBoxLayout()
         marklayout.addWidget(t_rad)
         marklayout.addWidget(self.radius_inp)
+        marklayout.addStretch(1)
 
         # Annotate (PICK)
         b_ann2 = AnnotatePickButton("Annotate")
@@ -220,6 +221,15 @@ class ClickCallbacks(QtWidgets.QFrame):
         self.buttons["mark_pick"] = b_mark2
         b_mark2.clicked.connect(self.button_clicked("mark_pick"))
 
+        # checkbox if callbacks are permanent
+        self.permanent_cb = QtWidgets.QCheckBox("Permanent?")
+        self.permanent_cb.stateChanged.connect(self.set_permanent)
+
+        # button to clear permanent annotations/markers
+        bclear = ClearButton("Clear")
+        bclear.clicked.connect(self.clear_annotations_and_markers)
+        bclear.setFixedSize(bclear.sizeHint())
+
         blayout = QtWidgets.QGridLayout()
         blayout.addWidget(self.t_click, 0, 0)
         blayout.addWidget(self.t_pick, 1, 0)
@@ -232,18 +242,14 @@ class ClickCallbacks(QtWidgets.QFrame):
         blayout.addWidget(b_mark2, 1, 3, 1, 1, Qt.AlignLeft)
         blayout.addLayout(dropdown_layout, 1, 4, 1, 1, Qt.AlignLeft)
 
+        perm_layout = QtWidgets.QVBoxLayout()
+        perm_layout.addWidget(self.permanent_cb, Qt.AlignRight)
+        perm_layout.addWidget(bclear, Qt.AlignRight)
+
         layout = QtWidgets.QHBoxLayout()
         layout.addLayout(blayout)
         layout.addStretch(1)
-
-        self.permanent_cb = QtWidgets.QCheckBox("Permanent?")
-        self.permanent_cb.stateChanged.connect(self.set_permanent)
-        layout.addWidget(self.permanent_cb, Qt.AlignRight)
-
-        bclear = ClearButton("Clear")
-        bclear.clicked.connect(self.clear_annotations_and_markers)
-        bclear.setFixedSize(bclear.sizeHint())
-        layout.addWidget(bclear, Qt.AlignRight)
+        layout.addLayout(perm_layout)
 
         self.setLayout(layout)
 
@@ -276,6 +282,7 @@ class ClickCallbacks(QtWidgets.QFrame):
                 pickm.append(m)
         return pickm
 
+    @pyqtSlot()
     def clear_annotations_and_markers(self):
         # clear all annotations and markers from this axis
         # (irrespective of the visible layer!)
@@ -339,6 +346,7 @@ class ClickCallbacks(QtWidgets.QFrame):
         self.populate_dropdown()
         self.update_buttons()
 
+    @pyqtSlot()
     def update_buttons(self):
         if self._pick_map is None or self._pick_map.coll is None:
             self.t_pick.setEnabled(False)
@@ -410,6 +418,7 @@ class ClickCallbacks(QtWidgets.QFrame):
 
             self.cids[key] = (self.m.all, method(**self._kwargs.get(key, dict())))
 
+    @pyqtSlot()
     def radius_changed(self):
         try:
             radius = float(self.radius_inp.text())
@@ -420,6 +429,7 @@ class ClickCallbacks(QtWidgets.QFrame):
         self.update_buttons()
 
     def button_clicked(self, key):
+        @pyqtSlot()
         def cb():
             if self.cids.get(key, None) is not None:
                 self.remove_callback(key)
