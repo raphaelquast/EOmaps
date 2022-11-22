@@ -202,6 +202,7 @@ class shapes(object):
 
         # special treatment of array input to properly mask values
         array = kwargs.pop("array", None)
+
         if array is not None:
             array = array[mask]
         else:
@@ -1518,14 +1519,16 @@ class shapes(object):
             v[:-1, :-1, 0] = p[0] - rx
             v[:-1, :-1, 1] = p[1] - ry
 
-            v[-1, :-1] = v[-2, :-1] + [0, 2 * rx]
-            v[:, -1] = v[:, -2] + [2 * ry, 0]
+            # treat bottom vertices values
+            v[-1, :-1] = v[-2, :-1] + [0, 2 * ry]
+
+            # treat right most vertices values
+            v[:, -1] = v[:, -2] + [2 * rx, 0]
 
             px, py = t.transform(clipx(v[:, :, 0]), clipy(v[:, :, 1]))
             verts = np.stack((px, py), axis=2)
 
             mask = np.logical_and(np.isfinite(px)[:-1, :-1], np.isfinite(py)[:-1, :-1])
-
             return verts, mask
 
         def _get_polygon_coll(self, x, y, crs, **kwargs):
@@ -1538,7 +1541,6 @@ class shapes(object):
 
             # remember masked points
             self._m._data_mask = mask
-
             # don't use a mask here since we need the full 2D array
             color_and_array = shapes._get_colors_and_array(
                 kwargs, np.full_like(mask, True)
@@ -1565,6 +1567,7 @@ class shapes(object):
             return coll
 
         def get_coll(self, x, y, crs, **kwargs):
+
             x, y = np.asanyarray(x), np.asanyarray(y)
             # don't use antialiasing by default since it introduces unwanted
             # transparency for reprojected QuadMeshes!
