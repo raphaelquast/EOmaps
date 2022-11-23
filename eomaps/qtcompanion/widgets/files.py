@@ -212,7 +212,6 @@ class PlotFileWidget(QtWidgets.QWidget):
         self.close_on_plot = close_on_plot
 
         self.m2 = None
-        self.cid_annotate = None
 
         self.file_path = None
 
@@ -225,19 +224,6 @@ class PlotFileWidget(QtWidgets.QWidget):
         self.file_info.setWordWrap(True)
         self.file_info.setTextInteractionFlags(Qt.TextSelectableByMouse)
         scroll.setWidget(self.file_info)
-
-        # annotate callback
-        self.cb_annotate = QtWidgets.QCheckBox("Annotate on click")
-        self.cb_annotate.stateChanged.connect(self.b_add_annotate_cb)
-
-        self.modifier_label = QtWidgets.QLabel("Modifier:")
-        self.annotate_modifier = QtWidgets.QLineEdit()
-        self.annotate_modifier.textEdited.connect(self.b_add_annotate_cb)
-
-        annotate_layout = QtWidgets.QHBoxLayout()
-        annotate_layout.addWidget(self.cb_annotate, 1)
-        annotate_layout.addWidget(self.modifier_label, 0)
-        annotate_layout.addWidget(self.annotate_modifier, 1)
 
         # add colorbar checkbox
         self.cb_colorbar = QtWidgets.QCheckBox("Add colorbar")
@@ -282,7 +268,6 @@ class PlotFileWidget(QtWidgets.QWidget):
         minmaxlayout.addWidget(self.minmaxupdate, Qt.AlignRight)
 
         options = QtWidgets.QVBoxLayout()
-        options.addLayout(annotate_layout)
         options.addWidget(self.cb_colorbar)
         options.addWidget(setlayername)
         options.addWidget(self.shape_selector)
@@ -350,26 +335,6 @@ class PlotFileWidget(QtWidgets.QWidget):
             layer = self.layer.placeholderText()
 
         return layer
-
-    def b_add_annotate_cb(self):
-        modifier = self.annotate_modifier.text()
-        if modifier == "":
-            modifier = None
-
-        if self.m2 is None:
-            return
-
-        if self.cb_annotate.isChecked():
-            if self.cid_annotate is None:
-                self.cid_annotate = self.m2.cb.pick.attach.annotate(modifier=modifier)
-            else:
-                # re-attach the callback (in case the modifier changed)
-                self.m2.cb.pick.remove(self.cid_annotate)
-                self.cid_annotate = self.m2.cb.pick.attach.annotate(modifier=modifier)
-        else:
-            if self.cid_annotate is not None:
-                self.m2.cb.pick.remove(self.cid_annotate)
-                self.cid_annotate = None
 
     def open_file(self, file_path=None):
         info = self.do_open_file(file_path)
@@ -559,8 +524,6 @@ class PlotGeoTIFFWidget(PlotFileWidget):
         m2.show_layer(m2.layer)
 
         self.m2 = m2
-        # check if we want to add an annotation
-        self.b_add_annotate_cb()
 
     def do_update_vals(self):
         import xarray as xar
@@ -780,8 +743,6 @@ class PlotNetCDFWidget(PlotFileWidget):
         m2.show_layer(m2.layer)
 
         self.m2 = m2
-        # check if we want to add an annotation
-        self.b_add_annotate_cb()
 
 
 class PlotCSVWidget(PlotFileWidget):
@@ -883,9 +844,6 @@ class PlotCSVWidget(PlotFileWidget):
         m2.show_layer(m2.layer)
 
         self.m2 = m2
-
-        # check if we want to add an annotation
-        self.b_add_annotate_cb()
 
     def do_update_vals(self):
         try:
