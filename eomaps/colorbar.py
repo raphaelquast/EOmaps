@@ -163,11 +163,14 @@ class ColorBar:
             - 0:
             - 0.9: 90% histogram, 10% colorbar
             - 1: only histogram
+
         hist_bins : int, list, tuple, array or "bins", optional
+
             - If int: The number of histogram-bins to use for the colorbar.
             - If list, tuple or numpy-array: the bins to use
             - If "bins": use the bins obtained from the classification
               (ONLY possible if a classification scheme is used!)
+
             The default is 256.
         extend_frac : float, optional
             The fraction of the colorbar-size to use for extension-arrows.
@@ -178,9 +181,11 @@ class ColorBar:
             The default is "horizontal".
         dynamic_shade_indicator : bool, optional
             ONLY relevant if data-shading is used! ("shade_raster" or "shade_points")
+
             - False: The colorbar represents the actual (full) dataset
             - True: The colorbar is dynamically updated and represents the density of
               the shaded pixel values within the current field of view.
+
             The default is False.
         show_outline : bool or dict
             Indicator if an outline should be added to the histogram.
@@ -188,7 +193,9 @@ class ColorBar:
             If a dict is provided, it is passed to `plt.step()` to style the line.
             (e.g. with ordinary matplotlib parameters such as color, lw, ls etc.)
             If True, the following properties are used:
+
             - {"color": "k", "lw": 1}
+
             The default is False.
         tick_precision : int or None
             The precision of the tick-labels in the colorbar.
@@ -230,6 +237,7 @@ class ColorBar:
 
         See Also
         --------
+
         - label_bin_center
 
         Examples

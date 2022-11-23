@@ -2456,8 +2456,8 @@ class Maps(object):
             The default is True.
 
 
-        Other Parameters:
-        -----------------
+        Other Parameters
+        ----------------
         vmin, vmax : float, optional
             Min- and max. values assigned to the colorbar. The default is None.
         zorder : float
@@ -2623,6 +2623,7 @@ class Maps(object):
 
         See Also
         --------
+
         - Maps.util.layer_selector
         - Maps.util.layer_slider
 

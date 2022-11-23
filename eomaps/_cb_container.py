@@ -235,8 +235,8 @@ class _click_container(_cb_container):
 
         For additional keyword-arguments check the doc of the callback-functions!
 
-        Examples:
-        ---------
+        Examples
+        --------
         Get a (temporary) annotation on a LEFT-double-click:
 
             >>> m.cb.click.attach.annotate(double_click=True, button=1, permanent=False)
