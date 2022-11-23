@@ -596,6 +596,7 @@ class ArtistEditor(QtWidgets.QWidget):
         for m in list(self.m._children):
             if layer == m.layer:
                 m.cleanup()
+                m.BM._bg_layers.pop(layer, None)
 
         if self.m.BM._bg_layer == layer:
             try:
