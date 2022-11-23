@@ -114,6 +114,18 @@ class PickMapDropdown(QtWidgets.QComboBox):
             )
 
 
+class PermanentCheckBox(QtWidgets.QCheckBox):
+    def enterEvent(self, e):
+        if self.window().showhelp is True:
+            QtWidgets.QToolTip.showText(
+                e.globalPos(),
+                "<h3>Permanent Markers / Annotations</h3>"
+                "If checked, the markers and annotations created with "
+                "the Pick/Click callbacks will be permanent."
+                "(e.g. they are not removed on the next click).",
+            )
+
+
 class ClearButton(QtWidgets.QPushButton):
     def enterEvent(self, e):
         if self.window().showhelp is True:
@@ -222,7 +234,7 @@ class ClickCallbacks(QtWidgets.QFrame):
         b_mark2.clicked.connect(self.button_clicked("mark_pick"))
 
         # checkbox if callbacks are permanent
-        self.permanent_cb = QtWidgets.QCheckBox("Permanent?")
+        self.permanent_cb = PermanentCheckBox("Permanent?")
         self.permanent_cb.stateChanged.connect(self.set_permanent)
 
         # button to clear permanent annotations/markers
