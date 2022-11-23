@@ -383,7 +383,8 @@ class NewLayerWidget(QtWidgets.QFrame):
 
     @pyqtSlot()
     def new_layer(self):
-        layer = self.new_layer_name.text()
+        # use .strip() to make sure the layer does not start or end with whitespaces
+        layer = self.new_layer_name.text().strip()
         if len(layer) == 0:
             QtWidgets.QToolTip.showText(
                 self.mapToGlobal(self.new_layer_name.pos()),
