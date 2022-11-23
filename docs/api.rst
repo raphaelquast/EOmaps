@@ -49,10 +49,12 @@ Once you have created your first ``Maps`` object, you can:
 
 - Create **a NEW layer** named ``"my_layer"`` by using ``m2 = m.new_layer("my_layer")``
 
-.. admonition:: Map-features and colorbars are layer-sensitive!
+.. admonition:: Map-features, colorbars and callbacks are layer-sensitive!
 
-    Features, datasets, colorbars etc. added to a ``Maps`` object are only visible if the associated layer is visible!
-    To manually switch between layers, use ``m.show_layer("the layer name")``, call ``m.show()`` or have a look at the :ref:`utility` and the :ref:`companion_widget`.
+    - Features, colorbars etc. added to a ``Maps`` object are only visible if the associated layer is visible
+    - Callbacks are only executed if the associated layer is visible
+
+    To switch between layers, use ``m.show_layer("the layer name")``, call ``m.show()`` or have a look at the :ref:`utility` and the :ref:`companion_widget`.
 
 .. code-block:: python
 
@@ -96,6 +98,7 @@ Once you have created your first ``Maps`` object, you can:
 
     | To create a layer that represents a **combination of multiple existing layers**, separate the individual layer-names
     | with a ``"|"`` character (e.g. ``"layer1|layer2"``).
+
     The layer will then always show **all features** of ``"layer1`` **and** ``layer2``.
 
     - NOTE: The *vertical stacking* of features is controlled by the ``zorder`` property, not by the order of the layers!
@@ -131,6 +134,7 @@ Once you have created your first ``Maps`` object, you can:
     Maps.new_layer
     Maps.all
     Maps.show_layer
+    Maps.show
     Maps.fetch_layers
 
 
@@ -138,27 +142,128 @@ Once you have created your first ``Maps`` object, you can:
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 To assign a dataset to a ``Maps`` object, use ``m.set_data(...)``.
-A dataset is hereby fully specified by setting its coordinates (``x`` and ``y``), the coordinate-reference-system (``crs``) and the data-values (``data``).
 
-EOmaps hereby accepts the following data-types as input:
+.. currentmodule:: eomaps
 
-- ``data``: ``pandas.DataFrame``
+.. autosummary::
+    :toctree: generated
+    :nosignatures:
+    :template: only_names_in_toc.rst
 
-  - ``x``, ``y``: The column-names to use as coordinates (``string``)
-  - ``parameter``: The column-name to use as data-values (``string``)
+    Maps.set_data
 
-- ``data``, ``x``, ``y``: ``pandas.Series``
+A dataset is fully specified by setting the following properties:
 
-  - all series must have the same size!
+- ``data`` : The data-values
+- ``x``, ``y``: The coordinates of the provided data
+- ``crs``: The coordinate-reference-system of the provided coordinates
+- ``parameter`` (optional): The parameter name
+- ``encoding`` (optional): The encoding of the data
+- ``cpos``, ``cpos_radius`` (optional): the pixel offset
 
-- ``data``, ``x``, ``y``: ``numpy.ndarray`` or ``list``
+The following data-types are accepted as input:
 
-  - equal-size **1D** or **2D** arrays for data and coordinates
-  - | **2D** data and **1D** coordinates:
-    | ``data``: (n, m), ``x``: (n,), ``y``: (m,)
+
++---------------------------------------------------------------------+------------------------------------------------------------------------------------+
+| **pandas DataFrames**                                               | .. code-block:: python                                                             |
+|                                                                     |                                                                                    |
+| - ``data``: ``pandas.DataFrame``                                    |     from eomaps import Maps                                                        |
+| - ``x``, ``y``: The column-names to use as coordinates (``string``) |     import pandas as pd                                                            |
+| - ``parameter``: The column-name to use as data-values (``string``) |                                                                                    |
+|                                                                     |     df = pd.DataFrame(dict(lon=[1,2,3], lat=[2,5,4], data=[12, 43, 2]))            |
+|                                                                     |     m = Maps()                                                                     |
+|                                                                     |     m.set_data(df, x="lon", y="lat", crs=4326, parameter="data")                   |
+|                                                                     |     m.plot_map()                                                                   |
++---------------------------------------------------------------------+------------------------------------------------------------------------------------+
+| **pandas Series**                                                   | .. code-block:: python                                                             |
+|                                                                     |                                                                                    |
+| - ``data``, ``x``, ``y``: ``pandas.Series``                         |     from eomaps import Maps                                                        |
+| - ``parameter``: (optional) parameter name (``string``)             |     import pandas as pd                                                            |
+|                                                                     |                                                                                    |
+|                                                                     |     x, y, data = pd.Series([1,2,3]), pd.Series([2, 5, 4]), pd.Series([12, 43, 2])  |
+|                                                                     |     m = Maps()                                                                     |
+|                                                                     |     m.set_data(data, x=x, y=y, crs=4326, parameter="param_name")                   |
+|                                                                     |     m.plot_map()                                                                   |
++---------------------------------------------------------------------+------------------------------------------------------------------------------------+
+| **1D** or **2D** data **and** coordinates                           | .. code-block:: python                                                             |
+|                                                                     |                                                                                    |
+| - ``data``, ``x``, ``y``: equal-size ``numpy.array`` (or ``list``)  |     from eomaps import Maps                                                        |
+| - ``parameter``: (optional) parameter name (``string``)             |     import numpy as np                                                             |
+|                                                                     |                                                                                    |
+|                                                                     |     x, y = np.mgrid[-20:20, -40:40]                                                |
+|                                                                     |     data = x + y                                                                   |
+|                                                                     |     m = Maps()                                                                     |
+|                                                                     |     m.set_data(data=data, x=x, y=y, crs=4326, parameter="param_name")              |
+|                                                                     |     m.plot_map()                                                                   |
++---------------------------------------------------------------------+------------------------------------------------------------------------------------+
+| **1D** coordinates and **2D** data                                  | .. code-block:: python                                                             |
+|                                                                     |                                                                                    |
+| - ``data``: ``numpy.array`` (or ``list``) with shape ``(n, m)``     |     from eomaps import Maps                                                        |
+| - ``x``: ``numpy.array`` (or ``list``) with shape ``(n,)``          |     import numpy as np                                                             |
+| - ``y``: ``numpy.array`` (or ``list``) with shape ``(m,)``          |                                                                                    |
+| - ``parameter``: (optional) parameter name (``string``)             |     x = np.linspace(10, 50, 100)                                                   |
+|                                                                     |     y = np.linspace(10, 50, 50)                                                    |
+|                                                                     |     data = np.random.normal(size=(100, 50))                                        |
+|                                                                     |                                                                                    |
+|                                                                     |     m = Maps()                                                                     |
+|                                                                     |     m.set_data(data=data, x=x, y=y, crs=4326, parameter="param_name")              |
+|                                                                     |     m.plot_map()                                                                   |
++---------------------------------------------------------------------+------------------------------------------------------------------------------------+
+
 
 To specify how the data is represented on the map, you have to set the *"plot-shape"* via ``m.set_shape``.
-(e.g. plot ellipses, rectangles, perform dynamic shading to speed up plotting, ...)
+
+    | **NOTE:** Some *"plot-shapes"* require more computational effort than others!
+    | Make sure to select an appropriate shape based on the size of the dataset you want to plot!
+
+.. currentmodule:: eomaps
+
+.. autosummary::
+    :toctree: generated
+    :nosignatures:
+    :template: only_names_in_toc.rst
+
+    Maps.set_shape
+
+Possible shapes that work nicely for datasets with up to ~500 000 data-points:
+
+.. currentmodule:: eomaps._shapes.shapes
+
+.. autosummary::
+    :toctree: generated
+    :nosignatures:
+    :template: only_names_in_toc.rst
+
+    geod_circles
+    ellipses
+    rectangles
+    voronoi_diagram
+    delaunay_triangulation
+
+Possible shapes that work nicely for up to a few million data-points:
+
+.. autosummary::
+    :toctree: generated
+    :nosignatures:
+    :template: only_names_in_toc.rst
+
+    raster
+
+While ``raster`` still works nicely even for a few million datapoints, extremely large datasets
+(> 10 million datapoints), it is recommended to use "shading" to **greatly speed-up plotting**.
+If shading is used, a dynamic averaging of the data based on the screen-resolution and the
+currently visible plot-extent is performed (resampling based on the mean-value is used by default).
+
+Possible shapes that can be used to quickly generate a plot for extremely large datasets are:
+
+.. autosummary::
+    :toctree: generated
+    :nosignatures:
+    :template: only_names_in_toc.rst
+
+    shade_points
+    shade_raster
+
 
 .. code-block:: python
 
@@ -177,47 +282,6 @@ To specify how the data is represented on the map, you have to set the *"plot-sh
     m3 = m.new_layer("data")                  # create a new layer named "data"
     ...                                       # ...
 
-.. currentmodule:: eomaps
-
-.. autosummary::
-    :toctree: generated
-    :nosignatures:
-    :template: only_names_in_toc.rst
-
-    Maps.set_data
-    Maps.set_shape
-
-Possible shapes that work nicely for datasets with up to ~500 000 data-points:
-
-.. currentmodule:: eomaps._shapes.shapes
-
-.. autosummary::
-    :toctree: generated
-    :nosignatures:
-    :template: only_names_in_toc.rst
-
-    geod_circles
-    ellipses
-    rectangles
-    voronoi_diagram
-    delaunay_triangulation
-    raster
-
-While ``raster`` still works nicely even for millions of datapoints, extremely large datasets
-(several million datapoints), it is recommended to use "shading" instead of actually plotting
-each individual datapoint.
-If shading is used, a dynamic averaging of the data based on the screen-resolution and the
-currently visible plot-extent is performed (resampling based on the mean-value is used by default).
-
-Possible shapes that can be used to quickly generate a plot for millions of datapoints are:
-
-.. autosummary::
-    :toctree: generated
-    :nosignatures:
-    :template: only_names_in_toc.rst
-
-    shade_points
-    shade_raster
 
 .. note::
 
@@ -264,10 +328,9 @@ Some useful arguments that are supported by most shapes (except "shade"-shapes) 
     m = Maps()
     m.add_feature.preset.coastline()
 
-    m2 = m.new_layer("a data layer")
-    m2.set_data([1,2,3,4,5], [1,2,3,4,5], [1,2,3,4,5], crs=4326)
-    m2.set_shape.ellipses(radius=.3, radius_crs=4326)
-    m2.plot_map(cmap="viridis", ec="g", lw=2, alpha=0.5)
+    m.set_data([1,2,3,4,5], [1,2,3,4,5], [1,2,3,4,5], crs=4326)
+    m.set_shape.ellipses(radius=.3, radius_crs=4326)
+    m.plot_map(cmap="viridis", ec="g", lw=2, alpha=0.5)
 
 
 To adjust the margins of the subplots, use ``m.subplots_adjust``, e.g.:
@@ -310,7 +373,7 @@ Once the map is ready, a snapshot of the map can be saved at any time by using:
 
 
 
-🌍 Customizing the plot
+🎨 Customizing the plot
 ~~~~~~~~~~~~~~~~~~~~~~~
 
 All arguments to customize the appearance of a dataset are passed to ``m.plot_map(...)``.
@@ -344,9 +407,9 @@ Colors can also be set **manually** by providing one of the following arguments 
 
 .. note::
 
-    - Manual color specifications do NOT work with the ``shade`` shapes!
-    - Providing manual colors will override the colors assigned by the ``cmap``!
-    - The ``colorbar`` will NOT represent manually defined colors!
+    - Manual color specifications do **not** work with the ``shade_raster`` and ``shade_points`` shapes!
+    - Providing manual colors will **override** the colors assigned by the ``cmap``!
+    - The ``colorbar`` does **not** represent manually defined colors!
 
 
 Uniform colors
@@ -467,71 +530,102 @@ Currently available classification-schemes are (see `mapclassify <https://github
 - UserDefined (bins)
 
 
-◔ Adding Maps to existing figures
+🍱 Adding Maps to existing figures
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-It is possible to add (one or more) EOmaps maps to existing ``matplotlib`` figures using ``Maps(f=<the figure instance>)``
+It is possible to add (one or more) EOmaps maps to existing ``matplotlib`` figures.
 
-The position of the map can be set via the ``ax`` argument, e.g.: ``Maps(ax=<...>)``.
-The syntax is hereby similar to matploltibs ``f.add_subplot()`` or ``f.add_axes``,
-allowing one of the following options:
+- To create a new map in an existing figure, simply provide the ``matplotlib.Figure`` instance via ``Maps(f=<the figure instance>)``
+- The initial position of the map can be set via the ``ax`` argument, e.g.: ``Maps(ax=<...>)``.
 
-- Four floats (left, bottom, width, height).
+  - NOTE: Since the effective size of the Map is dependent on the current zoom-region, the position always
+    represents the **maximal area** that can be occupied by the map!
+
+The syntax is similar to matplotlibs ``f.add_subplot()`` or ``f.add_axes``, allowing one of the following options:
+
+
+Absolute positioning
+********************
+To set the absolute position of the map, provide a list of 4 floats representing ``(left, bottom, width, height)``.
 
   - The absolute position of the map expressed in relative figure coordinates (e.g. ranging from 0 to 1)
-
-- Three integers (nrows, ncols, index).
-
-  - The map will take the index position on a grid with nrows rows and ncols columns.
-    index starts at 1 in the upper left corner and increases to the right. index can also be a two-tuple specifying the (first, last)
-    indices (1-based, and including last) of the map, e.g., Maps(ax=(3, 1, (1, 2))) makes a map that spans the upper 2/3 of the figure.
-
-- A 3-digit integer.
-
-  - The digits are interpreted as if given separately as three single-digit integers, i.e. Maps(ax=235) is the same as
-    Maps(ax=(2, 3, 5)). Note that this can only be used if there are no more than 9 subplots.
-
-- An already existing ``matplotlib.Axes`` instance
-
-  - NOTE: this MUST be a cartopy-``GeoAxes`` with the same projection as the Maps-object!
-
-- A ``matplotlib.SubplotSpec``
 
 .. code-block:: python
 
     import matplotlib.pyplot as plt
     from eomaps import Maps
 
-    # create a matplotlib figure
-    f = plt.figure(figsize=(10, 7))
-    # add a "normal" plot spanning the top rows of a 2x2 grid
-    ax = f.add_subplot(2, 2, (1, 2))
-    ax.plot([10, 20, 30, 40, 50], [10, 20, 30, 40, 50])
+    f = plt.figure(figsize=(10, 7))   # initialize the Figure
+    f.add_axes((.2, .5, .4, .4))      # add a normal axes
+    m = Maps(f=f, ax=(.2, 0, .4, .5)) # add a EOmaps map
 
-    # put a map on the 3rd axis of a 2x2 grid (bottom left)
-    m = Maps(f=f, ax=(2, 2, 3))
-    m.ax.set_title("click me!")
-    m.add_wms.OpenStreetMap.add_layer.default()
-    m.cb.click.attach.mark(radius=20, fc="none", ec="r", lw=2)
+Grid positioning
+****************
+To position the map in a grid, one of the following options are possible:
 
-    # attach a callback that plots markers on the axis if you click on the map
-    def cb(pos, **kwargs):
-        ax.plot(*pos, marker="o")
-    m.cb.click.attach(cb)
+- Three integers ``(nrows, ncols, index)``.
 
-    # Since we want to dynamically update the plot on the axis, it must be
-    # added to the BlitManager to ensure that the artists are properly updated.
-    # (EOmaps handles interactive re-drawing of the figure)
-    m.BM.add_artist(ax, layer=m.layer)
+  - The map will take the ``index`` position on a grid with ``nrows`` rows and ``ncols`` columns.
+  - ``index`` starts at 1 in the upper left corner and increases to the right.
+  - ``index`` can also be a two-tuple specifying the (first, last)
+    indices (1-based, and including last) of the map, e.g., Maps(ax=(3, 1, (1, 2))) makes a map that spans the upper 2/3 of the figure.
 
-    # put a map on the 4th axis of a 2x2 grid (bottom right)
-    m2 = Maps(f=f, ax=(2, 2, 4), crs=Maps.CRS.Mollweide())
-    m2.add_feature.preset.coastline()
-    m2.add_feature.preset.ocean()
-    m2.cb.click.attach.mark(radius=20, fc="none", ec="r", lw=2, n=200)
+.. code-block:: python
 
-    # share click events on the 2 maps
-    m.cb.click.share_events(m2)
+    import matplotlib.pyplot as plt
+    from eomaps import Maps
+
+    f = plt.figure(figsize=(10, 7))  # initialize the Figure
+    f.add_subplot(2, 2, 1)           # add a normal axes
+    m = Maps(f=f, ax=(2, 2, (1, 2))) # add a EOmaps map
+
+    f = plt.figure(figsize=(10, 7))  # initialize the Figure
+    f.add_subplot(3, 1, 1)           # add a normal axes
+    m = Maps(f=f, ax=(3, 1, (2, 3))) # add a EOmaps map
+
+
+- A 3-digit integer.
+
+  - The digits are interpreted as if given separately as three single-digit integers, i.e. Maps(ax=235) is the same as Maps(ax=(2, 3, 5)).
+  - Note that this can only be used if there are no more than 9 subplots.
+
+.. code-block:: python
+
+    import matplotlib.pyplot as plt
+    from eomaps import Maps
+
+    f = plt.figure(figsize=(10, 7)) # initialize the Figure
+    f.add_subplot(211)              # add a normal axes
+    m = Maps(f=f, ax=212)           # add a EOmaps map
+
+
+- An already existing ``matplotlib.Axes`` instance
+
+  - NOTE: this MUST be a cartopy-``GeoAxes`` with the same projection as the Maps-object!
+
+.. code-block:: python
+
+    import matplotlib.pyplot as plt
+    import cartopy
+    from eomaps import Maps
+
+    f = plt.figure(figsize=(10, 7))   # initialize the Figure
+    ax = f.add_subplot(projection=cartopy.crs.Mollweide())
+    m = Maps(ax=ax)
+
+
+- A ``matplotlib.SubplotSpec``
+
+.. code-block:: python
+
+    import matplotlib.pyplot as plt
+    from matplotlib.gridspec import GridSpec
+    from eomaps import Maps
+
+    gs = GridSpec(2, 2)              # setup the GridSpec
+
+    f = plt.figure(figsize=(10, 7))  # initialize the Figure
+    m = Maps(f=f, ax=gs[0,0])        # add a EOmaps map
 
 
 .. admonition:: Dynamic updates of plots
@@ -546,10 +640,47 @@ allowing one of the following options:
     In general, it should be sufficient to simply add the axes-object as artist via ``m.BM.add_artist(...)``
     This will ensure that all artists on the axes are updated.
 
+    Here's a more complete example to show how it works:
+
+    .. code-block:: python
+
+        import matplotlib.pyplot as plt
+        from eomaps import Maps
+
+        # create a matplotlib figure
+        f = plt.figure(figsize=(10, 7))
+        # add a "normal" plot spanning the top rows of a 2x2 grid
+        ax = f.add_subplot(2, 2, (1, 2))
+        ax.plot([10, 20, 30, 40, 50], [10, 20, 30, 40, 50])
+
+        # put a map on the 3rd axis of a 2x2 grid (bottom left)
+        m = Maps(f=f, ax=(2, 2, 3))
+        m.ax.set_title("click me!")
+        m.add_wms.OpenStreetMap.add_layer.default()
+        m.cb.click.attach.mark(radius=20, fc="none", ec="r", lw=2)
+
+        # attach a callback that plots markers on the axis if you click on the map
+        def cb(pos, **kwargs):
+            ax.plot(*pos, marker="o")
+        m.cb.click.attach(cb)
+
+        # Since we want to dynamically update the plot on the axis, it must be
+        # added to the BlitManager to ensure that the artists are properly updated.
+        # (EOmaps handles interactive re-drawing of the figure)
+        m.BM.add_artist(ax, layer=m.layer)
+
+        # put a map on the 4th axis of a 2x2 grid (bottom right)
+        m2 = Maps(f=f, ax=(2, 2, 4), crs=Maps.CRS.Mollweide())
+        m2.add_feature.preset.coastline()
+        m2.add_feature.preset.ocean()
+        m2.cb.click.attach.mark(radius=20, fc="none", ec="r", lw=2, n=200)
+
+        # share click events on the 2 maps
+        m.cb.click.share_events(m2)
 
 
-𝄜 Multiple maps in one figure
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+𝄜 MapsGrid objects
+*******************
 
 ``MapsGrid`` objects can be used to create (and manage) multiple maps in one figure.
 
@@ -585,7 +716,7 @@ and provides convenience-functions to perform actions on all maps of the figure.
 Make sure to checkout the :ref:`layout_editor` which greatly simplifies the arrangement of multiple axes within a figure!
 
 Custom grids and mixed axes
-***************************
++++++++++++++++++++++++++++
 
 Fully customized grid-definitions can be specified by providing ``m_inits`` and/or ``ax_inits`` dictionaries
 of the following structure:
@@ -762,8 +893,9 @@ simplifies using interactive capabilities.
 The main purpose of the widget is to provide easy-access to features that usually don't need to go into
 a python-script, such as:
 
-- Compare layers (e.g. peek-callbacks)
+- Compare layers (e.g. overlay multiple layers)
 - Switch between existing layers (or combine existing layers)
+- Add simple click or pick callbacks
 - Quickly create new WebMap layers (or add WebMap services to existing layers)
 - Draw shapes, add Annotations and NaturalEarth features to the map
 - Quick-edit existing map-artists
@@ -1769,7 +1901,7 @@ It has the following useful methods defined:
 
 
 📎 Set colorbar tick labels based on bins
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 To label the colorbar with custom names for a given set of bins, use ``m.colorbar.set_bin_labels()``:
 
