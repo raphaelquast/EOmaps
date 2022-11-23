@@ -29,7 +29,7 @@ class AutoUpdatePeekLayerDropdown(QtWidgets.QComboBox):
         self.m.BM.on_layer(self.update_visible_layer, persistent=True)
         self.update_layers()
 
-        self.setSizeAdjustPolicy(self.AdjustToContents)
+        self.setSizeAdjustPolicy(self.AdjustToMinimumContentsLengthWithIcon)
 
         self.activated.connect(self.set_last_active)
 
@@ -93,8 +93,14 @@ class AutoUpdatePeekLayerDropdown(QtWidgets.QComboBox):
         if self._empty_ok:
             self.addItem("")
 
+        # the QAbstractItemView object that holds the dropdown-items
+        view = self.view()
+        view.setTextElideMode(Qt.ElideNone)
+
         for key in layers:
             self.addItem(str(key))
+        # set the size of the dropdown to be 10 + the longest item
+        view.setFixedWidth(view.sizeHintForColumn(0) + 10)
 
         if self._use_active:
             # set current index to active layer if _use_active

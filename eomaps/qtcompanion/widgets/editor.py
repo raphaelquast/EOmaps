@@ -1,5 +1,5 @@
 from PyQt5 import QtCore, QtWidgets, QtGui
-from PyQt5.QtCore import Qt, pyqtSignal, pyqtSlot
+from PyQt5.QtCore import Qt, pyqtSignal, pyqtSlot, QSize
 
 from matplotlib.colors import to_rgba_array
 
@@ -484,6 +484,29 @@ class OptionTabs(QtWidgets.QTabWidget):
             )
 
 
+# make sure tabs are never larger than 150px
+class TabBar(QtWidgets.QTabBar):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        # remove strange line on top of tabs
+        # (see https://stackoverflow.com/a/33941638/9703451)
+        self.setStyleSheet(
+            " QTabBar { "
+            "qproperty-drawBase: 0; "
+            "}"
+            " QTabBar::tab { "
+            "padding-left: 0px; "
+            "}"
+        )
+
+        self.setElideMode(Qt.ElideRight)
+
+    def tabSizeHint(self, index):
+        size = QtWidgets.QTabBar.tabSizeHint(self, index)
+        return QSize(min(size.width(), 150), size.height())
+
+
 class ArtistEditor(QtWidgets.QWidget):
     def __init__(self, m=None):
 
@@ -493,6 +516,10 @@ class ArtistEditor(QtWidgets.QWidget):
         self._hidden_artists = dict()
 
         self.tabs = LayerArtistTabs()
+        self.tabs.setTabBar(TabBar())
+        self.tabs.setMovable(True)
+        self.tabs.setUsesScrollButtons(True)
+
         self.option_tabs = OptionTabs()
 
         self.newlayer = NewLayerWidget(m=self.m)
@@ -859,6 +886,7 @@ class ArtistEditor(QtWidgets.QWidget):
             scroll.setWidgetResizable(True)
 
             self.tabs.addTab(scroll, layer)
+            self.tabs.setTabToolTip(i, layer)
 
             if layer == "all" or layer == self.m.layer:
                 tabbar = self.tabs.tabBar()
