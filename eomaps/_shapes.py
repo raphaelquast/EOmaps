@@ -721,7 +721,9 @@ class shapes(object):
                 shape.mesh = mesh
 
                 if mesh is True:
-                    if n > 1:
+                    if n is None:
+                        n = 1
+                    elif n > 1:
                         warnings.warn(
                             "EOmaps: rectangles with 'mesh=True' only supports n=1"
                         )
@@ -1466,7 +1468,7 @@ class shapes(object):
 
         def __call__(self):
             """
-            Draw 2D datasets as rectangles (only 2D datasets, but possibly large ones)
+            Draw the data as a rectangular raster.
 
             (similar to plt.imshow)
 
@@ -1484,7 +1486,7 @@ class shapes(object):
             (e.g. the effective shape is a distorted rectangle with straight edges)
 
             - use `m.set_shape.rectangles()` if you need "curved" edges!
-            - use `m.set_shape.shade_raster()` for very large datasets
+            - use `m.set_shape.shade_raster()` for extremely large datasets
 
             Parameters
             ----------
