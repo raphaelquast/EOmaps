@@ -258,7 +258,7 @@ class shapes(object):
         def __init__(self, m):
             self._m = m
 
-        def __call__(self, radius=1000, n=20):
+        def __call__(self, radius=1000, n=None):
             """
             Draw geodesic circles with a radius defined in meters.
 
@@ -266,9 +266,10 @@ class shapes(object):
             ----------
             radius : float
                 The radius of the circles in meters.
-            n : int
-                The number of points to calculate on the circle.
-                The default is 20.
+            n : int or None
+                The number of intermediate points to calculate on the geodesic circle.
+                If None, 100 is used for < 10k pixels and 20 otherwise.
+                The default is None.
 
             Returns
             -------
@@ -288,6 +289,20 @@ class shapes(object):
         @property
         def _initargs(self):
             return dict(radius=self._radius, n=self.n)
+
+        @property
+        def n(self):
+            if self._n is None:
+                if self._m.data is not None:
+                    if np.size(self._m.data) < 10000:
+                        return 100
+                    else:
+                        return 20
+            return self._n
+
+        @n.setter
+        def n(self, val):
+            self._n = val
 
         @property
         def radius(self):
@@ -430,8 +445,9 @@ class shapes(object):
 
         def __init__(self, m):
             self._m = m
+            self._n = None
 
-        def __call__(self, radius="estimate", radius_crs="in", n=20):
+        def __call__(self, radius="estimate", radius_crs="in", n=None):
             """
             Draw projected ellipses with dimensions defined in units of a given crs.
 
@@ -444,9 +460,10 @@ class shapes(object):
             radius_crs : crs-specification, optional
                 The crs in which the dimensions are defined.
                 The default is "in".
-            n : int
-                The number of points to calculate on the circle.
-                The default is 20.
+            n : int or None
+                The number of intermediate points to calculate on the circle.
+                If None, 100 is used for < 10k pixels and 20 otherwise.
+                The default is None.
             """
             from . import MapsGrid  # do this here to avoid circular imports!
 
@@ -462,6 +479,20 @@ class shapes(object):
         @property
         def _initargs(self):
             return dict(radius=self._radius, radius_crs=self.radius_crs, n=self.n)
+
+        @property
+        def n(self):
+            if self._n is None:
+                if self._m.data is not None:
+                    if np.size(self._m.data) < 10000:
+                        return 100
+                    else:
+                        return 20
+            return self._n
+
+        @n.setter
+        def n(self, val):
+            self._n = val
 
         @property
         def radius(self):
@@ -652,7 +683,7 @@ class shapes(object):
         def __init__(self, m):
             self._m = m
 
-        def __call__(self, radius="estimate", radius_crs="in", mesh=False, n=10):
+        def __call__(self, radius="estimate", radius_crs="in", mesh=False, n=None):
             """
             Draw projected rectangles with fixed dimensions (and possibly curved edges)
 
@@ -673,11 +704,12 @@ class shapes(object):
                 does NOT allow setting edgecolors but it has the advantage that
                 boundaries between neighbouring rectangles are not visible.
                 Only n=1 is currently supported!
-            n : int
-                The number of intermediate points to calculate on the rectangle
-                edges (e.g. to plot "curved" rectangles in projected crs)
-                Use n=1 to get actual rectangles!
-                The default is 10
+            n : int or None
+                The number of intermediate points to calculate on the rectangle edges
+                (e.g. to properly plot "curved" rectangles in projected crs)
+                Use n=1 to force rectangles!
+                If None, 40 is used for <10k datapoints and 10 is used otherwise.
+                The default is None
             """
             from . import MapsGrid  # do this here to avoid circular imports!
 
@@ -706,6 +738,26 @@ class shapes(object):
                 n=self.n,
                 mesh=self.mesh,
             )
+
+        @property
+        def n(self):
+            if self._n is None:
+                if self._m.data is not None:
+                    # if plot crs is same as input-crs there is no need for
+                    # intermediate points since the rectangles are not curved!
+                    if self._m._crs_plot == self._m.data_specs.crs:
+                        return 1
+                    elif np.size(self._m.data) < 10000:
+                        return 40
+                    else:
+                        return 10
+                else:
+                    return 10
+            return self._n
+
+        @n.setter
+        def n(self, val):
+            self._n = val
 
         @property
         def radius(self):
