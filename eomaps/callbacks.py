@@ -545,10 +545,12 @@ class _click_callbacks(object):
         Parameters
         ----------
         layer : str or list
+
             - if str: The name of the layer you want to peek at.
             - if list: A list of layer-names to peek at.
               (alternatively you can also separate individual layer-names with a "|"
-               character, e.g.: "layer1|layer2")
+              character, e.g.: "layer1|layer2")
+
         how : str , float or tuple, optional
             The method you want to visualize the second layer.
             (e.g. swipe from a side or display a rectangle)

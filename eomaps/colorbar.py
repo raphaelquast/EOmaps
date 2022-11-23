@@ -222,10 +222,10 @@ class ColorBar:
 
             - if "mask": out-of range values will be masked.
               (e.g. values outside the colorbar limits are not represented in the
-               histogram and NO extend-arrows are added)
+              histogram and NO extend-arrows are added)
             - if "clip": out-of-range values will be clipped.
               (e.g. values outside the colorbar limits will be represented in the
-               min/max bins of the histogram)
+              min/max bins of the histogram)
 
             The default is "clip"
         hist_kwargs : dict
