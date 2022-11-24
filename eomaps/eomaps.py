@@ -2711,7 +2711,13 @@ class Maps(object):
         # clear all cached background layers before saving to make sure they
         # are re-drawn with the correct dpi-settings
         self.BM._bg_layers = dict()
+
+        # set the shading-axis-size to reflect the used dpi setting
+        self._update_shade_axis_size(dpi=kwargs.get("dpi", None))
         self.f.savefig(*args, **kwargs)
+        # reset the shading-axis-size to the used figure dpi
+        self._update_shade_axis_size()
+
         # redraw after the save to ensure that backgrounds are correctly cached
         self.redraw()
 
@@ -3134,6 +3140,22 @@ class Maps(object):
         # (required for peeking layers after the canvas has been resized
         #  and for webagg and nbagg backends to correctly re-draw the layer)
         self.BM._refetch_bg = True
+
+        # update the figure dimensions in case shading is used
+        self._update_shade_axis_size()
+
+    def _update_shade_axis_size(self, dpi=None):
+
+        # set the axis-size that is used to determine the number of pixels used
+        # when using "shade" shapes
+
+        if self.coll is not None and self.shape.name.startswith("shade_"):
+            if dpi is None:
+                self.coll.plot_width = int(self.ax.bbox.width)
+                self.coll.plot_height = int(self.ax.bbox.height)
+            else:
+                self.coll.plot_width = int(self.ax.bbox.width / self.f.dpi * dpi)
+                self.coll.plot_height = int(self.ax.bbox.height / self.f.dpi * dpi)
 
     def _on_close(self, event):
         # reset attributes that might use up a lot of memory when the figure is closed
