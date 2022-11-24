@@ -1538,8 +1538,8 @@ The most commonly used features are available under the ``preset`` category:
 
 .. _annotations_and_markers:
 
-🏕 Annotations, Markers, Lines etc.
------------------------------------
+🏕 Annotations, Markers, Lines, Logos, etc.
+-------------------------------------------
 
 🔴 Markers
 ~~~~~~~~~~~
@@ -1827,6 +1827,38 @@ To indicate rectangular areas in any given crs, simply use ``m.indicate_extent``
     |     except:                                                           |                                                 |
     |         pass                                                          |                                                 |
     +-----------------------------------------------------------------------+-------------------------------------------------+
+
+👽 Logos
+~~~~~~~~
+
+To add a logo (or basically any image file ``.png``, ``.jpeg`` etc.) to the map, you can use ``m.add_logo``.
+
+Logos can be re-positioned and re-sized with the :ref:`layout_editor`!
+
+- To fix the relative position of the logo with respect to the map-axis, use ``fix_position=True``
+
++--------------------------------------------------------------------------------------------+---------------------------------------+
+| .. code-block:: python                                                                     | .. image:: _static/minigifs/logos.png |
+|                                                                                            |   :align: center                      |
+|     from eomaps import Maps                                                                |                                       |
+|     m = Maps()                                                                             |                                       |
+|     m.add_feature.preset.coastline()                                                       |                                       |
+|     m.add_logo(position="ul", size=.15)                                                    |                                       |
+|     m.add_logo(position="ur", size=.15)                                                    |                                       |
+|     # notice that the bottom logos maintain their relative position on resize/zoom events! |                                       |
+|     # (and also that they can NOT be moved with the layout-editor)                         |                                       |
+|     m.add_logo(position="lr", size=.3, pad=(0.1,0.05), fix_position=True)                  |                                       |
+|     m.add_logo(position="ll", size=.4, fix_position=True)                                  |                                       |
++--------------------------------------------------------------------------------------------+---------------------------------------+
+
+.. currentmodule:: eomaps.Maps
+
+.. autosummary::
+    :toctree: generated
+    :nosignatures:
+    :template: only_names_in_toc.rst
+
+    add_logo
 
 
 .. _colorbar:
@@ -2323,7 +2355,6 @@ It is also possible to enter the **Layout Editor** and save the layout automatic
     get_layout
     apply_layout
     edit_layout
-
 
 
 📦 Reading data (NetCDF, GeoTIFF, CSV...)
