@@ -109,6 +109,7 @@ from .helpers import (
     LayoutEditor,
     progressbar,
     searchtree,
+    _TransformedBoundsLocator,
 )
 from ._shapes import shapes
 from .colorbar import ColorBar
@@ -2197,7 +2198,15 @@ class Maps(object):
 
         return out_d_int, out_d_tot
 
-    def add_logo(self, filepath=None, position="lr", size=0.12, pad=0.1, layer="all"):
+    def add_logo(
+        self,
+        filepath=None,
+        position="lr",
+        size=0.12,
+        pad=0.1,
+        layer="all",
+        fix_position=False,
+    ):
         """
         Add a small image (png, jpeg etc.) to the map whose position is dynamically
         updated if the plot is resized or zoomed.
@@ -2221,6 +2230,12 @@ class Maps(object):
             The default is 0.1.
         layer : str, optional
             The layer at which the logo should be visible. The default is "all".
+        fix_position : bool, optional
+            If True, the relative position of the logo (with respect to the map-axis)
+            is fixed (and dynamically updated on zoom / resize events)
+
+            NOTE: If True, the logo can NOT be moved with the layout_editor!
+            The default is False.
         """
 
         if filepath is None:
@@ -2245,42 +2260,22 @@ class Maps(object):
                 p = dict(rect=[pos.x0 + pwx, pos.y1 - s - pwy, s, s], anchor="NW")
             return p
 
-        figax = self.f.add_axes(**getpos(self.ax.get_position()))
+        figax = self.f.add_axes(**getpos(self.ax.get_position()), label="logo")
         figax.set_navigate(False)
         figax.set_axis_off()
         _ = figax.imshow(im, aspect="equal", zorder=999)
         self.BM.add_artist(figax, layer)
 
-        def setlim(*args, **kwargs):
-            figax.set_position(getpos(self.ax.get_position())["rect"])
+        if fix_position:
+            fixed_pos = (
+                figax.get_position()
+                .transformed(self.f.transFigure)
+                .transformed(self.ax.transAxes.inverted())
+            )
 
-        def update_decorator(f):
-            # use this so that we can "undecorate" the function with the
-            # __wrapped__ property
-            @wraps(f)
-            def newf(*args, **kwargs):
-                ret = f(*args, **kwargs)
-                setlim()
-                return ret
-
-            return newf
-
-        toolbar = self.f.canvas.toolbar
-        if toolbar is not None:
-            toolbar._update_view = update_decorator(toolbar._update_view)
-            toolbar.release_zoom = update_decorator(toolbar.release_zoom)
-            toolbar.release_pan = update_decorator(toolbar.release_pan)
-
-        def cleanup():
-
-            toolbar._update_view = toolbar._update_view.__wrapped__
-            toolbar.release_zoom = toolbar.release_zoom.__wrapped__
-            toolbar.release_pan = toolbar.release_pan.__wrapped__
-
-        if toolbar is not None:
-            self._cleanup_functions.add(cleanup)
-
-        self._logo_cids.add(self.f.canvas.mpl_connect("resize_event", setlim))
+            figax.set_axes_locator(
+                _TransformedBoundsLocator(fixed_pos.bounds, self.ax.transAxes)
+            )
 
     @wraps(ColorBar.__init__)
     def add_colorbar(self, *args, **kwargs):

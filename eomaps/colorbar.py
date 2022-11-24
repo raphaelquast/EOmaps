@@ -11,7 +11,7 @@ import copy
 from functools import partial, wraps
 from textwrap import dedent
 
-from .helpers import pairwise
+from .helpers import pairwise, _TransformedBoundsLocator
 
 
 ds, mpl_ext = None, None
@@ -67,32 +67,6 @@ def get_named_bins_formatter(bins, names, show_values=False):
             return names[b]
 
     return formatter
-
-
-# class copied from matplotlib.axes
-class _TransformedBoundsLocator:
-    """
-    Axes locator for `.Axes.inset_axes` and similarly positioned Axes.
-    The locator is a callable object used in `.Axes.set_aspect` to compute the
-    Axes location depending on the renderer.
-    """
-
-    def __init__(self, bounds, transform):
-        """
-        *bounds* (a ``[l, b, w, h]`` rectangle) and *transform* together
-        specify the position of the inset Axes.
-        """
-        self._bounds = bounds
-        self._transform = transform
-
-    def __call__(self, ax, renderer):
-        # Subtracting transSubfigure will typically rely on inverted(),
-        # freezing the transform; thus, this needs to be delayed until draw
-        # time as transSubfigure may otherwise change after this is evaluated.
-        return mtransforms.TransformedBbox(
-            mtransforms.Bbox.from_bounds(*self._bounds),
-            self._transform - ax.figure.transSubfigure,
-        )
 
 
 class ColorBar:
