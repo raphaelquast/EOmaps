@@ -2479,9 +2479,17 @@ class Maps(object):
         cmap = kwargs.setdefault("cmap", "viridis")
         if "alpha" in kwargs and kwargs["alpha"] < 1:
             # get a unique name for the colormap
-            ncmaps = len(
-                [None for i in plt.colormaps() if i.startswith("EOmaps_alpha_")]
-            )
+            try:
+                ncmaps = max(
+                    [
+                        int(i.rsplit("_", 1)[1])
+                        for i in plt.colormaps()
+                        if i.startswith("EOmaps_alpha_")
+                    ]
+                )
+            except Exception:
+                ncmaps = 0
+
             cmapname = f"EOmaps_alpha_{ncmaps + 1}"
 
             kwargs["cmap"] = cmap_alpha(
