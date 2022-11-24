@@ -4482,7 +4482,7 @@ class Maps(object):
                 )
                 return
 
-            self._companion_widget = MenuWindow(m=self)
+            self._companion_widget = MenuWindow(m=self, parent=self.f.canvas)
             # make sure that we clear the colormap-pixmap cache on startup
             self._companion_widget.cmapsChanged.emit()
 

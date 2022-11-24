@@ -184,7 +184,7 @@ class transparentWindow(QtWidgets.QMainWindow):
         # on show (otherwise callbacks are inactive as long as the window is focused!)
         self.setAttribute(Qt.WA_ShowWithoutActivating)
         self.setWindowFlags(
-            Qt.FramelessWindowHint | Qt.Dialog | Qt.WindowStaysOnTopHint
+            Qt.FramelessWindowHint | Qt.Dialog  # | Qt.WindowStaysOnTopHint
         )
         self.setFocusPolicy(Qt.ClickFocus)
 
