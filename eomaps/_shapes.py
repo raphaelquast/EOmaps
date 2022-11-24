@@ -1303,7 +1303,7 @@ class shapes(object):
                 A callable that takes the image output of the shading pipeline,
                 and returns another Image object.
                 See dynspread() and spread() for examples.
-                The default is `partial(ds.tf.dynspread, max_px=5)`.
+                The default is `partial(ds.tf.dynspread, max_px=50)`.
             agg_hook : callable, optional
                 A callable that takes the computed aggregate as an argument, and returns
                 another aggregate. This can be used to do preprocessing before the
@@ -1322,7 +1322,7 @@ class shapes(object):
                 aggregator = getattr(ds, aggregator)("val")
 
             if shade_hook is None:
-                shade_hook = partial(ds.tf.dynspread, max_px=5)
+                shade_hook = partial(ds.tf.dynspread, max_px=50)
 
             if agg_hook is None:
                 pass
