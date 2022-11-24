@@ -1164,6 +1164,7 @@ class SlippyImageArtist_NEW(AxesImage):
 
         ax.callbacks.connect("xlim_changed", self.on_xlim)
         self._prev_extent = (0, 0)
+        self._prev_size = (ax.bbox.width, ax.bbox.height)
 
     def on_xlim(self, *args, **kwargs):
         self.stale = True
@@ -1181,7 +1182,16 @@ class SlippyImageArtist_NEW(AxesImage):
             window_extent = ax.get_window_extent()
             [x1, y1], [x2, y2] = ax.viewLim.get_points()
 
-            if self._prev_extent != (x1, x2, y1, y2) or len(self.cache) == 0:
+            # only fetch images if one of the following is true:
+            # - the map extent changed
+            # - the size of the axis changed
+            # - the cache is empty
+
+            if (
+                self._prev_extent != (x1, x2, y1, y2)
+                or self._prev_size != (ax.bbox.width, ax.bbox.height)
+                or len(self.cache) == 0
+            ):
                 # only re-fetch tiles if the extent has changed
                 located_images = self.raster_source.fetch_raster(
                     ax.projection,
@@ -1190,17 +1200,19 @@ class SlippyImageArtist_NEW(AxesImage):
                 )
                 self.cache = located_images
                 self._prev_extent = (x1, x2, y1, y2)
+                self._prev_size = (ax.bbox.width, ax.bbox.height)
 
             for img, extent in self.cache:
                 self.set_array(img)
                 with ax.hold_limits():
                     self.set_extent(extent)
-                super().draw(renderer, *args, **kwargs)
+
+            super().draw(renderer, *args, **kwargs)
 
             self.stale = False
+
         except Exception:
             print("EOmaps: ... could not fetch WebMap service")
-
             if self in self.axes._mouseover_set:
                 self.axes._mouseover_set.remove(self)
 
