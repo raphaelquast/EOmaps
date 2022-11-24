@@ -266,7 +266,7 @@ class WMS_DLR_basemaps(WMSBase):
 
     def do_add_layer(self, wmslayer, layer):
         wms = getattr(self.m.add_wms.DLR_basemaps.add_layer, wmslayer)
-        wms(layer=layer)
+        wms(layer=layer, transparent=True)
         self.ask_for_legend(wms, wmslayer)
 
 
