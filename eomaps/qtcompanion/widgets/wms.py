@@ -2,6 +2,8 @@ from PyQt5 import QtWidgets
 from PyQt5.QtCore import Qt, QThread, QObject, pyqtSignal, pyqtSlot
 from PyQt5.QtGui import QStatusTipEvent
 
+from ... import Maps
+
 
 def remove_prefix(text, prefix):
     if text.startswith(prefix):
@@ -314,7 +316,7 @@ class AddWMSMenuButton(QtWidgets.QPushButton):
         self.setMenu(self.feature_menu)
         self.clicked.connect(self.show_menu)
 
-        self._submenus = dict()
+        self._submenus = getattr(m, "_companion_wms_submenus", dict())
 
         # set event-filter to avoid showing tooltips on hovver over QMenu items
         self.installEventFilter(StatusTipFilter(self))
@@ -372,10 +374,19 @@ class AddWMSMenuButton(QtWidgets.QPushButton):
         self._fetch_submenu(wmsname)
 
     def _fetch_submenu(self, wmsname):
+        if wmsname in getattr(Maps, "_companion_wms_submenus", dict()):
+            self._submenus[wmsname] = Maps._companion_wms_submenus[wmsname]
+
+        if wmsname in self._submenus:
+            return
         wmsclass = self.wms_dict[wmsname]
         wms = wmsclass(m=self.m)
         sub_features = wms.wmslayers
         self._submenus[wmsname] = sub_features
+
+        if not hasattr(Maps, "_companion_wms_submenus"):
+            Maps._companion_wms_submenus = dict()
+        Maps._companion_wms_submenus[wmsname] = sub_features
 
     def populate_submenu(self, wmsname=None):
         if wmsname not in self._submenus:
@@ -422,3 +433,10 @@ class AddWMSMenuButton(QtWidgets.QPushButton):
                 self.m.show_layer(layer)
 
         return wms_cb
+
+    @classmethod
+    def fetch_all_wms_layers(cls, m):
+        b = cls(m=m)
+        for wmsname in b.wms_dict:
+            print("Fetching:", wmsname)
+            b._fetch_submenu(wmsname)
