@@ -26,7 +26,7 @@ Possible ways for specifying the ``crs`` for plotting are:
 
 - If you provide an integer, it is identified as an epsg-code (e.g. ``4326``, ``3035``, etc.)
 
-  - 4326 hereby defaults to `PlateCarree` projection
+  - 4326 defaults to `PlateCarree` projection
 
 - All other CRS usable for plotting are accessible via ``Maps.CRS``,
   e.g.: ``crs=Maps.CRS.Orthographic()``, ``crs=Maps.CRS.GOOGLE_MERCATOR`` or ``crs=Maps.CRS.Equi7_EU``.
@@ -213,7 +213,9 @@ The following data-types are accepted as input:
 
 To specify how the data is represented on the map, you have to set the *"plot-shape"* via ``m.set_shape``.
 
-    | **NOTE:** Some *"plot-shapes"* require more computational effort than others!
+.. note::
+
+    | Some *"plot-shapes"* require more computational effort than others!
     | Make sure to select an appropriate shape based on the size of the dataset you want to plot!
 
 .. currentmodule:: eomaps
@@ -249,8 +251,8 @@ Possible shapes that work nicely for up to a few million data-points:
 
     raster
 
-While ``raster`` still works nicely even for a few million datapoints, extremely large datasets
-(> 10 million datapoints), it is recommended to use "shading" to **greatly speed-up plotting**.
+While ``raster`` can still be used for datasets with a few million datapoints, for extremely large datasets
+(> 10 million datapoints) it is recommended to use "shading" to **greatly speed-up plotting**.
 If shading is used, a dynamic averaging of the data based on the screen-resolution and the
 currently visible plot-extent is performed (resampling based on the mean-value is used by default).
 
@@ -267,27 +269,27 @@ Possible shapes that can be used to quickly generate a plot for extremely large 
 
 .. code-block:: python
 
+    from eomaps import Maps
+    data, x, y = [.3,.64,.2,.5,1], [1,2,3,4,5], [2,5,3,7,5]
+
     m = Maps()                                # create a Maps-object
-    m.set_data(data1, x, y, crs, ...)         # assign some data to the Maps-object
-    m.set_shape.geod_circles(radius=1000,     # draw geodetic circles with 1km radius
-                             n=100)           # use 100 intermediate points to represent the shape
-    m.plot_map()                              # plot the data
+    m.set_data(data, x, y)                    # assign some data to the Maps-object
+    m.set_shape.rectangles(radius=1,          # represent the datapoints as 1x1 degree rectangles
+                            radius_crs=4326)  # (in epsg=4326 projection)
+    m.plot_map(cmap="viridis", zorder=1)      # plot the data
 
     m2 = m.new_layer()                        # create a new Maps-object on the same layer
-    m2.set_data(data, x, y, crs, ...)         # assign another dataset to the new Maps object
-    m2.set_shape.rectangles(radius=1,         # represent the datapoints as 1x1 degree rectangles
-                            radius_crs=4326)
-    m2.plot_map()                             # plot the data
-
-    m3 = m.new_layer("data")                  # create a new layer named "data"
-    ...                                       # ...
-
+    m2.set_data(data, x, y)                   # assign another dataset to the new Maps object
+    m2.set_shape.geod_circles(radius=50000,   # draw geodetic circles with 50km radius
+                            n=100)          # use 100 intermediate points to represent the shape
+    m2.plot_map(ec="k", cmap="Reds",          # plot the data
+                zorder=2, set_extent=False)   # (and avoid resetting the plot-extent)
 
 .. note::
 
     The "shade"-shapes require the additional ``datashader`` dependency!
     You can install it via:
-    ``conda install -c conda-forge datashader``
+    ``mamba install -c conda-forge datashader``
 
 .. admonition:: What's used by default?
 
@@ -323,20 +325,24 @@ Some useful arguments that are supported by most shapes (except "shade"-shapes) 
     - "lw" or "linewidth" : the linewidth of the shapes
     - "alpha" : the alpha-transparency
 
+By default, the plot-extent of the axis is adjusted to the extent of the data.
+To keep the extent as-is, use ``m.plot_map(set_extent=False)``
+
 .. code-block:: python
 
+    from eomaps import Maps
     m = Maps()
-    m.add_feature.preset.coastline()
+    m.add_feature.preset.coastline(lw=0.5)
 
-    m.set_data([1,2,3,4,5], [1,2,3,4,5], [1,2,3,4,5], crs=4326)
-    m.set_shape.ellipses(radius=.3, radius_crs=4326)
-    m.plot_map(cmap="viridis", ec="g", lw=2, alpha=0.5)
-
+    m.set_data([1,2,3,4,5], [10,20,40,60,70], [10,20,50,70,30], crs=4326)
+    m.set_shape.geod_circles(radius=7e5)
+    m.plot_map(cmap="viridis", ec="b", lw=1.5, alpha=0.85, set_extent=False)
 
 To adjust the margins of the subplots, use ``m.subplots_adjust``, e.g.:
 
 .. code-block:: python
 
+    from eomaps import Maps
     m = Maps()
     m.subplots_adjust(left=0.1, right=0.9, bottom=0.05, top=0.95)
 
@@ -354,7 +360,7 @@ You can then continue to add :ref:`colorbar`, :ref:`annotations_and_markers`,
 :ref:`scalebar`, :ref:`compass`,  :ref:`webmap_layers` or :ref:`geodataframe` to the map,
 or you can start to :ref:`shape_drawer`, add :ref:`utility` and :ref:`callbacks`.
 
-Once the map is ready, a snapshot of the map can be saved at any time by using:
+Once the map is ready, an image of the map can be saved at any time by using:
 
 .. code-block:: python
 
@@ -378,18 +384,17 @@ Once the map is ready, a snapshot of the map can be saved at any time by using:
 
 All arguments to customize the appearance of a dataset are passed to ``m.plot_map(...)``.
 
-In general, the colors assigned to the shapes are specified by selecting a colormap (``cmap``)
-and (optionally) setting appropriate limits via ``vmin`` and ``vmax``.
+In general, the colors assigned to the shapes are specified by
 
-- ``cmap`` can be specified as (see `matplotlib-docs <https://matplotlib.org/stable/tutorials/colors/colormaps.html>`_ for more details):
+- selecting a colormap (``cmap``)
 
-  - a name of a pre-defined ``matplotlib`` colormap (e.g. ``"viridis"``, ``"RdYlBu"`` etc.)
-  - or a general ``matplotlib`` colormap object
+  - either a name of a pre-defined ``matplotlib`` colormap (e.g. ``"viridis"``, ``"RdYlBu"`` etc.)
+  - or a general ``matplotlib`` colormap object (see `matplotlib-docs <https://matplotlib.org/stable/tutorials/colors/colormaps.html>`_ for more details)
 
-- ``vmin`` and ``vmax`` set the range of data-values that are mapped
+- (optionally) setting appropriate data-limits via ``vmin`` and ``vmax``.
 
-  - (Any values outside this range will get the colormaps ``over`` and ``under`` colors assigned.)
-
+  - ``vmin`` and ``vmax`` set the range of data-values that are mapped to the colorbar-colors
+  - Any values outside this range will get the colormaps ``over`` and ``under`` colors assigned.
 
 .. code-block:: python
 
@@ -543,25 +548,9 @@ It is possible to add (one or more) EOmaps maps to existing ``matplotlib`` figur
 
 The syntax is similar to matplotlibs ``f.add_subplot()`` or ``f.add_axes``, allowing one of the following options:
 
-
-Absolute positioning
-********************
-To set the absolute position of the map, provide a list of 4 floats representing ``(left, bottom, width, height)``.
-
-  - The absolute position of the map expressed in relative figure coordinates (e.g. ranging from 0 to 1)
-
-.. code-block:: python
-
-    import matplotlib.pyplot as plt
-    from eomaps import Maps
-
-    f = plt.figure(figsize=(10, 7))   # initialize the Figure
-    f.add_axes((.2, .5, .4, .4))      # add a normal axes
-    m = Maps(f=f, ax=(.2, 0, .4, .5)) # add a EOmaps map
-
 Grid positioning
 ****************
-To position the map in a grid, one of the following options are possible:
+To position the map in a (virtual) grid, one of the following options are possible:
 
 - Three integers ``(nrows, ncols, index)``.
 
@@ -626,6 +615,22 @@ To position the map in a grid, one of the following options are possible:
 
     f = plt.figure(figsize=(10, 7))  # initialize the Figure
     m = Maps(f=f, ax=gs[0,0])        # add a EOmaps map
+
+
+Absolute positioning
+********************
+To set the absolute position of the map, provide a list of 4 floats representing ``(left, bottom, width, height)``.
+
+  - The absolute position of the map expressed in relative figure coordinates (e.g. ranging from 0 to 1)
+
+.. code-block:: python
+
+    import matplotlib.pyplot as plt
+    from eomaps import Maps
+
+    f = plt.figure(figsize=(10, 7))   # initialize the Figure
+    f.add_axes((.2, .5, .4, .4))      # add a normal axes
+    m = Maps(f=f, ax=(.2, 0, .4, .5)) # add a EOmaps map
 
 
 .. admonition:: Dynamic updates of plots
