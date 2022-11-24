@@ -79,7 +79,7 @@ reasonably well if you want the figures embedded in a Jupyter Notebook.
 
 .. note::
 
-  It is possible to plot **static snapshots** of a map to a Jupyter Notebook
+  It is possible to plot **static snapshots** of the current state of a map to a Jupyter Notebook
   irrespective of the used backend by using `m.snapshot()`, e.g.:
 
   .. code-block:: python
