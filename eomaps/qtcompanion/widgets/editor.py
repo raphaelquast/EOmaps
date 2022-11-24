@@ -708,7 +708,6 @@ class ArtistEditor(QtWidgets.QWidget):
         b_sh.clicked.connect(self.show_hide(artist=a, layer=layer))
 
         # zorder
-        l_z = QtWidgets.QLabel("zoder:")
         b_z = ZorderInput()
         b_z.setMinimumWidth(25)
         b_z.setMaximumWidth(25)
@@ -720,7 +719,6 @@ class ArtistEditor(QtWidgets.QWidget):
         # alpha
         alpha = a.get_alpha()
         if alpha is not None:
-            l_a = QtWidgets.QLabel("alpha:")
             b_a = AlphaInput()
 
             b_a.setMinimumWidth(25)
@@ -733,7 +731,7 @@ class ArtistEditor(QtWidgets.QWidget):
             b_a.setText(str(alpha))
             b_a.returnPressed.connect(self.set_alpha(artist=a, layer=layer, widget=b_a))
         else:
-            l_a, b_a = None, None
+            b_a = None
 
         # linewidth
         try:
@@ -744,7 +742,6 @@ class ArtistEditor(QtWidgets.QWidget):
                 lw = lw[0]
 
             if lw is not None:
-                l_lw = QtWidgets.QLabel("linewidth:")
                 b_lw = LineWidthInput()
 
                 b_lw.setMinimumWidth(25)
@@ -758,9 +755,9 @@ class ArtistEditor(QtWidgets.QWidget):
                     self.set_linewidth(artist=a, layer=layer, widget=b_lw)
                 )
             else:
-                l_lw, b_lw = None, None
+                b_lw = None
         except Exception:
-            l_lw, b_lw = None, None
+            b_lw = None
 
         # color
         try:
@@ -824,9 +821,9 @@ class ArtistEditor(QtWidgets.QWidget):
             layout.append((b_a, 5))  # alpha
 
         if b_cmap is not None:
-            layout.append((b_cmap, 5))  # cmap
+            layout.append((b_cmap, 6))  # cmap
 
-        layout.append((b_r, 6))  # remove
+        layout.append((b_r, 7))  # remove
 
         return layout
 
