@@ -11,6 +11,7 @@ from .widgets.save import SaveFileWidget
 from .widgets.files import OpenFileTabs, OpenDataStartTab
 from .widgets.utils import get_cmap_pixmaps
 from .widgets.extent import SetExtentToLocation
+from .widgets.click_callbacks import ClickCallbacks
 
 
 class OpenFileButton(QtWidgets.QPushButton):
@@ -27,6 +28,8 @@ class Tab1(QtWidgets.QWidget):
         setextent = SetExtentToLocation(m=self.m)
         save = SaveFileWidget(m=self.m)
 
+        click_cbs = ClickCallbacks(m=self.m)
+
         try:
             addwms = AddWMSMenuButton(m=self.m, new_layer=True)
         except:
@@ -39,12 +42,13 @@ class Tab1(QtWidgets.QWidget):
         l2.addWidget(addwms)
         l2.addWidget(self.open_file_button)
         l2.addStretch(1)
+        l2.addWidget(setextent)
 
         layout = QtWidgets.QVBoxLayout()
         layout.addWidget(peektabs)
         layout.addLayout(l2)
-        layout.addWidget(setextent)
         layout.addStretch(1)
+        layout.addWidget(click_cbs)
         layout.addWidget(save)
 
         self.setLayout(layout)
@@ -151,7 +155,7 @@ class MenuWindow(transparentWindow):
         self.setCentralWidget(menu_widget)
 
         sh = self.sizeHint()
-        self.resize(int(sh.width() * 1.35), sh.height())
+        # self.resize(int(sh.width() * 1.35), sh.height())
 
     def show(self):
         super().show()

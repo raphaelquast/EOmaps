@@ -163,7 +163,7 @@ class NewWindow(QtWidgets.QMainWindow):
         self.setCentralWidget(widget)
 
         # make sure that we close all remaining windows if the figure is closed
-        self.m.figure.f.canvas.mpl_connect("close_event", self.on_close)
+        self.m.f.canvas.mpl_connect("close_event", self.on_close)
 
     @pyqtSlot()
     def on_close(self, e):
@@ -184,7 +184,7 @@ class transparentWindow(QtWidgets.QMainWindow):
         # on show (otherwise callbacks are inactive as long as the window is focused!)
         self.setAttribute(Qt.WA_ShowWithoutActivating)
         self.setWindowFlags(
-            Qt.FramelessWindowHint | Qt.Dialog | Qt.WindowStaysOnTopHint
+            Qt.FramelessWindowHint | Qt.Dialog  # | Qt.WindowStaysOnTopHint
         )
         self.setFocusPolicy(Qt.ClickFocus)
 

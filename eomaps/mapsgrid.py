@@ -57,6 +57,9 @@ class MapsGrid:
     layer : int or str
         The default layer to assign to all Maps-objects of the grid.
         The default is 0.
+    f : matplotlib.Figure or None
+        The matplotlib figure to use. If None, a new figure will be created.
+        The default is None.
     kwargs
         Additional keyword-arguments passed to the `matplotlib.gridspec.GridSpec()`
         function that is used to initialize the grid.
@@ -134,6 +137,7 @@ class MapsGrid:
         ax_inits=None,
         figsize=None,
         layer="base",
+        f=None,
         **kwargs,
     ):
 
@@ -164,17 +168,18 @@ class MapsGrid:
                         # (instead of numpy-dtypes)  ... check numpy.ndarray.item
                         mij = Maps(
                             crs=crsij,
-                            gs_ax=self.gridspec[0, 0],
+                            ax=self.gridspec[0, 0],
                             figsize=figsize,
                             layer=layer,
+                            f=f,
                         )
                         mij.ax.set_label("mg_map_0_0")
                         self.parent = mij
                     else:
                         mij = Maps(
                             crs=crsij,
-                            parent=self.parent,
-                            gs_ax=self.gridspec[i, j],
+                            f=self.parent.f,
+                            ax=self.gridspec[i, j],
                             layer=layer,
                         )
                         mij.ax.set_label(f"mg_map_{i}_{j}")
@@ -205,18 +210,19 @@ class MapsGrid:
                     if i == 0:
                         mi = Maps(
                             crs=crs[key],
-                            gs_ax=self.gridspec[val],
+                            ax=self.gridspec[val],
                             figsize=figsize,
                             layer=layer,
+                            f=f,
                         )
                         mi.ax.set_label(f"mg_map_{key}")
                         self.parent = mi
                     else:
                         mi = Maps(
                             crs=crs[key],
-                            parent=self.parent,
-                            gs_ax=self.gridspec[val],
+                            ax=self.gridspec[val],
                             layer=layer,
+                            f=self.parent.f,
                         )
                         mi.ax.set_label(f"mg_map_{key}")
 
@@ -356,7 +362,7 @@ class MapsGrid:
 
     @property
     def f(self):
-        return self.parent.figure.f
+        return self.parent.f
 
     @wraps(Maps.plot_map)
     def plot_map(self, **kwargs):
@@ -457,7 +463,6 @@ class MapsGrid:
         Share click events between all Maps objects of the grid
         """
         self.parent.cb.click.share_events(*self.children)
-        self.parent.cb._click_move.share_events(*self.children)
 
     def share_pick_events(self, name="default"):
         """

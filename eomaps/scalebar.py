@@ -241,7 +241,7 @@ class ScaleBar:
 
         if not all(np.isfinite([x0, y0])):
             # if it fails, try to position it at the center of the extent
-            extent = self._m.figure.ax.get_extent()
+            extent = self._m.ax.get_extent()
             lon, lat = self._m._transf_plot_to_lonlat.transform(
                 np.mean(extent[:2]),
                 np.mean(extent[2:]),
@@ -464,13 +464,13 @@ class ScaleBar:
     def _get_d(self):
         # the base length used to define the size of the scalebar
         # get the position in figure coordinates
-        x, y = self._m.figure.ax.transData.transform(
+        x, y = self._m.ax.transData.transform(
             self._t_plot.transform(self._lon, self._lat)
         )
 
-        d_fig = max(self._m.figure.ax.bbox.height, self._m.figure.ax.bbox.width) / 100
+        d_fig = max(self._m.ax.bbox.height, self._m.ax.bbox.width) / 100
         # translate d_fig to data-coordinates
-        xb, yb = self._m.figure.ax.transData.inverted().transform(
+        xb, yb = self._m.ax.transData.inverted().transform(
             ([x, y + d_fig], [x, y - d_fig])
         )
         return np.abs(xb[1] - yb[1])
@@ -540,7 +540,7 @@ class ScaleBar:
             # if the object is within the canvas!
             try:
                 # get the widths of the text patches in data-coordinates
-                bbox = val.get_tightbbox(self._m.figure.f.canvas.get_renderer())
+                bbox = val.get_tightbbox(self._m.f.canvas.get_renderer())
                 bbox = bbox.transformed(self._m.ax.transData.inverted())
 
                 # use the max to account for rotated text objects
@@ -573,14 +573,14 @@ class ScaleBar:
                 xy, txt, size=self._label_props["scale"] * d / 2, prop=self._font_props
             )
 
-            self._artists[f"text_{i}"] = self._m.figure.ax.add_artist(
+            self._artists[f"text_{i}"] = self._m.ax.add_artist(
                 PathPatch(tp, color=self._label_props["color"], lw=0)
             )
             self._artists[f"text_{i}"].set_transform(
                 Affine2D().rotate_around(
                     *xy, ang + np.pi / 2 + np.deg2rad(self._label_props["rotation"])
                 )
-                + self._m.figure.ax.transData
+                + self._m.ax.transData
             )
 
             self._artists[f"text_{i}"].set_zorder(1)
@@ -635,7 +635,7 @@ class ScaleBar:
                 Affine2D().rotate_around(
                     *xy, ang + np.pi / 2 + np.deg2rad(self._label_props["rotation"])
                 )
-                + self._m.figure.ax.transData
+                + self._m.ax.transData
             )
         self._get_maxw(
             self._scale_props["scale"],
@@ -679,7 +679,7 @@ class ScaleBar:
 
         verts = self._get_patch_verts(pts, lon, lat, ang, d)
         p = PolyCollection([verts], **self._patch_props)
-        self._artists["patch"] = self._m.figure.ax.add_artist(p)
+        self._artists["patch"] = self._m.ax.add_artist(p)
 
         # -------------- add the scalebar
         coll = LineCollection(pts)
@@ -689,7 +689,7 @@ class ScaleBar:
         )[: len(pts)]
         coll.set_colors(colors)
         coll.set_linewidth(self._scale_props["width"])
-        self._artists["scale"] = self._m.figure.ax.add_collection(coll, autolim=False)
+        self._artists["scale"] = self._m.ax.add_collection(coll, autolim=False)
 
         # apply preset
         self.apply_preset(self.preset)
@@ -904,7 +904,7 @@ class ScaleBar:
         self.set_position()
 
     def _decorate_zooms(self):
-        toolbar = self._m.figure.f.canvas.toolbar
+        toolbar = self._m.f.canvas.toolbar
 
         if toolbar is not None:
             toolbar.release_zoom = self._zoom_decorator(toolbar.release_zoom)
@@ -1219,7 +1219,7 @@ class Compass:
             )
         )
         self._ax_cids.add(
-            self._m.figure.f.canvas.mpl_connect(
+            self._m.f.canvas.mpl_connect(
                 "resize_event", lambda *args: self._update_offset(None, None)
             )
         )

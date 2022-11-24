@@ -27,7 +27,7 @@ class TestBasicPlotting(unittest.TestCase):
         m.data = self.data
         m.set_data_specs(x="x", y="y", crs=3857)
         m.plot_map()
-        plt.close(m.figure.f)
+        plt.close(m.f)
 
         # -------------------------------------
 
@@ -39,7 +39,7 @@ class TestBasicPlotting(unittest.TestCase):
         )
         m.plot_map()
         m.indicate_extent(20, 10, 60, 76, crs=4326, fc="r", ec="k", alpha=0.5)
-        plt.close(m.figure.f)
+        plt.close(m.f)
 
     def test_simple_plot_shapes(self):
         usedata = self.data.sample(500)
@@ -140,7 +140,7 @@ class TestBasicPlotting(unittest.TestCase):
             )
             m.plot_map(fc="none", ec=color, lw=0.5 if cpos != "c" else 2)
 
-        plt.close(m.figure.f)
+        plt.close(m.f)
 
     def test_alpha_and_splitbins(self):
         m = Maps(4326)
@@ -151,7 +151,7 @@ class TestBasicPlotting(unittest.TestCase):
 
         m.plot_map(alpha=0.4)
 
-        plt.close(m.figure.f)
+        plt.close(m.f)
 
     def test_classification(self):
         m = Maps(4326)
@@ -163,7 +163,7 @@ class TestBasicPlotting(unittest.TestCase):
 
         m.plot_map()
 
-        plt.close(m.figure.f)
+        plt.close(m.f)
 
     def test_add_callbacks(self):
         m = Maps(3857, layer="layername")
@@ -243,7 +243,7 @@ class TestBasicPlotting(unittest.TestCase):
             m.cb.keypress.remove(cbID)
             self.assertTrue(len(m.cb.keypress.get.attached_callbacks) == 0)
 
-        plt.close(m.figure.f)
+        plt.close(m.f)
 
     def test_add_annotate(self):
         m = Maps()
@@ -263,7 +263,7 @@ class TestBasicPlotting(unittest.TestCase):
             xy=(m.data.x[0], m.data.y[0]), xy_crs=3857, fontsize=15, text="adsf"
         )
 
-        plt.close(m.figure.f)
+        plt.close(m.f)
 
     def test_add_marker(self):
         crs = Maps.CRS.Orthographic(central_latitude=45, central_longitude=45)
@@ -351,7 +351,7 @@ class TestBasicPlotting(unittest.TestCase):
                 1232, facecolor="none", edgecolor="r", radius="pixel", shape=shape, lw=2
             )
 
-        plt.close(m.figure.f)
+        plt.close(m.f)
 
     def test_copy(self):
         m = Maps(3857)
@@ -380,7 +380,7 @@ class TestBasicPlotting(unittest.TestCase):
         self.assertTrue(m3.data.equals(m.data))
 
         m3.plot_map()
-        plt.close(m3.figure.f)
+        plt.close(m3.f)
 
     def test_copy_connect(self):
         m = Maps(3857)
@@ -391,7 +391,7 @@ class TestBasicPlotting(unittest.TestCase):
         m.plot_map()
 
         # plot on the same axes
-        m2 = m.copy(parent=m, data_specs=True, gs_ax=m.figure.ax)
+        m2 = m.copy(parent=m, data_specs=True, ax=m.ax)
         m2.set_shape.ellipses()
         m2.plot_map(facecolor="none", edgecolor="r")
 
@@ -419,7 +419,7 @@ class TestBasicPlotting(unittest.TestCase):
 
         mg.join_limits()
 
-        mg.m_0_0.figure.ax.set_extent((-20, 20, 60, 80))
+        mg.m_0_0.ax.set_extent((-20, 20, 60, 80))
 
         plt.close("all")
 
@@ -446,7 +446,7 @@ class TestBasicPlotting(unittest.TestCase):
     def test_add_colorbar(self):
         gs = GridSpec(2, 2)
 
-        m = Maps(gs_ax=gs[0, 0])
+        m = Maps(ax=gs[0, 0])
         m.set_data_specs(data=self.data, x="x", y="y", in_crs=3857)
         m.plot_map()
         cb1 = m.add_colorbar(
@@ -600,7 +600,7 @@ class TestBasicPlotting(unittest.TestCase):
         c1 = m.add_compass((0.1, 0.1))
         c2 = m.add_compass((0.9, 0.9))
 
-        cv = m.figure.f.canvas
+        cv = m.f.canvas
 
         # click on compass to move it around
         cv.button_press_event(*m.ax.transAxes.transform((0.1, 0.1)), 1, False)
@@ -667,11 +667,11 @@ class TestBasicPlotting(unittest.TestCase):
         )
 
         # ----------------- TEST interactivity
-        cv = m.figure.f.canvas
-        x, y = m.figure.ax.transData.transform(s3.get_position()[:2])
+        cv = m.f.canvas
+        x, y = m.ax.transData.transform(s3.get_position()[:2])
         x1, y1 = (
-            (m.figure.f.bbox.x0 + m.figure.f.bbox.x1) / 2,
-            (m.figure.f.bbox.y0 + m.figure.f.bbox.y1) / 2,
+            (m.f.bbox.x0 + m.f.bbox.x1) / 2,
+            (m.f.bbox.y0 + m.f.bbox.y1) / 2,
         )
 
         # click on scalebar
@@ -714,6 +714,47 @@ class TestBasicPlotting(unittest.TestCase):
         bbox = list(map(float, resp["boundingbox"]))
 
         self.assertTrue(np.allclose([e[2], e[3], e[0], e[1]], bbox, atol=0.1))
+
+    def test_adding_maps_to_existing_figures(self):
+        # use existing axes
+        f = plt.figure()
+        ax = f.add_subplot(projection=Maps.CRS.PlateCarree())
+        m = Maps(ax=ax)
+        m.add_feature.preset.coastline()
+
+        # absolute positioning
+        f = plt.figure()
+        m1 = Maps(f=f, ax=(0.4, 0.4, 0.5, 0.5))
+        m2 = Maps(f=f, ax=(0.05, 0.05, 0.4, 0.4))
+        m1.add_feature.preset.coastline()
+        m2.add_feature.preset.coastline()
+        plt.close(f)
+
+        # grid positioning
+        f, ax = plt.subplots()
+        m = Maps(f=f, ax=211)
+        m.add_feature.preset.coastline()
+        plt.close(f)
+
+        f, ax = plt.subplots()
+        m = Maps(f=f, ax=(2, 1, 1))
+        m.add_feature.preset.coastline()
+        plt.close(f)
+
+        gs = GridSpec(2, 2)
+        f, ax = plt.subplots()
+        m = Maps(f=f, ax=gs[1, 1])
+        m.add_feature.preset.coastline()
+        plt.close(f)
+
+        f = plt.figure()
+        ax = f.add_subplot(221)
+        ax2 = f.add_subplot(222)
+        m1 = Maps(f=f, ax=223)
+        m2 = Maps(f=f, ax=224)
+
+        m1.add_feature.preset.coastline()
+        m2.add_feature.preset.coastline()
 
     def test_a_complex_figure(self):
         # %%
@@ -806,7 +847,7 @@ class TestBasicPlotting(unittest.TestCase):
 
         m.subplots_adjust(left=0.05, top=0.95, bottom=0.05, right=0.95)
         # %%
-        plt.close(m.figure.f)
+        plt.close(m.f)
 
     def test_alternative_inputs(self):
         lon, lat = np.mgrid[20:40, 20:50]

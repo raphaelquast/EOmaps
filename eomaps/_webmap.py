@@ -146,8 +146,8 @@ class _WebMap_layer:
                 print("EOmaps: The WebMap for the legend is not yet added to the map!")
                 self._layer = self._m.BM._bg_layer
 
-            axpos = self._m.figure.ax.get_position()
-            legax = self._m.figure.f.add_axes((axpos.x0, axpos.y0, 0.25, 0.5))
+            axpos = self._m.ax.get_position()
+            legax = self._m.f.add_axes((axpos.x0, axpos.y0, 0.25, 0.5))
 
             legax.patch.set_visible(False)
             legax.tick_params(
@@ -169,9 +169,9 @@ class _WebMap_layer:
 
                 # only execute action if no toolbar action is active
                 if (
-                    hasattr(self._m.figure.f.canvas, "toolbar")
-                    and self._m.figure.f.canvas.toolbar is not None
-                    and self._m.figure.f.canvas.toolbar.mode != ""
+                    hasattr(self._m.f.canvas, "toolbar")
+                    and self._m.f.canvas.toolbar is not None
+                    and self._m.f.canvas.toolbar.mode != ""
                 ):
                     return
 
@@ -186,7 +186,7 @@ class _WebMap_layer:
                     legax.bbox.height,
                 )
 
-                bbox = bbox.transformed(self._m.figure.f.transFigure.inverted())
+                bbox = bbox.transformed(self._m.f.transFigure.inverted())
                 legax.set_position(bbox)
 
             def cb_release(event):
@@ -221,10 +221,10 @@ class _WebMap_layer:
 
                 self._m.BM.update()
 
-            self._m.figure.f.canvas.mpl_connect("scroll_event", cb_scroll)
-            self._m.figure.f.canvas.mpl_connect("button_press_event", cb_pick)
-            self._m.figure.f.canvas.mpl_connect("button_release_event", cb_release)
-            self._m.figure.f.canvas.mpl_connect("motion_notify_event", cb_move)
+            self._m.f.canvas.mpl_connect("scroll_event", cb_scroll)
+            self._m.f.canvas.mpl_connect("button_press_event", cb_pick)
+            self._m.f.canvas.mpl_connect("button_release_event", cb_release)
+            self._m.f.canvas.mpl_connect("motion_notify_event", cb_move)
 
             self._m.parent._wms_legend.setdefault(self._layer, list()).append(legax)
 
@@ -296,8 +296,8 @@ class _WebMap_layer:
 
         (x0, x1), (y0, y1) = transformer.transform((x0, x1), (y0, y1))
 
-        self._m.figure.ax.set_xlim(x0, x1)
-        self._m.figure.ax.set_ylim(y0, y1)
+        self._m.ax.set_xlim(x0, x1)
+        self._m.ax.set_ylim(y0, y1)
 
     def _set_style(self, style=None):
         # style is a list with 1 entry!
@@ -1164,6 +1164,7 @@ class SlippyImageArtist_NEW(AxesImage):
 
         ax.callbacks.connect("xlim_changed", self.on_xlim)
         self._prev_extent = (0, 0)
+        self._prev_size = (ax.bbox.width, ax.bbox.height)
 
     def on_xlim(self, *args, **kwargs):
         self.stale = True
@@ -1181,7 +1182,16 @@ class SlippyImageArtist_NEW(AxesImage):
             window_extent = ax.get_window_extent()
             [x1, y1], [x2, y2] = ax.viewLim.get_points()
 
-            if self._prev_extent != (x1, x2, y1, y2) or len(self.cache) == 0:
+            # only fetch images if one of the following is true:
+            # - the map extent changed
+            # - the size of the axis changed
+            # - the cache is empty
+
+            if (
+                self._prev_extent != (x1, x2, y1, y2)
+                or self._prev_size != (ax.bbox.width, ax.bbox.height)
+                or len(self.cache) == 0
+            ):
                 # only re-fetch tiles if the extent has changed
                 located_images = self.raster_source.fetch_raster(
                     ax.projection,
@@ -1190,17 +1200,19 @@ class SlippyImageArtist_NEW(AxesImage):
                 )
                 self.cache = located_images
                 self._prev_extent = (x1, x2, y1, y2)
+                self._prev_size = (ax.bbox.width, ax.bbox.height)
 
             for img, extent in self.cache:
                 self.set_array(img)
                 with ax.hold_limits():
                     self.set_extent(extent)
-                super().draw(renderer, *args, **kwargs)
+
+            super().draw(renderer, *args, **kwargs)
 
             self.stale = False
+
         except Exception:
             print("EOmaps: ... could not fetch WebMap service")
-
             if self in self.axes._mouseover_set:
                 self.axes._mouseover_set.remove(self)
 

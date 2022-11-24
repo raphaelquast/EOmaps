@@ -33,7 +33,7 @@ class TestCallbacks(unittest.TestCase):
             m.set_data(self.lon + self.lat, x=self.lon, y=self.lat)
 
         m.plot_map()
-        m.figure.f.canvas.draw()
+        m.f.canvas.draw()
 
         return m
 
@@ -41,15 +41,15 @@ class TestCallbacks(unittest.TestCase):
         return
 
     def click_ax_center(self, m, dx=0, dy=0, release=True):
-        ax = m.figure.ax
-        cv = m.figure.f.canvas
+        ax = m.ax
+        cv = m.f.canvas
         x, y = (ax.bbox.x0 + ax.bbox.x1) / 2, (ax.bbox.y0 + ax.bbox.y1) / 2
         cv.button_press_event(x + dx, y + dy, 1, False)
         if release:
             cv.button_release_event(x + dx, y + dy, 1, False)
 
     def click_ID(self, m, ID, release=True):
-        cv = m.figure.f.canvas
+        cv = m.f.canvas
         x, y = m.ax.transData.transform((self.data.lon[ID], self.data.lat[ID]))
         cv.button_press_event(x, y, 1, False)
         if release:
@@ -304,8 +304,8 @@ class TestCallbacks(unittest.TestCase):
     def test_clear_annotations(self):
         # ---------- test as CLICK callback
         m = self.create_basic_map()
-
-        m.add_annotation(xy=(20, 20))
+        m.cb.click.attach.annotate(permanent=True)
+        self.click_ax_center(m)
         self.assertTrue(len(m.cb.click.get.permanent_annotations) == 1)
 
         cid = m.cb.click.attach.clear_annotations()
@@ -319,8 +319,8 @@ class TestCallbacks(unittest.TestCase):
     def test_clear_markers(self):
         # ---------- test as CLICK callback
         m = self.create_basic_map()
-
-        m.add_marker(xy=(20, 20))
+        m.cb.click.attach.mark(permanent=True)
+        self.click_ax_center(m)
         self.assertTrue(len(m.cb.click.get.permanent_markers) == 1)
 
         cid = m.cb.click.attach.clear_markers()
@@ -383,19 +383,35 @@ class TestCallbacks(unittest.TestCase):
 
         m2.plot_map(layer=2, cmap="Reds")
 
-        cid0 = m.cb.keypress.attach.switch_layer(layer=0, key="0")
-        cid1 = m.cb.keypress.attach.switch_layer(layer=2, key="2")
+        cid0 = m.all.cb.keypress.attach.switch_layer(layer="base", key="0")
+        cid1 = m.all.cb.keypress.attach.switch_layer(layer="2", key="2")
 
-        m.figure.f.canvas.key_press_event("2")
-        m.figure.f.canvas.key_release_event("2")
-        m.BM._bg_layer == 2
+        # a callback only active on the "base" layer
+        cid3 = m.cb.keypress.attach.switch_layer(layer="3", key="3")
 
-        m.figure.f.canvas.key_press_event("0")
-        m.figure.f.canvas.key_release_event("0")
-        m.BM._bg_layer == 0
+        # switch to layer 2
+        m.f.canvas.key_press_event("2")
+        m.f.canvas.key_release_event("2")
+        self.assertTrue(m.BM._bg_layer == "2")
 
-        m.cb.keypress.remove(cid0)
-        m.cb.keypress.remove(cid1)
+        # the 3rd callback should not trigger
+        m.f.canvas.key_press_event("3")
+        m.f.canvas.key_release_event("3")
+        self.assertTrue(m.BM._bg_layer == "2")
+
+        # switch to the "base" layer
+        m.f.canvas.key_press_event("0")
+        m.f.canvas.key_release_event("0")
+        self.assertTrue(m.BM._bg_layer == "base")
+
+        # now the 3rd callback should trigger
+        m.f.canvas.key_press_event("3")
+        m.f.canvas.key_release_event("3")
+        self.assertTrue(m.BM._bg_layer == "3")
+
+        m.all.cb.keypress.remove(cid0)
+        m.all.cb.keypress.remove(cid1)
+        m.cb.keypress.remove(cid3)
         plt.close("all")
 
     def test_make_dataset_pickable(self):
@@ -420,3 +436,21 @@ class TestCallbacks(unittest.TestCase):
         self.assertEqual(len(m2.cb.pick.get.picked_vals["ID"]), 1)
         self.assertEqual(len(m2.cb.pick.get.picked_vals["val"]), 1)
         self.assertTrue(m2.cb.pick.get.picked_vals["ID"][0] == 1225)
+
+    def test_keypress_callbacks_for_any_key(self):
+        m = self.create_basic_map()
+        m.new_layer("0")
+        m.new_layer("1")
+
+        def cb(key):
+            m.show_layer(key)
+
+        m.all.cb.keypress.attach(cb, key=None)
+
+        m.f.canvas.key_press_event("0")
+        m.f.canvas.key_release_event("0")
+        self.assertTrue(m.BM._bg_layer == "0")
+
+        m.f.canvas.key_press_event("1")
+        m.f.canvas.key_release_event("1")
+        self.assertTrue(m.BM._bg_layer == "1")

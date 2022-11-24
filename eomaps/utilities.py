@@ -2,7 +2,7 @@ from matplotlib.legend import DraggableLegend
 from matplotlib.lines import Line2D
 from matplotlib.widgets import Slider
 from functools import wraps
-from matplotlib.pyplot import Artist
+from matplotlib.pyplot import Artist, rcParams
 
 
 class SelectorButtons(Artist):
@@ -231,13 +231,13 @@ class LayerSelector(SelectorButtons):
         #     len(layers) > 0
         # ), "EOmaps: There are no layers with artists available.. plot something first!"
 
-        super().__init__(m.figure.f, layers, **kwargs)
+        super().__init__(m.f, layers, **kwargs)
 
         self.set_draggable(draggable, m=m)
         self._m = m
 
         self.set_zorder(9999)  # make sure the widget is on top of other artists
-        self.figure = self._m.figure.f  # make sure the figure is set for the artist
+        self.figure = self._m.f  # make sure the figure is set for the artist
         self.set_animated(True)
 
         self._m.BM.add_artist(self.leg, layer="all")
@@ -287,7 +287,7 @@ class LayerSelector(SelectorButtons):
             if hasattr(self._draggable_box, "offsetbox_x"):
                 self._draggable_box.save_offset()
                 loc = self._draggable_box.get_loc_in_canvas()
-                loc = set(self._m.figure.f.transFigure.inverted().transform(loc))
+                loc = set(self._m.f.transFigure.inverted().transform(loc))
                 self._init_args.update(dict(loc=loc))
 
         self.remove()
@@ -371,6 +371,7 @@ class LayerSlider(Slider):
             Additional kwargs are passed to matplotlib.widgets.Slider
 
             The default is
+
             >>> dict(initcolor="none",
             >>>      handle_style=dict(facecolor=".8", edgecolor="k", size=7),
             >>>      label=None,
@@ -410,7 +411,7 @@ class LayerSlider(Slider):
         # ), "EOmaps: There are no layers with artists available.. plot something first!"
 
         if pos is None:
-            ax_slider = self._m.figure.f.add_axes(
+            ax_slider = self._m.f.add_axes(
                 [
                     self._m.ax.get_position().x0,
                     self._m.ax.get_position().y0 - 0.05,
@@ -419,7 +420,7 @@ class LayerSlider(Slider):
                 ]
             )
         else:
-            ax_slider = self._m.figure.f.add_axes(pos)
+            ax_slider = self._m.f.add_axes(pos)
 
         kwargs.setdefault("color", ".2")  # remove start-position marker
         kwargs.setdefault("track_color", ".8")  # remove start-position marker
@@ -433,7 +434,7 @@ class LayerSlider(Slider):
 
         self.drawon = False
 
-        self._labels = layers
+        self._layers = layers
 
         # add some background-patch style for the text
         if txt_patch_props is not None:
@@ -472,6 +473,11 @@ class LayerSlider(Slider):
         self._init_args["name"] = name
         self._m.util._sliders[name] = self
 
+    def set_layers(self, layers):
+        self._layers = layers
+        self._m.util._update_widgets()
+        self._m.BM.update()
+
     def _reinit(self):
         """
         re-initialize the widget (to update layers etc.)
@@ -492,7 +498,7 @@ class LayerSlider(Slider):
         if self._m.parent._layout_editor._modifier_pressed:
             return
 
-        l = self._labels[int(val)]
+        l = self._layers[int(val)]
         self._m.BM.bg_layer = l
 
     def remove(self):
@@ -533,14 +539,17 @@ class utilities:
         for s in self._sliders.values():
             try:
                 s.eventson = False
-                s.set_val(s._labels.index(l))
+                s.set_val(s._layers.index(l))
                 s.valtext.set_text(l)
+                s.valtext.set_color(rcParams["text.color"])
                 s.eventson = True
             except ValueError:
-                s.valtext.set_text("")
+                s.valtext.set_text(self._m.BM._bg_layer)
+                s.valtext.set_color("r")
                 pass
             except IndexError:
-                s.valtext.set_text("")
+                s.valtext.set_text(self._m.BM._bg_layer)
+                s.valtext.set_color("r")
                 pass
             finally:
                 s.eventson = True

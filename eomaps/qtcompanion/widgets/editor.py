@@ -1,5 +1,5 @@
 from PyQt5 import QtCore, QtWidgets, QtGui
-from PyQt5.QtCore import Qt, pyqtSignal, pyqtSlot
+from PyQt5.QtCore import Qt, pyqtSignal, pyqtSlot, QSize
 
 from matplotlib.colors import to_rgba_array
 
@@ -383,7 +383,8 @@ class NewLayerWidget(QtWidgets.QFrame):
 
     @pyqtSlot()
     def new_layer(self):
-        layer = self.new_layer_name.text()
+        # use .strip() to make sure the layer does not start or end with whitespaces
+        layer = self.new_layer_name.text().strip()
         if len(layer) == 0:
             QtWidgets.QToolTip.showText(
                 self.mapToGlobal(self.new_layer_name.pos()),
@@ -483,6 +484,29 @@ class OptionTabs(QtWidgets.QTabWidget):
             )
 
 
+# make sure tabs are never larger than 150px
+class TabBar(QtWidgets.QTabBar):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        # remove strange line on top of tabs
+        # (see https://stackoverflow.com/a/33941638/9703451)
+        self.setStyleSheet(
+            " QTabBar { "
+            "qproperty-drawBase: 0; "
+            "}"
+            " QTabBar::tab { "
+            "padding-left: 0px; "
+            "}"
+        )
+
+        self.setElideMode(Qt.ElideRight)
+
+    def tabSizeHint(self, index):
+        size = QtWidgets.QTabBar.tabSizeHint(self, index)
+        return QSize(min(size.width(), 150), size.height())
+
+
 class ArtistEditor(QtWidgets.QWidget):
     def __init__(self, m=None):
 
@@ -492,6 +516,10 @@ class ArtistEditor(QtWidgets.QWidget):
         self._hidden_artists = dict()
 
         self.tabs = LayerArtistTabs()
+        self.tabs.setTabBar(TabBar())
+        self.tabs.setMovable(True)
+        self.tabs.setUsesScrollButtons(True)
+
         self.option_tabs = OptionTabs()
 
         self.newlayer = NewLayerWidget(m=self.m)
@@ -596,6 +624,7 @@ class ArtistEditor(QtWidgets.QWidget):
         for m in list(self.m._children):
             if layer == m.layer:
                 m.cleanup()
+                m.BM._bg_layers.pop(layer, None)
 
         if self.m.BM._bg_layer == layer:
             try:
@@ -679,7 +708,6 @@ class ArtistEditor(QtWidgets.QWidget):
         b_sh.clicked.connect(self.show_hide(artist=a, layer=layer))
 
         # zorder
-        l_z = QtWidgets.QLabel("zoder:")
         b_z = ZorderInput()
         b_z.setMinimumWidth(25)
         b_z.setMaximumWidth(25)
@@ -691,7 +719,6 @@ class ArtistEditor(QtWidgets.QWidget):
         # alpha
         alpha = a.get_alpha()
         if alpha is not None:
-            l_a = QtWidgets.QLabel("alpha:")
             b_a = AlphaInput()
 
             b_a.setMinimumWidth(25)
@@ -704,7 +731,7 @@ class ArtistEditor(QtWidgets.QWidget):
             b_a.setText(str(alpha))
             b_a.returnPressed.connect(self.set_alpha(artist=a, layer=layer, widget=b_a))
         else:
-            l_a, b_a = None, None
+            b_a = None
 
         # linewidth
         try:
@@ -715,7 +742,6 @@ class ArtistEditor(QtWidgets.QWidget):
                 lw = lw[0]
 
             if lw is not None:
-                l_lw = QtWidgets.QLabel("linewidth:")
                 b_lw = LineWidthInput()
 
                 b_lw.setMinimumWidth(25)
@@ -729,9 +755,9 @@ class ArtistEditor(QtWidgets.QWidget):
                     self.set_linewidth(artist=a, layer=layer, widget=b_lw)
                 )
             else:
-                l_lw, b_lw = None, None
+                b_lw = None
         except Exception:
-            l_lw, b_lw = None, None
+            b_lw = None
 
         # color
         try:
@@ -795,9 +821,9 @@ class ArtistEditor(QtWidgets.QWidget):
             layout.append((b_a, 5))  # alpha
 
         if b_cmap is not None:
-            layout.append((b_cmap, 5))  # cmap
+            layout.append((b_cmap, 6))  # cmap
 
-        layout.append((b_r, 6))  # remove
+        layout.append((b_r, 7))  # remove
 
         return layout
 
@@ -857,6 +883,7 @@ class ArtistEditor(QtWidgets.QWidget):
             scroll.setWidgetResizable(True)
 
             self.tabs.addTab(scroll, layer)
+            self.tabs.setTabToolTip(i, layer)
 
             if layer == "all" or layer == self.m.layer:
                 tabbar = self.tabs.tabBar()
@@ -907,7 +934,7 @@ class ArtistEditor(QtWidgets.QWidget):
                 self.m.show_layer(layer)
                 # TODO this is a workaround since modifier-releases are not
                 # forwarded to the canvas if it is not in focus
-                self.m.figure.f.canvas.key_release_event("control")
+                self.m.f.canvas.key_release_event("control")
 
         elif modifiers == Qt.ShiftModifier:
             # The all layer should not be combined with other layers...
@@ -932,7 +959,7 @@ class ArtistEditor(QtWidgets.QWidget):
                 self.m.show_layer(layer)
             # TODO this is a workaround since modifier-releases are not
             # forwarded to the canvas if it is not in focus
-            self.m.figure.f.canvas.key_release_event("shift")
+            self.m.f.canvas.key_release_event("shift")
 
     def set_color(self, artist, layer, colorwidget):
         def cb():

@@ -210,8 +210,8 @@ class AddAnnotationInput(QtWidgets.QWidget):
 
     def add_annotation(self, text):
         self.window().hide()
-        self.m.figure.f.canvas.show()
-        self.m.figure.f.canvas.activateWindow()
+        self.m.f.canvas.show()
+        self.m.f.canvas.activateWindow()
 
         def cb(pos, **kwargs):
             if len(self.cb_cids) > 0:

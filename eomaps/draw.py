@@ -142,10 +142,10 @@ class ShapeDrawer:
             return
 
         while len(active_drawer._cids) > 0:
-            active_drawer._m.figure.f.canvas.mpl_disconnect(active_drawer._cids.pop())
+            active_drawer._m.f.canvas.mpl_disconnect(active_drawer._cids.pop())
 
         # Cleanup.
-        if plt.fignum_exists(active_drawer._m.figure.f.number):
+        if plt.fignum_exists(active_drawer._m.f.number):
             while len(active_drawer._marks) > 0:
                 a = active_drawer._marks.pop()
                 active_drawer._m.BM.remove_artist(a)

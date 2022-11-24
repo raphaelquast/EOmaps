@@ -366,10 +366,28 @@ class PeekLayerWidget(QtWidgets.QWidget):
             self.cid = None
 
 
+# make sure tabs are never larger than 150px
+class TabBar(QtWidgets.QTabBar):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        # remove strange line on top of tabs
+        # (see https://stackoverflow.com/a/33941638/9703451)
+        self.setStyleSheet(" QTabBar { qproperty-drawBase: 0; }")
+
+        self.setElideMode(Qt.ElideRight)
+
+    def tabSizeHint(self, index):
+        size = QtWidgets.QTabBar.tabSizeHint(self, index)
+        return QSize(min(size.width(), 150), size.height())
+
+
 class PeekTabs(QtWidgets.QTabWidget):
     def __init__(self, *args, m=None, **kwargs):
         super().__init__(*args, **kwargs)
         self.m = m
+
+        self.setTabBar(TabBar())
 
         self.setTabsClosable(True)
         self.tabCloseRequested.connect(self.close_handler)
@@ -399,6 +417,11 @@ class PeekTabs(QtWidgets.QTabWidget):
 
         self.tabBarClicked.connect(self.tabbar_clicked)
         self.setCurrentIndex(0)
+
+    def setTabText(self, index, tip):
+        # set ToolTip as well wenn setting the TabText
+        super().setTabText(index, tip)
+        self.setTabToolTip(index, tip)
 
     def enterEvent(self, e):
         if self.window().showhelp is True:
@@ -447,9 +470,8 @@ class PeekTabs(QtWidgets.QTabWidget):
             if mod != "":
                 txt += f"[{mod}] "
 
-            self.setTabText(
-                self.indexOf(w),
-                txt + (w.current_layer if w.current_layer is not None else ""),
-            )
+            tabtext = txt + (w.current_layer if w.current_layer is not None else "")
+
+            self.setTabText(self.indexOf(w), tabtext)
 
         return settxt

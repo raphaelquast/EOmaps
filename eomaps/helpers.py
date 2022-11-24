@@ -7,9 +7,35 @@ import numpy as np
 from matplotlib.colors import LinearSegmentedColormap, ListedColormap
 from collections import defaultdict
 from itertools import chain
-from matplotlib.transforms import Bbox
+from matplotlib.transforms import Bbox, TransformedBbox
 import matplotlib.pyplot as plt
 from matplotlib.lines import Line2D
+
+
+# class copied from matplotlib.axes
+class _TransformedBoundsLocator:
+    """
+    Axes locator for `.Axes.inset_axes` and similarly positioned Axes.
+    The locator is a callable object used in `.Axes.set_aspect` to compute the
+    Axes location depending on the renderer.
+    """
+
+    def __init__(self, bounds, transform):
+        """
+        *bounds* (a ``[l, b, w, h]`` rectangle) and *transform* together
+        specify the position of the inset Axes.
+        """
+        self._bounds = bounds
+        self._transform = transform
+
+    def __call__(self, ax, renderer):
+        # Subtracting transSubfigure will typically rely on inverted(),
+        # freezing the transform; thus, this needs to be delayed until draw
+        # time as transSubfigure may otherwise change after this is evaluated.
+        return TransformedBbox(
+            Bbox.from_bounds(*self._bounds),
+            self._transform - ax.figure.transSubfigure,
+        )
 
 
 def pairwise(iterable, pairs=2):
@@ -184,7 +210,7 @@ class searchtree:
                         permanent=False,
                         text=text,
                         xytext=(0.98, 0.98),
-                        textcoords=self._m.figure.f.transFigure,
+                        textcoords=self._m.f.transFigure,
                         horizontalalignment="right",
                         verticalalignment="top",
                         arrowprops=None,
@@ -205,7 +231,7 @@ class LayoutEditor:
         self.cb_modifier = cb_modifier
 
         self.m = m
-        self.f = self.m.parent.figure.f
+        self.f = self.m.parent.f
 
         self._ax_picked = []
         self._m_picked = []
@@ -242,7 +268,7 @@ class LayoutEditor:
 
     @property
     def maxes(self):
-        return [m.figure.ax for m in self.ms]
+        return [m.ax for m in self.ms]
 
     @property
     def cbaxes(self):
@@ -646,7 +672,7 @@ class LayoutEditor:
 
     def _undo_draggable(self):
 
-        toolbar = getattr(self.m.figure.f, "toolbar", None)
+        toolbar = getattr(self.m.f, "toolbar", None)
         if toolbar is not None:
             # Reset the axes stack to make sure the "home" "back" and "forward" buttons
             # of the toolbar do not reset axis positions
@@ -751,9 +777,7 @@ class LayoutEditor:
         #         a.set_visible(False)
 
         dyn_artists = list(chain(*self.m.BM._artists.values()))
-        for a in set(
-            [*self.m.figure.f.artists, *chain(*self.m.BM._bg_artists.values())]
-        ):
+        for a in set([*self.m.f.artists, *chain(*self.m.BM._bg_artists.values())]):
             if a in dyn_artists:
                 continue
             if not isinstance(a, plt.Axes):
@@ -848,8 +872,8 @@ class LayoutEditor:
 
         self._remove_snap_grid()
 
-        bbox = self.m.figure.f.bbox
-        t = self.m.figure.f.transFigure.inverted()
+        bbox = self.m.f.bbox
+        t = self.m.f.transFigure.inverted()
 
         gx, gy = np.mgrid[
             0 : int(bbox.width) + int(snapx) : snapx,
@@ -865,7 +889,7 @@ class LayoutEditor:
             markeredgecolor="none",
             ms=(snapx + snapy) / 6,
         )
-        self._snap_grid_artist = self.m.figure.f.add_artist(l)
+        self._snap_grid_artist = self.m.f.add_artist(l)
 
         self.f.draw_artist(self._snap_grid_artist)
         self.f.canvas.blit()
@@ -935,7 +959,7 @@ class BlitManager:
 
     @property
     def figure(self):
-        return self._m.figure.f
+        return self._m.f
 
     @property
     def canvas(self):
@@ -1558,87 +1582,5 @@ class BlitManager:
                 argb[int(y0) : int(y0 + h), int(x0) : int(x0 + w), :],
             )
             gc.restore()
-
-            # # alternative (intransparent) version
-            # self.canvas.restore_region(
-            #     self._bg_layers[name],
-            #     bbox=(
-            #         x0,
-            #         self.figure.bbox.height - y0 - h,
-            #         x0 + w,
-            #         self.figure.bbox.height - y0,
-            #     ),
-            #     xy=(0, 0),
-            # )
-
-        return action
-
-    def _get_overlay_bg_action(self, layer, bbox_bounds=None, alpha=1):
-        """
-        Overlay a part of the screen with a different background
-        (intended as after-restore action)
-
-        bbox_bounds = (x, y, width, height)
-        """
-
-        if not isinstance(layer, (list, tuple)):
-            layer = [layer]
-
-        if bbox_bounds is None:
-            bbox_bounds = self.figure.bbox.bounds
-
-        if not hasattr(self, "_last_overlay_layer"):
-            self._last_overlay_layer = ""
-
-        def action():
-            name = self._get_overlay_name(layer, bg_layer=self.bg_layer)
-
-            if self.bg_layer == layer:
-                return
-
-            x0, y0, w, h = bbox_bounds
-
-            initial_layer = self.bg_layer
-            if name not in self._bg_layers:
-                # fetch the required background layer (assigned as <name>)
-                self.fetch_bg(initial_layer, overlay=(name, layer))
-                self._m.show_layer(initial_layer)
-
-            # restore the region of interest
-            if name in self._bg_layers:
-
-                # convert the buffer to rgba to add transparency
-                buffer = self._bg_layers[name]
-
-                x = buffer.get_extents()
-                ncols, nrows = x[2] - x[0], x[3] - x[1]
-
-                argb = (
-                    np.frombuffer(buffer, dtype=np.uint8)
-                    .reshape((nrows, ncols, 4))
-                    .copy()
-                )
-                argb = argb[::-1, :, :]
-
-                argb[:, :, -1] = int(255 * alpha)  # argb[:,:, -1] // 2
-
-                gc = self.canvas.renderer.new_gc()
-                gc.set_clip_rectangle(self.canvas.figure.bbox)
-                self.canvas.renderer.draw_image(
-                    gc, x0, y0, argb[int(y0) : int(y0 + h), int(x0) : int(x0 + w), :]
-                )
-                gc.restore()
-
-                # # alternative (intransparent) version
-                # self.canvas.restore_region(
-                #     self._bg_layers[name],
-                #     bbox=(
-                #         x0,
-                #         self.figure.bbox.height - y0 - h,
-                #         x0 + w,
-                #         self.figure.bbox.height - y0,
-                #     ),
-                #     xy=(0, 0),
-                # )
 
         return action

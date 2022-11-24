@@ -97,22 +97,24 @@ class _click_callbacks(object):
             ylabel = "y"
 
         if ID is not None:
-            printstr = ""
-            x, y = [np.format_float_positional(i, trim="-", precision=4) for i in pos]
+            printstr = "---------------\n"
+            x, y = pos
             printstr += f"{xlabel} = {x}\n{ylabel} = {y}\n"
             printstr += f"ID = {ID}\n"
 
-            if isinstance(val, (int, float)):
-                val = np.format_float_positional(val, trim="-", precision=4)
-            printstr += f"{self.m.data_specs.parameter} = {val}"
+            paramname = self.m.data_specs.parameter
+            if paramname is None:
+                paramname = "val"
+            printstr += f"{paramname} = {val}"
         else:
             lon, lat = self.m._transf_plot_to_lonlat.transform(*pos)
 
             printstr = (
+                "---------------\n"
                 f"x = {pos[0]}\n"
-                + f"y = {pos[1]}\n"
-                + f"lon = {lon}\n"
-                + f"lat = {lat}"
+                f"y = {pos[1]}\n"
+                f"lon = {lon}\n"
+                f"lat = {lat}"
             )
 
         print(printstr)
@@ -123,16 +125,13 @@ class _click_callbacks(object):
         val_precision=4,
         permanent=False,
         text=None,
-        zorder=10,
+        zorder=20,
         layer=None,
         **kwargs,
     ):
         """
         Add a basic text-annotation to the plot at the position where the map
         was clicked.
-
-        If permanent = True, the generated annotations are stored in a list
-        which is accessible via `m.cb.[click/pick].get.permanent_annotations`
 
         Parameters
         ----------
@@ -142,9 +141,16 @@ class _click_callbacks(object):
         val_precision : int
             The floating-point precision of the parameter-values (only used if
             "val_fmt=None"). The default is 4.
-        permanent : bool
-            Indicator if the annotation should be temporary (False) or
-            permanent (True). The default is False
+        permanent : bool or None
+            Indicator if the annotation should be temporary (False) or permanent (True).
+
+            If True, the generated annotations are stored in a list
+            which is accessible via `m.cb.[click/pick].get.permanent_annotations`
+
+            If None, the artists will be permanent but NOT added to the
+            `permanent_annotations` list!
+
+            The default is False
         text : callable or str, optional
             if str: the string to print
             if callable: A function that returns the string that should be
@@ -165,11 +171,12 @@ class _click_callbacks(object):
             For details, have a look at:
 
             - https://matplotlib.org/stable/gallery/misc/zorder_demo.html
+
+            The default is 20
         layer : str or None, optional
             The layer to put the marker on.
             If None, the layer associated with the used Maps-object (e.g. `m.layer`)
             The default is None
-
         kwargs
             kwargs passed to matplotlib.pyplot.annotate(). The default is:
 
@@ -200,7 +207,7 @@ class _click_callbacks(object):
         else:
             parameter = self.m.data_specs.parameter
 
-        ax = self.m.figure.ax
+        ax = self.m.ax
 
         if text is None:
             if ID is not None and self.m.data is not None:
@@ -260,17 +267,18 @@ class _click_callbacks(object):
             annotation = ax.annotate("", xy=pos, **styledict)
             annotation.set_zorder(zorder)
 
-            if not permanent:
+            if permanent is False:
                 # make the annotation temporary
                 self._temporary_artists.append(annotation)
                 self.m.BM.add_artist(annotation, layer=layer)
             else:
                 self.m.BM.add_artist(annotation, layer=layer)
 
-                if not hasattr(self, "permanent_annotations"):
-                    self.permanent_annotations = [annotation]
-                else:
-                    self.permanent_annotations.append(annotation)
+                if permanent is True:
+                    if not hasattr(self, "permanent_annotations"):
+                        self.permanent_annotations = [annotation]
+                    else:
+                        self.permanent_annotations.append(annotation)
 
             annotation.set_visible(True)
             annotation.xy = pos
@@ -286,8 +294,8 @@ class _click_callbacks(object):
                 self.m.BM.remove_artist(ann)
                 ann.remove()
 
-    def _annotate_cleanup(self):
-        self.clear_annotations()
+    # def _annotate_cleanup(self):
+    #     self.clear_annotations()
 
     def get_values(self, **kwargs):
         """
@@ -370,9 +378,16 @@ class _click_callbacks(object):
             if possible and else "ellipses".
         buffer : float, optional
             A factor to scale the size of the shape. The default is 1.
-        permanent : bool, optional
-            Indicator if the shapes should be permanent (True) or removed
-            on each new double-click (False).
+        permanent : bool or None
+            Indicator if the markers should be temporary (False) or permanent (True).
+
+            If True, the generated markers are stored in a list
+            which is accessible via `m.cb.[click/pick].get.permanent_markers`
+
+            If None, the artists will be permanent but NOT added to the
+            `permanent_markers` list!
+
+            The default is False
         n : int
             The number of points to calculate for the shape.
             The default is 20.
@@ -382,6 +397,7 @@ class _click_callbacks(object):
 
             - https://matplotlib.org/stable/gallery/misc/zorder_demo.html
 
+            The default is 10
         layer : str or None, optional
             The layer to put the marker on.
             If None, the layer associated with the used Maps-object (e.g. `m.layer`)
@@ -413,13 +429,11 @@ class _click_callbacks(object):
                 radius_crs = "in"
 
         if radius is None:
-            if self.m.figure.coll is not None:
+            if self.m.coll is not None:
                 radius = "pixel"
             else:
                 # make a dot with 1/20 of the width & height of the figure
-                t = self.m.figure.ax.bbox.transformed(
-                    self.m.figure.ax.transData.inverted()
-                )
+                t = self.m.ax.bbox.transformed(self.m.ax.transData.inverted())
                 radius = (t.width / 10.0, t.height / 10.0)
 
         ID, pos, val, ind, picker_name = self._popargs(kwargs)
@@ -483,27 +497,30 @@ class _click_callbacks(object):
             )
         else:
             raise TypeError(f"EOmaps: '{shape}' is not a valid marker-shape")
-        x, y = np.atleast_1d(pos[0]), np.atleast_1d(pos[1])
+
         coll = shp.get_coll(
             np.atleast_1d(pos[0]), np.atleast_1d(pos[1]), pos_crs, **kwargs
         )
 
-        if permanent is True and not hasattr(self, "permanent_markers"):
-            self.permanent_markers = []
-
-        marker = self.m.figure.ax.add_collection(coll)
+        marker = self.m.ax.add_collection(coll)
 
         marker.set_zorder(zorder)
 
         if layer is None:
             layer = self.m.layer
 
-        if permanent is True:
-            self.permanent_markers.append(marker)
-            self.m.BM.add_artist(marker, layer)
-        else:
+        if permanent is False:
+            # make the annotation temporary
             self._temporary_artists.append(marker)
             self.m.BM.add_artist(marker, layer)
+        else:
+            self.m.BM.add_artist(marker, layer)
+
+            if permanent is True:
+                if not hasattr(self, "permanent_markers"):
+                    self.permanent_markers = [marker]
+                else:
+                    self.permanent_markers.append(marker)
 
         return marker
 
@@ -518,18 +535,21 @@ class _click_callbacks(object):
                 marker.remove()
             del self.permanent_markers
 
-    def _mark_cleanup(self):
-        self.clear_markers()
+    # def _mark_cleanup(self):
+    #     self.clear_markers()
 
-    def peek_layer(self, layer="1", how=(0.4, 0.4), overlay=False, alpha=1, **kwargs):
+    def peek_layer(self, layer="1", how=(0.4, 0.4), alpha=1, **kwargs):
         """
         Swipe between data- or WebMap layers or peek a layers through a rectangle.
 
         Parameters
         ----------
         layer : str or list
+
             - if str: The name of the layer you want to peek at.
             - if list: A list of layer-names to peek at.
+              (alternatively you can also separate individual layer-names with a "|"
+              character, e.g.: "layer1|layer2")
 
         how : str , float or tuple, optional
             The method you want to visualize the second layer.
@@ -548,10 +568,6 @@ class _click_callbacks(object):
             The transparency of the peeked layer.
             (must be between 0 and 1)
             The default is 1.
-        overlay : bool, optional
-            Indicator if only the selected layers should be shown (False) or if the
-            layers should be used as an "overlay" on top of the current layer (True).
-            The default is False.
         **kwargs :
             additional kwargs passed to a rectangle-marker.
             the default is `(fc="none", ec="k", lw=1)`
@@ -571,13 +587,23 @@ class _click_callbacks(object):
         >>> m.peek_layer(layer="the layer name")
         """
 
-        if not isinstance(layer, str):
-            print("EOmaps v5.0 Warning: All layer-names are converted to strings!")
-            layer = str(layer)
+        if "overlay" in kwargs:
+            kwargs.pop("overlay")
+            warnings.warn(
+                "EOmaps: The 'overlay' argument of peek_layer is depreciated! "
+                "(It has no effect and can be removed.)"
+            )
+
+        if isinstance(layer, list):
+            layer = "|".join(map(str, layer))
+        else:
+            if not isinstance(layer, str):
+                print("EOmaps v5.0 Warning: All layer-names are converted to strings!")
+                layer = str(layer)
 
         ID, pos, val, ind, picker_name = self._popargs(kwargs)
 
-        ax = self.m.figure.ax
+        ax = self.m.ax
 
         # default boundary args
         args = dict(fc="none", ec="k", lw=1.1)
@@ -633,20 +659,20 @@ class _click_callbacks(object):
 
         elif isinstance(how, (float, list, tuple)):
             if isinstance(how, float):
-                w0, h0 = self.m.figure.ax.transAxes.transform((0, 0))
-                w1, h1 = self.m.figure.ax.transAxes.transform((how, how))
+                w0, h0 = self.m.ax.transAxes.transform((0, 0))
+                w1, h1 = self.m.ax.transAxes.transform((how, how))
                 blitw, blith = [min(w1 - w0, h1 - h0)] * 2
 
             else:
-                w0, h0 = self.m.figure.ax.transAxes.transform((0, 0))
-                w1, h1 = self.m.figure.ax.transAxes.transform(how)
+                w0, h0 = self.m.ax.transAxes.transform((0, 0))
+                w1, h1 = self.m.ax.transAxes.transform(how)
                 blitw, blith = (w1 - w0, h1 - h0)
 
             x0, y0 = ax.transData.transform((pos[0], pos[1]))
             x0, y0 = x0 - blitw / 2, y0 - blith / 2
 
             # make sure that we don't blit outside the axis
-            bbox = self.m.figure.ax.bbox
+            bbox = self.m.ax.bbox
             x1 = x0 + blitw
             y1 = y0 + blith
             if x0 < bbox.x0:
@@ -688,26 +714,15 @@ class _click_callbacks(object):
             raise TypeError(f"EOmaps: {how} is not a valid peek method!")
 
         if marker is not None:
-
+            # make sure to clear the marker at the next update
             def doit():
-                self.m.BM._artists_to_clear["click"].append(marker)
-                self.m.BM._artists_to_clear["_click_move"].append(marker)
-                self.m.BM._artists_to_clear["on_layer_change"].append(marker)
+                self.m.BM._artists_to_clear["move"].append(marker)
 
             self.m.BM._after_restore_actions.append(doit)
 
-        if overlay:
-            self.m.BM._after_restore_actions.append(
-                self.m.BM._get_overlay_bg_action(
-                    layer, (x0, y0, blitw, blith), alpha=alpha
-                )
-            )
-        else:
-            self.m.BM._after_restore_actions.append(
-                self.m.BM._get_restore_bg_action(
-                    layer, (x0, y0, blitw, blith), alpha=alpha
-                )
-            )
+        self.m.BM._after_restore_actions.append(
+            self.m.BM._get_restore_bg_action(layer, (x0, y0, blitw, blith), alpha=alpha)
+        )
 
     def load(
         self, database=None, load_method="load_fit", load_multiple=False, **kwargs
@@ -930,7 +945,7 @@ class keypress_callbacks:
         self._temporary_artists = temp_artists
         self._m = m
 
-    def switch_layer(self, layer=1, key="x"):
+    def switch_layer(self, layer, key="x"):
         """
         Change the default layer of the map.
 
@@ -939,8 +954,9 @@ class keypress_callbacks:
 
         Parameters
         ----------
-        layer : int, optional
-            The layer to use. The default is 1.
+        layer : str
+            The layer-name to use.
+            If a non-string value is provided, it will be converted to string!
 
         Additional Parameters
         ---------------------
@@ -950,7 +966,7 @@ class keypress_callbacks:
             The default is "x".
         """
 
-        self._m.BM.bg_layer = layer
+        self._m.BM.bg_layer = str(layer)
         self._m.BM.fetch_bg()
 
     def fetch_layers(self, layers=None, verbose=True, key="x"):

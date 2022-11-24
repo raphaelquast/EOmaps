@@ -187,10 +187,11 @@ class shapes(object):
                 radius = (radiusxy, radiusxy)
 
         assert radius is not None, (
-            "EOmaps: Radius estimation failed... either there's something wrong with "
-            + "the provided coordinates or you can try to increase the number of "
-            + "datapoints used to evaluate the radius by increasing "
-            + "`m.set_shape.radius_estimation_range`."
+            "EOmaps: Radius estimation failed... maybe there's something wrong with "
+            "the provided coordinates? "
+            "You can manually specify a radius with 'm.set_shape.<SHAPE>(radius=...)' "
+            "or you can increase the number of datapoints used to estimate the radius "
+            "by increasing `m.set_shape.radius_estimation_range`."
         )
 
         return radius
@@ -201,6 +202,7 @@ class shapes(object):
 
         # special treatment of array input to properly mask values
         array = kwargs.pop("array", None)
+
         if array is not None:
             array = array[mask]
         else:
@@ -256,7 +258,7 @@ class shapes(object):
         def __init__(self, m):
             self._m = m
 
-        def __call__(self, radius=1000, n=20):
+        def __call__(self, radius=1000, n=None):
             """
             Draw geodesic circles with a radius defined in meters.
 
@@ -264,9 +266,10 @@ class shapes(object):
             ----------
             radius : float
                 The radius of the circles in meters.
-            n : int
-                The number of points to calculate on the circle.
-                The default is 20.
+            n : int or None
+                The number of intermediate points to calculate on the geodesic circle.
+                If None, 100 is used for < 10k pixels and 20 otherwise.
+                The default is None.
 
             Returns
             -------
@@ -286,6 +289,20 @@ class shapes(object):
         @property
         def _initargs(self):
             return dict(radius=self._radius, n=self.n)
+
+        @property
+        def n(self):
+            if self._n is None:
+                if self._m.data is not None:
+                    if np.size(self._m.data) < 10000:
+                        return 100
+                    else:
+                        return 20
+            return self._n
+
+        @n.setter
+        def n(self, val):
+            self._n = val
 
         @property
         def radius(self):
@@ -416,7 +433,7 @@ class shapes(object):
 
             coll = PolyCollection(
                 verts,
-                # transOffset=self._m.figure.ax.transData,
+                # transOffset=self._m.ax.transData,
                 **color_and_array,
                 **kwargs,
             )
@@ -428,8 +445,9 @@ class shapes(object):
 
         def __init__(self, m):
             self._m = m
+            self._n = None
 
-        def __call__(self, radius="estimate", radius_crs="in", n=20):
+        def __call__(self, radius="estimate", radius_crs="in", n=None):
             """
             Draw projected ellipses with dimensions defined in units of a given crs.
 
@@ -442,9 +460,10 @@ class shapes(object):
             radius_crs : crs-specification, optional
                 The crs in which the dimensions are defined.
                 The default is "in".
-            n : int
-                The number of points to calculate on the circle.
-                The default is 20.
+            n : int or None
+                The number of intermediate points to calculate on the circle.
+                If None, 100 is used for < 10k pixels and 20 otherwise.
+                The default is None.
             """
             from . import MapsGrid  # do this here to avoid circular imports!
 
@@ -460,6 +479,20 @@ class shapes(object):
         @property
         def _initargs(self):
             return dict(radius=self._radius, radius_crs=self.radius_crs, n=self.n)
+
+        @property
+        def n(self):
+            if self._n is None:
+                if self._m.data is not None:
+                    if np.size(self._m.data) < 10000:
+                        return 100
+                    else:
+                        return 20
+            return self._n
+
+        @n.setter
+        def n(self, val):
+            self._n = val
 
         @property
         def radius(self):
@@ -601,18 +634,19 @@ class shapes(object):
             # mask any point that is in a different quadrant than the center point
             maskx = pts_quadrants != quadrants[:, np.newaxis]
             # take care of points that are on the center line (e.g. don't mask them)
-            # (use a +- 10 degree around 0 as threshold)
+            # (use a +- 25 degree around 0 as threshold)
             cpoints = np.broadcast_to(
-                np.isclose(xp, xc, atol=10)[:, np.newaxis], xs.shape
+                np.isclose(xp, xc, atol=25)[:, np.newaxis], xs.shape
             )
 
             maskx[cpoints] = False
             xs.mask[maskx] = True
-
             ys.mask = xs.mask
 
-            mask = ~np.all(maskx, axis=1) & np.isfinite(theta)
-
+            # mask any datapoint that has less than 4 of the ellipse-points unmasked
+            mask = ~(
+                n - np.count_nonzero(xs.mask, axis=1) <= min(n / 2, 4)
+            ) & np.isfinite(theta)
             return xs, ys, mask
 
         def get_coll(self, x, y, crs, **kwargs):
@@ -636,7 +670,7 @@ class shapes(object):
 
             coll = PolyCollection(
                 verts,
-                # transOffset=self._m.figure.ax.transData,
+                # transOffset=self._m.ax.transData,
                 **color_and_array,
                 **kwargs,
             )
@@ -649,7 +683,7 @@ class shapes(object):
         def __init__(self, m):
             self._m = m
 
-        def __call__(self, radius="estimate", radius_crs="in", mesh=False, n=10):
+        def __call__(self, radius="estimate", radius_crs="in", mesh=False, n=None):
             """
             Draw projected rectangles with fixed dimensions (and possibly curved edges)
 
@@ -670,11 +704,12 @@ class shapes(object):
                 does NOT allow setting edgecolors but it has the advantage that
                 boundaries between neighbouring rectangles are not visible.
                 Only n=1 is currently supported!
-            n : int
-                The number of intermediate points to calculate on the rectangle
-                edges (e.g. to plot "curved" rectangles in projected crs)
-                Use n=1 to get actual rectangles!
-                The default is 10
+            n : int or None
+                The number of intermediate points to calculate on the rectangle edges
+                (e.g. to properly plot "curved" rectangles in projected crs)
+                Use n=1 to force rectangles!
+                If None, 40 is used for <10k datapoints and 10 is used otherwise.
+                The default is None
             """
             from . import MapsGrid  # do this here to avoid circular imports!
 
@@ -686,7 +721,9 @@ class shapes(object):
                 shape.mesh = mesh
 
                 if mesh is True:
-                    if n > 1:
+                    if n is None:
+                        n = 1
+                    elif n > 1:
                         warnings.warn(
                             "EOmaps: rectangles with 'mesh=True' only supports n=1"
                         )
@@ -703,6 +740,26 @@ class shapes(object):
                 n=self.n,
                 mesh=self.mesh,
             )
+
+        @property
+        def n(self):
+            if self._n is None:
+                if self._m.data is not None:
+                    # if plot crs is same as input-crs there is no need for
+                    # intermediate points since the rectangles are not curved!
+                    if self._m._crs_plot == self._m.data_specs.crs:
+                        return 1
+                    elif np.size(self._m.data) < 10000:
+                        return 40
+                    else:
+                        return 10
+                else:
+                    return 10
+            return self._n
+
+        @n.setter
+        def n(self, val):
+            self._n = val
 
         @property
         def radius(self):
@@ -823,7 +880,7 @@ class shapes(object):
 
             coll = PolyCollection(
                 verts=verts,
-                # transOffset=self._m.figure.ax.transData,
+                # transOffset=self._m.ax.transData,
                 **color_and_array,
                 **kwargs,
             )
@@ -891,7 +948,7 @@ class shapes(object):
 
             coll = TriMesh(
                 tri,
-                # transOffset=self._m.figure.ax.transData,
+                # transOffset=self._m.ax.transData,
                 **color_and_array,
                 **kwargs,
             )
@@ -1017,7 +1074,7 @@ class shapes(object):
             coll = PolyCollection(
                 verts=verts,
                 **color_and_array,
-                # transOffset=self._m.figure.ax.transData,
+                # transOffset=self._m.ax.transData,
                 **kwargs,
             )
 
@@ -1186,7 +1243,7 @@ class shapes(object):
 
                 coll = TriMesh(
                     tri,
-                    # transOffset=self._m.figure.ax.transData,
+                    # transOffset=self._m.ax.transData,
                     **color_and_array,
                     **kwargs,
                 )
@@ -1205,7 +1262,7 @@ class shapes(object):
 
                 coll = PolyCollection(
                     verts=verts,
-                    # transOffset=self._m.figure.ax.transData,
+                    # transOffset=self._m.ax.transData,
                     **color_and_array,
                     **kwargs,
                 )
@@ -1246,7 +1303,7 @@ class shapes(object):
                 A callable that takes the image output of the shading pipeline,
                 and returns another Image object.
                 See dynspread() and spread() for examples.
-                The default is `partial(ds.tf.dynspread, max_px=5)`.
+                The default is `partial(ds.tf.dynspread, max_px=50)`.
             agg_hook : callable, optional
                 A callable that takes the computed aggregate as an argument, and returns
                 another aggregate. This can be used to do preprocessing before the
@@ -1265,7 +1322,7 @@ class shapes(object):
                 aggregator = getattr(ds, aggregator)("val")
 
             if shade_hook is None:
-                shade_hook = partial(ds.tf.dynspread, max_px=5)
+                shade_hook = partial(ds.tf.dynspread, max_px=50)
 
             if agg_hook is None:
                 pass
@@ -1411,7 +1468,7 @@ class shapes(object):
 
         def __call__(self):
             """
-            Draw 2D datasets as rectangles (only 2D datasets, but possibly large ones)
+            Draw the data as a rectangular raster.
 
             (similar to plt.imshow)
 
@@ -1429,7 +1486,7 @@ class shapes(object):
             (e.g. the effective shape is a distorted rectangle with straight edges)
 
             - use `m.set_shape.rectangles()` if you need "curved" edges!
-            - use `m.set_shape.shade_raster()` for very large datasets
+            - use `m.set_shape.shade_raster()` for extremely large datasets
 
             Parameters
             ----------
@@ -1516,14 +1573,16 @@ class shapes(object):
             v[:-1, :-1, 0] = p[0] - rx
             v[:-1, :-1, 1] = p[1] - ry
 
-            v[-1, :-1] = v[-2, :-1] + [0, 2 * rx]
-            v[:, -1] = v[:, -2] + [2 * ry, 0]
+            # treat bottom vertices values
+            v[-1, :-1] = v[-2, :-1] + [0, 2 * ry]
+
+            # treat right most vertices values
+            v[:, -1] = v[:, -2] + [2 * rx, 0]
 
             px, py = t.transform(clipx(v[:, :, 0]), clipy(v[:, :, 1]))
             verts = np.stack((px, py), axis=2)
 
             mask = np.logical_and(np.isfinite(px)[:-1, :-1], np.isfinite(py)[:-1, :-1])
-
             return verts, mask
 
         def _get_polygon_coll(self, x, y, crs, **kwargs):
@@ -1536,7 +1595,6 @@ class shapes(object):
 
             # remember masked points
             self._m._data_mask = mask
-
             # don't use a mask here since we need the full 2D array
             color_and_array = shapes._get_colors_and_array(
                 kwargs, np.full_like(mask, True)
@@ -1563,6 +1621,7 @@ class shapes(object):
             return coll
 
         def get_coll(self, x, y, crs, **kwargs):
+
             x, y = np.asanyarray(x), np.asanyarray(y)
             # don't use antialiasing by default since it introduces unwanted
             # transparency for reprojected QuadMeshes!

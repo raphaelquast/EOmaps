@@ -11,7 +11,7 @@ import copy
 from functools import partial, wraps
 from textwrap import dedent
 
-from .helpers import pairwise
+from .helpers import pairwise, _TransformedBoundsLocator
 
 
 ds, mpl_ext = None, None
@@ -67,32 +67,6 @@ def get_named_bins_formatter(bins, names, show_values=False):
             return names[b]
 
     return formatter
-
-
-# class copied from matplotlib.axes
-class _TransformedBoundsLocator:
-    """
-    Axes locator for `.Axes.inset_axes` and similarly positioned Axes.
-    The locator is a callable object used in `.Axes.set_aspect` to compute the
-    Axes location depending on the renderer.
-    """
-
-    def __init__(self, bounds, transform):
-        """
-        *bounds* (a ``[l, b, w, h]`` rectangle) and *transform* together
-        specify the position of the inset Axes.
-        """
-        self._bounds = bounds
-        self._transform = transform
-
-    def __call__(self, ax, renderer):
-        # Subtracting transSubfigure will typically rely on inverted(),
-        # freezing the transform; thus, this needs to be delayed until draw
-        # time as transSubfigure may otherwise change after this is evaluated.
-        return mtransforms.TransformedBbox(
-            mtransforms.Bbox.from_bounds(*self._bounds),
-            self._transform - ax.figure.transSubfigure,
-        )
 
 
 class ColorBar:
@@ -163,11 +137,14 @@ class ColorBar:
             - 0:
             - 0.9: 90% histogram, 10% colorbar
             - 1: only histogram
+
         hist_bins : int, list, tuple, array or "bins", optional
+
             - If int: The number of histogram-bins to use for the colorbar.
             - If list, tuple or numpy-array: the bins to use
             - If "bins": use the bins obtained from the classification
               (ONLY possible if a classification scheme is used!)
+
             The default is 256.
         extend_frac : float, optional
             The fraction of the colorbar-size to use for extension-arrows.
@@ -178,9 +155,11 @@ class ColorBar:
             The default is "horizontal".
         dynamic_shade_indicator : bool, optional
             ONLY relevant if data-shading is used! ("shade_raster" or "shade_points")
+
             - False: The colorbar represents the actual (full) dataset
             - True: The colorbar is dynamically updated and represents the density of
               the shaded pixel values within the current field of view.
+
             The default is False.
         show_outline : bool or dict
             Indicator if an outline should be added to the histogram.
@@ -188,7 +167,9 @@ class ColorBar:
             If a dict is provided, it is passed to `plt.step()` to style the line.
             (e.g. with ordinary matplotlib parameters such as color, lw, ls etc.)
             If True, the following properties are used:
+
             - {"color": "k", "lw": 1}
+
             The default is False.
         tick_precision : int or None
             The precision of the tick-labels in the colorbar.
@@ -215,10 +196,10 @@ class ColorBar:
 
             - if "mask": out-of range values will be masked.
               (e.g. values outside the colorbar limits are not represented in the
-               histogram and NO extend-arrows are added)
+              histogram and NO extend-arrows are added)
             - if "clip": out-of-range values will be clipped.
               (e.g. values outside the colorbar limits will be represented in the
-               min/max bins of the histogram)
+              min/max bins of the histogram)
 
             The default is "clip"
         hist_kwargs : dict
@@ -230,6 +211,7 @@ class ColorBar:
 
         See Also
         --------
+
         - label_bin_center
 
         Examples
@@ -286,7 +268,7 @@ class ColorBar:
 
         self._kwargs = copy.deepcopy(kwargs)
 
-        self._coll = self._m.figure.coll
+        self._coll = self._m.coll
         self._vmin = self._coll.norm.vmin
         self._vmax = self._coll.norm.vmax
 
@@ -496,13 +478,13 @@ class ColorBar:
             if self._parent_cb is not None:
 
                 try:
-                    self._ax = self._m.figure.f.add_subplot(
+                    self._ax = self._m.f.add_subplot(
                         self._parent_cb._ax.get_subplotspec(),
                         label="cb",
                         zorder=9999,
                     )
                 except AttributeError:
-                    self._ax = self._m.figure.f.add_axes(
+                    self._ax = self._m.f.add_axes(
                         self._parent_cb._ax.get_position(),
                         label="cb",
                         zorder=9999,
@@ -532,7 +514,7 @@ class ColorBar:
                     )
 
                     self._m.ax.set_subplotspec(gs[0, 0])
-                    self._ax = self._m.figure.f.add_subplot(
+                    self._ax = self._m.f.add_subplot(
                         gs[1, 0],
                         label="cb",
                         zorder=9999,
@@ -546,14 +528,14 @@ class ColorBar:
                     )
 
                     self._m.ax.set_subplotspec(gs[0, 0])
-                    self._ax = self._m.figure.f.add_subplot(
+                    self._ax = self._m.f.add_subplot(
                         gs[0, 1],
                         label="cb",
                         zorder=9999,
                     )
             elif isinstance(self._pos, SubplotSpec):
                 add_margins = True
-                self._ax = self._m.figure.f.add_subplot(
+                self._ax = self._m.f.add_subplot(
                     self._pos,
                     label="cb",
                     zorder=9999,
@@ -565,8 +547,8 @@ class ColorBar:
                 bbox = mtransforms.Bbox(((x0, y0), (x1, y1)))
 
                 # the parent axes holding the 2 child-axes
-                self._ax = plt.Axes(self._m.figure.f, bbox, label="cb", zorder=9999)
-                self._m.figure.f.add_axes(self._ax)
+                self._ax = plt.Axes(self._m.f, bbox, label="cb", zorder=9999)
+                self._m.f.add_axes(self._ax)
 
         # make all spines, labels etc. invisible for the base-axis
         self._ax.set_axis_off()

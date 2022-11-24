@@ -90,25 +90,49 @@ class map_objects(object):
     ):
         self._m = m
 
-        self.coll = None  # self.coll is assigned in "m.plot_map()"
+        self._coll = None  # self.coll is assigned in "m.plot_map()"
         self._figure_closed = False
 
     @property
+    def coll(self):
+        return self._coll
+
+    @coll.setter
+    def coll(self, val):
+        self._coll = val
+
+    @coll.getter
+    def coll(self):
+        warn(
+            "EOmaps: Using `m.figure.coll` is depreciated in EOmaps v5.x."
+            "Use `m.coll` instead!"
+        )
+        return self._coll
+
+    @property
     def f(self):
+        warn(
+            "EOmaps: Using `m.figure.f` is depreciated in EOmaps v5.x."
+            "Use `m.f` instead!"
+        )
         # always return the figure of the parent object
-        return self._m.parent._f
+        return self._m.f
 
     @property
     def ax(self):
-        ax = self._m._ax
-
-        # return None in case the plot is not yet initialized
-        if isinstance(ax, SubplotSpec):
-            ax = None
+        warn(
+            "EOmaps: Using `m.figure.ax` is depreciated in EOmaps v5.x."
+            "Use `m.ax` instead!"
+        )
+        ax = self._m.ax
         return ax
 
     @property
     def gridspec(self):
+        warn(
+            "EOmaps: Using `m.figure.gridspec` is depreciated in EOmaps v5.x."
+            "Use `m._gridspec` instead!"
+        )
         return getattr(self._m, "_gridspec", None)
 
     @property
@@ -973,7 +997,7 @@ class NaturalEarth_features(object):
                     else:
                         uselayer = layer
                     self.feature._kwargs.update(kwargs)
-                    art = m.figure.ax.add_feature(self.feature)
+                    art = m.ax.add_feature(self.feature)
 
                     m.BM.add_bg_artist(art, layer=uselayer)
             else:
