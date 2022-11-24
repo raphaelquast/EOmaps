@@ -453,9 +453,5 @@ class AddWMSMenuButton(QtWidgets.QPushButton):
             wms.do_add_layer(wmslayer, layer=layer)
             if self._show_layer:
                 self.m.show_layer(layer)
-            else:
-                self.m.BM._do_on_layer_change(layer)
-                if layer in self.m.BM._bg_layer.split("|"):
-                    self.m.redraw()
 
         return wms_cb
