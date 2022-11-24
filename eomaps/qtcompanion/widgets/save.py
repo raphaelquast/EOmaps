@@ -61,7 +61,7 @@ class SaveFileWidget(QtWidgets.QFrame):
         self.dpi_input.setMaximumWidth(50)
         validator = QtGui.QIntValidator()
         self.dpi_input.setValidator(validator)
-        self.dpi_input.setText("200")
+        self.dpi_input.setText("100")
 
         # transparent
         self.transp_cb = TransparentCheckBox()
