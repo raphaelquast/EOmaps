@@ -282,7 +282,6 @@ class StatusTipFilter(QObject):
 class AddWMSMenuButton(QtWidgets.QPushButton):
     def __init__(self, *args, m=None, new_layer=False, show_layer=False, **kwargs):
         super().__init__(*args, **kwargs)
-
         self.m = m
         self._new_layer = new_layer
         self._show_layer = show_layer
@@ -350,58 +349,18 @@ class AddWMSMenuButton(QtWidgets.QPushButton):
 
     @pyqtSlot()
     def populate_menu(self):
+
         self.sub_menus = dict()
         for wmsname in self.wms_dict:
             self.sub_menus[wmsname] = self.feature_menu.addMenu(wmsname)
-            self.sub_menus[wmsname].aboutToShow.connect(self.populate_submenu_thread)
+            self.sub_menus[wmsname].aboutToShow.connect(self._populate_submenu_cb)
         self.feature_menu.aboutToShow.disconnect()
 
     @pyqtSlot()
-    def populate_submenu_thread(self):
-        #
-
-        class Worker(QObject):
-            finished = pyqtSignal()
-            progress = pyqtSignal(int)
-
-            def __init__(self, *args, x=None, wmsname=None, **kwargs):
-                super().__init__(*args, **kwargs)
-
-                self.x = x
-                self.wmsname = wmsname
-
-            def run(self):
-                self.x.fetch_submenu(wmsname=self.wmsname)
-                self.finished.emit()
-
-        if not isinstance(self.sender(), QtWidgets.QMenu):
-            return
-
+    def _populate_submenu_cb(self):
         wmsname = self.sender().title()
-
-        if not hasattr(self, "threads"):
-            self.threads = dict()
-            self.workers = dict()
-
-        if wmsname not in self.threads:
-            thread = QThread()
-            worker = Worker(x=self, wmsname=wmsname)
-            worker.moveToThread(thread)
-            thread.started.connect(worker.run)
-
-            @pyqtSlot()
-            def doit():
-                self.populate_submenu(wmsname)
-
-            thread.finished.connect(doit)
-            worker.finished.connect(thread.quit)
-            worker.finished.connect(worker.deleteLater)
-            thread.finished.connect(thread.deleteLater)
-
-            self.threads[wmsname] = thread
-            self.workers[wmsname] = worker
-
-            thread.start()
+        self.fetch_submenu(wmsname=wmsname)
+        self.populate_submenu(wmsname)
 
     def set_layer(self, layer):
         self.layer = layer
@@ -410,6 +369,9 @@ class AddWMSMenuButton(QtWidgets.QPushButton):
         # disconnect callbacks to avoid recursions
         self.sub_menus[wmsname].aboutToShow.disconnect()
 
+        self._fetch_submenu(wmsname)
+
+    def _fetch_submenu(self, wmsname):
         wmsclass = self.wms_dict[wmsname]
         wms = wmsclass(m=self.m)
         sub_features = wms.wmslayers
@@ -420,20 +382,25 @@ class AddWMSMenuButton(QtWidgets.QPushButton):
             print("No layers found for the WMS: {wmsname}")
             return
         else:
-            wmsclass = self.wms_dict[wmsname]
-            wms = wmsclass(m=self.m)
             sub_features = self._submenus[wmsname]
 
         try:
+            submenu = self.sub_menus[wmsname]
+
             for wmslayer in sub_features:
-                action = self.sub_menus[wmsname].addAction(wmslayer)
-                action.triggered.connect(self.menu_callback_factory(wms, wmslayer))
+                action = submenu.addAction(wmslayer)
+                action.triggered.connect(self.menu_callback_factory(wmsname, wmslayer))
+
         except:
             print("There was a problem with the WMS: " + wmsname)
 
-    def menu_callback_factory(self, wms, wmslayer):
+    @pyqtSlot()
+    def menu_callback_factory(self, wmsname, wmslayer):
         @pyqtSlot()
         def wms_cb():
+            wmsclass = self.wms_dict[wmsname]
+            wms = wmsclass(m=self.m)
+
             if self._new_layer:
                 layer = wms.name + "_" + wmslayer
                 # indicate creation of new layer in statusbar
