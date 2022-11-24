@@ -879,21 +879,35 @@ Everything related to callbacks is grouped under the ``cb`` accessor.
 Starting with v5.0, EOmaps comes with an awesome **companion widget** that greatly
 simplifies using interactive capabilities.
 
-
-- To activate the widget, press ``w`` on the keyboard while the mouse is over the map you want to edit.
+- To activate the widget, **press** ``w`` on the keyboard **while the mouse is over the map you want to edit**.
 
   - If multiple maps are present in the figure, a green border indicates the map that is currently targeted by the widget.
   - Once the widget is initialized, pressing ``w`` will show/hide the widget.
 
-- | The widget is intended to be as self-explanatory as possible.
-  | To get information on how the individual controls work, simply click on the ``?`` symbol in the top left corner of the widget.
-
-|
 
 .. image:: _static/minigifs/companion_widget.gif
     :align: center
 
-|
+
+.. admonition:: What are the buttons and sliders doing?
+
+    To get information on how the individual controls work, simply **click on the** ``?`` **symbol** in the top left corner of the widget!
+
+    - This will activate **help tooltips** that explain the individual controls.
+
+
+.. note::
+
+    The companion-widget is written in ``PyQt5`` and therefore **only** works when using
+    the ``matplotlib qt5agg`` backend (matplotlibs default if QT5 is installed)!
+
+    To manually set the backend, execute the following lines at the start of your script:
+
+    .. code-block:: python
+
+        import matplotlib
+        matplotlib.use("qt5agg")
+
 
 The main purpose of the widget is to provide easy-access to features that usually don't need to go into
 a python-script, such as:
@@ -909,19 +923,6 @@ a python-script, such as:
 - A basic interface to plot data from files (with drag-and-drop support)
   (csv, NetCDF, GeoTIFF, shapefile)
 
-
-
-.. note::
-
-    The companion-widget is written in ``PyQt5`` and therefore **only** works when using
-    the ``matplotlib qt5agg`` backend!
-
-    To activate the backend, execute the following lines at the start of your script:
-
-    .. code-block:: python
-
-        import matplotlib
-        matplotlib.use("qt5agg")
 
 
 .. _callbacks:
