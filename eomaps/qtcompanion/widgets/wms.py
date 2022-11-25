@@ -2,7 +2,14 @@ from PyQt5 import QtWidgets
 from PyQt5.QtCore import Qt, QThread, QObject, pyqtSignal, pyqtSlot
 from PyQt5.QtGui import QStatusTipEvent
 
-from ... import Maps
+from ... import Maps, _data_dir
+from pathlib import Path
+import json
+import os
+
+# the path to which already fetched WebMap layers are stored
+# (to avoid fetching available layers on menu-population)
+wms_layers_dumppath = Path(_data_dir) / "_companion_wms_layers.json"
 
 
 def remove_prefix(text, prefix):
@@ -352,7 +359,21 @@ class AddWMSMenuButton(QtWidgets.QPushButton):
         self.setMenu(self.feature_menu)
         self.clicked.connect(self.show_menu)
 
-        self._submenus = getattr(m, "_companion_wms_submenus", dict())
+        # try to fetch cached wms-layer names (to populate dropdown)
+        # The cache will be updated if a layer of the wms-service is added to the map!
+        # (since then the layers are anyways re-fetched)
+        if wms_layers_dumppath.exists():
+            try:
+                with open(wms_layers_dumppath, "r") as file:
+                    self._submenus = json.load(file)
+            except Exception:
+                print(
+                    "EOmaps: Unable to load cached wms-layers from:\n    ",
+                    wms_layers_dumppath,
+                )
+                self._submenus = dict()
+        else:
+            self._submenus = dict()
 
         # set event-filter to avoid showing tooltips on hovver over QMenu items
         self.installEventFilter(StatusTipFilter(self))
@@ -415,6 +436,9 @@ class AddWMSMenuButton(QtWidgets.QPushButton):
 
         if wmsname in self._submenus:
             return
+
+        print(f"EOmaps: Fetching WMS layers for {wmsname} ...")
+
         wmsclass = self.wms_dict[wmsname]
         wms = wmsclass(m=self.m)
         sub_features = wms.wmslayers
@@ -423,6 +447,8 @@ class AddWMSMenuButton(QtWidgets.QPushButton):
         if not hasattr(Maps, "_companion_wms_submenus"):
             Maps._companion_wms_submenus = dict()
         Maps._companion_wms_submenus[wmsname] = sub_features
+
+        self._update_layer_cache(wmsname, wms.wmslayers)
 
     def populate_submenu(self, wmsname=None):
         if wmsname not in self._submenus:
@@ -465,14 +491,97 @@ class AddWMSMenuButton(QtWidgets.QPushButton):
                     return
 
             wms.do_add_layer(wmslayer, layer=layer)
+
+            # update the cached layer-names if necessary
+            self._update_layer_cache(wmsname, wms.wmslayers)
+
             if self._show_layer:
                 self.m.show_layer(layer)
 
         return wms_cb
 
+    def _update_layer_cache(self, wmsname, layers):
+        """
+        Update the layer-cache for the wms-menu-buttons
+
+        The cache is located at:
+
+        >>> from eomaps import _data_dir
+        >>> print(_data_dir)
+
+        Parameters
+        ----------
+        wmsname : str
+            the name of the wms-service.
+        layers : list
+            a list of layer-names.
+        """
+
+        # make sure the cache-directory has been initialized
+        if not os.path.isdir(_data_dir):
+            os.makedirs(_data_dir)
+
+        try:
+            if wms_layers_dumppath.exists():
+                with open(wms_layers_dumppath, "r") as file:
+                    cache = json.load(file)
+            else:
+                cache = dict()
+
+            if wmsname in cache:
+                # if new layers are found, update the cache for this service!
+                if set(cache[wmsname]) != set(layers):
+                    update = True
+                else:
+                    update = False
+            else:
+                update = True
+
+            if update:
+                cache[wmsname] = layers
+                with open(wms_layers_dumppath, "w") as file:
+                    json.dump(cache, file)
+
+        except Exception:
+            from warnings import warn
+
+            warn(
+                "EOmaps: PROBLEM while trying to save fetched WMS layers to:\n"
+                f"{wms_layers_dumppath}"
+            )
+            pass
+
     @classmethod
-    def fetch_all_wms_layers(cls, m):
+    def fetch_all_wms_layers(cls, m, refetch=False):
+        """
+        A convenience function to fetch (and cache) all available WMS-layers
+        for the companion-widget
+
+        Parameters
+        ----------
+        m : eomaps.Maps
+            The Maps-object to use.
+        refetch : bool, optional
+
+        - If True, ALL layers will be re-fetched.
+        - If False, the cached layers are loaded and returned as dict
+
+        The default is False.
+
+        Returns
+        -------
+        dict
+            The cached webmap layer names.
+
+        """
+        print("EOmaps: Fetching WMS layers for the companion widget...")
+
         b = cls(m=m)
+
+        if refetch is True:
+            b._submenus = dict()
+
         for wmsname in b.wms_dict:
-            print("Fetching:", wmsname)
             b._fetch_submenu(wmsname)
+
+        return b._submenus

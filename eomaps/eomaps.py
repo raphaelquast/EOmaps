@@ -4562,6 +4562,26 @@ class Maps(object):
 
         return gdf
 
+    def fetch_companion_wms_layers(self, refetch=True):
+        """
+        Fetch (and cache) WebMap layers for the companion-widget.
+
+        The cached layers are stored at the following location:
+
+        >>> from eomaps import _data_dir
+        >>> print(_data_dir)
+
+        Parameters
+        ----------
+        refetch : bool, optional
+            If True, the layers will be re-fetched and the cache will be updated.
+            If False, the cached dict is loaded and returned.
+            The default is True.
+        """
+        from .qtcompanion.widgets.wms import AddWMSMenuButton
+
+        return AddWMSMenuButton.fetch_all_wms_layers(self, refetch=refetch)
+
 
 class _InsetMaps(Maps):
     # a subclass of Maps that includes some special functions for inset maps
