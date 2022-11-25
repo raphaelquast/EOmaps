@@ -113,6 +113,41 @@ class WMS_NASA_GIBS(WMSBase):
         self.ask_for_legend(wms, wmslayer)
 
 
+class WMS_Austria(WMSBase):
+    layer_prefix = "AT_"
+    name = "Austria"
+
+    def __init__(self, m=None):
+        self.m = m
+
+        self._AT_layers = [
+            "Austria__" + key
+            for key in self.m.add_wms.Austria.AT_basemap.add_layer.__dict__
+        ]
+
+        self._Wien_layers = [
+            "Wien__" + key
+            for key in self.m.add_wms.Austria.Wien_basemap.add_layer.__dict__
+        ]
+
+        self.wmslayers = [*self._AT_layers, *self._Wien_layers]
+
+    def do_add_layer(self, wmslayer, layer):
+        if wmslayer in self._AT_layers:
+            wms = getattr(
+                self.m.add_wms.Austria.AT_basemap.add_layer,
+                remove_prefix(wmslayer, "Austria__"),
+            )
+        elif wmslayer in self._Wien_layers:
+            wms = getattr(
+                self.m.add_wms.Austria.Wien_basemap.add_layer,
+                remove_prefix(wmslayer, "Wien__"),
+            )
+
+        wms(layer=layer, transparent=True)
+        self.ask_for_legend(wms, wmslayer)
+
+
 class WMS_OSM(WMSBase):
     layer_prefix = "OSM_"
     name = "OpenStreetMap"
@@ -229,7 +264,7 @@ class WMS_S1GBM(WMSBase):
 
 
 class WMS_ISRIC_SoilGrids(WMSBase):
-    layer_prefix = "ISRIC_SoilGrids_"
+    layer_prefix = "ISRIC_SG_"
     name = "ISRIC SoilGrids"
 
     def __init__(self, m=None):
@@ -299,6 +334,7 @@ class AddWMSMenuButton(QtWidgets.QPushButton):
             "CAMS": WMS_CAMS,
             "ISRIC SoilGrids": WMS_ISRIC_SoilGrids,
             "DLR Basemaps": WMS_DLR_basemaps,
+            "Austria Basemaps": WMS_Austria,
         }
 
         if self._new_layer:
@@ -413,7 +449,7 @@ class AddWMSMenuButton(QtWidgets.QPushButton):
             wms = wmsclass(m=self.m)
 
             if self._new_layer:
-                layer = wms.name + "_" + wmslayer
+                layer = wms.layer_prefix + wmslayer
                 # indicate creation of new layer in statusbar
                 self.window().statusBar().showMessage(
                     f"New WebMap layer '{layer}' created!", 5000
