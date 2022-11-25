@@ -2,6 +2,15 @@ from PyQt5 import QtWidgets
 from PyQt5.QtCore import Qt, QThread, QObject, pyqtSignal, pyqtSlot
 from PyQt5.QtGui import QStatusTipEvent
 
+from ... import Maps, _data_dir
+from pathlib import Path
+import json
+import os
+
+# the path to which already fetched WebMap layers are stored
+# (to avoid fetching available layers on menu-population)
+wms_layers_dumppath = Path(_data_dir) / "_companion_wms_layers.json"
+
 
 def remove_prefix(text, prefix):
     if text.startswith(prefix):
@@ -107,6 +116,41 @@ class WMS_NASA_GIBS(WMSBase):
 
     def do_add_layer(self, wmslayer, layer):
         wms = getattr(self.usewms.add_layer, wmslayer)
+        wms(layer=layer, transparent=True)
+        self.ask_for_legend(wms, wmslayer)
+
+
+class WMS_Austria(WMSBase):
+    layer_prefix = "AT_"
+    name = "Austria"
+
+    def __init__(self, m=None):
+        self.m = m
+
+        self._AT_layers = [
+            "Austria__" + key
+            for key in self.m.add_wms.Austria.AT_basemap.add_layer.__dict__
+        ]
+
+        self._Wien_layers = [
+            "Wien__" + key
+            for key in self.m.add_wms.Austria.Wien_basemap.add_layer.__dict__
+        ]
+
+        self.wmslayers = [*self._AT_layers, *self._Wien_layers]
+
+    def do_add_layer(self, wmslayer, layer):
+        if wmslayer in self._AT_layers:
+            wms = getattr(
+                self.m.add_wms.Austria.AT_basemap.add_layer,
+                remove_prefix(wmslayer, "Austria__"),
+            )
+        elif wmslayer in self._Wien_layers:
+            wms = getattr(
+                self.m.add_wms.Austria.Wien_basemap.add_layer,
+                remove_prefix(wmslayer, "Wien__"),
+            )
+
         wms(layer=layer, transparent=True)
         self.ask_for_legend(wms, wmslayer)
 
@@ -227,7 +271,7 @@ class WMS_S1GBM(WMSBase):
 
 
 class WMS_ISRIC_SoilGrids(WMSBase):
-    layer_prefix = "ISRIC_SoilGrids_"
+    layer_prefix = "ISRIC_SG_"
     name = "ISRIC SoilGrids"
 
     def __init__(self, m=None):
@@ -282,7 +326,6 @@ class StatusTipFilter(QObject):
 class AddWMSMenuButton(QtWidgets.QPushButton):
     def __init__(self, *args, m=None, new_layer=False, show_layer=False, **kwargs):
         super().__init__(*args, **kwargs)
-
         self.m = m
         self._new_layer = new_layer
         self._show_layer = show_layer
@@ -298,6 +341,7 @@ class AddWMSMenuButton(QtWidgets.QPushButton):
             "CAMS": WMS_CAMS,
             "ISRIC SoilGrids": WMS_ISRIC_SoilGrids,
             "DLR Basemaps": WMS_DLR_basemaps,
+            "Austria Basemaps": WMS_Austria,
         }
 
         if self._new_layer:
@@ -315,7 +359,21 @@ class AddWMSMenuButton(QtWidgets.QPushButton):
         self.setMenu(self.feature_menu)
         self.clicked.connect(self.show_menu)
 
-        self._submenus = dict()
+        # try to fetch cached wms-layer names (to populate dropdown)
+        # The cache will be updated if a layer of the wms-service is added to the map!
+        # (since then the layers are anyways re-fetched)
+        if wms_layers_dumppath.exists():
+            try:
+                with open(wms_layers_dumppath, "r") as file:
+                    self._submenus = json.load(file)
+            except Exception:
+                print(
+                    "EOmaps: Unable to load cached wms-layers from:\n    ",
+                    wms_layers_dumppath,
+                )
+                self._submenus = dict()
+        else:
+            self._submenus = dict()
 
         # set event-filter to avoid showing tooltips on hovver over QMenu items
         self.installEventFilter(StatusTipFilter(self))
@@ -350,58 +408,18 @@ class AddWMSMenuButton(QtWidgets.QPushButton):
 
     @pyqtSlot()
     def populate_menu(self):
+
         self.sub_menus = dict()
         for wmsname in self.wms_dict:
             self.sub_menus[wmsname] = self.feature_menu.addMenu(wmsname)
-            self.sub_menus[wmsname].aboutToShow.connect(self.populate_submenu_thread)
+            self.sub_menus[wmsname].aboutToShow.connect(self._populate_submenu_cb)
         self.feature_menu.aboutToShow.disconnect()
 
     @pyqtSlot()
-    def populate_submenu_thread(self):
-        #
-
-        class Worker(QObject):
-            finished = pyqtSignal()
-            progress = pyqtSignal(int)
-
-            def __init__(self, *args, x=None, wmsname=None, **kwargs):
-                super().__init__(*args, **kwargs)
-
-                self.x = x
-                self.wmsname = wmsname
-
-            def run(self):
-                self.x.fetch_submenu(wmsname=self.wmsname)
-                self.finished.emit()
-
-        if not isinstance(self.sender(), QtWidgets.QMenu):
-            return
-
+    def _populate_submenu_cb(self):
         wmsname = self.sender().title()
-
-        if not hasattr(self, "threads"):
-            self.threads = dict()
-            self.workers = dict()
-
-        if wmsname not in self.threads:
-            thread = QThread()
-            worker = Worker(x=self, wmsname=wmsname)
-            worker.moveToThread(thread)
-            thread.started.connect(worker.run)
-
-            @pyqtSlot()
-            def doit():
-                self.populate_submenu(wmsname)
-
-            thread.finished.connect(doit)
-            worker.finished.connect(thread.quit)
-            worker.finished.connect(worker.deleteLater)
-            thread.finished.connect(thread.deleteLater)
-
-            self.threads[wmsname] = thread
-            self.workers[wmsname] = worker
-
-            thread.start()
+        self.fetch_submenu(wmsname=wmsname)
+        self.populate_submenu(wmsname)
 
     def set_layer(self, layer):
         self.layer = layer
@@ -410,32 +428,54 @@ class AddWMSMenuButton(QtWidgets.QPushButton):
         # disconnect callbacks to avoid recursions
         self.sub_menus[wmsname].aboutToShow.disconnect()
 
+        self._fetch_submenu(wmsname)
+
+    def _fetch_submenu(self, wmsname):
+        if wmsname in getattr(Maps, "_companion_wms_submenus", dict()):
+            self._submenus[wmsname] = Maps._companion_wms_submenus[wmsname]
+
+        if wmsname in self._submenus:
+            return
+
+        print(f"EOmaps: Fetching WMS layers for {wmsname} ...")
+
         wmsclass = self.wms_dict[wmsname]
         wms = wmsclass(m=self.m)
         sub_features = wms.wmslayers
         self._submenus[wmsname] = sub_features
+
+        if not hasattr(Maps, "_companion_wms_submenus"):
+            Maps._companion_wms_submenus = dict()
+        Maps._companion_wms_submenus[wmsname] = sub_features
+
+        self._update_layer_cache(wmsname, wms.wmslayers)
 
     def populate_submenu(self, wmsname=None):
         if wmsname not in self._submenus:
             print("No layers found for the WMS: {wmsname}")
             return
         else:
-            wmsclass = self.wms_dict[wmsname]
-            wms = wmsclass(m=self.m)
             sub_features = self._submenus[wmsname]
 
         try:
+            submenu = self.sub_menus[wmsname]
+
             for wmslayer in sub_features:
-                action = self.sub_menus[wmsname].addAction(wmslayer)
-                action.triggered.connect(self.menu_callback_factory(wms, wmslayer))
+                action = submenu.addAction(wmslayer)
+                action.triggered.connect(self.menu_callback_factory(wmsname, wmslayer))
+
         except:
             print("There was a problem with the WMS: " + wmsname)
 
-    def menu_callback_factory(self, wms, wmslayer):
+    @pyqtSlot()
+    def menu_callback_factory(self, wmsname, wmslayer):
         @pyqtSlot()
         def wms_cb():
+            wmsclass = self.wms_dict[wmsname]
+            wms = wmsclass(m=self.m)
+
             if self._new_layer:
-                layer = wms.name + "_" + wmslayer
+                layer = wms.layer_prefix + wmslayer
                 # indicate creation of new layer in statusbar
                 self.window().statusBar().showMessage(
                     f"New WebMap layer '{layer}' created!", 5000
@@ -451,7 +491,97 @@ class AddWMSMenuButton(QtWidgets.QPushButton):
                     return
 
             wms.do_add_layer(wmslayer, layer=layer)
+
+            # update the cached layer-names if necessary
+            self._update_layer_cache(wmsname, wms.wmslayers)
+
             if self._show_layer:
                 self.m.show_layer(layer)
 
         return wms_cb
+
+    def _update_layer_cache(self, wmsname, layers):
+        """
+        Update the layer-cache for the wms-menu-buttons
+
+        The cache is located at:
+
+        >>> from eomaps import _data_dir
+        >>> print(_data_dir)
+
+        Parameters
+        ----------
+        wmsname : str
+            the name of the wms-service.
+        layers : list
+            a list of layer-names.
+        """
+
+        # make sure the cache-directory has been initialized
+        if not os.path.isdir(_data_dir):
+            os.makedirs(_data_dir)
+
+        try:
+            if wms_layers_dumppath.exists():
+                with open(wms_layers_dumppath, "r") as file:
+                    cache = json.load(file)
+            else:
+                cache = dict()
+
+            if wmsname in cache:
+                # if new layers are found, update the cache for this service!
+                if set(cache[wmsname]) != set(layers):
+                    update = True
+                else:
+                    update = False
+            else:
+                update = True
+
+            if update:
+                cache[wmsname] = layers
+                with open(wms_layers_dumppath, "w") as file:
+                    json.dump(cache, file)
+
+        except Exception:
+            from warnings import warn
+
+            warn(
+                "EOmaps: PROBLEM while trying to save fetched WMS layers to:\n"
+                f"{wms_layers_dumppath}"
+            )
+            pass
+
+    @classmethod
+    def fetch_all_wms_layers(cls, m, refetch=False):
+        """
+        A convenience function to fetch (and cache) all available WMS-layers
+        for the companion-widget
+
+        Parameters
+        ----------
+        m : eomaps.Maps
+            The Maps-object to use.
+        refetch : bool, optional
+
+        - If True, ALL layers will be re-fetched.
+        - If False, the cached layers are loaded and returned as dict
+
+        The default is False.
+
+        Returns
+        -------
+        dict
+            The cached webmap layer names.
+
+        """
+        print("EOmaps: Fetching WMS layers for the companion widget...")
+
+        b = cls(m=m)
+
+        if refetch is True:
+            b._submenus = dict()
+
+        for wmsname in b.wms_dict:
+            b._fetch_submenu(wmsname)
+
+        return b._submenus
