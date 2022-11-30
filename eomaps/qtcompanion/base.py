@@ -122,7 +122,7 @@ class ToolBar(QtWidgets.QToolBar):
 
     def mousePressEvent(self, event):
         if event.button() == QtCore.Qt.LeftButton:
-            self.press_pos = event.pos()
+            self.press_pos = event.windowPos().toPoint()
 
     def mouseReleaseEvent(self, event):
         if event.button() == QtCore.Qt.LeftButton:
@@ -138,7 +138,7 @@ class ToolBar(QtWidgets.QToolBar):
             self.window().move(self.press_pos)
             self.press_pos = QtCore.QPoint(int(self.window().sizeHint().width() / 2), 0)
         else:
-            self.window().move(self.window().pos() + (event.pos() - self.press_pos))
+            self.window().move(event.globalPos() - self.press_pos)
 
 
 class NewWindow(QtWidgets.QMainWindow):
