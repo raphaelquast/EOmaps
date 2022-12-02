@@ -922,7 +922,7 @@ class BlitManager:
         self._bg = None
         self._artists = dict()
 
-        self._bg_artists = defaultdict(list)
+        self._bg_artists = dict()
         self._bg_layers = dict()
 
         # grab the background on every draw
@@ -1101,7 +1101,7 @@ class BlitManager:
         # get artists defined on the layer itself
         # Note: it's possible to create explicit multi-layers and attach
         # artists that are only visible if both layers are visible! (e.g. "l1|l2")
-        artists = [*self._bg_artists[layer]]
+        artists = [*self._bg_artists.get(layer, [])]
 
         # get all artists of the sub-layers (if we deal with a multi-layer)
         if "|" in layer:
@@ -1302,13 +1302,13 @@ class BlitManager:
         if art.figure != self.figure:
             raise RuntimeError
 
-        if art in self._bg_artists[layer]:
+        if layer in self._bg_artists and art in self._bg_artists[layer]:
             print(f"EOmaps: Background-artist {art} already added")
             return
 
         # art.set_animated(True)
 
-        self._bg_artists[layer].append(art)
+        self._bg_artists.setdefault(layer, []).append(art)
 
         # re-fetch the currently visible layer if an artist was added
         # (and all relevant sub-layers)
@@ -1331,6 +1331,8 @@ class BlitManager:
                     layers.append(key)
                 layer = "|".join(layers)
         else:
+            if layer not in self._bg_artists:
+                return
             if art in self._bg_artists[layer]:
                 art.set_animated(False)
                 self._bg_artists[layer].remove(art)
