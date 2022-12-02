@@ -418,7 +418,7 @@ class LayerArtistTabs(QtWidgets.QTabWidget):
                 border-bottom-color: none;
                 border-top-left-radius: 2px;
                 border-top-right-radius: 2px;
-                min-width: 12ex;
+                min-width: 50px;
                 padding: 1px;
                 margin: 1px;
             }
