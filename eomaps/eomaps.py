@@ -2711,18 +2711,23 @@ class Maps(object):
     def savefig(self, *args, **kwargs):
         # hide companion-widget indicator
         self._indicate_companion_map(False)
-        # clear all cached background layers before saving to make sure they
-        # are re-drawn with the correct dpi-settings
-        self.BM._bg_layers = dict()
 
-        # set the shading-axis-size to reflect the used dpi setting
-        self._update_shade_axis_size(dpi=kwargs.get("dpi", None))
+        dpi = kwargs.get("dpi", None)
+        if dpi is not None:
+            # clear all cached background layers before saving to make sure they
+            # are re-drawn with the correct dpi-settings
+            self.BM._bg_layers = dict()
+
+            # set the shading-axis-size to reflect the used dpi setting
+            self._update_shade_axis_size(dpi=dpi)
+
         self.f.savefig(*args, **kwargs)
-        # reset the shading-axis-size to the used figure dpi
-        self._update_shade_axis_size()
 
-        # redraw after the save to ensure that backgrounds are correctly cached
-        self.redraw()
+        if dpi is not None:
+            # reset the shading-axis-size to the used figure dpi
+            self._update_shade_axis_size()
+            # redraw after the save to ensure that backgrounds are correctly cached
+            self.redraw()
 
     def fetch_layers(self, layers=None, verbose=True):
         """
