@@ -1352,7 +1352,7 @@ else:
         @property
         def OpenStreetMap(self):
             """
-            (global) OpenStreetMap WebMap layers
+            OpenStreetMap WebMap layers
             https://wiki.openstreetmap.org/wiki/WMS
 
             Available styles are:
@@ -1373,48 +1373,6 @@ else:
                     - stamen_terrain_background
                 - OSM_terrestis: Styles hosted as free WMS service by Terrestis
                 - OSM_mundialis: Styles hosted as free WMS service by Mundialis
-
-            Note
-            ----
-            **LICENSE-info (without any warranty for correctness!!)**
-
-            Make sure to check the usage-policies at
-
-            - https://operations.osmfoundation.org/policies/tiles/
-            - https://www.openstreetmap.org/copyright
-
-            - for OSM_terrestis: https://www.terrestris.de/en/openstreetmap-wms/
-            - for OSM_mundialis: https://www.mundialis.de/en/ows-mundialis/
-
-            """
-
-            WMS = self._OpenStreetMap(self._m)
-            WMS.__doc__ = type(self)._OpenStreetMap.__doc__
-            return WMS
-
-        class _OpenStreetMap:
-            """
-            (global) OpenStreetMap WebMap layers
-            https://wiki.openstreetmap.org/wiki/WMS
-
-            Available styles are:
-
-                - default: standard OSM layer
-                - default_german: standard OSM layer in german
-                - stamen_toner: Black and white style by stamen
-                    - stamen_toner_lines
-                    - stamen_toner_background
-                    - stamen_toner_lite
-                    - stamen_toner_hybrid
-                    - stamen_toner_labels
-                - stamen_watercolor: a watercolor-like style by stamen
-                - stamen_terrain: a terrain layer by stamen
-                    - stamen_terrain_lines
-                    - stamen_terrain_labels
-                    - stamen_terrain_background
-
-                - OSM_terrestis: Styles hosted as free WMS service by Terrestis
-                - OSM_mundialis: Styles hosted as free WMS service by Mundialis
                 - OSM_wms and OSM_landuse: WMS hosted by Heidelberg Institute for
                   Geoinformation Technology
 
@@ -1431,6 +1389,16 @@ else:
             - for OSM_mundialis: https://www.mundialis.de/en/ows-mundialis/
             - for OSM_wms and OSM_landuse : https://heigit.org
 
+            """
+
+            WMS = self._OpenStreetMap(self._m)
+            WMS.__doc__ = type(self)._OpenStreetMap.__doc__
+            return WMS
+
+        class _OpenStreetMap:
+            """
+            (global) OpenStreetMap WebMap layers
+            https://wiki.openstreetmap.org/wiki/WMS
             """
 
             def __init__(self, m):
@@ -2247,10 +2215,11 @@ else:
         @lru_cache()
         def DLR_basemaps(self):
             """
+            Basemaps hosted by DLR's EOC Geoservice
+            https://geoservice.dlr.de
+
             A collection of basemaps provided by the EOC Geoservice of the Earth
             Observation Center (EOC) of the German Aerospace Center (DLR).
-
-            https://geoservice.dlr.de
 
             Note
             ----
