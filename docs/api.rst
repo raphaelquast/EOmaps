@@ -1285,6 +1285,7 @@ Pre-defined WebMap services:
     S2_cloudless
     GEBCO
     CAMS
+    DLR_basemaps
 
 **Services specific for Austria (Europe)**
 
