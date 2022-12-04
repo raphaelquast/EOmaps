@@ -1,8 +1,7 @@
 """A collection of helper-functions to generate map-plots."""
 
-from functools import lru_cache, wraps, partial
+from functools import lru_cache, wraps
 from itertools import repeat
-from collections import defaultdict
 import warnings
 import copy
 from types import SimpleNamespace
@@ -92,13 +91,9 @@ from pyproj import CRS, Transformer
 
 import matplotlib as mpl
 import matplotlib.pyplot as plt
-from matplotlib import cm
-from matplotlib.colors import LinearSegmentedColormap
-from matplotlib.gridspec import GridSpec, GridSpecFromSubplotSpec, SubplotSpec
+from matplotlib.gridspec import GridSpec, SubplotSpec
 
-import matplotlib.path as mpath
 import matplotlib.patches as mpatches
-from matplotlib.collections import PatchCollection
 
 from cartopy import crs as ccrs
 
@@ -353,6 +348,14 @@ class Maps(object):
 
         self._layer = layer
 
+        # check if the self represents a new-layer or an object on an existing layer
+        if any(
+            i.layer == layer for i in (self.parent, *self.parent._children) if i != self
+        ):
+            self._is_sublayer = True
+        else:
+            self._is_sublayer = False
+
         self._companion_widget = None  # slot for the pyqt widget
         self._cid_companion_key = None  # callback id for the companion-cb
         # a list to remember newly registered colormaps
@@ -423,27 +426,11 @@ class Maps(object):
         # a set to hold references to the compass objects
         self._compass = set()
 
-        # a set holding the callback ID's from added logos
-        self._logo_cids = set()
-
-        # keep track of all decorated functions that need to be "undecorated" so that
-        # Maps-objects can be garbage-collected
-        self._cleanup_functions = set()
-
         if not hasattr(self.parent, "_wms_legend"):
             self.parent._wms_legend = dict()
 
         # initialize the shape-drawer
         self._shape_drawer = ShapeDrawer(self)
-
-    def __enter__(self):
-        return self
-
-    def __exit__(self, type, value, traceback):
-        self.cleanup()
-        if self.parent == self:
-            plt.close(self.f)
-        gc.collect()
 
     def __getattribute__(self, key):
         if key == "plot_specs":
@@ -465,6 +452,21 @@ class Maps(object):
             )
         else:
             return object.__getattribute__(self, key)
+
+    def __enter__(self):
+        print(self.layer, self._is_sublayer)
+        assert not self._is_sublayer, (
+            "EOmaps: using a Maps-object as a context-manager is only possible "
+            "if you create a NEW layer (not a Maps-object on an existing layer)!"
+        )
+
+        return self
+
+    def __exit__(self, type, value, traceback):
+        self.cleanup()
+        if self.parent == self:
+            plt.close(self.f)
+        gc.collect()
 
     @property
     def layer(self):
@@ -2845,41 +2847,6 @@ class Maps(object):
 
         return copy_cls
 
-    def cleanup(self):
-        """
-        Cleanup all references to the object so that it can be safely deleted.
-        (primarily used internally to clear objects if the figure is closed)
-
-        Note
-        ----
-        Executing this function will remove ALL attached callbacks
-        and delete all assigned datasets & pre-computed values.
-
-        ONLY execute this if you do not need to do anything with the layer
-        (except for looking at it)
-        """
-        # remove the xlim-callback since it contains a reference to self
-        if hasattr(self, "_cid_xlim"):
-            self.ax.callbacks.disconnect(self._cid_xlim)
-            del self._cid_xlim
-
-        # disconnect all callbacks from attached logos
-        for cid in self._logo_cids:
-            self.f.canvas.mpl_disconnect(cid)
-        self._logo_cids.clear()
-
-        # disconnect all click, pick and keypress callbacks
-        self.cb._reset_cids()
-
-        # call all additional cleanup functions
-        for f in self._cleanup_functions:
-            f()
-        self._cleanup_functions.clear()
-
-        # remove the children from the parent Maps object
-        if self in self.parent._children:
-            self.parent._children.remove(self)
-
     def indicate_masked_points(self, radius=1.0, **kwargs):
         """
         Add circles to the map that indicate masked points.
@@ -3033,6 +3000,66 @@ class Maps(object):
 
         self.BM.on_layer(func=cb, layer=self.layer, persistent=persistent, m=self)
 
+    def cleanup(self):
+        """
+        Cleanup all references to the object so that it can be safely deleted.
+        (primarily used internally to clear objects if the figure is closed)
+
+        Note
+        ----
+        Executing this function will remove ALL attached callbacks
+        and delete all assigned datasets & pre-computed values.
+
+        ONLY execute this if you do not need to do anything with the layer
+        """
+        assert not self._is_sublayer, (
+            "EOmaps: m.cleanup() must be called on the Maps-object that was used "
+            "to create a NEW layer (not on a Maps-object referring to existing layer)!"
+        )
+
+        # disconnect callback on xlim-change (only relevant for parent)
+        try:
+            if hasattr(self, "_cid_xlim"):
+                self.ax.callbacks.disconnect(self._cid_xlim)
+                del self._cid_xlim
+        except Exception:
+            print("EOmaps-cleanup: Problem while clearing xlim-cid")
+
+        # clear data-specs and all cached properties of the data
+        try:
+            self._coll = None
+            if hasattr(self, "_props"):
+                self._props.clear()
+                del self._props
+
+            if hasattr(self, "tree"):
+                del self.tree
+            self.data_specs.delete()
+        except Exception:
+            print("EOmaps-cleanup: Problem while clearing data specs")
+
+        # disconnect all click, pick and keypress callbacks
+        try:
+            self.cb._reset_cids()
+        except Exception:
+            print("EOmaps-cleanup: Problem while clearing callbacks")
+
+        # cleanup all artists and cached background-layers from the blit-manager
+        self.BM.cleanup_layer(self.layer)
+
+        # remove the child from the parent Maps object
+        if self in self.parent._children:
+            self.parent._children.remove(self)
+
+        # re-initialize widgets to reflect layer-changes
+        # activate the base-layer
+        try:
+            if self.parent != self:
+                self.util._reinit_widgets()
+                self.show_layer(self.parent.layer)
+        except Exception:
+            print("EOmaps-cleanup: Problem while updating map to reflect changes")
+
     def _init_figure(self, ax=None, plot_crs=None, **kwargs):
         if self.parent.f is None:
             self._f = plt.figure(**kwargs)
@@ -3169,19 +3196,9 @@ class Maps(object):
     def _on_close(self, event):
         # reset attributes that might use up a lot of memory when the figure is closed
         for m in [self.parent, *self.parent._children]:
-            m._coll = None
-
-            if hasattr(m, "_props"):
-                m._props.clear()
-                del m._props
-
-            if hasattr(m, "tree"):
-                del m.tree
-
             if hasattr(m.f, "_EOmaps_parent"):
                 m.f._EOmaps_parent = None
 
-            m.data_specs.delete()
             m.cleanup()
 
         # delete the tempfolder containing the memmaps

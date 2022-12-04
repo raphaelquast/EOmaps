@@ -1586,3 +1586,50 @@ class BlitManager:
             gc.restore()
 
         return action
+
+    def cleanup_layer(self, layer):
+        self._cleanup_bg_artists(layer)
+        self._cleanup_artists(layer)
+        self._cleanup_bg_layers(layer)
+        self._cleanup_on_layer_activation(layer)
+
+    def _cleanup_bg_artists(self, layer):
+        try:
+            # remove all background artists
+            if layer in list(self._bg_artists):
+                for a in self._bg_artists[layer]:
+                    self.remove_bg_artist(a)
+                    a.remove()
+                del self._bg_artists[layer]
+        except Exception:
+            print("EOmaps-cleanup: Problem while clearing background artists")
+
+    def _cleanup_artists(self, layer):
+        try:
+            # remove all dynamic artists
+            if layer in list(self._artists):
+                for zorder, zartists in self._artists[layer].items():
+                    for a in zartists:
+                        self.remove_artist(a)
+                        a.remove()
+                del self._artists[layer]
+        except Exception:
+            print("EOmaps-cleanup: Problem while clearing dynamic artists")
+
+    def _cleanup_bg_layers(self, layer):
+        try:
+            # remove cached background-layers
+            if layer in self._bg_layers:
+                del self._bg_layers[layer]
+        except Exception:
+            print("EOmaps-cleanup: Problem while clearing cached background layers")
+
+    def _cleanup_on_layer_activation(self, layer):
+
+        try:
+            # remove not yet executed lazy-activation methods
+            # (e.g. not yet fetched WMS services)
+            if layer in self._on_layer_activation:
+                del self._on_layer_activation[layer]
+        except Exception:
+            print("EOmaps-cleanup: Problem while clearing layer activation methods")
