@@ -825,7 +825,7 @@ class LayoutEditor:
             ax.patch.set_facecolor("w")
             ax.patch.set_alpha(0.75)
 
-            if ax not in self.m.BM._bg_artists[self.m.BM.bg_layer]:
+            if ax not in self.m.BM._bg_artists.get(self.m.BM.bg_layer, []):
                 continue
             ax.set_visible(True)
 
