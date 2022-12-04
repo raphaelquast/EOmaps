@@ -454,7 +454,6 @@ class Maps(object):
             return object.__getattribute__(self, key)
 
     def __enter__(self):
-        print(self.layer, self._is_sublayer)
         assert not self._is_sublayer, (
             "EOmaps: using a Maps-object as a context-manager is only possible "
             "if you create a NEW layer (not a Maps-object on an existing layer)!"
