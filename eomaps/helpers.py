@@ -1250,24 +1250,22 @@ class BlitManager:
 
             The default is None in which case the layer of the base-Maps object is used.
         """
-        zorder = art.get_zorder()
+        if art.figure != self.figure:
+            raise RuntimeError
+
         if layer is None:
             layer = self._m.layer
 
         # make sure all layers are converted to string
         layer = str(layer)
 
-        self._artists.setdefault(layer, dict())
-        self._artists[layer].setdefault(zorder, list())
+        self._artists.setdefault(layer, set())
 
-        if art.figure != self.figure:
-            raise RuntimeError
-
-        if art in self._artists[layer][zorder]:
+        if art in self._artists[layer]:
             return
         else:
             art.set_animated(True)
-            self._artists[layer][zorder].append(art)
+            self._artists[layer].add(art)
 
     def add_bg_artist(self, art, layer=None):
         """
@@ -1352,17 +1350,23 @@ class BlitManager:
     def remove_artist(self, art, layer=None):
         # this only removes the artist from the blit-manager,
         # it does not clear it from the plot!
-        zorder = art.get_zorder()
 
         if layer is None:
             for key, layerartists in self._artists.items():
-                if art in layerartists.get(zorder, []):
+                if art in layerartists:
                     art.set_animated(False)
-                    layerartists[zorder].remove(art)
+                    layerartists.remove(art)
         else:
-            if art in self._artists[layer][zorder]:
+            if art in self._artists[layer]:
                 art.set_animated(False)
-                self._artists[layer][zorder].remove(art)
+                self._artists[layer].remove(art)
+
+    def _get_artist_zorder(self, a):
+        try:
+            return a.get_zorder()
+        except Exception:
+            print(r"EOmaps: unalble to identify zorder of {a}... using 99")
+            return 99
 
     def _draw_animated(self, layers=None, artists=None):
         """
@@ -1384,13 +1388,11 @@ class BlitManager:
         # always redraw artists from the "all" layer
         layers.add("all")
 
-        # redraw artists from the selected layers
-        for l in layers.intersection(self._artists):
-            zorder_artists = self._artists[l]
-            zorders = sorted(list(zorder_artists))
-            for zorder in zorders:
-                for a in zorder_artists[zorder]:
-                    fig.draw_artist(a)
+        # redraw artists from the selected layers (sorted by zorder)
+        for layer in layers:
+            for a in sorted(self._artists.get(layer, []), key=self._get_artist_zorder):
+                fig.draw_artist(a)
+
         if artists is not None:
             # redraw provided artists
             for a in artists:
@@ -1594,25 +1596,28 @@ class BlitManager:
         self._cleanup_on_layer_activation(layer)
 
     def _cleanup_bg_artists(self, layer):
+        if layer not in self._bg_artists:
+            return
+
         try:
             # remove all background artists
-            if layer in list(self._bg_artists):
-                for a in self._bg_artists[layer]:
-                    self.remove_bg_artist(a)
-                    a.remove()
-                del self._bg_artists[layer]
+            for a in self._bg_artists[layer]:
+                self.remove_bg_artist(a)
+                a.remove()
+            del self._bg_artists[layer]
         except Exception:
             print("EOmaps-cleanup: Problem while clearing background artists")
 
     def _cleanup_artists(self, layer):
+        if layer not in self._artists:
+            return
+
         try:
             # remove all dynamic artists
-            if layer in list(self._artists):
-                for zorder, zartists in self._artists[layer].items():
-                    for a in zartists:
-                        self.remove_artist(a)
-                        a.remove()
-                del self._artists[layer]
+            for a in self._artists[layer]:
+                self.remove_artist(a)
+                a.remove()
+            del self._artists[layer]
         except Exception:
             print("EOmaps-cleanup: Problem while clearing dynamic artists")
 
