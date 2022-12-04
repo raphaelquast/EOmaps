@@ -771,15 +771,12 @@ class LayoutEditor:
             self._ax_visible[ax] = ax.get_visible()
 
         # make all artists invisible (and remember their visibility state for later)
-        # for l in self.m.BM._bg_artists.values():
-        #     for a in l:
-        #         self._artists_visible[a] = a.get_visible()
-        #         a.set_visible(False)
-
-        dyn_artists = list(chain(*self.m.BM._artists.values()))
-        for a in set([*self.m.f.artists, *chain(*self.m.BM._bg_artists.values())]):
-            if a in dyn_artists:
-                continue
+        for a in {
+            *self.m.f.artists,
+            *chain(*self.m.BM._bg_artists.values()),
+            *chain(*self.m.BM._artists.values()),
+        }:
+            # keep axes visible!
             if not isinstance(a, plt.Axes):
                 self._artists_visible[a] = a.get_visible()
                 a.set_visible(False)
