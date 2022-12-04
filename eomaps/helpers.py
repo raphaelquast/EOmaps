@@ -1596,27 +1596,31 @@ class BlitManager:
         if layer not in self._bg_artists:
             return
 
-        try:
-            # remove all background artists
-            for a in self._bg_artists[layer]:
-                self.remove_bg_artist(a)
+        artists = self._bg_artists[layer]
+        while len(artists) > 0:
+            a = artists.pop()
+            try:
+                self.remove_bg_artist(a, layer)
                 a.remove()
-            del self._bg_artists[layer]
-        except Exception:
-            print("EOmaps-cleanup: Problem while clearing background artists")
+            except Exception:
+                print(f"EOmaps-cleanup: Problem while clearing bg artist:\n {a}")
+
+        del self._bg_artists[layer]
 
     def _cleanup_artists(self, layer):
         if layer not in self._artists:
             return
 
-        try:
-            # remove all dynamic artists
-            for a in self._artists[layer]:
+        artists = self._artists[layer]
+        while len(artists) > 0:
+            a = artists.pop()
+            try:
                 self.remove_artist(a)
                 a.remove()
-            del self._artists[layer]
-        except Exception:
-            print("EOmaps-cleanup: Problem while clearing dynamic artists")
+            except Exception:
+                print(f"EOmaps-cleanup: Problem while clearing dynamic artist:\n {a}")
+
+        del self._artists[layer]
 
     def _cleanup_bg_layers(self, layer):
         try:
