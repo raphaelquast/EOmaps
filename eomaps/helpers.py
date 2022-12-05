@@ -263,6 +263,15 @@ class LayoutEditor:
         self._shift_pressed = False
 
     @property
+    def modifier_pressed(self):
+        return self._modifier_pressed
+
+    @modifier_pressed.setter
+    def modifier_pressed(self, val):
+        self._modifier_pressed = val
+        self.m.cb.execute_callbacks(not val)
+
+    @property
     def ms(self):
         return [self.m.parent, *self.m.parent._children]
 
@@ -447,7 +456,7 @@ class LayoutEditor:
         self._remove_snap_grid()
 
     def cb_pick(self, event):
-        if not self._modifier_pressed:
+        if not self.modifier_pressed:
             return
         if (self.f.canvas.toolbar is not None) and self.f.canvas.toolbar.mode != "":
             return False
@@ -523,7 +532,7 @@ class LayoutEditor:
         self.m.redraw()
 
     def cb_move_with_key(self, event):
-        if not self._modifier_pressed:
+        if not self.modifier_pressed:
             return
         if (self.f.canvas.toolbar is not None) and self.f.canvas.toolbar.mode != "":
             return False
@@ -547,7 +556,7 @@ class LayoutEditor:
         if (self.f.canvas.toolbar is not None) and self.f.canvas.toolbar.mode != "":
             return False
         if self.modifier is not None:
-            if not self._modifier_pressed:
+            if not self.modifier_pressed:
                 return False
 
         if event.button != 1:
@@ -574,7 +583,7 @@ class LayoutEditor:
         if (self.f.canvas.toolbar is not None) and self.f.canvas.toolbar.mode != "":
             return False
         if self.modifier is not None:
-            if not self._modifier_pressed:
+            if not self.modifier_pressed:
                 return False
 
         # ordinary axes picked
@@ -611,16 +620,16 @@ class LayoutEditor:
         if (self.f.canvas.toolbar is not None) and self.f.canvas.toolbar.mode != "":
             return False
 
-        if (event.key == self.modifier) and (not self._modifier_pressed):
+        if (event.key == self.modifier) and (not self.modifier_pressed):
             self._make_draggable()
             return
         elif (event.key == self.modifier or event.key == "escape") and (
-            self._modifier_pressed
+            self.modifier_pressed
         ):
             self._undo_draggable()
             return
         else:
-            if not self._modifier_pressed:
+            if not self.modifier_pressed:
                 # only continue if  modifier is pressed!
                 return
 
@@ -750,8 +759,7 @@ class LayoutEditor:
         self._ax_visible.clear()
 
         # do this at the end!
-        self._modifier_pressed = False
-        self.m._ignore_cb_events = False
+        self.modifier_pressed = False
 
         # make sure the snap-grid is removed
         self._remove_snap_grid()
@@ -760,7 +768,7 @@ class LayoutEditor:
     def _make_draggable(self, filepath=None):
         self._filepath = filepath
 
-        # all ordinary callbacks will not execute if" self._modifier_pressed" is True!
+        # all ordinary callbacks will not execute if" self.modifier_pressed" is True!
         print("EOmaps: Activating layout-editor mode (press 'esc' to exit)")
         if filepath:
             print("EOmaps: On exit, the layout will be saved to:\n       ", filepath)
@@ -814,8 +822,7 @@ class LayoutEditor:
             for i in self.axes
         ]
 
-        self._modifier_pressed = True
-        self.m._ignore_cb_events = True
+        self.modifier_pressed = True
 
         for ax in self.axes:
             ax.patch.set_visible(True)

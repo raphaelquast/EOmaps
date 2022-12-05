@@ -779,12 +779,12 @@ class cb_click_container(_click_container):
 
     def _add_click_callback(self):
         def clickcb(event):
+            if not self._m.cb.get_execute_callbacks():
+                return
+
             try:
                 self._event = event
 
-                # ignore callbacks while dragging axes
-                if self._m._ignore_cb_events:
-                    return
                 # don't execute callbacks if a toolbar-action is active
                 if (
                     self._m.f.canvas.toolbar is not None
@@ -809,10 +809,10 @@ class cb_click_container(_click_container):
                 pass
 
         def releasecb(event):
+            if not self._m.cb.get_execute_callbacks():
+                return
+
             try:
-                # ignore callbacks while dragging axes
-                if self._m._ignore_cb_events:
-                    return
                 # don't execute callbacks if a toolbar-action is active
                 if (
                     self._m.f.canvas.toolbar is not None
@@ -931,6 +931,9 @@ class cb_move_container(cb_click_container):
 
     def _add_move_callback(self):
         def movecb(event):
+            if not self._m.cb.get_execute_callbacks():
+                return
+
             try:
                 self._event = event
                 # only execute movecb if a mouse-button is holded down
@@ -952,9 +955,6 @@ class cb_move_container(cb_click_container):
                             self._m.BM._clear_temp_artists(self._method)
                         return
 
-                # ignore callbacks while dragging axes
-                if self._m._ignore_cb_events:
-                    return
                 # don't execute callbacks if a toolbar-action is active
                 if (
                     self._m.f.canvas.toolbar is not None
@@ -1201,14 +1201,12 @@ class cb_pick_container(_click_container):
         # execute onpick and forward the event to all connected Maps-objects
 
         def pickcb(event):
+            if not self._m.cb.get_execute_callbacks():
+                return
 
             try:
                 # make sure pickcb is only executed if we are on the right layer
                 if not self._execute_cb(self._m.layer):
-                    return
-
-                # check if we want to ignore callbacks
-                if self._m._ignore_cb_events:
                     return
 
                 # don't execute callbacks if a toolbar-action is active
@@ -1350,10 +1348,10 @@ class keypress_container(_cb_container):
 
     def _initialize_callbacks(self):
         def _onpress(event):
-            try:
-                if self._m.parent._layout_editor._modifier_pressed:
-                    return
+            if not self._m.cb.get_execute_callbacks():
+                return
 
+            try:
                 self._event = event
 
                 # remember keypress event in case sticky modifiers are used for
@@ -1657,6 +1655,29 @@ class cb_container:
             cb_cls=keypress_callbacks,
             method="keypress",
         )
+
+    def get_execute_callbacks(self):
+        """
+        Get if callbacks should be executed or not.
+
+        Returns
+        -------
+        bool
+            If True, callbacks are executed.
+
+        """
+        return self._m.parent._execute_callbacks
+
+    def execute_callbacks(self, val):
+        """
+        Activate / deactivate triggering callbacks.
+
+        Parameters
+        ----------
+        val : bool
+            If True, callbacks will be executed.
+        """
+        self._m.parent._execute_callbacks = val
 
     @property
     @wraps(cb_click_container)

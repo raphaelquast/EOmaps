@@ -134,7 +134,7 @@ class DraggableLegend_new(DraggableLegend):
 
     def on_pick(self, evt):
         if self._check_still_parented() and evt.artist == self.ref_artist:
-            self._m._ignore_cb_events = True
+            self._m.cb.execute_callbacks(False)
             self.mouse_x = evt.mouseevent.x
             self.mouse_y = evt.mouseevent.y
             self.got_artist = True
@@ -143,7 +143,7 @@ class DraggableLegend_new(DraggableLegend):
 
     def on_release(self, event):
         if self._check_still_parented() and self.got_artist:
-            self._m._ignore_cb_events = False
+            self._m.cb.execute_callbacks(True)
             self.finalize_offset()
             self.got_artist = False
             self.canvas.mpl_disconnect(self._c1)
@@ -260,7 +260,7 @@ class LayerSelector(SelectorButtons):
         self._m.util._selectors[name] = self
 
     def on_clicked(self, val):
-        if self._m.parent._layout_editor._modifier_pressed:
+        if not self._m.cb.get_execute_callbacks():
             return
 
         l = self.labels[int(val)]
@@ -495,7 +495,7 @@ class LayerSlider(Slider):
         self._m.BM.update()
 
     def _on_changed(self, val):
-        if self._m.parent._layout_editor._modifier_pressed:
+        if not self._m.cb.get_execute_callbacks():
             return
 
         l = self._layers[int(val)]

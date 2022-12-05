@@ -429,6 +429,9 @@ class Maps(object):
         if not hasattr(self.parent, "_wms_legend"):
             self.parent._wms_legend = dict()
 
+        if not hasattr(self.parent, "_execute_callbacks"):
+            self.parent._execute_callbacks = True
+
         # initialize the shape-drawer
         self._shape_drawer = ShapeDrawer(self)
 
@@ -3117,10 +3120,6 @@ class Maps(object):
         # initialize the callbacks
         self.cb._init_cbs()
 
-        # set the _ignore_cb_events property on the parent
-        # (used to temporarily disconnect all callbacks)
-        self.parent._ignore_cb_events = False
-
         if newax:  # only if a new axis has been created
             self._ax_xlims = (0, 0)
             self._ax_ylims = (0, 0)
@@ -3300,14 +3299,6 @@ class Maps(object):
         boundary = mpl.path.Path(bnd_verts)
 
         return boundary, bnd_verts
-
-    @property
-    def _ignore_cb_events(self):
-        return self.parent._persistent_ignore_cb_events
-
-    @_ignore_cb_events.setter
-    def _ignore_cb_events(self, val):
-        self.parent._persistent_ignore_cb_events = val
 
     def _add_child(self, m):
         self.parent._children.add(m)
