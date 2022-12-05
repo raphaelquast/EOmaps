@@ -3881,8 +3881,12 @@ class Maps(object):
 
             if vmin is None and self.data is not None:
                 vmin = np.nanmin(props["z_data"])
+            else:
+                vmin = self._encode_values(vmin)
             if vmax is None and self.data is not None:
                 vmax = np.nanmax(props["z_data"])
+            else:
+                vmin = self._encode_values(vmin)
 
             # clip the data to properly account for vmin and vmax
             # (do this only if we don't intend to use the full dataset!)
@@ -4315,12 +4319,51 @@ class Maps(object):
         for key, val in memmaps.items():
             self._props[key] = val
 
+    def _encode_values(self, val):
+        """
+        Encode values with respect to the provided  "scale_factor" and "add_offset"
+        using the formula:
+
+            `encoded_value = val / scale_factor - add_offset`
+
+        NOTE: the data-type is not altered!!
+        (e.g. no integer-conversion is performed, only values are adjusted)
+
+        Parameters
+        ----------
+        val : array-like
+            The data-values to encode
+
+        Returns
+        -------
+        encoded_values
+            The encoded data values
+        """
+
+        encoding = self.data_specs.encoding
+        if encoding is not None:
+            try:
+                scale_factor = encoding.get("scale_factor", None)
+                add_offset = encoding.get("add_offset", None)
+
+                if scale_factor:
+                    val = val / scale_factor
+                if add_offset:
+                    val = val - add_offset
+
+                return val
+            except:
+                print("EOmaps: There was an error while trying to encode the data.")
+                return val
+        else:
+            return val
+
     def _decode_values(self, val):
         """
         Decode data-values with respect to the provided "scale_factor" and "add_offset"
         using the formula:
 
-            `actual_value = add_offset + scale_factor * encoded_value`
+            `actual_value = add_offset + scale_factor * val`
 
         The encoding is defined in `m.data_specs.encoding`
 
@@ -4342,12 +4385,13 @@ class Maps(object):
                 add_offset = encoding.get("add_offset", None)
 
                 if scale_factor:
-                    val *= scale_factor
+                    val = val * scale_factor
                 if add_offset:
-                    val += add_offset
+                    val = val + add_offset
 
                 return val
             except:
+                print("EOmaps: There was an error while trying to decode the data.")
                 return val
         else:
             return val
