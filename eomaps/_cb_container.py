@@ -1781,6 +1781,12 @@ class cb_container:
 
         self._remove_default_keymaps()
 
+    def _clear_callbacks(self):
+        # clear all callback containers
+        for method in self._methods:
+            obj = getattr(self, method)
+            obj.get.cbs.clear()
+
     def _reset_cids(self):
         # reset the callback functions (required to re-attach the callbacks
         # in case the figure is closed and re-initialized)

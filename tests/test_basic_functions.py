@@ -918,3 +918,48 @@ class TestBasicPlotting(unittest.TestCase):
         self.assertTrue(
             np.allclose(m._encode_values(m._decode_values(encoded)), encoded)
         )
+
+    def test_maps_as_contextmanager(self):
+        # just some very basic tests if cleanup functions do their job
+        with Maps(layer="first") as m:
+            m.set_data(*[[1, 2, 3]] * 3)
+            m.plot_map()
+            m.cb.click.attach.annotate()
+            self.assertTrue(
+                all(
+                    i in m._props
+                    for i in ["xorig", "yorig", "x0", "y0", "ids", "z_data"]
+                )
+            )
+            self.assertTrue(len(m.cb.click.get.cbs) == 1)
+
+            with m.new_layer("second") as m2:
+                self.assertTrue(set(m._get_layers()) == {"first", "second"})
+
+                m2.set_data(*[[1, 2, 3]] * 3)
+                m2.plot_map()
+                m2.cb.click.attach.annotate()
+                self.assertTrue(
+                    all(
+                        i in m._props
+                        for i in ["xorig", "yorig", "x0", "y0", "ids", "z_data"]
+                    )
+                )
+                self.assertFalse(m2.coll is None)
+                self.assertTrue(len(m2.cb.click.get.cbs) == 1)
+
+            self.assertTrue(set(m._get_layers()) == {"first"})
+            self.assertTrue(
+                all(
+                    i in m._props
+                    for i in ["xorig", "yorig", "x0", "y0", "ids", "z_data"]
+                )
+            )
+            self.assertTrue(len(m.cb.click.get.cbs) == 1)
+            self.assertTrue(len(m.cb.click.get.cbs) == 1)
+
+            self.assertTrue(m2.coll is None)
+            self.assertTrue(len(m2.cb.click.get.cbs) == 0)
+
+        self.assertTrue(m.coll is None)
+        self.assertTrue(len(m.cb.click.get.cbs) == 0)

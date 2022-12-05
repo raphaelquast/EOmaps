@@ -3043,6 +3043,8 @@ class Maps(object):
         # disconnect all click, pick and keypress callbacks
         try:
             self.cb._reset_cids()
+            # cleanup callback-containers
+            self.cb._clear_callbacks()
         except Exception:
             print("EOmaps-cleanup: Problem while clearing callbacks")
 
