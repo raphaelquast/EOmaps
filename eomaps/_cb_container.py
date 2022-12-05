@@ -973,7 +973,15 @@ class cb_move_container(cb_click_container):
                     # forward callbacks to the connected maps-objects
                     obj._fwd_cb(event)
 
-                self._m.parent.BM.update(clear=self._method)
+                # only update if a callback is attached
+                # (to avoid constantly calling update)
+                if len(self.get.cbs) > 0:
+                    if self._button_down:
+                        if event.button:
+                            self._m.parent.BM.update(clear=self._method)
+                    else:
+                        self._m.parent.BM.update(clear=self._method)
+
             except ReferenceError:
                 pass
 
