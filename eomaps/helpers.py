@@ -1389,6 +1389,7 @@ class BlitManager:
             layers = set(chain(*(i.split("|") for i in layers)))
             for l in layers:
                 layers.add(l)
+
         # always redraw artists from the "all" layer
         layers.add("all")
 
@@ -1471,7 +1472,6 @@ class BlitManager:
             If provided NO layer will be automatically updated!
             The default is None.
         """
-
         cv = self.canvas
         if (cv.toolbar is not None) and cv.toolbar.mode != "":
             # only re-draw artists during toolbar-actions (e.g. pan/zoom)
@@ -1527,6 +1527,29 @@ class BlitManager:
         # let the GUI event loop process anything it has to do
         # don't do this! it is causing infinite loops
         # cv.flush_events()
+
+    def blit_artists(self, artists, bg=None):
+        """
+        Blit artists (optionally on top of a given background)
+
+        Parameters
+        ----------
+        artists : iterable
+            the artists to draw
+        bg : matpltolib.BufferRegion, optional
+            A fetched background that is restored before drawing the artists.
+            The default is None.
+        """
+        cv = self.canvas
+
+        # restore the background
+        if bg is not None:
+            cv.restore_region(bg)
+
+        for a in artists:
+            self.figure.draw_artist(a)
+
+        cv.blit(cv.figure.bbox)
 
     def _get_overlay_name(self, layer=None, bg_layer=None):
         if layer is None:

@@ -155,6 +155,7 @@ class ShapeDrawer:
         cb : callable, optional
             A callable executed after finishing the draw. The default is None.
         """
+        self._m.cb.execute_callbacks(True)
 
         active_drawer = self._active_drawer
         if active_drawer is None:
@@ -166,17 +167,14 @@ class ShapeDrawer:
         # Cleanup.
         if plt.fignum_exists(active_drawer._m.f.number):
             if self._line is not None:
-                active_drawer._m.BM.remove_artist(self._line)
                 self._line.remove()
                 self._line = None
 
             if self._shape_indicator is not None:
-                active_drawer._m.BM.remove_artist(self._shape_indicator)
                 self._shape_indicator.remove()
                 self._shape_indicator = None
 
             if self._endline is not None:
-                active_drawer._m.BM.remove_artist(self._endline)
                 self._endline.remove()
                 self._endline = None
 
@@ -230,8 +228,6 @@ class ShapeDrawer:
                 lw=0.5,
                 ls="--",
             )
-            self._m.BM.add_artist(self._line, "all")
-            self._m.BM.add_artist(self._endline, "all")
 
     def _init_shape_indicator(self):
         if self._shape_indicator is None:
@@ -304,6 +300,9 @@ class ShapeDrawer:
         self._active_drawer = self
 
         canvas = self._m.BM.canvas
+        self._background = canvas.copy_from_bbox(self._m.ax.bbox)
+
+        self._m.cb.execute_callbacks(False)
 
         def handler(event):
             self._init_draw_line()
@@ -324,13 +323,18 @@ class ShapeDrawer:
             # MATLAB and sometimes quite useful, but will require the user to
             # test how many points were actually returned before using data).
 
+            if is_key and event.key in ["escape"]:
+                self._finish_drawing()
+                return
+
             if (
                 is_button
                 and event.button == mouse_stop
                 or is_key
-                and event.key in ["escape", "enter"]
+                and event.key in ["enter"]
             ):
                 self._finish_drawing(cb=cb)
+                return
 
             # Pop last click.
             elif (
@@ -377,10 +381,9 @@ class ShapeDrawer:
             if len(self._clicks) == n and n > 0:
                 self._finish_drawing(cb=cb)
 
-            for i in (self._endline, self._line):
-                if i is not None:
-                    self._m.ax.draw_artist(i)
-            self._m.BM.canvas.blit()
+            self._m.BM.blit_artists(
+                (i for i in (self._endline, self._line) if i), bg=self._background
+            )
 
         eventnames = ["button_press_event", "key_press_event", "close_event"]
         if draw_on_drag:
@@ -457,13 +460,16 @@ class ShapeDrawer:
         self._active_drawer = self
 
         canvas = self._m.BM.canvas
+        self._background = canvas.copy_from_bbox(self._m.ax.bbox)
+
+        self._m.cb.execute_callbacks(False)
 
         def handler(event):
             self._init_draw_line()
             self._init_shape_indicator()
 
             if event.name == "close_event":
-                self._finish_drawing(cb=cb)
+                self._finish_drawing()
                 return
 
             if (canvas.toolbar is not None) and canvas.toolbar.mode != "":
@@ -485,8 +491,10 @@ class ShapeDrawer:
             if is_button and event.button == mouse_stop:
                 self._clicks.append((event.xdata, event.ydata))
                 self._finish_drawing(cb=cb)
-            elif is_key and event.key in ["escape", "enter"]:
-                self._finish_drawing(cb=cb)
+                return
+            elif is_key and event.key in ["escape"]:
+                self._finish_drawing()
+                return
 
             # Pop last click.
             elif (
@@ -502,6 +510,8 @@ class ShapeDrawer:
                             self._line.set_data(*zip(*self._clicks))
                         else:
                             self._line.set_data([], [])
+
+                        self._shape_indicator.set_xy(np.empty(shape=(0, 2)))
 
             # Add new click.
             elif (
@@ -519,10 +529,10 @@ class ShapeDrawer:
                     if show_clicks:
                         self._line.set_data(*zip(*self._clicks))
 
-            for i in (self._shape_indicator, self._line):
-                if i is not None:
-                    self._m.ax.draw_artist(i)
-            self._m.BM.canvas.blit()
+            self._m.BM.blit_artists(
+                (i for i in (self._shape_indicator, self._line) if i),
+                bg=self._background,
+            )
 
         eventnames = ["button_press_event", "key_press_event", "close_event"]
         if draw_on_drag:
@@ -564,9 +574,11 @@ class ShapeDrawer:
                 (ph,) = self._m.ax.fill(pts[:, 0], pts[:, 1], **kwargs)
 
                 if self._layer is None:
-                    self._m.BM.add_bg_artist(ph, layer=self._m.BM._bg_layer)
+                    layer = self._m.BM._bg_layer
                 else:
-                    self._m.BM.add_bg_artist(ph, layer=self._layer)
+                    layer = self._layer
+
+                self._m.BM.add_bg_artist(ph, layer=layer)
 
                 ID = max(self._artists) + 1 if self._artists else 0
                 self._artists[ID] = ph
@@ -618,9 +630,9 @@ class ShapeDrawer:
                     100,
                 )
                 self._shape_indicator.set_xy(np.column_stack((pts[0][0], pts[1][0])))
-                if self._shape_indicator is not None:
-                    self._m.ax.draw_artist(self._shape_indicator)
-                self._m.BM.canvas.blit()
+                self._m.BM.blit_artists(
+                    (self._shape_indicator, self._line), bg=self._background
+                )
 
         self._ginput2(2, timeout=-1, draw_on_drag=True, movecb=movecb, cb=cb)
 
@@ -688,9 +700,9 @@ class ShapeDrawer:
                 )[0][0]
 
                 self._shape_indicator.set_xy(np.column_stack((pts[:, 0], pts[:, 1])))
-                if self._shape_indicator is not None:
-                    self._m.ax.draw_artist(self._shape_indicator)
-                self._m.BM.canvas.blit()
+                self._m.BM.blit_artists(
+                    (self._shape_indicator, self._line), bg=self._background
+                )
 
         self._ginput2(2, timeout=-1, draw_on_drag=True, movecb=movecb, cb=cb)
 
