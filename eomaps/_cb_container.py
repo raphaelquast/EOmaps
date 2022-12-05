@@ -7,7 +7,6 @@ from eomaps.callbacks import (
 from types import SimpleNamespace
 
 from functools import update_wrapper, partial, wraps
-from collections import defaultdict
 import matplotlib.pyplot as plt
 
 from pyproj import Transformer
@@ -354,7 +353,7 @@ class _click_container(_cb_container):
             self.m = parent._m
             self.cb = parent._cb
 
-            self.cbs = defaultdict(lambda: defaultdict(dict))
+            self.cbs = dict()
 
         @property
         def picked_object(self):
@@ -636,7 +635,7 @@ class _click_container(_cb_container):
         # check for modifiers
         button_modifier = f"{button}__{modifier}"
 
-        d = self.get.cbs[btn_key][button_modifier]
+        d = self.get.cbs.setdefault(btn_key, dict()).setdefault(button_modifier, dict())
 
         # get a unique name for the callback
         # name_idx__layer
@@ -715,9 +714,9 @@ class cb_click_container(_click_container):
         clickdict = self._get_clickdict(event)
 
         if event.dblclick:
-            cbs = self.get.cbs["double"]
+            cbs = self.get.cbs.get("double", dict())
         else:
-            cbs = self.get.cbs["single"]
+            cbs = self.get.cbs.get("single", dict())
 
         # check for keypress-modifiers
         if (
@@ -744,7 +743,7 @@ class cb_click_container(_click_container):
                     cb(**clickdict)
 
     def _onrelease(self, event):
-        cbs = self.get.cbs["release"]
+        cbs = self.get.cbs.get("release", dict())
 
         # check for keypress-modifiers
         if (
@@ -1162,9 +1161,9 @@ class cb_pick_container(_click_container):
         clickdict = self._get_pickdict(event)
 
         if event.mouseevent.dblclick:
-            cbs = self.get.cbs["double"]
+            cbs = self.get.cbs.get("double", dict())
         else:
-            cbs = self.get.cbs["single"]
+            cbs = self.get.cbs.get("single", dict())
 
         # check for keypress-modifiers
         if (
@@ -1378,23 +1377,24 @@ class keypress_container(_cb_container):
                         print(f"EOmaps: sticky modifier: {k} ({', '.join(methods)})")
                         self._modifier = k
 
-                update = False
                 for obj in self._objs:
                     # only trigger callbacks on the right layer
                     if not self._execute_cb(obj._m.layer):
                         continue
                     if any(i in obj.get.cbs for i in (event.key, None)):
-                        update = True
                         # do this to allow deleting callbacks with a callback
                         # otherwise modifying a dict during iteration is problematic!
-                        cbs = {**obj.get.cbs[event.key], **obj.get.cbs[None]}
+                        cbs = {
+                            **obj.get.cbs.get(event.key, dict()),
+                            **obj.get.cbs.get(None, dict()),
+                        }
 
                         names = list(cbs)
                         for name in names:
                             if name in cbs:
                                 cbs[name](key=event.key)
-                # if update:
-                #     self._m.parent.BM.update(clear=self._method)
+
+                self._m.parent.BM.update(clear=self._method)
             except ReferenceError:
                 pass
 
@@ -1490,7 +1490,7 @@ class keypress_container(_cb_container):
             self.m = parent._m
             self.cb = parent._cb
 
-            self.cbs = defaultdict(dict)
+            self.cbs = dict()
 
         @property
         def attached_callbacks(self):
@@ -1581,7 +1581,7 @@ class keypress_container(_cb_container):
             )
             callback = getattr(self._cb, callback)
 
-        cbdict = self.get.cbs[key]
+        cbdict = self.get.cbs.setdefault(key, dict())
 
         # get a unique name for the callback
         ncb = [
