@@ -4346,10 +4346,10 @@ class Maps(object):
                 scale_factor = encoding.get("scale_factor", None)
                 add_offset = encoding.get("add_offset", None)
 
-                if scale_factor:
-                    val = val / scale_factor
                 if add_offset:
                     val = val - add_offset
+                if scale_factor:
+                    val = val / scale_factor
 
                 return val
             except:

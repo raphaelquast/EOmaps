@@ -899,3 +899,22 @@ class TestBasicPlotting(unittest.TestCase):
         mg.add_feature.preset.coastline()
 
         plt.close("all")
+
+    def test_decode_encode_data(self):
+        encoded = np.array([1000, 2000, 3000])
+
+        m = Maps()
+        m.set_data(
+            encoded,
+            [1, 2, 3],
+            [1, 2, 3],
+            encoding=dict(scale_factor=0.01, add_offset=100),
+        )
+        m.plot_map()
+
+        decoded = np.array(encoded) * 0.01 + 100
+
+        self.assertTrue(np.allclose(m._decode_values(encoded), decoded))
+        self.assertTrue(
+            np.allclose(m._encode_values(m._decode_values(encoded)), encoded)
+        )
