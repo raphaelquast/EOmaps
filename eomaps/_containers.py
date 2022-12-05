@@ -6,11 +6,6 @@ from types import SimpleNamespace
 from functools import lru_cache
 from pathlib import Path
 import json
-from warnings import warn
-
-import matplotlib.pyplot as plt
-from matplotlib.pyplot import get_cmap
-from matplotlib.gridspec import SubplotSpec
 from matplotlib.colors import rgb2hex
 
 import cartopy.feature as cfeature
