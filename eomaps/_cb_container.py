@@ -962,7 +962,13 @@ class cb_move_container(cb_click_container):
 
                 # execute onclick on the maps object that belongs to the clicked axis
                 # and forward the event to all forwarded maps-objects
+                update = False
                 for obj in self._objs:
+                    # check if there is a reason to update
+                    if update is False:
+                        if len(obj.get.cbs) > 0:
+                            update = True
+
                     # clear temporary artists before executing new callbacks to avoid
                     # having old artists around when callbacks are triggered again
                     obj._clear_temporary_artists()
@@ -974,7 +980,7 @@ class cb_move_container(cb_click_container):
 
                 # only update if a callback is attached
                 # (to avoid constantly calling update)
-                if len(self.get.cbs) > 0:
+                if update:
                     if self._button_down:
                         if event.button:
                             self._m.parent.BM.update(clear=self._method)
@@ -1394,7 +1400,7 @@ class keypress_container(_cb_container):
                             if name in cbs:
                                 cbs[name](key=event.key)
 
-                self._m.parent.BM.update(clear=self._method)
+                # self._m.parent.BM.update(clear=self._method)
             except ReferenceError:
                 pass
 
