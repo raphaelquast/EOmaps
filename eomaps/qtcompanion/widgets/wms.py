@@ -224,12 +224,6 @@ class WMS_S2_cloudless(WMSBase):
     def __init__(self, m=None):
         self.m = m
         wmslayers = sorted(self.m.add_wms.S2_cloudless.layers)
-
-        if self.m.crs_plot == self.m.CRS.GOOGLE_MERCATOR:
-            wmslayers = [i for i in wmslayers if i.endswith("3857")]
-        else:
-            wmslayers = [i for i in wmslayers if not i.endswith("3857")]
-
         self.wmslayers = wmslayers
 
     def do_add_layer(self, wmslayer, layer):
@@ -244,11 +238,7 @@ class WMS_ESA_WorldCover(WMSBase):
 
     def __init__(self, m=None):
         self.m = m
-        self.wmslayers = [
-            key
-            for key in self.m.add_wms.ESA_WorldCover.layers
-            if (key.startswith("WORLDCOVER") or key.startswith("COP"))
-        ]
+        self.wmslayers = self.m.add_wms.ESA_WorldCover.layers
 
     def do_add_layer(self, wmslayer, layer):
         wms = getattr(self.m.add_wms.ESA_WorldCover.add_layer, wmslayer)
@@ -421,6 +411,38 @@ class AddWMSMenuButton(QtWidgets.QPushButton):
         self.fetch_submenu(wmsname=wmsname)
         self.populate_submenu(wmsname)
 
+    def select_wmslayers(self, wmsname, wmslayers):
+        """
+        Pre-select WMS-layers of services based on certain conditions
+        (e.g. to avoid showing layers that cannot be plottet)
+
+        Parameters
+        ----------
+        wmsname : str
+            the name of the wms.
+        wmslayers : list
+            the list of ALL available layers
+
+        Returns
+        -------
+        list
+            a list of the selected layers.
+
+        """
+        if wmsname == "S2 Cloudless":
+            if self.m.crs_plot == self.m.CRS.GOOGLE_MERCATOR:
+                wmslayers = [i for i in wmslayers if i.endswith("3857")]
+            else:
+                wmslayers = [i for i in wmslayers if not i.endswith("3857")]
+        elif wmsname == "ESA WorldCover":
+            wmslayers = [
+                key
+                for key in wmslayers
+                if (key.startswith("WORLDCOVER") or key.startswith("COP"))
+            ]
+
+        return wmslayers
+
     def set_layer(self, layer):
         self.layer = layer
 
@@ -455,7 +477,7 @@ class AddWMSMenuButton(QtWidgets.QPushButton):
             print("No layers found for the WMS: {wmsname}")
             return
         else:
-            sub_features = self._submenus[wmsname]
+            sub_features = self.select_wmslayers(wmsname, self._submenus[wmsname])
 
         try:
             submenu = self.sub_menus[wmsname]
