@@ -993,6 +993,11 @@ class TestBasicPlotting(unittest.TestCase):
         m2.cb.pick.attach.annotate()
         m2.cb.keypress.attach.fetch_layers()
 
+        m2.on_layer_activation(lambda m: print("temporary", m.layer))
+        m2.on_layer_activation(lambda m: print("permanent", m.layer), persistent=True)
+
+        self.assertTrue(len(m.BM._on_layer_activation[m2.layer]) == 2)
+
         self.assertTrue(len(m.BM._artists[m.layer]) == 2)
         self.assertTrue(len(m.BM._bg_artists[m.layer]) == 1)
         self.assertTrue(len(m.BM._artists[m2.layer]) == 2)
@@ -1005,6 +1010,8 @@ class TestBasicPlotting(unittest.TestCase):
         self.assertTrue(len(m2.cb.click.get.cbs) == 1)
 
         m2.cleanup()
+
+        self.assertTrue(m2.layer not in m.BM._on_layer_activation)
 
         self.assertTrue(len(m.BM._artists[m.layer]) == 2)
         self.assertTrue(len(m.BM._bg_artists[m.layer]) == 1)
