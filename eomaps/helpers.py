@@ -1230,7 +1230,6 @@ class BlitManager:
             else:
                 self.update(blit=False)
 
-            print("drawing")
             # re-draw indicator-shapes of active drawer
             # (to show indicators during zoom-events)
             active_drawer = getattr(self._m.parent, "_active_drawer", None)

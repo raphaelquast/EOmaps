@@ -91,9 +91,8 @@ class ShapeDrawer:
         self._line = None
         # a pointer indicating the mouse-position during a draw-event
         self._pointer = None
-        # a line indicating the next polygon-segment
+        # a line indicating the polygon end-segment
         self._endline = None
-
         # indicator shape when drawing circles / rectangles
         self._shape_indicator = None
 
@@ -231,7 +230,7 @@ class ShapeDrawer:
 
             # the line to use for indicating polygon-shape during draw
             self._line = plt.Line2D([], [], marker="+", color="r", **props)
-            self._pointer = plt.Line2D([], [], marker="+", color="r", **props)
+            self._pointer = plt.Line2D([], [], marker="+", color="r", lw=0.5, **props)
             self._endline = plt.Line2D([], [], color=".5", lw=0.5, ls="--", **props)
 
     def _init_shape_indicator(self):
@@ -350,7 +349,13 @@ class ShapeDrawer:
             # test how many points were actually returned before using data).
 
             if event.name == "motion_notify_event":
-                self._pointer.set_data([event.xdata], [event.ydata])
+                if len(self._clicks) > 0:
+                    self._pointer.set_data(
+                        [self._clicks[-1][0], event.xdata],
+                        [self._clicks[-1][1], event.ydata],
+                    )
+                else:
+                    self._pointer.set_data([event.xdata], [event.ydata])
 
             if is_key and event.key in ["escape"]:
                 self._finish_drawing()
