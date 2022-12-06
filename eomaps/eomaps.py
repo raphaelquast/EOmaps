@@ -262,6 +262,16 @@ class Maps(object):
     >>> ax = f.add_subplot(projection=Maps.CRS.Mollweide())
     >>> m = Maps(ax=ax)
 
+    Use Maps-objects as context-manager to close the map and free memory
+    once the map is exported.
+
+    >>> import matplotlib
+    >>> matplotlib.use("agg") # we can use a non-GUI backend since we only export png's
+    >>> from eomaps import Maps
+    >>> with Maps() as m:
+    >>>     m.add_feature.preset.coastline()
+    >>>     m.savefig(...)
+
     Attributes
     ----------
 
@@ -634,6 +644,34 @@ class Maps(object):
         -------
         eomaps.Maps
             A connected copy of the Maps-object that shares the same plot-axes.
+
+        Examples
+        --------
+
+        Create a new Maps-object **on an existing layer**
+
+        >>> from eomaps import Maps
+        >>> m = Maps(layer="base")    # m.layer == "base"
+        >>> m2 = m.new_layer()        # m2.layer == "base"
+
+
+        Create a new Maps-object representing a **new layer**
+
+        >>> from eomaps import Maps
+        >>> m = Maps(layer="base")           # m.layer == "base"
+        >>> m2 = m.new_layer("a new layer")  # m2.layer == "a new layer"
+
+
+        Create a new layer and immediately delete it after it has been exported.
+        (useful to free memory if a lot of layers are be exported)
+
+        >>> from eomaps import Maps
+        >>> m = Maps(layer="base")
+        >>> with m.new_layer("a new layer") as m2:
+        >>>     ...
+        >>>     m2.show()                           # make the layer visible
+        >>>     m2.savefig(...)                     # save it as an image
+
 
         See Also
         --------
