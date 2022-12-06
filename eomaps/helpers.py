@@ -956,7 +956,7 @@ class BlitManager:
         self._mpl_backend_blit_fix = False
 
         self._on_layer_change = dict()
-        self._on_layer_activation = defaultdict(dict)
+        self._on_layer_activation = dict()
 
         self._on_add_bg_artist = list()
         self._on_remove_bg_artist = list()
@@ -1080,7 +1080,7 @@ class BlitManager:
                     def inner(*args, **kwargs):
                         try:
                             func(*args, **kwargs)
-                            if inner in self._on_layer_activation[layer]:
+                            if inner in self._on_layer_activation.get(layer, dict()):
                                 self._on_layer_activation[layer].pop(inner)
                         except IndexError:
                             pass
@@ -1089,7 +1089,7 @@ class BlitManager:
 
                 func = remove_decorator(func)
 
-            self._on_layer_activation[layer][func] = m
+            self._on_layer_activation.setdefault(layer, dict())[func] = m
 
     def _refetch_layer(self, layer):
         if layer == "all":
