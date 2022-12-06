@@ -1229,7 +1229,7 @@ class cb_pick_container(_click_container):
 
                 self._event = event
                 # check if the artists has a custom picker assigned
-
+                self._clear_temporary_artists()
                 self._m.BM._clear_temp_artists(self._method)
 
                 # execute "_onpick" on the maps-object that belongs to the clicked axes
@@ -1240,9 +1240,8 @@ class cb_pick_container(_click_container):
 
                 self._m.BM._after_update_actions.append(self._clear_temporary_artists)
                 self._m.BM._clear_temp_artists(self._method)
-
                 # self._m.parent.BM.update(clear=self._method)
-                self._m.parent.BM._clear_temp_artists(self._method)
+                # self._m.parent.BM._clear_temp_artists(self._method)
                 # don't update here... the click-callback will take care of it!
             except ReferenceError:
                 pass
@@ -1257,7 +1256,6 @@ class cb_pick_container(_click_container):
         # PickEvents have a .mouseevent property for the associated MouseEvent!
         if event.mouseevent.inaxes != self._m.ax:
             return
-
         for key, m in self._fwd_cbs.items():
             obj = self._getobj(m)
             obj._clear_temporary_artists()
