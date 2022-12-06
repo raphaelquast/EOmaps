@@ -92,6 +92,8 @@ class ShapeDrawer:
 
         # indicator-line when drawing polygons
         self._line = None
+        # a pointer indicating the mouse-position during a draw-event
+        self._pointer = None
         # a line indicating the next polygon-segment
         self._endline = None
 
@@ -166,17 +168,10 @@ class ShapeDrawer:
 
         # Cleanup.
         if plt.fignum_exists(active_drawer._m.f.number):
-            if self._line is not None:
-                self._line.remove()
-                self._line = None
-
-            if self._shape_indicator is not None:
-                self._shape_indicator.remove()
-                self._shape_indicator = None
-
-            if self._endline is not None:
-                self._endline.remove()
-                self._endline = None
+            self._line = None
+            self._pointer = None
+            self._endline = None
+            self._shape_indicator = None
 
         if cb is not None:
             try:
@@ -220,21 +215,31 @@ class ShapeDrawer:
     def _init_draw_line(self):
         if self._line is None:
             # the line to use for indicating polygon-shape during draw
-            (self._line,) = self._m.ax.plot([], [], marker="+", color="r")
-            (self._endline,) = self._m.ax.plot(
-                [],
-                [],
-                color=".5",
-                lw=0.5,
-                ls="--",
+            self._line = plt.Line2D(
+                [], [], marker="+", color="r", transform=self._m.ax.transData
+            )
+            self._pointer = plt.Line2D(
+                [], [], marker="+", color="r", transform=self._m.ax.transData
+            )
+
+            self._endline = plt.Line2D(
+                [], [], color=".5", lw=0.5, ls="--", transform=self._m.ax.transData
             )
 
     def _init_shape_indicator(self):
         if self._shape_indicator is None:
             # a polygon to use for indicating circles/rectangles during draw
-            (self._shape_indicator,) = self._m.ax.fill(
-                [], [], fc="none", ec="r", animated=True
+            self._shape_indicator = plt.Polygon(
+                np.empty(shape=(0, 2)),
+                fc="none",
+                ec="r",
+                animated=True,
+                transform=self._m.ax.transData,
             )
+
+    def fetch_bg(self):
+        # self._background = self._m.BM.canvas.copy_from_bbox(self._m.ax.bbox)
+        self._background = self._m.BM._bg_layers[self._m.BM._bg_layer]
 
     # This is basically a copy of matplotlib's ginput function adapted for EOmaps
     # matplotlib's original ginput function is here:
@@ -300,7 +305,7 @@ class ShapeDrawer:
         self._active_drawer = self
 
         canvas = self._m.BM.canvas
-        self._background = canvas.copy_from_bbox(self._m.ax.bbox)
+        self.fetch_bg()
 
         self._m.cb.execute_callbacks(False)
 
@@ -309,6 +314,10 @@ class ShapeDrawer:
 
             if event.name == "close_event":
                 self._finish_drawing(cb=cb)
+                return
+
+            if event.name == "resize_event":
+                self._m.BM._after_update_actions.append(self.fetch_bg)
                 return
 
             if (canvas.toolbar is not None) and canvas.toolbar.mode != "":
@@ -322,6 +331,9 @@ class ShapeDrawer:
             # Quit (even if not in infinite mode; this is consistent with
             # MATLAB and sometimes quite useful, but will require the user to
             # test how many points were actually returned before using data).
+
+            if event.name == "motion_notify_event":
+                self._pointer.set_data([event.xdata], [event.ydata])
 
             if is_key and event.key in ["escape"]:
                 self._finish_drawing()
@@ -381,11 +393,17 @@ class ShapeDrawer:
             if len(self._clicks) == n and n > 0:
                 self._finish_drawing(cb=cb)
 
-            self._m.BM.blit_artists(
-                (i for i in (self._endline, self._line) if i), bg=self._background
+            artists = (
+                i for i in (self._shape_indicator, self._line, self._pointer) if i
             )
+            self._m.BM.blit_artists(artists, bg=self._background)
 
-        eventnames = ["button_press_event", "key_press_event", "close_event"]
+        eventnames = [
+            "button_press_event",
+            "key_press_event",
+            "close_event",
+            "resize_event",
+        ]
         if draw_on_drag:
             eventnames.append("motion_notify_event")
 
@@ -460,8 +478,7 @@ class ShapeDrawer:
         self._active_drawer = self
 
         canvas = self._m.BM.canvas
-        self._background = canvas.copy_from_bbox(self._m.ax.bbox)
-
+        self.fetch_bg()
         self._m.cb.execute_callbacks(False)
 
         def handler(event):
@@ -477,12 +494,28 @@ class ShapeDrawer:
 
             if event.name == "motion_notify_event":
                 if movecb:
-                    movecb(event, self._clicks)
+                    # indicate current mouse-position (e.g. the center of the shape)
+                    if len(self._clicks) == 0:
+                        self._pointer.set_data([event.xdata], [event.ydata])
+                    else:
+                        self._pointer.set_data([], [])
 
-            is_button = (
-                event.name == "button_press_event"
-                or event.name == "motion_notify_event"
-            )
+                    movecb(event, self._clicks)
+                artists = (
+                    i for i in (self._shape_indicator, self._line, self._pointer) if i
+                )
+                self._m.BM.blit_artists(artists, bg=self._background)
+                return
+
+            if event.name == "resize_event":
+                self._m.BM._after_update_actions.append(self.fetch_bg)
+                artists = (
+                    i for i in (self._shape_indicator, self._line, self._pointer) if i
+                )
+                self._m.BM.blit_artists(artists, bg=self._background)
+                return
+
+            is_button = event.name == "button_press_event"
             is_key = event.name == "key_press_event"
             # Quit (even if not in infinite mode; this is consistent with
             # MATLAB and sometimes quite useful, but will require the user to
@@ -529,12 +562,17 @@ class ShapeDrawer:
                     if show_clicks:
                         self._line.set_data(*zip(*self._clicks))
 
-            self._m.BM.blit_artists(
-                (i for i in (self._shape_indicator, self._line) if i),
-                bg=self._background,
+            artists = (
+                i for i in (self._shape_indicator, self._line, self._pointer) if i
             )
+            self._m.BM.blit_artists(artists, bg=self._background)
 
-        eventnames = ["button_press_event", "key_press_event", "close_event"]
+        eventnames = [
+            "button_press_event",
+            "key_press_event",
+            "close_event",
+            "resize_event",
+        ]
         if draw_on_drag:
             eventnames.append("motion_notify_event")
 
@@ -609,6 +647,7 @@ class ShapeDrawer:
 
         """
         self._init_shape_indicator()
+        self._init_draw_line()
 
         def cb():
             self._circle(**kwargs)
@@ -630,6 +669,7 @@ class ShapeDrawer:
                     100,
                 )
                 self._shape_indicator.set_xy(np.column_stack((pts[0][0], pts[1][0])))
+
                 self._m.BM.blit_artists(
                     (self._shape_indicator, self._line), bg=self._background
                 )
