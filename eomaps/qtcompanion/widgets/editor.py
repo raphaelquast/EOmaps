@@ -839,8 +839,7 @@ class ArtistEditor(QtWidgets.QWidget):
         layout = QtWidgets.QGridLayout()
         layout.setAlignment(Qt.AlignTop | Qt.AlignLeft)
 
-        # make sure that we don't create an empty entry in the defaultdict!
-        # TODO avoid using defaultdicts!!
+        # make sure that we don't create an empty entry !
         if layer in self.m.BM._bg_artists:
             artists = [a for a in self.m.BM._bg_artists[layer] if a.axes is self.m.ax]
         else:

@@ -716,7 +716,7 @@ class _click_callbacks(object):
         if marker is not None:
             # make sure to clear the marker at the next update
             def doit():
-                self.m.BM._artists_to_clear["move"].append(marker)
+                self.m.BM._artists_to_clear.setdefault("move", []).append(marker)
 
             self.m.BM._after_restore_actions.append(doit)
 

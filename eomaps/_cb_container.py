@@ -74,7 +74,7 @@ class _cb_container(object):
     def _clear_temporary_artists(self):
         while len(self._temporary_artists) > 0:
             art = self._temporary_artists.pop(-1)
-            self._m.BM._artists_to_clear[self._method].append(art)
+            self._m.BM._artists_to_clear.setdefault(self._method, []).append(art)
 
     def _sort_cbs(self, cbs):
         if not cbs:

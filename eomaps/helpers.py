@@ -5,7 +5,6 @@ import sys
 
 import numpy as np
 from matplotlib.colors import LinearSegmentedColormap, ListedColormap
-from collections import defaultdict
 from itertools import chain
 from matplotlib.transforms import Bbox, TransformedBbox
 import matplotlib.pyplot as plt
@@ -936,7 +935,7 @@ class BlitManager:
         self._after_restore_actions = []
         self._bg_layer = 0
 
-        self._artists_to_clear = defaultdict(list)
+        self._artists_to_clear = dict()
 
         self._hidden_axes = set()
 
@@ -1418,11 +1417,10 @@ class BlitManager:
 
         if method == "on_layer_change":
             # clear all artists from "on_layer_change" list irrespective of the method
-            allmethods = [i for i in self._artists_to_clear if i != method]
-            for art in self._artists_to_clear[method]:
-                for met in allmethods:
-
-                    if art in self._artists_to_clear[met]:
+            artists = self._artists_to_clear.pop("on_layer_change", [])
+            for art in artists:
+                for met, met_artists in self._artists_to_clear.items():
+                    if art in met_artists:
                         art.set_visible(False)
                         self.remove_artist(art)
                         try:
@@ -1430,11 +1428,11 @@ class BlitManager:
                         except ValueError:
                             # ignore errors if the artist no longer exists
                             pass
-                        self._artists_to_clear[met].remove(art)
-            del self._artists_to_clear[method]
+                        met_artists.remove(art)
         else:
-            while len(self._artists_to_clear[method]) > 0:
-                art = self._artists_to_clear[method].pop(-1)
+            artists = self._artists_to_clear.pop(method, [])
+            while len(artists) > 0:
+                art = artists.pop(-1)
                 art.set_visible(False)
                 self.remove_artist(art)
                 try:
@@ -1442,9 +1440,12 @@ class BlitManager:
                 except ValueError:
                     # ignore errors if the artist no longer exists
                     pass
-                if art in self._artists_to_clear["on_layer_change"]:
-                    self._artists_to_clear["on_layer_change"].remove(art)
-            del self._artists_to_clear[method]
+
+                try:
+                    self._artists_to_clear.get("on_layer_change", []).remove(art)
+                except ValueError:
+                    # ignore errors if the artist is not present in the list
+                    pass
 
     def update(
         self,
