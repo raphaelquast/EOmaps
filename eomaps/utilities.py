@@ -260,9 +260,6 @@ class LayerSelector(SelectorButtons):
         self._m.util._selectors[name] = self
 
     def on_clicked(self, val):
-        if not self._m.cb.get_execute_callbacks():
-            return
-
         l = self.labels[int(val)]
 
         self._m.BM.bg_layer = l
@@ -495,9 +492,6 @@ class LayerSlider(Slider):
         self._m.BM.update()
 
     def _on_changed(self, val):
-        if not self._m.cb.get_execute_callbacks():
-            return
-
         l = self._layers[int(val)]
         self._m.BM.bg_layer = l
 
