@@ -2509,6 +2509,14 @@ class Maps(object):
             `datashader.mpl_ext.dsshow`
         """
 
+        # convert vmin/vmax values to respect the encoding of the data
+        vmin = kwargs.get("vmin", None)
+        if vmin is not None:
+            kwargs["vmin"] = self._encode_values(vmin)
+        vmax = kwargs.get("vmax", None)
+        if vmax is not None:
+            kwargs["vmax"] = self._encode_values(vmax)
+
         if layer is None:
             layer = self.layer
         else:
@@ -3921,12 +3929,8 @@ class Maps(object):
 
             if vmin is None and self.data is not None:
                 vmin = np.nanmin(props["z_data"])
-            else:
-                vmin = self._encode_values(vmin)
             if vmax is None and self.data is not None:
                 vmax = np.nanmax(props["z_data"])
-            else:
-                vmin = self._encode_values(vmin)
 
             # clip the data to properly account for vmin and vmax
             # (do this only if we don't intend to use the full dataset!)
