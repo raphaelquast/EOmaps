@@ -3099,11 +3099,9 @@ class Maps(object):
         if self in self.parent._children:
             self.parent._children.remove(self)
 
-        # re-initialize widgets to reflect layer-changes
-        # activate the base-layer
+        # activate the base-layer (and re-initialize widgets)
         try:
             if self.parent != self:
-                self.util._reinit_widgets()
                 self.show_layer(self.parent.layer)
         except Exception:
             print("EOmaps-cleanup: Problem while updating map to reflect changes")
