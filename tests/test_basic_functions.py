@@ -1040,3 +1040,11 @@ class TestBasicPlotting(unittest.TestCase):
         self.assertTrue(len(m.cb.click.get.cbs) == 0)
         self.assertTrue(len(m.cb.click.get.cbs) == 0)
         self.assertTrue(len(m.cb.click.get.cbs) == 0)
+
+    def test_blit_artists(self):
+        # just a sanity-check if function throws an error...
+        m = Maps()
+        line = plt.Line2D(
+            [0, 0.25, 1], [0, 0.63, 1], c="k", lw=3, transform=m.ax.transAxes
+        )
+        m.BM.blit_artists([line])

@@ -1543,6 +1543,14 @@ class BlitManager:
         """
         cv = self.canvas
 
+        # paranoia in case we missed the first draw event
+        if getattr(self.figure, "_cachedRenderer", "nope") is None:
+            self.on_draw(None)
+            self._after_update_actions.append(
+                lambda: self.blit_artists(artists.copy(), bg)
+            )
+            return
+
         # restore the background
         if bg is not None:
             cv.restore_region(bg)
