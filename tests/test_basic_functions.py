@@ -963,3 +963,73 @@ class TestBasicPlotting(unittest.TestCase):
 
         self.assertTrue(m.coll is None)
         self.assertTrue(len(m.cb.click.get.cbs) == 0)
+
+    def test_cleanup(self):
+        m = Maps()
+        m.add_annotation(xy=(45, 45))
+        m.add_marker(xy=(45, 45))
+        m.set_data(*[[1, 2, 3]] * 3)
+        m.plot_map()
+        m.cb.click.attach.annotate()
+        m.cb.pick.attach.annotate()
+        m.cb.keypress.attach.fetch_layers()
+
+        self.assertTrue(len(m.BM._artists[m.layer]) == 2)
+        self.assertTrue(len(m.BM._bg_artists[m.layer]) == 1)
+
+        self.assertTrue(hasattr(m, "_props"))
+        self.assertTrue(hasattr(m, "tree"))
+        self.assertTrue(len(m.cb.click.get.cbs) == 1)
+        self.assertTrue(len(m.cb.click.get.cbs) == 1)
+        self.assertTrue(len(m.cb.click.get.cbs) == 1)
+
+        # test cleaning a new layer
+        m2 = m.new_layer("asdf")
+        m2.add_annotation(xy=(45, 45))
+        m2.add_marker(xy=(45, 45))
+        m2.set_data(*[[1, 2, 3]] * 3)
+        m2.plot_map()
+        m2.cb.click.attach.annotate()
+        m2.cb.pick.attach.annotate()
+        m2.cb.keypress.attach.fetch_layers()
+
+        self.assertTrue(len(m.BM._artists[m.layer]) == 2)
+        self.assertTrue(len(m.BM._bg_artists[m.layer]) == 1)
+        self.assertTrue(len(m.BM._artists[m2.layer]) == 2)
+        self.assertTrue(len(m.BM._bg_artists[m2.layer]) == 1)
+
+        self.assertTrue(hasattr(m2, "_props"))
+        self.assertTrue(hasattr(m2, "tree"))
+        self.assertTrue(len(m2.cb.click.get.cbs) == 1)
+        self.assertTrue(len(m2.cb.click.get.cbs) == 1)
+        self.assertTrue(len(m2.cb.click.get.cbs) == 1)
+
+        m2.cleanup()
+
+        self.assertTrue(len(m.BM._artists[m.layer]) == 2)
+        self.assertTrue(len(m.BM._bg_artists[m.layer]) == 1)
+        self.assertTrue(m2.layer not in m.BM._artists)
+        self.assertTrue(m2.layer not in m.BM._bg_artists)
+
+        self.assertTrue(hasattr(m, "_props"))
+        self.assertTrue(hasattr(m, "tree"))
+        self.assertTrue(len(m.cb.click.get.cbs) == 1)
+        self.assertTrue(len(m.cb.click.get.cbs) == 1)
+        self.assertTrue(len(m.cb.click.get.cbs) == 1)
+
+        self.assertTrue(not hasattr(m2, "_props"))
+        self.assertTrue(not hasattr(m2, "tree"))
+        self.assertTrue(len(m2.cb.click.get.cbs) == 0)
+        self.assertTrue(len(m2.cb.click.get.cbs) == 0)
+        self.assertTrue(len(m2.cb.click.get.cbs) == 0)
+
+        m.cleanup()
+
+        self.assertTrue(m.layer not in m.BM._artists)
+        self.assertTrue(m.layer not in m.BM._bg_artists)
+
+        self.assertTrue(not hasattr(m, "_props"))
+        self.assertTrue(not hasattr(m, "tree"))
+        self.assertTrue(len(m.cb.click.get.cbs) == 0)
+        self.assertTrue(len(m.cb.click.get.cbs) == 0)
+        self.assertTrue(len(m.cb.click.get.cbs) == 0)
