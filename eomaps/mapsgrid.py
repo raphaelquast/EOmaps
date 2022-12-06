@@ -1,4 +1,3 @@
-from collections import defaultdict
 from functools import wraps, lru_cache
 
 import numpy as np
@@ -142,7 +141,7 @@ class MapsGrid:
     ):
 
         self._Maps = []
-        self._names = defaultdict(list)
+        self._names = dict()
 
         self._wms_container = wms_container(self)
 
@@ -185,7 +184,7 @@ class MapsGrid:
                         mij.ax.set_label(f"mg_map_{i}_{j}")
                     self._Maps.append(mij)
                     name = f"{i}_{j}"
-                    self._names["Maps"].append(name)
+                    self._names.setdefault("Maps", []).append(name)
                     setattr(self, "m_" + name, mij)
         else:
             self._custom_init = True
@@ -227,7 +226,7 @@ class MapsGrid:
                         mi.ax.set_label(f"mg_map_{key}")
 
                     name = str(key)
-                    self._names["Maps"].append(name)
+                    self._names.setdefault("Maps", []).append(name)
 
                     self._Maps.append(mi)
                     setattr(self, f"m_{name}", mi)
@@ -246,7 +245,7 @@ class MapsGrid:
         mg = MapsGrid(m_inits=dict())  # initialize an empty MapsGrid
         mg.gridspec = self.gridspec
 
-        for name, m in zip(self._names["Maps"], self._Maps):
+        for name, m in zip(self._names.get("Maps", []), self._Maps):
             newm = m.new_layer(layer)
             mg._Maps.append(newm)
             mg._names["Maps"].append(name)
@@ -255,7 +254,7 @@ class MapsGrid:
             if m is self.parent:
                 mg.parent = newm
 
-        for name in self._names["Axes"]:
+        for name in self._names.get("Axes", []):
             ax = getattr(self, f"ax_{name}")
             mg._names["Axes"].append(name)
             setattr(mg, f"ax_{name}", ax)
@@ -287,9 +286,9 @@ class MapsGrid:
 
                 return getattr(self, f"m_{r}_{c}")
             else:
-                if str(key) in self._names["Maps"]:
+                if str(key) in self._names.get("Maps", []):
                     return getattr(self, "m_" + str(key))
-                elif str(key) in self._names["Axes"]:
+                elif str(key) in self._names.get("Axes", []):
                     return getattr(self, "ax_" + str(key))
                 else:
                     raise IndexError(f"{key} is not a valid indexer for MapsGrid")
@@ -347,7 +346,7 @@ class MapsGrid:
 
         ax = self.f.add_subplot(self.gridspec[ax_init], label=f"mg_ax_{name}")
 
-        self._names["Axes"].append(name)
+        self._names.setdefault("Axes", []).append(name)
         setattr(self, f"ax_{name}", ax)
         return ax
 

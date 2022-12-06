@@ -1,7 +1,6 @@
 from functools import lru_cache, partial
 from warnings import warn, filterwarnings, catch_warnings
 from types import SimpleNamespace
-from collections import defaultdict
 
 from PIL import Image
 from io import BytesIO
@@ -813,18 +812,20 @@ class _REST_API(object):
         with catch_warnings():
             filterwarnings("ignore", category=InsecureRequestWarning)
 
-            all_services = defaultdict(list)
+            all_services = dict()
             r = self._post(service, _params=self._params)
             # parse all services that are not inside a folder
             for s in r["services"]:
-                all_services["SERVICES"].append((s["name"], s["type"]))
+                all_services.setdefault("SERVICES", []).append((s["name"], s["type"]))
             for s in r["folders"]:
                 new = "/".join([service, s])
                 endpt = self._post(new, _params=self._params)
 
                 for serv in endpt["services"]:
                     if str(serv["type"]) == "MapServer":
-                        all_services[s].append((serv["name"], serv["type"]))
+                        all_services.setdefault(s, []).append(
+                            (serv["name"], serv["type"])
+                        )
         return all_services
 
 
