@@ -3060,18 +3060,15 @@ class Maps(object):
 
         ONLY execute this if you do not need to do anything with the layer
         """
-        assert not self._is_sublayer, (
-            "EOmaps: m.cleanup() must be called on the Maps-object that was used "
-            "to create a NEW layer (not on a Maps-object referring to existing layer)!"
-        )
 
         # disconnect callback on xlim-change (only relevant for parent)
-        try:
-            if hasattr(self, "_cid_xlim"):
-                self.ax.callbacks.disconnect(self._cid_xlim)
-                del self._cid_xlim
-        except Exception:
-            print("EOmaps-cleanup: Problem while clearing xlim-cid")
+        if not self._is_sublayer:
+            try:
+                if hasattr(self, "_cid_xlim"):
+                    self.ax.callbacks.disconnect(self._cid_xlim)
+                    del self._cid_xlim
+            except Exception:
+                print("EOmaps-cleanup: Problem while clearing xlim-cid")
 
         # clear data-specs and all cached properties of the data
         try:
@@ -3095,7 +3092,8 @@ class Maps(object):
             print("EOmaps-cleanup: Problem while clearing callbacks")
 
         # cleanup all artists and cached background-layers from the blit-manager
-        self.BM.cleanup_layer(self.layer)
+        if not self._is_sublayer:
+            self.BM.cleanup_layer(self.layer)
 
         # remove the child from the parent Maps object
         if self in self.parent._children:
