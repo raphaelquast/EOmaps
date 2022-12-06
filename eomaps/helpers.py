@@ -9,7 +9,7 @@ from itertools import chain
 from matplotlib.transforms import Bbox, TransformedBbox
 import matplotlib.pyplot as plt
 from matplotlib.lines import Line2D
-
+from contextlib import contextmanager
 
 # class copied from matplotlib.axes
 class _TransformedBoundsLocator:
@@ -983,9 +983,39 @@ class BlitManager:
                 for action in actions:
                     action(activate_action[action], l)
 
+    @contextmanager
+    def _without_artists(self, artists=None, layer=None):
+        try:
+            if artists is None:
+                yield
+            else:
+                removed_artists = {layer: set(), "all": set()}
+
+                for a in artists:
+                    if a in self._artists.get(layer, []):
+                        self.remove_artist(a, layer=layer)
+                        removed_artists[layer].add(a)
+                    elif a in self._artists.get("all", []):
+                        self.remove_artist(a, layer="all")
+                        removed_artists["all"].add(a)
+
+                yield
+        finally:
+            for layer, artists in removed_artists.items():
+                for a in artists:
+                    self.add_artist(a, layer=layer)
+
     @property
     def bg_layer(self):
         return self._bg_layer
+
+    def _get_active_bg(self, exclude_artists=None):
+        with self._without_artists(artists=exclude_artists, layer=self.bg_layer):
+            # fetch the current background (incl. dynamic artists)
+            self.update()
+            bg = self.canvas.copy_from_bbox(self.figure.bbox)
+
+        return bg
 
     @bg_layer.setter
     def bg_layer(self, val):
@@ -1259,6 +1289,7 @@ class BlitManager:
 
             The default is None in which case the layer of the base-Maps object is used.
         """
+
         if art.figure != self.figure:
             raise RuntimeError
 
@@ -1495,7 +1526,6 @@ class BlitManager:
         if bg_layer not in self._bg_layers or self._bg_layers[bg_layer] is None:
             self.on_draw(None)
         else:
-
             if clear:
                 self._clear_temp_artists(clear)
             # restore the background

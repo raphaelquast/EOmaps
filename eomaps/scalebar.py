@@ -985,8 +985,18 @@ class Compass:
         self._txt = "N"
 
     def __call__(
-        self, pos=None, scale=10, style="north arrow", patch="w", txt="N", pickable=True
+        self,
+        pos=None,
+        scale=10,
+        style="north arrow",
+        patch="w",
+        txt="N",
+        pickable=True,
+        layer="all",
     ):
+
+        self.layer = layer
+
         self._m.BM.update()
 
         ax2data = self._m.ax.transAxes + self._m.ax.transData.inverted()
@@ -1003,7 +1013,7 @@ class Compass:
 
         self._artist = self._get_artist(pos)
         self._m.ax.add_artist(self._artist)
-        self._m.BM.add_artist(self._artist)
+        self._m.BM.add_artist(self._artist, layer=self.layer)
 
         self.set_position(pos)
 
@@ -1136,14 +1146,28 @@ class Compass:
         if self._check_still_parented() and self._got_artist:
             x, y = evt.xdata, evt.ydata
 
-            if x is None or y is None:
-                # continue values outside of the crs-domain
+            # transform values if axes is put outside the figure
+            if evt.inaxes is None:
                 x, y = self._m.ax.transData.inverted().transform((evt.x, evt.y))
+
+            elif evt.inaxes != self._m.ax:
+                # don't allow moving the compass on top of another axes
+                # (somehow pick-events do not fire if compass is in another axes)
+                # TODO check this!
+                return
+
+            # continue values outside of the crs-domain
+            if x is None or y is None:
+                x, y = self._m.ax.transData.inverted().transform((evt.x, evt.y))
+
             self._update_offset(x, y)
-            self._m.BM._draw_animated(artists=[self._artist])
+            self._m.BM.blit_artists(artists=[self._artist], bg=self._bg)
 
     def _on_pick(self, evt):
+        # fetch the currently active background (to get a nice responsive motion)
         if self._check_still_parented() and evt.artist == self._artist:
+            self._bg = self._m.BM._get_active_bg(exclude_artists=[self._artist])
+
             self._got_artist = True
             self._c1 = self._canvas.mpl_connect("motion_notify_event", self._on_motion)
             self._c2 = self._canvas.mpl_connect("key_press_event", self._on_keypress)
@@ -1172,6 +1196,7 @@ class Compass:
                 pass
             else:
                 self._canvas.mpl_disconnect(c2)
+            self._m.BM.update()
 
     def _check_still_parented(self):
         if self._artist.figure is None:
