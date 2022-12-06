@@ -494,6 +494,7 @@ class LayerSlider(Slider):
     def _on_changed(self, val):
         l = self._layers[int(val)]
         self._m.BM.bg_layer = l
+        self._m.BM.update()
 
     def remove(self):
         """
