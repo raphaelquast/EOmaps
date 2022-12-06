@@ -1,6 +1,5 @@
 import numpy as np
 import matplotlib.pyplot as plt
-from collections import defaultdict
 import warnings
 
 
@@ -316,10 +315,10 @@ class _click_callbacks(object):
         ID, pos, val, ind, picker_name = self._popargs(kwargs)
 
         if not hasattr(self, "picked_vals"):
-            self.picked_vals = defaultdict(list)
+            self.picked_vals = dict()
 
         for key, val in zip(["pos", "ID", "val"], [pos, ID, val]):
-            self.picked_vals[key].append(val)
+            self.picked_vals.setdefault(key, []).append(val)
 
     def _get_values_cleanup(self):
         # cleanup method for get_values callback
