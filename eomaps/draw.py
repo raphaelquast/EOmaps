@@ -58,7 +58,7 @@ class ShapeDrawer:
         ----------
         m : eomaps.Maps
             the maps-object.
-        layer : str
+        layer : str or None
             The layer-name to put the shapes on.
             If None, the currently active layer will be used.
             The default is None.
@@ -70,8 +70,6 @@ class ShapeDrawer:
         # if not hasattr(self._m.parent, "_active_drawer"):
         #     self._m.parent._active_drawer = None
 
-        if layer is None:
-            layer = self._m.BM.bg_layer
         self._layer = layer
 
         if self._m.crs_plot == self._m.CRS.PlateCarree():
@@ -87,7 +85,6 @@ class ShapeDrawer:
             self.gdf = None
 
         self._cids = []
-
         self._clicks = []
 
         # indicator-line when drawing polygons
@@ -113,6 +110,19 @@ class ShapeDrawer:
         else:
             return d
 
+    @property
+    def layer(self):
+        # always draw on the active layer if no explicit layer is specified
+        if self._layer is None:
+            return self._m.BM._bg_layer
+        else:
+            return self._layer
+
+    @property
+    def _background(self):
+        # always use the currently active background as draw-background
+        return self._m.BM._bg_layers.get(self._m.BM._bg_layer, None)
+
     @_active_drawer.setter
     def _active_drawer(self, val):
         self._m.parent._active_drawer = val
@@ -136,13 +146,14 @@ class ShapeDrawer:
 
         return self.__class__(self._m, layer=layer)
 
-    def set_layer(self, layer):
+    def set_layer(self, layer=None):
         """
         Set the layer to which the final shape will be added.
+        If None, the shape will always be added to the currently active layer.
 
         Parameters
         ----------
-        layer : str
+        layer : str or None
             The layer name.
         """
         self._layer = layer
@@ -214,17 +225,14 @@ class ShapeDrawer:
 
     def _init_draw_line(self):
         if self._line is None:
-            # the line to use for indicating polygon-shape during draw
-            self._line = plt.Line2D(
-                [], [], marker="+", color="r", transform=self._m.ax.transData
-            )
-            self._pointer = plt.Line2D(
-                [], [], marker="+", color="r", transform=self._m.ax.transData
+            props = dict(
+                transform=self._m.ax.transData, clip_box=self._m.ax.bbox, clip_on=True
             )
 
-            self._endline = plt.Line2D(
-                [], [], color=".5", lw=0.5, ls="--", transform=self._m.ax.transData
-            )
+            # the line to use for indicating polygon-shape during draw
+            self._line = plt.Line2D([], [], marker="+", color="r", **props)
+            self._pointer = plt.Line2D([], [], marker="+", color="r", **props)
+            self._endline = plt.Line2D([], [], color=".5", lw=0.5, ls="--", **props)
 
     def _init_shape_indicator(self):
         if self._shape_indicator is None:
@@ -235,11 +243,24 @@ class ShapeDrawer:
                 ec="r",
                 animated=True,
                 transform=self._m.ax.transData,
+                clip_box=self._m.ax.bbox,
+                clip_on=True,
             )
 
-    def fetch_bg(self):
-        # self._background = self._m.BM.canvas.copy_from_bbox(self._m.ax.bbox)
-        self._background = self._m.BM._bg_layers[self._m.BM._bg_layer]
+    @property
+    def _indicator_artists(self):
+        return (
+            i
+            for i in (self._shape_indicator, self._line, self._pointer, self._endline)
+            if i is not None
+        )
+
+    def redraw(self, blit=True, *args):
+        # NOTE: If a drawer is active, this function is also called on any ordinary
+        # draw-event (e.g. zoom/pan/resize) to keep the indicators visible.
+        # see "m.BM.on_draw()"
+
+        self._m.BM.blit_artists(self._indicator_artists, bg=self._background, blit=blit)
 
     # This is basically a copy of matplotlib's ginput function adapted for EOmaps
     # matplotlib's original ginput function is here:
@@ -305,7 +326,7 @@ class ShapeDrawer:
         self._active_drawer = self
 
         canvas = self._m.BM.canvas
-        self.fetch_bg()
+        # self.fetch_bg()
 
         self._m.cb.execute_callbacks(False)
 
@@ -314,10 +335,6 @@ class ShapeDrawer:
 
             if event.name == "close_event":
                 self._finish_drawing(cb=cb)
-                return
-
-            if event.name == "resize_event":
-                self._m.BM._after_update_actions.append(self.fetch_bg)
                 return
 
             if (canvas.toolbar is not None) and canvas.toolbar.mode != "":
@@ -393,16 +410,12 @@ class ShapeDrawer:
             if len(self._clicks) == n and n > 0:
                 self._finish_drawing(cb=cb)
 
-            artists = (
-                i for i in (self._shape_indicator, self._line, self._pointer) if i
-            )
-            self._m.BM.blit_artists(artists, bg=self._background)
+            self.redraw()
 
         eventnames = [
             "button_press_event",
             "key_press_event",
             "close_event",
-            "resize_event",
         ]
         if draw_on_drag:
             eventnames.append("motion_notify_event")
@@ -478,7 +491,7 @@ class ShapeDrawer:
         self._active_drawer = self
 
         canvas = self._m.BM.canvas
-        self.fetch_bg()
+        # self.fetch_bg()
         self._m.cb.execute_callbacks(False)
 
         def handler(event):
@@ -501,14 +514,6 @@ class ShapeDrawer:
                         self._pointer.set_data([], [])
 
                     movecb(event, self._clicks)
-                artists = (
-                    i for i in (self._shape_indicator, self._line, self._pointer) if i
-                )
-                self._m.BM.blit_artists(artists, bg=self._background)
-                return
-
-            if event.name == "resize_event":
-                self._m.BM._after_update_actions.append(self.fetch_bg)
                 artists = (
                     i for i in (self._shape_indicator, self._line, self._pointer) if i
                 )
@@ -562,16 +567,12 @@ class ShapeDrawer:
                     if show_clicks:
                         self._line.set_data(*zip(*self._clicks))
 
-            artists = (
-                i for i in (self._shape_indicator, self._line, self._pointer) if i
-            )
-            self._m.BM.blit_artists(artists, bg=self._background)
+            self.redraw()
 
         eventnames = [
             "button_press_event",
             "key_press_event",
             "close_event",
-            "resize_event",
         ]
         if draw_on_drag:
             eventnames.append("motion_notify_event")
@@ -611,12 +612,7 @@ class ShapeDrawer:
             with autoscale_turned_off(self._m.ax):
                 (ph,) = self._m.ax.fill(pts[:, 0], pts[:, 1], **kwargs)
 
-                if self._layer is None:
-                    layer = self._m.BM._bg_layer
-                else:
-                    layer = self._layer
-
-                self._m.BM.add_bg_artist(ph, layer=layer)
+                self._m.BM.add_bg_artist(ph, layer=self.layer)
 
                 ID = max(self._artists) + 1 if self._artists else 0
                 self._artists[ID] = ph
@@ -689,10 +685,7 @@ class ShapeDrawer:
             with autoscale_turned_off(self._m.ax):
                 (ph,) = self._m.ax.fill(pts[0][0], pts[1][0], **kwargs)
 
-                if self._layer is None:
-                    self._m.BM.add_bg_artist(ph, layer=self._m.BM._bg_layer)
-                else:
-                    self._m.BM.add_bg_artist(ph, layer=self._layer)
+                self._m.BM.add_bg_artist(ph, layer=self.layer)
 
                 ID = max(self._artists) + 1 if self._artists else 0
                 self._artists[ID] = ph
@@ -758,10 +751,7 @@ class ShapeDrawer:
             with autoscale_turned_off(self._m.ax):
                 (ph,) = self._m.ax.fill(pts[:, 0], pts[:, 1], **kwargs)
 
-                if self._layer is None:
-                    self._m.BM.add_bg_artist(ph, layer=self._m.BM._bg_layer)
-                else:
-                    self._m.BM.add_bg_artist(ph, layer=self._layer)
+                self._m.BM.add_bg_artist(ph, layer=self.layer)
 
                 ID = max(self._artists) + 1 if self._artists else 0
                 self._artists[ID] = ph

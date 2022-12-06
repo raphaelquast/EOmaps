@@ -1230,6 +1230,13 @@ class BlitManager:
             else:
                 self.update(blit=False)
 
+            print("drawing")
+            # re-draw indicator-shapes of active drawer
+            # (to show indicators during zoom-events)
+            active_drawer = getattr(self._m.parent, "_active_drawer", None)
+            if active_drawer is not None:
+                active_drawer.redraw(blit=False)
+
         except Exception:
             # we need to catch exceptions since QT does not like them...
             pass
@@ -1529,7 +1536,7 @@ class BlitManager:
         # don't do this! it is causing infinite loops
         # cv.flush_events()
 
-    def blit_artists(self, artists, bg=None):
+    def blit_artists(self, artists, bg=None, blit=True):
         """
         Blit artists (optionally on top of a given background)
 
@@ -1540,6 +1547,9 @@ class BlitManager:
         bg : matpltolib.BufferRegion, optional
             A fetched background that is restored before drawing the artists.
             The default is None.
+        blit : bool
+            Indicator if canvas.blit() should be called or not.
+            The default is True
         """
         cv = self.canvas
 
@@ -1558,7 +1568,8 @@ class BlitManager:
         for a in artists:
             self.figure.draw_artist(a)
 
-        cv.blit(cv.figure.bbox)
+        if blit:
+            cv.blit()
 
     def _get_overlay_name(self, layer=None, bg_layer=None):
         if layer is None:
