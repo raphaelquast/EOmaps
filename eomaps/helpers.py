@@ -1354,7 +1354,7 @@ class BlitManager:
         def check_outdated(item):
             return any(l in item.split("|") for l in sublayers)
 
-        for l in filter(check_outdated, self._bg_layers):
+        for l in filter(check_outdated, set(self._bg_layers)):
             self._refetch_layer(l)
 
         for f in self._on_add_bg_artist:
