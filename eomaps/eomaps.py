@@ -4368,7 +4368,7 @@ class Maps(object):
         """
 
         encoding = self.data_specs.encoding
-        if encoding is not None:
+        if any(encoding is i for i in (None, False)):
             try:
                 scale_factor = encoding.get("scale_factor", None)
                 add_offset = encoding.get("add_offset", None)
