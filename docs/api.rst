@@ -2069,6 +2069,21 @@ The returned ``ScaleBar`` object provides the following useful methods:
 
 A compass can be added to the map via ``m.add_compass()``:
 
+- To add a **North-Arrow**, use ``m.add_compass(style="north arrow")``
+
+.. Note::
+
+    | The compass is a pickable object!
+    | Click on it with the LEFT mouse button to drag it around!
+
+    While a compass is picked (and the LEFT mouse button is pressed), the following
+    additional interactions are available:
+
+    - press ``delte`` on the keyboard: remove the compass from the plot
+    - rotate the ``mouse wheel``: scale the size of the compass
+
+
+
 .. currentmodule:: eomaps.Maps
 
 .. autosummary::
@@ -2107,6 +2122,7 @@ The returned ``compass`` object has the following useful methods assigned:
     set_patch
     set_scale
     set_pickable
+    set_ignore_invalid_angles
     remove
 
 .. _utility:
