@@ -1429,18 +1429,17 @@ class BlitManager:
             for l in layers:
                 layers.add(l)
 
+        if artists is None:
+            artists = []
+
         # always redraw artists from the "all" layer
         layers.add("all")
 
-        # redraw artists from the selected layers (sorted by zorder)
-        for layer in layers:
-            for a in sorted(self._artists.get(layer, []), key=self._get_artist_zorder):
-                fig.draw_artist(a)
-
-        if artists is not None:
-            # redraw provided artists
-            for a in artists:
-                fig.draw_artist(a)
+        # redraw artists from the selected layers and explicitly provided artists
+        # (sorted by zorder)
+        allartists = chain(*(self._artists.get(layer, []) for layer in layers), artists)
+        for a in sorted(allartists, key=self._get_artist_zorder):
+            fig.draw_artist(a)
 
     def _clear_temp_artists(self, method, forward=True):
         # clear artists from connected methods
