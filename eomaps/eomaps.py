@@ -1913,9 +1913,9 @@ class Maps(object):
         self.BM.update(clear=False)
 
     @wraps(Compass.__call__)
-    def add_compass(self, **kwargs):
+    def add_compass(self, *args, **kwargs):
         c = Compass(weakref.proxy(self))
-        c(**kwargs)
+        c(*args, **kwargs)
         # store a reference to the object (required for callbacks)!
         self._compass.add(c)
         return c
