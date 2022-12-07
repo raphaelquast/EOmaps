@@ -19,7 +19,7 @@ data = pd.DataFrame(
 )
 
 # ----------- setup some maps objects and assign datasets and the plot-crs
-mg = MapsGrid(1, 2, crs=[4326, Maps.CRS.Orthographic(45, 45)], figsize=(10, 6))
+mg = MapsGrid(1, 2, crs=[4326, Maps.CRS.Orthographic(45, 45)], figsize=(10, 5))
 mg.m_0_0.set_data(data=data.sample(100), x="lon", y="lat", crs=4326)
 
 mg.m_0_1.set_data(data=data, x="lon", y="lat", crs=4326)
@@ -51,4 +51,4 @@ for m in mg:
 
 mg.share_pick_events()  # share default pick events
 mg.share_pick_events("countries")  # share the events of the "countries" picker
-mg.m_0_1.add_logo(size=0.25, pad=0)
+mg.m_0_1.add_logo()

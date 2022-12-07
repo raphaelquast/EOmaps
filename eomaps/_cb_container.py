@@ -1240,8 +1240,6 @@ class cb_pick_container(_click_container):
 
                 self._m.BM._after_update_actions.append(self._clear_temporary_artists)
                 self._m.BM._clear_temp_artists(self._method)
-                # self._m.parent.BM.update(clear=self._method)
-                # self._m.parent.BM._clear_temp_artists(self._method)
                 # don't update here... the click-callback will take care of it!
             except ReferenceError:
                 pass
