@@ -1604,9 +1604,6 @@ class BlitManager:
         if bg_layer is None:
             bg_layer = self.bg_layer
 
-        if bg_layer in layer:
-            layer.pop(bg_layer)
-
         layer = sorted(set(chain(*(i.split("|") for i in layer), bg_layer.split("|"))))
         return "__overlay|" + "|".join(map(str, layer))
 
