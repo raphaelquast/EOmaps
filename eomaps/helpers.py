@@ -1348,11 +1348,14 @@ class BlitManager:
 
         self._bg_artists.setdefault(layer, []).append(art)
 
-        # re-fetch the currently visible layer if an artist was added
-        # (and all relevant sub-layers)
-        self._refetch_layer(layer)
-        if any(l in self.bg_layer.split("|") for l in layer.split("|")):
-            self._refetch_layer(self.bg_layer)
+        # check if there are any outdated cached background-layers and clear them
+        sublayers = layer.split("|")
+
+        def check_outdated(item):
+            return any(l in item.split("|") for l in sublayers)
+
+        for l in filter(check_outdated, self._bg_layers):
+            self._refetch_layer(l)
 
         for f in self._on_add_bg_artist:
             f()
@@ -1606,7 +1609,11 @@ class BlitManager:
         if bg_layer is None:
             bg_layer = self.bg_layer
 
-        return "__overlay_" + str(bg_layer) + "_" + "_".join(map(str, layer))
+        if bg_layer in layer:
+            layer.pop(bg_layer)
+
+        layer = sorted(set(chain(*(i.split("|") for i in layer), bg_layer.split("|"))))
+        return "__overlay|" + "|".join(map(str, layer))
 
     def _get_restore_bg_action(self, layer, bbox_bounds=None, alpha=1):
         """
