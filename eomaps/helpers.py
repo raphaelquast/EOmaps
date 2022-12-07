@@ -1333,15 +1333,11 @@ class BlitManager:
         # make sure all layer names are converted to string
         layer = str(layer)
 
-        if not any(m.layer == layer for m in (self._m, *self._m._children)):
-            print(f"creating a new Maps-object for the layer {layer}")
-            self._m.new_layer(layer)
-
         if art.figure != self.figure:
             raise RuntimeError
 
         if layer in self._bg_artists and art in self._bg_artists[layer]:
-            print(f"EOmaps: Background-artist {art} already added")
+            print(f"EOmaps: Background-artist '{art}' already added")
             return
 
         # art.set_animated(True)
