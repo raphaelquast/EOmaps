@@ -966,7 +966,7 @@ class cb_move_container(cb_click_container):
                 for obj in self._objs:
                     # check if there is a reason to update
                     if update is False:
-                        if len(obj.get.cbs) > 0:
+                        if len(obj.get.attached_callbacks) > 0:
                             update = True
 
                     # clear temporary artists before executing new callbacks to avoid
