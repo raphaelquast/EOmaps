@@ -1564,9 +1564,8 @@ class Maps(object):
                             proj_geoms.append(
                                 self.ax.projection.project_geometry(g, cartopy_crs)
                             )
-
-                    gdf.geometry = proj_geoms
-                    gdf.set_crs(self.ax.projection, allow_override=True)
+                    gdf = gdf.set_geometry(proj_geoms)
+                    gdf = gdf.set_crs(self.ax.projection, allow_override=True)
                 gdf = gdf[~gdf.is_empty]
         else:
             raise AssertionError(
