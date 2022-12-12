@@ -1520,9 +1520,9 @@ class shapes(object):
 
         def __repr__(self):
             try:
-                s = f"rectangles(radius={self.radius}, radius_crs={self.radius_crs})"
+                s = f"raster(radius={self.radius}, radius_crs={self.radius_crs})"
             except AttributeError:
-                s = "rectangles(radius, radius_crs)"
+                s = "raster(radius, radius_crs)"
 
             return s
 
