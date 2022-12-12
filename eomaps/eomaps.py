@@ -920,7 +920,7 @@ class Maps(object):
             - a 1D or 2D numpy-array with the data-values
             - a 1D list of data values
 
-        x, y : str, optional
+        x, y : array-like or str, optional
             Specify the coordinates associated with the provided data.
             Accepted inputs are:
 
