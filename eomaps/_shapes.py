@@ -211,7 +211,7 @@ class shapes(object):
         # ----------- manual color specifications
         # allow the synonyms "color", "fc" and "facecolor"
         color = None
-        for i in ["color", "fc", "facecolors"]:
+        for i in ["color", "fc", "facecolor"]:
             if color is None:
                 color = kwargs.pop(i, None)
                 if color is not None:
