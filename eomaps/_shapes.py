@@ -228,7 +228,7 @@ class shapes(object):
         if isinstance(color, (int, float, str, np.number)):
             # if a scalar is provided, broadcast it
             color = np.broadcast_to(color, mask.shape)
-        elif isinstance(color, tuple):
+        elif isinstance(color, (list, tuple)):
             if len(color) in [3, 4]:
                 if all(map(lambda i: isinstance(i, (int, float, np.number)), color)):
                     # check if a tuple of numbers is provided, and if so broadcast
