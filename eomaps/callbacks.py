@@ -436,7 +436,6 @@ class _click_callbacks(object):
                 radius = (t.width / 10.0, t.height / 10.0)
 
         ID, pos, val, ind, picker_name = self._popargs(kwargs)
-
         if ID is not None and picker_name == "default":
             if ind is None:
                 # ind = self.m.data.index.get_loc(ID)
@@ -501,7 +500,7 @@ class _click_callbacks(object):
             np.atleast_1d(pos[0]), np.atleast_1d(pos[1]), pos_crs, **kwargs
         )
 
-        marker = self.m.ax.add_collection(coll)
+        marker = self.m.ax.add_collection(coll, autolim=False)
 
         marker.set_zorder(zorder)
 
