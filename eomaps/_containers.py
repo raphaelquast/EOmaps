@@ -651,6 +651,76 @@ class _NaturalEarth_presets:
             zorder=99,
         )
 
+    @property
+    def urban_areas(self):
+        """
+        Add urban-areas to the map.
+
+        All provided arguments are passed to `m.add_feature`
+        (and further to `m.add_gdf` if geopandas is available)
+
+        The default args are:
+
+        - fc="r", lw=0., zorder=99
+
+        """
+
+        return self._feature(
+            self._m,
+            "cultural",
+            "urban_areas",
+            facecolor="r",
+            linewidth=0.0,
+            zorder=99,
+        )
+
+    @property
+    def lakes(self):
+        """
+        Add lakes to the map.
+
+        All provided arguments are passed to `m.add_feature`
+        (and further to `m.add_gdf` if geopandas is available)
+
+        The default args are:
+
+        - fc="b", ec="none", lw=0., zorder=99
+
+        """
+
+        return self._feature(
+            self._m,
+            "physical",
+            "lakes",
+            facecolor="b",
+            linewidth=0,
+            zorder=99,
+        )
+
+    @property
+    def rivers_lake_centerlines(self):
+        """
+        Add rivers_lake_centerlines to the map.
+
+        All provided arguments are passed to `m.add_feature`
+        (and further to `m.add_gdf` if geopandas is available)
+
+        The default args are:
+
+        - fc="none", ec="b", lw=0.75, zorder=99
+
+        """
+
+        return self._feature(
+            self._m,
+            "physical",
+            "rivers_lake_centerlines",
+            facecolor="none",
+            edgecolor="b",
+            linewidth=0.75,
+            zorder=99,
+        )
+
     class _feature:
         def __init__(self, m, category, name, **kwargs):
             self._m = m
