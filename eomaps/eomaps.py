@@ -869,7 +869,7 @@ class Maps(object):
             boundary.update(kwargs.pop("boundary", dict()))
 
         m2 = _InsetMaps(
-            f=self.f,
+            parent=self,
             crs=inset_crs,
             layer=layer,
             xy=xy,
@@ -4633,7 +4633,7 @@ class _InsetMaps(Maps):
 
     def __init__(
         self,
-        f,
+        parent,
         crs=4326,
         layer="all",
         xy=(45, 45),
@@ -4691,7 +4691,7 @@ class _InsetMaps(Maps):
         )[0]
 
         # initialize a new maps-object with a new axis
-        super().__init__(crs=crs, f=f, ax=gs, layer=layer, **kwargs)
+        super().__init__(crs=crs, f=parent.f, ax=gs, layer=layer, **kwargs)
 
         # get the boundary of a ellipse in the inset_crs
         bnd, bnd_verts = self._get_inset_boundary(
@@ -4719,7 +4719,7 @@ class _InsetMaps(Maps):
         )
 
         if indicate_extent is not False:
-            self.indicate_inset_extent(self.parent, **extent_kwargs)
+            self.indicate_inset_extent(parent, **extent_kwargs)
 
     def plot_map(self, *args, **kwargs):
         set_extent = kwargs.pop("set_extent", False)
