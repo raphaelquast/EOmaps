@@ -443,7 +443,7 @@ class Maps(object):
             self.parent._execute_callbacks = True
 
         # initialize the shape-drawer
-        self._shape_drawer = ShapeDrawer(self)
+        self._shape_drawer = ShapeDrawer(weakref.proxy(self))
 
     def __getattribute__(self, key):
         if key == "plot_specs":
