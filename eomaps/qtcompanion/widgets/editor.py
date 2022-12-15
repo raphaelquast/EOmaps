@@ -106,9 +106,11 @@ class AddFeaturesMenuButton(QtWidgets.QPushButton):
 
                 return
             try:
-                getattr(getattr(self.m.add_feature, featuretype), feature)(
-                    layer=layer, **self.props
-                )
+                f = getattr(getattr(self.m.add_feature, featuretype), feature)
+                if featuretype == "preset":
+                    f(layer=layer, **f.kwargs)
+                else:
+                    f(layer=layer, **self.props)
 
                 self.m.BM.update()
             except Exception:
