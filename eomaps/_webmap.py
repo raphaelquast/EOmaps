@@ -1152,6 +1152,7 @@ class SlippyImageArtist_NEW(AxesImage):
         # This artist fills the Axes, so should not influence layout.
         kwargs.setdefault("in_layout", False)
         super().__init__(ax, **kwargs)
+
         self.cache = []
 
         ax.callbacks.connect("xlim_changed", self.on_xlim)
@@ -1195,6 +1196,15 @@ class SlippyImageArtist_NEW(AxesImage):
                 self._prev_size = (ax.bbox.width, ax.bbox.height)
 
             for img, extent in self.cache:
+                try:
+                    clippath = self.axes.spines["geo"]
+                    self.set_clip_path(
+                        clippath.get_path(),
+                        transform=self.axes.projection._as_mpl_transform(self.axes),
+                    )
+                except:
+                    print("EOmaps: unable to set clippath for WMS images")
+
                 self.set_array(img)
                 with ax.hold_limits():
                     self.set_extent(extent)
