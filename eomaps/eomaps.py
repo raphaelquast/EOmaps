@@ -1369,7 +1369,10 @@ class Maps(object):
     @property
     @wraps(NaturalEarth_features)
     def add_feature(self):
-        return NaturalEarth_features(weakref.proxy(self))
+        # lazily initialize NaturalEarth features
+        if not hasattr(self, "_add_feature"):
+            self._add_feature = NaturalEarth_features(self)
+        return self._add_feature
 
     def add_gdf(
         self,
@@ -1671,6 +1674,7 @@ class Maps(object):
         xy=None,
         xy_crs=None,
         radius=None,
+        radius_crs=None,
         shape="ellipses",
         buffer=1,
         n=100,
@@ -1758,6 +1762,7 @@ class Maps(object):
             ID=ID,
             pos=xy,
             radius=radius,
+            radius_crs=radius_crs,
             ind=None,
             shape=shape,
             buffer=buffer,
@@ -3353,7 +3358,7 @@ class Maps(object):
                 # allow empty datasets
                 continue
 
-            if not isinstance(i, (list, np.ndarray)):
+            if not isinstance(i, (list, tuple, np.ndarray)):
                 if _register_pandas() and not isinstance(i, pd.Series):
                     raise AssertionError(
                         f"{iname} values must be a list, numpy-array or pandas.Series"
@@ -3362,9 +3367,28 @@ class Maps(object):
                     if iname == "data":
                         pandas_series_data = True
 
-        # get the data-coordinates
-        xorig = np.asanyarray(x)
-        yorig = np.asanyarray(y)
+        # set coordinates by extent
+
+        if isinstance(x, tuple) and isinstance(y, tuple):
+            assert data is not None, (
+                "EOmaps: If x- and y are provided as tuples, the data must be a 2D list "
+                "or numpy-array!"
+            )
+
+            shape = np.shape(data)
+            assert len(shape) == 2, (
+                "EOmaps: If x- and y are provided as tuples, the data must be a 2D list "
+                "or numpy-array!"
+            )
+
+            # get the data-coordinates
+            xorig = np.linspace(*x, shape[0])
+            yorig = np.linspace(*y, shape[1])
+
+        else:
+            # get the data-coordinates
+            xorig = np.asanyarray(x)
+            yorig = np.asanyarray(y)
 
         if data is not None:
             # get the data-values
@@ -3949,7 +3973,7 @@ class Maps(object):
                 )
 
             coll.set_clim(vmin, vmax)
-            ax.add_collection(coll)
+            ax.add_collection(coll, autolim=set_extent)
 
             self._coll = coll
 

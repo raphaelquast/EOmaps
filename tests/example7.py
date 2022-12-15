@@ -7,10 +7,6 @@ import geopandas as gpd
 
 # geopandas is used internally... the import is just here to show that!
 
-# While this example focuses on "m.add_feature", it works completely similar
-# with a custom GeoDataFrame by replacing "m.add_feature..." with "m.add_gdf()"
-# (the functionalities and arguments are completely similar)
-
 
 # ----------- create some example-data
 lon, lat = np.meshgrid(np.linspace(-180, 180, 25), np.linspace(-90, 90, 25))
@@ -20,13 +16,16 @@ data = pd.DataFrame(
 
 # ----------- setup some maps objects and assign datasets and the plot-crs
 mg = MapsGrid(1, 2, crs=[4326, Maps.CRS.Orthographic(45, 45)], figsize=(10, 5))
-mg.m_0_0.set_data(data=data.sample(100), x="lon", y="lat", crs=4326)
+mg.m_0_0.set_data(data=data.sample(100), x="lon", y="lat", crs=4326, parameter="data")
 
 mg.m_0_1.set_data(data=data, x="lon", y="lat", crs=4326)
 
-mg.add_feature.preset.ocean(reproject="cartopy")
+mg.add_feature.preset.ocean()
 
-mg.add_feature.cultural_50m.admin_0_countries(
+# fetch the data (incl. metadata) for the "admin_0_countries" feature
+countries = mg.add_feature.cultural.admin_0_countries.get_gdf(scale=50)
+mg.add_gdf(
+    countries,
     picker_name="countries",
     pick_method="contains",
     val_key="NAME",

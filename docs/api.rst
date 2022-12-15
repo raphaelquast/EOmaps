@@ -1492,12 +1492,17 @@ The general call-signature is:
     m.add_feature.< CATEGORY >.< FEATURE >(...)
 
     # if you only want to get the associated GeoDataFrame, you can use
-    gdf = m.add_feature.< CATEGORY >.< FEATURE >.get_gdf()
+    gdf = m.add_feature.< CATEGORY >.< FEATURE >.get_gdf(scale=10)
+    # and then add the obtained GeoDataFrame to the map via
+    m.add_gdf(gdf, ...)
 
-Where ``< CATEGORY >`` specifies the resolution and general category of the feature, e.g.:
 
-- ``cultural_10m``, ``cultural_50m``, ``cultural_110m``: cultural features (e.g. countries, states etc.)
-- ``physical_10m``, ``physical_50m``, ``physical_110m``: physical features (e.g. coastline, land, ocean etc.)
+``< CATEGORY >`` specifies the general category of the feature, e.g.:
+
+- ``cultural``: cultural features (e.g. countries, states etc.)
+- ``physical``: physical features (e.g. coastlines, land, ocean etc.)
+
+``< FEATURE >`` is the name of the NaturalEarth feature, e.g. ``"coastlines", "admin_0_countries"`` etc..
 
 The most commonly used features are available under the ``preset`` category:
 
@@ -1512,6 +1517,9 @@ The most commonly used features are available under the ``preset`` category:
     ocean
     land
     countries
+    urban_areas
+    lakes
+    rivers_lake_centerlines
 
 +-------------------------------------------------------------------------+-------------------------------------------------+
 | .. code-block:: python                                                  | .. image:: _static/minigifs/add_feature.gif     |
@@ -1523,19 +1531,14 @@ The most commonly used features are available under the ``preset`` category:
 |     m.add_feature.preset.land()                                         |                                                 |
 |     m.add_feature.preset.countries()                                    |                                                 |
 |                                                                         |                                                 |
-|     m.add_feature.physical_110m.lakes(ec="b")                           |                                                 |
-|     m.add_feature.cultural_110m.admin_0_pacific_groupings(ec="m", lw=2) |                                                 |
+|     m.add_feature.physical.lakes(scale=110, ec="b")                     |                                                 |
+|     m.add_feature.cultural.admin_0_pacific_groupings(ec="m", lw=2)      |                                                 |
 |                                                                         |                                                 |
 |     # (only if geopandas is installed)                                  |                                                 |
-|     places = m.add_feature.cultural_110m.populated_places.get_gdf()     |                                                 |
+|     places = m.add_feature.cultural.populated_places.get_gdf(scale=110) |                                                 |
 |     m.add_gdf(places, markersize=places.NATSCALE/10, fc="r")            |                                                 |
 |                                                                         |                                                 |
 +-------------------------------------------------------------------------+-------------------------------------------------+
-
-.. note::
-
-    If ``geopandas`` is installed, ``GeoDataFrames`` are used to visualize the features, and all aforementioned
-    functionalities of ``m.add_gdf`` can also directly be used with ``m.add_feature``!
 
 
 .. _annotations_and_markers:

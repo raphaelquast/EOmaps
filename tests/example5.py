@@ -63,17 +63,13 @@ m.cb.click.attach(callback, m=m3)
 
 # clip the features by the current map extent and use geopandas for reprojections
 # since it works for the selected map-extent and it is usually faster than cartopy
-args = dict(reproject="gpd", clip="extent")
+# args = dict(reproject="gpd", clip="extent")
 
-m.add_feature.preset.coastline("10m", zorder=101, **args)
-m.add_feature.physical_10m.lakes(ec="none", fc="b", zorder=100, **args)
-m.add_feature.physical_10m.rivers_lake_centerlines(
-    ec="b", fc="none", lw=0.5, zorder=100, **args
-)
-m.add_feature.cultural_10m.admin_0_countries(
-    ec=".75", fc="none", lw=0.5, zorder=100, **args
-)
-m.add_feature.cultural_10m.urban_areas(ec="none", fc="r", **args)
+m.add_feature.preset.coastline()
+m.add_feature.preset.lakes()
+m.add_feature.preset.rivers_lake_centerlines()
+m.add_feature.preset.countries()
+m.add_feature.preset.urban_areas()
 
 # add a customized legend
 leg = m.ax.legend(

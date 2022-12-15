@@ -40,8 +40,8 @@ m3 = m.new_inset_map(
 m3.add_feature.preset.coastline()
 m3.add_feature.preset.ocean()
 m3.add_feature.preset.land()
-m3.add_feature.cultural_10m.admin_0_countries(fc="none", ec=".5")
-m3.add_feature.cultural_10m.urban_areas(fc="r", ec="none")
+m3.add_feature.preset.countries(fc="none", ec=".5")
+m3.add_feature.preset.urban_areas(fc="r", ec="none")
 
 # print some data on all of the maps
 m3.set_shape.ellipses(n=100)  # use a higher ellipse-resolution on the inset-map
@@ -73,4 +73,3 @@ m3.add_colorbar(hist_bins=20, margin=dict(top=0.15))
 m3.set_inset_position(x=0.3)
 # set the y-ticks of the colorbar histogram
 m3.colorbar.ax_cb_plot.set_yticks([0, 1, 2])
-m3.redraw()

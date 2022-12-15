@@ -1,4 +1,6 @@
 from textwrap import dedent, indent, fill
+from inspect import cleandoc
+
 from warnings import warn
 from operator import attrgetter
 from inspect import signature, _empty
@@ -726,34 +728,72 @@ class _NaturalEarth_presets:
             self._m = m
             self.category = category
             self.name = name
-
             self.kwargs = kwargs
 
-            self.feature = getattr(
-                getattr(self._m.add_feature, f"{self.category}_10m"), self.name
+            self.feature = self._m.add_feature._get_feature(
+                category=self.category, name=self.name
             )
 
             add_params = """
             Other Parameters
             ----------------
-            scale : str
-                Set the scale of the feature preset ("10m", "50m" or "110m")
-                The default is "50m"
+            scale : int or str
+                Set the scale of the feature preset (10, 50, 110 or "auto")
+                The default is "auto"
             """
 
             self.__doc__ = combdoc(
-                f"PRESET using {kwargs} ", self.feature.__doc__, add_params
+                f"PRESET using {kwargs} \n", self.feature.__doc__, add_params
             )
 
-        def __call__(self, scale="50m", **kwargs):
+        def __call__(self, scale="auto", **kwargs):
             k = dict(**self.kwargs)
             k.update(kwargs)
-            self.feature = getattr(
-                getattr(self._m.add_feature, f"{self.category}_{scale}"), self.name
-            )
+
+            if scale != "auto":
+                self.feature = self._m.add_feature._get_feature(
+                    category=self.category, name=self.name
+                )
 
             self.__doc__ = self.feature.__doc__
-            return self.feature(**k)
+            return self.feature(scale=scale, **k)
+
+
+_NE_features_path = Path(__file__).parent / "NE_features.json"
+
+try:
+    with open(_NE_features_path, "r") as file:
+        _NE_features = json.load(file)
+
+        _NE_features_all = dict()
+        for scale, scale_items in _NE_features.items():
+            for category, category_items in scale_items.items():
+                _NE_features_all.setdefault(category, set()).update(category_items)
+
+except Exception:
+    print(
+        "EOmaps: Could not load available NaturalEarth features from\n"
+        f"{_NE_features_path}"
+    )
+    _NE_features = dict()
+    _NE_features_all = dict()
+
+
+class AdaptiveValidatedScaler(cfeature.AdaptiveScaler):
+    # subclass of the AdaptiveScaler to make sure the dataset exists
+    def __init__(self, default_scale, limits, validator=None):
+        super().__init__(default_scale, limits)
+
+        self.validator = validator
+
+    def scale_from_extent(self, extent):
+        scale = super().scale_from_extent(extent)
+
+        if self.validator is not None:
+            scale = self.validator(scale)
+
+        self._scale = scale
+        return self._scale
 
 
 class NaturalEarth_features(object):
@@ -763,48 +803,104 @@ class NaturalEarth_features(object):
     (see https://www.naturalearthdata.com)
 
     The features are grouped into the categories "cultural" and "physical"
-    at 3 different scales:
+    and available at 3 different scales:
 
-    - 1:10m : Large-scale data
-    - 1:50m : Medium-scale data
-    - 1:110m : Small-scale data
+    - 10 : Large-scale data (1:10m)
+    - 50 : Medium-scale data (1:50m)
+    - 110 : Small-scale data (1:110m)
+
+    If you use scale="auto", the appropriate scale of the feature will be determined
+    based on the map-extent.
 
     For available features and additional info, check the docstring of the
     individual categories!
 
-    >>> m.add_feature.cultural_10m.< feature-name >( ... style-kwargs ...)
-
+    >>> m.add_feature.< category >.< feature-name >(scale=10, ... style-kwargs ...)
 
     Examples
     --------
 
     - add black (coarse resolution) coastlines
-      >>> m.add_feature.physical_110m.coastline(fc="none", ec="k")
 
-    - color all land red with 50% transparency
-      >>> m.add_feature.physical_110m.land(fc="r", alpha=0.5)
+      >>> from eomaps import Maps
+      >>> m = Maps()
+      >>> m.add_feature.physical.coastline(scale=110, fc="none", ec="k")
 
-    - color all countries with respect to their area
-      >>> countries = m.add_feature.cultural_10m.admin_0_countries
-      >>> areas = np.argsort([i.area for i in countries.feature.geometries()])
-      >>> countries(ec="k", fc= [i for i in plt.cm.viridis(areas / areas.max())])
+    - color all land red with 50% transparency and automatically determine the
+      appropriate scale if you zoom the map
+
+      >>> from eomaps import Maps
+      >>> m = Maps()
+      >>> m.add_feature.physical.land(scale="auto", fc="r", alpha=0.5)
+
+    - fetch features as geopandas.GeoDataFrame
+      (to color all countries with respect to the area)
+
+      >>> from eomaps import Maps
+      >>> m = Maps()
+      >>> countries = m.add_feature.cultural.admin_0_countries.get_gdf(scale=10)
+      >>> countries["area_rank"] = countries.area.rank()
+      >>> m.add_gdf(countries, column="area_rank")
+
     """
 
     def __init__(self, m):
         self._m = m
 
-        with open(Path(__file__).parent / "NE_features.json", "r") as file:
-            features = json.load(file)
+        self._depreciated_names = dict()
 
-        for scale, scale_items in features.items():
+        for scale, scale_items in _NE_features.items():
             for category, category_items in scale_items.items():
-                ns = {
-                    name: self._feature(self._m, category, name, scale)
-                    for name in category_items
-                }
+                ns = dict()
+                for name in category_items:
+                    ns[name] = self._get_feature(category, name)
 
                 c = self._category(scale, category, **ns)
-                setattr(self, category + "_" + scale, c)
+                self._depreciated_names[f"{category}_{scale}"] = c
+
+        for category, names in _NE_features_all.items():
+            func = lambda name: self._feature(self._m, category, name)
+            ns = dict(zip(names, map(func, names)))
+
+            c = self._category(scale, category, **ns)
+            setattr(self, category, c)
+
+    def __call__(self, category, scale, name, **kwargs):
+        feature = self._get_feature(category, name)
+        return feature(**kwargs)
+
+    def __getattribute__(self, key):
+        if key != "_depreciated_names" and key in self._depreciated_names:
+            warn(
+                f"EOmaps: Using 'm.add_feature.{key}.< name >()' is depreciated! "
+                f"use 'm.add_feature.{key.split('_')[0]}.< name >(scale=...)' instead! ",
+                stacklevel=99,
+            )
+            return self._depreciated_names[key]
+        else:
+            return object.__getattribute__(self, key)
+
+    def __getitem__(self, key):
+        return getattr(self, key)
+
+    def _get_feature(self, category, name):
+        if category not in ["cultural", "physical"]:
+            raise AssertionError(
+                "EOmaps: Use one of ['cultural', 'physical']" + " as category!"
+            )
+
+        available_names = _NE_features_all[category]
+
+        if name not in available_names:
+            from difflib import get_close_matches
+
+            matches = get_close_matches(name, available_names, 3)
+            raise AssertionError(
+                f"EOmaps: {name} is not a valid feature-name... "
+                + (f"did you mean one of {matches}?" if matches else "")
+            )
+
+        return self._feature(self._m, category, name)
 
     @property
     def preset(self):
@@ -818,9 +914,6 @@ class NaturalEarth_features(object):
         """
         return _NaturalEarth_presets(self._m)
 
-    def __getitem__(self, key):
-        return getattr(self, key)
-
     class _category:
         def __init__(self, scale, category, **kwargs):
 
@@ -830,15 +923,27 @@ class NaturalEarth_features(object):
             for key, val in kwargs.items():
                 setattr(self, key, val)
 
-            self.__doc__ = combdoc(
-                NaturalEarth_features.__doc__,
-                "\nNotes\n-----\n Available NaturalEarth features for:   |   "
-                + scale
-                + "  "
-                + category
-                + "   |\n\n - "
-                + "\n - ".join(kwargs),
-            )
+            if scale == "auto":
+                header = (
+                    f"Auto-scaled feature interface for: {category}\n"
+                    "------------------------------------------------"
+                    "\n"
+                    "Note\n"
+                    "----\n"
+                    "Features will be added to the map using cartopy's Feature "
+                    "interface and the scale (10m, 50m or 110m) is automatically "
+                    "adjusted based on the extent of the map."
+                    "\n\n"
+                    "--------------------------------------------------------------"
+                    "\n\n"
+                )
+            else:
+                header = (
+                    f"Feature interface for: {category} - {scale}\n"
+                    "----------------------------------------------"
+                )
+
+            self.__doc__ = combdoc(header, NaturalEarth_features.__doc__)
 
         def __repr__(self):
             return (
@@ -846,252 +951,241 @@ class NaturalEarth_features(object):
             )
 
     class _feature:
-        def __init__(self, m, category, name, scale):
+        """
+        Natural Earth Feature
+
+        Call this class like a function to add the feature to the map.
+
+        By default, the scale of the feature is automatically adjusted based on the
+        map-extent. Use `scale=...` to use a fixed scale.
+
+        Common style-keywords can be used to customize the appearance
+        of the added features.
+
+        - "facecolor" (or "fc")
+        - "edgecolor" (or "ec")
+        - "linewidth" (or "lw")
+        - "linestyle" (or "ls")
+        - "alpha", "hatch", "dashes", ...
+        - "zoder"
+
+        Parameters
+        ----------
+        scale : (10, 50, 110 or 'auto'), optional
+            The (preferred) scale of the NaturalEarth feature.
+
+            If the scale is not available for the selected feature, the next available
+            scale will be used (and a warning is issued)!
+
+            If 'auto' the scale is automatically adjusted based on the map-extent.
+
+        layer : int, str or None, optional
+            The name of the layer at which map-features are plotted.
+
+            - If "all": the corresponding feature will be added to ALL layers
+            - If None, the layer of the parent object is used.
+
+            The default is None.
+
+        Methods
+        -------
+
+        get_gdf : Get a GeoDataFrame of the feature-geometries
+
+
+        Note
+        ----
+        Some shapes consist of point-geometries which cannot be
+        properly added without `geopandas`!
+
+        To use those features, first fetch the GeoDataFrame using `.get_gdf()`
+        and then plot the shapes with `m.add_gdf()` (see example below).
+
+
+        Examples
+        --------
+
+        >>> m = Maps()
+        >>> feature = m.add_feature.physical.coastline
+        >>> feature(scale=10,
+        >>>         fc="none",
+        >>>         ec="k",
+        >>>         lw=.5,
+        >>>         ls="--",
+        >>>         )
+
+        For more advanced plotting, fetch the data first and use geopandas
+        to plot the features!
+
+        >>> m = Maps()
+        >>> m.add_feature.preset.coastline()
+        >>> # get the data for a feature that consists of point-geometries
+        >>> m.add_feature.cultural.populated_places.get_gdf()
+        >>> # plot the features with geopandas
+        >>> m.add_gdf(gdf, column="SOV0NAME", markersize=gdf.SCALERANK)
+        """
+
+        def __init__(self, m, category, name, scale=None):
             self._m = m
-            if not _register_geopandas():
-                # use cartopy to add the features
-                self.feature = cfeature.NaturalEarthFeature(
-                    category=category, name=name, scale=scale
+
+            self._category = category
+            self._name = name
+            self._scale = scale
+            self._cartopy_feature = None
+
+            self.__doc__ = (
+                "NaturalEarth feature: "
+                f"{self._category} | {self._name}\n\n"
+                "----------------------------------------\n\n"
+            ) + self.__doc__
+
+        def __call__(self, layer=None, scale="auto", **kwargs):
+            self._set_scale(scale)
+
+            from . import MapsGrid  # do this here to avoid circular imports!
+
+            for m in self._m if isinstance(self._m, MapsGrid) else [self._m]:
+                if layer is None:
+                    uselayer = m.layer
+                else:
+                    uselayer = layer
+
+                feature = self._get_cartopy_feature(self._scale)
+                feature._kwargs.update(kwargs)
+                art = m.ax.add_feature(feature)
+                m.BM.add_bg_artist(art, layer=uselayer)
+
+        def _set_scale(self, scale):
+            if scale == "auto":
+                self._scale = "auto"
+                return
+
+            if isinstance(scale, int):
+                scale = f"{scale}m"
+
+            assert scale in [
+                "10m",
+                "50m",
+                "110m",
+                "auto",
+            ], "scale must be one of  [10, 50, 110, 'auto']"
+
+            self._scale = self._get_available_scale(scale)
+
+            if self._scale != scale:
+                print(
+                    f"EOmaps: The NaturalEarth feature '{self._name}' is not "
+                    f"available at 1:{scale} scale... using 1:{self._scale} instead!"
+                )
+
+        def _get_cartopy_feature(self, scale):
+            self._set_scale(scale)
+
+            if (
+                self._cartopy_feature is not None
+                and self._scale == self._cartopy_feature.scale
+            ):
+
+                return self._cartopy_feature
+
+            if self._scale == "auto":
+                usescale = AdaptiveValidatedScaler(
+                    "110m",
+                    (("50m", 50), ("10m", 15)),
+                    validator=self._get_available_scale,
                 )
             else:
-                # just get the path to the cached download and use
-                # geopandas to add the feature (provides more flexibility!)
-                self.feature = dict(resolution=scale, category=category, name=name)
+                usescale = self._scale
 
-            if not _register_geopandas():
-                self.__doc__ = dedent(
-                    f"""
-                    NaturalEarth feature:  {scale} | {category} | {name}
+            # get an instance of the corresponding cartopy-feature
+            self._cartopy_feature = cfeature.NaturalEarthFeature(
+                category=self._category, name=self._name, scale=usescale
+            )
 
-                    Call this class like a function to add the feature to the map.
+            return self._cartopy_feature
 
-                    Common style-keywords can be used to customize the appearance
-                    of the added features.
+        def _get_available_scale(self, scale):
+            # return the optimal scale for the selected feature
+            scaleorder = ["110m", "50m", "10m"]
+            while True:
+                if self._name in _NE_features[scale][self._category]:
+                    break
 
-                    - "facecolor" (or "fc")
-                    - "edgecolor" (or "ec")
-                    - "linewidth" (or "lw")
-                    - "linestyle" (or "ls")
-                    - "alpha", "hatch", "dashes", ...
-                    - "zoder"
+                scale = scaleorder[(scaleorder.index(scale) + 1) % len(scaleorder)]
 
-                    Parameters
-                    ----------
+            return scale
 
-                    layer : int, str or None, optional
-                        The name of the layer at which map-features are plotted.
-
-                        - If "all": the corresponding feature will be added to ALL layers
-                        - If None, the layer of the parent object is used.
-
-                        The default is None.
-
-                    Note
-                    ----
-                    Some shapes consist of point-geometries which cannot be
-                    properly added without `geopandas`!
-
-                    Run the following command to install geopandas and activate
-                    additional NaturalEarth features in EOmaps!
-
-                        `conda install -c conda-forge geopandas`
-
-                    (check the docstring again after installing to get more infos)
-
-                    Examples
-                    --------
-
-                    >>> m = Maps()
-                    >>> feature = m.add_feature.physical_10m.coastline
-                    >>> feature(fc="none",
-                    >>>         ec="k",
-                    >>>         lw=.5,
-                    >>>         ls="--",
-                    >>>         )
-                    """
-                )
-            else:
-                self.__doc__ = dedent(
-                    f"""
-                    NaturalEarth feature:  {scale} | {category} | {name}
-
-                    Call this class like a function to add the feature to the map.
-
-                    All keyword-arguments are passed to `m.add_gdf` and the
-                    NaturalEarth features are added to the map just like any
-                    other GeoDataFrame!
-                    (e.g. you can even attach callbacks if you like!)
-
-
-                    Parameters
-                    ----------
-                    picker_name : str or None
-                        A unique name that is used to identify the pick-method.
-
-                        If a `picker_name` is provided, a new pick-container will be
-                        created that can be used to pick geometries of the GeoDataFrame.
-
-                        The container can then be accessed via:
-                            >>> m.cb.pick__<picker_name>
-                            or
-                            >>> m.cb.pick[picker_name]
-                        and it can be used in the same way as `m.cb.pick...`
-
-                    pick_method : str or callable
-                        if str :
-                            The operation that is executed on the GeoDataFrame to identify
-                            the picked geometry.
-                            Possible values are:
-
-                            - "contains":
-                              pick a geometry only if it contains the clicked point
-                              (only works with polygons! (not with lines and points))
-                            - "centroids":
-                              pick the closest geometry with respect to the centroids
-                              (should work with any geometry whose centroid is defined)
-
-                            The default is "centroids"
-                        if callable :
-                            A callable that is used to identify the picked geometry.
-                            The call-signature is:
-
-                            >>> def picker(artist, mouseevent):
-                            >>>     # if the pick is NOT successful:
-                            >>>     return False, dict()
-                            >>>     ...
-                            >>>     # if the pick is successful:
-                            >>>     return True, dict(ID, pos, val, ind)
-                        The default is "contains"
-                    val_key : str
-                        The dataframe-column used to identify values for pick-callbacks.
-                        The default is None.
-
-                    kwargs :
-                        All remaining kwargs are passed to the plotting function
-                        of geopandas (e.g. `gdf.plot(**kwargs)`)
-
-                        (facecolor, edgecolor, etc.)
-
-                    layer : int, str or None, optional
-                        The name of the layer at which map-features are plotted.
-
-                        - If "all": the corresponding feature will be added to ALL layers
-                        - If None, the layer of the parent object is used.
-
-                        The default is None.
-
-
-                    Examples
-                    --------
-
-                    >>> m = Maps()
-                    >>> feature = m.add_feature.physical_10m.coastline
-                    >>> feature(fc="none",
-                    >>>         ec="k",
-                    >>>         lw=.5,
-                    >>>         ls="--",
-                    >>>         )
-
-                    - make the features from NaturalEarth interactive!
-                    >>> m = Maps()
-                    >>> feature = m.add_feature.physical_110m.admin_0_countries
-                    >>> feature(fc="none", ec="k", picker_name="countries", val_key="NAME_EN")
-                    >>> m.cb.pick["countries"].attach.highlite_geometry()
-                    >>> m.cb.pick["countries"].attach.annotate()
-
-
-                    """
-                )
-
-        @staticmethod
-        def _preferred_reproject_method(m):
+        def get_gdf(self, scale=50, what="full"):
             """
-            Temporary fix for reprojection issues with geopandas and/or cartopy.
-
-            This function just hard-codes the preferred way of reprojecting shapes
-            for given projections (you can always overrride this behaviour by
-            explicitly passing `reproject="..."` to the feature-call)
+            Get a geopandas.GeoDataFrame for the selected NaturalEarth feature
 
             Parameters
             ----------
-            m : eomaps.Maps
-                The maps-object to use.
+            scale : (10, 50, 110), optional
+                The scale to use when fetching the data for the NaturalEarth feature.
 
-            Returns
-            -------
-            method : str
-                the reproject-method to use as default.
+                If the scale is not available for the selected feature, the next
+                available scale will be used (and a warning is issued)!
+            what: str, optional
+                Set what information is included in the returned GeoDataFrame.
 
-            Examples
-            --------
-            The following examples have known issues that can be resolved by
-            switching the reprojection-method:
+                - "full": return all geometries AND metadata
+                - "geoms" : return only geometries (NO metadata)
+                - "geoms_intersecting": return only geometries that intersect with the
+                  current axis-extent (NO metadata)
 
-            >>> m = Maps(crs = Maps.CRS.Robinson())
-            >>> #gdf = m.add_feature.preset.ocean(reproject="cartopy")
-            >>> gdf = m.add_feature.preset.ocean(reproject="gpd")
-
-            >>> m = Maps(crs = Maps.CRS.Stereographic())
-            >>> #gdf = m.add_feature.preset.ocean(reproject="gpd")
-            >>> gdf = m.add_feature.preset.ocean(reproject="cartopy")
-
-            """
-
-            # use cartopy for stereographic reprojections but not for others
-            # (somehow geopandas can't handle Stereographic and Orthographic
-            # reprojection while cartopy can't handle Robinson...)
-            # TODO what's the reason for this???
-
-            if str(m.crs_plot.__class__.__name__) in [
-                "Stereographic",
-                "Orthographic",
-                "RotatedPole",
-            ]:
-                method = "cartopy"
-            else:
-                method = "gpd"
-            return method
-
-        def __call__(self, layer=None, **kwargs):
-            from . import MapsGrid  # do this here to avoid circular imports!
-
-            if not _register_geopandas():
-                for m in self._m if isinstance(self._m, MapsGrid) else [self._m]:
-                    if layer is None:
-                        uselayer = m.layer
-                    else:
-                        uselayer = layer
-                    self.feature._kwargs.update(kwargs)
-                    art = m.ax.add_feature(self.feature)
-
-                    m.BM.add_bg_artist(art, layer=uselayer)
-            else:
-                s = self.get_gdf()
-                for m in self._m if isinstance(self._m, MapsGrid) else [self._m]:
-                    if layer is None:
-                        uselayer = m.layer
-                    else:
-                        uselayer = layer
-                    # set preferred reprojection method (if not provided explicitly)
-                    kwargs.setdefault("reproject", self._preferred_reproject_method(m))
-                    m.add_gdf(s, layer=uselayer, **kwargs)
-
-        def get_gdf(self):
-            """
-            Get a geopandas.GeoDataFrame for the selected NaturalEarth feature
+                The default is False
 
             Returns
             -------
             gdf : geopandas.GeoDataFrame
-                A GeoDataFrame with all geometries and properties of the feature
+                A GeoDataFrame with all geometries of the feature
             """
-
             assert (
                 _register_geopandas()
             ), "EOmaps: Missing dependency `geopandas` for `feature.get_gdf()`"
 
-            gdf = gpd.read_file(shapereader.natural_earth(**self.feature))
-            gdf.set_crs(ccrs.PlateCarree(), inplace=True, allow_override=True)
+            self._set_scale(scale)
+
+            if what == "full":
+                gdf = gpd.read_file(
+                    shapereader.natural_earth(
+                        resolution=self._scale, category=self._category, name=self._name
+                    )
+                )
+            elif what.startswith("geoms"):
+                feature = self._get_cartopy_feature(self._scale)
+
+                if what == "geoms_intersecting":
+                    try:
+                        extent = self._m.ax.get_extent(feature.crs)
+                        feature.scaler.scale_from_extent(extent)
+                    except:
+                        print("EOmaps: unable to determine extent")
+                        pass
+                    geoms = list(feature.geometries())
+                elif what == "geoms":
+                    try:
+                        extent = self._m.ax.get_extent(feature.crs)
+                        geoms = list(feature.intersecting_geometries(extent))
+                    except ValueError:
+                        geoms = list(feature.geometries())
+                else:
+                    raise TypeError("EOmaps: what='{what}' is not a valid input!")
+
+                gdf = gpd.GeoDataFrame(geometry=geoms, crs=feature.crs)
+
+            else:
+                raise TypeError(
+                    "EOmaps: what='{what}' is not a valid input!"
+                    "Use one of: ['full' ,'geoms', 'geoms_intersecting']"
+                )
+
+            if gdf.crs is None:
+                # make sure the CRS is properly set
+                # (NE-features come in epsg=4326 projection)
+                gdf.set_crs(ccrs.PlateCarree(), inplace=True, allow_override=True)
+
             return gdf
 
 
