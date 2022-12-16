@@ -332,7 +332,6 @@ class ColorBar:
             )
 
         for key in ["top", "bottom", "left", "right"]:
-
             margin = kwargs.pop("margin", None)
             if margin is None:
                 margin = dict()
@@ -386,44 +385,44 @@ class ColorBar:
         if size is not None:
             self._hist_size = size
 
-        # # evaluate axis padding due to extension-arrows
-        # if self._extend == "both":
-        #     d = self._extend_frac / (1 + 2 * self._extend_frac)
-        #     ex_min, ex_max = d, d
-        # elif self._extend == "min":
-        #     d = self._extend_frac / (1 + self._extend_frac)
-        #     ex_min, ex_max = d, 0.0
-        # elif self._extend == "max":
-        #     d = self._extend_frac / (1 + self._extend_frac)
-        #     ex_min, ex_max = 0.0, d
-        # else:
-        #     ex_min, ex_max = 0.0, 0.0
-
-        # no need to explicitly specify padding of extension arrows if axis-size
-        # is determined AFTER the colorbar is plotted!
-        ex_min, ex_max = 0.0, 0.0
-
-        if self._orientation == "horizontal":
-            s = 1 - self._hist_size
-            cbpos = mtransforms.Bbox(((0, 0), (1, s)))
-            histpos = mtransforms.Bbox(((ex_min, s), (1 - ex_max, 1)))
+        if self._inherit_position:
+            parent = self._get_parent_cb()
+            parent.set_hist_size(size)
         else:
-            s = 1 - self._hist_size
-            cbpos = mtransforms.Bbox(((1 - s, 0), (1, 1)))
-            histpos = mtransforms.Bbox(((0, ex_min), (1 - s, 1 - ex_max)))
+            # if the position is not inherited from a parent-axes, add margins
+            if self._margin is None:
+                if self._orientation == "horizontal":
+                    self._margin = dict(left=0.1, right=0.1, bottom=0.3, top=0.0)
+                else:
+                    self._margin = dict(left=0.0, right=0.3, bottom=0.1, top=0.1)
 
-        # colorbar axes
-        # NOTE: labels are used to hide those axes from the layout-manager!
-        if histpos.width > 1e-4 and histpos.height > 1e-4:
+            l, r = (self._margin.get(k, 0) for k in ["left", "right"])
+            b, t = (self._margin.get(k, 0) for k in ["bottom", "top"])
+            w, h = 1 - l - r, 1 - t - b
+
+            if self._orientation == "horizontal":
+                s = (1 - self._hist_size) * h
+                cbpos = (l, b, w, s)
+                histpos = (l, b + s, w, h - s)
+            else:
+                s = (1 - self._hist_size) * w
+                cbpos = (l + w - s, b, s, h)
+                histpos = (l, b, w - s, h)
+
+            self.ax_cb_plot.set_axes_locator(
+                _TransformedBoundsLocator(histpos, self._ax.transAxes)
+            )
+            self.ax_cb.set_axes_locator(
+                _TransformedBoundsLocator(cbpos, self._ax.transAxes)
+            )
+
+        # only show histogram if it is larger than 1 pixel
+        if self.ax_cb_plot.bbox.width > 1 and self.ax_cb_plot.bbox.height > 1:
             self.ax_cb_plot.set_visible(True)
         else:
             self.ax_cb_plot.set_visible(False)
 
-        self.ax_cb_plot.set_axes_locator(
-            _TransformedBoundsLocator(histpos.bounds, self._ax.transAxes)
-        )
-
-        if cbpos.width > 1e-4 and cbpos.height > 1e-4:
+        if self.ax_cb.bbox.width > 1 and self.ax_cb.bbox.height > 1:
             self.ax_cb.set_visible(True)
             [i.set_visible(True) for i in self.ax_cb.patches]
             [i.set_visible(True) for i in self.ax_cb.collections]
@@ -431,12 +430,11 @@ class ColorBar:
             [i.set_visible(False) for i in self.ax_cb.patches]
             [i.set_visible(False) for i in self.ax_cb.collections]
 
-        self.ax_cb.set_axes_locator(
-            _TransformedBoundsLocator(cbpos.bounds, self._ax.transAxes)
-        )
-
-        self._m.BM._refetch_layer(self._m.layer)
-        self._m.BM.update(artists=self._axes)
+        # don't update parent colorbar when child changes hist-size
+        if self._m.BM._bg_layer == self._m.layer:
+            self._m.BM.blit_artists(artists=self._axes)
+        else:
+            self._m.BM._refetch_layer(self._m.layer)
 
     def _identify_parent_cb(self):
         parent_cb = None
@@ -470,7 +468,6 @@ class ColorBar:
     def _setup_axes(self):
         horizontal = self._orientation == "horizontal"
         add_hist = self._hist_size > 0
-        add_margins = False
 
         # check if one of the parent colorbars has a colorbar, and if so,
         # use it to set the position of the colorbar.
@@ -504,7 +501,6 @@ class ColorBar:
 
         if not self._inherit_position:
             if isinstance(self._pos, float):
-                add_margins = True
                 if horizontal:
                     gs = GridSpecFromSubplotSpec(
                         2,
@@ -534,7 +530,6 @@ class ColorBar:
                         zorder=9999,
                     )
             elif isinstance(self._pos, SubplotSpec):
-                add_margins = True
                 self._ax = self._m.f.add_subplot(
                     self._pos,
                     label="cb",
@@ -553,19 +548,29 @@ class ColorBar:
         # make all spines, labels etc. invisible for the base-axis
         self._ax.set_axis_off()
 
-        # NOTE: labels are used to hide those axes from the layout-manager!
         # colorbar axes
         self.ax_cb = self._ax.figure.add_axes(
-            self._ax.get_position(True),
+            self._ax.get_position(),
             label="EOmaps_cb",
             zorder=9998,
         )
         # histogram axes
         self.ax_cb_plot = self._ax.figure.add_axes(
-            self._ax.get_position(True),
+            self._ax.get_position(),
             label="EOmaps_cb_hist",
             zorder=9998,
         )
+
+        if self._inherit_position:
+            # in case the position is inherited, copy the locators from the parent!
+            self.ax_cb_plot.set_axes_locator(
+                _TransformedBoundsLocator(
+                    (0, 0, 1, 1), self._parent_cb.ax_cb_plot.transAxes
+                )
+            )
+            self.ax_cb.set_axes_locator(
+                _TransformedBoundsLocator((0, 0, 1, 1), self._parent_cb.ax_cb.transAxes)
+            )
 
         # join colorbar and histogram axes
         if horizontal:
@@ -594,28 +599,6 @@ class ColorBar:
         # hide histogram axis if no histogram should be drawn
         if not add_hist:
             self.ax_cb_plot.set_visible(False)
-
-        # add margins
-        if add_margins or self._margin is not None:
-            if self._margin is None:
-                if self._orientation == "horizontal":
-                    self._margin = dict(left=0.1, right=0.1, bottom=0.3, top=0.0)
-                else:
-                    self._margin = dict(left=0.0, right=0.3, bottom=0.1, top=0.1)
-
-            axpos = self._ax.get_position()
-            w, h = axpos.width, axpos.height
-            l, r = (self._margin.get(k, 0) * w for k in ["left", "right"])
-            b, t = (self._margin.get(k, 0) * h for k in ["bottom", "top"])
-
-            self._ax.set_position(
-                [
-                    axpos.x0 + l,
-                    axpos.y0 + b,
-                    axpos.width - l - r,
-                    axpos.height - b - t,
-                ]
-            )
 
         # add all axes as artists
         for a in self._axes:
@@ -763,7 +746,6 @@ class ColorBar:
             self._redraw = True
 
     def _plot_colorbar(self):
-
         # plot the colorbar
         horizontal = self._orientation == "horizontal"
         n_cmap = plt.cm.ScalarMappable(cmap=self._cmap, norm=self._norm)
