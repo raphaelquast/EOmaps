@@ -569,9 +569,9 @@ class ColorBar:
 
         # join colorbar and histogram axes
         if horizontal:
-            self.ax_cb_plot.get_shared_x_axes().join(self.ax_cb_plot, self.ax_cb)
+            self.ax_cb_plot.sharex(self.ax_cb)
         else:
-            self.ax_cb_plot.get_shared_y_axes().join(self.ax_cb_plot, self.ax_cb)
+            self.ax_cb_plot.sharey(self.ax_cb)
 
         # keep the background of the plot-axis but remove the outer frame
         self.ax_cb_plot.spines["top"].set_visible(False)
