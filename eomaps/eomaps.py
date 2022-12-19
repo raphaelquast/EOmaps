@@ -10,7 +10,6 @@ import weakref
 from tempfile import TemporaryDirectory, TemporaryFile
 import gc
 import json
-import requests
 from textwrap import fill
 
 import numpy as np
@@ -86,7 +85,6 @@ def _register_mapclassify():
     return True
 
 
-from scipy.spatial import cKDTree
 from pyproj import CRS, Transformer
 
 import matplotlib as mpl
@@ -114,13 +112,13 @@ from ._containers import (
     map_objects,
     classify_specs,
     # cb_container,
-    wms_container,
     NaturalEarth_features,
 )
+from ._webmap_containers import wms_container
 
 from ._cb_container import cb_container
 from .scalebar import ScaleBar, Compass
-from .projections import Equi7Grid_projection, _register_equi7grid
+from .projections import Equi7Grid_projection  # import to supercharge cartopy.ccrs
 from .reader import read_file, from_file, new_layer_from_file
 
 from .utilities import utilities
@@ -138,6 +136,27 @@ if plt.isinteractive():
         plt.ioff()
     else:
         plt.ion()
+
+
+# hardcoded list of available mapclassify-classifiers
+# (to avoid importing it on startup)
+_CLASSIFIERS = (
+    "BoxPlot",
+    "EqualInterval",
+    "FisherJenks",
+    "FisherJenksSampled",
+    "HeadTailBreaks",
+    "JenksCaspall",
+    "JenksCaspallForced",
+    "JenksCaspallSampled",
+    "MaxP",
+    "MaximumBreaks",
+    "NaturalBreaks",
+    "Quantiles",
+    "Percentiles",
+    "StdMean",
+    "UserDefined",
+)
 
 
 class Maps(object):
@@ -163,8 +182,8 @@ class Maps(object):
         The name of the plot-layer assigned to this Maps-object.
         The default is "base".
 
-    Other Parameters:
-    -----------------
+    Other Parameters
+    ----------------
     f : matplotlib.Figure, optional
         Explicitly specify the matplotlib figure instance to use.
         (ONLY useful if you want to add a map to an already existing figure!)
@@ -211,7 +230,6 @@ class Maps(object):
 
     Examples
     --------
-
     Create a new figure and axes
 
     >>> m = Maps()
@@ -274,7 +292,6 @@ class Maps(object):
 
     Attributes
     ----------
-
     CRS : Accessor for available projections (Supercharged version of cartopy.crs)
 
     CLASSIFIERS : Accessor for available classifiers (provided by mapclassify)
@@ -289,22 +306,10 @@ class Maps(object):
     read_file = read_file
 
     CRS = ccrs
-    CRS.Equi7Grid_projection = Equi7Grid_projection
-
-    if _register_equi7grid():
-        CRS.Equi7_EU = Equi7Grid_projection("EU")
-        CRS.Equi7_AF = Equi7Grid_projection("AF")
-        CRS.Equi7_AS = Equi7Grid_projection("AS")
-        CRS.Equi7_NA = Equi7Grid_projection("NA")
-        CRS.Equi7_SA = Equi7Grid_projection("SA")
-        CRS.Equi7_OC = Equi7Grid_projection("OC")
-        CRS.Equi7_AN = Equi7Grid_projection("AN")
-
-    if _register_mapclassify():
-        _classifiers = mapclassify.CLASSIFIERS
-        CLASSIFIERS = SimpleNamespace(**dict(zip(_classifiers, _classifiers)))
 
     _companion_widget_key = "w"
+
+    CLASSIFIERS = SimpleNamespace(**dict(zip(_CLASSIFIERS, _CLASSIFIERS)))
 
     def __init__(
         self,
@@ -1612,6 +1617,8 @@ class Maps(object):
                                 return False, dict()
 
                     elif pick_method == "centroids":
+                        from scipy.spatial import cKDTree
+
                         tree = cKDTree(
                             list(map(lambda x: (x.x, x.y), gdf.geometry.centroid))
                         )
@@ -1962,12 +1969,10 @@ class Maps(object):
 
         return s
 
-    if wms_container is not None:
-
-        @property
-        @wraps(wms_container)
-        def add_wms(self):
-            return self._wms_container
+    @property
+    @wraps(wms_container)
+    def add_wms(self):
+        return self._wms_container
 
     def add_line(
         self,
@@ -4281,7 +4286,6 @@ class Maps(object):
             print("EOmaps: Indexing for pick-callbacks...")
 
         if pick_distance is not None:
-            # self.tree = cKDTree(np.stack([props["x0"], props["y0"]], axis=1))
             self.tree = searchtree(m=self._proxy(self), pick_distance=pick_distance)
 
             self.cb.pick._set_artist(coll)
@@ -4430,6 +4434,8 @@ class Maps(object):
 
     @lru_cache()
     def _get_nominatim_response(self, q, user_agent=None):
+        import requests
+
         print(f"Querying {q}")
         if user_agent is None:
             user_agent = f"EOMaps v{Maps.__version__}"

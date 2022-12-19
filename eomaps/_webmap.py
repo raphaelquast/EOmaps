@@ -12,17 +12,10 @@ import numpy as np
 
 from pyproj import CRS, Transformer
 
-try:
-    from owslib.wmts import WebMapTileService
-    from owslib.wms import WebMapService
-    import requests
-    from urllib3.exceptions import InsecureRequestWarning
-
-    _import_OK = True
-
-except ImportError:
-    warn("EOmaps: adding WebMap services requires 'owslib'")
-    _import_OK = False
+from owslib.wmts import WebMapTileService
+from owslib.wms import WebMapService
+import requests
+from urllib3.exceptions import InsecureRequestWarning
 
 from .helpers import _sanitize
 

@@ -13,7 +13,7 @@ https://github.com/geopandas/geopandas/issues/2387
 
 """
 from contextlib import contextmanager
-from functools import wraps
+from functools import wraps, update_wrapper
 
 import numpy as np
 import matplotlib.pyplot as plt
@@ -21,20 +21,19 @@ import matplotlib.pyplot as plt
 import eomaps._shapes as eoshp
 
 gpd = None
+shapely_Polygon = None
 
 
 def _register_geopandas():
     global gpd
+    global shapely_Polygon
     try:
         import geopandas as gpd
+        from shapely.geometry import Polygon as shapely_Polygon
     except ImportError:
         return False
 
     return True
-
-
-if _register_geopandas():
-    from shapely.geometry import Polygon
 
 
 @contextmanager
@@ -81,6 +80,7 @@ class ShapeDrawer:
 
         if _register_geopandas():
             self.gdf = gpd.GeoDataFrame(geometry=[], crs=self._crs)
+            ShapeDrawer.save_shapes.__doc__ = gpd.GeoDataFrame.to_file.__doc__
         else:
             self.gdf = None
 
@@ -194,14 +194,11 @@ class ShapeDrawer:
         self._m.BM.update()
         self._active_drawer = None
 
-    if _register_geopandas():
-
-        @wraps(gpd.GeoDataFrame.to_file)
-        def save_shapes(self, filename, **kwargs):
-            if len(self.gdf) > 0:
-                self.gdf.to_file(filename, **kwargs)
-            else:
-                print("EOmaps: There are no polygons to save!")
+    def save_shapes(self, filename, **kwargs):
+        if len(self.gdf) > 0:
+            self.gdf.to_file(filename, **kwargs)
+        else:
+            print("EOmaps: There are no polygons to save!")
 
     def remove_last_shape(self):
         """
@@ -625,7 +622,7 @@ class ShapeDrawer:
             self._m.BM.update()
 
             if _register_geopandas():
-                gdf = gpd.GeoDataFrame(index=[ID], geometry=[Polygon(pts)])
+                gdf = gpd.GeoDataFrame(index=[ID], geometry=[shapely_Polygon(pts)])
                 gdf = gdf.set_crs(crs=self._crs)
                 self.gdf = self.gdf.append(gdf)
 
@@ -699,7 +696,7 @@ class ShapeDrawer:
 
             if _register_geopandas():
                 pts = np.column_stack((pts[0][0], pts[1][0]))
-                gdf = gpd.GeoDataFrame(index=[ID], geometry=[Polygon(pts)])
+                gdf = gpd.GeoDataFrame(index=[ID], geometry=[shapely_Polygon(pts)])
                 gdf = gdf.set_crs(crs=self._crs)
                 self.gdf = self.gdf.append(gdf)
 
@@ -764,7 +761,7 @@ class ShapeDrawer:
             self._m.BM.update()
 
             if _register_geopandas():
-                gdf = gpd.GeoDataFrame(index=[ID], geometry=[Polygon(pts)])
+                gdf = gpd.GeoDataFrame(index=[ID], geometry=[shapely_Polygon(pts)])
                 gdf = gdf.set_crs(crs=self._crs)
                 self.gdf = self.gdf.append(gdf)
 

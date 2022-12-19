@@ -7,11 +7,8 @@ import matplotlib.pyplot as plt
 from ._shapes import shapes
 from .eomaps import Maps
 
-from ._containers import (
-    # cb_container,
-    wms_container,
-    NaturalEarth_features,
-)
+from ._containers import NaturalEarth_features
+from ._webmap_containers import wms_container
 
 
 class MapsGrid:
@@ -409,12 +406,10 @@ class MapsGrid:
 
     add_marker.__doc__ = _doc_prefix + add_marker.__doc__
 
-    if wms_container is not None:
-
-        @property
-        @wraps(Maps.add_wms)
-        def add_wms(self):
-            return self._wms_container
+    @property
+    @wraps(Maps.add_wms)
+    def add_wms(self):
+        return self._wms_container
 
     @property
     @wraps(Maps.add_feature)
