@@ -7,7 +7,7 @@ import matplotlib.pyplot as plt
 from ._shapes import shapes
 from .eomaps import Maps
 
-from ._containers import NaturalEarth_features
+from .ne_features import NaturalEarth_features
 from ._webmap_containers import wms_container
 
 

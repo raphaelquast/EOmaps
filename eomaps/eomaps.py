@@ -111,10 +111,9 @@ from ._containers import (
     data_specs,
     map_objects,
     classify_specs,
-    # cb_container,
-    NaturalEarth_features,
 )
 from ._webmap_containers import wms_container
+from .ne_features import NaturalEarth_features
 
 from ._cb_container import cb_container
 from .scalebar import ScaleBar, Compass
