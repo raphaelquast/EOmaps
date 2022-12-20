@@ -4509,19 +4509,20 @@ class Maps(object):
                 print("EOmaps: Initializing companion-widget...")
                 self._init_companion_widget()
 
-            if self._companion_widget.isVisible():
-                self._companion_widget.hide()
-                self._indicate_companion_map(False)
-            else:
-                self._companion_widget.show()
-                self._indicate_companion_map(True)
+            if self._companion_widget is not None:
+                if self._companion_widget.isVisible():
+                    self._companion_widget.hide()
+                    self._indicate_companion_map(False)
+                else:
+                    self._companion_widget.show()
+                    self._indicate_companion_map(True)
 
-                # Do NOT activate the companion widget in here!!
-                # Activating the window during the callback steals focus and
-                # as a consequence the key-released-event is never triggered
-                # on the figure and "w" would remain activated permanently.
-                self.f.canvas.key_release_event("w")
-                self._companion_widget.activateWindow()
+                    # Do NOT activate the companion widget in here!!
+                    # Activating the window during the callback steals focus and
+                    # as a consequence the key-released-event is never triggered
+                    # on the figure and "w" would remain activated permanently.
+                    self.f.canvas.key_release_event("w")
+                    self._companion_widget.activateWindow()
 
         self._cid_companion_key = self.f.canvas.mpl_connect("key_press_event", cb)
         # self._cid_companion_key = self.all.cb.keypress.attach(cb, key=show_hide_key)
@@ -4543,7 +4544,7 @@ class Maps(object):
         """
 
         try:
-            if plt.get_backend() not in ["Qt5Agg", "QtAgg"]:
+            if plt.get_backend() not in ["Qt5Agg"]:
                 print(
                     "EOmaps: Using m.open_widget() is only possible if you use matplotlibs"
                     + f" 'Qt5Agg' backend! (active backend: '{plt.get_backend()}')"
