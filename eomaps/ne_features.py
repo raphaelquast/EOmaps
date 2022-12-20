@@ -45,7 +45,6 @@ class _NaturalEarth_presets:
         Add a coastline to the map.
 
         All provided arguments are passed to `m.add_feature`
-        (and further to `m.add_gdf` if geopandas is available)
 
         The default args are:
 
@@ -66,7 +65,6 @@ class _NaturalEarth_presets:
         Add ocean-coloring to the map.
 
         All provided arguments are passed to `m.add_feature`
-        (and further to `m.add_gdf` if geopandas is available)
 
         The default args are:
 
@@ -85,7 +83,6 @@ class _NaturalEarth_presets:
         Add a land-coloring to the map.
 
         All provided arguments are passed to `m.add_feature`
-        (and further to `m.add_gdf` if geopandas is available)
 
         The default args are:
 
@@ -105,7 +102,6 @@ class _NaturalEarth_presets:
         Add country-boundaries to the map.
 
         All provided arguments are passed to `m.add_feature`
-        (and further to `m.add_gdf` if geopandas is available)
 
         The default args are:
 
@@ -128,7 +124,6 @@ class _NaturalEarth_presets:
         Add urban-areas to the map.
 
         All provided arguments are passed to `m.add_feature`
-        (and further to `m.add_gdf` if geopandas is available)
 
         The default args are:
 
@@ -150,7 +145,6 @@ class _NaturalEarth_presets:
         Add lakes to the map.
 
         All provided arguments are passed to `m.add_feature`
-        (and further to `m.add_gdf` if geopandas is available)
 
         The default args are:
 
@@ -172,7 +166,6 @@ class _NaturalEarth_presets:
         Add rivers_lake_centerlines to the map.
 
         All provided arguments are passed to `m.add_feature`
-        (and further to `m.add_gdf` if geopandas is available)
 
         The default args are:
 
