@@ -13,7 +13,6 @@ https://github.com/geopandas/geopandas/issues/2387
 
 """
 from contextlib import contextmanager
-from functools import wraps, update_wrapper
 
 import numpy as np
 import matplotlib.pyplot as plt
