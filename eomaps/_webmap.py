@@ -181,6 +181,8 @@ class _WebMap_layer:
                 bbox = bbox.transformed(self._m.f.transFigure.inverted())
                 legax.set_position(bbox)
 
+                self._m.BM.blit_artists([legax])
+
             def cb_release(event):
                 self._legend_picked = False
                 legax.set_frame_on(False)
@@ -193,7 +195,15 @@ class _WebMap_layer:
                     legax.set_frame_on(False)
                     self._legend_picked = False
 
-            # TODO add keypress callback to remove legend!
+            def cb_keypress(event):
+                if not self._legend_picked:
+                    return
+
+                if event.key in ["delete", "backspace"]:
+                    self._m.BM.remove_artist(legax, self._layer)
+                    legax.remove()
+
+                self._m.BM.update()
 
             def cb_scroll(event):
                 if not self._legend_picked:
@@ -211,12 +221,13 @@ class _WebMap_layer:
                     )
                 )
 
-                self._m.BM.update()
+                self._m.BM.blit_artists([legax])
 
             self._m.f.canvas.mpl_connect("scroll_event", cb_scroll)
             self._m.f.canvas.mpl_connect("button_press_event", cb_pick)
             self._m.f.canvas.mpl_connect("button_release_event", cb_release)
             self._m.f.canvas.mpl_connect("motion_notify_event", cb_move)
+            self._m.f.canvas.mpl_connect("key_press_event", cb_keypress)
 
             self._m.parent._wms_legend.setdefault(self._layer, list()).append(legax)
 

@@ -986,11 +986,10 @@ class BlitManager:
     @contextmanager
     def _without_artists(self, artists=None, layer=None):
         try:
+            removed_artists = {layer: set(), "all": set()}
             if artists is None:
                 yield
             else:
-                removed_artists = {layer: set(), "all": set()}
-
                 for a in artists:
                     if a in self._artists.get(layer, []):
                         self.remove_artist(a, layer=layer)
@@ -1563,7 +1562,7 @@ class BlitManager:
         # don't do this! it is causing infinite loops
         # cv.flush_events()
 
-    def blit_artists(self, artists, bg=None, blit=True):
+    def blit_artists(self, artists, bg="active", blit=True):
         """
         Blit artists (optionally on top of a given background)
 
@@ -1571,9 +1570,9 @@ class BlitManager:
         ----------
         artists : iterable
             the artists to draw
-        bg : matpltolib.BufferRegion, optional
+        bg : matpltolib.BufferRegion, None or "active", optional
             A fetched background that is restored before drawing the artists.
-            The default is None.
+            The default is "active".
         blit : bool
             Indicator if canvas.blit() should be called or not.
             The default is True
@@ -1590,6 +1589,8 @@ class BlitManager:
 
         # restore the background
         if bg is not None:
+            if bg == "active":
+                bg = self._get_active_bg()
             cv.restore_region(bg)
 
         for a in artists:
