@@ -3592,11 +3592,6 @@ class Maps(object):
         classify_specs=None,
     ):
 
-        assert _register_mapclassify(), (
-            "EOmaps: Missing dependency: 'mapclassify' \n ... please install"
-            + " (conda install -c conda-forge mapclassify) to use data-classifications."
-        )
-
         if z_data is None:
             z_data = self._props["z_data"]
 
@@ -3607,6 +3602,11 @@ class Maps(object):
 
         # evaluate classification
         if classify_specs is not None and classify_specs.scheme is not None:
+            assert _register_mapclassify(), (
+                "EOmaps: Missing dependency: 'mapclassify' \n ... please install "
+                "(conda install -c conda-forge mapclassify) to use classifications."
+            )
+
             classified = True
 
             mapc = getattr(mapclassify, classify_specs.scheme)(
