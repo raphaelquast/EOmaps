@@ -21,14 +21,17 @@ import matplotlib.pyplot as plt
 import eomaps._shapes as eoshp
 
 gpd = None
+pd = None
 shapely_Polygon = None
 
 
 def _register_geopandas():
+    global pd
     global gpd
     global shapely_Polygon
     try:
         import geopandas as gpd
+        import pandas as pd
         from shapely.geometry import Polygon as shapely_Polygon
     except ImportError:
         return False
@@ -624,7 +627,7 @@ class ShapeDrawer:
             if _register_geopandas():
                 gdf = gpd.GeoDataFrame(index=[ID], geometry=[shapely_Polygon(pts)])
                 gdf = gdf.set_crs(crs=self._crs)
-                self.gdf = self.gdf.append(gdf)
+                self.gdf = pd.concat([self.gdf, gdf])
 
             for cb in self._on_new_poly:
                 cb()
@@ -698,7 +701,7 @@ class ShapeDrawer:
                 pts = np.column_stack((pts[0][0], pts[1][0]))
                 gdf = gpd.GeoDataFrame(index=[ID], geometry=[shapely_Polygon(pts)])
                 gdf = gdf.set_crs(crs=self._crs)
-                self.gdf = self.gdf.append(gdf)
+                self.gdf = pd.concat([self.gdf, gdf])
 
             for cb in self._on_new_poly:
                 cb()
@@ -763,7 +766,7 @@ class ShapeDrawer:
             if _register_geopandas():
                 gdf = gpd.GeoDataFrame(index=[ID], geometry=[shapely_Polygon(pts)])
                 gdf = gdf.set_crs(crs=self._crs)
-                self.gdf = self.gdf.append(gdf)
+                self.gdf = pd.concat([self.gdf, gdf])
 
             for cb in self._on_new_poly:
                 cb()
