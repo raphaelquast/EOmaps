@@ -1092,7 +1092,10 @@ class cb_pick_container(_click_container):
         pos = self._m._get_xy_from_index(index, reprojected=True)
         ID = self._get_id(index)
         val = self._m._props["z_data"].flat[index]
-        color = artist.cmap(artist.norm(val))
+        try:
+            color = artist.cmap(artist.norm(val))
+        except Exception:
+            color = None
 
         if index is not None:
             return True, dict(
