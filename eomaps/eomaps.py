@@ -1604,14 +1604,22 @@ class Maps(object):
                                     )[0]
                                 )
                                 if query.any():
+
+                                    ID = gdf.index[query][0]
+                                    ind = query.values.nonzero()[0][0]
+                                    if val_key:
+                                        val = gdf[query][val_key].iloc[0]
+                                    else:
+                                        val = None
+
+                                    val_numeric = artist.norm(artist.get_array()[ind])
+                                    color = artist.cmap(val_numeric)
+
                                     return True, dict(
-                                        ID=gdf.index[query][0],
-                                        ind=query.values.nonzero()[0][0],
-                                        val=(
-                                            gdf[query][val_key].iloc[0]
-                                            if val_key
-                                            else None
-                                        ),
+                                        ID=ID,
+                                        ind=ind,
+                                        val=val,
+                                        val_color=color,
                                     )
                                 else:
                                     return False, dict()
@@ -1634,10 +1642,16 @@ class Maps(object):
                                 ID = gdf.index[ind]
                                 val = gdf.iloc[ind][val_key] if val_key else None
                                 pos = tree.data[ind].tolist()
+
+                                val_numeric = artist.norm(artist.get_array()[ID])
+                                color = artist.cmap(val_numeric)
+
                             except:
                                 return False, dict()
 
-                            return True, dict(ID=ID, pos=pos, val=val, ind=ind)
+                            return True, dict(
+                                ID=ID, pos=pos, val=val, ind=ind, val_color=color
+                            )
 
                 elif callable(pick_method):
                     picker = pick_method

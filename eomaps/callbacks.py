@@ -191,6 +191,7 @@ class _click_callbacks(object):
             layer = self.m.layer
 
         ID, pos, val, ind, picker_name = self._popargs(kwargs)
+        ec = kwargs.pop("val_color", None)
 
         if isinstance(self.m.data_specs.x, str):
             xlabel = self.m.data_specs.x
@@ -255,10 +256,13 @@ class _click_callbacks(object):
 
         if printstr is not None:
             # create a new annotation
+            bbox = dict(boxstyle="round", fc="w", ec=ec)
+            bbox.update(kwargs.pop("bbox", dict()))
+
             styledict = dict(
                 xytext=(20, 20),
                 textcoords="offset points",
-                bbox=dict(boxstyle="round", fc="w"),
+                bbox=bbox,
                 arrowprops=dict(arrowstyle="->"),
             )
 

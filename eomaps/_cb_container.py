@@ -1089,9 +1089,21 @@ class cb_pick_container(_click_container):
         # find the closest point to the clicked pixel
         dist, index = self._m.tree.query((event.xdata, event.ydata))
 
+        pos = self._m._get_xy_from_index(index, reprojected=True)
+        ID = self._get_id(index)
+        val = self._m._props["z_data"].flat[index]
+        color = artist.cmap(artist.norm(val))
+
         if index is not None:
             return True, dict(
-                ind=index, dblclick=event.dblclick, button=event.button, dist=dist
+                dblclick=event.dblclick,
+                button=event.button,
+                dist=dist,
+                ind=index,
+                ID=ID,
+                pos=pos,
+                val=val,
+                val_color=color,
             )
         else:
             return True, dict(
@@ -1128,25 +1140,16 @@ class cb_pick_container(_click_container):
 
     def _get_pickdict(self, event):
         ind = event.ind
+        mouseevent = event.mouseevent
         if ind is not None:
-            if self._m.coll is not None and event.artist is self._m.coll:
-                clickdict = dict(
-                    pos=self._m._get_xy_from_index(ind, reprojected=True),
-                    ID=self._get_id(ind),
-                    val=self._m._props["z_data"].flat[ind],
-                    ind=ind,
-                    picker_name=self._picker_name,
-                )
-            else:
-                clickdict = dict(
-                    ID=getattr(event, "ID", None),
-                    pos=getattr(
-                        event, "pos", (event.mouseevent.xdata, event.mouseevent.ydata)
-                    ),
-                    val=getattr(event, "val", None),
-                    ind=getattr(event, "ind", None),
-                    picker_name=self._picker_name,
-                )
+            clickdict = dict(
+                ID=getattr(event, "ID", None),
+                pos=getattr(event, "pos", (mouseevent.xdata, mouseevent.ydata)),
+                val=getattr(event, "val", None),
+                ind=getattr(event, "ind", None),
+                picker_name=self._picker_name,
+                val_color=getattr(event, "val_color", None),
+            )
             return clickdict
 
     def _onpick(self, event):
