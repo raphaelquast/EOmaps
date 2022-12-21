@@ -1457,7 +1457,7 @@ The call-signature is: ``m.add_feature.< CATEGORY >.< FEATURE >(...)``:
 
 
 
-NaturalEarth provides features in 3 different scales: 1:10m, 1:50m, 1:110m.
+`NaturalEarth <https://www.naturalearthdata.com>`_ provides features in 3 different scales: 1:10m, 1:50m, 1:110m.
 By default EOmaps uses features at 1:50m scale. To set the scale manually, simply use the ``scale`` argument
 when calling the feature.
 

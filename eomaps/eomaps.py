@@ -1444,7 +1444,7 @@ class Maps(object):
 
         val_key : str
             The dataframe-column used to identify values for pick-callbacks.
-            The default is None.
+            The default is the value provided via `column=...` or None.
         layer : int, str or None
             The name of the layer at which the dataset will be plotted.
 
@@ -1526,6 +1526,9 @@ class Maps(object):
 
         if isinstance(gdf, (str, Path)):
             gdf = gpd.read_file(gdf)
+
+        if val_key is None:
+            val_key = kwargs.get("column", None)
 
         try:
             # explode the GeoDataFrame to avoid picking multi-part geometries
