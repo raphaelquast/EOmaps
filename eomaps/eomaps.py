@@ -14,6 +14,8 @@ from textwrap import fill
 
 import numpy as np
 
+# ------- perform lazy delayed imports
+# (for optional dependencies that take long time to import)
 
 pd = None
 
@@ -41,8 +43,6 @@ def _register_geopandas():
     return True
 
 
-# ------- perform lazy delayed imports
-# (for optional dependencies that take long time to import)
 xar = None
 
 

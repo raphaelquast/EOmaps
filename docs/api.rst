@@ -1509,6 +1509,7 @@ A ``geopandas.GeoDataFrame`` can be added to the map via ``m.add_gdf()``.
 
 .. code-block:: python
 
+    from eomaps import Maps
     import geopandas as gpd
 
     gdf = gpd.GeoDataFrame(geometries=[...], crs=...)
