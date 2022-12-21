@@ -9,6 +9,53 @@ import matplotlib.pyplot as plt
 
 from eomaps import Maps, MapsGrid
 
+from matplotlib.backend_bases import MouseEvent
+
+# copy of depreciated matplotlib function
+def button_press_event(canvas, x, y, button, dblclick=False, guiEvent=None):
+    """
+    Callback processing for mouse button press events.
+
+    Backend derived classes should call this function on any mouse
+    button press.  (*x*, *y*) are the canvas coords ((0, 0) is lower left).
+    button and key are as defined in `MouseEvent`.
+
+    This method will call all functions connected to the
+    'button_press_event' with a `MouseEvent` instance.
+    """
+    canvas._button = button
+    s = "button_press_event"
+    mouseevent = MouseEvent(
+        s, canvas, x, y, button, canvas._key, dblclick=dblclick, guiEvent=guiEvent
+    )
+    canvas.callbacks.process(s, mouseevent)
+
+
+# copy of depreciated matplotlib function
+def button_release_event(canvas, x, y, button, guiEvent=None):
+    """
+    Callback processing for mouse button release events.
+
+    Backend derived classes should call this function on any mouse
+    button release.
+
+    This method will call all functions connected to the
+    'button_release_event' with a `MouseEvent` instance.
+
+    Parameters
+    ----------
+    x : float
+        The canvas coordinates where 0=left.
+    y : float
+        The canvas coordinates where 0=bottom.
+    guiEvent
+        The native UI event that generated the Matplotlib event.
+    """
+    s = "button_release_event"
+    event = MouseEvent(s, canvas, x, y, button, canvas._key, guiEvent=guiEvent)
+    canvas.callbacks.process(s, event)
+    canvas._button = None
+
 
 class TestCallbacks(unittest.TestCase):
     def setUp(self):
@@ -44,16 +91,17 @@ class TestCallbacks(unittest.TestCase):
         ax = m.ax
         cv = m.f.canvas
         x, y = (ax.bbox.x0 + ax.bbox.x1) / 2, (ax.bbox.y0 + ax.bbox.y1) / 2
-        cv.button_press_event(x + dx, y + dy, 1, False)
+
+        button_press_event(cv, x + dx, y + dy, 1, False)
         if release:
-            cv.button_release_event(x + dx, y + dy, 1, False)
+            button_release_event(cv, x + dx, y + dy, 1, False)
 
     def click_ID(self, m, ID, release=True):
         cv = m.f.canvas
         x, y = m.ax.transData.transform((self.data.lon[ID], self.data.lat[ID]))
-        cv.button_press_event(x, y, 1, False)
+        button_press_event(cv, x, y, 1, False)
         if release:
-            cv.button_release_event(x, y, 1, False)
+            button_release_event(cv, x, y, 1, False)
 
     def test_get_values(self):
 
