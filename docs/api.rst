@@ -1498,6 +1498,8 @@ The most commonly used features are accessible with pre-defined colors via the `
 
 A ``geopandas.GeoDataFrame`` can be added to the map via ``m.add_gdf()``.
 
+
+
 .. currentmodule:: eomaps
 
 .. autosummary::
@@ -1516,6 +1518,8 @@ A ``geopandas.GeoDataFrame`` can be added to the map via ``m.add_gdf()``.
 
     m = Maps()
     m.add_gdf(gdf, fc="r", ec="g", lw=2)
+
+
 
 It is possible to make the shapes of a ``GeoDataFrame`` pickable
 (e.g. usable with ``m.cb.pick`` callbacks) by providing a ``picker_name``
@@ -2234,7 +2238,7 @@ Make sure to checkout the :ref:`layout_editor` which can be used to quickly re-p
     | .. code-block:: python                                         | .. image:: _static/minigifs/inset_maps.png |
     |                                                                |   :align: center                           |
     |     m = Maps(Maps.CRS.PlateCarree(central_longitude=-60))      |                                            |
-    |     m.add_feature.preset.ocean(reproject="cartopy")            |                                            |
+    |     m.add_feature.preset.ocean()                               |                                            |
     |     m2 = m.new_inset_map(xy=(5, 45), radius=10,                |                                            |
     |                          plot_position=(.3, .5), plot_size=.7, |                                            |
     |                          boundary=dict(ec="r", lw=4),          |                                            |
@@ -2246,11 +2250,11 @@ Make sure to checkout the :ref:`layout_editor` which can be used to quickly re-p
     |     m2.add_feature.preset.ocean()                              |                                            |
     |                                                                |                                            |
     |     m2.add_feature.cultural_10m.urban_areas(fc="r")            |                                            |
-    |     m2.add_feature.physical_10m.rivers_europe(ec="b", lw=0.25) |                                            |
+    |     m2.add_feature.physical_10m.rivers_europe(ec="b", lw=0.25, |                                            |
+    |                                               fc="none")       |                                            |
     |     m2.add_feature.physical_10m.lakes_europe(fc="b")           |                                            |
     |                                                                |                                            |
     +----------------------------------------------------------------+--------------------------------------------+
-
 
 .. currentmodule:: eomaps.Maps
 
