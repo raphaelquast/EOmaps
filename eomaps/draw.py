@@ -13,7 +13,6 @@ https://github.com/geopandas/geopandas/issues/2387
 
 """
 from contextlib import contextmanager
-from functools import wraps
 
 import numpy as np
 import matplotlib.pyplot as plt
@@ -21,20 +20,22 @@ import matplotlib.pyplot as plt
 import eomaps._shapes as eoshp
 
 gpd = None
+pd = None
+shapely_Polygon = None
 
 
 def _register_geopandas():
+    global pd
     global gpd
+    global shapely_Polygon
     try:
         import geopandas as gpd
+        import pandas as pd
+        from shapely.geometry import Polygon as shapely_Polygon
     except ImportError:
         return False
 
     return True
-
-
-if _register_geopandas():
-    from shapely.geometry import Polygon
 
 
 @contextmanager
@@ -58,19 +59,18 @@ class ShapeDrawer:
         ----------
         m : eomaps.Maps
             the maps-object.
-        layer : str
+        layer : str or None
             The layer-name to put the shapes on.
             If None, the currently active layer will be used.
             The default is None.
         """
 
         self._m = m
-        # add a slot to remember active drawers
-        # (used to make sure that 2 ShapeDrawer instances do not draw at the same time)
-        self._m._active_drawer = None
+        # # add a slot to remember active drawers
+        # # (used to make sure that 2 ShapeDrawer instances do not draw at the same time)
+        # if not hasattr(self._m.parent, "_active_drawer"):
+        #     self._m.parent._active_drawer = None
 
-        if layer is None:
-            layer = self._m.BM.bg_layer
         self._layer = layer
 
         if self._m.crs_plot == self._m.CRS.PlateCarree():
@@ -82,19 +82,51 @@ class ShapeDrawer:
 
         if _register_geopandas():
             self.gdf = gpd.GeoDataFrame(geometry=[], crs=self._crs)
+            ShapeDrawer.save_shapes.__doc__ = gpd.GeoDataFrame.to_file.__doc__
         else:
             self.gdf = None
 
         self._cids = []
-
         self._clicks = []
-        self._marks = []
-        self._endline = []
+
+        # indicator-line when drawing polygons
+        self._line = None
+        # a pointer indicating the mouse-position during a draw-event
+        self._pointer = None
+        # a line indicating the polygon end-segment
+        self._endline = None
+        # indicator shape when drawing circles / rectangles
+        self._shape_indicator = None
 
         self._on_new_poly = []
         self._on_poly_remove = []
 
         self._artists = dict()
+
+    @property
+    def _active_drawer(self):
+        d = getattr(self._m.parent, "_active_drawer", None)
+        if d is None:
+            return self
+        else:
+            return d
+
+    @property
+    def layer(self):
+        # always draw on the active layer if no explicit layer is specified
+        if self._layer is None:
+            return self._m.BM._bg_layer
+        else:
+            return self._layer
+
+    @property
+    def _background(self):
+        # always use the currently active background as draw-background
+        return self._m.BM._bg_layers.get(self._m.BM._bg_layer, None)
+
+    @_active_drawer.setter
+    def _active_drawer(self, val):
+        self._m.parent._active_drawer = val
 
     def new_drawer(self, layer=None):
         """
@@ -115,13 +147,14 @@ class ShapeDrawer:
 
         return self.__class__(self._m, layer=layer)
 
-    def set_layer(self, layer):
+    def set_layer(self, layer=None):
         """
         Set the layer to which the final shape will be added.
+        If None, the shape will always be added to the currently active layer.
 
         Parameters
         ----------
-        layer : str
+        layer : str or None
             The layer name.
         """
         self._layer = layer
@@ -136,8 +169,9 @@ class ShapeDrawer:
         cb : callable, optional
             A callable executed after finishing the draw. The default is None.
         """
+        self._m.cb.execute_callbacks(True)
 
-        active_drawer = self._m._active_drawer
+        active_drawer = self._active_drawer
         if active_drawer is None:
             return
 
@@ -146,15 +180,10 @@ class ShapeDrawer:
 
         # Cleanup.
         if plt.fignum_exists(active_drawer._m.f.number):
-            while len(active_drawer._marks) > 0:
-                a = active_drawer._marks.pop()
-                active_drawer._m.BM.remove_artist(a)
-                a.remove()
-
-            while len(active_drawer._endline) > 0:
-                a = active_drawer._endline.pop()
-                active_drawer._m.BM.remove_artist(a)
-                a.remove()
+            self._line = None
+            self._pointer = None
+            self._endline = None
+            self._shape_indicator = None
 
         if cb is not None:
             try:
@@ -165,16 +194,13 @@ class ShapeDrawer:
         active_drawer._clicks.clear()
 
         self._m.BM.update()
-        self._m._active_drawer = None
+        self._active_drawer = None
 
-    if _register_geopandas():
-
-        @wraps(gpd.GeoDataFrame.to_file)
-        def save_shapes(self, filename, **kwargs):
-            if len(self.gdf) > 0:
-                self.gdf.to_file(filename, **kwargs)
-            else:
-                print("EOmaps: There are no polygons to save!")
+    def save_shapes(self, filename, **kwargs):
+        if len(self.gdf) > 0:
+            self.gdf.to_file(filename, **kwargs)
+        else:
+            print("EOmaps: There are no polygons to save!")
 
     def remove_last_shape(self):
         """
@@ -194,6 +220,45 @@ class ShapeDrawer:
 
         for cb in self._on_poly_remove:
             cb()
+
+    def _init_draw_line(self):
+        if self._line is None:
+            props = dict(
+                transform=self._m.ax.transData, clip_box=self._m.ax.bbox, clip_on=True
+            )
+
+            # the line to use for indicating polygon-shape during draw
+            self._line = plt.Line2D([], [], marker="+", color="r", **props)
+            self._pointer = plt.Line2D([], [], marker="+", color="r", lw=0.5, **props)
+            self._endline = plt.Line2D([], [], color=".5", lw=0.5, ls="--", **props)
+
+    def _init_shape_indicator(self):
+        if self._shape_indicator is None:
+            # a polygon to use for indicating circles/rectangles during draw
+            self._shape_indicator = plt.Polygon(
+                np.empty(shape=(0, 2)),
+                fc="none",
+                ec="r",
+                animated=True,
+                transform=self._m.ax.transData,
+                clip_box=self._m.ax.bbox,
+                clip_on=True,
+            )
+
+    @property
+    def _indicator_artists(self):
+        return (
+            i
+            for i in (self._shape_indicator, self._line, self._pointer, self._endline)
+            if i is not None
+        )
+
+    def redraw(self, blit=True, *args):
+        # NOTE: If a drawer is active, this function is also called on any ordinary
+        # draw-event (e.g. zoom/pan/resize) to keep the indicators visible.
+        # see "m.BM.on_draw()"
+
+        self._m.BM.blit_artists(self._indicator_artists, bg=self._background, blit=blit)
 
     # This is basically a copy of matplotlib's ginput function adapted for EOmaps
     # matplotlib's original ginput function is here:
@@ -255,12 +320,17 @@ class ShapeDrawer:
         """
 
         # make sure all active drawings are finished before starting a new one
-        self._finish_drawing()
-        self._m._active_drawer = self
+        self._active_drawer._finish_drawing()
+        self._active_drawer = self
 
         canvas = self._m.BM.canvas
+        # self.fetch_bg()
+
+        self._m.cb.execute_callbacks(False)
 
         def handler(event):
+            self._init_draw_line()
+
             if event.name == "close_event":
                 self._finish_drawing(cb=cb)
                 return
@@ -277,13 +347,27 @@ class ShapeDrawer:
             # MATLAB and sometimes quite useful, but will require the user to
             # test how many points were actually returned before using data).
 
+            if event.name == "motion_notify_event":
+                if len(self._clicks) > 0:
+                    self._pointer.set_data(
+                        [self._clicks[-1][0], event.xdata],
+                        [self._clicks[-1][1], event.ydata],
+                    )
+                else:
+                    self._pointer.set_data([event.xdata], [event.ydata])
+
+            if is_key and event.key in ["escape"]:
+                self._finish_drawing()
+                return
+
             if (
                 is_button
                 and event.button == mouse_stop
                 or is_key
-                and event.key in ["escape", "enter"]
+                and event.key in ["enter"]
             ):
                 self._finish_drawing(cb=cb)
+                return
 
             # Pop last click.
             elif (
@@ -295,15 +379,18 @@ class ShapeDrawer:
                 if self._clicks:
                     self._clicks.pop()
                     if show_clicks:
-                        lastmark = self._marks.pop()
-                        self._m.BM.remove_artist(lastmark)
-                        lastmark.remove()
-                        self._m.BM.update()
+                        if len(self._clicks) > 0:
+                            self._line.set_data(*zip(*self._clicks))
+                        else:
+                            self._line.set_data([], [])
 
-                        while len(self._endline) > 0:
-                            el = self._endline.pop()
-                            self._m.BM.remove_artist(el)
-                            el.remove()
+                        if len(self._clicks) > 2:
+                            self._endline.set_data(
+                                [self._clicks[-1][0], self._clicks[0][0]],
+                                [self._clicks[-1][1], self._clicks[0][1]],
+                            )
+                        else:
+                            self._endline.set_data([], [])
 
             # Add new click.
             elif (
@@ -314,45 +401,26 @@ class ShapeDrawer:
                 and event.key is not None
             ):
                 if event.inaxes:
-                    while len(self._endline) > 0:
-                        el = self._endline.pop()
-                        self._m.BM.remove_artist(el)
-                        el.remove()
-
                     self._clicks.append((event.xdata, event.ydata))
                     if show_clicks:
-                        if len(self._clicks) < 2:
-                            x, y = [event.xdata], [event.ydata]
-                        else:
-                            x, y = [i[0] for i in self._clicks], [
-                                i[1] for i in self._clicks
-                            ]
-                        line = plt.Line2D(x, y, marker="+", color="r")
-                        event.inaxes.add_line(line)
-                        self._marks.append(line)
-
-                        self._m.BM.add_artist(line, "all")
+                        self._line.set_data(*zip(*self._clicks))
 
                         if len(self._clicks) > 2:
-                            self._endline.append(
-                                plt.Line2D(
-                                    [event.xdata, self._clicks[0][0]],
-                                    [event.ydata, self._clicks[0][1]],
-                                    color=".5",
-                                    lw=0.5,
-                                    ls="--",
-                                )
+                            self._endline.set_data(
+                                [event.xdata, self._clicks[0][0]],
+                                [event.ydata, self._clicks[0][1]],
                             )
-                            event.inaxes.add_line(self._endline[-1])
-
-                            self._m.BM.add_artist(self._endline[-1], "all")
-
-                        self._m.BM.update()
 
             if len(self._clicks) == n and n > 0:
                 self._finish_drawing(cb=cb)
 
-        eventnames = ["button_press_event", "key_press_event", "close_event"]
+            self.redraw()
+
+        eventnames = [
+            "button_press_event",
+            "key_press_event",
+            "close_event",
+        ]
         if draw_on_drag:
             eventnames.append("motion_notify_event")
 
@@ -423,14 +491,19 @@ class ShapeDrawer:
         """
 
         # make sure all active drawings are finished before starting a new one
-        self._finish_drawing()
-        self._m._active_drawer = self
+        self._active_drawer._finish_drawing()
+        self._active_drawer = self
 
         canvas = self._m.BM.canvas
+        # self.fetch_bg()
+        self._m.cb.execute_callbacks(False)
 
         def handler(event):
+            self._init_draw_line()
+            self._init_shape_indicator()
+
             if event.name == "close_event":
-                self._finish_drawing(cb=cb)
+                self._finish_drawing()
                 return
 
             if (canvas.toolbar is not None) and canvas.toolbar.mode != "":
@@ -438,12 +511,20 @@ class ShapeDrawer:
 
             if event.name == "motion_notify_event":
                 if movecb:
-                    movecb(event, self._clicks)
+                    # indicate current mouse-position (e.g. the center of the shape)
+                    if len(self._clicks) == 0:
+                        self._pointer.set_data([event.xdata], [event.ydata])
+                    else:
+                        self._pointer.set_data([], [])
 
-            is_button = (
-                event.name == "button_press_event"
-                or event.name == "motion_notify_event"
-            )
+                    movecb(event, self._clicks)
+                artists = (
+                    i for i in (self._shape_indicator, self._line, self._pointer) if i
+                )
+                self._m.BM.blit_artists(artists, bg=self._background)
+                return
+
+            is_button = event.name == "button_press_event"
             is_key = event.name == "key_press_event"
             # Quit (even if not in infinite mode; this is consistent with
             # MATLAB and sometimes quite useful, but will require the user to
@@ -452,8 +533,10 @@ class ShapeDrawer:
             if is_button and event.button == mouse_stop:
                 self._clicks.append((event.xdata, event.ydata))
                 self._finish_drawing(cb=cb)
-            elif is_key and event.key in ["escape", "enter"]:
-                self._finish_drawing(cb=cb)
+                return
+            elif is_key and event.key in ["escape"]:
+                self._finish_drawing()
+                return
 
             # Pop last click.
             elif (
@@ -465,15 +548,12 @@ class ShapeDrawer:
                 if self._clicks:
                     self._clicks.pop()
                     if show_clicks:
-                        lastmark = self._marks.pop()
-                        self._m.BM.remove_artist(lastmark)
-                        lastmark.remove()
-                        self._m.BM.update()
+                        if len(self._clicks) > 0:
+                            self._line.set_data(*zip(*self._clicks))
+                        else:
+                            self._line.set_data([], [])
 
-                        while len(self._endline) > 0:
-                            el = self._endline.pop()
-                            self._m.BM.remove_artist(el)
-                            el.remove()
+                        self._shape_indicator.set_xy(np.empty(shape=(0, 2)))
 
             # Add new click.
             elif (
@@ -487,42 +567,17 @@ class ShapeDrawer:
                     return
 
                 if event.inaxes:
-                    while len(self._endline) > 0:
-                        el = self._endline.pop()
-                        self._m.BM.remove_artist(el)
-                        el.remove()
-
                     self._clicks.append((event.xdata, event.ydata))
                     if show_clicks:
-                        if len(self._clicks) < 2:
-                            x, y = [event.xdata], [event.ydata]
-                        else:
-                            x, y = [i[0] for i in self._clicks], [
-                                i[1] for i in self._clicks
-                            ]
-                        line = plt.Line2D(x, y, marker="+", color="r")
-                        event.inaxes.add_line(line)
-                        self._marks.append(line)
+                        self._line.set_data(*zip(*self._clicks))
 
-                        self._m.BM.add_artist(line, "all")
+            self.redraw()
 
-                        if len(self._clicks) > 2:
-                            self._endline.append(
-                                plt.Line2D(
-                                    [event.xdata, self._clicks[0][0]],
-                                    [event.ydata, self._clicks[0][1]],
-                                    color=".5",
-                                    lw=0.5,
-                                    ls="--",
-                                )
-                            )
-                            event.inaxes.add_line(self._endline[-1])
-
-                            self._m.BM.add_artist(self._endline[-1], "all")
-
-                        self._m.BM.update()
-
-        eventnames = ["button_press_event", "key_press_event", "close_event"]
+        eventnames = [
+            "button_press_event",
+            "key_press_event",
+            "close_event",
+        ]
         if draw_on_drag:
             eventnames.append("motion_notify_event")
 
@@ -561,10 +616,7 @@ class ShapeDrawer:
             with autoscale_turned_off(self._m.ax):
                 (ph,) = self._m.ax.fill(pts[:, 0], pts[:, 1], **kwargs)
 
-                if self._layer is None:
-                    self._m.BM.add_bg_artist(ph, layer=self._m.BM._bg_layer)
-                else:
-                    self._m.BM.add_bg_artist(ph, layer=self._layer)
+                self._m.BM.add_bg_artist(ph, layer=self.layer)
 
                 ID = max(self._artists) + 1 if self._artists else 0
                 self._artists[ID] = ph
@@ -572,9 +624,9 @@ class ShapeDrawer:
             self._m.BM.update()
 
             if _register_geopandas():
-                gdf = gpd.GeoDataFrame(index=[ID], geometry=[Polygon(pts)])
+                gdf = gpd.GeoDataFrame(index=[ID], geometry=[shapely_Polygon(pts)])
                 gdf = gdf.set_crs(crs=self._crs)
-                self.gdf = self.gdf.append(gdf)
+                self.gdf = pd.concat([self.gdf, gdf])
 
             for cb in self._on_new_poly:
                 cb()
@@ -594,6 +646,8 @@ class ShapeDrawer:
             additional kwargs passed to the shape.
 
         """
+        self._init_shape_indicator()
+        self._init_draw_line()
 
         def cb():
             self._circle(**kwargs)
@@ -612,13 +666,13 @@ class ShapeDrawer:
                     "out",
                     [r, r],
                     "out",
-                    50,
+                    100,
                 )
-                (ph,) = self._m.ax.fill(
-                    pts[0][0], pts[1][0], fc="none", ec="r", animated=True
+                self._shape_indicator.set_xy(np.column_stack((pts[0][0], pts[1][0])))
+
+                self._m.BM.blit_artists(
+                    (self._shape_indicator, self._line), bg=self._background
                 )
-                self._m.ax.draw_artist(ph)
-                self._m.BM.update(artists=[ph])
 
         self._ginput2(2, timeout=-1, draw_on_drag=True, movecb=movecb, cb=cb)
 
@@ -635,10 +689,7 @@ class ShapeDrawer:
             with autoscale_turned_off(self._m.ax):
                 (ph,) = self._m.ax.fill(pts[0][0], pts[1][0], **kwargs)
 
-                if self._layer is None:
-                    self._m.BM.add_bg_artist(ph, layer=self._m.BM._bg_layer)
-                else:
-                    self._m.BM.add_bg_artist(ph, layer=self._layer)
+                self._m.BM.add_bg_artist(ph, layer=self.layer)
 
                 ID = max(self._artists) + 1 if self._artists else 0
                 self._artists[ID] = ph
@@ -647,9 +698,9 @@ class ShapeDrawer:
 
             if _register_geopandas():
                 pts = np.column_stack((pts[0][0], pts[1][0]))
-                gdf = gpd.GeoDataFrame(index=[ID], geometry=[Polygon(pts)])
+                gdf = gpd.GeoDataFrame(index=[ID], geometry=[shapely_Polygon(pts)])
                 gdf = gdf.set_crs(crs=self._crs)
-                self.gdf = self.gdf.append(gdf)
+                self.gdf = pd.concat([self.gdf, gdf])
 
             for cb in self._on_new_poly:
                 cb()
@@ -669,6 +720,7 @@ class ShapeDrawer:
             additional kwargs passed to the shape.
 
         """
+        self._init_shape_indicator()
 
         def cb():
             self._rectangle(**kwargs)
@@ -683,11 +735,11 @@ class ShapeDrawer:
                 pts = eoshp.shapes._rectangles(self._m)._get_rectangle_verts(
                     np.array([pts[0][0]]), np.array([pts[0][1]]), "out", r, "out", 50
                 )[0][0]
-                (ph,) = self._m.ax.fill(
-                    pts[:, 0], pts[:, 1], fc="none", ec="r", animated=True
+
+                self._shape_indicator.set_xy(np.column_stack((pts[:, 0], pts[:, 1])))
+                self._m.BM.blit_artists(
+                    (self._shape_indicator, self._line), bg=self._background
                 )
-                self._m.ax.draw_artist(ph)
-                self._m.BM.update(artists=[ph])
 
         self._ginput2(2, timeout=-1, draw_on_drag=True, movecb=movecb, cb=cb)
 
@@ -703,10 +755,7 @@ class ShapeDrawer:
             with autoscale_turned_off(self._m.ax):
                 (ph,) = self._m.ax.fill(pts[:, 0], pts[:, 1], **kwargs)
 
-                if self._layer is None:
-                    self._m.BM.add_bg_artist(ph, layer=self._m.BM._bg_layer)
-                else:
-                    self._m.BM.add_bg_artist(ph, layer=self._layer)
+                self._m.BM.add_bg_artist(ph, layer=self.layer)
 
                 ID = max(self._artists) + 1 if self._artists else 0
                 self._artists[ID] = ph
@@ -714,9 +763,9 @@ class ShapeDrawer:
             self._m.BM.update()
 
             if _register_geopandas():
-                gdf = gpd.GeoDataFrame(index=[ID], geometry=[Polygon(pts)])
+                gdf = gpd.GeoDataFrame(index=[ID], geometry=[shapely_Polygon(pts)])
                 gdf = gdf.set_crs(crs=self._crs)
-                self.gdf = self.gdf.append(gdf)
+                self.gdf = pd.concat([self.gdf, gdf])
 
             for cb in self._on_new_poly:
                 cb()

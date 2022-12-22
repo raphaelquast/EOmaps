@@ -1,7 +1,6 @@
 from functools import lru_cache, partial
 from warnings import warn, filterwarnings, catch_warnings
 from types import SimpleNamespace
-from collections import defaultdict
 
 from PIL import Image
 from io import BytesIO
@@ -13,17 +12,10 @@ import numpy as np
 
 from pyproj import CRS, Transformer
 
-try:
-    from owslib.wmts import WebMapTileService
-    from owslib.wms import WebMapService
-    import requests
-    from urllib3.exceptions import InsecureRequestWarning
-
-    _import_OK = True
-
-except ImportError:
-    warn("EOmaps: adding WebMap services requires 'owslib'")
-    _import_OK = False
+from owslib.wmts import WebMapTileService
+from owslib.wms import WebMapService
+import requests
+from urllib3.exceptions import InsecureRequestWarning
 
 from .helpers import _sanitize
 
@@ -189,6 +181,8 @@ class _WebMap_layer:
                 bbox = bbox.transformed(self._m.f.transFigure.inverted())
                 legax.set_position(bbox)
 
+                self._m.BM.blit_artists([legax])
+
             def cb_release(event):
                 self._legend_picked = False
                 legax.set_frame_on(False)
@@ -201,7 +195,15 @@ class _WebMap_layer:
                     legax.set_frame_on(False)
                     self._legend_picked = False
 
-            # TODO add keypress callback to remove legend!
+            def cb_keypress(event):
+                if not self._legend_picked:
+                    return
+
+                if event.key in ["delete", "backspace"]:
+                    self._m.BM.remove_artist(legax, self._layer)
+                    legax.remove()
+
+                self._m.BM.update()
 
             def cb_scroll(event):
                 if not self._legend_picked:
@@ -219,12 +221,13 @@ class _WebMap_layer:
                     )
                 )
 
-                self._m.BM.update()
+                self._m.BM.blit_artists([legax])
 
             self._m.f.canvas.mpl_connect("scroll_event", cb_scroll)
             self._m.f.canvas.mpl_connect("button_press_event", cb_pick)
             self._m.f.canvas.mpl_connect("button_release_event", cb_release)
             self._m.f.canvas.mpl_connect("motion_notify_event", cb_move)
+            self._m.f.canvas.mpl_connect("key_press_event", cb_keypress)
 
             self._m.parent._wms_legend.setdefault(self._layer, list()).append(legax)
 
@@ -374,9 +377,6 @@ class _wmts_layer(_WebMap_layer):
                     alpha=alpha,
                 )
             else:
-                if self._layer not in self._m._get_layers():
-                    # create a new (empty) layer so that utility-widgets get updated!
-                    self._m.new_layer(layer=self._layer)
                 # delay adding the layer until it is effectively activated
                 self._m.BM.on_layer(
                     func=partial(
@@ -480,9 +480,6 @@ class _wms_layer(_WebMap_layer):
                     alpha=alpha,
                 )
             else:
-                if self._layer not in self._m._get_layers():
-                    # create a new (empty) layer so that utility-widgets get updated!
-                    self._m.new_layer(layer=self._layer)
                 # delay adding the layer until it is effectively activated
                 m.BM.on_layer(
                     func=partial(
@@ -813,18 +810,20 @@ class _REST_API(object):
         with catch_warnings():
             filterwarnings("ignore", category=InsecureRequestWarning)
 
-            all_services = defaultdict(list)
+            all_services = dict()
             r = self._post(service, _params=self._params)
             # parse all services that are not inside a folder
             for s in r["services"]:
-                all_services["SERVICES"].append((s["name"], s["type"]))
+                all_services.setdefault("SERVICES", []).append((s["name"], s["type"]))
             for s in r["folders"]:
                 new = "/".join([service, s])
                 endpt = self._post(new, _params=self._params)
 
                 for serv in endpt["services"]:
                     if str(serv["type"]) == "MapServer":
-                        all_services[s].append((serv["name"], serv["type"]))
+                        all_services.setdefault(s, []).append(
+                            (serv["name"], serv["type"])
+                        )
         return all_services
 
 
@@ -1094,9 +1093,6 @@ class _xyz_tile_service:
                 # add the layer immediately if the layer is already active
                 self._do_add_layer(self._m, self._layer, **kwargs)
             else:
-                if self._layer not in self._m._get_layers():
-                    # create a new (empty) layer so that utility-widgets get updated!
-                    self._m.new_layer(layer=self._layer)
                 # delay adding the layer until it is effectively activated
                 self._m.BM.on_layer(
                     func=partial(self._do_add_layer, **kwargs),
@@ -1160,6 +1156,7 @@ class SlippyImageArtist_NEW(AxesImage):
         # This artist fills the Axes, so should not influence layout.
         kwargs.setdefault("in_layout", False)
         super().__init__(ax, **kwargs)
+
         self.cache = []
 
         ax.callbacks.connect("xlim_changed", self.on_xlim)
@@ -1203,6 +1200,15 @@ class SlippyImageArtist_NEW(AxesImage):
                 self._prev_size = (ax.bbox.width, ax.bbox.height)
 
             for img, extent in self.cache:
+                try:
+                    clippath = self.axes.spines["geo"]
+                    self.set_clip_path(
+                        clippath.get_path(),
+                        transform=self.axes.projection._as_mpl_transform(self.axes),
+                    )
+                except:
+                    print("EOmaps: unable to set clippath for WMS images")
+
                 self.set_array(img)
                 with ax.hold_limits():
                     self.set_extent(extent)

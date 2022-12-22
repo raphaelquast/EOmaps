@@ -48,7 +48,7 @@ mg.plot_map()
 mg.add_colorbar()
 
 # use cartopy to reproject the ocean to avoid glitches
-mg.add_feature.preset.ocean(reproject="cartopy")
+mg.add_feature.preset.ocean()
 mg.add_feature.preset.land()
 mg.add_feature.preset.coastline(layer="all")  # add the coastline to all layers
 

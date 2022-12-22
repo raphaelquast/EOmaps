@@ -985,8 +985,78 @@ class Compass:
         self._txt = "N"
 
     def __call__(
-        self, pos=None, scale=10, style="north arrow", patch="w", txt="N", pickable=True
+        self,
+        pos=None,
+        scale=10,
+        style="compass",
+        patch=None,
+        txt="N",
+        pickable=True,
+        layer="all",
+        ignore_invalid_angles=False,
     ):
+        """
+        Add a "compass" or "north-arrow" to the map.
+
+        Note
+        ----
+        You can use the mouse to pick the compass and move it anywhere on the map.
+        (the directions are dynamically updated if you pan/zoom or pick the compass)
+
+        - If you press the "delete" key while clicking on the compass, it is removed.
+          (same as calling `compass.remove()`)
+        - If you press the "d" key while clicking on the compass, it will be
+          disconnected from pick-events (same as calling `compass.set_pickable(False)`)
+
+
+        Parameters
+        ----------
+        pos : tuple or None, optional
+            The relative position of the compass with respect to the axis.
+            (0,0) - lower left corner, (1,1) - upper right corner
+            Note that you can also move the compass with the mouse!
+        scale : float, optional
+            A scale-factor for the size of the compass. The default is 10.
+        style : str, optional
+
+            - "north arrow" : draw only a north-arrow
+            - "compass": draw a compass with arrows in all 4 directions
+
+            The default is "compass".
+        patch : False, str or tuple, optional
+            The color of the background-patch.
+            (can be any color specification supported by matplotlib)
+            The default is "w".
+        txt : str, optional
+            Indicator which directions should be indicated.
+            - "NESW" : add letters for all 4 directions
+            - "NE" : add only letters for North and East (same for other combinations)
+            - None : don't add any letters
+            The default is "N".
+        pickable : bool, optional
+            Indicator if the compass should be static (False) or if it can be dragged
+            with the mouse (True). The default is True
+        layer : str, optional
+            The layer to put the compass on. The default is "all".
+        ignore_invalid_angles : bool, optional
+            - If True the compass will always (silently) use the last valid rotation-angle
+              in case the correct angle could not be determined.
+            - If False, a warning will be issued in case the angle could
+              not be determined, and a red border will be drawn around the compass to
+              indicate that it might not point in the right direction.
+
+            The default is False
+
+        Returns
+        -------
+        compass : eomaps.Compass
+            A compass-object that can be used to manually adjust the style and position
+            of the compass or remove it from the map.
+
+        """
+
+        self.layer = layer
+        self._ignore_invalid_angles = ignore_invalid_angles
         self._m.BM.update()
 
         ax2data = self._m.ax.transAxes + self._m.ax.transData.inverted()
@@ -1001,9 +1071,13 @@ class Compass:
         self._txt = txt
         self._scale = scale
 
+        self._ang = 0
+        # remember last used rotation angle for out-of-axes compass
+        self._last_ang = 999
+
         self._artist = self._get_artist(pos)
         self._m.ax.add_artist(self._artist)
-        self._m.BM.add_artist(self._artist)
+        self._m.BM.add_artist(self._artist, layer=self.layer)
 
         self.set_position(pos)
 
@@ -1017,6 +1091,7 @@ class Compass:
             self._canvas.mpl_connect("pick_event", self._on_pick),
             self._canvas.mpl_connect("button_release_event", self._on_release),
             self._canvas.mpl_connect("resize_event", self._on_resize),
+            self._canvas.mpl_connect("scroll_event", self._on_scroll),
         ]
 
         self._add_zoom_callbacks()
@@ -1110,7 +1185,6 @@ class Compass:
                     )
                 except Exception:
                     x, y = 0.9, 0.1
-
             self.set_position((x, y))
         except Exception:
             pass
@@ -1126,6 +1200,33 @@ class Compass:
             print("EOmaps: could not add scalebar at the desired location")
             return
 
+        if np.isnan(ang):
+            if not self._ignore_invalid_angles:
+                if self._last_ang != self._ang:
+                    print(
+                        "EOmaps: Compass rotation-angle could not be determined! "
+                        f"... using last found angle: {np.rad2deg(self._ang):.2f}"
+                    )
+                    patch = self._artist.get_children()[0]
+                    self._patch_ec = patch.get_edgecolor()
+                    patch.set_edgecolor("r")
+
+                self._last_ang = self._ang
+            else:
+                if hasattr(self, "_patch_ec"):
+                    self._artist.get_children()[0].set_edgecolor(self._patch_ec)
+                    del self._patch_ec
+                self._last_ang = 9999
+
+            ang = self._ang
+        else:
+            if hasattr(self, "_patch_ec"):
+                self._artist.get_children()[0].set_edgecolor(self._patch_ec)
+                del self._patch_ec
+
+            self._last_ang = 9999
+
+        self._ang = ang
         r = transforms.Affine2D().rotate(ang)
         s = transforms.Affine2D().scale(self._scale)
         t = transforms.Affine2D().translate(*self._m.ax.transData.transform(pos))
@@ -1136,14 +1237,35 @@ class Compass:
         if self._check_still_parented() and self._got_artist:
             x, y = evt.xdata, evt.ydata
 
-            if x is None or y is None:
-                # continue values outside of the crs-domain
+            # transform values if axes is put outside the figure
+            if evt.inaxes is None:
                 x, y = self._m.ax.transData.inverted().transform((evt.x, evt.y))
+            elif evt.inaxes != self._m.ax:
+                # don't allow moving the compass on top of another axes
+                # (somehow pick-events do not fire if compass is in another axes)
+                # TODO check this!
+                return
+
+            # continue values outside of the crs-domain
+            if x is None or y is None:
+                x, y = self._m.ax.transData.inverted().transform((evt.x, evt.y))
+
             self._update_offset(x, y)
-            self._m.BM._draw_animated(artists=[self._artist])
+            self._m.BM.blit_artists(artists=[self._artist], bg=self._bg)
+
+    def _on_scroll(self, event):
+        if self._check_still_parented() and self._got_artist:
+            self.set_scale(max(1, self._scale + event.step))
+            self._m.BM.blit_artists(artists=[self._artist], bg=self._bg)
 
     def _on_pick(self, evt):
+        if evt.mouseevent.button != 1:
+            return
+
+        # fetch the currently active background (to get a nice responsive motion)
         if self._check_still_parented() and evt.artist == self._artist:
+            self._bg = self._m.BM._get_active_bg(exclude_artists=[self._artist])
+
             self._got_artist = True
             self._c1 = self._canvas.mpl_connect("motion_notify_event", self._on_motion)
             self._c2 = self._canvas.mpl_connect("key_press_event", self._on_keypress)
@@ -1172,6 +1294,7 @@ class Compass:
                 pass
             else:
                 self._canvas.mpl_disconnect(c2)
+            self._m.BM.update()
 
     def _check_still_parented(self):
         if self._artist.figure is None:
@@ -1319,5 +1442,22 @@ class Compass:
         trans = self._get_transform(pos)
         for c in self._artist.get_children():
             c.set_transform(trans)
-
         self._pos = pos
+
+    def set_ignore_invalid_angles(self, val):
+        """
+        Set how to deal with invalid rotation-angles.
+
+        - If True the compass will always (silently) use the last valid rotation-angle
+          in case the correct angle could not be determined.
+        - If False (the default), a warning will be issued in case the angle could
+          not be determined, and a red border will be drawn around the compass to
+          indicate that it might not point in the right direction.
+
+        Parameters
+        ----------
+        val : bool
+            ignore invalid rotation angles.
+        """
+        self._ignore_invalid_angles = val
+        self.set_position(self._pos)

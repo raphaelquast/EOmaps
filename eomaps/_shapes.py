@@ -211,7 +211,7 @@ class shapes(object):
         # ----------- manual color specifications
         # allow the synonyms "color", "fc" and "facecolor"
         color = None
-        for i in ["color", "fc", "facecolors"]:
+        for i in ["color", "fc", "facecolor"]:
             if color is None:
                 color = kwargs.pop(i, None)
                 if color is not None:
@@ -228,7 +228,7 @@ class shapes(object):
         if isinstance(color, (int, float, str, np.number)):
             # if a scalar is provided, broadcast it
             color = np.broadcast_to(color, mask.shape)
-        elif isinstance(color, tuple):
+        elif isinstance(color, (list, tuple)):
             if len(color) in [3, 4]:
                 if all(map(lambda i: isinstance(i, (int, float, np.number)), color)):
                     # check if a tuple of numbers is provided, and if so broadcast
@@ -1520,9 +1520,9 @@ class shapes(object):
 
         def __repr__(self):
             try:
-                s = f"rectangles(radius={self.radius}, radius_crs={self.radius_crs})"
+                s = f"raster(radius={self.radius}, radius_crs={self.radius_crs})"
             except AttributeError:
-                s = "rectangles(radius, radius_crs)"
+                s = "raster(radius, radius_crs)"
 
             return s
 

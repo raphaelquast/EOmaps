@@ -1,6 +1,5 @@
 import numpy as np
 import matplotlib.pyplot as plt
-from collections import defaultdict
 import warnings
 
 
@@ -79,15 +78,16 @@ class _click_callbacks(object):
         val = kwargs.pop("val", None)
         ind = kwargs.pop("ind", None)
         picker_name = kwargs.pop("picker_name", "default")
+        val_color = kwargs.pop("val_color", None)
 
         # decode values in case a encoding is provided
         val = self.m._decode_values(val)
 
-        return ID, pos, val, ind, picker_name
+        return ID, pos, val, ind, picker_name, val_color
 
     def print_to_console(self, **kwargs):
         """Print details on the clicked pixel to the console"""
-        ID, pos, val, ind, picker_name = self._popargs(kwargs)
+        ID, pos, val, ind, picker_name, val_color = self._popargs(kwargs)
 
         if isinstance(self.m.data_specs.x, str):
             xlabel = self.m.data_specs.x
@@ -191,7 +191,7 @@ class _click_callbacks(object):
         if layer is None:
             layer = self.m.layer
 
-        ID, pos, val, ind, picker_name = self._popargs(kwargs)
+        ID, pos, val, ind, picker_name, val_color = self._popargs(kwargs)
 
         if isinstance(self.m.data_specs.x, str):
             xlabel = self.m.data_specs.x
@@ -256,10 +256,13 @@ class _click_callbacks(object):
 
         if printstr is not None:
             # create a new annotation
+            bbox = dict(boxstyle="round", fc="w", ec=val_color)
+            bbox.update(kwargs.pop("bbox", dict()))
+
             styledict = dict(
                 xytext=(20, 20),
                 textcoords="offset points",
-                bbox=dict(boxstyle="round", fc="w"),
+                bbox=bbox,
                 arrowprops=dict(arrowstyle="->"),
             )
 
@@ -313,13 +316,13 @@ class _click_callbacks(object):
 
         removing the callback will also remove the associated value-dictionary!
         """
-        ID, pos, val, ind, picker_name = self._popargs(kwargs)
+        ID, pos, val, ind, picker_name, val_color = self._popargs(kwargs)
 
         if not hasattr(self, "picked_vals"):
-            self.picked_vals = defaultdict(list)
+            self.picked_vals = dict()
 
         for key, val in zip(["pos", "ID", "val"], [pos, ID, val]):
-            self.picked_vals[key].append(val)
+            self.picked_vals.setdefault(key, []).append(val)
 
     def _get_values_cleanup(self):
         # cleanup method for get_values callback
@@ -436,7 +439,7 @@ class _click_callbacks(object):
                 t = self.m.ax.bbox.transformed(self.m.ax.transData.inverted())
                 radius = (t.width / 10.0, t.height / 10.0)
 
-        ID, pos, val, ind, picker_name = self._popargs(kwargs)
+        ID, pos, val, ind, picker_name, val_color = self._popargs(kwargs)
 
         if ID is not None and picker_name == "default":
             if ind is None:
@@ -502,7 +505,7 @@ class _click_callbacks(object):
             np.atleast_1d(pos[0]), np.atleast_1d(pos[1]), pos_crs, **kwargs
         )
 
-        marker = self.m.ax.add_collection(coll)
+        marker = self.m.ax.add_collection(coll, autolim=False)
 
         marker.set_zorder(zorder)
 
@@ -601,7 +604,7 @@ class _click_callbacks(object):
                 print("EOmaps v5.0 Warning: All layer-names are converted to strings!")
                 layer = str(layer)
 
-        ID, pos, val, ind, picker_name = self._popargs(kwargs)
+        ID, pos, val, ind, picker_name, val_color = self._popargs(kwargs)
 
         ax = self.m.ax
 
@@ -716,7 +719,7 @@ class _click_callbacks(object):
         if marker is not None:
             # make sure to clear the marker at the next update
             def doit():
-                self.m.BM._artists_to_clear["move"].append(marker)
+                self.m.BM._artists_to_clear.setdefault("move", []).append(marker)
 
             self.m.BM._after_restore_actions.append(doit)
 
@@ -745,7 +748,7 @@ class _click_callbacks(object):
             True: A single-object is returned, replacing `m.cb.picked_object` on each pick.
             False: A list of objects is returned that is extended with each pick.
         """
-        ID, pos, val, ind, picker_name = self._popargs(kwargs)
+        ID, pos, val, ind, picker_name, val_color = self._popargs(kwargs)
 
         assert database is not None, "you must provide a database object!"
 
@@ -800,7 +803,7 @@ class _click_callbacks(object):
             kwargs forwarded to the call to `plt.plot([...], [...], **kwargs)`.
 
         """
-        ID, pos, val, ind, picker_name = self._popargs(kwargs)
+        ID, pos, val, ind, picker_name, val_color = self._popargs(kwargs)
 
         style = dict(marker=".")
         style.update(**kwargs)
@@ -888,7 +891,7 @@ class pick_callbacks(_click_callbacks):
             (e.g. facecolor, edgecolor, linewidth etc. )
 
         """
-        ID, pos, val, ind, picker_name = self._popargs(kwargs)
+        ID, pos, val, ind, picker_name, val_color = self._popargs(kwargs)
 
         if ID is not None:
             # get the selected geometry and re-project it to the desired crs

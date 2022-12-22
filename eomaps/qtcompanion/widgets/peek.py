@@ -362,7 +362,8 @@ class PeekLayerWidget(QtWidgets.QWidget):
 
     def remove_peek_cb(self):
         if self.cid is not None:
-            self.m.all.cb.click.remove(self.cid)
+            if self.cid in self.m.all.cb.click.get.attached_callbacks:
+                self.m.all.cb.click.remove(self.cid)
             self.cid = None
 
 

@@ -2,8 +2,14 @@ from PyQt5 import QtWidgets
 from PyQt5.QtCore import Qt, pyqtSignal, pyqtSlot
 from PyQt5.QtGui import QKeySequence
 
-from .base import transparentWindow
+# TODO make sure a QApplication has been instantiated
+app = QtWidgets.QApplication.instance()
+if app is None:
+    # if it does not exist then a QApplication is created
+    app = QtWidgets.QApplication([])
 
+
+from .base import transparentWindow
 from .widgets.peek import PeekTabs
 from .widgets.editor import ArtistEditor
 from .widgets.wms import AddWMSMenuButton
@@ -112,6 +118,7 @@ class MenuWindow(transparentWindow):
     cmapsChanged = pyqtSignal()
 
     def __init__(self, *args, m=None, **kwargs):
+
         # assign m before calling the init of the transparentWindow
         # to show the layer-selector!
         self.m = m
@@ -126,8 +133,8 @@ class MenuWindow(transparentWindow):
         # (the pyqtSignal is emmited by Maps-objects if a new colormap is registered)
         self.cmapsChanged.connect(self.clear_pixmap_cache)
 
-        tabs = ControlTabs(m=self.m)
-        tabs.setMouseTracking(True)
+        self.tabs = ControlTabs(m=self.m)
+        self.tabs.setMouseTracking(True)
 
         self.setStyleSheet(
             """QToolTip {
@@ -141,7 +148,7 @@ class MenuWindow(transparentWindow):
         self.cb_transparentQ()
 
         menu_layout = QtWidgets.QVBoxLayout()
-        menu_layout.addWidget(tabs)
+        menu_layout.addWidget(self.tabs)
         menu_widget = QtWidgets.QWidget()
         menu_widget.setLayout(menu_layout)
 
@@ -154,7 +161,7 @@ class MenuWindow(transparentWindow):
 
         self.setCentralWidget(menu_widget)
 
-        sh = self.sizeHint()
+        # sh = self.sizeHint()
         # self.resize(int(sh.width() * 1.35), sh.height())
 
     def show(self):

@@ -17,10 +17,13 @@ m2 = m.new_inset_map(
     indicate_extent=dict(fc=(1, 0, 0, 0.25)),
 )
 
-# populate the inset with some features
+# populate the inset with some more detailed features
 m2.add_feature.preset.coastline()
 m2.add_feature.preset.ocean()
 m2.add_feature.preset.land()
+m2.add_feature.preset.countries()
+m2.add_feature.preset.urban_areas()
+
 
 # ---------- create another inset-map
 #            showing a 400km circle around the xy-point
@@ -36,12 +39,8 @@ m3 = m.new_inset_map(
     indicate_extent=dict(fc=(0, 1, 0, 0.25)),
 )
 
-# populate the inset with some more detailed features
-m3.add_feature.preset.coastline()
-m3.add_feature.preset.ocean()
-m3.add_feature.preset.land()
-m3.add_feature.cultural_10m.admin_0_countries(fc="none", ec=".5")
-m3.add_feature.cultural_10m.urban_areas(fc="r", ec="none")
+# populate the inset with some features
+m3.add_wms.OpenStreetMap.add_layer.stamen_terrain_background()
 
 # print some data on all of the maps
 m3.set_shape.ellipses(n=100)  # use a higher ellipse-resolution on the inset-map
@@ -68,9 +67,8 @@ for m_i, txt, color in zip([m2, m3], ["epsg: 4326", "epsg: 3035"], ["r", "g"]):
     # add the text-objects as artists to the blit-manager
     m_i.BM.add_artist(txt)
 
-m3.add_colorbar(histbins=20, top=0.15)
+m3.add_colorbar(hist_bins=20, margin=dict(bottom=-0.2), label="some parameter")
 # move the inset map (and the colorbar) to a different location
 m3.set_inset_position(x=0.3)
 # set the y-ticks of the colorbar histogram
 m3.colorbar.ax_cb_plot.set_yticks([0, 1, 2])
-m3.redraw()

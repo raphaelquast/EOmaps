@@ -106,9 +106,11 @@ class AddFeaturesMenuButton(QtWidgets.QPushButton):
 
                 return
             try:
-                getattr(getattr(self.m.add_feature, featuretype), feature)(
-                    layer=layer, **self.props
-                )
+                f = getattr(getattr(self.m.add_feature, featuretype), feature)
+                if featuretype == "preset":
+                    f(layer=layer, **f.kwargs)
+                else:
+                    f(layer=layer, **self.props)
 
                 self.m.BM.update()
             except Exception:
@@ -418,7 +420,7 @@ class LayerArtistTabs(QtWidgets.QTabWidget):
                 border-bottom-color: none;
                 border-top-left-radius: 2px;
                 border-top-right-radius: 2px;
-                min-width: 12ex;
+                min-width: 50px;
                 padding: 1px;
                 margin: 1px;
             }
@@ -839,8 +841,7 @@ class ArtistEditor(QtWidgets.QWidget):
         layout = QtWidgets.QGridLayout()
         layout.setAlignment(Qt.AlignTop | Qt.AlignLeft)
 
-        # make sure that we don't create an empty entry in the defaultdict!
-        # TODO avoid using defaultdicts!!
+        # make sure that we don't create an empty entry !
         if layer in self.m.BM._bg_artists:
             artists = [a for a in self.m.BM._bg_artists[layer] if a.axes is self.m.ax]
         else:

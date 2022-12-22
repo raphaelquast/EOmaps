@@ -357,7 +357,7 @@ To adjust the margins of the subplots, use ``m.subplots_adjust``, e.g.:
 
 
 You can then continue to add :ref:`colorbar`, :ref:`annotations_and_markers`,
-:ref:`scalebar`, :ref:`compass`,  :ref:`webmap_layers` or :ref:`geodataframe` to the map,
+:ref:`scalebar`, :ref:`compass`,  :ref:`webmap_layers`, :ref:`ne_features` or :ref:`geodataframe` to the map,
 or you can start to :ref:`shape_drawer`, add :ref:`utility` and :ref:`callbacks`.
 
 Once the map is ready, an image of the map can be saved at any time by using:
@@ -1268,7 +1268,7 @@ Pre-defined WebMap services:
 
 **Global:**
 
-.. currentmodule:: eomaps._containers.wms_container
+.. currentmodule:: eomaps._webmap_containers.wms_container
 
 .. autosummary::
     :toctree: generated
@@ -1285,10 +1285,11 @@ Pre-defined WebMap services:
     S2_cloudless
     GEBCO
     CAMS
+    DLR_basemaps
 
 **Services specific for Austria (Europe)**
 
-.. currentmodule:: eomaps._containers
+.. currentmodule:: eomaps._webmap_containers
 
 .. autosummary::
     :toctree: generated
@@ -1318,7 +1319,7 @@ Using custom WebMap services
 It is also possible to use custom WMS/WMTS/XYZ services.
 (see docstring of ``m.add_wms.get_service`` for more details and examples)
 
-.. currentmodule:: eomaps._containers.wms_container
+.. currentmodule:: eomaps._webmap_containers.wms_container
 
 .. autosummary::
     :toctree: generated
@@ -1408,14 +1409,92 @@ To show an example, here's how to fetch multiple timestamps for the UV-index of 
     |     m.show_layer(times[0])      # make the first timestamp visible                  |                                              |
     +-------------------------------------------------------------------------------------+----------------------------------------------+
 
+.. _ne_features:
+
+🌵 NaturalEarth features
+------------------------
+
+Feature-layers provided by `NaturalEarth <https://www.naturalearthdata.com>`_ can be directly added to the map via ``m.add_feature``.
+
+.. currentmodule:: eomaps
+
+.. autosummary::
+    :toctree: generated
+    :nosignatures:
+    :template: only_names_in_toc.rst
+
+    Maps.add_feature
+
+The call-signature is: ``m.add_feature.< CATEGORY >.< FEATURE >(...)``:
+
+``< CATEGORY >`` specifies the general category of the feature, e.g.:
+
+- ``cultural``: **cultural** features (e.g. countries, states etc.)
+- ``physical``: **physical** features (e.g. coastlines, land, ocean etc.)
+- ``preset``: a set of pre-defined layers for convenience (see below)
+
+``< FEATURE >`` is the name of the NaturalEarth feature, e.g. ``"coastlines", "admin_0_countries"`` etc..
+
+
++-------------------------------------------------------------------------+-------------------------------------------------+
+| .. code-block:: python                                                  | .. image:: _static/minigifs/add_feature.gif     |
+|                                                                         |   :align: center                                |
+|     from eomaps import Maps                                             |                                                 |
+|     m = Maps()                                                          |                                                 |
+|     m.add_feature.preset.coastline()                                    |                                                 |
+|     m.add_feature.preset.ocean()                                        |                                                 |
+|     m.add_feature.preset.land()                                         |                                                 |
+|     m.add_feature.preset.countries()                                    |                                                 |
+|                                                                         |                                                 |
+|     m.add_feature.physical.lakes(scale=110, ec="b")                     |                                                 |
+|     m.add_feature.cultural.admin_0_pacific_groupings(ec="m", lw=2)      |                                                 |
+|                                                                         |                                                 |
+|     # (only if geopandas is installed)                                  |                                                 |
+|     places = m.add_feature.cultural.populated_places.get_gdf(scale=110) |                                                 |
+|     m.add_gdf(places, markersize=places.NATSCALE/10, fc="r")            |                                                 |
+|                                                                         |                                                 |
++-------------------------------------------------------------------------+-------------------------------------------------+
+
+
+
+`NaturalEarth <https://www.naturalearthdata.com>`_ provides features in 3 different scales: 1:10m, 1:50m, 1:110m.
+By default EOmaps uses features at 1:50m scale. To set the scale manually, simply use the ``scale`` argument
+when calling the feature.
+
+- It is also possible to automatically update the scale based on the map-extent by using ``scale="auto"``.
+  (Note that if you zoom into a new scale the data might need to be downloaded and reprojected so the map might be irresponsive for a couple of seconds until everything is properly cached.)
+
+If you want to get a ``geopandas.GeoDataFrame`` containing all shapes and metadata of a feature, use:
+(Have a look at :ref:`geodataframe` on how to add the obtained ``GeoDataFrame`` to the map)
+
+.. code-block:: python
+
+    from eomaps import Maps
+    m = Maps()
+    gdf = m.add_feature.physical.coastline.get_gdf(scale=10)
+
+The most commonly used features are accessible with pre-defined colors via the ``preset`` category:
+
+.. currentmodule:: eomaps.ne_features._NaturalEarth_presets
+
+.. autosummary::
+    :toctree: generated
+    :nosignatures:
+    :template: only_names_in_toc.rst
+
+    coastline
+    ocean
+    land
+    countries
+    urban_areas
+    lakes
+    rivers_lake_centerlines
+
 
 .. _geodataframe:
 
-🌵 GeoDataFrames and NaturalEarth features
-------------------------------------------
-
 💠 GeoDataFrames
-~~~~~~~~~~~~~~~~~
+-----------------
 
 A ``geopandas.GeoDataFrame`` can be added to the map via ``m.add_gdf()``.
 
@@ -1430,6 +1509,7 @@ A ``geopandas.GeoDataFrame`` can be added to the map via ``m.add_gdf()``.
 
 .. code-block:: python
 
+    from eomaps import Maps
     import geopandas as gpd
 
     gdf = gpd.GeoDataFrame(geometries=[...], crs=...)
@@ -1466,75 +1546,6 @@ Once the ``picker_name`` is specified, pick-callbacks can be attached via:
     |     m.cb.pick["countries"].attach.highlight_geometry(fc="r", ec="g", lw=2) |                                              |
     |                                                                            |                                              |
     +----------------------------------------------------------------------------+----------------------------------------------+
-
-
-🌴 NaturalEarth features
-~~~~~~~~~~~~~~~~~~~~~~~~
-
-Feature-layers provided by `NaturalEarth <https://www.naturalearthdata.com>`_ can be directly added to the plot via ``m.add_feature``.
-
-.. currentmodule:: eomaps
-
-.. autosummary::
-    :toctree: generated
-    :nosignatures:
-    :template: only_names_in_toc.rst
-
-    Maps.add_feature
-
-The general call-signature is:
-
-.. code-block:: python
-
-    m = Maps()
-    # just call the feature to add it to the map
-    m.add_feature.< CATEGORY >.< FEATURE >(...)
-
-    # if you only want to get the associated GeoDataFrame, you can use
-    gdf = m.add_feature.< CATEGORY >.< FEATURE >.get_gdf()
-
-Where ``< CATEGORY >`` specifies the resolution and general category of the feature, e.g.:
-
-- ``cultural_10m``, ``cultural_50m``, ``cultural_110m``: cultural features (e.g. countries, states etc.)
-- ``physical_10m``, ``physical_50m``, ``physical_110m``: physical features (e.g. coastline, land, ocean etc.)
-
-The most commonly used features are available under the ``preset`` category:
-
-.. currentmodule:: eomaps._containers._NaturalEarth_presets
-
-.. autosummary::
-    :toctree: generated
-    :nosignatures:
-    :template: only_names_in_toc.rst
-
-    coastline
-    ocean
-    land
-    countries
-
-+-------------------------------------------------------------------------+-------------------------------------------------+
-| .. code-block:: python                                                  | .. image:: _static/minigifs/add_feature.gif     |
-|                                                                         |   :align: center                                |
-|     from eomaps import Maps                                             |                                                 |
-|     m = Maps()                                                          |                                                 |
-|     m.add_feature.preset.coastline()                                    |                                                 |
-|     m.add_feature.preset.ocean()                                        |                                                 |
-|     m.add_feature.preset.land()                                         |                                                 |
-|     m.add_feature.preset.countries()                                    |                                                 |
-|                                                                         |                                                 |
-|     m.add_feature.physical_110m.lakes(ec="b")                           |                                                 |
-|     m.add_feature.cultural_110m.admin_0_pacific_groupings(ec="m", lw=2) |                                                 |
-|                                                                         |                                                 |
-|     # (only if geopandas is installed)                                  |                                                 |
-|     places = m.add_feature.cultural_110m.populated_places.get_gdf()     |                                                 |
-|     m.add_gdf(places, markersize=places.NATSCALE/10, fc="r")            |                                                 |
-|                                                                         |                                                 |
-+-------------------------------------------------------------------------+-------------------------------------------------+
-
-.. note::
-
-    If ``geopandas`` is installed, ``GeoDataFrames`` are used to visualize the features, and all aforementioned
-    functionalities of ``m.add_gdf`` can also directly be used with ``m.add_feature``!
 
 
 .. _annotations_and_markers:
@@ -2068,6 +2079,21 @@ The returned ``ScaleBar`` object provides the following useful methods:
 
 A compass can be added to the map via ``m.add_compass()``:
 
+- To add a **North-Arrow**, use ``m.add_compass(style="north arrow")``
+
+.. Note::
+
+    | The compass is a pickable object!
+    | Click on it with the LEFT mouse button to drag it around!
+
+    While a compass is picked (and the LEFT mouse button is pressed), the following
+    additional interactions are available:
+
+    - press ``delte`` on the keyboard: remove the compass from the plot
+    - rotate the ``mouse wheel``: scale the size of the compass
+
+
+
 .. currentmodule:: eomaps.Maps
 
 .. autosummary::
@@ -2106,6 +2132,7 @@ The returned ``compass`` object has the following useful methods assigned:
     set_patch
     set_scale
     set_pickable
+    set_ignore_invalid_angles
     remove
 
 .. _utility:

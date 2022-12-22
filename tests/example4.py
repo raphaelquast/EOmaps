@@ -21,9 +21,8 @@ m.set_shape.rectangles()
 m.shape.radius = (m.shape.radius[0] * 2, m.shape.radius[1])
 
 m.set_classify_specs(scheme="EqualInterval", k=5)
-# add ocean-coloring in the background and clip by extent to avoid re-projection issues
-m.add_feature.preset.ocean(clip="extent")
-m.add_feature.preset.coastline(clip="extent")  # add coastlines on top
+m.add_feature.preset.coastline()
+m.add_feature.preset.ocean()
 m.plot_map()
 
 # --------- attach pre-defined CALLBACK functions ---------

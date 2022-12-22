@@ -7,7 +7,6 @@ from eomaps.callbacks import (
 from types import SimpleNamespace
 
 from functools import update_wrapper, partial, wraps
-from collections import defaultdict
 import matplotlib.pyplot as plt
 
 from pyproj import Transformer
@@ -75,7 +74,7 @@ class _cb_container(object):
     def _clear_temporary_artists(self):
         while len(self._temporary_artists) > 0:
             art = self._temporary_artists.pop(-1)
-            self._m.BM._artists_to_clear[self._method].append(art)
+            self._m.BM._artists_to_clear.setdefault(self._method, []).append(art)
 
     def _sort_cbs(self, cbs):
         if not cbs:
@@ -354,7 +353,7 @@ class _click_container(_cb_container):
             self.m = parent._m
             self.cb = parent._cb
 
-            self.cbs = defaultdict(lambda: defaultdict(dict))
+            self.cbs = dict()
 
         @property
         def picked_object(self):
@@ -636,7 +635,7 @@ class _click_container(_cb_container):
         # check for modifiers
         button_modifier = f"{button}__{modifier}"
 
-        d = self.get.cbs[btn_key][button_modifier]
+        d = self.get.cbs.setdefault(btn_key, dict()).setdefault(button_modifier, dict())
 
         # get a unique name for the callback
         # name_idx__layer
@@ -715,9 +714,9 @@ class cb_click_container(_click_container):
         clickdict = self._get_clickdict(event)
 
         if event.dblclick:
-            cbs = self.get.cbs["double"]
+            cbs = self.get.cbs.get("double", dict())
         else:
-            cbs = self.get.cbs["single"]
+            cbs = self.get.cbs.get("single", dict())
 
         # check for keypress-modifiers
         if (
@@ -744,7 +743,7 @@ class cb_click_container(_click_container):
                     cb(**clickdict)
 
     def _onrelease(self, event):
-        cbs = self.get.cbs["release"]
+        cbs = self.get.cbs.get("release", dict())
 
         # check for keypress-modifiers
         if (
@@ -779,12 +778,12 @@ class cb_click_container(_click_container):
 
     def _add_click_callback(self):
         def clickcb(event):
+            if not self._m.cb.get_execute_callbacks():
+                return
+
             try:
                 self._event = event
 
-                # ignore callbacks while dragging axes
-                if self._m._ignore_cb_events:
-                    return
                 # don't execute callbacks if a toolbar-action is active
                 if (
                     self._m.f.canvas.toolbar is not None
@@ -809,10 +808,10 @@ class cb_click_container(_click_container):
                 pass
 
         def releasecb(event):
+            if not self._m.cb.get_execute_callbacks():
+                return
+
             try:
-                # ignore callbacks while dragging axes
-                if self._m._ignore_cb_events:
-                    return
                 # don't execute callbacks if a toolbar-action is active
                 if (
                     self._m.f.canvas.toolbar is not None
@@ -931,6 +930,9 @@ class cb_move_container(cb_click_container):
 
     def _add_move_callback(self):
         def movecb(event):
+            if not self._m.cb.get_execute_callbacks():
+                return
+
             try:
                 self._event = event
                 # only execute movecb if a mouse-button is holded down
@@ -952,9 +954,6 @@ class cb_move_container(cb_click_container):
                             self._m.BM._clear_temp_artists(self._method)
                         return
 
-                # ignore callbacks while dragging axes
-                if self._m._ignore_cb_events:
-                    return
                 # don't execute callbacks if a toolbar-action is active
                 if (
                     self._m.f.canvas.toolbar is not None
@@ -963,7 +962,13 @@ class cb_move_container(cb_click_container):
 
                 # execute onclick on the maps object that belongs to the clicked axis
                 # and forward the event to all forwarded maps-objects
+                update = False
                 for obj in self._objs:
+                    # check if there is a reason to update
+                    if update is False:
+                        if len(obj.get.attached_callbacks) > 0:
+                            update = True
+
                     # clear temporary artists before executing new callbacks to avoid
                     # having old artists around when callbacks are triggered again
                     obj._clear_temporary_artists()
@@ -973,7 +978,15 @@ class cb_move_container(cb_click_container):
                     # forward callbacks to the connected maps-objects
                     obj._fwd_cb(event)
 
-                self._m.parent.BM.update(clear=self._method)
+                # only update if a callback is attached
+                # (to avoid constantly calling update)
+                if update:
+                    if self._button_down:
+                        if event.button:
+                            self._m.parent.BM.update(clear=self._method)
+                    else:
+                        self._m.parent.BM.update(clear=self._method)
+
             except ReferenceError:
                 pass
 
@@ -1076,9 +1089,24 @@ class cb_pick_container(_click_container):
         # find the closest point to the clicked pixel
         dist, index = self._m.tree.query((event.xdata, event.ydata))
 
+        pos = self._m._get_xy_from_index(index, reprojected=True)
+        ID = self._get_id(index)
+        val = self._m._props["z_data"].flat[index]
+        try:
+            color = artist.cmap(artist.norm(val))
+        except Exception:
+            color = None
+
         if index is not None:
             return True, dict(
-                ind=index, dblclick=event.dblclick, button=event.button, dist=dist
+                dblclick=event.dblclick,
+                button=event.button,
+                dist=dist,
+                ind=index,
+                ID=ID,
+                pos=pos,
+                val=val,
+                val_color=color,
             )
         else:
             return True, dict(
@@ -1115,25 +1143,16 @@ class cb_pick_container(_click_container):
 
     def _get_pickdict(self, event):
         ind = event.ind
+        mouseevent = event.mouseevent
         if ind is not None:
-            if self._m.coll is not None and event.artist is self._m.coll:
-                clickdict = dict(
-                    pos=self._m._get_xy_from_index(ind, reprojected=True),
-                    ID=self._get_id(ind),
-                    val=self._m._props["z_data"].flat[ind],
-                    ind=ind,
-                    picker_name=self._picker_name,
-                )
-            else:
-                clickdict = dict(
-                    ID=getattr(event, "ID", None),
-                    pos=getattr(
-                        event, "pos", (event.mouseevent.xdata, event.mouseevent.ydata)
-                    ),
-                    val=getattr(event, "val", None),
-                    ind=getattr(event, "ind", None),
-                    picker_name=self._picker_name,
-                )
+            clickdict = dict(
+                ID=getattr(event, "ID", None),
+                pos=getattr(event, "pos", (mouseevent.xdata, mouseevent.ydata)),
+                val=getattr(event, "val", None),
+                ind=getattr(event, "ind", None),
+                picker_name=self._picker_name,
+                val_color=getattr(event, "val_color", None),
+            )
             return clickdict
 
     def _onpick(self, event):
@@ -1154,9 +1173,9 @@ class cb_pick_container(_click_container):
         clickdict = self._get_pickdict(event)
 
         if event.mouseevent.dblclick:
-            cbs = self.get.cbs["double"]
+            cbs = self.get.cbs.get("double", dict())
         else:
-            cbs = self.get.cbs["single"]
+            cbs = self.get.cbs.get("single", dict())
 
         # check for keypress-modifiers
         if (
@@ -1193,14 +1212,12 @@ class cb_pick_container(_click_container):
         # execute onpick and forward the event to all connected Maps-objects
 
         def pickcb(event):
+            if not self._m.cb.get_execute_callbacks():
+                return
 
             try:
                 # make sure pickcb is only executed if we are on the right layer
                 if not self._execute_cb(self._m.layer):
-                    return
-
-                # check if we want to ignore callbacks
-                if self._m._ignore_cb_events:
                     return
 
                 # don't execute callbacks if a toolbar-action is active
@@ -1218,7 +1235,7 @@ class cb_pick_container(_click_container):
 
                 self._event = event
                 # check if the artists has a custom picker assigned
-
+                self._clear_temporary_artists()
                 self._m.BM._clear_temp_artists(self._method)
 
                 # execute "_onpick" on the maps-object that belongs to the clicked axes
@@ -1229,9 +1246,6 @@ class cb_pick_container(_click_container):
 
                 self._m.BM._after_update_actions.append(self._clear_temporary_artists)
                 self._m.BM._clear_temp_artists(self._method)
-
-                # self._m.parent.BM.update(clear=self._method)
-                self._m.parent.BM._clear_temp_artists(self._method)
                 # don't update here... the click-callback will take care of it!
             except ReferenceError:
                 pass
@@ -1246,7 +1260,6 @@ class cb_pick_container(_click_container):
         # PickEvents have a .mouseevent property for the associated MouseEvent!
         if event.mouseevent.inaxes != self._m.ax:
             return
-
         for key, m in self._fwd_cbs.items():
             obj = self._getobj(m)
             obj._clear_temporary_artists()
@@ -1342,10 +1355,10 @@ class keypress_container(_cb_container):
 
     def _initialize_callbacks(self):
         def _onpress(event):
-            try:
-                if self._m.parent._layout_editor._modifier_pressed:
-                    return
+            if not self._m.cb.get_execute_callbacks():
+                return
 
+            try:
                 self._event = event
 
                 # remember keypress event in case sticky modifiers are used for
@@ -1372,23 +1385,24 @@ class keypress_container(_cb_container):
                         print(f"EOmaps: sticky modifier: {k} ({', '.join(methods)})")
                         self._modifier = k
 
-                update = False
                 for obj in self._objs:
                     # only trigger callbacks on the right layer
                     if not self._execute_cb(obj._m.layer):
                         continue
                     if any(i in obj.get.cbs for i in (event.key, None)):
-                        update = True
                         # do this to allow deleting callbacks with a callback
                         # otherwise modifying a dict during iteration is problematic!
-                        cbs = {**obj.get.cbs[event.key], **obj.get.cbs[None]}
+                        cbs = {
+                            **obj.get.cbs.get(event.key, dict()),
+                            **obj.get.cbs.get(None, dict()),
+                        }
 
                         names = list(cbs)
                         for name in names:
                             if name in cbs:
                                 cbs[name](key=event.key)
-                # if update:
-                #     self._m.parent.BM.update(clear=self._method)
+
+                # self._m.parent.BM.update(clear=self._method)
             except ReferenceError:
                 pass
 
@@ -1484,7 +1498,7 @@ class keypress_container(_cb_container):
             self.m = parent._m
             self.cb = parent._cb
 
-            self.cbs = defaultdict(dict)
+            self.cbs = dict()
 
         @property
         def attached_callbacks(self):
@@ -1575,7 +1589,7 @@ class keypress_container(_cb_container):
             )
             callback = getattr(self._cb, callback)
 
-        cbdict = self.get.cbs[key]
+        cbdict = self.get.cbs.setdefault(key, dict())
 
         # get a unique name for the callback
         ncb = [
@@ -1649,6 +1663,29 @@ class cb_container:
             cb_cls=keypress_callbacks,
             method="keypress",
         )
+
+    def get_execute_callbacks(self):
+        """
+        Get if callbacks should be executed or not.
+
+        Returns
+        -------
+        bool
+            If True, callbacks are executed.
+
+        """
+        return self._m.parent._execute_callbacks
+
+    def execute_callbacks(self, val):
+        """
+        Activate / deactivate triggering callbacks.
+
+        Parameters
+        ----------
+        val : bool
+            If True, callbacks will be executed.
+        """
+        self._m.parent._execute_callbacks = val
 
     @property
     @wraps(cb_click_container)
@@ -1745,6 +1782,12 @@ class cb_container:
             obj._init_cbs()
 
         self._remove_default_keymaps()
+
+    def _clear_callbacks(self):
+        # clear all callback containers
+        for method in self._methods:
+            obj = getattr(self, method)
+            obj.get.cbs.clear()
 
     def _reset_cids(self):
         # reset the callback functions (required to re-attach the callbacks

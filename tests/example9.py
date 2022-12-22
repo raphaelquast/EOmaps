@@ -102,4 +102,4 @@ mg.m_top.colorbar.ax_cb_plot.tick_params(labelsize=6)
 # update the padding for the axes
 mg.subplots_adjust(bottom=0.1, left=0.12, right=0.94, wspace=0.3, hspace=0.3)
 
-mg.add_logo()
+mg.add_logo(fix_position=True)
