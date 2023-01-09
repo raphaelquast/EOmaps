@@ -4561,7 +4561,7 @@ class Maps(object):
         """
 
         try:
-            if plt.get_backend() not in ["Qt5Agg"]:
+            if plt.get_backend() not in ["QtAgg", "Qt5Agg"]:
                 print(
                     "EOmaps: Using m.open_widget() is only possible if you use matplotlibs"
                     + f" 'Qt5Agg' backend! (active backend: '{plt.get_backend()}')"
