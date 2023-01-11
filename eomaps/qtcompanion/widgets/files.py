@@ -49,6 +49,7 @@ class ShapeSelector(QtWidgets.QFrame):
         aggregator=_none_or_val,
         mask_radius=_none_or_val,
         radius=_identify_radius,
+        n=_none_or_val,
     )
 
     _argtypes = dict(
