@@ -1251,13 +1251,15 @@ class Maps(object):
             the pyproj CRS instance
 
         """
-        if crs == "in":
-            crs = self.data_specs.crs
-        elif crs == "out" or crs == "plot":
-            crs = self.crs_plot
-
         if not hasattr(self, "_crs_cache"):
             self._crs_cache = dict()
+
+        # check for strings first to avoid expensive equality checking for CRS objects!
+        if isinstance(crs, str):
+            if crs == "in":
+                crs = self.data_specs.crs
+            elif crs == "out" or crs == "plot":
+                crs = self.crs_plot
 
         h = hash(crs)
         if h in self._crs_cache:
