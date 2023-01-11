@@ -1582,9 +1582,7 @@ class BlitManager:
         # paranoia in case we missed the first draw event
         if getattr(self.figure, "_cachedRenderer", "nope") is None:
             self.on_draw(None)
-            self._after_update_actions.append(
-                lambda: self.blit_artists(artists.copy(), bg)
-            )
+            self._after_update_actions.append(lambda: self.blit_artists(artists, bg))
             return
 
         # restore the background
