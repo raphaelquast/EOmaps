@@ -31,6 +31,8 @@ def _identify_radius(r):
         # try to identify tuples
         if r.startswith("(") and r.endswith(")"):
             rx, ry = map(float, r.lstrip("(").rstrip(")").split(","))
+        elif r == "None":
+            r = None
         else:
             r = float(r)
             rx = ry = r
