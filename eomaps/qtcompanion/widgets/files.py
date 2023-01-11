@@ -106,7 +106,7 @@ class ShapeSelector(QtWidgets.QFrame):
 
             return convval
 
-        print(r"WARNING value-conversion for {key} = {val} did not succeed!")
+        print(f"WARNING value-conversion for {key} = {val} did not succeed!")
         return val
 
     @property

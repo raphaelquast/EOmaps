@@ -257,6 +257,7 @@ class shapes(object):
 
         def __init__(self, m):
             self._m = m
+            self._n = None
 
         def __call__(self, radius=1000, n=None):
             """
@@ -298,6 +299,8 @@ class shapes(object):
                         return 100
                     else:
                         return 20
+                else:
+                    return 20
             return self._n
 
         @n.setter
@@ -488,6 +491,8 @@ class shapes(object):
                         return 100
                     else:
                         return 20
+                else:
+                    return 20
             return self._n
 
         @n.setter
@@ -719,17 +724,8 @@ class shapes(object):
                 shape._radius = radius
                 shape.radius_crs = radius_crs
                 shape.mesh = mesh
+                shape.n = n
 
-                if mesh is True:
-                    if n is None:
-                        n = 1
-                    elif n > 1:
-                        warnings.warn(
-                            "EOmaps: rectangles with 'mesh=True' only supports n=1"
-                        )
-                    shape.n = 1
-                else:
-                    shape.n = n
                 m._shape = shape
 
         @property
@@ -759,7 +755,14 @@ class shapes(object):
 
         @n.setter
         def n(self, val):
-            self._n = val
+            if self.mesh is True:
+                if val is not None and val != 1:
+                    warnings.warn(
+                        "EOmaps: rectangles with 'mesh=True' only supports n=1"
+                    )
+                self._n = 1
+            else:
+                self._n = val
 
         @property
         def radius(self):
