@@ -329,7 +329,7 @@ class ScaleBar:
 
         if hasattr(self, "_lon") and hasattr(self, "_lat"):
             self.set_position()
-            self._m.BM.update(blit=False)
+            self._m.BM.blit_artists(self._artists.values())
 
     def set_patch_props(self, offsets=None, **kwargs):
         """
@@ -368,7 +368,7 @@ class ScaleBar:
 
         if hasattr(self, "_lon") and hasattr(self, "_lat"):
             self.set_position()
-            self._m.BM.update(blit=False)
+            self._m.BM.blit_artists(self._artists.values())
 
     def set_label_props(
         self, scale=None, rotation=None, every=None, offset=None, color=None, **kwargs
@@ -423,7 +423,7 @@ class ScaleBar:
 
         if hasattr(self, "_lon") and hasattr(self, "_lat"):
             self.set_position()
-            self._m.BM.update(blit=False)
+            self._m.BM.blit_artists(self._artists.values())
 
     def _get_base_pts(self, lon, lat, azim, npts=None):
         if npts is None:
