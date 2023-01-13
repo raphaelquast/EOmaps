@@ -109,12 +109,14 @@ class shapes(object):
             else:
                 radius = m._estimated_radius
         else:
-            if isinstance(radius, (list, np.ndarray)):
-                radiusx = radiusy = tuple(radius)
             # get manually specified radius (e.g. if radius != "estimate")
+            if isinstance(radius, (list, np.ndarray)):
+                radiusx = radiusy = np.asanyarray(radius).ravel()
             elif isinstance(radius, tuple):
                 radiusx, radiusy = radius
             elif isinstance(radius, (int, float, np.number)):
+                radiusx = radiusy = radius
+            else:
                 radiusx = radiusy = radius
 
             radius = (radiusx, radiusy)
@@ -265,8 +267,11 @@ class shapes(object):
 
             Parameters
             ----------
-            radius : float
+            radius : float or array-like
                 The radius of the circles in meters.
+
+                If you provide an array of sizes, each datapoint will be drawn with
+                the respective size!
             n : int or None
                 The number of intermediate points to calculate on the geodesic circle.
                 If None, 100 is used for < 10k pixels and 20 otherwise.
@@ -313,17 +318,7 @@ class shapes(object):
 
         @radius.setter
         def radius(self, val):
-            if not isinstance(val, (int, float)):
-                print("EOmaps: geod_circles only support a number as radius!")
-                if isinstance(val[0], (int, float)):
-                    print("EOmaps: ... using the mean")
-                    val = np.mean(val)
-                else:
-                    raise TypeError(
-                        f"EOmaps: '{val}' is not a valid radius for 'geod_circles'!"
-                    )
-
-            self._radius = val
+            self._radius = np.asanyarray(np.atleast_1d(val))
 
         @property
         def radius_crs(self):
@@ -358,7 +353,7 @@ class shapes(object):
             -------
             lons : array-like
                 the longitudes of the geodetic circle points.
-            lats : TYPE
+            lats : array-like
                 the latitudes of the geodetic circle points.
 
             """
@@ -367,7 +362,10 @@ class shapes(object):
             if isinstance(radius, (int, float)):
                 radius = np.full((size, n), radius)
             else:
-                radius = (np.broadcast_to(radius[:, None], (size, n)),)
+                if radius.size != lon.size:
+                    radius = np.broadcast_to(radius[:, None], (size, n))
+                else:
+                    radius = np.broadcast_to(radius.ravel()[:, None], (size, n))
 
             geod = self._m.crs_plot.get_geod()
             lons, lats, back_azim = geod.fwd(
@@ -405,8 +403,8 @@ class shapes(object):
                 ~xs.mask.any(axis=0)
                 & ~ys.mask.any(axis=0)
                 & ((dx / dy) < 10)
-                & (dx < radius * 50)
-                & (dy < radius * 50)
+                & (dx < radius.max() * 50)
+                & (dy < radius.max() * 50)
             )
 
             mask = np.broadcast_to(mask[:, None].T, lons.shape)
@@ -456,10 +454,13 @@ class shapes(object):
 
             Parameters
             ----------
-            radius : int, float, tuple or str, optional
+            radius : int, float, array-like or str, optional
                 The radius in x- and y- direction.
                 The default is "estimate" in which case the radius is attempted
                 to be estimated from the input-coordinates.
+
+                If you provide an array of sizes, each datapoint will be drawn with
+                the respective size!
             radius_crs : crs-specification, optional
                 The crs in which the dimensions are defined.
                 The default is "in".
@@ -506,7 +507,10 @@ class shapes(object):
 
         @radius.setter
         def radius(self, val):
-            self._radius = val
+            if isinstance(val, (list, tuple, np.ndarray)):
+                self._radius = np.asanyarray(val).ravel()
+            else:
+                self._radius = val
 
         def __repr__(self):
             try:
@@ -698,6 +702,9 @@ class shapes(object):
                 The radius in x- and y- direction.
                 The default is "estimate" in which case the radius is attempted
                 to be estimated from the input-coordinates.
+
+                If you provide an array of sizes, each datapoint will be drawn with
+                the respective size!
             radius_crs : crs-specification, optional
                 The crs in which the dimensions are defined.
                 The default is "in".
@@ -771,7 +778,10 @@ class shapes(object):
 
         @radius.setter
         def radius(self, val):
-            self._radius = val
+            if isinstance(val, (list, tuple, np.ndarray)):
+                self._radius = np.asanyarray(val).ravel()
+            else:
+                self._radius = val
 
         def __repr__(self):
             try:
