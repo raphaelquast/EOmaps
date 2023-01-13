@@ -154,7 +154,7 @@ class searchtree:
             else:
                 radius = self._m.shape.radius
 
-            self.d = max(radius) * self._pick_distance
+            self.d = np.max(radius) * self._pick_distance
         elif isinstance(pick_distance, str):
             self.d = float(pick_distance)
 
