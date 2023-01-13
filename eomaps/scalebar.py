@@ -463,6 +463,7 @@ class ScaleBar:
 
     def _get_d(self):
         # the base length used to define the size of the scalebar
+
         # get the position in figure coordinates
         x, y = self._m.ax.transData.transform(
             self._t_plot.transform(self._lon, self._lat)
@@ -476,16 +477,11 @@ class ScaleBar:
         return np.abs(xb[1] - yb[1])
 
     def _get_patch_verts(self, pts, lon, lat, ang, d):
-        ot = 0.75 * d * self._patch_offsets[0]  # top offset
-        # ob = 2.5 * d * self._patch_offsets[1]  # bottom offset
-        ob = (2.5 * d + self._maxw) * self._patch_offsets[1]  # bottom offset
-
-        ob = ((self._label_props["offset"] + 2) * d + self._maxw) * self._patch_offsets[
-            1
-        ]  # bottom offset
-
-        o_l = 0.5 * d * self._patch_offsets[2]  # left offset
-        o_r = 1.5 * d * self._patch_offsets[3]  # right offset
+        # top bottom left right referrs to a horizontally oriented colorbar!
+        ot = d * self._patch_offsets[0]
+        ob = self._maxw + d * (self._label_props["offset"] + self._patch_offsets[1])
+        o_l = d * self._patch_offsets[2]
+        o_r = self._top_h * 1.5 + d * self._patch_offsets[3]
 
         dxy = np.gradient(pts.reshape((-1, 2)), axis=0)
         alpha = np.arctan2(dxy[:, 1], -dxy[:, 0])
@@ -499,6 +495,8 @@ class ScaleBar:
 
         ptop[-1] -= (o_r * np.cos(alpha[-1]), -o_r * np.sin(alpha[-1]))
         pbottom[-1] -= (o_r * np.cos(alpha[-1]), -o_r * np.sin(alpha[-1]))
+
+        # TODO check how to deal with invalid vertices (e.g. self-intersections)
 
         return np.vstack([ptop, pbottom[::-1]])
 
@@ -516,8 +514,8 @@ class ScaleBar:
     def _get_txt_coords(self, lon, lat, d, ang):
         # get the base point for the text
         xt, yt = self._t_plot.transform(lon, lat)
-        xt = xt - d * self._label_props["offset"] * np.sin(ang) / 2
-        yt = yt + d * self._label_props["offset"] * np.cos(ang) / 2
+        xt = xt - d * self._label_props["offset"] * np.sin(ang)
+        yt = yt + d * self._label_props["offset"] * np.cos(ang)
         return xt, yt
 
     from functools import lru_cache
@@ -540,16 +538,27 @@ class ScaleBar:
             # if the object is within the canvas!
             try:
                 # get the widths of the text patches in data-coordinates
-                bbox = val.get_tightbbox(self._m.f.canvas.get_renderer())
+                bbox = val.get_window_extent(self._m.f.canvas.get_renderer())
                 bbox = bbox.transformed(self._m.ax.transData.inverted())
-
                 # use the max to account for rotated text objects
                 w = max(bbox.width, bbox.height)
                 if w > _maxw:
                     _maxw = w
             except Exception:
                 pass
+
+        _top_h = 0
+        try:
+            _top_label = next(i for i in sorted(self._artists) if i.startswith("text_"))
+            val = self._artists[_top_label]
+            bbox = val.get_window_extent(self._m.f.canvas.get_renderer())
+            bbox = bbox.transformed(self._m.ax.transData.inverted())
+            _top_h = min(bbox.width, bbox.height)
+        except Exception:
+            pass
+
         self._maxw = _maxw
+        self._top_h = _top_h
 
     def _set_minitxt(self, d, pts):
         angs = np.arctan2(*np.array([p[0] - p[-1] for p in pts]).T[::-1])
@@ -566,9 +575,7 @@ class ScaleBar:
             else:
                 txt = self._get_txt(i)
 
-            xy = self._get_txt_coords(
-                lon, lat, self._label_props["scale"] * d * 1.5, ang
-            )
+            xy = self._get_txt_coords(lon, lat, d, ang)
             tp = TextPath(
                 xy, txt, size=self._label_props["scale"] * d / 2, prop=self._font_props
             )
@@ -617,9 +624,7 @@ class ScaleBar:
             else:
                 txt = self._get_txt(i)
 
-            xy = self._get_txt_coords(
-                lon, lat, self._label_props["scale"] * d * 1.5, ang
-            )
+            xy = self._get_txt_coords(lon, lat, d, ang)
 
             tp = PathPatch(
                 TextPath(
@@ -709,7 +714,7 @@ class ScaleBar:
 
     def set_position(self, lon=None, lat=None, azim=None, update=False):
         """
-        Sset the position of the colorbar
+        Set the position of the colorbar
 
         Parameters
         ----------
@@ -752,6 +757,12 @@ class ScaleBar:
         self._artists["scale"].set_colors(colors)
 
         verts = self._get_patch_verts(pts, lon, lat, ang, d)
+
+        # TODO check how to deal with invalid vertices!!
+        # print(np.all(np.isfinite(self._m._transf_plot_to_lonlat.transform(*verts.T))))
+
+        # verts = np.ma.masked_invalid(verts)
+
         self._artists["patch"].set_verts([verts])
         self._artists["patch"].update(self._patch_props)
 
