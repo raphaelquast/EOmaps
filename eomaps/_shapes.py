@@ -403,8 +403,8 @@ class shapes(object):
                 ~xs.mask.any(axis=0)
                 & ~ys.mask.any(axis=0)
                 & ((dx / dy) < 10)
-                & (dx < radius.max() * 50)
-                & (dy < radius.max() * 50)
+                & (dx < np.max(radius) * 50)
+                & (dy < np.max(radius) * 50)
             )
 
             mask = np.broadcast_to(mask[:, None].T, lons.shape)
