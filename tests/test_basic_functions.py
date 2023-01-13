@@ -419,7 +419,7 @@ class TestBasicPlotting(unittest.TestCase):
         m.plot_map()
 
         # plot on the same axes
-        m2 = m.copy(parent=m, data_specs=True, ax=m.ax)
+        m2 = m.copy(data_specs=True, ax=m.ax)
         m2.set_shape.ellipses()
         m2.plot_map(facecolor="none", edgecolor="r")
 
@@ -913,10 +913,10 @@ class TestBasicPlotting(unittest.TestCase):
 
         # test providing custom args
         m = Maps()
-        countries = m.add_feature.cultural_110m.admin_0_countries
-        countries(ec="k", fc="g")
+        countries = m.add_feature.cultural.admin_0_countries
+        countries(ec="k", fc="g", scale=110)
 
-        m.add_feature.physical_110m.ocean(fc="b")
+        m.add_feature.physical.ocean(fc="b", scale=110)
 
         plt.close("all")
 
