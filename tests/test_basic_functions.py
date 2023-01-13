@@ -44,8 +44,8 @@ class TestBasicPlotting(unittest.TestCase):
     def test_simple_plot_shapes(self):
         usedata = self.data.sample(500)
 
-        m = Maps(4326)
         # rectangles
+        m = Maps(4326)
         m.set_data(usedata, x="x", y="y", in_crs=3857)
         m.set_shape.geod_circles(radius=100000)
         m.set_classify.Quantiles(k=5)
@@ -53,7 +53,6 @@ class TestBasicPlotting(unittest.TestCase):
         m.indicate_masked_points()
 
         m.add_feature.preset.ocean(ec="k", scale="110m")
-
         plt.close("all")
 
         # rectangles
@@ -65,10 +64,17 @@ class TestBasicPlotting(unittest.TestCase):
         m.add_feature.preset.ocean(ec="k", scale="110m")
 
         m.set_shape.rectangles(radius=1, radius_crs=4326)
-        m.plot_map()
+        m.plot_map(ec="k")
 
         m.set_shape.rectangles(radius=(1, 2), radius_crs="out")
-        m.plot_map()
+        m.plot_map(ec="k")
+
+        r = usedata.x.rank()
+        r = r / r.max() * 10
+        m.set_shape.rectangles(radius=r, radius_crs="out")
+        m.plot_map(ec="k", fc="none")
+
+        plt.close("all")
 
         # rectangles
         m = Maps(4326)
@@ -93,6 +99,13 @@ class TestBasicPlotting(unittest.TestCase):
 
         m.set_shape.ellipses(radius=1, radius_crs=4326)
         m.plot_map()
+
+        r = usedata.x.rank()
+        r = r / r.max() * 10
+        m.set_shape.ellipses(radius=r, radius_crs="out")
+        m.plot_map(ec="k", fc="none")
+
+        plt.close("all")
 
         plt.close("all")
 
