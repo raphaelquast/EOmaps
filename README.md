@@ -142,50 +142,42 @@ m.add_feature.cultural.admin_0_countries(scale=50, fc="none", ec="g", lw=0.3)
 m.add_wms.OpenStreetMap.add_layer.default()
 
 ### Plot datasets
-# - assign a dataset
-m.set_data(data=data, x=x, y=y, crs=4326)
-# - set the shape you want to use to represent the data-points
-m.set_shape.ellipses()
-# - (optionally) classify the data
-m.set_classify_specs(scheme=Maps.CLASSIFIERS.FisherJenks, k=6)
-# - plot the data
-m.plot_map(cmap="viridis", vmin=-100, vmax=100, set_extent=False)
-# - add a colorbar with a colored histogram on top
-m.add_colorbar(hist_bins="bins", label="What a nice colorbar")
+m.set_data(data=data, x=x, y=y, crs=4326) # assign a dataset
+m.set_shape.ellipses() # set how you want to represent the data-points on the map
+m.set_classify_specs(scheme=Maps.CLASSIFIERS.FisherJenks, k=6) # classify the data
+m.plot_map(cmap="viridis", vmin=-100, vmax=100, set_extent=False) # plot the data
+m.add_colorbar(hist_bins="bins", label="What a nice colorbar") # add a colorbar
 
 ### Use callback functions to interact with the map
-# - draw a marker at the click-position if you Right-click on the map
+#   (NOTE: you can also define custom callbacks!)
+# - click callbacks are executed if you click anywhere on the map
 m.cb.click.attach.mark(shape="geod_circles", radius=1e5, button=3)
-# - identify the closest datapoint and add an annotation on left-click
-m.cb.pick.attach.annotate()
-# - peek on layer 1 if you cllick on the map
 m.cb.click.attach.peek_layer(layer="layer 2", how=0.4)
-# - show an annotation while you move the mouse
-# (and simultaneously press "a" on the keyboard)
-m.cb.move.attach.annotate(modifier="a")
-# - switch between the layers with the keyboard
+#   use keypress-modifiers to trigger only if a button is pressed
+m.cb.click.attach.annotate(modifier="a") # use keypress modifiers
+# - pick callbacks identify the closest datapoint
+m.cb.pick.attach.annotate()
+# - keypress callbacks are executed if you press a key on the keyboard
+#   (using "m.all" ensures that the cb triggers irrespective of the visible layer)
 m.all.cb.keypress.attach.switch_layer(layer="base", key="0")
 m.all.cb.keypress.attach.switch_layer(layer="layer 2", key="1")
 
 ### Use multiple layers to compare and analyze different datasets
-# - create a new plot-layer
-#   ("m2" is just another Maps-object!)
-m2 = m.new_layer(layer="layer 2")
-m2.add_feature.preset.ocean()
+m2 = m.new_layer(layer="layer 2") # create a new plot-layer
+m2.add_feature.preset.ocean() # populate the layer
 # - Get a clickable widget to switch between the available plot-layers
 m.util.layer_selector(loc="upper center")
 
 ### Add zoomed-in "inset-maps" to highlight areas on th map
-m_inset = m.new_inset_map((10, 45), radius=10, layer="base",
-                          boundary=dict(lw=2, ec="r"),
-                          indicate_extent=dict(lw=2))
+m_inset = m.new_inset_map((10, 45), radius=10, layer="base")
 m_inset.add_feature.preset.coastline()
 m_inset.add_feature.preset.ocean()
-m_inset.set_data(data=data, x=x, y=y, crs=4326)
+#   plot the same data as before
+m_inset.data_specs = m.data_specs
 m_inset.classify_specs = m.classify_specs
 m_inset.plot_map()
 
-### Apply a specific layout (using  m.get_layout() )
+### Reposition axes based on a given layout (check m.get_layout())
 m.apply_layout(
     {'0_map': [0.44306, 0.25, 0.48889, 0.73333],
      '1_cb': [0.0125, 0.0, 0.98, 0.23377],
