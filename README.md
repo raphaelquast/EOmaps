@@ -154,7 +154,7 @@ m.add_colorbar(hist_bins="bins", label="What a nice colorbar") # add a colorbar
 m.cb.click.attach.mark(shape="geod_circles", radius=1e5, button=3)
 m.cb.click.attach.peek_layer(layer="layer 2", how=0.4)
 #   use keypress-modifiers to trigger only if a button is pressed
-m.cb.click.attach.annotate(modifier="a") # use keypress modifiers
+m.cb.click.attach.annotate(modifier="a")
 # - pick callbacks identify the closest datapoint
 m.cb.pick.attach.annotate()
 # - keypress callbacks are executed if you press a key on the keyboard
