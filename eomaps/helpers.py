@@ -141,7 +141,7 @@ class searchtree:
 
         if isinstance(pick_distance, (int, float, np.number)):
             # evaluate an appropriate pick-distance
-            if self._m.shape.radius_crs != "out":
+            if getattr(self._m.shape, "radius_crs", "?") != "out":
                 try:
                     radius = self._m.set_shape._estimate_radius(self._m, "out", np.max)
                 except AssertionError:

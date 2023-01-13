@@ -426,10 +426,7 @@ class _click_callbacks(object):
             ), f"'{shape}' is not a valid marker-shape... use one of {possible_shapes}"
 
         if radius_crs is None:
-            try:
-                radius_crs = self.m.shape.radius_crs
-            except Exception:
-                radius_crs = "in"
+            radius_crs = getattr(self.m.shape, "radius_crs", "in")
 
         if radius is None:
             if self.m.coll is not None:
