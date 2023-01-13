@@ -566,7 +566,7 @@ class shapes(object):
 
         @radius.setter
         def radius(self, val):
-            if isinstance(val, (list, tuple, np.ndarray)):
+            if isinstance(val, (list, np.ndarray)):
                 self._radius = np.asanyarray(val).ravel()
             else:
                 self._radius = val
@@ -627,7 +627,6 @@ class shapes(object):
         def _get_ellipse_points(self, x, y, crs, radius, radius_crs="in", n=20):
             crs = self._m.get_crs(crs)
             radius_crs = self._m.get_crs(radius_crs)
-
             # transform from crs to the plot_crs
             t_in_plot = shapes.get_transformer(crs, self._m.crs_plot)
             # transform from crs to the radius_crs
@@ -647,8 +646,8 @@ class shapes(object):
                 xs, ys = self._calc_ellipse_points(
                     p[0],
                     p[1],
-                    np.full_like(x, rx, dtype=float),
-                    np.full_like(x, ry, dtype=float),
+                    np.broadcast_to(rx, x.shape).astype(float),
+                    np.broadcast_to(ry, y.shape).astype(float),
                     np.full_like(x, 0),
                     n=n,
                 )
@@ -660,8 +659,8 @@ class shapes(object):
                 xs, ys = self._calc_ellipse_points(
                     p[0],
                     p[1],
-                    np.full_like(x, rx, dtype=float),
-                    np.full_like(x, ry, dtype=float),
+                    np.broadcast_to(rx, x.shape).astype(float),
+                    np.broadcast_to(ry, y.shape).astype(float),
                     np.full_like(x, 0),
                     n=n,
                 )
@@ -837,7 +836,7 @@ class shapes(object):
 
         @radius.setter
         def radius(self, val):
-            if isinstance(val, (list, tuple, np.ndarray)):
+            if isinstance(val, (list, np.ndarray)):
                 self._radius = np.asanyarray(val).ravel()
             else:
                 self._radius = val
