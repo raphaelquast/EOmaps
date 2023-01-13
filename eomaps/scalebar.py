@@ -125,6 +125,19 @@ class ScaleBar:
             The default is:
                 >>> dict(scale=1, offset=1, rotation=0, every=2)
         """
+        self._m = m
+
+        self._scale_props = dict(scale=None)
+        self._label_props = dict()
+        self._patch_props = dict()
+        self._patch_offsets = (1, 1, 1, 1)
+
+        self._font_kwargs = dict()
+        self._fontkeys = ("family", "style", "variant", "stretch", "weight")
+
+        # apply preset styling (so that any additional properties are applied on top
+        # of the preset)
+        self._apply_preset(preset)
 
         if scale is None:
             self._autoscale = autoscale_fraction
@@ -133,27 +146,17 @@ class ScaleBar:
 
         self._auto_position = auto_position
 
-        self._m = m
+        self.set_scale_props(scale=scale, **(scale_props if scale_props else {}))
+        # set the label properties
+        self.set_label_props(**(label_props if label_props else {}))
+        # set the patch properties
+        self.set_patch_props(**(patch_props if patch_props else {}))
 
         # number of intermediate points for evaluating the curvature
         self._interm_pts = 20
 
         self._cb_offset_interval = 0.05
         self._cb_rotate_inverval = 1
-
-        self._fontkeys = ("family", "style", "variant", "stretch", "weight")
-        self._font_kwargs = dict()
-
-        self._scale_props = dict(scale=scale, n=10, width=5, colors=("k", "w"))
-        self._patch_props = dict(fc=".75", ec="k", lw=1, ls="-")
-        self._patch_offsets = (1, 1, 1, 1)
-        self._label_props = dict(scale=2, rotation=0, every=2, offset=1, color="k")
-
-        self.set_scale_props(scale=scale, **(scale_props if scale_props else {}))
-        # set the label properties
-        self.set_label_props(**(label_props if label_props else {}))
-        # set the patch properties
-        self.set_patch_props(**(patch_props if patch_props else {}))
 
         # geod from plot_crs
         self._geod = self._m.crs_plot.get_geod()
@@ -171,21 +174,39 @@ class ScaleBar:
         )
 
         self._artists = OrderedDict(patch=None, scale=None)
-
-        self.preset = preset
-
         self._picker_name = None
 
-    def apply_preset(self, preset):
-        if preset == "bw":
-            self.set_scale_props(n=10, width=4, colors=("k", "w"))
-            self.set_patch_props(fc="none", ec="none", offsets=(1, 1.6, 1, 1))
-            self.set_label_props(
-                scale=1.5, offset=0.5, every=2, weight="bold", family="Courier New"
-            )
+    def _get_preset_props(self, preset):
+        scale_props = dict(n=10, width=5, colors=("k", "w"))
+        patch_props = dict(fc=".75", ec="k", lw=1, ls="-")
+        label_props = dict(scale=2, offset=1, every=2, rotation=0, color="k")
 
-            self._estimate_scale()
-            self.set_position()
+        if preset == "bw":
+            scale_props.update(dict(n=10, width=4, colors=("k", "w")))
+            patch_props.update(dict(fc="none", ec="none"))
+            label_props.update(
+                dict(
+                    scale=1.5,
+                    offset=0.5,
+                    every=2,
+                    weight="bold",
+                    family="Courier New",
+                )
+            )
+        return scale_props, patch_props, label_props
+
+    def _apply_preset(self, preset):
+        self.preset = preset
+
+        scale_props, patch_props, label_props = self._get_preset_props(preset)
+        self.set_scale_props(**scale_props)
+        self.set_patch_props(**patch_props)
+        self.set_label_props(**label_props)
+
+    def apply_preset(self, preset):
+        self._apply_preset(preset)
+        self._estimate_scale()
+        self.set_position()
 
     @staticmethod
     def round_to_n(x, n=0):
@@ -338,9 +359,10 @@ class ScaleBar:
             ["lw", "linewidth"],
             ["ls", "linestyle"],
         ]:
-            self._patch_props[key] = kwargs.pop(
-                key, kwargs.pop(synonym, self._patch_props[key])
-            )
+            if key in self._patch_props:
+                self._patch_props[key] = kwargs.pop(
+                    key, kwargs.pop(synonym, self._patch_props[key])
+                )
 
         self._patch_props.update(kwargs)
 
@@ -481,7 +503,11 @@ class ScaleBar:
         ot = d * self._patch_offsets[0]
         ob = self._maxw + d * (self._label_props["offset"] + self._patch_offsets[1])
         o_l = d * self._patch_offsets[2]
-        o_r = self._top_h * 1.5 + d * self._patch_offsets[3]
+        o_r = d * self._patch_offsets[3]
+
+        # in case the top scale has a label, add a margin to encompass the text!
+        if len(pts) % self._label_props["every"] == 0:
+            o_r += self._top_h * 1.5
 
         dxy = np.gradient(pts.reshape((-1, 2)), axis=0)
         alpha = np.arctan2(dxy[:, 1], -dxy[:, 0])
@@ -684,7 +710,6 @@ class ScaleBar:
 
         verts = self._get_patch_verts(pts, lon, lat, ang, d)
         p = PolyCollection([verts], **self._patch_props)
-        p.set_antialiased(False)
         self._artists["patch"] = self._m.ax.add_artist(p)
 
         # -------------- add the scalebar
@@ -697,9 +722,6 @@ class ScaleBar:
         coll.set_linewidth(self._scale_props["width"])
         self._artists["scale"] = self._m.ax.add_collection(coll, autolim=False)
 
-        # apply preset
-        self.apply_preset(self.preset)
-
         # -------------- make all artists animated
         self._artists["scale"].set_zorder(1)
         self._artists["patch"].set_zorder(0)
@@ -708,8 +730,7 @@ class ScaleBar:
         # self._m.BM.add_artist(self._artists["text"])
         self._m.BM.add_artist(self._artists["patch"])
 
-        self._m.BM.update(artists=self._artists.values())
-
+        self._m.BM.blit_artists(self._artists.values())
         # make sure to update the artists on zoom
         self._decorate_zooms()
 
