@@ -598,7 +598,9 @@ class TestBasicPlotting(unittest.TestCase):
         m = Maps(Maps.CRS.Stereographic())
         m.add_feature.preset.coastline(ec="k", scale="110m")
         c1 = m.add_compass((0.1, 0.1))
+        self.assertTrue(np.allclose(c1.get_position(), np.array([0.1, 0.1])))
         c2 = m.add_compass((0.9, 0.9))
+        self.assertTrue(np.allclose(c2.get_position(), np.array([0.9, 0.9])))
 
         cv = m.f.canvas
 

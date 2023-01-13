@@ -1477,6 +1477,29 @@ class Compass:
             c.set_transform(trans)
         self._pos = pos
 
+    def get_position(self, coords="axis"):
+        """
+        Return the current position of the compass
+
+        Parameters
+        ----------
+        coords : str, optional
+            Define what coordinates are returned
+
+            - "data" : coordinates in the plot-crs
+            - "axis": relative [0-1] coordinates with respect to the
+              axis (e.g. (0, 0) = lower left corner, (1, 1) = upper right corner)
+
+            The default is "axis".
+
+        Returns
+        -------
+        pos
+            a tuple (x, y) representing the current location of the compass.
+
+        """
+        return self._ax2data.inverted().transform(self._pos)
+
     def set_ignore_invalid_angles(self, val):
         """
         Set how to deal with invalid rotation-angles.
