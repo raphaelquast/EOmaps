@@ -107,6 +107,21 @@ class TestBasicPlotting(unittest.TestCase):
 
         plt.close("all")
 
+        # scatter_points
+        m = Maps(4326)
+        m.set_data(usedata, x="x", y="y", in_crs=3857)
+
+        m.set_shape.scatter_points(marker="*", size=20)
+        m.plot_map()
+
+        m.set_shape.scatter_points(size=1)
+        m.plot_map()
+
+        r = usedata.x.rank()
+        r = r / r.max() * 50
+        m.set_shape.scatter_points(size=r, marker="s")
+        m.plot_map(ec="k", fc="none")
+
         plt.close("all")
 
         # delaunay

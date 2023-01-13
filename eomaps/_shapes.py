@@ -441,6 +441,65 @@ class shapes(object):
 
             return coll
 
+    class _scatter_points(object):
+        name = "scatter_points"
+
+        def __init__(self, m):
+            self._m = m
+            self._n = None
+
+        def __call__(self, size=None, marker=None):
+            """
+            Draw each datapoint as a shape with a size defined in points**2.
+
+            All arguments are forwarded to `m.ax.scatter()`.
+
+            Parameters
+            ----------
+            size : int, float, array-like or str, optional
+                The marker size in points**2.
+
+                If you provide an array of sizes, each datapoint will be drawn with
+                the respective size!
+            marker : str
+                The marker style. Can be either an instance of the class or the text
+                shorthand for a particular marker. Some examples are:
+
+                - `".", "o", "s", "<", ">", "^", "$A^2$"`
+
+                See matplotlib.markers for more information about marker styles.
+            """
+            from . import MapsGrid  # do this here to avoid circular imports!
+
+            for m in self._m if isinstance(self._m, MapsGrid) else [self._m]:
+                shape = self.__class__(m)
+                shape._size = size
+                shape._marker = marker
+                m._shape = shape
+
+        @property
+        def _initargs(self):
+            return dict(size=self._size, marker=self._marker)
+
+        @property
+        def radius(self):
+            radius = shapes._get_radius(self._m, "estimate", "in")
+            return radius
+
+        @property
+        def radius_crs(self):
+            return "in"
+
+        def get_coll(self, x, y, crs, **kwargs):
+            color_and_array = shapes._get_colors_and_array(
+                kwargs, np.full((x.size,), True)
+            )
+            color_and_array["c"] = color_and_array["array"]
+            coll = self._m.ax.scatter(
+                x, y, s=self._size, marker=self._marker, **color_and_array, **kwargs
+            )
+            return coll
+
     class _ellipses(object):
         name = "ellipses"
 
@@ -1641,6 +1700,11 @@ class shapes(object):
             kwargs.setdefault("antialiased", False)
 
             return self._get_polygon_coll(x, y, crs, **kwargs)
+
+    @wraps(_scatter_points.__call__)
+    def scatter_points(self, *args, **kwargs):
+        shp = self._scatter_points(m=self._m)
+        return shp.__call__(*args, **kwargs)
 
     @wraps(_geod_circles.__call__)
     def geod_circles(self, *args, **kwargs):
