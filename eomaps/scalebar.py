@@ -684,6 +684,7 @@ class ScaleBar:
 
         verts = self._get_patch_verts(pts, lon, lat, ang, d)
         p = PolyCollection([verts], **self._patch_props)
+        p.set_antialiased(False)
         self._artists["patch"] = self._m.ax.add_artist(p)
 
         # -------------- add the scalebar
