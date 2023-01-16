@@ -4411,6 +4411,8 @@ class Maps(object):
         decoded_values
             The decoded data values
         """
+        if val is None:
+            return None
 
         encoding = self.data_specs.encoding
         if not any(encoding is i for i in (None, False)):
