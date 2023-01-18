@@ -1272,17 +1272,29 @@ class cb_pick_container(_click_container):
 
                 return clickdict
             else:
-                clickdicts = []
-                for i in range(len(ind)):
-                    clickdict = dict(
-                        ID=ID[i],
-                        pos=(pos[0][i], pos[1][i]),
-                        val=val[i],
-                        ind=ind[i],
-                        val_color=val_color[i],
-                        picker_name=self._picker_name,
-                    )
-                    clickdicts.append(clickdict)
+                if n_inds > 1:
+                    clickdicts = []
+                    for i in range(n_inds):
+                        clickdict = dict(
+                            ID=ID[i],
+                            pos=(pos[0][i], pos[1][i]),
+                            val=val[i],
+                            ind=ind[i],
+                            val_color=val_color[i],
+                            picker_name=self._picker_name,
+                        )
+                        clickdicts.append(clickdict)
+                else:
+                    clickdicts = [
+                        dict(
+                            ID=ID,  # convert IDs to numpy-arrays!
+                            pos=pos,
+                            val=val,
+                            ind=ind,
+                            val_color=val_color,
+                            picker_name=self._picker_name,
+                        )
+                    ]
 
                 return clickdicts
 
