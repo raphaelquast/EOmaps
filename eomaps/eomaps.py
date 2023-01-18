@@ -2524,7 +2524,7 @@ class Maps(object):
                 name=cmapname,
             )
 
-            plt.register_cmap(name=cmapname, cmap=kwargs["cmap"])
+            plt.colormaps.register(name=cmapname, cmap=kwargs["cmap"])
             if self._companion_widget is not None:
                 self._companion_widget.cmapsChanged.emit()
             # remember registered colormaps (to de-register on close)
@@ -3215,7 +3215,7 @@ class Maps(object):
 
         # de-register colormaps
         for cmap in self._registered_cmaps:
-            plt.cm.unregister_cmap(cmap)
+            plt.colormaps.unregister(cmap)
 
         # run garbage-collection to immediately free memory
         gc.collect
