@@ -7,6 +7,36 @@ import matplotlib.pyplot as plt
 
 from eomaps import Maps
 
+from matplotlib.backend_bases import MouseEvent
+
+
+def button_press_event(canvas, x, y, button, dblclick=False, guiEvent=None):
+    canvas._button = button
+    s = "button_press_event"
+    mouseevent = MouseEvent(
+        s, canvas, x, y, button, canvas._key, dblclick=dblclick, guiEvent=guiEvent
+    )
+    canvas.callbacks.process(s, mouseevent)
+
+
+def button_release_event(canvas, x, y, button, guiEvent=None):
+    s = "button_release_event"
+    event = MouseEvent(s, canvas, x, y, button, canvas._key, guiEvent=guiEvent)
+    canvas.callbacks.process(s, event)
+    canvas._button = None
+
+
+def scroll_event(canvas, x, y, step, guiEvent=None):
+    s = "scroll_event"
+    event = MouseEvent(s, canvas, x, y, step=step, guiEvent=guiEvent)
+    canvas.callbacks.process(s, event)
+
+
+def motion_notify_event(canvas, x, y, guiEvent=None):
+    s = "motion_notify_event"
+    event = MouseEvent(s, canvas, x, y, guiEvent=guiEvent)
+    canvas.callbacks.process(s, event)
+
 
 class TestWMS(unittest.TestCase):
     def setUp(self):
@@ -62,18 +92,19 @@ class TestWMS(unittest.TestCase):
         )
 
         # pick up the the legend (e.g. click on it)
-        m.f.canvas.button_press_event(*leg_cpos, 1, False)
+        button_press_event(m.f.canvas, *leg_cpos, 1, False)
 
         # resize the legend
-        m.f.canvas.scroll_event(*leg_cpos, 20, False)
+        scroll_event(m.f.canvas, *leg_cpos, 20, False)
 
         # move the legend
-        m.f.canvas.motion_notify_event(
+        motion_notify_event(
+            m.f.canvas,
             (m.ax.bbox.x0 + m.ax.bbox.x1) / 2,
             (m.ax.bbox.y0 + m.ax.bbox.y1) / 2,
             None,
         )
 
         # release the legend
-        m.f.canvas.button_press_event(0, 0, 1, False)
+        button_press_event(m.f.canvas, 0, 0, 1, False)
         plt.close(m.f)

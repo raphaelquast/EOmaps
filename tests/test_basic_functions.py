@@ -12,6 +12,49 @@ import numpy as np
 
 from eomaps import Maps, MapsGrid
 
+from matplotlib.backend_bases import MouseEvent, KeyEvent
+
+
+def button_press_event(canvas, x, y, button, dblclick=False, guiEvent=None):
+    canvas._button = button
+    s = "button_press_event"
+    mouseevent = MouseEvent(
+        s, canvas, x, y, button, canvas._key, dblclick=dblclick, guiEvent=guiEvent
+    )
+    canvas.callbacks.process(s, mouseevent)
+
+
+def button_release_event(canvas, x, y, button, guiEvent=None):
+    s = "button_release_event"
+    event = MouseEvent(s, canvas, x, y, button, canvas._key, guiEvent=guiEvent)
+    canvas.callbacks.process(s, event)
+    canvas._button = None
+
+
+def motion_notify_event(canvas, x, y, guiEvent=None):
+    s = "motion_notify_event"
+    event = MouseEvent(s, canvas, x, y, guiEvent=guiEvent)
+    canvas.callbacks.process(s, event)
+
+
+def scroll_event(canvas, x, y, step, guiEvent=None):
+    s = "scroll_event"
+    event = MouseEvent(s, canvas, x, y, step=step, guiEvent=guiEvent)
+    canvas.callbacks.process(s, event)
+
+
+def key_press_event(canvas, key, guiEvent=None):
+    s = "key_press_event"
+    event = KeyEvent(s, canvas, key, guiEvent=guiEvent)
+    canvas.callbacks.process(s, event)
+
+
+def key_release_event(canvas, key, guiEvent=None):
+    s = "key_release_event"
+    event = KeyEvent(s, canvas, key, guiEvent=guiEvent)
+    canvas.callbacks.process(s, event)
+    canvas._key = None
+
 
 class TestBasicPlotting(unittest.TestCase):
     def setUp(self):
@@ -633,9 +676,9 @@ class TestBasicPlotting(unittest.TestCase):
         cv = m.f.canvas
 
         # click on compass to move it around
-        cv.button_press_event(*m.ax.transAxes.transform((0.1, 0.1)), 1, False)
-        cv.motion_notify_event(*m.ax.transAxes.transform((0.5, 0.5)), False)
-        cv.button_release_event(*m.ax.transAxes.transform((0.5, 0.5)), 1, False)
+        button_press_event(cv, *m.ax.transAxes.transform((0.1, 0.1)), 1, False)
+        motion_notify_event(cv, *m.ax.transAxes.transform((0.5, 0.5)), False)
+        button_release_event(cv, *m.ax.transAxes.transform((0.5, 0.5)), 1, False)
 
         c1.set_position((-30000000, -2000000))
         c1.set_patch("r", "g", 5)
@@ -705,30 +748,30 @@ class TestBasicPlotting(unittest.TestCase):
         )
 
         # click on scalebar
-        cv.button_press_event(x, y, 1, False)
+        button_press_event(cv, x, y, 1, False)
 
         # move the scalebar
-        cv.motion_notify_event(x1, y1, False)
+        motion_notify_event(cv, x1, y1, False)
 
         # increase bbox size
-        cv.key_press_event("left")
-        cv.key_press_event("right")
-        cv.key_press_event("up")
-        cv.key_press_event("down")
+        key_press_event(cv, "left")
+        key_press_event(cv, "right")
+        key_press_event(cv, "up")
+        key_press_event(cv, "down")
 
         # deincrease bbox size
-        cv.key_press_event("alt+left")
-        cv.key_press_event("alt+right")
-        cv.key_press_event("alt+up")
-        cv.key_press_event("alt+down")
+        key_press_event(cv, "alt+left")
+        key_press_event(cv, "alt+right")
+        key_press_event(cv, "alt+up")
+        key_press_event(cv, "alt+down")
 
         # rotate the scalebar
-        cv.key_press_event("+")
-        cv.key_press_event("-")
+        key_press_event(cv, "+")
+        key_press_event(cv, "-")
 
         # adjust the padding between the ruler and the text
-        cv.key_press_event("alt+-")
-        cv.key_press_event("alt++")
+        key_press_event(cv, "alt+-")
+        key_press_event(cv, "alt++")
 
         for si in [s, s1, s2, s3]:
             si.remove()
