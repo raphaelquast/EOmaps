@@ -119,109 +119,214 @@ def progressbar(it, prefix="", size=60, file=sys.stdout):
 
 
 class searchtree:
-    def __init__(self, m=None, pick_distance=50):
+    def __init__(self, m):
         """
-        search for coordinates
+        Nearest-neighbour search.
 
         Parameters
         ----------
-        m : eomaps.Maps, optional
-            the maps-object. The default is None.
-        pick_distance : int, float or str optional
-            used to limit the number of pixels in the search to
-            - if a number is provided:
-              use a rectangle of (pick_distance * estimated radius in plot_crs)
-            - if a string is provided:
-              use a rectangle with r=float(pick_distance) in plot_crs
-
-            The default is 50.
+        m : eomaps.Maps
+            The maps-object that provides the data.
         """
         self._m = m
-        self._pick_distance = pick_distance
+        # set starting pick-distance to 50 times the radius
+        self.set_search_radius("50")
 
-        if isinstance(pick_distance, (int, float, np.number)):
+        self._misses = 0
+
+    @property
+    def d(self):
+        """Side-length of the search-rectangle (in units of the plot-crs)"""
+        return self._d
+
+    def set_search_radius(self, r):
+        """
+        Set the rectangle side-length that is used to limit the query.
+
+        (e.g. only points that are within a rectangle of the specified size
+         centered at the clicked point are considered!)
+
+        Parameters
+        ----------
+        r : int, float or str, optional
+            Set the radius of the (circular) area that is used to limit the
+            number of pixels when searching for nearest-neighbours.
+
+            - if `int` or `float`:
+              The radius of the circle in units of the plot_crs
+            - if `str`:
+              A multiplication-factor for the estimated pixel-radius.
+              (e.g. a circle with (`r=search_radius * m.shape.radius`) is
+              used if possible and else np.inf is used.
+
+            The default is "50" (e.g. 50 times the pixel-radius).
+        """
+
+        self._search_radius = r
+
+        if isinstance(r, str):
             # evaluate an appropriate pick-distance
             if getattr(self._m.shape, "radius_crs", "?") != "out":
                 try:
                     radius = self._m.set_shape._estimate_radius(self._m, "out", np.max)
                 except AssertionError:
                     print(
-                        "EOmaps... unable to estimate 'pick_distance' radius... "
-                        + "Defaulting to `np.inf`. See docstring of m.plot_map() for "
-                        + "more details on how to set the pick_distance!"
+                        "EOmaps: Unable to estimate search-radius based on data."
+                        "Defaulting to `np.inf`. "
+                        "See `m.tree.set_search_radius` for more details!"
                     )
                     radius = [np.inf]
             else:
                 radius = self._m.shape.radius
 
-            self.d = np.max(radius) * self._pick_distance
-        elif isinstance(pick_distance, str):
-            self.d = float(pick_distance)
+            self._d = np.max(radius) * float(self._search_radius)
+        elif isinstance(r, (int, float, np.number)):
+            self._d = float(r)
+        else:
+            raise TypeError(
+                f"EOmaps: {r} is not a valid search-radius. "
+                "The search-radius must be provided as "
+                "int, float or as string that can be identified "
+                "as float!"
+            )
 
-        self._misses = 0
+    def _identify_search_subset(self, x, d):
+        # select a rectangle around the pick-coordinates
+        # (provides tremendous speedups for very large datasets)
 
-    def query(self, x, k=1, d=None):
+        # get a rectangular boolean mask
+        mx = np.logical_and(
+            self._m._props["x0"] > (x[0] - d), self._m._props["x0"] < (x[0] + d)
+        )
+        my = np.logical_and(
+            self._m._props["y0"] > (x[1] - d), self._m._props["y0"] < (x[1] + d)
+        )
+
+        if self._m._1D2D:
+            mx_id, my_id = np.where(mx)[0], np.where(my)[0]
+            m_rect_x, m_rect_y = np.meshgrid(mx_id, my_id)
+
+            x_rect = self._m._props["x0"][m_rect_x].ravel()
+            y_rect = self._m._props["y0"][m_rect_y].ravel()
+
+            # get the unravelled indexes of the boolean mask
+            idx = np.ravel_multi_index((m_rect_x, m_rect_y), self._m._zshape).ravel()
+        else:
+            m = np.logical_and(mx, my)
+            # get the indexes of the search-rectangle
+            idx = np.where(m.ravel())[0]
+
+            if len(idx) > 0:
+                x_rect = self._m._props["x0"][m].ravel()
+                y_rect = self._m._props["y0"][m].ravel()
+            else:
+                x_rect, y_rect = [], []
+
+        if len(x_rect) > 0 and len(y_rect) > 0:
+            mcircle = (x_rect - x[0]) ** 2 + (y_rect - x[1]) ** 2 < d**2
+            return x_rect[mcircle], y_rect[mcircle], idx[mcircle]
+        else:
+            return [], [], []
+
+    def query(self, x, k=1, d=None, pick_relative_to_closest=True):
+        """
+        Find the (k) closest points.
+
+        Parameters
+        ----------
+        x : list, tuple or np.array of length 2
+            The x- and y- coordinates to search.
+        k : int, optional
+            The number of points to identify.
+            The default is 1.
+        d : float, optional
+            The max. distance (in plot-crs) to consider when identifying points.
+            If None, the currently assigned distance (e.g. `m.tree.d`) is used.
+            (see `m.tree.set_search_radius` on how to set the default distance!)
+            The default is None.
+        pick_relative_to_closest : bool, optional
+            ONLY relevant if `k > 1`.
+
+            - If True: pick (k) nearest neighbours based on the center of the
+              closest point
+            - If False: pick (k) nearest neighbours based on the click-position
+
+            The default is True.
+
+        Returns
+        -------
+        i : list
+            The indexes of the selected datapoints with respect to the
+            flattened array.
+        """
         if d is None:
             d = self.d
 
         i = None
-
         # take care of 1D coordinates and 2D data
         if self._m._1D2D:
-            # just perform a brute-force search for 1D coords
-            ix = np.argmin(np.abs(self._m._props["x0"] - x[0]))
-            iy = np.argmin(np.abs(self._m._props["y0"] - x[1]))
+            if k == 1:
+                # just perform a brute-force search for 1D coords
+                ix = np.argmin(np.abs(self._m._props["x0"] - x[0]))
+                iy = np.argmin(np.abs(self._m._props["y0"] - x[1]))
 
-            i = np.ravel_multi_index((ix, iy), self._m._zshape)
-
-        else:
-            # select a rectangle around the pick-coordinates
-            # (provides tremendous speedups for very large datasets)
-            mx = np.logical_and(
-                self._m._props["x0"] > (x[0] - d), self._m._props["x0"] < (x[0] + d)
-            )
-            my = np.logical_and(
-                self._m._props["y0"] > (x[1] - d), self._m._props["y0"] < (x[1] + d)
-            )
-            m = np.logical_and(mx, my)
-            # get the indexes of the search-rectangle
-            idx = np.where(m.ravel())[0]
-            # evaluate the clicked pixel as the one with the smallest
-            # euclidean distance
-            if len(idx) > 0:
-                i = idx[
-                    (
-                        (self._m._props["x0"][m].ravel() - x[0]) ** 2
-                        + (self._m._props["y0"][m].ravel() - x[1]) ** 2
-                    ).argmin()
-                ]
-
+                i = np.ravel_multi_index((ix, iy), self._m._zshape)
             else:
-                # show some warning if no points are found within the pick_distance
+                if pick_relative_to_closest is True:
+                    ix = np.argmin(np.abs(self._m._props["x0"] - x[0]))
+                    iy = np.argmin(np.abs(self._m._props["y0"] - x[1]))
 
-                if self._misses < 3:
-                    self._misses += 1
-
-                    text = "Found no data here...\n Increase pick_distance?"
-
-                    self._m.cb.click._cb.annotate(
-                        pos=x,
-                        permanent=False,
-                        text=text,
-                        xytext=(0.98, 0.98),
-                        textcoords=self._m.f.transFigure,
-                        horizontalalignment="right",
-                        verticalalignment="top",
-                        arrowprops=None,
-                        fontsize=7,
-                        bbox=dict(
-                            ec="r", fc=(1, 0.9, 0.9, 0.5), lw=0.25, boxstyle="round"
-                        ),
+                    # query again (starting from the closest point)
+                    return self.query(
+                        (self._m._props["x0"][ix], self._m._props["y0"][iy]),
+                        k=k,
+                        d=d,
+                        pick_relative_to_closest=False,
                     )
 
-                i = None
+        x_rect, y_rect, idx = self._identify_search_subset(x, d)
+        if len(idx) > 0:
 
-        return None, i
+            if k == 1:
+                i = idx[((x_rect - x[0]) ** 2 + (y_rect - x[1]) ** 2).argmin()]
+            else:
+                if pick_relative_to_closest is True:
+                    i0 = ((x_rect - x[0]) ** 2 + (y_rect - x[1]) ** 2).argmin()
+
+                    return self.query(
+                        (x_rect[i0], y_rect[i0]),
+                        k=k,
+                        d=d,
+                        pick_relative_to_closest=False,
+                    )
+                i = idx[
+                    ((x_rect - x[0]) ** 2 + (y_rect - x[1]) ** 2).argpartition(
+                        range(min(k, x_rect.size))
+                    )[:k]
+                ]
+        else:
+            # show a warning if no points are found in the search area
+            if self._misses < 3:
+                self._misses += 1
+            else:
+                text = "Found no data here...\n Increase search_radius?"
+                # TODO fix cleanup of temporary artists!!
+                self._m.add_annotation(
+                    xy=x,
+                    permanent=False,
+                    text=text,
+                    xytext=(0.98, 0.98),
+                    textcoords=self._m.ax.transAxes,
+                    horizontalalignment="right",
+                    verticalalignment="top",
+                    arrowprops=None,
+                    fontsize=7,
+                    bbox=dict(ec="r", fc=(1, 0.9, 0.9, 0.5), lw=0.25, boxstyle="round"),
+                )
+
+            i = None
+
+        return i
 
 
 class LayoutEditor:
@@ -1433,6 +1538,7 @@ class BlitManager:
         # redraw artists from the selected layers and explicitly provided artists
         # (sorted by zorder)
         allartists = chain(*(self._artists.get(layer, []) for layer in layers), artists)
+
         for a in sorted(allartists, key=self._get_artist_zorder):
             fig.draw_artist(a)
 

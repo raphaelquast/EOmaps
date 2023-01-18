@@ -868,7 +868,7 @@ class TestBasicPlotting(unittest.TestCase):
             m.ax.set_title(title)
             getattr(m.set_shape, i[0])(**i[1])
 
-            m.plot_map(edgecolor="none", pick_distance=5)
+            m.plot_map(edgecolor="none")
             m.cb.click.attach.annotate(fontsize=6)
             m.add_feature.preset.coastline(lw=0.5)
             m.add_colorbar()

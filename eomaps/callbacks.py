@@ -193,6 +193,18 @@ class _click_callbacks(object):
 
         ID, pos, val, ind, picker_name, val_color = self._popargs(kwargs)
 
+        try:
+            n_ids = len(ID)
+        except TypeError:
+            n_ids = 1
+
+        if ID is not None and n_ids > 1:
+            multipick = True
+            picked_pos = (pos[0][0], pos[1][0])
+        else:
+            multipick = False
+            picked_pos = pos
+
         if isinstance(self.m.data_specs.x, str):
             xlabel = self.m.data_specs.x
         else:
@@ -211,25 +223,61 @@ class _click_callbacks(object):
 
         if text is None:
             if ID is not None and self.m.data is not None:
-                x, y = [
-                    np.format_float_positional(i, trim="-", precision=pos_precision)
-                    for i in self.m._get_xy_from_index(ind)
-                ]
-                x0, y0 = [
-                    np.format_float_positional(i, trim="-", precision=pos_precision)
-                    for i in pos
-                ]
-                if isinstance(val, (int, float)):
-                    val = np.format_float_positional(
-                        val, trim="-", precision=val_precision
-                    )
+                if not multipick:
+                    x, y = [
+                        np.format_float_positional(i, trim="-", precision=pos_precision)
+                        for i in self.m._get_xy_from_index(ind)
+                    ]
+                    x0, y0 = [
+                        np.format_float_positional(i, trim="-", precision=pos_precision)
+                        for i in pos
+                    ]
 
+                    if isinstance(val, (int, float)):
+                        val = np.format_float_positional(
+                            val, trim="-", precision=val_precision
+                        )
+                else:
+                    coords = [
+                        *self.m._get_xy_from_index(ind),
+                        *self.m._get_xy_from_index(ind, reprojected=True),
+                    ]
+
+                    for n, c in enumerate(coords):
+                        mi = np.format_float_positional(
+                            np.nanmin(c), trim="-", precision=pos_precision
+                        )
+                        ma = np.format_float_positional(
+                            np.nanmax(c), trim="-", precision=pos_precision
+                        )
+                        coords[n] = f"{mi} ... {ma}"
+
+                    x, y, x0, y0 = coords
+
+                    if ID is not None:
+                        ID = f"{np.nanmin(ID)} ... {np.nanmax(ID)}"
+
+                    if val is not None:
+                        val = np.array(val, dtype=float)  # to handle None
+                        mi = np.format_float_positional(
+                            np.nanmin(val), trim="-", precision=pos_precision
+                        )
+                        ma = np.format_float_positional(
+                            np.nanmax(val), trim="-", precision=pos_precision
+                        )
+                        val = f"{mi}...{ma}"
+
+                equal_crs = self.m.data_specs.crs != self.m._crs_plot
                 printstr = (
-                    f"{xlabel} = {x} ({x0})\n"
-                    + f"{ylabel} = {y} ({y0})\n"
+                    (f"Picked {n_ids} points   (min ... max)\n" if multipick else "")
+                    + f"{xlabel} = {x}"
+                    + (f" ({x0})\n" if equal_crs else "\n")
+                    + f"{ylabel} = {y}"
+                    + (f" ({y0})\n" if equal_crs else "\n")
                     + (f"ID = {ID}" if ID is not None else "")
                     + (f"\n{parameter} = {val}" if val is not None else "")
                 )
+
             else:
                 lon, lat = self.m._transf_plot_to_lonlat.transform(*pos)
                 x, y = [
@@ -256,8 +304,12 @@ class _click_callbacks(object):
 
         if printstr is not None:
             # create a new annotation
-            bbox = dict(boxstyle="round", fc="w", ec=val_color)
-            bbox.update(kwargs.pop("bbox", dict()))
+            if not multipick:
+                bbox = dict(boxstyle="round", fc="w", ec=val_color)
+                bbox.update(kwargs.pop("bbox", dict()))
+            else:
+                bbox = dict(boxstyle="round", fc="w", ec="k")
+                bbox.update(kwargs.pop("bbox", dict()))
 
             styledict = dict(
                 xytext=(20, 20),
@@ -267,7 +319,7 @@ class _click_callbacks(object):
             )
 
             styledict.update(**kwargs)
-            annotation = ax.annotate("", xy=pos, **styledict)
+            annotation = ax.annotate("", xy=picked_pos, **styledict)
             annotation.set_zorder(zorder)
 
             if permanent is False:
@@ -284,7 +336,7 @@ class _click_callbacks(object):
                         self.permanent_annotations.append(annotation)
 
             annotation.set_visible(True)
-            annotation.xy = pos
+            annotation.xy = picked_pos
             annotation.set_text(printstr)
 
     def clear_annotations(self, **kwargs):
@@ -437,12 +489,11 @@ class _click_callbacks(object):
                 radius = (t.width / 10.0, t.height / 10.0)
 
         ID, pos, val, ind, picker_name, val_color = self._popargs(kwargs)
-
         if ID is not None and picker_name == "default":
             if ind is None:
-                # ind = self.m.data.index.get_loc(ID)
-                ind = np.flatnonzero(np.isin(self.m._props["ids"], ID))
-            pos = self.m._get_xy_from_index(ind)
+                pos = self.m._get_xy_from_ID(ID)
+            else:
+                pos = self.m._get_xy_from_index(ind)
             pos_crs = "in"
         else:
             pos_crs = "out"
@@ -746,9 +797,7 @@ class _click_callbacks(object):
             False: A list of objects is returned that is extended with each pick.
         """
         ID, pos, val, ind, picker_name, val_color = self._popargs(kwargs)
-
         assert database is not None, "you must provide a database object!"
-
         try:
             if isinstance(load_method, str):
                 assert hasattr(
@@ -761,7 +810,6 @@ class _click_callbacks(object):
                 raise TypeError("load_method must be a string or a callable!")
         except Exception:
             print(f"could not load object with ID:  '{ID}' from {database}")
-
         if load_multiple is True:
             self.picked_object = getattr(self, "picked_object", list()) + [pick]
         else:

@@ -1602,30 +1602,41 @@ class Maps(object):
                             try:
                                 query = getattr(gdf, pick_method)(
                                     gpd.points_from_xy(
-                                        [mouseevent.xdata], [mouseevent.ydata]
+                                        np.atleast_1d(mouseevent.xdata),
+                                        np.atleast_1d(mouseevent.ydata),
                                     )[0]
                                 )
+
                                 if query.any():
 
                                     ID = gdf.index[query][0]
                                     ind = query.values.nonzero()[0][0]
+
                                     if val_key:
                                         val = gdf[query][val_key].iloc[0]
                                     else:
                                         val = None
 
-                                    val_numeric = artist.norm(artist.get_array()[ind])
-                                    color = artist.cmap(val_numeric)
+                                    if artist.get_array() is not None:
+                                        val_numeric = artist.norm(
+                                            artist.get_array()[ind]
+                                        )
+                                        color = artist.cmap(val_numeric)
+                                    else:
+                                        val_numeric = None
+                                        color = None
 
                                     return True, dict(
                                         ID=ID,
                                         ind=ind,
                                         val=val,
                                         val_color=color,
+                                        pos=(mouseevent.xdata, mouseevent.ydata),
                                     )
                                 else:
                                     return False, dict()
                             except:
+
                                 return False, dict()
 
                     elif pick_method == "centroids":
@@ -1636,6 +1647,7 @@ class Maps(object):
                         )
 
                         def picker(artist, mouseevent):
+
                             try:
                                 dist, ind = tree.query(
                                     (mouseevent.xdata, mouseevent.ydata), 1
@@ -1674,7 +1686,6 @@ class Maps(object):
                 for artist, prefix in zip(artists, prefixes):
                     # make the newly added collection pickable
                     self.cb.add_picker(picker_name + prefix, artist, picker=picker)
-
                     # attach the re-projected GeoDataFrame to the pick-container
                     self.cb.pick[picker_name + prefix].data = gdf
 
@@ -2384,7 +2395,6 @@ class Maps(object):
 
     def plot_map(
         self,
-        pick_distance=100,
         layer=None,
         dynamic=False,
         set_extent=True,
@@ -2406,22 +2416,6 @@ class Maps(object):
 
         Parameters
         ----------
-        pick_distance : int, float, str or None
-
-            - If None, NO pick-callbacks will be assigned ('m.cb.pick' will not work!!)
-              (useful for very large datasets to speed up plotting and save memory)
-            - If a number is provided, it will be used to determine the search-area
-              used to identify clicked pixels (e.g. a rectangle with a edge-size of
-              `pick_distance * estimated radius`).
-            - If a string is provided, it will be directly assigned as pick-radius
-              (without multiplying by the estimated radius). This is useful for datasets
-              whose radius cannot be determined (e.g. singular points etc.)
-
-              The provided number is identified as radius in the plot-crs!
-
-              The string must be convertible to a number, e.g. `float("40.5")`
-
-            The default is 100.
         layer : str or None
             The layer at which the dataset will be plotted.
             ONLY relevant if `dynamic = False`!
@@ -2469,7 +2463,6 @@ class Maps(object):
 
             The default is True.
 
-
         Other Parameters
         ----------------
         vmin, vmax : float, optional
@@ -2484,6 +2477,12 @@ class Maps(object):
             For "shade_points" or "shade_raster" shapes, kwargs are passed to
             `datashader.mpl_ext.dsshow`
         """
+        if getattr(self, "coll", None) is not None:
+            print(
+                "EOmaps-warning: Calling `m.plot_map()` or "
+                "`m.make_dataset_pickable()` more than once on the "
+                "same Maps-object will override the assigned PICK-dataset!"
+            )
 
         # convert vmin/vmax values to respect the encoding of the data
         vmin = kwargs.get("vmin", None)
@@ -2502,7 +2501,7 @@ class Maps(object):
 
         useshape = self.shape  # invoke the setter to set the default shape
 
-        # make sure the colormap is properly set and transparencys are assigned
+        # make sure the colormap is properly set and transparencies are assigned
         cmap = kwargs.setdefault("cmap", "viridis")
         if "alpha" in kwargs and kwargs["alpha"] < 1:
             # get a unique name for the colormap
@@ -2537,7 +2536,6 @@ class Maps(object):
 
         if useshape.name.startswith("shade"):
             self._shade_map(
-                pick_distance=pick_distance,
                 layer=layer,
                 dynamic=dynamic,
                 set_extent=set_extent,
@@ -2546,7 +2544,6 @@ class Maps(object):
             )
         else:
             self._plot_map(
-                pick_distance=pick_distance,
                 layer=layer,
                 dynamic=dynamic,
                 set_extent=set_extent,
@@ -2574,7 +2571,6 @@ class Maps(object):
 
     def make_dataset_pickable(
         self,
-        pick_distance=100,
     ):
         """
         Make the associated dataset pickable **without plotting** it first.
@@ -2593,14 +2589,6 @@ class Maps(object):
         - To get multiple pickable datasets, use an individual layer for each of the
           datasets (e.g. first `m2 = m.new_layer()` and then assign the data to `m2`)
 
-        Parameters
-        ----------
-        pick_distance : int
-            The search-area surrounding the clicked pixel used to identify the datapoint
-            (e.g. a rectangle with a edge-size of `pick_distance * estimated radius`).
-
-            The default is 100.
-
         Examples
         --------
 
@@ -2608,7 +2596,6 @@ class Maps(object):
         >>> m.add_feature.preset.coastline()
         >>> ...
         >>> # a dataset that should be pickable but NOT visible...
-        >>> # (e.g. in this case 100 points along the diagonal)
         >>> m2 = m.new_layer()
         >>> m2.set_data(*np.linspace([0, -180,-90,], [100, 180, 90], 100).T)
         >>> m2.make_dataset_pickable()
@@ -2622,8 +2609,9 @@ class Maps(object):
 
         if self.coll is not None:
             print(
-                "EOmaps: There is already a collection assigned to this Maps-object"
-                + "... make sure to use a new layer for the pickable dataset!"
+                "EOmaps: There is already a dataset plotted on this Maps-object. "
+                "You MUST use a new layer (`m2 = m.new_layer()`) to use "
+                "`m2.make_dataset_pickable()`!"
             )
             return
 
@@ -2640,12 +2628,10 @@ class Maps(object):
 
         self._coll = art
 
-        if pick_distance is not None:
-            self.tree = searchtree(m=self._proxy(self), pick_distance=pick_distance)
-            self.cb.pick._set_artist(art)
-            self.cb.pick._init_cbs()
-            self.cb.pick._pick_distance = pick_distance
-            self.cb._methods.append("pick")
+        self.tree = searchtree(m=self._proxy(self))
+        self.cb.pick._set_artist(art)
+        self.cb.pick._init_cbs()
+        self.cb._methods.add("pick")
 
     def show_layer(self, name):
         """
@@ -3602,6 +3588,49 @@ class Maps(object):
         else:
             return (self._props["xorig"].flat[xind], self._props["yorig"].flat[yind])
 
+    def _get_xy_from_ID(self, ID, reprojected=False):
+        ind = self._get_ind(ID)
+        if self._1D2D:
+            xind, yind = np.unravel_index(ind, self._zshape)
+        else:
+            xind = yind = ind
+
+        if reprojected:
+            return (self._props["x0"].flat[xind], self._props["y0"].flat[yind])
+        else:
+            return (self._props["xorig"].flat[xind], self._props["yorig"].flat[yind])
+
+    def _get_ind(self, ID):
+        """
+        Identify the numerical data-index from a given ID
+
+        Parameters
+        ----------
+        ID : single ID or list of IDs
+            The IDs to search for.
+
+        Returns
+        -------
+        ind : any
+            The corresponding (flat) data-index.
+        """
+        ids = self._props["ids"]
+
+        ID = np.atleast_1d(ID)
+        if isinstance(ids, range):
+            # if "ids" is range-like, so is "ind", therefore we can simply
+            # select the values.
+            inds = [ids[i] for i in ID]
+        if isinstance(ids, list):
+            # for lists, using .index to identify the index
+            inds = [ids.index(i) for i in ID]
+        elif isinstance(ids, np.ndarray):
+            inds = np.flatnonzero(np.isin(ids, ID))
+        else:
+            ID = "?"
+
+        return inds
+
     def _classify_data(
         self,
         z_data=None,
@@ -3874,7 +3903,6 @@ class Maps(object):
 
     def _plot_map(
         self,
-        pick_distance=100,
         layer=None,
         dynamic=False,
         set_extent=True,
@@ -4000,13 +4028,11 @@ class Maps(object):
 
             self._coll = coll
 
-            if pick_distance is not None:
-                self.tree = searchtree(m=self._proxy(self), pick_distance=pick_distance)
-
-                self.cb.pick._set_artist(coll)
-                self.cb.pick._init_cbs()
-                self.cb.pick._pick_distance = pick_distance
-                self.cb._methods.append("pick")
+            # This is now done lazily (only if a pick-callback is attached)
+            # self.tree = searchtree(m=self._proxy(self))
+            # self.cb.pick._set_artist(coll)
+            # self.cb.pick._init_cbs()
+            # self.cb._methods.add("pick")
 
             if dynamic is True:
                 self.BM.add_artist(coll, layer)
@@ -4032,7 +4058,6 @@ class Maps(object):
 
     def _shade_map(
         self,
-        pick_distance=100,
         verbose=0,
         layer=None,
         dynamic=False,
@@ -4303,13 +4328,11 @@ class Maps(object):
         if verbose:
             print("EOmaps: Indexing for pick-callbacks...")
 
-        if pick_distance is not None:
-            self.tree = searchtree(m=self._proxy(self), pick_distance=pick_distance)
-
-            self.cb.pick._set_artist(coll)
-            self.cb.pick._init_cbs()
-            self.cb.pick._pick_distance = pick_distance
-            self.cb._methods.append("pick")
+        # This is now done lazily (only if a pick-callback is attached)
+        # self.tree = searchtree(m=self._proxy(self))
+        # self.cb.pick._set_artist(coll)
+        # self.cb.pick._init_cbs()
+        # self.cb._methods.add("pick")
 
         if dynamic is True:
             self.BM.add_artist(coll, layer)
