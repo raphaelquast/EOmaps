@@ -32,7 +32,6 @@ mg.m_0_0.set_classify_specs(scheme="EqualInterval", k=10)
 mg.m_0_1.ax.set_title("Stereographic")
 mg.m_0_1.set_shape.rectangles()
 mg.m_0_1.set_classify_specs(scheme="Quantiles", k=8)
-mg.m_0_1.plot_map()
 
 # --------- set specs for the third axis
 mg.m_0_2.ax.set_extent(mg.m_0_2.crs_plot.area_of_use.bounds)
