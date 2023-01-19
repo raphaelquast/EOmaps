@@ -739,6 +739,9 @@ class TestBasicPlotting(unittest.TestCase):
             label_props=dict(scale=1.5, weight="bold", family="Courier New"),
         )
 
+        # test_presets
+        s_bw = m.add_scalebar(preset="bw")
+
         # ----------------- TEST interactivity
         cv = m.f.canvas
         x, y = m.ax.transData.transform(s3.get_position()[:2])
@@ -773,8 +776,10 @@ class TestBasicPlotting(unittest.TestCase):
         key_press_event(cv, "alt+-")
         key_press_event(cv, "alt++")
 
-        for si in [s, s1, s2, s3]:
+        for si in [s, s1, s2, s3, s_bw]:
             si.remove()
+
+        plt.close("all")
 
     def test_set_extent_to_location(self):
         m = Maps()
