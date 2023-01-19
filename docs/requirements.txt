@@ -1,1 +1,4 @@
 sphinx_copybutton
+Sphinx==4.5.0
+docutils<0.17
+sphinx-rtd-theme>=0.5.2
