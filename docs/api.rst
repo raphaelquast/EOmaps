@@ -1117,7 +1117,9 @@ Custom callback functions can be attached to the map via ``m.cb.< METHOD >.attac
     m.cb.click.attach(some_callback, double_click=False, button=2, custom_kwarg=2)
     m.cb.keypress.attach(some_callback, key="x", custom_kwarg=3)
 
+
 .. note::
+
     Custom callbacks **must** always accept the following keyword arguments:
     ``pos``, ``ID``, ``val``, ``val_color``, ``ind``
 
@@ -1195,12 +1197,12 @@ To customize the picking-behavior, use ``m.cb.pick.set_props()``. The following 
 
 - ``n``: The (maximum) number of datapoints to pick within the search-circle.
 - ``search_radius``: The radius of a circle (in units of the plot-crs) that is used to identify the nearest neighbours.
-- ``pick_relative_to_closest``
+- ``pick_relative_to_closest``: Set the center of the search-circle.
 
   - If True, the nearest neighbours are searched relative to the closest identified datapoint.
   - If False, the nearest neighbours are searched relative to the click position.
 
-- ``consecutive_pick``
+- ``consecutive_pick``: Pick datapoints individually or alltogether.
 
   - If True, callbacks are executed for each picked point individually
   - If False, callbacks are executed only once and get lists of all picked values as input-arguments.
