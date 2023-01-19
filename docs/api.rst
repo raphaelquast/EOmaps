@@ -924,7 +924,6 @@ a python-script, such as:
   (csv, NetCDF, GeoTIFF, shapefile)
 
 
-
 .. _callbacks:
 
 🛸 Callbacks - make the map interactive!
@@ -949,7 +948,7 @@ They can be attached to a map via the ``.attach`` directive:
     +--------------------------------------------------------------+----------------------------------------------------------------------------------+
     | :class:`click <eomaps._cb_container.cb_click_container>`     | Callbacks that are executed if you click anywhere on the Map.                    |
     +--------------------------------------------------------------+----------------------------------------------------------------------------------+
-    | :class:`pick <eomaps._cb_container.cb_pick_container>`       | Callbacks that select the nearest datapoint if you click on the map.             |
+    | :class:`pick <eomaps._cb_container.cb_pick_container>`       | Callbacks that select the nearest datapoint(s) if you click on the map.          |
     +--------------------------------------------------------------+----------------------------------------------------------------------------------+
     | :class:`move <eomaps._cb_container.cb_move_container>`       | Callbacks that are executed if you press a key on the keyboard.                  |
     +--------------------------------------------------------------+----------------------------------------------------------------------------------+
@@ -1020,6 +1019,15 @@ In addition, each callback-container supports the following useful methods:
     | :class:`set_sticky_modifiers <eomaps._cb_container._click_container.set_sticky_modifiers>`  | Define keys on the keyboard that should be treated as "sticky modifiers". |
     +---------------------------------------------------------------------------------------------+---------------------------------------------------------------------------+
 
+
+.. table::
+    :width: 100 %
+    :widths: auto
+
+    +---------------------------------------------------------------------------------------------+---------------------------------------------------------------------------+
+    | :class:`attach <eomaps._cb_container._pick_container._set_props>`                           | Set the picking-behavior (number of datapoints, search radius etc.)       |
+    +---------------------------------------------------------------------------------------------+---------------------------------------------------------------------------+
+
 .. currentmodule:: eomaps._cb_container._cb_container
 
 .. autosummary::
@@ -1031,8 +1039,11 @@ In addition, each callback-container supports the following useful methods:
     add_temporary_artist
 
 
+🍬 Pre-defined callbacks
+~~~~~~~~~~~~~~~~~~~~~~~~~
+
 Pre-defined click, pick and move callbacks
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+******************************************
 
 Callbacks that can be used with ``m.cb.click``, ``m.cb.pick`` and ``m.cb.move``:
 
@@ -1049,7 +1060,7 @@ Callbacks that can be used with ``m.cb.click``, ``m.cb.pick`` and ``m.cb.move``:
     print_to_console
 
 
-Callbacks that can be used with ``m.cb.click`` or ``m.cb.pick``:
+Callbacks that can be used with ``m.cb.click`` and ``m.cb.pick``:
 
 .. currentmodule:: eomaps.callbacks.click_callbacks
 
@@ -1077,7 +1088,7 @@ Callbacks that can be used only with ``m.cb.pick``:
 
 
 Pre-defined keypress callbacks
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+******************************
 
 Callbacks that can be used with ``m.cb.keypress``
 
@@ -1166,6 +1177,84 @@ NOTE: sticky modifiers are defined for each callback method individually!
     m.cb.move.attach.mark(radius=5)
     m.cb.move.attach.mark(modifier="1", radius=5, fc="r")
 
+
+🍭 Picking N nearest neighbours
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+[requires EOmaps >= 3.4]
+
+By default pick-callbacks pick the nearest datapoint with respect to the click position.
+
+To customize the picking-behavior, use ``m.cb.pick.set_props()``. The following properties can be adjusted:
+
+- ``n``:
+
+  - The (maximum) number of datapoints to pick within the search-circle.
+
+- ``search_radius``:
+
+  - The radius of a circle (in units of the plot-crs) that is used to identify the nearest neighbours.
+
+- ``pick_relative_to_closest``:
+
+  - If True, the nearest neighbours are searched relative to the closest identified datapoint.
+  - If False, the nearest neighbours are searched relative to the click position.
+
+- ``consecutive_pick``:
+
+  - If True, callbacks are executed for each picked point individually
+  - If False, callbacks are executed only once and get lists of all picked values as input-arguments.
+
+.. currentmodule:: eomaps._cb_container.cb_pick_container
+
+.. autosummary::
+    :nosignatures:
+    :template: only_names_in_toc.rst
+
+    set_props
+
+
+.. table::
+    :widths: 50 50
+    :align: center
+
+    +--------------------------------------------------------------------------------+--------------------------------------------+
+    | .. code-block:: python                                                         | .. image:: _static/minigifs/pick_multi.gif |
+    |                                                                                |   :align: center                           |
+    |     from eomaps import Maps                                                    |                                            |
+    |     import numpy as np                                                         |                                            |
+    |                                                                                |                                            |
+    |     # create some random data                                                  |                                            |
+    |     x, y = np.mgrid[-30:67, -12:50]                                            |                                            |
+    |     data = np.random.randint(0, 100, x.shape)                                  |                                            |
+    |                                                                                |                                            |
+    |     # a callback to indicate the search-radius                                 |                                            |
+    |     def indicate_search_radius(m, pos, *args, **kwargs):                       |                                            |
+    |         art = m.add_marker(                                                    |                                            |
+    |             xy=(np.atleast_1d(pos[0])[0],                                      |                                            |
+    |                 np.atleast_1d(pos[1])[0]),                                     |                                            |
+    |             shape="ellipses", radius=m.tree.d, radius_crs="out",               |                                            |
+    |             n=100, fc="none", ec="k", lw=2)                                    |                                            |
+    |         m.cb.pick.add_temporary_artist(art)                                    |                                            |
+    |                                                                                |                                            |
+    |     # a callback to set the number of picked neighbours                        |                                            |
+    |     def pick_n_neighbours(m, n, **kwargs):                                     |                                            |
+    |         m.cb.pick.set_props(n=n)                                               |                                            |
+    |                                                                                |                                            |
+    |                                                                                |                                            |
+    |     m = Maps()                                                                 |                                            |
+    |     m.add_feature.preset.coastline()                                           |                                            |
+    |     m.set_data(data, x, y)                                                     |                                            |
+    |     m.plot_map()                                                               |                                            |
+    |     m.cb.pick.set_props(n=50, search_radius=10, pick_relative_to_closest=True) |                                            |
+    |                                                                                |                                            |
+    |     m.cb.pick.attach.annotate()                                                |                                            |
+    |     m.cb.pick.attach.mark(fc="none", ec="r")                                   |                                            |
+    |     m.cb.pick.attach(indicate_search_radius, m=m)                              |                                            |
+    |                                                                                |                                            |
+    |     for key, n in (("1", 1), ("2", 9), ("3", 50), ("4", 500)):                 |                                            |
+    |         m.cb.keypress.attach(pick_n_neighbours, key=key, m=m, n=n)             |                                            |
+    +--------------------------------------------------------------------------------+--------------------------------------------+
 
 📍 Picking a dataset without plotting it first
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -1844,7 +1933,7 @@ To indicate rectangular areas in any given crs, simply use ``m.indicate_extent``
     |         pass                                                          |                                                 |
     +-----------------------------------------------------------------------+-------------------------------------------------+
 
-👽 Logos
+🥦 Logos
 ~~~~~~~~
 
 To add a logo (or basically any image file ``.png``, ``.jpeg`` etc.) to the map, you can use ``m.add_logo``.
