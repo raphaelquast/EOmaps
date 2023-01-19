@@ -31,3 +31,7 @@ dependencies:
   - pytest-cov
   # --------------for building the docs
   - sphinx-copybutton
+  - sphinx=5.0.3
+  - docutils=0.17.1
+  - pip:
+    - sphinx_rtd_theme==1.1.1
