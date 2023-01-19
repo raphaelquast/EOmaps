@@ -32,7 +32,7 @@ dependencies:
   # --------------for building the docs
   - sphinx-copybutton
   - sphinx==5.3.0
-  - docutils==0.17.1
+  - docutils==0.16
   - pip
   - pip:
     - sphinx_rtd_theme==1.1.1
