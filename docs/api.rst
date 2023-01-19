@@ -1105,27 +1105,41 @@ Callbacks that can be used with ``m.cb.keypress``
 👽 Custom callbacks
 ~~~~~~~~~~~~~~~~~~~
 
-Custom callback functions can be attached to the map via:
+Custom callback functions can be attached to the map via ``m.cb.< METHOD >.attach(< CALLBACK FUNCTION >, **kwargs)``:
 
 .. code-block:: python
 
-    def some_callback(asdf, **kwargs):
-        print("hello world")
-        print("the value of 'asdf' is", asdf)
+    def some_callback(custom_kwarg, **kwargs):
+        print("the value of 'custom_kwarg' is", custom_kwarg)
         print("the position of the clicked pixel in plot-coordinates", kwargs["pos"])
         print("the dataset-index of the nearest datapoint", kwargs["ID"])
         print("data-value of the nearest datapoint", kwargs["val"])
+        print("the color of the nearest datapoint", kwargs["val_color"])
+        print("the numerical index of the nearest datapoint", kwargs["ind"])
         ...
 
     # attaching custom callbacks works completely similar for "click", "pick" and "keypress"!
     m = Maps()
     ...
-    m.cb.pick.attach(some_callback, double_click=False, button=1, asdf=1)
-    m.cb.click.attach(some_callback, double_click=False, button=2, asdf=1)
-    m.cb.keypress.attach(some_callback, key="x", asdf=1)
+    m.cb.pick.attach(some_callback, double_click=False, button=1, custom_kwarg=1)
+    m.cb.click.attach(some_callback, double_click=False, button=2, custom_kwarg=2)
+    m.cb.keypress.attach(some_callback, key="x", custom_kwarg=3)
 
-- ❗ for click callbacks the kwargs ``ID`` and ``val`` are set to ``None``!
-- ❗ for keypress callbacks the kwargs ``ID`` and ``val`` and ``pos`` are set to ``None``!
+.. note::
+    Custom callbacks **must** always accept the following keyword arguments:
+    ``pos``, ``ID``, ``val``, ``val_color``, ``ind``
+
+    - ❗ for click callbacks the kwargs ``ID``, ``val`` and ``val_color`` are set to ``None``!
+    - ❗ for keypress callbacks the kwargs ``ID``, ``val``, ``val_color``, ``ind`` and ``pos`` are set to ``None``!
+
+    For better readability it is recommended that you "unpack" used arguments like this:
+
+    .. code-block:: python
+
+        def cb(ID, val, **kwargs):
+            print(f"the ID is {ID} and the value is {val}")
+
+
 
 
 👾 Using modifiers for pick- click- and move callbacks
@@ -1187,20 +1201,14 @@ By default pick-callbacks pick the nearest datapoint with respect to the click p
 
 To customize the picking-behavior, use ``m.cb.pick.set_props()``. The following properties can be adjusted:
 
-- ``n``:
-
-  - The (maximum) number of datapoints to pick within the search-circle.
-
-- ``search_radius``:
-
-  - The radius of a circle (in units of the plot-crs) that is used to identify the nearest neighbours.
-
-- ``pick_relative_to_closest``:
+- ``n``: The (maximum) number of datapoints to pick within the search-circle.
+- ``search_radius``: The radius of a circle (in units of the plot-crs) that is used to identify the nearest neighbours.
+- ``pick_relative_to_closest``
 
   - If True, the nearest neighbours are searched relative to the closest identified datapoint.
   - If False, the nearest neighbours are searched relative to the click position.
 
-- ``consecutive_pick``:
+- ``consecutive_pick``
 
   - If True, callbacks are executed for each picked point individually
   - If False, callbacks are executed only once and get lists of all picked values as input-arguments.
