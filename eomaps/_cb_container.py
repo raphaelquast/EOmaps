@@ -1054,8 +1054,7 @@ class cb_pick_container(_click_container):
 
     set_sticky_modifiers : define keypress-modifiers that remain active after release
 
-    set_props : set the picking behaviour (e.g. number of picked points,
-                max. search radius, etc.)
+    set_props : set the picking behaviour (e.g. number of points, search radius, etc.)
 
     """
 

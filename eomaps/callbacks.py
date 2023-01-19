@@ -269,7 +269,7 @@ class _click_callbacks(object):
 
                 equal_crs = self.m.data_specs.crs != self.m._crs_plot
                 printstr = (
-                    (f"Picked {n_ids} points   (min ... max)\n" if multipick else "")
+                    (f"Picked {n_ids} points\n" if multipick else "")
                     + f"{xlabel} = {x}"
                     + (f" ({x0})\n" if equal_crs else "\n")
                     + f"{ylabel} = {y}"
