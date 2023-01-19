@@ -613,6 +613,7 @@ class TestCallbacks(unittest.TestCase):
         self.assertEqual(len(m2.cb.pick.get.picked_vals["ID"]), 1)
         self.assertEqual(len(m2.cb.pick.get.picked_vals["val"]), 1)
         self.assertTrue(m2.cb.pick.get.picked_vals["ID"][0] == 1225)
+        plt.close("all")
 
     def test_keypress_callbacks_for_any_key(self):
         m = self.create_basic_map()
@@ -631,15 +632,12 @@ class TestCallbacks(unittest.TestCase):
         key_press_event(m.f.canvas, "1")
         key_release_event(m.f.canvas, "1")
         self.assertTrue(m.BM._bg_layer == "1")
+        plt.close("all")
 
     def test_geodataframe_contains_picking(self):
         m = Maps()
         m.show()  # do this to make sure transforms are correctly set
         gdf = m.add_feature.cultural.admin_0_countries.get_gdf(scale=110)
-
-        pickid = 50
-        clickpt = gdf.centroid[pickid]
-        clickxy = m.ax.transData.transform((clickpt.x, clickpt.y))
 
         m.add_gdf(gdf, column="NAME", picker_name="col", pick_method="contains")
 
@@ -659,20 +657,23 @@ class TestCallbacks(unittest.TestCase):
         m.cb.pick["nocol"].attach(customcb, picked_vals=picked_vals_nocol)
         m.cb.pick__nocol.attach.highlight_geometry(fc="r", ec="g")
 
+        # evaluate pick position AFTER plotting geodataframes since the plot
+        # extent might have changed!
+        pickid = 50
+        clickpt = gdf.centroid[pickid]
+        clickxy = m.ax.transData.transform((clickpt.x, clickpt.y))
+
         button_press_event(m.f.canvas, *clickxy, 1)
         button_release_event(m.f.canvas, *clickxy, 1)
 
         self.assertTrue(picked_vals_col[0] == gdf.NAME.loc[pickid])
         self.assertTrue(picked_vals_nocol[0] is None)
+        plt.close("all")
 
     def test_geodataframe_centroid_picking(self):
         m = Maps()
         m.redraw()  # do this to make sure transforms are correctly set
         gdf = m.add_feature.cultural.populated_places.get_gdf(scale=110)
-
-        pickid = 50
-        clickpt = gdf.centroid[pickid]
-        clickxy = m.ax.transData.transform((clickpt.x, clickpt.y))
 
         m.add_gdf(gdf, column="NAME", picker_name="col", pick_method="centroids")
 
@@ -699,10 +700,15 @@ class TestCallbacks(unittest.TestCase):
         m.cb.pick["nocol"].attach(customcb, picked_vals=picked_vals_nocol)
         m.cb.pick__nocol.attach.highlight_geometry(fc="r", ec="g")
 
-        m.cb.click.attach.mark(radius=0.1)
+        # evaluate pick position AFTER plotting geodataframes since the plot
+        # extent might have changed!
+        pickid = 50
+        clickpt = gdf.centroid[pickid]
+        clickxy = m.ax.transData.transform((clickpt.x, clickpt.y))
 
         button_press_event(m.f.canvas, *clickxy, 1)
         button_release_event(m.f.canvas, *clickxy, 1)
 
         self.assertTrue(picked_vals_col[0] == gdf.NAME.loc[pickid])
         self.assertTrue(picked_vals_nocol[0] is None)
+        plt.close("all")
