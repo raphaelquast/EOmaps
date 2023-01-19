@@ -1621,16 +1621,16 @@ class Maps(object):
                                         val_numeric = artist.norm(
                                             artist.get_array()[ind]
                                         )
-                                        color = artist.cmap(val_numeric)
+                                        val_color = artist.cmap(val_numeric)
                                     else:
                                         val_numeric = None
-                                        color = None
+                                        val_color = None
 
                                     return True, dict(
                                         ID=ID,
                                         ind=ind,
                                         val=val,
-                                        val_color=color,
+                                        val_color=val_color,
                                         pos=(mouseevent.xdata, mouseevent.ydata),
                                     )
                                 else:
@@ -1647,24 +1647,29 @@ class Maps(object):
                         )
 
                         def picker(artist, mouseevent):
-
                             try:
+
                                 dist, ind = tree.query(
                                     (mouseevent.xdata, mouseevent.ydata), 1
                                 )
 
                                 ID = gdf.index[ind]
-                                val = gdf.iloc[ind][val_key] if val_key else None
+                                if val_key is not None:
+                                    val = gdf.iloc[ind][val_key]
+                                else:
+                                    val = None
                                 pos = tree.data[ind].tolist()
-
-                                val_numeric = artist.norm(artist.get_array()[ID])
-                                color = artist.cmap(val_numeric)
+                                try:
+                                    val_numeric = artist.norm(artist.get_array()[ID])
+                                    val_color = artist.cmap(val_numeric)
+                                except Exception:
+                                    val_color = None
 
                             except:
                                 return False, dict()
 
                             return True, dict(
-                                ID=ID, pos=pos, val=val, ind=ind, val_color=color
+                                ID=ID, pos=pos, val=val, ind=ind, val_color=val_color
                             )
 
                 elif callable(pick_method):

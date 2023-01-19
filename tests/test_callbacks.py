@@ -631,3 +631,78 @@ class TestCallbacks(unittest.TestCase):
         key_press_event(m.f.canvas, "1")
         key_release_event(m.f.canvas, "1")
         self.assertTrue(m.BM._bg_layer == "1")
+
+    def test_geodataframe_contains_picking(self):
+        m = Maps()
+        m.show()  # do this to make sure transforms are correctly set
+        gdf = m.add_feature.cultural.admin_0_countries.get_gdf(scale=110)
+
+        pickid = 50
+        clickpt = gdf.centroid[pickid]
+        clickxy = m.ax.transData.transform((clickpt.x, clickpt.y))
+
+        m.add_gdf(gdf, column="NAME", picker_name="col", pick_method="contains")
+
+        m.add_gdf(gdf, picker_name="nocol", pick_method="contains")
+
+        def customcb(picked_vals, val, **kwargs):
+            picked_vals.append(val)
+
+        picked_vals_col = []
+        picked_vals_nocol = []
+
+        m.cb.pick["col"].attach.annotate()
+        m.cb.pick["col"].attach(customcb, picked_vals=picked_vals_col)
+        m.cb.pick__col.attach.highlight_geometry(fc="r", ec="g")
+
+        m.cb.pick["nocol"].attach.annotate()
+        m.cb.pick["nocol"].attach(customcb, picked_vals=picked_vals_nocol)
+        m.cb.pick__nocol.attach.highlight_geometry(fc="r", ec="g")
+
+        button_press_event(m.f.canvas, *clickxy, 1)
+        button_release_event(m.f.canvas, *clickxy, 1)
+
+        self.assertTrue(picked_vals_col[0] == gdf.NAME.loc[pickid])
+        self.assertTrue(picked_vals_nocol[0] is None)
+
+    def test_geodataframe_centroid_picking(self):
+        m = Maps()
+        m.redraw()  # do this to make sure transforms are correctly set
+        gdf = m.add_feature.cultural.populated_places.get_gdf(scale=110)
+
+        pickid = 50
+        clickpt = gdf.centroid[pickid]
+        clickxy = m.ax.transData.transform((clickpt.x, clickpt.y))
+
+        m.add_gdf(gdf, column="NAME", picker_name="col", pick_method="centroids")
+
+        m.add_gdf(
+            gdf,
+            fc="none",
+            ec="k",
+            markersize=10,
+            picker_name="nocol",
+            pick_method="centroids",
+        )
+
+        def customcb(picked_vals, val, **kwargs):
+            picked_vals.append(val)
+
+        picked_vals_col = []
+        picked_vals_nocol = []
+
+        m.cb.pick["col"].attach.annotate()
+        m.cb.pick["col"].attach(customcb, picked_vals=picked_vals_col)
+        m.cb.pick__col.attach.highlight_geometry(fc="r", ec="g")
+
+        m.cb.pick["nocol"].attach.annotate(xytext=(20, -20))
+        m.cb.pick["nocol"].attach(customcb, picked_vals=picked_vals_nocol)
+        m.cb.pick__nocol.attach.highlight_geometry(fc="r", ec="g")
+
+        m.cb.click.attach.mark(radius=0.1)
+
+        button_press_event(m.f.canvas, *clickxy, 1)
+        button_release_event(m.f.canvas, *clickxy, 1)
+
+        self.assertTrue(picked_vals_col[0] == gdf.NAME.loc[pickid])
+        self.assertTrue(picked_vals_nocol[0] is None)
