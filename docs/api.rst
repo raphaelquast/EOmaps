@@ -1189,7 +1189,7 @@ NOTE: sticky modifiers are defined for each callback method individually!
 🍭 Picking N nearest neighbours
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-[requires EOmaps >= 3.4]
+[requires EOmaps >= 5.4]
 
 By default pick-callbacks pick the nearest datapoint with respect to the click position.
 
