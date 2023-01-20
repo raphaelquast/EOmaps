@@ -12,6 +12,49 @@ import numpy as np
 
 from eomaps import Maps, MapsGrid
 
+from matplotlib.backend_bases import MouseEvent, KeyEvent
+
+
+def button_press_event(canvas, x, y, button, dblclick=False, guiEvent=None):
+    canvas._button = button
+    s = "button_press_event"
+    mouseevent = MouseEvent(
+        s, canvas, x, y, button, canvas._key, dblclick=dblclick, guiEvent=guiEvent
+    )
+    canvas.callbacks.process(s, mouseevent)
+
+
+def button_release_event(canvas, x, y, button, guiEvent=None):
+    s = "button_release_event"
+    event = MouseEvent(s, canvas, x, y, button, canvas._key, guiEvent=guiEvent)
+    canvas.callbacks.process(s, event)
+    canvas._button = None
+
+
+def motion_notify_event(canvas, x, y, guiEvent=None):
+    s = "motion_notify_event"
+    event = MouseEvent(s, canvas, x, y, guiEvent=guiEvent)
+    canvas.callbacks.process(s, event)
+
+
+def scroll_event(canvas, x, y, step, guiEvent=None):
+    s = "scroll_event"
+    event = MouseEvent(s, canvas, x, y, step=step, guiEvent=guiEvent)
+    canvas.callbacks.process(s, event)
+
+
+def key_press_event(canvas, key, guiEvent=None):
+    s = "key_press_event"
+    event = KeyEvent(s, canvas, key, guiEvent=guiEvent)
+    canvas.callbacks.process(s, event)
+
+
+def key_release_event(canvas, key, guiEvent=None):
+    s = "key_release_event"
+    event = KeyEvent(s, canvas, key, guiEvent=guiEvent)
+    canvas.callbacks.process(s, event)
+    canvas._key = None
+
 
 class TestBasicPlotting(unittest.TestCase):
     def setUp(self):
@@ -44,8 +87,8 @@ class TestBasicPlotting(unittest.TestCase):
     def test_simple_plot_shapes(self):
         usedata = self.data.sample(500)
 
-        m = Maps(4326)
         # rectangles
+        m = Maps(4326)
         m.set_data(usedata, x="x", y="y", in_crs=3857)
         m.set_shape.geod_circles(radius=100000)
         m.set_classify.Quantiles(k=5)
@@ -53,7 +96,6 @@ class TestBasicPlotting(unittest.TestCase):
         m.indicate_masked_points()
 
         m.add_feature.preset.ocean(ec="k", scale="110m")
-
         plt.close("all")
 
         # rectangles
@@ -65,10 +107,17 @@ class TestBasicPlotting(unittest.TestCase):
         m.add_feature.preset.ocean(ec="k", scale="110m")
 
         m.set_shape.rectangles(radius=1, radius_crs=4326)
-        m.plot_map()
+        m.plot_map(ec="k")
 
         m.set_shape.rectangles(radius=(1, 2), radius_crs="out")
-        m.plot_map()
+        m.plot_map(ec="k")
+
+        r = usedata.x.rank()
+        r = r / r.max() * 10
+        m.set_shape.rectangles(radius=r, radius_crs="out")
+        m.plot_map(ec="k", fc="none")
+
+        plt.close("all")
 
         # rectangles
         m = Maps(4326)
@@ -93,6 +142,28 @@ class TestBasicPlotting(unittest.TestCase):
 
         m.set_shape.ellipses(radius=1, radius_crs=4326)
         m.plot_map()
+
+        r = usedata.x.rank()
+        r = r / r.max() * 10
+        m.set_shape.ellipses(radius=r, radius_crs="out")
+        m.plot_map(ec="k", fc="none")
+
+        plt.close("all")
+
+        # scatter_points
+        m = Maps(4326)
+        m.set_data(usedata, x="x", y="y", in_crs=3857)
+
+        m.set_shape.scatter_points(marker="*", size=20)
+        m.plot_map()
+
+        m.set_shape.scatter_points(size=1)
+        m.plot_map()
+
+        r = usedata.x.rank()
+        r = r / r.max() * 50
+        m.set_shape.scatter_points(size=r, marker="s")
+        m.plot_map(ec="k", fc="none")
 
         plt.close("all")
 
@@ -391,7 +462,7 @@ class TestBasicPlotting(unittest.TestCase):
         m.plot_map()
 
         # plot on the same axes
-        m2 = m.copy(parent=m, data_specs=True, ax=m.ax)
+        m2 = m.copy(data_specs=True, ax=m.ax)
         m2.set_shape.ellipses()
         m2.plot_map(facecolor="none", edgecolor="r")
 
@@ -598,14 +669,16 @@ class TestBasicPlotting(unittest.TestCase):
         m = Maps(Maps.CRS.Stereographic())
         m.add_feature.preset.coastline(ec="k", scale="110m")
         c1 = m.add_compass((0.1, 0.1))
+        self.assertTrue(np.allclose(c1.get_position(), np.array([0.1, 0.1])))
         c2 = m.add_compass((0.9, 0.9))
+        self.assertTrue(np.allclose(c2.get_position(), np.array([0.9, 0.9])))
 
         cv = m.f.canvas
 
         # click on compass to move it around
-        cv.button_press_event(*m.ax.transAxes.transform((0.1, 0.1)), 1, False)
-        cv.motion_notify_event(*m.ax.transAxes.transform((0.5, 0.5)), False)
-        cv.button_release_event(*m.ax.transAxes.transform((0.5, 0.5)), 1, False)
+        button_press_event(cv, *m.ax.transAxes.transform((0.1, 0.1)), 1, False)
+        motion_notify_event(cv, *m.ax.transAxes.transform((0.5, 0.5)), False)
+        button_release_event(cv, *m.ax.transAxes.transform((0.5, 0.5)), 1, False)
 
         c1.set_position((-30000000, -2000000))
         c1.set_patch("r", "g", 5)
@@ -666,6 +739,9 @@ class TestBasicPlotting(unittest.TestCase):
             label_props=dict(scale=1.5, weight="bold", family="Courier New"),
         )
 
+        # test_presets
+        s_bw = m.add_scalebar(preset="bw")
+
         # ----------------- TEST interactivity
         cv = m.f.canvas
         x, y = m.ax.transData.transform(s3.get_position()[:2])
@@ -675,33 +751,35 @@ class TestBasicPlotting(unittest.TestCase):
         )
 
         # click on scalebar
-        cv.button_press_event(x, y, 1, False)
+        button_press_event(cv, x, y, 1, False)
 
         # move the scalebar
-        cv.motion_notify_event(x1, y1, False)
+        motion_notify_event(cv, x1, y1, False)
 
         # increase bbox size
-        cv.key_press_event("left")
-        cv.key_press_event("right")
-        cv.key_press_event("up")
-        cv.key_press_event("down")
+        key_press_event(cv, "left")
+        key_press_event(cv, "right")
+        key_press_event(cv, "up")
+        key_press_event(cv, "down")
 
         # deincrease bbox size
-        cv.key_press_event("alt+left")
-        cv.key_press_event("alt+right")
-        cv.key_press_event("alt+up")
-        cv.key_press_event("alt+down")
+        key_press_event(cv, "alt+left")
+        key_press_event(cv, "alt+right")
+        key_press_event(cv, "alt+up")
+        key_press_event(cv, "alt+down")
 
         # rotate the scalebar
-        cv.key_press_event("+")
-        cv.key_press_event("-")
+        key_press_event(cv, "+")
+        key_press_event(cv, "-")
 
         # adjust the padding between the ruler and the text
-        cv.key_press_event("alt+-")
-        cv.key_press_event("alt++")
+        key_press_event(cv, "alt+-")
+        key_press_event(cv, "alt++")
 
-        for si in [s, s1, s2, s3]:
+        for si in [s, s1, s2, s3, s_bw]:
             si.remove()
+
+        plt.close("all")
 
     def test_set_extent_to_location(self):
         m = Maps()
@@ -838,7 +916,7 @@ class TestBasicPlotting(unittest.TestCase):
             m.ax.set_title(title)
             getattr(m.set_shape, i[0])(**i[1])
 
-            m.plot_map(edgecolor="none", pick_distance=5)
+            m.plot_map(edgecolor="none")
             m.cb.click.attach.annotate(fontsize=6)
             m.add_feature.preset.coastline(lw=0.5)
             m.add_colorbar()
@@ -883,10 +961,10 @@ class TestBasicPlotting(unittest.TestCase):
 
         # test providing custom args
         m = Maps()
-        countries = m.add_feature.cultural_110m.admin_0_countries
-        countries(ec="k", fc="g")
+        countries = m.add_feature.cultural.admin_0_countries
+        countries(ec="k", fc="g", scale=110)
 
-        m.add_feature.physical_110m.ocean(fc="b")
+        m.add_feature.physical.ocean(fc="b", scale=110)
 
         plt.close("all")
 

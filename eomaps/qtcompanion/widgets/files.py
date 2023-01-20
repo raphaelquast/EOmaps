@@ -31,6 +31,8 @@ def _identify_radius(r):
         # try to identify tuples
         if r.startswith("(") and r.endswith(")"):
             rx, ry = map(float, r.lstrip("(").rstrip(")").split(","))
+        elif r == "None":
+            r = None
         else:
             r = float(r)
             rx = ry = r
@@ -47,6 +49,7 @@ class ShapeSelector(QtWidgets.QFrame):
         aggregator=_none_or_val,
         mask_radius=_none_or_val,
         radius=_identify_radius,
+        n=_none_or_val,
     )
 
     _argtypes = dict(
@@ -106,7 +109,7 @@ class ShapeSelector(QtWidgets.QFrame):
 
             return convval
 
-        print(r"WARNING value-conversion for {key} = {val} did not succeed!")
+        print(f"WARNING value-conversion for {key} = {val} did not succeed!")
         return val
 
     @property

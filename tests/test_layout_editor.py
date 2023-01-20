@@ -5,9 +5,51 @@ mpl.rcParams["toolbar"] = "None"
 import unittest
 import numpy as np
 import pandas as pd
-import matplotlib.pyplot as plt
 
-from eomaps import Maps, MapsGrid
+from eomaps import MapsGrid
+
+from matplotlib.backend_bases import MouseEvent, KeyEvent
+
+
+def button_press_event(canvas, x, y, button, dblclick=False, guiEvent=None):
+    canvas._button = button
+    s = "button_press_event"
+    mouseevent = MouseEvent(
+        s, canvas, x, y, button, canvas._key, dblclick=dblclick, guiEvent=guiEvent
+    )
+    canvas.callbacks.process(s, mouseevent)
+
+
+def button_release_event(canvas, x, y, button, guiEvent=None):
+    s = "button_release_event"
+    event = MouseEvent(s, canvas, x, y, button, canvas._key, guiEvent=guiEvent)
+    canvas.callbacks.process(s, event)
+    canvas._button = None
+
+
+def motion_notify_event(canvas, x, y, guiEvent=None):
+    s = "motion_notify_event"
+    event = MouseEvent(s, canvas, x, y, guiEvent=guiEvent)
+    canvas.callbacks.process(s, event)
+
+
+def scroll_event(canvas, x, y, step, guiEvent=None):
+    s = "scroll_event"
+    event = MouseEvent(s, canvas, x, y, step=step, guiEvent=guiEvent)
+    canvas.callbacks.process(s, event)
+
+
+def key_press_event(canvas, key, guiEvent=None):
+    s = "key_press_event"
+    event = KeyEvent(s, canvas, key, guiEvent=guiEvent)
+    canvas.callbacks.process(s, event)
+
+
+def key_release_event(canvas, key, guiEvent=None):
+    s = "key_release_event"
+    event = KeyEvent(s, canvas, key, guiEvent=guiEvent)
+    canvas.callbacks.process(s, event)
+    canvas._key = None
 
 
 class TestLayoutEditor(unittest.TestCase):
@@ -29,77 +71,77 @@ class TestLayoutEditor(unittest.TestCase):
         cv = mg.f.canvas
 
         # activate draggable axes
-        cv.key_press_event("alt+l")
-        cv.key_release_event("alt+l")
+        key_press_event(cv, "alt+l")
+        key_release_event(cv, "alt+l")
 
         # ################ check handling axes
 
         # click on top left axes
         x0 = (mg.m_0_0.ax.bbox.x1 + mg.m_0_0.ax.bbox.x0) / 2
         y0 = (mg.m_0_0.ax.bbox.y1 + mg.m_0_0.ax.bbox.y0) / 2
-        cv.button_press_event(x0, y0, 1, False)
+        button_press_event(cv, x0, y0, 1, False)
 
         # move the axes to the center
         x1 = (mg.m_0_0.f.bbox.x1 + mg.m_0_0.f.bbox.x0) / 2
         y1 = (mg.m_0_0.f.bbox.y1 + mg.m_0_0.f.bbox.y0) / 2
-        cv.motion_notify_event(x1, y1, False)
+        motion_notify_event(cv, x1, y1, False)
 
         # release the mouse
-        cv.button_release_event(0, 0, 1, False)
+        button_release_event(cv, 0, 0, 1, False)
 
         # resize the axis
-        cv.scroll_event(x1, y1, 10)
+        scroll_event(cv, x1, y1, 10)
 
         # click on bottom right
         x2 = (mg.m_1_1.ax.bbox.x1 + mg.m_1_1.ax.bbox.x0) / 2
         y2 = (mg.m_1_1.ax.bbox.y1 + mg.m_1_1.ax.bbox.y0) / 2
-        cv.button_press_event(x2, y2, 1, False)
+        button_press_event(cv, x2, y2, 1, False)
 
         # move the axes to the top left
-        cv.motion_notify_event(x0, y0, False)
+        motion_notify_event(cv, x0, y0, False)
 
         # release the mouse
-        cv.button_release_event(0, 0, 1, False)
+        button_release_event(cv, 0, 0, 1, False)
 
         # resize the axis
-        cv.scroll_event(x1, y1, -10)
+        scroll_event(cv, x1, y1, -10)
 
         # ------------- check keystrokes
 
         # click on bottom left axis
         x3 = (mg.m_1_0.ax.bbox.x1 + mg.m_1_0.ax.bbox.x0) / 2
         y3 = (mg.m_1_0.ax.bbox.y1 + mg.m_1_0.ax.bbox.y0) / 2
-        cv.button_press_event(x3, y3, 1, False)
+        button_press_event(cv, x3, y3, 1, False)
 
-        cv.key_press_event("left")
-        cv.key_press_event("right")
-        cv.key_press_event("up")
-        cv.key_press_event("down")
+        key_press_event(cv, "left")
+        key_press_event(cv, "right")
+        key_press_event(cv, "up")
+        key_press_event(cv, "down")
 
         # release the mouse
-        cv.button_release_event(0, 0, 1, False)
+        button_release_event(cv, 0, 0, 1, False)
 
         # ################ check handling colorbars
 
         # click on top left colorbar
         x4 = (mg.m_1_0.colorbar.ax_cb.bbox.x1 + mg.m_1_0.colorbar.ax_cb.bbox.x0) / 2
         y4 = (mg.m_1_0.colorbar.ax_cb.bbox.y1 + mg.m_1_0.colorbar.ax_cb.bbox.y0) / 2
-        cv.button_press_event(x4, y4, 1, False)
+        button_press_event(cv, x4, y4, 1, False)
 
         # move it around with keys
-        cv.key_press_event("left")
-        cv.key_press_event("right")
-        cv.key_press_event("up")
-        cv.key_press_event("down")
+        key_press_event(cv, "left")
+        key_press_event(cv, "right")
+        key_press_event(cv, "up")
+        key_press_event(cv, "down")
 
         # move it around with the mouse
-        cv.motion_notify_event(x0, y0, False)
+        motion_notify_event(cv, x0, y0, False)
 
         # resize it
-        cv.scroll_event(x1, y1, 10)
+        scroll_event(cv, x1, y1, 10)
 
         # release the mouse
-        cv.button_release_event(0, 0, 1, False)
+        button_release_event(cv, 0, 0, 1, False)
 
         # ------ test re-showing axes on click
         # click on bottom right histogram
@@ -109,16 +151,16 @@ class TestLayoutEditor(unittest.TestCase):
         y5 = (
             mg.m_1_1.colorbar.ax_cb_plot.bbox.y1 + mg.m_1_1.colorbar.ax_cb_plot.bbox.y0
         ) / 2
-        cv.button_press_event(x5, y5, 1, False)
+        button_press_event(cv, x5, y5, 1, False)
 
         # click on bottom right colorbar
         x6 = (mg.m_1_1.colorbar.ax_cb.bbox.x1 + mg.m_1_1.colorbar.ax_cb.bbox.x0) / 2
         y6 = (mg.m_1_1.colorbar.ax_cb.bbox.y1 + mg.m_1_1.colorbar.ax_cb.bbox.y0) / 2
-        cv.button_press_event(x6, y6, 1, False)
+        button_press_event(cv, x6, y6, 1, False)
 
         # deactivate draggable axes
-        cv.key_press_event("alt+l")
-        cv.key_release_event("alt+l")
+        key_press_event(cv, "alt+l")
+        key_release_event(cv, "alt+l")
 
         # save the new layout
         new_layout = mg.get_layout()

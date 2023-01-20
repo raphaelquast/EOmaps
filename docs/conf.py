@@ -69,6 +69,7 @@ extensions = [
     "sphinx.ext.autosummary",
     "sphinx.ext.napoleon",
     "sphinx_copybutton",
+    "sphinx_rtd_theme",
 ]
 
 

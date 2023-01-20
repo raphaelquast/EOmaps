@@ -13,6 +13,107 @@ from pyproj import Transformer
 
 import numpy as np
 
+gpd = None
+
+
+def _register_geopandas():
+    global gpd
+    try:
+        import geopandas as gpd
+    except ImportError:
+        return False
+
+    return True
+
+
+class _gpd_picker:
+    # a collection of pick-methods for geopandas.GeoDataFrames
+    def __init__(self, gdf, val_key, pick_method):
+        self.gdf = gdf
+        self.val_key = val_key
+        self.pick_method = pick_method
+
+    def get_picker(self):
+        assert _register_geopandas(), (
+            "EOmaps: Missing dependency `geopandas`!\n"
+            + "please install '(conda install -c conda-forge geopandas)'"
+            + "to make geopandas GeoDataFrames pickable."
+        )
+
+        if self.pick_method == "contains":
+            return self._contains_picker
+        elif self.pick_method == "centroids":
+            from scipy.spatial import cKDTree
+
+            self.tree = cKDTree(
+                list(map(lambda x: (x.x, x.y), self.gdf.geometry.centroid))
+            )
+            return self._centroids_picker
+        else:
+            raise TypeError(
+                f"EOmaps: {self.pick_method} is not a valid " "pick_method!"
+            )
+
+    def _contains_picker(self, artist, mouseevent):
+        try:
+            query = getattr(self.gdf, "contains")(
+                gpd.points_from_xy(
+                    np.atleast_1d(mouseevent.xdata),
+                    np.atleast_1d(mouseevent.ydata),
+                )[0]
+            )
+
+            if query.any():
+
+                ID = self.gdf.index[query][0]
+                ind = query.values.nonzero()[0][0]
+
+                if self.val_key:
+                    val = self.gdf[query][self.val_key].iloc[0]
+                else:
+                    val = None
+
+                if artist.get_array() is not None:
+                    val_numeric = artist.norm(artist.get_array()[ind])
+                    val_color = artist.cmap(val_numeric)
+                else:
+                    val_numeric = None
+                    val_color = None
+
+                return True, dict(
+                    ID=ID,
+                    ind=ind,
+                    val=val,
+                    val_color=val_color,
+                    pos=(mouseevent.xdata, mouseevent.ydata),
+                )
+            else:
+                return False, dict()
+        except Exception:
+            return False, dict()
+
+    def _centroids_picker(self, artist, mouseevent):
+        try:
+            dist, ind = self.tree.query((mouseevent.xdata, mouseevent.ydata), 1)
+            ID = self.gdf.index[ind]
+
+            if self.val_key is not None:
+                val = self.gdf.iloc[ind][self.val_key]
+            else:
+                val = None
+
+            pos = self.tree.data[ind].tolist()
+            try:
+                val_numeric = artist.norm(artist.get_array()[ID])
+                val_color = artist.cmap(val_numeric)
+            except Exception:
+                val_color = None
+
+            return True, dict(ID=ID, pos=pos, val=val, ind=ind, val_color=val_color)
+
+        except Exception:
+            return False, dict()
+
 
 class _cb_container(object):
     """base-class for callback containers"""
@@ -504,6 +605,28 @@ class _click_container(_cb_container):
         if self._method == "click":
             self._m.cb._click_move._sticky_modifiers = args
 
+    def _init_picker(self):
+        try:
+            # Lazily make a plotted dataset pickable a
+            if getattr(self._m, "tree", None) is None:
+                assert getattr(self._m, "coll", None) is not None, (
+                    "EOmaps: you MUST call `m.plot_map()` or "
+                    "`m.make_dataset_pickable()` before assigning pick callbacks!"
+                )
+
+                from .helpers import searchtree
+
+                self._m.tree = searchtree(m=self._m._proxy(self._m))
+                self._m.cb.pick._set_artist(self._m.coll)
+                self._m.cb.pick._init_cbs()
+                self._m.cb._methods.add("pick")
+        except Exception as ex:
+            print(
+                "EOmaps: There was an error while trying to initialize "
+                "pick-callbacks!",
+                ex,
+            )
+
     def _add_callback(
         self,
         *args,
@@ -593,9 +716,10 @@ class _click_container(_cb_container):
 
         if self._method == "pick":
             assert self._m.coll is not None, (
-                "you can only attach pick-callbacks after plotting a dataset!"
-                + "... use `m.plot_map()` first."
+                "Pick-callbacks can only be attached AFTER calling `m.plot_map()` "
+                "or `m.make_dataset_pickable()`!"
             )
+            self._init_picker()
 
         # attach "on_move" callbacks
         movecb_name = None
@@ -1007,9 +1131,13 @@ class cb_pick_container(_click_container):
 
     Note
     ----
-    The threshold for the default picker can be set via the `pick_distance` argument.
-    Use `m.plot_map(pick_distance=20)` to specify the maximal distance (in pixels)
-    that is used to identify the closest datapoint.
+
+    To speed up identification of points for very large datasets, the search
+    is limited to points located inside a "search rectangle".
+    The side-length of this rectangle is determined in the plot-crs and can be
+    set via `m.cb.pick.set_props(search_radius=...)`.
+
+    The default is to use a side-length of 50 times the dataset-radius.
 
     Methods
     --------
@@ -1027,6 +1155,8 @@ class cb_pick_container(_click_container):
 
     set_sticky_modifiers : define keypress-modifiers that remain active after release
 
+    set_props : set the picking behaviour (e.g. number of points, search radius, etc.)
+
     """
 
     def __init__(self, picker_name="default", picker=None, *args, **kwargs):
@@ -1034,7 +1164,12 @@ class cb_pick_container(_click_container):
         self._cid_pick_event = dict()
         self._picker_name = picker_name
         self._artist = None
-        self._pick_distance = np.inf
+
+        self._n_ids = 1
+        self._consecutive_multipick = False
+        self._pick_relative_to_closest = True
+
+        self._search_radius = "50"
 
         if picker is None:
             self._picker = self._default_picker
@@ -1055,6 +1190,64 @@ class cb_pick_container(_click_container):
                 f"the picker {name} does not exist...", "use `m.cb.add_picker` first!"
             )
 
+    def set_props(
+        self,
+        n=None,
+        consecutive_pick=None,
+        pick_relative_to_closest=None,
+        search_radius=None,
+    ):
+        """
+        Set the picker-properties (number of picked points, max. search radius, etc.)
+        (Only provided arguments will be updated!)
+
+        Parameters
+        ----------
+        n : int, optional
+            The number of nearest neighbours to pick at each pick-event.
+            The default is 1.
+        consecutive_pick : bool, optional
+
+            - If True, pick-callbacks will be executed consecutively for each
+              picked datapoint.
+            - if False, pick-callbacks will get lists of all picked values
+              as input-arguments
+
+            The default is False.
+        pick_relative_to_closest : bool, optional
+            ONLY relevant if `n > 1`.
+
+            - If True: pick (n) nearest neighbours based on the center of the
+              closest identified datapoint
+            - If False: pick (n) nearest neighbours based on the click-position
+
+            The default is True.
+        search_radius : int, float, str or None optional
+            Set the radius of the area that is used to limit the number of
+            pixels when searching for nearest-neighbours.
+
+            if `int` or `float`:
+                The radius of the circle in units of the plot_crs
+            if `str:
+                A multiplication-factor for the estimated pixel-radius.
+                (e.g. a circle with (r=search_radius * m.shape.radius) is
+                used if possible and else np.inf is used.
+
+            The default is "50" (e.g. 50 times the pixel-radius).
+        """
+
+        if n is not None:
+            self._n_ids = n
+
+        if consecutive_pick is not None:
+            self._consecutive_multipick = consecutive_pick
+
+        if pick_relative_to_closest is not None:
+            self._pick_relative_to_closest = pick_relative_to_closest
+
+        if search_radius is not None:
+            self._search_radius = search_radius
+
     def _set_artist(self, artist):
         self._artist = artist
         self._artist.set_picker(self._picker)
@@ -1064,13 +1257,14 @@ class cb_pick_container(_click_container):
         self._add_pick_callback()
 
     def _default_picker(self, artist, event):
+
         # make sure that objects are only picked if we are on the right layer
         if not self._execute_cb(self._m.layer):
             return False, None
 
         try:
             # if no pick-callback is attached, don't identify the picked point
-            if len(self._m.cb.pick.get.cbs) == 0:
+            if len(self.get.cbs) == 0:
                 return False, None
         except ReferenceError:
             # in case we encounter a reference-error, remove the picker from the artist
@@ -1086,32 +1280,41 @@ class cb_pick_container(_click_container):
         if not np.isfinite((event.xdata, event.ydata)).all():
             return False, dict(ind=None, dblclick=event.dblclick, button=event.button)
 
-        # find the closest point to the clicked pixel
-        dist, index = self._m.tree.query((event.xdata, event.ydata))
+        # update the search-radius if necessary
+        # (do this here to allow setting a multiplier for the dataset-radius
+        # without having to plot it first!)
+        if self._search_radius != self._m.tree._search_radius:
+            self._m.tree.set_search_radius(self._search_radius)
 
-        pos = self._m._get_xy_from_index(index, reprojected=True)
-        ID = self._get_id(index)
-        val = self._m._props["z_data"].flat[index]
-        try:
-            color = artist.cmap(artist.norm(val))
-        except Exception:
-            color = None
+        # find the closest point to the clicked pixel
+        index = self._m.tree.query(
+            (event.xdata, event.ydata),
+            k=self._n_ids,
+            pick_relative_to_closest=self._pick_relative_to_closest,
+        )
 
         if index is not None:
+            pos = self._m._get_xy_from_index(index, reprojected=True)
+            ID = self._get_id(index)
+            val = self._m._props["z_data"].flat[index]
+            try:
+                val_color = artist.cmap(artist.norm(val))
+            except Exception:
+                val_color = None
+
             return True, dict(
                 dblclick=event.dblclick,
                 button=event.button,
-                dist=dist,
                 ind=index,
                 ID=ID,
                 pos=pos,
                 val=val,
-                val_color=color,
+                val_color=val_color,
             )
         else:
-            return True, dict(
-                ind=None, dblclick=event.dblclick, button=event.button, dist=dist
-            )
+            # do this to "unpick" previously picked datapoints if you click
+            # outside the data-extent
+            return True, dict(ind=None, dblclick=event.dblclick, button=event.button)
 
         return False, None
 
@@ -1122,7 +1325,7 @@ class cb_pick_container(_click_container):
 
         Parameters
         ----------
-        ind : int
+        ind : int or list of int
             The index of the flattened array.
 
         Returns
@@ -1133,27 +1336,67 @@ class cb_pick_container(_click_container):
 
         ids = self._m._props["ids"]
         if isinstance(ids, (list, range)):
-            ID = ids[ind]
+            ind = np.atleast_1d(ind).tolist()  # to treat numbers and lists
+            ID = [ids[i] for i in ind]
+            if len(ID) == 1:
+                ID = ID[0]
         elif isinstance(ids, np.ndarray):
             ID = ids.flat[ind]
         else:
             ID = "?"
-
         return ID
 
     def _get_pickdict(self, event):
-        ind = event.ind
-        mouseevent = event.mouseevent
+        event_ind = event.ind
+        n_inds = len(np.atleast_1d(event_ind))
+        # mouseevent = event.mouseevent
+        noval = [None] * n_inds if n_inds > 1 else None
+
+        ID = getattr(event, "ID", noval)
+        pos = getattr(event, "pos", noval)
+        val = getattr(event, "val", noval)
+        ind = getattr(event, "ind", noval)
+        val_color = getattr(event, "val_color", noval)
+
         if ind is not None:
-            clickdict = dict(
-                ID=getattr(event, "ID", None),
-                pos=getattr(event, "pos", (mouseevent.xdata, mouseevent.ydata)),
-                val=getattr(event, "val", None),
-                ind=getattr(event, "ind", None),
-                picker_name=self._picker_name,
-                val_color=getattr(event, "val_color", None),
-            )
-            return clickdict
+            if self._consecutive_multipick is False:
+                # return all picked values as arrays
+                clickdict = dict(
+                    ID=ID,  # convert IDs to numpy-arrays!
+                    pos=pos,
+                    val=val,
+                    ind=ind,
+                    val_color=val_color,
+                    picker_name=self._picker_name,
+                )
+
+                return clickdict
+            else:
+                if n_inds > 1:
+                    clickdicts = []
+                    for i in range(n_inds):
+                        clickdict = dict(
+                            ID=ID[i],
+                            pos=(pos[0][i], pos[1][i]),
+                            val=val[i],
+                            ind=ind[i],
+                            val_color=val_color[i],
+                            picker_name=self._picker_name,
+                        )
+                        clickdicts.append(clickdict)
+                else:
+                    clickdicts = [
+                        dict(
+                            ID=ID,  # convert IDs to numpy-arrays!
+                            pos=pos,
+                            val=val,
+                            ind=ind,
+                            val_color=val_color,
+                            picker_name=self._picker_name,
+                        )
+                    ]
+
+                return clickdicts
 
     def _onpick(self, event):
         if event.artist is not self._artist:
@@ -1201,7 +1444,11 @@ class cb_pick_container(_click_container):
 
                 cb = bcbs[key]
                 if clickdict is not None:
-                    cb(**clickdict)
+                    if self._consecutive_multipick is False:
+                        cb(**clickdict)
+                    else:
+                        for c in clickdict:
+                            cb(**c)
 
     def _reset_cids(self):
         for method, cid in self._cid_pick_event.items():
@@ -1234,9 +1481,8 @@ class cb_pick_container(_click_container):
                 self._m.BM._clear_temp_artists(self._method)
 
                 self._event = event
-                # check if the artists has a custom picker assigned
                 self._clear_temporary_artists()
-                self._m.BM._clear_temp_artists(self._method)
+                # self._m.BM._clear_temp_artists(self._method)
 
                 # execute "_onpick" on the maps-object that belongs to the clicked axes
                 # and forward the event to all forwarded maps-objects
@@ -1298,17 +1544,14 @@ class cb_pick_container(_click_container):
             )
 
             pick = obj._picker(obj._artist, dummymouseevent)
-
             if pick[1] is not None:
                 dummyevent.ID = pick[1].get("ID", None)
                 dummyevent.ind = pick[1].get("ind", None)
                 dummyevent.val = pick[1].get("val", None)
+                dummyevent.pos = pick[1].get("pos", None)
 
-                if "dist" in pick[1]:
-                    dummyevent.dist = pick[1].get("dist", None)
             else:
                 dummyevent.ind = None
-                dummyevent.dist = None
 
             obj._onpick(dummyevent)
 
@@ -1628,7 +1871,7 @@ class cb_container:
     def __init__(self, m):
         self._m = m
 
-        self._methods = ["click", "move", "keypress", "_click_move"]
+        self._methods = {"click", "move", "keypress", "_click_move"}
 
         self._click = cb_click_container(
             m=self._m,
@@ -1772,7 +2015,7 @@ class cb_container:
 
         # add the picker method to the accessible cbs
         setattr(self._m.cb, new_pick._method, new_pick)
-        self._methods.append(new_pick._method)
+        self._methods.add(new_pick._method)
 
         return new_pick
 

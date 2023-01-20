@@ -126,61 +126,76 @@ Interested in actively contributing to the library?
 
 ```python
 from eomaps import Maps
+import numpy as np
+### Initialize Maps object
+m = Maps(crs=Maps.CRS.Orthographic(), figsize=(12, 8))
 
-# initialize Maps object
-m = Maps(crs=Maps.CRS.Orthographic())
-
-# add map-features from NaturalEarth
+### Add map-features from NaturalEarth
 m.add_feature.preset.coastline()
-m.add_feature.cultural_50m.admin_0_countries(fc="none", ec="g")
+m.add_feature.cultural.admin_0_countries(scale=50, fc="none", ec="g", lw=0.3)
 
-# assign a dataset
-m.set_data(data=[1, 2, 3, 4], x=[45, 46, 47, 42], y=[23, 24, 25, 26], crs=4326)
-# set the shape you want to use to represent the data-points
-m.set_shape.geod_circles(radius=10000) # (e.g. geodetic circles with 10km radius)
-# (optionally) classify the data
-m.set_classify_specs(scheme=Maps.CLASSIFIERS.Quantiles, k=5)
-# plot the data
-m.plot_map(cmap="viridis", vmin=2, vmax=4)
-# add a colorbar with a colored histogram on top
-m.add_colorbar(histbins=200)
-
-# add a scalebar
-m.add_scalebar()
-# add a compass (or north-arrow)
-m.add_compass()
-
-# add imagery from a open-access WebMap services
+### Add imagery from open-access WebMap services
 m.add_wms.OpenStreetMap.add_layer.default()
 
-# use callback functions to interact with the map
-m.cb.pick.attach.annotate()
+### Plot datasets
+# --- Create some random data
+x, y = np.mgrid[-50:40:5, -20:50:3]
+data = x + y
+# ---
+m.set_data(data=data, x=x, y=y, crs=4326) # assign a dataset
+m.set_shape.ellipses() # set how you want to represent the data-points on the map
+m.set_classify_specs(scheme=Maps.CLASSIFIERS.FisherJenks, k=6) # classify the data
+m.plot_map(cmap="viridis", vmin=-100, vmax=100, set_extent=False) # plot the data
+m.add_colorbar(hist_bins="bins", label="What a nice colorbar") # add a colorbar
 
-# use multiple layers to compare and analyze different datasets
-m3 = m.new_layer(layer="layer 2")
-m3.add_feature.preset.ocean()
-
-# attach a callback to peek on layer 1 if you click on the map
+### Use callback functions to interact with the map
+#   (NOTE: you can also define custom callbacks!)
+# - Click callbacks are executed if you click anywhere on the map
+#   (Use keypress-modifiers to trigger only if a button is pressed)
+m.cb.click.attach.mark(shape="geod_circles", radius=1e5, button=3)
 m.cb.click.attach.peek_layer(layer="layer 2", how=0.4)
-# attach a callback to show an annotation while you move the mouse
-# (and simultaneously press "a" on the keyboard)
-m.cb.move.attach.annotate(modifier="a")
-# attach callbacks to switch between the layers with the keyboard
-m.cb.keypress.attach.switch_layer(layer=0, key="0")
-m.cb.keypress.attach.switch_layer(layer="layer 2", key="1")
+m.cb.click.attach.annotate(modifier="a")
+# - Pick callbacks identify the closest datapoint
+m.cb.pick.attach.annotate()
+# - Keypress callbacks are executed if you press a key on the keyboard
+#   (using "m.all" ensures that the cb triggers irrespective of the visible layer)
+m.all.cb.keypress.attach.switch_layer(layer="base", key="0")
+m.all.cb.keypress.attach.switch_layer(layer="layer 2", key="1")
 
-# get a clickable widget to switch between the available plot-layers
-m.util.layer_selector()
+### Use multiple layers to compare and analyze different datasets
+m2 = m.new_layer(layer="layer 2") # create a new plot-layer
+m2.add_feature.preset.ocean() # populate the layer
+# Get a clickable widget to switch between the available plot-layers
+m.util.layer_selector(loc="upper center")
 
-# add zoomed-in "inset-maps" to highlight areas on th map
-m_inset = m.new_inset_map((10, 45))
-m_inset.add_feature.preset.coastline(fc="g")
+### Add zoomed-in "inset-maps" to highlight areas on th map
+m_inset = m.new_inset_map((10, 45), radius=10, layer="base")
+m_inset.add_feature.preset.coastline()
+m_inset.add_feature.preset.ocean()
 
-# ---- plot data directly from GeoTIFF / NetCDF or CSV files
-m4 = m.new_layer_from_file.GeoTIFF(...)
-m4 = m.new_layer_from_file.NetCDF(...)
-m4 = m.new_layer_from_file.CSV(...)
+### Reposition axes based on a given layout (check m.get_layout())
+m.apply_layout(
+    {'0_map': [0.44306, 0.25, 0.48889, 0.73333],
+     '1_cb': [0.0125, 0.0, 0.98, 0.23377],
+     '1_cb_histogram_size': 0.8,
+     '2_map': [0.03333, 0.46667, 0.33329, 0.5]}
+    )
 
+### Add a scalebar
+s = m_inset.add_scalebar(lon=15.15, lat=44.45,
+                         autoscale_fraction=.4,
+                         scale_props=dict(n=6),
+                         label_props=dict(scale=3, every=2),
+                         patch_props=dict(lw=0.5)
+                         )
+
+### Add a compass (or north-arrow)
+c = m_inset.add_compass(pos=(.825,.88), layer="base")
+
+### Plot data directly from GeoTIFF / NetCDF or CSV files
+#m4 = m.new_layer_from_file.GeoTIFF(...)
+#m4 = m.new_layer_from_file.NetCDF(...)
+#m4 = m.new_layer_from_file.CSV(...)
 ```
 
 ----

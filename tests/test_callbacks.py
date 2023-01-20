@@ -1,28 +1,17 @@
-import matplotlib as mpl
-
 # mpl.rcParams["toolbar"] = "None"
 
 import unittest
+from itertools import product
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 
-from eomaps import Maps, MapsGrid
+from eomaps import Maps
 
-from matplotlib.backend_bases import MouseEvent
+from matplotlib.backend_bases import MouseEvent, KeyEvent
 
 # copy of depreciated matplotlib function
 def button_press_event(canvas, x, y, button, dblclick=False, guiEvent=None):
-    """
-    Callback processing for mouse button press events.
-
-    Backend derived classes should call this function on any mouse
-    button press.  (*x*, *y*) are the canvas coords ((0, 0) is lower left).
-    button and key are as defined in `MouseEvent`.
-
-    This method will call all functions connected to the
-    'button_press_event' with a `MouseEvent` instance.
-    """
     canvas._button = button
     s = "button_press_event"
     mouseevent = MouseEvent(
@@ -33,28 +22,23 @@ def button_press_event(canvas, x, y, button, dblclick=False, guiEvent=None):
 
 # copy of depreciated matplotlib function
 def button_release_event(canvas, x, y, button, guiEvent=None):
-    """
-    Callback processing for mouse button release events.
-
-    Backend derived classes should call this function on any mouse
-    button release.
-
-    This method will call all functions connected to the
-    'button_release_event' with a `MouseEvent` instance.
-
-    Parameters
-    ----------
-    x : float
-        The canvas coordinates where 0=left.
-    y : float
-        The canvas coordinates where 0=bottom.
-    guiEvent
-        The native UI event that generated the Matplotlib event.
-    """
     s = "button_release_event"
     event = MouseEvent(s, canvas, x, y, button, canvas._key, guiEvent=guiEvent)
     canvas.callbacks.process(s, event)
     canvas._button = None
+
+
+def key_press_event(canvas, key, guiEvent=None):
+    s = "key_press_event"
+    event = KeyEvent(s, canvas, key, guiEvent=guiEvent)
+    canvas.callbacks.process(s, event)
+
+
+def key_release_event(canvas, key, guiEvent=None):
+    s = "key_release_event"
+    event = KeyEvent(s, canvas, key, guiEvent=guiEvent)
+    canvas.callbacks.process(s, event)
+    canvas._key = None
 
 
 class TestCallbacks(unittest.TestCase):
@@ -125,27 +109,98 @@ class TestCallbacks(unittest.TestCase):
         plt.close("all")
 
         # ---------- test as PICK callback
-        m = self.create_basic_map()
-        cid = m.cb.pick.attach.get_values()
-        m.cb.pick.attach.annotate()
-        m.cb.click.attach.mark(radius=0.1)
+        for n, cpick, relpick, r in product(
+            [1, 5], [True, False], [True, False], ["10", 12.65]
+        ):
 
-        self.click_ID(m, 1225)
-        self.assertEqual(len(m.cb.pick.get.picked_vals["pos"]), 1)
-        self.assertEqual(len(m.cb.pick.get.picked_vals["ID"]), 1)
-        self.assertEqual(len(m.cb.pick.get.picked_vals["val"]), 1)
+            with self.subTest(
+                n=n,
+                consecutive_pick=cpick,
+                pick_relative_to_closest=relpick,
+                search_radius=r,
+            ):
+                m = self.create_basic_map()
+                m.cb.pick.set_props(
+                    n=n,
+                    consecutive_pick=cpick,
+                    pick_relative_to_closest=relpick,
+                    search_radius=r,
+                )
 
-        self.assertTrue(m.cb.pick.get.picked_vals["ID"][0] == 1225)
+                cid = m.cb.pick.attach.get_values()
+                m.cb.pick.attach.annotate()
+                m.cb.click.attach.mark(radius=0.1)
 
-        self.click_ID(m, 317)
-        self.assertEqual(len(m.cb.pick.get.picked_vals["pos"]), 2)
-        self.assertEqual(len(m.cb.pick.get.picked_vals["ID"]), 2)
-        self.assertEqual(len(m.cb.pick.get.picked_vals["val"]), 2)
+                self.click_ID(m, 1225)
 
-        self.assertTrue(m.cb.pick.get.picked_vals["ID"][1] == 317)
+                if n == 1:
+                    self.assertEqual(len(m.cb.pick.get.picked_vals["pos"]), 1)
+                    self.assertEqual(len(m.cb.pick.get.picked_vals["ID"]), 1)
+                    self.assertEqual(len(m.cb.pick.get.picked_vals["val"]), 1)
 
-        m.cb.click.remove(cid)
-        plt.close("all")
+                    self.assertTrue(m.cb.pick.get.picked_vals["ID"][0] == 1225)
+
+                elif n == 5:
+                    if cpick is True:
+                        self.assertEqual(len(m.cb.pick.get.picked_vals["pos"]), 5)
+                        self.assertEqual(len(m.cb.pick.get.picked_vals["ID"]), 5)
+                        self.assertEqual(len(m.cb.pick.get.picked_vals["val"]), 5)
+                    else:
+                        self.assertEqual(len(m.cb.pick.get.picked_vals["pos"]), 1)
+                        self.assertEqual(len(m.cb.pick.get.picked_vals["ID"]), 1)
+                        self.assertEqual(len(m.cb.pick.get.picked_vals["val"]), 1)
+                        if relpick is True:
+                            self.assertTrue(
+                                np.allclose(
+                                    m.cb.pick.get.picked_vals["ID"][0],
+                                    np.array([1225, 1275, 1175, 1224, 1226]),
+                                )
+                            )
+                        else:
+                            self.assertTrue(
+                                np.allclose(
+                                    m.cb.pick.get.picked_vals["ID"][0],
+                                    np.array([1225, 1275, 1175, 1224, 1325]),
+                                )
+                            )
+
+                # click on another pixel
+                self.click_ID(m, 317)
+
+                if n == 1:
+                    self.assertEqual(len(m.cb.pick.get.picked_vals["pos"]), 2)
+                    self.assertEqual(len(m.cb.pick.get.picked_vals["ID"]), 2)
+                    self.assertEqual(len(m.cb.pick.get.picked_vals["val"]), 2)
+
+                    self.assertTrue(m.cb.pick.get.picked_vals["ID"][1] == 317)
+
+                elif n == 5:
+                    if cpick is True:
+                        self.assertEqual(len(m.cb.pick.get.picked_vals["pos"]), 10)
+                        self.assertEqual(len(m.cb.pick.get.picked_vals["ID"]), 10)
+                        self.assertEqual(len(m.cb.pick.get.picked_vals["val"]), 10)
+                    else:
+                        self.assertEqual(len(m.cb.pick.get.picked_vals["pos"]), 2)
+                        self.assertEqual(len(m.cb.pick.get.picked_vals["ID"]), 2)
+                        self.assertEqual(len(m.cb.pick.get.picked_vals["val"]), 2)
+
+                        if relpick is True:
+                            self.assertTrue(
+                                np.allclose(
+                                    m.cb.pick.get.picked_vals["ID"][1],
+                                    np.array([317, 367, 267, 316, 417]),
+                                )
+                            )
+                        else:
+                            self.assertTrue(
+                                np.allclose(
+                                    m.cb.pick.get.picked_vals["ID"][1],
+                                    np.array([317, 367, 267, 316, 417]),
+                                )
+                            )
+
+                m.cb.pick.remove(cid)
+                plt.close("all")
 
     def test_print_to_console(self):
         # ---------- test as CLICK callback
@@ -157,15 +212,33 @@ class TestCallbacks(unittest.TestCase):
         plt.close("all")
 
         # ---------- test as PICK callback
-        m = self.create_basic_map()
-        cid = m.cb.pick.attach.print_to_console()
+        for n, cpick, relpick, r in product(
+            [1, 5], [True, False], [True, False], ["10", 12.65]
+        ):
 
-        self.click_ax_center(m)
-        m.cb.click.remove(cid)
-        plt.close("all")
+            with self.subTest(
+                n=n,
+                consecutive_pick=cpick,
+                pick_relative_to_closest=relpick,
+                search_radius=r,
+            ):
+
+                # ---------- test as CLICK callback
+                m = self.create_basic_map()
+                m.cb.pick.set_props(
+                    n=n,
+                    consecutive_pick=cpick,
+                    pick_relative_to_closest=relpick,
+                    search_radius=r,
+                )
+                cid = m.cb.pick.attach.print_to_console()
+
+                self.click_ax_center(m)
+                m.cb.pick.remove(cid)
+                plt.close("all")
 
     def test_annotate(self):
-        # ---------- test as CLICK callback
+
         m = self.create_basic_map()
         cid = m.cb.click.attach.annotate()
         self.click_ax_center(m)
@@ -193,31 +266,50 @@ class TestCallbacks(unittest.TestCase):
         self.click_ax_center(m)
 
         # ---------- test as PICK callback
-        m = self.create_basic_map()
-        cid = m.cb.pick.attach.annotate()
-        self.click_ax_center(m)
-        m.cb.pick.remove(cid)
+        for n, cpick, relpick, r in product(
+            [1, 5], [True, False], [True, False], ["10", 12.65]
+        ):
 
-        m.cb.pick.attach.annotate(
-            pos_precision=8, val_precision=8, permanent=False, xytext=(-30, -50)
-        )
-        self.click_ax_center(m)
+            with self.subTest(
+                n=n,
+                consecutive_pick=cpick,
+                pick_relative_to_closest=relpick,
+                search_radius=r,
+            ):
 
-        m.cb.pick.attach.annotate(text="hellooo", xytext=(200, 200))
-        self.click_ax_center(m)
+                # ---------- test as CLICK callback
+                m = self.create_basic_map()
+                m.cb.pick.set_props(
+                    n=n,
+                    consecutive_pick=cpick,
+                    pick_relative_to_closest=relpick,
+                    search_radius=r,
+                )
 
-        def text(m, ID, val, pos, ind):
-            return f"{ID}\n {val}\n {pos}\n {ind}\n {m.data_specs.crs}"
+                cid = m.cb.pick.attach.annotate()
+                self.click_ax_center(m)
+                m.cb.pick.remove(cid)
 
-        props = dict(
-            xytext=(-50, 100),
-            textcoords="offset points",
-            bbox=dict(boxstyle="round", fc="g", ec="r"),
-            arrowprops=dict(arrowstyle="fancy"),
-        )
+                m.cb.pick.attach.annotate(
+                    pos_precision=8, val_precision=8, permanent=False, xytext=(-30, -50)
+                )
+                self.click_ax_center(m)
 
-        m.cb.pick.attach.annotate(text=text, **props)
-        self.click_ax_center(m)
+                m.cb.pick.attach.annotate(text="hellooo", xytext=(200, 200))
+                self.click_ax_center(m)
+
+                def text(m, ID, val, pos, ind):
+                    return f"{ID}\n {val}\n {pos}\n {ind}\n {m.data_specs.crs}"
+
+                props = dict(
+                    xytext=(-50, 100),
+                    textcoords="offset points",
+                    bbox=dict(boxstyle="round", fc="g", ec="r"),
+                    arrowprops=dict(arrowstyle="fancy"),
+                )
+
+                m.cb.pick.attach.annotate(text=text, **props)
+                self.click_ax_center(m)
 
         plt.close("all")
 
@@ -264,45 +356,70 @@ class TestCallbacks(unittest.TestCase):
         plt.close("all")
 
         # ---------- test as PICK callback
-        m = self.create_basic_map()
-        cid = m.cb.pick.attach.mark()
 
-        self.click_ax_center(m)
-        m.cb.pick.remove(cid)
+        # test different pick-properties
+        for n, cpick, relpick, r in product(
+            [1, 5], [True, False], [True, False], ["10", 12.65]
+        ):
 
-        cid = m.cb.pick.attach.mark(
-            radius=400000,
-            radius_crs=3857,
-            shape="rectangles",
-            fc="r",
-            ec="g",
-            permanent=False,
-        )
-        self.click_ax_center(m)
+            with self.subTest(
+                n=n,
+                consecutive_pick=cpick,
+                pick_relative_to_closest=relpick,
+                search_radius=r,
+            ):
 
-        cid = m.cb.pick.attach.mark(
-            radius=500000, shape="geod_circles", fc="none", ec="k", n=6, permanent=True
-        )
+                m = self.create_basic_map()
+                m.cb.pick.set_props(
+                    n=n,
+                    consecutive_pick=cpick,
+                    pick_relative_to_closest=relpick,
+                    search_radius=r,
+                )
 
-        self.click_ax_center(m)
+                cid = m.cb.pick.attach.mark()
 
-        cid = m.cb.pick.attach.mark(
-            radius=500000,
-            shape="geod_circles",
-            fc="none",
-            ec="m",
-            n=100,
-            permanent=False,
-        )
+                self.click_ax_center(m)
+                m.cb.pick.remove(cid)
 
-        self.click_ax_center(m)
+                cid = m.cb.pick.attach.mark(
+                    radius=400000,
+                    radius_crs=3857,
+                    shape="rectangles",
+                    fc="r",
+                    ec="g",
+                    permanent=False,
+                )
+                self.click_ax_center(m)
 
-        cid = m.cb.pick.attach.mark(
-            fc=(1, 0, 0, 0.5), ec="k", n=100, permanent=False, buffer=15
-        )
+                cid = m.cb.pick.attach.mark(
+                    radius=500000,
+                    shape="geod_circles",
+                    fc="none",
+                    ec="k",
+                    n=6,
+                    permanent=True,
+                )
 
-        self.click_ax_center(m)
-        plt.close("all")
+                self.click_ax_center(m)
+
+                cid = m.cb.pick.attach.mark(
+                    radius=500000,
+                    shape="geod_circles",
+                    fc="none",
+                    ec="m",
+                    n=100,
+                    permanent=False,
+                )
+
+                self.click_ax_center(m)
+
+                cid = m.cb.pick.attach.mark(
+                    fc=(1, 0, 0, 0.5), ec="k", n=100, permanent=False, buffer=15
+                )
+
+                self.click_ax_center(m)
+                plt.close("all")
 
     def test_peek_layer(self):
         # ---------- test as CLICK callback
@@ -395,33 +512,45 @@ class TestCallbacks(unittest.TestCase):
         plt.close("all")
 
     def test_load(self):
+        for n, cpick, relpick, r in product(
+            [1, 5], [True, False], [True, False], ["10", 12.65]
+        ):
 
-        db = self.data
+            with self.subTest(
+                n=n,
+                consecutive_pick=cpick,
+                pick_relative_to_closest=relpick,
+                search_radius=r,
+            ):
 
-        m = self.create_basic_map()
-        m.cb.pick.attach.get_values()
+                db = self.data
 
-        cid = m.cb.pick.attach.load(database=db, load_method="xs")
+                m = self.create_basic_map()
+                m.cb.pick.attach.get_values()
 
-        self.assertTrue(m.cb.pick.get.picked_object is None)
+                cid = m.cb.pick.attach.load(database=db, load_method="xs")
 
-        self.click_ax_center(m)
-        ID = m.cb.pick.get.picked_vals["ID"]
+                self.assertTrue(m.cb.pick.get.picked_object is None)
 
-        self.assertTrue(all(m.cb.pick.get.picked_object == self.data.loc[ID[0]]))
+                self.click_ax_center(m)
+                ID = m.cb.pick.get.picked_vals["ID"]
 
-        m.cb.pick.remove(cid)
+                self.assertTrue(
+                    all(m.cb.pick.get.picked_object == self.data.loc[ID[0]])
+                )
 
-        def loadmethod(db, ID):
-            return db.loc[ID].lon
+                m.cb.pick.remove(cid)
 
-        cid = m.cb.pick.attach.load(database=db, load_method=loadmethod)
-        self.click_ax_center(m)
+                def loadmethod(db, ID):
+                    return db.loc[ID].lon
 
-        self.assertTrue(m.cb.pick.get.picked_object == self.data.loc[ID[0]].lon)
+                cid = m.cb.pick.attach.load(database=db, load_method=loadmethod)
+                self.click_ax_center(m)
 
-        m.cb.pick.remove(cid)
-        plt.close("all")
+                self.assertTrue(m.cb.pick.get.picked_object == self.data.loc[ID[0]].lon)
+
+                m.cb.pick.remove(cid)
+                plt.close("all")
 
     def test_switch_layer(self):
         # ---------- test as CLICK callback
@@ -438,23 +567,23 @@ class TestCallbacks(unittest.TestCase):
         cid3 = m.cb.keypress.attach.switch_layer(layer="3", key="3")
 
         # switch to layer 2
-        m.f.canvas.key_press_event("2")
-        m.f.canvas.key_release_event("2")
+        key_press_event(m.f.canvas, "2")
+        key_release_event(m.f.canvas, "2")
         self.assertTrue(m.BM._bg_layer == "2")
 
         # the 3rd callback should not trigger
-        m.f.canvas.key_press_event("3")
-        m.f.canvas.key_release_event("3")
+        key_press_event(m.f.canvas, "3")
+        key_release_event(m.f.canvas, "3")
         self.assertTrue(m.BM._bg_layer == "2")
 
         # switch to the "base" layer
-        m.f.canvas.key_press_event("0")
-        m.f.canvas.key_release_event("0")
+        key_press_event(m.f.canvas, "0")
+        key_release_event(m.f.canvas, "0")
         self.assertTrue(m.BM._bg_layer == "base")
 
         # now the 3rd callback should trigger
-        m.f.canvas.key_press_event("3")
-        m.f.canvas.key_release_event("3")
+        key_press_event(m.f.canvas, "3")
+        key_release_event(m.f.canvas, "3")
         self.assertTrue(m.BM._bg_layer == "3")
 
         m.all.cb.keypress.remove(cid0)
@@ -484,6 +613,7 @@ class TestCallbacks(unittest.TestCase):
         self.assertEqual(len(m2.cb.pick.get.picked_vals["ID"]), 1)
         self.assertEqual(len(m2.cb.pick.get.picked_vals["val"]), 1)
         self.assertTrue(m2.cb.pick.get.picked_vals["ID"][0] == 1225)
+        plt.close("all")
 
     def test_keypress_callbacks_for_any_key(self):
         m = self.create_basic_map()
@@ -495,10 +625,90 @@ class TestCallbacks(unittest.TestCase):
 
         m.all.cb.keypress.attach(cb, key=None)
 
-        m.f.canvas.key_press_event("0")
-        m.f.canvas.key_release_event("0")
+        key_press_event(m.f.canvas, "0")
+        key_release_event(m.f.canvas, "0")
         self.assertTrue(m.BM._bg_layer == "0")
 
-        m.f.canvas.key_press_event("1")
-        m.f.canvas.key_release_event("1")
+        key_press_event(m.f.canvas, "1")
+        key_release_event(m.f.canvas, "1")
         self.assertTrue(m.BM._bg_layer == "1")
+        plt.close("all")
+
+    def test_geodataframe_contains_picking(self):
+        m = Maps()
+        m.show()  # do this to make sure transforms are correctly set
+        gdf = m.add_feature.cultural.admin_0_countries.get_gdf(scale=110)
+
+        m.add_gdf(gdf, column="NAME", picker_name="col", pick_method="contains")
+
+        m.add_gdf(gdf, picker_name="nocol", pick_method="contains")
+
+        def customcb(picked_vals, val, **kwargs):
+            picked_vals.append(val)
+
+        picked_vals_col = []
+        picked_vals_nocol = []
+
+        m.cb.pick["col"].attach.annotate()
+        m.cb.pick["col"].attach(customcb, picked_vals=picked_vals_col)
+        m.cb.pick__col.attach.highlight_geometry(fc="r", ec="g")
+
+        m.cb.pick["nocol"].attach.annotate()
+        m.cb.pick["nocol"].attach(customcb, picked_vals=picked_vals_nocol)
+        m.cb.pick__nocol.attach.highlight_geometry(fc="r", ec="g")
+
+        # evaluate pick position AFTER plotting geodataframes since the plot
+        # extent might have changed!
+        pickid = 50
+        clickpt = gdf.centroid[pickid]
+        clickxy = m.ax.transData.transform((clickpt.x, clickpt.y))
+
+        button_press_event(m.f.canvas, *clickxy, 1)
+        button_release_event(m.f.canvas, *clickxy, 1)
+
+        self.assertTrue(picked_vals_col[0] == gdf.NAME.loc[pickid])
+        self.assertTrue(picked_vals_nocol[0] is None)
+        plt.close("all")
+
+    def test_geodataframe_centroid_picking(self):
+        m = Maps()
+        m.redraw()  # do this to make sure transforms are correctly set
+        gdf = m.add_feature.cultural.populated_places.get_gdf(scale=110)
+
+        m.add_gdf(gdf, column="NAME", picker_name="col", pick_method="centroids")
+
+        m.add_gdf(
+            gdf,
+            fc="none",
+            ec="k",
+            markersize=10,
+            picker_name="nocol",
+            pick_method="centroids",
+        )
+
+        def customcb(picked_vals, val, **kwargs):
+            picked_vals.append(val)
+
+        picked_vals_col = []
+        picked_vals_nocol = []
+
+        m.cb.pick["col"].attach.annotate()
+        m.cb.pick["col"].attach(customcb, picked_vals=picked_vals_col)
+        m.cb.pick__col.attach.highlight_geometry(fc="r", ec="g")
+
+        m.cb.pick["nocol"].attach.annotate(xytext=(20, -20))
+        m.cb.pick["nocol"].attach(customcb, picked_vals=picked_vals_nocol)
+        m.cb.pick__nocol.attach.highlight_geometry(fc="r", ec="g")
+
+        # evaluate pick position AFTER plotting geodataframes since the plot
+        # extent might have changed!
+        pickid = 50
+        clickpt = gdf.centroid[pickid]
+        clickxy = m.ax.transData.transform((clickpt.x, clickpt.y))
+
+        button_press_event(m.f.canvas, *clickxy, 1)
+        button_release_event(m.f.canvas, *clickxy, 1)
+
+        self.assertTrue(picked_vals_col[0] == gdf.NAME.loc[pickid])
+        self.assertTrue(picked_vals_nocol[0] is None)
+        plt.close("all")

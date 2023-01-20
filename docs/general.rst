@@ -140,7 +140,3 @@ A list of the dependencies can be found below:
       - sphinx-copybutton
       - sphinx_rtd_theme
       - mock
-      # -------------- for Equi7Grid projections
-      - pip
-      - pip:
-        - equi7grid

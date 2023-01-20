@@ -35,7 +35,7 @@ mg.add_gdf(
 )
 
 mg.set_shape.rectangles(radius=3, radius_crs=4326)
-mg.plot_map(alpha=0.75, ec=(1, 1, 1, 0.5), pick_distance=25)
+mg.plot_map(alpha=0.75, ec=(1, 1, 1, 0.5))
 
 for m in mg:
     # attach a callback to highlite the rectangles

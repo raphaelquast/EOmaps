@@ -125,6 +125,19 @@ class ScaleBar:
             The default is:
                 >>> dict(scale=1, offset=1, rotation=0, every=2)
         """
+        self._m = m
+
+        self._scale_props = dict(scale=None)
+        self._label_props = dict()
+        self._patch_props = dict()
+        self._patch_offsets = (1, 1, 1, 1)
+
+        self._font_kwargs = dict()
+        self._fontkeys = ("family", "style", "variant", "stretch", "weight")
+
+        # apply preset styling (so that any additional properties are applied on top
+        # of the preset)
+        self._apply_preset(preset)
 
         if scale is None:
             self._autoscale = autoscale_fraction
@@ -133,27 +146,17 @@ class ScaleBar:
 
         self._auto_position = auto_position
 
-        self._m = m
+        self.set_scale_props(scale=scale, **(scale_props if scale_props else {}))
+        # set the label properties
+        self.set_label_props(**(label_props if label_props else {}))
+        # set the patch properties
+        self.set_patch_props(**(patch_props if patch_props else {}))
 
         # number of intermediate points for evaluating the curvature
         self._interm_pts = 20
 
         self._cb_offset_interval = 0.05
         self._cb_rotate_inverval = 1
-
-        self._fontkeys = ("family", "style", "variant", "stretch", "weight")
-        self._font_kwargs = dict()
-
-        self._scale_props = dict(scale=scale, n=10, width=5, colors=("k", "w"))
-        self._patch_props = dict(fc=".75", ec="k", lw=1, ls="-")
-        self._patch_offsets = (1, 1, 1, 1)
-        self._label_props = dict(scale=2, rotation=0, every=2, offset=1, color="k")
-
-        self.set_scale_props(scale=scale, **(scale_props if scale_props else {}))
-        # set the label properties
-        self.set_label_props(**(label_props if label_props else {}))
-        # set the patch properties
-        self.set_patch_props(**(patch_props if patch_props else {}))
 
         # geod from plot_crs
         self._geod = self._m.crs_plot.get_geod()
@@ -171,21 +174,39 @@ class ScaleBar:
         )
 
         self._artists = OrderedDict(patch=None, scale=None)
-
-        self.preset = preset
-
         self._picker_name = None
 
-    def apply_preset(self, preset):
-        if preset == "bw":
-            self.set_scale_props(n=10, width=4, colors=("k", "w"))
-            self.set_patch_props(fc="none", ec="none", offsets=(1, 1.6, 1, 1))
-            self.set_label_props(
-                scale=1.5, offset=0.5, every=2, weight="bold", family="Courier New"
-            )
+    def _get_preset_props(self, preset):
+        scale_props = dict(n=10, width=5, colors=("k", "w"))
+        patch_props = dict(fc=".75", ec="k", lw=1, ls="-")
+        label_props = dict(scale=2, offset=1, every=2, rotation=0, color="k")
 
-            self._estimate_scale()
-            self.set_position()
+        if preset == "bw":
+            scale_props.update(dict(n=10, width=4, colors=("k", "w")))
+            patch_props.update(dict(fc="none", ec="none"))
+            label_props.update(
+                dict(
+                    scale=1.5,
+                    offset=0.5,
+                    every=2,
+                    weight="bold",
+                    family="Courier New",
+                )
+            )
+        return scale_props, patch_props, label_props
+
+    def _apply_preset(self, preset):
+        self.preset = preset
+
+        scale_props, patch_props, label_props = self._get_preset_props(preset)
+        self.set_scale_props(**scale_props)
+        self.set_patch_props(**patch_props)
+        self.set_label_props(**label_props)
+
+    def apply_preset(self, preset):
+        self._apply_preset(preset)
+        self._estimate_scale()
+        self.set_position()
 
     @staticmethod
     def round_to_n(x, n=0):
@@ -308,7 +329,7 @@ class ScaleBar:
 
         if hasattr(self, "_lon") and hasattr(self, "_lat"):
             self.set_position()
-            self._m.BM.update(blit=False)
+            self._m.BM.blit_artists(self._artists.values())
 
     def set_patch_props(self, offsets=None, **kwargs):
         """
@@ -338,15 +359,16 @@ class ScaleBar:
             ["lw", "linewidth"],
             ["ls", "linestyle"],
         ]:
-            self._patch_props[key] = kwargs.pop(
-                key, kwargs.pop(synonym, self._patch_props[key])
-            )
+            if key in self._patch_props:
+                self._patch_props[key] = kwargs.pop(
+                    key, kwargs.pop(synonym, self._patch_props[key])
+                )
 
         self._patch_props.update(kwargs)
 
         if hasattr(self, "_lon") and hasattr(self, "_lat"):
             self.set_position()
-            self._m.BM.update(blit=False)
+            self._m.BM.blit_artists(self._artists.values())
 
     def set_label_props(
         self, scale=None, rotation=None, every=None, offset=None, color=None, **kwargs
@@ -401,7 +423,7 @@ class ScaleBar:
 
         if hasattr(self, "_lon") and hasattr(self, "_lat"):
             self.set_position()
-            self._m.BM.update(blit=False)
+            self._m.BM.blit_artists(self._artists.values())
 
     def _get_base_pts(self, lon, lat, azim, npts=None):
         if npts is None:
@@ -463,6 +485,7 @@ class ScaleBar:
 
     def _get_d(self):
         # the base length used to define the size of the scalebar
+
         # get the position in figure coordinates
         x, y = self._m.ax.transData.transform(
             self._t_plot.transform(self._lon, self._lat)
@@ -476,16 +499,15 @@ class ScaleBar:
         return np.abs(xb[1] - yb[1])
 
     def _get_patch_verts(self, pts, lon, lat, ang, d):
-        ot = 0.75 * d * self._patch_offsets[0]  # top offset
-        # ob = 2.5 * d * self._patch_offsets[1]  # bottom offset
-        ob = (2.5 * d + self._maxw) * self._patch_offsets[1]  # bottom offset
+        # top bottom left right referrs to a horizontally oriented colorbar!
+        ot = d * self._patch_offsets[0]
+        ob = self._maxw + d * (self._label_props["offset"] + self._patch_offsets[1])
+        o_l = d * self._patch_offsets[2]
+        o_r = d * self._patch_offsets[3]
 
-        ob = ((self._label_props["offset"] + 2) * d + self._maxw) * self._patch_offsets[
-            1
-        ]  # bottom offset
-
-        o_l = 0.5 * d * self._patch_offsets[2]  # left offset
-        o_r = 1.5 * d * self._patch_offsets[3]  # right offset
+        # in case the top scale has a label, add a margin to encompass the text!
+        if len(pts) % self._label_props["every"] == 0:
+            o_r += self._top_h * 1.5
 
         dxy = np.gradient(pts.reshape((-1, 2)), axis=0)
         alpha = np.arctan2(dxy[:, 1], -dxy[:, 0])
@@ -499,6 +521,8 @@ class ScaleBar:
 
         ptop[-1] -= (o_r * np.cos(alpha[-1]), -o_r * np.sin(alpha[-1]))
         pbottom[-1] -= (o_r * np.cos(alpha[-1]), -o_r * np.sin(alpha[-1]))
+
+        # TODO check how to deal with invalid vertices (e.g. self-intersections)
 
         return np.vstack([ptop, pbottom[::-1]])
 
@@ -516,8 +540,8 @@ class ScaleBar:
     def _get_txt_coords(self, lon, lat, d, ang):
         # get the base point for the text
         xt, yt = self._t_plot.transform(lon, lat)
-        xt = xt - d * self._label_props["offset"] * np.sin(ang) / 2
-        yt = yt + d * self._label_props["offset"] * np.cos(ang) / 2
+        xt = xt - d * self._label_props["offset"] * np.sin(ang)
+        yt = yt + d * self._label_props["offset"] * np.cos(ang)
         return xt, yt
 
     from functools import lru_cache
@@ -540,16 +564,27 @@ class ScaleBar:
             # if the object is within the canvas!
             try:
                 # get the widths of the text patches in data-coordinates
-                bbox = val.get_tightbbox(self._m.f.canvas.get_renderer())
+                bbox = val.get_window_extent(self._m.f.canvas.get_renderer())
                 bbox = bbox.transformed(self._m.ax.transData.inverted())
-
                 # use the max to account for rotated text objects
                 w = max(bbox.width, bbox.height)
                 if w > _maxw:
                     _maxw = w
             except Exception:
                 pass
+
+        _top_h = 0
+        try:
+            _top_label = next(i for i in sorted(self._artists) if i.startswith("text_"))
+            val = self._artists[_top_label]
+            bbox = val.get_window_extent(self._m.f.canvas.get_renderer())
+            bbox = bbox.transformed(self._m.ax.transData.inverted())
+            _top_h = min(bbox.width, bbox.height)
+        except Exception:
+            pass
+
         self._maxw = _maxw
+        self._top_h = _top_h
 
     def _set_minitxt(self, d, pts):
         angs = np.arctan2(*np.array([p[0] - p[-1] for p in pts]).T[::-1])
@@ -566,9 +601,7 @@ class ScaleBar:
             else:
                 txt = self._get_txt(i)
 
-            xy = self._get_txt_coords(
-                lon, lat, self._label_props["scale"] * d * 1.5, ang
-            )
+            xy = self._get_txt_coords(lon, lat, d, ang)
             tp = TextPath(
                 xy, txt, size=self._label_props["scale"] * d / 2, prop=self._font_props
             )
@@ -617,9 +650,7 @@ class ScaleBar:
             else:
                 txt = self._get_txt(i)
 
-            xy = self._get_txt_coords(
-                lon, lat, self._label_props["scale"] * d * 1.5, ang
-            )
+            xy = self._get_txt_coords(lon, lat, d, ang)
 
             tp = PathPatch(
                 TextPath(
@@ -691,9 +722,6 @@ class ScaleBar:
         coll.set_linewidth(self._scale_props["width"])
         self._artists["scale"] = self._m.ax.add_collection(coll, autolim=False)
 
-        # apply preset
-        self.apply_preset(self.preset)
-
         # -------------- make all artists animated
         self._artists["scale"].set_zorder(1)
         self._artists["patch"].set_zorder(0)
@@ -702,14 +730,13 @@ class ScaleBar:
         # self._m.BM.add_artist(self._artists["text"])
         self._m.BM.add_artist(self._artists["patch"])
 
-        self._m.BM.update(artists=self._artists.values())
-
+        self._m.BM.blit_artists(self._artists.values())
         # make sure to update the artists on zoom
         self._decorate_zooms()
 
     def set_position(self, lon=None, lat=None, azim=None, update=False):
         """
-        Sset the position of the colorbar
+        Set the position of the colorbar
 
         Parameters
         ----------
@@ -752,6 +779,12 @@ class ScaleBar:
         self._artists["scale"].set_colors(colors)
 
         verts = self._get_patch_verts(pts, lon, lat, ang, d)
+
+        # TODO check how to deal with invalid vertices!!
+        # print(np.all(np.isfinite(self._m._transf_plot_to_lonlat.transform(*verts.T))))
+
+        # verts = np.ma.masked_invalid(verts)
+
         self._artists["patch"].set_verts([verts])
         self._artists["patch"].update(self._patch_props)
 
@@ -1443,6 +1476,29 @@ class Compass:
         for c in self._artist.get_children():
             c.set_transform(trans)
         self._pos = pos
+
+    def get_position(self, coords="axis"):
+        """
+        Return the current position of the compass
+
+        Parameters
+        ----------
+        coords : str, optional
+            Define what coordinates are returned
+
+            - "data" : coordinates in the plot-crs
+            - "axis": relative [0-1] coordinates with respect to the
+              axis (e.g. (0, 0) = lower left corner, (1, 1) = upper right corner)
+
+            The default is "axis".
+
+        Returns
+        -------
+        pos
+            a tuple (x, y) representing the current location of the compass.
+
+        """
+        return self._ax2data.inverted().transform(self._pos)
 
     def set_ignore_invalid_angles(self, val):
         """

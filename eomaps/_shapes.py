@@ -109,12 +109,14 @@ class shapes(object):
             else:
                 radius = m._estimated_radius
         else:
-            if isinstance(radius, (list, np.ndarray)):
-                radiusx = radiusy = tuple(radius)
             # get manually specified radius (e.g. if radius != "estimate")
+            if isinstance(radius, (list, np.ndarray)):
+                radiusx = radiusy = np.asanyarray(radius).ravel()
             elif isinstance(radius, tuple):
                 radiusx, radiusy = radius
             elif isinstance(radius, (int, float, np.number)):
+                radiusx = radiusy = radius
+            else:
                 radiusx = radiusy = radius
 
             radius = (radiusx, radiusy)
@@ -257,6 +259,7 @@ class shapes(object):
 
         def __init__(self, m):
             self._m = m
+            self._n = None
 
         def __call__(self, radius=1000, n=None):
             """
@@ -264,8 +267,11 @@ class shapes(object):
 
             Parameters
             ----------
-            radius : float
+            radius : float or array-like
                 The radius of the circles in meters.
+
+                If you provide an array of sizes, each datapoint will be drawn with
+                the respective size!
             n : int or None
                 The number of intermediate points to calculate on the geodesic circle.
                 If None, 100 is used for < 10k pixels and 20 otherwise.
@@ -298,6 +304,8 @@ class shapes(object):
                         return 100
                     else:
                         return 20
+                else:
+                    return 20
             return self._n
 
         @n.setter
@@ -310,17 +318,7 @@ class shapes(object):
 
         @radius.setter
         def radius(self, val):
-            if not isinstance(val, (int, float)):
-                print("EOmaps: geod_circles only support a number as radius!")
-                if isinstance(val[0], (int, float)):
-                    print("EOmaps: ... using the mean")
-                    val = np.mean(val)
-                else:
-                    raise TypeError(
-                        f"EOmaps: '{val}' is not a valid radius for 'geod_circles'!"
-                    )
-
-            self._radius = val
+            self._radius = np.asanyarray(np.atleast_1d(val))
 
         @property
         def radius_crs(self):
@@ -355,7 +353,7 @@ class shapes(object):
             -------
             lons : array-like
                 the longitudes of the geodetic circle points.
-            lats : TYPE
+            lats : array-like
                 the latitudes of the geodetic circle points.
 
             """
@@ -364,7 +362,10 @@ class shapes(object):
             if isinstance(radius, (int, float)):
                 radius = np.full((size, n), radius)
             else:
-                radius = (np.broadcast_to(radius[:, None], (size, n)),)
+                if radius.size != lon.size:
+                    radius = np.broadcast_to(radius[:, None], (size, n))
+                else:
+                    radius = np.broadcast_to(radius.ravel()[:, None], (size, n))
 
             geod = self._m.crs_plot.get_geod()
             lons, lats, back_azim = geod.fwd(
@@ -402,8 +403,8 @@ class shapes(object):
                 ~xs.mask.any(axis=0)
                 & ~ys.mask.any(axis=0)
                 & ((dx / dy) < 10)
-                & (dx < radius * 50)
-                & (dy < radius * 50)
+                & (dx < np.max(radius) * 50)
+                & (dy < np.max(radius) * 50)
             )
 
             mask = np.broadcast_to(mask[:, None].T, lons.shape)
@@ -440,6 +441,65 @@ class shapes(object):
 
             return coll
 
+    class _scatter_points(object):
+        name = "scatter_points"
+
+        def __init__(self, m):
+            self._m = m
+            self._n = None
+
+        def __call__(self, size=None, marker=None):
+            """
+            Draw each datapoint as a shape with a size defined in points**2.
+
+            All arguments are forwarded to `m.ax.scatter()`.
+
+            Parameters
+            ----------
+            size : int, float, array-like or str, optional
+                The marker size in points**2.
+
+                If you provide an array of sizes, each datapoint will be drawn with
+                the respective size!
+            marker : str
+                The marker style. Can be either an instance of the class or the text
+                shorthand for a particular marker. Some examples are:
+
+                - `".", "o", "s", "<", ">", "^", "$A^2$"`
+
+                See matplotlib.markers for more information about marker styles.
+            """
+            from . import MapsGrid  # do this here to avoid circular imports!
+
+            for m in self._m if isinstance(self._m, MapsGrid) else [self._m]:
+                shape = self.__class__(m)
+                shape._size = size
+                shape._marker = marker
+                m._shape = shape
+
+        @property
+        def _initargs(self):
+            return dict(size=self._size, marker=self._marker)
+
+        @property
+        def radius(self):
+            radius = shapes._get_radius(self._m, "estimate", "in")
+            return radius
+
+        @property
+        def radius_crs(self):
+            return "in"
+
+        def get_coll(self, x, y, crs, **kwargs):
+            color_and_array = shapes._get_colors_and_array(
+                kwargs, np.full((x.size,), True)
+            )
+            color_and_array["c"] = color_and_array["array"]
+            coll = self._m.ax.scatter(
+                x, y, s=self._size, marker=self._marker, **color_and_array, **kwargs
+            )
+            return coll
+
     class _ellipses(object):
         name = "ellipses"
 
@@ -453,10 +513,13 @@ class shapes(object):
 
             Parameters
             ----------
-            radius : int, float, tuple or str, optional
+            radius : int, float, array-like or str, optional
                 The radius in x- and y- direction.
                 The default is "estimate" in which case the radius is attempted
                 to be estimated from the input-coordinates.
+
+                If you provide an array of sizes, each datapoint will be drawn with
+                the respective size!
             radius_crs : crs-specification, optional
                 The crs in which the dimensions are defined.
                 The default is "in".
@@ -488,6 +551,8 @@ class shapes(object):
                         return 100
                     else:
                         return 20
+                else:
+                    return 20
             return self._n
 
         @n.setter
@@ -501,7 +566,10 @@ class shapes(object):
 
         @radius.setter
         def radius(self, val):
-            self._radius = val
+            if isinstance(val, (list, np.ndarray)):
+                self._radius = np.asanyarray(val).ravel()
+            else:
+                self._radius = val
 
         def __repr__(self):
             try:
@@ -559,7 +627,6 @@ class shapes(object):
         def _get_ellipse_points(self, x, y, crs, radius, radius_crs="in", n=20):
             crs = self._m.get_crs(crs)
             radius_crs = self._m.get_crs(radius_crs)
-
             # transform from crs to the plot_crs
             t_in_plot = shapes.get_transformer(crs, self._m.crs_plot)
             # transform from crs to the radius_crs
@@ -579,8 +646,8 @@ class shapes(object):
                 xs, ys = self._calc_ellipse_points(
                     p[0],
                     p[1],
-                    np.full_like(x, rx, dtype=float),
-                    np.full_like(x, ry, dtype=float),
+                    np.broadcast_to(rx, x.shape).astype(float),
+                    np.broadcast_to(ry, y.shape).astype(float),
                     np.full_like(x, 0),
                     n=n,
                 )
@@ -592,8 +659,8 @@ class shapes(object):
                 xs, ys = self._calc_ellipse_points(
                     p[0],
                     p[1],
-                    np.full_like(x, rx, dtype=float),
-                    np.full_like(x, ry, dtype=float),
+                    np.broadcast_to(rx, x.shape).astype(float),
+                    np.broadcast_to(ry, y.shape).astype(float),
                     np.full_like(x, 0),
                     n=n,
                 )
@@ -693,6 +760,9 @@ class shapes(object):
                 The radius in x- and y- direction.
                 The default is "estimate" in which case the radius is attempted
                 to be estimated from the input-coordinates.
+
+                If you provide an array of sizes, each datapoint will be drawn with
+                the respective size!
             radius_crs : crs-specification, optional
                 The crs in which the dimensions are defined.
                 The default is "in".
@@ -719,17 +789,8 @@ class shapes(object):
                 shape._radius = radius
                 shape.radius_crs = radius_crs
                 shape.mesh = mesh
+                shape.n = n
 
-                if mesh is True:
-                    if n is None:
-                        n = 1
-                    elif n > 1:
-                        warnings.warn(
-                            "EOmaps: rectangles with 'mesh=True' only supports n=1"
-                        )
-                    shape.n = 1
-                else:
-                    shape.n = n
                 m._shape = shape
 
         @property
@@ -759,7 +820,14 @@ class shapes(object):
 
         @n.setter
         def n(self, val):
-            self._n = val
+            if self.mesh is True:
+                if val is not None and val != 1:
+                    warnings.warn(
+                        "EOmaps: rectangles with 'mesh=True' only supports n=1"
+                    )
+                self._n = 1
+            else:
+                self._n = val
 
         @property
         def radius(self):
@@ -768,7 +836,10 @@ class shapes(object):
 
         @radius.setter
         def radius(self, val):
-            self._radius = val
+            if isinstance(val, (list, np.ndarray)):
+                self._radius = np.asanyarray(val).ravel()
+            else:
+                self._radius = val
 
         def __repr__(self):
             try:
@@ -1628,6 +1699,11 @@ class shapes(object):
             kwargs.setdefault("antialiased", False)
 
             return self._get_polygon_coll(x, y, crs, **kwargs)
+
+    @wraps(_scatter_points.__call__)
+    def scatter_points(self, *args, **kwargs):
+        shp = self._scatter_points(m=self._m)
+        return shp.__call__(*args, **kwargs)
 
     @wraps(_geod_circles.__call__)
     def geod_circles(self, *args, **kwargs):
