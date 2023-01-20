@@ -1589,6 +1589,7 @@ The most commonly used features are accessible with pre-defined colors via the `
 
 A ``geopandas.GeoDataFrame`` can be added to the map via ``m.add_gdf()``.
 
+- This is basically just a wrapper for  ``geopandas`` plotting capabilities (e.g. ``gdf.plot(...)`` )
 
 
 .. currentmodule:: eomaps
@@ -1605,7 +1606,7 @@ A ``geopandas.GeoDataFrame`` can be added to the map via ``m.add_gdf()``.
     from eomaps import Maps
     import geopandas as gpd
 
-    gdf = gpd.GeoDataFrame(geometries=[...], crs=...)
+    gdf = gpd.GeoDataFrame(geometries=[...], crs=...)<>
 
     m = Maps()
     m.add_gdf(gdf, fc="r", ec="g", lw=2)
@@ -1614,7 +1615,16 @@ A ``geopandas.GeoDataFrame`` can be added to the map via ``m.add_gdf()``.
 
 It is possible to make the shapes of a ``GeoDataFrame`` pickable
 (e.g. usable with ``m.cb.pick`` callbacks) by providing a ``picker_name``
-(and optionally specifying a ``pick_method``).
+(and specifying a ``pick_method``).
+
+- use ``pick_method="contains"`` if your ``GeoDataFrame`` consists of **polygon-geometries** (the default)
+
+  - pick a geometry if `geometry.contains(mouse-click-position) == True`
+
+- use ``pick_method="centroids"`` if your ``GeoDataFrame`` consists of **point-geometries**
+
+  - pick the geometry with the closest centroid
+
 
 Once the ``picker_name`` is specified, pick-callbacks can be attached via:
 
