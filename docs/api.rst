@@ -1589,7 +1589,8 @@ The most commonly used features are accessible with pre-defined colors via the `
 
 A ``geopandas.GeoDataFrame`` can be added to the map via ``m.add_gdf()``.
 
-- This is basically just a wrapper for  ``geopandas`` plotting capabilities (e.g. ``gdf.plot(...)`` )
+- This is basically just a wrapper for  the plotting capabilities of ``geopandas`` (e.g. ``gdf.plot(...)`` )
+  supercharged with EOmaps features.
 
 
 .. currentmodule:: eomaps
