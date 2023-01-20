@@ -13,6 +13,107 @@ from pyproj import Transformer
 
 import numpy as np
 
+gpd = None
+
+
+def _register_geopandas():
+    global gpd
+    try:
+        import geopandas as gpd
+    except ImportError:
+        return False
+
+    return True
+
+
+class _gpd_picker:
+    # a collection of pick-methods for geopandas.GeoDataFrames
+    def __init__(self, gdf, val_key, pick_method):
+        self.gdf = gdf
+        self.val_key = val_key
+        self.pick_method = pick_method
+
+    def get_picker(self):
+        assert _register_geopandas(), (
+            "EOmaps: Missing dependency `geopandas`!\n"
+            + "please install '(conda install -c conda-forge geopandas)'"
+            + "to make geopandas GeoDataFrames pickable."
+        )
+
+        if self.pick_method == "contains":
+            return self._contains_picker
+        elif self.pick_method == "centroids":
+            from scipy.spatial import cKDTree
+
+            self.tree = cKDTree(
+                list(map(lambda x: (x.x, x.y), self.gdf.geometry.centroid))
+            )
+            return self._centroids_picker
+        else:
+            raise TypeError(
+                f"EOmaps: {self.pick_method} is not a valid " "pick_method!"
+            )
+
+    def _contains_picker(self, artist, mouseevent):
+        try:
+            query = getattr(self.gdf, "contains")(
+                gpd.points_from_xy(
+                    np.atleast_1d(mouseevent.xdata),
+                    np.atleast_1d(mouseevent.ydata),
+                )[0]
+            )
+
+            if query.any():
+
+                ID = self.gdf.index[query][0]
+                ind = query.values.nonzero()[0][0]
+
+                if self.val_key:
+                    val = self.gdf[query][self.val_key].iloc[0]
+                else:
+                    val = None
+
+                if artist.get_array() is not None:
+                    val_numeric = artist.norm(artist.get_array()[ind])
+                    val_color = artist.cmap(val_numeric)
+                else:
+                    val_numeric = None
+                    val_color = None
+
+                return True, dict(
+                    ID=ID,
+                    ind=ind,
+                    val=val,
+                    val_color=val_color,
+                    pos=(mouseevent.xdata, mouseevent.ydata),
+                )
+            else:
+                return False, dict()
+        except Exception:
+            return False, dict()
+
+    def _centroids_picker(self, artist, mouseevent):
+        try:
+            dist, ind = self.tree.query((mouseevent.xdata, mouseevent.ydata), 1)
+            ID = self.gdf.index[ind]
+
+            if self.val_key is not None:
+                val = self.gdf.iloc[ind][self.val_key]
+            else:
+                val = None
+
+            pos = self.tree.data[ind].tolist()
+            try:
+                val_numeric = artist.norm(artist.get_array()[ID])
+                val_color = artist.cmap(val_numeric)
+            except Exception:
+                val_color = None
+
+            return True, dict(ID=ID, pos=pos, val=val, ind=ind, val_color=val_color)
+
+        except Exception:
+            return False, dict()
+
 
 class _cb_container(object):
     """base-class for callback containers"""

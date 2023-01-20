@@ -115,7 +115,7 @@ from ._containers import (
 from ._webmap_containers import wms_container
 from .ne_features import NaturalEarth_features
 
-from ._cb_container import cb_container
+from ._cb_container import cb_container, _gpd_picker
 from .scalebar import ScaleBar, Compass
 from .projections import Equi7Grid_projection  # import to supercharge cartopy.ccrs
 from .reader import read_file, from_file, new_layer_from_file
@@ -1515,11 +1515,6 @@ class Maps(object):
             The matplotlib-artists added to the plot
 
         """
-        assert pick_method in ["centroids", "contains"], (
-            f"EOmaps: '{pick_method}' is not a valid GeoDataFrame pick-method! "
-            + "... use one of ['contains', 'centroids']"
-        )
-
         assert _register_geopandas(), (
             "EOmaps: Missing dependency `geopandas`!\n"
             + "please install '(conda install -c conda-forge geopandas)'"
@@ -1594,105 +1589,31 @@ class Maps(object):
                 prefixes.append(f"_{i.__class__.__name__.replace('Collection', '')}")
 
         if picker_name is not None:
-            if pick_method is not None:
-                if isinstance(pick_method, str):
-                    if pick_method == "contains":
+            if isinstance(pick_method, str):
+                self._picker_cls = _gpd_picker(
+                    gdf=gdf, pick_method=pick_method, val_key=val_key
+                )
+                picker = self._picker_cls.get_picker()
+            elif callable(pick_method):
+                picker = pick_method
+            else:
+                print("EOmaps: I don't know what to do with the provided pick_method")
 
-                        def picker(artist, mouseevent):
-                            try:
-                                query = getattr(gdf, pick_method)(
-                                    gpd.points_from_xy(
-                                        np.atleast_1d(mouseevent.xdata),
-                                        np.atleast_1d(mouseevent.ydata),
-                                    )[0]
-                                )
+            if len(artists) > 1:
+                warnings.warn(
+                    "EOmaps: Multiple geometry types encountered in `m.add_gdf`. "
+                    + "The pick containers are re-named to"
+                    + f"{[picker_name + prefix for prefix in prefixes]}"
+                )
+            else:
+                prefixes = [""]
 
-                                if query.any():
-
-                                    ID = gdf.index[query][0]
-                                    ind = query.values.nonzero()[0][0]
-
-                                    if val_key:
-                                        val = gdf[query][val_key].iloc[0]
-                                    else:
-                                        val = None
-
-                                    if artist.get_array() is not None:
-                                        val_numeric = artist.norm(
-                                            artist.get_array()[ind]
-                                        )
-                                        val_color = artist.cmap(val_numeric)
-                                    else:
-                                        val_numeric = None
-                                        val_color = None
-
-                                    return True, dict(
-                                        ID=ID,
-                                        ind=ind,
-                                        val=val,
-                                        val_color=val_color,
-                                        pos=(mouseevent.xdata, mouseevent.ydata),
-                                    )
-                                else:
-                                    return False, dict()
-                            except:
-
-                                return False, dict()
-
-                    elif pick_method == "centroids":
-                        from scipy.spatial import cKDTree
-
-                        tree = cKDTree(
-                            list(map(lambda x: (x.x, x.y), gdf.geometry.centroid))
-                        )
-
-                        def picker(artist, mouseevent):
-                            try:
-
-                                dist, ind = tree.query(
-                                    (mouseevent.xdata, mouseevent.ydata), 1
-                                )
-
-                                ID = gdf.index[ind]
-                                if val_key is not None:
-                                    val = gdf.iloc[ind][val_key]
-                                else:
-                                    val = None
-                                pos = tree.data[ind].tolist()
-                                try:
-                                    val_numeric = artist.norm(artist.get_array()[ID])
-                                    val_color = artist.cmap(val_numeric)
-                                except Exception:
-                                    val_color = None
-
-                            except:
-                                return False, dict()
-
-                            return True, dict(
-                                ID=ID, pos=pos, val=val, ind=ind, val_color=val_color
-                            )
-
-                elif callable(pick_method):
-                    picker = pick_method
-                else:
-                    print(
-                        "EOmaps: I don't know what to do with the provided pick_method"
-                    )
-
-                if len(artists) > 1:
-                    warnings.warn(
-                        "EOmaps: Multiple geometry types encountered in `m.add_gdf`. "
-                        + "The pick containers are re-named to"
-                        + f"{[picker_name + prefix for prefix in prefixes]}"
-                    )
-                else:
-                    prefixes = [""]
-
-                for artist, prefix in zip(artists, prefixes):
-                    # make the newly added collection pickable
-                    self.cb.add_picker(picker_name + prefix, artist, picker=picker)
-                    # attach the re-projected GeoDataFrame to the pick-container
-                    self.cb.pick[picker_name + prefix].data = gdf
+            for artist, prefix in zip(artists, prefixes):
+                # make the newly added collection pickable
+                self.cb.add_picker(picker_name + prefix, artist, picker=picker)
+                # attach the re-projected GeoDataFrame to the pick-container
+                self.cb.pick[picker_name + prefix].data = gdf
+                self.cb.pick[picker_name + prefix].val_key = val_key
 
         if layer is None:
             layer = self.layer
