@@ -3553,6 +3553,38 @@ class Maps(object):
 
         return inds
 
+    def inherit_classification(self, m=None):
+        """
+        Use the classification of another Maps-object when plotting the data.
+
+        NOTE
+        ----
+        If the classification is inherited, the following arguments
+        for `m.plot_map()` will have no effect (they are inherited):
+
+            - "cmap"
+            - "vmin"
+            - "vmax"
+
+        Parameters
+        ----------
+        m : eomaps.Maps or None
+            The Maps-object that provides the classification.
+
+            - If None, no classification is inherited
+
+            The default is None
+        """
+        if m is not None:
+            self._inherit_classification = True
+
+            self._inherited_cbcmap = m._cbcmap
+            self._inherited_norm = m._norm
+            self._inherited_bins = m._bins
+            self._inherited_classified = m._classified
+        else:
+            self._inherit_classification = False
+
     def _classify_data(
         self,
         z_data=None,
@@ -3561,6 +3593,14 @@ class Maps(object):
         vmax=None,
         classify_specs=None,
     ):
+
+        if getattr(self, "_inherit_classification", False):
+            return (
+                self._inherited_cbcmap,
+                self._inherited_norm,
+                self._inherited_bins,
+                self._inherited_classified,
+            )
 
         if z_data is None:
             z_data = self._data_manager.z_data
