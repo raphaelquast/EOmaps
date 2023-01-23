@@ -227,7 +227,9 @@ class _click_callbacks(object):
 
         ax = self.m.ax
         if text is None:
-            if self.m.data is not None:
+            # use "ind is not None" to distinguish between click and pick
+            # TODO implement better distinction between click and pick!
+            if self.m.data is not None and ind is not None:
                 if not multipick:
                     x, y = [
                         np.format_float_positional(i, trim="-", precision=pos_precision)
