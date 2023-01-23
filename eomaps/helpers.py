@@ -1251,12 +1251,18 @@ class BlitManager:
         return artists
 
     def fetch_bg(self, layer=None, bbox=None, overlay=None):
+
         # add this to the zorder of the overlay-artists prior to plotting
         # to ensure that they appear on top of other artists
         overlay_zorder_bias = 1000
         cv = self.canvas
         if layer is None:
             layer = self.bg_layer
+
+        # execute actions before fetching new artists
+        # (e.g. update data based on extent etc.)
+        for action in getattr(self, "_before_fetch_bg_actions", []):
+            action(layer=layer, bbox=bbox)
 
         if overlay is None:
             overlay_name, overlay_layers = "", []

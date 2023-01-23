@@ -23,10 +23,17 @@ class DataManager:
 
         # self.last_extent = self.current_extent
 
-        self._cid_xlim = self.m.ax.callbacks.connect(
-            "xlim_changed", self.on_extent_changed
-        )
+        # self._cid_xlim = self.m.ax.callbacks.connect(
+        #     "xlim_changed", self.on_extent_changed
+        # )
+
+        # self._cid_xlim = self.m.f.canvas.mpl_connect(
+        #     "draw_event", self.on_extent_changed
+        # )
+
         # self.m._prepare_data = self.get_props
+
+        self.m.BM._before_fetch_bg_actions = [self.on_extent_changed]
 
     @property
     def current_extent(self):
@@ -36,10 +43,10 @@ class DataManager:
     def extent_changed(self):
         return not self.current_extent == self.last_extent
 
-    def on_extent_changed(self, *args, **kwargs):
+    def on_extent_changed(self, layer, bbox=None):
 
         # TODO make sure m.coll is always on m.layer!
-        if self.m.BM._bg_layer != self.m.layer:
+        if layer != self.m.layer:
             return
 
         if (getattr(self.m, "coll", None) is None) or (
@@ -106,7 +113,7 @@ class DataManager:
             qx = q.any(axis=1)
             qy = q.any(axis=0)
 
-            wx, wy = np.where(qy)[0], np.where(qy)[0]
+            wx, wy = np.where(qx)[0], np.where(qy)[0]
             # idq = np.ravel_multi_index(np.meshgrid(wx, wy), (qx.size, qy.size)).ravel()
 
             ind = np.ravel_multi_index(np.meshgrid(wx, wy), (qx.size, qy.size)).ravel()
@@ -169,8 +176,12 @@ class DataManager:
     def _set_n(self, props):
         s = self._get_datasize(props)
 
-        if s < 1000:
+        if s < 10:
+            n = 500
+        elif s < 100:
             n = 100
+        elif s < 1000:
+            n = 50
         elif s < 10000:
             n = 20
         else:
