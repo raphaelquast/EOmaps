@@ -2326,7 +2326,6 @@ class Maps(object):
         layer=None,
         dynamic=False,
         set_extent=True,
-        memmap=False,
         assume_sorted=True,
         **kwargs,
     ):
@@ -2361,27 +2360,6 @@ class Maps(object):
             - if False: The plot-extent is kept as-is
 
             The default is True
-        memmap : bool, str or pathlib.Path
-            Use memory-mapping to save some memory by storing intermediate datasets
-            (e.g. projected coordinates, indexes & the data) in a temporary folder on
-            disc rather than keeping everything in memory.
-            This causes a slight performance penalty when identifying clicked points but
-            it can provide a reduction in memory-usage for very large datasets
-            (or for a very large number of interactive layers).
-
-            - If None: memory-mapping is only used if "shade_raster" or "shade_points"
-              is used as plot-shape.
-            - if False: memory-mapping is disabled
-            - if True: memory-mapping is used with an automatically located tempfolder
-            - if str or pathlib.Path: memory-mapping is used and the provided folder
-              is used as location for the temporary files (stored in a temp-subfolder).
-
-            NOTE: The tempfolder and all files will be deleted if the figure is closed,
-            the Maps-object is deleted or the kernel is interrupted!
-
-            The location of the tempfolder is accessible via `m._tempfolder`
-
-            The default is False.
         assume_sorted : bool, optional
             ONLY relevant for the shapes "raster" and "shade_raster"
             (and only if coordinates are provided as 1D arrays and data is a 2D array)
@@ -2495,11 +2473,6 @@ class Maps(object):
                 assume_sorted=assume_sorted,
                 **kwargs,
             )
-
-        # after plotting, use memory-mapping to store datasets required by
-        # callbacks etc. so that we don't need to keep them in memory.
-        if memmap:
-            self._memmap_props(dir=memmap)
 
         if hasattr(self, "_data_mask") and not np.all(self._data_mask):
             print("EOmaps: Warning: some datapoints could not be drawn!")
@@ -4290,40 +4263,6 @@ class Maps(object):
 
         if dynamic is True:
             self.BM.update(clear=False)
-
-    def _memmap_props(self, dir=None):
-        # memory-map all datasets in the self._props dict to free memory while
-        # keeping all callbacks etc. responsive.
-        if not hasattr(self.parent, "_tmpfolder"):
-            if isinstance(dir, (str, Path)):
-                self.parent._tmpfolder = TemporaryDirectory(dir=dir)
-            else:
-                self.parent._tmpfolder = TemporaryDirectory()
-
-        memmaps = dict()
-
-        for key, data in self._props.items():
-            # don't memmap x0 and y0 since they are needed to identify points
-            # (e.g. they would be loaded to memory as soon as a point is clicked)
-            if key in ["x0", "y0"]:
-                continue
-            file = TemporaryFile(
-                prefix=key + "__", suffix=".dat", dir=self.parent._tmpfolder.name
-            )
-
-            # filename = path.join(tmpfolder.name, f'{key}.dat')
-            args = dict(filename=file, dtype="float32", shape=data.shape)
-
-            fp = np.memmap(**args, mode="w+")
-
-            fp[:] = data[:]  # write the data to the memmap object
-            fp.flush()  # flush the data to disk
-
-            # replace the file in memory with the memmap
-            memmaps[key] = np.memmap(**args, mode="r")
-
-        for key, val in memmaps.items():
-            self._props[key] = val
 
     def _encode_values(self, val):
         """
