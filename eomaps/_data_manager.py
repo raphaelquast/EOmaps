@@ -110,13 +110,13 @@ class DataManager:
 
         # TODO fix IDs
         if len(q.shape) == 2:
-            qx = q.any(axis=1)
-            qy = q.any(axis=0)
+            qx = q.any(axis=0)
+            qy = q.any(axis=1)
 
             wx, wy = np.where(qx)[0], np.where(qy)[0]
-            # idq = np.ravel_multi_index(np.meshgrid(wx, wy), (qx.size, qy.size)).ravel()
-
-            ind = np.ravel_multi_index(np.meshgrid(wx, wy), (qx.size, qy.size)).ravel()
+            ind = np.ravel_multi_index(
+                np.meshgrid(wx, wy), (qx.size, qy.size)
+            ).T.ravel()
 
             if isinstance(self.ids, (list, range)):
                 idq = [self.ids[i] for i in ind]
@@ -139,15 +139,15 @@ class DataManager:
                 idq = None
 
         props = dict(
-            xorig=self.xorig[qx][:, qy]
+            xorig=self.xorig[qy][:, qx]
             if len(self.xorig.shape) == 2
             else self.xorig[q],
-            yorig=self.yorig[qx][:, qy]
+            yorig=self.yorig[qy][:, qx]
             if len(self.yorig.shape) == 2
             else self.yorig[q],
-            x0=self.x0[qx][:, qy] if len(self.x0.shape) == 2 else self.x0[q],
-            y0=self.y0[qx][:, qy] if len(self.y0.shape) == 2 else self.y0[q],
-            z_data=self.z_data[qx][:, qy]
+            x0=self.x0[qy][:, qx] if len(self.x0.shape) == 2 else self.x0[q],
+            y0=self.y0[qy][:, qx] if len(self.y0.shape) == 2 else self.y0[q],
+            z_data=self.z_data[qy][:, qx]
             if len(self.z_data.shape) == 2
             else self.z_data[q],
             ids=idq,
