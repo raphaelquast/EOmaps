@@ -194,11 +194,11 @@ class _click_callbacks(object):
         ID, pos, val, ind, picker_name, val_color = self._popargs(kwargs)
 
         try:
-            n_ids = len(ID)
+            n_ids = len(ind)
         except TypeError:
             n_ids = 1
 
-        if ID is not None and n_ids > 1:
+        if n_ids > 1:
             multipick = True
             picked_pos = (pos[0][0], pos[1][0])
         else:
@@ -220,9 +220,8 @@ class _click_callbacks(object):
             parameter = self.m.data_specs.parameter
 
         ax = self.m.ax
-
         if text is None:
-            if ID is not None and self.m.data is not None:
+            if self.m.data is not None:
                 if not multipick:
                     x, y = [
                         np.format_float_positional(i, trim="-", precision=pos_precision)

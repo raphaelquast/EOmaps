@@ -613,7 +613,6 @@ class _click_container(_cb_container):
                     "EOmaps: you MUST call `m.plot_map()` or "
                     "`m.make_dataset_pickable()` before assigning pick callbacks!"
                 )
-
                 from .helpers import searchtree
 
                 self._m.tree = searchtree(m=self._m._proxy(self._m))
@@ -1343,7 +1342,7 @@ class cb_pick_container(_click_container):
         elif isinstance(ids, np.ndarray):
             ID = ids.flat[ind]
         else:
-            ID = "?"
+            ID = None
         return ID
 
     def _get_pickdict(self, event):

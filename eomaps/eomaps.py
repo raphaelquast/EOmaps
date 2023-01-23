@@ -123,6 +123,8 @@ from .reader import read_file, from_file, new_layer_from_file
 from .utilities import utilities
 from .draw import ShapeDrawer
 
+from ._data_manager import DataManager
+
 from ._version import __version__
 
 if plt.isinteractive():
@@ -2460,7 +2462,21 @@ class Maps(object):
         # (by default shading would use 0 while ordinary collections use 1)
         kwargs.setdefault("zorder", 1)
 
+        # ---------------------- prepare the data
+        if kwargs.get("verbose") is not None:
+            print("EOmaps: Preparing the data")
+
+        # props = self._prepare_data(assume_sorted=assume_sorted)
+        # if len(props["z_data"]) == 0:
+        #     print("EOmaps: there was no data to plot")
+        #     return
+
+        # # remember props for later use
+        # self._props = props
+
         if useshape.name.startswith("shade"):
+            self._props = self._prepare_data(assume_sorted=assume_sorted)
+
             self._shade_map(
                 layer=layer,
                 dynamic=dynamic,
@@ -2469,6 +2485,9 @@ class Maps(object):
                 **kwargs,
             )
         else:
+            self._data_manager = DataManager(self._proxy(self))
+            self._props = self._data_manager.get_props()
+
             self._plot_map(
                 layer=layer,
                 dynamic=dynamic,
@@ -3056,12 +3075,6 @@ class Maps(object):
             self._ax_xlims = (0, 0)
             self._ax_ylims = (0, 0)
 
-            def xlims_change(*args, **kwargs):
-                if self._ax_xlims != args[0].get_xlim():
-                    self.BM._refetch_bg = True
-                    # self.f.stale = True
-                    self._ax_xlims = args[0].get_xlim()
-
             # def ylims_change(*args, **kwargs):
             #     if self._ax_ylims != args[0].get_ylim():
             #         print("y limchange", self.BM._refetch_bg)
@@ -3070,7 +3083,9 @@ class Maps(object):
 
             # do this only on xlims and NOT on ylims to avoid recursion
             # (plot aspect ensures that y changes if x changes)
-            self._cid_xlim = self.ax.callbacks.connect("xlim_changed", xlims_change)
+            self._cid_xlim = self.ax.callbacks.connect(
+                "xlim_changed", self._on_xlims_change
+            )
             # self.ax.callbacks.connect("ylim_changed", ylims_change)
 
             if self._cid_companion_key is None:
@@ -3100,6 +3115,12 @@ class Maps(object):
                 # make sure to call show only if we use an interactive backend...
                 # or within the ipympl backend (otherwise it will block subsequent code!)
                 plt.show()
+
+    def _on_xlims_change(self, *args, **kwargs):
+        if self._ax_xlims != args[0].get_xlim():
+            self.BM._refetch_bg = True
+            # self.f.stale = True
+            self._ax_xlims = args[0].get_xlim()
 
     def _on_resize(self, event):
         # make sure the background is re-fetched if the canvas has been resized
@@ -3553,7 +3574,7 @@ class Maps(object):
         elif isinstance(ids, np.ndarray):
             inds = np.flatnonzero(np.isin(ids, ID))
         else:
-            ID = "?"
+            ID = None
 
         return inds
 
@@ -3866,16 +3887,10 @@ class Maps(object):
             # if self.data is None:
             #     return
 
-            # ---------------------- prepare the data
-            props = self._prepare_data(assume_sorted=assume_sorted)
-
-            # remember props for later use
-            self._props = props
-
             if vmin is None and self.data is not None:
-                vmin = np.nanmin(props["z_data"])
+                vmin = np.nanmin(self._props["z_data"])
             if vmax is None and self.data is not None:
-                vmax = np.nanmax(props["z_data"])
+                vmax = np.nanmax(self._props["z_data"])
 
             # clip the data to properly account for vmin and vmax
             # (do this only if we don't intend to use the full dataset!)
@@ -3895,64 +3910,23 @@ class Maps(object):
             self.classify_specs._bins = bins
             self.classify_specs._classified = classified
 
+            self._cbcmap = cbcmap
+            self._norm = norm
+            self._bins = bins
+            self._classified = classified
+
+            self._vmin = vmin
+            self._vmax = vmax
+            self._set_extent = set_extent
+
             # ------------- plot the data
+            self._coll_kwargs = kwargs
 
-            # don't pass the array if explicit facecolors are set
-            if (
-                ("color" in kwargs and kwargs["color"] is not None)
-                or ("facecolor" in kwargs and kwargs["facecolor"] is not None)
-                or ("fc" in kwargs and kwargs["fc"] is not None)
-            ):
-                args = dict(array=None, cmap=None, norm=None, **kwargs)
-            else:
-                args = dict(array=props["z_data"], cmap=cbcmap, norm=norm, **kwargs)
+            self._coll = self._get_coll(self._props, **kwargs)
 
-            if self.shape.name in ["raster"]:
-                # if input-data is 1D, try to convert data to 2D (required for raster)
-                # TODO make an explicit data-conversion function for 2D-only shapes
-                if len(self._xshape) == 2 and len(self._yshape) == 2:
-                    coll = self.shape.get_coll(
-                        props["xorig"], props["yorig"], "in", **args
-                    )
-                elif _register_pandas():
-                    if (
-                        (len(self._xshape) == 1)
-                        and (len(self._yshape) == 1)
-                        and (len(self._zshape) == 1)
-                        and (props["x0"].size == props["y0"].size)
-                        and (props["x0"].size == props["z_data"].size)
-                    ):
-
-                        df = (
-                            pd.DataFrame(
-                                dict(
-                                    x=props["x0"].ravel(),
-                                    y=props["y0"].ravel(),
-                                    val=props["z_data"].ravel(),
-                                ),
-                                copy=False,
-                            ).set_index(["x", "y"])
-                        )["val"].unstack("y")
-
-                        xg, yg = np.meshgrid(df.index.values, df.columns.values)
-
-                        if args["array"] is not None:
-                            args["array"] = df.values.T
-
-                        coll = self.shape.get_coll(xg, yg, "out", **args)
-            else:
-                # convert to 1D for further processing
-                if args["array"] is not None:
-                    args["array"] = args["array"].ravel()
-
-                coll = self.shape.get_coll(
-                    props["x0"].ravel(), props["y0"].ravel(), "out", **args
-                )
-
-            coll.set_clim(vmin, vmax)
-            ax.add_collection(coll, autolim=set_extent)
-
-            self._coll = coll
+            self._coll.set_clim(vmin, vmax)
+            if self.shape.name != "scatter_points":
+                ax.add_collection(self._coll, autolim=self._set_extent)
 
             # This is now done lazily (only if a pick-callback is attached)
             # self.tree = searchtree(m=self._proxy(self))
@@ -3961,9 +3935,9 @@ class Maps(object):
             # self.cb._methods.add("pick")
 
             if dynamic is True:
-                self.BM.add_artist(coll, layer)
+                self.BM.add_artist(self._coll, layer)
             else:
-                self.BM.add_bg_artist(coll, layer)
+                self.BM.add_bg_artist(self._coll, layer)
 
             if set_extent:
                 # set the image extent
@@ -3977,10 +3951,64 @@ class Maps(object):
                 ax.set_xlim(max(x0min, xmin), min(x0max, xmax))
                 ax.set_ylim(max(y0min, ymin), min(y0max, ymax))
 
-            self.f.canvas.draw_idle()
+            # self.f.canvas.draw_idle()
 
         except Exception as ex:
             raise ex
+
+    def _get_coll(self, props, **kwargs):
+        # don't pass the array if explicit facecolors are set
+        if (
+            ("color" in kwargs and kwargs["color"] is not None)
+            or ("facecolor" in kwargs and kwargs["facecolor"] is not None)
+            or ("fc" in kwargs and kwargs["fc"] is not None)
+        ):
+            args = dict(array=None, cmap=None, norm=None, **kwargs)
+        else:
+            args = dict(
+                array=props["z_data"], cmap=self._cbcmap, norm=self._norm, **kwargs
+            )
+
+        if self.shape.name in ["raster"]:
+            # if input-data is 1D, try to convert data to 2D (required for raster)
+            # TODO make an explicit data-conversion function for 2D-only shapes
+            if len(self._xshape) == 2 and len(self._yshape) == 2:
+                coll = self.shape.get_coll(props["xorig"], props["yorig"], "in", **args)
+            elif _register_pandas():
+                if (
+                    (len(self._xshape) == 1)
+                    and (len(self._yshape) == 1)
+                    and (len(self._zshape) == 1)
+                    and (props["x0"].size == props["y0"].size)
+                    and (props["x0"].size == props["z_data"].size)
+                ):
+
+                    df = (
+                        pd.DataFrame(
+                            dict(
+                                x=props["x0"].ravel(),
+                                y=props["y0"].ravel(),
+                                val=props["z_data"].ravel(),
+                            ),
+                            copy=False,
+                        ).set_index(["x", "y"])
+                    )["val"].unstack("y")
+
+                    xg, yg = np.meshgrid(df.index.values, df.columns.values)
+
+                    if args["array"] is not None:
+                        args["array"] = df.values.T
+
+                    coll = self.shape.get_coll(xg, yg, "out", **args)
+        else:
+            # convert to 1D for further processing
+            if args["array"] is not None:
+                args["array"] = args["array"].ravel()
+
+            coll = self.shape.get_coll(
+                props["x0"].ravel(), props["y0"].ravel(), "out", **args
+            )
+        return coll
 
     def _shade_map(
         self,
@@ -4023,25 +4051,14 @@ class Maps(object):
             del self.BM._bg_layers[layer]
             # self.BM._refetch_bg = True
 
-        if verbose:
-            print("EOmaps: Preparing the data")
-        # ---------------------- prepare the data
-        props = self._prepare_data(assume_sorted=assume_sorted)
-        if len(props["z_data"]) == 0:
-            print("EOmaps: there was no data to plot")
-            return
-
-        # remember props for later use
-        self._props = props
-
         # get the name of the used aggretation reduction
         aggname = self.shape.aggregator.__class__.__name__
         if aggname in ["first", "last", "max", "min", "mean", "mode"]:
             # set vmin/vmax in case the aggregation still represents data-values
             if vmin is None:
-                vmin = np.nanmin(props["z_data"])
+                vmin = np.nanmin(self._props["z_data"])
             if vmax is None:
-                vmax = np.nanmax(props["z_data"])
+                vmax = np.nanmax(self._props["z_data"])
         else:
             # set vmin/vmax for aggregations that do NOT represent data values
 
@@ -4087,7 +4104,7 @@ class Maps(object):
         if verbose:
             print("EOmaps: Plotting...")
 
-        zdata = props["z_data"]
+        zdata = self._props["z_data"]
         if len(zdata) == 0:
             print("EOmaps: there was no data to plot")
             return
@@ -4096,8 +4113,8 @@ class Maps(object):
 
         # get rid of unnecessary dimensions in the numpy arrays
         zdata = zdata.squeeze()
-        props["x0"] = props["x0"].squeeze()
-        props["y0"] = props["y0"].squeeze()
+        self._props["x0"] = self._props["x0"].squeeze()
+        self._props["y0"] = self._props["y0"].squeeze()
 
         # the shape is always set after _prepare data!
         if self.shape.name == "shade_points" and not self._1D2D:
@@ -4106,7 +4123,11 @@ class Maps(object):
             ), f"EOmaps: missing dependency 'pandas' for {self.shape.name}"
 
             df = pd.DataFrame(
-                dict(x=props["x0"].ravel(), y=props["y0"].ravel(), val=zdata.ravel()),
+                dict(
+                    x=self._props["x0"].ravel(),
+                    y=self._props["y0"].ravel(),
+                    val=zdata.ravel(),
+                ),
                 copy=False,
             )
 
@@ -4115,8 +4136,8 @@ class Maps(object):
                 _register_xarray()
             ), "EOmaps: missing dependency `xarray` for 'shade_raster'"
             if len(zdata.shape) == 2:
-                if (zdata.shape == props["x0"].shape) and (
-                    zdata.shape == props["y0"].shape
+                if (zdata.shape == self._props["x0"].shape) and (
+                    zdata.shape == self._props["y0"].shape
                 ):
                     # 2D coordinates and 2D raster
 
@@ -4130,31 +4151,32 @@ class Maps(object):
                         data_vars=dict(val=(["xx", "yy"], zdata)),
                         # dims=["x", "y"],
                         coords=dict(
-                            x=(["xx", "yy"], props["x0"]), y=(["xx", "yy"], props["y0"])
+                            x=(["xx", "yy"], self._props["x0"]),
+                            y=(["xx", "yy"], self._props["y0"]),
                         ),
                     )
 
                 elif (
-                    ((zdata.shape[1],) == props["x0"].shape)
-                    and ((zdata.shape[0],) == props["y0"].shape)
-                    and (props["x0"].shape != props["y0"].shape)
+                    ((zdata.shape[1],) == self._props["x0"].shape)
+                    and ((zdata.shape[0],) == self._props["y0"].shape)
+                    and (self._props["x0"].shape != self._props["y0"].shape)
                 ):
                     raise AssertionError(
                         "EOmaps: it seems like you need to transpose your data! \n"
                         + f"the dataset has a shape of {zdata.shape}, but the "
-                        + f"coordinates suggest ({props['x0'].shape}, {props['x0'].shape})"
+                        + f"coordinates suggest ({self._props['x0'].shape}, {self._props['x0'].shape})"
                     )
-                elif (zdata.T.shape == props["x0"].shape) and (
-                    zdata.T.shape == props["y0"].shape
+                elif (zdata.T.shape == self._props["x0"].shape) and (
+                    zdata.T.shape == self._props["y0"].shape
                 ):
                     raise AssertionError(
                         "EOmaps: it seems like you need to transpose your data! \n"
                         + f"the dataset has a shape of {zdata.shape}, but the "
-                        + f"coordinates suggest {props['x0'].shape}"
+                        + f"coordinates suggest {self._props['x0'].shape}"
                     )
 
-                elif ((zdata.shape[0],) == props["x0"].shape) and (
-                    (zdata.shape[1],) == props["y0"].shape
+                elif ((zdata.shape[0],) == self._props["x0"].shape) and (
+                    (zdata.shape[1],) == self._props["y0"].shape
                 ):
                     # 1D coordinates and 2D data
 
@@ -4167,7 +4189,7 @@ class Maps(object):
                     df = xar.DataArray(
                         data=zdata,
                         dims=["x", "y"],
-                        coords=dict(x=props["x0"], y=props["y0"]),
+                        coords=dict(x=self._props["x0"], y=self._props["y0"]),
                     )
                     df = xar.Dataset(dict(val=df))
             else:
@@ -4182,8 +4204,8 @@ class Maps(object):
                 df = (
                     pd.DataFrame(
                         dict(
-                            x=props["xorig"].ravel(),
-                            y=props["yorig"].ravel(),
+                            x=self._props["xorig"].ravel(),
+                            y=self._props["yorig"].ravel(),
                             val=zdata.ravel(),
                         ),
                         copy=False,
