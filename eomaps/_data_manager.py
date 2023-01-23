@@ -187,4 +187,4 @@ class DataManager:
         else:
             n = 12
 
-        self.m.shape._n = n
+        self.m.shape.n = n
