@@ -1548,7 +1548,7 @@ class cb_pick_container(_click_container):
                 dummyevent.ind = pick[1].get("ind", None)
                 dummyevent.val = pick[1].get("val", None)
                 dummyevent.pos = pick[1].get("pos", None)
-
+                dummyevent.val_color = pick[1].get("val_color", None)
             else:
                 dummyevent.ind = None
 
