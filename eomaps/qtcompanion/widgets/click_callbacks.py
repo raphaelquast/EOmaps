@@ -167,11 +167,16 @@ class ClickCallbacks(QtWidgets.QFrame):
                 fc="none",
                 ec="r",
                 n=100,
-                zorder=998,
+                # zorder=998,
             ),
-            mark_pick=dict(fc="none", ec="r", n=100, lw=2, zorder=998),
-            annotate=dict(zorder=999),
-            annotate_pick=dict(zorder=999),
+            mark_pick=dict(
+                fc="none",
+                ec="r",
+                n=100,
+                lw=2,  # zorder=998
+            ),
+            annotate=dict(),  # zorder=999
+            annotate_pick=dict(),  # zorder=999
         )
 
         self.buttons = dict()
@@ -287,6 +292,7 @@ class ClickCallbacks(QtWidgets.QFrame):
                 and m.ax == self.m.ax
                 and m.layer
                 in (
+                    "all",
                     m.BM._bg_layer,
                     *m.BM._bg_layer.split("|"),
                 )
