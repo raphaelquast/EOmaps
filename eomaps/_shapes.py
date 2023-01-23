@@ -124,11 +124,10 @@ class shapes(object):
 
     @staticmethod
     def _estimate_radius(m, radius_crs, method=np.median):
-
         if radius_crs == "in":
-            x, y = m._props["xorig"], m._props["yorig"]
+            x, y = m._data_manager.xorig, m._data_manager.yorig
         elif radius_crs == "out":
-            x, y = m._props["x0"], m._props["y0"]
+            x, y = m._data_manager.x0, m._data_manager.y0
         else:
             raise AssertionError(
                 "radius can only be estimated if radius_crs is 'in' or 'out'!"
@@ -179,14 +178,21 @@ class shapes(object):
                 balanced_tree=False,
             )
 
-            dists, pts = in_tree.query(in_tree.data, 3)
+            dists, pts = in_tree.query(in_tree.data, min(len(in_tree.data), 3))
+            # consider only neighbors
+            # (the first entry is the search-point again!)
+            pts = pts[:, 1:]
+            # get the average distance between points having a distance > 0
+            d = np.abs(in_tree.data[:, np.newaxis] - in_tree.data[pts]).reshape(-1, 2)
+            radiusx = method(d[:, 0][d[:, 0] > 0]) / 2
+            radiusy = method(d[:, 1][d[:, 1] > 0]) / 2
 
-            radiusxy = method(dists) / 2
-
-            if not np.isfinite(radiusxy) or not (radiusxy > 0):
+            rxOK = np.isfinite(radiusx) and (radiusx > 0)
+            ryOK = np.isfinite(radiusy) and (radiusy > 0)
+            if not (rxOK and ryOK):
                 radius = None
             else:
-                radius = (radiusxy, radiusxy)
+                radius = (radiusx, radiusy)
 
         assert radius is not None, (
             "EOmaps: Radius estimation failed... maybe there's something wrong with "
