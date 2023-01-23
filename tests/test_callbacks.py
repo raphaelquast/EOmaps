@@ -272,6 +272,7 @@ class TestCallbacks(unittest.TestCase):
 
         cid = m.cb.click.attach.annotate(text=text, **props)
         self.click_ax_center(m)
+        plt.close("all")
 
         # ---------- test as PICK callback
         for n, cpick, relpick, r in product(

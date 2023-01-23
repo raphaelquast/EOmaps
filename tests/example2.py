@@ -58,7 +58,7 @@ mg.add_feature.preset.coastline(layer="all")  # add the coastline to all layers
 # on the layer-switcher utility buttons (bottom center of the figure)
 # or by using `m2.show()`   or via  `m.show_layer("layer 2")`
 m2 = mg.m_0_1.new_layer(layer="layer 2", copy_data_specs=True)
-m2.set_shape.delaunay_triangulation(mask_radius=max(m2.shape.radius) * 2)
+m2.set_shape.delaunay_triangulation(mask_radius=0.5)
 m2.set_classify_specs(scheme="Quantiles", k=4)
 m2.plot_map(cmap="RdYlBu")
 m2.add_colorbar()

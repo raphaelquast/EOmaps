@@ -25,9 +25,6 @@ m.ax.set_title("Wooohoo, a flashy map-widget with static indicators!")
 m.set_data(data=data_OK, x="lon", y="lat", in_crs=4326)
 m.set_shape.rectangles(mesh=True)
 m.set_classify_specs(scheme="Quantiles", k=10)
-# double the estimated radius in x-direction to make the plot dense
-m.shape.radius = (m.shape.radius[0] * 2, m.shape.radius[1])
-
 m.plot_map(cmap="Spectral_r")
 
 # ... add a basic "annotate" callback
@@ -38,8 +35,6 @@ cid = m.cb.click.attach.annotate(bbox=dict(alpha=0.75, color="w"))
 m2 = m.new_layer(copy_classify_specs=False)
 m2.data_specs.data = data_mask
 m2.set_shape.rectangles(mesh=False)
-# double the estimated radius in x-direction to make the plot dense
-m2.shape.radius = (m2.shape.radius[0] * 2, m2.shape.radius[1])
 m2.plot_map(cmap="magma", set_extent=False)
 
 # --------- add another layer with data that is dynamically updated if we click on the masked area

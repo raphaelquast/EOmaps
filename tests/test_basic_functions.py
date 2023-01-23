@@ -206,7 +206,7 @@ class TestBasicPlotting(unittest.TestCase):
 
         for cpos, color in zip(["ul", "ur", "ll", "lr", "c"], "rgbcm"):
             m.set_data_specs(
-                cpos_radius=m.shape.radius[0] / 2,
+                cpos_radius=387755 / 2,
                 cpos=cpos,
             )
             m.plot_map(fc="none", ec=color, lw=0.5 if cpos != "c" else 2)

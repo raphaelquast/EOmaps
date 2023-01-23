@@ -17,8 +17,6 @@ m = Maps(crs=3035, figsize=(10, 8))
 m.set_data(data=data, x="lon", y="lat", in_crs=4326)
 m.ax.set_title("A clickable widget!")
 m.set_shape.rectangles()
-# double the estimated radius in x-direction to make the plot dense
-m.shape.radius = (m.shape.radius[0] * 2, m.shape.radius[1])
 
 m.set_classify_specs(scheme="EqualInterval", k=5)
 m.add_feature.preset.coastline()
