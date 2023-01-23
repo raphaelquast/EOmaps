@@ -31,7 +31,7 @@ m.shape.radius = (m.shape.radius[0] * 2, m.shape.radius[1])
 m.plot_map(cmap="Spectral_r")
 
 # ... add a basic "annotate" callback
-cid = m.cb.click.attach.annotate(bbox=dict(alpha=0.75), color="w")
+cid = m.cb.click.attach.annotate(bbox=dict(alpha=0.75, color="w"))
 
 # --------- add another layer of data to indicate the values in the masked area
 #           (copy all defined specs but the classification)
@@ -40,14 +40,17 @@ m2.data_specs.data = data_mask
 m2.set_shape.rectangles(mesh=False)
 # double the estimated radius in x-direction to make the plot dense
 m2.shape.radius = (m2.shape.radius[0] * 2, m2.shape.radius[1])
-m2.plot_map(cmap="magma")
+m2.plot_map(cmap="magma", set_extent=False)
+
 # --------- add another layer with data that is dynamically updated if we click on the masked area
 m3 = m.new_layer(copy_classify_specs=False)
 m3.data_specs.data = data_OK.sample(1000)
 m3.set_shape.ellipses(radius=25000, radius_crs=3857)
 
 # plot the map and set dynamic=True to allow continuous updates of the collection
-m3.plot_map(cmap="gist_ncar", edgecolor="w", linewidth=0.25, dynamic=True)
+m3.plot_map(
+    cmap="gist_ncar", edgecolor="w", linewidth=0.25, dynamic=True, set_extent=False
+)
 
 # --------- define a callback that will change the values of the previously plotted dataset
 #           NOTE: this is not possible for the shapes:  "shade_points" and "shade_raster" !
