@@ -183,7 +183,8 @@ class _click_callbacks(object):
             >>> dict(xytext=(20, 20),
             >>>      textcoords="offset points",
             >>>      bbox=dict(boxstyle="round", fc="w"),
-            >>>      arrowprops=dict(arrowstyle="->")
+            >>>      arrowprops=dict(arrowstyle="->"),
+            >>>      annotation_clip=True,
             >>>     )
 
         """
@@ -192,7 +193,6 @@ class _click_callbacks(object):
             layer = self.m.layer
 
         ID, pos, val, ind, picker_name, val_color = self._popargs(kwargs)
-
         if isinstance(ind, (list, np.ndarray)):
             # multipick = True
             picked_pos = (pos[0][0], pos[1][0])
@@ -323,6 +323,7 @@ class _click_callbacks(object):
                 textcoords="offset points",
                 bbox=bbox,
                 arrowprops=dict(arrowstyle="->"),
+                annotation_clip=True,
             )
 
             styledict.update(**kwargs)
