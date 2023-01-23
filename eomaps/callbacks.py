@@ -193,14 +193,20 @@ class _click_callbacks(object):
 
         ID, pos, val, ind, picker_name, val_color = self._popargs(kwargs)
 
-        try:
-            n_ids = len(ind)
-        except TypeError:
-            n_ids = 1
-
-        if n_ids > 1:
-            multipick = True
+        if isinstance(ind, (list, np.ndarray)):
+            # multipick = True
             picked_pos = (pos[0][0], pos[1][0])
+
+            try:
+                n_ids = len(ind)
+            except TypeError:
+                n_ids = "??"
+
+            if n_ids == 1:
+                multipick = False
+            else:
+                multipick = True
+
         else:
             multipick = False
             picked_pos = pos
