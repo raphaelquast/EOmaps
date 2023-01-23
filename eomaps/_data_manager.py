@@ -21,19 +21,8 @@ class DataManager:
         self.ids = props["ids"]
         self.z_data = props["z_data"]
 
-        # self.last_extent = self.current_extent
-
-        # self._cid_xlim = self.m.ax.callbacks.connect(
-        #     "xlim_changed", self.on_extent_changed
-        # )
-
-        # self._cid_xlim = self.m.f.canvas.mpl_connect(
-        #     "draw_event", self.on_extent_changed
-        # )
-
-        # self.m._prepare_data = self.get_props
-
-        self.m.BM._before_fetch_bg_actions = [self.on_extent_changed]
+        # TODO make sure to properly remove _fetch_bg_actions!!
+        self.m.BM._before_fetch_bg_actions.append(self.on_extent_changed)
 
     @property
     def current_extent(self):
@@ -62,12 +51,12 @@ class DataManager:
             return
 
         if self.extent_changed and self.last_extent:
+            # currently assigned "n" of the used shape
+            old_n = getattr(self.m.shape, "n", None)
+
             props = self.get_props()
-
             if props["x0"].size < 5 and props["y0"].size < 5:
-                old_n = getattr(self.m.shape, "n", None)
-
-                if old_n is None or old_n == self.m.shape.n:
+                if old_n == self.m.shape.n:
                     return
                 else:
                     # redraw the shape with the new n
@@ -115,16 +104,12 @@ class DataManager:
 
         # get mask
         q = ((self.x0 >= x0) & (self.x0 <= x1)) & ((self.y0 >= y0) & (self.y0 <= y1))
-
         # TODO fix IDs
         if len(q.shape) == 2:
             qx = q.any(axis=0)
             qy = q.any(axis=1)
-
             wx, wy = np.where(qx)[0], np.where(qy)[0]
-            ind = np.ravel_multi_index(
-                np.meshgrid(wx, wy), (qx.size, qy.size)
-            ).T.ravel()
+            ind = np.ravel_multi_index(np.meshgrid(wx, wy), (qx.size, qy.size)).ravel()
 
             if isinstance(self.ids, (list, range)):
                 idq = [self.ids[i] for i in ind]
@@ -163,12 +148,12 @@ class DataManager:
 
         self.last_extent = self.current_extent
 
-        self.m._xshape = props["x0"].shape
-        self.m._yshape = props["y0"].shape
-        self.m._zshape = props["z_data"].shape
+        # self.m._xshape = props["x0"].shape
+        # self.m._yshape = props["y0"].shape
+        # self.m._zshape = props["z_data"].shape
         self._set_n(props)
 
-        self.m._props = props
+        # self.m._props = props
         return props
 
     def _get_datasize(self, props):
@@ -185,14 +170,13 @@ class DataManager:
         s = self._get_datasize(props)
 
         if s < 10:
-            n = 500
-        elif s < 100:
             n = 100
+        elif s < 100:
+            n = 75
         elif s < 1000:
             n = 50
         elif s < 10000:
             n = 20
         else:
             n = 12
-
         self.m.shape.n = n

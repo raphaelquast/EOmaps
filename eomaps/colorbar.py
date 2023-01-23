@@ -695,7 +695,7 @@ class ColorBar:
                 )
         else:
 
-            z_data = self._m._props["z_data"]
+            z_data = self._m._data_manager.z_data
             bins = self._m.classify_specs._bins
             cmap = self._m.classify_specs._cbcmap
             norm = self._m.classify_specs._norm

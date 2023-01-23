@@ -1295,7 +1295,7 @@ class cb_pick_container(_click_container):
         if index is not None:
             pos = self._m._get_xy_from_index(index, reprojected=True)
             ID = self._get_id(index)
-            val = self._m._props["z_data"].flat[index]
+            val = self._m._data_manager.z_data.flat[index]
             try:
                 val_color = artist.cmap(artist.norm(val))
             except Exception:
@@ -1332,8 +1332,7 @@ class cb_pick_container(_click_container):
         ID : any
             The corresponding data-ID.
         """
-
-        ids = self._m._props["ids"]
+        ids = self._m._data_manager.ids
         if isinstance(ids, (list, range)):
             ind = np.atleast_1d(ind).tolist()  # to treat numbers and lists
             ID = [ids[i] for i in ind]

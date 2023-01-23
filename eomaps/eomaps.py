@@ -1088,6 +1088,7 @@ class Maps(object):
                 for i in mapclassify.CLASSIFIERS
             }
         )
+
         s.__doc__ = dedent(
             """
             Interface to the classifiers provided by the 'mapclassify' module.
@@ -1828,12 +1829,13 @@ class Maps(object):
             assert xy is None, "You can only provide 'ID' or 'pos' not both!"
             # avoid using np.isin directly since it needs a lot of ram
             # for very large datasets!
-            # mask = np.isin(self._props["ids"], ID)
-            # ind = np.where(mask)[0]
             mask, ind = self._find_ID(ID)
 
-            xy = (self._props["xorig"][mask], self._props["yorig"][mask])
-            val = self._props["z_data"][mask]
+            xy = (
+                self._data_manager.xorig.ravel()[mask],
+                self._data_manager.yorig.ravel()[mask],
+            )
+            val = self._data_manager.z_data.ravel()[mask]
             ID = np.atleast_1d(ID)
             xy_crs = self.data_specs.crs
         else:
@@ -2444,16 +2446,12 @@ class Maps(object):
         if kwargs.get("verbose") is not None:
             print("EOmaps: Preparing the data")
 
-        # props = self._prepare_data(assume_sorted=assume_sorted)
-        # if len(props["z_data"]) == 0:
-        #     print("EOmaps: there was no data to plot")
-        #     return
-
-        # # remember props for later use
-        # self._props = props
-
         if useshape.name.startswith("shade"):
             self._props = self._prepare_data(assume_sorted=assume_sorted)
+            self._data_manager = DataManager(self._proxy(self))
+            self._data_manager.set_props()
+
+            # TODO check treatment for shade shapes
 
             self._shade_map(
                 layer=layer,
@@ -2534,8 +2532,10 @@ class Maps(object):
             return
 
         # ---------------------- prepare the data
-        props = self._prepare_data()
-        self._props = props
+        self._props = self._prepare_data()
+        self._data_manager = DataManager(self._proxy(self))
+        self._data_manager.set_props()
+
         # use the axis as Artist to execute pick-events on any click on the axis
 
         x0, x1 = self._props["x0"].min(), self._props["x0"].max()
@@ -3125,10 +3125,6 @@ class Maps(object):
 
             m.cleanup()
 
-        # delete the tempfolder containing the memmaps
-        if hasattr(self.parent, "_tmpfolder"):
-            self.parent._tmpfolder.cleanup()
-
         # close the pyqt widget if there is one
         if self._companion_widget is not None:
             self._companion_widget.close()
@@ -3504,9 +3500,12 @@ class Maps(object):
             xind = yind = ind
 
         if reprojected:
-            return (self._props["x0"].flat[xind], self._props["y0"].flat[yind])
+            return (self._data_manager.x0.flat[xind], self._data_manager.y0.flat[yind])
         else:
-            return (self._props["xorig"].flat[xind], self._props["yorig"].flat[yind])
+            return (
+                self._data_manager.xorig.flat[xind],
+                self._data_manager.yorig.flat[yind],
+            )
 
     def _get_xy_from_ID(self, ID, reprojected=False):
         ind = self._get_ind(ID)
@@ -3516,9 +3515,12 @@ class Maps(object):
             xind = yind = ind
 
         if reprojected:
-            return (self._props["x0"].flat[xind], self._props["y0"].flat[yind])
+            return (self._data_manager.x0.flat[xind], self._data_manager.y0.flat[yind])
         else:
-            return (self._props["xorig"].flat[xind], self._props["yorig"].flat[yind])
+            return (
+                self._data_manager.xorig.flat[xind],
+                self._data_manager.yorig.flat[yind],
+            )
 
     def _get_ind(self, ID):
         """
@@ -3561,7 +3563,7 @@ class Maps(object):
     ):
 
         if z_data is None:
-            z_data = self._props["z_data"]
+            z_data = self._data_manager.z_data
 
         if isinstance(cmap, str):
             cmap = plt.get_cmap(cmap).copy()
@@ -3653,13 +3655,13 @@ class Maps(object):
 
     def _find_ID(self, ID):
         # explicitly treat range-like indices (for very large datasets)
-        ids = self._props["ids"]
+        ids = self._data_manager.ids
         if isinstance(ids, range):
             if ID in ids:
                 return [ID], [ID]
             else:
                 return None, None
-        elif isinstance(ids, np.ndarray):
+        elif isinstance(ids, (list, np.ndarray)):
             mask = np.isin(ids, ID)
             ind = np.where(mask)[0]
 
@@ -3861,9 +3863,9 @@ class Maps(object):
             #     return
 
             if vmin is None and self.data is not None:
-                vmin = np.nanmin(self._props["z_data"])
+                vmin = np.nanmin(self._data_manager.z_data)
             if vmax is None and self.data is not None:
-                vmax = np.nanmax(self._props["z_data"])
+                vmax = np.nanmax(self._data_manager.z_data)
 
             # clip the data to properly account for vmin and vmax
             # (do this only if we don't intend to use the full dataset!)
@@ -3878,6 +3880,7 @@ class Maps(object):
                 classify_specs=self.classify_specs,
             )
 
+            # TODO remove duplicated attributes!!
             self.classify_specs._cbcmap = cbcmap
             self.classify_specs._norm = norm
             self.classify_specs._bins = bins

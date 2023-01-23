@@ -196,18 +196,18 @@ class searchtree:
 
         # get a rectangular boolean mask
         mx = np.logical_and(
-            self._m._props["x0"] > (x[0] - d), self._m._props["x0"] < (x[0] + d)
+            self._m._data_manager.x0 > (x[0] - d), self._m._data_manager.x0 < (x[0] + d)
         )
         my = np.logical_and(
-            self._m._props["y0"] > (x[1] - d), self._m._props["y0"] < (x[1] + d)
+            self._m._data_manager.y0 > (x[1] - d), self._m._data_manager.y0 < (x[1] + d)
         )
 
         if self._m._1D2D:
             mx_id, my_id = np.where(mx)[0], np.where(my)[0]
             m_rect_x, m_rect_y = np.meshgrid(mx_id, my_id)
 
-            x_rect = self._m._props["x0"][m_rect_x].ravel()
-            y_rect = self._m._props["y0"][m_rect_y].ravel()
+            x_rect = self._m._data_manager.x0[m_rect_x].ravel()
+            y_rect = self._m._data_manager.y0[m_rect_y].ravel()
 
             # get the unravelled indexes of the boolean mask
             idx = np.ravel_multi_index((m_rect_x, m_rect_y), self._m._zshape).ravel()
@@ -217,8 +217,8 @@ class searchtree:
             idx = np.where(m.ravel())[0]
 
             if len(idx) > 0:
-                x_rect = self._m._props["x0"][m].ravel()
-                y_rect = self._m._props["y0"][m].ravel()
+                x_rect = self._m._data_manager.x0[m].ravel()
+                y_rect = self._m._data_manager.y0[m].ravel()
             else:
                 x_rect, y_rect = [], []
 
@@ -267,18 +267,18 @@ class searchtree:
         if self._m._1D2D:
             if k == 1:
                 # just perform a brute-force search for 1D coords
-                ix = np.argmin(np.abs(self._m._props["x0"] - x[0]))
-                iy = np.argmin(np.abs(self._m._props["y0"] - x[1]))
+                ix = np.argmin(np.abs(self._m._data_manager.x0 - x[0]))
+                iy = np.argmin(np.abs(self._m._data_manager.y0 - x[1]))
 
                 i = np.ravel_multi_index((ix, iy), self._m._zshape)
             else:
                 if pick_relative_to_closest is True:
-                    ix = np.argmin(np.abs(self._m._props["x0"] - x[0]))
-                    iy = np.argmin(np.abs(self._m._props["y0"] - x[1]))
+                    ix = np.argmin(np.abs(self._m._data_manager.x0 - x[0]))
+                    iy = np.argmin(np.abs(self._m._data_manager.y0 - x[1]))
 
                     # query again (starting from the closest point)
                     return self.query(
-                        (self._m._props["x0"][ix], self._m._props["y0"][iy]),
+                        (self._m._data_manager.x0[ix], self._m._data_manager.y0[iy]),
                         k=k,
                         d=d,
                         pick_relative_to_closest=False,
@@ -1065,6 +1065,8 @@ class BlitManager:
         self._on_add_bg_artist = list()
         self._on_remove_bg_artist = list()
 
+        self._before_fetch_bg_actions = list()
+
     @property
     def figure(self):
         return self._m.f
@@ -1261,7 +1263,7 @@ class BlitManager:
 
         # execute actions before fetching new artists
         # (e.g. update data based on extent etc.)
-        for action in getattr(self, "_before_fetch_bg_actions", []):
+        for action in self._before_fetch_bg_actions:
             action(layer=layer, bbox=bbox)
 
         if overlay is None:
