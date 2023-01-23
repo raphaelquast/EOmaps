@@ -80,12 +80,20 @@ class DataManager:
                 self.m.ax.add_collection(coll, autolim=self.m._set_extent)
 
             try:
-                self.m.BM.remove_bg_artist(self.m._coll)
+                if self.m._coll_dynamic:
+                    self.m.BM.remove_artist(self.m._coll)
+                else:
+                    self.m.BM.remove_bg_artist(self.m._coll)
+
                 self.m._coll.remove()
             except Exception as ex:
                 print(ex)
 
-            self.m.BM.add_bg_artist(coll, self.m.layer)
+            if self.m._coll_dynamic:
+                self.m.BM.add_artist(coll, self.m.layer)
+            else:
+                self.m.BM.add_bg_artist(coll, self.m.layer)
+
             self.m._coll = coll
             self.m.cb.pick._set_artist(coll)
 

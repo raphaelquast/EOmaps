@@ -3921,6 +3921,7 @@ class Maps(object):
 
             # ------------- plot the data
             self._coll_kwargs = kwargs
+            self._coll_dynamic = dynamic
 
             self._coll = self._get_coll(self._props, **kwargs)
 
