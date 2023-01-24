@@ -1394,6 +1394,7 @@ class Maps(object):
         clip=False,
         reproject="gpd",
         verbose=False,
+        only_valid=True,
         **kwargs,
     ):
         """
@@ -1509,6 +1510,13 @@ class Maps(object):
             Indicator if a progressbar should be printed when re-projecting
             geometries with "use_gpd=False".
             The default is False.
+        only_valid : bool, optional
+
+            - If True, only valid geometries (e.g. `gdf.is_valid`) are plotted.
+            - If False, all geometries are attempted to be plotted
+              (this might result in errors for infinite geometries etc.)
+
+            The default is True
         kwargs :
             all remaining kwargs are passed to `geopandas.GeoDataFrame.plot(**kwargs)`
 
@@ -1530,9 +1538,12 @@ class Maps(object):
         if val_key is None:
             val_key = kwargs.get("column", None)
 
+        if only_valid:
+            gdf = gdf[gdf.is_valid]
+
         try:
             # explode the GeoDataFrame to avoid picking multi-part geometries
-            gdf = gdf[gdf.is_valid].explode(index_parts=False)
+            gdf = gdf.explode(index_parts=False)
         except Exception:
             # geopandas sometimes has problems exploding geometries...
             # if it does not work, just continue with the Multi-geometries!
@@ -1585,6 +1596,11 @@ class Maps(object):
         # (geopandas always uses collections)
         colls = [id(i) for i in self.ax.collections]
         artists, prefixes = [], []
+
+        # drop all invalid geometries
+        if only_valid:
+            gdf = gdf[gdf.is_valid]
+
         for geomtype, geoms in gdf.groupby(gdf.geom_type):
             gdf.plot(ax=self.ax, aspect=self.ax.get_aspect(), **kwargs)
             artists = [i for i in self.ax.collections if id(i) not in colls]
@@ -1593,14 +1609,16 @@ class Maps(object):
 
         if picker_name is not None:
             if isinstance(pick_method, str):
-                self._picker_cls = _gpd_picker(
+                picker_cls = _gpd_picker(
                     gdf=gdf, pick_method=pick_method, val_key=val_key
                 )
-                picker = self._picker_cls.get_picker()
+                picker = picker_cls.get_picker()
             elif callable(pick_method):
                 picker = pick_method
+                picker_cls = None
             else:
                 print("EOmaps: I don't know what to do with the provided pick_method")
+                return
 
             if len(artists) > 1:
                 warnings.warn(
@@ -1617,6 +1635,7 @@ class Maps(object):
                 # attach the re-projected GeoDataFrame to the pick-container
                 self.cb.pick[picker_name + prefix].data = gdf
                 self.cb.pick[picker_name + prefix].val_key = val_key
+                self.cb.pick[picker_name + prefix]._picker_cls = picker_cls
 
         if layer is None:
             layer = self.layer
