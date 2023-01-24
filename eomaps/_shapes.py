@@ -60,7 +60,7 @@ class shapes(object):
 
     Attributes
     ----------
-    radius_estimation_range : int
+    _radius_estimation_range : int
         The number of datapoints to use for estimating the radius of a shape.
         (only relevant if the radius is not specified explicitly.)
         The default is 100000
@@ -80,7 +80,7 @@ class shapes(object):
 
     def __init__(self, m):
         self._m = m
-        self.radius_estimation_range = 100000
+        self._radius_estimation_range = 100000
 
     def _get(self, shape, **kwargs):
         shp = getattr(self, f"_{shape}")(self._m)
@@ -136,7 +136,7 @@ class shapes(object):
         radius = None
         # try to estimate radius for 2D datasets
         if len(m._xshape) == 2 and len(m._yshape) == 2:
-            userange = int(np.sqrt(m.set_shape.radius_estimation_range))
+            userange = int(np.sqrt(m.set_shape._radius_estimation_range))
 
             radiusx = (
                 np.nanmedian(
@@ -157,13 +157,13 @@ class shapes(object):
                 radius = None
 
         # for 1D datasets (or if 2D radius-estimation fails), use the median distance
-        # of 3 neighbours of the first N datapoints (N=shape.radius_estimation_range)
+        # of 3 neighbours of the first N datapoints (N=shape._radius_estimation_range)
         if radius is None:
             from scipy.spatial import cKDTree
 
             # take care of 2D data with 1D coordinates
             if m._1D2D:
-                userange = int(np.sqrt(m.set_shape.radius_estimation_range))
+                userange = int(np.sqrt(m.set_shape._radius_estimation_range))
                 x, y = np.meshgrid(x[:userange], y[:userange])
 
             in_tree = cKDTree(
@@ -199,7 +199,7 @@ class shapes(object):
             "the provided coordinates? "
             "You can manually specify a radius with 'm.set_shape.<SHAPE>(radius=...)' "
             "or you can increase the number of datapoints used to estimate the radius "
-            "by increasing `m.set_shape.radius_estimation_range`."
+            "by increasing `m.set_shape._radius_estimation_range`."
         )
 
         return radius
@@ -255,7 +255,7 @@ class shapes(object):
 
     @staticmethod
     @lru_cache()
-    def get_transformer(in_crs, out_crs):
+    def _get_transformer(in_crs, out_crs):
         # cache transformers to avoid re-initialization for each feature
         t = Transformer.from_crs(in_crs, out_crs, always_xy=True)
         return t
@@ -390,9 +390,11 @@ class shapes(object):
             x, y = np.asarray(x), np.asarray(y)
 
             # transform from in-crs to lon/lat
-            radius_t = shapes.get_transformer(self._m.get_crs(crs), CRS.from_epsg(4326))
+            radius_t = shapes._get_transformer(
+                self._m.get_crs(crs), CRS.from_epsg(4326)
+            )
             # transform from lon/lat to the plot_crs
-            plot_t = shapes.get_transformer(
+            plot_t = shapes._get_transformer(
                 CRS.from_epsg(4326), CRS.from_user_input(self._m.crs_plot)
             )
 
@@ -634,11 +636,11 @@ class shapes(object):
             crs = self._m.get_crs(crs)
             radius_crs = self._m.get_crs(radius_crs)
             # transform from crs to the plot_crs
-            t_in_plot = shapes.get_transformer(crs, self._m.crs_plot)
+            t_in_plot = shapes._get_transformer(crs, self._m.crs_plot)
             # transform from crs to the radius_crs
-            t_in_radius = shapes.get_transformer(crs, radius_crs)
+            t_in_radius = shapes._get_transformer(crs, radius_crs)
             # transform from crs to the radius_crs
-            t_radius_plot = shapes.get_transformer(radius_crs, self._m.crs_plot)
+            t_radius_plot = shapes._get_transformer(radius_crs, self._m.crs_plot)
 
             if isinstance(radius, (int, float, np.number)):
                 rx, ry = radius, radius
@@ -695,8 +697,8 @@ class shapes(object):
 
                 return quadrants
 
-            t_in_lonlat = shapes.get_transformer(crs, 4326)
-            t_plot_lonlat = shapes.get_transformer(self._m.crs_plot, 4326)
+            t_in_lonlat = shapes._get_transformer(crs, 4326)
+            t_plot_lonlat = shapes._get_transformer(self._m.crs_plot, 4326)
 
             # transform the coordinates to lon/lat
             xp, _ = t_in_lonlat.transform(x, y)
@@ -867,13 +869,13 @@ class shapes(object):
             if radius_crs == crs:
                 in_crs = self._m.get_crs(crs)
                 # transform from crs to the plot_crs
-                t = shapes.get_transformer(
+                t = shapes._get_transformer(
                     CRS.from_user_input(in_crs), self._m.crs_plot
                 )
 
                 # make sure we do not transform out of bounds (if possible)
                 if in_crs.area_of_use is not None:
-                    transformer = shapes.get_transformer(in_crs.geodetic_crs, in_crs)
+                    transformer = shapes._get_transformer(in_crs.geodetic_crs, in_crs)
 
                     xmin, ymin, xmax, ymax = transformer.transform_bounds(
                         *in_crs.area_of_use.bounds
@@ -889,13 +891,13 @@ class shapes(object):
                 r_crs = self._m.get_crs(radius_crs)
 
                 # transform from crs to the radius_crs
-                t_in_radius = shapes.get_transformer(in_crs, r_crs)
+                t_in_radius = shapes._get_transformer(in_crs, r_crs)
                 # transform from radius_crs to the plot_crs
-                t = shapes.get_transformer(r_crs, self._m.crs_plot)
+                t = shapes._get_transformer(r_crs, self._m.crs_plot)
 
                 # make sure we do not transform out of bounds (if possible)
                 if r_crs.area_of_use is not None:
-                    transformer = shapes.get_transformer(r_crs.geodetic_crs, r_crs)
+                    transformer = shapes._get_transformer(r_crs.geodetic_crs, r_crs)
 
                     xmin, ymin, xmax, ymax = transformer.transform_bounds(
                         *r_crs.area_of_use.bounds
@@ -1094,7 +1096,7 @@ class shapes(object):
                 raise ImportError("'scipy' is required for 'voronoi'!")
 
             # transform from crs to the plot_crs
-            t_in_plot = shapes.get_transformer(self._m.get_crs(crs), self._m.crs_plot)
+            t_in_plot = shapes._get_transformer(self._m.get_crs(crs), self._m.crs_plot)
 
             x0, y0 = t_in_plot.transform(x, y)
 
@@ -1247,7 +1249,7 @@ class shapes(object):
                 raise ImportError("'scipy' is required for 'delaunay_triangulation'!")
 
             # transform from crs to the plot_crs
-            t_in_plot = shapes.get_transformer(self._m.get_crs(crs), self._m.crs_plot)
+            t_in_plot = shapes._get_transformer(self._m.get_crs(crs), self._m.crs_plot)
 
             x0, y0 = t_in_plot.transform(x, y)
             datamask = np.isfinite(x0) & np.isfinite(y0)
@@ -1629,11 +1631,11 @@ class shapes(object):
             # transform corner-points
             in_crs = self._m.get_crs(crs)
             # transform from crs to the plot_crs
-            t = shapes.get_transformer(in_crs, self._m.crs_plot)
+            t = shapes._get_transformer(in_crs, self._m.crs_plot)
 
             # make sure we do not transform out of bounds (if possible)
             if in_crs.area_of_use is not None:
-                transformer = shapes.get_transformer(in_crs.geodetic_crs, in_crs)
+                transformer = shapes._get_transformer(in_crs.geodetic_crs, in_crs)
 
                 xmin, ymin, xmax, ymax = transformer.transform_bounds(
                     *in_crs.area_of_use.bounds
