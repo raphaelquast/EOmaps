@@ -93,8 +93,8 @@ class shapes(object):
         if (isinstance(radius, str) and radius == "estimate") or radius is None:
             if m._estimated_radius is None:
                 # make sure props are defined otherwise we can't estimate the radius!
-                if not hasattr(m, "_props"):
-                    m._props = m._prepare_data()
+                if not m._data_manager._props_set:
+                    m._data_manager.set_props()
 
                 print("EOmaps: estimating radius...")
                 radiusx, radiusy = shapes._estimate_radius(m, radius_crs)
@@ -165,12 +165,18 @@ class shapes(object):
             if m._1D2D:
                 userange = int(np.sqrt(m.set_shape._radius_estimation_range))
                 x, y = np.meshgrid(x[:userange], y[:userange])
+                x, y = x.flat, y.flat
+            else:
+                x = x.flat[: m.set_shape._radius_estimation_range]
+                x = x[np.isfinite(x)]
+                y = y.flat[: m.set_shape._radius_estimation_range]
+                y = y[np.isfinite(y)]
 
             in_tree = cKDTree(
                 np.stack(
                     [
-                        x.flat[: m.set_shape.radius_estimation_range],
-                        y.flat[: m.set_shape.radius_estimation_range],
+                        x,
+                        y,
                     ],
                     axis=1,
                 ),
@@ -184,15 +190,29 @@ class shapes(object):
             pts = pts[:, 1:]
             # get the average distance between points having a distance > 0
             d = np.abs(in_tree.data[:, np.newaxis] - in_tree.data[pts]).reshape(-1, 2)
-            radiusx = method(d[:, 0][d[:, 0] > 0]) / 2
-            radiusy = method(d[:, 1][d[:, 1] > 0]) / 2
+
+            use_dx = d[:, 0] > 0
+            use_dy = d[:, 1] > 0
+            if any(use_dx):
+                radiusx = method(d[:, 0][use_dx]) / 2
+            else:
+                radiusx = np.nan
+
+            if any(use_dy):
+                radiusy = method(d[:, 1][use_dy]) / 2
+            else:
+                radiusx = np.nan
 
             rxOK = np.isfinite(radiusx) and (radiusx > 0)
             ryOK = np.isfinite(radiusy) and (radiusy > 0)
-            if not (rxOK and ryOK):
-                radius = None
-            else:
+            if rxOK and ryOK:
                 radius = (radiusx, radiusy)
+            elif rxOK:
+                radius = (radiusx, radiusx)
+            elif ryOK:
+                radius = (radiusy, radiusy)
+            else:
+                radius = None
 
         assert radius is not None, (
             "EOmaps: Radius estimation failed... maybe there's something wrong with "
@@ -1266,8 +1286,8 @@ class shapes(object):
 
                 if radius_crs == "in":
                     # use input-coordinates for evaluating the mask
-                    mx = self._m._props["xorig"].ravel()
-                    my = self._m._props["yorig"].ravel()
+                    mx = self._m._data_manager._props["xorig"].ravel()
+                    my = self._m._data_manager._props["yorig"].ravel()
                 elif radius_crs == "out":
                     # use projected coordinates for evaluating the mask
                     mx = x
