@@ -1452,18 +1452,20 @@ class BlitManager:
             print(f"EOmaps: Background-artist '{art}' already added")
             return
 
-        # art.set_animated(True)
-
         self._bg_artists.setdefault(layer, []).append(art)
 
-        # check if there are any outdated cached background-layers and clear them
-        sublayers = layer.split("|")
+        if layer == "all":
+            # clear all cached background-layers
+            self._bg_layers.clear()
+        else:
+            # check for outdated cached background-layers and clear them
+            sublayers = layer.split("|")
 
-        def check_outdated(item):
-            return any(l in item.split("|") for l in sublayers)
+            def check_outdated(item):
+                return any(l in item.split("|") for l in sublayers)
 
-        for l in filter(check_outdated, set(self._bg_layers)):
-            self._refetch_layer(l)
+            for l in filter(check_outdated, set(self._bg_layers)):
+                self._refetch_layer(l)
 
         for f in self._on_add_bg_artist:
             f()
