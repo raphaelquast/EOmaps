@@ -2243,7 +2243,8 @@ class Maps(object):
         figax.set_navigate(False)
         figax.set_axis_off()
         _ = figax.imshow(im, aspect="equal", zorder=999)
-        self.BM.add_artist(figax, layer)
+
+        self.BM.add_bg_artist(figax, layer)
 
         if fix_position:
             fixed_pos = (
