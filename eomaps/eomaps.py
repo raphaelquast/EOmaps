@@ -451,6 +451,9 @@ class Maps(object):
         # initialize the shape-drawer
         self._shape_drawer = ShapeDrawer(weakref.proxy(self))
 
+        # initialize the data-manager
+        self._data_manager = DataManager(self._proxy(self))
+
     def __getattribute__(self, key):
         if key == "plot_specs":
             raise AttributeError(
@@ -2263,6 +2266,10 @@ class Maps(object):
         Add a colorbar to the map.
         (docstring inherited from ColorBar.__init__)
         """
+        if self.coll is None:
+            # in order to plot a colorbar we need to fetch the layer!
+            # TODO implement a better way to ensure correct vmin/vmax
+            self._data_manager.on_fetch_bg(self.layer)
 
         colorbar = ColorBar(
             self,
@@ -2467,11 +2474,8 @@ class Maps(object):
             print("EOmaps: Preparing the data")
 
         if useshape.name.startswith("shade"):
-            self._props = self._prepare_data(assume_sorted=assume_sorted)
-            self._data_manager = DataManager(self._proxy(self))
+            # TODO check data_manager treatment for shade shapes
             self._data_manager.set_props()
-
-            # TODO check treatment for shade shapes
 
             self._shade_map(
                 layer=layer,
@@ -2481,8 +2485,7 @@ class Maps(object):
                 **kwargs,
             )
         else:
-            self._data_manager = DataManager(self._proxy(self))
-            self._props = self._data_manager.get_props()
+            self._data_manager.set_props()
 
             self._plot_map(
                 layer=layer,
@@ -2495,15 +2498,19 @@ class Maps(object):
         if hasattr(self, "_data_mask") and not np.all(self._data_mask):
             print("EOmaps: Warning: some datapoints could not be drawn!")
 
-        x0, y0, x1, y1 = self.crs_plot.boundary.bounds
+        # update here to make sure the collection is properly added!
+        self.BM.update()
+        self.ax.autoscale_view()
 
-        if (
-            np.any(self._props["x0"] < x0)
-            or np.any(self._props["x0"] > x1)
-            or np.any(self._props["y0"] < y0)
-            or np.any(self._props["y0"] > y1)
-        ):
-            print("EOmaps: Warning: some points are outside the CRS bounds!")
+        # x0, y0, x1, y1 = self.crs_plot.boundary.bounds
+
+        # if (
+        #     np.any(self._props["x0"] < x0)
+        #     or np.any(self._props["x0"] > x1)
+        #     or np.any(self._props["y0"] < y0)
+        #     or np.any(self._props["y0"] > y1)
+        # ):
+        #     print("EOmaps: Warning: some points are outside the CRS bounds!")
 
     def make_dataset_pickable(
         self,
@@ -2552,14 +2559,14 @@ class Maps(object):
             return
 
         # ---------------------- prepare the data
-        self._props = self._prepare_data()
+        # self._props = self._prepare_data()
         self._data_manager = DataManager(self._proxy(self))
         self._data_manager.set_props()
 
         # use the axis as Artist to execute pick-events on any click on the axis
 
-        x0, x1 = self._props["x0"].min(), self._props["x0"].max()
-        y0, y1 = self._props["y0"].min(), self._props["y0"].max()
+        x0, x1 = self._data_manager.x0.min(), self._data_manager.x0.max()
+        y0, y1 = self._data_manager.y0.min(), self._data_manager.y0.max()
 
         # use a transparent rectangle of the data-extent as artist for picking
         (art,) = self.ax.fill([x0, x1, x1, x0], [y0, y0, y1, y1], fc="none", ec="none")
@@ -3556,7 +3563,7 @@ class Maps(object):
         ind : any
             The corresponding (flat) data-index.
         """
-        ids = self._props["ids"]
+        ids = self._data_manager.ids
 
         ID = np.atleast_1d(ID)
         if isinstance(ids, range):
@@ -3917,10 +3924,6 @@ class Maps(object):
             # remove previously fetched backgrounds for the used layer
             if layer in self.BM._bg_layers and dynamic is False:
                 del self.BM._bg_layers[layer]
-                # self.BM._refetch_bg = True
-
-            # if self.data is None:
-            #     return
 
             if vmin is None and self.data is not None:
                 vmin = np.nanmin(self._data_manager.z_data)
@@ -3959,36 +3962,9 @@ class Maps(object):
             self._coll_kwargs = kwargs
             self._coll_dynamic = dynamic
 
-            self._coll = self._get_coll(self._props, **kwargs)
-
-            self._coll.set_clim(vmin, vmax)
-            if self.shape.name != "scatter_points":
-                ax.add_collection(self._coll, autolim=self._set_extent)
-
-            # This is now done lazily (only if a pick-callback is attached)
-            # self.tree = searchtree(m=self._proxy(self))
-            # self.cb.pick._set_artist(coll)
-            # self.cb.pick._init_cbs()
-            # self.cb._methods.add("pick")
-
-            if dynamic is True:
-                self.BM.add_artist(self._coll, layer)
-            else:
-                self.BM.add_bg_artist(self._coll, layer)
-
-            if set_extent:
-                # set the image extent
-                x0min, y0min, x0max, y0max = self.coll.get_datalim(
-                    self.ax.transData
-                ).extents
-
-                ymin, ymax = ax.projection.y_limits
-                xmin, xmax = ax.projection.x_limits
-                # set the axis-extent
-                ax.set_xlim(max(x0min, xmin), min(x0max, xmax))
-                ax.set_ylim(max(y0min, ymin), min(y0max, ymax))
-
-            # self.f.canvas.draw_idle()
+            self.BM._refetch_layer(layer)
+            # NOTE: the actual plot is performed by the data-manager
+            # at the next call to m.BM.fetch_bg() for the corresponding layer
 
         except Exception as ex:
             raise ex
@@ -4093,9 +4069,9 @@ class Maps(object):
         if aggname in ["first", "last", "max", "min", "mean", "mode"]:
             # set vmin/vmax in case the aggregation still represents data-values
             if vmin is None:
-                vmin = np.nanmin(self._props["z_data"])
+                vmin = np.nanmin(self._data_manager.z_data)
             if vmax is None:
-                vmax = np.nanmax(self._props["z_data"])
+                vmax = np.nanmax(self._data_manager.z_data)
         else:
             # set vmin/vmax for aggregations that do NOT represent data values
 
@@ -4141,7 +4117,7 @@ class Maps(object):
         if verbose:
             print("EOmaps: Plotting...")
 
-        zdata = self._props["z_data"]
+        zdata = self._data_manager.z_data
         if len(zdata) == 0:
             print("EOmaps: there was no data to plot")
             return
@@ -4150,8 +4126,8 @@ class Maps(object):
 
         # get rid of unnecessary dimensions in the numpy arrays
         zdata = zdata.squeeze()
-        self._props["x0"] = self._props["x0"].squeeze()
-        self._props["y0"] = self._props["y0"].squeeze()
+        x0 = self._data_manager.x0.squeeze()
+        y0 = self._data_manager.y0.squeeze()
 
         # the shape is always set after _prepare data!
         if self.shape.name == "shade_points" and not self._1D2D:
@@ -4161,8 +4137,8 @@ class Maps(object):
 
             df = pd.DataFrame(
                 dict(
-                    x=self._props["x0"].ravel(),
-                    y=self._props["y0"].ravel(),
+                    x=x0.ravel(),
+                    y=y0.ravel(),
                     val=zdata.ravel(),
                 ),
                 copy=False,
@@ -4173,9 +4149,7 @@ class Maps(object):
                 _register_xarray()
             ), "EOmaps: missing dependency `xarray` for 'shade_raster'"
             if len(zdata.shape) == 2:
-                if (zdata.shape == self._props["x0"].shape) and (
-                    zdata.shape == self._props["y0"].shape
-                ):
+                if (zdata.shape == x0.shape) and (zdata.shape == y0.shape):
                     # 2D coordinates and 2D raster
 
                     # use a curvilinear QuadMesh
@@ -4188,32 +4162,30 @@ class Maps(object):
                         data_vars=dict(val=(["xx", "yy"], zdata)),
                         # dims=["x", "y"],
                         coords=dict(
-                            x=(["xx", "yy"], self._props["x0"]),
-                            y=(["xx", "yy"], self._props["y0"]),
+                            x=(["xx", "yy"], x0),
+                            y=(["xx", "yy"], y0),
                         ),
                     )
 
                 elif (
-                    ((zdata.shape[1],) == self._props["x0"].shape)
-                    and ((zdata.shape[0],) == self._props["y0"].shape)
-                    and (self._props["x0"].shape != self._props["y0"].shape)
+                    ((zdata.shape[1],) == x0.shape)
+                    and ((zdata.shape[0],) == y0.shape)
+                    and (x0.shape != y0.shape)
                 ):
                     raise AssertionError(
                         "EOmaps: it seems like you need to transpose your data! \n"
                         + f"the dataset has a shape of {zdata.shape}, but the "
-                        + f"coordinates suggest ({self._props['x0'].shape}, {self._props['x0'].shape})"
+                        + f"coordinates suggest ({x0.shape}, {y0.shape})"
                     )
-                elif (zdata.T.shape == self._props["x0"].shape) and (
-                    zdata.T.shape == self._props["y0"].shape
-                ):
+                elif (zdata.T.shape == x0.shape) and (zdata.T.shape == y0.shape):
                     raise AssertionError(
                         "EOmaps: it seems like you need to transpose your data! \n"
                         + f"the dataset has a shape of {zdata.shape}, but the "
-                        + f"coordinates suggest {self._props['x0'].shape}"
+                        + f"coordinates suggest {x0.shape}"
                     )
 
-                elif ((zdata.shape[0],) == self._props["x0"].shape) and (
-                    (zdata.shape[1],) == self._props["y0"].shape
+                elif ((zdata.shape[0],) == x0.shape) and (
+                    (zdata.shape[1],) == y0.shape
                 ):
                     # 1D coordinates and 2D data
 
@@ -4226,7 +4198,7 @@ class Maps(object):
                     df = xar.DataArray(
                         data=zdata,
                         dims=["x", "y"],
-                        coords=dict(x=self._props["x0"], y=self._props["y0"]),
+                        coords=dict(x=x0, y=y0),
                     )
                     df = xar.Dataset(dict(val=df))
             else:
@@ -4241,8 +4213,8 @@ class Maps(object):
                 df = (
                     pd.DataFrame(
                         dict(
-                            x=self._props["xorig"].ravel(),
-                            y=self._props["yorig"].ravel(),
+                            x=x0.ravel(),
+                            y=y0.ravel(),
                             val=zdata.ravel(),
                         ),
                         copy=False,
