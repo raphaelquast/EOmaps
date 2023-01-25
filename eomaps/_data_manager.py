@@ -46,9 +46,9 @@ class DataManager:
             return
 
         # estimate the radius (used as margin on data selection)
-        r = self.m._shapes._estimate_radius(self.m, "out")
-        if r is not None and all(np.isfinite(i) for i in r):
-            self._radius_margin = [i * self._radius_margin_factor for i in r]
+        self._r = self.m._shapes._estimate_radius(self.m, "out")
+        if self._r is not None and all(np.isfinite(i) for i in self._r):
+            self._radius_margin = [i * self._radius_margin_factor for i in self._r]
         else:
             self._radius_margin = None
 
@@ -64,9 +64,44 @@ class DataManager:
     def extent_changed(self):
         return not self.current_extent == self.last_extent
 
+    def _set_lims(self):
+        props = self.get_props()
+
+        # set the extent...
+        # do this ONLY if this is the first time the collection is plotted!
+        # (and BEFORE the collection is added to the axis!)
+        x0min, x0max = np.nanmin(props["x0"]), np.nanmax(props["x0"])
+        y0min, y0max = np.nanmin(props["y0"]), np.nanmax(props["y0"])
+
+        # in case a proper radius is defined, add a margin of
+        # (1 x radius) to the map
+        if self._r is not None and all(np.isfinite(self._r)):
+            rx, ry = self._r
+            x0min -= rx
+            y0min -= ry
+            x0max += rx
+            y0max += ry
+
+        print("settnig the extent", self.x0.min())
+
+        ymin, ymax = self.m.ax.projection.y_limits
+        xmin, xmax = self.m.ax.projection.x_limits
+        # set the axis-extent
+
+        x0, x1, y0, y1 = (
+            max(x0min, xmin),
+            min(x0max, xmax),
+            max(y0min, ymin),
+            min(y0max, ymax),
+        )
+
+        self.m.ax.set_xlim(x0, x1)
+        self.m.ax.set_ylim(y0, y1)
+
+        return (x0, x1, y0, y1)
+
     def on_fetch_bg(self, layer, bbox=None):
         # TODO support providing a bbox as extent
-
         if self.layer != "all" and self.layer not in layer.split("|"):
             return
 
@@ -76,6 +111,14 @@ class DataManager:
 
         if self.extent_changed or self.m.coll is None:
             props = self.get_props()
+            # update the number of immediate points calculated for plot-shapes
+            s = self._get_datasize(props)
+            self._print_datasize_warnings(s)
+            self._set_n(s)
+
+            # if self.m.coll is None and self.m._set_extent:
+            #     self._set_lims(props)
+            #     return
 
             if props["x0"].size < 1 or props["y0"].size < 1:
                 # keep original data if too low amount of data is attempted
@@ -86,7 +129,10 @@ class DataManager:
             coll.set_clim(self.m._vmin, self.m._vmax)
 
             if self.m.shape.name != "scatter_points":
-                self.m.ax.add_collection(coll, autolim=self.m._set_extent)
+                # avoid use "autolim=True" since it can cause problems in
+                # case the data-limits are infinite (e.g. for projected
+                # datasets containing points outside the used projection)
+                self.m.ax.add_collection(coll, autolim=False)
 
             # remove previous collection from the map
             if self.m.coll is not None:
@@ -169,14 +215,7 @@ class DataManager:
             else self.z_data[q],
             ids=idq,
         )
-        s = self._get_datasize(props)
-        self._print_datasize_warnings(s)
-
         self.last_extent = self.current_extent
-
-        # update the number of immediate points calculated for plot-shapes
-        self._set_n(s)
-
         self._current_data = props
 
         return props

@@ -2506,6 +2506,10 @@ class Maps(object):
             )
         else:
             self._data_manager.set_props(layer=layer, assume_sorted=assume_sorted)
+            if set_extent and set(self.BM._bg_layer.split("|")).issubset(
+                set(layer.split("|"))
+            ):
+                self._data_manager._set_lims()
 
             self._plot_map(
                 layer=layer,
