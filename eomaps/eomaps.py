@@ -11,6 +11,7 @@ from tempfile import TemporaryDirectory, TemporaryFile
 import gc
 import json
 from textwrap import fill
+from contextlib import contextmanager
 
 import numpy as np
 
@@ -1386,6 +1387,18 @@ class Maps(object):
             self._add_feature = NaturalEarth_features(self)
         return self._add_feature
 
+    @contextmanager
+    def _disable_autoscale(self, set_extent):
+        if set_extent is False:
+            init_extent = self.ax.get_extent()
+
+        try:
+
+            yield
+        finally:
+            if set_extent is False:
+                self.ax.set_extent(init_extent)
+
     def add_gdf(
         self,
         gdf,
@@ -1398,6 +1411,7 @@ class Maps(object):
         reproject="gpd",
         verbose=False,
         only_valid=True,
+        set_extent=True,
         **kwargs,
     ):
         """
@@ -1604,11 +1618,14 @@ class Maps(object):
         if only_valid:
             gdf = gdf[gdf.is_valid]
 
-        for geomtype, geoms in gdf.groupby(gdf.geom_type):
-            gdf.plot(ax=self.ax, aspect=self.ax.get_aspect(), **kwargs)
-            artists = [i for i in self.ax.collections if id(i) not in colls]
-            for i in artists:
-                prefixes.append(f"_{i.__class__.__name__.replace('Collection', '')}")
+        with self._disable_autoscale(set_extent):
+            for geomtype, geoms in gdf.groupby(gdf.geom_type):
+                gdf.plot(ax=self.ax, aspect=self.ax.get_aspect(), **kwargs)
+                artists = [i for i in self.ax.collections if id(i) not in colls]
+                for i in artists:
+                    prefixes.append(
+                        f"_{i.__class__.__name__.replace('Collection', '')}"
+                    )
 
         if picker_name is not None:
             if isinstance(pick_method, str):
