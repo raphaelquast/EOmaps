@@ -7,7 +7,6 @@ import copy
 from types import SimpleNamespace
 from pathlib import Path
 import weakref
-from tempfile import TemporaryDirectory, TemporaryFile
 import gc
 import json
 from textwrap import fill
@@ -2367,6 +2366,21 @@ class Maps(object):
 
         self.redraw()
 
+    def _get_alpha_cmap_name(self, alpha):
+        # get a unique name for the colormap
+        try:
+            ncmaps = max(
+                [
+                    int(i.rsplit("_", 1)[1])
+                    for i in plt.colormaps()
+                    if i.startswith("EOmaps_alpha_")
+                ]
+            )
+        except Exception:
+            ncmaps = 0
+
+        return f"EOmaps_alpha_{ncmaps + 1}"
+
     def plot_map(
         self,
         layer=None,
@@ -2457,18 +2471,7 @@ class Maps(object):
         cmap = kwargs.setdefault("cmap", "viridis")
         if "alpha" in kwargs and kwargs["alpha"] < 1:
             # get a unique name for the colormap
-            try:
-                ncmaps = max(
-                    [
-                        int(i.rsplit("_", 1)[1])
-                        for i in plt.colormaps()
-                        if i.startswith("EOmaps_alpha_")
-                    ]
-                )
-            except Exception:
-                ncmaps = 0
-
-            cmapname = f"EOmaps_alpha_{ncmaps + 1}"
+            cmapname = self._get_alpha_cmap_name(kwargs["alpha"])
 
             kwargs["cmap"] = cmap_alpha(
                 cmap=cmap,
