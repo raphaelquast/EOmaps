@@ -609,10 +609,6 @@ class _click_container(_cb_container):
         try:
             # Lazily make a plotted dataset pickable a
             if getattr(self._m, "tree", None) is None:
-                assert getattr(self._m, "coll", None) is not None, (
-                    "EOmaps: you MUST call `m.plot_map()` or "
-                    "`m.make_dataset_pickable()` before assigning pick callbacks!"
-                )
                 from .helpers import searchtree
 
                 self._m.tree = searchtree(m=self._m._proxy(self._m))
@@ -714,11 +710,11 @@ class _click_container(_cb_container):
             button = self._default_button
 
         if self._method == "pick":
-            assert self._m.coll is not None, (
-                "Pick-callbacks can only be attached AFTER calling `m.plot_map()` "
-                "or `m.make_dataset_pickable()`!"
-            )
-            self._init_picker()
+            if self._m.coll is None:
+                # lazily initialize the picker when the layer is fetched
+                self._m._data_manager._on_next_fetch.append(self._init_picker)
+            else:
+                self._init_picker()
 
         # attach "on_move" callbacks
         movecb_name = None

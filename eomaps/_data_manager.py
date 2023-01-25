@@ -13,6 +13,8 @@ class DataManager:
         # extent-margin for data-selection
         self._radius_margin_factor = 4  # (e.g. a margin of 2 pixels)
 
+        self._on_next_fetch = []
+
     @property
     def x0(self):
         return self._all_data.get("x0", None)
@@ -65,13 +67,11 @@ class DataManager:
         return not self.current_extent == self.last_extent
 
     def _set_lims(self):
-        props = self.get_props()
-
         # set the extent...
         # do this ONLY if this is the first time the collection is plotted!
         # (and BEFORE the collection is added to the axis!)
-        x0min, x0max = np.nanmin(props["x0"]), np.nanmax(props["x0"])
-        y0min, y0max = np.nanmin(props["y0"]), np.nanmax(props["y0"])
+        x0min, x0max = np.nanmin(self.x0), np.nanmax(self.x0)
+        y0min, y0max = np.nanmin(self.y0), np.nanmax(self.y0)
 
         # in case a proper radius is defined, add a margin of
         # (1 x radius) to the map
@@ -101,58 +101,75 @@ class DataManager:
         return (x0, x1, y0, y1)
 
     def on_fetch_bg(self, layer, bbox=None):
-        # TODO support providing a bbox as extent
-        if self.layer != "all" and self.layer not in layer.split("|"):
-            return
+        try:
+            # TODO support providing a bbox as extent
 
-        if not hasattr(self, "x0"):
-            # self.set_props()
-            return
+            layer_requested = set(self.layer.split("|")).issubset(set(layer.split("|")))
 
-        if self.extent_changed or self.m.coll is None:
-            props = self.get_props()
-            # update the number of immediate points calculated for plot-shapes
-            s = self._get_datasize(props)
-            self._print_datasize_warnings(s)
-            self._set_n(s)
-
-            # if self.m.coll is None and self.m._set_extent:
-            #     self._set_lims(props)
-            #     return
-
-            if props["x0"].size < 1 or props["y0"].size < 1:
-                # keep original data if too low amount of data is attempted
-                # to be plotted
+            if self.layer != "all" and not layer_requested:
                 return
 
-            coll = self.m._get_coll(props, **self.m._coll_kwargs)
-            coll.set_clim(self.m._vmin, self.m._vmax)
+            if not hasattr(self, "x0"):
+                # self.set_props()
+                return
 
-            if self.m.shape.name != "scatter_points":
-                # avoid use "autolim=True" since it can cause problems in
-                # case the data-limits are infinite (e.g. for projected
-                # datasets containing points outside the used projection)
-                self.m.ax.add_collection(coll, autolim=False)
+            if self.extent_changed or self.m.coll is None:
+                props = self.get_props()
+                # update the number of immediate points calculated for plot-shapes
+                s = self._get_datasize(props)
+                self._print_datasize_warnings(s)
+                self._set_n(s)
 
-            # remove previous collection from the map
-            if self.m.coll is not None:
-                try:
-                    if self.m._coll_dynamic:
-                        self.m.BM.remove_artist(self.m._coll)
-                    else:
-                        self.m.BM.remove_bg_artist(self.m._coll)
+                # if self.m.coll is None and self.m._set_extent:
+                #     self._set_lims(props)
+                #     return
 
-                    self.m._coll.remove()
-                except Exception as ex:
-                    print(ex)
+                if props["x0"].size < 1 or props["y0"].size < 1:
+                    # keep original data if too low amount of data is attempted
+                    # to be plotted
+                    return
 
-            if self.m._coll_dynamic:
-                self.m.BM.add_artist(coll, self.layer)
-            else:
-                self.m.BM.add_bg_artist(coll, self.layer)
+                coll = self.m._get_coll(props, **self.m._coll_kwargs)
+                coll.set_clim(self.m._vmin, self.m._vmax)
 
-            self.m._coll = coll
-            self.m.cb.pick._set_artist(coll)
+                if self.m.shape.name != "scatter_points":
+                    # avoid use "autolim=True" since it can cause problems in
+                    # case the data-limits are infinite (e.g. for projected
+                    # datasets containing points outside the used projection)
+                    self.m.ax.add_collection(coll, autolim=False)
+
+                # remove previous collection from the map
+                if self.m.coll is not None:
+                    try:
+                        if self.m._coll_dynamic:
+                            self.m.BM.remove_artist(self.m._coll)
+                        else:
+                            self.m.BM.remove_bg_artist(self.m._coll)
+
+                        self.m._coll.remove()
+                    except Exception as ex:
+                        print(ex)
+
+                if self.m._coll_dynamic:
+                    self.m.BM.add_artist(coll, self.layer)
+                else:
+                    self.m.BM.add_bg_artist(coll, self.layer)
+
+                self.m._coll = coll
+
+                # this is used in _cb_container when adding callbacks
+                # before a layer has been fetched (e.g. before m.coll is defined)
+                # (=lazily initialize the picker when the layer is fetched)
+                while len(self._on_next_fetch) > 0:
+                    self._on_next_fetch.pop(-1)()
+
+                self.m.cb.pick._set_artist(coll)
+
+        except Exception as ex:
+            print(
+                f"EOmaps: Unable to plot the data for the layer '{layer}' !"
+                f"\n        {ex}"
+            )
 
     def get_props(self, *args, **kwargs):
         x0, x1, y0, y1 = self.current_extent
