@@ -1005,10 +1005,17 @@ class TestBasicPlotting(unittest.TestCase):
             m.cb.click.attach.annotate()
             self.assertTrue(
                 all(
-                    i in m._props
+                    i in m._data_manager._all_data
                     for i in ["xorig", "yorig", "x0", "y0", "ids", "z_data"]
                 )
             )
+            self.assertTrue(
+                all(
+                    i in m._data_manager._current_data
+                    for i in ["xorig", "yorig", "x0", "y0", "ids", "z_data"]
+                )
+            )
+
             self.assertTrue(len(m.cb.click.get.cbs) == 1)
 
             with m.new_layer("second") as m2:
@@ -1017,19 +1024,37 @@ class TestBasicPlotting(unittest.TestCase):
                 m2.set_data(*[[1, 2, 3]] * 3)
                 m2.plot_map()
                 m2.cb.click.attach.annotate()
+                m2.show()  # show the layer to trigger drawing
                 self.assertTrue(
                     all(
-                        i in m._props
+                        i in m2._data_manager._all_data
                         for i in ["xorig", "yorig", "x0", "y0", "ids", "z_data"]
                     )
                 )
+                self.assertTrue(
+                    all(
+                        i in m2._data_manager._current_data
+                        for i in ["xorig", "yorig", "x0", "y0", "ids", "z_data"]
+                    )
+                )
+
                 self.assertFalse(m2.coll is None)
                 self.assertTrue(len(m2.cb.click.get.cbs) == 1)
 
             self.assertTrue(set(m._get_layers()) == {"first"})
+
+            self.assertTrue(len(m2._data_manager._all_data) == 0)
+            self.assertTrue(len(m2._data_manager._current_data) == 0)
+
             self.assertTrue(
                 all(
-                    i in m._props
+                    i in m._data_manager._all_data
+                    for i in ["xorig", "yorig", "x0", "y0", "ids", "z_data"]
+                )
+            )
+            self.assertTrue(
+                all(
+                    i in m._data_manager._current_data
                     for i in ["xorig", "yorig", "x0", "y0", "ids", "z_data"]
                 )
             )
@@ -1041,6 +1066,9 @@ class TestBasicPlotting(unittest.TestCase):
 
         self.assertTrue(m.coll is None)
         self.assertTrue(len(m.cb.click.get.cbs) == 0)
+
+        self.assertTrue(len(m._data_manager._all_data) == 0)
+        self.assertTrue(len(m._data_manager._current_data) == 0)
 
     def test_cleanup(self):
         m = Maps()

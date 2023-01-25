@@ -53,7 +53,8 @@ class DataManager:
             self._radius_margin = None
 
         # TODO make sure to properly remove _fetch_bg_actions!!
-        self.m.BM._before_fetch_bg_actions.append(self.on_fetch_bg)
+        if self.on_fetch_bg not in self.m.BM._before_fetch_bg_actions:
+            self.m.BM._before_fetch_bg_actions.append(self.on_fetch_bg)
 
     @property
     def current_extent(self):
@@ -241,3 +242,8 @@ class DataManager:
     def cleanup(self):
         # TODO cleanup method (e.g. free memory)
         self._all_data.clear()
+        self._current_data.clear()
+        self.last_extent = None
+
+        if self.on_fetch_bg in self.m.BM._before_fetch_bg_actions:
+            self.m.BM._before_fetch_bg_actions.remove(self.on_fetch_bg)
