@@ -1268,8 +1268,7 @@ class BlitManager:
             # execute actions before fetching new artists
             # (e.g. update data based on extent etc.)
             for action in self._before_fetch_bg_actions:
-                for l in (*layer.split("|"), "all"):
-                    action(layer=layer, bbox=bbox)
+                action(layer=layer, bbox=bbox)
 
             # get all relevant artists to plot and remember zorders
             # self.get_bg_artists() already returns artists sorted by zorder!
