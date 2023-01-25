@@ -2495,7 +2495,7 @@ class Maps(object):
 
         if useshape.name.startswith("shade"):
             # TODO check data_manager treatment for shade shapes
-            self._data_manager.set_props()
+            self._data_manager.set_props(layer=layer, assume_sorted=assume_sorted)
 
             self._shade_map(
                 layer=layer,
@@ -2505,7 +2505,7 @@ class Maps(object):
                 **kwargs,
             )
         else:
-            self._data_manager.set_props()
+            self._data_manager.set_props(layer=layer, assume_sorted=assume_sorted)
 
             self._plot_map(
                 layer=layer,
@@ -2520,17 +2520,8 @@ class Maps(object):
 
         # update here to make sure the collection is properly added!
         self.BM.update()
-        self.ax.autoscale_view()
-
-        # x0, y0, x1, y1 = self.crs_plot.boundary.bounds
-
-        # if (
-        #     np.any(self._props["x0"] < x0)
-        #     or np.any(self._props["x0"] > x1)
-        #     or np.any(self._props["y0"] < y0)
-        #     or np.any(self._props["y0"] > y1)
-        # ):
-        #     print("EOmaps: Warning: some points are outside the CRS bounds!")
+        # TODO add option to set margins
+        # self.ax.margins(0, 0, tight=False)
 
     def make_dataset_pickable(
         self,
@@ -2579,11 +2570,8 @@ class Maps(object):
             return
 
         # ---------------------- prepare the data
-        # self._props = self._prepare_data()
         self._data_manager = DataManager(self._proxy(self))
         self._data_manager.set_props()
-
-        # use the axis as Artist to execute pick-events on any click on the axis
 
         x0, x1 = self._data_manager.x0.min(), self._data_manager.x0.max()
         y0, y1 = self._data_manager.y0.min(), self._data_manager.y0.max()
@@ -3000,9 +2988,7 @@ class Maps(object):
         # clear data-specs and all cached properties of the data
         try:
             self._coll = None
-            if hasattr(self, "_props"):
-                self._props.clear()
-                del self._props
+            self._data_manager.cleanup()
 
             if hasattr(self, "tree"):
                 del self.tree
@@ -3929,8 +3915,6 @@ class Maps(object):
                 + " instead!"
             )
 
-        ax = self.ax
-
         cmap = kwargs.pop("cmap", "viridis")
         vmin = kwargs.pop("vmin", None)
         vmax = kwargs.pop("vmax", None)
@@ -3941,10 +3925,6 @@ class Maps(object):
             ), f"The key '{key}' is assigned internally by EOmaps!"
 
         try:
-            # remove previously fetched backgrounds for the used layer
-            if layer in self.BM._bg_layers and dynamic is False:
-                del self.BM._bg_layers[layer]
-
             if vmin is None and self.data is not None:
                 vmin = np.nanmin(self._data_manager.z_data)
             if vmax is None and self.data is not None:
@@ -3982,9 +3962,10 @@ class Maps(object):
             self._coll_kwargs = kwargs
             self._coll_dynamic = dynamic
 
-            self.BM._refetch_layer(layer)
             # NOTE: the actual plot is performed by the data-manager
             # at the next call to m.BM.fetch_bg() for the corresponding layer
+            self.BM._refetch_layer(layer)
+            # self.BM.fetch_bg(layer=layer)
 
         except Exception as ex:
             raise ex

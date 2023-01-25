@@ -93,7 +93,7 @@ class shapes(object):
         if (isinstance(radius, str) and radius == "estimate") or radius is None:
             if m._estimated_radius is None:
                 # make sure props are defined otherwise we can't estimate the radius!
-                if not m._data_manager._props_set:
+                if m._data_manager.x0 is None:
                     m._data_manager.set_props()
 
                 print("EOmaps: estimating radius...")
@@ -1286,8 +1286,8 @@ class shapes(object):
 
                 if radius_crs == "in":
                     # use input-coordinates for evaluating the mask
-                    mx = self._m._data_manager._props["xorig"].ravel()
-                    my = self._m._data_manager._props["yorig"].ravel()
+                    mx = self._m._data_manager._current_data["xorig"].ravel()
+                    my = self._m._data_manager._current_data["yorig"].ravel()
                 elif radius_crs == "out":
                     # use projected coordinates for evaluating the mask
                     mx = x

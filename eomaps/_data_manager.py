@@ -5,31 +5,45 @@ class DataManager:
     def __init__(self, m):
         self.m = m
         self.last_extent = None
+        self._all_data = dict()
+
+        self._current_data = dict()
 
         # multiplication factor for the shape-radius to determine the
         # extent-margin for data-selection
         self._radius_margin_factor = 4  # (e.g. a margin of 2 pixels)
 
-        self._props_set = False
+    @property
+    def x0(self):
+        return self._all_data.get("x0", None)
 
-    def set_props(self):
-        # TODO
-        assume_sorted = True
+    @property
+    def y0(self):
+        return self._all_data.get("y0", None)
 
-        props = self.m._prepare_data(assume_sorted=assume_sorted)
-        if len(props["x0"]) == 0:
-            print("EOmaps: there was no data to plot")
+    @property
+    def xorig(self):
+        return self._all_data.get("xorig", None)
+
+    @property
+    def yorig(self):
+        return self._all_data.get("yorig", None)
+
+    @property
+    def z_data(self):
+        return self._all_data.get("z_data", None)
+
+    @property
+    def ids(self):
+        return self._all_data.get("ids", None)
+
+    def set_props(self, layer, assume_sorted=True):
+        self._all_data = self.m._prepare_data(assume_sorted=assume_sorted)
+        self.layer = layer
+
+        if len(self.x0) == 0:
+            print("EOmaps: There is no data to plot")
             return
-
-        self.x0 = props["x0"]
-        self.y0 = props["y0"]
-        self.xorig = props["xorig"]
-        self.yorig = props["yorig"]
-        self.ids = props["ids"]
-        self.z_data = props["z_data"]
-
-        # TODO make sure to properly remove _fetch_bg_actions!!
-        self.m.BM._before_fetch_bg_actions.append(self.on_fetch_bg)
 
         # estimate the radius (used as margin on data selection)
         r = self.m._shapes._estimate_radius(self.m, "out")
@@ -38,7 +52,8 @@ class DataManager:
         else:
             self._radius_margin = None
 
-        self._props_set = True
+        # TODO make sure to properly remove _fetch_bg_actions!!
+        self.m.BM._before_fetch_bg_actions.append(self.on_fetch_bg)
 
     @property
     def current_extent(self):
@@ -49,8 +64,9 @@ class DataManager:
         return not self.current_extent == self.last_extent
 
     def on_fetch_bg(self, layer, bbox=None):
-        # TODO make sure m.coll is always on m.layer!
-        if self.m.layer != "all" and layer not in self.m.layer.split("|"):
+        # TODO support providing a bbox as extent
+
+        if self.layer != "all" and self.layer not in layer.split("|"):
             return
 
         if not hasattr(self, "x0"):
@@ -84,37 +100,14 @@ class DataManager:
                     print(ex)
 
             if self.m._coll_dynamic:
-                self.m.BM.add_artist(coll, self.m.layer)
+                self.m.BM.add_artist(coll, self.layer)
             else:
-                self.m.BM.add_bg_artist(coll, self.m.layer)
-
-            # no need for extent setting! its done by autolim!
-
-            # # TODO do this BEFORE fetching the data!
-            # if self.m.coll is None:
-            #     if self.m._set_extent:
-            #         # set the image extent
-            #         x0min, y0min, x0max, y0max = coll.get_datalim(
-            #             self.m.ax.transData
-            #         ).extents
-
-            #         ymin, ymax = self.m.ax.projection.y_limits
-            #         xmin, xmax = self.m.ax.projection.x_limits
-            #         # # set the axis-extent
-            #         # self.m.ax.set_xlim(max(x0min, xmin), min(x0max, xmax))
-            #         # self.m.ax.set_ylim(max(y0min, ymin), min(y0max, ymax))
-
-            #         self.m.ax.set_extent((max(x0min, xmin), min(x0max, xmax),
-            #                               max(y0min, ymin), min(y0max, ymax)),
-            #                               self.m.ax.projection)
+                self.m.BM.add_bg_artist(coll, self.layer)
 
             self.m._coll = coll
             self.m.cb.pick._set_artist(coll)
 
     def get_props(self, *args, **kwargs):
-        # if not hasattr(self, "x0"):
-        #     self.set_props()
-
         x0, x1, y0, y1 = self.current_extent
 
         if self._radius_margin is not None:
@@ -183,7 +176,7 @@ class DataManager:
         # update the number of immediate points calculated for plot-shapes
         self._set_n(s)
 
-        self._props = props
+        self._current_data = props
 
         return props
 
@@ -230,7 +223,6 @@ class DataManager:
                 print(f"{txt}...\n       this might take some time...")
             else:
                 print(f"{txt}...\n       this might take A VERY LONG TIME❗❗")
-
         else:
             if name in ["rectangles", "ellipses", "geod_circles"]:
                 txt = f"EOmaps: Plotting {s:.1E} {self.m.shape.name}"
@@ -245,3 +237,7 @@ class DataManager:
                 print(f"{txt}...\n       this might take some time...")
             else:
                 print(f"{txt}...\n       this might take A VERY LONG TIME❗❗")
+
+    def cleanup(self):
+        # TODO cleanup method (e.g. free memory)
+        self._all_data.clear()
