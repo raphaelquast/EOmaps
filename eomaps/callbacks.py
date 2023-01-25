@@ -646,13 +646,6 @@ class _click_callbacks(object):
         >>> m.peek_layer(layer="the layer name")
         """
 
-        if "overlay" in kwargs:
-            kwargs.pop("overlay")
-            warnings.warn(
-                "EOmaps: The 'overlay' argument of peek_layer is depreciated! "
-                "(It has no effect and can be removed.)"
-            )
-
         if isinstance(layer, list):
             layer = "|".join(map(str, layer))
         else:
