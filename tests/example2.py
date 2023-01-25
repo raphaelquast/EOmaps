@@ -34,13 +34,12 @@ mg.m_0_1.set_shape.rectangles()
 mg.m_0_1.set_classify_specs(scheme="Quantiles", k=8)
 
 # --------- set specs for the third axis
-mg.m_0_2.ax.set_extent(mg.m_0_2.crs_plot.area_of_use.bounds)
-
 mg.m_0_2.ax.set_title("epsg=3035")
 mg.m_0_2.set_classify_specs(
     scheme="StdMean",
     multiples=[-1, -0.75, -0.5, -0.25, 0.25, 0.5, 0.75, 1],
 )
+
 
 # --------- plot all maps and add colorbars to all maps
 mg.plot_map()
@@ -89,6 +88,6 @@ m2.colorbar.ax_cb.tick_params(rotation=90, labelsize=8)
 # add logos to all maps
 mg.add_logo(size=0.05)
 
-# trigger a final re-draw of all layers to make sure the manual
-# changes to the ticks are properly reflected in the cached layers.
-mg.redraw()
+# # trigger a final re-draw of all layers to make sure the manual
+# # changes to the ticks are properly reflected in the cached layers.
+# mg.redraw()
