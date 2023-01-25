@@ -1111,10 +1111,6 @@ class BlitManager:
                 for a in artists:
                     self.add_artist(a, layer=layer)
 
-    @property
-    def bg_layer(self):
-        return self._bg_layer
-
     def _get_active_bg(self, exclude_artists=None):
         with self._without_artists(artists=exclude_artists, layer=self.bg_layer):
             # fetch the current background (incl. dynamic artists)
@@ -1122,6 +1118,10 @@ class BlitManager:
             bg = self.canvas.copy_from_bbox(self.figure.bbox)
 
         return bg
+
+    @property
+    def bg_layer(self):
+        return self._bg_layer
 
     @bg_layer.setter
     def bg_layer(self, val):
