@@ -2506,10 +2506,13 @@ class Maps(object):
             )
         else:
             self._data_manager.set_props(layer=layer, assume_sorted=assume_sorted)
-            if set_extent and set(self.BM._bg_layer.split("|")).issubset(
-                set(layer.split("|"))
-            ):
-                self._data_manager._set_lims()
+            # TODO set limits only if layer is visible?
+            # if set_extent and set(self.BM._bg_layer.split("|")).issubset(
+            #     set(layer.split("|"))
+            # ):
+            #     self._data_manager._set_lims()
+
+            self._data_manager._set_lims()
 
             self._plot_map(
                 layer=layer,
@@ -2523,7 +2526,7 @@ class Maps(object):
             print("EOmaps: Warning: some datapoints could not be drawn!")
 
         # update here to make sure the collection is properly added!
-        self.BM.update()
+        # self.BM.update()
         # TODO add option to set margins
         # self.ax.margins(0, 0, tight=False)
 
@@ -2575,7 +2578,7 @@ class Maps(object):
 
         # ---------------------- prepare the data
         self._data_manager = DataManager(self._proxy(self))
-        self._data_manager.set_props()
+        self._data_manager.set_props(layer=self.layer)
 
         x0, x1 = self._data_manager.x0.min(), self._data_manager.x0.max()
         y0, y1 = self._data_manager.y0.min(), self._data_manager.y0.max()
@@ -3968,7 +3971,7 @@ class Maps(object):
 
             # NOTE: the actual plot is performed by the data-manager
             # at the next call to m.BM.fetch_bg() for the corresponding layer
-            self.BM._refetch_layer(layer)
+            # self.BM._refetch_layer(layer)
             # self.BM.fetch_bg(layer=layer)
 
         except Exception as ex:
