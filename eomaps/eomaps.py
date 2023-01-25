@@ -1226,7 +1226,7 @@ class Maps(object):
         lon0, lon1, lat0, lat1 = map(float, r["boundingbox"])
 
         # set extent to found bbox
-        self.ax.set_extent((lat0, lat1, lon0, lon1), crs=Maps.CRS.PlateCarree())
+        self.set_extent((lat0, lat1, lon0, lon1), crs=Maps.CRS.PlateCarree())
 
         # add annotation
         if annotate is not False:
