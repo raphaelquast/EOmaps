@@ -94,6 +94,7 @@ from matplotlib.gridspec import GridSpec, SubplotSpec
 import matplotlib.patches as mpatches
 
 from cartopy import crs as ccrs
+from cartopy.mpl.geoaxes import GeoAxes
 
 from .helpers import (
     pairwise,
@@ -453,6 +454,7 @@ class Maps(object):
 
         # initialize the data-manager
         self._data_manager = DataManager(self._proxy(self))
+        self._set_extent_on_plot = True
 
     def __getattribute__(self, key):
         if key == "plot_specs":
@@ -2381,6 +2383,15 @@ class Maps(object):
 
         return f"EOmaps_alpha_{ncmaps + 1}"
 
+    @wraps(GeoAxes.set_extent)
+    def set_extent(self, extent, crs=None):
+        # just a wrapper to make sure that previously set extents are not
+        # resetted when plotting data!
+
+        # ( e.g. once .set_extent is called .plot_map does NOT set the extent!)
+        self.ax.set_extent(extent)
+        self._set_extent_on_plot = False
+
     def plot_map(
         self,
         layer=None,
@@ -2506,13 +2517,8 @@ class Maps(object):
             )
         else:
             self._data_manager.set_props(layer=layer, assume_sorted=assume_sorted)
-            # TODO set limits only if layer is visible?
-            # if set_extent and set(self.BM._bg_layer.split("|")).issubset(
-            #     set(layer.split("|"))
-            # ):
-            #     self._data_manager._set_lims()
-
-            self._data_manager._set_lims()
+            if self._set_extent_on_plot:
+                self._data_manager._set_lims()
 
             self._plot_map(
                 layer=layer,
