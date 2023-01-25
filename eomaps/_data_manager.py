@@ -82,8 +82,6 @@ class DataManager:
             x0max += rx
             y0max += ry
 
-        print("settnig the extent", self.x0.min())
-
         ymin, ymax = self.m.ax.projection.y_limits
         xmin, xmax = self.m.ax.projection.x_limits
         # set the axis-extent
