@@ -322,6 +322,7 @@ class Maps(object):
         preferred_wms_service="wms",
         **kwargs,
     ):
+        self._inherit_classification = None
 
         if "parent" in kwargs:
             kwargs.pop("parent")
@@ -1027,7 +1028,6 @@ class Maps(object):
           >>> # e.g. the "actual" data values are [0.01, 0.02, 0.03, ...]
           >>> m.set_data(vals, x=lon, y=lat, crs=4326, encoding=encoding)
         """
-
         # depreciate the use of "xcoord" and "ycoord"... use "x", "y" instead
         if "xcoord" in kwargs:
             if x is None:
@@ -2535,6 +2535,7 @@ class Maps(object):
         # self.BM.update()
         # TODO add option to set margins
         # self.ax.margins(0, 0, tight=False)
+        self._data_plotted = True
 
     def make_dataset_pickable(
         self,
@@ -3599,14 +3600,14 @@ class Maps(object):
 
         return inds
 
-    def inherit_classification(self, m=None):
+    def inherit_classification(self, m):
         """
         Use the classification of another Maps-object when plotting the data.
 
         NOTE
         ----
         If the classification is inherited, the following arguments
-        for `m.plot_map()` will have no effect (they are inherited):
+        for `m.plot_map()` will have NO effect (they are inherited):
 
             - "cmap"
             - "vmin"
@@ -3615,21 +3616,35 @@ class Maps(object):
         Parameters
         ----------
         m : eomaps.Maps or None
-            The Maps-object that provides the classification.
-
-            - If None, no classification is inherited
-
-            The default is None
+            The Maps-object that provides the classification specs.
         """
         if m is not None:
-            self._inherit_classification = True
-
-            self._inherited_cbcmap = m._cbcmap
-            self._inherited_norm = m._norm
-            self._inherited_bins = m._bins
-            self._inherited_classified = m._classified
+            self._inherit_classification = self._proxy(m)
         else:
-            self._inherit_classification = False
+            self._inherit_classification = None
+
+    def inherit_data(self, m):
+        """
+        Use the data of another Maps-object (without copying).
+
+        NOTE
+        ----
+        If the data is inherited, any change in the data of the parent
+        Maps-object will be reflected in this Maps-object as well!
+
+        Parameters
+        ----------
+        m : eomaps.Maps or None
+            The Maps-object that provides the data.
+        """
+
+        if m is not None:
+            self.data_specs = m.data_specs
+            self.set_data_specs = lambda *args, **kwargs: (
+                "EOmaps: You cannot set data_specs for a Maps object that "
+                "inherits data!"
+            )
+            self.set_data = self.set_data_specs
 
     def _classify_data(
         self,
@@ -3640,13 +3655,19 @@ class Maps(object):
         classify_specs=None,
     ):
 
-        if getattr(self, "_inherit_classification", False):
-            return (
-                self._inherited_cbcmap,
-                self._inherited_norm,
-                self._inherited_bins,
-                self._inherited_classified,
-            )
+        if self._inherit_classification is not None:
+            try:
+                return (
+                    self._inherit_classification._cbcmap,
+                    self._inherit_classification._norm,
+                    self._inherit_classification._bins,
+                    self._inherit_classification._classified,
+                )
+            except AttributeError:
+                raise AssertionError(
+                    "EOmaps: A Maps object can only inherit the classification "
+                    "if the parent Maps object called `m.plot_map()` first!!"
+                )
 
         if z_data is None:
             z_data = self._data_manager.z_data
