@@ -251,13 +251,8 @@ class data_specs(object):
         if key.startswith("_"):
             return key
 
-        if key == "crs":
-            key = "in_crs"
-
         assert key in [
             *self.keys(),
-            "xcoord",
-            "ycoord",
         ], f"{key} is not a valid data-specs key!"
 
         return key
@@ -267,7 +262,7 @@ class data_specs(object):
             "parameter",
             "x",
             "y",
-            "in_crs",
+            "crs",
             "data",
             "encoding",
             "cpos",
@@ -289,48 +284,6 @@ class data_specs(object):
     @crs.setter
     def crs(self, crs):
         self._crs = crs
-
-    in_crs = crs
-
-    @property
-    def xcoord(self):
-        warn(
-            "EOmaps: `m.data_specs.xcoord` is depreciated."
-            + "use `m.data_specs.x` instead!",
-            DeprecationWarning,
-            stacklevel=2,
-        )
-        return self._x
-
-    @xcoord.setter
-    def xcoord(self, xcoord):
-        warn(
-            "EOmaps: `m.data_specs.xcoord` is depreciated."
-            + "use `m.data_specs.x` instead!",
-            DeprecationWarning,
-            stacklevel=2,
-        )
-        self._x = xcoord
-
-    @property
-    def ycoord(self):
-        warn(
-            "EOmaps: `m.data_specs.ycoord` is depreciated."
-            + "use `m.data_specs.y` instead!",
-            DeprecationWarning,
-            stacklevel=2,
-        )
-        return self._y
-
-    @ycoord.setter
-    def ycoord(self, ycoord):
-        warn(
-            "EOmaps: `m.data_specs.ycoord` is depreciated."
-            + "use `m.data_specs.y` instead!",
-            DeprecationWarning,
-            stacklevel=2,
-        )
-        self._y = ycoord
 
     @property
     def x(self):
@@ -388,11 +341,6 @@ class data_specs(object):
     def encoding(self, encoding):
         if encoding not in [None, False]:
             assert isinstance(encoding, dict), "EOmaps: encoding must be a dictionary!"
-
-            # assert all(
-            #     i in ["scale_factor", "add_offset"] for i in encoding
-            # ), "EOmaps: encoding accepts only 'scale_factor' and 'add_offset' as keys!"
-
         self._encoding = encoding
 
     @property
