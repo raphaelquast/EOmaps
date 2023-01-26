@@ -22,7 +22,7 @@ mg = MapsGrid(
     layer="layer 1",
 )
 # set the data on ALL maps-objects of the grid
-mg.set_data(data=data, x="lon", y="lat", in_crs=4326)
+mg.set_data(data=data, x="lon", y="lat", crs=4326)
 
 # --------- set specs for the first axis
 mg.m_0_0.ax.set_title("epsg=4326")

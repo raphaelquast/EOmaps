@@ -22,7 +22,7 @@ data_mask = data[data.param < 0]
 # --------- initialize a Maps object and plot a basic map
 m = Maps(Maps.CRS.Orthographic(), figsize=(10, 7))
 m.ax.set_title("Wooohoo, a flashy map-widget with static indicators!")
-m.set_data(data=data_OK, x="lon", y="lat", in_crs=4326)
+m.set_data(data=data_OK, x="lon", y="lat", crs=4326)
 m.set_shape.rectangles(mesh=True)
 m.set_classify_specs(scheme="Quantiles", k=10)
 m.plot_map(cmap="Spectral_r")
@@ -108,7 +108,7 @@ m.add_marker(
 m.add_annotation(
     ID=mark_id,
     text=f"Here's Vienna!\n... the data-value is={m.data.param.loc[mark_id]:.2f}",
-    xytext=(80, 85),
+    xytext=(80, 70),
     textcoords="offset points",
     bbox=dict(boxstyle="round", fc="w", ec="r"),
     horizontalalignment="center",

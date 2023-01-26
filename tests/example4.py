@@ -14,7 +14,7 @@ data = pd.DataFrame(
 
 # --------- initialize a Maps object and plot a basic map
 m = Maps(crs=3035, figsize=(10, 8))
-m.set_data(data=data, x="lon", y="lat", in_crs=4326)
+m.set_data(data=data, x="lon", y="lat", crs=4326)
 m.ax.set_title("A clickable widget!")
 m.set_shape.rectangles()
 
