@@ -432,11 +432,6 @@ class _click_container(_cb_container):
             if button is None:
                 button = self._parent._default_button
 
-            if self._parent._method == "pick":
-                assert (
-                    self._parent._m.coll is not None
-                ), "you can only attach pick-callbacks after calling `plot_map()`!"
-
             return self._parent._add_callback(
                 callback=f,
                 double_click=double_click,
@@ -606,6 +601,10 @@ class _click_container(_cb_container):
             self._m.cb._click_move._sticky_modifiers = args
 
     def _init_picker(self):
+        assert (
+            self._m.coll is not None
+        ), "you can only attach pick-callbacks after calling `plot_map()`!"
+
         try:
             # Lazily make a plotted dataset pickable a
             if getattr(self._m, "tree", None) is None:
