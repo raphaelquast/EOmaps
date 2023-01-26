@@ -606,9 +606,10 @@ class TestCallbacks(unittest.TestCase):
 
         m2 = m.new_layer(copy_data_specs=True)
 
-        # adding pick callbacks is only possible after plotting data
-        with self.assertRaises(AssertionError):
-            m2.cb.pick.attach.annotate()
+        # in EOmaps v6 its now possible to attach callbacks before
+        # plotting the data (they will only start to trigger once the
+        # data is plotted)
+        m2.cb.pick.attach.annotate()
 
         m2.make_dataset_pickable()
         m2.cb.pick.attach.annotate()

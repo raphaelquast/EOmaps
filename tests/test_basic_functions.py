@@ -229,7 +229,7 @@ class TestBasicPlotting(unittest.TestCase):
         for cpos, color in zip(["ul", "ur", "ll", "lr", "c"], "rgbcm"):
             m2 = m.new_layer()
             m2.set_shape.ellipses(n=100)
-            m2.data_specs(
+            m2.set_data(
                 self.data,
                 x="x",
                 y="y",
@@ -463,7 +463,7 @@ class TestBasicPlotting(unittest.TestCase):
 
         self.assertTrue(
             m2.data_specs[["x", "y", "parameter", "crs"]]
-            == {"x": "lon", "y": "lat", "parameter": None, "in_crs": 4326}
+            == {"x": "lon", "y": "lat", "parameter": None, "crs": 4326}
         )
         self.assertTrue([*m.classify_specs] == [*m2.classify_specs])
         self.assertTrue(m2.data == None)
@@ -1031,6 +1031,7 @@ class TestBasicPlotting(unittest.TestCase):
             m.set_data(*[[1, 2, 3]] * 3)
             m.plot_map()
             m.cb.click.attach.annotate()
+            m.redraw()  # redraw here to force drawing (otherwise the data is NEVER shown!)
             self.assertTrue(
                 all(
                     i in m._data_manager._all_data
