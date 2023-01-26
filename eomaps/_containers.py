@@ -45,106 +45,6 @@ def _register_mapclassify():
     return True
 
 
-class map_objects(object):
-    """
-    A container for accessing objects of the generated figure
-
-        - f : the matplotlib figure
-        - ax : the geo-axes used for plotting the map
-        - ax_cb : the axis of the colorbar
-        - ax_cb_plot : the axis used to plot the histogram on top of the colorbar
-        - cb : the matplotlib colorbar-instance
-        - gridspec : the matplotlib GridSpec instance
-        - cb_gridspec : the GridSpecFromSubplotSpec for the colorbar and the histogram
-        - coll : the collection representing the data on the map
-
-    """
-
-    def __init__(
-        self,
-        m=None,
-    ):
-        self._m = m
-
-        self._coll = None  # self.coll is assigned in "m.plot_map()"
-        self._figure_closed = False
-
-    @property
-    def coll(self):
-        return self._coll
-
-    @coll.setter
-    def coll(self, val):
-        self._coll = val
-
-    @coll.getter
-    def coll(self):
-        warn(
-            "EOmaps: Using `m.figure.coll` is depreciated in EOmaps v5.x."
-            "Use `m.coll` instead!"
-        )
-        return self._coll
-
-    @property
-    def f(self):
-        warn(
-            "EOmaps: Using `m.figure.f` is depreciated in EOmaps v5.x."
-            "Use `m.f` instead!"
-        )
-        # always return the figure of the parent object
-        return self._m.f
-
-    @property
-    def ax(self):
-        warn(
-            "EOmaps: Using `m.figure.ax` is depreciated in EOmaps v5.x."
-            "Use `m.ax` instead!"
-        )
-        ax = self._m.ax
-        return ax
-
-    @property
-    def gridspec(self):
-        warn(
-            "EOmaps: Using `m.figure.gridspec` is depreciated in EOmaps v5.x."
-            "Use `m._gridspec` instead!"
-        )
-        return getattr(self._m, "_gridspec", None)
-
-    @property
-    def ax_cb(self):
-        warn(
-            "EOmaps: Using `m.figure.ax_cb` is depreciated in EOmaps v5.x."
-            "Use `m.colorbar.ax_cb` instead!"
-        )
-        colorbar = getattr(self._m, "colorbar", None)
-        if colorbar is not None:
-            return colorbar.ax_cb
-
-    @property
-    def ax_cb_plot(self):
-        warn(
-            "EOmaps: Using `m.figure.ax_cb_plot` is depreciated in EOmaps v5.x."
-            "Use `m.colorbar.ax_cb_plot` instead!"
-        )
-        colorbar = getattr(self._m, "colorbar", None)
-        if colorbar is not None:
-            return colorbar.ax_cb_plot
-
-    def set_colorbar_position(self, pos=None, ratio=None, cb=None):
-        """
-        This function is depreciated in EOmaps v5.x!
-
-        Use the following methods instead:
-        - m.colorbar.set_position
-        - m.colorbar.set_hist_size
-        """
-        raise AssertionError(
-            "EOmaps: `m.figure.set_colorbar_position` is depreciated in EOmaps v5.x! "
-            "use `m.colorbar.set_position` and `m.colorbar.set_hist_size` instead."
-        )
-
-
 class data_specs(object):
     """
     a container for accessing the data-properties
@@ -161,7 +61,6 @@ class data_specs(object):
         encoding=None,
         cpos="c",
         cpos_radius=None,
-        **kwargs,
     ):
         self._m = m
         self.data = data

@@ -255,8 +255,6 @@ class ColorBar:
         else:
             self._hist_kwargs = copy.deepcopy(hist_kwargs)
 
-        self._depreciate_kwargs(kwargs)
-
         self._extend_frac = extend_frac
         self._orientation = orientation
         self._dynamic_shade_indicator = dynamic_shade_indicator
@@ -304,47 +302,6 @@ class ColorBar:
         """
         for ax in self._axes:
             ax.set_visible(vis)
-
-    def _depreciate_kwargs(self, kwargs):
-        if "histbins" in kwargs:
-            self._hist_bins = kwargs.pop("histbins")
-            print(
-                "EOmaps: Colorbar argument 'histbins' is depreciated in EOmaps v5.0."
-                "Please use 'hist_bins' instead!"
-            )
-        if "density" in kwargs:
-            self._hist_kwargs["density"] = kwargs.pop("density")
-            print(
-                "EOmaps: Colorbar argument 'density' is depreciated in EOmaps v5.0."
-                "Please use `hist_kwargs=dict(density=...)` instead!"
-            )
-        if "histogram_size" in kwargs:
-            self._hist_size = kwargs.pop("histogram_size")
-            print(
-                "EOmaps: Colorbar argument 'histogram_size' is depreciated in EOmaps v5.0."
-                "Please use `hist_size` instead!"
-            )
-        if "add_extend_arrows" in kwargs:
-            kwargs.pop("add_extend_arrows")
-            print(
-                "EOmaps: Colorbar argument 'add_extend_arrows' is depreciated in EOmaps v5.0."
-                "Extend-arrows are added automatically if data out-of-range is found."
-            )
-
-        for key in ["top", "bottom", "left", "right"]:
-            margin = kwargs.pop("margin", None)
-            if margin is None:
-                margin = dict()
-
-            if key in kwargs:
-                margin[key] = kwargs.pop(key)
-                print(
-                    f"EOmaps: Colorbar argument '{key}' is depreciated in EOmaps v5.0."
-                    "Please use 'margin=dict({key}=...)' instead!"
-                )
-
-            if len(margin) > 0:
-                self._margin = margin
 
     def _default_cb_tick_formatter(self, x, pos, precision=None):
         """
@@ -605,7 +562,6 @@ class ColorBar:
             a.set_navigate(False)
             if a is not None:
                 self._m.BM.add_bg_artist(a, self._m.layer)
-
         # we need to re-draw since the background axis size has changed!
         self._refetch_bg = True
 

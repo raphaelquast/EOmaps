@@ -110,7 +110,6 @@ from .colorbar import ColorBar
 
 from ._containers import (
     data_specs,
-    map_objects,
     classify_specs,
 )
 from ._webmap_containers import wms_container
@@ -324,21 +323,6 @@ class Maps(object):
     ):
         self._inherit_classification = None
 
-        if "parent" in kwargs:
-            kwargs.pop("parent")
-            warnings.warn(
-                "EOmaps: The 'parent' argument for Maps() is depreciated! "
-                "It is sufficient to specify the figure (f) to which the "
-                "map should be added."
-            )
-
-        if "ax" in kwargs:
-            ax = kwargs.pop("gs_ax")
-            warnings.warn(
-                "EOmaps: The 'gs_ax=...' argument for Maps() is depreciated! "
-                "use 'ax=...' instead!"
-            )
-
         if isinstance(ax, plt.Axes) and hasattr(ax, "figure"):
             if isinstance(ax.figure, plt.Figure):
                 if f is not None:
@@ -416,7 +400,6 @@ class Maps(object):
 
         self._layout_editor = None
 
-        self._figure = map_objects(weakref.proxy(self))
         self._cb = cb_container(weakref.proxy(self))  # accessor for the callbacks
 
         self._init_figure(ax=ax, plot_crs=crs, **kwargs)
@@ -570,13 +553,6 @@ class Maps(object):
         return self._shape_drawer
 
     @property
-    @wraps(map_objects)
-    def figure(self):
-        warnings.warn("EOmaps: The use of 'm.figure...' is depreciated!")
-
-        return self._figure
-
-    @property
     def BM(self):
         """The Blit-Manager used to dynamically update the plots"""
         m = weakref.proxy(self)
@@ -719,7 +695,6 @@ class Maps(object):
         boundary=True,
         shape="ellipses",
         indicate_extent=True,
-        **kwargs,
     ):
         """
         Create a new (empty) inset-map that shows a zoomed-in view on a given extent.
@@ -867,20 +842,6 @@ class Maps(object):
 
         """
 
-        if "edgecolor" in kwargs or "linewidth" in kwargs:
-            warnings.warn(
-                "EOmaps: 'edgecolor' and 'linewidth' kwargs for `m.new_inset_map()`"
-                + " are depreciated! use `boundary=dict(ec='r', lw=1)` instead!",
-                category=DeprecationWarning,
-                stacklevel=2,
-            )
-
-            ec = kwargs.pop("edgecolor", "r")
-            lw = kwargs.pop("linewidth", 1)
-
-            boundary = dict(ec=ec, lw=lw)
-            boundary.update(kwargs.pop("boundary", dict()))
-
         m2 = _InsetMaps(
             parent=self,
             crs=inset_crs,
@@ -912,7 +873,7 @@ class Maps(object):
         encoding=None,
         cpos="c",
         cpos_radius=None,
-        **kwargs,
+        parameter=None,
     ):
         """
         Set the properties of the dataset you want to plot.
@@ -1029,30 +990,6 @@ class Maps(object):
           >>> # e.g. the "actual" data values are [0.01, 0.02, 0.03, ...]
           >>> m.set_data(vals, x=lon, y=lat, crs=4326, encoding=encoding)
         """
-        # depreciate the use of "xcoord" and "ycoord"... use "x", "y" instead
-        if "xcoord" in kwargs:
-            if x is None:
-                warnings.warn(
-                    "EOmaps: using 'xcoord' in 'm.set_data' is depreciated. "
-                    + "Use 'x=...' instead!",
-                    DeprecationWarning,
-                    stacklevel=2,
-                )
-                x = kwargs.pop("xcoord")
-            else:
-                raise TypeError("EOmaps: You cannot provide both 'x' and 'xcoord'!")
-        if "ycoord" in kwargs:
-            if y is None:
-                warnings.warn(
-                    "EOmaps: using 'ycoord' in 'm.set_data' is depreciated. "
-                    + "Use 'y=...' instead!",
-                    DeprecationWarning,
-                    stacklevel=2,
-                )
-                y = kwargs.pop("ycoord")
-            else:
-                raise TypeError("EOmaps: You cannot provide both 'y' and 'ycoord'!")
-
         if data is not None:
             self.data_specs.data = data
 
@@ -1065,9 +1002,6 @@ class Maps(object):
         if crs is not None:
             self.data_specs.crs = crs
 
-        for key, val in kwargs.items():
-            self.data_specs[key] = val
-
         if encoding is not None:
             self.data_specs.encoding = encoding
 
@@ -1076,6 +1010,9 @@ class Maps(object):
 
         if cpos_radius is not None:
             self.data_specs.cpos_radius = cpos_radius
+
+        if parameter is not None:
+            self.data_specs.parameter = parameter
 
     set_data = set_data_specs
 
@@ -3922,16 +3859,6 @@ class Maps(object):
         assume_sorted=True,
         **kwargs,
     ):
-
-        if "coastlines" in kwargs:
-            kwargs.pop("coastlines")
-            warnings.warn(
-                "EOmaps: the 'coastlines' kwarg for 'plot_map' is depreciated!"
-                + "Instead use "
-                + "\n    m.add_feature.preset.ocean()"
-                + "\n    m.add_feature.preset.coastline()"
-                + " instead!"
-            )
 
         cmap = kwargs.pop("cmap", "viridis")
         vmin = kwargs.pop("vmin", None)
