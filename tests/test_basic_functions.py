@@ -521,6 +521,7 @@ class TestBasicPlotting(unittest.TestCase):
         m.data = self.data
         m.set_data_specs(x="x", y="y", crs=3857, parameter="value")
         data = m._prepare_data()
+        plt.close("all")
 
     def test_layout_editor(self):
 
@@ -535,6 +536,7 @@ class TestBasicPlotting(unittest.TestCase):
         m.add_feature.preset.coastline()
         m._layout_editor._make_draggable()
         m._layout_editor._undo_draggable()
+        plt.close("all")
 
     def test_add_colorbar(self):
         gs = GridSpec(2, 2)
@@ -627,6 +629,7 @@ class TestBasicPlotting(unittest.TestCase):
 
         cb6.set_bin_labels(bins, labels, show_values=True)
         cb6.tick_params(which="minor", rotation=90)
+        plt.close("all")
 
     def test_MapsGrid(self):
         mg = MapsGrid(2, 2, crs=4326)
@@ -645,7 +648,7 @@ class TestBasicPlotting(unittest.TestCase):
         self.assertTrue(mg.m_1_0 is mg[1, 0])
         self.assertTrue(mg.m_1_1 is mg[1, 1])
 
-        plt.close(mg.f)
+        plt.close("all")
 
     def test_MapsGrid2(self):
         mg = MapsGrid(
@@ -686,6 +689,7 @@ class TestBasicPlotting(unittest.TestCase):
                 m_inits={1: (0, slice(0, 2)), 2: (1, 0)},
                 ax_inits={"2": (1, 1), 2: 2},
             )
+        plt.close("all")
 
     def test_compass(self):
         m = Maps(Maps.CRS.Stereographic())
@@ -814,6 +818,7 @@ class TestBasicPlotting(unittest.TestCase):
         bbox = list(map(float, resp["boundingbox"]))
 
         self.assertTrue(np.allclose([e[2], e[3], e[0], e[1]], bbox, atol=0.1))
+        plt.close("all")
 
     def test_adding_maps_to_existing_figures(self):
         # use existing axes
@@ -821,6 +826,7 @@ class TestBasicPlotting(unittest.TestCase):
         ax = f.add_subplot(projection=Maps.CRS.PlateCarree())
         m = Maps(ax=ax)
         m.add_feature.preset.coastline()
+        plt.close(f)
 
         # absolute positioning
         f = plt.figure()
@@ -855,6 +861,7 @@ class TestBasicPlotting(unittest.TestCase):
 
         m1.add_feature.preset.coastline()
         m2.add_feature.preset.coastline()
+        plt.close("all")
 
     def test_a_complex_figure(self):
         # %%
@@ -946,6 +953,8 @@ class TestBasicPlotting(unittest.TestCase):
         mgrid.share_click_events()
 
         m.subplots_adjust(left=0.05, top=0.95, bottom=0.05, right=0.95)
+        plt.close("all")
+
         # %%
         plt.close(m.f)
 
@@ -957,11 +966,13 @@ class TestBasicPlotting(unittest.TestCase):
         m = Maps()
         m.set_data(vals, x=lon, y=lat)
         m.plot_map()
+        plt.close("all")
 
         # 1D numpy array
         m = Maps()
         m.set_data(vals.ravel(), x=lon.ravel(), y=lat.ravel())
         m.plot_map()
+        plt.close("all")
 
         # 1D lists
         m = Maps()
@@ -971,6 +982,7 @@ class TestBasicPlotting(unittest.TestCase):
             y=lat.ravel().tolist(),
         )
         m.plot_map()
+        plt.close("all")
 
     def test_add_feature(self):
         m = Maps()
@@ -1018,14 +1030,17 @@ class TestBasicPlotting(unittest.TestCase):
         self.assertTrue(
             np.allclose(m._encode_values(m._decode_values(encoded)), encoded)
         )
+        plt.close("all")
 
     def test_maps_as_contextmanager(self):
+        # we need to test this in interactive mode!
+        plt.ion()
         # just some very basic tests if cleanup functions do their job
         with Maps(layer="first") as m:
             m.set_data(*[[1, 2, 3]] * 3)
             m.plot_map()
             m.cb.click.attach.annotate()
-            m.redraw()  # redraw here to force drawing (otherwise the data is NEVER shown!)
+            m.show()
             self.assertTrue(
                 all(
                     i in m._data_manager._all_data
@@ -1092,8 +1107,10 @@ class TestBasicPlotting(unittest.TestCase):
 
         self.assertTrue(len(m._data_manager._all_data) == 0)
         self.assertTrue(len(m._data_manager._current_data) == 0)
+        plt.close("all")
 
     def test_cleanup(self):
+        plt.ion()  # must be tested in interactive mode!
         m = Maps()
         m.add_annotation(xy=(45, 45))
         m.add_marker(xy=(45, 45))
@@ -1174,6 +1191,7 @@ class TestBasicPlotting(unittest.TestCase):
         self.assertTrue(len(m.cb.click.get.cbs) == 0)
         self.assertTrue(len(m.cb.click.get.cbs) == 0)
         self.assertTrue(len(m.cb.click.get.cbs) == 0)
+        plt.close("all")
 
     def test_blit_artists(self):
         # just a sanity-check if function throws an error...
@@ -1182,3 +1200,4 @@ class TestBasicPlotting(unittest.TestCase):
             [0, 0.25, 1], [0, 0.63, 1], c="k", lw=3, transform=m.ax.transAxes
         )
         m.BM.blit_artists([line])
+        plt.close("all")
