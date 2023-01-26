@@ -215,9 +215,6 @@ class data_specs(object):
 
     def __getitem__(self, key):
         if isinstance(key, (list, tuple)):
-            if "crs" in key:
-                key[key.index("crs")] = "in_crs"
-
             for i in key:
                 assert i in self.keys(), f"{i} is not a valid data-specs key!"
             if len(key) == 0:
@@ -229,8 +226,6 @@ class data_specs(object):
                 else:
                     item = dict(zip(key, attrgetter(*key)(self)))
         else:
-            if key == "crs":
-                key = "in_crs"
             assert key in self.keys(), f"{key} is not a valid data-specs key!"
             item = getattr(self, key)
         return item
