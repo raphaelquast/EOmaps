@@ -1107,11 +1107,11 @@ class TestBasicPlotting(unittest.TestCase):
         m.cb.click.attach.annotate()
         m.cb.pick.attach.annotate()
         m.cb.keypress.attach.fetch_layers()
-
+        m.redraw()  # redraw since otherwise the map might not yet be created!
         self.assertTrue(len(m.BM._artists[m.layer]) == 2)
         self.assertTrue(len(m.BM._bg_artists[m.layer]) == 1)
 
-        self.assertTrue(hasattr(m, "_props"))
+        self.assertTrue(m._data_manager.x0.size == 3)
         self.assertTrue(hasattr(m, "tree"))
         self.assertTrue(len(m.cb.click.get.cbs) == 1)
         self.assertTrue(len(m.cb.click.get.cbs) == 1)
@@ -1131,13 +1131,16 @@ class TestBasicPlotting(unittest.TestCase):
         m2.on_layer_activation(lambda m: print("permanent", m.layer), persistent=True)
 
         self.assertTrue(len(m.BM._on_layer_activation[m2.layer]) == 2)
+        m2.show()  # show the layer to draw the artists!
+        m.redraw()  # redraw since otherwise the map might not yet be created!
+        self.assertTrue(len(m.BM._on_layer_activation[m2.layer]) == 1)
 
         self.assertTrue(len(m.BM._artists[m.layer]) == 2)
         self.assertTrue(len(m.BM._bg_artists[m.layer]) == 1)
         self.assertTrue(len(m.BM._artists[m2.layer]) == 2)
         self.assertTrue(len(m.BM._bg_artists[m2.layer]) == 1)
 
-        self.assertTrue(hasattr(m2, "_props"))
+        self.assertTrue(m2._data_manager.x0.size == 3)
         self.assertTrue(hasattr(m2, "tree"))
         self.assertTrue(len(m2.cb.click.get.cbs) == 1)
         self.assertTrue(len(m2.cb.click.get.cbs) == 1)
@@ -1152,13 +1155,15 @@ class TestBasicPlotting(unittest.TestCase):
         self.assertTrue(m2.layer not in m.BM._artists)
         self.assertTrue(m2.layer not in m.BM._bg_artists)
 
-        self.assertTrue(hasattr(m, "_props"))
+        # m should still be OK
+        self.assertTrue(m._data_manager.x0.size == 3)
         self.assertTrue(hasattr(m, "tree"))
         self.assertTrue(len(m.cb.click.get.cbs) == 1)
         self.assertTrue(len(m.cb.click.get.cbs) == 1)
         self.assertTrue(len(m.cb.click.get.cbs) == 1)
 
-        self.assertTrue(not hasattr(m2, "_props"))
+        # m2 must already be cleared
+        self.assertTrue(m2._data_manager.x0 is None)
         self.assertTrue(not hasattr(m2, "tree"))
         self.assertTrue(len(m2.cb.click.get.cbs) == 0)
         self.assertTrue(len(m2.cb.click.get.cbs) == 0)
@@ -1169,7 +1174,7 @@ class TestBasicPlotting(unittest.TestCase):
         self.assertTrue(m.layer not in m.BM._artists)
         self.assertTrue(m.layer not in m.BM._bg_artists)
 
-        self.assertTrue(not hasattr(m, "_props"))
+        self.assertTrue(m._data_manager.x0 is None)
         self.assertTrue(not hasattr(m, "tree"))
         self.assertTrue(len(m.cb.click.get.cbs) == 0)
         self.assertTrue(len(m.cb.click.get.cbs) == 0)
