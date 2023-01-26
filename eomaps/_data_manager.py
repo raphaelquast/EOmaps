@@ -286,7 +286,6 @@ class DataManager:
 
         # fail-fast in case the extent is completely outside the region
         if not self.data_in_extent((x0, x1, y0, y1)):
-            print("not in rect")
             self.last_extent = (x0, x1, y0, y1)
             self._current_data = None
             return
