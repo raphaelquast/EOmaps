@@ -89,7 +89,7 @@ class TestBasicPlotting(unittest.TestCase):
 
         # rectangles
         m = Maps(4326)
-        m.set_data(usedata, x="x", y="y", in_crs=3857)
+        m.set_data(usedata, x="x", y="y", crs=3857)
         m.set_shape.geod_circles(radius=100000)
         m.set_classify.Quantiles(k=5)
         m.plot_map()
@@ -100,123 +100,151 @@ class TestBasicPlotting(unittest.TestCase):
 
         # rectangles
         m = Maps(4326)
-        m.set_data(usedata, x="x", y="y", in_crs=3857)
+        m.set_data(usedata, x="x", y="y", crs=3857)
         m.set_classify.EqualInterval(k=5)
         m.set_shape.rectangles()
         m.plot_map()
         m.add_feature.preset.ocean(ec="k", scale="110m")
 
-        m.set_shape.rectangles(radius=1, radius_crs=4326)
-        m.plot_map(ec="k")
+        m2 = m.new_layer()
+        m2.inherit_data(m)
+        m2.set_shape.rectangles(radius=1, radius_crs=4326)
+        m2.plot_map(ec="k")
 
-        m.set_shape.rectangles(radius=(1, 2), radius_crs="out")
-        m.plot_map(ec="k")
+        m3 = m.new_layer()
+        m3.inherit_data(m)
+        m3.inherit_classification(m)
+        m3.set_shape.rectangles(radius=(0.5, 2), radius_crs="out")
+        m3.plot_map(ec="k")
 
         r = usedata.x.rank()
         r = r / r.max() * 10
-        m.set_shape.rectangles(radius=r, radius_crs="out")
-        m.plot_map(ec="k", fc="none")
+        m4 = m.new_layer()
+        m4.inherit_data(m)
+        m4.set_shape.rectangles(radius=r, radius_crs="out")
+        m4.plot_map(ec="k", fc="none")
 
         plt.close("all")
 
         # rectangles
         m = Maps(4326)
-        m.set_data(usedata, x="x", y="y", in_crs=3857)
+        m.set_data(usedata, x="x", y="y", crs=3857)
         m.set_shape.rectangles(mesh=True)
         m.plot_map()
 
-        m.set_shape.rectangles(radius=1, radius_crs=4326, mesh=True)
-        m.plot_map()
+        m2 = m.new_layer()
+        m2.inherit_data(m)
+        m2.set_shape.rectangles(radius=1, radius_crs=4326, mesh=True)
+        m2.plot_map()
 
-        m.set_shape.rectangles(radius=(1, 2), radius_crs="out", mesh=True)
-        m.plot_map()
+        m3 = m.new_layer()
+        m3.inherit_data(m)
+        m3.set_shape.rectangles(radius=(1, 2), radius_crs="out", mesh=True)
+        m3.plot_map()
 
         plt.close("all")
 
         # ellipses
         m = Maps(4326)
-        m.set_data(usedata, x="x", y="y", in_crs=3857)
-
+        m.set_data(usedata, x="x", y="y", crs=3857)
         m.set_shape.ellipses()
         m.plot_map()
 
-        m.set_shape.ellipses(radius=1, radius_crs=4326)
-        m.plot_map()
+        m2 = m.new_layer()
+        m2.inherit_data(m)
+        m2.inherit_classification(m)
+        m2.set_shape.ellipses(radius=1, radius_crs=4326)
+        m2.plot_map()
+
+        m3 = m.new_layer()
+        m3.inherit_data(m)
+        m3.inherit_classification(m)
 
         r = usedata.x.rank()
         r = r / r.max() * 10
-        m.set_shape.ellipses(radius=r, radius_crs="out")
-        m.plot_map(ec="k", fc="none")
+        m3.set_shape.ellipses(radius=r, radius_crs="out")
+        m3.plot_map(ec="k", fc="none")
 
         plt.close("all")
 
         # scatter_points
         m = Maps(4326)
-        m.set_data(usedata, x="x", y="y", in_crs=3857)
-
+        m.set_data(usedata, x="x", y="y", crs=3857)
         m.set_shape.scatter_points(marker="*", size=20)
         m.plot_map()
 
-        m.set_shape.scatter_points(size=1)
-        m.plot_map()
+        m2 = m.new_layer()
+        m2.inherit_data(m)
+        m2.set_shape.scatter_points(size=1)
+        m2.plot_map()
 
+        m3 = m.new_layer()
+        m3.inherit_data(m)
         r = usedata.x.rank()
         r = r / r.max() * 50
-        m.set_shape.scatter_points(size=r, marker="s")
-        m.plot_map(ec="k", fc="none")
+        m3.set_shape.scatter_points(size=r, marker="s")
+        m3.plot_map(ec="k", fc="none")
 
         plt.close("all")
 
         # delaunay
         m = Maps(4326)
-        m.set_data(usedata, x="x", y="y", in_crs=3857)
-
+        m.set_data(usedata, x="x", y="y", crs=3857)
         m.set_shape.delaunay_triangulation(flat=True)
         m.plot_map()
         m.indicate_masked_points(5, ec="r")
 
-        m.set_shape.delaunay_triangulation(flat=False)
-        m.plot_map()
-        m.indicate_masked_points(5)
+        m2 = m.new_layer()
+        m2.inherit_data(m)
+        m2.set_shape.delaunay_triangulation(flat=False)
+        m2.plot_map()
+        m2.indicate_masked_points(5)
 
-        m.set_shape.delaunay_triangulation(masked=False)
-        m.plot_map()
-        m.indicate_masked_points(5)
+        m3 = m.new_layer()
+        m3.inherit_data(m)
+        m3.set_shape.delaunay_triangulation(masked=False)
+        m3.plot_map()
+        m3.indicate_masked_points(5)
 
         plt.close("all")
 
         # voronoi
         m = Maps(4326)
-        m.set_data(usedata, x="x", y="y", in_crs=3857)
-
+        m.set_data(usedata, x="x", y="y", crs=3857)
         m.set_shape.voronoi_diagram(masked=False)
         m.plot_map()
         m.indicate_masked_points(5, ec="k")
 
-        m.set_shape.voronoi_diagram(masked=True, mask_radius=5)
-        m.plot_map()
-        m.indicate_masked_points(5, ec="k")
+        m2 = m.new_layer()
+        m2.inherit_data(m)
+        m2.set_shape.voronoi_diagram(masked=True, mask_radius=5)
+        m2.plot_map()
+        m2.indicate_masked_points(5, ec="k")
 
         plt.close("all")
 
     def test_cpos(self):
         m = Maps(4326)
-        m.set_shape.ellipses(n=100)
-        m.set_data_specs(self.data, x="x", y="y", in_crs=3857)
 
         for cpos, color in zip(["ul", "ur", "ll", "lr", "c"], "rgbcm"):
-            m.set_data_specs(
+            m2 = m.new_layer()
+            m2.set_shape.ellipses(n=100)
+            m2.data_specs(
+                self.data,
+                x="x",
+                y="y",
+                crs=3857,
                 cpos_radius=387755 / 2,
                 cpos=cpos,
             )
-            m.plot_map(fc="none", ec=color, lw=0.5 if cpos != "c" else 2)
+            m2.plot_map(fc="none", ec=color, lw=0.5 if cpos != "c" else 2)
 
         plt.close(m.f)
 
     def test_alpha_and_splitbins(self):
         m = Maps(4326)
         m.data = self.data
-        m.set_data_specs(x="x", y="y", in_crs=3857)
+        m.set_data_specs(x="x", y="y", crs=3857)
         m.set_shape.rectangles()
         m.set_classify_specs(scheme="Percentiles", pct=[0.1, 0.2])
 
@@ -227,7 +255,7 @@ class TestBasicPlotting(unittest.TestCase):
     def test_classification(self):
         m = Maps(4326)
         m.data = self.data
-        m.set_data_specs(x="x", y="y", in_crs=3857)
+        m.set_data_specs(x="x", y="y", crs=3857)
         m.set_shape.rectangles(radius=1, radius_crs="out")
 
         m.set_classify_specs(scheme="Quantiles", k=5)
@@ -239,7 +267,7 @@ class TestBasicPlotting(unittest.TestCase):
     def test_add_callbacks(self):
         m = Maps(3857, layer="layername")
         m.data = self.data.sample(10)
-        m.set_data_specs(x="x", y="y", in_crs=3857)
+        m.set_data_specs(x="x", y="y", crs=3857)
         m.set_shape.ellipses(radius=200000)
 
         m.plot_map()
@@ -319,7 +347,7 @@ class TestBasicPlotting(unittest.TestCase):
     def test_add_annotate(self):
         m = Maps()
         m.data = self.data
-        m.set_data_specs(x="x", y="y", in_crs=3857)
+        m.set_data_specs(x="x", y="y", crs=3857)
 
         m.plot_map()
 
@@ -340,8 +368,8 @@ class TestBasicPlotting(unittest.TestCase):
         crs = Maps.CRS.Orthographic(central_latitude=45, central_longitude=45)
         m = Maps(crs)
         m.data = self.data
-        m.set_data_specs(x="x", y="y", in_crs=3857)
-        m.plot_map()
+        m.set_data_specs(x="x", y="y", crs=3857)
+        m.plot_map(set_extent=True)
 
         m.add_marker(
             np.arange(1810, 1840, 1),
@@ -427,7 +455,7 @@ class TestBasicPlotting(unittest.TestCase):
     def test_copy(self):
         m = Maps(3857)
         m.data = self.data
-        m.set_data_specs(x="x", y="y", in_crs=3857)
+        m.set_data_specs(x="x", y="y", crs=3857)
 
         m.set_classify_specs(scheme="Quantiles", k=5)
 
@@ -456,7 +484,7 @@ class TestBasicPlotting(unittest.TestCase):
     def test_copy_connect(self):
         m = Maps(3857)
         m.data = self.data
-        m.set_data_specs(x="x", y="y", in_crs=3857)
+        m.set_data_specs(x="x", y="y", crs=3857)
         m.set_shape.rectangles()
         m.set_classify_specs(scheme="Quantiles", k=5)
         m.plot_map()
@@ -484,7 +512,7 @@ class TestBasicPlotting(unittest.TestCase):
     def test_join_limits(self):
         mg = MapsGrid(2, 1, crs=3857)
         mg.add_feature.preset.coastline()
-        mg.set_data(data=self.data, x="x", y="y", in_crs=3857)
+        mg.set_data(data=self.data, x="x", y="y", crs=3857)
         for m in mg:
             m.plot_map()
 
@@ -497,7 +525,7 @@ class TestBasicPlotting(unittest.TestCase):
     def test_prepare_data(self):
         m = Maps()
         m.data = self.data
-        m.set_data_specs(x="x", y="y", in_crs=3857, parameter="value")
+        m.set_data_specs(x="x", y="y", crs=3857, parameter="value")
         data = m._prepare_data()
 
     def test_layout_editor(self):
@@ -518,7 +546,7 @@ class TestBasicPlotting(unittest.TestCase):
         gs = GridSpec(2, 2)
 
         m = Maps(ax=gs[0, 0])
-        m.set_data_specs(data=self.data, x="x", y="y", in_crs=3857)
+        m.set_data_specs(data=self.data, x="x", y="y", crs=3857)
         m.plot_map()
         cb1 = m.add_colorbar(
             gs[1, 0],
@@ -573,7 +601,7 @@ class TestBasicPlotting(unittest.TestCase):
         self.assertTrue(m.colorbar is cb4)
 
         m2 = m.new_layer("asdf")
-        m2.set_data_specs(data=self.data, x="x", y="y", in_crs=3857)
+        m2.set_data_specs(data=self.data, x="x", y="y", crs=3857)
         m2.set_classify.Quantiles(k=4)
         m2.plot_map()
         cb5 = m2.add_colorbar()
@@ -594,7 +622,7 @@ class TestBasicPlotting(unittest.TestCase):
         bins = [-5e6, 5e6, 1e7]
         labels = ["A", "b", "c", "d"]
         m3 = m.new_layer("asdf")
-        m3.set_data_specs(data=self.data, x="x", y="y", in_crs=3857)
+        m3.set_data_specs(data=self.data, x="x", y="y", crs=3857)
         m3.set_classify.UserDefined(bins=bins)
         m3.plot_map()
         cb6 = m3.add_colorbar()
@@ -609,7 +637,7 @@ class TestBasicPlotting(unittest.TestCase):
     def test_MapsGrid(self):
         mg = MapsGrid(2, 2, crs=4326)
         mg.set_data(
-            data=self.data, x="x", y="y", in_crs=3857, encoding=dict(scale_factor=1e-7)
+            data=self.data, x="x", y="y", crs=3857, encoding=dict(scale_factor=1e-7)
         )
         mg.set_classify_specs(scheme=Maps.CLASSIFIERS.EqualInterval, k=4)
         mg.set_shape.rectangles()
@@ -634,7 +662,7 @@ class TestBasicPlotting(unittest.TestCase):
             ax_inits=dict(c=(1, 1)),
         )
 
-        mg.set_data(data=self.data, x="x", y="y", in_crs=3857)
+        mg.set_data(data=self.data, x="x", y="y", crs=3857)
         mg.set_classify_specs(scheme=Maps.CLASSIFIERS.EqualInterval, k=4)
 
         for m in mg:
