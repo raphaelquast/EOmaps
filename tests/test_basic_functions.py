@@ -92,8 +92,7 @@ class TestBasicPlotting(unittest.TestCase):
         m.set_data(usedata, x="x", y="y", crs=3857)
         m.set_shape.geod_circles(radius=100000)
         m.set_classify.Quantiles(k=5)
-        m.plot_map()
-        m.indicate_masked_points()
+        m.plot_map(indicate_masked_points=True)
 
         m.add_feature.preset.ocean(ec="k", scale="110m")
         plt.close("all")
@@ -103,26 +102,26 @@ class TestBasicPlotting(unittest.TestCase):
         m.set_data(usedata, x="x", y="y", crs=3857)
         m.set_classify.EqualInterval(k=5)
         m.set_shape.rectangles()
-        m.plot_map()
+        m.plot_map(indicate_masked_points=True)
         m.add_feature.preset.ocean(ec="k", scale="110m")
 
         m2 = m.new_layer()
         m2.inherit_data(m)
         m2.set_shape.rectangles(radius=1, radius_crs=4326)
-        m2.plot_map(ec="k")
+        m2.plot_map(ec="k", indicate_masked_points=True)
 
         m3 = m.new_layer()
         m3.inherit_data(m)
         m3.inherit_classification(m)
         m3.set_shape.rectangles(radius=(0.5, 2), radius_crs="out")
-        m3.plot_map(ec="k")
+        m3.plot_map(ec="k", indicate_masked_points=True)
 
         r = usedata.x.rank()
         r = r / r.max() * 10
         m4 = m.new_layer()
         m4.inherit_data(m)
         m4.set_shape.rectangles(radius=r, radius_crs="out")
-        m4.plot_map(ec="k", fc="none")
+        m4.plot_map(ec="k", fc="none", indicate_masked_points=True)
 
         plt.close("all")
 
@@ -130,7 +129,7 @@ class TestBasicPlotting(unittest.TestCase):
         m = Maps(4326)
         m.set_data(usedata, x="x", y="y", crs=3857)
         m.set_shape.rectangles(mesh=True)
-        m.plot_map()
+        m.plot_map(indicate_masked_points=True)
 
         m2 = m.new_layer()
         m2.inherit_data(m)
@@ -140,7 +139,7 @@ class TestBasicPlotting(unittest.TestCase):
         m3 = m.new_layer()
         m3.inherit_data(m)
         m3.set_shape.rectangles(radius=(1, 2), radius_crs="out", mesh=True)
-        m3.plot_map()
+        m3.plot_map(indicate_masked_points=True)
 
         plt.close("all")
 
@@ -148,7 +147,7 @@ class TestBasicPlotting(unittest.TestCase):
         m = Maps(4326)
         m.set_data(usedata, x="x", y="y", crs=3857)
         m.set_shape.ellipses()
-        m.plot_map()
+        m.plot_map(indicate_masked_points=True)
 
         m2 = m.new_layer()
         m2.inherit_data(m)
@@ -163,7 +162,7 @@ class TestBasicPlotting(unittest.TestCase):
         r = usedata.x.rank()
         r = r / r.max() * 10
         m3.set_shape.ellipses(radius=r, radius_crs="out")
-        m3.plot_map(ec="k", fc="none")
+        m3.plot_map(ec="k", fc="none", indicate_masked_points=True)
 
         plt.close("all")
 
@@ -176,14 +175,14 @@ class TestBasicPlotting(unittest.TestCase):
         m2 = m.new_layer()
         m2.inherit_data(m)
         m2.set_shape.scatter_points(size=1)
-        m2.plot_map()
+        m2.plot_map(indicate_masked_points=True)
 
         m3 = m.new_layer()
         m3.inherit_data(m)
         r = usedata.x.rank()
         r = r / r.max() * 50
         m3.set_shape.scatter_points(size=r, marker="s")
-        m3.plot_map(ec="k", fc="none")
+        m3.plot_map(ec="k", fc="none", indicate_masked_points=True)
 
         plt.close("all")
 
@@ -191,20 +190,17 @@ class TestBasicPlotting(unittest.TestCase):
         m = Maps(4326)
         m.set_data(usedata, x="x", y="y", crs=3857)
         m.set_shape.delaunay_triangulation(flat=True)
-        m.plot_map()
-        m.indicate_masked_points(5, ec="r")
+        m.plot_map(indicate_masked_points=True)
 
         m2 = m.new_layer()
         m2.inherit_data(m)
         m2.set_shape.delaunay_triangulation(flat=False)
-        m2.plot_map()
-        m2.indicate_masked_points(5)
+        m2.plot_map(indicate_masked_points=True)
 
         m3 = m.new_layer()
         m3.inherit_data(m)
         m3.set_shape.delaunay_triangulation(masked=False)
         m3.plot_map()
-        m3.indicate_masked_points(5)
 
         plt.close("all")
 
@@ -212,14 +208,12 @@ class TestBasicPlotting(unittest.TestCase):
         m = Maps(4326)
         m.set_data(usedata, x="x", y="y", crs=3857)
         m.set_shape.voronoi_diagram(masked=False)
-        m.plot_map()
-        m.indicate_masked_points(5, ec="k")
+        m.plot_map(indicate_masked_points=True)
 
         m2 = m.new_layer()
         m2.inherit_data(m)
         m2.set_shape.voronoi_diagram(masked=True, mask_radius=5)
         m2.plot_map()
-        m2.indicate_masked_points(5, ec="k")
 
         plt.close("all")
 

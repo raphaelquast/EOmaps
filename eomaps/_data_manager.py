@@ -9,11 +9,48 @@ class DataManager:
 
         self._current_data = dict()
 
+        self._on_next_fetch = []
+        self._masked_points_artist = None
+
+        self._radius_margin_factor = 6
+        self._radius_margin = None
+
+        self._extent_margin_factor = 0.1
+
+    def set_margin_factors(self, radius_margin_factor, extent_margin_factor):
+        """
+        Set the margin factors that are applied to the plot extent
+        prior to selecting the data.
+
+        Defaults are (6, 0.1)
+
+        Note
+        ----
+        To make the changes effective this function MUST be called before
+        plotting the data (e.g. before calling `m.plot_map()`)!
+
+        Parameters
+        ----------
+        radius_margin_factor : float
+            A multiplication factor for the shape-radius to determine the
+            extent-margin for data-selection.
+
+            margin = < shape radius > * radius_margin_factor
+
+        extent_margin_factor : float
+            Only used as a fallback if radius could not be determined!
+
+            A multiplication factor for the data extent to determine the
+            extent-margin for data-selection.
+
+            margin = < data_extent > * radius_margin_factor
+        """
         # multiplication factor for the shape-radius to determine the
         # extent-margin for data-selection
-        self._radius_margin_factor = 4  # (e.g. a margin of 2 pixels)
-
-        self._on_next_fetch = []
+        self._radius_margin_factor = radius_margin_factor
+        # multiplication factor for the plot_extent to determine the
+        # fallback extent-margin for data-selection
+        self._extent_margin_factor = extent_margin_factor
 
     @property
     def x0(self):
@@ -39,13 +76,23 @@ class DataManager:
     def ids(self):
         return self._all_data.get("ids", None)
 
-    def set_props(self, layer, assume_sorted=True):
+    def set_props(
+        self,
+        layer,
+        assume_sorted=True,
+        update_coll_on_fetch=True,
+        indicate_masked_points=True,
+    ):
         self._all_data = self.m._prepare_data(assume_sorted=assume_sorted)
+        self._indicate_masked_points = indicate_masked_points
         self.layer = layer
 
         if len(self.x0) == 0:
             print("EOmaps: There is no data to plot")
             return
+
+        self._x0min, self._x0max = np.nanmin(self.x0), np.nanmax(self.x0)
+        self._y0min, self._y0max = np.nanmin(self.y0), np.nanmax(self.y0)
 
         # estimate the radius (used as margin on data selection)
         self._r = self.m._shapes._estimate_radius(self.m, "out")
@@ -54,9 +101,12 @@ class DataManager:
         else:
             self._radius_margin = None
 
-        # TODO make sure to properly remove _fetch_bg_actions!!
-        if self.on_fetch_bg not in self.m.BM._before_fetch_bg_actions:
-            self.m.BM._before_fetch_bg_actions.append(self.on_fetch_bg)
+        if update_coll_on_fetch:
+            # attach a hook that updates the collection whenever a new
+            # background is fetched
+            # ("shade" shapes take care about updating the data themselves!)
+            if self.on_fetch_bg not in self.m.BM._before_fetch_bg_actions:
+                self.m.BM._before_fetch_bg_actions.append(self.on_fetch_bg)
 
     @property
     def current_extent(self):
@@ -70,17 +120,15 @@ class DataManager:
         # set the extent...
         # do this ONLY if this is the first time the collection is plotted!
         # (and BEFORE the collection is added to the axis!)
-        x0min, x0max = np.nanmin(self.x0), np.nanmax(self.x0)
-        y0min, y0max = np.nanmin(self.y0), np.nanmax(self.y0)
 
         # in case a proper radius is defined, add a margin of
         # (1 x radius) to the map
         if self._r is not None and all(np.isfinite(self._r)):
             rx, ry = self._r
-            x0min -= rx
-            y0min -= ry
-            x0max += rx
-            y0max += ry
+            x0min = self._x0min - rx
+            y0min = self._y0min - ry
+            x0max = self._x0max + rx
+            y0max = self._y0max + ry
 
         ymin, ymax = self.m.ax.projection.y_limits
         xmin, xmax = self.m.ax.projection.x_limits
@@ -98,6 +146,44 @@ class DataManager:
 
         return (x0, x1, y0, y1)
 
+    def indicate_masked_points(self, radius=1.0, **kwargs):
+        # remove previous mask artist
+        if self._masked_points_artist is not None:
+            try:
+                self.m.BM.remove_bg_artist(self._masked_points_artist)
+                self._masked_points_artist.remove()
+                self._masked_points_artist = None
+            except Exception as ex:
+                print(ex)
+
+        if not hasattr(self.m, "_data_mask") or self.m._data_mask is None:
+            return
+
+        mask = self.m._data_mask.ravel()
+        npts = np.count_nonzero(mask)
+        if npts == 0:
+            return
+
+        if npts > 1e5:
+            print(
+                "EOmaps: There are more than 100 000 masked points! "
+                "... indicating masked points will affect performance!"
+            )
+
+        kwargs.setdefault("ec", "r")
+        kwargs.setdefault("lw", 0.25)
+
+        self._masked_points_artist = self.m.ax.scatter(
+            self._current_data["x0"].ravel()[~mask],
+            self._current_data["y0"].ravel()[~mask],
+            cmap=getattr(self.m, "_cbcmap", "Reds"),
+            norm=getattr(self.m, "_norm", None),
+            c=self._current_data["z_data"].ravel()[~mask],
+            **kwargs,
+        )
+
+        self.m.BM.add_bg_artist(self._masked_points_artist, layer=self.layer)
+
     def on_fetch_bg(self, layer, bbox=None):
         try:
             # TODO support providing a bbox as extent
@@ -113,18 +199,21 @@ class DataManager:
 
             if self.extent_changed or self.m.coll is None:
                 props = self.get_props()
+                if props is None:
+                    # fail-fast in case the data is completely outside the extent
+                    return
                 # update the number of immediate points calculated for plot-shapes
                 s = self._get_datasize(props)
                 self._print_datasize_warnings(s)
                 self._set_n(s)
 
-                # if self.m.coll is None and self.m._set_extent:
-                #     self._set_lims(props)
-                #     return
-
                 if props["x0"].size < 1 or props["y0"].size < 1:
                     # keep original data if too low amount of data is attempted
                     # to be plotted
+
+                    # make the collection invisible to avoid plotting it again
+                    self.m.coll.set_visible(False)
+                    self.m.coll.set_animated(True)
                     return
 
                 coll = self.m._get_coll(props, **self.m._coll_kwargs)
@@ -155,6 +244,9 @@ class DataManager:
 
                 self.m._coll = coll
 
+                if self._indicate_masked_points:
+                    self.indicate_masked_points()
+
                 # this is used in _cb_container when adding callbacks
                 # before a layer has been fetched (e.g. before m.coll is defined)
                 # (=lazily initialize the picker when the layer is fetched)
@@ -169,26 +261,39 @@ class DataManager:
                 f"\n        {ex}"
             )
 
+    def data_in_extent(self, extent):
+        x0, x1, y0, y1 = extent
+        if x0 > self._x0max or self._x0min > x1:
+            return False
+        if y0 > self._y0max or self._y0min > y1:
+            return False
+        return True
+
     def get_props(self, *args, **kwargs):
         x0, x1, y0, y1 = self.current_extent
 
         if self._radius_margin is not None:
             dx, dy = self._radius_margin
         else:
-            # fallback to using a margin of 10% of the plot-extent
-            # TODO this can be improved... margin should actually get smaller
-            # if the extent gets larger...
-            dx = (x1 - x0) / 10
-            dy = (y1 - y0) / 10
+            # fallback to using a margin of 10% of the data-extent
+            dx = (self._x0max - self._x0min) * self._extent_margin_factor
+            dy = (self._y0max - self._y0min) * self._extent_margin_factor
 
         x0 = x0 - dx
         x1 = x1 + dx
         y0 = y0 - dy
         y1 = y1 + dy
 
+        # fail-fast in case the extent is completely outside the region
+        if not self.data_in_extent((x0, x1, y0, y1)):
+            print("not in rect")
+            self.last_extent = (x0, x1, y0, y1)
+            self._current_data = None
+            return
+
         # get mask
         q = ((self.x0 >= x0) & (self.x0 <= x1)) & ((self.y0 >= y0) & (self.y0 <= y1))
-        # TODO fix IDs
+
         if len(q.shape) == 2:
             # select columns that contain at least one value
             qx = q.any(axis=0)
@@ -294,7 +399,6 @@ class DataManager:
                 print(f"{txt}...\n       this might take A VERY LONG TIME❗❗")
 
     def cleanup(self):
-        # TODO cleanup method (e.g. free memory)
         self._all_data.clear()
         self._current_data.clear()
         self.last_extent = None

@@ -455,6 +455,7 @@ class Maps(object):
 
         # initialize the data-manager
         self._data_manager = DataManager(self._proxy(self))
+        self._data_plotted = False
         self._set_extent_on_plot = True
 
     def __getattribute__(self, key):
@@ -2398,6 +2399,7 @@ class Maps(object):
         dynamic=False,
         set_extent=True,
         assume_sorted=True,
+        indicate_masked_points=False,
         **kwargs,
     ):
         """
@@ -2439,6 +2441,11 @@ class Maps(object):
             (required for QuadMesh if unsorted coordinates are provided)
 
             The default is True.
+        indicate_masked_points : bool
+            If True, any datapoints that could not be properly plotted
+            with the currently assigned shape are indicated with a
+            circle with a red boundary.
+            The default is False
 
         Other Parameters
         ----------------
@@ -2454,6 +2461,14 @@ class Maps(object):
             For "shade_points" or "shade_raster" shapes, kwargs are passed to
             `datashader.mpl_ext.dsshow`
         """
+
+        assert self._data_plotted is False, (
+            "EOmaps: Calling `m.plot_map()` multiple times on the same "
+            "Maps-object is no longer supported since EOmaps v6.0 !"
+            "Create a new layer with `m2 = m.new_layer()` and use the new "
+            "Maps-object to plot the additional data!"
+        )
+
         if getattr(self, "coll", None) is not None:
             print(
                 "EOmaps-warning: Calling `m.plot_map()` or "
@@ -2505,8 +2520,13 @@ class Maps(object):
             print("EOmaps: Preparing the data")
 
         if useshape.name.startswith("shade"):
-            # TODO check data_manager treatment for shade shapes
-            self._data_manager.set_props(layer=layer, assume_sorted=assume_sorted)
+            # shade shapes use datashader to update the data of the collections!
+            self._data_manager.set_props(
+                layer=layer,
+                assume_sorted=assume_sorted,
+                update_coll_on_fetch=False,
+                indicate_masked_points=indicate_masked_points,
+            )
 
             self._shade_map(
                 layer=layer,
@@ -2516,8 +2536,14 @@ class Maps(object):
                 **kwargs,
             )
         else:
-            self._data_manager.set_props(layer=layer, assume_sorted=assume_sorted)
-            if self._set_extent_on_plot:
+            self._data_manager.set_props(
+                layer=layer,
+                assume_sorted=assume_sorted,
+                update_coll_on_fetch=True,
+                indicate_masked_points=indicate_masked_points,
+            )
+
+            if set_extent and self._set_extent_on_plot:
                 self._data_manager._set_lims()
 
             self._plot_map(
@@ -2823,48 +2849,6 @@ class Maps(object):
             )
 
         return copy_cls
-
-    def indicate_masked_points(self, radius=1.0, **kwargs):
-        """
-        Add circles to the map that indicate masked points.
-        (e.g. points resulting in very distorted shapes etc.)
-
-        Parameters
-        ----------
-        radius : float, optional
-            The radius to use for plotting the indicators for the masked
-            points. The unit of the radius is map-pixels! The default is 1.
-        **kwargs :
-            additional kwargs passed to `m.plot_map(**kwargs)`.
-
-        Returns
-        -------
-        m : eomaps.Maps
-            A (connected) copy of the maps-object with the data set to the masked pixels.
-        **kwargs
-            additional kwargs passed to `m.plot_map(**kwargs)`
-        """
-        if not hasattr(self, "_data_mask"):
-            print("EOmaps: There are no masked points to indicate!")
-            return
-
-        mask = self._data_mask.reshape(self._zshape)
-
-        if len(self._props["z_data"][~mask]) == 0:
-            print("EOmaps: There are no masked points to indicate!")
-            return
-
-        kwargs.setdefault("ec", "r")
-
-        a = self.ax.scatter(
-            self._props["x0"][~mask],
-            self._props["y0"][~mask],
-            cmap=self.classify_specs._cbcmap,
-            c=self._props["z_data"][~mask],
-            **kwargs,
-        )
-
-        self.BM.add_bg_artist(a, layer=self.layer)
 
     def indicate_extent(self, x0, y0, x1, y1, crs=4326, npts=100, **kwargs):
         """

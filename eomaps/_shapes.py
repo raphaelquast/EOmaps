@@ -1065,6 +1065,7 @@ class shapes(object):
 
         def __init__(self, m):
             self._m = m
+            self._mask_radius = None
 
         def __call__(self, masked=True, mask_radius=None):
             """
@@ -1076,7 +1077,9 @@ class shapes(object):
                 Indicator if the voronoi-diagram should be masked or not
 
             mask_radius : float, optional
-                the radius used for masking the voronoi-diagram (in units of the plot-crs)
+                The radius used for masking the voronoi-diagram
+                (in units of the plot-crs)
+                The default is 4 times the estimated data-radius.
             """
             from . import MapsGrid  # do this here to avoid circular imports!
 
@@ -1102,7 +1105,11 @@ class shapes(object):
 
         @property
         def mask_radius(self):
-            return shapes._get_radius(self._m, self._mask_radius, "out")
+            r = shapes._get_radius(self._m, self._mask_radius, "out")
+            if self._mask_radius is None:
+                return (i * 4 for i in r)
+            else:
+                return r
 
         @mask_radius.setter
         def mask_radius(self, val):
@@ -1193,6 +1200,7 @@ class shapes(object):
 
         def __init__(self, m):
             self._m = m
+            self._mask_radius = None
 
         def __call__(
             self, masked=True, mask_radius=None, mask_radius_crs="in", flat=False
@@ -1207,6 +1215,7 @@ class shapes(object):
             mask_radius : float, optional
                 the radius used for masking the delaunay-triangulation
                 (in units of the plot-crs)
+                The default is 4 times the estimated data-radius.
             mask_radius_crs : str, optional
                 The crs in which the radius is defined (either "in" or "out")
             flat : bool
@@ -1248,9 +1257,11 @@ class shapes(object):
         @property
         def mask_radius(self):
             if self.masked:
-                return shapes._get_radius(
-                    self._m, self._mask_radius, self.mask_radius_crs
-                )
+                r = shapes._get_radius(self._m, self._mask_radius, self.mask_radius_crs)
+                if self._mask_radius is None:
+                    return (i * 4 for i in r)
+                else:
+                    return r
             else:
                 return None
 
@@ -1681,7 +1692,10 @@ class shapes(object):
             px, py = t.transform(clipx(v[:, :, 0]), clipy(v[:, :, 1]))
             verts = np.stack((px, py), axis=2)
 
-            mask = np.logical_and(np.isfinite(px)[:-1, :-1], np.isfinite(py)[:-1, :-1])
+            # TODO is there a proper way to implement a mask here?
+            # (raster must always remain 2D...)
+            # mask = np.logical_and(np.isfinite(px)[:-1, :-1], np.isfinite(py)[:-1, :-1])
+            mask = np.full(px[:-1, :-1].shape, True, dtype=bool)
             return verts, mask
 
         def _get_polygon_coll(self, x, y, crs, **kwargs):
@@ -1692,8 +1706,8 @@ class shapes(object):
                 crs,
             )
 
-            # remember masked points
-            self._m._data_mask = mask
+            # TODO masking is skipped for now...
+            self._m._data_mask = None
             # don't use a mask here since we need the full 2D array
             color_and_array = shapes._get_colors_and_array(
                 kwargs, np.full_like(mask, True)
@@ -1756,6 +1770,10 @@ class shapes(object):
     @wraps(_voronoi_diagram.__call__)
     def voronoi_diagram(self, *args, **kwargs):
         shp = self._voronoi_diagram(m=self._m)
+        # increase radius margins for voronoi diagrams since
+        # outer points are otherwise always masked!
+        self._m._data_manager.set_margin_factors(20, 0.1)
+
         return shp.__call__(*args, **kwargs)
 
     @wraps(_delaunay_triangulation.__call__)
