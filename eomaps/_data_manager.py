@@ -1,4 +1,5 @@
 import numpy as np
+from pyproj import CRS, Transformer
 
 
 class DataManager:
@@ -76,6 +77,14 @@ class DataManager:
     def ids(self):
         return self._all_data.get("ids", None)
 
+    @property
+    def x0_1D(self):
+        return getattr(self, "_x0_1D", None)
+
+    @property
+    def y0_1D(self):
+        return getattr(self, "_y0_1D", None)
+
     def set_props(
         self,
         layer,
@@ -83,7 +92,7 @@ class DataManager:
         update_coll_on_fetch=True,
         indicate_masked_points=True,
     ):
-        self._all_data = self.m._prepare_data(assume_sorted=assume_sorted)
+        self._all_data = self._prepare_data(assume_sorted=assume_sorted)
         self._indicate_masked_points = indicate_masked_points
         self.layer = layer
 
@@ -91,8 +100,14 @@ class DataManager:
             print("EOmaps: There is no data to plot")
             return
 
-        self._x0min, self._x0max = np.nanmin(self.x0), np.nanmax(self.x0)
-        self._y0min, self._y0max = np.nanmin(self.y0), np.nanmax(self.y0)
+        if self.x0_1D is not None:
+            # if we have 1D coordinates, use them to get the extent
+            self._x0min, self._x0max = np.nanmin(self.x0_1D), np.nanmax(self.x0_1D)
+            self._y0min, self._y0max = np.nanmin(self.y0_1D), np.nanmax(self.y0_1D)
+        else:
+            # get the extent from the full coordinate arrays
+            self._x0min, self._x0max = np.nanmin(self.x0), np.nanmax(self.x0)
+            self._y0min, self._y0max = np.nanmin(self.y0), np.nanmax(self.y0)
 
         # estimate the radius (used as margin on data selection)
         self._r = self.m._shapes._estimate_radius(self.m, "out")
@@ -107,6 +122,145 @@ class DataManager:
             # ("shade" shapes take care about updating the data themselves!)
             if self.on_fetch_bg not in self.m.BM._before_fetch_bg_actions:
                 self.m.BM._before_fetch_bg_actions.append(self.on_fetch_bg)
+
+    def _prepare_data(self, assume_sorted=True):
+        in_crs = self.m.data_specs.crs
+        cpos = self.m.data_specs.cpos
+        cpos_radius = self.m.data_specs.cpos_radius
+
+        props = dict()
+        # get coordinate transformation from in_crs to plot_crs
+        # make sure to re-identify the CRS with pyproj to correctly skip re-projection
+        # in case we use in_crs == plot_crs
+        crs1 = CRS.from_user_input(in_crs)
+        crs2 = CRS.from_user_input(self.m._crs_plot)
+
+        # identify the provided data and get it in the internal format
+        z_data, xorig, yorig, ids, parameter = self.m._identify_data()
+
+        if cpos is not None and cpos != "c":
+            # fix position of pixel-center in the input-crs
+            assert (
+                cpos_radius is not None
+            ), "you must specify a 'cpos_radius if 'cpos' is not 'c'"
+            if isinstance(cpos_radius, (list, tuple)):
+                rx, ry = cpos_radius
+            else:
+                rx = ry = cpos_radius
+
+            xorig, yorig = self._set_cpos(xorig, yorig, rx, ry, cpos)
+
+        # invoke the shape-setter to make sure a shape is set
+        used_shape = self.m.shape
+
+        # --------- sort by coordinates
+        # this is required to avoid glitches in "raster" and "shade_raster"
+        # since QuadMesh requires sorted coordinates!
+        # (currently only implemented for 1D coordinates and 2D data)
+        if assume_sorted is False:
+            if used_shape.name in ["raster", "shade_raster"]:
+                if (
+                    len(xorig.shape) == 1
+                    and len(yorig.shape) == 1
+                    and len(z_data.shape) == 2
+                ):
+
+                    xs, ys = np.argsort(xorig), np.argsort(yorig)
+                    np.take(xorig, xs, out=xorig, mode="wrap")
+                    np.take(yorig, ys, out=yorig, mode="wrap")
+                    np.take(
+                        np.take(z_data, xs, 0),
+                        indices=ys,
+                        axis=1,
+                        out=z_data,
+                        mode="wrap",
+                    )
+                else:
+                    print(
+                        "EOmaps: using 'assume_sorted=False' is only possible"
+                        + "if you use 1D coordinates + 2D data!"
+                        + "...continuing without sorting."
+                    )
+            else:
+                print(
+                    "EOmaps: using 'assume_sorted=False' is only relevant for "
+                    + "the shapes ['raster', 'shade_raster']! "
+                    + "...continuing without sorting."
+                )
+
+        self._z_transposed = False
+
+        if crs1 == crs2:
+            if (
+                len(xorig.shape) == 1
+                and len(yorig.shape) == 1
+                and len(z_data.shape) == 2
+            ):
+                # remember 1 dimensional coordinate vectors for querying
+                self._x0_1D = xorig
+                self._y0_1D = yorig
+                if used_shape.name not in ["shade_raster"]:
+                    # convert 1D data to 2D (required for all shapes but shade_raster)
+                    xorig, yorig = np.meshgrid(xorig, yorig, copy=False)
+                    z_data = z_data.T
+                    self._z_transposed = True
+
+            x0, y0 = xorig, yorig
+
+        else:
+            # transform center-points to the plot_crs
+            transformer = Transformer.from_crs(
+                crs1,
+                crs2,
+                always_xy=True,
+            )
+            # convert 1D data to 2D to make sure re-projection is correct
+            if (
+                len(xorig.shape) == 1
+                and len(yorig.shape) == 1
+                and len(z_data.shape) == 2
+            ):
+                xorig, yorig = np.meshgrid(xorig, yorig, copy=False)
+                z_data = z_data.T
+                # self._z_transposed = True
+
+            x0, y0 = transformer.transform(xorig, yorig)
+
+        # use np.asanyarray to ensure that the output is a proper numpy-array
+        # (relevant for categorical dtypes in pandas.DataFrames)
+        props["xorig"] = np.asanyarray(xorig)
+        props["yorig"] = np.asanyarray(yorig)
+        props["ids"] = ids
+        props["z_data"] = np.asanyarray(z_data)
+        props["x0"] = np.asanyarray(x0)
+        props["y0"] = np.asanyarray(y0)
+
+        # remember shapes for later use
+        # TODO remove this!
+        self.m._xshape = props["x0"].shape
+        self.m._yshape = props["y0"].shape
+        self.m._zshape = props["z_data"].shape
+
+        return props
+
+    def _set_cpos(self, x, y, radiusx, radiusy, cpos):
+        # use x = x + ...   instead of x +=  to allow casting from int to float
+        if cpos == "c":
+            pass
+        elif cpos == "ll":
+            x = x + radiusx
+            y = y + radiusy
+        elif cpos == "ul":
+            x = x + radiusx
+            y = y - radiusy
+        elif cpos == "lr":
+            x = x - radiusx
+            y = y + radiusy
+        elif cpos == "ur":
+            x = x - radiusx
+            y = y - radiusx
+
+        return x, y
 
     @property
     def current_extent(self):
@@ -184,76 +338,109 @@ class DataManager:
 
         self.m.BM.add_bg_artist(self._masked_points_artist, layer=self.layer)
 
-    def on_fetch_bg(self, layer, bbox=None):
-        try:
-            # TODO support providing a bbox as extent
+    def redraw_required(self, layer):
+        """
 
-            layer_requested = set(self.layer.split("|")).issubset(set(layer.split("|")))
+        Parameters
+        ----------
+        layer : str
+            The layer for which the background is fetched.
+        """
+        # check if the layer of the dataset is requested
+        if not (
+            self.layer == "all"
+            or set(self.layer.split("|")).issubset(set(layer.split("|")))
+        ):
+            return False
 
-            if self.layer != "all" and not layer_requested:
-                return
+        # check if the data has never been plotted
+        if self.m.coll is None:
+            return True
 
-            if not hasattr(self, "x0"):
-                # self.set_props()
-                return
+        # check if the current map-extent has changed
+        if not self.extent_changed:
+            return False
 
-            if self.extent_changed or self.m.coll is None:
-                props = self.get_props()
-                if props is None:
-                    # fail-fast in case the data is completely outside the extent
-                    return
-                # update the number of immediate points calculated for plot-shapes
-                s = self._get_datasize(props)
-                self._print_datasize_warnings(s)
-                self._set_n(s)
+        return True
 
-                if props["x0"].size < 1 or props["y0"].size < 1:
-                    # keep original data if too low amount of data is attempted
-                    # to be plotted
-
-                    # make the collection invisible to avoid plotting it again
-                    self.m.coll.set_visible(False)
-                    self.m.coll.set_animated(True)
-                    return
-
-                coll = self.m._get_coll(props, **self.m._coll_kwargs)
-                coll.set_clim(self.m._vmin, self.m._vmax)
-
-                if self.m.shape.name != "scatter_points":
-                    # avoid use "autolim=True" since it can cause problems in
-                    # case the data-limits are infinite (e.g. for projected
-                    # datasets containing points outside the used projection)
-                    self.m.ax.add_collection(coll, autolim=False)
-
-                # remove previous collection from the map
-                if self.m.coll is not None:
-                    try:
-                        if self.m._coll_dynamic:
-                            self.m.BM.remove_artist(self.m._coll)
-                        else:
-                            self.m.BM.remove_bg_artist(self.m._coll)
-
-                        self.m._coll.remove()
-                    except Exception as ex:
-                        print(ex)
-
+    def _remove_existing_coll(self):
+        if self.m.coll is not None:
+            try:
                 if self.m._coll_dynamic:
-                    self.m.BM.add_artist(coll, self.layer)
+                    self.m.BM.remove_artist(self.m._coll)
                 else:
-                    self.m.BM.add_bg_artist(coll, self.layer)
+                    self.m.BM.remove_bg_artist(self.m._coll)
 
-                self.m._coll = coll
+                self.m.coll.remove()
+                self.m._coll = None
+            except Exception as ex:
+                print(ex)
 
-                if self._indicate_masked_points:
-                    self.indicate_masked_points()
+    def on_fetch_bg(self, layer, bbox=None):
+        # TODO support providing a bbox as extent?
 
-                # this is used in _cb_container when adding callbacks
-                # before a layer has been fetched (e.g. before m.coll is defined)
-                # (=lazily initialize the picker when the layer is fetched)
-                while len(self._on_next_fetch) > 0:
-                    self._on_next_fetch.pop(-1)()
+        try:
+            if not self.redraw_required(layer):
+                return
 
-                self.m.cb.pick._set_artist(coll)
+            # check if the data_manager has no data assigned
+            if self.x0 is None and self.m.coll is not None:
+                self._remove_existing_coll()
+                return False
+
+            props = self.get_props()
+            if props is None:
+                # fail-fast in case the data is completely outside the extent
+                return
+
+            # update the number of immediate points calculated for plot-shapes
+            s = self._get_datasize(props)
+            self._print_datasize_warnings(s)
+            self._set_n(s)
+
+            if props["x0"].size < 1 or props["y0"].size < 1:
+                # keep original data if too low amount of data is attempted
+                # to be plotted
+
+                # make the collection invisible to avoid plotting it again
+                self.m.coll.set_visible(False)
+                self.m.coll.set_animated(True)
+                return
+
+            # remove previous collection from the map
+            self._remove_existing_coll()
+
+            # draw the new collection
+            coll = self.m._get_coll(props, **self.m._coll_kwargs)
+            coll.set_clim(self.m._vmin, self.m._vmax)
+
+            if self.m.shape.name != "scatter_points":
+                # avoid use "autolim=True" since it can cause problems in
+                # case the data-limits are infinite (e.g. for projected
+                # datasets containing points outside the used projection)
+                # the extent is set by calling "._set_lims()" in `m.plot_map()`
+                self.m.ax.add_collection(coll, autolim=False)
+
+            if self.m._coll_dynamic:
+                self.m.BM.add_artist(coll, self.layer)
+            else:
+                self.m.BM.add_bg_artist(coll, self.layer)
+
+            self.m._coll = coll
+
+            # if required, add masked points indicators
+            if self._indicate_masked_points:
+                self.indicate_masked_points()
+
+            # execute actions that should be performed after the data
+            # has been updated.
+            # this is used in case pick-callbacks are assigned
+            # before a layer has been fetched (e.g. before m.coll is defined)
+            # (=lazily initialize the picker when the layer is fetched)
+            while len(self._on_next_fetch) > 0:
+                self._on_next_fetch.pop(-1)()
+
+            self.m.cb.pick._set_artist(coll)
 
         except Exception as ex:
             print(
@@ -262,12 +449,22 @@ class DataManager:
             )
 
     def data_in_extent(self, extent):
+        # check if the data extent collides with the map extent
         x0, x1, y0, y1 = extent
         if x0 > self._x0max or self._x0min > x1:
             return False
         if y0 > self._y0max or self._y0min > y1:
             return False
         return True
+
+    def full_data_in_extent(self, extent):
+        # check if the map extent fully contains the data extent
+        x0, x1, y0, y1 = extent
+        if (x0 < self._x0min and x1 > self._x0max) and (
+            y0 < self._y0min and y1 > self._y0max
+        ):
+            return True
+        return False
 
     def get_props(self, *args, **kwargs):
         x0, x1, y0, y1 = self.current_extent
@@ -288,15 +485,34 @@ class DataManager:
         if not self.data_in_extent((x0, x1, y0, y1)):
             self.last_extent = (x0, x1, y0, y1)
             self._current_data = None
-            return
+            return self._current_data
+
+        # in case the extent is larger than the full data,
+        # there is no need to query!
+        if self.full_data_in_extent((x0, x1, y0, y1)):
+            self.last_extent = self.current_extent
+            self._current_data = {**self._all_data}
+            return self._current_data
 
         # get mask
-        q = ((self.x0 >= x0) & (self.x0 <= x1)) & ((self.y0 >= y0) & (self.y0 <= y1))
+        if self.x0_1D is not None:
+            # in case 1D coordinates and 2D data is provided, query on 1D vectors!
+            q = None
+            qx = (self.x0_1D >= x0) & (self.x0_1D <= x1)
+            qy = (self.y0_1D >= y0) & (self.y0_1D <= y1)
+        else:
+            # query extent
+            q = ((self.x0 >= x0) & (self.x0 <= x1)) & (
+                (self.y0 >= y0) & (self.y0 <= y1)
+            )
 
-        if len(q.shape) == 2:
+            if len(q.shape) == 2:
+                # in case coordinates are 2D, query the relevant 2D array
+                qx = q.any(axis=0)
+                qy = q.any(axis=1)
+
+        if q is None or len(q.shape) == 2:
             # select columns that contain at least one value
-            qx = q.any(axis=0)
-            qy = q.any(axis=1)
             wx, wy = np.where(qx)[0], np.where(qy)[0]
             ind = np.ravel_multi_index(np.meshgrid(wx, wy), (qx.size, qy.size)).ravel()
 
@@ -320,7 +536,7 @@ class DataManager:
             else:
                 idq = None
 
-        props = dict(
+        self._current_data = dict(
             xorig=self.xorig[qy][:, qx]
             if len(self.xorig.shape) == 2
             else self.xorig[q],
@@ -335,20 +551,11 @@ class DataManager:
             ids=idq,
         )
         self.last_extent = self.current_extent
-        self._current_data = props
 
-        return props
+        return self._current_data
 
     def _get_datasize(self, props):
-        sx = np.size(props["x0"])
-        sy = np.size(props["y0"])
-
-        if self.m._1D2D:
-            s = sx * sy
-        else:
-            s = max(sx, sy)
-
-        return s
+        return np.size(props["z_data"])
 
     def _set_n(self, s):
         if s < 10:
@@ -371,7 +578,7 @@ class DataManager:
         name = self.m.shape.name
 
         if name in ["raster"]:
-            if s < 1e6:
+            if s < 2e6:
                 return
             else:
                 txt = f"EOmaps: Plotting {s:.1E} points as {self.m.shape.name}"
@@ -396,6 +603,74 @@ class DataManager:
                 print(f"{txt}...\n       this might take some time...")
             else:
                 print(f"{txt}...\n       this might take A VERY LONG TIME❗❗")
+
+    def _get_xy_from_index(self, ind, reprojected=False):
+        """
+        Get x and y coordinates from a list of numerical data indexes
+
+        Parameters
+        ----------
+        ind : array-like
+            a list of indexes
+        reprojected : bool, optional
+            - if True, the coordinates are returned in the plot-crs.
+            - if False, the input coordinates are returned
+            The default is False.
+
+        Returns
+        -------
+        (x, y) : a tuple of x- and y- coordinate arrays
+
+        """
+        if self.x0_1D is not None:
+            # unravel indices since data is 2D
+            xind, yind = np.unravel_index(ind, (self.x0_1D.size, self.y0_1D.size))
+            # 1D coordinates are only possible if input crs == plot crs!
+            return self.x0_1D[xind], self.y0_1D[yind]
+        else:
+            xind = yind = ind
+
+        if reprojected:
+            return (
+                self.x0.flat[xind],
+                self.y0.flat[yind],
+            )
+        else:
+            return (
+                self.xorig.flat[xind],
+                self.yorig.flat[yind],
+            )
+
+    def _get_xy_from_ID(self, ID, reprojected=False):
+        """
+        Get x and y coordinates from a list of data IDs
+
+        Parameters
+        ----------
+        ID : single ID or list of IDs
+            The IDs to search for.
+
+        Returns
+        -------
+        (x, y) : a tuple of x- and y- coordinate arrays
+        """
+        ids = self.ids
+
+        # find numerical index from ID
+        ID = np.atleast_1d(ID)
+        if isinstance(ids, range):
+            # if "ids" is range-like, so is "ind", therefore we can simply
+            # select the values.
+            inds = [ids[i] for i in ID]
+        if isinstance(ids, list):
+            # for lists, using .index to identify the index
+            inds = [ids.index(i) for i in ID]
+        elif isinstance(ids, np.ndarray):
+            inds = np.flatnonzero(np.isin(ids, ID))
+        else:
+            inds = None
+
+        return self._get_xy_from_index(inds, reprojected=reprojected)
 
     def cleanup(self):
         self._all_data.clear()

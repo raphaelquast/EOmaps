@@ -252,7 +252,7 @@ class _click_callbacks(object):
                 if not multipick:
                     x, y = [
                         np.format_float_positional(i, trim="-", precision=pos_precision)
-                        for i in self.m._get_xy_from_index(ind)
+                        for i in self.m._data_manager._get_xy_from_index(ind)
                     ]
                     x0, y0 = [
                         np.format_float_positional(i, trim="-", precision=pos_precision)
@@ -265,8 +265,8 @@ class _click_callbacks(object):
                         )
                 else:
                     coords = [
-                        *self.m._get_xy_from_index(ind),
-                        *self.m._get_xy_from_index(ind, reprojected=True),
+                        *self.m._data_manager._get_xy_from_index(ind),
+                        *self.m._data_manager._get_xy_from_index(ind, reprojected=True),
                     ]
 
                     for n, c in enumerate(coords):
@@ -521,9 +521,9 @@ class _click_callbacks(object):
         ID, pos, val, ind, picker_name, val_color = self._popargs(kwargs)
         if ID is not None and picker_name == "default":
             if ind is None:
-                pos = self.m._get_xy_from_ID(ID)
+                pos = self.m._data_manager._get_xy_from_ID(ID)
             else:
-                pos = self.m._get_xy_from_index(ind)
+                pos = self.m._data_manager._get_xy_from_index(ind)
             pos_crs = "in"
         else:
             pos_crs = "out"

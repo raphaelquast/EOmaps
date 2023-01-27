@@ -3339,205 +3339,6 @@ class Maps(object):
 
         return z_data, xorig, yorig, ids, parameter
 
-    def _prepare_data(
-        self,
-        data=None,
-        in_crs=None,
-        plot_crs=None,
-        radius=None,
-        radius_crs=None,
-        cpos=None,
-        cpos_radius=None,
-        parameter=None,
-        x=None,
-        y=None,
-        buffer=None,
-        assume_sorted=True,
-    ):
-        if in_crs is None:
-            in_crs = self.data_specs.crs
-        if cpos is None:
-            cpos = self.data_specs.cpos
-        if cpos_radius is None:
-            cpos_radius = self.data_specs.cpos_radius
-
-        props = dict()
-        # get coordinate transformation from in_crs to plot_crs
-        # make sure to re-identify the CRS with pyproj to correctly skip re-projection
-        # in case we use in_crs == plot_crs
-
-        crs1 = CRS.from_user_input(in_crs)
-        crs2 = CRS.from_user_input(self._crs_plot)
-
-        # identify the provided data and get it in the internal format
-        z_data, xorig, yorig, ids, parameter = self._identify_data(
-            data=data, x=x, y=y, parameter=parameter
-        )
-
-        if cpos is not None and cpos != "c":
-            # fix position of pixel-center in the input-crs
-            assert (
-                cpos_radius is not None
-            ), "you must specify a 'cpos_radius if 'cpos' is not 'c'"
-            if isinstance(cpos_radius, (list, tuple)):
-                rx, ry = cpos_radius
-            else:
-                rx = ry = cpos_radius
-
-            xorig, yorig = self._set_cpos(xorig, yorig, rx, ry, cpos)
-
-        # invoke the shape-setter to make sure a shape is set
-        used_shape = self.shape
-
-        # --------- sort by coordinates
-        # this is required to avoid glitches in "raster" and "shade_raster"
-        # since QuadMesh requires sorted coordinates!
-        # (currently only implemented for 1D coordinates and 2D data)
-
-        if assume_sorted is False:
-            if used_shape.name in ["raster", "shade_raster"]:
-                if (
-                    len(xorig.shape) == 1
-                    and len(yorig.shape) == 1
-                    and len(z_data.shape) == 2
-                ):
-
-                    xs, ys = np.argsort(xorig), np.argsort(yorig)
-                    np.take(xorig, xs, out=xorig, mode="wrap")
-                    np.take(yorig, ys, out=yorig, mode="wrap")
-                    np.take(
-                        np.take(z_data, xs, 0),
-                        indices=ys,
-                        axis=1,
-                        out=z_data,
-                        mode="wrap",
-                    )
-                else:
-                    print(
-                        "EOmaps: using 'assume_sorted=False' is only possible"
-                        + "if you use 1D coordinates + 2D data!"
-                        + "...continuing without sorting."
-                    )
-            else:
-                print(
-                    "EOmaps: using 'assume_sorted=False' is only relevant for "
-                    + "the shapes ['raster', 'shade_raster']! "
-                    + "...continuing without sorting."
-                )
-
-        if crs1 == crs2:
-            if used_shape.name not in ["shade_raster"]:
-                # convert 1D data to 2D (required for all shapes but shade_raster)
-                if (
-                    len(xorig.shape) == 1
-                    and len(yorig.shape) == 1
-                    and len(z_data.shape) == 2
-                ):
-
-                    xorig, yorig = np.meshgrid(xorig, yorig, copy=False)
-                    z_data = z_data.T
-
-            x0, y0 = xorig, yorig
-
-        else:
-            # transform center-points to the plot_crs
-            transformer = Transformer.from_crs(
-                crs1,
-                crs2,
-                always_xy=True,
-            )
-            # convert 1D data to 2D to make sure re-projection is correct
-            if (
-                len(xorig.shape) == 1
-                and len(yorig.shape) == 1
-                and len(z_data.shape) == 2
-            ):
-                xorig, yorig = np.meshgrid(xorig, yorig, copy=False)
-                z_data = z_data.T
-
-            x0, y0 = transformer.transform(xorig, yorig)
-
-        # use np.asanyarray to ensure that the output is a proper numpy-array
-        # (relevant for categorical dtypes in pandas.DataFrames)
-        props["xorig"] = np.asanyarray(xorig)
-        props["yorig"] = np.asanyarray(yorig)
-        props["ids"] = ids
-        props["z_data"] = np.asanyarray(z_data)
-        props["x0"] = np.asanyarray(x0)
-        props["y0"] = np.asanyarray(y0)
-
-        # remember shapes for later use
-        self._xshape = props["x0"].shape
-        self._yshape = props["y0"].shape
-        self._zshape = props["z_data"].shape
-
-        if len(self._xshape) == 1 and len(self._yshape) == 1 and len(self._zshape) == 2:
-            self._1D2D = True
-        else:
-            self._1D2D = False
-
-        return props
-
-    def _get_xy_from_index(self, ind, reprojected=False):
-        if self._1D2D:
-            xind, yind = np.unravel_index(ind, self._zshape)
-        else:
-            xind = yind = ind
-
-        if reprojected:
-            return (self._data_manager.x0.flat[xind], self._data_manager.y0.flat[yind])
-        else:
-            return (
-                self._data_manager.xorig.flat[xind],
-                self._data_manager.yorig.flat[yind],
-            )
-
-    def _get_xy_from_ID(self, ID, reprojected=False):
-        ind = self._get_ind(ID)
-        if self._1D2D:
-            xind, yind = np.unravel_index(ind, self._zshape)
-        else:
-            xind = yind = ind
-
-        if reprojected:
-            return (self._data_manager.x0.flat[xind], self._data_manager.y0.flat[yind])
-        else:
-            return (
-                self._data_manager.xorig.flat[xind],
-                self._data_manager.yorig.flat[yind],
-            )
-
-    def _get_ind(self, ID):
-        """
-        Identify the numerical data-index from a given ID
-
-        Parameters
-        ----------
-        ID : single ID or list of IDs
-            The IDs to search for.
-
-        Returns
-        -------
-        ind : any
-            The corresponding (flat) data-index.
-        """
-        ids = self._data_manager.ids
-
-        ID = np.atleast_1d(ID)
-        if isinstance(ids, range):
-            # if "ids" is range-like, so is "ind", therefore we can simply
-            # select the values.
-            inds = [ids[i] for i in ID]
-        if isinstance(ids, list):
-            # for lists, using .index to identify the index
-            inds = [ids.index(i) for i in ID]
-        elif isinstance(ids, np.ndarray):
-            inds = np.flatnonzero(np.isin(ids, ID))
-        else:
-            ID = None
-
-        return inds
-
     def inherit_classification(self, m):
         """
         Use the classification of another Maps-object when plotting the data.
@@ -3623,11 +3424,13 @@ class Maps(object):
             )
 
             classified = True
-
-            mapc = getattr(mapclassify, classify_specs.scheme)(
-                z_data[~np.isnan(z_data)], **classify_specs
-            )
-            bins = mapc.bins
+            if self.classify_specs.scheme == "UserDefined":
+                bins = self.classify_specs.bins
+            else:
+                mapc = getattr(mapclassify, classify_specs.scheme)(
+                    z_data[~np.isnan(z_data)], **classify_specs
+                )
+                bins = mapc.bins
             if vmin < min(bins):
                 bins = [vmin, *bins]
 
@@ -3848,25 +3651,6 @@ class Maps(object):
 
         scheme.__doc__ = s.__doc__
         return scheme
-
-    def _set_cpos(self, x, y, radiusx, radiusy, cpos):
-        # use x = x + ...   instead of x +=  to allow casting from int to float
-        if cpos == "c":
-            pass
-        elif cpos == "ll":
-            x = x + radiusx
-            y = y + radiusy
-        elif cpos == "ul":
-            x = x + radiusx
-            y = y - radiusy
-        elif cpos == "lr":
-            x = x - radiusx
-            y = y + radiusy
-        elif cpos == "ur":
-            x = x - radiusx
-            y = y - radiusx
-
-        return x, y
 
     def _plot_map(
         self,
@@ -4093,7 +3877,7 @@ class Maps(object):
         y0 = self._data_manager.y0.squeeze()
 
         # the shape is always set after _prepare data!
-        if self.shape.name == "shade_points" and not self._1D2D:
+        if self.shape.name == "shade_points" and self._data_manager.x0_1D is None:
             assert (
                 _register_pandas()
             ), f"EOmaps: missing dependency 'pandas' for {self.shape.name}"

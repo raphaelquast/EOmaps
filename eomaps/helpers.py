@@ -194,15 +194,18 @@ class searchtree:
         # select a rectangle around the pick-coordinates
         # (provides tremendous speedups for very large datasets)
 
-        # get a rectangular boolean mask
-        mx = np.logical_and(
-            self._m._data_manager.x0 > (x[0] - d), self._m._data_manager.x0 < (x[0] + d)
-        )
-        my = np.logical_and(
-            self._m._data_manager.y0 > (x[1] - d), self._m._data_manager.y0 < (x[1] + d)
-        )
+        if self._m._data_manager.x0_1D is not None:
+            # TODO check this!
+            # get a rectangular boolean mask
+            mx = np.logical_and(
+                self._m._data_manager.x0_1D > (x[0] - d),
+                self._m._data_manager.x0_1D < (x[0] + d),
+            )
+            my = np.logical_and(
+                self._m._data_manager.y0_1D > (x[1] - d),
+                self._m._data_manager.y0_1D < (x[1] + d),
+            )
 
-        if self._m._1D2D:
             mx_id, my_id = np.where(mx)[0], np.where(my)[0]
             m_rect_x, m_rect_y = np.meshgrid(mx_id, my_id)
 
@@ -212,6 +215,16 @@ class searchtree:
             # get the unravelled indexes of the boolean mask
             idx = np.ravel_multi_index((m_rect_x, m_rect_y), self._m._zshape).ravel()
         else:
+            # get a rectangular boolean mask
+            mx = np.logical_and(
+                self._m._data_manager.x0 > (x[0] - d),
+                self._m._data_manager.x0 < (x[0] + d),
+            )
+            my = np.logical_and(
+                self._m._data_manager.y0 > (x[1] - d),
+                self._m._data_manager.y0 < (x[1] + d),
+            )
+
             m = np.logical_and(mx, my)
             # get the indexes of the search-rectangle
             idx = np.where(m.ravel())[0]
@@ -264,25 +277,63 @@ class searchtree:
 
         i = None
         # take care of 1D coordinates and 2D data
-        if self._m._1D2D:
-            if k == 1:
-                # just perform a brute-force search for 1D coords
-                ix = np.argmin(np.abs(self._m._data_manager.x0 - x[0]))
-                iy = np.argmin(np.abs(self._m._data_manager.y0 - x[1]))
-
-                i = np.ravel_multi_index((ix, iy), self._m._zshape)
+        if self._m._data_manager.x0_1D is not None:
+            if k > 1 and pick_relative_to_closest is True:
+                ix = np.argmin(np.abs(self._m._data_manager.x0_1D - x[0]))
+                iy = np.argmin(np.abs(self._m._data_manager.y0_1D - x[1]))
+                # query again (starting from the closest point)
+                return self.query(
+                    (self._m._data_manager.x0_1D[ix], self._m._data_manager.y0_1D[iy]),
+                    k=k,
+                    d=d,
+                    pick_relative_to_closest=False,
+                )
             else:
-                if pick_relative_to_closest is True:
-                    ix = np.argmin(np.abs(self._m._data_manager.x0 - x[0]))
-                    iy = np.argmin(np.abs(self._m._data_manager.y0 - x[1]))
+                # perform a brute-force search for 1D coords
+                ix = np.argpartition(
+                    np.abs(self._m._data_manager.x0_1D - x[0]), range(k)
+                )[:k]
+                iy = np.argpartition(
+                    np.abs(self._m._data_manager.y0_1D - x[1]), range(k)
+                )[:k]
 
-                    # query again (starting from the closest point)
-                    return self.query(
-                        (self._m._data_manager.x0[ix], self._m._data_manager.y0[iy]),
-                        k=k,
-                        d=d,
-                        pick_relative_to_closest=False,
+                if k > 1:
+                    # select a circle within the kxk rectangle
+                    ix, iy = np.meshgrid(ix, iy)
+                    idx = np.ravel_multi_index(
+                        (ix, iy),
+                        (
+                            self._m._data_manager.x0_1D.size,
+                            self._m._data_manager.y0_1D.size,
+                        ),
+                    ).ravel()
+
+                    x_rect, y_rect = (
+                        i.ravel()
+                        for i in (
+                            self._m._data_manager.x0_1D[ix],
+                            self._m._data_manager.y0_1D[iy],
+                        )
                     )
+
+                    i = idx[
+                        ((x_rect - x[0]) ** 2 + (y_rect - x[1]) ** 2).argpartition(
+                            range(int(min(k, x_rect.size)))
+                        )[:k]
+                    ]
+
+                else:
+                    ix = np.argmin(np.abs(self._m._data_manager.x0_1D - x[0]))
+                    iy = np.argmin(np.abs(self._m._data_manager.y0_1D - x[1]))
+                    i = np.ravel_multi_index(
+                        (ix, iy),
+                        (
+                            self._m._data_manager.x0_1D.size,
+                            self._m._data_manager.y0_1D.size,
+                        ),
+                    )
+
+                return i
 
         x_rect, y_rect, idx = self._identify_search_subset(x, d)
         if len(idx) > 0:

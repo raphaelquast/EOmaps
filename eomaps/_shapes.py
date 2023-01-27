@@ -124,32 +124,27 @@ class shapes(object):
 
     @staticmethod
     def _estimate_radius(m, radius_crs, method=np.median):
-        if radius_crs == "in":
-            x, y = m._data_manager.xorig, m._data_manager.yorig
-        elif radius_crs == "out":
-            x, y = m._data_manager.x0, m._data_manager.y0
+
+        assert radius_crs in [
+            "in",
+            "out",
+        ], "radius can only be estimated if radius_crs is 'in' or 'out'!"
+
+        if m._data_manager.x0_1D is not None:
+            x, y = m._data_manager.x0_1D, m._data_manager.y0_1D
         else:
-            raise AssertionError(
-                "radius can only be estimated if radius_crs is 'in' or 'out'!"
-            )
+            if radius_crs == "in":
+                x, y = m._data_manager.xorig, m._data_manager.yorig
+            elif radius_crs == "out":
+                x, y = m._data_manager.x0, m._data_manager.y0
 
         radius = None
         # try to estimate radius for 2D datasets
-        if len(m._xshape) == 2 and len(m._yshape) == 2:
+        if len(x.shape) == 2 and len(y.shape) == 2:
             userange = int(np.sqrt(m.set_shape._radius_estimation_range))
 
-            radiusx = (
-                np.nanmedian(
-                    np.diff(x.reshape(m._xshape)[:userange, :userange], axis=1)
-                )
-                / 2
-            )
-            radiusy = (
-                np.nanmedian(
-                    np.diff(y.reshape(m._yshape)[:userange, :userange], axis=0)
-                )
-                / 2
-            )
+            radiusx = np.nanmedian(np.diff(x[:userange, :userange], axis=1)) / 2
+            radiusy = np.nanmedian(np.diff(y[:userange, :userange], axis=0)) / 2
 
             radius = (radiusx, radiusy)
 
@@ -162,7 +157,7 @@ class shapes(object):
             from scipy.spatial import cKDTree
 
             # take care of 2D data with 1D coordinates
-            if m._1D2D:
+            if m._data_manager.x0_1D is not None:
                 userange = int(np.sqrt(m.set_shape._radius_estimation_range))
                 x, y = np.meshgrid(x[:userange], y[:userange])
                 x, y = x.flat, y.flat
@@ -201,7 +196,7 @@ class shapes(object):
             if any(use_dy):
                 radiusy = method(d[:, 1][use_dy]) / 2
             else:
-                radiusx = np.nan
+                radiusy = np.nan
 
             rxOK = np.isfinite(radiusx) and (radiusx > 0)
             ryOK = np.isfinite(radiusy) and (radiusy > 0)
@@ -756,8 +751,6 @@ class shapes(object):
                 for i, (x, y) in enumerate(zip(xs, ys))
                 if mask[i]
             )
-
-            # verts = np.ma.stack((xs, ys)).T.swapaxes(0, 1)
 
             color_and_array = shapes._get_colors_and_array(kwargs, mask)
             # remember masked points
@@ -1350,7 +1343,6 @@ class shapes(object):
                         pass
                     else:
                         color_and_array[key] = np.tile(val, 6)
-
                 coll = TriMesh(
                     tri,
                     # transOffset=self._m.ax.transData,
@@ -1654,9 +1646,15 @@ class shapes(object):
                 rx = abs(dx[np.isfinite(dx)][0]) / 2
                 ry = abs(dy[np.isfinite(dy)][0]) / 2
 
-            self._radius = rx, ry
-            p = x, y
+            assert rx != 0 and ry != 0, (
+                "EOmaps: it seems the radius of the raster-data is 0... "
+                "Are the coordinates transposed?"
+            )
 
+            self._radius = rx, ry
+            # TODO switch to estimating the radius?
+            # rx, ry = self.radius
+            p = x, y
             in_crs = self._m.get_crs(crs)
 
             # transform corner-points

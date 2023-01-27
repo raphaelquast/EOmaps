@@ -1288,9 +1288,15 @@ class cb_pick_container(_click_container):
         )
 
         if index is not None:
-            pos = self._m._get_xy_from_index(index, reprojected=True)
+            pos = self._m._data_manager._get_xy_from_index(index, reprojected=True)
             ID = self._get_id(index)
-            val = self._m._data_manager.z_data.flat[index]
+
+            # TODO check proper treatment of transposed data!
+            if self._m._data_manager._z_transposed:
+                val = self._m._data_manager.z_data.T.flat[index]
+            else:
+                val = self._m._data_manager.z_data.flat[index]
+
             try:
                 val_color = artist.cmap(artist.norm(val))
             except Exception:
