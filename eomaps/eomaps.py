@@ -2820,23 +2820,32 @@ class Maps(object):
 
     def redraw(self):
         """
-        Force a re-draw of all cached background layers.
-        This will make sure that actions not managed by EOmaps are also properly drawn.
+        Force a re-draw of the current layer and all cached background layers.
 
-        - Use this at the very end of your code to trigger a final re-draw!
+        - Use this at the very end of your code to trigger a final re-draw
+          to make sure artists not managed by EOmaps are properly drawn!
 
         Note
         ----
-        Don't use this in an interactive context since it will trigger a re-draw
-        of all background-layers!
+        Don't use this to interactively update artists on a map!
+        since it will trigger a re-draw of all background-layers!
 
-        To make an artist dynamically updated if you interact with the map, use:
+        To dynamically re-draw an artist whenever you interact with the map, use:
 
         >>> m.BM.add_artist(artist)
+
+        To make an artist temporary (e.g. remove it on the next event), use
+        one of :
+
+        >>> m.cb.click.add_temporary_artist(artist)
+        >>> m.cb.pick.add_temporary_artist(artist)
+        >>> m.cb.keypress.add_temporary_artist(artist)
+        >>> m.cb.move.add_temporary_artist(artist)
         """
 
         self.BM._refetch_bg = True
-        self.BM.canvas.draw()
+        self._data_manager.last_extent = None
+        self.BM.on_draw(None)
 
     @wraps(GridSpec.update)
     def subplots_adjust(self, **kwargs):
