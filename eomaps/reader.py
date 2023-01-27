@@ -424,23 +424,15 @@ class read_file:
                     + f"Available variables: {list(ncfile)}"
                 )
 
-            # 1D coordinates + 2D data expects transposed data!
-            transpose = False
-            if data.dims != x.dims or data.dims != x.dims:
-                if (len(data.dims) == 2 and len(x.dims) == 1 and len(y.dims) == 1) and (
-                    data.dims[0] == x.dims[0] and data.dims[1] == y.dims[0]
-                ):
-                    x, y = y, x
-                    transpose = True
-                elif (
-                    len(data.dims) == 2 and len(x.dims) == 1 and len(y.dims) == 1
-                ) and (data.dims[0] == y.dims[0] and data.dims[1] == x.dims[0]):
-                    transpose = True
-                else:
-                    raise AssertionError(
-                        "EOmaps: Invalid dimensions of data and coordinates!\n"
-                        + f"data: {data.dims},  x: {x.dims}, y: {y.dims}"
-                    )
+            check_shapes = data.shape == (x.size, y.size) or (
+                data.shape == x.shape and data.shape == y.shape
+            )
+
+            if not check_shapes:
+                raise AssertionError(
+                    "EOmaps: Invalid dimensions of data and coordinates!\n"
+                    + f"data: {data.shape},  x: {x.shape}, y: {y.shape}"
+                )
 
             # only use masked arrays if mask_and_scale is False!
             # (otherwise the mask is already applied as NaN's in the float-array)
@@ -462,7 +454,7 @@ class read_file:
 
             if set_data is not None:
                 set_data.set_data(
-                    data=data.T if transpose else data,
+                    data=data,
                     x=x.values,
                     y=y.values,
                     crs=data_crs,
@@ -471,7 +463,7 @@ class read_file:
                 )
             else:
                 return dict(
-                    data=data.T if transpose else data,
+                    data=data,
                     x=x.values,
                     y=y.values,
                     crs=data_crs,
