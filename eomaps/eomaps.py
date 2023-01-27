@@ -677,6 +677,9 @@ class Maps(object):
             ax=self.ax,
             layer=layer,
         )
+        # make sure the new layer does not attempt to reset the extent if
+        # it has already been set on the parent layer
+        m._set_extent_on_plot = self._set_extent_on_plot
 
         # re-initialize all sliders and buttons to include the new layer
         self.util._reinit_widgets()
@@ -2465,6 +2468,10 @@ class Maps(object):
                 indicate_masked_points=indicate_masked_points,
             )
 
+            # dont set extent if "m.set_extent" was called explicitly
+            if set_extent and self._set_extent_on_plot:
+                self._data_manager._set_lims()
+
             self._shade_map(
                 layer=layer,
                 dynamic=dynamic,
@@ -2480,6 +2487,7 @@ class Maps(object):
                 indicate_masked_points=indicate_masked_points,
             )
 
+            # dont set extent if "m.set_extent" was called explicitly
             if set_extent and self._set_extent_on_plot:
                 self._data_manager._set_lims()
 
