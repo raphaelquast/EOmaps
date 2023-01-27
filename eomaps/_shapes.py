@@ -94,7 +94,7 @@ class shapes(object):
             if m._estimated_radius is None:
                 # make sure props are defined otherwise we can't estimate the radius!
                 if m._data_manager.x0 is None:
-                    m._data_manager.set_props()
+                    m._data_manager.set_props(None)
 
                 print("EOmaps: estimating radius...")
                 radiusx, radiusy = shapes._estimate_radius(m, radius_crs)
