@@ -520,7 +520,9 @@ class TestBasicPlotting(unittest.TestCase):
         m = Maps()
         m.data = self.data
         m.set_data_specs(x="x", y="y", crs=3857, parameter="value")
-        data = m._prepare_data()
+        data = m._data_manager._prepare_data()
+
+        # TODO add proper checks here!
         plt.close("all")
 
     def test_layout_editor(self):
