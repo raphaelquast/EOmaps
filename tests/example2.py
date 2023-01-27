@@ -68,13 +68,13 @@ m2.cb.click.attach.annotate(text="callbacks are layer-sensitive!")
 for m in mg:
     m.cb.pick.attach.mark(fc="r", ec="none", buffer=1, permanent=True)
     m.cb.pick.attach.mark(fc="none", ec="r", lw=1, buffer=5, permanent=True)
-    m.cb.click.attach.mark(fc="none", ec="k", lw=2, buffer=10, permanent=False)
+    m.cb.move.attach.mark(fc="none", ec="k", lw=2, buffer=10, permanent=False)
 
 # add an annotation-callback to the second map
 mg.m_0_1.cb.pick.attach.annotate(text="the closest point is here!", zorder=99)
 
 # share click & pick-events between all Maps-objects of the MapsGrid
-mg.share_click_events()
+mg.share_move_events()
 mg.share_pick_events()
 
 # --------- add a layer-selector widget
