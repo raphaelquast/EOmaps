@@ -85,8 +85,23 @@ class _click_callbacks(object):
 
         return ID, pos, val, ind, picker_name, val_color
 
+    @staticmethod
+    def _fmt(x, **kwargs):
+        # make sure to format arrays with "," separator to make them
+        # copy-pasteable
+        kwargs.setdefault("separator", ",")
+        try:
+            return np.array2string(np.asanyarray(x), **kwargs)
+        except Exception:
+            return str(x)
+
     def print_to_console(self, **kwargs):
-        """Print details on the clicked pixel to the console"""
+        """
+        Print details on the clicked pixel to the console.
+
+        Additional kwargs are passed to `numpy.array2string()`
+        to control the formatting of the printed values.
+        """
         ID, pos, val, ind, picker_name, val_color = self._popargs(kwargs)
 
         if isinstance(self.m.data_specs.x, str):
@@ -97,24 +112,28 @@ class _click_callbacks(object):
             ylabel = "y"
 
         if ID is not None:
-            printstr = "---------------\n"
             x, y = pos
-            printstr += f"{xlabel} = {x}\n{ylabel} = {y}\n"
-            printstr += f"ID = {ID}\n"
+
+            printstr = (
+                "---------------\n"
+                f"{xlabel} = {self._fmt(x, **kwargs)}\n"
+                f"{ylabel} = {self._fmt(y, **kwargs)}\n"
+                f"ID = {self._fmt(ID, **kwargs)}\n"
+            )
 
             paramname = self.m.data_specs.parameter
             if paramname is None:
                 paramname = "val"
-            printstr += f"{paramname} = {val}"
+            printstr += f"{paramname} = {self._fmt(val)}"
         else:
             lon, lat = self.m._transf_plot_to_lonlat.transform(*pos)
 
             printstr = (
                 "---------------\n"
-                f"x = {pos[0]}\n"
-                f"y = {pos[1]}\n"
-                f"lon = {lon}\n"
-                f"lat = {lat}"
+                f"x = {self._fmt(pos[0], **kwargs)}\n"
+                f"y = {self._fmt(pos[1], **kwargs)}\n"
+                f"lon = {self._fmt(lon, **kwargs)}\n"
+                f"lat = {self._fmt(lat, **kwargs)}"
             )
 
         print(printstr)
@@ -473,11 +492,14 @@ class _click_callbacks(object):
 
         if shape is None:
             if self.m.shape is not None:
-                shape = (
-                    self.m.shape.name
-                    if (self.m.shape.name in possible_shapes)
-                    else "ellipses"
-                )
+                m_shape = self.m.shape.name
+                print(m_shape)
+                if m_shape in possible_shapes:
+                    shape = m_shape
+                elif m_shape in ["raster", "shade_raster"]:
+                    shape = "rectangles"
+                else:
+                    shape = "ellipses"
             else:
                 "ellipses"
         else:
