@@ -493,7 +493,6 @@ class _click_callbacks(object):
         if shape is None:
             if self.m.shape is not None:
                 m_shape = self.m.shape.name
-                print(m_shape)
                 if m_shape in possible_shapes:
                     shape = m_shape
                 elif m_shape in ["raster", "shade_raster"]:
