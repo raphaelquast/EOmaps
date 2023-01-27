@@ -4486,8 +4486,8 @@ class Maps(object):
             # make sure that we clear the colormap-pixmap cache on startup
             self._companion_widget.cmapsChanged.emit()
 
-        except Exception:
-            print("EOmaps: Unable to initialize companion widget.")
+        except Exception as ex:
+            print("EOmaps: Unable to initialize companion widget.", ex)
 
     @staticmethod
     def _proxy(obj):
