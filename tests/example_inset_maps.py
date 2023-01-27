@@ -45,7 +45,7 @@ m3.add_wms.OpenStreetMap.add_layer.stamen_terrain_background()
 
 # print some data on all of the maps
 
-x, y = np.mgrid[-50:50, -30:70]
+x, y = np.meshgrid(np.linspace(-50, 50, 100), np.linspace(-30, 70, 100))
 data = x + y
 
 for m_i in [m, m2, m3]:

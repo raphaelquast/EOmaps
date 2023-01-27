@@ -5,7 +5,6 @@ import pandas as pd
 import numpy as np
 
 # create some data
-# lon, lat = np.mgrid[-20:40, 30:60]
 lon, lat = np.meshgrid(np.linspace(-20, 40, 50), np.linspace(30, 60, 50))
 
 data = pd.DataFrame(

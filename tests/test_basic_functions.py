@@ -961,7 +961,7 @@ class TestBasicPlotting(unittest.TestCase):
         plt.close(m.f)
 
     def test_alternative_inputs(self):
-        lon, lat = np.mgrid[20:40, 20:50]
+        lon, lat = np.meshgrid(np.linspace(20, 40, 50), np.linspace(10, 50, 20))
         vals = lon + lat
 
         # 2D numpy array
