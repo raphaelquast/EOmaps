@@ -52,6 +52,19 @@ class MarkRadiusLineEdit(QtWidgets.QLineEdit):
             )
 
 
+class PickNPointsLineEdit(QtWidgets.QLineEdit):
+    def enterEvent(self, e):
+        if self.window().showhelp is True:
+            QtWidgets.QToolTip.showText(
+                e.globalPos(),
+                "<h3>Number of points to pick</h3>"
+                "Set the number of nearest datapoints to select "
+                "when executing 'pick' callbacks<p>"
+                "NOTE: If multiple datasets are present on a layer, this is "
+                "assigned for each dataset individually!)",
+            )
+
+
 class MarkPickButton(QtWidgets.QPushButton):
     def enterEvent(self, e):
         if self.window().showhelp is True:
@@ -184,6 +197,15 @@ class ClickCallbacks(QtWidgets.QFrame):
         self.t_click = QtWidgets.QLabel("<b>Click</b> callbacks:")
         self.t_pick = QtWidgets.QLabel("<b>Pick</b> callbacks:")
 
+        # number of points to pick
+        # (init before pick map dropdown to update n)
+        self.n_points_inp = PickNPointsLineEdit()
+        self.n_points_inp.setText(str(self._pick_map.cb.pick._n_ids))
+        self.n_points_inp.setMaximumWidth(30)
+        validator = QtGui.QIntValidator()
+        self.n_points_inp.setValidator(validator)
+        self.n_points_inp.textChanged.connect(self.n_points_changed)
+
         # pick-map dropdown
         self.map_dropdown = PickMapDropdown()
         self.populate_dropdown()
@@ -194,6 +216,7 @@ class ClickCallbacks(QtWidgets.QFrame):
         dropdown_layout = QtWidgets.QHBoxLayout()
         dropdown_layout.addWidget(t_dropdown)
         dropdown_layout.addWidget(self.map_dropdown)
+        dropdown_layout.addWidget(self.n_points_inp)
 
         # Annotate
         b_ann = AnnotateButton("Annotate")
@@ -357,6 +380,11 @@ class ClickCallbacks(QtWidgets.QFrame):
 
         self._pick_map = self.map_dropdown.itemData(index)
         self.reattach_pick_callbacks()
+
+        # update number of picked points to reflect value of selected dataset
+        self.n_points_inp.setText(str(self._pick_map.cb.pick._n_ids))
+        self.n_points_changed()
+
         self.update_buttons()
 
     def on_layer_change(self, *args, **kwargs):
@@ -444,6 +472,17 @@ class ClickCallbacks(QtWidgets.QFrame):
             return
         self._kwargs["mark"]["radius"] = radius
         self.attach_callback("mark")
+        self.update_buttons()
+
+    @pyqtSlot()
+    def n_points_changed(self):
+        try:
+            n = int(self.n_points_inp.text())
+        except ValueError:
+            return
+
+        self._pick_map.cb.pick.set_props(n)
+
         self.update_buttons()
 
     def button_clicked(self, key):
