@@ -285,12 +285,16 @@ class _click_callbacks(object):
 
                     if val is not None:
                         val = np.array(val, dtype=float)  # to handle None
-                        mi = np.format_float_positional(
-                            np.nanmin(val), trim="-", precision=pos_precision
-                        )
-                        ma = np.format_float_positional(
-                            np.nanmax(val), trim="-", precision=pos_precision
-                        )
+
+                        # catch warnings here to avoid showing "all-nan-slice"
+                        # all the time when clicking on empty pixels
+                        with warnings.catch_warnings():
+                            mi = np.format_float_positional(
+                                np.nanmin(val), trim="-", precision=pos_precision
+                            )
+                            ma = np.format_float_positional(
+                                np.nanmax(val), trim="-", precision=pos_precision
+                            )
                         val = f"{mi}...{ma}"
 
                 equal_crs = self.m.data_specs.crs != self.m._crs_plot
