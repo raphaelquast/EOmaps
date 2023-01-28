@@ -92,5 +92,5 @@ m3.set_inset_position(x=0.3)
 
 # share pick events
 for mi in [m, m2, m3]:
-    mi.cb.pick.attach.annotate(text=lambda ID, val, **kwargs: f"ID={ID}, val={val}")
+    mi.cb.pick.attach.annotate(text=lambda ID, val, **kwargs: f"ID={ID}, val={val:.2f}")
 m.cb.pick.share_events(m2, m3)
