@@ -222,7 +222,7 @@ class DataManager:
             ):
                 xorig, yorig = np.meshgrid(xorig, yorig, copy=False)
                 z_data = z_data.T
-                # self._z_transposed = True
+                self._z_transposed = True
 
             x0, y0 = transformer.transform(xorig, yorig)
 
@@ -619,12 +619,13 @@ class DataManager:
 
         Returns
         -------
-        (x, y) : a tuple of x- and y- coordinate arrays
+        (x, y) : tuple of x- and y- coordinate arrays
 
         """
         if self.x0_1D is not None:
+            # TODO check treatment of transposed data
             # unravel indices since data is 2D
-            xind, yind = np.unravel_index(ind, (self.x0_1D.size, self.y0_1D.size))
+            yind, xind = np.unravel_index(ind, (self.y0_1D.size, self.x0_1D.size))
             # 1D coordinates are only possible if input crs == plot crs!
             return self.x0_1D[xind], self.y0_1D[yind]
         else:
@@ -640,6 +641,51 @@ class DataManager:
                 self.xorig.flat[xind],
                 self.yorig.flat[yind],
             )
+
+    def _get_val_from_index(self, ind):
+        """
+        Get x and y coordinates from a list of numerical data indexes
+
+        Parameters
+        ----------
+        ind : array-like
+            a list of indexes
+
+        Returns
+        -------
+        val : array of the corresponding data values
+
+        """
+        val = self.z_data.flat[ind]
+
+        return val
+
+    def _get_id_from_index(self, ind):
+        """
+        Identify the ID from a 1D list or range object or a numpy.ndarray
+        (to avoid very large numpy-arrays if no explicit IDs are provided)
+
+        Parameters
+        ----------
+        ind : int or list of int
+            The index of the flattened array.
+
+        Returns
+        -------
+        val : array of the correspondint IDs
+
+        """
+        ids = self.ids
+        if isinstance(ids, (list, range)):
+            ind = np.atleast_1d(ind).tolist()  # to treat numbers and lists
+            ID = np.array([ids[i] for i in ind])
+            if len(ID) == 1:
+                ID = ID[0]
+        elif isinstance(ids, np.ndarray):
+            ID = ids.flat[ind]
+        else:
+            ID = None
+        return ID
 
     def _get_xy_from_ID(self, ID, reprojected=False):
         """
@@ -661,10 +707,10 @@ class DataManager:
         if isinstance(ids, range):
             # if "ids" is range-like, so is "ind", therefore we can simply
             # select the values.
-            inds = [ids[i] for i in ID]
+            inds = np.array([ids[i] for i in ID])
         if isinstance(ids, list):
             # for lists, using .index to identify the index
-            inds = [ids.index(i) for i in ID]
+            inds = np.array([ids.index(i) for i in ID])
         elif isinstance(ids, np.ndarray):
             inds = np.flatnonzero(np.isin(ids, ID))
         else:

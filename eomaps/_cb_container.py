@@ -1289,13 +1289,8 @@ class cb_pick_container(_click_container):
 
         if index is not None:
             pos = self._m._data_manager._get_xy_from_index(index, reprojected=True)
-            ID = self._get_id(index)
-
-            # TODO check proper treatment of transposed data!
-            if self._m._data_manager._z_transposed:
-                val = self._m._data_manager.z_data.T.flat[index]
-            else:
-                val = self._m._data_manager.z_data.flat[index]
+            val = self._m._data_manager._get_val_from_index(index)
+            ID = self._m._data_manager._get_id_from_index(index)
 
             try:
                 val_color = artist.cmap(artist.norm(val))
@@ -1317,33 +1312,6 @@ class cb_pick_container(_click_container):
             return True, dict(ind=None, dblclick=event.dblclick, button=event.button)
 
         return False, None
-
-    def _get_id(self, ind):
-        """
-        Identify the ID from a 1D list or range object or a numpy.ndarray
-        (to avoid very large numpy-arrays if no explicit IDs are provided)
-
-        Parameters
-        ----------
-        ind : int or list of int
-            The index of the flattened array.
-
-        Returns
-        -------
-        ID : any
-            The corresponding data-ID.
-        """
-        ids = self._m._data_manager.ids
-        if isinstance(ids, (list, range)):
-            ind = np.atleast_1d(ind).tolist()  # to treat numbers and lists
-            ID = [ids[i] for i in ind]
-            if len(ID) == 1:
-                ID = ID[0]
-        elif isinstance(ids, np.ndarray):
-            ID = ids.flat[ind]
-        else:
-            ID = None
-        return ID
 
     def _get_pickdict(self, event):
         event_ind = event.ind

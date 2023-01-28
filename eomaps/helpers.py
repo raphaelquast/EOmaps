@@ -274,7 +274,6 @@ class searchtree:
         """
         if d is None:
             d = self.d
-
         i = None
         # take care of 1D coordinates and 2D data
         if self._m._data_manager.x0_1D is not None:
@@ -289,6 +288,7 @@ class searchtree:
                     pick_relative_to_closest=False,
                 )
             else:
+
                 # perform a brute-force search for 1D coords
                 ix = np.argpartition(
                     np.abs(self._m._data_manager.x0_1D - x[0]), range(k)
@@ -300,11 +300,12 @@ class searchtree:
                 if k > 1:
                     # select a circle within the kxk rectangle
                     ix, iy = np.meshgrid(ix, iy)
+
                     idx = np.ravel_multi_index(
-                        (ix, iy),
+                        (iy, ix),
                         (
-                            self._m._data_manager.x0_1D.size,
                             self._m._data_manager.y0_1D.size,
+                            self._m._data_manager.x0_1D.size,
                         ),
                     ).ravel()
 
@@ -325,11 +326,13 @@ class searchtree:
                 else:
                     ix = np.argmin(np.abs(self._m._data_manager.x0_1D - x[0]))
                     iy = np.argmin(np.abs(self._m._data_manager.y0_1D - x[1]))
+
+                    # TODO check treatment of transposed data in here!
                     i = np.ravel_multi_index(
-                        (ix, iy),
+                        (iy, ix),
                         (
-                            self._m._data_manager.x0_1D.size,
                             self._m._data_manager.y0_1D.size,
+                            self._m._data_manager.x0_1D.size,
                         ),
                     )
 
