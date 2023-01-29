@@ -2468,10 +2468,6 @@ class Maps(object):
                 indicate_masked_points=indicate_masked_points,
             )
 
-            # dont set extent if "m.set_extent" was called explicitly
-            if set_extent and self._set_extent_on_plot:
-                self._data_manager._set_lims()
-
             self._shade_map(
                 layer=layer,
                 dynamic=dynamic,
@@ -3163,49 +3159,6 @@ class Maps(object):
 
         m.ax.callbacks.connect("xlim_changed", parent_xlims_change)
         m.ax.callbacks.connect("ylim_changed", parent_ylims_change)
-
-    def _get_inset_boundary(self, x, y, xy_crs, radius, radius_crs, shape, n=100):
-        """
-        get inset map boundary
-        """
-
-        shp = self.set_shape._get(shape)
-
-        if shape == "ellipses":
-            shp_pts = shp._get_ellipse_points(
-                x=np.atleast_1d(x),
-                y=np.atleast_1d(y),
-                crs=xy_crs,
-                radius=radius,
-                radius_crs=radius_crs,
-                n=n,
-            )
-            bnd_verts = np.stack(shp_pts[:2], axis=2)[0]
-
-        elif shape == "rectangles":
-            shp_pts = shp._get_rectangle_verts(
-                x=np.atleast_1d(x),
-                y=np.atleast_1d(y),
-                crs=xy_crs,
-                radius=radius,
-                radius_crs=radius_crs,
-                n=n,
-            )
-            bnd_verts = shp_pts[0][0]
-
-        elif shape == "geod_circles":
-            shp_pts = shp._get_geod_circle_points(
-                x=np.atleast_1d(x),
-                y=np.atleast_1d(y),
-                crs=xy_crs,
-                radius=radius,
-                # radius_crs=radius_crs,
-                n=n,
-            )
-            bnd_verts = np.stack(shp_pts[:2], axis=2).squeeze()
-        boundary = mpl.path.Path(bnd_verts)
-
-        return boundary, bnd_verts
 
     def _add_child(self, m):
         self.parent._children.add(m)
@@ -3994,7 +3947,7 @@ class Maps(object):
             if self.shape.name == "shade_points":
                 df = df.to_dataframe().reset_index()
 
-        if set_extent is True:
+        if set_extent is True and self._set_extent_on_plot is True:
             # convert to a numpy-array to support 2D indexing with boolean arrays
             x, y = np.asarray(df.x), np.asarray(df.y)
             xf, yf = np.isfinite(x), np.isfinite(y)
@@ -4539,3 +4492,46 @@ class _InsetMaps(Maps):
         )
 
         self.redraw()
+
+    def _get_inset_boundary(self, x, y, xy_crs, radius, radius_crs, shape, n=100):
+        """
+        get inset map boundary
+        """
+
+        shp = self.set_shape._get(shape)
+
+        if shape == "ellipses":
+            shp_pts = shp._get_ellipse_points(
+                x=np.atleast_1d(x),
+                y=np.atleast_1d(y),
+                crs=xy_crs,
+                radius=radius,
+                radius_crs=radius_crs,
+                n=n,
+            )
+            bnd_verts = np.stack(shp_pts[:2], axis=2)[0]
+
+        elif shape == "rectangles":
+            shp_pts = shp._get_rectangle_verts(
+                x=np.atleast_1d(x),
+                y=np.atleast_1d(y),
+                crs=xy_crs,
+                radius=radius,
+                radius_crs=radius_crs,
+                n=n,
+            )
+            bnd_verts = shp_pts[0][0]
+
+        elif shape == "geod_circles":
+            shp_pts = shp._get_geod_circle_points(
+                x=np.atleast_1d(x),
+                y=np.atleast_1d(y),
+                crs=xy_crs,
+                radius=radius,
+                # radius_crs=radius_crs,
+                n=n,
+            )
+            bnd_verts = np.stack(shp_pts[:2], axis=2).squeeze()
+        boundary = mpl.path.Path(bnd_verts)
+
+        return boundary, bnd_verts
