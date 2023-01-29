@@ -21,7 +21,7 @@ m.set_data(
     data=data,  #
     x="lon",
     y="lat",
-    in_crs=4326,
+    crs=4326,
     cpos="c",  # pixel-coordinates represent "center-position" (default)
     cpos_radius=None,  # radius to shift the center-position if "cpos" is not "c"
 )

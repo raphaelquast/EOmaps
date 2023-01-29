@@ -432,11 +432,6 @@ class _click_container(_cb_container):
             if button is None:
                 button = self._parent._default_button
 
-            if self._parent._method == "pick":
-                assert (
-                    self._parent._m.coll is not None
-                ), "you can only attach pick-callbacks after calling `plot_map()`!"
-
             return self._parent._add_callback(
                 callback=f,
                 double_click=double_click,
@@ -606,14 +601,13 @@ class _click_container(_cb_container):
             self._m.cb._click_move._sticky_modifiers = args
 
     def _init_picker(self):
+        assert (
+            self._m.coll is not None
+        ), "you can only attach pick-callbacks after calling `plot_map()`!"
+
         try:
             # Lazily make a plotted dataset pickable a
             if getattr(self._m, "tree", None) is None:
-                assert getattr(self._m, "coll", None) is not None, (
-                    "EOmaps: you MUST call `m.plot_map()` or "
-                    "`m.make_dataset_pickable()` before assigning pick callbacks!"
-                )
-
                 from .helpers import searchtree
 
                 self._m.tree = searchtree(m=self._m._proxy(self._m))
@@ -715,11 +709,11 @@ class _click_container(_cb_container):
             button = self._default_button
 
         if self._method == "pick":
-            assert self._m.coll is not None, (
-                "Pick-callbacks can only be attached AFTER calling `m.plot_map()` "
-                "or `m.make_dataset_pickable()`!"
-            )
-            self._init_picker()
+            if self._m.coll is None:
+                # lazily initialize the picker when the layer is fetched
+                self._m._data_manager._on_next_fetch.append(self._init_picker)
+            else:
+                self._init_picker()
 
         # attach "on_move" callbacks
         movecb_name = None
@@ -1294,9 +1288,10 @@ class cb_pick_container(_click_container):
         )
 
         if index is not None:
-            pos = self._m._get_xy_from_index(index, reprojected=True)
-            ID = self._get_id(index)
-            val = self._m._props["z_data"].flat[index]
+            pos = self._m._data_manager._get_xy_from_index(index, reprojected=True)
+            val = self._m._data_manager._get_val_from_index(index)
+            ID = self._m._data_manager._get_id_from_index(index)
+
             try:
                 val_color = artist.cmap(artist.norm(val))
             except Exception:
@@ -1317,34 +1312,6 @@ class cb_pick_container(_click_container):
             return True, dict(ind=None, dblclick=event.dblclick, button=event.button)
 
         return False, None
-
-    def _get_id(self, ind):
-        """
-        Identify the ID from a 1D list or range object or a numpy.ndarray
-        (to avoid very large numpy-arrays if no explicit IDs are provided)
-
-        Parameters
-        ----------
-        ind : int or list of int
-            The index of the flattened array.
-
-        Returns
-        -------
-        ID : any
-            The corresponding data-ID.
-        """
-
-        ids = self._m._props["ids"]
-        if isinstance(ids, (list, range)):
-            ind = np.atleast_1d(ind).tolist()  # to treat numbers and lists
-            ID = [ids[i] for i in ind]
-            if len(ID) == 1:
-                ID = ID[0]
-        elif isinstance(ids, np.ndarray):
-            ID = ids.flat[ind]
-        else:
-            ID = "?"
-        return ID
 
     def _get_pickdict(self, event):
         event_ind = event.ind
@@ -1549,7 +1516,7 @@ class cb_pick_container(_click_container):
                 dummyevent.ind = pick[1].get("ind", None)
                 dummyevent.val = pick[1].get("val", None)
                 dummyevent.pos = pick[1].get("pos", None)
-
+                dummyevent.val_color = pick[1].get("val_color", None)
             else:
                 dummyevent.ind = None
 

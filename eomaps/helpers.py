@@ -166,7 +166,7 @@ class searchtree:
 
         if isinstance(r, str):
             # evaluate an appropriate pick-distance
-            if getattr(self._m.shape, "radius_crs", "?") != "out":
+            if getattr(self._m.shape, "radius_crs", None) != "out":
                 try:
                     radius = self._m.set_shape._estimate_radius(self._m, "out", np.max)
                 except AssertionError:
@@ -194,31 +194,44 @@ class searchtree:
         # select a rectangle around the pick-coordinates
         # (provides tremendous speedups for very large datasets)
 
-        # get a rectangular boolean mask
-        mx = np.logical_and(
-            self._m._props["x0"] > (x[0] - d), self._m._props["x0"] < (x[0] + d)
-        )
-        my = np.logical_and(
-            self._m._props["y0"] > (x[1] - d), self._m._props["y0"] < (x[1] + d)
-        )
+        if self._m._data_manager.x0_1D is not None:
+            # TODO check this!
+            # get a rectangular boolean mask
+            mx = np.logical_and(
+                self._m._data_manager.x0_1D > (x[0] - d),
+                self._m._data_manager.x0_1D < (x[0] + d),
+            )
+            my = np.logical_and(
+                self._m._data_manager.y0_1D > (x[1] - d),
+                self._m._data_manager.y0_1D < (x[1] + d),
+            )
 
-        if self._m._1D2D:
             mx_id, my_id = np.where(mx)[0], np.where(my)[0]
             m_rect_x, m_rect_y = np.meshgrid(mx_id, my_id)
 
-            x_rect = self._m._props["x0"][m_rect_x].ravel()
-            y_rect = self._m._props["y0"][m_rect_y].ravel()
+            x_rect = self._m._data_manager.x0[m_rect_x].ravel()
+            y_rect = self._m._data_manager.y0[m_rect_y].ravel()
 
             # get the unravelled indexes of the boolean mask
             idx = np.ravel_multi_index((m_rect_x, m_rect_y), self._m._zshape).ravel()
         else:
+            # get a rectangular boolean mask
+            mx = np.logical_and(
+                self._m._data_manager.x0 > (x[0] - d),
+                self._m._data_manager.x0 < (x[0] + d),
+            )
+            my = np.logical_and(
+                self._m._data_manager.y0 > (x[1] - d),
+                self._m._data_manager.y0 < (x[1] + d),
+            )
+
             m = np.logical_and(mx, my)
             # get the indexes of the search-rectangle
             idx = np.where(m.ravel())[0]
 
             if len(idx) > 0:
-                x_rect = self._m._props["x0"][m].ravel()
-                y_rect = self._m._props["y0"][m].ravel()
+                x_rect = self._m._data_manager.x0[m].ravel()
+                y_rect = self._m._data_manager.y0[m].ravel()
             else:
                 x_rect, y_rect = [], []
 
@@ -261,28 +274,69 @@ class searchtree:
         """
         if d is None:
             d = self.d
-
         i = None
         # take care of 1D coordinates and 2D data
-        if self._m._1D2D:
-            if k == 1:
-                # just perform a brute-force search for 1D coords
-                ix = np.argmin(np.abs(self._m._props["x0"] - x[0]))
-                iy = np.argmin(np.abs(self._m._props["y0"] - x[1]))
-
-                i = np.ravel_multi_index((ix, iy), self._m._zshape)
+        if self._m._data_manager.x0_1D is not None:
+            if k > 1 and pick_relative_to_closest is True:
+                ix = np.argmin(np.abs(self._m._data_manager.x0_1D - x[0]))
+                iy = np.argmin(np.abs(self._m._data_manager.y0_1D - x[1]))
+                # query again (starting from the closest point)
+                return self.query(
+                    (self._m._data_manager.x0_1D[ix], self._m._data_manager.y0_1D[iy]),
+                    k=k,
+                    d=d,
+                    pick_relative_to_closest=False,
+                )
             else:
-                if pick_relative_to_closest is True:
-                    ix = np.argmin(np.abs(self._m._props["x0"] - x[0]))
-                    iy = np.argmin(np.abs(self._m._props["y0"] - x[1]))
 
-                    # query again (starting from the closest point)
-                    return self.query(
-                        (self._m._props["x0"][ix], self._m._props["y0"][iy]),
-                        k=k,
-                        d=d,
-                        pick_relative_to_closest=False,
+                # perform a brute-force search for 1D coords
+                ix = np.argpartition(
+                    np.abs(self._m._data_manager.x0_1D - x[0]), range(k)
+                )[:k]
+                iy = np.argpartition(
+                    np.abs(self._m._data_manager.y0_1D - x[1]), range(k)
+                )[:k]
+
+                if k > 1:
+                    # select a circle within the kxk rectangle
+                    ix, iy = np.meshgrid(ix, iy)
+
+                    idx = np.ravel_multi_index(
+                        (iy, ix),
+                        (
+                            self._m._data_manager.y0_1D.size,
+                            self._m._data_manager.x0_1D.size,
+                        ),
+                    ).ravel()
+
+                    x_rect, y_rect = (
+                        i.ravel()
+                        for i in (
+                            self._m._data_manager.x0_1D[ix],
+                            self._m._data_manager.y0_1D[iy],
+                        )
                     )
+
+                    i = idx[
+                        ((x_rect - x[0]) ** 2 + (y_rect - x[1]) ** 2).argpartition(
+                            range(int(min(k, x_rect.size)))
+                        )[:k]
+                    ]
+
+                else:
+                    ix = np.argmin(np.abs(self._m._data_manager.x0_1D - x[0]))
+                    iy = np.argmin(np.abs(self._m._data_manager.y0_1D - x[1]))
+
+                    # TODO check treatment of transposed data in here!
+                    i = np.ravel_multi_index(
+                        (iy, ix),
+                        (
+                            self._m._data_manager.y0_1D.size,
+                            self._m._data_manager.x0_1D.size,
+                        ),
+                    )
+
+                return i
 
         x_rect, y_rect, idx = self._identify_search_subset(x, d)
         if len(idx) > 0:
@@ -1065,6 +1119,8 @@ class BlitManager:
         self._on_add_bg_artist = list()
         self._on_remove_bg_artist = list()
 
+        self._before_fetch_bg_actions = list()
+
     @property
     def figure(self):
         return self._m.f
@@ -1109,10 +1165,6 @@ class BlitManager:
                 for a in artists:
                     self.add_artist(a, layer=layer)
 
-    @property
-    def bg_layer(self):
-        return self._bg_layer
-
     def _get_active_bg(self, exclude_artists=None):
         with self._without_artists(artists=exclude_artists, layer=self.bg_layer):
             # fetch the current background (incl. dynamic artists)
@@ -1120,6 +1172,10 @@ class BlitManager:
             bg = self.canvas.copy_from_bbox(self.figure.bbox)
 
         return bg
+
+    @property
+    def bg_layer(self):
+        return self._bg_layer
 
     @bg_layer.setter
     def bg_layer(self, val):
@@ -1248,99 +1304,84 @@ class BlitManager:
                 layer_artists = self._bg_artists.get(l, [])
                 artists += layer_artists
 
+        artists.sort(key=lambda x: getattr(x, "zorder", -1))
+
         return artists
 
-    def fetch_bg(self, layer=None, bbox=None, overlay=None):
-        # add this to the zorder of the overlay-artists prior to plotting
-        # to ensure that they appear on top of other artists
-        overlay_zorder_bias = 1000
+    def fetch_bg(self, layer=None, bbox=None):
         cv = self.canvas
-        if layer is None:
-            layer = self.bg_layer
-
-        if overlay is None:
-            overlay_name, overlay_layers = "", []
-        else:
-            overlay_name, overlay_layers = overlay
-
-        for l in overlay_layers:
-            self._do_on_layer_change(l)
-
-        allartists = list(chain(*(self.get_bg_artists(i) for i in [layer, "all"])))
-        allartists.sort(key=lambda x: getattr(x, "zorder", -1))
-
-        overlay_artists = list(chain(*(self.get_bg_artists(i) for i in overlay_layers)))
-        overlay_artists.sort(key=lambda x: getattr(x, "zorder", -1))
-
-        for a in overlay_artists:
-            a.zorder += overlay_zorder_bias
-
-        allartists = allartists + overlay_artists
-
-        # check if all artists are stale, and if so skip re-fetching the background
-        # (only if also the axis extent is the same!)
-        newbg = any(art.stale for art in allartists)
-
-        # don't re-fetch the background if it is not necessary
-        if (
-            (not newbg)
-            and (self._bg_layers.get(layer, None) is not None)
-            and (
-                (overlay_name == "")
-                or (self._bg_layers.get(overlay_name, None) is not None)
-            )
-        ):
-            return
-
-        if bbox is None:
-            bbox = self.figure.bbox
 
         # temporarily disconnect draw-event callback to avoid recursion
         # while we re-draw the artists
-
         cv.mpl_disconnect(self.cid)
 
-        if not self._m.parent._layout_editor._modifier_pressed:
-            # make all artists of the corresponding layer visible
-            for l in self._bg_artists:
-                if l not in [layer, *layer.split("|"), "all", *overlay_layers]:
-                    # artists on "all" are always visible!
-                    # make all artists of other layers invisible
-                    for art in self.get_bg_artists(l):
-                        art.set_visible(False)
-            for art in allartists:
-                if art not in self._hidden_axes:
-                    art.set_visible(True)
+        try:
+            if layer is None:
+                layer = self.bg_layer
 
-                    # TODO at the moment the layer-order has no effect on the order
-                    # at which artists are drawn in multi-layers!
-                    # (e.g. stacking is solely defined by the zorder property)
-                    # maybe implement drawing multilayer artists based on the order
-                    # of the layers?
-                    # self.figure.draw_artist(art)
+            # execute actions before fetching new artists
+            # (e.g. update data based on extent etc.)
+            for action in self._before_fetch_bg_actions:
+                action(layer=layer, bbox=bbox)
 
-            cv._force_full = True
-            cv.draw()
+            # get all relevant artists to plot and remember zorders
+            # self.get_bg_artists() already returns artists sorted by zorder!
+            allartists, initial_zorders, maxzorders = [], [], []
+            for l in (*layer.split("|"), "all"):
+                artists = self.get_bg_artists(l)
+                z = list(map(lambda a: getattr(a, "zorder", 0), artists))
 
-        if overlay_layers:
-            self._bg_layers[overlay_name] = cv.copy_from_bbox(bbox)
-            # make all overlay-artists invisible again
-            # (to avoid re-fetching webmap services after an overlay action etc.)
-            for l in overlay_layers:
-                if l == self.bg_layer:
-                    continue
-                for art in self.get_bg_artists(l):
-                    art.set_visible(False)
+                allartists.append(artists)
+                initial_zorders.append(z)
+                maxzorders.append(max(z, default=0))
 
-        else:
+            # add max zorder of underlying layer to overlay-artists prior to
+            # plotting to ensure that they appear on top of other artists
+            overlayz = 0
+            for artists, z in zip(allartists, maxzorders):
+                for a in artists:
+                    a.zorder += overlayz
+                overlayz += z
+
+            # check if all artists are stale, and if so skip re-fetching the background
+            # (only if also the axis extent is the same!)
+            no_stale_artists = not any(art.stale for art in chain(*allartists))
+
+            # don't re-fetch the background if it is not necessary
+            if no_stale_artists and (self._bg_layers.get(layer, None) is not None):
+                return
+
+            if bbox is None:
+                bbox = self.figure.bbox
+
+            if not self._m.parent._layout_editor._modifier_pressed:
+                # make all artists of the corresponding layer visible
+                for l in self._bg_artists:
+                    if l not in [layer, *layer.split("|"), "all"]:
+                        # artists on "all" are always visible!
+                        # make all artists of other layers invisible
+                        for art in self.get_bg_artists(l):
+                            art.set_visible(False)
+                for art in chain(*allartists):
+                    if art not in self._hidden_axes:
+                        art.set_visible(True)
+
+                cv._force_full = True
+                cv.draw()
+
             self._bg_layers[layer] = cv.copy_from_bbox(bbox)
 
-        self.cid = cv.mpl_connect("draw_event", self.on_draw)
+            # restore original zorders
+            for artists, zorders in zip(allartists, initial_zorders):
+                for a, z in zip(artists, zorders):
+                    a.zorder = z
 
-        for a in overlay_artists:
-            a.zorder -= overlay_zorder_bias
+            self._refetch_bg = False
 
-        self._refetch_bg = False
+        finally:
+
+            # reconnect draw event
+            self.cid = cv.mpl_connect("draw_event", self.on_draw)
 
     def on_draw(self, event):
         """Callback to register with 'draw_event'."""
@@ -1444,18 +1485,20 @@ class BlitManager:
             print(f"EOmaps: Background-artist '{art}' already added")
             return
 
-        # art.set_animated(True)
-
         self._bg_artists.setdefault(layer, []).append(art)
 
-        # check if there are any outdated cached background-layers and clear them
-        sublayers = layer.split("|")
+        if layer == "all":
+            # clear all cached background-layers
+            self._bg_layers.clear()
+        else:
+            # check for outdated cached background-layers and clear them
+            sublayers = layer.split("|")
 
-        def check_outdated(item):
-            return any(l in item.split("|") for l in sublayers)
+            def check_outdated(item):
+                return any(l in item.split("|") for l in sublayers)
 
-        for l in filter(check_outdated, set(self._bg_layers)):
-            self._refetch_layer(l)
+            for l in filter(check_outdated, set(self._bg_layers)):
+                self._refetch_layer(l)
 
         for f in self._on_add_bg_artist:
             f()
@@ -1628,12 +1671,12 @@ class BlitManager:
         # paranoia in case we missed the draw event,
         if bg_layer not in self._bg_layers or self._bg_layers[bg_layer] is None:
             self.on_draw(None)
+            self.fetch_bg(bg_layer)
         else:
             if clear:
                 self._clear_temp_artists(clear)
             # restore the background
             cv.restore_region(self._bg_layers[bg_layer])
-
             # draw all of the animated artists
             while len(self._after_restore_actions) > 0:
                 action = self._after_restore_actions.pop(0)
@@ -1709,8 +1752,8 @@ class BlitManager:
         if bg_layer is None:
             bg_layer = self.bg_layer
 
-        layer = sorted(set(chain(*(i.split("|") for i in layer), bg_layer.split("|"))))
-        return "__overlay|" + "|".join(map(str, layer))
+        layer = chain(*(i.split("|") for i in layer), bg_layer.split("|"))
+        return "|".join(map(str, layer))
 
     def _get_restore_bg_action(self, layer, bbox_bounds=None, alpha=1):
         """
@@ -1732,16 +1775,15 @@ class BlitManager:
             x0, y0, w, h = bbox_bounds
 
             initial_layer = self.bg_layer
+
             if name not in self._bg_layers:
                 # fetch the required background layer
-                if not isinstance(layer, (list, tuple)):
-                    layers = [layer]
-                else:
-                    layers = layer
-
-                self.fetch_bg(self._bg_layer, overlay=(name, layers))
-
                 self.fetch_bg(initial_layer)
+
+                # execute actions on layer-changes
+                # (to make sure all lazy WMS services are properly added)
+                self._do_on_layer_change(layer=name)
+                self.fetch_bg(name)
                 self._m.show_layer(initial_layer)
 
             # convert the buffer to rgba so that we can add transparency

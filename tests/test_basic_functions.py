@@ -89,134 +89,156 @@ class TestBasicPlotting(unittest.TestCase):
 
         # rectangles
         m = Maps(4326)
-        m.set_data(usedata, x="x", y="y", in_crs=3857)
+        m.set_data(usedata, x="x", y="y", crs=3857)
         m.set_shape.geod_circles(radius=100000)
         m.set_classify.Quantiles(k=5)
-        m.plot_map()
-        m.indicate_masked_points()
+        m.plot_map(indicate_masked_points=True)
 
         m.add_feature.preset.ocean(ec="k", scale="110m")
         plt.close("all")
 
         # rectangles
         m = Maps(4326)
-        m.set_data(usedata, x="x", y="y", in_crs=3857)
+        m.set_data(usedata, x="x", y="y", crs=3857)
         m.set_classify.EqualInterval(k=5)
         m.set_shape.rectangles()
-        m.plot_map()
+        m.plot_map(indicate_masked_points=True)
         m.add_feature.preset.ocean(ec="k", scale="110m")
 
-        m.set_shape.rectangles(radius=1, radius_crs=4326)
-        m.plot_map(ec="k")
+        m2 = m.new_layer()
+        m2.inherit_data(m)
+        m2.set_shape.rectangles(radius=1, radius_crs=4326)
+        m2.plot_map(ec="k", indicate_masked_points=True)
 
-        m.set_shape.rectangles(radius=(1, 2), radius_crs="out")
-        m.plot_map(ec="k")
+        m3 = m.new_layer()
+        m3.inherit_data(m)
+        m3.inherit_classification(m)
+        m3.set_shape.rectangles(radius=(0.5, 2), radius_crs="out")
+        m3.plot_map(ec="k", indicate_masked_points=True)
 
         r = usedata.x.rank()
         r = r / r.max() * 10
-        m.set_shape.rectangles(radius=r, radius_crs="out")
-        m.plot_map(ec="k", fc="none")
+        m4 = m.new_layer()
+        m4.inherit_data(m)
+        m4.set_shape.rectangles(radius=r, radius_crs="out")
+        m4.plot_map(ec="k", fc="none", indicate_masked_points=True)
 
         plt.close("all")
 
         # rectangles
         m = Maps(4326)
-        m.set_data(usedata, x="x", y="y", in_crs=3857)
+        m.set_data(usedata, x="x", y="y", crs=3857)
         m.set_shape.rectangles(mesh=True)
-        m.plot_map()
+        m.plot_map(indicate_masked_points=True)
 
-        m.set_shape.rectangles(radius=1, radius_crs=4326, mesh=True)
-        m.plot_map()
+        m2 = m.new_layer()
+        m2.inherit_data(m)
+        m2.set_shape.rectangles(radius=1, radius_crs=4326, mesh=True)
+        m2.plot_map()
 
-        m.set_shape.rectangles(radius=(1, 2), radius_crs="out", mesh=True)
-        m.plot_map()
+        m3 = m.new_layer()
+        m3.inherit_data(m)
+        m3.set_shape.rectangles(radius=(1, 2), radius_crs="out", mesh=True)
+        m3.plot_map(indicate_masked_points=True)
 
         plt.close("all")
 
         # ellipses
         m = Maps(4326)
-        m.set_data(usedata, x="x", y="y", in_crs=3857)
-
+        m.set_data(usedata, x="x", y="y", crs=3857)
         m.set_shape.ellipses()
-        m.plot_map()
+        m.plot_map(indicate_masked_points=True)
 
-        m.set_shape.ellipses(radius=1, radius_crs=4326)
-        m.plot_map()
+        m2 = m.new_layer()
+        m2.inherit_data(m)
+        m2.inherit_classification(m)
+        m2.set_shape.ellipses(radius=1, radius_crs=4326)
+        m2.plot_map()
+
+        m3 = m.new_layer()
+        m3.inherit_data(m)
+        m3.inherit_classification(m)
 
         r = usedata.x.rank()
         r = r / r.max() * 10
-        m.set_shape.ellipses(radius=r, radius_crs="out")
-        m.plot_map(ec="k", fc="none")
+        m3.set_shape.ellipses(radius=r, radius_crs="out")
+        m3.plot_map(ec="k", fc="none", indicate_masked_points=True)
 
         plt.close("all")
 
         # scatter_points
         m = Maps(4326)
-        m.set_data(usedata, x="x", y="y", in_crs=3857)
-
+        m.set_data(usedata, x="x", y="y", crs=3857)
         m.set_shape.scatter_points(marker="*", size=20)
         m.plot_map()
 
-        m.set_shape.scatter_points(size=1)
-        m.plot_map()
+        m2 = m.new_layer()
+        m2.inherit_data(m)
+        m2.set_shape.scatter_points(size=1)
+        m2.plot_map(indicate_masked_points=True)
 
+        m3 = m.new_layer()
+        m3.inherit_data(m)
         r = usedata.x.rank()
         r = r / r.max() * 50
-        m.set_shape.scatter_points(size=r, marker="s")
-        m.plot_map(ec="k", fc="none")
+        m3.set_shape.scatter_points(size=r, marker="s")
+        m3.plot_map(ec="k", fc="none", indicate_masked_points=True)
 
         plt.close("all")
 
         # delaunay
         m = Maps(4326)
-        m.set_data(usedata, x="x", y="y", in_crs=3857)
-
+        m.set_data(usedata, x="x", y="y", crs=3857)
         m.set_shape.delaunay_triangulation(flat=True)
-        m.plot_map()
-        m.indicate_masked_points(5, ec="r")
+        m.plot_map(indicate_masked_points=True)
 
-        m.set_shape.delaunay_triangulation(flat=False)
-        m.plot_map()
-        m.indicate_masked_points(5)
+        m2 = m.new_layer()
+        m2.inherit_data(m)
+        m2.set_shape.delaunay_triangulation(flat=False)
+        m2.plot_map(indicate_masked_points=True)
 
-        m.set_shape.delaunay_triangulation(masked=False)
-        m.plot_map()
-        m.indicate_masked_points(5)
+        m3 = m.new_layer()
+        m3.inherit_data(m)
+        m3.set_shape.delaunay_triangulation(masked=False)
+        m3.plot_map()
 
         plt.close("all")
 
         # voronoi
         m = Maps(4326)
-        m.set_data(usedata, x="x", y="y", in_crs=3857)
-
+        m.set_data(usedata, x="x", y="y", crs=3857)
         m.set_shape.voronoi_diagram(masked=False)
-        m.plot_map()
-        m.indicate_masked_points(5, ec="k")
+        m.plot_map(indicate_masked_points=True)
 
-        m.set_shape.voronoi_diagram(masked=True, mask_radius=5)
-        m.plot_map()
-        m.indicate_masked_points(5, ec="k")
+        m2 = m.new_layer()
+        m2.inherit_data(m)
+        m2.set_shape.voronoi_diagram(masked=True, mask_radius=5)
+        m2.plot_map()
 
         plt.close("all")
 
     def test_cpos(self):
         m = Maps(4326)
-        m.set_shape.ellipses(n=100)
-        m.set_data_specs(self.data, x="x", y="y", in_crs=3857)
 
         for cpos, color in zip(["ul", "ur", "ll", "lr", "c"], "rgbcm"):
-            m.set_data_specs(
-                cpos_radius=m.shape.radius[0] / 2,
+            m2 = m.new_layer()
+            m2.set_shape.ellipses(n=100)
+            m2.set_data(
+                self.data,
+                x="x",
+                y="y",
+                crs=3857,
+                cpos_radius=387755 / 2,
                 cpos=cpos,
             )
-            m.plot_map(fc="none", ec=color, lw=0.5 if cpos != "c" else 2)
+            m2.plot_map(fc="none", ec=color, lw=0.5 if cpos != "c" else 2)
 
         plt.close(m.f)
 
     def test_alpha_and_splitbins(self):
         m = Maps(4326)
         m.data = self.data
-        m.set_data_specs(x="x", y="y", in_crs=3857)
+        m.set_data_specs(x="x", y="y", crs=3857)
         m.set_shape.rectangles()
         m.set_classify_specs(scheme="Percentiles", pct=[0.1, 0.2])
 
@@ -227,7 +249,7 @@ class TestBasicPlotting(unittest.TestCase):
     def test_classification(self):
         m = Maps(4326)
         m.data = self.data
-        m.set_data_specs(x="x", y="y", in_crs=3857)
+        m.set_data_specs(x="x", y="y", crs=3857)
         m.set_shape.rectangles(radius=1, radius_crs="out")
 
         m.set_classify_specs(scheme="Quantiles", k=5)
@@ -239,7 +261,7 @@ class TestBasicPlotting(unittest.TestCase):
     def test_add_callbacks(self):
         m = Maps(3857, layer="layername")
         m.data = self.data.sample(10)
-        m.set_data_specs(x="x", y="y", in_crs=3857)
+        m.set_data_specs(x="x", y="y", crs=3857)
         m.set_shape.ellipses(radius=200000)
 
         m.plot_map()
@@ -319,7 +341,7 @@ class TestBasicPlotting(unittest.TestCase):
     def test_add_annotate(self):
         m = Maps()
         m.data = self.data
-        m.set_data_specs(x="x", y="y", in_crs=3857)
+        m.set_data_specs(x="x", y="y", crs=3857)
 
         m.plot_map()
 
@@ -340,8 +362,8 @@ class TestBasicPlotting(unittest.TestCase):
         crs = Maps.CRS.Orthographic(central_latitude=45, central_longitude=45)
         m = Maps(crs)
         m.data = self.data
-        m.set_data_specs(x="x", y="y", in_crs=3857)
-        m.plot_map()
+        m.set_data_specs(x="x", y="y", crs=3857)
+        m.plot_map(set_extent=True)
 
         m.add_marker(
             np.arange(1810, 1840, 1),
@@ -427,7 +449,7 @@ class TestBasicPlotting(unittest.TestCase):
     def test_copy(self):
         m = Maps(3857)
         m.data = self.data
-        m.set_data_specs(x="x", y="y", in_crs=3857)
+        m.set_data_specs(x="x", y="y", crs=3857)
 
         m.set_classify_specs(scheme="Quantiles", k=5)
 
@@ -435,7 +457,7 @@ class TestBasicPlotting(unittest.TestCase):
 
         self.assertTrue(
             m2.data_specs[["x", "y", "parameter", "crs"]]
-            == {"x": "lon", "y": "lat", "parameter": None, "in_crs": 4326}
+            == {"x": "lon", "y": "lat", "parameter": None, "crs": 4326}
         )
         self.assertTrue([*m.classify_specs] == [*m2.classify_specs])
         self.assertTrue(m2.data == None)
@@ -456,7 +478,7 @@ class TestBasicPlotting(unittest.TestCase):
     def test_copy_connect(self):
         m = Maps(3857)
         m.data = self.data
-        m.set_data_specs(x="x", y="y", in_crs=3857)
+        m.set_data_specs(x="x", y="y", crs=3857)
         m.set_shape.rectangles()
         m.set_classify_specs(scheme="Quantiles", k=5)
         m.plot_map()
@@ -484,7 +506,7 @@ class TestBasicPlotting(unittest.TestCase):
     def test_join_limits(self):
         mg = MapsGrid(2, 1, crs=3857)
         mg.add_feature.preset.coastline()
-        mg.set_data(data=self.data, x="x", y="y", in_crs=3857)
+        mg.set_data(data=self.data, x="x", y="y", crs=3857)
         for m in mg:
             m.plot_map()
 
@@ -497,8 +519,11 @@ class TestBasicPlotting(unittest.TestCase):
     def test_prepare_data(self):
         m = Maps()
         m.data = self.data
-        m.set_data_specs(x="x", y="y", in_crs=3857, parameter="value")
-        data = m._prepare_data()
+        m.set_data_specs(x="x", y="y", crs=3857, parameter="value")
+        data = m._data_manager._prepare_data()
+
+        # TODO add proper checks here!
+        plt.close("all")
 
     def test_layout_editor(self):
 
@@ -513,12 +538,13 @@ class TestBasicPlotting(unittest.TestCase):
         m.add_feature.preset.coastline()
         m._layout_editor._make_draggable()
         m._layout_editor._undo_draggable()
+        plt.close("all")
 
     def test_add_colorbar(self):
         gs = GridSpec(2, 2)
 
         m = Maps(ax=gs[0, 0])
-        m.set_data_specs(data=self.data, x="x", y="y", in_crs=3857)
+        m.set_data_specs(data=self.data, x="x", y="y", crs=3857)
         m.plot_map()
         cb1 = m.add_colorbar(
             gs[1, 0],
@@ -573,7 +599,7 @@ class TestBasicPlotting(unittest.TestCase):
         self.assertTrue(m.colorbar is cb4)
 
         m2 = m.new_layer("asdf")
-        m2.set_data_specs(data=self.data, x="x", y="y", in_crs=3857)
+        m2.set_data_specs(data=self.data, x="x", y="y", crs=3857)
         m2.set_classify.Quantiles(k=4)
         m2.plot_map()
         cb5 = m2.add_colorbar()
@@ -594,7 +620,7 @@ class TestBasicPlotting(unittest.TestCase):
         bins = [-5e6, 5e6, 1e7]
         labels = ["A", "b", "c", "d"]
         m3 = m.new_layer("asdf")
-        m3.set_data_specs(data=self.data, x="x", y="y", in_crs=3857)
+        m3.set_data_specs(data=self.data, x="x", y="y", crs=3857)
         m3.set_classify.UserDefined(bins=bins)
         m3.plot_map()
         cb6 = m3.add_colorbar()
@@ -605,11 +631,12 @@ class TestBasicPlotting(unittest.TestCase):
 
         cb6.set_bin_labels(bins, labels, show_values=True)
         cb6.tick_params(which="minor", rotation=90)
+        plt.close("all")
 
     def test_MapsGrid(self):
         mg = MapsGrid(2, 2, crs=4326)
         mg.set_data(
-            data=self.data, x="x", y="y", in_crs=3857, encoding=dict(scale_factor=1e-7)
+            data=self.data, x="x", y="y", crs=3857, encoding=dict(scale_factor=1e-7)
         )
         mg.set_classify_specs(scheme=Maps.CLASSIFIERS.EqualInterval, k=4)
         mg.set_shape.rectangles()
@@ -623,7 +650,7 @@ class TestBasicPlotting(unittest.TestCase):
         self.assertTrue(mg.m_1_0 is mg[1, 0])
         self.assertTrue(mg.m_1_1 is mg[1, 1])
 
-        plt.close(mg.f)
+        plt.close("all")
 
     def test_MapsGrid2(self):
         mg = MapsGrid(
@@ -634,7 +661,7 @@ class TestBasicPlotting(unittest.TestCase):
             ax_inits=dict(c=(1, 1)),
         )
 
-        mg.set_data(data=self.data, x="x", y="y", in_crs=3857)
+        mg.set_data(data=self.data, x="x", y="y", crs=3857)
         mg.set_classify_specs(scheme=Maps.CLASSIFIERS.EqualInterval, k=4)
 
         for m in mg:
@@ -664,6 +691,7 @@ class TestBasicPlotting(unittest.TestCase):
                 m_inits={1: (0, slice(0, 2)), 2: (1, 0)},
                 ax_inits={"2": (1, 1), 2: 2},
             )
+        plt.close("all")
 
     def test_compass(self):
         m = Maps(Maps.CRS.Stereographic())
@@ -792,6 +820,7 @@ class TestBasicPlotting(unittest.TestCase):
         bbox = list(map(float, resp["boundingbox"]))
 
         self.assertTrue(np.allclose([e[2], e[3], e[0], e[1]], bbox, atol=0.1))
+        plt.close("all")
 
     def test_adding_maps_to_existing_figures(self):
         # use existing axes
@@ -799,6 +828,7 @@ class TestBasicPlotting(unittest.TestCase):
         ax = f.add_subplot(projection=Maps.CRS.PlateCarree())
         m = Maps(ax=ax)
         m.add_feature.preset.coastline()
+        plt.close(f)
 
         # absolute positioning
         f = plt.figure()
@@ -833,6 +863,7 @@ class TestBasicPlotting(unittest.TestCase):
 
         m1.add_feature.preset.coastline()
         m2.add_feature.preset.coastline()
+        plt.close("all")
 
     def test_a_complex_figure(self):
         # %%
@@ -924,22 +955,26 @@ class TestBasicPlotting(unittest.TestCase):
         mgrid.share_click_events()
 
         m.subplots_adjust(left=0.05, top=0.95, bottom=0.05, right=0.95)
+        plt.close("all")
+
         # %%
         plt.close(m.f)
 
     def test_alternative_inputs(self):
-        lon, lat = np.mgrid[20:40, 20:50]
+        lon, lat = np.meshgrid(np.linspace(20, 40, 50), np.linspace(10, 50, 20))
         vals = lon + lat
 
         # 2D numpy array
         m = Maps()
         m.set_data(vals, x=lon, y=lat)
         m.plot_map()
+        plt.close("all")
 
         # 1D numpy array
         m = Maps()
         m.set_data(vals.ravel(), x=lon.ravel(), y=lat.ravel())
         m.plot_map()
+        plt.close("all")
 
         # 1D lists
         m = Maps()
@@ -949,6 +984,7 @@ class TestBasicPlotting(unittest.TestCase):
             y=lat.ravel().tolist(),
         )
         m.plot_map()
+        plt.close("all")
 
     def test_add_feature(self):
         m = Maps()
@@ -996,19 +1032,30 @@ class TestBasicPlotting(unittest.TestCase):
         self.assertTrue(
             np.allclose(m._encode_values(m._decode_values(encoded)), encoded)
         )
+        plt.close("all")
 
     def test_maps_as_contextmanager(self):
+        # we need to test this in interactive mode!
+        plt.ion()
         # just some very basic tests if cleanup functions do their job
         with Maps(layer="first") as m:
             m.set_data(*[[1, 2, 3]] * 3)
             m.plot_map()
             m.cb.click.attach.annotate()
+            m.show()
             self.assertTrue(
                 all(
-                    i in m._props
+                    i in m._data_manager._all_data
                     for i in ["xorig", "yorig", "x0", "y0", "ids", "z_data"]
                 )
             )
+            self.assertTrue(
+                all(
+                    i in m._data_manager._current_data
+                    for i in ["xorig", "yorig", "x0", "y0", "ids", "z_data"]
+                )
+            )
+
             self.assertTrue(len(m.cb.click.get.cbs) == 1)
 
             with m.new_layer("second") as m2:
@@ -1017,19 +1064,37 @@ class TestBasicPlotting(unittest.TestCase):
                 m2.set_data(*[[1, 2, 3]] * 3)
                 m2.plot_map()
                 m2.cb.click.attach.annotate()
+                m2.show()  # show the layer to trigger drawing
                 self.assertTrue(
                     all(
-                        i in m._props
+                        i in m2._data_manager._all_data
                         for i in ["xorig", "yorig", "x0", "y0", "ids", "z_data"]
                     )
                 )
+                self.assertTrue(
+                    all(
+                        i in m2._data_manager._current_data
+                        for i in ["xorig", "yorig", "x0", "y0", "ids", "z_data"]
+                    )
+                )
+
                 self.assertFalse(m2.coll is None)
                 self.assertTrue(len(m2.cb.click.get.cbs) == 1)
 
             self.assertTrue(set(m._get_layers()) == {"first"})
+
+            self.assertTrue(len(m2._data_manager._all_data) == 0)
+            self.assertTrue(len(m2._data_manager._current_data) == 0)
+
             self.assertTrue(
                 all(
-                    i in m._props
+                    i in m._data_manager._all_data
+                    for i in ["xorig", "yorig", "x0", "y0", "ids", "z_data"]
+                )
+            )
+            self.assertTrue(
+                all(
+                    i in m._data_manager._current_data
                     for i in ["xorig", "yorig", "x0", "y0", "ids", "z_data"]
                 )
             )
@@ -1042,7 +1107,12 @@ class TestBasicPlotting(unittest.TestCase):
         self.assertTrue(m.coll is None)
         self.assertTrue(len(m.cb.click.get.cbs) == 0)
 
+        self.assertTrue(len(m._data_manager._all_data) == 0)
+        self.assertTrue(len(m._data_manager._current_data) == 0)
+        plt.close("all")
+
     def test_cleanup(self):
+        plt.ion()  # must be tested in interactive mode!
         m = Maps()
         m.add_annotation(xy=(45, 45))
         m.add_marker(xy=(45, 45))
@@ -1051,11 +1121,11 @@ class TestBasicPlotting(unittest.TestCase):
         m.cb.click.attach.annotate()
         m.cb.pick.attach.annotate()
         m.cb.keypress.attach.fetch_layers()
-
+        m.redraw()  # redraw since otherwise the map might not yet be created!
         self.assertTrue(len(m.BM._artists[m.layer]) == 2)
         self.assertTrue(len(m.BM._bg_artists[m.layer]) == 1)
 
-        self.assertTrue(hasattr(m, "_props"))
+        self.assertTrue(m._data_manager.x0.size == 3)
         self.assertTrue(hasattr(m, "tree"))
         self.assertTrue(len(m.cb.click.get.cbs) == 1)
         self.assertTrue(len(m.cb.click.get.cbs) == 1)
@@ -1075,13 +1145,16 @@ class TestBasicPlotting(unittest.TestCase):
         m2.on_layer_activation(lambda m: print("permanent", m.layer), persistent=True)
 
         self.assertTrue(len(m.BM._on_layer_activation[m2.layer]) == 2)
+        m2.show()  # show the layer to draw the artists!
+        m.redraw()  # redraw since otherwise the map might not yet be created!
+        self.assertTrue(len(m.BM._on_layer_activation[m2.layer]) == 1)
 
         self.assertTrue(len(m.BM._artists[m.layer]) == 2)
         self.assertTrue(len(m.BM._bg_artists[m.layer]) == 1)
         self.assertTrue(len(m.BM._artists[m2.layer]) == 2)
         self.assertTrue(len(m.BM._bg_artists[m2.layer]) == 1)
 
-        self.assertTrue(hasattr(m2, "_props"))
+        self.assertTrue(m2._data_manager.x0.size == 3)
         self.assertTrue(hasattr(m2, "tree"))
         self.assertTrue(len(m2.cb.click.get.cbs) == 1)
         self.assertTrue(len(m2.cb.click.get.cbs) == 1)
@@ -1096,13 +1169,15 @@ class TestBasicPlotting(unittest.TestCase):
         self.assertTrue(m2.layer not in m.BM._artists)
         self.assertTrue(m2.layer not in m.BM._bg_artists)
 
-        self.assertTrue(hasattr(m, "_props"))
+        # m should still be OK
+        self.assertTrue(m._data_manager.x0.size == 3)
         self.assertTrue(hasattr(m, "tree"))
         self.assertTrue(len(m.cb.click.get.cbs) == 1)
         self.assertTrue(len(m.cb.click.get.cbs) == 1)
         self.assertTrue(len(m.cb.click.get.cbs) == 1)
 
-        self.assertTrue(not hasattr(m2, "_props"))
+        # m2 must already be cleared
+        self.assertTrue(m2._data_manager.x0 is None)
         self.assertTrue(not hasattr(m2, "tree"))
         self.assertTrue(len(m2.cb.click.get.cbs) == 0)
         self.assertTrue(len(m2.cb.click.get.cbs) == 0)
@@ -1113,11 +1188,12 @@ class TestBasicPlotting(unittest.TestCase):
         self.assertTrue(m.layer not in m.BM._artists)
         self.assertTrue(m.layer not in m.BM._bg_artists)
 
-        self.assertTrue(not hasattr(m, "_props"))
+        self.assertTrue(m._data_manager.x0 is None)
         self.assertTrue(not hasattr(m, "tree"))
         self.assertTrue(len(m.cb.click.get.cbs) == 0)
         self.assertTrue(len(m.cb.click.get.cbs) == 0)
         self.assertTrue(len(m.cb.click.get.cbs) == 0)
+        plt.close("all")
 
     def test_blit_artists(self):
         # just a sanity-check if function throws an error...
@@ -1126,3 +1202,4 @@ class TestBasicPlotting(unittest.TestCase):
             [0, 0.25, 1], [0, 0.63, 1], c="k", lw=3, transform=m.ax.transAxes
         )
         m.BM.blit_artists([line])
+        plt.close("all")

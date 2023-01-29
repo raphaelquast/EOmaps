@@ -458,6 +458,12 @@ class MapsGrid:
         """
         self.parent.cb.click.share_events(*self.children)
 
+    def share_move_events(self):
+        """
+        Share move events between all Maps objects of the grid
+        """
+        self.parent.cb.move.share_events(*self.children)
+
     def share_pick_events(self, name="default"):
         """
         Share pick events between all Maps objects of the grid

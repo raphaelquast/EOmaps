@@ -85,8 +85,23 @@ class _click_callbacks(object):
 
         return ID, pos, val, ind, picker_name, val_color
 
+    @staticmethod
+    def _fmt(x, **kwargs):
+        # make sure to format arrays with "," separator to make them
+        # copy-pasteable
+        kwargs.setdefault("separator", ",")
+        try:
+            return np.array2string(np.asanyarray(x), **kwargs)
+        except Exception:
+            return str(x)
+
     def print_to_console(self, **kwargs):
-        """Print details on the clicked pixel to the console"""
+        """
+        Print details on the clicked pixel to the console.
+
+        Additional kwargs are passed to `numpy.array2string()`
+        to control the formatting of the printed values.
+        """
         ID, pos, val, ind, picker_name, val_color = self._popargs(kwargs)
 
         if isinstance(self.m.data_specs.x, str):
@@ -97,24 +112,28 @@ class _click_callbacks(object):
             ylabel = "y"
 
         if ID is not None:
-            printstr = "---------------\n"
             x, y = pos
-            printstr += f"{xlabel} = {x}\n{ylabel} = {y}\n"
-            printstr += f"ID = {ID}\n"
+
+            printstr = (
+                "---------------\n"
+                f"{xlabel} = {self._fmt(x, **kwargs)}\n"
+                f"{ylabel} = {self._fmt(y, **kwargs)}\n"
+                f"ID = {self._fmt(ID, **kwargs)}\n"
+            )
 
             paramname = self.m.data_specs.parameter
             if paramname is None:
                 paramname = "val"
-            printstr += f"{paramname} = {val}"
+            printstr += f"{paramname} = {self._fmt(val)}"
         else:
             lon, lat = self.m._transf_plot_to_lonlat.transform(*pos)
 
             printstr = (
                 "---------------\n"
-                f"x = {pos[0]}\n"
-                f"y = {pos[1]}\n"
-                f"lon = {lon}\n"
-                f"lat = {lat}"
+                f"x = {self._fmt(pos[0], **kwargs)}\n"
+                f"y = {self._fmt(pos[1], **kwargs)}\n"
+                f"lon = {self._fmt(lon, **kwargs)}\n"
+                f"lat = {self._fmt(lat, **kwargs)}"
             )
 
         print(printstr)
@@ -183,7 +202,8 @@ class _click_callbacks(object):
             >>> dict(xytext=(20, 20),
             >>>      textcoords="offset points",
             >>>      bbox=dict(boxstyle="round", fc="w"),
-            >>>      arrowprops=dict(arrowstyle="->")
+            >>>      arrowprops=dict(arrowstyle="->"),
+            >>>      annotation_clip=True,
             >>>     )
 
         """
@@ -192,15 +212,20 @@ class _click_callbacks(object):
             layer = self.m.layer
 
         ID, pos, val, ind, picker_name, val_color = self._popargs(kwargs)
-
-        try:
-            n_ids = len(ID)
-        except TypeError:
-            n_ids = 1
-
-        if ID is not None and n_ids > 1:
-            multipick = True
+        if isinstance(ind, (list, np.ndarray)):
+            # multipick = True
             picked_pos = (pos[0][0], pos[1][0])
+
+            try:
+                n_ids = len(ind)
+            except TypeError:
+                n_ids = "??"
+
+            if n_ids == 1:
+                multipick = False
+            else:
+                multipick = True
+
         else:
             multipick = False
             picked_pos = pos
@@ -220,13 +245,14 @@ class _click_callbacks(object):
             parameter = self.m.data_specs.parameter
 
         ax = self.m.ax
-
         if text is None:
-            if ID is not None and self.m.data is not None:
+            # use "ind is not None" to distinguish between click and pick
+            # TODO implement better distinction between click and pick!
+            if self.m.data is not None and ind is not None:
                 if not multipick:
                     x, y = [
                         np.format_float_positional(i, trim="-", precision=pos_precision)
-                        for i in self.m._get_xy_from_index(ind)
+                        for i in self.m._data_manager._get_xy_from_index(ind)
                     ]
                     x0, y0 = [
                         np.format_float_positional(i, trim="-", precision=pos_precision)
@@ -239,8 +265,8 @@ class _click_callbacks(object):
                         )
                 else:
                     coords = [
-                        *self.m._get_xy_from_index(ind),
-                        *self.m._get_xy_from_index(ind, reprojected=True),
+                        *self.m._data_manager._get_xy_from_index(ind),
+                        *self.m._data_manager._get_xy_from_index(ind, reprojected=True),
                     ]
 
                     for n, c in enumerate(coords):
@@ -259,12 +285,16 @@ class _click_callbacks(object):
 
                     if val is not None:
                         val = np.array(val, dtype=float)  # to handle None
-                        mi = np.format_float_positional(
-                            np.nanmin(val), trim="-", precision=pos_precision
-                        )
-                        ma = np.format_float_positional(
-                            np.nanmax(val), trim="-", precision=pos_precision
-                        )
+
+                        # catch warnings here to avoid showing "all-nan-slice"
+                        # all the time when clicking on empty pixels
+                        with warnings.catch_warnings():
+                            mi = np.format_float_positional(
+                                np.nanmin(val), trim="-", precision=pos_precision
+                            )
+                            ma = np.format_float_positional(
+                                np.nanmax(val), trim="-", precision=pos_precision
+                            )
                         val = f"{mi}...{ma}"
 
                 equal_crs = self.m.data_specs.crs != self.m._crs_plot
@@ -316,6 +346,7 @@ class _click_callbacks(object):
                 textcoords="offset points",
                 bbox=bbox,
                 arrowprops=dict(arrowstyle="->"),
+                annotation_clip=True,
             )
 
             styledict.update(**kwargs)
@@ -465,11 +496,13 @@ class _click_callbacks(object):
 
         if shape is None:
             if self.m.shape is not None:
-                shape = (
-                    self.m.shape.name
-                    if (self.m.shape.name in possible_shapes)
-                    else "ellipses"
-                )
+                m_shape = self.m.shape.name
+                if m_shape in possible_shapes:
+                    shape = m_shape
+                elif m_shape in ["raster", "shade_raster"]:
+                    shape = "rectangles"
+                else:
+                    shape = "ellipses"
             else:
                 "ellipses"
         else:
@@ -491,9 +524,9 @@ class _click_callbacks(object):
         ID, pos, val, ind, picker_name, val_color = self._popargs(kwargs)
         if ID is not None and picker_name == "default":
             if ind is None:
-                pos = self.m._get_xy_from_ID(ID)
+                pos = self.m._data_manager._get_xy_from_ID(ID)
             else:
-                pos = self.m._get_xy_from_index(ind)
+                pos = self.m._data_manager._get_xy_from_index(ind)
             pos_crs = "in"
         else:
             pos_crs = "out"
@@ -637,13 +670,6 @@ class _click_callbacks(object):
         >>> m2.plot_map()
         >>> m.peek_layer(layer="the layer name")
         """
-
-        if "overlay" in kwargs:
-            kwargs.pop("overlay")
-            warnings.warn(
-                "EOmaps: The 'overlay' argument of peek_layer is depreciated! "
-                "(It has no effect and can be removed.)"
-            )
 
         if isinstance(layer, list):
             layer = "|".join(map(str, layer))

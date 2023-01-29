@@ -60,7 +60,7 @@ class shapes(object):
 
     Attributes
     ----------
-    radius_estimation_range : int
+    _radius_estimation_range : int
         The number of datapoints to use for estimating the radius of a shape.
         (only relevant if the radius is not specified explicitly.)
         The default is 100000
@@ -80,7 +80,7 @@ class shapes(object):
 
     def __init__(self, m):
         self._m = m
-        self.radius_estimation_range = 100000
+        self._radius_estimation_range = 100000
 
     def _get(self, shape, **kwargs):
         shp = getattr(self, f"_{shape}")(self._m)
@@ -93,8 +93,8 @@ class shapes(object):
         if (isinstance(radius, str) and radius == "estimate") or radius is None:
             if m._estimated_radius is None:
                 # make sure props are defined otherwise we can't estimate the radius!
-                if not hasattr(m, "_props"):
-                    m._props = m._prepare_data()
+                if m._data_manager.x0 is None:
+                    m._data_manager.set_props(None)
 
                 print("EOmaps: estimating radius...")
                 radiusx, radiusy = shapes._estimate_radius(m, radius_crs)
@@ -125,32 +125,26 @@ class shapes(object):
     @staticmethod
     def _estimate_radius(m, radius_crs, method=np.median):
 
-        if radius_crs == "in":
-            x, y = m._props["xorig"], m._props["yorig"]
-        elif radius_crs == "out":
-            x, y = m._props["x0"], m._props["y0"]
+        assert radius_crs in [
+            "in",
+            "out",
+        ], "radius can only be estimated if radius_crs is 'in' or 'out'!"
+
+        if m._data_manager.x0_1D is not None:
+            x, y = m._data_manager.x0_1D, m._data_manager.y0_1D
         else:
-            raise AssertionError(
-                "radius can only be estimated if radius_crs is 'in' or 'out'!"
-            )
+            if radius_crs == "in":
+                x, y = m._data_manager.xorig, m._data_manager.yorig
+            elif radius_crs == "out":
+                x, y = m._data_manager.x0, m._data_manager.y0
 
         radius = None
         # try to estimate radius for 2D datasets
-        if len(m._xshape) == 2 and len(m._yshape) == 2:
-            userange = int(np.sqrt(m.set_shape.radius_estimation_range))
+        if len(x.shape) == 2 and len(y.shape) == 2:
+            userange = int(np.sqrt(m.set_shape._radius_estimation_range))
 
-            radiusx = (
-                np.nanmedian(
-                    np.diff(x.reshape(m._xshape)[:userange, :userange], axis=1)
-                )
-                / 2
-            )
-            radiusy = (
-                np.nanmedian(
-                    np.diff(y.reshape(m._yshape)[:userange, :userange], axis=0)
-                )
-                / 2
-            )
+            radiusx = np.nanmedian(np.diff(x[:userange, :userange], axis=1)) / 2
+            radiusy = np.nanmedian(np.diff(y[:userange, :userange], axis=0)) / 2
 
             radius = (radiusx, radiusy)
 
@@ -158,20 +152,26 @@ class shapes(object):
                 radius = None
 
         # for 1D datasets (or if 2D radius-estimation fails), use the median distance
-        # of 3 neighbours of the first N datapoints (N=shape.radius_estimation_range)
+        # of 3 neighbours of the first N datapoints (N=shape._radius_estimation_range)
         if radius is None:
             from scipy.spatial import cKDTree
 
             # take care of 2D data with 1D coordinates
-            if m._1D2D:
-                userange = int(np.sqrt(m.set_shape.radius_estimation_range))
+            if m._data_manager.x0_1D is not None:
+                userange = int(np.sqrt(m.set_shape._radius_estimation_range))
                 x, y = np.meshgrid(x[:userange], y[:userange])
+                x, y = x.flat, y.flat
+            else:
+                x = x.flat[: m.set_shape._radius_estimation_range]
+                x = x[np.isfinite(x)]
+                y = y.flat[: m.set_shape._radius_estimation_range]
+                y = y[np.isfinite(y)]
 
             in_tree = cKDTree(
                 np.stack(
                     [
-                        x.flat[: m.set_shape.radius_estimation_range],
-                        y.flat[: m.set_shape.radius_estimation_range],
+                        x,
+                        y,
                     ],
                     axis=1,
                 ),
@@ -179,21 +179,42 @@ class shapes(object):
                 balanced_tree=False,
             )
 
-            dists, pts = in_tree.query(in_tree.data, 3)
+            dists, pts = in_tree.query(in_tree.data, min(len(in_tree.data), 3))
+            # consider only neighbors
+            # (the first entry is the search-point again!)
+            pts = pts[:, 1:]
+            # get the average distance between points having a distance > 0
+            d = np.abs(in_tree.data[:, np.newaxis] - in_tree.data[pts]).reshape(-1, 2)
 
-            radiusxy = method(dists) / 2
-
-            if not np.isfinite(radiusxy) or not (radiusxy > 0):
-                radius = None
+            use_dx = d[:, 0] > 0
+            use_dy = d[:, 1] > 0
+            if any(use_dx):
+                radiusx = method(d[:, 0][use_dx]) / 2
             else:
-                radius = (radiusxy, radiusxy)
+                radiusx = np.nan
+
+            if any(use_dy):
+                radiusy = method(d[:, 1][use_dy]) / 2
+            else:
+                radiusy = np.nan
+
+            rxOK = np.isfinite(radiusx) and (radiusx > 0)
+            ryOK = np.isfinite(radiusy) and (radiusy > 0)
+            if rxOK and ryOK:
+                radius = (radiusx, radiusy)
+            elif rxOK:
+                radius = (radiusx, radiusx)
+            elif ryOK:
+                radius = (radiusy, radiusy)
+            else:
+                radius = None
 
         assert radius is not None, (
             "EOmaps: Radius estimation failed... maybe there's something wrong with "
             "the provided coordinates? "
             "You can manually specify a radius with 'm.set_shape.<SHAPE>(radius=...)' "
             "or you can increase the number of datapoints used to estimate the radius "
-            "by increasing `m.set_shape.radius_estimation_range`."
+            "by increasing `m.set_shape._radius_estimation_range`."
         )
 
         return radius
@@ -249,7 +270,7 @@ class shapes(object):
 
     @staticmethod
     @lru_cache()
-    def get_transformer(in_crs, out_crs):
+    def _get_transformer(in_crs, out_crs):
         # cache transformers to avoid re-initialization for each feature
         t = Transformer.from_crs(in_crs, out_crs, always_xy=True)
         return t
@@ -384,9 +405,11 @@ class shapes(object):
             x, y = np.asarray(x), np.asarray(y)
 
             # transform from in-crs to lon/lat
-            radius_t = shapes.get_transformer(self._m.get_crs(crs), CRS.from_epsg(4326))
+            radius_t = shapes._get_transformer(
+                self._m.get_crs(crs), CRS.from_epsg(4326)
+            )
             # transform from lon/lat to the plot_crs
-            plot_t = shapes.get_transformer(
+            plot_t = shapes._get_transformer(
                 CRS.from_epsg(4326), CRS.from_user_input(self._m.crs_plot)
             )
 
@@ -628,11 +651,11 @@ class shapes(object):
             crs = self._m.get_crs(crs)
             radius_crs = self._m.get_crs(radius_crs)
             # transform from crs to the plot_crs
-            t_in_plot = shapes.get_transformer(crs, self._m.crs_plot)
+            t_in_plot = shapes._get_transformer(crs, self._m.crs_plot)
             # transform from crs to the radius_crs
-            t_in_radius = shapes.get_transformer(crs, radius_crs)
+            t_in_radius = shapes._get_transformer(crs, radius_crs)
             # transform from crs to the radius_crs
-            t_radius_plot = shapes.get_transformer(radius_crs, self._m.crs_plot)
+            t_radius_plot = shapes._get_transformer(radius_crs, self._m.crs_plot)
 
             if isinstance(radius, (int, float, np.number)):
                 rx, ry = radius, radius
@@ -689,8 +712,8 @@ class shapes(object):
 
                 return quadrants
 
-            t_in_lonlat = shapes.get_transformer(crs, 4326)
-            t_plot_lonlat = shapes.get_transformer(self._m.crs_plot, 4326)
+            t_in_lonlat = shapes._get_transformer(crs, 4326)
+            t_plot_lonlat = shapes._get_transformer(self._m.crs_plot, 4326)
 
             # transform the coordinates to lon/lat
             xp, _ = t_in_lonlat.transform(x, y)
@@ -728,8 +751,6 @@ class shapes(object):
                 for i, (x, y) in enumerate(zip(xs, ys))
                 if mask[i]
             )
-
-            # verts = np.ma.stack((xs, ys)).T.swapaxes(0, 1)
 
             color_and_array = shapes._get_colors_and_array(kwargs, mask)
             # remember masked points
@@ -861,13 +882,13 @@ class shapes(object):
             if radius_crs == crs:
                 in_crs = self._m.get_crs(crs)
                 # transform from crs to the plot_crs
-                t = shapes.get_transformer(
+                t = shapes._get_transformer(
                     CRS.from_user_input(in_crs), self._m.crs_plot
                 )
 
                 # make sure we do not transform out of bounds (if possible)
                 if in_crs.area_of_use is not None:
-                    transformer = shapes.get_transformer(in_crs.geodetic_crs, in_crs)
+                    transformer = shapes._get_transformer(in_crs.geodetic_crs, in_crs)
 
                     xmin, ymin, xmax, ymax = transformer.transform_bounds(
                         *in_crs.area_of_use.bounds
@@ -883,13 +904,13 @@ class shapes(object):
                 r_crs = self._m.get_crs(radius_crs)
 
                 # transform from crs to the radius_crs
-                t_in_radius = shapes.get_transformer(in_crs, r_crs)
+                t_in_radius = shapes._get_transformer(in_crs, r_crs)
                 # transform from radius_crs to the plot_crs
-                t = shapes.get_transformer(r_crs, self._m.crs_plot)
+                t = shapes._get_transformer(r_crs, self._m.crs_plot)
 
                 # make sure we do not transform out of bounds (if possible)
                 if r_crs.area_of_use is not None:
-                    transformer = shapes.get_transformer(r_crs.geodetic_crs, r_crs)
+                    transformer = shapes._get_transformer(r_crs.geodetic_crs, r_crs)
 
                     xmin, ymin, xmax, ymax = transformer.transform_bounds(
                         *r_crs.area_of_use.bounds
@@ -1037,6 +1058,7 @@ class shapes(object):
 
         def __init__(self, m):
             self._m = m
+            self._mask_radius = None
 
         def __call__(self, masked=True, mask_radius=None):
             """
@@ -1048,7 +1070,9 @@ class shapes(object):
                 Indicator if the voronoi-diagram should be masked or not
 
             mask_radius : float, optional
-                the radius used for masking the voronoi-diagram (in units of the plot-crs)
+                The radius used for masking the voronoi-diagram
+                (in units of the plot-crs)
+                The default is 4 times the estimated data-radius.
             """
             from . import MapsGrid  # do this here to avoid circular imports!
 
@@ -1074,7 +1098,11 @@ class shapes(object):
 
         @property
         def mask_radius(self):
-            return shapes._get_radius(self._m, self._mask_radius, "out")
+            r = shapes._get_radius(self._m, self._mask_radius, "out")
+            if self._mask_radius is None:
+                return (i * 4 for i in r)
+            else:
+                return r
 
         @mask_radius.setter
         def mask_radius(self, val):
@@ -1088,7 +1116,7 @@ class shapes(object):
                 raise ImportError("'scipy' is required for 'voronoi'!")
 
             # transform from crs to the plot_crs
-            t_in_plot = shapes.get_transformer(self._m.get_crs(crs), self._m.crs_plot)
+            t_in_plot = shapes._get_transformer(self._m.get_crs(crs), self._m.crs_plot)
 
             x0, y0 = t_in_plot.transform(x, y)
 
@@ -1165,6 +1193,7 @@ class shapes(object):
 
         def __init__(self, m):
             self._m = m
+            self._mask_radius = None
 
         def __call__(
             self, masked=True, mask_radius=None, mask_radius_crs="in", flat=False
@@ -1179,6 +1208,7 @@ class shapes(object):
             mask_radius : float, optional
                 the radius used for masking the delaunay-triangulation
                 (in units of the plot-crs)
+                The default is 4 times the estimated data-radius.
             mask_radius_crs : str, optional
                 The crs in which the radius is defined (either "in" or "out")
             flat : bool
@@ -1220,9 +1250,11 @@ class shapes(object):
         @property
         def mask_radius(self):
             if self.masked:
-                return shapes._get_radius(
-                    self._m, self._mask_radius, self.mask_radius_crs
-                )
+                r = shapes._get_radius(self._m, self._mask_radius, self.mask_radius_crs)
+                if self._mask_radius is None:
+                    return (i * 4 for i in r)
+                else:
+                    return r
             else:
                 return None
 
@@ -1241,7 +1273,7 @@ class shapes(object):
                 raise ImportError("'scipy' is required for 'delaunay_triangulation'!")
 
             # transform from crs to the plot_crs
-            t_in_plot = shapes.get_transformer(self._m.get_crs(crs), self._m.crs_plot)
+            t_in_plot = shapes._get_transformer(self._m.get_crs(crs), self._m.crs_plot)
 
             x0, y0 = t_in_plot.transform(x, y)
             datamask = np.isfinite(x0) & np.isfinite(y0)
@@ -1258,8 +1290,8 @@ class shapes(object):
 
                 if radius_crs == "in":
                     # use input-coordinates for evaluating the mask
-                    mx = self._m._props["xorig"].ravel()
-                    my = self._m._props["yorig"].ravel()
+                    mx = self._m._data_manager._current_data["xorig"].ravel()
+                    my = self._m._data_manager._current_data["yorig"].ravel()
                 elif radius_crs == "out":
                     # use projected coordinates for evaluating the mask
                     mx = x
@@ -1311,7 +1343,6 @@ class shapes(object):
                         pass
                     else:
                         color_and_array[key] = np.tile(val, 6)
-
                 coll = TriMesh(
                     tri,
                     # transOffset=self._m.ax.transData,
@@ -1615,19 +1646,25 @@ class shapes(object):
                 rx = abs(dx[np.isfinite(dx)][0]) / 2
                 ry = abs(dy[np.isfinite(dy)][0]) / 2
 
-            self._radius = rx, ry
-            p = x, y
+            assert rx != 0 and ry != 0, (
+                "EOmaps: it seems the radius of the raster-data is 0... "
+                "Are the coordinates transposed?"
+            )
 
+            self._radius = rx, ry
+            # TODO switch to estimating the radius?
+            # rx, ry = self.radius
+            p = x, y
             in_crs = self._m.get_crs(crs)
 
             # transform corner-points
             in_crs = self._m.get_crs(crs)
             # transform from crs to the plot_crs
-            t = shapes.get_transformer(in_crs, self._m.crs_plot)
+            t = shapes._get_transformer(in_crs, self._m.crs_plot)
 
             # make sure we do not transform out of bounds (if possible)
             if in_crs.area_of_use is not None:
-                transformer = shapes.get_transformer(in_crs.geodetic_crs, in_crs)
+                transformer = shapes._get_transformer(in_crs.geodetic_crs, in_crs)
 
                 xmin, ymin, xmax, ymax = transformer.transform_bounds(
                     *in_crs.area_of_use.bounds
@@ -1653,7 +1690,10 @@ class shapes(object):
             px, py = t.transform(clipx(v[:, :, 0]), clipy(v[:, :, 1]))
             verts = np.stack((px, py), axis=2)
 
-            mask = np.logical_and(np.isfinite(px)[:-1, :-1], np.isfinite(py)[:-1, :-1])
+            # TODO is there a proper way to implement a mask here?
+            # (raster must always remain 2D...)
+            # mask = np.logical_and(np.isfinite(px)[:-1, :-1], np.isfinite(py)[:-1, :-1])
+            mask = np.full(px[:-1, :-1].shape, True, dtype=bool)
             return verts, mask
 
         def _get_polygon_coll(self, x, y, crs, **kwargs):
@@ -1664,8 +1704,8 @@ class shapes(object):
                 crs,
             )
 
-            # remember masked points
-            self._m._data_mask = mask
+            # TODO masking is skipped for now...
+            self._m._data_mask = None
             # don't use a mask here since we need the full 2D array
             color_and_array = shapes._get_colors_and_array(
                 kwargs, np.full_like(mask, True)
@@ -1728,6 +1768,10 @@ class shapes(object):
     @wraps(_voronoi_diagram.__call__)
     def voronoi_diagram(self, *args, **kwargs):
         shp = self._voronoi_diagram(m=self._m)
+        # increase radius margins for voronoi diagrams since
+        # outer points are otherwise always masked!
+        self._m._data_manager.set_margin_factors(20, 0.1)
+
         return shp.__call__(*args, **kwargs)
 
     @wraps(_delaunay_triangulation.__call__)

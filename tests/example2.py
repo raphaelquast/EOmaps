@@ -22,7 +22,7 @@ mg = MapsGrid(
     layer="layer 1",
 )
 # set the data on ALL maps-objects of the grid
-mg.set_data(data=data, x="lon", y="lat", in_crs=4326)
+mg.set_data(data=data, x="lon", y="lat", crs=4326)
 
 # --------- set specs for the first axis
 mg.m_0_0.ax.set_title("epsg=4326")
@@ -34,13 +34,12 @@ mg.m_0_1.set_shape.rectangles()
 mg.m_0_1.set_classify_specs(scheme="Quantiles", k=8)
 
 # --------- set specs for the third axis
-mg.m_0_2.ax.set_extent(mg.m_0_2.crs_plot.area_of_use.bounds)
-
 mg.m_0_2.ax.set_title("epsg=3035")
 mg.m_0_2.set_classify_specs(
     scheme="StdMean",
     multiples=[-1, -0.75, -0.5, -0.25, 0.25, 0.5, 0.75, 1],
 )
+
 
 # --------- plot all maps and add colorbars to all maps
 mg.plot_map()
@@ -58,7 +57,7 @@ mg.add_feature.preset.coastline(layer="all")  # add the coastline to all layers
 # on the layer-switcher utility buttons (bottom center of the figure)
 # or by using `m2.show()`   or via  `m.show_layer("layer 2")`
 m2 = mg.m_0_1.new_layer(layer="layer 2", copy_data_specs=True)
-m2.set_shape.delaunay_triangulation(mask_radius=max(m2.shape.radius) * 2)
+m2.set_shape.delaunay_triangulation(mask_radius=0.5)
 m2.set_classify_specs(scheme="Quantiles", k=4)
 m2.plot_map(cmap="RdYlBu")
 m2.add_colorbar()
@@ -69,13 +68,13 @@ m2.cb.click.attach.annotate(text="callbacks are layer-sensitive!")
 for m in mg:
     m.cb.pick.attach.mark(fc="r", ec="none", buffer=1, permanent=True)
     m.cb.pick.attach.mark(fc="none", ec="r", lw=1, buffer=5, permanent=True)
-    m.cb.click.attach.mark(fc="none", ec="k", lw=2, buffer=10, permanent=False)
+    m.cb.move.attach.mark(fc="none", ec="k", lw=2, buffer=10, permanent=False)
 
 # add an annotation-callback to the second map
 mg.m_0_1.cb.pick.attach.annotate(text="the closest point is here!", zorder=99)
 
 # share click & pick-events between all Maps-objects of the MapsGrid
-mg.share_click_events()
+mg.share_move_events()
 mg.share_pick_events()
 
 # --------- add a layer-selector widget
@@ -89,6 +88,6 @@ m2.colorbar.ax_cb.tick_params(rotation=90, labelsize=8)
 # add logos to all maps
 mg.add_logo(size=0.05)
 
-# trigger a final re-draw of all layers to make sure the manual
-# changes to the ticks are properly reflected in the cached layers.
-mg.redraw()
+# # trigger a final re-draw of all layers to make sure the manual
+# # changes to the ticks are properly reflected in the cached layers.
+# mg.redraw()

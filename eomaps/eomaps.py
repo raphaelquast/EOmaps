@@ -7,10 +7,10 @@ import copy
 from types import SimpleNamespace
 from pathlib import Path
 import weakref
-from tempfile import TemporaryDirectory, TemporaryFile
 import gc
 import json
 from textwrap import fill
+from contextlib import contextmanager
 
 import numpy as np
 
@@ -94,6 +94,7 @@ from matplotlib.gridspec import GridSpec, SubplotSpec
 import matplotlib.patches as mpatches
 
 from cartopy import crs as ccrs
+from cartopy.mpl.geoaxes import GeoAxes
 
 from .helpers import (
     pairwise,
@@ -109,7 +110,6 @@ from .colorbar import ColorBar
 
 from ._containers import (
     data_specs,
-    map_objects,
     classify_specs,
 )
 from ._webmap_containers import wms_container
@@ -122,6 +122,8 @@ from .reader import read_file, from_file, new_layer_from_file
 
 from .utilities import utilities
 from .draw import ShapeDrawer
+
+from ._data_manager import DataManager
 
 from ._version import __version__
 
@@ -319,21 +321,7 @@ class Maps(object):
         preferred_wms_service="wms",
         **kwargs,
     ):
-
-        if "parent" in kwargs:
-            kwargs.pop("parent")
-            warnings.warn(
-                "EOmaps: The 'parent' argument for Maps() is depreciated! "
-                "It is sufficient to specify the figure (f) to which the "
-                "map should be added."
-            )
-
-        if "ax" in kwargs:
-            ax = kwargs.pop("gs_ax")
-            warnings.warn(
-                "EOmaps: The 'gs_ax=...' argument for Maps() is depreciated! "
-                "use 'ax=...' instead!"
-            )
+        self._inherit_classification = None
 
         if isinstance(ax, plt.Axes) and hasattr(ax, "figure"):
             if isinstance(ax.figure, plt.Figure):
@@ -412,7 +400,6 @@ class Maps(object):
 
         self._layout_editor = None
 
-        self._figure = map_objects(weakref.proxy(self))
         self._cb = cb_container(weakref.proxy(self))  # accessor for the callbacks
 
         self._init_figure(ax=ax, plot_crs=crs, **kwargs)
@@ -448,6 +435,11 @@ class Maps(object):
 
         # initialize the shape-drawer
         self._shape_drawer = ShapeDrawer(weakref.proxy(self))
+
+        # initialize the data-manager
+        self._data_manager = DataManager(self._proxy(self))
+        self._data_plotted = False
+        self._set_extent_on_plot = True
 
     def __getattribute__(self, key):
         if key == "plot_specs":
@@ -559,13 +551,6 @@ class Maps(object):
     @wraps(ShapeDrawer)
     def draw(self):
         return self._shape_drawer
-
-    @property
-    @wraps(map_objects)
-    def figure(self):
-        warnings.warn("EOmaps: The use of 'm.figure...' is depreciated!")
-
-        return self._figure
 
     @property
     def BM(self):
@@ -692,6 +677,9 @@ class Maps(object):
             ax=self.ax,
             layer=layer,
         )
+        # make sure the new layer does not attempt to reset the extent if
+        # it has already been set on the parent layer
+        m._set_extent_on_plot = self._set_extent_on_plot
 
         # re-initialize all sliders and buttons to include the new layer
         self.util._reinit_widgets()
@@ -710,7 +698,6 @@ class Maps(object):
         boundary=True,
         shape="ellipses",
         indicate_extent=True,
-        **kwargs,
     ):
         """
         Create a new (empty) inset-map that shows a zoomed-in view on a given extent.
@@ -858,20 +845,6 @@ class Maps(object):
 
         """
 
-        if "edgecolor" in kwargs or "linewidth" in kwargs:
-            warnings.warn(
-                "EOmaps: 'edgecolor' and 'linewidth' kwargs for `m.new_inset_map()`"
-                + " are depreciated! use `boundary=dict(ec='r', lw=1)` instead!",
-                category=DeprecationWarning,
-                stacklevel=2,
-            )
-
-            ec = kwargs.pop("edgecolor", "r")
-            lw = kwargs.pop("linewidth", 1)
-
-            boundary = dict(ec=ec, lw=lw)
-            boundary.update(kwargs.pop("boundary", dict()))
-
         m2 = _InsetMaps(
             parent=self,
             crs=inset_crs,
@@ -903,7 +876,7 @@ class Maps(object):
         encoding=None,
         cpos="c",
         cpos_radius=None,
-        **kwargs,
+        parameter=None,
     ):
         """
         Set the properties of the dataset you want to plot.
@@ -1020,31 +993,6 @@ class Maps(object):
           >>> # e.g. the "actual" data values are [0.01, 0.02, 0.03, ...]
           >>> m.set_data(vals, x=lon, y=lat, crs=4326, encoding=encoding)
         """
-
-        # depreciate the use of "xcoord" and "ycoord"... use "x", "y" instead
-        if "xcoord" in kwargs:
-            if x is None:
-                warnings.warn(
-                    "EOmaps: using 'xcoord' in 'm.set_data' is depreciated. "
-                    + "Use 'x=...' instead!",
-                    DeprecationWarning,
-                    stacklevel=2,
-                )
-                x = kwargs.pop("xcoord")
-            else:
-                raise TypeError("EOmaps: You cannot provide both 'x' and 'xcoord'!")
-        if "ycoord" in kwargs:
-            if y is None:
-                warnings.warn(
-                    "EOmaps: using 'ycoord' in 'm.set_data' is depreciated. "
-                    + "Use 'y=...' instead!",
-                    DeprecationWarning,
-                    stacklevel=2,
-                )
-                y = kwargs.pop("ycoord")
-            else:
-                raise TypeError("EOmaps: You cannot provide both 'y' and 'ycoord'!")
-
         if data is not None:
             self.data_specs.data = data
 
@@ -1057,9 +1005,6 @@ class Maps(object):
         if crs is not None:
             self.data_specs.crs = crs
 
-        for key, val in kwargs.items():
-            self.data_specs[key] = val
-
         if encoding is not None:
             self.data_specs.encoding = encoding
 
@@ -1068,6 +1013,9 @@ class Maps(object):
 
         if cpos_radius is not None:
             self.data_specs.cpos_radius = cpos_radius
+
+        if parameter is not None:
+            self.data_specs.parameter = parameter
 
     set_data = set_data_specs
 
@@ -1086,6 +1034,7 @@ class Maps(object):
                 for i in mapclassify.CLASSIFIERS
             }
         )
+
         s.__doc__ = dedent(
             """
             Interface to the classifiers provided by the 'mapclassify' module.
@@ -1218,7 +1167,7 @@ class Maps(object):
         lon0, lon1, lat0, lat1 = map(float, r["boundingbox"])
 
         # set extent to found bbox
-        self.ax.set_extent((lat0, lat1, lon0, lon1), crs=Maps.CRS.PlateCarree())
+        self.set_extent((lat0, lat1, lon0, lon1), crs=Maps.CRS.PlateCarree())
 
         # add annotation
         if annotate is not False:
@@ -1380,6 +1329,18 @@ class Maps(object):
             self._add_feature = NaturalEarth_features(self)
         return self._add_feature
 
+    @contextmanager
+    def _disable_autoscale(self, set_extent):
+        if set_extent is False:
+            init_extent = self.ax.get_extent()
+
+        try:
+
+            yield
+        finally:
+            if set_extent is False:
+                self.ax.set_extent(init_extent)
+
     def add_gdf(
         self,
         gdf,
@@ -1391,6 +1352,8 @@ class Maps(object):
         clip=False,
         reproject="gpd",
         verbose=False,
+        only_valid=True,
+        set_extent=True,
         **kwargs,
     ):
         """
@@ -1506,6 +1469,13 @@ class Maps(object):
             Indicator if a progressbar should be printed when re-projecting
             geometries with "use_gpd=False".
             The default is False.
+        only_valid : bool, optional
+
+            - If True, only valid geometries (e.g. `gdf.is_valid`) are plotted.
+            - If False, all geometries are attempted to be plotted
+              (this might result in errors for infinite geometries etc.)
+
+            The default is True
         kwargs :
             all remaining kwargs are passed to `geopandas.GeoDataFrame.plot(**kwargs)`
 
@@ -1527,9 +1497,12 @@ class Maps(object):
         if val_key is None:
             val_key = kwargs.get("column", None)
 
+        if only_valid:
+            gdf = gdf[gdf.is_valid]
+
         try:
             # explode the GeoDataFrame to avoid picking multi-part geometries
-            gdf = gdf[gdf.is_valid].explode(index_parts=False)
+            gdf = gdf.explode(index_parts=False)
         except Exception:
             # geopandas sometimes has problems exploding geometries...
             # if it does not work, just continue with the Multi-geometries!
@@ -1582,22 +1555,32 @@ class Maps(object):
         # (geopandas always uses collections)
         colls = [id(i) for i in self.ax.collections]
         artists, prefixes = [], []
-        for geomtype, geoms in gdf.groupby(gdf.geom_type):
-            gdf.plot(ax=self.ax, aspect=self.ax.get_aspect(), **kwargs)
-            artists = [i for i in self.ax.collections if id(i) not in colls]
-            for i in artists:
-                prefixes.append(f"_{i.__class__.__name__.replace('Collection', '')}")
+
+        # drop all invalid geometries
+        if only_valid:
+            gdf = gdf[gdf.is_valid]
+
+        with self._disable_autoscale(set_extent):
+            for geomtype, geoms in gdf.groupby(gdf.geom_type):
+                gdf.plot(ax=self.ax, aspect=self.ax.get_aspect(), **kwargs)
+                artists = [i for i in self.ax.collections if id(i) not in colls]
+                for i in artists:
+                    prefixes.append(
+                        f"_{i.__class__.__name__.replace('Collection', '')}"
+                    )
 
         if picker_name is not None:
             if isinstance(pick_method, str):
-                self._picker_cls = _gpd_picker(
+                picker_cls = _gpd_picker(
                     gdf=gdf, pick_method=pick_method, val_key=val_key
                 )
-                picker = self._picker_cls.get_picker()
+                picker = picker_cls.get_picker()
             elif callable(pick_method):
                 picker = pick_method
+                picker_cls = None
             else:
                 print("EOmaps: I don't know what to do with the provided pick_method")
+                return
 
             if len(artists) > 1:
                 warnings.warn(
@@ -1614,6 +1597,7 @@ class Maps(object):
                 # attach the re-projected GeoDataFrame to the pick-container
                 self.cb.pick[picker_name + prefix].data = gdf
                 self.cb.pick[picker_name + prefix].val_key = val_key
+                self.cb.pick[picker_name + prefix]._picker_cls = picker_cls
 
         if layer is None:
             layer = self.layer
@@ -1826,12 +1810,13 @@ class Maps(object):
             assert xy is None, "You can only provide 'ID' or 'pos' not both!"
             # avoid using np.isin directly since it needs a lot of ram
             # for very large datasets!
-            # mask = np.isin(self._props["ids"], ID)
-            # ind = np.where(mask)[0]
             mask, ind = self._find_ID(ID)
 
-            xy = (self._props["xorig"][mask], self._props["yorig"][mask])
-            val = self._props["z_data"][mask]
+            xy = (
+                self._data_manager.xorig.ravel()[mask],
+                self._data_manager.yorig.ravel()[mask],
+            )
+            val = self._data_manager.z_data.ravel()[mask]
             ID = np.atleast_1d(ID)
             xy_crs = self.data_specs.crs
         else:
@@ -2220,7 +2205,8 @@ class Maps(object):
         figax.set_navigate(False)
         figax.set_axis_off()
         _ = figax.imshow(im, aspect="equal", zorder=999)
-        self.BM.add_artist(figax, layer)
+
+        self.BM.add_bg_artist(figax, layer)
 
         if fix_position:
             fixed_pos = (
@@ -2239,6 +2225,10 @@ class Maps(object):
         Add a colorbar to the map.
         (docstring inherited from ColorBar.__init__)
         """
+        if self.coll is None:
+            # in order to plot a colorbar we need to fetch the layer!
+            # TODO implement a better way to ensure correct vmin/vmax
+            self._data_manager.on_fetch_bg(self.layer)
 
         colorbar = ColorBar(
             self,
@@ -2319,13 +2309,37 @@ class Maps(object):
 
         self.redraw()
 
+    def _get_alpha_cmap_name(self, alpha):
+        # get a unique name for the colormap
+        try:
+            ncmaps = max(
+                [
+                    int(i.rsplit("_", 1)[1])
+                    for i in plt.colormaps()
+                    if i.startswith("EOmaps_alpha_")
+                ]
+            )
+        except Exception:
+            ncmaps = 0
+
+        return f"EOmaps_alpha_{ncmaps + 1}"
+
+    @wraps(GeoAxes.set_extent)
+    def set_extent(self, extent, crs=None):
+        # just a wrapper to make sure that previously set extents are not
+        # resetted when plotting data!
+
+        # ( e.g. once .set_extent is called .plot_map does NOT set the extent!)
+        self.ax.set_extent(extent)
+        self._set_extent_on_plot = False
+
     def plot_map(
         self,
         layer=None,
         dynamic=False,
         set_extent=True,
-        memmap=False,
         assume_sorted=True,
+        indicate_masked_points=False,
         **kwargs,
     ):
         """
@@ -2359,27 +2373,6 @@ class Maps(object):
             - if False: The plot-extent is kept as-is
 
             The default is True
-        memmap : bool, str or pathlib.Path
-            Use memory-mapping to save some memory by storing intermediate datasets
-            (e.g. projected coordinates, indexes & the data) in a temporary folder on
-            disc rather than keeping everything in memory.
-            This causes a slight performance penalty when identifying clicked points but
-            it can provide a reduction in memory-usage for very large datasets
-            (or for a very large number of interactive layers).
-
-            - If None: memory-mapping is only used if "shade_raster" or "shade_points"
-              is used as plot-shape.
-            - if False: memory-mapping is disabled
-            - if True: memory-mapping is used with an automatically located tempfolder
-            - if str or pathlib.Path: memory-mapping is used and the provided folder
-              is used as location for the temporary files (stored in a temp-subfolder).
-
-            NOTE: The tempfolder and all files will be deleted if the figure is closed,
-            the Maps-object is deleted or the kernel is interrupted!
-
-            The location of the tempfolder is accessible via `m._tempfolder`
-
-            The default is False.
         assume_sorted : bool, optional
             ONLY relevant for the shapes "raster" and "shade_raster"
             (and only if coordinates are provided as 1D arrays and data is a 2D array)
@@ -2388,6 +2381,11 @@ class Maps(object):
             (required for QuadMesh if unsorted coordinates are provided)
 
             The default is True.
+        indicate_masked_points : bool
+            If True, any datapoints that could not be properly plotted
+            with the currently assigned shape are indicated with a
+            circle with a red boundary.
+            The default is False
 
         Other Parameters
         ----------------
@@ -2403,6 +2401,14 @@ class Maps(object):
             For "shade_points" or "shade_raster" shapes, kwargs are passed to
             `datashader.mpl_ext.dsshow`
         """
+
+        assert self._data_plotted is False, (
+            "EOmaps: Calling `m.plot_map()` multiple times on the same "
+            "Maps-object is no longer supported since EOmaps v6.0 !"
+            "Create a new layer with `m2 = m.new_layer()` and use the new "
+            "Maps-object to plot the additional data!"
+        )
+
         if getattr(self, "coll", None) is not None:
             print(
                 "EOmaps-warning: Calling `m.plot_map()` or "
@@ -2431,18 +2437,7 @@ class Maps(object):
         cmap = kwargs.setdefault("cmap", "viridis")
         if "alpha" in kwargs and kwargs["alpha"] < 1:
             # get a unique name for the colormap
-            try:
-                ncmaps = max(
-                    [
-                        int(i.rsplit("_", 1)[1])
-                        for i in plt.colormaps()
-                        if i.startswith("EOmaps_alpha_")
-                    ]
-                )
-            except Exception:
-                ncmaps = 0
-
-            cmapname = f"EOmaps_alpha_{ncmaps + 1}"
+            cmapname = self._get_alpha_cmap_name(kwargs["alpha"])
 
             kwargs["cmap"] = cmap_alpha(
                 cmap=cmap,
@@ -2460,7 +2455,23 @@ class Maps(object):
         # (by default shading would use 0 while ordinary collections use 1)
         kwargs.setdefault("zorder", 1)
 
+        # ---------------------- prepare the data
+        if kwargs.get("verbose") is not None:
+            print("EOmaps: Preparing the data")
+
         if useshape.name.startswith("shade"):
+            # shade shapes use datashader to update the data of the collections!
+            self._data_manager.set_props(
+                layer=layer,
+                assume_sorted=assume_sorted,
+                update_coll_on_fetch=False,
+                indicate_masked_points=indicate_masked_points,
+            )
+
+            # dont set extent if "m.set_extent" was called explicitly
+            if set_extent and self._set_extent_on_plot:
+                self._data_manager._set_lims()
+
             self._shade_map(
                 layer=layer,
                 dynamic=dynamic,
@@ -2469,6 +2480,17 @@ class Maps(object):
                 **kwargs,
             )
         else:
+            self._data_manager.set_props(
+                layer=layer,
+                assume_sorted=assume_sorted,
+                update_coll_on_fetch=True,
+                indicate_masked_points=indicate_masked_points,
+            )
+
+            # dont set extent if "m.set_extent" was called explicitly
+            if set_extent and self._set_extent_on_plot:
+                self._data_manager._set_lims()
+
             self._plot_map(
                 layer=layer,
                 dynamic=dynamic,
@@ -2477,23 +2499,14 @@ class Maps(object):
                 **kwargs,
             )
 
-        # after plotting, use memory-mapping to store datasets required by
-        # callbacks etc. so that we don't need to keep them in memory.
-        if memmap:
-            self._memmap_props(dir=memmap)
-
         if hasattr(self, "_data_mask") and not np.all(self._data_mask):
             print("EOmaps: Warning: some datapoints could not be drawn!")
 
-        x0, y0, x1, y1 = self.crs_plot.boundary.bounds
-
-        if (
-            np.any(self._props["x0"] < x0)
-            or np.any(self._props["x0"] > x1)
-            or np.any(self._props["y0"] < y0)
-            or np.any(self._props["y0"] > y1)
-        ):
-            print("EOmaps: Warning: some points are outside the CRS bounds!")
+        # update here to make sure the collection is properly added!
+        # self.BM.update()
+        # TODO add option to set margins
+        # self.ax.margins(0, 0, tight=False)
+        self._data_plotted = True
 
     def make_dataset_pickable(
         self,
@@ -2542,12 +2555,11 @@ class Maps(object):
             return
 
         # ---------------------- prepare the data
-        props = self._prepare_data()
-        self._props = props
-        # use the axis as Artist to execute pick-events on any click on the axis
+        self._data_manager = DataManager(self._proxy(self))
+        self._data_manager.set_props(layer=self.layer)
 
-        x0, x1 = self._props["x0"].min(), self._props["x0"].max()
-        y0, y1 = self._props["y0"].min(), self._props["y0"].max()
+        x0, x1 = self._data_manager.x0.min(), self._data_manager.x0.max()
+        y0, y1 = self._data_manager.y0.min(), self._data_manager.y0.max()
 
         # use a transparent rectangle of the data-extent as artist for picking
         (art,) = self.ax.fill([x0, x1, x1, x0], [y0, y0, y1, y1], fc="none", ec="none")
@@ -2783,48 +2795,6 @@ class Maps(object):
 
         return copy_cls
 
-    def indicate_masked_points(self, radius=1.0, **kwargs):
-        """
-        Add circles to the map that indicate masked points.
-        (e.g. points resulting in very distorted shapes etc.)
-
-        Parameters
-        ----------
-        radius : float, optional
-            The radius to use for plotting the indicators for the masked
-            points. The unit of the radius is map-pixels! The default is 1.
-        **kwargs :
-            additional kwargs passed to `m.plot_map(**kwargs)`.
-
-        Returns
-        -------
-        m : eomaps.Maps
-            A (connected) copy of the maps-object with the data set to the masked pixels.
-        **kwargs
-            additional kwargs passed to `m.plot_map(**kwargs)`
-        """
-        if not hasattr(self, "_data_mask"):
-            print("EOmaps: There are no masked points to indicate!")
-            return
-
-        mask = self._data_mask.reshape(self._zshape)
-
-        if len(self._props["z_data"][~mask]) == 0:
-            print("EOmaps: There are no masked points to indicate!")
-            return
-
-        kwargs.setdefault("ec", "r")
-
-        a = self.ax.scatter(
-            self._props["x0"][~mask],
-            self._props["y0"][~mask],
-            cmap=self.classify_specs._cbcmap,
-            c=self._props["z_data"][~mask],
-            **kwargs,
-        )
-
-        self.BM.add_bg_artist(a, layer=self.layer)
-
     def indicate_extent(self, x0, y0, x1, y1, crs=4326, npts=100, **kwargs):
         """
         Indicate a rectangular extent in a given crs on the map.
@@ -2858,23 +2828,32 @@ class Maps(object):
 
     def redraw(self):
         """
-        Force a re-draw of all cached background layers.
-        This will make sure that actions not managed by EOmaps are also properly drawn.
+        Force a re-draw of the current layer and all cached background layers.
 
-        - Use this at the very end of your code to trigger a final re-draw!
+        - Use this at the very end of your code to trigger a final re-draw
+          to make sure artists not managed by EOmaps are properly drawn!
 
         Note
         ----
-        Don't use this in an interactive context since it will trigger a re-draw
-        of all background-layers!
+        Don't use this to interactively update artists on a map!
+        since it will trigger a re-draw of all background-layers!
 
-        To make an artist dynamically updated if you interact with the map, use:
+        To dynamically re-draw an artist whenever you interact with the map, use:
 
         >>> m.BM.add_artist(artist)
+
+        To make an artist temporary (e.g. remove it on the next event), use
+        one of :
+
+        >>> m.cb.click.add_temporary_artist(artist)
+        >>> m.cb.pick.add_temporary_artist(artist)
+        >>> m.cb.keypress.add_temporary_artist(artist)
+        >>> m.cb.move.add_temporary_artist(artist)
         """
 
         self.BM._refetch_bg = True
-        self.BM.canvas.draw()
+        self._data_manager.last_extent = None
+        self.BM.on_draw(None)
 
     @wraps(GridSpec.update)
     def subplots_adjust(self, **kwargs):
@@ -2961,9 +2940,7 @@ class Maps(object):
         # clear data-specs and all cached properties of the data
         try:
             self._coll = None
-            if hasattr(self, "_props"):
-                self._props.clear()
-                del self._props
+            self._data_manager.cleanup()
 
             if hasattr(self, "tree"):
                 del self.tree
@@ -3056,12 +3033,6 @@ class Maps(object):
             self._ax_xlims = (0, 0)
             self._ax_ylims = (0, 0)
 
-            def xlims_change(*args, **kwargs):
-                if self._ax_xlims != args[0].get_xlim():
-                    self.BM._refetch_bg = True
-                    # self.f.stale = True
-                    self._ax_xlims = args[0].get_xlim()
-
             # def ylims_change(*args, **kwargs):
             #     if self._ax_ylims != args[0].get_ylim():
             #         print("y limchange", self.BM._refetch_bg)
@@ -3070,7 +3041,9 @@ class Maps(object):
 
             # do this only on xlims and NOT on ylims to avoid recursion
             # (plot aspect ensures that y changes if x changes)
-            self._cid_xlim = self.ax.callbacks.connect("xlim_changed", xlims_change)
+            self._cid_xlim = self.ax.callbacks.connect(
+                "xlim_changed", self._on_xlims_change
+            )
             # self.ax.callbacks.connect("ylim_changed", ylims_change)
 
             if self._cid_companion_key is None:
@@ -3101,6 +3074,12 @@ class Maps(object):
                 # or within the ipympl backend (otherwise it will block subsequent code!)
                 plt.show()
 
+    def _on_xlims_change(self, *args, **kwargs):
+        if self._ax_xlims != args[0].get_xlim():
+            self.BM._refetch_bg = True
+            # self.f.stale = True
+            self._ax_xlims = args[0].get_xlim()
+
     def _on_resize(self, event):
         # make sure the background is re-fetched if the canvas has been resized
         # (required for peeking layers after the canvas has been resized
@@ -3130,10 +3109,6 @@ class Maps(object):
                 m.f._EOmaps_parent = None
 
             m.cleanup()
-
-        # delete the tempfolder containing the memmaps
-        if hasattr(self.parent, "_tmpfolder"):
-            self.parent._tmpfolder.cleanup()
 
         # close the pyqt widget if there is one
         if self._companion_widget is not None:
@@ -3364,198 +3339,51 @@ class Maps(object):
 
         return z_data, xorig, yorig, ids, parameter
 
-    def _prepare_data(
-        self,
-        data=None,
-        in_crs=None,
-        plot_crs=None,
-        radius=None,
-        radius_crs=None,
-        cpos=None,
-        cpos_radius=None,
-        parameter=None,
-        x=None,
-        y=None,
-        buffer=None,
-        assume_sorted=True,
-    ):
-        if in_crs is None:
-            in_crs = self.data_specs.crs
-        if cpos is None:
-            cpos = self.data_specs.cpos
-        if cpos_radius is None:
-            cpos_radius = self.data_specs.cpos_radius
-
-        props = dict()
-        # get coordinate transformation from in_crs to plot_crs
-        # make sure to re-identify the CRS with pyproj to correctly skip re-projection
-        # in case we use in_crs == plot_crs
-
-        crs1 = CRS.from_user_input(in_crs)
-        crs2 = CRS.from_user_input(self._crs_plot)
-
-        # identify the provided data and get it in the internal format
-        z_data, xorig, yorig, ids, parameter = self._identify_data(
-            data=data, x=x, y=y, parameter=parameter
-        )
-
-        if cpos is not None and cpos != "c":
-            # fix position of pixel-center in the input-crs
-            assert (
-                cpos_radius is not None
-            ), "you must specify a 'cpos_radius if 'cpos' is not 'c'"
-            if isinstance(cpos_radius, (list, tuple)):
-                rx, ry = cpos_radius
-            else:
-                rx = ry = cpos_radius
-
-            xorig, yorig = self._set_cpos(xorig, yorig, rx, ry, cpos)
-
-        # invoke the shape-setter to make sure a shape is set
-        used_shape = self.shape
-
-        # --------- sort by coordinates
-        # this is required to avoid glitches in "raster" and "shade_raster"
-        # since QuadMesh requires sorted coordinates!
-        # (currently only implemented for 1D coordinates and 2D data)
-
-        if assume_sorted is False:
-            if used_shape.name in ["raster", "shade_raster"]:
-                if (
-                    len(xorig.shape) == 1
-                    and len(yorig.shape) == 1
-                    and len(z_data.shape) == 2
-                ):
-
-                    xs, ys = np.argsort(xorig), np.argsort(yorig)
-                    np.take(xorig, xs, out=xorig, mode="wrap")
-                    np.take(yorig, ys, out=yorig, mode="wrap")
-                    np.take(
-                        np.take(z_data, xs, 0),
-                        indices=ys,
-                        axis=1,
-                        out=z_data,
-                        mode="wrap",
-                    )
-                else:
-                    print(
-                        "EOmaps: using 'assume_sorted=False' is only possible"
-                        + "if you use 1D coordinates + 2D data!"
-                        + "...continuing without sorting."
-                    )
-            else:
-                print(
-                    "EOmaps: using 'assume_sorted=False' is only relevant for "
-                    + "the shapes ['raster', 'shade_raster']! "
-                    + "...continuing without sorting."
-                )
-
-        if crs1 == crs2:
-            if used_shape.name not in ["shade_raster"]:
-                # convert 1D data to 2D (required for all shapes but shade_raster)
-                if (
-                    len(xorig.shape) == 1
-                    and len(yorig.shape) == 1
-                    and len(z_data.shape) == 2
-                ):
-
-                    xorig, yorig = np.meshgrid(xorig, yorig, copy=False)
-                    z_data = z_data.T
-
-            x0, y0 = xorig, yorig
-
-        else:
-            # transform center-points to the plot_crs
-            transformer = Transformer.from_crs(
-                crs1,
-                crs2,
-                always_xy=True,
-            )
-            # convert 1D data to 2D to make sure re-projection is correct
-            if (
-                len(xorig.shape) == 1
-                and len(yorig.shape) == 1
-                and len(z_data.shape) == 2
-            ):
-                xorig, yorig = np.meshgrid(xorig, yorig, copy=False)
-                z_data = z_data.T
-
-            x0, y0 = transformer.transform(xorig, yorig)
-
-        # use np.asanyarray to ensure that the output is a proper numpy-array
-        # (relevant for categorical dtypes in pandas.DataFrames)
-        props["xorig"] = np.asanyarray(xorig)
-        props["yorig"] = np.asanyarray(yorig)
-        props["ids"] = ids
-        props["z_data"] = np.asanyarray(z_data)
-        props["x0"] = np.asanyarray(x0)
-        props["y0"] = np.asanyarray(y0)
-
-        # remember shapes for later use
-        self._xshape = props["x0"].shape
-        self._yshape = props["y0"].shape
-        self._zshape = props["z_data"].shape
-
-        if len(self._xshape) == 1 and len(self._yshape) == 1 and len(self._zshape) == 2:
-            self._1D2D = True
-        else:
-            self._1D2D = False
-
-        return props
-
-    def _get_xy_from_index(self, ind, reprojected=False):
-        if self._1D2D:
-            xind, yind = np.unravel_index(ind, self._zshape)
-        else:
-            xind = yind = ind
-
-        if reprojected:
-            return (self._props["x0"].flat[xind], self._props["y0"].flat[yind])
-        else:
-            return (self._props["xorig"].flat[xind], self._props["yorig"].flat[yind])
-
-    def _get_xy_from_ID(self, ID, reprojected=False):
-        ind = self._get_ind(ID)
-        if self._1D2D:
-            xind, yind = np.unravel_index(ind, self._zshape)
-        else:
-            xind = yind = ind
-
-        if reprojected:
-            return (self._props["x0"].flat[xind], self._props["y0"].flat[yind])
-        else:
-            return (self._props["xorig"].flat[xind], self._props["yorig"].flat[yind])
-
-    def _get_ind(self, ID):
+    def inherit_classification(self, m):
         """
-        Identify the numerical data-index from a given ID
+        Use the classification of another Maps-object when plotting the data.
+
+        NOTE
+        ----
+        If the classification is inherited, the following arguments
+        for `m.plot_map()` will have NO effect (they are inherited):
+
+            - "cmap"
+            - "vmin"
+            - "vmax"
 
         Parameters
         ----------
-        ID : single ID or list of IDs
-            The IDs to search for.
-
-        Returns
-        -------
-        ind : any
-            The corresponding (flat) data-index.
+        m : eomaps.Maps or None
+            The Maps-object that provides the classification specs.
         """
-        ids = self._props["ids"]
-
-        ID = np.atleast_1d(ID)
-        if isinstance(ids, range):
-            # if "ids" is range-like, so is "ind", therefore we can simply
-            # select the values.
-            inds = [ids[i] for i in ID]
-        if isinstance(ids, list):
-            # for lists, using .index to identify the index
-            inds = [ids.index(i) for i in ID]
-        elif isinstance(ids, np.ndarray):
-            inds = np.flatnonzero(np.isin(ids, ID))
+        if m is not None:
+            self._inherit_classification = self._proxy(m)
         else:
-            ID = "?"
+            self._inherit_classification = None
 
-        return inds
+    def inherit_data(self, m):
+        """
+        Use the data of another Maps-object (without copying).
+
+        NOTE
+        ----
+        If the data is inherited, any change in the data of the parent
+        Maps-object will be reflected in this Maps-object as well!
+
+        Parameters
+        ----------
+        m : eomaps.Maps or None
+            The Maps-object that provides the data.
+        """
+
+        if m is not None:
+            self.data_specs = m.data_specs
+            self.set_data_specs = lambda *args, **kwargs: (
+                "EOmaps: You cannot set data_specs for a Maps object that "
+                "inherits data!"
+            )
+            self.set_data = self.set_data_specs
 
     def _classify_data(
         self,
@@ -3566,8 +3394,22 @@ class Maps(object):
         classify_specs=None,
     ):
 
+        if self._inherit_classification is not None:
+            try:
+                return (
+                    self._inherit_classification._cbcmap,
+                    self._inherit_classification._norm,
+                    self._inherit_classification._bins,
+                    self._inherit_classification._classified,
+                )
+            except AttributeError:
+                raise AssertionError(
+                    "EOmaps: A Maps object can only inherit the classification "
+                    "if the parent Maps object called `m.plot_map()` first!!"
+                )
+
         if z_data is None:
-            z_data = self._props["z_data"]
+            z_data = self._data_manager.z_data
 
         if isinstance(cmap, str):
             cmap = plt.get_cmap(cmap).copy()
@@ -3582,11 +3424,13 @@ class Maps(object):
             )
 
             classified = True
-
-            mapc = getattr(mapclassify, classify_specs.scheme)(
-                z_data[~np.isnan(z_data)], **classify_specs
-            )
-            bins = mapc.bins
+            if self.classify_specs.scheme == "UserDefined":
+                bins = self.classify_specs.bins
+            else:
+                mapc = getattr(mapclassify, classify_specs.scheme)(
+                    z_data[~np.isnan(z_data)], **classify_specs
+                )
+                bins = mapc.bins
             if vmin < min(bins):
                 bins = [vmin, *bins]
 
@@ -3659,13 +3503,13 @@ class Maps(object):
 
     def _find_ID(self, ID):
         # explicitly treat range-like indices (for very large datasets)
-        ids = self._props["ids"]
+        ids = self._data_manager.ids
         if isinstance(ids, range):
             if ID in ids:
                 return [ID], [ID]
             else:
                 return None, None
-        elif isinstance(ids, np.ndarray):
+        elif isinstance(ids, (list, np.ndarray)):
             mask = np.isin(ids, ID)
             ind = np.where(mask)[0]
 
@@ -3808,25 +3652,6 @@ class Maps(object):
         scheme.__doc__ = s.__doc__
         return scheme
 
-    def _set_cpos(self, x, y, radiusx, radiusy, cpos):
-        # use x = x + ...   instead of x +=  to allow casting from int to float
-        if cpos == "c":
-            pass
-        elif cpos == "ll":
-            x = x + radiusx
-            y = y + radiusy
-        elif cpos == "ul":
-            x = x + radiusx
-            y = y - radiusy
-        elif cpos == "lr":
-            x = x - radiusx
-            y = y + radiusy
-        elif cpos == "ur":
-            x = x - radiusx
-            y = y - radiusx
-
-        return x, y
-
     def _plot_map(
         self,
         layer=None,
@@ -3835,18 +3660,6 @@ class Maps(object):
         assume_sorted=True,
         **kwargs,
     ):
-
-        if "coastlines" in kwargs:
-            kwargs.pop("coastlines")
-            warnings.warn(
-                "EOmaps: the 'coastlines' kwarg for 'plot_map' is depreciated!"
-                + "Instead use "
-                + "\n    m.add_feature.preset.ocean()"
-                + "\n    m.add_feature.preset.coastline()"
-                + " instead!"
-            )
-
-        ax = self.ax
 
         cmap = kwargs.pop("cmap", "viridis")
         vmin = kwargs.pop("vmin", None)
@@ -3858,24 +3671,10 @@ class Maps(object):
             ), f"The key '{key}' is assigned internally by EOmaps!"
 
         try:
-            # remove previously fetched backgrounds for the used layer
-            if layer in self.BM._bg_layers and dynamic is False:
-                del self.BM._bg_layers[layer]
-                # self.BM._refetch_bg = True
-
-            # if self.data is None:
-            #     return
-
-            # ---------------------- prepare the data
-            props = self._prepare_data(assume_sorted=assume_sorted)
-
-            # remember props for later use
-            self._props = props
-
             if vmin is None and self.data is not None:
-                vmin = np.nanmin(props["z_data"])
+                vmin = np.nanmin(self._data_manager.z_data)
             if vmax is None and self.data is not None:
-                vmax = np.nanmax(props["z_data"])
+                vmax = np.nanmax(self._data_manager.z_data)
 
             # clip the data to properly account for vmin and vmax
             # (do this only if we don't intend to use the full dataset!)
@@ -3890,97 +3689,86 @@ class Maps(object):
                 classify_specs=self.classify_specs,
             )
 
+            # TODO remove duplicated attributes!!
             self.classify_specs._cbcmap = cbcmap
             self.classify_specs._norm = norm
             self.classify_specs._bins = bins
             self.classify_specs._classified = classified
 
+            self._cbcmap = cbcmap
+            self._norm = norm
+            self._bins = bins
+            self._classified = classified
+
+            self._vmin = vmin
+            self._vmax = vmax
+            self._set_extent = set_extent
+
             # ------------- plot the data
+            self._coll_kwargs = kwargs
+            self._coll_dynamic = dynamic
 
-            # don't pass the array if explicit facecolors are set
-            if (
-                ("color" in kwargs and kwargs["color"] is not None)
-                or ("facecolor" in kwargs and kwargs["facecolor"] is not None)
-                or ("fc" in kwargs and kwargs["fc"] is not None)
-            ):
-                args = dict(array=None, cmap=None, norm=None, **kwargs)
-            else:
-                args = dict(array=props["z_data"], cmap=cbcmap, norm=norm, **kwargs)
-
-            if self.shape.name in ["raster"]:
-                # if input-data is 1D, try to convert data to 2D (required for raster)
-                # TODO make an explicit data-conversion function for 2D-only shapes
-                if len(self._xshape) == 2 and len(self._yshape) == 2:
-                    coll = self.shape.get_coll(
-                        props["xorig"], props["yorig"], "in", **args
-                    )
-                elif _register_pandas():
-                    if (
-                        (len(self._xshape) == 1)
-                        and (len(self._yshape) == 1)
-                        and (len(self._zshape) == 1)
-                        and (props["x0"].size == props["y0"].size)
-                        and (props["x0"].size == props["z_data"].size)
-                    ):
-
-                        df = (
-                            pd.DataFrame(
-                                dict(
-                                    x=props["x0"].ravel(),
-                                    y=props["y0"].ravel(),
-                                    val=props["z_data"].ravel(),
-                                ),
-                                copy=False,
-                            ).set_index(["x", "y"])
-                        )["val"].unstack("y")
-
-                        xg, yg = np.meshgrid(df.index.values, df.columns.values)
-
-                        if args["array"] is not None:
-                            args["array"] = df.values.T
-
-                        coll = self.shape.get_coll(xg, yg, "out", **args)
-            else:
-                # convert to 1D for further processing
-                if args["array"] is not None:
-                    args["array"] = args["array"].ravel()
-
-                coll = self.shape.get_coll(
-                    props["x0"].ravel(), props["y0"].ravel(), "out", **args
-                )
-
-            coll.set_clim(vmin, vmax)
-            ax.add_collection(coll, autolim=set_extent)
-
-            self._coll = coll
-
-            # This is now done lazily (only if a pick-callback is attached)
-            # self.tree = searchtree(m=self._proxy(self))
-            # self.cb.pick._set_artist(coll)
-            # self.cb.pick._init_cbs()
-            # self.cb._methods.add("pick")
-
-            if dynamic is True:
-                self.BM.add_artist(coll, layer)
-            else:
-                self.BM.add_bg_artist(coll, layer)
-
-            if set_extent:
-                # set the image extent
-                x0min, y0min, x0max, y0max = self.coll.get_datalim(
-                    self.ax.transData
-                ).extents
-
-                ymin, ymax = ax.projection.y_limits
-                xmin, xmax = ax.projection.x_limits
-                # set the axis-extent
-                ax.set_xlim(max(x0min, xmin), min(x0max, xmax))
-                ax.set_ylim(max(y0min, ymin), min(y0max, ymax))
-
-            self.f.canvas.draw_idle()
+            # NOTE: the actual plot is performed by the data-manager
+            # at the next call to m.BM.fetch_bg() for the corresponding layer
+            # self.BM._refetch_layer(layer)
+            # self.BM.fetch_bg(layer=layer)
 
         except Exception as ex:
             raise ex
+
+    def _get_coll(self, props, **kwargs):
+        # don't pass the array if explicit facecolors are set
+        if (
+            ("color" in kwargs and kwargs["color"] is not None)
+            or ("facecolor" in kwargs and kwargs["facecolor"] is not None)
+            or ("fc" in kwargs and kwargs["fc"] is not None)
+        ):
+            args = dict(array=None, cmap=None, norm=None, **kwargs)
+        else:
+            args = dict(
+                array=props["z_data"], cmap=self._cbcmap, norm=self._norm, **kwargs
+            )
+
+        if self.shape.name in ["raster"]:
+            # if input-data is 1D, try to convert data to 2D (required for raster)
+            # TODO make an explicit data-conversion function for 2D-only shapes
+            if len(self._xshape) == 2 and len(self._yshape) == 2:
+                coll = self.shape.get_coll(props["xorig"], props["yorig"], "in", **args)
+            elif _register_pandas():
+                if (
+                    (len(self._xshape) == 1)
+                    and (len(self._yshape) == 1)
+                    and (len(self._zshape) == 1)
+                    and (props["x0"].size == props["y0"].size)
+                    and (props["x0"].size == props["z_data"].size)
+                ):
+
+                    df = (
+                        pd.DataFrame(
+                            dict(
+                                x=props["x0"].ravel(),
+                                y=props["y0"].ravel(),
+                                val=props["z_data"].ravel(),
+                            ),
+                            copy=False,
+                        ).set_index(["x", "y"])
+                    )["val"].unstack("y")
+
+                    xg, yg = np.meshgrid(df.index.values, df.columns.values)
+
+                    if args["array"] is not None:
+                        args["array"] = df.values.T
+
+                    coll = self.shape.get_coll(xg, yg, "out", **args)
+        else:
+            # convert to 1D for further processing
+            if args["array"] is not None:
+                args["array"] = args["array"].ravel()
+
+            coll = self.shape.get_coll(
+                props["x0"].ravel(), props["y0"].ravel(), "out", **args
+            )
+        return coll
 
     def _shade_map(
         self,
@@ -4023,25 +3811,14 @@ class Maps(object):
             del self.BM._bg_layers[layer]
             # self.BM._refetch_bg = True
 
-        if verbose:
-            print("EOmaps: Preparing the data")
-        # ---------------------- prepare the data
-        props = self._prepare_data(assume_sorted=assume_sorted)
-        if len(props["z_data"]) == 0:
-            print("EOmaps: there was no data to plot")
-            return
-
-        # remember props for later use
-        self._props = props
-
         # get the name of the used aggretation reduction
         aggname = self.shape.aggregator.__class__.__name__
         if aggname in ["first", "last", "max", "min", "mean", "mode"]:
             # set vmin/vmax in case the aggregation still represents data-values
             if vmin is None:
-                vmin = np.nanmin(props["z_data"])
+                vmin = np.nanmin(self._data_manager.z_data)
             if vmax is None:
-                vmax = np.nanmax(props["z_data"])
+                vmax = np.nanmax(self._data_manager.z_data)
         else:
             # set vmin/vmax for aggregations that do NOT represent data values
 
@@ -4087,7 +3864,7 @@ class Maps(object):
         if verbose:
             print("EOmaps: Plotting...")
 
-        zdata = props["z_data"]
+        zdata = self._data_manager.z_data
         if len(zdata) == 0:
             print("EOmaps: there was no data to plot")
             return
@@ -4096,17 +3873,21 @@ class Maps(object):
 
         # get rid of unnecessary dimensions in the numpy arrays
         zdata = zdata.squeeze()
-        props["x0"] = props["x0"].squeeze()
-        props["y0"] = props["y0"].squeeze()
+        x0 = self._data_manager.x0.squeeze()
+        y0 = self._data_manager.y0.squeeze()
 
         # the shape is always set after _prepare data!
-        if self.shape.name == "shade_points" and not self._1D2D:
+        if self.shape.name == "shade_points" and self._data_manager.x0_1D is None:
             assert (
                 _register_pandas()
             ), f"EOmaps: missing dependency 'pandas' for {self.shape.name}"
 
             df = pd.DataFrame(
-                dict(x=props["x0"].ravel(), y=props["y0"].ravel(), val=zdata.ravel()),
+                dict(
+                    x=x0.ravel(),
+                    y=y0.ravel(),
+                    val=zdata.ravel(),
+                ),
                 copy=False,
             )
 
@@ -4115,9 +3896,7 @@ class Maps(object):
                 _register_xarray()
             ), "EOmaps: missing dependency `xarray` for 'shade_raster'"
             if len(zdata.shape) == 2:
-                if (zdata.shape == props["x0"].shape) and (
-                    zdata.shape == props["y0"].shape
-                ):
+                if (zdata.shape == x0.shape) and (zdata.shape == y0.shape):
                     # 2D coordinates and 2D raster
 
                     # use a curvilinear QuadMesh
@@ -4130,31 +3909,30 @@ class Maps(object):
                         data_vars=dict(val=(["xx", "yy"], zdata)),
                         # dims=["x", "y"],
                         coords=dict(
-                            x=(["xx", "yy"], props["x0"]), y=(["xx", "yy"], props["y0"])
+                            x=(["xx", "yy"], x0),
+                            y=(["xx", "yy"], y0),
                         ),
                     )
 
                 elif (
-                    ((zdata.shape[1],) == props["x0"].shape)
-                    and ((zdata.shape[0],) == props["y0"].shape)
-                    and (props["x0"].shape != props["y0"].shape)
+                    ((zdata.shape[1],) == x0.shape)
+                    and ((zdata.shape[0],) == y0.shape)
+                    and (x0.shape != y0.shape)
                 ):
                     raise AssertionError(
                         "EOmaps: it seems like you need to transpose your data! \n"
                         + f"the dataset has a shape of {zdata.shape}, but the "
-                        + f"coordinates suggest ({props['x0'].shape}, {props['x0'].shape})"
+                        + f"coordinates suggest ({x0.shape}, {y0.shape})"
                     )
-                elif (zdata.T.shape == props["x0"].shape) and (
-                    zdata.T.shape == props["y0"].shape
-                ):
+                elif (zdata.T.shape == x0.shape) and (zdata.T.shape == y0.shape):
                     raise AssertionError(
                         "EOmaps: it seems like you need to transpose your data! \n"
                         + f"the dataset has a shape of {zdata.shape}, but the "
-                        + f"coordinates suggest {props['x0'].shape}"
+                        + f"coordinates suggest {x0.shape}"
                     )
 
-                elif ((zdata.shape[0],) == props["x0"].shape) and (
-                    (zdata.shape[1],) == props["y0"].shape
+                elif ((zdata.shape[0],) == x0.shape) and (
+                    (zdata.shape[1],) == y0.shape
                 ):
                     # 1D coordinates and 2D data
 
@@ -4167,7 +3945,7 @@ class Maps(object):
                     df = xar.DataArray(
                         data=zdata,
                         dims=["x", "y"],
-                        coords=dict(x=props["x0"], y=props["y0"]),
+                        coords=dict(x=x0, y=y0),
                     )
                     df = xar.Dataset(dict(val=df))
             else:
@@ -4182,8 +3960,8 @@ class Maps(object):
                 df = (
                     pd.DataFrame(
                         dict(
-                            x=props["xorig"].ravel(),
-                            y=props["yorig"].ravel(),
+                            x=x0.ravel(),
+                            y=y0.ravel(),
                             val=zdata.ravel(),
                         ),
                         copy=False,
@@ -4267,40 +4045,6 @@ class Maps(object):
 
         if dynamic is True:
             self.BM.update(clear=False)
-
-    def _memmap_props(self, dir=None):
-        # memory-map all datasets in the self._props dict to free memory while
-        # keeping all callbacks etc. responsive.
-        if not hasattr(self.parent, "_tmpfolder"):
-            if isinstance(dir, (str, Path)):
-                self.parent._tmpfolder = TemporaryDirectory(dir=dir)
-            else:
-                self.parent._tmpfolder = TemporaryDirectory()
-
-        memmaps = dict()
-
-        for key, data in self._props.items():
-            # don't memmap x0 and y0 since they are needed to identify points
-            # (e.g. they would be loaded to memory as soon as a point is clicked)
-            if key in ["x0", "y0"]:
-                continue
-            file = TemporaryFile(
-                prefix=key + "__", suffix=".dat", dir=self.parent._tmpfolder.name
-            )
-
-            # filename = path.join(tmpfolder.name, f'{key}.dat')
-            args = dict(filename=file, dtype="float32", shape=data.shape)
-
-            fp = np.memmap(**args, mode="w+")
-
-            fp[:] = data[:]  # write the data to the memmap object
-            fp.flush()  # flush the data to disk
-
-            # replace the file in memory with the memmap
-            memmaps[key] = np.memmap(**args, mode="r")
-
-        for key, val in memmaps.items():
-            self._props[key] = val
 
     def _encode_values(self, val):
         """
@@ -4534,8 +4278,8 @@ class Maps(object):
             # make sure that we clear the colormap-pixmap cache on startup
             self._companion_widget.cmapsChanged.emit()
 
-        except Exception:
-            print("EOmaps: Unable to initialize companion widget.")
+        except Exception as ex:
+            print("EOmaps: Unable to initialize companion widget.", ex)
 
     @staticmethod
     def _proxy(obj):

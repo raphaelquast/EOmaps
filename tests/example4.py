@@ -5,7 +5,6 @@ import pandas as pd
 import numpy as np
 
 # create some data
-# lon, lat = np.mgrid[-20:40, 30:60]
 lon, lat = np.meshgrid(np.linspace(-20, 40, 50), np.linspace(30, 60, 50))
 
 data = pd.DataFrame(
@@ -14,11 +13,9 @@ data = pd.DataFrame(
 
 # --------- initialize a Maps object and plot a basic map
 m = Maps(crs=3035, figsize=(10, 8))
-m.set_data(data=data, x="lon", y="lat", in_crs=4326)
+m.set_data(data=data, x="lon", y="lat", crs=4326)
 m.ax.set_title("A clickable widget!")
 m.set_shape.rectangles()
-# double the estimated radius in x-direction to make the plot dense
-m.shape.radius = (m.shape.radius[0] * 2, m.shape.radius[1])
 
 m.set_classify_specs(scheme="EqualInterval", k=5)
 m.add_feature.preset.coastline()
