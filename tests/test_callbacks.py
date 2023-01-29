@@ -83,7 +83,14 @@ class TestCallbacks(unittest.TestCase):
 
     def click_ID(self, m, ID, release=True):
         cv = m.f.canvas
-        x, y = m.ax.transData.transform((self.data.lon[ID], self.data.lat[ID]))
+
+        # get coordinates in plot-crs
+        plotx, ploty = m._transf_lonlat_to_plot.transform(
+            self.data.lon[ID], self.data.lat[ID]
+        )
+
+        # get coordinates in figure points
+        x, y = m.ax.transData.transform((plotx, ploty))
         button_press_event(cv, x, y, 1, False)
         if release:
             button_release_event(cv, x, y, 1, False)
@@ -128,14 +135,32 @@ class TestCallbacks(unittest.TestCase):
         ]
 
         # ---------- test as PICK callback
-        for ID, n, cpick, relpick, r, data in product(
-            [1225, 350],
-            [1, 5],
-            [True, False],
-            [True, False],
-            ["10", 12.65],
+        # for ID, n, cpick, relpick, r, data, plotcrs in product(
+        #     [1225, 350],
+        #     [1, 5],
+        #     [True, False],
+        #     [True, False],
+        #     ["10", 12.65],
+        #     data_selections,
+        #     [4326, Maps.CRS.Mollweide()],
+        # ):
+        for ID, n, cpick, relpick, r, data, plotcrs in product(
+            [1225],
+            [5],
+            [True],
+            [True],
+            ["10", None],
             data_selections,
+            [4326, Maps.CRS.Mollweide()],
         ):
+
+            # note r is defined in units of the plot crs!
+            if r is None:
+                if plotcrs == 4326:
+                    r = 12.65
+                else:
+                    r = 1e6
+
             with self.subTest(
                 n=n,
                 consecutive_pick=cpick,
@@ -143,11 +168,18 @@ class TestCallbacks(unittest.TestCase):
                 search_radius=r,
                 data=data["test"],
             ):
-                # print("--------------- TESTING:", ID, n, cpick, relpick, r, data["test"])
+                print(
+                    "--------------- TESTING:", ID, n, cpick, relpick, r, data["test"]
+                )
 
-                m = Maps()
+                m = Maps(crs=plotcrs)
                 m.set_data(**{key: val for key, val in data.items() if key != "test"})
                 m.plot_map()
+
+                # identify x-y in plot_crs
+                ref_x, ref_y = m._transf_lonlat_to_plot.transform(
+                    *self.data.loc[ID][["lon", "lat"]]
+                )
 
                 m.cb.pick.set_props(
                     n=n,
@@ -169,16 +201,16 @@ class TestCallbacks(unittest.TestCase):
 
                     self.assertTrue(m.cb.pick.get.picked_vals["ID"][0] == ID)
                     self.assertTrue(
-                        m.cb.pick.get.picked_vals["val"][0]
-                        == self.data.loc[ID]["value"]
+                        np.allclose(
+                            m.cb.pick.get.picked_vals["val"][0],
+                            self.data.loc[ID]["value"],
+                        )
                     )
                     self.assertTrue(
-                        m.cb.pick.get.picked_vals["pos"][0][0]
-                        == self.data.loc[ID]["lon"]
+                        np.allclose(m.cb.pick.get.picked_vals["pos"][0][0], ref_x)
                     )
                     self.assertTrue(
-                        m.cb.pick.get.picked_vals["pos"][0][1]
-                        == self.data.loc[ID]["lat"]
+                        np.allclose(m.cb.pick.get.picked_vals["pos"][0][1], ref_y)
                     )
 
                 elif n == 5:
@@ -188,6 +220,9 @@ class TestCallbacks(unittest.TestCase):
                         self.data.loc[ID][["lon", "lat"]].values, k=n
                     )
                     pickids.sort()  # sort found IDs since KDtree sorting might be different
+                    ref_x, ref_y = m._transf_lonlat_to_plot.transform(
+                        *self.data.loc[pickids][["lon", "lat"]].values.T
+                    )
 
                     if cpick is True:
                         self.assertEqual(len(m.cb.pick.get.picked_vals["pos"]), 5)
@@ -217,13 +252,13 @@ class TestCallbacks(unittest.TestCase):
                             self.assertTrue(
                                 np.allclose(
                                     m.cb.pick.get.picked_vals["pos"][0][0][sortp],
-                                    self.data.loc[pickids]["lon"].values,
+                                    ref_x,
                                 )
                             )
                             self.assertTrue(
                                 np.allclose(
                                     m.cb.pick.get.picked_vals["pos"][0][1][sortp],
-                                    self.data.loc[pickids]["lat"].values,
+                                    ref_y,
                                 )
                             )
 
@@ -251,13 +286,13 @@ class TestCallbacks(unittest.TestCase):
                             self.assertTrue(
                                 np.allclose(
                                     m.cb.pick.get.picked_vals["pos"][0][0][sortp][0],
-                                    self.data.loc[pickids]["lon"].values[0],
+                                    ref_x[0],
                                 )
                             )
                             self.assertTrue(
                                 np.allclose(
                                     m.cb.pick.get.picked_vals["pos"][0][1][sortp][0],
-                                    self.data.loc[pickids]["lat"].values[0],
+                                    ref_y[0],
                                 )
                             )
 
