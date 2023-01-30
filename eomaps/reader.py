@@ -424,8 +424,10 @@ class read_file:
                     + f"Available variables: {list(ncfile)}"
                 )
 
-            check_shapes = data.shape == (y.size, x.size) or (
-                data.shape == x.shape and data.shape == y.shape
+            check_shapes = (
+                (data.shape == (x.size, y.size))
+                or (data.shape == (y.size, x.size))
+                or (data.shape == x.shape and data.shape == y.shape)
             )
 
             if not check_shapes:
@@ -439,15 +441,14 @@ class read_file:
                     f"y   : {ystr}\n"
                 )
 
-            # only use masked arrays if mask_and_scale is False!
-            # (otherwise the mask is already applied as NaN's in the float-array)
-            # Using masked-arrays ensures that we can deal with integers as well!
-
             if data.shape == (y.size, x.size) and len(x.shape) == 1:
                 data = data.values.T
             else:
                 data = data.values
 
+            # only use masked arrays if mask_and_scale is False!
+            # (otherwise the mask is already applied as NaN's in the float-array)
+            # Using masked-arrays ensures that we can deal with integers as well!
             if mask_and_scale is False:
                 encoding = dict(
                     scale_factor=getattr(usencfile[parameter], "scale_factor", 1),
