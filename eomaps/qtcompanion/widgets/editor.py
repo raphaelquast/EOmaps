@@ -951,7 +951,7 @@ class ArtistEditor(QtWidgets.QWidget):
                     currlayers.remove(l)
 
             if len(currlayers) > 1:
-                uselayer = "|".join(sorted(currlayers))
+                uselayer = "|".join(currlayers)
 
                 self.m.show_layer(uselayer)
             elif len(currlayers) == 1:
