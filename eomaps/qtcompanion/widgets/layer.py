@@ -241,7 +241,7 @@ class AutoUpdateLayerMenuButton(QtWidgets.QPushButton):
 
             uselayer = "???"
             if len(checked_layers) > 1:
-                uselayer = "|".join(sorted(checked_layers))
+                uselayer = "|".join(checked_layers)
             elif len(checked_layers) == 1:
                 uselayer = checked_layers[0]
 

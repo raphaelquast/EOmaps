@@ -1326,22 +1326,23 @@ class BlitManager:
 
             # get all relevant artists to plot and remember zorders
             # self.get_bg_artists() already returns artists sorted by zorder!
-            allartists, initial_zorders, maxzorders = [], [], []
-            for l in (*layer.split("|"), "all"):
+            allartists, initial_zorders = [], []
+            zorder_offset = 0
+            for l in ("all", *layer.split("|")):
                 artists = self.get_bg_artists(l)
-                z = list(map(lambda a: getattr(a, "zorder", 0), artists))
-
                 allartists.append(artists)
+                # get all currently assigned zorders and remember for later
+                z = list(map(lambda a: getattr(a, "zorder", 0), artists))
                 initial_zorders.append(z)
-                maxzorders.append(max(z, default=0))
 
-            # add max zorder of underlying layer to overlay-artists prior to
-            # plotting to ensure that they appear on top of other artists
-            overlayz = 0
-            for artists, z in zip(allartists, maxzorders):
-                for a in artists:
-                    a.zorder += overlayz
-                overlayz += z
+                # assign new zorders (to avoid issues with negative zorders etc.)
+                new_zorders = np.argsort(z)
+                for a, newz in zip(artists, new_zorders):
+                    a.set_zorder(newz + zorder_offset)
+
+                # offset the zorder to make sure artists of next layers appear
+                # on top of previous layers
+                zorder_offset = len(artists) + 1
 
             # check if all artists are stale, and if so skip re-fetching the background
             # (only if also the axis extent is the same!)
