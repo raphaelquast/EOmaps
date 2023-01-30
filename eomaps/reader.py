@@ -429,9 +429,14 @@ class read_file:
             )
 
             if not check_shapes:
+                dstr = str([f"{i}: {j}" for i, j in zip(data.dims, data.shape)])
+                xstr = str([f"{i}: {j}" for i, j in zip(x.dims, x.shape)])
+                ystr = str([f"{i}: {j}" for i, j in zip(y.dims, y.shape)])
                 raise AssertionError(
                     "EOmaps: Invalid dimensions of data and coordinates!\n"
-                    + f"data: {data.shape},  x: {x.shape}, y: {y.shape}"
+                    f"data: {dstr}\n"
+                    f"x   : {xstr}\n"
+                    f"y   : {ystr}\n"
                 )
 
             # only use masked arrays if mask_and_scale is False!
