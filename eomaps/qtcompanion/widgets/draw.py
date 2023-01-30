@@ -2,7 +2,6 @@ from PyQt5 import QtWidgets
 from PyQt5.QtCore import Qt, pyqtSlot
 
 from .utils import GetColorWidget, AlphaSlider
-from .editor import AddAnnotationInput
 
 
 class TransparencySlider(AlphaSlider):
