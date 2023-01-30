@@ -100,9 +100,18 @@ class shapes(object):
                 radiusx, radiusy = shapes._estimate_radius(m, radius_crs)
 
                 if radiusx == radiusy:
-                    print(f"EOmaps: radius: {radiusx:.4f}")
+                    print(
+                        "EOmaps: radius:",
+                        np.format_float_scientific(radiusx, precision=4),
+                    )
                 else:
-                    print(f"EOmaps: radius: ({radiusx:.4f}, {radiusy:.4f})")
+                    print(
+                        "EOmaps: radius:" "(",
+                        np.format_float_scientific(radiusx, precision=4),
+                        ",",
+                        np.format_float_scientific(radiusy, precision=4),
+                        ")",
+                    )
                 radius = (radiusx, radiusy)
                 # remember estimated radius to avoid re-calculating it all the time
                 m._estimated_radius = (radiusx, radiusy)
