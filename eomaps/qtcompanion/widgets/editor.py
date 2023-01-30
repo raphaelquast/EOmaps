@@ -575,7 +575,31 @@ class ArtistEditor(QtWidgets.QWidget):
         # connect a callback to update the layer of the feature-button
         # with respect to the currently selected layer-tab
         self.tabs.currentChanged.connect(self.set_layer)
+        self.tabs.tabBar().tabMoved.connect(self.tab_moved)
+
         self.set_layer()
+
+    @pyqtSlot()
+    def tab_moved(self):
+        currlayers = self.m.BM.bg_layer.split("|")
+
+        # get the name of the layer that was moved
+        layer = self.tabs.tabText(self.tabs.currentIndex())
+        if layer not in currlayers:
+            return
+
+        # get the current ordering of visible layers
+        ntabs = self.tabs.count()
+        layer_order = []
+        for i in range(ntabs):
+            l = self.tabs.tabText(i)
+            if l in currlayers:
+                layer_order.append(self.tabs.tabText(i))
+
+        # set the new layer-order
+        if currlayers != layer_order:  # avoid recursions
+            self.m.BM.bg_layer = "|".join(layer_order)
+            self.m.BM.update()
 
     @pyqtSlot()
     def set_layer(self):
@@ -654,6 +678,8 @@ class ArtistEditor(QtWidgets.QWidget):
 
     def color_active_tab(self, m=None, l=None):
 
+        currlayers = self.m.BM.bg_layer.split("|")
+
         defaultcolor = self.tabs.palette().color(self.tabs.foregroundRole())
         activecolor = QtGui.QColor(50, 200, 50)
         multicolor = QtGui.QColor(200, 50, 50)
@@ -672,6 +698,13 @@ class ArtistEditor(QtWidgets.QWidget):
 
             if l == layer:
                 self.tabs.tabBar().setTabTextColor(i, activecolor)
+
+        # adjust the sort-order of the tabs to the order of the visible layers
+        for ncl, cl in enumerate(currlayers):
+            for i in range(self.tabs.count()):
+                layer = self.tabs.tabText(i)
+                if layer == cl:
+                    self.tabs.tabBar().moveTab(i, ncl)
 
     def _get_artist_layout(self, a, layer):
         # label
