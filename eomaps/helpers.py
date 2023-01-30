@@ -1342,7 +1342,7 @@ class BlitManager:
 
                 # offset the zorder to make sure artists of next layers appear
                 # on top of previous layers
-                zorder_offset = len(artists) + 1
+                zorder_offset += len(artists) + 1
 
             # check if all artists are stale, and if so skip re-fetching the background
             # (only if also the axis extent is the same!)
