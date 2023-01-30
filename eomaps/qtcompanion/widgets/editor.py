@@ -454,16 +454,21 @@ class LayerArtistTabs(QtWidgets.QTabWidget):
                 e.globalPos(),
                 "<h3>Background Layers and Artists</h3>"
                 "Each tab represents a layer of the map."
+                "<ul>"
+                "<li>The tab-order represents the stacking order of the layers.</li>"
+                "<li><b>drag</b> tabs to change the layer ordering!</li>"
+                "</ul>"
+                "<ul>"
+                "<li><b>click</b> on a tab to select it (e.g. to add/remove features)</li>"
+                "<li><b>control + click</b> on a tab to make it the visible layer.</li>"
+                "<li><b>shift + click</b> on tabs to make multiple layers visible.</li>"
+                "</ul>"
                 "The tab-entries show all individual <b>background</b> artists of the "
                 "selected layer. (background artists are static map-elements that are "
                 "only re-drawn on pan/zoom or resize events)"
-                "<ul>"
-                "<li><b>control+click</b> on a tab to make it the visible layer.</li>"
-                "<li><b>shift+click</b> on tabs to make multiple layers visible.</li>"
-                "</ul>"
-                "Feature and WebMap artists created with the controls above are always "
-                "added to the "
-                "<b>currently selected tab</b>!<br>"
+                "<br>"
+                "Features and WebMaps created with the controls above are always "
+                "added to the <b>currently selected tab</b>!<br>"
                 "(indicated by a <b><font color=#c80000>red border</font></b>)",
             )
 
