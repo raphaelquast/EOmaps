@@ -798,7 +798,11 @@ class _click_callbacks(object):
             self.m.BM._after_restore_actions.append(doit)
 
         self.m.BM._after_restore_actions.append(
-            self.m.BM._get_restore_bg_action(layer, (x0, y0, blitw, blith), alpha=alpha)
+            self.m.BM._get_restore_bg_action(
+                "|".join([layer, self.m.BM.bg_layer]),
+                (x0, y0, blitw, blith),
+                alpha=alpha,
+            )
         )
 
     def load(
