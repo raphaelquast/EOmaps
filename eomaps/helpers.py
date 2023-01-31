@@ -707,8 +707,7 @@ class LayoutEditor:
             cb.set_position(bbox)
 
         self._color_axes()
-        self.m.BM._refetch_bg = True
-        self.m.BM.canvas.draw()
+        self.m.redraw()
 
     def cb_move(self, event):
         if (self.f.canvas.toolbar is not None) and self.f.canvas.toolbar.mode != "":
@@ -734,8 +733,7 @@ class LayoutEditor:
             bbox = self._get_move_bbox(cb._ax, event.x, event.y)
             cb.set_position(bbox)
 
-        self.m.BM._refetch_bg = True
-        self.m.BM.canvas.draw()
+        self.m.redraw()
 
     def cb_scroll(self, event):
         if (self.f.canvas.toolbar is not None) and self.f.canvas.toolbar.mode != "":
