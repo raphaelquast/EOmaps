@@ -1319,7 +1319,7 @@ class Maps(object):
             The default is None.
 
         """
-        self._layout_editor._make_draggable(filepath=filepath)
+        self.parent._layout_editor._make_draggable(filepath=filepath)
 
     @property
     @wraps(NaturalEarth_features)
@@ -2849,7 +2849,6 @@ class Maps(object):
 
         self.BM._refetch_bg = True
         self._data_manager.last_extent = None
-        self.BM.on_draw(None)
         self.f.canvas.draw()
 
     @wraps(GridSpec.update)

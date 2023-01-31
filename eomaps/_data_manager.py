@@ -347,7 +347,7 @@ class DataManager:
             The layer for which the background is fetched.
         """
         # don't re-draw while the layout-editor is active!
-        if self.m._layout_editor.modifier_pressed:
+        if self.m.parent._layout_editor.modifier_pressed:
             return
 
         # check if the layer of the dataset is requested
