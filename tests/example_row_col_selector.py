@@ -1,78 +1,62 @@
-# %matplotlib widget
-from eomaps import Maps, MapsGrid
+from eomaps import Maps
 import numpy as np
-import itertools
 
 # setup some random 2D data
 lon, lat = np.meshgrid(np.linspace(-180, 180, 200), np.linspace(-90, 90, 100))
 data = np.sqrt(lon**2 + lat**2) + np.random.normal(size=lat.shape) ** 2 * 20
-
 name = "some parameter"
-# -------------------------
+# ----------------------
 
-# initialize a map and 2 ordinary plots that will be used to visualize the data
-mg = MapsGrid(
-    2,
-    2,
-    m_inits={"map": (slice(0, 2), 0)},
-    ax_inits={"row": (0, 1), "col": (1, 1)},
-    crs=Maps.CRS.InterruptedGoodeHomolosine(),
-    figsize=(8, 5),
-)
-
-mg.gridspec.update(top=0.95, bottom=0.1, left=0.01, right=0.99, hspace=0.3, wspace=0.15)
-
-# set the limits and labels for the axes
-mg.ax_row.set_xlabel("Longitude")
-mg.ax_row.set_ylabel(name)
-mg.ax_row.set_xlim(-185, 185)
-mg.ax_row.set_ylim(data.min(), data.max())
-
-mg.ax_col.set_xlabel("Latitude")
-mg.ax_col.set_ylabel(name)
-mg.ax_col.set_xlim(-92.5, 92.5)
-mg.ax_col.set_ylim(data.min(), data.max())
-
-# ---- plot the map
-m = mg.m_map  # get the Maps-object
-
+# create a new map spanning the left row of a 2x2 grid
+m = Maps(crs=Maps.CRS.InterruptedGoodeHomolosine(), ax=(2, 2, (1, 3)), figsize=(8, 5))
+m.add_feature.preset.coastline()
 m.set_data(data, lon, lat, parameter=name)
 m.set_classify_specs(Maps.CLASSIFIERS.NaturalBreaks, k=5)
 m.plot_map()
-m.add_colorbar()
-m.colorbar.ax_cb.tick_params(rotation=90)
-m.add_feature.preset.coastline()
 
-# add some new layers that will be used to indicate rows and columns
+# create 2 ordinary matplotlib axes to show the selected data
+ax_row = m.f.add_subplot(222)  # 2x2 grid, top right
+ax_row.set_xlabel("Longitude")
+ax_row.set_ylabel(name)
+ax_row.set_xlim(-185, 185)
+ax_row.set_ylim(data.min(), data.max())
+
+ax_col = m.f.add_subplot(224)  #  2x2 grid, bottom right
+ax_col.set_xlabel("Latitude")
+ax_col.set_ylabel(name)
+ax_col.set_xlim(-92.5, 92.5)
+ax_col.set_ylim(data.min(), data.max())
+
+# add a colorbar for the data
+m.add_colorbar(label=name)
+m.colorbar.ax_cb.tick_params(rotation=90)  # rotate colorbar ticks 90°
+
+# add new layers to plot row- and column data
 m2 = m.new_layer()
+m2.set_shape.ellipses(m.shape.radius)
+
 m3 = m.new_layer()
+m3.set_shape.ellipses(m.shape.radius)
 
-# ---- define a custom callback to indicate the clicked row/column
-def cb(m, ind, ID, coords, *args, **kwargs):
-
+# define a custom callback to indicate the clicked row/column
+def cb(m, ind, ID, *args, **kwargs):
     # get row and column from the data
     # NOTE: "ind" always represents the index of the flattened array!
-    r, c = next(itertools.islice(np.ndindex(m.data.shape), ind, None))
-    # update the coordinates in our dictionary
-    coords.update(dict(r=r, c=c))
+    r, c = np.unravel_index(ind, m.data.shape)
 
     # ---- highlight the picked column
-    m2.set_data(m.data_specs.data[:, c], m.data_specs.x[:, c], m.data_specs.y[:, c])
-    m2.set_shape.ellipses(m.shape.radius)
-    # use "dynamic=True" to avoid re-drawing the background all the time
+    # use "dynamic=True" to avoid re-drawing the background on each pick
     # use "set_extent=False" to avoid resetting the plot extent on each draw
-    m2.plot_map(fc="none", ec="b", set_extent=False, dynamic=True)
-    m.cb.pick.add_temporary_artist(m2.coll)  # remove the highlight on next pick
+    m2.set_data(m.data_specs.data[:, c], m.data_specs.x[:, c], m.data_specs.y[:, c])
+    m2.plot_map(fc="none", ec="b", set_extent=False, dynamic=True, verbose=0)
 
     # ---- highlight the picked row
     m3.set_data(m.data_specs.data[r, :], m.data_specs.x[r, :], m.data_specs.y[r, :])
-    m3.set_shape.ellipses(m.shape.radius)
-    m3.plot_map(fc="none", ec="r", set_extent=False, dynamic=True)
-    m.cb.pick.add_temporary_artist(m3.coll)  # remove the highlight on next pick
+    m3.plot_map(fc="none", ec="r", set_extent=False, dynamic=True, verbose=0)
 
     # ---- plot the data for the selected column
-    (art0,) = mg.ax_col.plot(m.data_specs.y[:, c], m.data_specs.data[:, c], c="b")
-    (art01,) = mg.ax_col.plot(
+    (art0,) = ax_col.plot(m.data_specs.y[:, c], m.data_specs.data[:, c], c="b")
+    (art01,) = ax_col.plot(
         m.data_specs.y[r, c],
         m.data_specs.data[r, c],
         c="k",
@@ -81,12 +65,9 @@ def cb(m, ind, ID, coords, *args, **kwargs):
         ms=10,
     )
 
-    m.cb.pick.add_temporary_artist(art0)
-    m.cb.pick.add_temporary_artist(art01)
-
     # ---- plot the data for the selected row
-    (art1,) = mg.ax_row.plot(m.data_specs.x[r, :], m.data_specs.data[r, :], c="r")
-    (art11,) = mg.ax_row.plot(
+    (art1,) = ax_row.plot(m.data_specs.x[r, :], m.data_specs.data[r, :], c="r")
+    (art11,) = ax_row.plot(
         m.data_specs.x[r, c],
         m.data_specs.data[r, c],
         c="k",
@@ -94,25 +75,34 @@ def cb(m, ind, ID, coords, *args, **kwargs):
         markerfacecolor="none",
         ms=10,
     )
-    m.cb.pick.add_temporary_artist(art1)
-    m.cb.pick.add_temporary_artist(art11)
 
-    # ---- add a temporary pick-annotation
-    # NOTE: *args, **kwargs must be forwarded to the additional callback!
-    m.cb.pick._cb.annotate(
-        ID=ID,
-        text=(
-            f"row/col={r}/{c}\n"
-            + f"lon/lat={m.data_specs.x[r,c]:.2f}/{m.data_specs.y[r,c]:.2f}"
-            + f"\nval={m.data[r,c]:.2f}"
-        ),
-        permanent=False,
-        *args,
-        **kwargs,
+    # make all artists temporary (e.g. remove them on next pick)
+    for a in [art0, art01, art1, art11]:
+        m.cb.pick.add_temporary_artist(a)
+
+
+# attach the custom callback
+m.cb.pick.attach(cb, m=m)
+
+# ---- add a pick-annotation with a custom text
+def text(ind, val, **kwargs):
+    r, c = np.unravel_index(ind, m.data.shape)
+    return (
+        f"row/col = {r}/{c}\n"
+        f"lon/lat = {m.data_specs.x[r, c]:.2f}/{m.data_specs.y[r, c]:.2f}\n"
+        f"val = {val:.2f}"
     )
 
 
-# initialize a dict that can be used to access the last clicked (row, col)
-coords = dict(r=None, c=None)
-# attach the custom callback
-m.cb.pick.attach(cb, coords=coords, m=m)
+m.cb.pick.attach.annotate(text=text, fontsize=7)
+
+# apply a previously arranged layout (e.g. check "layout-editor" in the docs!)
+m.apply_layout(
+    {
+        "0_map": [0.015, 0.49253, 0.51, 0.35361],
+        "1_": [0.60375, 0.592, 0.38, 0.392],
+        "2_": [0.60375, 0.096, 0.38, 0.392],
+        "3_cb": [0.025, 0.144, 0.485, 0.28],
+        "3_cb_histogram_size": 0.8,
+    }
+)
