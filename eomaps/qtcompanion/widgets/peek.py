@@ -139,7 +139,7 @@ class PeekMethodButtons(QtWidgets.QWidget):
 
         self.methodChanged.emit("square")
         self.rect_button.setCurrentWidget(self.buttons["square"])
-        self.round_button.setCurrentWidget(self.buttons["square"])
+        self.round_button.setCurrentWidget(self.buttons["circle"])
 
     def button_clicked(self, method):
         @pyqtSlot()

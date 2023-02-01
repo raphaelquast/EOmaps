@@ -1495,7 +1495,6 @@ class BlitManager:
                 self._bg_layers = dict()
                 self._refetch_bg = False
             else:
-                print(self._layers_to_refetch)
                 # remove all cached backgrounds that were tagged for refetch
                 while len(self._layers_to_refetch) > 0:
                     self._bg_layers.pop(self._layers_to_refetch.pop(), None)
