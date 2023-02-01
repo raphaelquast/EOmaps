@@ -626,6 +626,7 @@ class TestBasicPlotting(unittest.TestCase):
         cb6 = m3.add_colorbar()
         cb6.set_bin_labels(bins, labels)
         m.show_layer(m3.layer)
+        m.redraw()
 
         self.assertTrue(labels == [i.get_text() for i in cb6.ax_cb.get_xticklabels()])
 
