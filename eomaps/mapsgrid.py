@@ -489,7 +489,7 @@ class MapsGrid:
 
         # clear all cached background layers before saving to make sure they
         # are re-drawn with the correct dpi-settings
-        self.parent.BM._bg_layers = dict()
+        self.parent.BM._refetch_bg = True
 
         self.f.savefig(*args, **kwargs)
 
