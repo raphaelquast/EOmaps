@@ -11,6 +11,7 @@ import matplotlib.pyplot as plt
 from matplotlib.lines import Line2D
 from contextlib import contextmanager, ExitStack
 
+
 # class copied from matplotlib.axes
 class _TransformedBoundsLocator:
     """
@@ -902,10 +903,10 @@ class LayoutEditor:
             # remember any axes that are intentionally hidden
             if not val:
                 if ax in self.m.BM._bg_artists[self.m.BM.bg_layer]:
-                    self.m.BM._hidden_axes.add(ax)
+                    self.m.BM._hidden_artists.add(ax)
             else:
-                if ax in self.m.BM._hidden_axes:
-                    self.m.BM._hidden_axes.remove(ax)
+                if ax in self.m.BM._hidden_artists:
+                    self.m.BM._hidden_artists.remove(ax)
 
         for cb in self.cbs:
             if cb is not None:
@@ -1094,9 +1095,10 @@ class BlitManager:
 
         self._artists_to_clear = dict()
 
-        self._hidden_axes = set()
+        self._hidden_artists = set()
 
         self._refetch_bg = True
+        self._layers_to_refetch = set()
 
         # TODO these activate some crude fixes for jupyter notebook and webagg
         # backends... proper fixes would be nice
@@ -1221,7 +1223,9 @@ class BlitManager:
                         i.set_visible(False)
 
         self._clear_temp_artists("on_layer_change")
-        # self.fetch_bg(self._bg_layer)
+
+        if val not in self._bg_layers:
+            self.fetch_bg(val)
 
     def on_layer(self, func, layer=None, persistent=False, m=None):
         """
@@ -1293,10 +1297,14 @@ class BlitManager:
 
     def _refetch_layer(self, layer):
         if layer == "all":
+            # if the all layer changed, all backgrounds need a refetch
             self._refetch_bg = True
         else:
-            if layer in self._bg_layers:
-                del self._bg_layers[layer]
+            # set any background that contains the layer for refetch
+            self._layers_to_refetch.add(layer)
+            for l in self._bg_layers:
+                if layer in l.split("|"):
+                    self._layers_to_refetch.add(l)
 
     def get_bg_artists(self, layer):
         # get all relevant artists for combined background layers
@@ -1307,26 +1315,37 @@ class BlitManager:
         # artists that are only visible if both layers are visible! (e.g. "l1|l2")
         artists = [*self._bg_artists.get(layer, [])]
 
-        # get all artists of the sub-layers (if we deal with a multi-layer)
-        if "|" in layer:
-            for l in layer.split("|"):
-                if l in ["_", ""]:
-                    continue
-                layer_artists = self._bg_artists.get(l, [])
-                artists += layer_artists
+        # # get all artists of the sub-layers (if we deal with a multi-layer)
+        # if "|" in layer:
+        #     for l in layer.split("|"):
+        #         if l in ["_", ""]:
+        #             continue
+        #         layer_artists = self._bg_artists.get(l, [])
+        #         artists += layer_artists
 
         artists.sort(key=lambda x: getattr(x, "zorder", -1))
 
         return artists
 
     def _combine_bgs(self, layer):
-        # TODO decide on layer-ordering!
-        layers = layer.split("|")[::-1]
+        print("combining", layer)
+        # TODO decide on layer-ordering! (currently transposed)
+        layers, alphas = [], []
+        for l in layer.split("|")[::-1]:
+            if l.endswith("}") and "{" in l:
+                try:
+                    name, a = l.split("{")
+                    a = float(a.replace("}", ""))
 
-        x0, y0, w, h = self.figure.bbox.bounds
-
-        # remember initial layer
-        initial_layer = self.bg_layer
+                    layers.append(name)
+                    alphas.append(a)
+                except Exception:
+                    raise TypeError(
+                        "EOmaps: unable to parse multilayer-transparency " f"for '{l}'"
+                    )
+            else:
+                layers.append(l)
+                alphas.append(1)
 
         # make sure all layers are already fetched
         for l in layers:
@@ -1334,50 +1353,46 @@ class BlitManager:
                 # execute actions on layer-changes
                 # (to make sure all lazy WMS services are properly added)
                 self._do_on_layer_change(layer=l)
-                self.fetch_bg(l)
+                self._do_fetch_bg(l)
 
-        def action(l, alpha=1):
-            # convert the buffer to rgba so that we can add transparency
-            buffer = self._bg_layers[l]
+        gc = self.canvas.renderer.new_gc()
+        gc.set_clip_rectangle(self.canvas.figure.bbox)
 
-            x = buffer.get_extents()
-            ncols, nrows = x[2] - x[0], x[3] - x[1]
+        # switch to a blank background layer before merging backgrounds
+        # TODO is there a beter way to avoid drawing on initial backgrounds?
+        initial_layer = self._bg_layer
+        self._m.bg_layer = "__BLANK__"
 
-            argb = (
-                np.frombuffer(buffer, dtype=np.uint8).reshape((nrows, ncols, 4)).copy()
-            )
-            argb = argb[::-1, :, :]
-
-            argb[:, :, -1] = (argb[:, :, -1] * alpha).astype(np.int8)
-
-            gc = self.canvas.renderer.new_gc()
-            gc.set_clip_rectangle(self.canvas.figure.bbox)
+        x0, y0, w, h = self.figure.bbox.bounds
+        for l, a in zip(layers, alphas):
+            rgba = self._get_array(l, a=a)
             self.canvas.renderer.draw_image(
                 gc,
                 int(x0),
                 int(y0),
-                argb[int(y0) : int(y0 + h), int(x0) : int(x0 + w), :],
+                rgba[int(y0) : int(y0 + h), int(x0) : int(x0 + w), :],
             )
-            gc.restore()
-
-        for l in layers:
-            # TODO add option to set alpha when combining layers
-            action(l, alpha=1)
-
         # cache the combined background
         self._bg_layers[layer] = self._m.f.canvas.copy_from_bbox(self._m.f.bbox)
+        gc.restore()
 
         # restore initial layer
-        self._m.show_layer(initial_layer)
+        self._m.bg_layer = initial_layer
 
-    def fetch_bg(self, layer=None, bbox=None):
+    def _get_array(self, l, a=1):
+        rgba = np.array(self._bg_layers[l])[::-1, :, :]
+        if a != 1:
+            rgba = rgba.copy()
+            rgba[..., -1] = (rgba[..., -1] * a).astype(rgba.dtype)
+        return rgba
+
+    def _do_fetch_bg(self, layer=None, bbox=None):
         cv = self.canvas
 
-        # temporarily disconnect draw-event callback to avoid recursion
-        # while we re-draw the artists
-        cv.mpl_disconnect(self.cid)
+        if layer is None:
+            layer = self.bg_layer
 
-        # use this to make sure the background patches are not stored
+        # use contextmanagers to make sure the background patches are not stored
         # in the buffer regions!
         with ExitStack() as stack:
             # get rid of the figure background patch
@@ -1390,60 +1405,82 @@ class BlitManager:
                     ax_i.patch._cm_set(facecolor="none", edgecolor="none")
                 )
 
-            try:
-                if layer is None:
-                    layer = self.bg_layer
+            # execute actions before fetching new artists
+            # (e.g. update data based on extent etc.)
+            for action in self._before_fetch_bg_actions:
+                action(layer=layer, bbox=bbox)
 
-                if "|" in layer:
+            # execute actions on layer-changes
+            # (to make sure all lazy WMS services are properly added)
+            self._do_on_layer_change(layer=layer)
+
+            if "|" in layer:
+                if layer not in self._bg_layers:
                     self._combine_bgs(layer)
-                    return
+                return
 
-                # execute actions before fetching new artists
-                # (e.g. update data based on extent etc.)
-                for action in self._before_fetch_bg_actions:
-                    action(layer=layer, bbox=bbox)
+            # get all relevant artists to plot and remember zorders
+            # self.get_bg_artists() already returns artists sorted by zorder!
+            allartists = []
 
-                # get all relevant artists to plot and remember zorders
-                # self.get_bg_artists() already returns artists sorted by zorder!
-                allartists = []
+            for l in ("all", layer):
+                artists = self.get_bg_artists(l)
+                allartists.append(artists)
 
-                for l in ("all", layer):
-                    artists = self.get_bg_artists(l)
-                    allartists.append(artists)
+            # check if all artists are stale, and if so skip re-fetching the background
+            # (only if also the axis extent is the same!)
+            no_stale_artists = not any(art.stale for art in chain(*allartists))
 
-                # check if all artists are stale, and if so skip re-fetching the background
-                # (only if also the axis extent is the same!)
-                no_stale_artists = not any(art.stale for art in chain(*allartists))
+            # don't re-fetch the background if it is not necessary
+            if no_stale_artists and (self._bg_layers.get(layer, None) is not None):
+                return
 
-                # don't re-fetch the background if it is not necessary
-                if no_stale_artists and (self._bg_layers.get(layer, None) is not None):
-                    return
+            if bbox is None:
+                bbox = self.figure.bbox
 
-                if bbox is None:
-                    bbox = self.figure.bbox
+            if not self._m.parent._layout_editor._modifier_pressed:
+                # make all artists of the corresponding layer visible
+                for l in self._bg_artists:
+                    if l not in [layer, "all"]:
+                        # artists on "all" are always visible!
+                        # make all artists of other layers invisible
+                        for art in self.get_bg_artists(l):
+                            art.set_visible(False)
 
-                if not self._m.parent._layout_editor._modifier_pressed:
-                    # make all artists of the corresponding layer visible
-                    for l in self._bg_artists:
-                        if l not in [layer, "all"]:
-                            # artists on "all" are always visible!
-                            # make all artists of other layers invisible
-                            for art in self.get_bg_artists(l):
-                                art.set_visible(False)
+                for art in chain(*allartists):
+                    if art not in self._hidden_artists:
+                        art.set_visible(True)
+                        # art.draw(cv.get_renderer())
 
-                    for art in chain(*allartists):
-                        if art not in self._hidden_axes:
-                            art.set_visible(True)
+                cv._force_full = True
+                cv.draw()
 
-                    cv._force_full = True
-                    cv.draw()
+                self._bg_layers[layer] = cv.copy_from_bbox(bbox)
 
-                    self._bg_layers[layer] = cv.copy_from_bbox(bbox)
+    def fetch_bg(self, layer=None, bbox=None):
+        cv = self.canvas
 
-                self._refetch_bg = False
+        if layer is None:
+            layer = self.bg_layer
 
-            finally:
-                # reconnect draw event
+        if layer in self._bg_layers:
+            # don't re-fetch existing layers
+            # (layers get cleared automatically if limits)
+            return
+
+        # temporarily disconnect draw-event callback to avoid recursion
+        # while we re-draw the artists
+        if self.cid is not None:
+            cv.mpl_disconnect(self.cid)
+            self.cid = None
+
+        # use contextmanagers to make sure the background patches are not stored
+        # in the buffer regions!
+        try:
+            self._do_fetch_bg(layer, bbox)
+        finally:
+            # reconnect draw event
+            if self.cid is None:
                 self.cid = cv.mpl_connect("draw_event", self.on_draw)
 
     def on_draw(self, event):
@@ -1456,9 +1493,17 @@ class BlitManager:
             # reset all background-layers and re-fetch the default one
             if self._refetch_bg:
                 self._bg_layers = dict()
+                self._refetch_bg = False
+            else:
+                # remove all cached backgrounds that were tagged for refetch
+                while len(self._layers_to_refetch) > 0:
+                    self._bg_layers.pop(self._layers_to_refetch.pop(), None)
 
             if self.bg_layer not in self._bg_layers:
+                print("fetching", self.bg_layer)
+                # TODO there might be other reasons to re-fetch a background!
                 self.fetch_bg()
+
             # workaround for nbagg backend to avoid glitches
             # it's slow but at least it works...
             # check progress of the following issuse
@@ -1550,18 +1595,8 @@ class BlitManager:
 
         self._bg_artists.setdefault(layer, []).append(art)
 
-        if layer == "all":
-            # clear all cached background-layers
-            self._bg_layers.clear()
-        else:
-            # check for outdated cached background-layers and clear them
-            sublayers = layer.split("|")
-
-            def check_outdated(item):
-                return any(l in item.split("|") for l in sublayers)
-
-            for l in filter(check_outdated, set(self._bg_layers)):
-                self._refetch_layer(l)
+        # tag all relevant layers for refetch
+        self._refetch_layer(layer)
 
         for f in self._on_add_bg_artist:
             f()
@@ -1589,12 +1624,8 @@ class BlitManager:
             for f in self._on_remove_bg_artist:
                 f()
 
-            # re-fetch the currently visible layer if an artist was added
-            # (and all relevant sub-layers)
+            # tag all relevant layers for refetch
             self._refetch_layer(layer)
-            if layer is not None:
-                if any(l in self.bg_layer.split("|") for l in layer.split("|")):
-                    self._refetch_layer(self.bg_layer)
 
     def remove_artist(self, art, layer=None):
         # this only removes the artist from the blit-manager,
@@ -1719,14 +1750,11 @@ class BlitManager:
             If provided NO layer will be automatically updated!
             The default is None.
         """
-        cv = self.canvas
-        if (cv.toolbar is not None) and cv.toolbar.mode != "":
-            # only re-draw artists during toolbar-actions (e.g. pan/zoom)
-            # this avoids a glitch with animated artists during pan/zoom events
-            self._draw_animated(layers=layers, artists=artists)
-            if self._mpl_backend_blit_fix:
-                cv.blit()
+        if self._m.parent._layout_editor._modifier_pressed:
+            # don't update during layout-editing
             return
+
+        cv = self.canvas
 
         if bg_layer is None:
             bg_layer = self.bg_layer
@@ -1738,6 +1766,7 @@ class BlitManager:
         else:
             if clear:
                 self._clear_temp_artists(clear)
+
             # restore the background
             cv.restore_region(self._bg_layers[bg_layer])
             # draw all of the animated artists

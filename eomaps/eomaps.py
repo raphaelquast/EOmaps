@@ -2665,7 +2665,7 @@ class Maps(object):
         if dpi is not None:
             # clear all cached background layers before saving to make sure they
             # are re-drawn with the correct dpi-settings
-            self.BM._bg_layers = dict()
+            self.BM._refetch_bg = True
 
             # set the shading-axis-size to reflect the used dpi setting
             self._update_shade_axis_size(dpi=dpi)
@@ -3064,21 +3064,14 @@ class Maps(object):
         self.cb._init_cbs()
 
         if newax:  # only if a new axis has been created
-            self._ax_xlims = (0, 0)
-            self._ax_ylims = (0, 0)
-
-            # def ylims_change(*args, **kwargs):
-            #     if self._ax_ylims != args[0].get_ylim():
-            #         print("y limchange", self.BM._refetch_bg)
-            #         self.BM._refetch_bg = True
-            #         self._ax_ylims = args[0].get_ylim()
-
             # do this only on xlims and NOT on ylims to avoid recursion
             # (plot aspect ensures that y changes if x changes)
             self._cid_xlim = self.ax.callbacks.connect(
                 "xlim_changed", self._on_xlims_change
             )
-            # self.ax.callbacks.connect("ylim_changed", ylims_change)
+            self._cid_xlim = self.ax.callbacks.connect(
+                "ylim_changed", self._on_ylims_change
+            )
 
             if self._cid_companion_key is None:
                 # attach the Qt companion widget
@@ -3109,10 +3102,10 @@ class Maps(object):
                 plt.show()
 
     def _on_xlims_change(self, *args, **kwargs):
-        if self._ax_xlims != args[0].get_xlim():
-            self.BM._refetch_bg = True
-            # self.f.stale = True
-            self._ax_xlims = args[0].get_xlim()
+        self.BM._refetch_bg = True
+
+    def _on_ylims_change(self, *args, **kwargs):
+        self.BM._refetch_bg = True
 
     def _on_resize(self, event):
         # make sure the background is re-fetched if the canvas has been resized
@@ -3798,8 +3791,9 @@ class Maps(object):
         vmax = kwargs.pop("vmin", None)
 
         # remove previously fetched backgrounds for the used layer
-        if layer in self.BM._bg_layers and dynamic is False:
-            del self.BM._bg_layers[layer]
+        if dynamic is False:
+            self.BM._refetch_layer(layer)
+            # del self.BM._bg_layers[layer]
             # self.BM._refetch_bg = True
 
         # get the name of the used aggretation reduction

@@ -520,7 +520,6 @@ class ArtistEditor(QtWidgets.QWidget):
         super().__init__()
 
         self.m = m
-        self._hidden_artists = dict()
 
         self.tabs = LayerArtistTabs()
         self.tabs.setTabBar(TabBar())
@@ -739,8 +738,7 @@ class ArtistEditor(QtWidgets.QWidget):
         b_sh = ShowHideToolButton()
         b_sh.setAutoRaise(True)
 
-        # #b_sh.setStyleSheet("background-color : #79a76e")
-        if a in self._hidden_artists.get(layer, []):
+        if a in self.m.BM._hidden_artists:
             b_sh.setIcon(QtGui.QIcon(str(iconpath / "eye_closed.png")))
         else:
             b_sh.setIcon(QtGui.QIcon(str(iconpath / "eye_open.png")))
@@ -849,27 +847,31 @@ class ArtistEditor(QtWidgets.QWidget):
 
         layout = []
         layout.append((b_sh, 0))  # show hide
-        if b_c is not None:
-            layout.append((b_c, 1))  # color
+
+        # if b_c is not None:
+        #     layout.append((b_c, 1))  # color
+
         layout.append((b_z, 2))  # zorder
 
         layout.append((label, 3))  # title
-        if b_lw is not None:
-            layout.append((b_lw, 4))  # linewidth
 
-        if b_a is not None:
-            layout.append((b_a, 5))  # alpha
+        # if b_lw is not None:
+        #     layout.append((b_lw, 4))  # linewidth
 
-        if b_cmap is not None:
-            layout.append((b_cmap, 6))  # cmap
+        # if b_a is not None:
+        #     layout.append((b_a, 5))  # alpha
+
+        # if b_cmap is not None:
+        #     layout.append((b_cmap, 6))  # cmap
 
         layout.append((b_r, 7))  # remove
 
         return layout
 
     @pyqtSlot()
-    def populate_layer(self):
-        layer = self.tabs.tabText(self.tabs.currentIndex())
+    def populate_layer(self, layer=None):
+        if layer is None:
+            layer = self.tabs.tabText(self.tabs.currentIndex())
         widget = self.tabs.currentWidget()
 
         if widget is None:
@@ -881,14 +883,13 @@ class ArtistEditor(QtWidgets.QWidget):
 
         # make sure that we don't create an empty entry !
         if layer in self.m.BM._bg_artists:
-            artists = [a for a in self.m.BM._bg_artists[layer] if a.axes is self.m.ax]
+            artists = [
+                a for a in self.m.BM.get_bg_artists(layer) if a.axes is self.m.ax
+            ]
         else:
             artists = []
 
-        for i, a in enumerate(
-            sorted((*artists, *self._hidden_artists.get(layer, [])), key=str)
-        ):
-
+        for i, a in enumerate(artists):
             a_layout = self._get_artist_layout(a, layer)
             for art, pos in a_layout:
                 layout.addWidget(art, i, pos)
@@ -1005,7 +1006,8 @@ class ArtistEditor(QtWidgets.QWidget):
             artist.set_fc(colorwidget.facecolor.getRgbF())
             artist.set_edgecolor(colorwidget.edgecolor.getRgbF())
 
-            self.m.redraw()
+            self.m.BM._refetch_layer(layer)
+            self.m.BM.update()
 
         return cb
 
@@ -1014,21 +1016,18 @@ class ArtistEditor(QtWidgets.QWidget):
             return
 
         self.m.BM.remove_bg_artist(artist, layer)
-
-        if artist in self._hidden_artists.get(layer, []):
-            self._hidden_artists[layer].remove(artist)
-
         artist.remove()
 
         self.populate()
-        self.m.redraw()
+        self.m.BM._refetch_layer(layer)
+        self.m.BM.on_draw(None)
 
     def remove(self, artist, layer):
         @pyqtSlot()
         def cb():
             self._msg = QtWidgets.QMessageBox(self)
             self._msg.setIcon(QtWidgets.QMessageBox.Question)
-            self._msg.setWindowTitle(f"Delete artist?")
+            self._msg.setWindowTitle("Delete artist?")
             self._msg.setText(
                 "Do you really want to delete the following artist"
                 + f"from the layer '{layer}'?\n\n"
@@ -1039,31 +1038,23 @@ class ArtistEditor(QtWidgets.QWidget):
                 QtWidgets.QMessageBox.Yes | QtWidgets.QMessageBox.No
             )
             self._msg.buttonClicked.connect(lambda: self._do_remove(artist, layer))
-            ret = self._msg.show()
+            self._msg.show()
 
         return cb
 
     def show_hide(self, artist, layer):
         @pyqtSlot()
         def cb():
-            if artist in self.m.BM._bg_artists[layer]:
-                self._hidden_artists.setdefault(layer, []).append(artist)
-                self.m.BM.remove_bg_artist(artist, layer=layer)
-                artist.set_visible(False)
+            if artist in self.m.BM._hidden_artists:
+                self.m.BM._hidden_artists.remove(artist)
+                artist.set_visible(True)
             else:
-                if layer in self._hidden_artists:
-                    try:
-                        self._hidden_artists[layer].remove(artist)
-                    except ValueError:
-                        print("could not find hidden artist in _hidden_artists list")
-                        pass
+                self.m.BM._hidden_artists.add(artist)
+                artist.set_visible(False)
 
-                try:
-                    self.m.BM.add_bg_artist(artist, layer=layer)
-                except:
-                    print("problem unhiding", artist, "from layer", layer)
-
-            self.m.redraw()
+            self.m.BM._refetch_layer(layer)
+            self.m.BM.on_draw(None)
+            self.populate_layer(layer)
 
         return cb
 
@@ -1074,7 +1065,8 @@ class ArtistEditor(QtWidgets.QWidget):
             if len(val) > 0:
                 artist.set_zorder(int(val))
 
-            self.m.redraw()
+            self.m.BM._refetch_layer(layer)
+            self.m.BM.on_draw(None)
 
         return cb
 
@@ -1085,7 +1077,8 @@ class ArtistEditor(QtWidgets.QWidget):
             if len(val) > 0:
                 artist.set_alpha(float(val.replace(",", ".")))
 
-            self.m.redraw()
+            self.m.BM._refetch_layer(layer)
+            self.m.BM.on_draw(None)
 
         return cb
 
@@ -1096,7 +1089,8 @@ class ArtistEditor(QtWidgets.QWidget):
             if len(val) > 0:
                 artist.set_linewidth(float(val.replace(",", ".")))
 
-            self.m.redraw()
+            self.m.BM._refetch_layer(layer)
+            self.m.BM.on_draw(None)
 
         return cb
 
@@ -1107,6 +1101,7 @@ class ArtistEditor(QtWidgets.QWidget):
             if len(val) > 0:
                 artist.set_cmap(val)
 
-            self.m.redraw()
+            self.m.BM._refetch_layer(layer)
+            self.m.on_draw(None)
 
         return cb
