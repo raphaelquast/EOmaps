@@ -321,6 +321,9 @@ class Maps(object):
         preferred_wms_service="wms",
         **kwargs,
     ):
+        # make sure the used layer-name is valid
+        layer = self._check_layer_name(layer)
+
         self._inherit_classification = None
 
         if isinstance(ax, plt.Axes) and hasattr(ax, "figure"):
@@ -343,10 +346,6 @@ class Maps(object):
 
         self._colorbars = []
         self._coll = None  # slot for the collection created by m.plot_map()
-
-        if not isinstance(layer, str):
-            print("EOmaps v5.0 Warning: All layer-names are converted to strings!")
-            layer = str(layer)
 
         self._layer = layer
 
@@ -2585,7 +2584,7 @@ class Maps(object):
         layers = self._get_layers()
 
         if not isinstance(name, str):
-            print("EOmaps v5.0 Warning: All layer-names are converted to strings!")
+            print("EOmaps: All layer-names are converted to strings!")
             name = str(name)
 
         if "|" in name:
@@ -2595,6 +2594,9 @@ class Maps(object):
             names = [name]
 
         for i in names:
+            if "{" in i and i.endswith("}"):
+                i = i.split("{")[0]  # strip off transparency assignments
+
             if i not in layers:
                 lstr = " - " + "\n - ".join(map(str, layers))
 
@@ -2966,6 +2968,42 @@ class Maps(object):
                 self.show_layer(self.parent.layer)
         except Exception:
             print("EOmaps-cleanup: Problem while updating map to reflect changes")
+
+    def _check_layer_name(self, layer):
+        if not isinstance(layer, str):
+            print("EOmaps: All layer-names are converted to strings!")
+            layer = str(layer)
+
+        if layer == "__BLANK__":
+            raise TypeError(
+                "Eomaps: The layer-name '__BLANK__' is reserved "
+                "for internal use and cannot be assigned to "
+                "a Maps object!"
+            )
+
+        reserved_symbs = {
+            # "|": (
+            #     "It is used as a separation-character to combine multiple "
+            #     "layers (e.g. m.show_layer('A|B') will overlay the layer 'B' "
+            #     "on top of 'A'."
+            # ),
+            "{": (
+                "It is used to specify transparency when combining multiple "
+                "layers (e.g. m.show_layer('A|B{0.5}') will overlay the layer "
+                "'B' with 50% transparency on top of the layer 'A'."
+            ),
+        }
+
+        reserved_symbs["}"] = reserved_symbs["{"]
+
+        for symb, explanation in reserved_symbs.items():
+            if symb in layer:
+                raise TypeError(
+                    f"EOmaps: The symbol '{symb}' is not allowed in layer-names!\n"
+                    + explanation
+                )
+
+        return layer
 
     def _init_figure(self, ax=None, plot_crs=None, **kwargs):
         if self.parent.f is None:
