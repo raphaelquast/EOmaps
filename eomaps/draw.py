@@ -51,7 +51,7 @@ def autoscale_turned_off(ax=None):
 
 
 class ShapeDrawer:
-    def __init__(self, m, layer=None):
+    def __init__(self, m, layer=None, dynamic=True):
         """
         Base-class for drawing shapes on a map.
 
@@ -63,15 +63,21 @@ class ShapeDrawer:
             The layer-name to put the shapes on.
             If None, the currently active layer will be used.
             The default is None.
+        dynamic : bool
+            If True, shapes are added as dynamic artists to avoid re-drawing
+            the background after the draw is finished.
+            If False, the shapes are added as background-artists.
         """
 
         self._m = m
+
         # # add a slot to remember active drawers
         # # (used to make sure that 2 ShapeDrawer instances do not draw at the same time)
         # if not hasattr(self._m.parent, "_active_drawer"):
         #     self._m.parent._active_drawer = None
 
         self._layer = layer
+        self._dynamic = dynamic
 
         if self._m.crs_plot == self._m.CRS.PlateCarree():
             # temporary workaround for geopandas issue with WKT2 strings
@@ -128,7 +134,7 @@ class ShapeDrawer:
     def _active_drawer(self, val):
         self._m.parent._active_drawer = val
 
-    def new_drawer(self, layer=None):
+    def new_drawer(self, layer=None, dynamic=True):
         """
         Initialize a new ShapeDrawer.
 
@@ -138,6 +144,10 @@ class ShapeDrawer:
             The layer-name to put the shapes on.
             If None, the currently active layer will be used.
             The default is None.
+        dynamic : bool
+            If True, shapes are added as dynamic artists to avoid re-drawing
+            the background after the draw is finished.
+            If False, the shapes are added as background-artists.
 
         Returns
         -------
@@ -145,7 +155,7 @@ class ShapeDrawer:
             A new instance of the ShapeDrawer that can be used to draw shapes.
         """
 
-        return self.__class__(self._m, layer=layer)
+        return self.__class__(self._m, layer=layer, dynamic=dynamic)
 
     def set_layer(self, layer=None):
         """
@@ -212,7 +222,10 @@ class ShapeDrawer:
 
         ID = list(self._artists)[-1]
         a = self._artists.pop(ID)
-        self._m.BM.remove_bg_artist(a)
+        if self._dynamic:
+            self._m.BM.remove_artist(a)
+        else:
+            self._m.BM.remove_bg_artist(a)
         a.remove()
 
         if _register_geopandas():
@@ -220,6 +233,8 @@ class ShapeDrawer:
 
         for cb in self._on_poly_remove:
             cb()
+
+        self._m.BM.on_draw(None)
 
     def _init_draw_line(self):
         if self._line is None:
@@ -258,7 +273,13 @@ class ShapeDrawer:
         # draw-event (e.g. zoom/pan/resize) to keep the indicators visible.
         # see "m.BM.on_draw()"
 
-        self._m.BM.blit_artists(self._indicator_artists, bg=self._background, blit=blit)
+        artists = self._indicator_artists
+
+        if self._dynamic:
+            # draw all previously drawn shapes as well
+            artists = (*artists, *self._artists.values())
+
+        self._m.BM.blit_artists(artists, bg=self._background, blit=blit)
 
     # This is basically a copy of matplotlib's ginput function adapted for EOmaps
     # matplotlib's original ginput function is here:
@@ -518,9 +539,14 @@ class ShapeDrawer:
                         self._pointer.set_data([], [])
 
                     movecb(event, self._clicks)
+
                 artists = (
                     i for i in (self._shape_indicator, self._line, self._pointer) if i
                 )
+                if self._dynamic:
+                    # draw all previously drawn shapes as well
+                    artists = (*artists, *self._artists.values())
+
                 self._m.BM.blit_artists(artists, bg=self._background)
                 return
 
@@ -602,6 +628,7 @@ class ShapeDrawer:
         kwargs :
             additional kwargs passed to the shape.
         """
+        kwargs.setdefault("zorder", 10)
 
         def cb():
             self._polygon(**kwargs)
@@ -616,12 +643,14 @@ class ShapeDrawer:
             with autoscale_turned_off(self._m.ax):
                 (ph,) = self._m.ax.fill(pts[:, 0], pts[:, 1], **kwargs)
 
-                self._m.BM.add_bg_artist(ph, layer=self.layer)
+                if self._dynamic:
+                    self._m.BM.add_artist(ph, layer=self.layer)
+                else:
+                    self._m.BM.add_bg_artist(ph, layer=self.layer)
+                    self._m.BM.on_draw(None)
 
                 ID = max(self._artists) + 1 if self._artists else 0
                 self._artists[ID] = ph
-
-            self._m.BM.update()
 
             if _register_geopandas():
                 gdf = gpd.GeoDataFrame(index=[ID], geometry=[shapely_Polygon(pts)])
@@ -646,6 +675,8 @@ class ShapeDrawer:
             additional kwargs passed to the shape.
 
         """
+        kwargs.setdefault("zorder", 10)
+
         self._init_shape_indicator()
         self._init_draw_line()
 
@@ -670,9 +701,12 @@ class ShapeDrawer:
                 )
                 self._shape_indicator.set_xy(np.column_stack((pts[0][0], pts[1][0])))
 
-                self._m.BM.blit_artists(
-                    (self._shape_indicator, self._line), bg=self._background
-                )
+                artists = (self._shape_indicator, self._line)
+                if self._dynamic:
+                    # draw all previously drawn shapes as well
+                    artists = (*artists, *self._artists.values())
+
+                self._m.BM.blit_artists(artists, bg=self._background)
 
         self._ginput2(2, timeout=-1, draw_on_drag=True, movecb=movecb, cb=cb)
 
@@ -689,12 +723,14 @@ class ShapeDrawer:
             with autoscale_turned_off(self._m.ax):
                 (ph,) = self._m.ax.fill(pts[0][0], pts[1][0], **kwargs)
 
-                self._m.BM.add_bg_artist(ph, layer=self.layer)
+                if self._dynamic:
+                    self._m.BM.add_artist(ph, layer=self.layer)
+                else:
+                    self._m.BM.add_bg_artist(ph, layer=self.layer)
+                    self._m.BM.on_draw(None)
 
                 ID = max(self._artists) + 1 if self._artists else 0
                 self._artists[ID] = ph
-
-            self._m.BM.update()
 
             if _register_geopandas():
                 pts = np.column_stack((pts[0][0], pts[1][0]))
@@ -720,6 +756,8 @@ class ShapeDrawer:
             additional kwargs passed to the shape.
 
         """
+        kwargs.setdefault("zorder", 10)
+
         self._init_shape_indicator()
 
         def cb():
@@ -737,9 +775,13 @@ class ShapeDrawer:
                 )[0][0]
 
                 self._shape_indicator.set_xy(np.column_stack((pts[:, 0], pts[:, 1])))
-                self._m.BM.blit_artists(
-                    (self._shape_indicator, self._line), bg=self._background
-                )
+
+                artists = (self._shape_indicator, self._line)
+                if self._dynamic:
+                    # draw all previously drawn shapes as well
+                    artists = (*artists, *self._artists.values())
+
+                self._m.BM.blit_artists(artists, bg=self._background)
 
         self._ginput2(2, timeout=-1, draw_on_drag=True, movecb=movecb, cb=cb)
 
@@ -755,12 +797,14 @@ class ShapeDrawer:
             with autoscale_turned_off(self._m.ax):
                 (ph,) = self._m.ax.fill(pts[:, 0], pts[:, 1], **kwargs)
 
-                self._m.BM.add_bg_artist(ph, layer=self.layer)
+                if self._dynamic:
+                    self._m.BM.add_artist(ph, layer=self.layer)
+                else:
+                    self._m.BM.add_bg_artist(ph, layer=self.layer)
+                    self._m.BM.on_draw(None)
 
                 ID = max(self._artists) + 1 if self._artists else 0
                 self._artists[ID] = ph
-
-            self._m.BM.update()
 
             if _register_geopandas():
                 gdf = gpd.GeoDataFrame(index=[ID], geometry=[shapely_Polygon(pts)])
