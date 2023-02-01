@@ -1328,7 +1328,6 @@ class BlitManager:
         return artists
 
     def _combine_bgs(self, layer):
-        print("combining", layer)
         # TODO decide on layer-ordering! (currently transposed)
         layers, alphas = [], []
         for l in layer.split("|")[::-1]:
@@ -1500,7 +1499,6 @@ class BlitManager:
                     self._bg_layers.pop(self._layers_to_refetch.pop(), None)
 
             if self.bg_layer not in self._bg_layers:
-                print("fetching", self.bg_layer)
                 # TODO there might be other reasons to re-fetch a background!
                 self.fetch_bg()
 
