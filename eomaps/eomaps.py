@@ -2393,6 +2393,12 @@ class Maps(object):
         zorder : float
             The zorder of the artist (e.g. the stacking level of overlapping artists)
             The default is 1
+        verbose : int
+            The print-message level.
+
+            - 0: don't print warning and info messages to the console
+            - 1: print messages
+
         kwargs
             kwargs passed to the initialization of the matpltolib collection
             (dependent on the plot-shape) [linewidth, edgecolor, facecolor, ...]
@@ -2401,19 +2407,21 @@ class Maps(object):
             `datashader.mpl_ext.dsshow`
         """
 
-        assert self._data_plotted is False, (
-            "EOmaps: Calling `m.plot_map()` multiple times on the same "
-            "Maps-object is no longer supported since EOmaps v6.0 !"
-            "Create a new layer with `m2 = m.new_layer()` and use the new "
-            "Maps-object to plot the additional data!"
-        )
+        # assert self._data_plotted is False, (
+        #     "EOmaps: Calling `m.plot_map()` multiple times on the same "
+        #     "Maps-object is no longer supported since EOmaps v6.0 !"
+        #     "Create a new layer with `m2 = m.new_layer()` and use the new "
+        #     "Maps-object to plot the additional data!"
+        # )
 
-        if getattr(self, "coll", None) is not None:
-            print(
-                "EOmaps-warning: Calling `m.plot_map()` or "
-                "`m.make_dataset_pickable()` more than once on the "
-                "same Maps-object will override the assigned PICK-dataset!"
-            )
+        verbose = kwargs.pop("verbose", 10)
+        if verbose > 0:
+            if getattr(self, "coll", None) is not None:
+                print(
+                    "EOmaps-warning: Calling `m.plot_map()` or "
+                    "`m.make_dataset_pickable()` more than once on the "
+                    "same Maps-object will override the assigned PICK-dataset!"
+                )
 
         # convert vmin/vmax values to respect the encoding of the data
         vmin = kwargs.get("vmin", None)
@@ -2426,7 +2434,7 @@ class Maps(object):
         if layer is None:
             layer = self.layer
         else:
-            if not isinstance(layer, str):
+            if (verbose > 0) and not isinstance(layer, str):
                 print("EOmaps: The layer-name has been converted to a string!")
                 layer = str(layer)
 
@@ -2455,7 +2463,7 @@ class Maps(object):
         kwargs.setdefault("zorder", 1)
 
         # ---------------------- prepare the data
-        if kwargs.get("verbose") is not None:
+        if verbose > 0:
             print("EOmaps: Preparing the data")
 
         if useshape.name.startswith("shade"):
@@ -2465,6 +2473,7 @@ class Maps(object):
                 assume_sorted=assume_sorted,
                 update_coll_on_fetch=False,
                 indicate_masked_points=indicate_masked_points,
+                dynamic=dynamic,
             )
 
             self._shade_map(
@@ -2480,6 +2489,7 @@ class Maps(object):
                 assume_sorted=assume_sorted,
                 update_coll_on_fetch=True,
                 indicate_masked_points=indicate_masked_points,
+                dynamic=dynamic,
             )
 
             # dont set extent if "m.set_extent" was called explicitly
@@ -2494,8 +2504,9 @@ class Maps(object):
                 **kwargs,
             )
 
-        if hasattr(self, "_data_mask") and not np.all(self._data_mask):
-            print("EOmaps: Warning: some datapoints could not be drawn!")
+        if verbose > 0:
+            if hasattr(self, "_data_mask") and not np.all(self._data_mask):
+                print("EOmaps: Warning: some datapoints could not be drawn!")
 
         # update here to make sure the collection is properly added!
         # self.BM.update()
@@ -3694,7 +3705,13 @@ class Maps(object):
 
             # NOTE: the actual plot is performed by the data-manager
             # at the next call to m.BM.fetch_bg() for the corresponding layer
-            # self.BM._refetch_layer(layer)
+            if self._coll_dynamic is False:
+                # self.BM._refetch_layer(layer)
+
+                self._data_manager.on_fetch_bg()
+                self.BM.on_draw(None)
+
+            # self.BM.update()
             # self.BM.fetch_bg(layer=layer)
 
         except Exception as ex:
@@ -3814,7 +3831,7 @@ class Maps(object):
                     print("EOmaps: setting vmin=1 to avoid counting empty pixels...")
                     vmin = 1
 
-        if verbose:
+        if verbose > 0:
             print("EOmaps: Classifying...")
 
         # ---------------------- classify the data
@@ -3846,7 +3863,7 @@ class Maps(object):
             kwargs.setdefault("vmin", vmin)
             kwargs.setdefault("vmax", vmax)
 
-        if verbose:
+        if verbose > 0:
             print("EOmaps: Plotting...")
 
         zdata = self._data_manager.z_data
@@ -4014,7 +4031,7 @@ class Maps(object):
         )
 
         self._coll = coll
-        if verbose:
+        if verbose > 0:
             print("EOmaps: Indexing for pick-callbacks...")
 
         # This is now done lazily (only if a pick-callback is attached)

@@ -1120,6 +1120,7 @@ class BlitManager:
         self._on_remove_bg_artist = list()
 
         self._before_fetch_bg_actions = list()
+        self._before_update_actions = list()
 
     @property
     def figure(self):
@@ -1756,6 +1757,10 @@ class BlitManager:
 
         if bg_layer is None:
             bg_layer = self.bg_layer
+
+        while len(self._before_update_actions) > 0:
+            action = self._before_update_actions.pop(0)
+            action()
 
         # paranoia in case we missed the draw event,
         if bg_layer not in self._bg_layers or self._bg_layers[bg_layer] is None:

@@ -91,7 +91,11 @@ class DataManager:
         assume_sorted=True,
         update_coll_on_fetch=True,
         indicate_masked_points=True,
+        dynamic=False,
     ):
+        if self.m._data_plotted:
+            self._remove_existing_coll()
+
         self._all_data = self._prepare_data(assume_sorted=assume_sorted)
         self._indicate_masked_points = indicate_masked_points
         self.layer = layer
@@ -120,8 +124,13 @@ class DataManager:
             # attach a hook that updates the collection whenever a new
             # background is fetched
             # ("shade" shapes take care about updating the data themselves!)
-            if self.on_fetch_bg not in self.m.BM._before_fetch_bg_actions:
-                self.m.BM._before_fetch_bg_actions.append(self.on_fetch_bg)
+
+            if dynamic is True:
+                if self.on_fetch_bg not in self.m.BM._before_update_actions:
+                    self.m.BM._before_update_actions.append(self.on_fetch_bg)
+            else:
+                if self.on_fetch_bg not in self.m.BM._before_fetch_bg_actions:
+                    self.m.BM._before_fetch_bg_actions.append(self.on_fetch_bg)
 
     def _prepare_data(self, assume_sorted=True):
         in_crs = self.m.data_specs.crs
@@ -380,9 +389,10 @@ class DataManager:
             except Exception as ex:
                 print(ex)
 
-    def on_fetch_bg(self, layer, bbox=None):
+    def on_fetch_bg(self, layer=None, bbox=None):
         # TODO support providing a bbox as extent?
-
+        if layer is None:
+            layer = self.layer
         try:
             if not self.redraw_required(layer):
                 return
@@ -471,6 +481,7 @@ class DataManager:
         return False
 
     def get_props(self, *args, **kwargs):
+
         x0, x1, y0, y1 = self.current_extent
 
         if self._radius_margin is not None:
@@ -729,3 +740,5 @@ class DataManager:
 
         if self.on_fetch_bg in self.m.BM._before_fetch_bg_actions:
             self.m.BM._before_fetch_bg_actions.remove(self.on_fetch_bg)
+        if self.on_fetch_bg in self.m.BM._before_update_actions:
+            self.m.BM._before_update_actions.remove(self.on_fetch_bg)
