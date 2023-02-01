@@ -1377,7 +1377,7 @@ class BlitManager:
         gc.restore()
 
         # restore initial layer
-        self._m.bg_layer = initial_layer
+        self._m.show_layer(initial_layer)
 
     def _get_array(self, l, a=1):
         rgba = np.array(self._bg_layers[l])[::-1, :, :]
@@ -1495,6 +1495,7 @@ class BlitManager:
                 self._bg_layers = dict()
                 self._refetch_bg = False
             else:
+                print(self._layers_to_refetch)
                 # remove all cached backgrounds that were tagged for refetch
                 while len(self._layers_to_refetch) > 0:
                     self._bg_layers.pop(self._layers_to_refetch.pop(), None)
@@ -1841,16 +1842,29 @@ class BlitManager:
         if blit:
             cv.blit()
 
-    def _get_restore_bg_action(self, layer, bbox_bounds=None, alpha=1):
+    def _get_restore_bg_action(
+        self, layer, bbox_bounds=None, alpha=1, clip_path=None, set_clip_path=False
+    ):
         """
         Update a part of the screen with a different background
         (intended as after-restore action)
 
         bbox_bounds = (x, y, width, height)
         """
+        from matplotlib.transforms import Bbox, TransformedPath
 
         if bbox_bounds is None:
             bbox_bounds = self.figure.bbox.bounds
+
+        if clip_path is not None:
+            clip_path = TransformedPath(
+                clip_path, self._m.ax.projection._as_mpl_transform(self._m.ax)
+            )
+
+            # if set_clip_path is True:
+            #     bbox_bounds = clip_path.get_fully_transformed_path().get_extents().bounds
+
+        bbox = Bbox.from_bounds(*bbox_bounds)
 
         def action():
             if self.bg_layer == layer:
@@ -1875,7 +1889,11 @@ class BlitManager:
             argb[:, :, -1] = (argb[:, :, -1] * alpha).astype(np.int8)
 
             gc = self.canvas.renderer.new_gc()
-            gc.set_clip_rectangle(self.canvas.figure.bbox)
+
+            gc.set_clip_rectangle(bbox)
+            if set_clip_path is True:
+                gc.set_clip_path(clip_path)
+
             self.canvas.renderer.draw_image(
                 gc,
                 int(x0),

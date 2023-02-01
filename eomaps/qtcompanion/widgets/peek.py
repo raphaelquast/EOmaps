@@ -4,7 +4,16 @@ from PyQt5.QtCore import Qt, pyqtSignal, QSize, pyqtSlot
 from .layer import AutoUpdatePeekLayerDropdown, AutoUpdateLayerMenuButton
 from ..common import iconpath
 
-peek_methods = ("top", "bottom", "left", "right", "rectangle", "square")
+peek_methods = (
+    "top",
+    "bottom",
+    "left",
+    "right",
+    "rectangle",
+    "square",
+    "circle",
+    "ellipse",
+)
 peek_icons = dict()
 for method in peek_methods:
     peek_icons[method] = QtGui.QIcon(str(iconpath / f"peek_{method}.png"))
@@ -59,11 +68,16 @@ class PeekMethodButtons(QtWidgets.QWidget):
         self.rectangle_size = 1
         self.how = (self.rectangle_size, self.rectangle_size)
         self.alpha = 1
+        self.shape = "rectangular"
 
         self.buttons = dict()
         self.rect_button = (
             QtWidgets.QStackedWidget()
         )  # stacked buttons for rectangle/square
+        self.round_button = (
+            QtWidgets.QStackedWidget()
+        )  # stacked buttons for ellipse/circle
+
         for method in peek_methods:
             b = QtWidgets.QToolButton()
             b.setIcon(peek_icons[method])
@@ -74,6 +88,9 @@ class PeekMethodButtons(QtWidgets.QWidget):
 
             if method in ("rectangle", "square"):
                 self.rect_button.addWidget(b)
+
+            if method in ("ellipse", "circle"):
+                self.round_button.addWidget(b)
 
         self.rectangle_slider = RectangleSlider(Qt.Horizontal)
         self.rectangle_slider.valueChanged.connect(self.rectangle_sider_value_changed)
@@ -104,6 +121,8 @@ class PeekMethodButtons(QtWidgets.QWidget):
         buttonlayout.addWidget(self.buttons["right"])
         buttonlayout.addWidget(self.buttons["left"])
         buttonlayout.addWidget(self.rect_button)
+        buttonlayout.addWidget(self.round_button)
+
         buttonlayout.addWidget(self.rectangle_slider, 1)
         buttons = ButtonWidget()
         buttons.setLayout(buttonlayout)
@@ -120,18 +139,40 @@ class PeekMethodButtons(QtWidgets.QWidget):
 
         self.methodChanged.emit("square")
         self.rect_button.setCurrentWidget(self.buttons["square"])
-
-        # self.buttons["rectangle"].setText(self.symbols_inverted["square"])
+        self.round_button.setCurrentWidget(self.buttons["square"])
 
     def button_clicked(self, method):
         @pyqtSlot()
         def cb():
             if method == "square":
-                m = "rectangle"
-                self.rect_button.setCurrentWidget(self.buttons["rectangle"])
+                if self._method == "square":
+                    m = "rectangle"
+                    self.rect_button.setCurrentWidget(self.buttons["rectangle"])
+                else:
+                    m = method
+                    self.rect_button.setCurrentWidget(self.buttons[method])
             elif method == "rectangle":
-                m = "square"
-                self.rect_button.setCurrentWidget(self.buttons["square"])
+                if self._method == "rectangle":
+                    m = "square"
+                    self.rect_button.setCurrentWidget(self.buttons["square"])
+                else:
+                    m = method
+                    self.rect_button.setCurrentWidget(self.buttons[method])
+            elif method == "circle":
+                if self._method == "circle":
+                    m = "ellipse"
+                    self.round_button.setCurrentWidget(self.buttons["ellipse"])
+                else:
+                    m = method
+                    self.round_button.setCurrentWidget(self.buttons[method])
+            elif method == "ellipse":
+                if self._method == "ellipse":
+                    m = "circle"
+                    self.round_button.setCurrentWidget(self.buttons["circle"])
+                else:
+                    m = method
+                    self.round_button.setCurrentWidget(self.buttons[method])
+
             else:
                 m = method
             self.methodChanged.emit(m)
@@ -141,7 +182,7 @@ class PeekMethodButtons(QtWidgets.QWidget):
     @pyqtSlot(int)
     def rectangle_sider_value_changed(self, i):
         self.rectangle_size = i / 100
-        if self._method in ["rectangle", "square"]:
+        if self._method in ["rectangle", "square", "circle", "ellipse"]:
             self.methodChanged.emit(self._method)
         else:
             self.methodChanged.emit("rectangle")
@@ -221,17 +262,38 @@ class PeekMethodButtons(QtWidgets.QWidget):
                 val.setIcon(peek_icons[f"{key}"])
 
         if method == "rectangle":
+            self.shape = "rectangular"
             self.rectangle_slider.show()
             if self.rectangle_size < 0.99:
                 self.how = (self.rectangle_size, self.rectangle_size)
             else:
                 self.how = "full"
         elif method == "square":
+            self.shape = "rectangular"
             self.rectangle_slider.show()
             if self.rectangle_size < 0.99:
                 self.how = self.rectangle_size
             else:
                 self.how = "full"
+
+        elif method == "ellipse":
+            self.rectangle_slider.show()
+            if self.rectangle_size < 0.99:
+                self.how = (self.rectangle_size, self.rectangle_size)
+                self.shape = "round"
+            else:
+                self.how = "full"
+                self.shape = "rectangular"
+
+        elif method == "circle":
+            self.rectangle_slider.show()
+            if self.rectangle_size < 0.99:
+                self.how = self.rectangle_size
+                self.shape = "round"
+            else:
+                self.how = "full"
+                self.shape = "rectangular"
+
         else:
             self.rectangle_slider.hide()
             self.how = method
@@ -335,7 +397,11 @@ class PeekLayerWidget(QtWidgets.QWidget):
             modifier = None
 
         self.cid = self.m.all.cb.click.attach.peek_layer(
-            l, how=self.buttons.how, alpha=self.buttons.alpha, modifier=modifier
+            layer=l,
+            how=self.buttons.how,
+            alpha=self.buttons.alpha,
+            modifier=modifier,
+            shape=self.buttons.shape,
         )
         self.current_layer = l
 
@@ -354,10 +420,11 @@ class PeekLayerWidget(QtWidgets.QWidget):
             modifier = None
 
         self.cid = self.m.all.cb.click.attach.peek_layer(
-            self.current_layer,
+            layer=self.current_layer,
             how=self.buttons.how,
             alpha=self.buttons.alpha,
             modifier=modifier,
+            shape=self.buttons.shape,
         )
 
     def remove_peek_cb(self):
