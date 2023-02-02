@@ -1842,7 +1842,12 @@ class BlitManager:
             cv.blit()
 
     def _get_restore_bg_action(
-        self, layer, bbox_bounds=None, alpha=1, clip_path=None, set_clip_path=False
+        self,
+        layer,
+        bbox_bounds=None,
+        alpha=1,
+        clip_path=None,
+        set_clip_path=False,
     ):
         """
         Update a part of the screen with a different background
@@ -1850,20 +1855,11 @@ class BlitManager:
 
         bbox_bounds = (x, y, width, height)
         """
-        from matplotlib.transforms import Bbox, TransformedPath
 
         if bbox_bounds is None:
-            bbox_bounds = self.figure.bbox.bounds
-
-        if clip_path is not None:
-            clip_path = TransformedPath(
-                clip_path, self._m.ax.projection._as_mpl_transform(self._m.ax)
-            )
-
-            # if set_clip_path is True:
-            #     bbox_bounds = clip_path.get_fully_transformed_path().get_extents().bounds
-
-        bbox = Bbox.from_bounds(*bbox_bounds)
+            bbox = self.figure.bbox
+        else:
+            bbox = Bbox.from_bounds(*bbox_bounds)
 
         def action():
             if self.bg_layer == layer:
@@ -1872,7 +1868,7 @@ class BlitManager:
             if layer not in self._bg_layers:
                 self.fetch_bg(layer)
 
-            x0, y0, w, h = bbox_bounds
+            x0, y0, w, h = bbox.bounds
 
             # convert the buffer to rgba so that we can add transparency
             buffer = self._bg_layers[layer]

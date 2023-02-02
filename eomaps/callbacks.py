@@ -1,6 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.patches import PathPatch
+from matplotlib.transforms import TransformedPath
 import warnings
 
 
@@ -842,6 +843,11 @@ class _click_callbacks(object):
                 self.m.BM._artists_to_clear.setdefault("move", []).append(marker)
 
             self.m.BM._after_restore_actions.append(doit)
+
+        # create a TransformedPath as needed for clipping
+        clip_path = TransformedPath(
+            clip_path, self.m.ax.projection._as_mpl_transform(self.m.ax)
+        )
 
         self.m.BM._after_restore_actions.append(
             self.m.BM._get_restore_bg_action(
