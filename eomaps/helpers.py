@@ -407,6 +407,7 @@ class LayoutEditor:
 
         self._artists_visible = dict()
         self._ax_visible = dict()
+        self._ax_animated = dict()
 
         # the snap-to-grid interval (0 means no snapping)
         self._snap_id = 5
@@ -864,6 +865,10 @@ class LayoutEditor:
                     + f"filepath: '{self._filepath}'."
                 )
 
+        # reset the "animated" state of the axes
+        for ax, val in self._ax_animated.items():
+            ax.set_animated(val)
+
         for ax, frameQ, spine_vis, patch_props, spine_props in zip(
             self.axes,
             self._frameon,
@@ -914,6 +919,7 @@ class LayoutEditor:
                     p.set_visible(True)
 
         self._ax_visible.clear()
+        self._ax_animated.clear()
 
         # do this at the end!
         self.modifier_pressed = False
@@ -934,6 +940,11 @@ class LayoutEditor:
         # do this as the first thing since axes might be artists as well!
         for ax in self.axes:
             self._ax_visible[ax] = ax.get_visible()
+            self._ax_animated[ax] = ax.get_animated()
+            # treat all axes as "non-animated"
+            # TODO implement a better treatment for this
+            # (e.g. just blit them on draw)!
+            ax.set_animated(False)
 
         # make all artists invisible (and remember their visibility state for later)
         for a in {
@@ -986,7 +997,10 @@ class LayoutEditor:
             ax.patch.set_facecolor("w")
             ax.patch.set_alpha(0.75)
 
-            if ax not in self.m.BM._bg_artists.get(self.m.BM.bg_layer, []):
+            if ax not in chain(
+                self.m.BM._bg_artists.get(self.m.BM.bg_layer, []),
+                self.m.BM._artists.get(self.m.BM.bg_layer, []),
+            ):
                 continue
             ax.set_visible(True)
 
