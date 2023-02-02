@@ -82,6 +82,7 @@ class TestDraw(unittest.TestCase):
         self.assertTrue(len(m.draw._artists) == 3)
 
         # -----------------------------
+        m.new_layer("shapes")
         d = m.draw.new_drawer(layer="shapes")
 
         d.rectangle(fc="none", ec="r")
