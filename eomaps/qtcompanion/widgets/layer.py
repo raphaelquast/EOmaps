@@ -25,8 +25,6 @@ class AutoUpdatePeekLayerDropdown(QtWidgets.QComboBox):
 
         self._last_active = None
 
-        # update layers on every change of the Maps-object background layer
-        self.m.BM.on_layer(self.update_visible_layer, persistent=True)
         self.update_layers()
 
         self.setSizeAdjustPolicy(self.AdjustToMinimumContentsLengthWithIcon)
@@ -48,20 +46,6 @@ class AutoUpdatePeekLayerDropdown(QtWidgets.QComboBox):
     @pyqtSlot()
     def set_last_active(self):
         self._last_active = self.currentText()
-
-    def update_visible_layer(self, m, l):
-        # make sure to re-fetch layers first
-        self.update_layers()
-
-        if self._use_active:
-            # set current index to active layer if _use_active
-            currindex = self.findText(l)
-            self.setCurrentIndex(currindex)
-        elif self._last_active is not None:
-            # set current index to last active layer otherwise
-            idx = self.findText(self._last_active)
-            if idx != -1:
-                self.setCurrentIndex(idx)
 
     def mousePressEvent(self, event):
         if event.button() == Qt.RightButton:

@@ -123,13 +123,12 @@ class PeekMethodButtons(QtWidgets.QWidget):
         buttonlayout.addWidget(self.rect_button)
         buttonlayout.addWidget(self.round_button)
 
-        buttonlayout.addWidget(self.rectangle_slider, 1)
         buttons = ButtonWidget()
         buttons.setLayout(buttonlayout)
 
-        layout = QtWidgets.QVBoxLayout()
-
+        layout = QtWidgets.QHBoxLayout()
         layout.addWidget(buttons)
+        layout.addWidget(self.rectangle_slider)
         layout.addWidget(self.alphaslider)
         layout.setAlignment(Qt.AlignLeft | Qt.AlignCenter)
 
@@ -356,9 +355,10 @@ class PeekLayerWidget(QtWidgets.QWidget):
         self.modifier.setMaximumWidth(50)
         self.modifier.textChanged.connect(self.method_changed)
 
-        modifier_layout = QtWidgets.QHBoxLayout()
-        modifier_layout.addWidget(modifier_label, 0, Qt.AlignLeft)
-        modifier_layout.addWidget(self.modifier, 0, Qt.AlignLeft)
+        modifier_layout = QtWidgets.QVBoxLayout()
+        modifier_layout.addWidget(modifier_label)
+        modifier_layout.addWidget(self.modifier)
+        modifier_layout.setAlignment(Qt.AlignLeft)
         modifier_widget = QtWidgets.QWidget()
         modifier_widget.setLayout(modifier_layout)
 
@@ -367,19 +367,18 @@ class PeekLayerWidget(QtWidgets.QWidget):
         label.setFixedWidth(width + 5)
 
         selectorlayout = QtWidgets.QVBoxLayout()
-        selectorlayout.addWidget(label, 0, Qt.AlignTop)
-        selectorlayout.addWidget(self.layerselector, 0, Qt.AlignCenter | Qt.AlignLeft)
-        selectorlayout.addWidget(modifier_widget)
-        selectorlayout.setAlignment(Qt.AlignTop)
+        selectorlayout.addWidget(label)
+        selectorlayout.addWidget(self.layerselector)
+        selectorlayout.setAlignment(Qt.AlignLeft)
 
         selectorwidget = QtWidgets.QWidget()
         selectorwidget.setLayout(selectorlayout)
 
         layout = QtWidgets.QHBoxLayout()
-        layout.addWidget(selectorwidget)
+        layout.addWidget(selectorwidget, 0, Qt.AlignLeft)
+        layout.addWidget(modifier_widget, 0, Qt.AlignLeft)
         layout.addWidget(self.buttons)
-
-        layout.setAlignment(Qt.AlignCenter | Qt.AlignLeft)
+        layout.setAlignment(Qt.AlignLeft)
 
         self.setLayout(layout)
 
@@ -390,6 +389,7 @@ class PeekLayerWidget(QtWidgets.QWidget):
             self.current_layer = None
 
         if l == "":
+            self.current_layer = None
             return
 
         modifier = self.modifier.text().strip()
@@ -441,8 +441,8 @@ class TabBar(QtWidgets.QTabBar):
 
         # remove strange line on top of tabs
         # (see https://stackoverflow.com/a/33941638/9703451)
-        self.setStyleSheet(" QTabBar { qproperty-drawBase: 0; }")
-
+        self.setDrawBase(False)
+        self.setExpanding(False)
         self.setElideMode(Qt.ElideRight)
 
     def tabSizeHint(self, index):

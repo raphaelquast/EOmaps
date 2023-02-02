@@ -440,6 +440,8 @@ class Maps(object):
         self._data_plotted = False
         self._set_extent_on_plot = True
 
+        self._after_add_child = list()
+
     def __getattribute__(self, key):
         if key == "plot_specs":
             raise AttributeError(
@@ -3205,6 +3207,13 @@ class Maps(object):
     def _add_child(self, m):
         self.parent._children.add(m)
 
+        # execute hooks to notify the gui that a new child was added
+        for action in self._after_add_child:
+            try:
+                action()
+            except Exception as ex:
+                print("EOmaps: Problem executing 'on_add_child' action:", ex)
+
     def _identify_data(self, data=None, x=None, y=None, parameter=None):
         """
         Identify the way how the data has been provided and convert to the
@@ -4222,7 +4231,6 @@ class Maps(object):
                     m._indicate_companion_map(False)
 
             if self._companion_widget is None:
-                print("EOmaps: Initializing companion-widget...")
                 self._init_companion_widget()
 
             if self._companion_widget is not None:
