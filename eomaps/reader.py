@@ -568,6 +568,7 @@ def _from_file(
     parent=None,
     figsize=None,
     layer=None,
+    extent=None,
     **kwargs,
 ):
     """
@@ -618,6 +619,18 @@ def _from_file(
         to create a Maps-object for the dataset)
     figsize : tuple, optional
         The size of the figure. (Only relevant if parent is None!)
+    extent : tuple or string
+
+        - If a tuple is provided, it is used to set the plot-extent
+          before plotting via `m.set_extent(extent)`
+
+          - (x0, x1, y0, y1) : provide the extent in lat/lon
+          - ((x0, x1, y0, y1), crs) : provide the extent in the given crs
+
+        - If a string is provided, it is used to attempt to set the plot-extent
+          before plotting via `m.set_extent_to_location(extent)`
+
+        The default is None
     kwargs :
         Keyword-arguments passed to `m.plot_map()`
     Returns
@@ -674,6 +687,25 @@ def _from_file(
         elif isinstance(shape, dict):
             getattr(m.set_shape, shape["shape"])(
                 **{k: v for k, v in shape.items() if k != "shape"}
+            )
+
+    if extent is not None:
+        if isinstance(extent, tuple):
+            if len(extent) == 2 and len(extent[0]) == 4:
+                m.set_extent(extent[0], crs=extent[1])
+            elif len(extent) == 4:
+                m.set_extent(extent)
+            else:
+                print(
+                    "EOmaps: unable to identify the provided extent"
+                    f"{extent}... defaulting to global"
+                )
+        elif isinstance(extent, str):
+            m.set_extent_to_location(extent)
+        else:
+            print(
+                "EOmaps: unable to identify the provided extent"
+                f"{extent}... defaulting to global"
             )
 
     m.plot_map(**kwargs)
@@ -805,6 +837,20 @@ class from_file:
             values for callbacks and colorbars, even if `mask_and_scale=False`!
 
             The default is False.
+        extent : tuple or string
+            Set the extent of the map prior to plotting
+            (can provide great speedups if only a subset of the dataset is shown!)
+
+            - If a tuple is provided, it is used to set the plot-extent
+              before plotting via `m.set_extent(extent)`
+
+              - (x0, x1, y0, y1) : provide the extent in lat/lon
+              - ((x0, x1, y0, y1), crs) : provide the extent in the given crs
+
+            - If a string is provided, it is used to attempt to set the plot-extent
+              before plotting via `m.set_extent_to_location(extent)`
+
+            The default is None
         kwargs :
             Keyword-arguments passed to `m.plot_map()`
 
@@ -969,6 +1015,20 @@ class from_file:
             values for callbacks and colorbars, even if `mask_and_scale=False`!
 
             The default is False.
+        extent : tuple or string
+            Set the extent of the map prior to plotting
+            (can provide great speedups if only a subset of the dataset is shown!)
+
+            - If a tuple is provided, it is used to set the plot-extent
+              before plotting via `m.set_extent(extent)`
+
+              - (x0, x1, y0, y1) : provide the extent in lat/lon
+              - ((x0, x1, y0, y1), crs) : provide the extent in the given crs
+
+            - If a string is provided, it is used to attempt to set the plot-extent
+              before plotting via `m.set_extent_to_location(extent)`
+
+            The default is None
         kwargs :
             Keyword-arguments passed to `m.plot_map()`
 
@@ -1104,6 +1164,21 @@ class from_file:
             Additional kwargs passed to pandas.read_file()
             (e.g. to set index_col etc.)
             The default is None
+        extent : tuple or string
+            Set the extent of the map prior to plotting
+            (can provide great speedups if only a subset of the dataset is shown!)
+
+            - If a tuple is provided, it is used to set the plot-extent
+              before plotting via `m.set_extent(extent)`
+
+              - (x0, x1, y0, y1) : provide the extent in lat/lon
+              - ((x0, x1, y0, y1), crs) : provide the extent in the given crs
+
+            - If a string is provided, it is used to attempt to set the plot-extent
+              before plotting via `m.set_extent_to_location(extent)`
+
+            The default is None
+
         kwargs :
             Keyword-arguments passed to `m.plot_map()`
 
