@@ -59,7 +59,7 @@ representative at an online or offline event.
 ## Enforcement
 
 Instances of abusive, harassing, or otherwise unacceptable behavior may be
-reported in the [🚩 Code of Conduct](https://github.com/raphaelquast/EOmaps/discussions/categories/code-of-conduct) 
+reported in the [🚩 Code of Conduct](https://github.com/raphaelquast/EOmaps/discussions/categories/code-of-conduct)
 discussions thread at the EOmaps GitHub repository.
 All complaints will be reviewed and investigated promptly and fairly.
 
