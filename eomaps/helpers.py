@@ -1118,6 +1118,8 @@ class LayoutEditor:
         layout : dict or None
             A dict of the positons of all axes, e.g.: {1:(x0, y0, width height), ...}
         """
+        figsize = [*self.f.get_size_inches()]
+
         axes = [
             a for a in self.axes if a.get_label() not in ["EOmaps_cb", "EOmaps_cb_hist"]
         ]
@@ -1129,6 +1131,8 @@ class LayoutEditor:
         # -----------
 
         layout = dict()
+        layout["figsize"] = figsize
+
         for i, ax in enumerate(axes):
             if cbs[i] is not None:
                 if cbs[i]._ax.get_axes_locator() is not None:
@@ -1188,15 +1192,6 @@ class LayoutEditor:
             with open(layout, "r") as file:
                 layout = json.load(file)
 
-        axes = [
-            a for a in self.axes if a.get_label() not in ["EOmaps_cb", "EOmaps_cb_hist"]
-        ]
-
-        # identify relevant colorbars
-        colorbars = [getattr(m, "colorbar", None) for m in self.ms]
-        cbaxes = [getattr(cb, "_ax", None) for cb in colorbars]
-        cbs = [(colorbars[cbaxes.index(a)] if a in cbaxes else None) for a in axes]
-
         # check if all relevant axes are specified in the layout
         valid_keys = set(self.get_layout())
         if valid_keys != set(layout):
@@ -1206,6 +1201,20 @@ class LayoutEditor:
                 "Invalid or missing keys:\n"
                 f"{sorted(valid_keys.symmetric_difference(set(layout)))}\n"
             )
+
+        # set the figsize
+        figsize = layout.pop("figsize", None)
+        if figsize is not None:
+            self.f.set_size_inches(*figsize)
+
+        axes = [
+            a for a in self.axes if a.get_label() not in ["EOmaps_cb", "EOmaps_cb_hist"]
+        ]
+
+        # identify relevant colorbars
+        colorbars = [getattr(m, "colorbar", None) for m in self.ms]
+        cbaxes = [getattr(cb, "_ax", None) for cb in colorbars]
+        cbs = [(colorbars[cbaxes.index(a)] if a in cbaxes else None) for a in axes]
 
         for key in valid_keys.intersection(set(layout)):
             val = layout[key]
