@@ -1572,10 +1572,6 @@ class BlitManager:
             for action in self._before_fetch_bg_actions:
                 action(layer=layer, bbox=bbox)
 
-            # execute actions on layer-changes
-            # (to make sure all lazy WMS services are properly added)
-            self._do_on_layer_change(layer=layer)
-
             if "|" in layer:
                 if layer not in self._bg_layers:
                     self._combine_bgs(layer)
