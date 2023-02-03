@@ -1337,19 +1337,16 @@ class BlitManager:
         with self._without_artists(artists=exclude_artists, layer=self.bg_layer):
             # fetch the current background (incl. dynamic artists)
             self.update()
-            from contextlib import ExitStack
 
             with ExitStack() as stack:
+                # get rid of the figure background patch
+                # (done by putting the patch on the __BG__ layer!)
+
                 # get rid of the axes background patch
                 for ax_i in self._m.f.axes:
                     stack.enter_context(
                         ax_i.patch._cm_set(facecolor="none", edgecolor="none")
                     )
-                # get rid of the figure background patch
-                stack.enter_context(
-                    self._m.f.patch._cm_set(facecolor="none", edgecolor="none")
-                )
-
                 bg = self.canvas.copy_from_bbox(self.figure.bbox)
 
         return bg
@@ -1558,9 +1555,11 @@ class BlitManager:
         # in the buffer regions!
         with ExitStack() as stack:
             # get rid of the figure background patch
-            stack.enter_context(
-                self._m.f.patch._cm_set(facecolor="none", edgecolor="none")
-            )
+            # (this is done by putting the patch on the __BG__ layer!)
+            # stack.enter_context(
+            #     self._m.f.patch._cm_set(facecolor="none", edgecolor="none")
+            # )
+
             # get rid of the axes background patch
             for ax_i in self._m.f.axes:
                 stack.enter_context(

@@ -442,6 +442,12 @@ class Maps(object):
 
         self._after_add_child = list()
 
+        # Make sure the figure-background patch is on an explicit layer
+        # This is used to avoid having the background patch on each fetched
+        # background while maintaining the capability of restoring it
+        if self.f.patch not in self.BM._bg_artists.get("__BG__", []):
+            self.BM.add_bg_artist(self.f.patch, layer="__BG__")
+
     def __getattribute__(self, key):
         if key == "plot_specs":
             raise AttributeError(
@@ -2540,6 +2546,13 @@ class Maps(object):
 
         dpi = kwargs.get("dpi", None)
 
+        # add the figure background patch as the bottom layer
+        transparent = kwargs.get("transparent", False)
+        if transparent is False:
+            initial_layer = self.BM.bg_layer
+            layer_with_bg = "|".join([initial_layer, "__BG__"])
+            self.show_layer(layer_with_bg)
+
         redraw = False
         if dpi is not None and dpi != self.f.dpi:
             redraw = True
@@ -2558,6 +2571,12 @@ class Maps(object):
             self._update_shade_axis_size()
             # redraw after the save to ensure that backgrounds are correctly cached
             self.redraw()
+
+        # restore the previous layer
+        if transparent is False:
+            self.BM._refetch_layer(layer_with_bg)
+            self.show_layer(initial_layer)
+            self.BM.on_draw(None)
 
     def fetch_layers(self, layers=None, verbose=True):
         """
