@@ -10,7 +10,9 @@ from matplotlib.transforms import Bbox, TransformedBbox
 import matplotlib.pyplot as plt
 from matplotlib.lines import Line2D
 from contextlib import contextmanager, ExitStack
-
+from pathlib import Path
+import json
+import warnings
 
 # class copied from matplotlib.axes
 class _TransformedBoundsLocator:
@@ -1073,6 +1075,146 @@ class LayoutEditor:
         if hasattr(self, "_snap_grid_artist"):
             self._snap_grid_artist.remove()
             del self._snap_grid_artist
+
+        self.m.redraw()
+
+    def get_layout(self, filepath=None, override=False, precision=5):
+        """
+        Get the positions of all axes within the current plot.
+
+        To re-apply a layout, use:
+
+            >>> l = m.get_layout()
+            >>> m.set_layout(l)
+
+        Note
+        ----
+        The returned list is only a snapshot of the current layout.
+        It can only be re-applied to a given figure if the order at which the axes are
+        created remains the same!
+
+        Parameters
+        ----------
+        filepath : str or pathlib.Path, optional
+            If provided, a json-file will be created at the specified destination that
+            can be used in conjunction with `m.set_layout(...)` to apply the layout:
+
+            >>> m.get_layout(filepath=<FILEPATH>, override=True)
+            >>> m.apply_layout_layout(<FILEPATH>)
+
+            You can also manually read-in the layout-dict via:
+            >>> import json
+            >>> layout = json.load(<FILEPATH>)
+        override: bool
+            Indicator if the file specified as 'filepath' should be overwritten if it
+            already exists.
+            The default is False.
+        precision : int or None
+            The precision of the returned floating-point numbers.
+            If None, all available digits are returned
+            The default is 5
+        Returns
+        -------
+        layout : dict or None
+            A dict of the positons of all axes, e.g.: {1:(x0, y0, width height), ...}
+        """
+        axes = [
+            a for a in self.axes if a.get_label() not in ["EOmaps_cb", "EOmaps_cb_hist"]
+        ]
+
+        # identify relevant colorbars
+        colorbars = [getattr(m, "colorbar", None) for m in self.ms]
+        cbaxes = [getattr(cb, "_ax", None) for cb in colorbars]
+        cbs = [(colorbars[cbaxes.index(a)] if a in cbaxes else None) for a in axes]
+        # -----------
+
+        layout = dict()
+        for i, ax in enumerate(axes):
+            if cbs[i] is not None:
+                if cbs[i]._ax.get_axes_locator() is not None:
+                    continue
+
+            label = ax.get_label()
+            name = f"{i}_{label}"
+            if precision is not None:
+                layout[name] = np.round(ax.get_position().bounds, precision).tolist()
+            else:
+                layout[name] = ax.get_position().bounds
+
+            if cbs[i] is not None:
+                layout[f"{name}_histogram_size"] = cbs[i]._hist_size
+
+        if filepath is not None:
+            filepath = Path(filepath)
+            assert (
+                not filepath.exists() or override
+            ), f"The file {filepath} already exists! Use override=True to relace it."
+            with open(filepath, "w") as file:
+                json.dump(layout, file)
+            print("EOmaps: Layout saved to:\n       ", filepath)
+
+        return layout
+
+    def apply_layout(self, layout):
+        """
+        Set the positions of all axes within the current plot based on a previously
+        defined layout.
+
+        To apply a layout, use:
+
+            >>> l = m.get_layout()
+            >>> m.set_layout(l)
+
+        To save a layout to disc and apply it at a later stage, use
+            >>> m.get_layout(filepath=<FILEPATH>)
+            >>> m.set_layout(<FILEPATH>)
+
+        Note
+        ----
+        The returned list is only a snapshot of the current layout.
+        It can only be re-applied to a given figure if the order at which the axes are
+        created remains the same!
+
+        Parameters
+        ----------
+        layout : dict, str or pathlib.Path
+            If a dict is provided, it is directly used to define the layout.
+
+            If a string or a pathlib.Path object is provided, it will be used to
+            read a previously dumped layout (e.g. with `m.get_layout(filepath)`)
+
+        """
+        if isinstance(layout, (str, Path)):
+            with open(layout, "r") as file:
+                layout = json.load(file)
+
+        axes = [
+            a for a in self.axes if a.get_label() not in ["EOmaps_cb", "EOmaps_cb_hist"]
+        ]
+
+        # identify relevant colorbars
+        colorbars = [getattr(m, "colorbar", None) for m in self.ms]
+        cbaxes = [getattr(cb, "_ax", None) for cb in colorbars]
+        cbs = [(colorbars[cbaxes.index(a)] if a in cbaxes else None) for a in axes]
+
+        # check if all relevant axes are specified in the layout
+        valid_keys = set(self.get_layout())
+        if valid_keys != set(layout):
+            warnings.warn(
+                "EOmaps: The the layout does not match the expected structure! "
+                "Layout might not be properly restored. "
+                "Invalid or missing keys:\n"
+                f"{sorted(valid_keys.symmetric_difference(set(layout)))}\n"
+            )
+
+        for key in valid_keys.intersection(set(layout)):
+            val = layout[key]
+
+            i = int(key[: key.find("_")])
+            if key.endswith("_histogram_size"):
+                cbs[i].set_hist_size(val)
+            else:
+                axes[i].set_position(val)
 
         self.m.redraw()
 
