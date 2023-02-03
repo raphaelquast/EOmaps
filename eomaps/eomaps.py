@@ -2259,8 +2259,10 @@ class Maps(object):
             The print-message level.
 
             - 0: don't print warning and info messages to the console
-            - 1: print messages
+            - >= 1: print warnings
+            - >= 10: print warnings and info messages
 
+            The default is 1
         kwargs
             kwargs passed to the initialization of the matpltolib collection
             (dependent on the plot-shape) [linewidth, edgecolor, facecolor, ...]
@@ -2276,8 +2278,8 @@ class Maps(object):
         #     "Maps-object to plot the additional data!"
         # )
 
-        verbose = kwargs.pop("verbose", 10)
-        if verbose > 0:
+        verbose = kwargs.pop("verbose", 1)
+        if verbose >= 1:
             if getattr(self, "coll", None) is not None:
                 print(
                     "EOmaps-warning: Calling `m.plot_map()` or "
@@ -2325,7 +2327,7 @@ class Maps(object):
         kwargs.setdefault("zorder", 1)
 
         # ---------------------- prepare the data
-        if verbose > 0:
+        if verbose >= 10:
             print("EOmaps: Preparing the data")
 
         if useshape.name.startswith("shade"):
@@ -2366,7 +2368,7 @@ class Maps(object):
                 **kwargs,
             )
 
-        if verbose > 0:
+        if verbose >= 1:
             if getattr(self, "_data_mask", None) is not None and not np.all(
                 self._data_mask
             ):
