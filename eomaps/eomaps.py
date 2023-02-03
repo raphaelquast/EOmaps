@@ -2535,7 +2535,11 @@ class Maps(object):
         self._indicate_companion_map(False)
 
         dpi = kwargs.get("dpi", None)
-        if dpi is not None:
+
+        redraw = False
+        if dpi is not None and dpi != self.f.dpi:
+            redraw = True
+
             # clear all cached background layers before saving to make sure they
             # are re-drawn with the correct dpi-settings
             self.BM._refetch_bg = True
@@ -2545,7 +2549,7 @@ class Maps(object):
 
         self.f.savefig(*args, **kwargs)
 
-        if dpi is not None:
+        if redraw is True:
             # reset the shading-axis-size to the used figure dpi
             self._update_shade_axis_size()
             # redraw after the save to ensure that backgrounds are correctly cached
