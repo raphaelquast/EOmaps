@@ -20,39 +20,42 @@
 
 # EOmaps - Interactive maps in python!
 
-EOmaps is a Python package to visualize and analyze geographical datasets.
+EOmaps is a <tt>python</tt> package to visualize and analyze geographical datasets.
 
-It is built on top of `matplotlib` and `cartopy` and aims to provide an
+It is built on top of [matplotlib](matplotlib.org/) and [cartopy](https://scitools.org.uk/cartopy/docs/latest/) and aims to provide an
 intuitive and easy-to-use interface to handle the following tasks:
 
 - Speed up and simplify the creation and comparison of maps
 - Visualize small datasets as well as millions of datapoints
 - Handle 1D and 2D datasets and create plots from NetCDF, GeoTIFF or CSV files
 - Take care of re-projecting the data
-- Compare or overlay different plot-layers and WebMap services
-- Use the maps as interactive data-analysis widgets (e.g. execute functions if you click on the map)
-- Provide a versatile set of tools to customize the maps
-- Arrange multiple maps in one figure
-- Get a nice colorbar with a histogram on top
-- Export high resolution images
+- Compare, combine and overlay multiple plot-layers and WebMap services
+- Use the maps as interactive data-analysis widgets  
+  (e.g. execute functions if you click on the map)
+- Provide a versatile set of tools to customize the maps  
+  (incl. scalebars, north-arrows and a nice colorbar with a histogram on top)
+- Help arranging multiple maps (and other plots/images) in one figure
+- Export high resolution images (png, jpeg etc.)
 
 ## 🔨 Installation
 
-To install EOmaps (and all its dependencies) via the `conda` package-manager, simply use:
+To install EOmaps (and all its dependencies) via the [conda](https://docs.conda.io/projects/conda/en/stable/) package-manager, simply use:
 ```python
 conda install -c conda-forge eomaps
 ```
-... to get a huge speedup, use `mamba` to solve the dependencies!
+... to get a <u>**huge speedup**</u>, use [mamba](https://mamba.readthedocs.io/en/latest/) to solve the dependencies!
 ```python
 conda install -c conda-forge mamba
 mamba install -c conda-forge eomaps
 ```
-For more information, have a look at the [installation instructions](https://eomaps.readthedocs.io/en/latest/general.html#installation) or checkout the quickstart guide [🚀 from 0 to EOmaps](https://eomaps.readthedocs.io/en/latest/FAQ.html#from-0-to-eomaps-a-quickstart-guide)!
+Need more information?
+- Have a look at the [🐛Installation](https://eomaps.readthedocs.io/en/latest/general.html#installation) instructions in the docs.
+- Checkout the quickstart guide [🚀 From 0 to EOmaps](https://eomaps.readthedocs.io/en/latest/FAQ.html#from-0-to-eomaps-a-quickstart-guide).
 <br/>
 
 ## 📖 Documentation
 
-Make sure to have a look at the <a href=https://eomaps.readthedocs.io/en/latest><b>🌳 documentation 🌳</b></a> which provides a lot of <a href=https://eomaps.readthedocs.io/en/latest/EOmaps_examples.html><b>examples</b></a> on how to create awesome interactive maps (incl. 🐍 source code)!
+Make sure to have a look at the <a href=https://eomaps.readthedocs.io/en/latest><b>🌳 Documentation 🌳</b></a> which provides a lot of <a href=https://eomaps.readthedocs.io/en/latest/EOmaps_examples.html><b>🌐Examples</b></a> on how to create awesome interactive maps (incl. 🐍 source code)!
 
 ## ✔️ Citation
 Did EOmaps help in your research?  
