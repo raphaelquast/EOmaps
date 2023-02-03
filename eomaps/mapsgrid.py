@@ -491,7 +491,7 @@ class MapsGrid:
         # are re-drawn with the correct dpi-settings
         self.parent.BM._refetch_bg = True
 
-        self.f.savefig(*args, **kwargs)
+        self.parent.savefig(*args, **kwargs)
 
     @property
     @wraps(Maps.util)
