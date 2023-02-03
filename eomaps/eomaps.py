@@ -2367,7 +2367,9 @@ class Maps(object):
             )
 
         if verbose > 0:
-            if hasattr(self, "_data_mask") and not np.all(self._data_mask):
+            if getattr(self, "_data_mask", None) is not None and not np.all(
+                self._data_mask
+            ):
                 print("EOmaps: Warning: some datapoints could not be drawn!")
 
         # update here to make sure the collection is properly added!
