@@ -4076,7 +4076,12 @@ class Maps(object):
     def _indicate_companion_map(self, visible):
         if hasattr(self, "_companion_map_indicator"):
             self.BM.remove_artist(self._companion_map_indicator)
-            self._companion_map_indicator.remove()
+            try:
+                self._companion_map_indicator.remove()
+            except ValueError:
+                # ignore errors resulting from the fact that the artist
+                # has already been removed!
+                pass
             del self._companion_map_indicator
 
         if self._companion_widget is None:
