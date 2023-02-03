@@ -61,7 +61,7 @@ Consider supporting the development and add a citation to your publication!
 [![https://doi.org/10.5281/zenodo.6459598](https://zenodo.org/badge/410829039.svg)](https://zenodo.org/badge/latestdoi/410829039)
 
 
-## 🚀 Contribute
+## 🌟 Contribute
 
 Found a bug or got an idea for an interesting feature?  
 Open an [issue](https://github.com/raphaelquast/EOmaps/issues) or start a [discussion](https://github.com/raphaelquast/EOmaps/discussions), and I'll see what I can do!  
