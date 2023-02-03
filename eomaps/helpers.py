@@ -1473,22 +1473,17 @@ class BlitManager:
                     self._layers_to_refetch.add(l)
 
     def get_bg_artists(self, layer):
-        # get all relevant artists for combined background layers
-        layer = str(layer)  # make sure we convert non-string layer names to string!
+        artists = set()
+        for l in np.atleast_1d(layer):
+            # get all relevant artists for combined background layers
+            l = str(l)  # w make sure we convert non-string layer names to string!
 
-        # get artists defined on the layer itself
-        # Note: it's possible to create explicit multi-layers and attach
-        # artists that are only visible if both layers are visible! (e.g. "l1|l2")
-        artists = [*self._bg_artists.get(layer, [])]
+            # get artists defined on the layer itself
+            # Note: it's possible to create explicit multi-layers and attach
+            # artists that are only visible if both layers are visible! (e.g. "l1|l2")
+            artists = artists.union(set(self._bg_artists.get(l, [])))
 
-        # # get all artists of the sub-layers (if we deal with a multi-layer)
-        # if "|" in layer:
-        #     for l in layer.split("|"):
-        #         if l in ["_", ""]:
-        #             continue
-        #         layer_artists = self._bg_artists.get(l, [])
-        #         artists += layer_artists
-
+        artists = [*artists]  # convert to list for sorting
         artists.sort(key=lambda x: getattr(x, "zorder", -1))
 
         return artists
@@ -1586,15 +1581,11 @@ class BlitManager:
 
             # get all relevant artists to plot and remember zorders
             # self.get_bg_artists() already returns artists sorted by zorder!
-            allartists = []
-
-            for l in ("all", layer):
-                artists = self.get_bg_artists(l)
-                allartists.append(artists)
+            allartists = self.get_bg_artists(["all", layer])
 
             # check if all artists are stale, and if so skip re-fetching the background
             # (only if also the axis extent is the same!)
-            no_stale_artists = not any(art.stale for art in chain(*allartists))
+            no_stale_artists = not any(art.stale for art in allartists)
 
             # don't re-fetch the background if it is not necessary
             if no_stale_artists and (self._bg_layers.get(layer, None) is not None):
@@ -1609,10 +1600,10 @@ class BlitManager:
                     if l not in [layer, "all"]:
                         # artists on "all" are always visible!
                         # make all artists of other layers invisible
-                        for art in self.get_bg_artists(l):
+                        for art in self._bg_artists.get(l, []):
                             art.set_visible(False)
 
-                for art in chain(*allartists):
+                for art in allartists:
                     if art not in self._hidden_artists:
                         art.set_visible(True)
                         # art.draw(cv.get_renderer())

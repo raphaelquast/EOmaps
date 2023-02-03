@@ -1023,13 +1023,11 @@ class ArtistEditorTabs(LayerArtistTabs):
             artists = []
 
         for i, a in enumerate(artists):
-            a_layout = self._get_artist_layout(a, layer)
-            for art, pos in a_layout:
+            for art, pos in self._get_artist_layout(a, layer):
                 layout.addWidget(art, i, pos)
 
         tabwidget = QtWidgets.QWidget()
         tabwidget.setLayout(layout)
-
         widget.setWidget(tabwidget)
 
     # --------
