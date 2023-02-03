@@ -2926,7 +2926,7 @@ class Maps(object):
                 projection=projection,
                 aspect="equal",
                 adjustable="box",
-                label="map",
+                label=self._get_ax_label(),
             )
 
         self._ax = ax
@@ -2973,6 +2973,9 @@ class Maps(object):
                 # make sure to call show only if we use an interactive backend...
                 # or within the ipympl backend (otherwise it will block subsequent code!)
                 plt.show()
+
+    def _get_ax_label(self):
+        return "map"
 
     def _on_xlims_change(self, *args, **kwargs):
         self.BM._refetch_bg = True
@@ -4334,6 +4337,9 @@ class _InsetMaps(Maps):
 
         if indicate_extent is not False:
             self.indicate_inset_extent(parent, **extent_kwargs)
+
+    def _get_ax_label(self):
+        return "inset_map"
 
     def plot_map(self, *args, **kwargs):
         set_extent = kwargs.pop("set_extent", False)
