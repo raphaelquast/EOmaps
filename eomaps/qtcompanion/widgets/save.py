@@ -94,8 +94,7 @@ class SaveFileWidget(QtWidgets.QFrame):
     @pyqtSlot()
     def save_file(self):
         savepath = QtWidgets.QFileDialog.getSaveFileName()[0]
-
-        if savepath is not None:
+        if savepath is not None and savepath != "":
             self.m.savefig(
                 savepath,
                 dpi=int(self.dpi_input.text()),
