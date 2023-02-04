@@ -1025,7 +1025,9 @@ class _xyz_tile_service:
         self.name = name
 
     def _reinit(self, m):
-        return _xyz_tile_service(m, self.url, self._maxzoom)
+        return _xyz_tile_service(
+            m, url=self.url, maxzoom=self._maxzoom, name=self._name
+        )
 
     def __call__(
         self,
