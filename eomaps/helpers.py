@@ -1564,7 +1564,7 @@ class BlitManager:
     def _combine_bgs(self, layer):
         # TODO decide on layer-ordering! (currently transposed)
         layers, alphas = [], []
-        for l in layer.split("|")[::-1]:
+        for l in layer.split("|"):
             if l.endswith("}") and "{" in l:
                 try:
                     name, a = l.split("{")
