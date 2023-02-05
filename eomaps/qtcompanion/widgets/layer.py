@@ -258,7 +258,7 @@ class AutoUpdateLayerMenuButton(QtWidgets.QPushButton):
                     w.setText(f"[{active_layers.index(key)}]  {key}")
                 else:
                     w.setChecked(False)
-                    w.setText("   " + key)
+                    w.setText(key + "        ")  # add space for [n]
 
                 # re connect action trigger
                 w.clicked.connect(action.trigger)
@@ -279,7 +279,7 @@ class AutoUpdateLayerMenuButton(QtWidgets.QPushButton):
             # checkBox.setCheckable(False)
             action = QtWidgets.QWidgetAction(self.menu())
             action.setDefaultWidget(checkBox)
-            action.setText("   " + key)
+            action.setText(key + "        ")
             action.setData(key)
 
             if key == "all":
