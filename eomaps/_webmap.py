@@ -867,11 +867,16 @@ class xyzRasterSource(RasterSource):
         else:
             self.desired_tile_form = "RGB"
 
-        self._factory = TileFactory(self.url, desired_tile_form=self.desired_tile_form)
+        self._factory = TileFactory(
+            self.url, desired_tile_form=self.desired_tile_form, cache=True  # TODO
+        )
 
     # function to estimate a proper zoom-level
     @staticmethod
     def _getz(d, zmax):
+        # see https://wiki.openstreetmap.org/wiki/Zoom_levels
+        # see https://stackoverflow.com/a/75251360/9703451
+
         z = int(np.clip(np.ceil(np.log2(1 / d * 40075016.68557849)), 0, zmax))
         return z
 
