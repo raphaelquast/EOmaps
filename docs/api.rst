@@ -192,7 +192,7 @@ It is also possible to assign a **global transparency** when combining multiple 
     Maps.fetch_layers
 
 
-🔵 Visualizing data
+🔴 Visualizing data
 ~~~~~~~~~~~~~~~~~~~~
 
 To visualize a dataset, first assign the dataset to the ``Maps``-object,
@@ -528,12 +528,12 @@ Once the map is ready, an image of the map can be saved at any time by using:
 
 .. code-block:: python
 
-    m.savefig( "snapshot1.png", dpi=100, transparent=False, ...)
+    m.savefig("snapshot1.png", dpi=100, transparent=False, ...)
 
 
 .. admonition:: Notes on exporting high-dpi figures
 
-    EOmaps tries its best to follow the WYSIWYG concept (e.g. "What You See Is What You Get").
+    EOmaps tries its best to follow the WYSIWYG concept (e.g. *"What You See Is What You Get"*).
     However, if you export the map with a dpi-value other than ``100``, there are certain circumstances
     where the final image might look different.
     To summarize:
