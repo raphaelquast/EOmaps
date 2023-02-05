@@ -1058,9 +1058,10 @@ class TestBasicPlotting(unittest.TestCase):
             )
 
             self.assertTrue(len(m.cb.click.get.cbs) == 1)
+            self.assertTrue(set(m._get_layers()) == {"__BG__", "first"})
 
             with m.new_layer("second") as m2:
-                self.assertTrue(set(m._get_layers()) == {"first", "second"})
+                self.assertTrue(set(m._get_layers()) == {"__BG__", "first", "second"})
 
                 m2.set_data(*[[1, 2, 3]] * 3)
                 m2.plot_map()
@@ -1082,7 +1083,7 @@ class TestBasicPlotting(unittest.TestCase):
                 self.assertFalse(m2.coll is None)
                 self.assertTrue(len(m2.cb.click.get.cbs) == 1)
 
-            self.assertTrue(set(m._get_layers()) == {"first"})
+            self.assertTrue(set(m._get_layers()) == {"__BG__", "first"})
 
             self.assertTrue(len(m2._data_manager._all_data) == 0)
             self.assertTrue(len(m2._data_manager._current_data) == 0)
