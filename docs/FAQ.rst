@@ -196,17 +196,20 @@ simply provide it as an explicit argument!
 General changes in behavior
 +++++++++++++++++++++++++++
 
-❗ Starting with EOmaps v6.0 multiple calls to ``m.plot_map()``
-**on the same Maps-object completely remove (and replace)** the previous dataset!
-(use a new Maps-object on the same layer for datasets that should be visible at the same time!)
-
+- | 🔶 Starting with EOmaps v6.0 multiple calls to ``m.plot_map()``
+  | **on the same Maps-object completely remove (and replace)** the previous dataset!
+  | (use a new Maps-object on the same layer for datasets that should be visible at the same time!)
+- | 🔶 WebMap services are no longer re-fetched by default when exporting images with ``m.savefig()``
+  | To force a re-fetch of WebMap services prior to saving the image at the desired dpi, use ``m.savefig(refetch_wms=True)``
+  | (see ``m.refetch_wms_on_size_change()`` for more details)
 - | 🔷 ``m.add_gdf`` now uses only valid geometries
   | (to revert to the old behavior, use: ``m.add_gdf(..., only_valid=False)``)
-
 - 🔷 the order at which multi-layers are combined now determines the stacking of the artists
 
   - ``m.show_layer("A|B")`` plots all artists of the layer ``"A"`` **on top of** the layer ``"B"``
   - the ordering of artists inside a layer is determined by their ``zorder``  (e.g. ``m.plot_map(zorder=123)``)
+
+
 
 Removed (previously depreciated) functionalities
 ++++++++++++++++++++++++++++++++++++++++++++++++
