@@ -4047,7 +4047,8 @@ class Maps(object):
                 if l in layers:
                     layers.remove(l)
 
-        layers.remove("__BG__")  # never return the background layer!
+        if "__BG__" in layers:
+            layers.remove("__BG__")  # never return the background layer!
 
         # sort the layers
         layers = sorted(layers, key=lambda x: str(x))
