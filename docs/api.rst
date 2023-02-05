@@ -120,7 +120,7 @@ with a ``"|"`` character.
 
 It is also possible to assign a **global transparency** when combining multiple layers via ``"<layer-name>{<transparency>}"``.
 
-- ``m.show_layer("A|B{0.5}")`` will overlay the layer ``B`` with 50% transparency on top of the layer ``layer A``.
+- ``m.show_layer("A|B{0.5}")`` will overlay the layer ``B`` with 50% transparency on top of the layer ``A``.
 
 
 
@@ -2747,3 +2747,5 @@ some additional functions and properties that might come in handy:
     Maps.snapshot
     Maps.refetch_wms_on_size_change
     Maps.fetch_companion_wms_layers
+    Maps.inherit_classification
+    Maps.inherit_data
