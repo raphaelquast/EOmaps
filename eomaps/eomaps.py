@@ -10,7 +10,7 @@ import weakref
 import gc
 import json
 from textwrap import fill
-from contextlib import contextmanager
+from contextlib import contextmanager, ExitStack
 
 import numpy as np
 
@@ -112,6 +112,7 @@ from ._containers import (
     data_specs,
     classify_specs,
 )
+from ._webmap import refetch_wms_on_size_change, _cx_refetch_wms_on_size_change
 from ._webmap_containers import wms_container
 from .ne_features import NaturalEarth_features
 
@@ -2540,31 +2541,36 @@ class Maps(object):
         display(Image.fromarray(sn, "RGBA"), display_id=True, clear=clear)
 
     @wraps(plt.savefig)
-    def savefig(self, *args, **kwargs):
-        # hide companion-widget indicator
-        self._indicate_companion_map(False)
+    def savefig(self, *args, refetch_wms=False, **kwargs):
 
-        dpi = kwargs.get("dpi", None)
+        with ExitStack() as stack:
+            if refetch_wms is False:
+                stack.enter_context(_cx_refetch_wms_on_size_change(refetch_wms))
 
-        # add the figure background patch as the bottom layer
-        transparent = kwargs.get("transparent", False)
-        if transparent is False:
-            initial_layer = self.BM.bg_layer
-            layer_with_bg = "|".join([initial_layer, "__BG__"])
-            self.show_layer(layer_with_bg)
+            # hide companion-widget indicator
+            self._indicate_companion_map(False)
 
-        redraw = False
-        if dpi is not None and dpi != self.f.dpi:
-            redraw = True
+            dpi = kwargs.get("dpi", None)
 
-            # clear all cached background layers before saving to make sure they
-            # are re-drawn with the correct dpi-settings
-            self.BM._refetch_bg = True
+            # add the figure background patch as the bottom layer
+            transparent = kwargs.get("transparent", False)
+            if transparent is False:
+                initial_layer = self.BM.bg_layer
+                layer_with_bg = "|".join([initial_layer, "__BG__"])
+                self.show_layer(layer_with_bg)
 
-            # set the shading-axis-size to reflect the used dpi setting
-            self._update_shade_axis_size(dpi=dpi)
+            redraw = False
+            if dpi is not None and dpi != self.f.dpi:
+                redraw = True
 
-        self.f.savefig(*args, **kwargs)
+                # clear all cached background layers before saving to make sure they
+                # are re-drawn with the correct dpi-settings
+                self.BM._refetch_bg = True
+
+                # set the shading-axis-size to reflect the used dpi setting
+                self._update_shade_axis_size(dpi=dpi)
+
+            self.f.savefig(*args, **kwargs)
 
         if redraw is True:
             # reset the shading-axis-size to the used figure dpi
@@ -4275,6 +4281,10 @@ class Maps(object):
         from .qtcompanion.widgets.wms import AddWMSMenuButton
 
         return AddWMSMenuButton.fetch_all_wms_layers(self, refetch=refetch)
+
+    @wraps(refetch_wms_on_size_change)
+    def refetch_wms_on_size_change(self, *args, **kwargs):
+        refetch_wms_on_size_change(*args, **kwargs)
 
 
 class _InsetMaps(Maps):
