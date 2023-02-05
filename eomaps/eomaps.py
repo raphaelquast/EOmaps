@@ -8,7 +8,6 @@ from types import SimpleNamespace
 from pathlib import Path
 import weakref
 import gc
-import json
 from textwrap import fill
 from contextlib import contextmanager, ExitStack
 
@@ -16,6 +15,7 @@ import numpy as np
 
 # ------- perform lazy delayed imports
 # (for optional dependencies that take long time to import)
+
 
 pd = None
 
@@ -104,6 +104,7 @@ from .helpers import (
     progressbar,
     searchtree,
     _TransformedBoundsLocator,
+    _add_to_docstring,
 )
 from ._shapes import shapes
 from .colorbar import ColorBar
@@ -2540,6 +2541,21 @@ class Maps(object):
 
         display(Image.fromarray(sn, "RGBA"), display_id=True, clear=clear)
 
+    @_add_to_docstring(
+        insert={
+            "Other Parameters": (
+                "refetch_wms : bool\n"
+                "    If True, re-fetch EOmaps WebMap services with respect to "
+                "the dpi of the exported figure before exporting the image. "
+                "\n\n    NOTE: This might fail for high-dpi exports and might "
+                "result in a completely different appearance of the wms-images "
+                "in the exported file! "
+                "\n\n    See `m.refetch_wms_on_size_change()` for more details. "
+                "The default is False",
+                1,
+            )
+        }
+    )
     @wraps(plt.savefig)
     def savefig(self, *args, refetch_wms=False, **kwargs):
 
@@ -4264,7 +4280,7 @@ class Maps(object):
 
     def fetch_companion_wms_layers(self, refetch=True):
         """
-        Fetch (and cache) WebMap layers for the companion-widget.
+        Fetch (and cache) WebMap layer names for the companion-widget.
 
         The cached layers are stored at the following location:
 
