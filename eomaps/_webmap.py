@@ -868,7 +868,8 @@ class xyzRasterSource(RasterSource):
             self.desired_tile_form = "RGB"
 
         self._factory = TileFactory(
-            self.url, desired_tile_form=self.desired_tile_form, cache=True  # TODO
+            self.url,
+            desired_tile_form=self.desired_tile_form,
         )
 
     # function to estimate a proper zoom-level
