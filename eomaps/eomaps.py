@@ -2,6 +2,7 @@
 
 from functools import lru_cache, wraps
 from itertools import repeat
+from textwrap import dedent
 import warnings
 import copy
 from types import SimpleNamespace
@@ -487,9 +488,7 @@ class Maps(object):
 
     @property
     def layer(self):
-        """
-        The layer-name associated with this Maps-object.
-        """
+        """The layer-name associated with this Maps-object."""
         return self._layer
 
     @property
@@ -508,31 +507,24 @@ class Maps(object):
 
     @property
     def ax(self):
-        """
-        The matplotlib (cartopy) GeoAxes associated with this Maps-object.
-        """
+        """The matplotlib (cartopy) GeoAxes associated with this Maps-object."""
         return self._ax
 
     @property
     def f(self):
-        """
-        The matplotlib Figure associated with this Maps-object.
-        """
+        """The matplotlib Figure associated with this Maps-object."""
         # always return the figure of the parent object
         return self.parent._f
 
     @property
     def coll(self):
-        """
-        The collection representing the dataset that was used in the last call
-        to m.plot_map().
-        """
+        """The collection representing the dataset plotted by m.plot_map()."""
         return self._coll
 
     @property
     def shape(self):
         """
-        The shape that will be used to represent the dataset if `m.plot_map()` is called
+        The shape that is used to represent the dataset if `m.plot_map()` is called.
 
         By default "ellipses" is used for datasets < 500k datapoints and for plots
         where no explicit data is assigned, and otherwise "shade_raster" is used
@@ -547,11 +539,13 @@ class Maps(object):
     @property
     @wraps(cb_container)
     def cb(self):
+        """Accessor to attach callbacks to the map."""
         return self._cb
 
     @property
     @wraps(utilities)
     def util(self):
+        """Add utilities to the map."""
         if self.parent._util is None:
             self.parent._util = utilities(self.parent)
         return self.parent._util
@@ -559,11 +553,12 @@ class Maps(object):
     @property
     @wraps(ShapeDrawer)
     def draw(self):
+        """Draw simple shapes on the map."""
         return self._shape_drawer
 
     @property
     def BM(self):
-        """The Blit-Manager used to dynamically update the plots"""
+        """The Blit-Manager used to dynamically update the plots."""
         m = weakref.proxy(self)
         if self.parent._BM is None:
             self.parent._BM = BlitManager(m)
@@ -574,6 +569,7 @@ class Maps(object):
     def parent(self):
         """
         The parent-object to which this Maps-object is connected to.
+
         If None, `self` is returned!
         """
         if self._parent is None:
@@ -583,15 +579,13 @@ class Maps(object):
 
     @property
     def crs_plot(self):
-        """
-        The crs used for plotting.
-        """
+        """The crs used for plotting."""
         return self._crs_plot_cartopy
 
     @property
     def colorbar(self):
         """
-        Get the **most recently added** colorbar of this Maps-object
+        Get the **most recently added** colorbar of this Maps-object.
 
         Returns
         -------
@@ -603,6 +597,7 @@ class Maps(object):
 
     @property
     def data(self):
+        """The data assigned to this Maps-object."""
         return self.data_specs.data
 
     @data.setter
@@ -613,6 +608,7 @@ class Maps(object):
     @property
     @wraps(new_layer_from_file)
     def new_layer_from_file(self):
+        """Create a new layer from a file."""
         return self._new_layer_from_file
 
     def new_layer(
@@ -645,7 +641,6 @@ class Maps(object):
 
         Examples
         --------
-
         Create a new Maps-object **on an existing layer**
 
         >>> from eomaps import Maps
@@ -675,7 +670,6 @@ class Maps(object):
         --------
         copy : general way for copying Maps objects
         """
-
         if layer is None:
             layer = copy.deepcopy(self.layer)
 
@@ -710,6 +704,7 @@ class Maps(object):
     ):
         """
         Create a new (empty) inset-map that shows a zoomed-in view on a given extent.
+
         The returned Maps-object can then be used to populate the inset-map with
         features, datasets etc.
 
@@ -792,7 +787,7 @@ class Maps(object):
             A eomaps.Maps-object of the inset-map.
             (use it just like any other Maps-object)
 
-        See also
+        See Also
         --------
         The following additional methods are defined on `_InsetMaps` objects
 
@@ -804,7 +799,6 @@ class Maps(object):
 
         Examples
         --------
-
         Simple example:
 
         >>> m = Maps()
@@ -851,9 +845,7 @@ class Maps(object):
         >>> m3.add_feature.preset.land()
 
         >>> m.util.layer_selector()
-
         """
-
         m2 = _InsetMaps(
             parent=self,
             crs=inset_crs,
@@ -874,6 +866,7 @@ class Maps(object):
     @property
     @wraps(shapes)
     def set_shape(self):
+        """Set the plot-shape."""
         return self._shapes
 
     def set_data_specs(
@@ -973,7 +966,6 @@ class Maps(object):
 
         Examples
         --------
-
         - using a single `pandas.DataFrame`
 
           >>> data = pd.DataFrame(dict(lon=[...], lat=[...], a=[...], b=[...]))
@@ -1030,8 +1022,7 @@ class Maps(object):
 
     @property
     def set_classify(self):
-        from textwrap import dedent
-
+        """Accessor to set the data-classification."""
         assert _register_mapclassify(), (
             "EOmaps: Missing dependency: 'mapclassify' \n ... please install"
             + " (conda install -c conda-forge mapclassify) to use data-classifications."
@@ -1076,7 +1067,8 @@ class Maps(object):
     def set_classify_specs(self, scheme=None, **kwargs):
         """
         Set classification specifications for the data.
-        (classification is performed by the `mapclassify` module)
+
+        The classification is ultimately performed by the `mapclassify` module!
 
         Note
         ----
@@ -1118,7 +1110,6 @@ class Maps(object):
             kwargs passed to the call to the respective mapclassify classifier
             (dependent on the selected scheme... see above)
         """
-
         assert _register_mapclassify(), (
             "EOmaps: Missing dependency: 'mapclassify' \n ... please install"
             + " (conda install -c conda-forge mapclassify) to use data-classifications."
@@ -1129,6 +1120,7 @@ class Maps(object):
     def set_extent_to_location(self, location, annotate=False, user_agent=None):
         """
         Set the map-extent based on a given location query.
+
         The bounding-box is hereby resolved via the OpenStreetMap Nominatim service.
 
         Note
@@ -1160,7 +1152,6 @@ class Maps(object):
 
         Examples
         --------
-
         >>> m = Maps()
         >>> m.set_extent_to_location("Austria")
         >>> m.add_feature.preset.countries()
@@ -1193,7 +1184,7 @@ class Maps(object):
 
     def get_crs(self, crs="plot"):
         """
-        Get the pyproj CRS instance of a given crs specification
+        Get the pyproj CRS instance of a given crs specification.
 
         Parameters
         ----------
@@ -1229,10 +1220,12 @@ class Maps(object):
 
     @wraps(LayoutEditor.get_layout)
     def get_layout(self, *args, **kwargs):
+        """Get the current layout."""
         return self.parent._layout_editor.get_layout(*args, **kwargs)
 
     @wraps(LayoutEditor.apply_layout)
     def apply_layout(self, *args, **kwargs):
+        """Apply a given layout."""
         return self.parent._layout_editor.apply_layout(*args, **kwargs)
 
     def edit_layout(self, filepath=None):
@@ -1260,6 +1253,7 @@ class Maps(object):
     @property
     @wraps(NaturalEarth_features)
     def add_feature(self):
+        """Add features from NaturalEarth."""
         # lazily initialize NaturalEarth features
         if not hasattr(self, "_add_feature"):
             self._add_feature = NaturalEarth_features(self)
@@ -1564,7 +1558,7 @@ class Maps(object):
         **kwargs,
     ):
         """
-        add a marker to the plot
+        Add a marker to the plot.
 
         Parameters
         ----------
@@ -1611,12 +1605,10 @@ class Maps(object):
 
         Examples
         --------
-
             >>> m.add_marker(ID=1, buffer=5)
             >>> m.add_marker(ID=1, radius=2, radius_crs=4326, shape="rectangles")
             >>> m.add_marker(xy=(45, 35), xy_crs=4326, radius=20000, shape="geod_circles")
         """
-
         if ID is not None:
             assert xy is None, "You can only provide 'ID' or 'pos' not both!"
         else:
@@ -1670,7 +1662,7 @@ class Maps(object):
         **kwargs,
     ):
         """
-        add an annotation to the plot
+        Add an annotation to the plot.
 
         Parameters
         ----------
@@ -1703,7 +1695,6 @@ class Maps(object):
 
         Examples
         --------
-
         >>> m.add_annotation(ID=1)
         >>> m.add_annotation(xy=(45, 35), xy_crs=4326)
 
@@ -1741,7 +1732,6 @@ class Maps(object):
         >>>                  )
 
         """
-
         if ID is not None:
             assert xy is None, "You can only provide 'ID' or 'pos' not both!"
             # avoid using np.isin directly since it needs a lot of ram
@@ -1801,6 +1791,7 @@ class Maps(object):
 
     @wraps(Compass.__call__)
     def add_compass(self, *args, **kwargs):
+        """Add a compass (or north-arrow) to the map."""
         c = Compass(weakref.proxy(self))
         c(*args, **kwargs)
         # store a reference to the object (required for callbacks)!
@@ -1821,7 +1812,7 @@ class Maps(object):
         patch_props=None,
         label_props=None,
     ):
-
+        """Add a scalebar to the map."""
         s = ScaleBar(
             m=self,
             preset=preset,
@@ -1848,6 +1839,7 @@ class Maps(object):
     @property
     @wraps(wms_container)
     def add_wms(self):
+        """Accessor to attach WebMap services to the map."""
         return self._wms_container
 
     def add_line(
@@ -1945,7 +1937,6 @@ class Maps(object):
             A list of total distances of the line-segments (in meters).
 
         """
-
         if layer is None:
             layer = self.layer
 
@@ -2085,8 +2076,10 @@ class Maps(object):
         fix_position=False,
     ):
         """
-        Add a small image (png, jpeg etc.) to the map whose position is dynamically
-        updated if the plot is resized or zoomed.
+        Add a small image (png, jpeg etc.) to the map.
+
+        The position of the image is dynamically updated if the plot is resized or
+        zoomed.
 
         Parameters
         ----------
@@ -2113,8 +2106,8 @@ class Maps(object):
 
             NOTE: If True, the logo can NOT be moved with the layout_editor!
             The default is False.
-        """
 
+        """
         if filepath is None:
             filepath = Path(__file__).parent / "logo.png"
 
@@ -2157,10 +2150,7 @@ class Maps(object):
 
     @wraps(ColorBar.__init__)
     def add_colorbar(self, *args, **kwargs):
-        """
-        Add a colorbar to the map.
-        (docstring inherited from ColorBar.__init__)
-        """
+        """Add a colorbar to the map."""
         if self.coll is None:
             # in order to plot a colorbar we need to fetch the layer!
             # TODO implement a better way to ensure correct vmin/vmax
@@ -2195,6 +2185,7 @@ class Maps(object):
 
     @wraps(GeoAxes.set_extent)
     def set_extent(self, extent, crs=None):
+        """Set the extent of the map."""
         # just a wrapper to make sure that previously set extents are not
         # resetted when plotting data!
 
@@ -2212,8 +2203,12 @@ class Maps(object):
         **kwargs,
     ):
         """
-        Actually generate the map-plot based on the data provided as `m.data` and the
-        specifications defined in "data_specs" and "classify_specs".
+        Plot the dataset assigned to this Maps-object.
+
+        - To set the data, see `m.set_data()`
+        - To change the "shape" that is used to represent the datapoints, see
+          `m.set_shape`.
+        - To classify the data, see `m.set_classify` or `m.set_classify_specs()`
 
         NOTE
         ----
@@ -2277,15 +2272,8 @@ class Maps(object):
 
             For "shade_points" or "shade_raster" shapes, kwargs are passed to
             `datashader.mpl_ext.dsshow`
+
         """
-
-        # assert self._data_plotted is False, (
-        #     "EOmaps: Calling `m.plot_map()` multiple times on the same "
-        #     "Maps-object is no longer supported since EOmaps v6.0 !"
-        #     "Create a new layer with `m2 = m.new_layer()` and use the new "
-        #     "Maps-object to plot the additional data!"
-        # )
-
         verbose = kwargs.pop("verbose", 1)
         if verbose >= 1:
             if getattr(self, "coll", None) is not None:
@@ -2410,7 +2398,6 @@ class Maps(object):
 
         Examples
         --------
-
         >>> m = Maps()
         >>> m.add_feature.preset.coastline()
         >>> ...
@@ -2421,11 +2408,6 @@ class Maps(object):
         >>> m2.cb.pick.attach.annotate()  # get an annotation for the invisible dataset
         >>> # ...call m2.plot_map() to make the dataset visible...
         """
-
-        # if self.data is None:
-        #     print("EOmaps: you must set the data first!")
-        #     return
-
         if self.coll is not None:
             print(
                 "EOmaps: There is already a dataset plotted on this Maps-object. "
@@ -2457,7 +2439,6 @@ class Maps(object):
 
         See Also
         --------
-
         - Maps.util.layer_selector
         - Maps.util.layer_slider
 
@@ -2498,12 +2479,12 @@ class Maps(object):
     def show(self):
         """
         Make the layer of this `Maps`-object visible.
-        (a shortcut for `m.show_layer(m.layer)`)
+
+        This is just a shortcut for `m.show_layer(m.layer)`
 
         If matploltib is used in non-interactive mode, (e.g. `plt.ioff()`)
         `plt.show()` is called as well!
         """
-
         self.show_layer(self.layer)
 
         if not plt.isinteractive():
@@ -2511,15 +2492,17 @@ class Maps(object):
 
     def snapshot(self, clear=False):
         """
-        Print a static image of the current figure to the active IPython display.
-        (e.g. the active Jupyter Notebook cell or the active IPython console)
+        Print a static image of the figure to the active IPython display.
+
+        This is useful if you want to print a snapshot of the current state of the map
+        to the active Jupyter Notebook cell or the currently active IPython console
+        while using a backend that creates popup-plots (e.g. `qt` or `tkinter`)
 
         ONLY use this if you work in an interactive IPython terminal, a Jupyter
         Notebook or a Jupyter Lab environment!
 
         Parameters
         ----------
-
         clear: bool
             Indicator if the current cell-output should be cleared prior
             to showing the snapshot or not. The default is False
@@ -2558,7 +2541,7 @@ class Maps(object):
     )
     @wraps(plt.savefig)
     def savefig(self, *args, refetch_wms=False, **kwargs):
-
+        """Save the figure."""
         with ExitStack() as stack:
             if refetch_wms is False:
                 stack.enter_context(_cx_refetch_wms_on_size_change(refetch_wms))
@@ -2626,7 +2609,6 @@ class Maps(object):
         m.cb.keypress.attach.fetch_layers : use a keypress callback to fetch layers
 
         """
-
         active_layer = self.BM._bg_layer
         all_layers = self._get_layers()
 
@@ -2654,7 +2636,7 @@ class Maps(object):
 
     def join_limits(self, *args):
         """
-        Join the x- and y- limits of the axes (e.g. on zoom)
+        Join the x- and y- limits of the axes (e.g. on zoom).
 
         Parameters
         ----------
@@ -2689,12 +2671,12 @@ class Maps(object):
         kwargs :
             Additional kwargs passed to `m = Maps(**kwargs)`
             (e.g. crs, f, ax, orientation, layer)
+
         Returns
         -------
         copy_cls : eomaps.Maps object
             a new Maps class.
         """
-
         copy_cls = Maps(**kwargs)
 
         if data_specs is True:
@@ -2718,8 +2700,6 @@ class Maps(object):
     def indicate_extent(self, x0, y0, x1, y1, crs=4326, npts=100, **kwargs):
         """
         Indicate a rectangular extent in a given crs on the map.
-        (the rectangle is drawn as a polygon where each line is divided by "npts"
-        points to ensure correct re-projection of the shape to other crs)
 
         Parameters
         ----------
@@ -2727,7 +2707,8 @@ class Maps(object):
             the boundaries of the shape
         npts : int, optional
             The number of points used to draw the polygon-lines.
-            (e.g. to correctly display curvature in projected coordinate-systems)
+            (e.g. to correctly display the distortion of the extent-rectangle when
+             it is re-projected to another coordinate-system)
             The default is 100.
         crs : any, optional
             a coordinate-system identifier.
@@ -2736,7 +2717,6 @@ class Maps(object):
             additional keyword-arguments passed to `m.add_gdf()`.
 
         """
-
         assert _register_geopandas(), (
             "EOmaps: Missing dependency `geopandas`!\n"
             + "please install '(conda install -c conda-forge geopandas)'"
@@ -2770,13 +2750,13 @@ class Maps(object):
         >>> m.cb.keypress.add_temporary_artist(artist)
         >>> m.cb.move.add_temporary_artist(artist)
         """
-
         self.BM._refetch_bg = True
         self._data_manager.last_extent = None
         self.f.canvas.draw()
 
     @wraps(GridSpec.update)
     def subplots_adjust(self, **kwargs):
+        """Adjust the margins of subplots."""
         self.parent._gridspec.update(**kwargs)
         # after changing margins etc. a redraw is required
         # to fetch the updated background!
@@ -2813,7 +2793,6 @@ class Maps(object):
 
         Examples
         --------
-
         >>> m = Maps()
         >>> m.add_feature.preset.coastline()
         >>>
@@ -2838,7 +2817,9 @@ class Maps(object):
     def cleanup(self):
         """
         Cleanup all references to the object so that it can be safely deleted.
-        (primarily used internally to clear objects if the figure is closed)
+
+        This function is primarily used internally to clear objects if the figure
+        is closed.
 
         Note
         ----
@@ -2847,7 +2828,6 @@ class Maps(object):
 
         ONLY execute this if you do not need to do anything with the layer
         """
-
         # disconnect callback on xlim-change (only relevant for parent)
         if not self._is_sublayer:
             try:
@@ -3127,10 +3107,8 @@ class Maps(object):
                 print("EOmaps: Problem executing 'on_add_child' action:", ex)
 
     def _identify_data(self, data=None, x=None, y=None, parameter=None):
-        """
-        Identify the way how the data has been provided and convert to the
-        internal structure.
-        """
+        # identify the way how the data has been provided and convert to the internal
+        # structure
 
         if data is None:
             data = self.data_specs.data
@@ -3292,7 +3270,6 @@ class Maps(object):
         m : eomaps.Maps or None
             The Maps-object that provides the data.
         """
-
         if m is not None:
             self.data_specs = m.data_specs
             self.set_data_specs = lambda *args, **kwargs: (
@@ -3375,9 +3352,7 @@ class Maps(object):
         return cbcmap, norm, bins, classified
 
     def _set_parent(self):
-        """
-        Identify the parent object
-        """
+        """Identify the parent object."""
         assert self._parent is None, "EOmaps: There is already a parent Maps object!"
         # check if the figure to which the Maps-object is added already has a parent
         parent = None
@@ -3433,8 +3408,7 @@ class Maps(object):
 
     def _clip_gdf(self, gdf, how="crs"):
         """
-        Clip the shapes of a GeoDataFrame with respect to the boundaries
-        of the crs (or the plot-extent).
+        Clip the shapes of a GeoDataFrame with respect to the given boundaries.
 
         Parameters
         ----------
@@ -3703,7 +3677,8 @@ class Maps(object):
     ):
         """
         Plot the dataset using the (very fast) "datashader" library.
-        (requires `datashader`... use `conda install -c conda-forge datashader`)
+
+        Requires `datashader`... use `conda install -c conda-forge datashader`
 
         - This method is intended for extremely large datasets
           (up to millions of datapoints)!
@@ -3971,8 +3946,9 @@ class Maps(object):
 
     def _encode_values(self, val):
         """
-        Encode values with respect to the provided  "scale_factor" and "add_offset"
-        using the formula:
+        Encode values with respect to the provided  "scale_factor" and "add_offset".
+
+        Encoding is performed via the formula:
 
             `encoded_value = val / scale_factor - add_offset`
 
@@ -3989,7 +3965,6 @@ class Maps(object):
         encoded_values
             The encoded data values
         """
-
         encoding = self.data_specs.encoding
         if encoding is not None:
             try:
@@ -4010,8 +3985,9 @@ class Maps(object):
 
     def _decode_values(self, val):
         """
-        Decode data-values with respect to the provided "scale_factor" and "add_offset"
-        using the formula:
+        Decode data-values with respect to the provided "scale_factor" and "add_offset".
+
+        Decoding is performed via the formula:
 
             `actual_value = add_offset + scale_factor * val`
 
@@ -4183,7 +4159,6 @@ class Maps(object):
             The keyboard-shortcut that is assigned to show/hide the widget.
             The default is "w".
         """
-
         try:
             if plt.get_backend() not in ["QtAgg", "Qt5Agg"]:
                 print(
@@ -4243,7 +4218,7 @@ class Maps(object):
     @staticmethod
     def _make_rect_poly(x0, y0, x1, y1, crs=None, npts=100):
         """
-        return a geopandas.GeoDataFrame with a rectangle in the given crs
+        Return a geopandas.GeoDataFrame with a rectangle in the given crs.
 
         Parameters
         ----------
@@ -4261,7 +4236,6 @@ class Maps(object):
             the geodataframe with the shape and crs defined
 
         """
-
         assert _register_geopandas(), (
             "EOmaps: Missing dependency `geopandas`!\n"
             + "please install '(conda install -c conda-forge geopandas)'"
@@ -4300,6 +4274,7 @@ class Maps(object):
 
     @wraps(refetch_wms_on_size_change)
     def refetch_wms_on_size_change(self, *args, **kwargs):
+        """Set the behavior for WebMap services if the axis or figure size changes."""
         refetch_wms_on_size_change(*args, **kwargs)
 
 
@@ -4419,8 +4394,8 @@ class _InsetMaps(Maps):
         kwargs :
             additional keyword-arguments passed to `m.add_marker`
             (e.g. "facecolor", "edgecolor" etc.)
-        """
 
+        """
         if not any((i in kwargs for i in ["fc", "facecolor"])):
             kwargs["fc"] = "none"
         if not any((i in kwargs for i in ["ec", "edgecolor"])):
@@ -4453,8 +4428,8 @@ class _InsetMaps(Maps):
             The relative radius (0-1) of the inset in relation to the figure width.
             If None, the existing size is used.
             The default is None.
-        """
 
+        """
         y0, y1, x0, x1 = self._gridspec.get_grid_positions(self.f)
 
         if size is None:
@@ -4475,9 +4450,7 @@ class _InsetMaps(Maps):
         self.redraw()
 
     def _get_inset_boundary(self, x, y, xy_crs, radius, radius_crs, shape, n=100):
-        """
-        get inset map boundary
-        """
+        # get the inset-shape boundary
 
         shp = self.set_shape._get(shape)
 
