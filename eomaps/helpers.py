@@ -2,17 +2,20 @@
 from itertools import tee
 import re
 import sys
-
-import numpy as np
-from matplotlib.colors import LinearSegmentedColormap, ListedColormap
 from itertools import chain
-from matplotlib.transforms import Bbox, TransformedBbox
-import matplotlib.pyplot as plt
-from matplotlib.lines import Line2D
 from contextlib import contextmanager, ExitStack
+from textwrap import indent, dedent
+from functools import wraps
 from pathlib import Path
 import json
 import warnings
+
+import numpy as np
+import matplotlib.pyplot as plt
+from matplotlib.lines import Line2D
+from matplotlib.colors import LinearSegmentedColormap, ListedColormap
+from matplotlib.transforms import Bbox, TransformedBbox
+
 
 # class copied from matplotlib.axes
 class _TransformedBoundsLocator:
@@ -119,6 +122,77 @@ def progressbar(it, prefix="", size=60, file=sys.stdout):
         show(i + 1)
     file.write("\n")
     file.flush()
+
+
+def _add_to_docstring(prefix=None, suffix=None, insert=None):
+    """
+    Add text to an existing docstring
+
+    Parameters
+    ----------
+    prefix : str, optional
+        A string appended as prefix to the existing docstring.
+        The default is None.
+    suffix : str, optional
+        A string appended as suffix to the existing docstring.
+        The default is None.
+    insert : dict, optional
+        Search for the provided keys and insert the values at the next line.
+
+        If values are tuples, they are interpreted as:
+        (string, line-offset) where `line-offset` represents an offset added
+        to the line at which key was found.
+
+        The default is None.
+    """
+
+    def decorator(f):
+        doc = f.__doc__
+
+        try:
+
+            @wraps(f)
+            def inner(*args, **kwargs):
+                return f(*args, **kwargs)
+
+            if insert is not None:
+                for searchstr, val in insert.items():
+                    if isinstance(val, str):
+                        offset = 0
+                    else:
+                        val, offset = val
+
+                    try:
+                        docsplit = dedent(f.__doc__).split("\n")
+                        paramline = docsplit.index(searchstr) + 1
+                        docsplit = f.__doc__.split("\n")
+
+                        # count number of leading spaces
+                        nspaces = len(docsplit[paramline]) - len(
+                            docsplit[paramline].lstrip(" ")
+                        )
+
+                        docsplit = (
+                            docsplit[: (paramline + offset)]
+                            + indent(val, " " * nspaces).split("\n")
+                            + docsplit[(paramline + offset) :]
+                        )
+                        doc = "\n".join(docsplit)
+                    except ValueError:
+                        print(f"EOmaps: Unable to update docstring for {f.__name__}")
+
+            if prefix is not None:
+                doc = prefix + "\n" + doc
+            if suffix is not None:
+                doc = doc + "\n" + suffix
+
+            inner.__doc__ = doc
+            return inner
+        except Exception:
+            print(f"EOmaps: Unable to update docstring for {f.__name__}")
+            return f
+
+    return decorator
 
 
 class searchtree:
