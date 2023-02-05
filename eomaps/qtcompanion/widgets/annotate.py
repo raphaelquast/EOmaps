@@ -220,6 +220,7 @@ class AddAnnotationInput(QtWidgets.QWidget):
                     xy_crs=self.m.crs_plot,
                     text=text,
                     layer=self.layer,
+                    permanent=True,
                     arrowprops=dict(
                         arrowstyle="fancy",
                         connectionstyle="angle3",
