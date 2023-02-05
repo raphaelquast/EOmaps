@@ -774,6 +774,7 @@ class Maps(object):
             The shape to use. Can be either "ellipses", "rectangles" or "geod_circles".
             The default is "ellipses".
         indicate_extent : bool or dict, optional
+
             - If True: add a polygon representing the inset-extent to the parent map.
             - If a dict is provided, it will be used to update the appearance of the
               added polygon (e.g. facecolor, edgecolor, linewidth etc.)
