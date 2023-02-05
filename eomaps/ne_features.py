@@ -495,6 +495,7 @@ class NaturalEarth_features(object):
                 feature._kwargs.update(kwargs)
                 art = m.ax.add_feature(feature)
                 m.BM.add_bg_artist(art, layer=uselayer)
+                m.BM.on_draw(None)
 
         def _set_scale(self, scale):
             if scale == "auto":
