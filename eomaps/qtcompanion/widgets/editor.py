@@ -646,11 +646,17 @@ class LayerTabBar(QtWidgets.QTabBar):
         activecolor = QtGui.QColor(50, 200, 50)
         multicolor = QtGui.QColor(200, 50, 50)
 
-        for i in range(self.count()):
-            layer = self.tabText(i)
+        active_layers = set(self.m.BM._bg_layer.split("|"))
+        active_layers.add(self.m.BM._bg_layer)
 
-            active_layers = set(self.m.BM._bg_layer.split("|"))
-            active_layers.add(self.m.BM._bg_layer)
+        if "{" in self.m.BM._bg_layer:  # TODO support transparency
+            for i in range(self.count()):
+                self.setTabTextColor(i, defaultcolor)
+            return
+
+        for i in range(self.count()):
+
+            layer = self.tabText(i)
 
             color = activecolor if len(active_layers) == 1 else multicolor
             if layer in active_layers:

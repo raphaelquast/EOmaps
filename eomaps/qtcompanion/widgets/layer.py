@@ -173,7 +173,10 @@ class AutoUpdateLayerMenuButton(QtWidgets.QPushButton):
             l = f"{len([1 for i in l.split('|') if len(i) > 0])} layers visible"
             # txt = txt[:50] + " ..."
 
-        if "|" in l:
+        if "{" in l:  # TODO support transparency
+            l = "custom :   " + l
+            self.setStyleSheet("QPushButton{color: rgb(200,50,50)}")
+        elif "|" in l:
             l = "multi :   " + l
             self.setStyleSheet("QPushButton{color: rgb(200,50,50)}")
         else:
@@ -240,11 +243,15 @@ class AutoUpdateLayerMenuButton(QtWidgets.QPushButton):
 
     def update_checkstatus(self):
         currlayer = str(self.m.BM.bg_layer)
-        if "|" in currlayer:
-            active_layers = [i for i in currlayer.split("|") if i != "_"]
-            active_layers.append(currlayer)
+
+        if "{" in self.m.BM._bg_layer:  # TODO support transparency
+            active_layers = []
         else:
-            active_layers = [currlayer]
+            if "|" in currlayer:
+                active_layers = [i for i in currlayer.split("|") if i != "_"]
+                active_layers.append(currlayer)
+            else:
+                active_layers = [currlayer]
 
         for action in self.menu().actions():
             key = action.data()
