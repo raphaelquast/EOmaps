@@ -4380,15 +4380,6 @@ class _InsetMaps(Maps):
         if indicate_extent is not False:
             self.indicate_inset_extent(parent, **extent_kwargs)
 
-        from matplotlib.patches import Rectangle
-
-        bbox = self.ax.bbox.transformed(self.ax.transData.inverted())
-        rect = Rectangle(
-            (bbox.x0, bbox.y0), bbox.width, bbox.height, facecolor="r", zorder=0
-        )
-        self.ax.add_patch(rect)
-        self.BM.add_bg_artist(rect, "__BG__")
-
     def _get_ax_label(self):
         return "inset_map"
 
