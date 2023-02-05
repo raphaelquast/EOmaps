@@ -531,25 +531,6 @@ Once the map is ready, an image of the map can be saved at any time by using:
     m.savefig("snapshot1.png", dpi=100, transparent=False, ...)
 
 
-.. admonition:: Notes on exporting high-dpi figures
-
-    EOmaps tries its best to follow the WYSIWYG concept (e.g. *"What You See Is What You Get"*).
-    However, if you export the map with a dpi-value other than ``100``, there are certain circumstances
-    where the final image might look different.
-    To summarize:
-
-    - Changing the dpi of the figure requires a re-draw of all plotted datasets.
-
-      - if you use ``shade`` shapes to represent the data, using a higher dpi-value can result in a very different appearance of the data!
-
-    - WebMap services usually come as image-tiles with 96 dpi
-
-      - by default, images are not re-fetched when saving the map to keep the original appearance
-      - If you want to re-fetch the WebMap based on the export-dpi, use ``m.savefig(refetch_wms=True)``.
-
-        - Note: increasing the dpi will result in an increase in the number of tiles that have to be fetched. If the number of required tiles is too large, the server might reject the request and the map might have gaps or no tiles at all.
-
-
 To adjust the margins of the subplots, use ``m.subplots_adjust()``, ``m.f.tight_layout()`` or
 have a look at the :ref:`layout_editor`!
 
@@ -567,6 +548,25 @@ have a look at the :ref:`layout_editor`!
     :template: only_names_in_toc.rst
 
     Maps.subplots_adjust
+
+
+.. admonition:: Notes on exporting high-dpi figures
+
+    EOmaps tries its best to follow the WYSIWYG concept (e.g. *"What You See Is What You Get"*).
+    However, if you export the map with a dpi-value other than ``100``, there are certain circumstances
+    where the final image might look different.
+    To summarize:
+
+    - Changing the dpi of the figure requires a re-draw of all plotted datasets.
+
+      - if you use ``shade`` shapes to represent the data, using a higher dpi-value can result in a very different appearance of the data!
+
+    - WebMap services usually come as image-tiles with 96 dpi
+
+      - by default, images are not re-fetched when saving the map to keep the original appearance
+      - If you want to re-fetch the WebMap based on the export-dpi, use ``m.savefig(refetch_wms=True)``.
+
+        - Note: increasing the dpi will result in an increase in the number of tiles that have to be fetched. If the number of required tiles is too large, the server might reject the request and the map might have gaps or no tiles at all.
 
 
 
