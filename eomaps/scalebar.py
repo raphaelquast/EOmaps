@@ -1425,7 +1425,7 @@ class Compass:
 
     def set_scale(self, scale):
         """
-        Set the size of the  compass. (The default is 10)
+        Set the size scale-factor of the compass. (The default is 10)
 
         Parameters
         ----------
@@ -1499,6 +1499,18 @@ class Compass:
 
         """
         return self._ax2data.inverted().transform(self._pos)
+
+    def get_scale(self):
+        """
+        Return the current size scale-factor of the compass.
+
+        Returns
+        -------
+        s : float
+            The size of the compass.
+
+        """
+        return self._scale
 
     def set_ignore_invalid_angles(self, val):
         """
