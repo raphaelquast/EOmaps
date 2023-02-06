@@ -537,6 +537,19 @@ class LayerTabBar(QtWidgets.QTabBar):
             self.populate()
             self.m._after_add_child.append(self.populate)
 
+    def enterEvent(self, e):
+        if self.window().showhelp is True:
+            QtWidgets.QToolTip.showText(
+                e.globalPos(),
+                "<h3>Layer Tabs</h3>"
+                "Select, combine and re-arrange layers of the map. "
+                "<ul>"
+                "<li><b>control + click</b> to make the selected layer visible.</li>"
+                "<li><b>shift + click</b> to select multiple layers. </li>"
+                "<li><b>drag</b> layers to change the stacking-order. "
+                "</ul>",
+            )
+
     def tabSizeHint(self, index):
         # make sure tabs are never larger than 150px
         size = QtWidgets.QTabBar.tabSizeHint(self, index)
