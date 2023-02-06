@@ -1387,19 +1387,20 @@ class Maps(object):
             re-projected geometries are displayed in certain coordinate-systems.
             (see example below)
 
-            - if "gpd": geopandas is used to re-project the geometries
-            - if "cartopy": cartopy is used to re-project the geometries
-              (slower but generally more robust than "gpd")
+            - if "gpd": re-project geometries geopandas
+            - if "cartopy": re-project geometries with cartopy (slower but more robust)
 
             >>> mg = MapsGrid(2, 1, crs=Maps.CRS.Stereographic())
             >>> mg.m_0_0.add_feature.preset.ocean(reproject="gpd")
             >>> mg.m_1_0.add_feature.preset.ocean(reproject="cartopy")
 
-            The default is "gpd"
+            The default is "gpd".
+
         verbose : bool, optional
             Indicator if a progressbar should be printed when re-projecting
             geometries with "use_gpd=False".
             The default is False.
+
         only_valid : bool, optional
 
             - If True, only valid geometries (e.g. `gdf.is_valid`) are plotted.
@@ -1407,6 +1408,7 @@ class Maps(object):
               (this might result in errors for infinite geometries etc.)
 
             The default is True
+
         kwargs :
             all remaining kwargs are passed to `geopandas.GeoDataFrame.plot(**kwargs)`
 
@@ -2709,14 +2711,13 @@ class Maps(object):
         npts : int, optional
             The number of points used to draw the polygon-lines.
             (e.g. to correctly display the distortion of the extent-rectangle when
-             it is re-projected to another coordinate-system)
+            it is re-projected to another coordinate-system)
             The default is 100.
         crs : any, optional
-            a coordinate-system identifier.
+            A coordinate-system identifier.
             The default is 4326 (e.g. lon/lat).
         kwargs :
-            additional keyword-arguments passed to `m.add_gdf()`.
-
+            Additional keyword-arguments passed to `m.add_gdf()`.
         """
         assert _register_geopandas(), (
             "EOmaps: Missing dependency `geopandas`!\n"
