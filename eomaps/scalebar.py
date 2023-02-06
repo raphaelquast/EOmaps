@@ -1113,6 +1113,8 @@ class Compass:
         self._patch = patch
         self._txt = txt
         self._scale = scale
+        # remember the dpi at the time the compass was initialized
+        self._init_dpi = self._m.f.dpi
 
         self._ang = 0
         # remember last used rotation angle for out-of-axes compass
@@ -1133,14 +1135,11 @@ class Compass:
         self._cids = [
             self._canvas.mpl_connect("pick_event", self._on_pick),
             self._canvas.mpl_connect("button_release_event", self._on_release),
-            self._canvas.mpl_connect("resize_event", self._on_resize),
             self._canvas.mpl_connect("scroll_event", self._on_scroll),
         ]
 
-        self._add_zoom_callbacks()
-
-    def _on_resize(self, event):
-        self._update_offset(*self._pos)
+        if self._update_offset not in self._m.BM._before_fetch_bg_actions:
+            self._m.BM._before_fetch_bg_actions.append(self._update_offset)
 
     def _get_artist(self, pos):
         if self._style == "north arrow":
@@ -1216,19 +1215,19 @@ class Compass:
 
         return art
 
-    def _update_offset(self, x, y):
+    def _update_offset(self, x=None, y=None, *args, **kwargs):
         # reset to the center of the axis if both are None
         try:
-            ax2data = self._m.ax.transAxes + self._m.ax.transData.inverted()
-
             if x is None or y is None:
                 try:
-                    x, y = ax2data.transform(
-                        self._ax2data.inverted().transform(self._pos)
-                    )
+                    self.set_position(self._pos)
+                    return
                 except Exception:
                     x, y = 0.9, 0.1
-            self.set_position((x, y))
+                    self.set_position((x, y), "axis")
+                    return
+
+            self.set_position((x, y), "data")
         except Exception:
             pass
 
@@ -1271,7 +1270,9 @@ class Compass:
 
         self._ang = ang
         r = transforms.Affine2D().rotate(ang)
-        s = transforms.Affine2D().scale(self._scale)
+        # apply the scale-factor with respect to the current figure dpi to keep the
+        # relative size of the north-arrow on dpi-changes!
+        s = transforms.Affine2D().scale(self._scale * self._m.f.dpi / self._init_dpi)
         t = transforms.Affine2D().translate(*self._m.ax.transData.transform(pos))
         trans = r + s + t
         return trans
@@ -1351,8 +1352,8 @@ class Compass:
         for cid in self._cids:
             self._canvas.mpl_disconnect(cid)
 
-        for cid in self._ax_cids:
-            self._m.ax.callbacks.disconnect(cid)
+        if self._update_offset in self._m.BM._before_fetch_bg_actions:
+            self._m.BM._before_fetch_bg_actions.append(self._update_offset)
 
         try:
             c1 = self._c1
@@ -1370,25 +1371,6 @@ class Compass:
 
     def _finalize_offset(self):
         pass
-
-    def _add_zoom_callbacks(self):
-        self._ax_cids = set()
-
-        self._ax_cids.add(
-            self._m.ax.callbacks.connect(
-                "xlim_changed", lambda *args: self._update_offset(None, None)
-            )
-        )
-        self._ax_cids.add(
-            self._m.ax.callbacks.connect(
-                "ylim_changed", lambda *args: self._update_offset(None, None)
-            )
-        )
-        self._ax_cids.add(
-            self._m.f.canvas.mpl_connect(
-                "resize_event", lambda *args: self._update_offset(None, None)
-            )
-        )
 
     def remove(self):
         """
@@ -1477,9 +1459,8 @@ class Compass:
 
             The default is "data".
         """
-        self._ax2data = self._m.ax.transAxes + self._m.ax.transData.inverted()
-
         if coords == "axis":
+            self._ax2data = self._m.ax.transAxes + self._m.ax.transData.inverted()
             pos = self._ax2data.transform(pos)
 
         trans = self._get_transform(pos)
@@ -1487,7 +1468,7 @@ class Compass:
             c.set_transform(trans)
         self._pos = pos
 
-    def get_position(self, coords="axis"):
+    def get_position(self, coords="data"):
         """
         Return the current position of the compass.
 
@@ -1500,7 +1481,7 @@ class Compass:
             - "axis": relative [0-1] coordinates with respect to the
               axis (e.g. (0, 0) = lower left corner, (1, 1) = upper right corner)
 
-            The default is "axis".
+            The default is "data".
 
         Returns
         -------
@@ -1508,7 +1489,14 @@ class Compass:
             a tuple (x, y) representing the current location of the compass.
 
         """
-        return self._ax2data.inverted().transform(self._pos)
+        self._ax2data = self._m.ax.transAxes + self._m.ax.transData.inverted()
+
+        if coords == "axis":
+            return self._ax2data.inverted().transform(self._pos)
+        elif coords == "data":
+            return self._pos
+        else:
+            raise TypeError("EOmaps: 'coords' must be one of ['data', 'axis']!")
 
     def get_scale(self):
         """
