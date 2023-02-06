@@ -390,6 +390,10 @@ class DataManager:
                 print(ex)
 
     def on_fetch_bg(self, layer=None, bbox=None):
+        if getattr(self.m, "coll", None) is not None:
+            if self.m.coll.get_visible() is False:
+                return
+
         # TODO support providing a bbox as extent?
         if layer is None:
             layer = self.layer
