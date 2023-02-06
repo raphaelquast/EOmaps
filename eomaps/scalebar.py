@@ -14,6 +14,8 @@ import matplotlib.transforms as transforms
 
 
 class ScaleBar:
+    """Base class for EOmaps scalebars."""
+
     def __init__(
         self,
         m,
@@ -27,6 +29,7 @@ class ScaleBar:
     ):
         """
         Add a scalebar to the map.
+
         The scalebar represents a ruler in units of meters whose direction
         follows geodesic lines.
 
@@ -204,12 +207,21 @@ class ScaleBar:
         self.set_label_props(**label_props)
 
     def apply_preset(self, preset):
+        """
+        Apply a style-preset to the Scalebar.
+
+        Parameters
+        ----------
+        preset : str
+            The name of the preset.
+
+        """
         self._apply_preset(preset)
         self._estimate_scale()
         self.set_position()
 
     @staticmethod
-    def round_to_n(x, n=0):
+    def _round_to_n(x, n=0):
         # round to n significant digits
         # 1234 -> 1000
         # 0.01234 -> 0.1
@@ -244,7 +256,7 @@ class ScaleBar:
 
             scale = dist / self._scale_props["n"]
             # round to 1 significant digit
-            scale = self.round_to_n(scale)
+            scale = self._round_to_n(scale)
 
             self._scale_props["scale"] = scale
             return scale
@@ -270,15 +282,13 @@ class ScaleBar:
         return lon, lat
 
     def auto_position(self, pos):
+        """Move the scalebar to the desired position and apply auto-scaling."""
         lon, lat = self._get_autopos(pos)
         self.set_position(lon, lat, self._azim)
 
     @property
     def cb_rotate_interval(self):
-        """
-        Get/set the interval for the rotation when using the <+> and <->
-        keys on the keyboard to rotate the scalebar
-        """
+        """Get/set the rotation interval when rotating the scalebar with +/- keys."""
         return self._cb_rotate_inverval
 
     @cb_rotate_interval.setter
@@ -288,8 +298,10 @@ class ScaleBar:
     @property
     def cb_offset_interval(self):
         """
-        Get/set the interval for the text-offset when using the <alt> + <+>/<->
-        keyboard-shortcut to set the offset for the scalebar-labels.
+        Get/set the interval for changing the text-offset with keyboard-shortcuts.
+
+        e.g.: when using the <alt> + <+>/<-> keyboard-shortcut to set the offset for
+        the scalebar-labels.
         """
         return self._cb_offset_interval
 
@@ -299,7 +311,7 @@ class ScaleBar:
 
     def set_scale_props(self, scale=None, n=None, width=None, colors=None):
         """
-        Set the properties of the scalebar (and update the plot accordingly)
+        Set the properties of the scalebar (and update the plot accordingly).
 
         Parameters
         ----------
@@ -333,7 +345,7 @@ class ScaleBar:
 
     def set_patch_props(self, offsets=None, **kwargs):
         """
-        Set the properties of the frame (and update the plot accordingly)
+        Set the properties of the frame (and update the plot accordingly).
 
         Parameters
         ----------
@@ -374,7 +386,7 @@ class ScaleBar:
         self, scale=None, rotation=None, every=None, offset=None, color=None, **kwargs
     ):
         """
-        Set the properties of the labels (and update the plot accordingly)
+        Set the properties of the labels (and update the plot accordingly).
 
         Parameters
         ----------
@@ -401,7 +413,6 @@ class ScaleBar:
                 >>> dict(family="Helvetica", style="italic").
 
         """
-
         if scale is not None:
             self._label_props["scale"] = scale
         if rotation is not None:
@@ -736,7 +747,7 @@ class ScaleBar:
 
     def set_position(self, lon=None, lat=None, azim=None, update=False):
         """
-        Set the position of the colorbar
+        Set the position of the colorbar.
 
         Parameters
         ----------
@@ -750,8 +761,8 @@ class ScaleBar:
         update : bool
             Indicator if the plot should be immediately updated (True) or at the next
             event (False). The default is False.
-        """
 
+        """
         if lon is None:
             lon = self._lon
         if lat is None:
@@ -799,7 +810,7 @@ class ScaleBar:
 
     def _make_pickable(self):
         """
-        Add callbacks to adjust the scalebar position manually
+        Add callbacks to adjust the scalebar position manually.
 
             - <LEFT>-click on the scalebar with the mouse to pick it up
                 - hold down <LEFT> to drag the scalebar
@@ -807,6 +818,7 @@ class ScaleBar:
             - <RIGHT>-click on the scalebar to detach the callbacks again
               (e.g. make it non-interactive)
             - use <ARROW-keys> to set the size of the patch
+
         """
 
         def scb_move(s, pos, **kwargs):
@@ -986,8 +998,7 @@ class ScaleBar:
 
     def get_position(self):
         """
-        Return the current position (and orientation) of the scalebar
-        (e.g. to obtain the position after manual re-positioning)
+        Return the current position (and orientation) of the scalebar.
 
         Returns
         -------
@@ -997,9 +1008,7 @@ class ScaleBar:
         return [self._lon, self._lat, self._azim]
 
     def remove(self):
-        """
-        Remove the scalebar from the map
-        """
+        """Remove the scalebar from the map."""
         self._remove_callbacks()
         for a in self._artists.values():
             self._m.BM.remove_artist(a)
@@ -1009,6 +1018,8 @@ class ScaleBar:
 
 
 class Compass:
+    """Base class for EOmaps compass objects."""
+
     def __init__(self, m):
         self._m = m
 
@@ -1087,7 +1098,6 @@ class Compass:
             of the compass or remove it from the map.
 
         """
-
         self.layer = layer
         self._ignore_invalid_angles = ignore_invalid_angles
         self._m.BM.update()
@@ -1406,8 +1416,8 @@ class Compass:
             - False or "none": Make the background-patch invisible.
         linewidth: float
             The linewidth of the patch.
-        """
 
+        """
         if facecolor is False:
             facecolor = "none"
         if edgecolor is False:
@@ -1425,14 +1435,14 @@ class Compass:
 
     def set_scale(self, scale):
         """
-        Set the size scale-factor of the compass. (The default is 10)
+        Set the size scale-factor of the compass. (The default is 10).
 
         Parameters
         ----------
         s : float
             The size of the compass.
-        """
 
+        """
         self._scale = scale
         self._update_offset(*self._pos)
 
@@ -1479,7 +1489,7 @@ class Compass:
 
     def get_position(self, coords="axis"):
         """
-        Return the current position of the compass
+        Return the current position of the compass.
 
         Parameters
         ----------
