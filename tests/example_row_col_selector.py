@@ -99,6 +99,7 @@ m.cb.pick.attach.annotate(text=text, fontsize=7)
 # apply a previously arranged layout (e.g. check "layout-editor" in the docs!)
 m.apply_layout(
     {
+        "figsize": [8, 5],
         "0_map": [0.015, 0.49253, 0.51, 0.35361],
         "1_": [0.60375, 0.592, 0.38, 0.392],
         "2_": [0.60375, 0.096, 0.38, 0.392],
