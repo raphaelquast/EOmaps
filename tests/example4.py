@@ -183,5 +183,5 @@ m.cb.move.attach.mark(
 )
 
 
-m.add_colorbar(hist_bins="bins")
+m.add_colorbar(hist_bins="bins", label="A classified dataset")
 m.add_logo()
