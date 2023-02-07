@@ -1002,6 +1002,10 @@ class LayoutEditor:
 
         # make sure the snap-grid is removed
         self._remove_snap_grid()
+
+        for s in self.m.BM._spines:
+            s.set_animated(True)
+
         self.m.redraw()
 
     def _make_draggable(self, filepath=None):
@@ -1107,6 +1111,9 @@ class LayoutEditor:
             self.cids.append(
                 self.f.canvas.mpl_connect("key_release_event", self.cb_key_release)
             )
+
+        for s in self.m.BM._spines:
+            s.set_animated(False)
 
         self.m.redraw()
 
@@ -1323,6 +1330,8 @@ class BlitManager:
 
         self._bg = None
         self._artists = dict()
+
+        self._spines = []
 
         self._bg_artists = dict()
         self._bg_layers = dict()
@@ -1594,10 +1603,11 @@ class BlitManager:
 
         # switch to a blank background layer before merging backgrounds
         # TODO is there a beter way to avoid drawing on initial backgrounds?
-        self._m.bg_layer = "__BLANK__"
+        self.canvas.restore_region(self._bg_layers["__BLANK__"])
 
         x0, y0, w, h = self.figure.bbox.bounds
         for l, a in zip(layers, alphas):
+
             rgba = self._get_array(l, a=a)
             self.canvas.renderer.draw_image(
                 gc,
@@ -1621,6 +1631,8 @@ class BlitManager:
 
     def _do_fetch_bg(self, layer=None, bbox=None):
         cv = self.canvas
+        if bbox is None:
+            bbox = self.figure.bbox
 
         if layer is None:
             layer = self.bg_layer
@@ -1662,10 +1674,8 @@ class BlitManager:
             if no_stale_artists and (self._bg_layers.get(layer, None) is not None):
                 return
 
-            if bbox is None:
-                bbox = self.figure.bbox
-
             if not self._m.parent._layout_editor._modifier_pressed:
+
                 # make all artists of the corresponding layer visible
                 for l in self._bg_artists:
                     if l not in [layer, "all"]:
@@ -1684,7 +1694,35 @@ class BlitManager:
 
                 self._bg_layers[layer] = cv.copy_from_bbox(bbox)
 
+    def _do_fetch_blank(self):
+        # fetch a blank background
+
+        if self._bg_layers.get("__BLANK__", None) is not None:
+            # don't re-fetch the background if it is not necessary
+            return
+
+        with ExitStack() as stack:
+            # use contextmanagers to make sure the background patches are not stored
+            # in the buffer regions!
+            for ax_i in self._m.f.axes:
+                stack.enter_context(
+                    ax_i.patch._cm_set(facecolor="none", edgecolor="none")
+                )
+
+            for l in self._bg_artists:
+                # make all artists of layers invisible
+                for art in self._bg_artists.get(l, []):
+                    art.set_visible(False)
+
+            self.canvas._force_full = True
+            self.canvas.draw()
+
+            self._bg_layers["__BLANK__"] = self.canvas.copy_from_bbox(self.figure.bbox)
+
     def fetch_bg(self, layer=None, bbox=None):
+        if self._m.parent._layout_editor._modifier_pressed:
+            return
+
         cv = self.canvas
 
         if layer is None:
@@ -1704,6 +1742,7 @@ class BlitManager:
         # use contextmanagers to make sure the background patches are not stored
         # in the buffer regions!
         try:
+            self._do_fetch_blank()
             self._do_fetch_bg(layer, bbox)
         finally:
             # reconnect draw event
@@ -1897,6 +1936,10 @@ class BlitManager:
 
         # always redraw artists from the "all" layer
         layers.add("all")
+
+        # draw geo-spines of axes
+        for a in self._spines:
+            fig.draw_artist(a)
 
         # redraw artists from the selected layers and explicitly provided artists
         # (sorted by zorder)

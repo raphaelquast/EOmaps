@@ -451,6 +451,13 @@ class Maps(object):
         if self.f.patch not in self.BM._bg_artists.get("__BG__", []):
             self.BM.add_bg_artist(self.f.patch, layer="__BG__")
 
+        # Add the cartopy-geo-axes spine to the "__BLANK__" layer that is restored
+        # before drawing any other artist.
+        gsp = self.ax.spines["geo"]
+        if gsp not in self.BM._spines:
+            gsp.set_animated(True)
+            self.BM._spines.append(gsp)
+
     def __getattribute__(self, key):
         if key == "plot_specs":
             raise AttributeError(
