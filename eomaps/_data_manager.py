@@ -357,7 +357,7 @@ class DataManager:
         """
         # don't re-draw while the layout-editor is active!
         if self.m.parent._layout_editor.modifier_pressed:
-            return
+            return False
 
         # check if the layer of the dataset is requested
         if not (
