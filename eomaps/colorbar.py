@@ -285,8 +285,6 @@ class ColorBar:
 
         self._cid_redraw = None
 
-        self._refetch_bg = False
-
         self._set_data()
         self._setup_axes()
 
@@ -563,7 +561,7 @@ class ColorBar:
             if a is not None:
                 self._m.BM.add_bg_artist(a, self._m.layer)
         # we need to re-draw since the background axis size has changed!
-        self._refetch_bg = True
+        self._m.BM._refetch_layer(self._m.layer)
 
     @property
     def _axes(self):
@@ -902,9 +900,6 @@ class ColorBar:
             if self._log is False:
                 # self.ax_cb_plot.xaxis.set_major_locator(plt.MaxNLocator(5))
                 self.ax_cb_plot.set_xlim(None, 0)
-
-        if self._refetch_bg:
-            self._m.BM._refetch_layer(self._m.layer)
 
     def _redraw_colorbar(self, *args, **kwargs):
         self._set_data()
