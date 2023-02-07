@@ -1562,6 +1562,8 @@ class BlitManager:
         return artists
 
     def _combine_bgs(self, layer):
+        initial_layer = self._bg_layer
+
         # TODO decide on layer-ordering! (currently transposed)
         layers, alphas = [], []
         for l in layer.split("|"):
@@ -1587,13 +1589,11 @@ class BlitManager:
                 # (to make sure all lazy WMS services are properly added)
                 self._do_on_layer_change(layer=l)
                 self._do_fetch_bg(l)
-
         gc = self.canvas.renderer.new_gc()
         gc.set_clip_rectangle(self.canvas.figure.bbox)
 
         # switch to a blank background layer before merging backgrounds
         # TODO is there a beter way to avoid drawing on initial backgrounds?
-        initial_layer = self._bg_layer
         self._m.bg_layer = "__BLANK__"
 
         x0, y0, w, h = self.figure.bbox.bounds

@@ -680,12 +680,19 @@ class LayerTabBar(QtWidgets.QTabBar):
             if l == layer:
                 self.setTabTextColor(i, activecolor)
 
-        # adjust the sort-order of the tabs to the order of the visible layers
-        for ncl, cl in enumerate(currlayers):
+        # --- adjust the sort-order of the tabs to the order of the visible layers
+        # disconnect tab_moved callback to avoid recursions
+        self.tabMoved.disconnect(self.tab_moved)
+        # to avoid issues with non-existent and private layers (e.g. the background
+        # layer on savefig etc.) use the following strategy:
+        # go through the layers in reverse and move each found layer to the position 0
+        for cl in currlayers[::-1]:
             for i in range(self.count()):
                 layer = self.tabText(i)
                 if layer == cl:
-                    self.moveTab(i, ncl)
+                    self.moveTab(i, 0)
+        # re-connect tab_moved callback
+        self.tabMoved.connect(self.tab_moved)
 
     @pyqtSlot()
     def populate(self):

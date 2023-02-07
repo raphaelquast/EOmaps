@@ -244,7 +244,7 @@ class AutoUpdateLayerMenuButton(QtWidgets.QPushButton):
     def update_checkstatus(self):
         currlayer = str(self.m.BM.bg_layer)
 
-        if "{" in self.m.BM._bg_layer:  # TODO support transparency
+        if "{" in currlayer:  # TODO support transparency
             active_layers = []
         else:
             if "|" in currlayer:
@@ -259,7 +259,6 @@ class AutoUpdateLayerMenuButton(QtWidgets.QPushButton):
             if isinstance(w, QtWidgets.QCheckBox):
                 # temporarily disconnect triggering the action on state-changes
                 w.clicked.disconnect(action.trigger)
-
                 if key in active_layers:
                     w.setChecked(True)
                     w.setText(f"[{active_layers.index(key)}]  {key}")
