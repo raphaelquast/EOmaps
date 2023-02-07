@@ -43,7 +43,7 @@ m.all.cb.click.attach.peek_layer(layer="data|OSM", how=0.2)
 
 # on a right-click, "swipe" the layers ("data", "S1GBM_vv") from the left
 m.all.cb.click.attach.peek_layer(
-    layer="data|S1GBM_vv",
+    layer="S1GBM_vv|data",
     how="left",
     button=3,
 )
