@@ -4043,6 +4043,11 @@ class Maps(object):
         # (ONLY do this for unique layers... skip multi-layers )
         layers = layers.union({i for i in self.BM._bg_artists if "|" not in i})
 
+        # exclude private layers
+        for l in ["__BG__", "__BLANK__"]:
+            if l in layers:
+                layers.remove(l)
+
         if exclude:
             for l in exclude:
                 if l in layers:
