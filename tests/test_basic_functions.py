@@ -1083,7 +1083,7 @@ class TestBasicPlotting(unittest.TestCase):
                 self.assertFalse(m2.coll is None)
                 self.assertTrue(len(m2.cb.click.get.cbs) == 1)
 
-            self.assertTrue(set(m._get_layers()) == {"__BG__", "first"})
+            self.assertTrue(set(m._get_layers()) == {"first"})
 
             self.assertTrue(len(m2._data_manager._all_data) == 0)
             self.assertTrue(len(m2._data_manager._current_data) == 0)

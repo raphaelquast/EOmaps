@@ -677,6 +677,11 @@ The **initial position of the axes** used by a ``Maps`` object is set via the ``
 - ...for more information, checkout the matplotlib tutorial: `Customizing Figure Layouts <https://matplotlib.org/3.1.1/tutorials/intermediate/gridspec.html#sphx-glr-tutorials-intermediate-gridspec-py>`_
 
 
+.. note::
+
+    Make sure to have a look at the :ref:`layout_editor` on how to re-position and re-scale axes to arbitrary positions!
+
+
 In the following, the most commonly used cases are introduced:
 
 Grid positioning
@@ -2641,17 +2646,14 @@ You can use it to simply drag the axes the mouse to the desired locations and ch
     :align: center
 
     +-----------------------------------------------------------------------------------------+-----------------------------------------------+
-    | press ``ALT + L``: enter the **Layout Editor** mode                                     | .. image:: _static/minigifs/layout_editor.gif |
-    |                                                                                         |     :align: center                            |
-    | - press ``ALT + L`` again or ``escape`` to exit the **Layout Editor**                   |                                               |
+    | - Press ``ALT + L``: enter the **Layout Editor** mode                                   | .. image:: _static/minigifs/layout_editor.gif |
+    | - Press ``ALT + L`` again or ``escape`` to exit the **Layout Editor**                   |     :align: center                            |
     |                                                                                         |                                               |
     | **Pick** and **re-arrange** the axes as you like with the mouse.                        |                                               |
     |                                                                                         |                                               |
     | - To pick **multiple axes**, hold down ``shift``!                                       |                                               |
-    | - **Resize** picked axes with the **scroll-wheel** (or with the ``+`` and ``-`` keys)   |                                               |
-    |                                                                                         |                                               |
-    | For **"colorbars"** there are some special options:                                     |                                               |
-    |                                                                                         |                                               |
+    | - | **Resize** picked axes with the **scroll-wheel**                                    |                                               |
+    |   | (or by pressing the ``+`` and ``-`` keys)                                           |                                               |
     | - Hold down ``h`` or ``v`` to change horizontal/vertical size                           |                                               |
     | - Hold down ``control`` to change ratio between colorbar and histogram                  |                                               |
     |                                                                                         |                                               |
