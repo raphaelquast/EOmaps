@@ -659,59 +659,161 @@ To create an RGB or RGBA composite from 3 (or 4) datasets, pass the datasets as 
 
 
 
-🍱 Adding Maps to existing figures
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+🍱 Multiple Maps (and/or plots) in one figure
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-It is possible to add (one or more) EOmaps maps to existing ``matplotlib`` figures.
+It is possible to combine multiple ``EOmaps`` maps and/or ordinary ``matpltolib`` plots in one figure.
 
-- To create a new map in an existing figure, simply provide the ``matplotlib.Figure`` instance via ``Maps(f=<the figure instance>)``
-- The initial position of the map can be set via the ``ax`` argument, e.g.: ``Maps(ax=<...>)``.
 
-The syntax is similar to matplotlibs ``f.add_subplot()`` or ``f.add_axes``, allowing one of the following options:
+The **figure** used by a ``Maps`` object is set via the ``f`` argument, e.g.: ``m = Maps(f=...)``
+
+- If no figure is provided, a new figure is created whenever you initialize a ``Maps`` object.
+- The figure-instance of an existing ``Maps`` object is accessible via ``m.f``
+
+The **initial position of the axes** used by a ``Maps`` object is set via the ``ax`` argument, e.g.: ``m = Maps(ax=...)``
+
+- The syntax for positioning axes is similar to matplotlibs ``f.add_subplot()`` or ``f.add_axes()``
+- The axis-instance of an existing ``Maps`` object is accessible via ``m.ax``
+- ...for more information, checkout the matplotlib tutorial: `Customizing Figure Layouts <https://matplotlib.org/3.1.1/tutorials/intermediate/gridspec.html#sphx-glr-tutorials-intermediate-gridspec-py>`_
+
+
+In the following, the most commonly used cases are introduced:
 
 Grid positioning
 ****************
 To position the map in a (virtual) grid, one of the following options are possible:
 
-- Three integers ``(nrows, ncols, index)``.
+- Three integers ``(nrows, ncols, index)`` (or 2 integers and a tuple).
 
   - The map will take the ``index`` position on a grid with ``nrows`` rows and ``ncols`` columns.
   - ``index`` starts at 1 in the upper left corner and increases to the right.
   - ``index`` can also be a two-tuple specifying the (first, last)
     indices (1-based, and including last) of the map, e.g., Maps(ax=(3, 1, (1, 2))) makes a map that spans the upper 2/3 of the figure.
 
-.. code-block:: python
+.. table::
 
-    import matplotlib.pyplot as plt
-    from eomaps import Maps
+    +----------------------------------------------------+------------------------------------+
+    | .. code-block:: python                             | .. image:: _static/grids/grid1.png |
+    |                                                    |   :align: center                   |
+    |     from eomaps import Maps                        |                                    |
+    |     # ----- initialize a figure with an EOmaps map |                                    |
+    |     # position = item 1 of a 2x1 grid              |                                    |
+    |     m = Maps(ax=(2, 1, 1))                         |                                    |
+    |     # ----- add a normal matplotlib axes           |                                    |
+    |     # position = item 2 of a 2x1 grid              |                                    |
+    |     ax = m.f.add_subplot(2, 1, 2)                  |                                    |
+    +----------------------------------------------------+------------------------------------+
 
-    f = plt.figure(figsize=(10, 7))  # initialize the Figure
-    f.add_subplot(2, 2, 1)           # add a normal axes
-    m = Maps(f=f, ax=(2, 2, (1, 2))) # add a EOmaps map
+.. table::
 
-    f = plt.figure(figsize=(10, 7))  # initialize the Figure
-    f.add_subplot(3, 1, 1)           # add a normal axes
-    m = Maps(f=f, ax=(3, 1, (2, 3))) # add a EOmaps map
+    +----------------------------------------------------+------------------------------------+
+    | .. code-block:: python                             | .. image:: _static/grids/grid2.png |
+    |                                                    |   :align: center                   |
+    |     from eomaps import Maps                        |                                    |
+    |     # ----- initialize a figure with an EOmaps map |                                    |
+    |     # position = item 1 of a 2x2 grid              |                                    |
+    |     m = Maps(ax=(2, 2, 1))                         |                                    |
+    |     # ----- add another Map to the same figure     |                                    |
+    |     # position = item 3 of a 2x2 grid              |                                    |
+    |     m2 = Maps(f=m.f, ax=(2, 2, 3))                 |                                    |
+    |     # ----- add a normal matplotlib axes           |                                    |
+    |     # position = second item of a 1x2 grid         |                                    |
+    |     ax = m.f.add_subplot(1, 2, 2)                  |                                    |
+    +----------------------------------------------------+------------------------------------+
 
+.. table::
+
+    +----------------------------------------------------+------------------------------------+
+    | .. code-block:: python                             | .. image:: _static/grids/grid3.png |
+    |                                                    |   :align: center                   |
+    |     from eomaps import Maps                        |                                    |
+    |     # ----- initialize a figure with an EOmaps map |                                    |
+    |     # position = span 2 rows of a 3x1 grid         |                                    |
+    |     m = Maps(ax=(3, 1, (1, 2)))                    |                                    |
+    |     # ----- add a normal matplotlib axes           |                                    |
+    |     # position = item 3 of a 3x1 grid              |                                    |
+    |     ax = m.f.add_subplot(3, 1, 3)                  |                                    |
+    +----------------------------------------------------+------------------------------------+
 
 - A 3-digit integer.
 
   - The digits are interpreted as if given separately as three single-digit integers, i.e. Maps(ax=235) is the same as Maps(ax=(2, 3, 5)).
   - Note that this can only be used if there are no more than 9 subplots.
 
-.. code-block:: python
+.. table::
 
-    import matplotlib.pyplot as plt
-    from eomaps import Maps
+    +----------------------------------------------------+------------------------------------+
+    | .. code-block:: python                             | .. image:: _static/grids/grid4.png |
+    |                                                    |   :align: center                   |
+    |     from eomaps import Maps                        |                                    |
+    |     # ----- initialize a figure with an EOmaps map |                                    |
+    |     m = Maps(ax=211)                               |                                    |
+    |     # ----- add a normal matplotlib axes           |                                    |
+    |     ax = m.f.add_subplot(212)                      |                                    |
+    +----------------------------------------------------+------------------------------------+
 
-    f = plt.figure(figsize=(10, 7)) # initialize the Figure
-    f.add_subplot(211)              # add a normal axes
-    m = Maps(f=f, ax=212)           # add a EOmaps map
+.. table::
+
+    +----------------------------------------------------+------------------------------------+
+    | .. code-block:: python                             | .. image:: _static/grids/grid5.png |
+    |                                                    |   :align: center                   |
+    |     from eomaps import Maps                        |                                    |
+    |     # ----- initialize a figure with an EOmaps map |                                    |
+    |     m = Maps(ax=221)                               |                                    |
+    |     # ----- add 2 more Maps to the same figure     |                                    |
+    |     m2 = Maps(f=m.f, ax=222)                       |                                    |
+    |     m3 = Maps(f=m.f, ax=223)                       |                                    |
+    |     # ----- add a normal matplotlib axes           |                                    |
+    |     ax = m.f.add_subplot(224)                      |                                    |
+    +----------------------------------------------------+------------------------------------+
 
 
-- An already existing ``matplotlib.Axes`` instance
+- A matplotlib `GridSpec <https://matplotlib.org/stable/api/_as_gen/matplotlib.gridspec.GridSpec.html>`_
 
-  - NOTE: this MUST be a cartopy-``GeoAxes`` with the same projection as the Maps-object!
+.. table::
+
+    +----------------------------------------------+------------------------------------+
+    | .. code-block:: python                       | .. image:: _static/grids/grid6.png |
+    |                                              |   :align: center                   |
+    |     from matplotlib.gridspec import GridSpec |                                    |
+    |     from eomaps import Maps                  |                                    |
+    |                                              |                                    |
+    |     gs = GridSpec(2, 2)                      |                                    |
+    |     m = Maps(ax=gs[0,0])                     |                                    |
+    |     m2 = Maps(f= m.f, ax=gs[0,1])            |                                    |
+    |     ax = m.f.add_subplot(gs[1,:])            |                                    |
+    +----------------------------------------------+------------------------------------+
+
+Absolute positioning
+********************
+
+To set the absolute position of the map, provide a list of 4 floats representing ``(left, bottom, width, height)``.
+
+  - The absolute position of the map expressed in relative figure coordinates (e.g. ranging from 0 to 1)
+  - NOTE: Since the effective size of the Map is dependent on the current zoom-region, the position always
+    represents the **maximal area** that can be occupied by the map!
+
+.. table::
+
+    +----------------------------------------------------+------------------------------------+
+    | .. code-block:: python                             | .. image:: _static/grids/grid7.png |
+    |                                                    |   :align: center                   |
+    |     from eomaps import Maps                        |                                    |
+    |     # ----- initialize a figure with an EOmaps map |                                    |
+    |     m = Maps(ax=(.07, 0.53, .6, .3))               |                                    |
+    |     # ----- add a normal matplotlib axes           |                                    |
+    |     ax = m.f.add_axes((.35, .15, .6, .2))          |                                    |
+    +----------------------------------------------------+------------------------------------+
+
+Using already existing figures / axes
+*************************************
+
+It is also possible to insert an EOmaps map into an existing figure or re-use an existing axes.
+
+  - To put a map on an existing figure, provide the figure-instance via ``m = Maps(f= <the figure instance>)``
+  - To use an existing axes, provide the axes-instance via ``m = Maps(ax= <the axes instance>)``
+
+    - NOTE: The axes **MUST** be a cartopy-``GeoAxes``!
 
 .. code-block:: python
 
@@ -719,100 +821,80 @@ To position the map in a (virtual) grid, one of the following options are possib
     import cartopy
     from eomaps import Maps
 
-    f = plt.figure(figsize=(10, 7))   # initialize the Figure
+    f = plt.figure(figsize=(10, 7))
     ax = f.add_subplot(projection=cartopy.crs.Mollweide())
-    m = Maps(ax=ax)
+    m = Maps(f=f, ax=ax)
 
 
-- A ``matplotlib.SubplotSpec``
+Dynamic updates of plots in the same figure
+*******************************************
 
-.. code-block:: python
-
-    import matplotlib.pyplot as plt
-    from matplotlib.gridspec import GridSpec
-    from eomaps import Maps
-
-    gs = GridSpec(2, 2)              # setup the GridSpec
-
-    f = plt.figure(figsize=(10, 7))  # initialize the Figure
-    m = Maps(f=f, ax=gs[0,0])        # add a EOmaps map
-
-
-Absolute positioning
-********************
-
-  - NOTE: Since the effective size of the Map is dependent on the current zoom-region, the position always
-    represents the **maximal area** that can be occupied by the map!
-
-To set the absolute position of the map, provide a list of 4 floats representing ``(left, bottom, width, height)``.
-
-  - The absolute position of the map expressed in relative figure coordinates (e.g. ranging from 0 to 1)
-
-.. code-block:: python
-
-    import matplotlib.pyplot as plt
-    from eomaps import Maps
-
-    f = plt.figure(figsize=(10, 7))   # initialize the Figure
-    f.add_axes((.2, .5, .4, .4))      # add a normal axes
-    m = Maps(f=f, ax=(.2, 0, .4, .5)) # add a EOmaps map
-
-
-.. admonition:: Dynamic updates of plots
-
-    As soon as a ``Maps``-object is attached to a figure, EOmaps will handle re-drawing of the figure.
+    As soon as a ``Maps``-object is attached to a figure, EOmaps will handle re-drawing of the figure!
     Therefore **dynamically updated** artists must be added to the "blit-manager" (``m.BM``) to ensure
     that they are correctly updated.
 
-    - use ``m.BM.add_artist(artist, layer=...)`` if the artist should be re-drawn on any change in the figure
+    - use ``m.BM.add_artist(artist, layer=...)`` if the artist should be re-drawn on **any event** in the figure
     - use ``m.BM.add_bg_artist(artist, layer=...)`` if the artist should **only** be re-drawn if the extent of the map changes
 
-    In general, it should be sufficient to simply add the axes-object as artist via ``m.BM.add_artist(...)``
-    This will ensure that all artists on the axes are updated.
+.. note::
 
-    Here's a more complete example to show how it works:
+    In most cases it is sufficient to simply add the whole axes-object as artist via ``m.BM.add_artist(...)``.
 
-    .. code-block:: python
+    This ensures that all artists of the axes are updated as well!
 
-        import matplotlib.pyplot as plt
-        from eomaps import Maps
 
-        # create a matplotlib figure
-        f = plt.figure(figsize=(10, 7))
-        # add a "normal" plot spanning the top rows of a 2x2 grid
-        ax = f.add_subplot(2, 2, (1, 2))
-        ax.plot([10, 20, 30, 40, 50], [10, 20, 30, 40, 50])
+Here's an example to show how it works:
 
-        # put a map on the 3rd axis of a 2x2 grid (bottom left)
-        m = Maps(f=f, ax=(2, 2, 3))
-        m.ax.set_title("click me!")
-        m.add_wms.OpenStreetMap.add_layer.default()
-        m.cb.click.attach.mark(radius=20, fc="none", ec="r", lw=2)
+.. table::
 
-        # attach a callback that plots markers on the axis if you click on the map
-        def cb(pos, **kwargs):
-            ax.plot(*pos, marker="o")
-        m.cb.click.attach(cb)
+    +-------------------------------------------------------------------------------------+------------------------------------------------------+
+    | .. code-block:: python                                                              | .. image:: _static/minigifs/dynamic_axes_updates.gif |
+    |                                                                                     |   :align: center                                     |
+    |         from eomaps import Maps                                                     |                                                      |
+    |                                                                                     |                                                      |
+    |         # Initialize a new figure with an EOmaps map                                |                                                      |
+    |         m = Maps(ax=223)                                                            |                                                      |
+    |         m.ax.set_title("click me!")                                                 |                                                      |
+    |         m.add_feature.preset.coastline()                                            |                                                      |
+    |         m.cb.click.attach.mark(radius=20, fc="none", ec="r", lw=2)                  |                                                      |
+    |                                                                                     |                                                      |
+    |         # Add another map to the figure                                             |                                                      |
+    |         m2 = Maps(f=m.f, ax=224, crs=Maps.CRS.Mollweide())                          |                                                      |
+    |         m2.add_feature.preset.coastline()                                           |                                                      |
+    |         m2.add_feature.preset.ocean()                                               |                                                      |
+    |         m2.cb.click.attach.mark(radius=20, fc="none", ec="r", lw=2, n=200)          |                                                      |
+    |                                                                                     |                                                      |
+    |         # Add a "normal" matplotlib plot to the figure                              |                                                      |
+    |         ax = m.f.add_subplot(211)                                                   |                                                      |
+    |         # Since we want to dynamically update the data on the axis, it must be      |                                                      |
+    |         # added to the BlitManager to ensure that the artists are properly updated. |                                                      |
+    |         # (EOmaps handles interactive re-drawing of the figure)                     |                                                      |
+    |         m.BM.add_artist(ax, layer=m.layer)                                          |                                                      |
+    |                                                                                     |                                                      |
+    |         # plot some static data on the axis                                         |                                                      |
+    |         ax.plot([10, 20, 30, 40, 50], [10, 20, 30, 40, 50])                         |                                                      |
+    |                                                                                     |                                                      |
+    |         # define a callback that plots markers on the axis if you click on the map  |                                                      |
+    |         def cb(pos, **kwargs):                                                      |                                                      |
+    |             ax.plot(*pos, marker="o")                                               |                                                      |
+    |                                                                                     |                                                      |
+    |         m.cb.click.attach(cb)        # attach the callback to the first map         |                                                      |
+    |         m.cb.click.share_events(m2)  # share click events between the 2 maps        |                                                      |
+    +-------------------------------------------------------------------------------------+------------------------------------------------------+
 
-        # Since we want to dynamically update the plot on the axis, it must be
-        # added to the BlitManager to ensure that the artists are properly updated.
-        # (EOmaps handles interactive re-drawing of the figure)
-        m.BM.add_artist(ax, layer=m.layer)
 
-        # put a map on the 4th axis of a 2x2 grid (bottom right)
-        m2 = Maps(f=f, ax=(2, 2, 4), crs=Maps.CRS.Mollweide())
-        m2.add_feature.preset.coastline()
-        m2.add_feature.preset.ocean()
-        m2.cb.click.attach.mark(radius=20, fc="none", ec="r", lw=2, n=200)
-
-        # share click events on the 2 maps
-        m.cb.click.share_events(m2)
 
 
 𝄜 MapsGrid objects
 *******************
 
 ``MapsGrid`` objects can be used to create (and manage) multiple maps in one figure.
+
+.. note::
+
+    While ``MapsGrid`` objects provide some convenience, starting with EOmaps v6.x,
+    the preferred way of combining multiple maps and/or matplotlib axes in a figure
+    is by using one of the options presented in the previous sections!
 
 A ``MapsGrid`` creates a grid of ``Maps`` objects (and/or ordinary ``matpltolib`` axes),
 and provides convenience-functions to perform actions on all maps of the figure.
