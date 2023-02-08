@@ -2470,6 +2470,9 @@ class Maps(object):
             names = [name]
 
         for i in names:
+            if i in ["__BG__", "__BLANK__"]:
+                continue
+
             if "{" in i and i.endswith("}"):
                 i = i.split("{")[0]  # strip off transparency assignments
 
