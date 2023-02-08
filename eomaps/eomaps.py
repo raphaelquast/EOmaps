@@ -114,8 +114,16 @@ from ._containers import (
     data_specs,
     classify_specs,
 )
-from ._webmap import refetch_wms_on_size_change, _cx_refetch_wms_on_size_change
-from ._webmap_containers import wms_container
+
+try:
+    from ._webmap import refetch_wms_on_size_change, _cx_refetch_wms_on_size_change
+    from ._webmap_containers import wms_container
+except ImportError as ex:
+    print("EOmaps: Unable to import required WebMap dependencies:", ex)
+    refetch_wms_on_size_change = None
+    _cx_refetch_wms_on_size_change = None
+    wms_container = None
+
 from .ne_features import NaturalEarth_features
 
 from ._cb_container import cb_container, _gpd_picker
@@ -405,7 +413,8 @@ class Maps(object):
         self._cb = cb_container(weakref.proxy(self))  # accessor for the callbacks
 
         self._init_figure(ax=ax, plot_crs=crs, **kwargs)
-        self._wms_container = wms_container(weakref.proxy(self))
+        if wms_container is not None:
+            self._wms_container = wms_container(weakref.proxy(self))
         self._new_layer_from_file = new_layer_from_file(weakref.proxy(self))
 
         self._shapes = shapes(weakref.proxy(self))
@@ -1846,11 +1855,13 @@ class Maps(object):
 
         return s
 
-    @property
-    @wraps(wms_container)
-    def add_wms(self):
-        """Accessor to attach WebMap services to the map."""
-        return self._wms_container
+    if wms_container is not None:
+
+        @property
+        @wraps(wms_container)
+        def add_wms(self):
+            """Accessor to attach WebMap services to the map."""
+            return self._wms_container
 
     def add_line(
         self,
@@ -2557,7 +2568,8 @@ class Maps(object):
         """Save the figure."""
         with ExitStack() as stack:
             if refetch_wms is False:
-                stack.enter_context(_cx_refetch_wms_on_size_change(refetch_wms))
+                if _cx_refetch_wms_on_size_change is not None:
+                    stack.enter_context(_cx_refetch_wms_on_size_change(refetch_wms))
 
             # hide companion-widget indicator
             self._indicate_companion_map(False)
@@ -4289,10 +4301,12 @@ class Maps(object):
 
         return AddWMSMenuButton.fetch_all_wms_layers(self, refetch=refetch)
 
-    @wraps(refetch_wms_on_size_change)
-    def refetch_wms_on_size_change(self, *args, **kwargs):
-        """Set the behavior for WebMap services if the axis or figure size changes."""
-        refetch_wms_on_size_change(*args, **kwargs)
+    if refetch_wms_on_size_change is not None:
+
+        @wraps(refetch_wms_on_size_change)
+        def refetch_wms_on_size_change(self, *args, **kwargs):
+            """Set the behavior for WebMap services on axis or figure size changes."""
+            refetch_wms_on_size_change(*args, **kwargs)
 
 
 class _InsetMaps(Maps):

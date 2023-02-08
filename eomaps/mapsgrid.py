@@ -8,7 +8,11 @@ from ._shapes import shapes
 from .eomaps import Maps
 
 from .ne_features import NaturalEarth_features
-from ._webmap_containers import wms_container
+
+try:
+    from ._webmap_containers import wms_container
+except ImportError:
+    wms_container = None
 
 
 class MapsGrid:
@@ -140,7 +144,8 @@ class MapsGrid:
         self._Maps = []
         self._names = dict()
 
-        self._wms_container = wms_container(self)
+        if wms_container is not None:
+            self._wms_container = wms_container(self)
 
         gskwargs = dict(bottom=0.01, top=0.99, left=0.01, right=0.99)
         gskwargs.update(kwargs)
@@ -406,10 +411,12 @@ class MapsGrid:
 
     add_marker.__doc__ = _doc_prefix + add_marker.__doc__
 
-    @property
-    @wraps(Maps.add_wms)
-    def add_wms(self):
-        return self._wms_container
+    if hasattr(Maps, "add_wms"):
+
+        @property
+        @wraps(Maps.add_wms)
+        def add_wms(self):
+            return self._wms_container
 
     @property
     @wraps(Maps.add_feature)
