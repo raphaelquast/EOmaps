@@ -2373,8 +2373,10 @@ class Maps(object):
             )
 
             # dont set extent if "m.set_extent" was called explicitly
+            extent_set = False
             if set_extent and self._set_extent_on_plot:
                 self._data_manager._set_lims()
+                extent_set = True
 
             self._plot_map(
                 layer=layer,
@@ -2383,6 +2385,11 @@ class Maps(object):
                 assume_sorted=assume_sorted,
                 **kwargs,
             )
+
+            if extent_set:
+                # re-fetch backgrounds to make sure previously fetched backgrounds
+                # reflect the new limits!
+                self.BM._refetch_bg = True
 
         if verbose >= 1:
             if getattr(self, "_data_mask", None) is not None and not np.all(
