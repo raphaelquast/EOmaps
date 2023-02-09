@@ -3624,10 +3624,11 @@ class Maps(object):
 
             # NOTE: the actual plot is performed by the data-manager
             # at the next call to m.BM.fetch_bg() for the corresponding layer
+            self._data_manager.on_fetch_bg()
+
             if self._coll_dynamic is False:
                 # self.BM._refetch_layer(layer)
 
-                self._data_manager.on_fetch_bg()
                 self.BM.on_draw(None)
 
             # self.BM.update()
