@@ -702,26 +702,33 @@ class _click_callbacks(object):
 
             The default is "left".
         alpha : float, optional
-            The transparency of the peeked layer.
-            (must be between 0 and 1)
+            The transparency of the peeked layer. (between 0 and 1)
+            If you overlay a (possibly transparent) combination of multiple layers,
+            this transparency will be assigned as a global transparency for the
+            obtained "combined layer".
             The default is 1.
         **kwargs :
             additional kwargs passed to a rectangle-marker.
             the default is `(fc="none", ec="k", lw=1)`
 
-        Note
-        ----
-        You must draw something on the layer first!
 
-        To assign a layer to an object, either use the `layer=...` argument when
-        adding objects (e.g. `m.plot_map(layer=1)`), or use a new Maps-layer via
-
+        Examples
+        --------
+        Overlay a single layer:
         >>> m = Maps()
-        >>> m2 = m.new_layer(layer="the layer name")
-        >>> # now all artists added with m2 will be added to the layer
-        >>> # "the layer name" (if not explicitly specified otherwise)
-        >>> m2.plot_map()
-        >>> m.peek_layer(layer="the layer name")
+        >>> m.add_feature.preset.coastline()
+        >>> m2 = m.new_layer(layer="ocean")
+        >>> m2.add_feature.preset.ocean()
+        >>> m.cb.click.attach.peek_layer(layer="ocean")
+
+        Overlay a (transparent) combination of multiple layers:
+        >>> m = Maps()
+        >>> m.all.add_feature.preset.coastline()
+        >>> m.add_feature.preset.urban_areas()
+        >>> m.add_feature.preset.ocean(layer="ocean")
+        >>> m.add_feature.physical.land(layer="land", fc="g")
+        >>> m.cb.click.attach.peek_layer(layer=["ocean", ("land", 0.5)],
+        >>>                              shape="round", how=0.4)
         """
 
         shape = "ellipses" if shape == "round" else "rectangles"
