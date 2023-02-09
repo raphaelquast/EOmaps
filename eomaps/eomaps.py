@@ -460,8 +460,7 @@ class Maps(object):
         if self.f.patch not in self.BM._bg_artists.get("__BG__", []):
             self.BM.add_bg_artist(self.f.patch, layer="__BG__")
 
-        # Add the cartopy-geo-axes spine to the "__BLANK__" layer that is restored
-        # before drawing any other artist.
+        # Treat cartopy geo-spines separately in the blit-manager
         gsp = self.ax.spines["geo"]
         if gsp not in self.BM._spines:
             gsp.set_animated(True)
@@ -2514,7 +2513,7 @@ class Maps(object):
         if not plt.isinteractive():
             plt.show()
 
-    def snapshot(self, clear=False):
+    def snapshot(self, clear=False, layer=None):
         """
         Print a static image of the figure to the active IPython display.
 
@@ -2544,7 +2543,7 @@ class Maps(object):
         # hide companion-widget indicator
         self._indicate_companion_map(False)
 
-        sn = self._get_snapshot()
+        sn = self._get_snapshot(layer=layer)
 
         display(Image.fromarray(sn, "RGBA"), display_id=True, clear=clear)
 
@@ -4095,9 +4094,12 @@ class Maps(object):
 
         return resp[0]
 
-    def _get_snapshot(self):
-        buf = self.f.canvas.print_to_buffer()
-        x = np.frombuffer(buf[0], dtype=np.uint8).reshape(buf[1][1], buf[1][0], 4)
+    def _get_snapshot(self, layer=None):
+        if layer is None:
+            buf = self.f.canvas.print_to_buffer()
+            x = np.frombuffer(buf[0], dtype=np.uint8).reshape(buf[1][1], buf[1][0], 4)
+        else:
+            x = self.BM._get_array(layer)[::-1, ...]
         return x
 
     def _indicate_companion_map(self, visible):
