@@ -56,12 +56,17 @@ Possible ways for specifying the ``crs`` for plotting are:
 
 Once you have created your first ``Maps`` object, you can:
 
-- Create **additional** ``Maps`` **objects on the same layer** by using ``m2 = m.new_layer()``
+🌱 Create **additional** ``Maps`` **objects on the same layer** by using ``m2 = m.new_layer()``
 
-  - If no explicit layer-name is provided, ``m2`` will use the same layer as ``m``
-  - This is especially useful if you want to plot multiple datasets **on the same layer**
+- If no explicit layer-name is provided, ``m2`` will use the same layer as ``m``
+- This is especially useful if you want to plot **multiple datasets on the same layer**
 
-- Create **a NEW layer** named ``"my_layer"`` by using ``m2 = m.new_layer("my_layer")``
+🌱 Create **a NEW layer** named ``"my_layer"`` by using ``m2 = m.new_layer("my_layer")``
+
+- All artists / features / callbacks etc. assigned to ``m2`` will only be visible / executed if the layer ``"my_layer"`` is visible
+
+🎄 **Transparently overlay** existing layers with ``m.show_layer(....)"`` (see :ref:`combine_layers`)
+
 
 .. code-block:: python
 
@@ -109,18 +114,68 @@ Once you have created your first ``Maps`` object, you can:
         m_ocean.add_feature.preset.ocean()   # add ocean-coloring to the "ocean" layer
         m.show_layer("ocean")                # show the "ocean" layer (note that it has coastlines as well!)
 
+.. _combine_layers:
 
 🗗 Combine & compare multiple layers
 ************************************
 
-To create a layer that represents a **combination of multiple existing layers**, separate the individual layer-names
-with a ``"|"`` character.
+To switch between layers or view a layer that represents a **combination of multiple existing layers**, use ``m.show_layer(...)``.
 
-- ``m.show_layer("A|B")`` will overlay all features of the layer ``B`` on top of the layer ``A``.
+- If you provide a single layer-name, the map will show the corresponding layer, e.g. ``m.show_layer("my_layer")``
 
-It is also possible to assign a **global transparency** when combining multiple layers via ``"<layer-name>{<transparency>}"``.
+To **(transparently) overlay multiple existing layers**, use one of the following options:
 
-- ``m.show_layer("A|B{0.5}")`` will overlay the layer ``B`` with 50% transparency on top of the layer ``A``.
+- Provide a **list of layer names** or tuples of the form ``(< layer-name >, < transparency [0-1] >)``
+
+  - ``m.show_layer(["A", "B"])`` will overlay all features of the layer ``B`` on top of the layer ``A``.
+  - ``m.show_layer(["A", ("B", 0.5)])`` will overlay the layer ``B`` with 50% transparency on top of the layer ``A``.
+
+- Provide a **combined layer name** by separating the individual layer names you want to show with a ``"|"`` character.
+
+  - ``m.show_layer("A|B")`` will overlay all features of the layer ``B`` on top of the layer ``A``.
+  - To transparently overlay a layer, add the transparency to the layer-name in curly-brackets, e.g.: ``"<layer-name>{<transparency>}"``.
+
+    - ``m.show_layer("A|B{0.5}")`` will overlay the layer ``B`` with 50% transparency on top of the layer ``A``.
+
+
+.. code-block:: python
+
+    m = Maps(layer="first")
+    m.add_feature.physical.land(fc="k")
+
+    m2 = m.new_layer("second")                # create a new layer and plot some data
+    m2.add_feature.preset.ocean(zorder=2)
+    m2.set_data(data=[.14,.25,.38],
+                x=[10,20,30], y=[30,50,70],
+                crs=4326)
+    m2.plot_map(zorder=1)                     # plot the data "below" the ocean
+
+    m.show_layer(["first", ("second", .75)])   # overlay the second layer with 25% transparency
+
+
+
+If you want to overlay a part of the screen with a different layer, have a look at **peek-layer callbacks**!
+
+.. code-block:: python
+
+    m = Maps()
+    m.all.add_feature.preset.coastline()
+    m.add_feature.preset.urban_areas()
+
+    m.add_feature.preset.ocean(layer="ocean")
+    m.add_feature.physical.land(layer="land", fc="g")
+    m.cb.click.attach.peek_layer(layer=["ocean", ("land", 0.5)],
+                                 shape="round", how=0.4)
+
+
+.. currentmodule:: eomaps.callbacks.click_callbacks
+
+.. autosummary::
+    :toctree: generated
+    :nosignatures:
+    :template: only_names_in_toc.rst
+
+    peek_layer
 
 
 
@@ -157,26 +212,6 @@ It is also possible to assign a **global transparency** when combining multiple 
 
     .. image:: _static/minigifs/rearrange_layers.gif
 
-
-
-.. code-block:: python
-
-    m = Maps(layer="first")
-    m.add_feature.preset.ocean(alpha=0.75, zorder=2)
-
-    m2 = m.new_layer("second")                # create a new layer and plot some data
-    m2.set_data(data=[.14,.25,.38],
-                x=[1,2,3], y=[3,5,7],
-                crs=4326)
-    m2.set_shape.ellipses(n=100)
-    m2.plot_map(zorder=1)                     # plot the data "below" the ocean
-
-    m.show_layer("first|second")  # show all features of the two layers
-
-    # you can even create Maps-objects representing combined layers!
-    # (the features will only be visible if all sub-layers are visible)
-    m_combined = m.new_layer("first|second")
-    m_combined.add_annotation(xy=(2, 5), xy_crs=4326, text="some text")
 
 .. currentmodule:: eomaps
 
