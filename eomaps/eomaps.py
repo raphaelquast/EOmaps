@@ -2455,18 +2455,74 @@ class Maps(object):
 
     def show_layer(self, name):
         """
-        Display the selected layer on the map.
+        Show a single layer or (transparently) overlay selected layers.
+
+        Parameters
+        ----------
+        name : str, list or tuple
+
+            - if str: The name of the layer to show
+            - if list: A list of layer-assignments of the following form:
+
+                - A layer-name (string)
+                - A tuple (layer-name, transparency)
+
+        Examples
+        --------
+        Show a **single layer** by providing the name of the layer as string:
+
+        >>> m.show_layer("A")
+
+        To show **multiple layers**, use one of the following options:
+
+        Provide the combined layer-name, e.g.:
+
+        >>> m.show_layer("A|B|C")
+
+        Provide a list of layer-names, e.g.:
+
+        >>> m.show_layer(["A", "B", "C"])
+
+        To **transparently overlay multiple layers**, use one of the following options:
+
+        Provide the combined layer-name, e.g.:
+
+        >>> m.show_layer("A|B{0.5}|C{0.25}")
+
+        Provide a list of layer-names and tuples, e.g.:
+
+        >>> m.show_layer(["A", ("B", 0.5), ("C", 0.25)])
 
         See Also
         --------
         - Maps.util.layer_selector
         - Maps.util.layer_slider
 
-        Parameters
-        ----------
-        name : str
-            The name of the layer to activate.
         """
+        if isinstance(name, (list, tuple)):
+            combnames = []
+            for i in name:
+                if isinstance(i, str):
+                    combnames.append(i)
+                elif isinstance(i, (list, tuple)):
+                    assert (
+                        len(i) == 2 and isinstance(i[0], str) and i[1] > 0 and i[1] < 1
+                    ), (
+                        f"EOmaps: unable to identify the layer-assignment: {i} .\n"
+                        "You can provide either a single layer-name as string, a list "
+                        "of layer-names or a list of tuples of the form: "
+                        "(< layer-name (str) >, < layer-transparency [0-1] > )"
+                    )
+                    combnames.append(i[0] + "{" + str(i[1]) + "}")
+                else:
+                    raise TypeError(
+                        f"EOmaps: unable to identify the layer-assignment: {i} .\n"
+                        "You can provide either a single layer-name as string, a list "
+                        "of layer-names or a list of tuples of the form: "
+                        "(< layer-name (str) >, < layer-transparency [0-1] > )"
+                    )
+            name = "|".join(combnames)
+
         layers = self._get_layers()
 
         if not isinstance(name, str):
