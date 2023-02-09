@@ -349,6 +349,7 @@ class DataManager:
 
     def redraw_required(self, layer):
         """
+        Check if a re-draw of the collection is required.
 
         Parameters
         ----------
@@ -359,22 +360,31 @@ class DataManager:
         if self.m.parent._layout_editor.modifier_pressed:
             return False
 
-        # check if the layer of the dataset is requested
+        # don't re-draw if the layer of the dataset is not requested
         if not (
             self.layer == "all"
             or set(self.layer.split("|")).issubset(set(layer.split("|")))
         ):
             return False
 
-        # check if the data has never been plotted
+        # don't re-draw if the collection has been hidden in the companion-widget
+        if self.m.coll in self.m.BM._hidden_artists:
+            return False
+
+        # re-draw if the data has never been plotted
         if self.m.coll is None:
             return True
 
-        # check if the current map-extent has changed
-        if not self.extent_changed:
-            return False
+        # re-draw if the collection has been removed from the axes (but the object
+        # still exists... e.g. for temporary artists)
+        if self.m.coll.axes is None:
+            return True
 
-        return True
+        # re-draw if the current map-extent has changed
+        if self.extent_changed:
+            return True
+
+        return False
 
     def _remove_existing_coll(self):
         if self.m.coll is not None:
@@ -390,10 +400,6 @@ class DataManager:
                 print(ex)
 
     def on_fetch_bg(self, layer=None, bbox=None):
-        if getattr(self.m, "coll", None) is not None:
-            if self.m.coll.get_visible() is False:
-                return
-
         # TODO support providing a bbox as extent?
         if layer is None:
             layer = self.layer
@@ -419,10 +425,6 @@ class DataManager:
             if props["x0"].size < 1 or props["y0"].size < 1:
                 # keep original data if too low amount of data is attempted
                 # to be plotted
-
-                # make the collection invisible to avoid plotting it again
-                self.m.coll.set_visible(False)
-                self.m.coll.set_animated(True)
                 return
 
             # remove previous collection from the map
