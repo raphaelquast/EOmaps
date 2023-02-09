@@ -1717,7 +1717,7 @@ class BlitManager:
 
     def _do_fetch_blank(self):
         # fetch a blank background
-        if self._refetch_blank is False or self._blank_bg is None:
+        if self._refetch_blank is False and self._blank_bg is not None:
             # don't re-fetch the background if it is not necessary
             return
         try:
