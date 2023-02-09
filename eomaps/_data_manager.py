@@ -394,7 +394,9 @@ class DataManager:
                 else:
                     self.m.BM.remove_bg_artist(self.m._coll)
 
-                self.m.coll.remove()
+                # if the collection is still attached to the axes, remove it
+                if self.m.coll.axes is not None:
+                    self.m.coll.remove()
                 self.m._coll = None
             except Exception as ex:
                 print(ex)
