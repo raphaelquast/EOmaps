@@ -2939,6 +2939,7 @@ class Maps(object):
             newfig = False
             if not hasattr(self.parent.f, "_EOmaps_parent"):
                 self.parent.f._EOmaps_parent = self.parent
+            self.parent._add_child(self)
 
         if isinstance(ax, plt.Axes):
             # check if the axis is already used by another maps-object
