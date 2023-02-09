@@ -164,8 +164,7 @@ If you want to overlay a part of the screen with a different layer, have a look 
 
     m.add_feature.preset.ocean(layer="ocean")
     m.add_feature.physical.land(layer="land", fc="g")
-    m.cb.click.attach.peek_layer(layer=["ocean", ("land", 0.5)],
-                                 shape="round", how=0.4)
+    m.cb.click.attach.peek_layer(layer=["ocean", ("land", 0.5)], shape="round", how=0.4)
 
 
 .. currentmodule:: eomaps.callbacks.click_callbacks
