@@ -2480,7 +2480,7 @@ class Maps(object):
             names = [name]
 
         for i in names:
-            if i in ["__BG__", "__BLANK__"]:
+            if i in ["__BG__"]:
                 continue
 
             if "{" in i and i.endswith("}"):
@@ -2899,11 +2899,10 @@ class Maps(object):
             print("EOmaps: All layer-names are converted to strings!")
             layer = str(layer)
 
-        if layer == "__BLANK__":
+        if layer == "__BG__":
             raise TypeError(
-                "Eomaps: The layer-name '__BLANK__' is reserved "
-                "for internal use and cannot be assigned to "
-                "a Maps object!"
+                "EOmaps: The layer-name '__BG__' is reserved for internal use and "
+                "cannot be assigned to a Maps object!"
             )
 
         reserved_symbs = {
@@ -3041,6 +3040,7 @@ class Maps(object):
         # (required for peeking layers after the canvas has been resized
         #  and for webagg and nbagg backends to correctly re-draw the layer)
         self.BM._refetch_bg = True
+        self.BM._refetch_blank = True
 
         # update the figure dimensions in case shading is used
         self._update_shade_axis_size()
@@ -4060,7 +4060,7 @@ class Maps(object):
         layers = layers.union({i for i in self.BM._bg_artists if "|" not in i})
 
         # exclude private layers
-        for l in ["__BG__", "__BLANK__"]:
+        for l in ["__BG__"]:
             if l in layers:
                 layers.remove(l)
 

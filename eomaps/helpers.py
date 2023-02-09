@@ -1372,6 +1372,23 @@ class BlitManager:
         self._before_fetch_bg_actions = list()
         self._before_update_actions = list()
 
+        self._refetch_blank = True
+        self._blank_bg = None
+
+        self._managed_axes = set()
+
+    def _get_unmanaged_axes(self):
+        # return a list of all axes that are not managed by the blit-manager
+        # (to ensure that "unmanaged" axes are drawn as well)
+
+        # EOmaps axes
+        maxes = {m.ax for m in (self._m.parent, *self._m.parent._children)}
+        allaxes = set(self._m.f.axes)
+
+        unmanaged_axes = allaxes.difference(maxes, self._managed_axes)
+
+        return unmanaged_axes
+
     @property
     def figure(self):
         return self._m.f
@@ -1573,7 +1590,6 @@ class BlitManager:
     def _combine_bgs(self, layer):
         initial_layer = self._bg_layer
 
-        # TODO decide on layer-ordering! (currently transposed)
         layers, alphas = [], []
         for l in layer.split("|"):
             if l.endswith("}") and "{" in l:
@@ -1598,12 +1614,13 @@ class BlitManager:
                 # (to make sure all lazy WMS services are properly added)
                 self._do_on_layer_change(layer=l)
                 self._do_fetch_bg(l)
+
         gc = self.canvas.renderer.new_gc()
         gc.set_clip_rectangle(self.canvas.figure.bbox)
 
         # switch to a blank background layer before merging backgrounds
         # TODO is there a beter way to avoid drawing on initial backgrounds?
-        self.canvas.restore_region(self._bg_layers["__BLANK__"])
+        self.canvas.restore_region(self._blank_bg)
 
         x0, y0, w, h = self.figure.bbox.bounds
         for l, a in zip(layers, alphas):
@@ -1637,93 +1654,84 @@ class BlitManager:
         if layer is None:
             layer = self.bg_layer
 
+        if "|" in layer:
+            if layer not in self._bg_layers:
+                self._combine_bgs(layer)
+            return
+
         # use contextmanagers to make sure the background patches are not stored
         # in the buffer regions!
         with ExitStack() as stack:
-            # get rid of the figure background patch
-            # (this is done by putting the patch on the __BG__ layer!)
-            # stack.enter_context(
-            #     self._m.f.patch._cm_set(facecolor="none", edgecolor="none")
-            # )
-
             # get rid of the axes background patch
+            # (the figure background patch is on the "__BG__" layer)
             for ax_i in self._m.f.axes:
                 stack.enter_context(
                     ax_i.patch._cm_set(facecolor="none", edgecolor="none")
                 )
+
+            stack.enter_context(self._make_layer_artists_visible(layer=layer))
 
             # execute actions before fetching new artists
             # (e.g. update data based on extent etc.)
             for action in self._before_fetch_bg_actions:
                 action(layer=layer, bbox=bbox)
 
-            if "|" in layer:
-                if layer not in self._bg_layers:
-                    self._combine_bgs(layer)
-                return
-
             # get all relevant artists to plot and remember zorders
             # self.get_bg_artists() already returns artists sorted by zorder!
             allartists = self.get_bg_artists(["all", layer])
-
-            # check if all artists are stale, and if so skip re-fetching the background
-            # (only if also the axis extent is the same!)
-            no_stale_artists = not any(art.stale for art in allartists)
+            # check if all artists are not stale
+            no_stale_artists = all(not art.stale for art in allartists)
 
             # don't re-fetch the background if it is not necessary
             if no_stale_artists and (self._bg_layers.get(layer, None) is not None):
                 return
 
+            self.canvas.restore_region(self._blank_bg)
+
             if not self._m.parent._layout_editor._modifier_pressed:
-
-                # make all artists of the corresponding layer visible
-                for l in self._bg_artists:
-                    if l not in [layer, "all"]:
-                        # artists on "all" are always visible!
-                        # make all artists of other layers invisible
-                        for art in self._bg_artists.get(l, []):
-                            art.set_visible(False)
-
                 for art in allartists:
                     if art not in self._hidden_artists:
-                        art.set_visible(True)
-                        # art.draw(cv.get_renderer())
-
-                cv._force_full = True
-                cv.draw()
+                        art.draw(cv.get_renderer())
 
                 self._bg_layers[layer] = cv.copy_from_bbox(bbox)
 
+    @contextmanager
+    def _make_layer_artists_visible(self, layer):
+        try:
+            for l, artists in self._bg_artists.items():
+                if l not in [layer, "all"]:
+                    # artists on "all" are always visible!
+                    # make all artists of other layers invisible
+                    for a in artists:
+                        a.set_visible(False)
+                else:
+                    for a in artists:
+                        a.set_visible(True)
+            yield
+
+        finally:
+            # hide all artists (to avoid triggering re-draws of webmaps etc.)
+            for a in chain(*self._m.BM._bg_artists.values()):
+                a.set_visible(False)
+            pass
+
     def _do_fetch_blank(self):
         # fetch a blank background
-
-        if self._bg_layers.get("__BLANK__", None) is not None:
+        if self._refetch_blank is False or self._blank_bg is None:
             # don't re-fetch the background if it is not necessary
             return
-
-        with ExitStack() as stack:
-            # use contextmanagers to make sure the background patches are not stored
-            # in the buffer regions!
-            for ax_i in self._m.f.axes:
-                stack.enter_context(
-                    ax_i.patch._cm_set(facecolor="none", edgecolor="none")
-                )
-
-            for l in self._bg_artists:
-                # make all artists of layers invisible
-                for art in self._bg_artists.get(l, []):
-                    art.set_visible(False)
-
+        try:
+            self._m.f.set_visible(False)
             self.canvas._force_full = True
             self.canvas.draw()
-
-            self._bg_layers["__BLANK__"] = self.canvas.copy_from_bbox(self.figure.bbox)
+            self._blank_bg = self.canvas.copy_from_bbox(self.figure.bbox)
+            self._refetch_blank = False
+        finally:
+            self._m.f.set_visible(True)
 
     def fetch_bg(self, layer=None, bbox=None):
         if self._m.parent._layout_editor._modifier_pressed:
             return
-
-        cv = self.canvas
 
         if layer is None:
             layer = self.bg_layer
@@ -1733,24 +1741,26 @@ class BlitManager:
             # (layers get cleared automatically if limits)
             return
 
-        # temporarily disconnect draw-event callback to avoid recursion
-        # while we re-draw the artists
-        if self.cid is not None:
-            cv.mpl_disconnect(self.cid)
-            self.cid = None
-
-        # use contextmanagers to make sure the background patches are not stored
-        # in the buffer regions!
-        try:
+        with self._disconnect_draw():
             self._do_fetch_blank()
             self._do_fetch_bg(layer, bbox)
+
+    @contextmanager
+    def _disconnect_draw(self):
+        try:
+            # temporarily disconnect draw-event callback to avoid recursion
+            if self.cid is not None:
+                self.canvas.mpl_disconnect(self.cid)
+                self.cid = None
+            yield
         finally:
             # reconnect draw event
             if self.cid is None:
-                self.cid = cv.mpl_connect("draw_event", self.on_draw)
+                self.cid = self.canvas.mpl_connect("draw_event", self.on_draw)
 
     def on_draw(self, event):
         """Callback to register with 'draw_event'."""
+
         cv = self.canvas
         if event is not None:
             if event.canvas != cv:
@@ -1825,6 +1835,9 @@ class BlitManager:
             art.set_animated(True)
             self._artists[layer].add(art)
 
+            if isinstance(art, plt.Axes):
+                self._managed_axes.add(art)
+
     def add_bg_artist(self, art, layer=None):
         """
         Add a background-artist to be managed.
@@ -1858,7 +1871,11 @@ class BlitManager:
             print(f"EOmaps: Background-artist '{art}' already added")
             return
 
+        art.set_animated(True)
         self._bg_artists.setdefault(layer, []).append(art)
+
+        if isinstance(art, plt.Axes):
+            self._managed_axes.add(art)
 
         # tag all relevant layers for refetch
         self._refetch_layer(layer)
@@ -1874,6 +1891,11 @@ class BlitManager:
                 if art in val:
                     art.set_animated(False)
                     val.remove(art)
+
+                    # remove axes from the managed_axes set as well!
+                    if art in self._managed_axes:
+                        self._managed_axes.remove(art)
+
                     removed = True
                     layers.append(key)
                 layer = "|".join(layers)
@@ -1883,6 +1905,11 @@ class BlitManager:
             if art in self._bg_artists[layer]:
                 art.set_animated(False)
                 self._bg_artists[layer].remove(art)
+
+                # remove axes from the managed_axes set as well!
+                if art in self._managed_axes:
+                    self._managed_axes.remove(art)
+
                 removed = True
 
         if removed:
@@ -1901,10 +1928,19 @@ class BlitManager:
                 if art in layerartists:
                     art.set_animated(False)
                     layerartists.remove(art)
+
+                    # remove axes from the managed_axes set as well!
+                    if art in self._managed_axes:
+                        self._managed_axes.remove(art)
+
         else:
             if art in self._artists[layer]:
                 art.set_animated(False)
                 self._artists[layer].remove(art)
+
+                # remove axes from the managed_axes set as well!
+                if art in self._managed_axes:
+                    self._managed_axes.remove(art)
 
     def _get_artist_zorder(self, a):
         try:
@@ -1940,6 +1976,14 @@ class BlitManager:
         # draw geo-spines of axes
         for a in self._spines:
             fig.draw_artist(a)
+
+        # draw all "unmanaged" axes (e.g. axes that are found in the figure but
+        # not in the blit-manager)
+        # TODO would be nice to find a better way to handle this!
+        # - NOTE: this must be done before drawing managed artists to properly support
+        #   temporary artists on unmanaged axes!
+        for ax in self._get_unmanaged_axes():
+            ax.draw(self.canvas.renderer)
 
         # redraw artists from the selected layers and explicitly provided artists
         # (sorted by zorder)
@@ -2048,7 +2092,6 @@ class BlitManager:
                 action()
 
             self._draw_animated(layers=layers, artists=artists)
-
             if blit:
                 # workaround for nbagg backend to avoid glitches
                 # it's slow but at least it works...
