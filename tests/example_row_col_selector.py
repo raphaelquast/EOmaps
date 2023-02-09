@@ -38,6 +38,7 @@ m2.set_shape.ellipses(m.shape.radius)
 m3 = m.new_layer()
 m3.set_shape.ellipses(m.shape.radius)
 
+
 # define a custom callback to indicate the clicked row/column
 def cb(m, ind, ID, *args, **kwargs):
     # get row and column from the data
@@ -77,7 +78,8 @@ def cb(m, ind, ID, *args, **kwargs):
     )
 
     # make all artists temporary (e.g. remove them on next pick)
-    for a in [art0, art01, art1, art11]:
+    # "m2.coll" represents the collection created by "m2.plot_map()"
+    for a in [art0, art01, art1, art11, m2.coll, m3.coll]:
         m.cb.pick.add_temporary_artist(a)
 
 
