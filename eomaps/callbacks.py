@@ -7,7 +7,7 @@ import warnings
 
 class _click_callbacks(object):
     """
-    a collection of callback-functions
+    A collection of callback-functions.
 
     to attach a callback, use:
         >>> cid = m.cb.click.attach.annotate(**kwargs)
@@ -151,8 +151,7 @@ class _click_callbacks(object):
         **kwargs,
     ):
         """
-        Add a basic text-annotation to the plot at the position where the map
-        was clicked.
+        Add a text-annotation to the plot at the position where the map was clicked.
 
         Parameters
         ----------
@@ -209,7 +208,6 @@ class _click_callbacks(object):
             >>>     )
 
         """
-
         if layer is None:
             layer = self.m.layer
 
@@ -373,9 +371,7 @@ class _click_callbacks(object):
             annotation.set_text(printstr)
 
     def clear_annotations(self, **kwargs):
-        """
-        Remove all temporary and permanent annotations from the plot
-        """
+        """Remove all temporary and permanent annotations from the plot."""
         if hasattr(self, "permanent_annotations"):
             while len(self.permanent_annotations) > 0:
                 ann = self.permanent_annotations.pop(0)
@@ -387,8 +383,9 @@ class _click_callbacks(object):
 
     def get_values(self, **kwargs):
         """
-        Successively collect return-values in a dict accessible via
-        `m.cb.[click/pick].get.picked_vals`.
+        Successively collect return-values in a dict.
+
+        The dict is accessible via `m.cb.[click/pick].get.picked_vals`
 
         The structure of the picked_vals dict is as follows:
         (lists are appended as you click on more pixels)
@@ -611,9 +608,7 @@ class _click_callbacks(object):
         return marker
 
     def clear_markers(self, **kwargs):
-        """
-        Remove all temporary and permanent annotations from the plot.
-        """
+        """Remove all temporary and permanent annotations from the plot."""
         if hasattr(self, "permanent_markers"):
             while len(self.permanent_markers) > 0:
                 marker = self.permanent_markers.pop(0)
@@ -715,6 +710,7 @@ class _click_callbacks(object):
         Examples
         --------
         Overlay a single layer:
+
         >>> m = Maps()
         >>> m.add_feature.preset.coastline()
         >>> m2 = m.new_layer(layer="ocean")
@@ -722,6 +718,7 @@ class _click_callbacks(object):
         >>> m.cb.click.attach.peek_layer(layer="ocean")
 
         Overlay a (transparent) combination of multiple layers:
+
         >>> m = Maps()
         >>> m.all.add_feature.preset.coastline()
         >>> m.add_feature.preset.urban_areas()
@@ -729,8 +726,8 @@ class _click_callbacks(object):
         >>> m.add_feature.physical.land(layer="land", fc="g")
         >>> m.cb.click.attach.peek_layer(layer=["ocean", ("land", 0.5)],
         >>>                              shape="round", how=0.4)
-        """
 
+        """
         shape = "ellipses" if shape == "round" else "rectangles"
 
         layer = self.m._get_combined_layer_name(layer)
@@ -1001,10 +998,7 @@ class _click_callbacks(object):
 
 
 class pick_callbacks(_click_callbacks):
-    """
-    A collection of callback functions that are executed when clicking on
-    a pixel of the plotted collection.
-    """
+    """A collection of callbacks that are executed if you click on a datapoint."""
 
     _cb_list = [
         "get_values",
@@ -1042,10 +1036,7 @@ class pick_callbacks(_click_callbacks):
 
 
 class click_callbacks(_click_callbacks):
-    """
-    A collection of callback functions that are executed when clicking anywhere
-    on the map.
-    """
+    """Collection of callbacks that are executed if you click anywhere on the map."""
 
     _cb_list = [
         "get_values",
@@ -1062,9 +1053,7 @@ class click_callbacks(_click_callbacks):
 
 
 class move_callbacks(_click_callbacks):
-    """
-    A collection of callback functions that are executed on mouse-movement.
-    """
+    """Collection of callbacks that are executed on mouse-movement."""
 
     _cb_list = [
         "print_to_console",
@@ -1078,10 +1067,7 @@ class move_callbacks(_click_callbacks):
 
 
 class keypress_callbacks:
-    """
-    A collection of callback functions that are executed when the assigned
-    key is pressed.
-    """
+    """Collection of callbacks that are executed if you press a key on the keyboard."""
 
     _cb_list = ["switch_layer", "fetch_layers"]
 
@@ -1108,8 +1094,8 @@ class keypress_callbacks:
             The key to use for triggering the callback.
             Modifiers are indicated with a "+", e.g. "alt+x".
             The default is "x".
-        """
 
+        """
         self._m.BM.bg_layer = str(layer)
         self._m.BM.fetch_bg()
 
@@ -1147,6 +1133,6 @@ class keypress_callbacks:
             The key to use for triggering the callback.
             Modifiers are indicated with a "+", e.g. "alt+x".
             The default is "x".
-        """
 
+        """
         self._m.fetch_layers(layers=layers, verbose=verbose)
