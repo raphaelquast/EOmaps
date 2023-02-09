@@ -667,16 +667,26 @@ class _click_callbacks(object):
         self, layer="1", how=(0.4, 0.4), alpha=1, shape="rectangular", **kwargs
     ):
         """
-        Swipe between data- or WebMap layers or peek a layers through a rectangle.
+        Overlay a part of the map with a different layer if you click on the map.
+
+        This callback allows you to overlay one (or more) existing layers on top
+        of the currently visible layer if you click on the map.
+
+        You can show a rectangular or circular area of the "peek-layer" centered at
+        the mouse-position or swipe beween layers (e.g. from left/right/top or bottom).
+
 
         Parameters
         ----------
         layer : str or list
 
             - if str: The name of the layer you want to peek at.
-            - if list: A list of layer-names to peek at.
-              (alternatively you can also separate individual layer-names with a "|"
-              character, e.g.: "layer1|layer2")
+            - if list: A list of layer-names of the following form:
+
+                - A layer-name (string)
+                - A tuple (< layer-name >, < transparency [0-1] >)
+
+            see `m.show_layer()` for more details on how to provide combined layer-names
 
         how : str , float or tuple, optional
             The method you want to visualize the second layer.
@@ -716,12 +726,7 @@ class _click_callbacks(object):
 
         shape = "ellipses" if shape == "round" else "rectangles"
 
-        if isinstance(layer, list):
-            layer = "|".join(map(str, layer))
-        else:
-            if not isinstance(layer, str):
-                print("EOmaps v5.0 Warning: All layer-names are converted to strings!")
-                layer = str(layer)
+        layer = self.m._get_combined_layer_name(layer)
 
         ID, pos, val, ind, picker_name, val_color = self._popargs(kwargs)
 

@@ -2453,6 +2453,35 @@ class Maps(object):
         self.cb.pick._init_cbs()
         self.cb._methods.add("pick")
 
+    def _get_combined_layer_name(self, name):
+        if isinstance(name, (list, tuple)):
+            combnames = []
+            for i in name:
+                if isinstance(i, str):
+                    combnames.append(i)
+                elif isinstance(i, (list, tuple)):
+                    assert (
+                        len(i) == 2 and isinstance(i[0], str) and i[1] > 0 and i[1] < 1
+                    ), (
+                        f"EOmaps: unable to identify the layer-assignment: {i} .\n"
+                        "You can provide either a single layer-name as string, a list "
+                        "of layer-names or a list of tuples of the form: "
+                        "(< layer-name (str) >, < layer-transparency [0-1] > )"
+                    )
+                    combnames.append(i[0] + "{" + str(i[1]) + "}")
+                else:
+                    raise TypeError(
+                        f"EOmaps: unable to identify the layer-assignment: {i} .\n"
+                        "You can provide either a single layer-name as string, a list "
+                        "of layer-names or a list of tuples of the form: "
+                        "(< layer-name (str) >, < layer-transparency [0-1] > )"
+                    )
+            return "|".join(combnames)
+        elif isinstance(name, str):
+            return name
+        else:
+            raise TypeError(f"EOmaps: Unable to combine the layer-name {name}")
+
     def show_layer(self, name):
         """
         Show a single layer or (transparently) overlay selected layers.
@@ -2499,29 +2528,7 @@ class Maps(object):
         - Maps.util.layer_slider
 
         """
-        if isinstance(name, (list, tuple)):
-            combnames = []
-            for i in name:
-                if isinstance(i, str):
-                    combnames.append(i)
-                elif isinstance(i, (list, tuple)):
-                    assert (
-                        len(i) == 2 and isinstance(i[0], str) and i[1] > 0 and i[1] < 1
-                    ), (
-                        f"EOmaps: unable to identify the layer-assignment: {i} .\n"
-                        "You can provide either a single layer-name as string, a list "
-                        "of layer-names or a list of tuples of the form: "
-                        "(< layer-name (str) >, < layer-transparency [0-1] > )"
-                    )
-                    combnames.append(i[0] + "{" + str(i[1]) + "}")
-                else:
-                    raise TypeError(
-                        f"EOmaps: unable to identify the layer-assignment: {i} .\n"
-                        "You can provide either a single layer-name as string, a list "
-                        "of layer-names or a list of tuples of the form: "
-                        "(< layer-name (str) >, < layer-transparency [0-1] > )"
-                    )
-            name = "|".join(combnames)
+        name = self._get_combined_layer_name(name)
 
         layers = self._get_layers()
 
@@ -2552,7 +2559,6 @@ class Maps(object):
 
         # invoke the bg_layer setter of the blit-manager
         self.BM.bg_layer = name
-        # self.BM.canvas.draw_idle()
         self.BM.update()
 
     def show(self):
