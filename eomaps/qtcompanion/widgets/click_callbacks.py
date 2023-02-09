@@ -424,9 +424,14 @@ class ClickCallbacks(QtWidgets.QFrame):
         if mcid is not None:
             m, cid = mcid
             if key.endswith("_pick"):
-                m.cb.pick.remove(cid)
+                # explicitly check if the callback is attached to avoid warnings if
+                # the figure is closed while a callback is still attached
+                # (this way cleanup might have already removed the callback)
+                if cid in m.cb.pick.get.attached_callbacks:
+                    m.cb.pick.remove(cid)
             else:
-                m.cb.click.remove(cid)
+                if cid in m.cb.click.get.attached_callbacks:
+                    m.cb.click.remove(cid)
         self.cids[key] = None
 
         self.m.BM.update()
