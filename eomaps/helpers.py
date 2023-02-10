@@ -483,10 +483,6 @@ class LayoutEditor:
 
         self.f.canvas.mpl_connect("key_press_event", self.cb_key_press)
 
-        self._artists_visible = dict()
-        self._ax_visible = dict()
-        self._ax_animated = dict()
-
         # the snap-to-grid interval (0 means no snapping)
         self._snap_id = 5
 
@@ -647,24 +643,14 @@ class LayoutEditor:
     def _color_unpicked(self, ax):
         for spine in ax.spines.values():
             spine.set_edgecolor("b")
-
-            if ax in self._ax_visible and self._ax_visible[ax]:
-                spine.set_linestyle("-")
-                spine.set_linewidth(1)
-            else:
-                spine.set_linestyle(":")
-                spine.set_linewidth(1)
+            spine.set_linestyle("-")
+            spine.set_linewidth(1)
 
     def _color_picked(self, ax):
         for spine in ax.spines.values():
             spine.set_edgecolor("r")
-
-            if ax in self._ax_visible and self._ax_visible[ax]:
-                spine.set_linestyle("-")
-                spine.set_linewidth(2)
-            else:
-                spine.set_linestyle(":")
-                spine.set_linewidth(1)
+            spine.set_linestyle("-")
+            spine.set_linewidth(2)
 
     def _color_axes(self):
         for ax in self.axes:
@@ -840,7 +826,6 @@ class LayoutEditor:
 
                 new_size = np.clip(start_size + event.step * 0.02, 0.0, 1.0)
                 cb.set_hist_size(new_size)
-                self._ax_visible[cb.ax_cb_plot] = cb.ax_cb_plot.get_visible()
             else:
                 resize_bbox = self._get_resize_bbox(cb._ax, event.step)
                 if resize_bbox is not None:
