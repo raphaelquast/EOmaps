@@ -3061,6 +3061,11 @@ class Maps(object):
         self.cb._init_cbs()
 
         if newax:  # only if a new axis has been created
+
+            # explicitly set initial limits to global to avoid issues if NE-features
+            # are added (and clipped) before actual limits are set
+            self.ax.set_global()
+
             # do this only on xlims and NOT on ylims to avoid recursion
             # (plot aspect ensures that y changes if x changes)
             self._cid_xlim = self.ax.callbacks.connect(
