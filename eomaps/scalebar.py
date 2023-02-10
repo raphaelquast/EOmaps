@@ -26,6 +26,7 @@ class ScaleBar:
         scale_props=None,
         patch_props=None,
         label_props=None,
+        layer=None,
     ):
         """
         Add a scalebar to the map.
@@ -127,8 +128,17 @@ class ScaleBar:
 
             The default is:
                 >>> dict(scale=1, offset=1, rotation=0, every=2)
+        layer : str, optional
+            The layer at which the scalebar should be visible.
+            If None, the layer of the Maps-object used to create the scalebar is used.
+            The default is None.
+
         """
         self._m = m
+
+        if layer is None:
+            layer = self._m.layer
+        self.layer = layer
 
         self._scale_props = dict(scale=None)
         self._label_props = dict()
@@ -628,7 +638,7 @@ class ScaleBar:
             )
 
             self._artists[f"text_{i}"].set_zorder(1)
-            self._m.BM.add_artist(self._artists[f"text_{i}"])
+            self._m.BM.add_artist(self._artists[f"text_{i}"], layer=self.layer)
 
     def _redraw_minitxt(self):
         # don't redraw if we haven't drawn anything yet
@@ -737,9 +747,9 @@ class ScaleBar:
         self._artists["scale"].set_zorder(1)
         self._artists["patch"].set_zorder(0)
 
-        self._m.BM.add_artist(self._artists["scale"])
+        self._m.BM.add_artist(self._artists["scale"], layer=self.layer)
         # self._m.BM.add_artist(self._artists["text"])
-        self._m.BM.add_artist(self._artists["patch"])
+        self._m.BM.add_artist(self._artists["patch"], layer=self.layer)
 
         self._m.BM.blit_artists(self._artists.values())
         # make sure to update the artists on zoom
@@ -1036,7 +1046,7 @@ class Compass:
         patch=None,
         txt="N",
         pickable=True,
-        layer="all",
+        layer=None,
         ignore_invalid_angles=False,
     ):
         """
@@ -1098,7 +1108,10 @@ class Compass:
             of the compass or remove it from the map.
 
         """
+        if layer is None:
+            layer = self._m.layer
         self.layer = layer
+
         self._ignore_invalid_angles = ignore_invalid_angles
         self._m.BM.update()
 
@@ -1360,7 +1373,9 @@ class Compass:
 
     @property
     def _layer_visible(self):
-        return self.layer in (*self._m.BM.bg_layer.split("|"), self._m.BM.bg_layer)
+        return self.layer == "all" or (
+            self.layer in (*self._m.BM.bg_layer.split("|"), self._m.BM.bg_layer)
+        )
 
     def _disconnect(self):
         """Disconnect the callbacks."""
