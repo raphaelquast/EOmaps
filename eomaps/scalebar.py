@@ -1278,6 +1278,9 @@ class Compass:
         return trans
 
     def _on_motion(self, evt):
+        if not self._layer_visible:
+            return
+
         if self._check_still_parented() and self._got_artist:
             x, y = evt.xdata, evt.ydata
 
@@ -1295,26 +1298,31 @@ class Compass:
                 x, y = self._m.ax.transData.inverted().transform((evt.x, evt.y))
 
             self._update_offset(x, y)
-            self._m.BM.blit_artists(artists=[self._artist], bg=self._bg)
 
     def _on_scroll(self, event):
+        if not self._layer_visible:
+            return
+
         if self._check_still_parented() and self._got_artist:
             self.set_scale(max(1, self._scale + event.step))
-            self._m.BM.blit_artists(artists=[self._artist], bg=self._bg)
+            self._m.BM.blit_artists(artists=[self._artist])
 
     def _on_pick(self, evt):
+        if not self._layer_visible:
+            return
+
         if evt.mouseevent.button != 1:
             return
 
-        # fetch the currently active background (to get a nice responsive motion)
         if self._check_still_parented() and evt.artist == self._artist:
-            self._bg = self._m.BM._get_active_bg(exclude_artists=[self._artist])
-
             self._got_artist = True
             self._c1 = self._canvas.mpl_connect("motion_notify_event", self._on_motion)
             self._c2 = self._canvas.mpl_connect("key_press_event", self._on_keypress)
 
     def _on_keypress(self, event):
+        if not self._layer_visible:
+            return
+
         if event.key == "delete":
             self.remove()
         if event.key == "d":
@@ -1322,6 +1330,9 @@ class Compass:
             self.set_pickable(False)
 
     def _on_release(self, event):
+        if not self._layer_visible:
+            return
+
         if self._check_still_parented() and self._got_artist:
             self._finalize_offset()
             self._got_artist = False
@@ -1346,6 +1357,10 @@ class Compass:
             return False
         else:
             return True
+
+    @property
+    def _layer_visible(self):
+        return self.layer in (*self._m.BM.bg_layer.split("|"), self._m.BM.bg_layer)
 
     def _disconnect(self):
         """Disconnect the callbacks."""
