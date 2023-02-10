@@ -1427,9 +1427,11 @@ class BlitManager:
 
             for cb in m._colorbars:
                 if layer_visible:
-                    m.colorbar.set_visible(True)
+                    if cb in self._hidden_artists:
+                        self._hidden_artists.remove(cb)
                 else:
-                    m.colorbar.set_visible(False)
+                    if cb not in self._hidden_artists:
+                        self._hidden_artists.add(cb)
 
         # hide all wms_legends that are not on the visible layer
         if hasattr(self._m.parent, "_wms_legend"):
