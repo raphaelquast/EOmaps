@@ -869,6 +869,19 @@ class TestBasicPlotting(unittest.TestCase):
         m2.add_feature.preset.coastline()
         plt.close("all")
 
+    def test_combine_layers(self):
+        m = Maps(4326)
+        m.data = self.data
+        m.set_data_specs(x="x", y="y", crs=3857)
+        m.plot_map()
+
+        m2 = m.new_layer("ocean")
+        m2.add_feature.preset.ocean()
+
+        m.add_feature.preset.land(layer="land")
+
+        m.show_layer("base", ("ocean", 0.9), ("land", 0.25))
+
     def test_a_complex_figure(self):
         # %%
         lon, lat = np.linspace(-180, 180, 500), np.linspace(-90, 90, 500)

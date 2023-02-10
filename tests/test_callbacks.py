@@ -526,21 +526,23 @@ class TestCallbacks(unittest.TestCase):
         m = self.create_basic_map()
 
         m2 = m.new_layer(copy_data_specs=True)
-        m2.plot_map(layer=2, cmap="Reds")
+        m2.plot_map(layer="2", cmap="Reds")
 
-        cid = m.cb.click.attach.peek_layer(layer=2)
+        m.add_feature.preset.ocean(layer="ocean")
+
+        cid = m.cb.click.attach.peek_layer(layer="2")
         self.click_ax_center(m)
         m.cb.click.remove(cid)
 
-        cid = m.cb.click.attach.peek_layer(layer=2, how="left")
+        cid = m.cb.click.attach.peek_layer(layer="2", how="left")
         self.click_ax_center(m)
         m.cb.click.remove(cid)
 
-        cid = m.cb.click.attach.peek_layer(layer=2, how="right")
+        cid = m.cb.click.attach.peek_layer(layer=["2", "ocean"], how="right")
         self.click_ax_center(m)
         m.cb.click.remove(cid)
 
-        cid = m.cb.click.attach.peek_layer(layer=2, how="top")
+        cid = m.cb.click.attach.peek_layer(layer=["2", ("ocean", 0.6)], how="top")
         self.click_ax_center(m)
         m.cb.click.remove(cid)
 
@@ -550,16 +552,16 @@ class TestCallbacks(unittest.TestCase):
         self.click_ax_center(m)
         m.cb.click.remove(cid)
 
-        cid = m.cb.click.attach.peek_layer(layer=2, how="full")
+        cid = m.cb.click.attach.peek_layer(layer="2", how="full")
         self.click_ax_center(m)
         m.cb.click.remove(cid)
 
-        cid = m.cb.click.attach.peek_layer(layer=2, how=(0.25))
+        cid = m.cb.click.attach.peek_layer(layer="2", how=(0.25))
         self.click_ax_center(m)
         m.cb.click.remove(cid)
 
         cid = m.cb.click.attach.peek_layer(
-            layer=2, how=(0.25, 0.25), hatch="/////", ec="g", lw=4
+            layer="2", how=(0.25, 0.25), hatch="/////", ec="g", lw=4
         )
         self.click_ax_center(m)
         m.cb.click.remove(cid)

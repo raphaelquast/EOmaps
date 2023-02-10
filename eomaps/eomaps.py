@@ -2397,11 +2397,12 @@ class Maps(object):
             ):
                 print("EOmaps: Warning: some datapoints could not be drawn!")
 
-        # update here to make sure the collection is properly added!
-        # self.BM.update()
-        # TODO add option to set margins
-        # self.ax.margins(0, 0, tight=False)
         self._data_plotted = True
+
+        # call draw after plotting a dataset to make sure axis sizes are properly
+        # adjusted (otherwise the startup size of axes might be incorrect if other
+        # features are added before draw is actually called.)
+        self.f.canvas.draw()
 
     def make_dataset_pickable(
         self,
@@ -2430,7 +2431,7 @@ class Maps(object):
         >>> ...
         >>> # a dataset that should be pickable but NOT visible...
         >>> m2 = m.new_layer()
-        >>> m2.set_data(*np.linspace([0, -180,-90,], [100, 180, 90], 100).T)
+            >>> m2.set_data(*np.linspace([0, -180,-90,], [100, 180, 90], 100).T)
         >>> m2.make_dataset_pickable()
         >>> m2.cb.pick.attach.annotate()  # get an annotation for the invisible dataset
         >>> # ...call m2.plot_map() to make the dataset visible...
@@ -2460,10 +2461,16 @@ class Maps(object):
         self.cb.pick._init_cbs()
         self.cb._methods.add("pick")
 
-    def _get_combined_layer_name(self, name):
-        if isinstance(name, (list, tuple)):
+    def _get_combined_layer_name(self, *args):
+        if len(args) == 1:
+            assert isinstance(
+                args[0], str
+            ), "EOmaps: Single arguments passed to 'show_layer()', must be strings!"
+            return args[0]
+
+        try:
             combnames = []
-            for i in name:
+            for i in args:
                 if isinstance(i, str):
                     combnames.append(i)
                 elif isinstance(i, (list, tuple)):
@@ -2484,24 +2491,20 @@ class Maps(object):
                         "(< layer-name (str) >, < layer-transparency [0-1] > )"
                     )
             return "|".join(combnames)
-        elif isinstance(name, str):
-            return name
-        else:
-            raise TypeError(f"EOmaps: Unable to combine the layer-name {name}")
+        except Exception:
+            raise TypeError(f"EOmaps: Unable to combine the layer-names {args}")
 
-    def show_layer(self, name):
+    def show_layer(self, *args):
         """
-        Show a single layer or (transparently) overlay selected layers.
+        Show a single layer or (transparently) overlay multiple selected layers.
 
         Parameters
         ----------
-        name : str, list or tuple
+        args : str, tuple
 
-            - if str: The name of the layer to show
-            - if list: A list of layer-assignments of the following form:
-
-                - A layer-name (string)
-                - A tuple (layer-name, transparency)
+            - if str: The name of the layer to show.
+            - if tuple: A combination of a layer-name and a transparency assignment
+              ( < layer name >, < transparency [0-1] > )
 
         Examples
         --------
@@ -2511,23 +2514,23 @@ class Maps(object):
 
         To show **multiple layers**, use one of the following options:
 
+        Provide multiple layer-names (stacking is done from left to right), e.g.:
+
+        >>> m.show_layer("A", "B", "C")
+
         Provide the combined layer-name, e.g.:
 
         >>> m.show_layer("A|B|C")
 
-        Provide a list of layer-names, e.g.:
-
-        >>> m.show_layer(["A", "B", "C"])
-
         To **transparently overlay multiple layers**, use one of the following options:
+
+        Provide tuples of layer-names and transparency-assignments, e.g.:
+
+        >>> m.show_layer("A", ("B", 0.5), ("C", 0.25))
 
         Provide the combined layer-name, e.g.:
 
         >>> m.show_layer("A|B{0.5}|C{0.25}")
-
-        Provide a list of layer-names and tuples, e.g.:
-
-        >>> m.show_layer(["A", ("B", 0.5), ("C", 0.25)])
 
         See Also
         --------
@@ -2535,7 +2538,7 @@ class Maps(object):
         - Maps.util.layer_slider
 
         """
-        name = self._get_combined_layer_name(name)
+        name = self._get_combined_layer_name(*args)
 
         layers = self._get_layers()
 

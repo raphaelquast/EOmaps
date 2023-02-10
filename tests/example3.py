@@ -64,6 +64,7 @@ m.add_logo(position="lr", pad=(-1.1, 0), size=0.1)
 
 m.apply_layout(
     {
+        "figsize": [9, 5],
         "0_map": [0.13798, 0.27054, 0.76154, 0.66818],
         "1_cb": [0.2325, 0.09, 0.6, 0.135],
         "1_cb_histogram_size": 1,

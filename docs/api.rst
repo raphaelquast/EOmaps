@@ -125,10 +125,10 @@ To switch between layers or view a layer that represents a **combination of mult
 
 To **(transparently) overlay multiple existing layers**, use one of the following options:
 
-- Provide a **list of layer names** or tuples of the form ``(< layer-name >, < transparency [0-1] >)``
+- Provide **multiple layer names or tuples** of the form ``(< layer-name >, < transparency [0-1] >)``
 
-  - ``m.show_layer(["A", "B"])`` will overlay all features of the layer ``B`` on top of the layer ``A``.
-  - ``m.show_layer(["A", ("B", 0.5)])`` will overlay the layer ``B`` with 50% transparency on top of the layer ``A``.
+  - ``m.show_layer("A", "B")`` will overlay all features of the layer ``B`` on top of the layer ``A``.
+  - ``m.show_layer("A", ("B", 0.5))`` will overlay the layer ``B`` with 50% transparency on top of the layer ``A``.
 
 - Provide a **combined layer name** by separating the individual layer names you want to show with a ``"|"`` character.
 
@@ -150,7 +150,7 @@ To **(transparently) overlay multiple existing layers**, use one of the followin
                 crs=4326)
     m2.plot_map(zorder=1)                     # plot the data "below" the ocean
 
-    m.show_layer(["first", ("second", .75)])   # overlay the second layer with 25% transparency
+    m.show_layer("first", ("second", .75))   # overlay the second layer with 25% transparency
 
 
 
@@ -186,8 +186,8 @@ If you want to overlay a part of the screen with a different layer, have a look 
 
     If you stack **multiple layers** on top of each other, the stacking is determined by the order of the layer-names (from right to left)
 
-      - e.g. ``m.show_layer("A|B")`` will show the layer ``"B"`` on top of the layer ``"A"``
-      - you can stack as many layers as you like! ``m.show_layer("A|B|C|D")``
+      - e.g. ``m.show_layer("A", "B")`` will show the layer ``"B"`` on top of the layer ``"A"``
+      - you can stack as many layers as you like! ``m.show_layer("A", "B", ("C", 0.5), "D", ...)``
 
 .. admonition:: Using the :ref:`companion_widget`
 

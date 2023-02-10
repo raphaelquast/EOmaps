@@ -730,7 +730,8 @@ class _click_callbacks(object):
         """
         shape = "ellipses" if shape == "round" else "rectangles"
 
-        layer = self.m._get_combined_layer_name(layer)
+        if not isinstance(layer, str):
+            layer = self.m._get_combined_layer_name(*layer)
 
         ID, pos, val, ind, picker_name, val_color = self._popargs(kwargs)
 
