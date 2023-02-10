@@ -15,7 +15,9 @@ import matplotlib.pyplot as plt
 from matplotlib.lines import Line2D
 from matplotlib.colors import LinearSegmentedColormap, ListedColormap
 from matplotlib.transforms import Bbox, TransformedBbox
-
+from matplotlib.axis import XAxis, YAxis
+from matplotlib.spines import Spine
+from matplotlib.text import Text
 
 # class copied from matplotlib.axes
 class _TransformedBoundsLocator:
@@ -862,6 +864,28 @@ class LayoutEditor:
         ):
             self._undo_draggable()
             return
+        elif (event.key.lower() == "q") and (self.modifier_pressed):
+            print(
+                "\n##########################\n\n"
+                "EOmaps Layout Editor controls:\n\n"
+                "Click on axes to select them for editing.\n"
+                "(Hold 'shift' while clicking on axes to select multiple axes.)\n\n"
+                "Drag selected axes with the mouse or use the 'arrow-keys' to "
+                "change their position.\n\n"
+                "Use the 'scroll-wheel' or the '+' and '-' keys to change the size "
+                "of selected axes.\n"
+                "For normal matplotlib axes: Hold down 'h' or 'v' to adjust only "
+                "the horizontal or vertical size of the axes.\n"
+                "For EOmaps colorbars: Hold down 'control' to adjust the relative "
+                "size of the histogram.\n\n"
+                "Use the keys 1-9 to adjust the spacing of the 'snap grid' (Note that "
+                "the grid-spacing also determines the step-size for size- and "
+                "position-changes!) Press 0 to disable grid-snapping.\n\n"
+                f"To exit, press 'escape' or '{self.modifier}'\n"
+                "\n##########################\n\n"
+            )
+            return
+
         else:
             if not self.modifier_pressed:
                 # only continue if  modifier is pressed!
@@ -913,8 +937,86 @@ class LayoutEditor:
 
         return snap
 
-    def _undo_draggable(self):
+    def _make_draggable(self, filepath=None):
+        self._filepath = filepath
+        self.modifier_pressed = True
+        print("EOmaps: Layout Editor activated! (press 'esc' to exit and 'q' for info)")
 
+        self._revert_props = []
+        for ax in self.f.axes:
+            # only handle axes that have a finite size (in pixels) to avoid
+            # singular matrix errors for initially hidden zero-size axes
+            # (can happen for colorbar/colorbar histogram axes)
+            singularax = False
+            if ax.bbox.width <= 1 or ax.bbox.height <= 1:
+                singularax = True
+
+            # check if the axis is the container-axes of a colorbar
+            cbaxQ = ax.get_label() == "cb"
+
+            self._revert_props.append((ax.set_visible, ax.get_visible()))
+            self._revert_props.append((ax.set_frame_on, ax.get_frame_on()))
+            self._revert_props.append((ax.set_animated, ax.get_animated()))
+
+            if not ax.axison:
+                showXY = False
+                self._revert_props.append(ax.set_axis_off)
+                ax.set_axis_on()
+            else:
+                showXY = True
+
+            # keep singular axes hidden
+            if not singularax:
+                ax.set_visible(True)
+
+            ax.set_animated(False)
+            ax.set_frame_on(True)
+
+            for child in ax.get_children():
+                for prop in [
+                    "facecolor",
+                    "edgecolor",
+                    "linewidth",
+                    "linestyle",
+                    "alpha",
+                    "animated",
+                    "visible",
+                ]:
+                    if hasattr(child, f"set_{prop}") and hasattr(child, f"get_{prop}"):
+                        self._revert_props.append(
+                            (
+                                getattr(child, f"set_{prop}"),
+                                getattr(child, f"get_{prop}")(),
+                            )
+                        )
+
+                if isinstance(child, Spine) and not cbaxQ:
+                    # make sure spines are visible (and re-drawn on draw)
+                    child.set_animated(False)
+                    child.set_visible(True)
+                elif (
+                    ax not in self.maxes
+                    and showXY
+                    and isinstance(child, (XAxis, YAxis))
+                ):
+                    # keep all tick labels etc. of normal axes and colorbars visible
+                    child.set_animated(False)
+                    child.set_visible(True)
+                elif child is ax.patch and not cbaxQ:
+                    # make sure patches are visible (and re-drawn on draw)
+                    child.set_visible(True)
+                    child.set_facecolor("w")
+                    child.set_alpha(0.75)  # for overlapping axes
+                else:
+                    # make all other childs invisible (to avoid drawing them)
+                    child.set_visible(False)
+                    child.set_animated(True)
+
+        self._color_axes()
+        self._attach_callbacks()
+        self.m.redraw()
+
+    def _undo_draggable(self):
         toolbar = getattr(self.m.f, "toolbar", None)
         if toolbar is not None:
             # Reset the axes stack to make sure the "home" "back" and "forward" buttons
@@ -932,6 +1034,8 @@ class LayoutEditor:
         self._m_picked = []
 
         print("EOmaps: Exiting layout-editor mode...")
+
+        # in case a filepath was provided, save the new layout
         if self._filepath:
             try:
                 self.m.get_layout(filepath=self._filepath, override=True)
@@ -941,187 +1045,52 @@ class LayoutEditor:
                     + f"filepath: '{self._filepath}'."
                 )
 
-        # reset the "animated" state of the axes
-        for ax, val in self._ax_animated.items():
-            ax.set_animated(val)
-
-        for ax, frameQ, spine_vis, patch_props, spine_props in zip(
-            self.axes,
-            self._frameon,
-            self._spines_visible,
-            self._patchprops,
-            self._spineprops,
-        ):
-            pvis, pfc, pec, plw, palpha = patch_props
-            ax.patch.set_visible(pvis)
-            ax.patch.set_fc(pfc)
-            ax.patch.set_ec(pec)
-            ax.patch.set_lw(plw)
-            ax.patch.set_alpha(palpha)
-
-            ax.set_frame_on(frameQ)
-
-            for key, (svis, sfc, sec, slw, salpha) in spine_props.items():
-                ax.spines[key].set_visible(svis)
-                ax.spines[key].set_fc(sfc)
-                ax.spines[key].set_ec(sec)
-                ax.spines[key].set_lw(slw)
-                ax.spines[key].set_alpha(salpha)
-
-            while len(self.cids) > 0:
-                cid = self.cids.pop(-1)
-                self.f.canvas.mpl_disconnect(cid)
-
-        for a, visQ in self._artists_visible.items():
-            a.set_visible(visQ)
-        self._artists_visible.clear()
-
-        # apply changes to the visibility state of the axes
-        # do this at the end since axes might also be artists!
-        for ax, val in self._ax_visible.items():
-            ax.set_visible(val)
-
-            # remember any axes that are intentionally hidden
-            if not val:
-                if ax in self.m.BM._bg_artists[self.m.BM.bg_layer]:
-                    self.m.BM._hidden_artists.add(ax)
+        self._reset_callbacks()
+        # revert all changes to artists
+        for p in self._revert_props:
+            if isinstance(p, tuple):
+                p[0](p[1])
             else:
-                if ax in self.m.BM._hidden_artists:
-                    self.m.BM._hidden_artists.remove(ax)
+                p()
 
-        for cb in self.cbs:
-            if cb is not None:
-                for p in cb.ax_cb_plot.patches:
-                    p.set_visible(True)
-
-        self._ax_visible.clear()
-        self._ax_animated.clear()
-
-        # do this at the end!
         self.modifier_pressed = False
 
-        # make sure the snap-grid is removed
-        self._remove_snap_grid()
-
-        for s in self.m.BM._spines:
-            s.set_animated(True)
-
-        self.m.redraw()
-
-    def _make_draggable(self, filepath=None):
-        self._filepath = filepath
-
-        # all ordinary callbacks will not execute if" self.modifier_pressed" is True!
-        print("EOmaps: Activating layout-editor mode (press 'esc' to exit)")
-        if filepath:
-            print("EOmaps: On exit, the layout will be saved to:\n       ", filepath)
-
-        # remember the visibility state of the axes
-        # do this as the first thing since axes might be artists as well!
-        for ax in self.axes:
-            self._ax_visible[ax] = ax.get_visible()
-            self._ax_animated[ax] = ax.get_animated()
-            # treat all axes as "non-animated"
-            # TODO implement a better treatment for this
-            # (e.g. just blit them on draw)!
-            ax.set_animated(False)
-
-        # make all artists invisible (and remember their visibility state for later)
-        for a in {
-            *self.m.f.artists,
-            *chain(*self.m.BM._bg_artists.values()),
-            *chain(*self.m.BM._artists.values()),
-        }:
-            # keep axes visible!
-            if not isinstance(a, plt.Axes):
-                self._artists_visible[a] = a.get_visible()
-                a.set_visible(False)
-
-        for cb in self.cbs:
-            if cb is not None:
-                for p in cb.ax_cb_plot.patches:
-                    p.set_visible(False)
-
-        # remember which spines were visible before
-        self._spines_visible = self.get_spines_visible()
-        self._frameon = [i.get_frame_on() for i in self.axes]
-        self._patchprops = [
-            (
-                i.patch.get_visible(),
-                i.patch.get_fc(),
-                i.patch.get_ec(),
-                i.patch.get_lw(),
-                i.patch.get_alpha(),
-            )
-            for i in self.axes
-        ]
-
-        self._spineprops = [
-            {
-                name: (
-                    s.get_visible(),
-                    s.get_fc(),
-                    s.get_ec(),
-                    s.get_lw(),
-                    s.get_alpha(),
-                )
-                for name, s in i.spines.items()
-            }
-            for i in self.axes
-        ]
-
-        self.modifier_pressed = True
-
-        for ax in self.axes:
-            ax.patch.set_visible(True)
-            ax.patch.set_facecolor("w")
-            ax.patch.set_alpha(0.75)
-
-            if ax not in chain(
-                self.m.BM._bg_artists.get(self.m.BM.bg_layer, []),
-                self.m.BM._artists.get(self.m.BM.bg_layer, []),
-            ):
-                continue
-            ax.set_visible(True)
-
-            ax.set_frame_on(True)
-            for spine in ax.spines.values():
-                spine.set_visible(True)
-
-        self._color_axes()
-
-        if len(self.cids) == 0:
-            self.cids.append(self.f.canvas.mpl_connect("scroll_event", self.cb_scroll))
-            self.cids.append(
-                self.f.canvas.mpl_connect("button_press_event", self.cb_pick)
-            )
-
-            self.cids.append(
-                self.f.canvas.mpl_connect("button_release_event", self.cb_release)
-            )
-
-            self.cids.append(
-                self.f.canvas.mpl_connect("motion_notify_event", self.cb_move)
-            )
-
-            self.cids.append(
-                self.f.canvas.mpl_connect("key_press_event", self.cb_move_with_key)
-            )
-
-            self.cids.append(
-                self.f.canvas.mpl_connect("key_release_event", self.cb_key_release)
-            )
-
-        for s in self.m.BM._spines:
-            s.set_animated(False)
+        # reset the histogram-size of all colorbars to make sure previously hidden
+        # axes (e.g. size=0) become visible if the size is now > 0.
+        for m in self.ms:
+            for cb in m._colorbars:
+                cb.set_hist_size()
 
         self.m.redraw()
+
+    def _reset_callbacks(self):
+        # disconnect all callbacks of the layout-editor
+        while len(self.cids) > 0:
+            cid = self.cids.pop(-1)
+            self.f.canvas.mpl_disconnect(cid)
+
+    def _attach_callbacks(self):
+        # make sure all previously set callbacks are reset
+        self._reset_callbacks()
+
+        events = (
+            ("scroll_event", self.cb_scroll),
+            ("button_press_event", self.cb_pick),
+            ("button_release_event", self.cb_release),
+            ("motion_notify_event", self.cb_move),
+            ("key_press_event", self.cb_move_with_key),
+            ("key_release_event", self.cb_key_release),
+        )
+
+        for event, cb in events:
+            self.cids.append(self.f.canvas.mpl_connect(event, cb))
 
     def _show_snap_grid(self, snap=None):
         # snap = (snapx, snapy)
 
         if snap is None:
             if self._snap_id == 0:
+                self._remove_snap_grid()
                 return
             else:
                 snapx, snapy = self._snap
