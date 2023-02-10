@@ -727,7 +727,7 @@ To position the map in a (virtual) grid, one of the following options are possib
   - The map will take the ``index`` position on a grid with ``nrows`` rows and ``ncols`` columns.
   - ``index`` starts at 1 in the upper left corner and increases to the right.
   - ``index`` can also be a two-tuple specifying the (first, last)
-    indices (1-based, and including last) of the map, e.g., Maps(ax=(3, 1, (1, 2))) makes a map that spans the upper 2/3 of the figure.
+    indices (1-based, and including last) of the map, e.g., ``Maps(ax=(3, 1, (1, 2)))`` makes a map that spans the upper 2/3 of the figure.
 
 .. table::
 
@@ -776,7 +776,7 @@ To position the map in a (virtual) grid, one of the following options are possib
 
 - A 3-digit integer.
 
-  - The digits are interpreted as if given separately as three single-digit integers, i.e. Maps(ax=235) is the same as Maps(ax=(2, 3, 5)).
+  - The digits are interpreted as if given separately as three single-digit integers, i.e. ``Maps(ax=235)`` is the same as ``Maps(ax=(2, 3, 5))``.
   - Note that this can only be used if there are no more than 9 subplots.
 
 .. table::
@@ -829,8 +829,14 @@ Absolute positioning
 To set the absolute position of the map, provide a list of 4 floats representing ``(left, bottom, width, height)``.
 
   - The absolute position of the map expressed in relative figure coordinates (e.g. ranging from 0 to 1)
-  - NOTE: Since the effective size of the Map is dependent on the current zoom-region, the position always
+
+.. note::
+
+    Since the effective size of the Map is dependent on the current zoom-region, the position always
     represents the **maximal area** that can be occupied by the map!
+
+    Also, using ``m.f.tight_layout()`` will not work with axes added in this way.
+
 
 .. table::
 
