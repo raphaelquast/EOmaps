@@ -606,10 +606,13 @@ class TestBasicPlotting(unittest.TestCase):
 
         m.redraw()
 
-        self.assertTrue(all(cb.ax_cb.get_visible() for cb in m._colorbars))
-        self.assertFalse(m2.colorbar.ax_cb.get_visible())
         m.show_layer("asdf")
-        self.assertTrue(m2.colorbar.ax_cb.get_visible())
+        self.assertTrue(len(m.BM._hidden_artists) == 4)
+        for cb in m._colorbars:
+            self.assertTrue(cb in m.BM._hidden_artists)
+        m.show_layer("base")
+        for cb in m2._colorbars:
+            self.assertTrue(cb in m.BM._hidden_artists)
 
         self.assertTrue(len(m2._colorbars) == 1)
         self.assertTrue(all(not cb.ax_cb.get_visible() for cb in m._colorbars))
