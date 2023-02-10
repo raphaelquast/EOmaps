@@ -375,13 +375,14 @@ class ColorBar:
         if self.ax_cb_plot.bbox.width > 1 and self.ax_cb_plot.bbox.height > 1:
             self.ax_cb_plot.set_visible(True)
         else:
-            self.ax_cb_plot.set_visible(False)
+            self.ax_cb_plot.set_visible(False)  # to avoid singular matrix errors
 
         if self.ax_cb.bbox.width > 1 and self.ax_cb.bbox.height > 1:
             self.ax_cb.set_visible(True)
             [i.set_visible(True) for i in self.ax_cb.patches]
             [i.set_visible(True) for i in self.ax_cb.collections]
         else:
+            self.ax_cb.set_visible(False)  # to avoid singular matrix errors
             [i.set_visible(False) for i in self.ax_cb.patches]
             [i.set_visible(False) for i in self.ax_cb.collections]
 
@@ -769,7 +770,7 @@ class ColorBar:
         horizontal = self._orientation == "horizontal"
         n_cmap = plt.cm.ScalarMappable(cmap=self._cmap, norm=self._norm)
 
-        if self._hist_size <= 0:
+        if self._hist_size <= 0.0001:
             return
 
         # plot the histogram
