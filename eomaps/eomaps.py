@@ -2150,7 +2150,9 @@ class Maps(object):
                 p = dict(rect=[pos.x0 + pwx, pos.y1 - s - pwy, s, s], anchor="NW")
             return p
 
-        figax = self.f.add_axes(**getpos(self.ax.get_position()), label="logo")
+        figax = self.f.add_axes(
+            **getpos(self.ax.get_position()), label="logo", zorder=999
+        )
         figax.set_navigate(False)
         figax.set_axis_off()
         _ = figax.imshow(im, aspect="equal", zorder=999)
