@@ -1041,6 +1041,7 @@ class Compass:
     def __call__(
         self,
         pos=None,
+        pos_transform="axes",
         scale=10,
         style="compass",
         patch=None,
@@ -1066,9 +1067,17 @@ class Compass:
         Parameters
         ----------
         pos : tuple or None, optional
-            The relative position of the compass with respect to the axis.
-            (0,0) - lower left corner, (1,1) - upper right corner
+            The initial position of the compass with respect to the transformation
+            defined as "pos_transform".
             Note that you can also move the compass with the mouse!
+        pos_transform : string, optional
+            Indicator in what coordinate-system the initial position is provided.
+
+            - "axes": relative axis-coordinates in the range (0-1)
+            - "lonlat": coordinates provided as (longitude, latitude)
+            - "plot_crs": coordinates provided in the crs used for plotting.
+
+            The default is "axes".
         scale : float, optional
             A scale-factor for the size of the compass. The default is 10.
         style : str, optional
@@ -1120,7 +1129,17 @@ class Compass:
         if pos is None:
             pos = ax2data.transform((0.5, 0.5))
         else:
-            pos = ax2data.transform(pos)
+            if pos_transform == "axes":
+                pos = ax2data.transform(pos)
+            elif pos_transform == "lonlat":
+                pos = self._m._transf_lonlat_to_plot.transform(*pos)
+            elif pos_transform == "plot_crs":
+                pass
+            else:
+                raise TypeError(
+                    f"EOmaps: {pos_transform} is not a valid 'pos_transform'."
+                    "Use one of ('axes', 'lonlat', 'plot_crs')"
+                )
 
         self._style = style
         self._patch = patch
