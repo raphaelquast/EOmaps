@@ -737,12 +737,11 @@ class TestCallbacks(unittest.TestCase):
 
     def test_geodataframe_contains_picking(self):
         m = Maps()
-        m.show()  # do this to make sure transforms are correctly set
         gdf = m.add_feature.cultural.admin_0_countries.get_gdf(scale=110)
 
         m.add_gdf(gdf, column="NAME", picker_name="col", pick_method="contains")
 
-        m.add_gdf(gdf, picker_name="nocol", pick_method="contains")
+        m.add_gdf(gdf, picker_name="nocol", pick_method="contains", fc="none")
 
         def customcb(picked_vals, val, **kwargs):
             picked_vals.append(val)
@@ -757,6 +756,7 @@ class TestCallbacks(unittest.TestCase):
         m.cb.pick["nocol"].attach.annotate()
         m.cb.pick["nocol"].attach(customcb, picked_vals=picked_vals_nocol)
         m.cb.pick__nocol.attach.highlight_geometry(fc="r", ec="g")
+        m.redraw()  # do this to make sure transforms are correctly set
 
         # evaluate pick position AFTER plotting geodataframes since the plot
         # extent might have changed!
@@ -773,7 +773,6 @@ class TestCallbacks(unittest.TestCase):
 
     def test_geodataframe_centroid_picking(self):
         m = Maps()
-        m.redraw()  # do this to make sure transforms are correctly set
         gdf = m.add_feature.cultural.populated_places.get_gdf(scale=110)
 
         m.add_gdf(gdf, column="NAME", picker_name="col", pick_method="centroids")
@@ -800,6 +799,7 @@ class TestCallbacks(unittest.TestCase):
         m.cb.pick["nocol"].attach.annotate(xytext=(20, -20))
         m.cb.pick["nocol"].attach(customcb, picked_vals=picked_vals_nocol)
         m.cb.pick__nocol.attach.highlight_geometry(fc="r", ec="g")
+        m.redraw()  # do this to make sure transforms are correctly set
 
         # evaluate pick position AFTER plotting geodataframes since the plot
         # extent might have changed!
