@@ -2752,13 +2752,13 @@ with ``shade_raster`` (if it fails it will fallback to ``shade_points`` and fina
 .. note::
 
     At the moment, the readers are intended as a "shortcut" to read well-structured datasets!
-    If they fail, simply read the data manually and then set the data as usual via ``m.set_data(...)``.
+    If they fail, read the data manually and then set the data as usual via ``m.set_data(...)``.
 
     Under the hood, EOmaps uses the following libraries to read data:
 
-    - GeoTIFF (``rioxarray`` + ``xarray.open_dataset``)
-    - NetCDF (``xarray.open_dataset``)
-    - CSV (``pandas.read_csv``)
+    - GeoTIFF (``rioxarray`` + ``xarray.open_dataset()``)
+    - NetCDF (``xarray.open_dataset()``)
+    - CSV (``pandas.read_csv()``)
 
 
 Read relevant data from a file
