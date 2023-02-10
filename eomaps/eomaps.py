@@ -1827,6 +1827,7 @@ class Maps(object):
         scale_props=None,
         patch_props=None,
         label_props=None,
+        layer=None,
     ):
         """Add a scalebar to the map."""
         s = ScaleBar(
@@ -1838,6 +1839,7 @@ class Maps(object):
             scale_props=scale_props,
             patch_props=patch_props,
             label_props=label_props,
+            layer=layer,
         )
 
         if lon is None or lat is None:
@@ -4471,17 +4473,23 @@ class _InsetMaps(Maps):
         # https://github.com/matplotlib/matplotlib/pull/22347
         self.ax.set_navigate(False)
 
-        # set style of the inset-boundary
+        # set style of the inset-boundary spines
         if boundary is not False:
-            self.ax.spines["geo"].set_edgecolor(boundary_kwargs["ec"])
-            self.ax.spines["geo"].set_lw(boundary_kwargs["lw"])
+            spine = self.ax.spines["geo"]
+            spine.set_edgecolor(boundary_kwargs["ec"])
+            spine.set_lw(boundary_kwargs["lw"])
+
+            # explicitly add the spine as artist on the relevant layer
+            if spine in parent.BM._spines:
+                parent.BM._spines.remove(spine)
+            parent.BM.add_artist(spine, layer=layer)
 
         self._inset_props = dict(
             xy=xy, xy_crs=xy_crs, radius=radius, radius_crs=radius_crs, shape=shape
         )
 
         if indicate_extent is not False:
-            self.indicate_inset_extent(parent, **extent_kwargs)
+            self.indicate_inset_extent(parent, layer=layer, **extent_kwargs)
 
     def _get_ax_label(self):
         return "inset_map"
