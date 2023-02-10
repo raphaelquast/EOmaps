@@ -64,6 +64,7 @@ class TestDraw(unittest.TestCase):
     def test_basic_drawing_capabilities(self):
         m = Maps()
         m.add_feature.preset.coastline()
+        m.redraw()
         m.draw.rectangle(fc="none", ec="r")
         self.click_ax_center(m)
         self.click_ax_center(m, dx=20, dy=20, button=2)
