@@ -191,7 +191,7 @@ class TestCallbacks(unittest.TestCase):
                 cid = m.cb.pick.attach.get_values()
                 m.cb.pick.attach.print_to_console()
                 m.cb.click.attach.mark(radius=0.1)
-                m.show()
+                m.redraw()
                 self.click_ID(m, ID)
 
                 if n == 1:
