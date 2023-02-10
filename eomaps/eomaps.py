@@ -350,10 +350,10 @@ class Maps(object):
 
         self._ax = None
         self._parent = None
-
         self._BM = None
         self._util = None
         self._children = set()  # weakref.WeakSet()
+        self._after_add_child = list()
 
         self._colorbars = []
         self._coll = None  # slot for the collection created by m.plot_map()
@@ -451,8 +451,6 @@ class Maps(object):
         self._data_manager = DataManager(self._proxy(self))
         self._data_plotted = False
         self._set_extent_on_plot = True
-
-        self._after_add_child = list()
 
         # Make sure the figure-background patch is on an explicit layer
         # This is used to avoid having the background patch on each fetched
