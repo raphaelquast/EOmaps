@@ -2183,7 +2183,9 @@ class BlitManager:
             a = artists.pop()
             try:
                 self.remove_bg_artist(a, layer)
-                a.remove()
+                # no need to remove spines (to avoid NotImplementedErrors)!
+                if not isinstance(a, Spine):
+                    a.remove()
             except Exception:
                 print(f"EOmaps-cleanup: Problem while clearing bg artist:\n {a}")
 
@@ -2198,7 +2200,9 @@ class BlitManager:
             a = artists.pop()
             try:
                 self.remove_artist(a)
-                a.remove()
+                # no need to remove spines (to avoid NotImplementedErrors)!
+                if not isinstance(a, Spine):
+                    a.remove()
             except Exception:
                 print(f"EOmaps-cleanup: Problem while clearing dynamic artist:\n {a}")
 
