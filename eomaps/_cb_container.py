@@ -1600,7 +1600,7 @@ class keypress_container(_cb_container):
                             if name in cbs:
                                 cbs[name](key=event.key)
 
-                # self._m.parent.BM.update(clear=self._method)
+                self._m.parent.BM.update(clear=self._method)
             except ReferenceError:
                 pass
 
