@@ -710,7 +710,7 @@ class Maps(object):
         plot_position=(0.5, 0.5),
         plot_size=0.5,
         inset_crs=4326,
-        layer="all",
+        layer=None,
         boundary=True,
         shape="ellipses",
         indicate_extent=True,
@@ -766,15 +766,10 @@ class Maps(object):
         inset_crs : any, optional
             The crs that is used in the inset-map.
             The default is 4326.
-        layer : str, optional
+        layer : str or None, optional
             The layer associated with the inset-map.
-            Note: If you specify a dedicated layer for the inset-map, the contents
-            of the inset-map will only be visible on that specific layer!
-            To create different views of an inset-map for different layers,
-            simply create a child-layer from the inset-map (see examples below).
-            By default the "all" layer is used so that the contents of the inset-map
-            are visible independent of the currently visible layer.
-            The default is "all".
+            If None (the default), the layer of the Maps-object used to create
+            the inset-map is used.
         boundary: bool or dict, optional
             - If True: indicate the boundary of the inset-map with default colors
               (e.g.: {"ec":"r", "lw":2})
@@ -4411,7 +4406,7 @@ class _InsetMaps(Maps):
         self,
         parent,
         crs=4326,
-        layer="all",
+        layer=None,
         xy=(45, 45),
         xy_crs=4326,
         radius=5,
@@ -4423,6 +4418,11 @@ class _InsetMaps(Maps):
         boundary=True,
         **kwargs,
     ):
+
+        # inherit the layer from the parent Maps-object if not explicitly
+        # provided
+        if layer is None:
+            layer = parent.layer
 
         possible_shapes = ["ellipses", "rectangles", "geod_circles"]
         assert (
