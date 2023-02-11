@@ -2621,6 +2621,16 @@ class Maps(object):
 
         display(Image.fromarray(sn, "RGBA"), display_id=True, clear=clear)
 
+    @wraps(plt.Figure.text)
+    def text(self, *args, **kwargs):
+
+        kwargs.setdefault("animated", True)
+
+        a = self.f.text(*args, **kwargs)
+        self.BM.add_artist(a)
+
+        return a
+
     @_add_to_docstring(
         insert={
             "Other Parameters": (
