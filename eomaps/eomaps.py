@@ -2655,6 +2655,9 @@ class Maps(object):
                 if _cx_refetch_wms_on_size_change is not None:
                     stack.enter_context(_cx_refetch_wms_on_size_change(refetch_wms))
 
+                # don't clear on layer-changes
+                stack.enter_context(self.BM._cx_dont_clear_on_layer_change())
+
             # hide companion-widget indicator
             self._indicate_companion_map(False)
 

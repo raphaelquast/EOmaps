@@ -1323,6 +1323,8 @@ class BlitManager:
 
         self._managed_axes = set()
 
+        self._clear_on_layer_change = False
+
     def _get_unmanaged_axes(self):
         # return a list of all axes that are not managed by the blit-manager
         # (to ensure that "unmanaged" axes are drawn as well)
@@ -1435,10 +1437,23 @@ class BlitManager:
                     for i in legends:
                         i.set_visible(False)
 
-        self._clear_temp_artists("on_layer_change")
+        if self._clear_on_layer_change:
+            self._clear_temp_artists("on_layer_change")
 
         if val not in self._bg_layers:
             self.fetch_bg(val)
+
+    @contextmanager
+    def _cx_dont_clear_on_layer_change(self):
+        # a context-manager to avoid clearing artists on layer-changes
+        # (used in savefig to avoid clearing artists when re-fetching
+        # layers with backgrounds)
+        init_val = self._clear_on_layer_change
+        try:
+            self._clear_on_layer_change = False
+            yield
+        finally:
+            self._clear_on_layer_change = init_val
 
     def on_layer(self, func, layer=None, persistent=False, m=None):
         """
