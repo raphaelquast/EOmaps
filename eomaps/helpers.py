@@ -524,12 +524,6 @@ class LayoutEditor:
     def axes(self):
         return self.f.axes
 
-    def get_spines_visible(self):
-        return [
-            {key: val.get_visible() for key, val in ax.spines.items()}
-            for ax in self.axes
-        ]
-
     @property
     def cbs(self):
         # get all colorbars
@@ -1285,8 +1279,6 @@ class BlitManager:
         self._bg = None
         self._artists = dict()
 
-        self._spines = []
-
         self._bg_artists = dict()
         self._bg_layers = dict()
 
@@ -1527,6 +1519,19 @@ class BlitManager:
                 if layer in l.split("|"):
                     self._layers_to_refetch.add(l)
 
+    def _bg_artists_sort(self, art):
+        sortp = []
+
+        # ensure that inset-map artists are always drawn after all other artists
+        if art.axes is not None:
+            if art.axes.get_label() == "inset_map":
+                sortp.append(1)
+            else:
+                sortp.append(0)
+
+        sortp.append(getattr(art, "zorder", -1))
+        return sortp
+
     def get_bg_artists(self, layer):
         artists = set()
         for l in np.atleast_1d(layer):
@@ -1538,9 +1543,7 @@ class BlitManager:
             # artists that are only visible if both layers are visible! (e.g. "l1|l2")
             artists = artists.union(set(self._bg_artists.get(l, [])))
 
-        artists = [*artists]  # convert to list for sorting
-        artists.sort(key=lambda x: getattr(x, "zorder", -1))
-
+        artists = sorted(artists, key=self._bg_artists_sort)
         return artists
 
     def _combine_bgs(self, layer):
@@ -1929,10 +1932,6 @@ class BlitManager:
         # always redraw artists from the "all" layer
         layers.add("all")
 
-        # draw geo-spines of axes
-        for a in self._spines:
-            fig.draw_artist(a)
-
         # draw all "unmanaged" axes (e.g. axes that are found in the figure but
         # not in the blit-manager)
         # TODO would be nice to find a better way to handle this!
@@ -2041,7 +2040,13 @@ class BlitManager:
                 self._clear_temp_artists(clear)
 
             # restore the background
-            cv.restore_region(self._bg_layers[bg_layer])
+
+            # fetch the layer with the spines drawn
+            # TODO find a better treatment for spines!
+            self.fetch_bg(f"__SPINES__|{bg_layer}")
+            cv.restore_region(self._bg_layers[f"__SPINES__|{bg_layer}"])
+            # cv.restore_region(self._bg_layers[bg_layer])
+
             # draw all of the animated artists
             while len(self._after_restore_actions) > 0:
                 action = self._after_restore_actions.pop(0)

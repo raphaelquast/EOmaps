@@ -459,10 +459,14 @@ class Maps(object):
             self.BM.add_bg_artist(self.f.patch, layer="__BG__")
 
         # Treat cartopy geo-spines separately in the blit-manager
-        gsp = self.ax.spines["geo"]
-        if gsp not in self.BM._spines:
-            gsp.set_animated(True)
-            self.BM._spines.append(gsp)
+        # to avoid issues with overlapping spines that are drawn on each layer
+        # if multiple layers of a map are combined.
+        # (Note: spines need to be visible on each layer in case the layer
+        # is viewed on its own, but overlapping spines cause blurry boundaries)
+        # TODO find a better way to deal with this!
+        spine = self.ax.spines["geo"]
+        if spine not in self.BM._bg_artists.get("__SPINES__", []):
+            self.BM.add_bg_artist(spine, layer="__SPINES__")
 
     def __getattribute__(self, key):
         if key == "plot_specs":
@@ -2660,7 +2664,7 @@ class Maps(object):
             transparent = kwargs.get("transparent", False)
             if transparent is False:
                 initial_layer = self.BM.bg_layer
-                layer_with_bg = "|".join(["__BG__", initial_layer])
+                layer_with_bg = "|".join(["__BG__", "__SPINES__", initial_layer])
                 self.show_layer(layer_with_bg)
 
             redraw = False
@@ -3085,8 +3089,15 @@ class Maps(object):
             )
 
             if self._cid_companion_key is None:
-                # attach the Qt companion widget
-                self._add_companion_cb(show_hide_key=self._companion_widget_key)
+                # attach a callback to show/hide the window with the "w" key
+
+                # NOTE the companion-widget is ONLY initialized on Maps-objects that
+                # create NEW axes. This is required to make sure that any additional
+                # Maps-object on the same axes will then always use the same widget.
+                # (otherwise each layer would get its own widget)
+                self._cid_companion_key = self.f.canvas.mpl_connect(
+                    "key_press_event", self._open_companion_widget_cb
+                )
 
         if self.parent == self:  # use == instead of "is" since the parent is a proxy!
             # only attach resize- and close-callbacks if we initialize a parent
@@ -4219,46 +4230,59 @@ class Maps(object):
 
         self.BM.update()
 
+    def _open_companion_widget_cb(self, event):
+        if event.key != self._companion_widget_key:
+            return
+
+        if event.inaxes != self.ax:
+            return
+
+        if self.ax.get_label() == "inset_map":
+            if self.layer != self.BM.bg_layer:
+                # open the widget for the first found maps-object
+                # that contains the event
+                for m in (self.parent, *self.parent._children):
+                    if m.layer != m.BM.bg_layer:
+                        continue
+                    if m.ax.in_axes(event) and m != self:
+                        event.inaxes = m.ax
+                        m._open_companion_widget_cb(event)
+                        return
+                return
+
+        # hide all other companion-widgets
+        for m in (self.parent, *self.parent._children):
+            if m == self:
+                continue
+            if m._companion_widget is not None and m._companion_widget.isVisible():
+                m._companion_widget.hide()
+                m._indicate_companion_map(False)
+
+        if self._companion_widget is None:
+            self._init_companion_widget()
+
+        if self._companion_widget is not None:
+            if self._companion_widget.isVisible():
+                self._companion_widget.hide()
+                self._indicate_companion_map(False)
+            else:
+                self._companion_widget.show()
+                self._indicate_companion_map(True)
+
+                # Do NOT activate the companion widget in here!!
+                # Activating the window during the callback steals focus and
+                # as a consequence the key-released-event is never triggered
+                # on the figure and "w" would remain activated permanently.
+                self.f.canvas.key_release_event("w")
+                self._companion_widget.activateWindow()
+
     def _add_companion_cb(self, show_hide_key="w"):
         # attach a callback to show/hide the window with the "w" key
 
-        # NOTE the companion-widget is ONLY initialized on Maps-object that
+        # NOTE the companion-widget is ONLY initialized on Maps-objects that
         # create NEW axes. This is required to make sure that any additional
         # Maps-object on the same axes will then always use the same widget.
         # (otherwise each layer would get its own widget)
-
-        def cb(event):
-            if event.key != show_hide_key:
-                return
-
-            if event.inaxes != self.ax:
-                return
-
-            # hide all other companion-widgets
-            for m in (self.parent, *self.parent._children):
-                if m == self:
-                    continue
-                if m._companion_widget is not None and m._companion_widget.isVisible():
-                    m._companion_widget.hide()
-                    m._indicate_companion_map(False)
-
-            if self._companion_widget is None:
-                self._init_companion_widget()
-
-            if self._companion_widget is not None:
-                if self._companion_widget.isVisible():
-                    self._companion_widget.hide()
-                    self._indicate_companion_map(False)
-                else:
-                    self._companion_widget.show()
-                    self._indicate_companion_map(True)
-
-                    # Do NOT activate the companion widget in here!!
-                    # Activating the window during the callback steals focus and
-                    # as a consequence the key-released-event is never triggered
-                    # on the figure and "w" would remain activated permanently.
-                    self.f.canvas.key_release_event("w")
-                    self._companion_widget.activateWindow()
 
         self._cid_companion_key = self.f.canvas.mpl_connect("key_press_event", cb)
         # self._cid_companion_key = self.all.cb.keypress.attach(cb, key=show_hide_key)
@@ -4491,10 +4515,11 @@ class _InsetMaps(Maps):
             spine.set_edgecolor(boundary_kwargs["ec"])
             spine.set_lw(boundary_kwargs["lw"])
 
-            # explicitly add the spine as artist on the relevant layer
-            if spine in parent.BM._spines:
-                parent.BM._spines.remove(spine)
-            parent.BM.add_artist(spine, layer=layer)
+        # treat inset-map spines explicitly for now...
+        if spine in self.BM._bg_artists.get("__SPINES__", []):
+            self.BM.remove_bg_artist(spine, "__SPINES__")
+
+        self.BM.add_bg_artist(spine, layer=self.layer)
 
         self._inset_props = dict(
             xy=xy, xy_crs=xy_crs, radius=radius, radius_crs=radius_crs, shape=shape
@@ -4509,6 +4534,19 @@ class _InsetMaps(Maps):
     def plot_map(self, *args, **kwargs):
         set_extent = kwargs.pop("set_extent", False)
         super().plot_map(*args, **kwargs, set_extent=set_extent)
+
+    def new_layer(self, layer=None, **kwargs):
+        if layer is not None:
+            if layer != self.layer:
+
+                print(
+                    "EOmaps: InsetMaps do not (yet) support multiple layers! "
+                    "Create a unique InsetMap if you need multiple InsetMaps "
+                    "on multiple layers."
+                )
+                return
+        else:
+            super().new_layer(layer=layer, **kwargs)
 
     # add a convenience-method to add a boundary-polygon to a map
     def indicate_inset_extent(self, m, n=100, **kwargs):

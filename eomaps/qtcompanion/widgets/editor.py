@@ -3,6 +3,7 @@ from PyQt5.QtCore import Qt, pyqtSignal, pyqtSlot, QSize
 
 from matplotlib.colors import to_rgba_array
 
+from ...eomaps import _InsetMaps
 from ..common import iconpath
 from .wms import AddWMSMenuButton
 from .utils import GetColorWidget, AlphaSlider
@@ -355,11 +356,17 @@ class NewLayerWidget(QtWidgets.QFrame):
 
         self.m = m
 
-        new_layer_label = QtWidgets.QLabel("<b>Create a new layer:</b>")
+        # hide new-layer textbox for Inset-Maps
+        if not isinstance(self.m, _InsetMaps):
+            new_layer_label = QtWidgets.QLabel("<b>Create a new layer:</b>")
+        else:
+            new_layer_label = QtWidgets.QLabel(
+                "<b>InsetMaps support only single layers.</b>"
+            )
+
         self.new_layer_name = NewLayerLineEdit()
         self.new_layer_name.setMaximumWidth(300)
         self.new_layer_name.setPlaceholderText("my_layer")
-
         self.new_layer_name.returnPressed.connect(self.new_layer)
 
         try:
@@ -374,7 +381,8 @@ class NewLayerWidget(QtWidgets.QFrame):
             newlayer.addWidget(self.addwms)
         newlayer.addStretch(1)
         newlayer.addWidget(new_layer_label)
-        newlayer.addWidget(self.new_layer_name)
+        if not isinstance(self.m, _InsetMaps):
+            newlayer.addWidget(self.new_layer_name)
 
         # addfeature = AddFeatureWidget(m=self.m)
 
@@ -699,7 +707,11 @@ class LayerTabBar(QtWidgets.QTabBar):
         self._current_tab_idx = self.currentIndex()
         self._current_tab_name = self.tabText(self._current_tab_idx)
 
-        alllayers = sorted(list(self.m._get_layers()))
+        if isinstance(self.m, _InsetMaps):
+            # avoid showing multiple layers for inset-maps
+            alllayers = [self.m.layer]
+        else:
+            alllayers = sorted(list(self.m._get_layers()))
 
         while self.count() > 0:
             self.removeTab(0)
@@ -991,7 +1003,11 @@ class ArtistEditorTabs(LayerArtistTabs):
         self._current_tab_idx = self.currentIndex()
         self._current_tab_name = self.tabText(self._current_tab_idx)
 
-        alllayers = sorted(list(self.m._get_layers()))
+        if isinstance(self.m, _InsetMaps):
+            # avoid showing multiple layers for inset-maps
+            alllayers = [self.m.layer]
+        else:
+            alllayers = sorted(list(self.m._get_layers()))
 
         while self.count() > 0:
             self.removeTab(0)
@@ -1192,6 +1208,7 @@ class ArtistEditor(QtWidgets.QWidget):
         option_widget = QtWidgets.QWidget()
         option_layout = QtWidgets.QVBoxLayout()
         option_layout.addWidget(self.option_tabs)
+
         option_layout.addWidget(self.newlayer)
         option_widget.setLayout(option_layout)
 
