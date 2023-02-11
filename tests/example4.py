@@ -22,6 +22,24 @@ m.add_feature.preset.coastline()
 m.add_feature.preset.ocean()
 m.plot_map()
 
+# add some static text
+m.text(
+    0.66,
+    0.92,
+    (
+        "Left-click: temporary annotations\n"
+        "Right-click: permanent annotations\n"
+        "Middle-click: clear permanent annotations"
+    ),
+    fontsize=10,
+    horizontalalignment="left",
+    verticalalignment="top",
+    color="k",
+    fontweight="bold",
+    bbox=dict(facecolor="w", alpha=0.75),
+)
+
+
 # --------- attach pre-defined CALLBACK functions ---------
 
 ### add a temporary annotation and a marker if you left-click on a pixel
@@ -42,7 +60,7 @@ m.cb.pick.attach.annotate(
     zorder=10,
 )
 ### save all picked values to a dict accessible via m.cb.get.picked_vals
-cid = m.cb.pick.attach.get_values(button=1)
+m.cb.pick.attach.get_values(button=1)
 
 ### add a permanent marker if you right-click on a pixel
 m.cb.pick.attach.mark(
@@ -60,7 +78,7 @@ def text(m, ID, val, pos, ind):
     return f"ID={ID}"
 
 
-cid = m.cb.pick.attach.annotate(
+m.cb.pick.attach.annotate(
     button=3,
     permanent=True,
     bbox=dict(boxstyle="round", fc="r"),
@@ -70,12 +88,12 @@ cid = m.cb.pick.attach.annotate(
 )
 
 ### remove all permanent markers and annotations if you middle-click anywhere on the map
-cid = m.cb.pick.attach.clear_annotations(button=2)
-cid = m.cb.pick.attach.clear_markers(button=2)
+m.cb.pick.attach.clear_annotations(button=2)
+m.cb.pick.attach.clear_markers(button=2)
 
 # --------- define a custom callback to update some text to the map
 # (use a high zorder to draw the texts above all other things)
-txt = m.ax.text(
+txt = m.text(
     0.5,
     0.35,
     "You clicked on 0 pixels so far",
@@ -88,7 +106,7 @@ txt = m.ax.text(
     zorder=99,
     transform=m.ax.transAxes,
 )
-txt2 = m.ax.text(
+txt2 = m.text(
     0.18,
     0.9,
     "   lon    /    lat " + "\n",
@@ -100,11 +118,6 @@ txt2 = m.ax.text(
     zorder=99,
     transform=m.ax.transAxes,
 )
-
-# add the custom text objects to the blit-manager (m.BM) to avoid re-drawing the whole
-# image if the text changes.
-m.BM.add_artist(txt)
-m.BM.add_artist(txt2)
 
 
 def cb1(m, pos, ID, val, **kwargs):
@@ -128,60 +141,35 @@ def cb1(m, pos, ID, val, **kwargs):
     txt2.set_text(lonlat_txt + f"{d['lon']:.2f}  /  {d['lat']:.2f}" + "\n")
 
 
-cid = m.cb.pick.attach(cb1, button=1, m=m)
+m.cb.pick.attach(cb1, button=1, m=m)
 
 
-def cb2(m, pos, ID, val, **kwargs):
+def cb2(m, pos, val, **kwargs):
     # plot a marker at the pixel-position
     (l,) = m.ax.plot(*pos, marker="*", animated=True)
+    # add the custom marker to the blit-manager!
+    m.BM.add_artist(l)
+
     # print the value at the pixel-position
     # use a low zorder so the text will be drawn below the temporary annotations
-    t = m.ax.text(
+    m.text(
         pos[0],
         pos[1] - 150000,
         f"{val:.2f}",
         horizontalalignment="center",
         verticalalignment="bottom",
         color=l.get_color(),
-        animated=True,
         zorder=1,
+        transform=m.ax.transData,
     )
-    # add the artists to the Blit-Manager (m.BM) to avoid triggering a re-draw of the
-    # whole figure each time the callback triggers
-
-    m.BM.add_artist(l)
-    m.BM.add_artist(t)
 
 
-cid = m.cb.pick.attach(cb2, button=3, m=m)
+m.cb.pick.attach(cb2, button=3, m=m)
 
-# add some static text
-infotext = (
-    "Left-click: temporary annotations\n"
-    + "Right-click: permanent annotations\n"
-    + "Middle-click: clear permanent annotations"
-)
+# add a "target-indicator" on mouse-movement
+m.cb.move.attach.mark(fc="r", ec="none", radius=10000, shape="geod_circles")
+m.cb.move.attach.mark(fc="none", ec="r", radius=50000, shape="geod_circles")
 
-_ = m.f.text(
-    0.66,
-    0.92,
-    infotext,
-    fontsize=10,
-    horizontalalignment="left",
-    verticalalignment="top",
-    color="k",
-    fontweight="bold",
-    bbox=dict(facecolor="w", alpha=0.75),
-)
-
-# add a basic "target-indicator" on mouse-movement
-m.cb.move.attach.mark(
-    fc="r", ec="none", radius=10000, shape="geod_circles", permanent=False
-)
-m.cb.move.attach.mark(
-    fc="none", ec="r", radius=50000, shape="geod_circles", permanent=False
-)
-
-
+# add a colorbar
 m.add_colorbar(hist_bins="bins", label="A classified dataset")
 m.add_logo()

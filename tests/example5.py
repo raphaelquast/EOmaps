@@ -19,7 +19,7 @@ data_OK = data[data.param >= 0]
 data_OK.var = np.sqrt(data_OK.param)
 data_mask = data[data.param < 0]
 
-# --------- initialize a Maps object and plot a basic map
+# --------- initialize a Maps object and plot the data
 m = Maps(Maps.CRS.Orthographic(), figsize=(10, 7))
 m.ax.set_title("Wooohoo, a flashy map-widget with static indicators!")
 m.set_data(data=data_OK, x="lon", y="lat", crs=4326)
@@ -27,28 +27,28 @@ m.set_shape.rectangles(mesh=True)
 m.set_classify_specs(scheme="Quantiles", k=10)
 m.plot_map(cmap="Spectral_r")
 
-# ... add a basic "annotate" callback
+# ... add an "annotate" callback
 cid = m.cb.click.attach.annotate(bbox=dict(alpha=0.75, color="w"))
 
-# --------- add another layer of data to indicate the values in the masked area
-#           (copy all defined specs but the classification)
-m2 = m.new_layer(copy_classify_specs=False)
-m2.data_specs.data = data_mask
-m2.set_shape.rectangles(mesh=False)
+# - create a new layer and plot another dataset
+m2 = m.new_layer()
+m2.set_data(data=data_mask, x="lon", y="lat", crs=4326)
+m2.set_shape.rectangles()
 m2.plot_map(cmap="magma", set_extent=False)
 
-# --------- add another layer with data that is dynamically updated if we click on the masked area
-m3 = m.new_layer(copy_classify_specs=False)
-m3.data_specs.data = data_OK.sample(1000)
+# create a new layer for some dynamically updated data
+m3 = m.new_layer()
+m3.set_data(data=data_OK.sample(1000), x="lon", y="lat", crs=4326)
 m3.set_shape.ellipses(radius=25000, radius_crs=3857)
 
-# plot the map and set dynamic=True to allow continuous updates of the collection
+# plot the map and set dynamic=True to allow continuous updates of the
+# collection without re-drawing the background map
 m3.plot_map(
     cmap="gist_ncar", edgecolor="w", linewidth=0.25, dynamic=True, set_extent=False
 )
 
-# --------- define a callback that will change the values of the previously plotted dataset
-#           NOTE: this is not possible for the shapes:  "shade_points" and "shade_raster" !
+# define a callback that changes the values of the previously plotted dataset
+# NOTE: this is not possible for the shapes:  "shade_points" and "shade_raster"!
 def callback(m, **kwargs):
     selection = np.random.randint(0, len(m.data), 1000)
     m.coll.set_array(data_OK.param.iloc[selection])
@@ -58,11 +58,6 @@ def callback(m, **kwargs):
 m.cb.click.attach(callback, m=m3)
 
 # --------- add some basic overlays from NaturalEarth
-
-# clip the features by the current map extent and use geopandas for reprojections
-# since it works for the selected map-extent and it is usually faster than cartopy
-# args = dict(reproject="gpd", clip="extent")
-
 m.add_feature.preset.coastline()
 m.add_feature.preset.lakes()
 m.add_feature.preset.rivers_lake_centerlines()
@@ -83,8 +78,7 @@ leg = m.ax.legend(
     facecolor="w",
     framealpha=1,
 )
-# add the legend to the blit-manager to keep it on top of dynamically updated artists
-leg.zorder = 999
+# add the legend as artist to keep it on top
 m.BM.add_artist(leg)
 
 # --------- add some fancy (static) indicators for selected pixels

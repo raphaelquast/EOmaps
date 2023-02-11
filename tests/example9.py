@@ -1,16 +1,8 @@
 # EOmaps example 9:  Data analysis widgets - Interacting with a database
 
-from eomaps import MapsGrid, Maps
+from eomaps import Maps
 import pandas as pd
 import numpy as np
-
-
-# just a helper-function to calculate axis-limits with a margin
-def get_limits(data, margin=0.05):
-    mi, ma = np.nanmin(data), np.nanmax(data)
-    dm = margin * (ma - mi)
-    return mi - dm, ma + dm
-
 
 # ============== create a random database =============
 length, Nlon, Nlat = 1000, 100, 50
@@ -35,36 +27,29 @@ data = pd.DataFrame(dict(count=database.count(axis=1), **coords))
 # =====================================================
 
 
-# -------- initialize a MapsGrid with a map on top and 2 ordinary axes below
-mg = MapsGrid(
-    2,
-    2,
-    m_inits=dict(top=(0, slice(0, 2))),
-    ax_inits=dict(left=(1, 0), right=(1, 1)),
-    height_ratios=(3, 2),
+# initialize a map on top
+m = Maps(ax=211)
+m.add_feature.preset.ocean()
+m.add_feature.preset.coastline()
+
+# initialize 2 matplotlib plot-axes below the map
+ax_left = m.f.add_subplot(223)
+ax_left.set_ylabel("data-values")
+ax_left.set_xlabel("data-index")
+
+ax_right = m.f.add_subplot(224)
+ax_right.set_ylabel("data-values")
+ax_right.set_xlabel("histogram count")
+
+# -------- assign data to the map and plot it
+m.set_data(data=data, x="lon", y="lat", crs=4326)
+m.set_classify_specs(
+    scheme=Maps.CLASSIFIERS.UserDefined,
+    bins=[50, 100, 200, 400, 800],
 )
+m.set_shape.ellipses(radius=0.5)
+m.plot_map()
 
-mg.add_feature.preset.ocean()
-mg.add_feature.preset.coastline()
-
-# -------- set the specs for the Maps-object of the grid and plot the map
-mg.m_top.set_data(data=data, x="lon", y="lat", crs=4326)
-mg.m_top.set_classify_specs(
-    scheme=Maps.CLASSIFIERS.UserDefined, bins=[50, 100, 200, 400, 800]
-)
-mg.m_top.set_shape.ellipses(radius=0.5)
-mg.m_top.plot_map()
-
-# -------- set some axis labels
-mg.ax_left.set_ylabel("data-values")
-mg.ax_left.set_xlabel("data-index")
-mg.ax_right.set_ylabel("data-values")
-mg.ax_right.set_xlabel("histogram count")
-
-# -------- add the axes to the blit-manager so that their artists
-#          as well as axis limits etc. are dynamically updated
-mg.parent.BM.add_artist(mg.ax_left)
-mg.parent.BM.add_artist(mg.ax_right)
 
 # -------- define a custom callback function to update the plots
 def update_plots(ID, **kwargs):
@@ -72,34 +57,39 @@ def update_plots(ID, **kwargs):
     x = database.loc[ID].dropna()
 
     # plot the lines and histograms
-    (l,) = mg.ax_left.plot(x, lw=0.5, marker=".", c="C0")
-    cnt, val, art = mg.ax_right.hist(
-        x.values, bins=50, orientation="horizontal", fc="C0"
-    )
-    # add all artists as "temporary artists" so that they are removed
-    # when the next datapoint is selected
+    (l,) = ax_left.plot(x, lw=0.5, marker=".", c="C0")
+    cnt, val, art = ax_right.hist(x.values, bins=50, orientation="horizontal", fc="C0")
+    # add all artists as "temporary pick artists" so that they
+    # are removed when the next datapoint is selected
     for a in [l, *art]:
-        mg.m_top.cb.pick.add_temporary_artist(a)
+        m.cb.pick.add_temporary_artist(a)
 
-    # manually set the axis limits (autoscaling not always works as expected)
-    mg.ax_left.set_ylim(*get_limits(x))
-    mg.ax_left.set_xlim(*get_limits(x.index))
-    mg.ax_right.set_ylim(*get_limits(x))
-    mg.ax_right.set_xlim(*get_limits(cnt))
+    # re-compute axis limits based on the new artists
+    ax_left.relim()
+    ax_right.relim()
 
 
-# attach the custom callback (and some pre-defined)
-mg.m_top.cb.pick.attach(update_plots)
-mg.m_top.cb.pick.attach.annotate()
-mg.m_top.cb.pick.attach.mark(permanent=False, buffer=1, fc="none", ec="r")
-mg.m_top.cb.pick.attach.mark(permanent=False, buffer=2, fc="none", ec="r", ls=":")
-
+# attach the custom callback (and some pre-defined callbacks)
+m.cb.pick.attach(update_plots)
+m.cb.pick.attach.annotate()
+m.cb.pick.attach.mark(permanent=False, buffer=1, fc="none", ec="r")
+m.cb.pick.attach.mark(permanent=False, buffer=2, fc="none", ec="r", ls=":")
 
 # add a colorbar
-mg.m_top.add_colorbar(0.25, label="Number of observations")
-mg.m_top.colorbar.ax_cb_plot.tick_params(labelsize=6)
+m.add_colorbar(0.25, label="Number of observations")
+m.colorbar.ax_cb_plot.tick_params(labelsize=6)
 
-# update the padding for the axes
-mg.subplots_adjust(bottom=0.1, left=0.12, right=0.94, wspace=0.3, hspace=0.3)
+# add a logo
+m.add_logo()
 
-mg.add_logo(fix_position=True)
+m.apply_layout(
+    {
+        "figsize": [6.4, 4.8],
+        "0_map": [0.05625, 0.60894, 0.8875, 0.36594],
+        "1_": [0.12326, 0.11123, 0.35, 0.31667],
+        "2_": [0.58674, 0.11123, 0.35, 0.31667],
+        "3_cb": [0.12, 0.51667, 0.82, 0.06166],
+        "3_cb_histogram_size": 0.8,
+        "4_logo": [0.8125, 0.62333, 0.1212, 0.06667],
+    }
+)

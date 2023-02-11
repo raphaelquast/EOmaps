@@ -94,3 +94,14 @@ m3.set_inset_position(x=0.3)
 for mi in [m, m2, m3]:
     mi.cb.pick.attach.annotate(text=lambda ID, val, **kwargs: f"ID={ID}, val={val:.2f}")
 m.cb.pick.share_events(m2, m3)
+
+m.apply_layout(
+    {
+        "figsize": [6.4, 4.8],
+        "0_map": [0.1625, 0.09, 0.675, 0.9],
+        "1_inset_map": [0.5625, 0.15, 0.375, 0.5],
+        "2_inset_map": [0.0875, 0.33338, 0.325, 0.43225],
+        "3_cb": [0.0875, 0.12, 0.4375, 0.12987],
+        "3_cb_histogram_size": 0.8,
+    }
+)
