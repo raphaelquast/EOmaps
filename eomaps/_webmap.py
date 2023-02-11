@@ -324,7 +324,7 @@ class _wmts_layer(_WebMap_layer):
         super().__init__(*args, **kwargs)
         pass
 
-    def __call__(self, layer=None, zorder=0, alpha=1, **kwargs):
+    def __call__(self, layer=None, zorder=-5, alpha=1, **kwargs):
         """
         Add the WMTS layer to the map
 
@@ -339,7 +339,7 @@ class _wmts_layer(_WebMap_layer):
             The default is None.
         zorder : float
             The zorder of the artist (e.g. the stacking level of overlapping artists)
-            The default is 0
+            The default is -5
         alpha : float, optional
             The alpha-transparency of the image.
             NOTE: This changes the global transparency of the images... it does
@@ -426,7 +426,7 @@ class _wms_layer(_WebMap_layer):
         super().__init__(*args, **kwargs)
         pass
 
-    def __call__(self, layer=None, zorder=0, alpha=1, **kwargs):
+    def __call__(self, layer=None, zorder=-5, alpha=1, **kwargs):
         """
         Add the WMS layer to the map
 
@@ -441,7 +441,7 @@ class _wms_layer(_WebMap_layer):
             The default is None.
         zorder : float
             The zorder of the artist (e.g. the stacking level of overlapping artists)
-            The default is 0
+            The default is -5
         alpha : float, optional
             The alpha-transparency of the image.
             NOTE: This changes the global transparency of the images... it does
@@ -1042,7 +1042,7 @@ class _xyz_tile_service:
         transparent=False,
         alpha=1,
         interpolation="spline36",
-        zorder=0,
+        zorder=-5,
         **kwargs,
     ):
         """
@@ -1072,7 +1072,7 @@ class _xyz_tile_service:
             provide a huge boost in image quality! The default is 750.
         zorder : float
             The zorder of the artist (e.g. the stacking level of overlapping artists)
-            The default is 0
+            The default is -5
         **kwargs :
             Additional kwargs passed to the cartopy-wrapper for
             matplotlib's `imshow`.
@@ -1213,6 +1213,8 @@ class SlippyImageArtist_NEW(AxesImage):
         self.raster_source = raster_source
         # This artist fills the Axes, so should not influence layout.
         kwargs.setdefault("in_layout", False)
+        kwargs.setdefault("zorder", -5)
+
         super().__init__(ax, **kwargs)
 
         self.cache = []

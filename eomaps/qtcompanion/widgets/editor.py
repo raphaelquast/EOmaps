@@ -113,7 +113,8 @@ class AddFeaturesMenuButton(QtWidgets.QPushButton):
                 else:
                     f(layer=layer, **self.props)
 
-                self.m.BM.update()
+                self.m.BM._refetch_layer(layer)
+                self.m.BM.on_draw(None)
             except Exception:
                 import traceback
 

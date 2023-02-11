@@ -522,8 +522,12 @@ class AddWMSMenuButton(QtWidgets.QPushButton):
             # emit a signal that a new layer has been created
             self.wmsLayerCreated.emit()
 
+            self.m.BM._refetch_layer(layer)
+
             if self._show_layer:
                 self.m.show_layer(layer)
+            else:
+                self.m.BM.on_draw(None)
 
         return wms_cb
 
