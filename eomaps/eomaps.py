@@ -2667,7 +2667,8 @@ class Maps(object):
             transparent = kwargs.get("transparent", False)
             if transparent is False:
                 initial_layer = self.BM.bg_layer
-                layer_with_bg = "|".join(["__BG__", "__SPINES__", initial_layer])
+
+                layer_with_bg = "|".join(["__BG__", initial_layer, "__SPINES__"])
                 self.show_layer(layer_with_bg)
 
             redraw = False
