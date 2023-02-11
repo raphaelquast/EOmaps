@@ -1330,6 +1330,7 @@ class Compass:
                 x, y = self._m.ax.transData.inverted().transform((evt.x, evt.y))
 
             self._update_offset(x, y)
+            self._m.BM.blit_artists(artists=[self._artist])
 
     def _on_scroll(self, event):
         if not self._layer_visible:
