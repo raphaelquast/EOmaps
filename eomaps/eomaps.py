@@ -2990,6 +2990,12 @@ class Maps(object):
                 "cannot be assigned to a Maps object!"
             )
 
+        if layer == "__SPINES__":
+            raise TypeError(
+                "EOmaps: The layer-name '__SPINES__' is reserved for internal "
+                "use and cannot be assigned to a Maps object!"
+            )
+
         reserved_symbs = {
             # "|": (
             #     "It is used as a separation-character to combine multiple "
@@ -4157,7 +4163,7 @@ class Maps(object):
         layers = layers.union({i for i in self.BM._bg_artists if "|" not in i})
 
         # exclude private layers
-        for l in ["__BG__"]:
+        for l in ["__BG__", "__SPINES__"]:
             if l in layers:
                 layers.remove(l)
 
