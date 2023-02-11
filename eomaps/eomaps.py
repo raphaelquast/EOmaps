@@ -2554,7 +2554,7 @@ class Maps(object):
             names = [name]
 
         for i in names:
-            if i in ["__BG__"]:
+            if i in ["__BG__", "__SPINES__"]:
                 continue
 
             if "{" in i and i.endswith("}"):
