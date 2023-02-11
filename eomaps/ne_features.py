@@ -493,9 +493,9 @@ class NaturalEarth_features(object):
 
                 feature = self._get_cartopy_feature(self._scale)
                 feature._kwargs.update(kwargs)
+                m.BM.on_draw(None)
                 art = m.ax.add_feature(feature)
                 m.BM.add_bg_artist(art, layer=uselayer)
-                m.BM.on_draw(None)
 
         def _set_scale(self, scale):
             if scale == "auto":
