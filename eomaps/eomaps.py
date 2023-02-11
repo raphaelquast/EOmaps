@@ -2625,6 +2625,8 @@ class Maps(object):
     def text(self, *args, **kwargs):
 
         kwargs.setdefault("animated", True)
+        kwargs.setdefault("horizontalalignment", "center")
+        kwargs.setdefault("verticalalignment", "center")
 
         a = self.f.text(*args, **kwargs)
         self.BM.add_artist(a)
