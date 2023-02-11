@@ -581,6 +581,19 @@ class DataManager:
         return np.size(props["z_data"])
 
     def _set_n(self, s):
+        shape = self.m.shape
+
+        if shape.name == "rectangles":
+            # mesh currently onls supports n=1
+            if shape.mesh is True:
+                shape.n = 1
+                return
+            # if plot crs is same as input-crs there is no need for
+            # intermediate points since the rectangles are not curved!
+            if self.m._crs_plot == self.m.data_specs.crs:
+                shape.n = 1
+                return
+
         if s < 10:
             n = 100
         elif s < 100:
@@ -592,7 +605,7 @@ class DataManager:
         else:
             n = 12
 
-        self.m.shape.n = n
+        shape.n = n
 
     def _print_datasize_warnings(self, s):
         if s < 1e5:
