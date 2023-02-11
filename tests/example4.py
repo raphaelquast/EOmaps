@@ -173,3 +173,13 @@ m.cb.move.attach.mark(fc="none", ec="r", radius=50000, shape="geod_circles")
 # add a colorbar
 m.add_colorbar(hist_bins="bins", label="A classified dataset")
 m.add_logo()
+
+m.apply_layout(
+    {
+        "figsize": [10.0, 8.0],
+        "0_map": [0.04375, 0.27717, 0.9125, 0.69566],
+        "1_cb": [0.01, 0.0, 0.98, 0.23377],
+        "1_cb_histogram_size": 0.8,
+        "2_logo": [0.825, 0.29688, 0.12, 0.06188],
+    }
+)
