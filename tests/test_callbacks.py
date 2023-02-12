@@ -191,7 +191,7 @@ class TestCallbacks(unittest.TestCase):
                 cid = m.cb.pick.attach.get_values()
                 m.cb.pick.attach.print_to_console()
                 m.cb.click.attach.mark(radius=0.1)
-                m.redraw()
+                m.f.canvas.draw()  # make sure figure is drawn before testing
                 self.click_ID(m, ID)
 
                 if n == 1:
@@ -758,7 +758,7 @@ class TestCallbacks(unittest.TestCase):
         m.cb.pick["nocol"].attach.annotate()
         m.cb.pick["nocol"].attach(customcb, picked_vals=picked_vals_nocol)
         m.cb.pick__nocol.attach.highlight_geometry(fc="r", ec="g")
-        m.redraw()  # do this to make sure transforms are correctly set
+        m.f.canvas.draw()  # make sure figure is drawn before testing
 
         # evaluate pick position AFTER plotting geodataframes since the plot
         # extent might have changed!
@@ -801,7 +801,7 @@ class TestCallbacks(unittest.TestCase):
         m.cb.pick["nocol"].attach.annotate(xytext=(20, -20))
         m.cb.pick["nocol"].attach(customcb, picked_vals=picked_vals_nocol)
         m.cb.pick__nocol.attach.highlight_geometry(fc="r", ec="g")
-        m.redraw()  # do this to make sure transforms are correctly set
+        m.f.canvas.draw()  # do this to make sure transforms are correctly set
 
         # evaluate pick position AFTER plotting geodataframes since the plot
         # extent might have changed!
