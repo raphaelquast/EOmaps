@@ -87,6 +87,8 @@ class ColorBar:
         log=False,
         out_of_range_vals="clip",
         hist_kwargs=None,
+        label=None,
+        ylabel=None,
         **kwargs,
     ):
         """
@@ -205,6 +207,11 @@ class ColorBar:
         hist_kwargs : dict
             A dictionary with keyword-arguments passed to the creation of the histogram
             (e.g. passed to `plt.hist()` )
+        label : str, optional
+            The label used for the colorbar. The default is None
+        ylabel : str, optional
+            The label used for the y-axis of the colorbar. The default is None
+
         kwargs :
             All additional kwargs are passed to the creation of the colorbar
             (e.g. `plt.colorbar()`)
@@ -264,6 +271,7 @@ class ColorBar:
         self._log = log
         self._out_of_range_vals = out_of_range_vals
 
+        kwargs["label"] = label
         self._kwargs = copy.deepcopy(kwargs)
 
         self._coll = self._m.coll
@@ -287,6 +295,9 @@ class ColorBar:
 
         self._set_data()
         self._setup_axes()
+
+        if ylabel is not None:
+            self.ax_cb_plot.set_ylabel(ylabel)
 
     def set_visible(self, vis):
         """
