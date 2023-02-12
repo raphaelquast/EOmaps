@@ -1633,6 +1633,9 @@ class Maps(object):
                 # transform coordinates
                 xy = transformer.transform(*xy)
 
+        if layer is None:
+            layer = self.layer
+
         # using permanent=None results in permanent makers that  are NOT
         # added to the "m.cb.click.get.permanent_markers" list that is
         # used to manage callback-markers
@@ -1655,9 +1658,9 @@ class Maps(object):
         )
 
         if permanent is True:
-            self.BM.add_bg_artist(marker)
+            self.BM.add_bg_artist(marker, layer=layer)
         else:
-            self.BM.add_artist(marker)
+            self.BM.add_artist(marker, layer=layer)
 
             self.BM.update()
 
@@ -2380,6 +2383,7 @@ class Maps(object):
                 assume_sorted=assume_sorted,
                 **kwargs,
             )
+            self.BM._refetch_layer(layer)
 
             # if dynamic is False:
             #     self.BM._refetch_layer(layer)
