@@ -592,18 +592,19 @@ class _click_callbacks(object):
         if layer is None:
             layer = self.m.layer
 
+        # explicitly use True/False here to allow overriding the "permanent"
+        # behavior by using permanent=None (or anything other than True/False)
         if permanent is False:
             # make the annotation temporary
             self._temporary_artists.append(marker)
             self.m.BM.add_artist(marker, layer)
-        else:
+        elif permanent is True:
             self.m.BM.add_artist(marker, layer)
 
-            if permanent is True:
-                if not hasattr(self, "permanent_markers"):
-                    self.permanent_markers = [marker]
-                else:
-                    self.permanent_markers.append(marker)
+            if not hasattr(self, "permanent_markers"):
+                self.permanent_markers = [marker]
+            else:
+                self.permanent_markers.append(marker)
 
         return marker
 

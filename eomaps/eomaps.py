@@ -1642,9 +1642,16 @@ class Maps(object):
                 # transform coordinates
                 xy = transformer.transform(*xy)
 
-        # using permanent=None results in permanent makers that  are NOT added to the
-        # "m.cb.click.get.permanent_markers" list
-        kwargs.setdefault("permanent", None)
+        # using permanent=None results in permanent makers that  are NOT
+        # added to the "m.cb.click.get.permanent_markers" list that is
+        # used to manage callback-markers
+
+        permanent = kwargs.pop("permanent", False)
+
+        if permanent is True:
+            cb_permanent = None
+        else:
+            cb_permanent = False
 
         # add marker
         marker = self.cb.click._cb.mark(
@@ -1657,13 +1664,13 @@ class Maps(object):
             buffer=buffer,
             n=n,
             layer=layer,
+            permanent=cb_permanent,
             **kwargs,
         )
 
-        try:
-            # this will fail if no initial draw was performed!
-            self.BM._draw_animated(artists=[marker])
-        except Exception:
+        if permanent is True:
+            self.BM.add_bg_artist(marker)
+        else:
             self.BM.update()
 
         return marker
