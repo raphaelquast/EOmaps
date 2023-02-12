@@ -86,9 +86,6 @@ for m_i, txt, color in zip([m2, m3], ["epsg: 4326", "epsg: 3035"], ["r", "g"]):
 m3.add_colorbar(hist_bins=20, margin=dict(bottom=-0.2), label="some parameter")
 # move the inset map (and the colorbar) to a different location
 m3.set_inset_position(x=0.3)
-# set the y-ticks of the colorbar histogram
-# m3.colorbar.ax_cb_plot.set_yticks([0, 1, 2])
-
 
 # share pick events
 for mi in [m, m2, m3]:
