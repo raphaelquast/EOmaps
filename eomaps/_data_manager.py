@@ -356,15 +356,14 @@ class DataManager:
         layer : str
             The layer for which the background is fetched.
         """
+
         # don't re-draw while the layout-editor is active!
         if self.m.parent._layout_editor.modifier_pressed:
             return False
 
         # don't re-draw if the layer of the dataset is not requested
-        if not (
-            self.layer == "all"
-            or set(self.layer.split("|")).issubset(set(layer.split("|")))
-        ):
+        # (note multi-layers trigger re-draws of individual layers as well)
+        if layer not in ["all", self.layer]:
             return False
 
         # don't re-draw if the collection has been hidden in the companion-widget
@@ -431,7 +430,6 @@ class DataManager:
 
             # remove previous collection from the map
             self._remove_existing_coll()
-
             # draw the new collection
             coll = self.m._get_coll(props, **self.m._coll_kwargs)
             coll.set_clim(self.m._vmin, self.m._vmax)
