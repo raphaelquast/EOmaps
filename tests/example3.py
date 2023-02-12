@@ -44,7 +44,7 @@ m.add_colorbar(
 m.colorbar.ax_cb_plot.set_ylabel("The Y label")
 
 # add a logo to the plot
-m.add_logo(position="lr", pad=(-1.1, 0), size=0.1)
+m.add_logo()
 
 m.apply_layout(
     {
