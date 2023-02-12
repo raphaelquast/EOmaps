@@ -47,10 +47,5 @@ s4.set_label_props(scale=1.5, offset=0.5, every=2, weight="bold", family="Courie
 
 # NOTE that the black-and-white scalebar is automatically re-scaled and re-positioned
 #      on zoom events (the default if you don't provide an explicit scale & position)!
-#      ... to manually override this behaviour, uncomment the following lines
-
-# s4._auto_position = None
-# s4._autoscale = None
-
 
 m.add_logo()

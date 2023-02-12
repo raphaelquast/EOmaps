@@ -14,6 +14,8 @@ import matplotlib.transforms as transforms
 
 
 class ScaleBar:
+    """Base class for EOmaps scalebars."""
+
     def __init__(
         self,
         m,
@@ -24,9 +26,11 @@ class ScaleBar:
         scale_props=None,
         patch_props=None,
         label_props=None,
+        layer=None,
     ):
         """
         Add a scalebar to the map.
+
         The scalebar represents a ruler in units of meters whose direction
         follows geodesic lines.
 
@@ -124,8 +128,17 @@ class ScaleBar:
 
             The default is:
                 >>> dict(scale=1, offset=1, rotation=0, every=2)
+        layer : str, optional
+            The layer at which the scalebar should be visible.
+            If None, the layer of the Maps-object used to create the scalebar is used.
+            The default is None.
+
         """
         self._m = m
+
+        if layer is None:
+            layer = self._m.layer
+        self.layer = layer
 
         self._scale_props = dict(scale=None)
         self._label_props = dict()
@@ -204,12 +217,21 @@ class ScaleBar:
         self.set_label_props(**label_props)
 
     def apply_preset(self, preset):
+        """
+        Apply a style-preset to the Scalebar.
+
+        Parameters
+        ----------
+        preset : str
+            The name of the preset.
+
+        """
         self._apply_preset(preset)
         self._estimate_scale()
         self.set_position()
 
     @staticmethod
-    def round_to_n(x, n=0):
+    def _round_to_n(x, n=0):
         # round to n significant digits
         # 1234 -> 1000
         # 0.01234 -> 0.1
@@ -244,7 +266,7 @@ class ScaleBar:
 
             scale = dist / self._scale_props["n"]
             # round to 1 significant digit
-            scale = self.round_to_n(scale)
+            scale = self._round_to_n(scale)
 
             self._scale_props["scale"] = scale
             return scale
@@ -270,15 +292,13 @@ class ScaleBar:
         return lon, lat
 
     def auto_position(self, pos):
+        """Move the scalebar to the desired position and apply auto-scaling."""
         lon, lat = self._get_autopos(pos)
         self.set_position(lon, lat, self._azim)
 
     @property
     def cb_rotate_interval(self):
-        """
-        Get/set the interval for the rotation when using the <+> and <->
-        keys on the keyboard to rotate the scalebar
-        """
+        """Get/set the rotation interval when rotating the scalebar with +/- keys."""
         return self._cb_rotate_inverval
 
     @cb_rotate_interval.setter
@@ -288,8 +308,10 @@ class ScaleBar:
     @property
     def cb_offset_interval(self):
         """
-        Get/set the interval for the text-offset when using the <alt> + <+>/<->
-        keyboard-shortcut to set the offset for the scalebar-labels.
+        Get/set the interval for changing the text-offset with keyboard-shortcuts.
+
+        e.g.: when using the <alt> + <+>/<-> keyboard-shortcut to set the offset for
+        the scalebar-labels.
         """
         return self._cb_offset_interval
 
@@ -299,7 +321,7 @@ class ScaleBar:
 
     def set_scale_props(self, scale=None, n=None, width=None, colors=None):
         """
-        Set the properties of the scalebar (and update the plot accordingly)
+        Set the properties of the scalebar (and update the plot accordingly).
 
         Parameters
         ----------
@@ -333,7 +355,7 @@ class ScaleBar:
 
     def set_patch_props(self, offsets=None, **kwargs):
         """
-        Set the properties of the frame (and update the plot accordingly)
+        Set the properties of the frame (and update the plot accordingly).
 
         Parameters
         ----------
@@ -374,7 +396,7 @@ class ScaleBar:
         self, scale=None, rotation=None, every=None, offset=None, color=None, **kwargs
     ):
         """
-        Set the properties of the labels (and update the plot accordingly)
+        Set the properties of the labels (and update the plot accordingly).
 
         Parameters
         ----------
@@ -401,7 +423,6 @@ class ScaleBar:
                 >>> dict(family="Helvetica", style="italic").
 
         """
-
         if scale is not None:
             self._label_props["scale"] = scale
         if rotation is not None:
@@ -617,7 +638,7 @@ class ScaleBar:
             )
 
             self._artists[f"text_{i}"].set_zorder(1)
-            self._m.BM.add_artist(self._artists[f"text_{i}"])
+            self._m.BM.add_artist(self._artists[f"text_{i}"], layer=self.layer)
 
     def _redraw_minitxt(self):
         # don't redraw if we haven't drawn anything yet
@@ -726,9 +747,9 @@ class ScaleBar:
         self._artists["scale"].set_zorder(1)
         self._artists["patch"].set_zorder(0)
 
-        self._m.BM.add_artist(self._artists["scale"])
+        self._m.BM.add_artist(self._artists["scale"], layer=self.layer)
         # self._m.BM.add_artist(self._artists["text"])
-        self._m.BM.add_artist(self._artists["patch"])
+        self._m.BM.add_artist(self._artists["patch"], layer=self.layer)
 
         self._m.BM.blit_artists(self._artists.values())
         # make sure to update the artists on zoom
@@ -736,7 +757,7 @@ class ScaleBar:
 
     def set_position(self, lon=None, lat=None, azim=None, update=False):
         """
-        Set the position of the colorbar
+        Set the position of the colorbar.
 
         Parameters
         ----------
@@ -750,8 +771,8 @@ class ScaleBar:
         update : bool
             Indicator if the plot should be immediately updated (True) or at the next
             event (False). The default is False.
-        """
 
+        """
         if lon is None:
             lon = self._lon
         if lat is None:
@@ -799,7 +820,7 @@ class ScaleBar:
 
     def _make_pickable(self):
         """
-        Add callbacks to adjust the scalebar position manually
+        Add callbacks to adjust the scalebar position manually.
 
             - <LEFT>-click on the scalebar with the mouse to pick it up
                 - hold down <LEFT> to drag the scalebar
@@ -807,6 +828,7 @@ class ScaleBar:
             - <RIGHT>-click on the scalebar to detach the callbacks again
               (e.g. make it non-interactive)
             - use <ARROW-keys> to set the size of the patch
+
         """
 
         def scb_move(s, pos, **kwargs):
@@ -986,8 +1008,7 @@ class ScaleBar:
 
     def get_position(self):
         """
-        Return the current position (and orientation) of the scalebar
-        (e.g. to obtain the position after manual re-positioning)
+        Return the current position (and orientation) of the scalebar.
 
         Returns
         -------
@@ -997,9 +1018,7 @@ class ScaleBar:
         return [self._lon, self._lat, self._azim]
 
     def remove(self):
-        """
-        Remove the scalebar from the map
-        """
+        """Remove the scalebar from the map."""
         self._remove_callbacks()
         for a in self._artists.values():
             self._m.BM.remove_artist(a)
@@ -1009,6 +1028,8 @@ class ScaleBar:
 
 
 class Compass:
+    """Base class for EOmaps compass objects."""
+
     def __init__(self, m):
         self._m = m
 
@@ -1020,12 +1041,13 @@ class Compass:
     def __call__(
         self,
         pos=None,
+        pos_transform="axes",
         scale=10,
         style="compass",
         patch=None,
         txt="N",
         pickable=True,
-        layer="all",
+        layer=None,
         ignore_invalid_angles=False,
     ):
         """
@@ -1045,9 +1067,17 @@ class Compass:
         Parameters
         ----------
         pos : tuple or None, optional
-            The relative position of the compass with respect to the axis.
-            (0,0) - lower left corner, (1,1) - upper right corner
+            The initial position of the compass with respect to the transformation
+            defined as "pos_transform".
             Note that you can also move the compass with the mouse!
+        pos_transform : string, optional
+            Indicator in what coordinate-system the initial position is provided.
+
+            - "axes": relative axis-coordinates in the range (0-1)
+            - "lonlat": coordinates provided as (longitude, latitude)
+            - "plot_crs": coordinates provided in the crs used for plotting.
+
+            The default is "axes".
         scale : float, optional
             A scale-factor for the size of the compass. The default is 10.
         style : str, optional
@@ -1087,8 +1117,10 @@ class Compass:
             of the compass or remove it from the map.
 
         """
-
+        if layer is None:
+            layer = self._m.layer
         self.layer = layer
+
         self._ignore_invalid_angles = ignore_invalid_angles
         self._m.BM.update()
 
@@ -1097,12 +1129,24 @@ class Compass:
         if pos is None:
             pos = ax2data.transform((0.5, 0.5))
         else:
-            pos = ax2data.transform(pos)
+            if pos_transform == "axes":
+                pos = ax2data.transform(pos)
+            elif pos_transform == "lonlat":
+                pos = self._m._transf_lonlat_to_plot.transform(*pos)
+            elif pos_transform == "plot_crs":
+                pass
+            else:
+                raise TypeError(
+                    f"EOmaps: {pos_transform} is not a valid 'pos_transform'."
+                    "Use one of ('axes', 'lonlat', 'plot_crs')"
+                )
 
         self._style = style
         self._patch = patch
         self._txt = txt
         self._scale = scale
+        # remember the dpi at the time the compass was initialized
+        self._init_dpi = self._m.f.dpi
 
         self._ang = 0
         # remember last used rotation angle for out-of-axes compass
@@ -1123,14 +1167,11 @@ class Compass:
         self._cids = [
             self._canvas.mpl_connect("pick_event", self._on_pick),
             self._canvas.mpl_connect("button_release_event", self._on_release),
-            self._canvas.mpl_connect("resize_event", self._on_resize),
             self._canvas.mpl_connect("scroll_event", self._on_scroll),
         ]
 
-        self._add_zoom_callbacks()
-
-    def _on_resize(self, event):
-        self._update_offset(*self._pos)
+        if self._update_offset not in self._m.BM._before_fetch_bg_actions:
+            self._m.BM._before_fetch_bg_actions.append(self._update_offset)
 
     def _get_artist(self, pos):
         if self._style == "north arrow":
@@ -1206,19 +1247,19 @@ class Compass:
 
         return art
 
-    def _update_offset(self, x, y):
+    def _update_offset(self, x=None, y=None, *args, **kwargs):
         # reset to the center of the axis if both are None
         try:
-            ax2data = self._m.ax.transAxes + self._m.ax.transData.inverted()
-
             if x is None or y is None:
                 try:
-                    x, y = ax2data.transform(
-                        self._ax2data.inverted().transform(self._pos)
-                    )
+                    self.set_position(self._pos)
+                    return
                 except Exception:
                     x, y = 0.9, 0.1
-            self.set_position((x, y))
+                    self.set_position((x, y), "axis")
+                    return
+
+            self.set_position((x, y), "data")
         except Exception:
             pass
 
@@ -1261,12 +1302,17 @@ class Compass:
 
         self._ang = ang
         r = transforms.Affine2D().rotate(ang)
-        s = transforms.Affine2D().scale(self._scale)
+        # apply the scale-factor with respect to the current figure dpi to keep the
+        # relative size of the north-arrow on dpi-changes!
+        s = transforms.Affine2D().scale(self._scale * self._m.f.dpi / self._init_dpi)
         t = transforms.Affine2D().translate(*self._m.ax.transData.transform(pos))
         trans = r + s + t
         return trans
 
     def _on_motion(self, evt):
+        if not self._layer_visible:
+            return
+
         if self._check_still_parented() and self._got_artist:
             x, y = evt.xdata, evt.ydata
 
@@ -1284,26 +1330,32 @@ class Compass:
                 x, y = self._m.ax.transData.inverted().transform((evt.x, evt.y))
 
             self._update_offset(x, y)
-            self._m.BM.blit_artists(artists=[self._artist], bg=self._bg)
+            self._m.BM.blit_artists(artists=[self._artist])
 
     def _on_scroll(self, event):
+        if not self._layer_visible:
+            return
+
         if self._check_still_parented() and self._got_artist:
             self.set_scale(max(1, self._scale + event.step))
-            self._m.BM.blit_artists(artists=[self._artist], bg=self._bg)
+            self._m.BM.blit_artists(artists=[self._artist])
 
     def _on_pick(self, evt):
+        if not self._layer_visible:
+            return
+
         if evt.mouseevent.button != 1:
             return
 
-        # fetch the currently active background (to get a nice responsive motion)
         if self._check_still_parented() and evt.artist == self._artist:
-            self._bg = self._m.BM._get_active_bg(exclude_artists=[self._artist])
-
             self._got_artist = True
             self._c1 = self._canvas.mpl_connect("motion_notify_event", self._on_motion)
             self._c2 = self._canvas.mpl_connect("key_press_event", self._on_keypress)
 
     def _on_keypress(self, event):
+        if not self._layer_visible:
+            return
+
         if event.key == "delete":
             self.remove()
         if event.key == "d":
@@ -1311,6 +1363,9 @@ class Compass:
             self.set_pickable(False)
 
     def _on_release(self, event):
+        if not self._layer_visible:
+            return
+
         if self._check_still_parented() and self._got_artist:
             self._finalize_offset()
             self._got_artist = False
@@ -1336,13 +1391,19 @@ class Compass:
         else:
             return True
 
+    @property
+    def _layer_visible(self):
+        return self.layer == "all" or (
+            self.layer in (*self._m.BM.bg_layer.split("|"), self._m.BM.bg_layer)
+        )
+
     def _disconnect(self):
         """Disconnect the callbacks."""
         for cid in self._cids:
             self._canvas.mpl_disconnect(cid)
 
-        for cid in self._ax_cids:
-            self._m.ax.callbacks.disconnect(cid)
+        if self._update_offset in self._m.BM._before_fetch_bg_actions:
+            self._m.BM._before_fetch_bg_actions.append(self._update_offset)
 
         try:
             c1 = self._c1
@@ -1360,25 +1421,6 @@ class Compass:
 
     def _finalize_offset(self):
         pass
-
-    def _add_zoom_callbacks(self):
-        self._ax_cids = set()
-
-        self._ax_cids.add(
-            self._m.ax.callbacks.connect(
-                "xlim_changed", lambda *args: self._update_offset(None, None)
-            )
-        )
-        self._ax_cids.add(
-            self._m.ax.callbacks.connect(
-                "ylim_changed", lambda *args: self._update_offset(None, None)
-            )
-        )
-        self._ax_cids.add(
-            self._m.f.canvas.mpl_connect(
-                "resize_event", lambda *args: self._update_offset(None, None)
-            )
-        )
 
     def remove(self):
         """
@@ -1406,8 +1448,8 @@ class Compass:
             - False or "none": Make the background-patch invisible.
         linewidth: float
             The linewidth of the patch.
-        """
 
+        """
         if facecolor is False:
             facecolor = "none"
         if edgecolor is False:
@@ -1425,14 +1467,14 @@ class Compass:
 
     def set_scale(self, scale):
         """
-        Set the size of the  compass. (The default is 10)
+        Set the size scale-factor of the compass. (The default is 10).
 
         Parameters
         ----------
         s : float
             The size of the compass.
-        """
 
+        """
         self._scale = scale
         self._update_offset(*self._pos)
 
@@ -1467,9 +1509,8 @@ class Compass:
 
             The default is "data".
         """
-        self._ax2data = self._m.ax.transAxes + self._m.ax.transData.inverted()
-
         if coords == "axis":
+            self._ax2data = self._m.ax.transAxes + self._m.ax.transData.inverted()
             pos = self._ax2data.transform(pos)
 
         trans = self._get_transform(pos)
@@ -1477,9 +1518,9 @@ class Compass:
             c.set_transform(trans)
         self._pos = pos
 
-    def get_position(self, coords="axis"):
+    def get_position(self, coords="data"):
         """
-        Return the current position of the compass
+        Return the current position of the compass.
 
         Parameters
         ----------
@@ -1490,7 +1531,7 @@ class Compass:
             - "axis": relative [0-1] coordinates with respect to the
               axis (e.g. (0, 0) = lower left corner, (1, 1) = upper right corner)
 
-            The default is "axis".
+            The default is "data".
 
         Returns
         -------
@@ -1498,7 +1539,26 @@ class Compass:
             a tuple (x, y) representing the current location of the compass.
 
         """
-        return self._ax2data.inverted().transform(self._pos)
+        self._ax2data = self._m.ax.transAxes + self._m.ax.transData.inverted()
+
+        if coords == "axis":
+            return self._ax2data.inverted().transform(self._pos)
+        elif coords == "data":
+            return self._pos
+        else:
+            raise TypeError("EOmaps: 'coords' must be one of ['data', 'axis']!")
+
+    def get_scale(self):
+        """
+        Return the current size scale-factor of the compass.
+
+        Returns
+        -------
+        s : float
+            The size of the compass.
+
+        """
+        return self._scale
 
     def set_ignore_invalid_angles(self, val):
         """

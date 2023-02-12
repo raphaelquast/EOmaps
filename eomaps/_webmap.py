@@ -1,6 +1,7 @@
 from functools import lru_cache, partial
 from warnings import warn, filterwarnings, catch_warnings
 from types import SimpleNamespace
+from contextlib import contextmanager
 
 from PIL import Image
 from io import BytesIO
@@ -323,7 +324,7 @@ class _wmts_layer(_WebMap_layer):
         super().__init__(*args, **kwargs)
         pass
 
-    def __call__(self, layer=None, zorder=0, alpha=1, **kwargs):
+    def __call__(self, layer=None, zorder=-5, alpha=1, **kwargs):
         """
         Add the WMTS layer to the map
 
@@ -338,7 +339,7 @@ class _wmts_layer(_WebMap_layer):
             The default is None.
         zorder : float
             The zorder of the artist (e.g. the stacking level of overlapping artists)
-            The default is 0
+            The default is -5
         alpha : float, optional
             The alpha-transparency of the image.
             NOTE: This changes the global transparency of the images... it does
@@ -367,7 +368,7 @@ class _wmts_layer(_WebMap_layer):
             else:
                 self._layer = layer
 
-            if self._layer == "all" or self._m.BM.bg_layer == self._layer:
+            if self._layer == "all" or self._layer in m.BM.bg_layer.split("|"):
                 # add the layer immediately if the layer is already active
                 self._do_add_layer(
                     self._m,
@@ -425,7 +426,7 @@ class _wms_layer(_WebMap_layer):
         super().__init__(*args, **kwargs)
         pass
 
-    def __call__(self, layer=None, zorder=0, alpha=1, **kwargs):
+    def __call__(self, layer=None, zorder=-5, alpha=1, **kwargs):
         """
         Add the WMS layer to the map
 
@@ -440,7 +441,7 @@ class _wms_layer(_WebMap_layer):
             The default is None.
         zorder : float
             The zorder of the artist (e.g. the stacking level of overlapping artists)
-            The default is 0
+            The default is -5
         alpha : float, optional
             The alpha-transparency of the image.
             NOTE: This changes the global transparency of the images... it does
@@ -470,7 +471,7 @@ class _wms_layer(_WebMap_layer):
             else:
                 self._layer = layer
 
-            if self._layer == "all" or m.BM.bg_layer == self._layer:
+            if self._layer == "all" or self._layer in m.BM.bg_layer.split("|"):
                 # add the layer immediately if the layer is already active
                 self._do_add_layer(
                     m=m,
@@ -866,11 +867,17 @@ class xyzRasterSource(RasterSource):
         else:
             self.desired_tile_form = "RGB"
 
-        self._factory = TileFactory(self.url, desired_tile_form=self.desired_tile_form)
+        self._factory = TileFactory(
+            self.url,
+            desired_tile_form=self.desired_tile_form,
+        )
 
     # function to estimate a proper zoom-level
     @staticmethod
     def _getz(d, zmax):
+        # see https://wiki.openstreetmap.org/wiki/Zoom_levels
+        # see https://stackoverflow.com/a/75251360/9703451
+
         z = int(np.clip(np.ceil(np.log2(1 / d * 40075016.68557849)), 0, zmax))
         return z
 
@@ -1025,7 +1032,9 @@ class _xyz_tile_service:
         self.name = name
 
     def _reinit(self, m):
-        return _xyz_tile_service(m, self.url, self._maxzoom)
+        return _xyz_tile_service(
+            m, url=self.url, maxzoom=self._maxzoom, name=self._name
+        )
 
     def __call__(
         self,
@@ -1033,7 +1042,7 @@ class _xyz_tile_service:
         transparent=False,
         alpha=1,
         interpolation="spline36",
-        zorder=0,
+        zorder=-5,
         **kwargs,
     ):
         """
@@ -1063,7 +1072,7 @@ class _xyz_tile_service:
             provide a huge boost in image quality! The default is 750.
         zorder : float
             The zorder of the artist (e.g. the stacking level of overlapping artists)
-            The default is 0
+            The default is -5
         **kwargs :
             Additional kwargs passed to the cartopy-wrapper for
             matplotlib's `imshow`.
@@ -1140,6 +1149,48 @@ from matplotlib.image import AxesImage
 import matplotlib.artist
 
 
+def refetch_wms_on_size_change(refetch):
+    """
+    Set the behavior of WebMap services with respect to size changes.
+
+    A size change is triggered if:
+
+    - The axis that shows the wms-service is re-sized
+    - The figure is re-sized
+    - The figure dpi changes
+    - The figure is saved with a dpi-value other than the current figure dpi
+
+    By default, WebMap services are dynamically re-fetched on any size-change.
+    (this also means that saving figures at high dpi-values will cause a
+     re-fetch of webmap services which might result in a different look
+     of the exported image!)
+
+    Note
+    ----
+    This will set the GLOBAL behavior for ALL EOmaps WebMap services!
+
+    Parameters
+    ----------
+    refetch : bool
+
+        - If True: WebMap services are dynamically re-fetched on size changes
+        - If False: WebMap services are only re-fetched if the axis-extent
+          changes.
+    """
+    SlippyImageArtist_NEW._refetch_on_size_change = refetch
+
+
+@contextmanager
+def _cx_refetch_wms_on_size_change(refetch):
+    val = SlippyImageArtist_NEW._refetch_on_size_change
+
+    try:
+        SlippyImageArtist_NEW._refetch_on_size_change = refetch
+        yield
+    finally:
+        SlippyImageArtist_NEW._refetch_on_size_change = val
+
+
 class SlippyImageArtist_NEW(AxesImage):
 
     """
@@ -1151,10 +1202,19 @@ class SlippyImageArtist_NEW(AxesImage):
 
     """
 
+    # Indicator if WebMap services should be dynamically re-fetched
+    # if the size of the axes or figure changes
+    # (NOTE: a size-change also triggers if the figure dpi changes
+    # or if m.savefig() is called with a dpi value different than the current
+    # dpi!)
+    _refetch_on_size_change = True
+
     def __init__(self, ax, raster_source, **kwargs):
         self.raster_source = raster_source
         # This artist fills the Axes, so should not influence layout.
         kwargs.setdefault("in_layout", False)
+        kwargs.setdefault("zorder", -5)
+
         super().__init__(ax, **kwargs)
 
         self.cache = []
@@ -1162,6 +1222,9 @@ class SlippyImageArtist_NEW(AxesImage):
         ax.callbacks.connect("xlim_changed", self.on_xlim)
         self._prev_extent = (0, 0)
         self._prev_size = (ax.bbox.width, ax.bbox.height)
+
+        # indicator if WebMaps should be re-fetched if the size of the
+        # axes (e.g. also the figure size or dpi) changes.
 
     def on_xlim(self, *args, **kwargs):
         self.stale = True
@@ -1181,12 +1244,15 @@ class SlippyImageArtist_NEW(AxesImage):
 
             # only fetch images if one of the following is true:
             # - the map extent changed
-            # - the size of the axis changed
+            # - the size of the axis, figure or the figure-dpi changed
             # - the cache is empty
 
+            extent_changed = self._prev_extent != (x1, x2, y1, y2)
+            axsize_changed = self._prev_size != (ax.bbox.width, ax.bbox.height)
+
             if (
-                self._prev_extent != (x1, x2, y1, y2)
-                or self._prev_size != (ax.bbox.width, ax.bbox.height)
+                extent_changed
+                or (self._refetch_on_size_change and axsize_changed)
                 or len(self.cache) == 0
             ):
                 # only re-fetch tiles if the extent has changed

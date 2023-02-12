@@ -116,7 +116,7 @@ class _gpd_picker:
 
 
 class _cb_container(object):
-    """base-class for callback containers"""
+    """Base-class for callback containers."""
 
     def __init__(self, m, cb_class=None, method="click", tmp_artists=None):
         self._m = m
@@ -138,15 +138,12 @@ class _cb_container(object):
         self._event = None
 
     def _getobj(self, m):
-        """get the equivalent callback container on another maps object"""
+        """Get the equivalent callback container on another maps object."""
         return getattr(m.cb, self._method, None)
 
     @property
     def _objs(self):
-        """
-        get the callback-container objects associated with the axes that
-        the event belonged to
-        """
+        """Get the callback-container objects associated with the event-axes."""
         # Note: it is possible that more than 1 Maps objects are
         # assigned to the same axis!
         objs = []
@@ -194,7 +191,7 @@ class _cb_container(object):
 
     def forward_events(self, *args):
         """
-        Forward callback-events from this Maps-object to other Maps-objects
+        Forward callback-events from this Maps-object to other Maps-objects.
 
         (e.g. share events one-way)
 
@@ -208,7 +205,7 @@ class _cb_container(object):
 
     def share_events(self, *args):
         """
-        Share callback-events between this Maps-object and all other Maps-objects
+        Share callback-events between this Maps-object and all other Maps-objects.
 
         (e.g. share events both ways)
 
@@ -217,7 +214,6 @@ class _cb_container(object):
         args : eomaps.Maps
             The Maps-objects that should execute the callback.
         """
-
         for m1 in (self._m, *args):
             for m2 in (self._m, *args):
                 if m1 is not m2:
@@ -228,7 +224,7 @@ class _cb_container(object):
 
     def add_temporary_artist(self, artist):
         """
-        Make an artist temporary (remove it from the map at the next event)
+        Make an artist temporary (remove it from the map at the next event).
 
         Parameters
         ----------
@@ -240,7 +236,7 @@ class _cb_container(object):
 
     def _execute_cb(self, layer):
         """
-        Get bool if a callback assigned on "layer" should be executed
+        Get bool if a callback assigned on "layer" should be executed.
 
         - True if the callback is assigned to the "all" layer
         - True if the corresponding layer is currently active
@@ -374,7 +370,7 @@ class _click_container(_cb_container):
 
         def __call__(self, f, double_click=False, button=None, modifier=None, **kwargs):
             """
-            add a custom callback-function to the map
+            Add a custom callback-function to the map.
 
             Parameters
             ----------
@@ -428,14 +424,8 @@ class _click_container(_cb_container):
                 the ID of the attached callback
 
             """
-
             if button is None:
                 button = self._parent._default_button
-
-            if self._parent._method == "pick":
-                assert (
-                    self._parent._m.coll is not None
-                ), "you can only attach pick-callbacks after calling `plot_map()`!"
 
             return self._parent._add_callback(
                 callback=f,
@@ -446,9 +436,7 @@ class _click_container(_cb_container):
             )
 
     class _get:
-        """
-        Accessor for objects generated/retrieved by callbacks.
-        """
+        """Accessor for objects generated/retrieved by callbacks."""
 
         def __init__(self, parent):
             self.m = parent._m
@@ -498,7 +486,7 @@ class _click_container(_cb_container):
 
     def _parse_cid(self, cid):
         """
-        get the
+        Parse a callbac-id.
 
         Parameters
         ----------
@@ -599,21 +587,19 @@ class _click_container(_cb_container):
         >>> m.cb.click.set_sticky_modifiers("1")
 
         """
-
         self._sticky_modifiers = list(map(str, args))
 
         if self._method == "click":
             self._m.cb._click_move._sticky_modifiers = args
 
     def _init_picker(self):
+        assert (
+            self._m.coll is not None
+        ), "you can only attach pick-callbacks after calling `plot_map()`!"
+
         try:
             # Lazily make a plotted dataset pickable a
             if getattr(self._m, "tree", None) is None:
-                assert getattr(self._m, "coll", None) is not None, (
-                    "EOmaps: you MUST call `m.plot_map()` or "
-                    "`m.make_dataset_pickable()` before assigning pick callbacks!"
-                )
-
                 from .helpers import searchtree
 
                 self._m.tree = searchtree(m=self._m._proxy(self._m))
@@ -637,7 +623,7 @@ class _click_container(_cb_container):
         **kwargs,
     ):
         """
-        Attach a callback to the plot that will be executed if a pixel is clicked
+        Attach a callback to the plot that will be executed if a pixel is clicked.
 
         A list of pre-defined callbacks (accessible via `m.cb`) or customly defined
         functions can be used.
@@ -715,11 +701,11 @@ class _click_container(_cb_container):
             button = self._default_button
 
         if self._method == "pick":
-            assert self._m.coll is not None, (
-                "Pick-callbacks can only be attached AFTER calling `m.plot_map()` "
-                "or `m.make_dataset_pickable()`!"
-            )
-            self._init_picker()
+            if self._m.coll is None:
+                # lazily initialize the picker when the layer is fetched
+                self._m._data_manager._on_next_fetch.append(self._init_picker)
+            else:
+                self._init_picker()
 
         # attach "on_move" callbacks
         movecb_name = None
@@ -796,7 +782,6 @@ class cb_click_container(_click_container):
 
     Methods
     -------
-
     attach : accessor for callbacks.
         Executing the functions will attach the associated callback to the map!
 
@@ -1017,7 +1002,6 @@ class cb_move_container(cb_click_container):
 
     Methods
     -------
-
     attach : accessor for callbacks.
         Executing the functions will attach the associated callback to the map!
 
@@ -1124,14 +1108,12 @@ class cb_move_container(cb_click_container):
 class cb_pick_container(_click_container):
     """
     Callbacks that select the nearest datapoint if you click on the map.
-    (you must plot a dataset with `m.plot_map()` first!)
 
     The event will search for the closest data-point and execute the callback
     with the properties (e.g. position , ID, value) of the selected point.
 
     Note
     ----
-
     To speed up identification of points for very large datasets, the search
     is limited to points located inside a "search rectangle".
     The side-length of this rectangle is determined in the plot-crs and can be
@@ -1140,7 +1122,7 @@ class cb_pick_container(_click_container):
     The default is to use a side-length of 50 times the dataset-radius.
 
     Methods
-    --------
+    -------
     attach : accessor for callbacks.
         Executing the functions will attach the associated callback to the map!
 
@@ -1198,8 +1180,9 @@ class cb_pick_container(_click_container):
         search_radius=None,
     ):
         """
-        Set the picker-properties (number of picked points, max. search radius, etc.)
-        (Only provided arguments will be updated!)
+        Set the picker-properties (number of picked points, max. search radius, etc.).
+
+        Only provided arguments will be updated!
 
         Parameters
         ----------
@@ -1234,8 +1217,8 @@ class cb_pick_container(_click_container):
                 used if possible and else np.inf is used.
 
             The default is "50" (e.g. 50 times the pixel-radius).
-        """
 
+        """
         if n is not None:
             self._n_ids = n
 
@@ -1294,9 +1277,10 @@ class cb_pick_container(_click_container):
         )
 
         if index is not None:
-            pos = self._m._get_xy_from_index(index, reprojected=True)
-            ID = self._get_id(index)
-            val = self._m._props["z_data"].flat[index]
+            pos = self._m._data_manager._get_xy_from_index(index, reprojected=True)
+            val = self._m._data_manager._get_val_from_index(index)
+            ID = self._m._data_manager._get_id_from_index(index)
+
             try:
                 val_color = artist.cmap(artist.norm(val))
             except Exception:
@@ -1317,34 +1301,6 @@ class cb_pick_container(_click_container):
             return True, dict(ind=None, dblclick=event.dblclick, button=event.button)
 
         return False, None
-
-    def _get_id(self, ind):
-        """
-        Identify the ID from a 1D list or range object or a numpy.ndarray
-        (to avoid very large numpy-arrays if no explicit IDs are provided)
-
-        Parameters
-        ----------
-        ind : int or list of int
-            The index of the flattened array.
-
-        Returns
-        -------
-        ID : any
-            The corresponding data-ID.
-        """
-
-        ids = self._m._props["ids"]
-        if isinstance(ids, (list, range)):
-            ind = np.atleast_1d(ind).tolist()  # to treat numbers and lists
-            ID = [ids[i] for i in ind]
-            if len(ID) == 1:
-                ID = ID[0]
-        elif isinstance(ids, np.ndarray):
-            ID = ids.flat[ind]
-        else:
-            ID = "?"
-        return ID
 
     def _get_pickdict(self, event):
         event_ind = event.ind
@@ -1549,7 +1505,7 @@ class cb_pick_container(_click_container):
                 dummyevent.ind = pick[1].get("ind", None)
                 dummyevent.val = pick[1].get("val", None)
                 dummyevent.pos = pick[1].get("pos", None)
-
+                dummyevent.val_color = pick[1].get("val_color", None)
             else:
                 dummyevent.ind = None
 
@@ -1562,7 +1518,6 @@ class keypress_container(_cb_container):
 
     Methods
     -------
-
     attach : accessor for callbacks.
         Executing the functions will attach the associated callback to the map!
 
@@ -1645,7 +1600,7 @@ class keypress_container(_cb_container):
                             if name in cbs:
                                 cbs[name](key=event.key)
 
-                # self._m.parent.BM.update(clear=self._method)
+                self._m.parent.BM.update(clear=self._method)
             except ReferenceError:
                 pass
 
@@ -1670,17 +1625,16 @@ class keypress_container(_cb_container):
 
         Examples
         --------
+        Attach a pre-defined callback:
 
-            Attach a pre-defined callback:
+        >>> m.cb.keypress.attach.switch_layer(layer=1, key="1")
 
-            >>> m.cb.keypress.attach.switch_layer(layer=1, key="1")
+        Attach a custom callback:
 
-            Attach a custom callback:
-
-            >>> def cb(**kwargs):
-            >>>     ... do something ...
-            >>>
-            >>> m.cb.keypress.attach(cb, key="3")
+        >>> def cb(**kwargs):
+        >>>     ... do something ...
+        >>>
+        >>> m.cb.keypress.attach(cb, key="3")
 
         """
 
@@ -1700,7 +1654,7 @@ class keypress_container(_cb_container):
 
         def __call__(self, f, key, **kwargs):
             """
-            Add a custom callback-function to the map
+            Add a custom callback-function to the map.
 
             Parameters
             ----------
@@ -1728,7 +1682,6 @@ class keypress_container(_cb_container):
                 the ID of the attached callback
 
             """
-
             if key is not None and not isinstance(key, str):
                 raise TypeError(
                     "EOmaps: The 'key' for keypress-callbacks must be a string!"
@@ -1760,15 +1713,15 @@ class keypress_container(_cb_container):
 
     def remove(self, callback=None):
         """
-        remove an attached callback from the figure
+        Remove an attached callback from the figure.
 
         Parameters
         ----------
         callback : int, str or tuple
             if str: the name of the callback to remove
                     (`<function_name>_<count>__<layer>__<key>`)
-        """
 
+        """
         if callback is not None:
             name, layer, key = self._parse_cid(callback)
 
@@ -1791,7 +1744,7 @@ class keypress_container(_cb_container):
 
     def _add_callback(self, callback, key="x", **kwargs):
         """
-        Attach a callback to the plot that will be executed if a key is pressed
+        Attach a callback to the plot that will be executed if a key is pressed.
 
         A list of pre-defined callbacks (accessible via `m.cb`) or customly defined
         functions can be used.
@@ -1823,7 +1776,6 @@ class keypress_container(_cb_container):
             (to remove the callback, use `m.cb.remove(cbname)`)
 
         """
-
         if isinstance(callback, str):
             assert hasattr(self._cb, callback), (
                 f"The function '{callback}' does not exist as a pre-defined callback."
@@ -1858,7 +1810,6 @@ class cb_container:
 
     Methods
     -------
-
     - **click** : Execute functions when clicking on the map
 
     - **pick** : Execute functions when you "pick" a pixel on the  map
@@ -1933,21 +1884,25 @@ class cb_container:
     @property
     @wraps(cb_click_container)
     def click(self):
+        """Attach click callbacks."""
         return self._click
 
     @property
     @wraps(cb_move_container)
     def move(self):
+        """Attach move callbacks."""
         return self._move
 
     @property
     @wraps(cb_pick_container)
     def pick(self):
+        """Attach pick callbacks."""
         return self._pick
 
     @property
     @wraps(keypress_container)
     def keypress(self):
+        """Attach keypress callbacks."""
         return self._keypress
 
     def add_picker(self, name, artist, picker):

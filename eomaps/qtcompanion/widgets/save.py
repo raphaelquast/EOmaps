@@ -25,6 +25,24 @@ class TransparentCheckBox(QtWidgets.QCheckBox):
             )
 
 
+class RefetchWMSCheckBox(QtWidgets.QCheckBox):
+    def enterEvent(self, e):
+        if self.window().showhelp is True:
+            QtWidgets.QToolTip.showText(
+                e.globalPos(),
+                "<h3>Frame transparency</h3>"
+                "Toggle re-fetching WebMap services on figure-export."
+                "<p>"
+                "If checked, all WebMap services will be re-fetched with respect to "
+                "the export-dpi before saving the figure. "
+                "<p>"
+                "NOTE: For high dpi-exports, this can result in a very large number of "
+                "tiles that need to be fetched from the server. "
+                "If the request is too large, the server might refuse it and the final "
+                "image can have gaps (or no wms-tiles at all)!",
+            )
+
+
 class SaveButton(QtWidgets.QPushButton):
     def enterEvent(self, e):
         if self.window().showhelp is True:
@@ -69,6 +87,12 @@ class SaveFileWidget(QtWidgets.QFrame):
         width = transp_label.fontMetrics().boundingRect(transp_label.text()).width()
         transp_label.setFixedWidth(width + 5)
 
+        # refetch WebMap services
+        self.refetch_cb = RefetchWMSCheckBox()
+        refetch_label = QtWidgets.QLabel("Re-fetch WebMaps")
+        width = transp_label.fontMetrics().boundingRect(refetch_label.text()).width()
+        refetch_label.setFixedWidth(width + 5)
+
         layout = QtWidgets.QHBoxLayout()
         layout.addWidget(b_edit)
         layout.addStretch(1)
@@ -76,6 +100,8 @@ class SaveFileWidget(QtWidgets.QFrame):
         layout.addWidget(self.dpi_input)
         layout.addWidget(transp_label)
         layout.addWidget(self.transp_cb)
+        layout.addWidget(refetch_label)
+        layout.addWidget(self.refetch_cb)
 
         layout.addWidget(b1)
 
@@ -94,10 +120,10 @@ class SaveFileWidget(QtWidgets.QFrame):
     @pyqtSlot()
     def save_file(self):
         savepath = QtWidgets.QFileDialog.getSaveFileName()[0]
-
-        if savepath is not None:
+        if savepath is not None and savepath != "":
             self.m.savefig(
                 savepath,
                 dpi=int(self.dpi_input.text()),
                 transparent=self.transp_cb.isChecked(),
+                refetch_wms=self.refetch_cb.isChecked(),
             )

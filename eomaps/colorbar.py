@@ -87,6 +87,8 @@ class ColorBar:
         log=False,
         out_of_range_vals="clip",
         hist_kwargs=None,
+        label=None,
+        ylabel=None,
         **kwargs,
     ):
         """
@@ -205,6 +207,11 @@ class ColorBar:
         hist_kwargs : dict
             A dictionary with keyword-arguments passed to the creation of the histogram
             (e.g. passed to `plt.hist()` )
+        label : str, optional
+            The label used for the colorbar. The default is None
+        ylabel : str, optional
+            The label used for the y-axis of the colorbar. The default is None
+
         kwargs :
             All additional kwargs are passed to the creation of the colorbar
             (e.g. `plt.colorbar()`)
@@ -255,8 +262,6 @@ class ColorBar:
         else:
             self._hist_kwargs = copy.deepcopy(hist_kwargs)
 
-        self._depreciate_kwargs(kwargs)
-
         self._extend_frac = extend_frac
         self._orientation = orientation
         self._dynamic_shade_indicator = dynamic_shade_indicator
@@ -266,6 +271,7 @@ class ColorBar:
         self._log = log
         self._out_of_range_vals = out_of_range_vals
 
+        kwargs["label"] = label
         self._kwargs = copy.deepcopy(kwargs)
 
         self._coll = self._m.coll
@@ -287,10 +293,11 @@ class ColorBar:
 
         self._cid_redraw = None
 
-        self._refetch_bg = False
-
         self._set_data()
         self._setup_axes()
+
+        if ylabel is not None:
+            self.ax_cb_plot.set_ylabel(ylabel)
 
     def set_visible(self, vis):
         """
@@ -304,47 +311,6 @@ class ColorBar:
         """
         for ax in self._axes:
             ax.set_visible(vis)
-
-    def _depreciate_kwargs(self, kwargs):
-        if "histbins" in kwargs:
-            self._hist_bins = kwargs.pop("histbins")
-            print(
-                "EOmaps: Colorbar argument 'histbins' is depreciated in EOmaps v5.0."
-                "Please use 'hist_bins' instead!"
-            )
-        if "density" in kwargs:
-            self._hist_kwargs["density"] = kwargs.pop("density")
-            print(
-                "EOmaps: Colorbar argument 'density' is depreciated in EOmaps v5.0."
-                "Please use `hist_kwargs=dict(density=...)` instead!"
-            )
-        if "histogram_size" in kwargs:
-            self._hist_size = kwargs.pop("histogram_size")
-            print(
-                "EOmaps: Colorbar argument 'histogram_size' is depreciated in EOmaps v5.0."
-                "Please use `hist_size` instead!"
-            )
-        if "add_extend_arrows" in kwargs:
-            kwargs.pop("add_extend_arrows")
-            print(
-                "EOmaps: Colorbar argument 'add_extend_arrows' is depreciated in EOmaps v5.0."
-                "Extend-arrows are added automatically if data out-of-range is found."
-            )
-
-        for key in ["top", "bottom", "left", "right"]:
-            margin = kwargs.pop("margin", None)
-            if margin is None:
-                margin = dict()
-
-            if key in kwargs:
-                margin[key] = kwargs.pop(key)
-                print(
-                    f"EOmaps: Colorbar argument '{key}' is depreciated in EOmaps v5.0."
-                    "Please use 'margin=dict({key}=...)' instead!"
-                )
-
-            if len(margin) > 0:
-                self._margin = margin
 
     def _default_cb_tick_formatter(self, x, pos, precision=None):
         """
@@ -420,13 +386,14 @@ class ColorBar:
         if self.ax_cb_plot.bbox.width > 1 and self.ax_cb_plot.bbox.height > 1:
             self.ax_cb_plot.set_visible(True)
         else:
-            self.ax_cb_plot.set_visible(False)
+            self.ax_cb_plot.set_visible(False)  # to avoid singular matrix errors
 
         if self.ax_cb.bbox.width > 1 and self.ax_cb.bbox.height > 1:
             self.ax_cb.set_visible(True)
             [i.set_visible(True) for i in self.ax_cb.patches]
             [i.set_visible(True) for i in self.ax_cb.collections]
         else:
+            self.ax_cb.set_visible(False)  # to avoid singular matrix errors
             [i.set_visible(False) for i in self.ax_cb.patches]
             [i.set_visible(False) for i in self.ax_cb.collections]
 
@@ -475,12 +442,17 @@ class ColorBar:
             if self._parent_cb is not None:
 
                 try:
+                    parent_subplotspec = self._parent_cb._ax.get_subplotspec()
+                except AttributeError:
+                    parent_subplotspec = None
+
+                if parent_subplotspec is not None:
                     self._ax = self._m.f.add_subplot(
-                        self._parent_cb._ax.get_subplotspec(),
+                        parent_subplotspec,
                         label="cb",
                         zorder=9999,
                     )
-                except AttributeError:
+                else:
                     self._ax = self._m.f.add_axes(
                         self._parent_cb._ax.get_position(),
                         label="cb",
@@ -605,9 +577,8 @@ class ColorBar:
             a.set_navigate(False)
             if a is not None:
                 self._m.BM.add_bg_artist(a, self._m.layer)
-
         # we need to re-draw since the background axis size has changed!
-        self._refetch_bg = True
+        self._m.BM._refetch_layer(self._m.layer)
 
     @property
     def _axes(self):
@@ -695,7 +666,7 @@ class ColorBar:
                 )
         else:
 
-            z_data = self._m._props["z_data"]
+            z_data = self._m._data_manager.z_data
             bins = self._m.classify_specs._bins
             cmap = self._m.classify_specs._cbcmap
             norm = self._m.classify_specs._norm
@@ -815,7 +786,7 @@ class ColorBar:
         horizontal = self._orientation == "horizontal"
         n_cmap = plt.cm.ScalarMappable(cmap=self._cmap, norm=self._norm)
 
-        if self._hist_size <= 0:
+        if self._hist_size <= 0.0001:
             return
 
         # plot the histogram
@@ -946,9 +917,6 @@ class ColorBar:
             if self._log is False:
                 # self.ax_cb_plot.xaxis.set_major_locator(plt.MaxNLocator(5))
                 self.ax_cb_plot.set_xlim(None, 0)
-
-        if self._refetch_bg:
-            self._m.BM._refetch_layer(self._m.layer)
 
     def _redraw_colorbar(self, *args, **kwargs):
         self._set_data()

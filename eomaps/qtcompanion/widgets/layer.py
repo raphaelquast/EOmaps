@@ -25,8 +25,6 @@ class AutoUpdatePeekLayerDropdown(QtWidgets.QComboBox):
 
         self._last_active = None
 
-        # update layers on every change of the Maps-object background layer
-        self.m.BM.on_layer(self.update_visible_layer, persistent=True)
         self.update_layers()
 
         self.setSizeAdjustPolicy(self.AdjustToMinimumContentsLengthWithIcon)
@@ -48,20 +46,6 @@ class AutoUpdatePeekLayerDropdown(QtWidgets.QComboBox):
     @pyqtSlot()
     def set_last_active(self):
         self._last_active = self.currentText()
-
-    def update_visible_layer(self, m, l):
-        # make sure to re-fetch layers first
-        self.update_layers()
-
-        if self._use_active:
-            # set current index to active layer if _use_active
-            currindex = self.findText(l)
-            self.setCurrentIndex(currindex)
-        elif self._last_active is not None:
-            # set current index to last active layer otherwise
-            idx = self.findText(self._last_active)
-            if idx != -1:
-                self.setCurrentIndex(idx)
 
     def mousePressEvent(self, event):
         if event.button() == Qt.RightButton:
@@ -141,7 +125,10 @@ class AutoUpdateLayerMenuButton(QtWidgets.QPushButton):
                 "<ul>"
                 "<li><b>click</b> to switch to the selected layer</li>"
                 "<li><b>control+click</b> to overlay multiple layers</li>"
-                "</ul>",
+                "</ul>"
+                "NOTE: The order at which you select layers will determine "
+                "the 'stacking' of the layers! (the number [n] in front "
+                " of the layer-name indicates the stack-order of the layer.",
             )
 
     def get_uselayer(self):
@@ -150,7 +137,7 @@ class AutoUpdateLayerMenuButton(QtWidgets.QPushButton):
             w = a.defaultWidget()
 
             if isinstance(w, QtWidgets.QCheckBox) and w.isChecked():
-                active_layers.append(a.text())
+                active_layers.append(a.data())
 
         uselayer = "???"
 
@@ -186,7 +173,10 @@ class AutoUpdateLayerMenuButton(QtWidgets.QPushButton):
             l = f"{len([1 for i in l.split('|') if len(i) > 0])} layers visible"
             # txt = txt[:50] + " ..."
 
-        if "|" in l:
+        if "{" in l:  # TODO support transparency
+            l = "custom :   " + l
+            self.setStyleSheet("QPushButton{color: rgb(200,50,50)}")
+        elif "|" in l:
             l = "multi :   " + l
             self.setStyleSheet("QPushButton{color: rgb(200,50,50)}")
         else:
@@ -211,8 +201,8 @@ class AutoUpdateLayerMenuButton(QtWidgets.QPushButton):
         actionwidget = action.defaultWidget()
 
         checked_layers = [l for l in self.m.BM.bg_layer.split("|") if l != "_"]
-        selected_layer = action.text()
-        selected_layers = [l for l in action.text().split("|") if l != "_"]
+        selected_layer = action.data()
+        selected_layers = [l for l in action.data().split("|") if l != "_"]
 
         # if no relevant modifier is pressed, just select single layers!
         if not (modifiers == Qt.ShiftModifier or modifiers == Qt.ControlModifier):
@@ -241,7 +231,7 @@ class AutoUpdateLayerMenuButton(QtWidgets.QPushButton):
 
             uselayer = "???"
             if len(checked_layers) > 1:
-                uselayer = "|".join(sorted(checked_layers))
+                uselayer = "|".join(checked_layers)
             elif len(checked_layers) == 1:
                 uselayer = checked_layers[0]
 
@@ -253,24 +243,28 @@ class AutoUpdateLayerMenuButton(QtWidgets.QPushButton):
 
     def update_checkstatus(self):
         currlayer = str(self.m.BM.bg_layer)
-        if "|" in currlayer:
-            active_layers = {i for i in currlayer.split("|") if i != "_"}
-            active_layers.add(currlayer)
+
+        if "{" in currlayer:  # TODO support transparency
+            active_layers = []
         else:
-            active_layers = {currlayer}
+            if "|" in currlayer:
+                active_layers = [i for i in currlayer.split("|") if i != "_"]
+                active_layers.append(currlayer)
+            else:
+                active_layers = [currlayer]
 
         for action in self.menu().actions():
-            key = action.text()
+            key = action.data()
             w = action.defaultWidget()
             if isinstance(w, QtWidgets.QCheckBox):
-
                 # temporarily disconnect triggering the action on state-changes
                 w.clicked.disconnect(action.trigger)
-
                 if key in active_layers:
                     w.setChecked(True)
+                    w.setText(f"[{active_layers.index(key)}]  {key}")
                 else:
                     w.setChecked(False)
+                    w.setText(key + "        ")  # add space for [n]
 
                 # re connect action trigger
                 w.clicked.connect(action.trigger)
@@ -291,7 +285,8 @@ class AutoUpdateLayerMenuButton(QtWidgets.QPushButton):
             # checkBox.setCheckable(False)
             action = QtWidgets.QWidgetAction(self.menu())
             action.setDefaultWidget(checkBox)
-            action.setText(key)
+            action.setText(key + "        ")
+            action.setData(key)
 
             if key == "all":
                 # use a transparent checkbox to avoid closing the menu on click
@@ -310,6 +305,8 @@ class AutoUpdateLayerMenuButton(QtWidgets.QPushButton):
             checkBox.clicked.connect(action.trigger)
             action.triggered.connect(self.actionClicked)
             self.menu().addAction(action)
+
+            action.triggered.connect(self.menu().show)
 
         self.update_display_text(self.m.BM._bg_layer)
 

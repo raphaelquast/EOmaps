@@ -100,9 +100,11 @@ free and open source `ScreenToGif <https://www.screentogif.com/>`_ software.
 
 All animated gifs in this documentation have been created with this awesome piece of software.
 
+⚠️ Important changes between major versions
+********************************************
 
-⚙ Port script from EOmaps v3.x to v4.x
-***************************************
+⚙ From EOmaps v3.x to v4.x
+---------------------------
 
 Changes between **EOmaps v3.x** and **EOmaps v4.0**:
 
@@ -186,3 +188,62 @@ simply provide it as an explicit argument!
       ...
 
   m.cb.click.attach(custom_cb, m=m, asdf=1)
+
+
+⚙ From EOmaps v5.x to v6.x
+---------------------------
+
+General changes in behavior
++++++++++++++++++++++++++++
+
+- | 🔶 Starting with EOmaps v6.0 multiple calls to ``m.plot_map()``
+  | **on the same Maps-object completely remove (and replace)** the previous dataset!
+  | (use a new Maps-object on the same layer for datasets that should be visible at the same time!)
+- | 🔶 WebMap services are no longer re-fetched by default when exporting images with ``m.savefig()``
+  | To force a re-fetch of WebMap services prior to saving the image at the desired dpi, use ``m.savefig(refetch_wms=True)``
+  | (see ``m.refetch_wms_on_size_change()`` for more details)
+- | 🔷 ``m.add_gdf`` now uses only valid geometries
+  | (to revert to the old behavior, use: ``m.add_gdf(..., only_valid=False)``)
+- 🔷 the order at which multi-layers are combined now determines the stacking of the artists
+
+  - ``m.show_layer("A|B")`` plots all artists of the layer ``"A"`` **on top of** the layer ``"B"``
+  - the ordering of artists inside a layer is determined by their ``zorder``  (e.g. ``m.plot_map(zorder=123)``)
+
+
+
+Removed (previously depreciated) functionalities
+++++++++++++++++++++++++++++++++++++++++++++++++
+- ❌ the ``m.figure`` accessor has been removed!
+
+  - Use ``m.ax``, ``m.f``, ``m.colorbar.ax_cb``, ``m.colorbar.ax_cb_plot`` instead
+
+- ❌ kwargs for ``m.plot_map(...)``
+
+  - ``"coastlines"`` use ``m.add_feature.preset.coastline()`` instead
+
+- ❌ kwargs for ``m.set_data(...)``
+
+   - ``"in_crs"`` use ``"crs"`` instead
+   - ``"xcoord"`` use ``"x"`` instead
+   - ``"ycoord"`` use ``"y"`` instead
+
+- ❌ kwargs for ``Maps(...)``
+
+  - ``"parent"`` ... no longer needed
+  - ``"gs_ax"`` use ``"ax"`` instead
+
+- ❌ kwargs for ``m.new_inset_maps(...)``
+
+  - ``"edgecolor"`` and ``"facecolor"`` use ``boundary=dict(ec=..., fc=...)`` instead
+
+- ❌ kwargs for ``m.add_colorbar(...)``
+
+  - ``"histbins"`` use ``"hist_bins"`` instead
+  - ``"histogram_size"`` use ``"hist_size"`` instead
+  - ``"density"`` use ``"hist_kwargs=dict(density=...)"`` instead
+  - ``"top", "bottom", "left", "right"`` use ``margin=dict(top=..., bottom=..., left=..., right=...)`` instead
+  - ``"add_extend_arrows"``
+
+- ❌ ``m.indicate_masked_points()`` has been removed, use ``m.plot_map(indicate_masked_points=True)`` instead
+- ❌ ``m.shape.get_transformer`` is now a private (e.g. ``m.shape._get_transformer``)
+- ❌ ``m.shape.radius_estimation_range`` is now a private (e.g. ``m.shape._radius_estimation_range``)

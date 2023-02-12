@@ -1,11 +1,13 @@
 import numpy as np
 import matplotlib.pyplot as plt
+from matplotlib.patches import PathPatch
+from matplotlib.transforms import TransformedPath
 import warnings
 
 
 class _click_callbacks(object):
     """
-    a collection of callback-functions
+    A collection of callback-functions.
 
     to attach a callback, use:
         >>> cid = m.cb.click.attach.annotate(**kwargs)
@@ -85,8 +87,23 @@ class _click_callbacks(object):
 
         return ID, pos, val, ind, picker_name, val_color
 
+    @staticmethod
+    def _fmt(x, **kwargs):
+        # make sure to format arrays with "," separator to make them
+        # copy-pasteable
+        kwargs.setdefault("separator", ",")
+        try:
+            return np.array2string(np.asanyarray(x), **kwargs)
+        except Exception:
+            return str(x)
+
     def print_to_console(self, **kwargs):
-        """Print details on the clicked pixel to the console"""
+        """
+        Print details on the clicked pixel to the console.
+
+        Additional kwargs are passed to `numpy.array2string()`
+        to control the formatting of the printed values.
+        """
         ID, pos, val, ind, picker_name, val_color = self._popargs(kwargs)
 
         if isinstance(self.m.data_specs.x, str):
@@ -97,24 +114,28 @@ class _click_callbacks(object):
             ylabel = "y"
 
         if ID is not None:
-            printstr = "---------------\n"
             x, y = pos
-            printstr += f"{xlabel} = {x}\n{ylabel} = {y}\n"
-            printstr += f"ID = {ID}\n"
+
+            printstr = (
+                "---------------\n"
+                f"{xlabel} = {self._fmt(x, **kwargs)}\n"
+                f"{ylabel} = {self._fmt(y, **kwargs)}\n"
+                f"ID = {self._fmt(ID, **kwargs)}\n"
+            )
 
             paramname = self.m.data_specs.parameter
             if paramname is None:
                 paramname = "val"
-            printstr += f"{paramname} = {val}"
+            printstr += f"{paramname} = {self._fmt(val)}"
         else:
             lon, lat = self.m._transf_plot_to_lonlat.transform(*pos)
 
             printstr = (
                 "---------------\n"
-                f"x = {pos[0]}\n"
-                f"y = {pos[1]}\n"
-                f"lon = {lon}\n"
-                f"lat = {lat}"
+                f"x = {self._fmt(pos[0], **kwargs)}\n"
+                f"y = {self._fmt(pos[1], **kwargs)}\n"
+                f"lon = {self._fmt(lon, **kwargs)}\n"
+                f"lat = {self._fmt(lat, **kwargs)}"
             )
 
         print(printstr)
@@ -130,8 +151,7 @@ class _click_callbacks(object):
         **kwargs,
     ):
         """
-        Add a basic text-annotation to the plot at the position where the map
-        was clicked.
+        Add a text-annotation to the plot at the position where the map was clicked.
 
         Parameters
         ----------
@@ -183,24 +203,29 @@ class _click_callbacks(object):
             >>> dict(xytext=(20, 20),
             >>>      textcoords="offset points",
             >>>      bbox=dict(boxstyle="round", fc="w"),
-            >>>      arrowprops=dict(arrowstyle="->")
+            >>>      arrowprops=dict(arrowstyle="->"),
+            >>>      annotation_clip=True,
             >>>     )
 
         """
-
         if layer is None:
             layer = self.m.layer
 
         ID, pos, val, ind, picker_name, val_color = self._popargs(kwargs)
-
-        try:
-            n_ids = len(ID)
-        except TypeError:
-            n_ids = 1
-
-        if ID is not None and n_ids > 1:
-            multipick = True
+        if isinstance(ind, (list, np.ndarray)):
+            # multipick = True
             picked_pos = (pos[0][0], pos[1][0])
+
+            try:
+                n_ids = len(ind)
+            except TypeError:
+                n_ids = "??"
+
+            if n_ids == 1:
+                multipick = False
+            else:
+                multipick = True
+
         else:
             multipick = False
             picked_pos = pos
@@ -220,13 +245,14 @@ class _click_callbacks(object):
             parameter = self.m.data_specs.parameter
 
         ax = self.m.ax
-
         if text is None:
-            if ID is not None and self.m.data is not None:
+            # use "ind is not None" to distinguish between click and pick
+            # TODO implement better distinction between click and pick!
+            if self.m.data is not None and ind is not None:
                 if not multipick:
                     x, y = [
                         np.format_float_positional(i, trim="-", precision=pos_precision)
-                        for i in self.m._get_xy_from_index(ind)
+                        for i in self.m._data_manager._get_xy_from_index(ind)
                     ]
                     x0, y0 = [
                         np.format_float_positional(i, trim="-", precision=pos_precision)
@@ -239,8 +265,8 @@ class _click_callbacks(object):
                         )
                 else:
                     coords = [
-                        *self.m._get_xy_from_index(ind),
-                        *self.m._get_xy_from_index(ind, reprojected=True),
+                        *self.m._data_manager._get_xy_from_index(ind),
+                        *self.m._data_manager._get_xy_from_index(ind, reprojected=True),
                     ]
 
                     for n, c in enumerate(coords):
@@ -259,12 +285,16 @@ class _click_callbacks(object):
 
                     if val is not None:
                         val = np.array(val, dtype=float)  # to handle None
-                        mi = np.format_float_positional(
-                            np.nanmin(val), trim="-", precision=pos_precision
-                        )
-                        ma = np.format_float_positional(
-                            np.nanmax(val), trim="-", precision=pos_precision
-                        )
+
+                        # catch warnings here to avoid showing "all-nan-slice"
+                        # all the time when clicking on empty pixels
+                        with warnings.catch_warnings():
+                            mi = np.format_float_positional(
+                                np.nanmin(val), trim="-", precision=pos_precision
+                            )
+                            ma = np.format_float_positional(
+                                np.nanmax(val), trim="-", precision=pos_precision
+                            )
                         val = f"{mi}...{ma}"
 
                 equal_crs = self.m.data_specs.crs != self.m._crs_plot
@@ -316,6 +346,7 @@ class _click_callbacks(object):
                 textcoords="offset points",
                 bbox=bbox,
                 arrowprops=dict(arrowstyle="->"),
+                annotation_clip=True,
             )
 
             styledict.update(**kwargs)
@@ -340,9 +371,7 @@ class _click_callbacks(object):
             annotation.set_text(printstr)
 
     def clear_annotations(self, **kwargs):
-        """
-        Remove all temporary and permanent annotations from the plot
-        """
+        """Remove all temporary and permanent annotations from the plot."""
         if hasattr(self, "permanent_annotations"):
             while len(self.permanent_annotations) > 0:
                 ann = self.permanent_annotations.pop(0)
@@ -354,8 +383,9 @@ class _click_callbacks(object):
 
     def get_values(self, **kwargs):
         """
-        Successively collect return-values in a dict accessible via
-        `m.cb.[click/pick].get.picked_vals`.
+        Successively collect return-values in a dict.
+
+        The dict is accessible via `m.cb.[click/pick].get.picked_vals`
 
         The structure of the picked_vals dict is as follows:
         (lists are appended as you click on more pixels)
@@ -465,11 +495,13 @@ class _click_callbacks(object):
 
         if shape is None:
             if self.m.shape is not None:
-                shape = (
-                    self.m.shape.name
-                    if (self.m.shape.name in possible_shapes)
-                    else "ellipses"
-                )
+                m_shape = self.m.shape.name
+                if m_shape in possible_shapes:
+                    shape = m_shape
+                elif m_shape in ["raster", "shade_raster"]:
+                    shape = "rectangles"
+                else:
+                    shape = "ellipses"
             else:
                 "ellipses"
         else:
@@ -491,9 +523,9 @@ class _click_callbacks(object):
         ID, pos, val, ind, picker_name, val_color = self._popargs(kwargs)
         if ID is not None and picker_name == "default":
             if ind is None:
-                pos = self.m._get_xy_from_ID(ID)
+                pos = self.m._data_manager._get_xy_from_ID(ID)
             else:
-                pos = self.m._get_xy_from_index(ind)
+                pos = self.m._data_manager._get_xy_from_index(ind)
             pos_crs = "in"
         else:
             pos_crs = "out"
@@ -560,25 +592,24 @@ class _click_callbacks(object):
         if layer is None:
             layer = self.m.layer
 
+        # explicitly use True/False here to allow overriding the "permanent"
+        # behavior by using permanent=None (or anything other than True/False)
         if permanent is False:
             # make the annotation temporary
             self._temporary_artists.append(marker)
             self.m.BM.add_artist(marker, layer)
-        else:
+        elif permanent is True:
             self.m.BM.add_artist(marker, layer)
 
-            if permanent is True:
-                if not hasattr(self, "permanent_markers"):
-                    self.permanent_markers = [marker]
-                else:
-                    self.permanent_markers.append(marker)
+            if not hasattr(self, "permanent_markers"):
+                self.permanent_markers = [marker]
+            else:
+                self.permanent_markers.append(marker)
 
         return marker
 
     def clear_markers(self, **kwargs):
-        """
-        Remove all temporary and permanent annotations from the plot.
-        """
+        """Remove all temporary and permanent annotations from the plot."""
         if hasattr(self, "permanent_markers"):
             while len(self.permanent_markers) > 0:
                 marker = self.permanent_markers.pop(0)
@@ -589,18 +620,69 @@ class _click_callbacks(object):
     # def _mark_cleanup(self):
     #     self.clear_markers()
 
-    def peek_layer(self, layer="1", how=(0.4, 0.4), alpha=1, **kwargs):
+    def _get_clip_path(self, x, y, xy_crs, radius, radius_crs, shape, n=100):
+        shp = self.m.set_shape._get(shape)
+
+        if shape == "ellipses":
+            shp_pts = shp._get_ellipse_points(
+                x=np.atleast_1d(x),
+                y=np.atleast_1d(y),
+                crs=xy_crs,
+                radius=radius,
+                radius_crs=radius_crs,
+                n=n,
+            )
+            bnd_verts = np.stack(shp_pts[:2], axis=2)[0]
+
+        elif shape == "rectangles":
+            shp_pts = shp._get_rectangle_verts(
+                x=np.atleast_1d(x),
+                y=np.atleast_1d(y),
+                crs=xy_crs,
+                radius=radius,
+                radius_crs=radius_crs,
+                n=n,
+            )
+            bnd_verts = shp_pts[0][0]
+
+        elif shape == "geod_circles":
+            shp_pts = shp._get_geod_circle_points(
+                x=np.atleast_1d(x),
+                y=np.atleast_1d(y),
+                crs=xy_crs,
+                radius=radius,
+                # radius_crs=radius_crs,
+                n=n,
+            )
+            bnd_verts = np.stack(shp_pts[:2], axis=2).squeeze()
+        from matplotlib.path import Path
+
+        return Path(bnd_verts)
+
+    def peek_layer(
+        self, layer="1", how=(0.4, 0.4), alpha=1, shape="rectangular", **kwargs
+    ):
         """
-        Swipe between data- or WebMap layers or peek a layers through a rectangle.
+        Overlay a part of the map with a different layer if you click on the map.
+
+        This callback allows you to overlay one (or more) existing layers on top
+        of the currently visible layer if you click on the map.
+
+        You can show a rectangular or circular area of the "peek-layer" centered at
+        the mouse-position or swipe beween layers (e.g. from left/right/top or bottom).
+
 
         Parameters
         ----------
         layer : str or list
 
             - if str: The name of the layer you want to peek at.
-            - if list: A list of layer-names to peek at.
-              (alternatively you can also separate individual layer-names with a "|"
-              character, e.g.: "layer1|layer2")
+            - if list: A list of layer-names of the following form:
+
+                - A layer-name (string)
+                - A tuple (< layer-name >, < transparency [0-1] >)
+
+            see `m.show_layer()` for more details on how to provide combined layer-names
 
         how : str , float or tuple, optional
             The method you want to visualize the second layer.
@@ -616,41 +698,41 @@ class _click_callbacks(object):
 
             The default is "left".
         alpha : float, optional
-            The transparency of the peeked layer.
-            (must be between 0 and 1)
+            The transparency of the peeked layer. (between 0 and 1)
+            If you overlay a (possibly transparent) combination of multiple layers,
+            this transparency will be assigned as a global transparency for the
+            obtained "combined layer".
             The default is 1.
         **kwargs :
             additional kwargs passed to a rectangle-marker.
             the default is `(fc="none", ec="k", lw=1)`
 
-        Note
-        ----
-        You must draw something on the layer first!
 
-        To assign a layer to an object, either use the `layer=...` argument when
-        adding objects (e.g. `m.plot_map(layer=1)`), or use a new Maps-layer via
+        Examples
+        --------
+        Overlay a single layer:
 
         >>> m = Maps()
-        >>> m2 = m.new_layer(layer="the layer name")
-        >>> # now all artists added with m2 will be added to the layer
-        >>> # "the layer name" (if not explicitly specified otherwise)
-        >>> m2.plot_map()
-        >>> m.peek_layer(layer="the layer name")
+        >>> m.add_feature.preset.coastline()
+        >>> m2 = m.new_layer(layer="ocean")
+        >>> m2.add_feature.preset.ocean()
+        >>> m.cb.click.attach.peek_layer(layer="ocean")
+
+        Overlay a (transparent) combination of multiple layers:
+
+        >>> m = Maps()
+        >>> m.all.add_feature.preset.coastline()
+        >>> m.add_feature.preset.urban_areas()
+        >>> m.add_feature.preset.ocean(layer="ocean")
+        >>> m.add_feature.physical.land(layer="land", fc="g")
+        >>> m.cb.click.attach.peek_layer(layer=["ocean", ("land", 0.5)],
+        >>>                              shape="round", how=0.4)
+
         """
+        shape = "ellipses" if shape == "round" else "rectangles"
 
-        if "overlay" in kwargs:
-            kwargs.pop("overlay")
-            warnings.warn(
-                "EOmaps: The 'overlay' argument of peek_layer is depreciated! "
-                "(It has no effect and can be removed.)"
-            )
-
-        if isinstance(layer, list):
-            layer = "|".join(map(str, layer))
-        else:
-            if not isinstance(layer, str):
-                print("EOmaps v5.0 Warning: All layer-names are converted to strings!")
-                layer = str(layer)
+        if not isinstance(layer, str):
+            layer = self.m._get_combined_layer_name(*layer)
 
         ID, pos, val, ind, picker_name, val_color = self._popargs(kwargs)
 
@@ -697,16 +779,18 @@ class _click_callbacks(object):
                 x0m, y0m = ax.transData.inverted().transform((x0, y0))
                 x1m, y1m = ax.transData.inverted().transform((x0 + blitw, y0 + blith))
                 w, h = abs(x1m - x0m), abs(y1m - y0m)
-                marker = self.mark(
-                    pos=((x0m + x1m) / 2, (y0m + y1m) / 2),
-                    radius_crs="out",
-                    shape="rectangles",
-                    radius=(w / 2, h / 2),
-                    permanent=False,
-                    **args,
+
+                clip_path = self._get_clip_path(
+                    (x0m + x1m) / 2,
+                    (y0m + y1m) / 2,
+                    "out",
+                    (w / 2, h / 2),
+                    "out",
+                    "rectangles",
+                    100,
                 )
             else:
-                marker = None
+                clip_path = None
 
         elif isinstance(how, (float, list, tuple)):
             if isinstance(how, float):
@@ -746,33 +830,44 @@ class _click_callbacks(object):
             x0m, y0m = ax.transData.inverted().transform(
                 (x0 - blitw / 2.0, y0 - blith / 2)
             )
+
+            # TODO check why a 1 pixel offset is required for a tight fit!
+            # (rounding issues?)
             x1m, y1m = ax.transData.inverted().transform(
-                (x0 + blitw / 2.0, y0 + blith / 2)
+                (x0 + blitw / 2.0 - 1, y0 + blith / 2)
             )
             w, h = abs(x1m - x0m), abs(y1m - y0m)
 
-            marker = self.mark(
-                pos=pos,
-                radius_crs="out",
-                shape="rectangles",
-                radius=(w / 1.99, h / 1.99),  # 1.99 to be larger than the blit-region
-                permanent=False,
-                layer="all",
-                **args,
+            clip_path = self._get_clip_path(
+                x1m, y1m, "out", (w / 2, h / 2), "out", shape, 100
             )
-
         else:
             raise TypeError(f"EOmaps: {how} is not a valid peek method!")
 
-        if marker is not None:
+        if clip_path is not None:
+            patch = PathPatch(clip_path, ec="k", fc="none")
+            marker = self.m.ax.add_patch(patch)
+            self.m.cb.click.add_temporary_artist(marker)
+
             # make sure to clear the marker at the next update
             def doit():
                 self.m.BM._artists_to_clear.setdefault("move", []).append(marker)
 
             self.m.BM._after_restore_actions.append(doit)
 
+        # create a TransformedPath as needed for clipping
+        clip_path = TransformedPath(
+            clip_path, self.m.ax.projection._as_mpl_transform(self.m.ax)
+        )
+
         self.m.BM._after_restore_actions.append(
-            self.m.BM._get_restore_bg_action(layer, (x0, y0, blitw, blith), alpha=alpha)
+            self.m.BM._get_restore_bg_action(
+                "|".join([self.m.BM.bg_layer, layer]),
+                (x0, y0, blitw, blith),
+                alpha=alpha,
+                clip_path=clip_path,
+                set_clip_path=False if shape == "rectangles" else True,
+            )
         )
 
     def load(
@@ -905,10 +1000,7 @@ class _click_callbacks(object):
 
 
 class pick_callbacks(_click_callbacks):
-    """
-    A collection of callback functions that are executed when clicking on
-    a pixel of the plotted collection.
-    """
+    """A collection of callbacks that are executed if you click on a datapoint."""
 
     _cb_list = [
         "get_values",
@@ -946,10 +1038,7 @@ class pick_callbacks(_click_callbacks):
 
 
 class click_callbacks(_click_callbacks):
-    """
-    A collection of callback functions that are executed when clicking anywhere
-    on the map.
-    """
+    """Collection of callbacks that are executed if you click anywhere on the map."""
 
     _cb_list = [
         "get_values",
@@ -966,9 +1055,7 @@ class click_callbacks(_click_callbacks):
 
 
 class move_callbacks(_click_callbacks):
-    """
-    A collection of callback functions that are executed on mouse-movement.
-    """
+    """Collection of callbacks that are executed on mouse-movement."""
 
     _cb_list = [
         "print_to_console",
@@ -982,10 +1069,7 @@ class move_callbacks(_click_callbacks):
 
 
 class keypress_callbacks:
-    """
-    A collection of callback functions that are executed when the assigned
-    key is pressed.
-    """
+    """Collection of callbacks that are executed if you press a key on the keyboard."""
 
     _cb_list = ["switch_layer", "fetch_layers"]
 
@@ -1012,10 +1096,9 @@ class keypress_callbacks:
             The key to use for triggering the callback.
             Modifiers are indicated with a "+", e.g. "alt+x".
             The default is "x".
-        """
 
-        self._m.BM.bg_layer = str(layer)
-        self._m.BM.fetch_bg()
+        """
+        self._m.show_layer(layer)
 
     def fetch_layers(self, layers=None, verbose=True, key="x"):
         """
@@ -1051,6 +1134,6 @@ class keypress_callbacks:
             The key to use for triggering the callback.
             Modifiers are indicated with a "+", e.g. "alt+x".
             The default is "x".
-        """
 
+        """
         self._m.fetch_layers(layers=layers, verbose=verbose)

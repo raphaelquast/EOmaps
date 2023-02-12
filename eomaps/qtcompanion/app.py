@@ -1,5 +1,5 @@
 from PyQt5 import QtWidgets
-from PyQt5.QtCore import Qt, pyqtSignal, pyqtSlot
+from PyQt5.QtCore import Qt, pyqtSignal, pyqtSlot, QSize
 from PyQt5.QtGui import QKeySequence
 
 # TODO make sure a QApplication has been instantiated
@@ -19,6 +19,8 @@ from .widgets.utils import get_cmap_pixmaps
 from .widgets.extent import SetExtentToLocation
 from .widgets.click_callbacks import ClickCallbacks
 
+from .widgets.editor import LayerTabBar
+
 
 class OpenFileButton(QtWidgets.QPushButton):
     def enterEvent(self, e):
@@ -31,13 +33,26 @@ class Tab1(QtWidgets.QWidget):
         self.m = m
 
         peektabs = PeekTabs(m=self.m)
+
         setextent = SetExtentToLocation(m=self.m)
         save = SaveFileWidget(m=self.m)
+
+        # -------------
+        self.layer_tabs = LayerTabBar(self.m, populate=True)
+        # make sure the tab-widget auto-expands properly
+        self.layer_tabs.setSizePolicy(
+            QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Minimum
+        )
+        self.layer_tabs.setTabsClosable(False)
+        # -------------
 
         click_cbs = ClickCallbacks(m=self.m)
 
         try:
             addwms = AddWMSMenuButton(m=self.m, new_layer=True)
+            addwms.wmsLayerCreated.connect(
+                self.layer_tabs.repopulate_and_activate_current
+            )
         except:
             addwms = QtWidgets.QPushButton("WMS services unavailable")
 
@@ -50,11 +65,19 @@ class Tab1(QtWidgets.QWidget):
         l2.addStretch(1)
         l2.addWidget(setextent)
 
+        layer_tab_layout = QtWidgets.QHBoxLayout()
+        layer_tab_layout.setAlignment(Qt.AlignLeft)
+        layer_tab_layout.addWidget(QtWidgets.QLabel("<b>Layers: </b>"))
+        layer_tab_layout.addWidget(self.layer_tabs)
+
         layout = QtWidgets.QVBoxLayout()
         layout.addWidget(peektabs)
-        layout.addLayout(l2)
         layout.addStretch(1)
         layout.addWidget(click_cbs)
+        layout.addStretch(1)
+        layout.addLayout(l2)
+        layout.addStretch(1)
+        layout.addLayout(layer_tab_layout)
         layout.addWidget(save)
 
         self.setLayout(layout)
@@ -88,20 +111,11 @@ class ControlTabs(QtWidgets.QTabWidget):
 
     @pyqtSlot()
     def tabchanged(self):
-        if self.currentWidget() == self.tab_edit:
-            self.tab_edit.populate()
-            self.tab_edit.populate_layer()
+        if self.currentWidget() == self.tab1:
+            self.tab1.layer_tabs.repopulate_and_activate_current()
 
-            # activate the currently visible layer in the editor-tabs
-            try:
-                idx = next(
-                    i
-                    for i in range(self.tab_edit.tabs.count())
-                    if self.tab_edit.tabs.tabText(i) == self.m.BM._bg_layer
-                )
-                self.tab_edit.tabs.setCurrentIndex(idx)
-            except StopIteration:
-                pass
+        elif self.currentWidget() == self.tab_edit:
+            self.tab_edit.artist_tabs.repopulate_and_activate_current()
 
     def dragEnterEvent(self, e):
         self.tab_open.dragEnterEvent(e)

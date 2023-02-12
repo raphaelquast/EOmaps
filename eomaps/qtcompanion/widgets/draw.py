@@ -2,7 +2,6 @@ from PyQt5 import QtWidgets
 from PyQt5.QtCore import Qt, pyqtSlot
 
 from .utils import GetColorWidget, AlphaSlider
-from .editor import AddAnnotationInput
 
 
 class TransparencySlider(AlphaSlider):
@@ -300,19 +299,32 @@ class DrawerWidget(QtWidgets.QWidget):
 
     @pyqtSlot()
     def save_shapes(self):
-        save_path, widget = QtWidgets.QFileDialog.getSaveFileName(
-            caption="Save Shapes", directory="shapes.shp", filter="Shapefiles (*.shp)"
-        )
-        if save_path is not None and len(save_path) > 0:
-            self.drawer.save_shapes(save_path)
-            # after saving the polygons, start with a new drawer
-            self._new_drawer()
+        try:
+            save_path, widget = QtWidgets.QFileDialog.getSaveFileName(
+                caption="Save Shapes",
+                directory="shapes.shp",
+                filter="Shapefiles (*.shp)",
+            )
+            if save_path is not None and len(save_path) > 0:
+                self.drawer.save_shapes(save_path)
+                # after saving the polygons, start with a new drawer
+                self._new_drawer()
+        except Exception:
+            print(
+                "EOmaps: Encountered a problem while trying to save " "drawn shapes..."
+            )
 
     @pyqtSlot()
     def remove_last_shape(self):
-        self.drawer.remove_last_shape()
-        # update to make sure the changes are reflected on the map immediately
-        self.m.BM.update()
+        try:
+            self.drawer.remove_last_shape()
+            # update to make sure the changes are reflected on the map immediately
+            self.m.BM.update()
+        except Exception:
+            print(
+                "EOmaps: Encountered a problem while trying to remove "
+                "the last drawn shape..."
+            )
 
     @pyqtSlot(int)
     def set_alpha_with_slider(self, i):

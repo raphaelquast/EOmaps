@@ -2,14 +2,22 @@
 from itertools import tee
 import re
 import sys
+from itertools import chain
+from contextlib import contextmanager, ExitStack
+from textwrap import indent, dedent
+from functools import wraps
+from pathlib import Path
+import json
+import warnings
 
 import numpy as np
-from matplotlib.colors import LinearSegmentedColormap, ListedColormap
-from itertools import chain
-from matplotlib.transforms import Bbox, TransformedBbox
 import matplotlib.pyplot as plt
 from matplotlib.lines import Line2D
-from contextlib import contextmanager
+from matplotlib.colors import LinearSegmentedColormap, ListedColormap
+from matplotlib.transforms import Bbox, TransformedBbox
+from matplotlib.axis import XAxis, YAxis
+from matplotlib.spines import Spine
+from matplotlib.text import Text
 
 # class copied from matplotlib.axes
 class _TransformedBoundsLocator:
@@ -118,6 +126,77 @@ def progressbar(it, prefix="", size=60, file=sys.stdout):
     file.flush()
 
 
+def _add_to_docstring(prefix=None, suffix=None, insert=None):
+    """
+    Add text to an existing docstring
+
+    Parameters
+    ----------
+    prefix : str, optional
+        A string appended as prefix to the existing docstring.
+        The default is None.
+    suffix : str, optional
+        A string appended as suffix to the existing docstring.
+        The default is None.
+    insert : dict, optional
+        Search for the provided keys and insert the values at the next line.
+
+        If values are tuples, they are interpreted as:
+        (string, line-offset) where `line-offset` represents an offset added
+        to the line at which key was found.
+
+        The default is None.
+    """
+
+    def decorator(f):
+        doc = f.__doc__
+
+        try:
+
+            @wraps(f)
+            def inner(*args, **kwargs):
+                return f(*args, **kwargs)
+
+            if insert is not None:
+                for searchstr, val in insert.items():
+                    if isinstance(val, str):
+                        offset = 0
+                    else:
+                        val, offset = val
+
+                    try:
+                        docsplit = dedent(f.__doc__).split("\n")
+                        paramline = docsplit.index(searchstr) + 1
+                        docsplit = f.__doc__.split("\n")
+
+                        # count number of leading spaces
+                        nspaces = len(docsplit[paramline]) - len(
+                            docsplit[paramline].lstrip(" ")
+                        )
+
+                        docsplit = (
+                            docsplit[: (paramline + offset)]
+                            + indent(val, " " * nspaces).split("\n")
+                            + docsplit[(paramline + offset) :]
+                        )
+                        doc = "\n".join(docsplit)
+                    except ValueError:
+                        print(f"EOmaps: Unable to update docstring for {f.__name__}")
+
+            if prefix is not None:
+                doc = prefix + "\n" + doc
+            if suffix is not None:
+                doc = doc + "\n" + suffix
+
+            inner.__doc__ = doc
+            return inner
+        except Exception:
+            print(f"EOmaps: Unable to update docstring for {f.__name__}")
+            return f
+
+    return decorator
+
+
 class searchtree:
     def __init__(self, m):
         """
@@ -166,7 +245,7 @@ class searchtree:
 
         if isinstance(r, str):
             # evaluate an appropriate pick-distance
-            if getattr(self._m.shape, "radius_crs", "?") != "out":
+            if getattr(self._m.shape, "radius_crs", None) != "out":
                 try:
                     radius = self._m.set_shape._estimate_radius(self._m, "out", np.max)
                 except AssertionError:
@@ -194,31 +273,44 @@ class searchtree:
         # select a rectangle around the pick-coordinates
         # (provides tremendous speedups for very large datasets)
 
-        # get a rectangular boolean mask
-        mx = np.logical_and(
-            self._m._props["x0"] > (x[0] - d), self._m._props["x0"] < (x[0] + d)
-        )
-        my = np.logical_and(
-            self._m._props["y0"] > (x[1] - d), self._m._props["y0"] < (x[1] + d)
-        )
+        if self._m._data_manager.x0_1D is not None:
+            # TODO check this!
+            # get a rectangular boolean mask
+            mx = np.logical_and(
+                self._m._data_manager.x0_1D > (x[0] - d),
+                self._m._data_manager.x0_1D < (x[0] + d),
+            )
+            my = np.logical_and(
+                self._m._data_manager.y0_1D > (x[1] - d),
+                self._m._data_manager.y0_1D < (x[1] + d),
+            )
 
-        if self._m._1D2D:
             mx_id, my_id = np.where(mx)[0], np.where(my)[0]
             m_rect_x, m_rect_y = np.meshgrid(mx_id, my_id)
 
-            x_rect = self._m._props["x0"][m_rect_x].ravel()
-            y_rect = self._m._props["y0"][m_rect_y].ravel()
+            x_rect = self._m._data_manager.x0[m_rect_x].ravel()
+            y_rect = self._m._data_manager.y0[m_rect_y].ravel()
 
             # get the unravelled indexes of the boolean mask
             idx = np.ravel_multi_index((m_rect_x, m_rect_y), self._m._zshape).ravel()
         else:
+            # get a rectangular boolean mask
+            mx = np.logical_and(
+                self._m._data_manager.x0 > (x[0] - d),
+                self._m._data_manager.x0 < (x[0] + d),
+            )
+            my = np.logical_and(
+                self._m._data_manager.y0 > (x[1] - d),
+                self._m._data_manager.y0 < (x[1] + d),
+            )
+
             m = np.logical_and(mx, my)
             # get the indexes of the search-rectangle
             idx = np.where(m.ravel())[0]
 
             if len(idx) > 0:
-                x_rect = self._m._props["x0"][m].ravel()
-                y_rect = self._m._props["y0"][m].ravel()
+                x_rect = self._m._data_manager.x0[m].ravel()
+                y_rect = self._m._data_manager.y0[m].ravel()
             else:
                 x_rect, y_rect = [], []
 
@@ -261,28 +353,69 @@ class searchtree:
         """
         if d is None:
             d = self.d
-
         i = None
         # take care of 1D coordinates and 2D data
-        if self._m._1D2D:
-            if k == 1:
-                # just perform a brute-force search for 1D coords
-                ix = np.argmin(np.abs(self._m._props["x0"] - x[0]))
-                iy = np.argmin(np.abs(self._m._props["y0"] - x[1]))
-
-                i = np.ravel_multi_index((ix, iy), self._m._zshape)
+        if self._m._data_manager.x0_1D is not None:
+            if k > 1 and pick_relative_to_closest is True:
+                ix = np.argmin(np.abs(self._m._data_manager.x0_1D - x[0]))
+                iy = np.argmin(np.abs(self._m._data_manager.y0_1D - x[1]))
+                # query again (starting from the closest point)
+                return self.query(
+                    (self._m._data_manager.x0_1D[ix], self._m._data_manager.y0_1D[iy]),
+                    k=k,
+                    d=d,
+                    pick_relative_to_closest=False,
+                )
             else:
-                if pick_relative_to_closest is True:
-                    ix = np.argmin(np.abs(self._m._props["x0"] - x[0]))
-                    iy = np.argmin(np.abs(self._m._props["y0"] - x[1]))
 
-                    # query again (starting from the closest point)
-                    return self.query(
-                        (self._m._props["x0"][ix], self._m._props["y0"][iy]),
-                        k=k,
-                        d=d,
-                        pick_relative_to_closest=False,
+                # perform a brute-force search for 1D coords
+                ix = np.argpartition(
+                    np.abs(self._m._data_manager.x0_1D - x[0]), range(k)
+                )[:k]
+                iy = np.argpartition(
+                    np.abs(self._m._data_manager.y0_1D - x[1]), range(k)
+                )[:k]
+
+                if k > 1:
+                    # select a circle within the kxk rectangle
+                    ix, iy = np.meshgrid(ix, iy)
+
+                    idx = np.ravel_multi_index(
+                        (iy, ix),
+                        (
+                            self._m._data_manager.y0_1D.size,
+                            self._m._data_manager.x0_1D.size,
+                        ),
+                    ).ravel()
+
+                    x_rect, y_rect = (
+                        i.ravel()
+                        for i in (
+                            self._m._data_manager.x0_1D[ix],
+                            self._m._data_manager.y0_1D[iy],
+                        )
                     )
+
+                    i = idx[
+                        ((x_rect - x[0]) ** 2 + (y_rect - x[1]) ** 2).argpartition(
+                            range(int(min(k, x_rect.size)))
+                        )[:k]
+                    ]
+
+                else:
+                    ix = np.argmin(np.abs(self._m._data_manager.x0_1D - x[0]))
+                    iy = np.argmin(np.abs(self._m._data_manager.y0_1D - x[1]))
+
+                    # TODO check treatment of transposed data in here!
+                    i = np.ravel_multi_index(
+                        (iy, ix),
+                        (
+                            self._m._data_manager.y0_1D.size,
+                            self._m._data_manager.x0_1D.size,
+                        ),
+                    )
+
+                return i
 
         x_rect, y_rect, idx = self._identify_search_subset(x, d)
         if len(idx) > 0:
@@ -350,9 +483,6 @@ class LayoutEditor:
 
         self.f.canvas.mpl_connect("key_press_event", self.cb_key_press)
 
-        self._artists_visible = dict()
-        self._ax_visible = dict()
-
         # the snap-to-grid interval (0 means no snapping)
         self._snap_id = 5
 
@@ -393,12 +523,6 @@ class LayoutEditor:
     @property
     def axes(self):
         return self.f.axes
-
-    def get_spines_visible(self):
-        return [
-            {key: val.get_visible() for key, val in ax.spines.items()}
-            for ax in self.axes
-        ]
 
     @property
     def cbs(self):
@@ -513,24 +637,14 @@ class LayoutEditor:
     def _color_unpicked(self, ax):
         for spine in ax.spines.values():
             spine.set_edgecolor("b")
-
-            if ax in self._ax_visible and self._ax_visible[ax]:
-                spine.set_linestyle("-")
-                spine.set_linewidth(1)
-            else:
-                spine.set_linestyle(":")
-                spine.set_linewidth(1)
+            spine.set_linestyle("-")
+            spine.set_linewidth(1)
 
     def _color_picked(self, ax):
         for spine in ax.spines.values():
             spine.set_edgecolor("r")
-
-            if ax in self._ax_visible and self._ax_visible[ax]:
-                spine.set_linestyle("-")
-                spine.set_linewidth(2)
-            else:
-                spine.set_linestyle(":")
-                spine.set_linewidth(1)
+            spine.set_linestyle("-")
+            spine.set_linewidth(2)
 
     def _color_axes(self):
         for ax in self.axes:
@@ -653,8 +767,7 @@ class LayoutEditor:
             cb.set_position(bbox)
 
         self._color_axes()
-        self.m.BM._refetch_bg = True
-        self.m.BM.canvas.draw()
+        self.m.redraw()
 
     def cb_move(self, event):
         if (self.f.canvas.toolbar is not None) and self.f.canvas.toolbar.mode != "":
@@ -680,8 +793,7 @@ class LayoutEditor:
             bbox = self._get_move_bbox(cb._ax, event.x, event.y)
             cb.set_position(bbox)
 
-        self.m.BM._refetch_bg = True
-        self.m.BM.canvas.draw()
+        self.m.redraw()
 
     def cb_scroll(self, event):
         if (self.f.canvas.toolbar is not None) and self.f.canvas.toolbar.mode != "":
@@ -708,7 +820,6 @@ class LayoutEditor:
 
                 new_size = np.clip(start_size + event.step * 0.02, 0.0, 1.0)
                 cb.set_hist_size(new_size)
-                self._ax_visible[cb.ax_cb_plot] = cb.ax_cb_plot.get_visible()
             else:
                 resize_bbox = self._get_resize_bbox(cb._ax, event.step)
                 if resize_bbox is not None:
@@ -732,6 +843,28 @@ class LayoutEditor:
         ):
             self._undo_draggable()
             return
+        elif (event.key.lower() == "q") and (self.modifier_pressed):
+            print(
+                "\n##########################\n\n"
+                "EOmaps Layout Editor controls:\n\n"
+                "Click on axes to select them for editing.\n"
+                "(Hold 'shift' while clicking on axes to select multiple axes.)\n\n"
+                "Drag selected axes with the mouse or use the 'arrow-keys' to "
+                "change their position.\n\n"
+                "Use the 'scroll-wheel' or the '+' and '-' keys to change the size "
+                "of selected axes.\n"
+                "For normal matplotlib axes: Hold down 'h' or 'v' to adjust only "
+                "the horizontal or vertical size of the axes.\n"
+                "For EOmaps colorbars: Hold down 'control' to adjust the relative "
+                "size of the histogram.\n\n"
+                "Use the keys 1-9 to adjust the spacing of the 'snap grid' (Note that "
+                "the grid-spacing also determines the step-size for size- and "
+                "position-changes!) Press 0 to disable grid-snapping.\n\n"
+                f"To exit, press 'escape' or '{self.modifier}'\n"
+                "\n##########################\n\n"
+            )
+            return
+
         else:
             if not self.modifier_pressed:
                 # only continue if  modifier is pressed!
@@ -783,8 +916,86 @@ class LayoutEditor:
 
         return snap
 
-    def _undo_draggable(self):
+    def _make_draggable(self, filepath=None):
+        self._filepath = filepath
+        self.modifier_pressed = True
+        print("EOmaps: Layout Editor activated! (press 'esc' to exit and 'q' for info)")
 
+        self._revert_props = []
+        for ax in self.f.axes:
+            # only handle axes that have a finite size (in pixels) to avoid
+            # singular matrix errors for initially hidden zero-size axes
+            # (can happen for colorbar/colorbar histogram axes)
+            singularax = False
+            if ax.bbox.width <= 1 or ax.bbox.height <= 1:
+                singularax = True
+
+            # check if the axis is the container-axes of a colorbar
+            cbaxQ = ax.get_label() == "cb"
+
+            self._revert_props.append((ax.set_visible, ax.get_visible()))
+            self._revert_props.append((ax.set_frame_on, ax.get_frame_on()))
+            self._revert_props.append((ax.set_animated, ax.get_animated()))
+
+            if not ax.axison:
+                showXY = False
+                self._revert_props.append(ax.set_axis_off)
+                ax.set_axis_on()
+            else:
+                showXY = True
+
+            # keep singular axes hidden
+            if not singularax:
+                ax.set_visible(True)
+
+            ax.set_animated(False)
+            ax.set_frame_on(True)
+
+            for child in ax.get_children():
+                for prop in [
+                    "facecolor",
+                    "edgecolor",
+                    "linewidth",
+                    "linestyle",
+                    "alpha",
+                    "animated",
+                    "visible",
+                ]:
+                    if hasattr(child, f"set_{prop}") and hasattr(child, f"get_{prop}"):
+                        self._revert_props.append(
+                            (
+                                getattr(child, f"set_{prop}"),
+                                getattr(child, f"get_{prop}")(),
+                            )
+                        )
+
+                if isinstance(child, Spine) and not cbaxQ:
+                    # make sure spines are visible (and re-drawn on draw)
+                    child.set_animated(False)
+                    child.set_visible(True)
+                elif (
+                    ax not in self.maxes
+                    and showXY
+                    and isinstance(child, (XAxis, YAxis))
+                ):
+                    # keep all tick labels etc. of normal axes and colorbars visible
+                    child.set_animated(False)
+                    child.set_visible(True)
+                elif child is ax.patch and not cbaxQ:
+                    # make sure patches are visible (and re-drawn on draw)
+                    child.set_visible(True)
+                    child.set_facecolor("w")
+                    child.set_alpha(0.75)  # for overlapping axes
+                else:
+                    # make all other childs invisible (to avoid drawing them)
+                    child.set_visible(False)
+                    child.set_animated(True)
+
+        self._color_axes()
+        self._attach_callbacks()
+        self.m.redraw()
+
+    def _undo_draggable(self):
         toolbar = getattr(self.m.f, "toolbar", None)
         if toolbar is not None:
             # Reset the axes stack to make sure the "home" "back" and "forward" buttons
@@ -802,6 +1013,8 @@ class LayoutEditor:
         self._m_picked = []
 
         print("EOmaps: Exiting layout-editor mode...")
+
+        # in case a filepath was provided, save the new layout
         if self._filepath:
             try:
                 self.m.get_layout(filepath=self._filepath, override=True)
@@ -811,167 +1024,52 @@ class LayoutEditor:
                     + f"filepath: '{self._filepath}'."
                 )
 
-        for ax, frameQ, spine_vis, patch_props, spine_props in zip(
-            self.axes,
-            self._frameon,
-            self._spines_visible,
-            self._patchprops,
-            self._spineprops,
-        ):
-            pvis, pfc, pec, plw, palpha = patch_props
-            ax.patch.set_visible(pvis)
-            ax.patch.set_fc(pfc)
-            ax.patch.set_ec(pec)
-            ax.patch.set_lw(plw)
-            ax.patch.set_alpha(palpha)
-
-            ax.set_frame_on(frameQ)
-
-            for key, (svis, sfc, sec, slw, salpha) in spine_props.items():
-                ax.spines[key].set_visible(svis)
-                ax.spines[key].set_fc(sfc)
-                ax.spines[key].set_ec(sec)
-                ax.spines[key].set_lw(slw)
-                ax.spines[key].set_alpha(salpha)
-
-            while len(self.cids) > 0:
-                cid = self.cids.pop(-1)
-                self.f.canvas.mpl_disconnect(cid)
-
-        for a, visQ in self._artists_visible.items():
-            a.set_visible(visQ)
-        self._artists_visible.clear()
-
-        # apply changes to the visibility state of the axes
-        # do this at the end since axes might also be artists!
-        for ax, val in self._ax_visible.items():
-            ax.set_visible(val)
-
-            # remember any axes that are intentionally hidden
-            if not val:
-                if ax in self.m.BM._bg_artists[self.m.BM.bg_layer]:
-                    self.m.BM._hidden_axes.add(ax)
+        self._reset_callbacks()
+        # revert all changes to artists
+        for p in self._revert_props:
+            if isinstance(p, tuple):
+                p[0](p[1])
             else:
-                if ax in self.m.BM._hidden_axes:
-                    self.m.BM._hidden_axes.remove(ax)
+                p()
 
-        for cb in self.cbs:
-            if cb is not None:
-                for p in cb.ax_cb_plot.patches:
-                    p.set_visible(True)
-
-        self._ax_visible.clear()
-
-        # do this at the end!
         self.modifier_pressed = False
 
-        # make sure the snap-grid is removed
-        self._remove_snap_grid()
-        self.m.redraw()
-
-    def _make_draggable(self, filepath=None):
-        self._filepath = filepath
-
-        # all ordinary callbacks will not execute if" self.modifier_pressed" is True!
-        print("EOmaps: Activating layout-editor mode (press 'esc' to exit)")
-        if filepath:
-            print("EOmaps: On exit, the layout will be saved to:\n       ", filepath)
-
-        # remember the visibility state of the axes
-        # do this as the first thing since axes might be artists as well!
-        for ax in self.axes:
-            self._ax_visible[ax] = ax.get_visible()
-
-        # make all artists invisible (and remember their visibility state for later)
-        for a in {
-            *self.m.f.artists,
-            *chain(*self.m.BM._bg_artists.values()),
-            *chain(*self.m.BM._artists.values()),
-        }:
-            # keep axes visible!
-            if not isinstance(a, plt.Axes):
-                self._artists_visible[a] = a.get_visible()
-                a.set_visible(False)
-
-        for cb in self.cbs:
-            if cb is not None:
-                for p in cb.ax_cb_plot.patches:
-                    p.set_visible(False)
-
-        # remember which spines were visible before
-        self._spines_visible = self.get_spines_visible()
-        self._frameon = [i.get_frame_on() for i in self.axes]
-        self._patchprops = [
-            (
-                i.patch.get_visible(),
-                i.patch.get_fc(),
-                i.patch.get_ec(),
-                i.patch.get_lw(),
-                i.patch.get_alpha(),
-            )
-            for i in self.axes
-        ]
-
-        self._spineprops = [
-            {
-                name: (
-                    s.get_visible(),
-                    s.get_fc(),
-                    s.get_ec(),
-                    s.get_lw(),
-                    s.get_alpha(),
-                )
-                for name, s in i.spines.items()
-            }
-            for i in self.axes
-        ]
-
-        self.modifier_pressed = True
-
-        for ax in self.axes:
-            ax.patch.set_visible(True)
-            ax.patch.set_facecolor("w")
-            ax.patch.set_alpha(0.75)
-
-            if ax not in self.m.BM._bg_artists.get(self.m.BM.bg_layer, []):
-                continue
-            ax.set_visible(True)
-
-            ax.set_frame_on(True)
-            for spine in ax.spines.values():
-                spine.set_visible(True)
-
-        self._color_axes()
-
-        if len(self.cids) == 0:
-            self.cids.append(self.f.canvas.mpl_connect("scroll_event", self.cb_scroll))
-            self.cids.append(
-                self.f.canvas.mpl_connect("button_press_event", self.cb_pick)
-            )
-
-            self.cids.append(
-                self.f.canvas.mpl_connect("button_release_event", self.cb_release)
-            )
-
-            self.cids.append(
-                self.f.canvas.mpl_connect("motion_notify_event", self.cb_move)
-            )
-
-            self.cids.append(
-                self.f.canvas.mpl_connect("key_press_event", self.cb_move_with_key)
-            )
-
-            self.cids.append(
-                self.f.canvas.mpl_connect("key_release_event", self.cb_key_release)
-            )
+        # reset the histogram-size of all colorbars to make sure previously hidden
+        # axes (e.g. size=0) become visible if the size is now > 0.
+        for m in self.ms:
+            for cb in m._colorbars:
+                cb.set_hist_size()
 
         self.m.redraw()
+
+    def _reset_callbacks(self):
+        # disconnect all callbacks of the layout-editor
+        while len(self.cids) > 0:
+            cid = self.cids.pop(-1)
+            self.f.canvas.mpl_disconnect(cid)
+
+    def _attach_callbacks(self):
+        # make sure all previously set callbacks are reset
+        self._reset_callbacks()
+
+        events = (
+            ("scroll_event", self.cb_scroll),
+            ("button_press_event", self.cb_pick),
+            ("button_release_event", self.cb_release),
+            ("motion_notify_event", self.cb_move),
+            ("key_press_event", self.cb_move_with_key),
+            ("key_release_event", self.cb_key_release),
+        )
+
+        for event, cb in events:
+            self.cids.append(self.f.canvas.mpl_connect(event, cb))
 
     def _show_snap_grid(self, snap=None):
         # snap = (snapx, snapy)
 
         if snap is None:
             if self._snap_id == 0:
+                self._remove_snap_grid()
                 return
             else:
                 snapx, snapy = self._snap
@@ -1009,6 +1107,157 @@ class LayoutEditor:
 
         self.m.redraw()
 
+    def get_layout(self, filepath=None, override=False, precision=5):
+        """
+        Get the positions of all axes within the current plot.
+
+        To re-apply a layout, use:
+
+            >>> l = m.get_layout()
+            >>> m.set_layout(l)
+
+        Note
+        ----
+        The returned list is only a snapshot of the current layout.
+        It can only be re-applied to a given figure if the order at which the axes are
+        created remains the same!
+
+        Parameters
+        ----------
+        filepath : str or pathlib.Path, optional
+            If provided, a json-file will be created at the specified destination that
+            can be used in conjunction with `m.set_layout(...)` to apply the layout:
+
+            >>> m.get_layout(filepath=<FILEPATH>, override=True)
+            >>> m.apply_layout_layout(<FILEPATH>)
+
+            You can also manually read-in the layout-dict via:
+            >>> import json
+            >>> layout = json.load(<FILEPATH>)
+        override: bool
+            Indicator if the file specified as 'filepath' should be overwritten if it
+            already exists.
+            The default is False.
+        precision : int or None
+            The precision of the returned floating-point numbers.
+            If None, all available digits are returned
+            The default is 5
+        Returns
+        -------
+        layout : dict or None
+            A dict of the positons of all axes, e.g.: {1:(x0, y0, width height), ...}
+        """
+        figsize = [*self.f.get_size_inches()]
+
+        axes = [
+            a for a in self.axes if a.get_label() not in ["EOmaps_cb", "EOmaps_cb_hist"]
+        ]
+
+        # identify relevant colorbars
+        colorbars = [getattr(m, "colorbar", None) for m in self.ms]
+        cbaxes = [getattr(cb, "_ax", None) for cb in colorbars]
+        cbs = [(colorbars[cbaxes.index(a)] if a in cbaxes else None) for a in axes]
+        # -----------
+
+        layout = dict()
+        layout["figsize"] = figsize
+
+        for i, ax in enumerate(axes):
+            if cbs[i] is not None:
+                if cbs[i]._ax.get_axes_locator() is not None:
+                    continue
+
+            label = ax.get_label()
+            name = f"{i}_{label}"
+            if precision is not None:
+                layout[name] = np.round(ax.get_position().bounds, precision).tolist()
+            else:
+                layout[name] = ax.get_position().bounds
+
+            if cbs[i] is not None:
+                layout[f"{name}_histogram_size"] = cbs[i]._hist_size
+
+        if filepath is not None:
+            filepath = Path(filepath)
+            assert (
+                not filepath.exists() or override
+            ), f"The file {filepath} already exists! Use override=True to relace it."
+            with open(filepath, "w") as file:
+                json.dump(layout, file)
+            print("EOmaps: Layout saved to:\n       ", filepath)
+
+        return layout
+
+    def apply_layout(self, layout):
+        """
+        Set the positions of all axes within the current plot based on a previously
+        defined layout.
+
+        To apply a layout, use:
+
+            >>> l = m.get_layout()
+            >>> m.set_layout(l)
+
+        To save a layout to disc and apply it at a later stage, use
+            >>> m.get_layout(filepath=<FILEPATH>)
+            >>> m.set_layout(<FILEPATH>)
+
+        Note
+        ----
+        The returned list is only a snapshot of the current layout.
+        It can only be re-applied to a given figure if the order at which the axes are
+        created remains the same!
+
+        Parameters
+        ----------
+        layout : dict, str or pathlib.Path
+            If a dict is provided, it is directly used to define the layout.
+
+            If a string or a pathlib.Path object is provided, it will be used to
+            read a previously dumped layout (e.g. with `m.get_layout(filepath)`)
+
+        """
+        if isinstance(layout, (str, Path)):
+            with open(layout, "r") as file:
+                layout = json.load(file)
+
+        # check if all relevant axes are specified in the layout
+        valid_keys = set(self.get_layout())
+        if valid_keys != set(layout):
+            warnings.warn(
+                "EOmaps: The the layout does not match the expected structure! "
+                "Layout might not be properly restored. "
+                "Invalid or missing keys:\n"
+                f"{sorted(valid_keys.symmetric_difference(set(layout)))}\n"
+            )
+
+        # set the figsize
+        figsize = layout.get("figsize", None)
+        if figsize is not None:
+            self.f.set_size_inches(*figsize)
+
+        axes = [
+            a for a in self.axes if a.get_label() not in ["EOmaps_cb", "EOmaps_cb_hist"]
+        ]
+
+        # identify relevant colorbars
+        colorbars = [getattr(m, "colorbar", None) for m in self.ms]
+        cbaxes = [getattr(cb, "_ax", None) for cb in colorbars]
+        cbs = [(colorbars[cbaxes.index(a)] if a in cbaxes else None) for a in axes]
+
+        for key in valid_keys.intersection(set(layout)):
+            if key == "figsize":
+                continue
+            val = layout[key]
+
+            i = int(key[: key.find("_")])
+            if key.endswith("_histogram_size"):
+                cbs[i].set_hist_size(val)
+            else:
+                axes[i].set_position(val)
+
+        self.m.redraw()
+
 
 # taken from https://matplotlib.org/stable/tutorials/advanced/blitting.html#class-based-example
 class BlitManager:
@@ -1042,9 +1291,10 @@ class BlitManager:
 
         self._artists_to_clear = dict()
 
-        self._hidden_axes = set()
+        self._hidden_artists = set()
 
         self._refetch_bg = True
+        self._layers_to_refetch = set()
 
         # TODO these activate some crude fixes for jupyter notebook and webagg
         # backends... proper fixes would be nice
@@ -1064,6 +1314,28 @@ class BlitManager:
 
         self._on_add_bg_artist = list()
         self._on_remove_bg_artist = list()
+
+        self._before_fetch_bg_actions = list()
+        self._before_update_actions = list()
+
+        self._refetch_blank = True
+        self._blank_bg = None
+
+        self._managed_axes = set()
+
+        self._clear_on_layer_change = False
+
+    def _get_unmanaged_axes(self):
+        # return a list of all axes that are not managed by the blit-manager
+        # (to ensure that "unmanaged" axes are drawn as well)
+
+        # EOmaps axes
+        maxes = {m.ax for m in (self._m.parent, *self._m.parent._children)}
+        allaxes = set(self._m.f.axes)
+
+        unmanaged_axes = allaxes.difference(maxes, self._managed_axes)
+
+        return unmanaged_axes
 
     @property
     def figure(self):
@@ -1109,17 +1381,27 @@ class BlitManager:
                 for a in artists:
                     self.add_artist(a, layer=layer)
 
-    @property
-    def bg_layer(self):
-        return self._bg_layer
-
     def _get_active_bg(self, exclude_artists=None):
         with self._without_artists(artists=exclude_artists, layer=self.bg_layer):
             # fetch the current background (incl. dynamic artists)
             self.update()
-            bg = self.canvas.copy_from_bbox(self.figure.bbox)
+
+            with ExitStack() as stack:
+                # get rid of the figure background patch
+                # (done by putting the patch on the __BG__ layer!)
+
+                # get rid of the axes background patch
+                for ax_i in self._m.f.axes:
+                    stack.enter_context(
+                        ax_i.patch._cm_set(facecolor="none", edgecolor="none")
+                    )
+                bg = self.canvas.copy_from_bbox(self.figure.bbox)
 
         return bg
+
+    @property
+    def bg_layer(self):
+        return self._bg_layer
 
     @bg_layer.setter
     def bg_layer(self, val):
@@ -1139,9 +1421,11 @@ class BlitManager:
 
             for cb in m._colorbars:
                 if layer_visible:
-                    m.colorbar.set_visible(True)
+                    if cb in self._hidden_artists:
+                        self._hidden_artists.remove(cb)
                 else:
-                    m.colorbar.set_visible(False)
+                    if cb not in self._hidden_artists:
+                        self._hidden_artists.add(cb)
 
         # hide all wms_legends that are not on the visible layer
         if hasattr(self._m.parent, "_wms_legend"):
@@ -1153,8 +1437,20 @@ class BlitManager:
                     for i in legends:
                         i.set_visible(False)
 
-        self._clear_temp_artists("on_layer_change")
-        # self.fetch_bg(self._bg_layer)
+        if self._clear_on_layer_change:
+            self._clear_temp_artists("on_layer_change")
+
+    @contextmanager
+    def _cx_dont_clear_on_layer_change(self):
+        # a context-manager to avoid clearing artists on layer-changes
+        # (used in savefig to avoid clearing artists when re-fetching
+        # layers with backgrounds)
+        init_val = self._clear_on_layer_change
+        try:
+            self._clear_on_layer_change = False
+            yield
+        finally:
+            self._clear_on_layer_change = init_val
 
     def on_layer(self, func, layer=None, persistent=False, m=None):
         """
@@ -1226,125 +1522,224 @@ class BlitManager:
 
     def _refetch_layer(self, layer):
         if layer == "all":
+            # if the all layer changed, all backgrounds need a refetch
             self._refetch_bg = True
         else:
-            if layer in self._bg_layers:
-                del self._bg_layers[layer]
+            # set any background that contains the layer for refetch
+            self._layers_to_refetch.add(layer)
+            for l in self._bg_layers:
+                if layer in l.split("|"):
+                    self._layers_to_refetch.add(l)
+
+    def _bg_artists_sort(self, art):
+        sortp = []
+
+        # ensure that inset-map artists are always drawn after all other artists
+        if art.axes is not None:
+            if art.axes.get_label() == "inset_map":
+                sortp.append(1)
+            else:
+                sortp.append(0)
+
+        sortp.append(getattr(art, "zorder", -1))
+        return sortp
 
     def get_bg_artists(self, layer):
-        # get all relevant artists for combined background layers
-        layer = str(layer)  # make sure we convert non-string layer names to string!
+        artists = set()
+        for l in np.atleast_1d(layer):
+            # get all relevant artists for combined background layers
+            l = str(l)  # w make sure we convert non-string layer names to string!
 
-        # get artists defined on the layer itself
-        # Note: it's possible to create explicit multi-layers and attach
-        # artists that are only visible if both layers are visible! (e.g. "l1|l2")
-        artists = [*self._bg_artists.get(layer, [])]
+            # get artists defined on the layer itself
+            # Note: it's possible to create explicit multi-layers and attach
+            # artists that are only visible if both layers are visible! (e.g. "l1|l2")
 
-        # get all artists of the sub-layers (if we deal with a multi-layer)
-        if "|" in layer:
-            for l in layer.split("|"):
-                if l in ["_", ""]:
-                    continue
-                layer_artists = self._bg_artists.get(l, [])
-                artists += layer_artists
+            layer_artists = set(self._bg_artists.get(l, []))
+            artists = artists.union(layer_artists)
+
+        artists = sorted(artists, key=self._bg_artists_sort)
 
         return artists
 
-    def fetch_bg(self, layer=None, bbox=None, overlay=None):
-        # add this to the zorder of the overlay-artists prior to plotting
-        # to ensure that they appear on top of other artists
-        overlay_zorder_bias = 1000
-        cv = self.canvas
-        if layer is None:
-            layer = self.bg_layer
+    def _combine_bgs(self, layer):
+        layers, alphas = [], []
+        for l in layer.split("|"):
+            if l.endswith("}") and "{" in l:
+                try:
+                    name, a = l.split("{")
+                    a = float(a.replace("}", ""))
 
-        if overlay is None:
-            overlay_name, overlay_layers = "", []
-        else:
-            overlay_name, overlay_layers = overlay
+                    layers.append(name)
+                    alphas.append(a)
+                except Exception:
+                    raise TypeError(
+                        "EOmaps: unable to parse multilayer-transparency " f"for '{l}'"
+                    )
+            else:
+                layers.append(l)
+                alphas.append(1)
 
-        for l in overlay_layers:
-            self._do_on_layer_change(l)
+        # make sure all layers are already fetched
+        for l in layers:
+            if l not in self._bg_layers:
+                # execute actions on layer-changes
+                # (to make sure all lazy WMS services are properly added)
+                self._do_on_layer_change(layer=l)
+                self._do_fetch_bg(l)
 
-        allartists = list(chain(*(self.get_bg_artists(i) for i in [layer, "all"])))
-        allartists.sort(key=lambda x: getattr(x, "zorder", -1))
+        gc = self.canvas.renderer.new_gc()
+        gc.set_clip_rectangle(self.canvas.figure.bbox)
 
-        overlay_artists = list(chain(*(self.get_bg_artists(i) for i in overlay_layers)))
-        overlay_artists.sort(key=lambda x: getattr(x, "zorder", -1))
+        # switch to a blank background layer before merging backgrounds
+        # TODO is there a beter way to avoid drawing on initial backgrounds?
+        self.canvas.restore_region(self._blank_bg)
 
-        for a in overlay_artists:
-            a.zorder += overlay_zorder_bias
+        x0, y0, w, h = self.figure.bbox.bounds
+        for l, a in zip(layers, alphas):
 
-        allartists = allartists + overlay_artists
-
-        # check if all artists are stale, and if so skip re-fetching the background
-        # (only if also the axis extent is the same!)
-        newbg = any(art.stale for art in allartists)
-
-        # don't re-fetch the background if it is not necessary
-        if (
-            (not newbg)
-            and (self._bg_layers.get(layer, None) is not None)
-            and (
-                (overlay_name == "")
-                or (self._bg_layers.get(overlay_name, None) is not None)
+            rgba = self._get_array(l, a=a)
+            self.canvas.renderer.draw_image(
+                gc,
+                int(x0),
+                int(y0),
+                rgba[int(y0) : int(y0 + h), int(x0) : int(x0 + w), :],
             )
-        ):
-            return
+        # cache the combined background
+        self._bg_layers[layer] = self._m.f.canvas.copy_from_bbox(self._m.f.bbox)
+        gc.restore()
+
+    def _get_array(self, l, a=1):
+        rgba = np.array(self._bg_layers[l])[::-1, :, :]
+        if a != 1:
+            rgba = rgba.copy()
+            rgba[..., -1] = (rgba[..., -1] * a).astype(rgba.dtype)
+        return rgba
+
+    def _do_fetch_bg(self, layer, bbox=None):
+        cv = self.canvas
 
         if bbox is None:
             bbox = self.figure.bbox
 
-        # temporarily disconnect draw-event callback to avoid recursion
-        # while we re-draw the artists
+        if "|" in layer:
+            if layer not in self._bg_layers:
+                self._combine_bgs(layer)
+            return
 
-        cv.mpl_disconnect(self.cid)
+        # use contextmanagers to make sure the background patches are not stored
+        # in the buffer regions!
+        with ExitStack() as stack:
+            # get rid of the axes background patches
+            # (the figure background patch is on the "__BG__" layer)
+            for ax_i in self._m.f.axes:
+                stack.enter_context(
+                    ax_i.patch._cm_set(facecolor="none", edgecolor="none")
+                )
 
-        if not self._m.parent._layout_editor._modifier_pressed:
-            # make all artists of the corresponding layer visible
-            for l in self._bg_artists:
-                if l not in [layer, *layer.split("|"), "all", *overlay_layers]:
+            stack.enter_context(self._make_layer_artists_visible(layer=layer))
+
+            # execute actions before fetching new artists
+            # (e.g. update data based on extent etc.)
+            for action in self._before_fetch_bg_actions:
+                action(layer=layer, bbox=bbox)
+
+            # get all relevant artists to plot and remember zorders
+            # self.get_bg_artists() already returns artists sorted by zorder!
+            if layer in ["__SPINES__", "__BG__", "__inset___SPINES__"]:
+                # avoid fetching artists from the "all" layer for private layers
+                allartists = self.get_bg_artists(layer)
+            else:
+                allartists = self.get_bg_artists(["all", layer])
+
+            # check if all artists are not stale
+            no_stale_artists = all(not art.stale for art in allartists)
+
+            # don't re-fetch the background if it is not necessary
+            if no_stale_artists and (self._bg_layers.get(layer, None) is not None):
+                return
+
+            self.canvas.restore_region(self._blank_bg)
+
+            if not self._m.parent._layout_editor._modifier_pressed:
+                for art in allartists:
+                    if art not in self._hidden_artists:
+                        art.draw(cv.get_renderer())
+
+                self._bg_layers[layer] = cv.copy_from_bbox(bbox)
+
+    @contextmanager
+    def _make_layer_artists_visible(self, layer):
+        try:
+            for l, artists in self._bg_artists.items():
+                if l not in [layer, "all"]:
                     # artists on "all" are always visible!
                     # make all artists of other layers invisible
-                    for art in self.get_bg_artists(l):
-                        art.set_visible(False)
-            for art in allartists:
-                if art not in self._hidden_axes:
-                    art.set_visible(True)
+                    for a in artists:
+                        a.set_visible(False)
+                else:
+                    for a in artists:
+                        a.set_visible(True)
+            yield
 
-                    # TODO at the moment the layer-order has no effect on the order
-                    # at which artists are drawn in multi-layers!
-                    # (e.g. stacking is solely defined by the zorder property)
-                    # maybe implement drawing multilayer artists based on the order
-                    # of the layers?
-                    # self.figure.draw_artist(art)
+        finally:
+            # hide all artists (to avoid triggering re-draws of webmaps etc.)
+            for a in chain(*self._m.BM._bg_artists.values()):
+                a.set_visible(False)
+            pass
 
-            cv._force_full = True
-            cv.draw()
+    def _do_fetch_blank(self):
+        # fetch a blank background
+        if self._refetch_blank is False and self._blank_bg is not None:
+            # don't re-fetch the background if it is not necessary
+            return
+        try:
+            self._m.f.set_visible(False)
+            self.canvas._force_full = True
+            self.canvas.draw()
+            self._blank_bg = self.canvas.copy_from_bbox(self.figure.bbox)
+            self._refetch_blank = False
+        finally:
+            self._m.f.set_visible(True)
 
-        if overlay_layers:
-            self._bg_layers[overlay_name] = cv.copy_from_bbox(bbox)
-            # make all overlay-artists invisible again
-            # (to avoid re-fetching webmap services after an overlay action etc.)
-            for l in overlay_layers:
-                if l == self.bg_layer:
-                    continue
-                for art in self.get_bg_artists(l):
-                    art.set_visible(False)
+    def fetch_bg(self, layer=None, bbox=None):
+        if self._m.parent._layout_editor._modifier_pressed:
+            return
 
-        else:
-            self._bg_layers[layer] = cv.copy_from_bbox(bbox)
+        initial_layer = self.bg_layer
 
-        self.cid = cv.mpl_connect("draw_event", self.on_draw)
+        if layer is None:
+            layer = initial_layer
 
-        for a in overlay_artists:
-            a.zorder -= overlay_zorder_bias
+        if layer in self._bg_layers:
+            # don't re-fetch existing layers
+            # (layers get cleared automatically if re-draw is necessary)
+            return
 
-        self._refetch_bg = False
+        with self._disconnect_draw():
+            self._do_fetch_blank()
+            self._do_fetch_bg(layer, bbox)
+
+            if initial_layer in self._bg_layers:
+                self.canvas.restore_region(self._bg_layers[initial_layer])
+
+    @contextmanager
+    def _disconnect_draw(self):
+        try:
+            # temporarily disconnect draw-event callback to avoid recursion
+            if self.cid is not None:
+                self.canvas.mpl_disconnect(self.cid)
+                self.cid = None
+            yield
+        finally:
+            # reconnect draw event
+            if self.cid is None:
+                self.cid = self.canvas.mpl_connect("draw_event", self.on_draw)
 
     def on_draw(self, event):
         """Callback to register with 'draw_event'."""
+
         cv = self.canvas
+
         if event is not None:
             if event.canvas != cv:
                 raise RuntimeError
@@ -1352,9 +1747,18 @@ class BlitManager:
             # reset all background-layers and re-fetch the default one
             if self._refetch_bg:
                 self._bg_layers = dict()
+                self._refetch_bg = False
+            else:
+                # remove all cached backgrounds that were tagged for refetch
+                while len(self._layers_to_refetch) > 0:
+                    self._bg_layers.pop(self._layers_to_refetch.pop(), None)
 
-            if self.bg_layer not in self._bg_layers:
-                self.fetch_bg()
+            show_layer = self._get_showlayer_name()
+
+            if show_layer not in self._bg_layers:
+                # TODO there might be other reasons to re-fetch a background!
+                self.fetch_bg(layer=show_layer)
+
             # workaround for nbagg backend to avoid glitches
             # it's slow but at least it works...
             # check progress of the following issuse
@@ -1411,6 +1815,9 @@ class BlitManager:
             art.set_animated(True)
             self._artists[layer].add(art)
 
+            if isinstance(art, plt.Axes):
+                self._managed_axes.add(art)
+
     def add_bg_artist(self, art, layer=None):
         """
         Add a background-artist to be managed.
@@ -1440,22 +1847,25 @@ class BlitManager:
         if art.figure != self.figure:
             raise RuntimeError
 
+        # put all artist of inset-maps on dedicated layers
+        if (
+            getattr(art, "axes", None) is not None
+            and art.axes.get_label() == "inset_map"
+            and not layer.startswith("__inset_")
+        ):
+            layer = "__inset_" + str(layer)
         if layer in self._bg_artists and art in self._bg_artists[layer]:
             print(f"EOmaps: Background-artist '{art}' already added")
             return
 
-        # art.set_animated(True)
-
+        art.set_animated(True)
         self._bg_artists.setdefault(layer, []).append(art)
 
-        # check if there are any outdated cached background-layers and clear them
-        sublayers = layer.split("|")
+        if isinstance(art, plt.Axes):
+            self._managed_axes.add(art)
 
-        def check_outdated(item):
-            return any(l in item.split("|") for l in sublayers)
-
-        for l in filter(check_outdated, set(self._bg_layers)):
-            self._refetch_layer(l)
+        # tag all relevant layers for refetch
+        self._refetch_layer(layer)
 
         for f in self._on_add_bg_artist:
             f()
@@ -1468,6 +1878,11 @@ class BlitManager:
                 if art in val:
                     art.set_animated(False)
                     val.remove(art)
+
+                    # remove axes from the managed_axes set as well!
+                    if art in self._managed_axes:
+                        self._managed_axes.remove(art)
+
                     removed = True
                     layers.append(key)
                 layer = "|".join(layers)
@@ -1477,18 +1892,19 @@ class BlitManager:
             if art in self._bg_artists[layer]:
                 art.set_animated(False)
                 self._bg_artists[layer].remove(art)
+
+                # remove axes from the managed_axes set as well!
+                if art in self._managed_axes:
+                    self._managed_axes.remove(art)
+
                 removed = True
 
         if removed:
             for f in self._on_remove_bg_artist:
                 f()
 
-            # re-fetch the currently visible layer if an artist was added
-            # (and all relevant sub-layers)
+            # tag all relevant layers for refetch
             self._refetch_layer(layer)
-            if layer is not None:
-                if any(l in self.bg_layer.split("|") for l in layer.split("|")):
-                    self._refetch_layer(self.bg_layer)
 
     def remove_artist(self, art, layer=None):
         # this only removes the artist from the blit-manager,
@@ -1499,10 +1915,19 @@ class BlitManager:
                 if art in layerartists:
                     art.set_animated(False)
                     layerartists.remove(art)
+
+                    # remove axes from the managed_axes set as well!
+                    if art in self._managed_axes:
+                        self._managed_axes.remove(art)
+
         else:
             if art in self._artists[layer]:
                 art.set_animated(False)
                 self._artists[layer].remove(art)
+
+                # remove axes from the managed_axes set as well!
+                if art in self._managed_axes:
+                    self._managed_axes.remove(art)
 
     def _get_artist_zorder(self, a):
         try:
@@ -1534,6 +1959,14 @@ class BlitManager:
 
         # always redraw artists from the "all" layer
         layers.add("all")
+
+        # draw all "unmanaged" axes (e.g. axes that are found in the figure but
+        # not in the blit-manager)
+        # TODO would be nice to find a better way to handle this!
+        # - NOTE: this must be done before drawing managed artists to properly support
+        #   temporary artists on unmanaged axes!
+        for ax in self._get_unmanaged_axes():
+            ax.draw(self.canvas.renderer)
 
         # redraw artists from the selected layers and explicitly provided artists
         # (sorted by zorder)
@@ -1587,6 +2020,34 @@ class BlitManager:
                     # ignore errors if the artist is not present in the list
                     pass
 
+    def _get_showlayer_name(self, layer=None):
+
+        # combine all layers that should be shown
+        # (e.g. to add spines, backgrounds and inset-maps)
+
+        if layer is None:
+            layer = self.bg_layer
+
+        # pass private layers through
+        if layer.startswith("__"):
+            return layer
+
+        show_layers = [self.bg_layer, "__SPINES__"]
+
+        # show inset map layers and spines only if they contain at least 1 artist
+        inset_Q = False
+        for l in self.bg_layer.split("|"):
+            narts = len(self._bg_artists.get("__inset_" + l, []))
+
+            if narts > 0:
+                show_layers.append(f"__inset_{l}")
+                inset_Q = True
+
+        if inset_Q:
+            show_layers.append("__inset___SPINES__")
+
+        return self._m._get_combined_layer_name(*show_layers)
+
     def update(
         self,
         layers=None,
@@ -1607,66 +2068,69 @@ class BlitManager:
         bbox_bounds : tuple, optional
             the blit-region bounds to update. The default is None.
         bg_layer : int, optional
-            the background-layer number. The default is None.
+            the background-layer name to restore. The default is None.
         artists : list, optional
             A list of artists to update.
             If provided NO layer will be automatically updated!
             The default is None.
         """
-        cv = self.canvas
-        if (cv.toolbar is not None) and cv.toolbar.mode != "":
-            # only re-draw artists during toolbar-actions (e.g. pan/zoom)
-            # this avoids a glitch with animated artists during pan/zoom events
-            self._draw_animated(layers=layers, artists=artists)
-            if self._mpl_backend_blit_fix:
-                cv.blit()
+        if self._m.parent._layout_editor._modifier_pressed:
+            # don't update during layout-editing
             return
+
+        cv = self.canvas
 
         if bg_layer is None:
             bg_layer = self.bg_layer
 
-        # paranoia in case we missed the draw event,
-        if bg_layer not in self._bg_layers or self._bg_layers[bg_layer] is None:
-            self.on_draw(None)
-        else:
-            if clear:
-                self._clear_temp_artists(clear)
-            # restore the background
-            cv.restore_region(self._bg_layers[bg_layer])
+        while len(self._before_update_actions) > 0:
+            action = self._before_update_actions.pop(0)
+            action()
 
-            # draw all of the animated artists
-            while len(self._after_restore_actions) > 0:
-                action = self._after_restore_actions.pop(0)
-                action()
+        if clear:
+            self._clear_temp_artists(clear)
 
-            self._draw_animated(layers=layers, artists=artists)
+        # restore the background
+        # add additional layers (background, spines etc.)
+        show_layer = self._get_showlayer_name()
+        if show_layer not in self._bg_layers:
+            # paranoia in case the background was not properly fetched before
+            self.fetch_bg(show_layer)
 
-            if blit:
-                # workaround for nbagg backend to avoid glitches
-                # it's slow but at least it works...
-                # check progress of the following issuse
-                # https://github.com/matplotlib/matplotlib/issues/19116
-                if self._mpl_backend_force_full:
-                    cv._force_full = True
+        cv.restore_region(self._bg_layers[show_layer])
 
-                if bbox_bounds is not None:
+        # draw all of the animated artists
+        while len(self._after_restore_actions) > 0:
+            action = self._after_restore_actions.pop(0)
+            action()
 
-                    class bbox:
-                        bounds = bbox_bounds
+        self._draw_animated(layers=layers, artists=artists)
+        if blit:
+            # workaround for nbagg backend to avoid glitches
+            # it's slow but at least it works...
+            # check progress of the following issuse
+            # https://github.com/matplotlib/matplotlib/issues/19116
+            if self._mpl_backend_force_full:
+                cv._force_full = True
 
-                    cv.blit(bbox)
-                else:
-                    # update the GUI state
-                    cv.blit(self.figure.bbox)
+            if bbox_bounds is not None:
 
-            # execute all actions registered to be called after blitting
-            while len(self._after_update_actions) > 0:
-                action = self._after_update_actions.pop(0)
-                action()
+                class bbox:
+                    bounds = bbox_bounds
+
+                cv.blit(bbox)
+            else:
+                # update the GUI state
+                cv.blit(self.figure.bbox)
+
+        # execute all actions registered to be called after blitting
+        while len(self._after_update_actions) > 0:
+            action = self._after_update_actions.pop(0)
+            action()
 
         # let the GUI event loop process anything it has to do
         # don't do this! it is causing infinite loops
-        # cv.flush_events()
+        cv.flush_events()
 
     def blit_artists(self, artists, bg="active", blit=True):
         """
@@ -1686,10 +2150,9 @@ class BlitManager:
         cv = self.canvas
 
         # paranoia in case we missed the first draw event
-        if getattr(self.figure, "_cachedRenderer", "nope") is None:
-            self.on_draw(None)
-            self._after_update_actions.append(lambda: self.blit_artists(artists, bg))
-            return
+        if getattr(self.figure, "_cachedRenderer", None) is None:
+            with self._disconnect_draw():
+                self.figure.canvas.draw()
 
         # restore the background
         if bg is not None:
@@ -1703,16 +2166,14 @@ class BlitManager:
         if blit:
             cv.blit()
 
-    def _get_overlay_name(self, layer=None, bg_layer=None):
-        if layer is None:
-            layer = []
-        if bg_layer is None:
-            bg_layer = self.bg_layer
-
-        layer = sorted(set(chain(*(i.split("|") for i in layer), bg_layer.split("|"))))
-        return "__overlay|" + "|".join(map(str, layer))
-
-    def _get_restore_bg_action(self, layer, bbox_bounds=None, alpha=1):
+    def _get_restore_bg_action(
+        self,
+        layer,
+        bbox_bounds=None,
+        alpha=1,
+        clip_path=None,
+        set_clip_path=False,
+    ):
         """
         Update a part of the screen with a different background
         (intended as after-restore action)
@@ -1721,31 +2182,22 @@ class BlitManager:
         """
 
         if bbox_bounds is None:
-            bbox_bounds = self.figure.bbox.bounds
-
-        name = self._get_overlay_name(layer=[self.bg_layer], bg_layer=layer)
+            bbox = self.figure.bbox
+        else:
+            bbox = Bbox.from_bounds(*bbox_bounds)
 
         def action():
             if self.bg_layer == layer:
                 return
 
-            x0, y0, w, h = bbox_bounds
+            # make sure the background is fetched
+            if layer not in self._bg_layers:
+                self.fetch_bg(layer)
 
-            initial_layer = self.bg_layer
-            if name not in self._bg_layers:
-                # fetch the required background layer
-                if not isinstance(layer, (list, tuple)):
-                    layers = [layer]
-                else:
-                    layers = layer
-
-                self.fetch_bg(self._bg_layer, overlay=(name, layers))
-
-                self.fetch_bg(initial_layer)
-                self._m.show_layer(initial_layer)
+            x0, y0, w, h = bbox.bounds
 
             # convert the buffer to rgba so that we can add transparency
-            buffer = self._bg_layers[name]
+            buffer = self._bg_layers[layer]
 
             x = buffer.get_extents()
             ncols, nrows = x[2] - x[0], x[3] - x[1]
@@ -1755,10 +2207,14 @@ class BlitManager:
             )
             argb = argb[::-1, :, :]
 
-            argb[:, :, -1] = int(255 * alpha)  # argb[:,:, -1] // 2
+            argb[:, :, -1] = (argb[:, :, -1] * alpha).astype(np.int8)
 
             gc = self.canvas.renderer.new_gc()
-            gc.set_clip_rectangle(self.canvas.figure.bbox)
+
+            gc.set_clip_rectangle(bbox)
+            if set_clip_path is True:
+                gc.set_clip_path(clip_path)
+
             self.canvas.renderer.draw_image(
                 gc,
                 int(x0),
@@ -1784,7 +2240,9 @@ class BlitManager:
             a = artists.pop()
             try:
                 self.remove_bg_artist(a, layer)
-                a.remove()
+                # no need to remove spines (to avoid NotImplementedErrors)!
+                if not isinstance(a, Spine):
+                    a.remove()
             except Exception:
                 print(f"EOmaps-cleanup: Problem while clearing bg artist:\n {a}")
 
@@ -1799,7 +2257,9 @@ class BlitManager:
             a = artists.pop()
             try:
                 self.remove_artist(a)
-                a.remove()
+                # no need to remove spines (to avoid NotImplementedErrors)!
+                if not isinstance(a, Spine):
+                    a.remove()
             except Exception:
                 print(f"EOmaps-cleanup: Problem while clearing dynamic artist:\n {a}")
 

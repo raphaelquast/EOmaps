@@ -68,13 +68,13 @@ class _NaturalEarth_presets:
 
         The default args are:
 
-        - fc=(0.59375, 0.71484375, 0.8828125), ec="none", zorder=0, reproject="cartopy"
+        - fc=(0.59375, 0.71484375, 0.8828125), ec="none", zorder=-2, reproject="cartopy"
         """
         # convert color to hex to avoid issues with geopandas
         color = rgb2hex(cfeature.COLORS["water"])
 
         return self._feature(
-            self._m, "physical", "ocean", facecolor=color, edgecolor="none", zorder=-1
+            self._m, "physical", "ocean", facecolor=color, edgecolor="none", zorder=-2
         )
 
     @property
@@ -86,7 +86,7 @@ class _NaturalEarth_presets:
 
         The default args are:
 
-        - fc=(0.9375, 0.9375, 0.859375), ec="none", zorder=0
+        - fc=(0.9375, 0.9375, 0.859375), ec="none", zorder=-1
 
         """
         # convert color to hex to avoid issues with geopandas
@@ -127,7 +127,7 @@ class _NaturalEarth_presets:
 
         The default args are:
 
-        - fc="r", lw=0., zorder=99
+        - fc="r", lw=0., zorder=100
 
         """
         return self._feature(
@@ -136,7 +136,7 @@ class _NaturalEarth_presets:
             "urban_areas",
             facecolor="r",
             linewidth=0.0,
-            zorder=99,
+            zorder=100,
         )
 
     @property
@@ -148,7 +148,7 @@ class _NaturalEarth_presets:
 
         The default args are:
 
-        - fc="b", ec="none", lw=0., zorder=99
+        - fc="b", ec="none", lw=0., zorder=98
 
         """
         return self._feature(
@@ -157,7 +157,7 @@ class _NaturalEarth_presets:
             "lakes",
             facecolor="b",
             linewidth=0,
-            zorder=99,
+            zorder=98,
         )
 
     @property
@@ -169,7 +169,7 @@ class _NaturalEarth_presets:
 
         The default args are:
 
-        - fc="none", ec="b", lw=0.75, zorder=99
+        - fc="none", ec="b", lw=0.75, zorder=97
 
         """
         return self._feature(
@@ -179,7 +179,7 @@ class _NaturalEarth_presets:
             facecolor="none",
             edgecolor="b",
             linewidth=0.75,
-            zorder=99,
+            zorder=97,
         )
 
     class _feature:

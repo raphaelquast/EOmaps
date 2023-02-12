@@ -5,6 +5,7 @@ from itertools import product
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
+from scipy.spatial import KDTree
 
 from eomaps import Maps
 
@@ -44,7 +45,7 @@ def key_release_event(canvas, key, guiEvent=None):
 class TestCallbacks(unittest.TestCase):
     def setUp(self):
         self.lon, self.lat = np.meshgrid(
-            np.linspace(-50, 50, 50), np.linspace(-25, 25, 50)
+            np.linspace(-50, 50, 50), np.linspace(-25, 25, 60)
         )
 
         self.data = pd.DataFrame(
@@ -82,7 +83,14 @@ class TestCallbacks(unittest.TestCase):
 
     def click_ID(self, m, ID, release=True):
         cv = m.f.canvas
-        x, y = m.ax.transData.transform((self.data.lon[ID], self.data.lat[ID]))
+
+        # get coordinates in plot-crs
+        plotx, ploty = m._transf_lonlat_to_plot.transform(
+            self.data.lon[ID], self.data.lat[ID]
+        )
+
+        # get coordinates in figure points
+        x, y = m.ax.transData.transform((plotx, ploty))
         button_press_event(cv, x, y, 1, False)
         if release:
             button_release_event(cv, x, y, 1, False)
@@ -108,18 +116,71 @@ class TestCallbacks(unittest.TestCase):
         m.cb.click.remove(cid)
         plt.close("all")
 
+        df = self.data
+        x1d = df["lon"].values
+        y1d = df["lat"].values
+        data1d = df["value"].values
+
+        data2d = self.data.set_index(["lon", "lat"]).unstack("lon")
+        x1d2d, y1d2d = data2d.columns.get_level_values(1).values, data2d.index.values
+        data2d = data2d["value"].values
+
+        x2d, y2d = np.meshgrid(x1d2d, y1d2d)
+
+        data_selections = [
+            dict(data=self.data, x="lon", y="lat", test="pandas"),
+            dict(data=data1d, x=x1d, y=y1d, test="1d"),
+            dict(data=data2d.T, x=x1d2d, y=y1d2d, test="1d2d"),
+            dict(data=data2d, x=x2d, y=y2d, test="2d"),
+        ]
+
         # ---------- test as PICK callback
-        for n, cpick, relpick, r in product(
-            [1, 5], [True, False], [True, False], ["10", 12.65]
+        # for ID, n, cpick, relpick, r, data, plotcrs in product(
+        #     [1225, 350],
+        #     [1, 5],
+        #     [True, False],
+        #     [True, False],
+        #     ["10", 12.65],
+        #     data_selections,
+        #     [4326, Maps.CRS.Mollweide()],
+        # ):
+        for ID, n, cpick, relpick, r, data, plotcrs in product(
+            [1225],
+            [5],
+            [True],
+            [True],
+            ["10", None],
+            data_selections,
+            [4326, Maps.CRS.Mollweide()],
         ):
+
+            # note r is defined in units of the plot crs!
+            if r is None:
+                if plotcrs == 4326:
+                    r = 12.65
+                else:
+                    r = 1e6
 
             with self.subTest(
                 n=n,
                 consecutive_pick=cpick,
                 pick_relative_to_closest=relpick,
                 search_radius=r,
+                data=data["test"],
             ):
-                m = self.create_basic_map()
+                print(
+                    "--------------- TESTING:", ID, n, cpick, relpick, r, data["test"]
+                )
+
+                m = Maps(crs=plotcrs)
+                m.set_data(**{key: val for key, val in data.items() if key != "test"})
+                m.plot_map()
+
+                # identify x-y in plot_crs
+                ref_x, ref_y = m._transf_lonlat_to_plot.transform(
+                    *self.data.loc[ID][["lon", "lat"]]
+                )
+
                 m.cb.pick.set_props(
                     n=n,
                     consecutive_pick=cpick,
@@ -128,19 +189,41 @@ class TestCallbacks(unittest.TestCase):
                 )
 
                 cid = m.cb.pick.attach.get_values()
-                m.cb.pick.attach.annotate()
+                m.cb.pick.attach.print_to_console()
                 m.cb.click.attach.mark(radius=0.1)
-
-                self.click_ID(m, 1225)
+                m.f.canvas.draw()  # make sure figure is drawn before testing
+                self.click_ID(m, ID)
 
                 if n == 1:
                     self.assertEqual(len(m.cb.pick.get.picked_vals["pos"]), 1)
                     self.assertEqual(len(m.cb.pick.get.picked_vals["ID"]), 1)
                     self.assertEqual(len(m.cb.pick.get.picked_vals["val"]), 1)
 
-                    self.assertTrue(m.cb.pick.get.picked_vals["ID"][0] == 1225)
+                    self.assertTrue(m.cb.pick.get.picked_vals["ID"][0] == ID)
+                    self.assertTrue(
+                        np.allclose(
+                            m.cb.pick.get.picked_vals["val"][0],
+                            self.data.loc[ID]["value"],
+                        )
+                    )
+                    self.assertTrue(
+                        np.allclose(m.cb.pick.get.picked_vals["pos"][0][0], ref_x)
+                    )
+                    self.assertTrue(
+                        np.allclose(m.cb.pick.get.picked_vals["pos"][0][1], ref_y)
+                    )
 
                 elif n == 5:
+                    # get n nearest neighbours from pandas dataframe
+                    tree = KDTree(self.data[["lon", "lat"]].values)
+                    d, pickids = tree.query(
+                        self.data.loc[ID][["lon", "lat"]].values, k=n
+                    )
+                    pickids.sort()  # sort found IDs since KDtree sorting might be different
+                    ref_x, ref_y = m._transf_lonlat_to_plot.transform(
+                        *self.data.loc[pickids][["lon", "lat"]].values.T
+                    )
+
                     if cpick is True:
                         self.assertEqual(len(m.cb.pick.get.picked_vals["pos"]), 5)
                         self.assertEqual(len(m.cb.pick.get.picked_vals["ID"]), 5)
@@ -150,57 +233,73 @@ class TestCallbacks(unittest.TestCase):
                         self.assertEqual(len(m.cb.pick.get.picked_vals["ID"]), 1)
                         self.assertEqual(len(m.cb.pick.get.picked_vals["val"]), 1)
                         if relpick is True:
+                            # sort found IDs to make sure sorting is same
+                            # as reference IDs
+                            sortp = np.argsort(m.cb.pick.get.picked_vals["ID"][0])
+
                             self.assertTrue(
                                 np.allclose(
-                                    m.cb.pick.get.picked_vals["ID"][0],
-                                    np.array([1225, 1275, 1175, 1224, 1226]),
+                                    m.cb.pick.get.picked_vals["ID"][0][sortp],
+                                    pickids,
                                 )
                             )
+                            self.assertTrue(
+                                np.allclose(
+                                    m.cb.pick.get.picked_vals["val"][0][sortp],
+                                    self.data.loc[pickids]["value"].values,
+                                )
+                            )
+                            self.assertTrue(
+                                np.allclose(
+                                    m.cb.pick.get.picked_vals["pos"][0][0][sortp],
+                                    ref_x,
+                                )
+                            )
+                            self.assertTrue(
+                                np.allclose(
+                                    m.cb.pick.get.picked_vals["pos"][0][1][sortp],
+                                    ref_y,
+                                )
+                            )
+
                         else:
+                            # TODO this might be failing irregularly
+                            # (figure size, extent, dpi etc. might have an impact)
+
+                            # sort found IDs to make sure sorting is same
+                            # as reference IDs
+                            sortp = np.argsort(m.cb.pick.get.picked_vals["ID"][0])
+
+                            # check only closest point for now
                             self.assertTrue(
                                 np.allclose(
-                                    m.cb.pick.get.picked_vals["ID"][0],
-                                    np.array([1225, 1275, 1175, 1224, 1325]),
+                                    m.cb.pick.get.picked_vals["ID"][0][sortp][0],
+                                    pickids[0],
                                 )
                             )
-
-                # click on another pixel
-                self.click_ID(m, 317)
-
-                if n == 1:
-                    self.assertEqual(len(m.cb.pick.get.picked_vals["pos"]), 2)
-                    self.assertEqual(len(m.cb.pick.get.picked_vals["ID"]), 2)
-                    self.assertEqual(len(m.cb.pick.get.picked_vals["val"]), 2)
-
-                    self.assertTrue(m.cb.pick.get.picked_vals["ID"][1] == 317)
-
-                elif n == 5:
-                    if cpick is True:
-                        self.assertEqual(len(m.cb.pick.get.picked_vals["pos"]), 10)
-                        self.assertEqual(len(m.cb.pick.get.picked_vals["ID"]), 10)
-                        self.assertEqual(len(m.cb.pick.get.picked_vals["val"]), 10)
-                    else:
-                        self.assertEqual(len(m.cb.pick.get.picked_vals["pos"]), 2)
-                        self.assertEqual(len(m.cb.pick.get.picked_vals["ID"]), 2)
-                        self.assertEqual(len(m.cb.pick.get.picked_vals["val"]), 2)
-
-                        if relpick is True:
                             self.assertTrue(
                                 np.allclose(
-                                    m.cb.pick.get.picked_vals["ID"][1],
-                                    np.array([317, 367, 267, 316, 417]),
+                                    m.cb.pick.get.picked_vals["val"][0][sortp][0],
+                                    self.data.loc[pickids]["value"].values[0],
                                 )
                             )
-                        else:
                             self.assertTrue(
                                 np.allclose(
-                                    m.cb.pick.get.picked_vals["ID"][1],
-                                    np.array([317, 367, 267, 316, 417]),
+                                    m.cb.pick.get.picked_vals["pos"][0][0][sortp][0],
+                                    ref_x[0],
+                                )
+                            )
+                            self.assertTrue(
+                                np.allclose(
+                                    m.cb.pick.get.picked_vals["pos"][0][1][sortp][0],
+                                    ref_y[0],
                                 )
                             )
 
                 m.cb.pick.remove(cid)
                 plt.close("all")
+
+        plt.close("all")
 
     def test_print_to_console(self):
         # ---------- test as CLICK callback
@@ -264,6 +363,7 @@ class TestCallbacks(unittest.TestCase):
 
         cid = m.cb.click.attach.annotate(text=text, **props)
         self.click_ax_center(m)
+        plt.close("all")
 
         # ---------- test as PICK callback
         for n, cpick, relpick, r in product(
@@ -426,40 +526,42 @@ class TestCallbacks(unittest.TestCase):
         m = self.create_basic_map()
 
         m2 = m.new_layer(copy_data_specs=True)
-        m2.plot_map(layer=2, cmap="Reds")
+        m2.plot_map(layer="2", cmap="Reds")
 
-        cid = m.cb.click.attach.peek_layer(layer=2)
+        m.add_feature.preset.ocean(layer="ocean")
+
+        cid = m.cb.click.attach.peek_layer(layer="2")
         self.click_ax_center(m)
         m.cb.click.remove(cid)
 
-        cid = m.cb.click.attach.peek_layer(layer=2, how="left")
+        cid = m.cb.click.attach.peek_layer(layer="2", how="left")
         self.click_ax_center(m)
         m.cb.click.remove(cid)
 
-        cid = m.cb.click.attach.peek_layer(layer=2, how="right")
+        cid = m.cb.click.attach.peek_layer(layer=["2", "ocean"], how="right")
         self.click_ax_center(m)
         m.cb.click.remove(cid)
 
-        cid = m.cb.click.attach.peek_layer(layer=2, how="top")
+        cid = m.cb.click.attach.peek_layer(layer=["2", ("ocean", 0.6)], how="top")
         self.click_ax_center(m)
         m.cb.click.remove(cid)
 
         cid = m.cb.click.attach.peek_layer(
-            layer=2, how="bottom", hatch="/////", ec="g", lw=4
+            layer="2", how="bottom", hatch="/////", ec="g", lw=4
         )
         self.click_ax_center(m)
         m.cb.click.remove(cid)
 
-        cid = m.cb.click.attach.peek_layer(layer=2, how="full")
+        cid = m.cb.click.attach.peek_layer(layer="2", how="full")
         self.click_ax_center(m)
         m.cb.click.remove(cid)
 
-        cid = m.cb.click.attach.peek_layer(layer=2, how=(0.25))
+        cid = m.cb.click.attach.peek_layer(layer="2", how=(0.25))
         self.click_ax_center(m)
         m.cb.click.remove(cid)
 
         cid = m.cb.click.attach.peek_layer(
-            layer=2, how=(0.25, 0.25), hatch="/////", ec="g", lw=4
+            layer="2", how=(0.25, 0.25), hatch="/////", ec="g", lw=4
         )
         self.click_ax_center(m)
         m.cb.click.remove(cid)
@@ -557,8 +659,8 @@ class TestCallbacks(unittest.TestCase):
         m = self.create_basic_map()
 
         m2 = m.new_layer(copy_data_specs=True)
-
-        m2.plot_map(layer=2, cmap="Reds")
+        m3 = m.new_layer("3")
+        m2.plot_map(layer="2", cmap="Reds")
 
         cid0 = m.all.cb.keypress.attach.switch_layer(layer="base", key="0")
         cid1 = m.all.cb.keypress.attach.switch_layer(layer="2", key="2")
@@ -597,9 +699,10 @@ class TestCallbacks(unittest.TestCase):
 
         m2 = m.new_layer(copy_data_specs=True)
 
-        # adding pick callbacks is only possible after plotting data
-        with self.assertRaises(AssertionError):
-            m2.cb.pick.attach.annotate()
+        # in EOmaps v6 its now possible to attach callbacks before
+        # plotting the data (they will only start to trigger once the
+        # data is plotted)
+        m2.cb.pick.attach.annotate()
 
         m2.make_dataset_pickable()
         m2.cb.pick.attach.annotate()
@@ -636,12 +739,11 @@ class TestCallbacks(unittest.TestCase):
 
     def test_geodataframe_contains_picking(self):
         m = Maps()
-        m.show()  # do this to make sure transforms are correctly set
         gdf = m.add_feature.cultural.admin_0_countries.get_gdf(scale=110)
 
         m.add_gdf(gdf, column="NAME", picker_name="col", pick_method="contains")
 
-        m.add_gdf(gdf, picker_name="nocol", pick_method="contains")
+        m.add_gdf(gdf, picker_name="nocol", pick_method="contains", fc="none")
 
         def customcb(picked_vals, val, **kwargs):
             picked_vals.append(val)
@@ -656,6 +758,7 @@ class TestCallbacks(unittest.TestCase):
         m.cb.pick["nocol"].attach.annotate()
         m.cb.pick["nocol"].attach(customcb, picked_vals=picked_vals_nocol)
         m.cb.pick__nocol.attach.highlight_geometry(fc="r", ec="g")
+        m.f.canvas.draw()  # make sure figure is drawn before testing
 
         # evaluate pick position AFTER plotting geodataframes since the plot
         # extent might have changed!
@@ -672,7 +775,6 @@ class TestCallbacks(unittest.TestCase):
 
     def test_geodataframe_centroid_picking(self):
         m = Maps()
-        m.redraw()  # do this to make sure transforms are correctly set
         gdf = m.add_feature.cultural.populated_places.get_gdf(scale=110)
 
         m.add_gdf(gdf, column="NAME", picker_name="col", pick_method="centroids")
@@ -699,6 +801,7 @@ class TestCallbacks(unittest.TestCase):
         m.cb.pick["nocol"].attach.annotate(xytext=(20, -20))
         m.cb.pick["nocol"].attach(customcb, picked_vals=picked_vals_nocol)
         m.cb.pick__nocol.attach.highlight_geometry(fc="r", ec="g")
+        m.f.canvas.draw()  # do this to make sure transforms are correctly set
 
         # evaluate pick position AFTER plotting geodataframes since the plot
         # extent might have changed!

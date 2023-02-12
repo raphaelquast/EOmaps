@@ -45,106 +45,6 @@ def _register_mapclassify():
     return True
 
 
-class map_objects(object):
-    """
-    A container for accessing objects of the generated figure
-
-        - f : the matplotlib figure
-        - ax : the geo-axes used for plotting the map
-        - ax_cb : the axis of the colorbar
-        - ax_cb_plot : the axis used to plot the histogram on top of the colorbar
-        - cb : the matplotlib colorbar-instance
-        - gridspec : the matplotlib GridSpec instance
-        - cb_gridspec : the GridSpecFromSubplotSpec for the colorbar and the histogram
-        - coll : the collection representing the data on the map
-
-    """
-
-    def __init__(
-        self,
-        m=None,
-    ):
-        self._m = m
-
-        self._coll = None  # self.coll is assigned in "m.plot_map()"
-        self._figure_closed = False
-
-    @property
-    def coll(self):
-        return self._coll
-
-    @coll.setter
-    def coll(self, val):
-        self._coll = val
-
-    @coll.getter
-    def coll(self):
-        warn(
-            "EOmaps: Using `m.figure.coll` is depreciated in EOmaps v5.x."
-            "Use `m.coll` instead!"
-        )
-        return self._coll
-
-    @property
-    def f(self):
-        warn(
-            "EOmaps: Using `m.figure.f` is depreciated in EOmaps v5.x."
-            "Use `m.f` instead!"
-        )
-        # always return the figure of the parent object
-        return self._m.f
-
-    @property
-    def ax(self):
-        warn(
-            "EOmaps: Using `m.figure.ax` is depreciated in EOmaps v5.x."
-            "Use `m.ax` instead!"
-        )
-        ax = self._m.ax
-        return ax
-
-    @property
-    def gridspec(self):
-        warn(
-            "EOmaps: Using `m.figure.gridspec` is depreciated in EOmaps v5.x."
-            "Use `m._gridspec` instead!"
-        )
-        return getattr(self._m, "_gridspec", None)
-
-    @property
-    def ax_cb(self):
-        warn(
-            "EOmaps: Using `m.figure.ax_cb` is depreciated in EOmaps v5.x."
-            "Use `m.colorbar.ax_cb` instead!"
-        )
-        colorbar = getattr(self._m, "colorbar", None)
-        if colorbar is not None:
-            return colorbar.ax_cb
-
-    @property
-    def ax_cb_plot(self):
-        warn(
-            "EOmaps: Using `m.figure.ax_cb_plot` is depreciated in EOmaps v5.x."
-            "Use `m.colorbar.ax_cb_plot` instead!"
-        )
-        colorbar = getattr(self._m, "colorbar", None)
-        if colorbar is not None:
-            return colorbar.ax_cb_plot
-
-    def set_colorbar_position(self, pos=None, ratio=None, cb=None):
-        """
-        This function is depreciated in EOmaps v5.x!
-
-        Use the following methods instead:
-        - m.colorbar.set_position
-        - m.colorbar.set_hist_size
-        """
-        raise AssertionError(
-            "EOmaps: `m.figure.set_colorbar_position` is depreciated in EOmaps v5.x! "
-            "use `m.colorbar.set_position` and `m.colorbar.set_hist_size` instead."
-        )
-
-
 class data_specs(object):
     """
     a container for accessing the data-properties
@@ -161,7 +61,6 @@ class data_specs(object):
         encoding=None,
         cpos="c",
         cpos_radius=None,
-        **kwargs,
     ):
         self._m = m
         self.data = data
@@ -215,9 +114,6 @@ class data_specs(object):
 
     def __getitem__(self, key):
         if isinstance(key, (list, tuple)):
-            if "crs" in key:
-                key[key.index("crs")] = "in_crs"
-
             for i in key:
                 assert i in self.keys(), f"{i} is not a valid data-specs key!"
             if len(key) == 0:
@@ -229,8 +125,6 @@ class data_specs(object):
                 else:
                     item = dict(zip(key, attrgetter(*key)(self)))
         else:
-            if key == "crs":
-                key = "in_crs"
             assert key in self.keys(), f"{key} is not a valid data-specs key!"
             item = getattr(self, key)
         return item
@@ -251,13 +145,8 @@ class data_specs(object):
         if key.startswith("_"):
             return key
 
-        if key == "crs":
-            key = "in_crs"
-
         assert key in [
             *self.keys(),
-            "xcoord",
-            "ycoord",
         ], f"{key} is not a valid data-specs key!"
 
         return key
@@ -267,7 +156,7 @@ class data_specs(object):
             "parameter",
             "x",
             "y",
-            "in_crs",
+            "crs",
             "data",
             "encoding",
             "cpos",
@@ -289,48 +178,6 @@ class data_specs(object):
     @crs.setter
     def crs(self, crs):
         self._crs = crs
-
-    in_crs = crs
-
-    @property
-    def xcoord(self):
-        warn(
-            "EOmaps: `m.data_specs.xcoord` is depreciated."
-            + "use `m.data_specs.x` instead!",
-            DeprecationWarning,
-            stacklevel=2,
-        )
-        return self._x
-
-    @xcoord.setter
-    def xcoord(self, xcoord):
-        warn(
-            "EOmaps: `m.data_specs.xcoord` is depreciated."
-            + "use `m.data_specs.x` instead!",
-            DeprecationWarning,
-            stacklevel=2,
-        )
-        self._x = xcoord
-
-    @property
-    def ycoord(self):
-        warn(
-            "EOmaps: `m.data_specs.ycoord` is depreciated."
-            + "use `m.data_specs.y` instead!",
-            DeprecationWarning,
-            stacklevel=2,
-        )
-        return self._y
-
-    @ycoord.setter
-    def ycoord(self, ycoord):
-        warn(
-            "EOmaps: `m.data_specs.ycoord` is depreciated."
-            + "use `m.data_specs.y` instead!",
-            DeprecationWarning,
-            stacklevel=2,
-        )
-        self._y = ycoord
 
     @property
     def x(self):
@@ -388,11 +235,6 @@ class data_specs(object):
     def encoding(self, encoding):
         if encoding not in [None, False]:
             assert isinstance(encoding, dict), "EOmaps: encoding must be a dictionary!"
-
-            # assert all(
-            #     i in ["scale_factor", "add_offset"] for i in encoding
-            # ), "EOmaps: encoding accepts only 'scale_factor' and 'add_offset' as keys!"
-
         self._encoding = encoding
 
     @property

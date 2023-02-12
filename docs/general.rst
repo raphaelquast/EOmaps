@@ -21,7 +21,7 @@ This should make sure all required dependencies are correctly installed.
 .. admonition:: Speed up the installation
 
   Since EOMaps dependencies can be demanding to solve for ``conda`` it is highly recommended to have a look at `mamba <https://github.com/mamba-org/mamba>`_
-  (a C++ re-implementation of ``conda`` that provides a remarkable speedup)
+  (a C++ re-implementation of the ``conda`` solver that provides a remarkable speedup)
 
   To install ``mamba``, simply use:
 
@@ -34,6 +34,9 @@ This should make sure all required dependencies are correctly installed.
   .. code-block:: console
 
     mamba install -c conda-forge eomaps
+
+  Alternatively you can also configure ``conda`` to use the ``libmamba`` solver by default.
+  (More info here: `A Faster Solver for Conda: Libmamba <https://www.anaconda.com/blog/a-faster-conda-for-a-growing-community>`_  )
 
 
 A quick tutorial on how to **get started from scratch** is available here: :ref:`quickstart_guide`

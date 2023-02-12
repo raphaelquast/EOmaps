@@ -1,4 +1,5 @@
-# EOmaps example 1:
+# EOmaps: A simple map
+
 from eomaps import Maps
 import pandas as pd
 import numpy as np
@@ -19,12 +20,12 @@ m.set_data(
     parameter="data_variable",  # the DataFrame-column you want to plot
     x="lon",  # the name of the DataFrame-column representing the x-coordinates
     y="lat",  # the name of the DataFrame-column representing the y-coordinates
-    crs=4326,
-)  # the coordinate-system of the x- and y- coordinates
+    crs=4326,  # the coordinate-system of the x- and y- coordinates
+)
 m.plot_map()
-m.add_colorbar()
+m.add_colorbar(label="A dataset")
 
 c = m.add_compass((0.05, 0.86), scale=7, patch=None)
 
-m.cb.pick.attach.annotate()  # attach a basic pick-annotation (on left-click)
+m.cb.pick.attach.annotate()  # attach a pick-annotation (on left-click)
 m.add_logo()  # add a logo
