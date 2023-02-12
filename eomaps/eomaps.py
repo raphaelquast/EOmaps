@@ -1639,11 +1639,6 @@ class Maps(object):
 
         permanent = kwargs.pop("permanent", False)
 
-        if permanent is True:
-            cb_permanent = None
-        else:
-            cb_permanent = False
-
         # add marker
         marker = self.cb.click._cb.mark(
             ID=ID,
@@ -1655,13 +1650,15 @@ class Maps(object):
             buffer=buffer,
             n=n,
             layer=layer,
-            permanent=cb_permanent,
+            permanent=None,
             **kwargs,
         )
 
         if permanent is True:
             self.BM.add_bg_artist(marker)
         else:
+            self.BM.add_artist(marker)
+
             self.BM.update()
 
         return marker
