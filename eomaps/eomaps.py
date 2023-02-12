@@ -464,24 +464,15 @@ class Maps(object):
         # (Note: spines need to be visible on each layer in case the layer
         # is viewed on its own, but overlapping spines cause blurry boundaries)
         # TODO find a better way to deal with this!
+        self._handle_spines()
+
+    def _handle_spines(self):
         spine = self.ax.spines["geo"]
         if spine not in self.BM._bg_artists.get("__SPINES__", []):
             self.BM.add_bg_artist(spine, layer="__SPINES__")
 
     def __getattribute__(self, key):
-        if key == "plot_specs":
-            raise AttributeError(
-                "EOmaps: 'm.plot_specs' has been removed in v4.0!\n For instructions "
-                + "on how to quickly port your script to EOmaps >= 4.0, see: \n"
-                + r"https://eomaps.readthedocs.io/en/latest/FAQ.html#port-script-from-eomaps-v3-x-to-v4-x"
-            )
-        elif key == "set_plot_specs":
-            raise AttributeError(
-                "EOmaps: 'm.set_plot_specs' has been removed in v4.0!\n For instructions "
-                + "on how to quickly port your script to EOmaps >= 4.0, see: \n"
-                + r"https://eomaps.readthedocs.io/en/latest/FAQ.html#port-script-from-eomaps-v3-x-to-v4-x"
-            )
-        elif key == "set_layout":
+        if key == "set_layout":
             raise AttributeError(
                 "'Maps' object has no attribute 'set_layout'... "
                 "did you mean 'apply_layout'?"
@@ -531,7 +522,7 @@ class Maps(object):
     def f(self):
         """The matplotlib Figure associated with this Maps-object."""
         # always return the figure of the parent object
-        return self.parent._f
+        return self._f
 
     @property
     def coll(self):
@@ -2157,8 +2148,9 @@ class Maps(object):
             return p
 
         figax = self.f.add_axes(
-            **getpos(self.ax.get_position()), label="logo", zorder=999
+            **getpos(self.ax.get_position()), label="logo", zorder=999, animated=True
         )
+
         figax.set_navigate(False)
         figax.set_axis_off()
         _ = figax.imshow(im, aspect="equal", zorder=999)
@@ -2179,10 +2171,6 @@ class Maps(object):
     @wraps(ColorBar.__init__)
     def add_colorbar(self, *args, **kwargs):
         """Add a colorbar to the map."""
-        if self.coll is None:
-            # in order to plot a colorbar we need to fetch the layer!
-            # TODO implement a better way to ensure correct vmin/vmax
-            self._data_manager.on_fetch_bg(self.layer)
 
         colorbar = ColorBar(
             self,
@@ -2371,6 +2359,8 @@ class Maps(object):
                 assume_sorted=assume_sorted,
                 **kwargs,
             )
+            self.BM._refetch_layer(layer)
+
         else:
             self._data_manager.set_props(
                 layer=layer,
@@ -2381,10 +2371,10 @@ class Maps(object):
             )
 
             # dont set extent if "m.set_extent" was called explicitly
-            extent_set = False
             if set_extent and self._set_extent_on_plot:
+                # note bg-layers are automatically triggered for re-draw
+                # if the extent changes!
                 self._data_manager._set_lims()
-                extent_set = True
 
             self._plot_map(
                 layer=layer,
@@ -2394,10 +2384,8 @@ class Maps(object):
                 **kwargs,
             )
 
-            if extent_set:
-                # re-fetch backgrounds to make sure previously fetched backgrounds
-                # reflect the new limits!
-                self.BM._refetch_bg = True
+            # if dynamic is False:
+            #     self.BM._refetch_layer(layer)
 
         if verbose >= 1:
             if getattr(self, "_data_mask", None) is not None and not np.all(
@@ -2410,7 +2398,6 @@ class Maps(object):
         # call draw after plotting a dataset to make sure axis sizes are properly
         # adjusted (otherwise the startup size of axes might be incorrect if other
         # features are added before draw is actually called.)
-        self.f.canvas.draw()
 
     def make_dataset_pickable(
         self,
@@ -2561,7 +2548,8 @@ class Maps(object):
             names = [name]
 
         for i in names:
-            if i in ["__BG__", "__SPINES__"]:
+            # ignore non-existing private layers
+            if i.startswith("__"):
                 continue
 
             if "{" in i and i.endswith("}"):
@@ -2675,8 +2663,8 @@ class Maps(object):
             transparent = kwargs.get("transparent", False)
             if transparent is False:
                 initial_layer = self.BM.bg_layer
-
-                layer_with_bg = "|".join(["__BG__", initial_layer, "__SPINES__"])
+                showlayer_name = self.BM._get_showlayer_name(initial_layer)
+                layer_with_bg = "|".join(["__BG__", showlayer_name])
                 self.show_layer(layer_with_bg)
 
             redraw = False
@@ -2872,7 +2860,7 @@ class Maps(object):
         """
         self.BM._refetch_bg = True
         self._data_manager.last_extent = None
-        self.f.canvas.draw()
+        self.f.canvas.draw_idle()
 
     @wraps(GridSpec.update)
     def subplots_adjust(self, **kwargs):
@@ -2996,16 +2984,10 @@ class Maps(object):
             print("EOmaps: All layer-names are converted to strings!")
             layer = str(layer)
 
-        if layer == "__BG__":
+        if layer.startswith("__") and not layer.startswith("__inset_"):
             raise TypeError(
-                "EOmaps: The layer-name '__BG__' is reserved for internal use and "
-                "cannot be assigned to a Maps object!"
-            )
-
-        if layer == "__SPINES__":
-            raise TypeError(
-                "EOmaps: The layer-name '__SPINES__' is reserved for internal "
-                "use and cannot be assigned to a Maps object!"
+                "EOmaps: Layer-names starting with '__' are reserved "
+                "for internal use and cannot be used as Maps-layer-names!"
             )
 
         reserved_symbs = {
@@ -3739,15 +3721,8 @@ class Maps(object):
 
             # NOTE: the actual plot is performed by the data-manager
             # at the next call to m.BM.fetch_bg() for the corresponding layer
+            # this is called to make sure m.coll is properly set
             self._data_manager.on_fetch_bg()
-
-            if self._coll_dynamic is False:
-                # self.BM._refetch_layer(layer)
-
-                self.BM.on_draw(None)
-
-            # self.BM.update()
-            # self.BM.fetch_bg(layer=layer)
 
         except Exception as ex:
             raise ex
@@ -4255,19 +4230,6 @@ class Maps(object):
         if event.inaxes != self.ax:
             return
 
-        if self.ax.get_label() == "inset_map":
-            if self.layer != self.BM.bg_layer:
-                # open the widget for the first found maps-object
-                # that contains the event
-                for m in (self.parent, *self.parent._children):
-                    if m.layer != m.BM.bg_layer:
-                        continue
-                    if m.ax.in_axes(event) and m != self:
-                        event.inaxes = m.ax
-                        m._open_companion_widget_cb(event)
-                        return
-                return
-
         # hide all other companion-widgets
         for m in (self.parent, *self.parent._children):
             if m == self:
@@ -4293,17 +4255,6 @@ class Maps(object):
                 # on the figure and "w" would remain activated permanently.
                 self.f.canvas.key_release_event("w")
                 self._companion_widget.activateWindow()
-
-    def _add_companion_cb(self, show_hide_key="w"):
-        # attach a callback to show/hide the window with the "w" key
-
-        # NOTE the companion-widget is ONLY initialized on Maps-objects that
-        # create NEW axes. This is required to make sure that any additional
-        # Maps-object on the same axes will then always use the same widget.
-        # (otherwise each layer would get its own widget)
-
-        self._cid_companion_key = self.f.canvas.mpl_connect("key_press_event", cb)
-        # self._cid_companion_key = self.all.cb.keypress.attach(cb, key=show_hide_key)
 
     def _init_companion_widget(self, show_hide_key="w"):
         """
@@ -4466,6 +4417,12 @@ class _InsetMaps(Maps):
         if layer is None:
             layer = parent.layer
 
+        # put all inset-map artists on dedicated layers
+        # NOTE: all artists of inset-map axes are put on a dedicated layer
+        # with a "__inset_" prefix to ensure they appear on top of other artists
+        # (AND on top of spines of normal maps)!
+        # layer = "__inset_" + str(layer)
+
         possible_shapes = ["ellipses", "rectangles", "geod_circles"]
         assert (
             shape in possible_shapes
@@ -4527,24 +4484,24 @@ class _InsetMaps(Maps):
         # https://github.com/matplotlib/matplotlib/pull/22347
         self.ax.set_navigate(False)
 
-        # set style of the inset-boundary spines
         if boundary is not False:
             spine = self.ax.spines["geo"]
             spine.set_edgecolor(boundary_kwargs["ec"])
             spine.set_lw(boundary_kwargs["lw"])
-
-        # treat inset-map spines explicitly for now...
-        if spine in self.BM._bg_artists.get("__SPINES__", []):
-            self.BM.remove_bg_artist(spine, "__SPINES__")
-
-        self.BM.add_bg_artist(spine, layer=self.layer)
 
         self._inset_props = dict(
             xy=xy, xy_crs=xy_crs, radius=radius, radius_crs=radius_crs, shape=shape
         )
 
         if indicate_extent is not False:
-            self.indicate_inset_extent(parent, layer=layer, **extent_kwargs)
+            self.indicate_inset_extent(
+                parent, layer=parent.layer, permanent=True, **extent_kwargs
+            )
+
+    def _handle_spines(self):
+        spine = self.ax.spines["geo"]
+        if spine not in self.BM._bg_artists.get("__inset___SPINES__", []):
+            self.BM.add_bg_artist(spine, layer="__inset___SPINES__")
 
     def _get_ax_label(self):
         return "inset_map"
@@ -4552,19 +4509,6 @@ class _InsetMaps(Maps):
     def plot_map(self, *args, **kwargs):
         set_extent = kwargs.pop("set_extent", False)
         super().plot_map(*args, **kwargs, set_extent=set_extent)
-
-    def new_layer(self, layer=None, **kwargs):
-        if layer is not None:
-            if layer != self.layer:
-
-                print(
-                    "EOmaps: InsetMaps do not (yet) support multiple layers! "
-                    "Create a unique InsetMap if you need multiple InsetMaps "
-                    "on multiple layers."
-                )
-                return
-        else:
-            super().new_layer(layer=layer, **kwargs)
 
     # add a convenience-method to add a boundary-polygon to a map
     def indicate_inset_extent(self, m, n=100, **kwargs):

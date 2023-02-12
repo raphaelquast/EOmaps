@@ -1440,9 +1440,6 @@ class BlitManager:
         if self._clear_on_layer_change:
             self._clear_temp_artists("on_layer_change")
 
-        if val not in self._bg_layers:
-            self.fetch_bg(val)
-
     @contextmanager
     def _cx_dont_clear_on_layer_change(self):
         # a context-manager to avoid clearing artists on layer-changes
@@ -1556,14 +1553,15 @@ class BlitManager:
             # get artists defined on the layer itself
             # Note: it's possible to create explicit multi-layers and attach
             # artists that are only visible if both layers are visible! (e.g. "l1|l2")
-            artists = artists.union(set(self._bg_artists.get(l, [])))
+
+            layer_artists = set(self._bg_artists.get(l, []))
+            artists = artists.union(layer_artists)
 
         artists = sorted(artists, key=self._bg_artists_sort)
+
         return artists
 
     def _combine_bgs(self, layer):
-        initial_layer = self._bg_layer
-
         layers, alphas = [], []
         for l in layer.split("|"):
             if l.endswith("}") and "{" in l:
@@ -1610,9 +1608,6 @@ class BlitManager:
         self._bg_layers[layer] = self._m.f.canvas.copy_from_bbox(self._m.f.bbox)
         gc.restore()
 
-        # restore initial layer
-        self._m.show_layer(initial_layer)
-
     def _get_array(self, l, a=1):
         rgba = np.array(self._bg_layers[l])[::-1, :, :]
         if a != 1:
@@ -1620,13 +1615,11 @@ class BlitManager:
             rgba[..., -1] = (rgba[..., -1] * a).astype(rgba.dtype)
         return rgba
 
-    def _do_fetch_bg(self, layer=None, bbox=None):
+    def _do_fetch_bg(self, layer, bbox=None):
         cv = self.canvas
+
         if bbox is None:
             bbox = self.figure.bbox
-
-        if layer is None:
-            layer = self.bg_layer
 
         if "|" in layer:
             if layer not in self._bg_layers:
@@ -1636,7 +1629,7 @@ class BlitManager:
         # use contextmanagers to make sure the background patches are not stored
         # in the buffer regions!
         with ExitStack() as stack:
-            # get rid of the axes background patch
+            # get rid of the axes background patches
             # (the figure background patch is on the "__BG__" layer)
             for ax_i in self._m.f.axes:
                 stack.enter_context(
@@ -1652,7 +1645,12 @@ class BlitManager:
 
             # get all relevant artists to plot and remember zorders
             # self.get_bg_artists() already returns artists sorted by zorder!
-            allartists = self.get_bg_artists(["all", layer])
+            if layer in ["__SPINES__", "__BG__", "__inset___SPINES__"]:
+                # avoid fetching artists from the "all" layer for private layers
+                allartists = self.get_bg_artists(layer)
+            else:
+                allartists = self.get_bg_artists(["all", layer])
+
             # check if all artists are not stale
             no_stale_artists = all(not art.stale for art in allartists)
 
@@ -1707,17 +1705,22 @@ class BlitManager:
         if self._m.parent._layout_editor._modifier_pressed:
             return
 
+        initial_layer = self.bg_layer
+
         if layer is None:
-            layer = self.bg_layer
+            layer = initial_layer
 
         if layer in self._bg_layers:
             # don't re-fetch existing layers
-            # (layers get cleared automatically if limits)
+            # (layers get cleared automatically if re-draw is necessary)
             return
 
         with self._disconnect_draw():
             self._do_fetch_blank()
             self._do_fetch_bg(layer, bbox)
+
+            if initial_layer in self._bg_layers:
+                self.canvas.restore_region(self._bg_layers[initial_layer])
 
     @contextmanager
     def _disconnect_draw(self):
@@ -1736,6 +1739,7 @@ class BlitManager:
         """Callback to register with 'draw_event'."""
 
         cv = self.canvas
+
         if event is not None:
             if event.canvas != cv:
                 raise RuntimeError
@@ -1749,9 +1753,11 @@ class BlitManager:
                 while len(self._layers_to_refetch) > 0:
                     self._bg_layers.pop(self._layers_to_refetch.pop(), None)
 
-            if self.bg_layer not in self._bg_layers:
+            show_layer = self._get_showlayer_name()
+
+            if show_layer not in self._bg_layers:
                 # TODO there might be other reasons to re-fetch a background!
-                self.fetch_bg()
+                self.fetch_bg(layer=show_layer)
 
             # workaround for nbagg backend to avoid glitches
             # it's slow but at least it works...
@@ -1841,6 +1847,13 @@ class BlitManager:
         if art.figure != self.figure:
             raise RuntimeError
 
+        # put all artist of inset-maps on dedicated layers
+        if (
+            getattr(art, "axes", None) is not None
+            and art.axes.get_label() == "inset_map"
+            and not layer.startswith("__inset_")
+        ):
+            layer = "__inset_" + str(layer)
         if layer in self._bg_artists and art in self._bg_artists[layer]:
             print(f"EOmaps: Background-artist '{art}' already added")
             return
@@ -2007,6 +2020,34 @@ class BlitManager:
                     # ignore errors if the artist is not present in the list
                     pass
 
+    def _get_showlayer_name(self, layer=None):
+
+        # combine all layers that should be shown
+        # (e.g. to add spines, backgrounds and inset-maps)
+
+        if layer is None:
+            layer = self.bg_layer
+
+        # pass private layers through
+        if layer.startswith("__"):
+            return layer
+
+        show_layers = [self.bg_layer, "__SPINES__"]
+
+        # show inset map layers and spines only if they contain at least 1 artist
+        inset_Q = False
+        for l in self.bg_layer.split("|"):
+            narts = len(self._bg_artists.get("__inset_" + l, []))
+
+            if narts > 0:
+                show_layers.append(f"__inset_{l}")
+                inset_Q = True
+
+        if inset_Q:
+            show_layers.append("__inset___SPINES__")
+
+        return self._m._get_combined_layer_name(*show_layers)
+
     def update(
         self,
         layers=None,
@@ -2027,7 +2068,7 @@ class BlitManager:
         bbox_bounds : tuple, optional
             the blit-region bounds to update. The default is None.
         bg_layer : int, optional
-            the background-layer number. The default is None.
+            the background-layer name to restore. The default is None.
         artists : list, optional
             A list of artists to update.
             If provided NO layer will be automatically updated!
@@ -2046,54 +2087,50 @@ class BlitManager:
             action = self._before_update_actions.pop(0)
             action()
 
-        # paranoia in case we missed the draw event,
-        if bg_layer not in self._bg_layers or self._bg_layers[bg_layer] is None:
-            self.on_draw(None)
-            self.fetch_bg(bg_layer)
-        else:
-            if clear:
-                self._clear_temp_artists(clear)
+        if clear:
+            self._clear_temp_artists(clear)
 
-            # restore the background
+        # restore the background
+        # add additional layers (background, spines etc.)
+        show_layer = self._get_showlayer_name()
+        if show_layer not in self._bg_layers:
+            # paranoia in case the background was not properly fetched before
+            self.fetch_bg(show_layer)
 
-            # fetch the layer with the spines drawn
-            # TODO find a better treatment for spines!
-            self.fetch_bg(f"__SPINES__|{bg_layer}")
-            cv.restore_region(self._bg_layers[f"__SPINES__|{bg_layer}"])
-            # cv.restore_region(self._bg_layers[bg_layer])
+        cv.restore_region(self._bg_layers[show_layer])
 
-            # draw all of the animated artists
-            while len(self._after_restore_actions) > 0:
-                action = self._after_restore_actions.pop(0)
-                action()
+        # draw all of the animated artists
+        while len(self._after_restore_actions) > 0:
+            action = self._after_restore_actions.pop(0)
+            action()
 
-            self._draw_animated(layers=layers, artists=artists)
-            if blit:
-                # workaround for nbagg backend to avoid glitches
-                # it's slow but at least it works...
-                # check progress of the following issuse
-                # https://github.com/matplotlib/matplotlib/issues/19116
-                if self._mpl_backend_force_full:
-                    cv._force_full = True
+        self._draw_animated(layers=layers, artists=artists)
+        if blit:
+            # workaround for nbagg backend to avoid glitches
+            # it's slow but at least it works...
+            # check progress of the following issuse
+            # https://github.com/matplotlib/matplotlib/issues/19116
+            if self._mpl_backend_force_full:
+                cv._force_full = True
 
-                if bbox_bounds is not None:
+            if bbox_bounds is not None:
 
-                    class bbox:
-                        bounds = bbox_bounds
+                class bbox:
+                    bounds = bbox_bounds
 
-                    cv.blit(bbox)
-                else:
-                    # update the GUI state
-                    cv.blit(self.figure.bbox)
+                cv.blit(bbox)
+            else:
+                # update the GUI state
+                cv.blit(self.figure.bbox)
 
-            # execute all actions registered to be called after blitting
-            while len(self._after_update_actions) > 0:
-                action = self._after_update_actions.pop(0)
-                action()
+        # execute all actions registered to be called after blitting
+        while len(self._after_update_actions) > 0:
+            action = self._after_update_actions.pop(0)
+            action()
 
         # let the GUI event loop process anything it has to do
         # don't do this! it is causing infinite loops
-        # cv.flush_events()
+        cv.flush_events()
 
     def blit_artists(self, artists, bg="active", blit=True):
         """
@@ -2113,10 +2150,8 @@ class BlitManager:
         cv = self.canvas
 
         # paranoia in case we missed the first draw event
-        if getattr(self.figure, "_cachedRenderer", "nope") is None:
-            self.on_draw(None)
-            self._after_update_actions.append(lambda: self.blit_artists(artists, bg))
-            return
+        if getattr(self.figure, "_cachedRenderer", None) is None:
+            self.figure.canvas.draw()
 
         # restore the background
         if bg is not None:
@@ -2153,6 +2188,7 @@ class BlitManager:
         def action():
             if self.bg_layer == layer:
                 return
+
             # make sure the background is fetched
             if layer not in self._bg_layers:
                 self.fetch_bg(layer)

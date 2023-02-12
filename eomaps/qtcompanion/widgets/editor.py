@@ -357,14 +357,7 @@ class NewLayerWidget(QtWidgets.QFrame):
 
         self.m = m
 
-        # hide new-layer textbox for Inset-Maps
-        if not isinstance(self.m, _InsetMaps):
-            new_layer_label = QtWidgets.QLabel("<b>Create a new layer:</b>")
-        else:
-            new_layer_label = QtWidgets.QLabel(
-                "<b>InsetMaps support only single layers.</b>"
-            )
-
+        new_layer_label = QtWidgets.QLabel("<b>Create a new layer:</b>")
         self.new_layer_name = NewLayerLineEdit()
         self.new_layer_name.setMaximumWidth(300)
         self.new_layer_name.setPlaceholderText("my_layer")
@@ -382,8 +375,7 @@ class NewLayerWidget(QtWidgets.QFrame):
             newlayer.addWidget(self.addwms)
         newlayer.addStretch(1)
         newlayer.addWidget(new_layer_label)
-        if not isinstance(self.m, _InsetMaps):
-            newlayer.addWidget(self.new_layer_name)
+        newlayer.addWidget(self.new_layer_name)
 
         # addfeature = AddFeatureWidget(m=self.m)
 
@@ -708,11 +700,7 @@ class LayerTabBar(QtWidgets.QTabBar):
         self._current_tab_idx = self.currentIndex()
         self._current_tab_name = self.tabText(self._current_tab_idx)
 
-        if isinstance(self.m, _InsetMaps):
-            # avoid showing multiple layers for inset-maps
-            alllayers = [self.m.layer]
-        else:
-            alllayers = sorted(list(self.m._get_layers()))
+        alllayers = sorted(list(self.m._get_layers()))
 
         while self.count() > 0:
             self.removeTab(0)
@@ -1004,11 +992,7 @@ class ArtistEditorTabs(LayerArtistTabs):
         self._current_tab_idx = self.currentIndex()
         self._current_tab_name = self.tabText(self._current_tab_idx)
 
-        if isinstance(self.m, _InsetMaps):
-            # avoid showing multiple layers for inset-maps
-            alllayers = [self.m.layer]
-        else:
-            alllayers = sorted(list(self.m._get_layers()))
+        alllayers = sorted(list(self.m._get_layers()))
 
         while self.count() > 0:
             self.removeTab(0)
@@ -1048,6 +1032,10 @@ class ArtistEditorTabs(LayerArtistTabs):
         if layer is None:
             layer = self.tabText(self.currentIndex())
 
+        # make sure we fetch artists of inset-maps from the layer with
+        # the "__inset_" prefix
+        if isinstance(self.m, _InsetMaps) and not layer.startswith("__inset_"):
+            layer = "__inset_" + layer
         widget = self.currentWidget()
 
         if widget is None:
