@@ -23,7 +23,7 @@ m.set_data(
     crs=4326,  # the coordinate-system of the x- and y- coordinates
 )
 m.plot_map()
-m.add_colorbar()
+m.add_colorbar(label="A dataset")
 
 c = m.add_compass((0.05, 0.86), scale=7, patch=None)
 
