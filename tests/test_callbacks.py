@@ -659,8 +659,8 @@ class TestCallbacks(unittest.TestCase):
         m = self.create_basic_map()
 
         m2 = m.new_layer(copy_data_specs=True)
-
-        m2.plot_map(layer=2, cmap="Reds")
+        m3 = m.new_layer("3")
+        m2.plot_map(layer="2", cmap="Reds")
 
         cid0 = m.all.cb.keypress.attach.switch_layer(layer="base", key="0")
         cid1 = m.all.cb.keypress.attach.switch_layer(layer="2", key="2")

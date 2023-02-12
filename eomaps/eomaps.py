@@ -2563,10 +2563,11 @@ class Maps(object):
             if i not in layers:
                 lstr = " - " + "\n - ".join(map(str, layers))
 
-                raise AssertionError(
+                print(
                     f"EOmaps: The layer '{i}' does not exist...\n"
                     + f"Use one of: \n{lstr}"
                 )
+                return
 
         # invoke the bg_layer setter of the blit-manager
         self.BM.bg_layer = name
