@@ -128,7 +128,8 @@ class ShapeDrawer:
     @property
     def _background(self):
         # always use the currently active background as draw-background
-        return self._m.BM._bg_layers.get(self._m.BM._bg_layer, None)
+        layer = self._m.BM._get_showlayer_name(self._m.BM._bg_layer)
+        return self._m.BM._bg_layers.get(layer, None)
 
     @_active_drawer.setter
     def _active_drawer(self, val):
