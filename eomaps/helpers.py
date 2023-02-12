@@ -2151,7 +2151,8 @@ class BlitManager:
 
         # paranoia in case we missed the first draw event
         if getattr(self.figure, "_cachedRenderer", None) is None:
-            self.figure.canvas.draw()
+            with self._disconnect_draw():
+                self.figure.canvas.draw()
 
         # restore the background
         if bg is not None:
