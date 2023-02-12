@@ -4136,7 +4136,7 @@ class Maps(object):
         else:
             return val
 
-    def _get_layers(self, exclude=None):
+    def _get_layers(self, exclude=None, exclude_private=True):
         # return a list of all (empty and non-empty) layer-names
         layers = set((m.layer for m in (self.parent, *self.parent._children)))
         # add layers that are not yet activated (but have an activation
@@ -4147,9 +4147,8 @@ class Maps(object):
         layers = layers.union({i for i in self.BM._bg_artists if "|" not in i})
 
         # exclude private layers
-        for l in ["__BG__", "__SPINES__"]:
-            if l in layers:
-                layers.remove(l)
+        if exclude_private:
+            layers = {l for l in layers if not l.startswith("__")}
 
         if exclude:
             for l in exclude:
