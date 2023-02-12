@@ -1097,8 +1097,7 @@ class keypress_callbacks:
             The default is "x".
 
         """
-        self._m.BM.bg_layer = str(layer)
-        self._m.BM.fetch_bg()
+        self._m.show_layer(layer)
 
     def fetch_layers(self, layers=None, verbose=True, key="x"):
         """
