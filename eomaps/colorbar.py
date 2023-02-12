@@ -431,12 +431,17 @@ class ColorBar:
             if self._parent_cb is not None:
 
                 try:
+                    parent_subplotspec = self._parent_cb._ax.get_subplotspec()
+                except AttributeError:
+                    parent_subplotspec = None
+
+                if parent_subplotspec is not None:
                     self._ax = self._m.f.add_subplot(
-                        self._parent_cb._ax.get_subplotspec(),
+                        parent_subplotspec,
                         label="cb",
                         zorder=9999,
                     )
-                except AttributeError:
+                else:
                     self._ax = self._m.f.add_axes(
                         self._parent_cb._ax.get_position(),
                         label="cb",
