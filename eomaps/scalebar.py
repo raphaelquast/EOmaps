@@ -1252,14 +1252,14 @@ class Compass:
         try:
             if x is None or y is None:
                 try:
-                    self.set_position(self._pos)
+                    self._set_position(self._pos)
                     return
                 except Exception:
                     x, y = 0.9, 0.1
-                    self.set_position((x, y), "axis")
+                    self._set_position((x, y), "axis")
                     return
 
-            self.set_position((x, y), "data")
+            self._set_position((x, y), "data")
         except Exception:
             pass
 
@@ -1330,7 +1330,7 @@ class Compass:
                 x, y = self._m.ax.transData.inverted().transform((evt.x, evt.y))
 
             self._update_offset(x, y)
-            self._m.BM.blit_artists(artists=[self._artist])
+            self._m.BM.update(artists=[self._artist])
 
     def _on_scroll(self, event):
         if not self._layer_visible:
@@ -1338,7 +1338,6 @@ class Compass:
 
         if self._check_still_parented() and self._got_artist:
             self.set_scale(max(1, self._scale + event.step))
-            self._m.BM.blit_artists(artists=[self._artist])
 
     def _on_pick(self, evt):
         if not self._layer_visible:
@@ -1492,6 +1491,20 @@ class Compass:
             b = None
         self._artist.set_picker(b)
 
+    def _set_position(self, pos, coords="data"):
+        # Avoid calling BM.update() in here! It results in infinite
+        # recursions on zoom events because the position of the scalebar is
+        # dynamically updated on each re-fetch of the background!
+
+        if coords == "axis":
+            self._ax2data = self._m.ax.transAxes + self._m.ax.transData.inverted()
+            pos = self._ax2data.transform(pos)
+
+        trans = self._get_transform(pos)
+        for c in self._artist.get_children():
+            c.set_transform(trans)
+        self._pos = pos
+
     def set_position(self, pos, coords="data"):
         """
         Set the position of the compass.
@@ -1509,14 +1522,8 @@ class Compass:
 
             The default is "data".
         """
-        if coords == "axis":
-            self._ax2data = self._m.ax.transAxes + self._m.ax.transData.inverted()
-            pos = self._ax2data.transform(pos)
-
-        trans = self._get_transform(pos)
-        for c in self._artist.get_children():
-            c.set_transform(trans)
-        self._pos = pos
+        self._set_position(pos, coords="data")
+        self._m.BM.update(artists=[self._artist])
 
     def get_position(self, coords="data"):
         """
