@@ -1135,11 +1135,11 @@ class TestBasicPlotting(unittest.TestCase):
         m.add_annotation(xy=(45, 45))
         m.add_marker(xy=(45, 45))
         m.set_data(*[[1, 2, 3]] * 3)
-        m.plot_map()
+        m.plot_map(set_extent=False)
         m.cb.click.attach.annotate()
         m.cb.pick.attach.annotate()
         m.cb.keypress.attach.fetch_layers()
-        m.redraw()  # redraw since otherwise the map might not yet be created!
+        m.f.canvas.draw()  # redraw since otherwise the map might not yet be created!
         self.assertTrue(len(m.BM._artists[m.layer]) == 2)
         self.assertTrue(len(m.BM._bg_artists[m.layer]) == 1)
 
@@ -1164,7 +1164,7 @@ class TestBasicPlotting(unittest.TestCase):
 
         self.assertTrue(len(m.BM._on_layer_activation[m2.layer]) == 2)
         m2.show()  # show the layer to draw the artists!
-        m.redraw()  # redraw since otherwise the map might not yet be created!
+        m.f.canvas.draw()  # redraw since otherwise the map might not yet be created!
         self.assertTrue(len(m.BM._on_layer_activation[m2.layer]) == 1)
 
         self.assertTrue(len(m.BM._artists[m.layer]) == 2)
