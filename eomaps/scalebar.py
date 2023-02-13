@@ -351,7 +351,7 @@ class ScaleBar:
 
         if hasattr(self, "_lon") and hasattr(self, "_lat"):
             self.set_position()
-            self._m.BM.blit_artists(self._artists.values())
+            self._m.BM.update(artists=self._artists.values())
 
     def set_patch_props(self, offsets=None, **kwargs):
         """
@@ -390,7 +390,7 @@ class ScaleBar:
 
         if hasattr(self, "_lon") and hasattr(self, "_lat"):
             self.set_position()
-            self._m.BM.blit_artists(self._artists.values())
+            self._m.BM.update(artists=self._artists.values())
 
     def set_label_props(
         self, scale=None, rotation=None, every=None, offset=None, color=None, **kwargs
@@ -444,7 +444,7 @@ class ScaleBar:
 
         if hasattr(self, "_lon") and hasattr(self, "_lat"):
             self.set_position()
-            self._m.BM.blit_artists(self._artists.values())
+            self._m.BM.update(artists=self._artists.values())
 
     def _get_base_pts(self, lon, lat, azim, npts=None):
         if npts is None:
@@ -751,7 +751,7 @@ class ScaleBar:
         # self._m.BM.add_artist(self._artists["text"])
         self._m.BM.add_artist(self._artists["patch"], layer=self.layer)
 
-        self._m.BM.blit_artists(self._artists.values())
+        self._m.BM.update(artists=self._artists.values())
         # make sure to update the artists on zoom
         self._decorate_zooms()
 
