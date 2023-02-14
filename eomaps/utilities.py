@@ -419,14 +419,23 @@ class LayerSlider(Slider):
         else:
             ax_slider = self._m.f.add_axes(pos)
 
+        ax_slider.set_label("slider")
+
         kwargs.setdefault("color", ".2")  # remove start-position marker
         kwargs.setdefault("track_color", ".8")  # remove start-position marker
         kwargs.setdefault("initcolor", "none")  # remove start-position marker
         kwargs.setdefault("handle_style", dict(facecolor=".8", edgecolor="k", size=7))
         kwargs.setdefault("label", None)
 
+        # use a small minimal value for valmax to avoid "vmin==vmax" warnings
+        # in case only 1 layer is available
         super().__init__(
-            ax_slider, valmin=0, valmax=len(layers) - 1, valinit=0, valstep=1, **kwargs
+            ax_slider,
+            valmin=0,
+            valmax=max(len(layers) - 1, 0.01),
+            valinit=0,
+            valstep=1,
+            **kwargs,
         )
 
         self.drawon = False
