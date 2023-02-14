@@ -700,12 +700,21 @@ class LayerTabBar(QtWidgets.QTabBar):
         self._current_tab_idx = self.currentIndex()
         self._current_tab_name = self.tabText(self._current_tab_idx)
 
-        alllayers = sorted(list(self.m._get_layers()))
+        alllayers = set(self.m._get_layers())
 
-        while self.count() > 0:
-            self.removeTab(0)
+        # go through the layers in reverse and remove any no longer existing layers
+        existing_layers = set()
+        for i in range(self.count(), -1, -1):
+            layer = self.tabText(i)
+            # remove all tabs that do not represent existing layers of the map
+            if layer not in alllayers:
+                self.removeTab(i)
+            else:
+                existing_layers.add(layer)
 
-        self.tabwidgets = dict()
+        # pop all existing layers from the alllayers set (no need to re-create them)
+        alllayers.difference_update(existing_layers)
+
         for i, layer in enumerate(alllayers):
 
             layout = QtWidgets.QGridLayout()
@@ -744,7 +753,6 @@ class LayerTabBar(QtWidgets.QTabBar):
                     break
 
             if found is False:
-                print(f"Unable to activate the tab '{self._current_tab_name}'!")
                 self.setCurrentIndex(0)
 
     @pyqtSlot(int)
@@ -994,10 +1002,24 @@ class ArtistEditorTabs(LayerArtistTabs):
 
         alllayers = sorted(list(self.m._get_layers()))
 
-        while self.count() > 0:
-            self.removeTab(0)
+        self._current_tab_idx = self.currentIndex()
+        self._current_tab_name = self.tabText(self._current_tab_idx)
 
-        self.tabwidgets = dict()
+        alllayers = set(self.m._get_layers())
+
+        # go through the layers in reverse and remove any no longer existing layers
+        existing_layers = set()
+        for i in range(self.count(), -1, -1):
+            layer = self.tabText(i)
+            # remove all tabs that do not represent existing layers of the map
+            if layer not in alllayers:
+                self.removeTab(i)
+            else:
+                existing_layers.add(layer)
+
+        # pop all existing layers from the alllayers set (no need to re-create them)
+        alllayers.difference_update(existing_layers)
+
         for i, layer in enumerate(alllayers):
 
             layout = QtWidgets.QGridLayout()
