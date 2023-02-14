@@ -1122,7 +1122,7 @@ class Compass:
         self.layer = layer
 
         self._ignore_invalid_angles = ignore_invalid_angles
-        self._m.BM.update()
+        # self._m.BM.update()
 
         ax2data = self._m.ax.transAxes + self._m.ax.transData.inverted()
 
@@ -1156,7 +1156,7 @@ class Compass:
         self._m.ax.add_artist(self._artist)
         self._m.BM.add_artist(self._artist, layer=self.layer)
 
-        self.set_position(pos)
+        self._set_position(pos)
 
         if pickable:
             if not self._artist.pickable():
