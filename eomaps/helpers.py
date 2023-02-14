@@ -1309,8 +1309,9 @@ class BlitManager:
         self._mpl_backend_force_full = False
         self._mpl_backend_blit_fix = False
 
-        self._on_layer_change = dict()
-        self._on_layer_activation = dict()
+        # True = persistant, False = execute only once
+        self._on_layer_change = {True: list(), False: list()}
+        self._on_layer_activation = {True: dict(), False: dict()}
 
         self._on_add_bg_artist = list()
         self._on_remove_bg_artist = list()
@@ -1347,18 +1348,38 @@ class BlitManager:
 
     def _do_on_layer_change(self, layer):
         # general callbacks executed on any layer change
-        if len(self._on_layer_change) > 0:
-            actions = list(self._on_layer_change)
-            for action in actions:
-                action(self._on_layer_change[action], layer)
+        # persistent callbacks
+        for f in self._on_layer_change[True]:
+            f(layer=layer)
+        # single-shot callbacks
+        while len(self._on_layer_change[False]) > 0:
+            try:
+                f = self._on_layer_change[False].pop(-1)
+                f(layer=layer)
+            except Exception as ex:
+                print(
+                    "EOmaps: there was an issue while trying to execute a "
+                    f"layer-change action: {ex}"
+                )
 
-        # individual callables executed if a specific layer is activated
         for l in layer.split("|"):
-            activate_action = self._on_layer_activation.get(l, None)
-            if activate_action is not None:
-                actions = list(activate_action)
-                for action in actions:
-                    action(activate_action[action], l)
+            # individual callables executed if a specific layer is activate
+            # persistent callbacks
+            for f in self._on_layer_activation[True].get(layer, []):
+                f(layer=l)
+
+            # single-shot callbacks
+            single_shot_funcs = self._on_layer_activation[False].get(l, [])
+            while len(single_shot_funcs) > 0:
+                try:
+                    f = single_shot_funcs.pop(-1)
+                    f(layer=l)
+                except Exception as ex:
+                    raise (ex)
+                    print(
+                        "EOmaps: there was an issue while trying to execute a "
+                        f"layer-change action: {ex}"
+                    )
 
     @contextmanager
     def _without_artists(self, artists=None, layer=None):
@@ -1484,41 +1505,13 @@ class BlitManager:
         if m is None:
             m = self._m
 
+        def cb(*args, **kwargs):
+            func(m=m, *args, **kwargs)
+
         if layer is None:
-            if not persistent:
-
-                def remove_decorator(func):
-                    def inner(*args, **kwargs):
-                        try:
-                            func(*args, **kwargs)
-                            if inner in self._on_layer_change:
-                                self._on_layer_change.pop(inner)
-                        except IndexError:
-                            pass
-
-                    return inner
-
-                func = remove_decorator(func)
-
-            self._on_layer_change[func] = m
-
+            self._on_layer_change[persistent].append(cb)
         else:
-            if not persistent:
-
-                def remove_decorator(func):
-                    def inner(*args, **kwargs):
-                        try:
-                            func(*args, **kwargs)
-                            if inner in self._on_layer_activation.get(layer, dict()):
-                                self._on_layer_activation[layer].pop(inner)
-                        except IndexError:
-                            pass
-
-                    return inner
-
-                func = remove_decorator(func)
-
-            self._on_layer_activation.setdefault(layer, dict())[func] = m
+            self._on_layer_activation[persistent].setdefault(layer, list()).append(cb)
 
     def _refetch_layer(self, layer):
         if layer == "all":

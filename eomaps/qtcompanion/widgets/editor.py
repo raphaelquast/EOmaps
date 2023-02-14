@@ -653,7 +653,7 @@ class LayerTabBar(QtWidgets.QTabBar):
 
         self.populate()
 
-    def color_active_tab(self, m=None, l=None):
+    def color_active_tab(self, m=None, layer=None):
         currlayers = self.m.BM.bg_layer.split("|")
 
         defaultcolor = self.palette().color(self.foregroundRole())
@@ -670,15 +670,15 @@ class LayerTabBar(QtWidgets.QTabBar):
 
         for i in range(self.count()):
 
-            layer = self.tabText(i)
+            selected_layer = self.tabText(i)
 
             color = activecolor if len(active_layers) == 1 else multicolor
-            if layer in active_layers:
+            if selected_layer in active_layers:
                 self.setTabTextColor(i, color)
             else:
                 self.setTabTextColor(i, defaultcolor)
 
-            if l == layer:
+            if layer == selected_layer:
                 self.setTabTextColor(i, activecolor)
 
         # --- adjust the sort-order of the tabs to the order of the visible layers

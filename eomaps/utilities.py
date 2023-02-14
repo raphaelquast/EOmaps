@@ -522,7 +522,9 @@ class utilities:
         self._sliders = dict()
 
         # register a function to update all associated widgets on a layer-chance
-        self._m.BM.on_layer(lambda m, l: self._update_widgets(l), persistent=True)
+        self._m.BM.on_layer(
+            lambda m, layer: self._update_widgets(layer), persistent=True
+        )
 
     def _update_widgets(self, l=None):
         if l is None:

@@ -2918,7 +2918,7 @@ class Maps(object):
 
         """
 
-        def cb(m, l):
+        def cb(m, layer):
             func(m=m, **kwargs)
 
         self.BM.on_layer(func=cb, layer=self.layer, persistent=persistent, m=self)
@@ -4145,7 +4145,9 @@ class Maps(object):
         layers = set((m.layer for m in (self.parent, *self.parent._children)))
         # add layers that are not yet activated (but have an activation
         # method defined...)
-        layers = layers.union(set(self.BM._on_layer_activation))
+        layers = layers.union(set(self.BM._on_layer_activation[True]))
+        layers = layers.union(set(self.BM._on_layer_activation[False]))
+
         # add all (possibly still invisible) layers with artists defined
         # (ONLY do this for unique layers... skip multi-layers )
         layers = layers.union({i for i in self.BM._bg_artists if "|" not in i})
