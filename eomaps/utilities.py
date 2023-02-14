@@ -481,6 +481,17 @@ class LayerSlider(Slider):
 
     def set_layers(self, layers):
         self._layers = layers
+        self.valmax = max(len(layers) - 1, 0.01)
+        self.ax.set_xlim(self.valmin, self.valmax)
+
+        if self._m.BM.bg_layer in self._layers:
+            currval = self._layers.index(self._m.BM.bg_layer)
+            self.set_val(currval)
+        else:
+            self.set_val(0)
+
+        self._on_changed(self.val)
+
         self._m.util._update_widgets()
         self._m.BM.update()
 
