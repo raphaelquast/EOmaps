@@ -493,6 +493,8 @@ class OptionTabs(QtWidgets.QTabWidget):
 
 
 class LayerTabBar(QtWidgets.QTabBar):
+    _number_of_min_tabs_for_size = 8
+
     def __init__(self, m=None, populate=False, *args, **kwargs):
         """
         Parameters
@@ -509,6 +511,7 @@ class LayerTabBar(QtWidgets.QTabBar):
             The default is False.
 
         """
+
         super().__init__(*args, **kwargs)
         self.m = m
 
@@ -538,6 +541,24 @@ class LayerTabBar(QtWidgets.QTabBar):
             self.populate()
             self.m._after_add_child.append(self.populate)
 
+    def sizeHint(self):
+        # make sure the TabBar does not expand the window width
+
+        hint = super().sizeHint()
+        width = self.window().width()
+        hint.setWidth(width)
+        return hint
+
+    def minimumTabSizeHint(self, index):
+        # the minimum width of the tabs is determined such that at least
+        # "_number_of_min_tabs_for_size"  tabs are visible.
+        # (e.g. for the elide of long tab-names)
+
+        hint = super().tabSizeHint(index)
+        w = int(self.sizeHint().width() / self._number_of_min_tabs_for_size)
+        hint.setWidth(w)
+        return hint
+
     def enterEvent(self, e):
         if self.window().showhelp is True:
             QtWidgets.QToolTip.showText(
@@ -550,11 +571,6 @@ class LayerTabBar(QtWidgets.QTabBar):
                 "<li><b>drag</b> layers to change the stacking-order. "
                 "</ul>",
             )
-
-    def tabSizeHint(self, index):
-        # make sure tabs are never larger than 150px
-        size = QtWidgets.QTabBar.tabSizeHint(self, index)
-        return QSize(min(size.width(), 150), size.height())
 
     def repopulate_and_activate_current(self):
         self.populate()
@@ -715,7 +731,7 @@ class LayerTabBar(QtWidgets.QTabBar):
         # pop all existing layers from the alllayers set (no need to re-create them)
         alllayers.difference_update(existing_layers)
 
-        for i, layer in enumerate(alllayers):
+        for i, layer in enumerate(sorted(alllayers)):
 
             layout = QtWidgets.QGridLayout()
             layout.setAlignment(Qt.AlignTop | Qt.AlignLeft)
@@ -809,10 +825,9 @@ class LayerTabBar(QtWidgets.QTabBar):
 
 class ArtistEditorTabs(LayerArtistTabs):
     def __init__(self, m=None):
-
         super().__init__()
-
         self.m = m
+
         self.setTabBar(LayerTabBar(m=self.m))
 
         # re-populate tabs if a new layer is created
@@ -1020,7 +1035,7 @@ class ArtistEditorTabs(LayerArtistTabs):
         # pop all existing layers from the alllayers set (no need to re-create them)
         alllayers.difference_update(existing_layers)
 
-        for i, layer in enumerate(alllayers):
+        for i, layer in enumerate(sorted(alllayers)):
 
             layout = QtWidgets.QGridLayout()
             layout.setAlignment(Qt.AlignTop | Qt.AlignLeft)
