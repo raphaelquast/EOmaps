@@ -1162,10 +1162,13 @@ class TestBasicPlotting(unittest.TestCase):
         m2.on_layer_activation(lambda m: print("temporary", m.layer))
         m2.on_layer_activation(lambda m: print("permanent", m.layer), persistent=True)
 
-        self.assertTrue(len(m.BM._on_layer_activation[m2.layer]) == 2)
+        self.assertTrue(len(m.BM._on_layer_activation[True][m2.layer]) == 1)
+        self.assertTrue(len(m.BM._on_layer_activation[False][m2.layer]) == 1)
+
         m2.show()  # show the layer to draw the artists!
         m.f.canvas.draw()  # redraw since otherwise the map might not yet be created!
-        self.assertTrue(len(m.BM._on_layer_activation[m2.layer]) == 1)
+        self.assertTrue(len(m.BM._on_layer_activation[True][m2.layer]) == 1)
+        self.assertTrue(len(m.BM._on_layer_activation[False][m2.layer]) == 0)
 
         self.assertTrue(len(m.BM._artists[m.layer]) == 2)
         self.assertTrue(len(m.BM._bg_artists[m.layer]) == 1)
