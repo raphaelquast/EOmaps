@@ -2836,9 +2836,9 @@ class Maps(object):
         gdf = self._make_rect_poly(x0, y0, x1, y1, self.get_crs(crs), npts)
         self.add_gdf(gdf, **kwargs)
 
-    def redraw(self):
+    def redraw(self, *args):
         """
-        Force a re-draw of the current layer and all cached background layers.
+        Force a re-draw of cached background layers.
 
         - Use this at the very end of your code to trigger a final re-draw
           to make sure artists not managed by EOmaps are properly drawn!
@@ -2846,7 +2846,7 @@ class Maps(object):
         Note
         ----
         Don't use this to interactively update artists on a map!
-        since it will trigger a re-draw of all background-layers!
+        since it will trigger a re-draw background-layers!
 
         To dynamically re-draw an artist whenever you interact with the map, use:
 
@@ -2859,8 +2859,21 @@ class Maps(object):
         >>> m.cb.pick.add_temporary_artist(artist)
         >>> m.cb.keypress.add_temporary_artist(artist)
         >>> m.cb.move.add_temporary_artist(artist)
+
+        Parameters
+        ----------
+        *args : str
+            Positional arguments provided to redraw are identified as layer-names
+            that should be re-drawn. If no arguments are provided, all layers
+            are re-drawn!
+
         """
-        self.BM._refetch_bg = True
+        if len(args) == 0:
+            self.BM._refetch_bg = True
+        else:
+            for l in args:
+                self.BM._refetch_layer(l)
+
         self._data_manager.last_extent = None
         self.f.canvas.draw_idle()
 
