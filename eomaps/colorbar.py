@@ -412,11 +412,8 @@ class ColorBar:
             [i.set_visible(False) for i in self.ax_cb.patches]
             [i.set_visible(False) for i in self.ax_cb.collections]
 
-        # don't update parent colorbar when child changes hist-size
-        if self._m.BM._bg_layer == self._m.layer:
-            self._m.BM.blit_artists(artists=self._axes)
-        else:
-            self._m.BM._refetch_layer(self._m.layer)
+        # tag layer for refetch
+        self._m.BM._refetch_layer(self._m.layer)
 
     def _identify_parent_cb(self):
         parent_cb = None
