@@ -2182,6 +2182,7 @@ class Maps(object):
         colorbar._plot_colorbar()
 
         self._colorbars.append(colorbar)
+        self.BM._refetch_layer(self.layer)
         return colorbar
 
     def _get_alpha_cmap_name(self, alpha):
