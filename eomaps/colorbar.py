@@ -78,6 +78,7 @@ class ColorBar:
         margin=None,
         hist_size=0.8,
         hist_bins=256,
+        extend=None,
         extend_frac=0.025,
         orientation="horizontal",
         dynamic_shade_indicator=False,
@@ -148,6 +149,19 @@ class ColorBar:
               (ONLY possible if a classification scheme is used!)
 
             The default is 256.
+        extend : str or None, optional
+            Set how extension-arrows should be added.
+
+            - None: extension-arrow behavior is determined by the provided dataset
+              in conjunction with the limits (e.g. vmin and vmax).
+            - "neither": extension arrows are never added
+            - "min" or "max": only min / max extension arrows are added
+            - "both": both min and max extension arrows are added
+
+            Note: If the colorbar inherits its position from a colorbar on a different
+            layer, the extend-behavior is inherited as well!
+
+            The default is None.
         extend_frac : float, optional
             The fraction of the colorbar-size to use for extension-arrows.
             (Extension-arrows are added if out-of-range values are found!)
@@ -211,7 +225,6 @@ class ColorBar:
             The label used for the colorbar. The default is None
         ylabel : str, optional
             The label used for the y-axis of the colorbar. The default is None
-
         kwargs :
             All additional kwargs are passed to the creation of the colorbar
             (e.g. `plt.colorbar()`)
@@ -244,6 +257,9 @@ class ColorBar:
         self._pos = pos
         self._margin = margin
 
+        self._init_extend = extend
+        self._extend_frac = extend_frac
+
         self._parent_cb = self._identify_parent_cb()
 
         if inherit_position is None:
@@ -262,7 +278,6 @@ class ColorBar:
         else:
             self._hist_kwargs = copy.deepcopy(hist_kwargs)
 
-        self._extend_frac = extend_frac
         self._orientation = orientation
         self._dynamic_shade_indicator = dynamic_shade_indicator
         self._show_outline = show_outline
@@ -417,8 +432,9 @@ class ColorBar:
             for m in [self._m.parent, *self._m.parent._children]:
                 if m is not self._m and m.ax is self._m.ax:
                     if m.colorbar is not None:
-                        parent_cb = m.colorbar
-                        break
+                        if m.colorbar._parent_cb is None:
+                            parent_cb = m.colorbar
+                            break
 
         return parent_cb
 
@@ -458,6 +474,23 @@ class ColorBar:
                         label="cb",
                         zorder=9999,
                     )
+
+                parent_extend = getattr(
+                    self._parent_cb, "_extend", self._parent_cb._init_extend
+                )
+
+                if parent_extend is None:
+                    try:
+                        self._parent_cb._set_extend()
+                        parent_extend = getattr(
+                            self._parent_cb, "_extend", self._parent_cb._init_extend
+                        )
+
+                    except Exception:
+                        print(
+                            "EOmaps: unable to determine automatic extension arrow"
+                            "size of parent colorbar."
+                        )
 
                 # inherit axis-position from the parent axis position
                 # (e.g. it can no longer be freely moved... its position is determined
@@ -534,6 +567,21 @@ class ColorBar:
         )
 
         if self._inherit_position:
+            # handle axis size in case parent colorbar has extension arrows
+            if parent_extend in ["min", "both", None]:
+                padx = -self._parent_cb._extend_frac
+            else:
+                padx = 0
+            if parent_extend in ["max", "both", None]:
+                pady = -self._parent_cb._extend_frac
+            else:
+                pady = 0
+
+            if self._orientation == "horizontal":
+                size = (padx, 0, 1 - padx - pady, 1)
+            else:
+                size = (0, padx, 1, 1 - padx - pady)
+
             # in case the position is inherited, copy the locators from the parent!
             self.ax_cb_plot.set_axes_locator(
                 _TransformedBoundsLocator(
@@ -541,7 +589,7 @@ class ColorBar:
                 )
             )
             self.ax_cb.set_axes_locator(
-                _TransformedBoundsLocator((0, 0, 1, 1), self._parent_cb.ax_cb.transAxes)
+                _TransformedBoundsLocator(size, self._parent_cb.ax_cb.transAxes)
             )
 
         # join colorbar and histogram axes
@@ -585,16 +633,31 @@ class ColorBar:
         return (self._ax, self.ax_cb, self.ax_cb_plot)
 
     def _set_extend(self, z_data):
-        extend = "neither"
-        if (z_data > self._vmax).any():
-            extend = "max"
-        if (z_data < self._vmin).any():
-            if extend == "max":
-                extend = "both"
-            else:
-                extend = "min"
+        if self._inherit_position and self._parent_cb is not None:
+            self._extend = self._parent_cb._extend
+            # warn if provided extend behavior differs from the inherited behavior
+            if self._extend != self._init_extend:
+                print(
+                    f"EOmaps Warning: m.add_colorbar(extend='{self._extend}') is "
+                    "inherited from the parent colorbar! Explicitly set the 'extend' "
+                    "behavior to silence this warning."
+                )
+            if self._extend is not None:
+                return
 
-        self._extend = extend
+        if self._init_extend is not None:
+            self._extend = self._init_extend
+        else:
+            extend = "neither"
+            if (z_data > self._vmax).any():
+                extend = "max"
+            if (z_data < self._vmin).any():
+                if extend == "max":
+                    extend = "both"
+                else:
+                    extend = "min"
+
+            self._extend = extend
 
     def _set_data(self):
         renorm = False
