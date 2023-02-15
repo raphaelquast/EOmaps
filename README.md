@@ -13,8 +13,9 @@
 &nbsp; &nbsp; &nbsp;
 [![Documentation Status](https://readthedocs.org/projects/eomaps/badge/?version=latest)](https://eomaps.readthedocs.io/en/latest/?badge=latest)
 &nbsp; &nbsp; &nbsp;
-[![Chat on gitter](https://badges.gitter.im/raphaelquast/EOmaps.png)](https://app.gitter.im/#/room/#EOmaps:gitter.im)
 <a href="https://www.buymeacoffee.com/raphaelquast" target="_blank"><img src="https://www.buymeacoffee.com/assets/img/custom_images/yellow_img.png" alt="Buy Me A Coffee" align="right" style="height: 25px !important;" ></a>
+
+<a href="https://zenodo.org/badge/latestdoi/410829039" target="_blank"><img src=https://badges.gitter.im/raphaelquast/EOmaps.png alt="chat on gitter" align="left" style="height: 20px !important;" ></a>
 
 <a href="https://zenodo.org/badge/latestdoi/410829039" target="_blank"><img src="https://zenodo.org/badge/410829039.svg" alt="DOI: 10.5281/zenodo.6459598" align="right" style="height: 20px !important;" ></a>
 
