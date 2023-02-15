@@ -310,7 +310,7 @@ class DataManager:
         self.m.f.canvas.draw_idle()
         return (x0, x1, y0, y1)
 
-    def indicate_masked_points(self, radius=1.0, **kwargs):
+    def indicate_masked_points(self, **kwargs):
         # remove previous mask artist
         if self._masked_points_artist is not None:
             try:
@@ -336,13 +336,13 @@ class DataManager:
 
         kwargs.setdefault("ec", "r")
         kwargs.setdefault("lw", 0.25)
+        kwargs.setdefault("c", self._current_data["z_data"].ravel()[~mask])
 
         self._masked_points_artist = self.m.ax.scatter(
             self._current_data["x0"].ravel()[~mask],
             self._current_data["y0"].ravel()[~mask],
             cmap=getattr(self.m, "_cbcmap", "Reds"),
             norm=getattr(self.m, "_norm", None),
-            c=self._current_data["z_data"].ravel()[~mask],
             **kwargs,
         )
 
@@ -450,8 +450,11 @@ class DataManager:
             self.m._coll = coll
 
             # if required, add masked points indicators
-            if self._indicate_masked_points:
-                self.indicate_masked_points()
+            if self._indicate_masked_points is not False:
+                if isinstance(self._indicate_masked_points, dict):
+                    self.indicate_masked_points(**self._indicate_masked_points)
+                else:
+                    self.indicate_masked_points()
 
             # execute actions that should be performed after the data
             # has been updated.

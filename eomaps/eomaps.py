@@ -2262,10 +2262,17 @@ class Maps(object):
             (required for QuadMesh if unsorted coordinates are provided)
 
             The default is True.
-        indicate_masked_points : bool
+        indicate_masked_points : bool or dict
+            If False, masked points are not indicated.
+
             If True, any datapoints that could not be properly plotted
             with the currently assigned shape are indicated with a
             circle with a red boundary.
+
+            If a dict is provided, it can be used to update the appearance of the
+            masked points (arguments are passed to matpltolibs `plt.scatter()`)
+            ('s': markersize, 'marker': the shape of the marker, ...)
+
             The default is False
 
         Other Parameters
