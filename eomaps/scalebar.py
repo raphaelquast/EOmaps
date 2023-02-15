@@ -982,6 +982,7 @@ class ScaleBar:
                 self.auto_position(self._auto_position)
 
             self.set_position()
+            self._m.BM.update()
             return ret
 
         return newzoom
@@ -1002,6 +1003,8 @@ class ScaleBar:
                 self.auto_position(self._auto_position)
 
             self.set_position()
+            self._m.BM.update()
+
             return ret
 
         return newupdate
