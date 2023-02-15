@@ -4598,7 +4598,7 @@ class _InsetMaps(Maps):
             top=y + size / 2,
         )
 
-        self.redraw()
+        self.redraw(self.layer)
 
     def _get_inset_boundary(self, x, y, xy_crs, radius, radius_crs, shape, n=100):
         # get the inset-shape boundary

@@ -690,7 +690,7 @@ class ColorBar:
             try:
                 z_data = self._coll.get_ds_data().values
             except:
-                self._m.redraw()
+                self._m.redraw(self.layer)
                 z_data = self._coll.get_ds_data().values
 
             if "count" in aggname:

@@ -1159,8 +1159,7 @@ class OpenFileTabs(QtWidgets.QTabWidget):
         # make sure all temporary pick-artists have been cleared
         widget.m2.BM._clear_temp_artists("pick")
         # redraw if the layer was currently visible
-        if widget.m2.layer in self.m.BM._bg_layer.split("|"):
-            self.m.redraw()
+        self.m.redraw(widget.m2.layer)
 
         del widget.m2
 
