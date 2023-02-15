@@ -241,7 +241,7 @@ class _cb_container(object):
         - True if the callback is assigned to the "all" layer
         - True if the corresponding layer is currently active
         - True if the corresponding layer is part of a currently active "multi-layer"
-          (e.g.  "layer|layer2" )
+          (e.g.  "layer|layer2" or "layer|layer2{0.5}" )
 
         Parameters
         ----------
@@ -255,7 +255,6 @@ class _cb_container(object):
             layer or not.
         """
         visible_layer = self._m.BM.bg_layer
-
         if layer == "all":
             # the all layer is always executed
             return True
@@ -265,7 +264,10 @@ class _cb_container(object):
                 return True
             else:
                 # return true for layers that are part of the multi-layer
-                return any(i.strip() == layer for i in visible_layer.split("|"))
+                # (make sure to strip off transparency assignments, e.g. "layer{}" )
+                return any(
+                    i.strip().split("{")[0] == layer for i in visible_layer.split("|")
+                )
         else:
             return layer == visible_layer
 

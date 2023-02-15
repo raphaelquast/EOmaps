@@ -1939,13 +1939,15 @@ class BlitManager:
 
         """
         fig = self.canvas.figure
+
+        # make sure to strip-off transparency-assignments (e.g. "layer1{0.5}")
         if layers is None:
-            layers = set(self.bg_layer.split("|"))
+            layers = {l.split("{", maxsplit=1)[0] for l in self.bg_layer.split("|")}
             layers.add(self.bg_layer)
         else:
             layers = set(chain(*(i.split("|") for i in layers)))
             for l in layers:
-                layers.add(l)
+                layers.add(l.split("{", maxsplit=1)[0])
 
         if artists is None:
             artists = []
