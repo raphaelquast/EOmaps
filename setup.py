@@ -42,7 +42,7 @@ setup(
         "numpy",
         "scipy",
         "pandas",
-        "matplotlib>=3.0",
+        "matplotlib>=3.4",
         "cartopy>=0.20.0",
         "descartes",
         "mapclassify",

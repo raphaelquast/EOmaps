@@ -419,14 +419,23 @@ class LayerSlider(Slider):
         else:
             ax_slider = self._m.f.add_axes(pos)
 
+        ax_slider.set_label("slider")
+
         kwargs.setdefault("color", ".2")  # remove start-position marker
         kwargs.setdefault("track_color", ".8")  # remove start-position marker
         kwargs.setdefault("initcolor", "none")  # remove start-position marker
         kwargs.setdefault("handle_style", dict(facecolor=".8", edgecolor="k", size=7))
         kwargs.setdefault("label", None)
 
+        # use a small minimal value for valmax to avoid "vmin==vmax" warnings
+        # in case only 1 layer is available
         super().__init__(
-            ax_slider, valmin=0, valmax=len(layers) - 1, valinit=0, valstep=1, **kwargs
+            ax_slider,
+            valmin=0,
+            valmax=max(len(layers) - 1, 0.01),
+            valinit=0,
+            valstep=1,
+            **kwargs,
         )
 
         self.drawon = False
@@ -472,6 +481,17 @@ class LayerSlider(Slider):
 
     def set_layers(self, layers):
         self._layers = layers
+        self.valmax = max(len(layers) - 1, 0.01)
+        self.ax.set_xlim(self.valmin, self.valmax)
+
+        if self._m.BM.bg_layer in self._layers:
+            currval = self._layers.index(self._m.BM.bg_layer)
+            self.set_val(currval)
+        else:
+            self.set_val(0)
+
+        self._on_changed(self.val)
+
         self._m.util._update_widgets()
         self._m.BM.update()
 
@@ -522,7 +542,9 @@ class utilities:
         self._sliders = dict()
 
         # register a function to update all associated widgets on a layer-chance
-        self._m.BM.on_layer(lambda m, l: self._update_widgets(l), persistent=True)
+        self._m.BM.on_layer(
+            lambda m, layer: self._update_widgets(layer), persistent=True
+        )
 
     def _update_widgets(self, l=None):
         if l is None:

@@ -57,13 +57,17 @@ m.util.layer_selector(
     layers=["OSM", "S1GBM_vv", "data"],
 )
 # add a slider to switch between layers
-m.util.layer_slider(
+s = m.util.layer_slider(
     pos=(0.5, 0.93, 0.38, 0.025),
     color="r",
     handle_style=dict(facecolor="r"),
     txt_patch_props=dict(fc="w", ec="none", alpha=0.75, boxstyle="round, pad=.25"),
-    layers=["OSM", "S1GBM_vv", "data"],
 )
+
+# explicitly set the layers you want to use in the slider
+# (Note: you can also use combinations of multiple existing layers!)
+s.set_layers(["OSM", "S1GBM_vv", "data", "OSM|data{0.5}"])
+
 # ------------------------------
 
 m.add_logo()
@@ -72,7 +76,7 @@ m.apply_layout(
     {
         "figsize": [9.0, 4.0],
         "0_map": [0.00625, 0.01038, 0.9875, 0.97924],
-        "1_": [0.5, 0.93, 0.38, 0.025],
+        "1_slider": [0.45, 0.93, 0.38, 0.025],
         "2_logo": [0.865, 0.02812, 0.12, 0.11138],
     }
 )

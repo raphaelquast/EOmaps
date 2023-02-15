@@ -488,8 +488,8 @@ class MapsGrid:
         self.parent.join_limits(*self.children)
 
     @wraps(Maps.redraw)
-    def redraw(self):
-        self.parent.redraw()
+    def redraw(self, *args):
+        self.parent.redraw(*args)
 
     @wraps(plt.savefig)
     def savefig(self, *args, **kwargs):

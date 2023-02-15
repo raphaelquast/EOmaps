@@ -2182,6 +2182,7 @@ class Maps(object):
         colorbar._plot_colorbar()
 
         self._colorbars.append(colorbar)
+        self.BM._refetch_layer(self.layer)
         return colorbar
 
     def _get_alpha_cmap_name(self, alpha):
@@ -2835,9 +2836,9 @@ class Maps(object):
         gdf = self._make_rect_poly(x0, y0, x1, y1, self.get_crs(crs), npts)
         self.add_gdf(gdf, **kwargs)
 
-    def redraw(self):
+    def redraw(self, *args):
         """
-        Force a re-draw of the current layer and all cached background layers.
+        Force a re-draw of cached background layers.
 
         - Use this at the very end of your code to trigger a final re-draw
           to make sure artists not managed by EOmaps are properly drawn!
@@ -2845,7 +2846,7 @@ class Maps(object):
         Note
         ----
         Don't use this to interactively update artists on a map!
-        since it will trigger a re-draw of all background-layers!
+        since it will trigger a re-draw background-layers!
 
         To dynamically re-draw an artist whenever you interact with the map, use:
 
@@ -2858,9 +2859,25 @@ class Maps(object):
         >>> m.cb.pick.add_temporary_artist(artist)
         >>> m.cb.keypress.add_temporary_artist(artist)
         >>> m.cb.move.add_temporary_artist(artist)
+
+        Parameters
+        ----------
+        *args : str
+            Positional arguments provided to redraw are identified as layer-names
+            that should be re-drawn. If no arguments are provided, all layers
+            are re-drawn!
+
         """
-        self.BM._refetch_bg = True
-        self._data_manager.last_extent = None
+        if len(args) == 0:
+            # in case no argument is provided, force a complete re-draw of
+            # all layers (and datasets) of the map
+            self.BM._refetch_bg = True
+            self._data_manager.last_extent = None
+        else:
+            # only re-fetch the required layers
+            for l in args:
+                self.BM._refetch_layer(l)
+
         self.f.canvas.draw_idle()
 
     @wraps(GridSpec.update)
@@ -2918,7 +2935,7 @@ class Maps(object):
 
         """
 
-        def cb(m, l):
+        def cb(m, layer):
             func(m=m, **kwargs)
 
         self.BM.on_layer(func=cb, layer=self.layer, persistent=persistent, m=self)
@@ -4145,7 +4162,9 @@ class Maps(object):
         layers = set((m.layer for m in (self.parent, *self.parent._children)))
         # add layers that are not yet activated (but have an activation
         # method defined...)
-        layers = layers.union(set(self.BM._on_layer_activation))
+        layers = layers.union(set(self.BM._on_layer_activation[True]))
+        layers = layers.union(set(self.BM._on_layer_activation[False]))
+
         # add all (possibly still invisible) layers with artists defined
         # (ONLY do this for unique layers... skip multi-layers )
         layers = layers.union({i for i in self.BM._bg_artists if "|" not in i})
@@ -4579,7 +4598,7 @@ class _InsetMaps(Maps):
             top=y + size / 2,
         )
 
-        self.redraw()
+        self.redraw(self.layer)
 
     def _get_inset_boundary(self, x, y, xy_crs, radius, radius_crs, shape, n=100):
         # get the inset-shape boundary

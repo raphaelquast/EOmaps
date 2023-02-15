@@ -184,7 +184,7 @@ class AutoUpdateLayerMenuButton(QtWidgets.QPushButton):
 
         self.setText(l)
 
-    def update_visible_layer(self, m, l):
+    def update_visible_layer(self, *args, **kwargs):
         # make sure to re-fetch layers first
         self.update_layers()
         self.update_display_text(self.m.BM._bg_layer)

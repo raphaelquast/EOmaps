@@ -493,6 +493,8 @@ class OptionTabs(QtWidgets.QTabWidget):
 
 
 class LayerTabBar(QtWidgets.QTabBar):
+    _number_of_min_tabs_for_size = 8
+
     def __init__(self, m=None, populate=False, *args, **kwargs):
         """
         Parameters
@@ -509,6 +511,7 @@ class LayerTabBar(QtWidgets.QTabBar):
             The default is False.
 
         """
+
         super().__init__(*args, **kwargs)
         self.m = m
 
@@ -538,6 +541,24 @@ class LayerTabBar(QtWidgets.QTabBar):
             self.populate()
             self.m._after_add_child.append(self.populate)
 
+    def sizeHint(self):
+        # make sure the TabBar does not expand the window width
+
+        hint = super().sizeHint()
+        width = self.window().width()
+        hint.setWidth(width)
+        return hint
+
+    def minimumTabSizeHint(self, index):
+        # the minimum width of the tabs is determined such that at least
+        # "_number_of_min_tabs_for_size"  tabs are visible.
+        # (e.g. for the elide of long tab-names)
+
+        hint = super().tabSizeHint(index)
+        w = int(self.sizeHint().width() / self._number_of_min_tabs_for_size)
+        hint.setWidth(w)
+        return hint
+
     def enterEvent(self, e):
         if self.window().showhelp is True:
             QtWidgets.QToolTip.showText(
@@ -550,11 +571,6 @@ class LayerTabBar(QtWidgets.QTabBar):
                 "<li><b>drag</b> layers to change the stacking-order. "
                 "</ul>",
             )
-
-    def tabSizeHint(self, index):
-        # make sure tabs are never larger than 150px
-        size = QtWidgets.QTabBar.tabSizeHint(self, index)
-        return QSize(min(size.width(), 150), size.height())
 
     def repopulate_and_activate_current(self):
         self.populate()
@@ -653,7 +669,7 @@ class LayerTabBar(QtWidgets.QTabBar):
 
         self.populate()
 
-    def color_active_tab(self, m=None, l=None):
+    def color_active_tab(self, m=None, layer=None):
         currlayers = self.m.BM.bg_layer.split("|")
 
         defaultcolor = self.palette().color(self.foregroundRole())
@@ -670,15 +686,15 @@ class LayerTabBar(QtWidgets.QTabBar):
 
         for i in range(self.count()):
 
-            layer = self.tabText(i)
+            selected_layer = self.tabText(i)
 
             color = activecolor if len(active_layers) == 1 else multicolor
-            if layer in active_layers:
+            if selected_layer in active_layers:
                 self.setTabTextColor(i, color)
             else:
                 self.setTabTextColor(i, defaultcolor)
 
-            if l == layer:
+            if layer == selected_layer:
                 self.setTabTextColor(i, activecolor)
 
         # --- adjust the sort-order of the tabs to the order of the visible layers
@@ -700,13 +716,22 @@ class LayerTabBar(QtWidgets.QTabBar):
         self._current_tab_idx = self.currentIndex()
         self._current_tab_name = self.tabText(self._current_tab_idx)
 
-        alllayers = sorted(list(self.m._get_layers()))
+        alllayers = set(self.m._get_layers())
 
-        while self.count() > 0:
-            self.removeTab(0)
+        # go through the layers in reverse and remove any no longer existing layers
+        existing_layers = set()
+        for i in range(self.count(), -1, -1):
+            layer = self.tabText(i)
+            # remove all tabs that do not represent existing layers of the map
+            if layer not in alllayers:
+                self.removeTab(i)
+            else:
+                existing_layers.add(layer)
 
-        self.tabwidgets = dict()
-        for i, layer in enumerate(alllayers):
+        # pop all existing layers from the alllayers set (no need to re-create them)
+        alllayers.difference_update(existing_layers)
+
+        for i, layer in enumerate(sorted(alllayers)):
 
             layout = QtWidgets.QGridLayout()
             layout.setAlignment(Qt.AlignTop | Qt.AlignLeft)
@@ -744,7 +769,6 @@ class LayerTabBar(QtWidgets.QTabBar):
                     break
 
             if found is False:
-                print(f"Unable to activate the tab '{self._current_tab_name}'!")
                 self.setCurrentIndex(0)
 
     @pyqtSlot(int)
@@ -801,10 +825,9 @@ class LayerTabBar(QtWidgets.QTabBar):
 
 class ArtistEditorTabs(LayerArtistTabs):
     def __init__(self, m=None):
-
         super().__init__()
-
         self.m = m
+
         self.setTabBar(LayerTabBar(m=self.m))
 
         # re-populate tabs if a new layer is created
@@ -994,11 +1017,25 @@ class ArtistEditorTabs(LayerArtistTabs):
 
         alllayers = sorted(list(self.m._get_layers()))
 
-        while self.count() > 0:
-            self.removeTab(0)
+        self._current_tab_idx = self.currentIndex()
+        self._current_tab_name = self.tabText(self._current_tab_idx)
 
-        self.tabwidgets = dict()
-        for i, layer in enumerate(alllayers):
+        alllayers = set(self.m._get_layers())
+
+        # go through the layers in reverse and remove any no longer existing layers
+        existing_layers = set()
+        for i in range(self.count(), -1, -1):
+            layer = self.tabText(i)
+            # remove all tabs that do not represent existing layers of the map
+            if layer not in alllayers:
+                self.removeTab(i)
+            else:
+                existing_layers.add(layer)
+
+        # pop all existing layers from the alllayers set (no need to re-create them)
+        alllayers.difference_update(existing_layers)
+
+        for i, layer in enumerate(sorted(alllayers)):
 
             layout = QtWidgets.QGridLayout()
             layout.setAlignment(Qt.AlignTop | Qt.AlignLeft)
@@ -1114,8 +1151,7 @@ class ArtistEditorTabs(LayerArtistTabs):
                 self.m.BM._hidden_artists.add(artist)
                 artist.set_visible(False)
 
-            self.m.BM._refetch_layer(layer)
-            self.m.BM.on_draw(None)
+            self.m.redraw(layer)
             self.populate_layer(layer)
 
         return cb
@@ -1127,8 +1163,7 @@ class ArtistEditorTabs(LayerArtistTabs):
             if len(val) > 0:
                 artist.set_zorder(int(val))
 
-            self.m.BM._refetch_layer(layer)
-            self.m.BM.on_draw(None)
+            self.m.redraw(layer)
 
         return cb
 
@@ -1139,8 +1174,7 @@ class ArtistEditorTabs(LayerArtistTabs):
             if len(val) > 0:
                 artist.set_alpha(float(val.replace(",", ".")))
 
-            self.m.BM._refetch_layer(layer)
-            self.m.BM.on_draw(None)
+            self.m.redraw(layer)
 
         return cb
 
@@ -1151,8 +1185,7 @@ class ArtistEditorTabs(LayerArtistTabs):
             if len(val) > 0:
                 artist.set_linewidth(float(val.replace(",", ".")))
 
-            self.m.BM._refetch_layer(layer)
-            self.m.BM.on_draw(None)
+            self.m.redraw(layer)
 
         return cb
 
@@ -1163,8 +1196,7 @@ class ArtistEditorTabs(LayerArtistTabs):
             if len(val) > 0:
                 artist.set_cmap(val)
 
-            self.m.BM._refetch_layer(layer)
-            self.m.on_draw(None)
+            self.m.redraw(layer)
 
         return cb
 

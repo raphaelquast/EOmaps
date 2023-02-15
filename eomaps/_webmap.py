@@ -372,7 +372,7 @@ class _wmts_layer(_WebMap_layer):
                 # add the layer immediately if the layer is already active
                 self._do_add_layer(
                     self._m,
-                    l=self._layer,
+                    layer=self._layer,
                     wms_kwargs=kwargs,
                     zorder=zorder,
                     alpha=alpha,
@@ -409,7 +409,7 @@ class _wmts_layer(_WebMap_layer):
             ax.add_image(img)
         return img
 
-    def _do_add_layer(self, m, l, **kwargs):
+    def _do_add_layer(self, m, layer, **kwargs):
         # actually add the layer to the map.
         print(f"EOmaps: Adding wmts-layer: {self.name}")
 
@@ -418,7 +418,7 @@ class _wmts_layer(_WebMap_layer):
             m.ax, self._wms, self.name, interpolation="spline36", **kwargs
         )
 
-        m.BM.add_bg_artist(art, l)
+        m.BM.add_bg_artist(art, layer=layer)
 
 
 class _wms_layer(_WebMap_layer):
@@ -475,7 +475,7 @@ class _wms_layer(_WebMap_layer):
                 # add the layer immediately if the layer is already active
                 self._do_add_layer(
                     m=m,
-                    l=self._layer,
+                    layer=self._layer,
                     wms_kwargs=kwargs,
                     zorder=zorder,
                     alpha=alpha,
@@ -514,7 +514,7 @@ class _wms_layer(_WebMap_layer):
 
         return img
 
-    def _do_add_layer(self, m, l, **kwargs):
+    def _do_add_layer(self, m, layer, **kwargs):
         # actually add the layer to the map.
         print(f"EOmaps: ... adding wms-layer {self.name}")
 
@@ -523,7 +523,7 @@ class _wms_layer(_WebMap_layer):
             m.ax, self._wms, self.name, interpolation="spline36", **kwargs
         )
 
-        m.BM.add_bg_artist(art, l)
+        m.BM.add_bg_artist(art, layer=layer)
 
 
 class _WebServiec_collection(object):
@@ -1100,7 +1100,7 @@ class _xyz_tile_service:
 
             if self._layer == "all" or self._m.BM.bg_layer == self._layer:
                 # add the layer immediately if the layer is already active
-                self._do_add_layer(self._m, self._layer, **kwargs)
+                self._do_add_layer(self._m, layer=self._layer, **kwargs)
             else:
                 # delay adding the layer until it is effectively activated
                 self._m.BM.on_layer(
@@ -1110,7 +1110,7 @@ class _xyz_tile_service:
                     m=self._m,
                 )
 
-    def _do_add_layer(self, m, l, **kwargs):
+    def _do_add_layer(self, m, layer, **kwargs):
         # actually add the layer to the map.
         print(f"EOmaps: ... adding wms-layer {self.name}")
 
@@ -1133,7 +1133,7 @@ class _xyz_tile_service:
             m.ax.add_image(img)
         self._artist = img
 
-        m.BM.add_bg_artist(self._artist, l)
+        m.BM.add_bg_artist(self._artist, layer=layer)
 
 
 # ------------------------------------------------------------------------------

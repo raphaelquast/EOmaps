@@ -307,6 +307,7 @@ class DataManager:
         self.m.ax.set_xlim(x0, x1)
         self.m.ax.set_ylim(y0, y1)
 
+        self.m.f.canvas.draw_idle()
         return (x0, x1, y0, y1)
 
     def indicate_masked_points(self, radius=1.0, **kwargs):
