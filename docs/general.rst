@@ -52,15 +52,6 @@ More details on how to **configure your favorite IDE** to work with EOmaps can b
 ~~~~~~~~~~~~~~~~~~~~~~~~~
 To use the full potential of EOmaps, some additional dependencies might be required
 
-.. admonition:: Note on ``matplotlib`` backends
-
-  By default EOmaps requires only a minimal version of ``matplotlib`` that does not include bindings for
-  all available `matplotlib backends <https://matplotlib.org/stable/users/explain/backends.html?highlight=backend#backends>`_.
-
-  - To install all backends, explicitly use: ``conda install -c conda-forge matplotlib``  (or ``mamba ...``)
-  - For ``QtAgg``, just install the ``pyqt`` bindings via ``conda install -c conda-forge pyqt``
-
-
 - `Pandas <https://pandas.pydata.org/>`_
 
   - The go-to library for data-analysis.
