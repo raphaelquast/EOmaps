@@ -1151,8 +1151,7 @@ class ArtistEditorTabs(LayerArtistTabs):
                 self.m.BM._hidden_artists.add(artist)
                 artist.set_visible(False)
 
-            self.m.BM._refetch_layer(layer)
-            self.m.BM.on_draw(None)
+            self.m.redraw(layer)
             self.populate_layer(layer)
 
         return cb
@@ -1164,8 +1163,7 @@ class ArtistEditorTabs(LayerArtistTabs):
             if len(val) > 0:
                 artist.set_zorder(int(val))
 
-            self.m.BM._refetch_layer(layer)
-            self.m.BM.on_draw(None)
+            self.m.redraw(layer)
 
         return cb
 
@@ -1176,8 +1174,7 @@ class ArtistEditorTabs(LayerArtistTabs):
             if len(val) > 0:
                 artist.set_alpha(float(val.replace(",", ".")))
 
-            self.m.BM._refetch_layer(layer)
-            self.m.BM.on_draw(None)
+            self.m.redraw(layer)
 
         return cb
 
@@ -1188,8 +1185,7 @@ class ArtistEditorTabs(LayerArtistTabs):
             if len(val) > 0:
                 artist.set_linewidth(float(val.replace(",", ".")))
 
-            self.m.BM._refetch_layer(layer)
-            self.m.BM.on_draw(None)
+            self.m.redraw(layer)
 
         return cb
 
@@ -1200,8 +1196,7 @@ class ArtistEditorTabs(LayerArtistTabs):
             if len(val) > 0:
                 artist.set_cmap(val)
 
-            self.m.BM._refetch_layer(layer)
-            self.m.on_draw(None)
+            self.m.redraw(layer)
 
         return cb
 
