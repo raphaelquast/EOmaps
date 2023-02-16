@@ -694,7 +694,15 @@ class DataManager:
         val : array of the corresponding data values
 
         """
-        val = self.z_data.flat[ind]
+
+        # TODO
+        # Note datashader transposes the data by itself!
+        # (to pick the correct value, we need to pick the transposed one!)
+
+        if self.m.shape.name == "shade_raster":
+            val = self.z_data.T.flat[ind]
+        else:
+            val = self.z_data.flat[ind]
 
         return val
 
