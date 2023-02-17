@@ -52,5 +52,6 @@ jobs:
         with:
           env_vars: ${{ matrix.os }}, ${{ matrix.python-version }}
           name: maps_coverage
+          token: ${{ secrets.CODECOV_TOKEN }}
           fail_ci_if_error: true
           verbose: true
