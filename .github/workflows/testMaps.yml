@@ -17,7 +17,7 @@ jobs:
 
     name: test_Maps ${{ matrix.os }}  ${{ matrix.python-version }}
     steps:
-      # checkout the repository
+      # checkout repository
       - uses: actions/checkout@v3
       # install miniconda environment
       - uses: conda-incubator/setup-miniconda@v2
