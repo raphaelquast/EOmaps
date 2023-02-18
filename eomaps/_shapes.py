@@ -235,7 +235,8 @@ class shapes(object):
         array = kwargs.pop("array", None)
 
         if array is not None:
-            array = array[mask]
+            if mask is not None:
+                array = array[mask]
         else:
             array = None
 
@@ -243,7 +244,11 @@ class shapes(object):
         for c_key in ["fc", "facecolor", "color"]:
             color = kwargs.pop("fc", None)
             if color is not None:
-                color_vals[c_key] = np.atleast_1d(color)[mask]
+                if mask is not None:
+                    color = np.atleast_1d(color)
+                    color_vals[c_key] = color[np.broadcast_to(mask, color.shape)]
+                else:
+                    color_vals[c_key] = color
 
         if len(color_vals) == 0:
             return {"array": array}
