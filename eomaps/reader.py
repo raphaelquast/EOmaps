@@ -40,10 +40,67 @@ def _register_rioxarray():
     return True
 
 
+def identify_geotiff_cmap(path, band=1):
+    """
+    Identify GeoTIFF colormap.
+
+    Check if a GeoTiff file contains a color specification and return appropriate
+    colormap and classify-specs to plot the data
+
+    Parameters
+    ----------
+    path : str
+        The path to the GeoTIFF file.
+    band : int
+        The band to use for identifying the colormap.
+
+    Returns
+    -------
+    cmap : matplotlib colormap
+        The identified colormap
+    classify_specs : dict
+        A dict that can be used as classify-specs.
+
+    """
+    try:
+        try:
+            import rasterio
+            from matplotlib.colors import ListedColormap
+
+            with rasterio.open(path) as tifffile:
+                c = tifffile.colormap(band)
+
+            colors = np.array(list(c.values())) / 255
+            bins = list(c)
+
+            cmap = ListedColormap(colors)
+
+            classify_specs = dict(scheme="UserDefined", bins=bins)
+        except ValueError:
+            print(
+                f"EOmaps: No cmap found for GeoTIFF band {band}, defaulting to 'viridis'"
+            )
+            classify_specs = None
+            cmap = "viridis"
+        except IndexError:
+            print(
+                f"EOmaps: No cmap found for GeoTIFF band {band}, defaulting to 'viridis'"
+            )
+            classify_specs = None
+            cmap = "viridis"
+
+        return cmap, classify_specs
+
+    except ImportError as ex:
+        print("EOmaps: Unable to identify cmap for GeoTIFF:", ex)
+        return "viridis", None
+
+
 class read_file:
     """
     A collection of methods to read data from a file.
-    (see individual reader-functions for details)
+
+    More details in the individual reader-functions!
 
     Currently supported filetypes are:
 
@@ -1079,6 +1136,25 @@ class from_file:
 
         if val_transform:
             data["data"] = val_transform(data["data"])
+
+        if (
+            classify_specs is None
+            and kwargs.get("cmap", None) is None
+            and isinstance(path_or_dataset, (Path, str))
+        ):
+
+            # try to identify used band
+            if sel is not None and "band" in sel:
+                band = sel.get("band", 1)
+
+            elif isel is not None and "band" in isel:
+                with xar.open_dataset(path_or_dataset) as ncfile:
+                    band = np.atleast_1d(ncfile.isel(**isel).band.values)[0]
+            else:
+                band = 1
+
+            cmap, classify_specs = identify_geotiff_cmap(path_or_dataset, band=band)
+            kwargs["cmap"] = cmap
 
         return _from_file(
             data,
