@@ -244,9 +244,8 @@ class shapes(object):
         for c_key in ["fc", "facecolor", "color"]:
             color = kwargs.pop("fc", None)
             if color is not None:
-                if mask is not None:
-                    color = np.atleast_1d(color)
-                    color_vals[c_key] = color[np.broadcast_to(mask, color.shape)]
+                if isinstance(color, np.ndarray):
+                    color_vals[c_key] = color[mask]
                 else:
                     color_vals[c_key] = color
 
@@ -955,7 +954,6 @@ class shapes(object):
 
             # remember masked points
             self._m._data_mask = mask
-
             color_and_array = shapes._get_colors_and_array(kwargs, mask)
 
             coll = PolyCollection(

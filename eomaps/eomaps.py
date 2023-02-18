@@ -3758,22 +3758,20 @@ class Maps(object):
         )
 
     def _handle_explicit_colors(self, color):
-        current_zshape = self._data_manager._current_data["z_data"].shape
         if isinstance(color, (int, float, str, np.number)):
             # if a scalar is provided, broadcast it
-            color = np.broadcast_to(color, current_zshape)
-        elif isinstance(color, (list, tuple, np.ndarray)):
-            if len(color) in [3, 4]:
-                if all(map(lambda i: isinstance(i, (int, float, np.number)), color)):
-                    # check if a tuple of numbers is provided, and if so broadcast
-                    # it as a rgb or rgba tuple
-                    color = np.broadcast_to(np.rec.fromarrays(color), current_zshape)
-                elif all(map(lambda i: isinstance(i, (list, np.ndarray)), color)):
-                    # check if a tuple of lists or arrays is provided, and if so,
-                    # broadcast them as RGB arrays
-                    color = self._sel_c_transp(
-                        np.rec.fromarrays(np.broadcast_arrays(*color))
-                    )
+            pass
+        elif isinstance(color, (list, tuple)) and len(color) in [3, 4]:
+            if all(map(lambda i: isinstance(i, (int, float, np.number)), color)):
+                # check if a tuple of numbers is provided, and if so broadcast
+                # it as a rgb or rgba tuple
+                pass
+            elif all(map(lambda i: isinstance(i, (list, np.ndarray)), color)):
+                # check if a tuple of lists or arrays is provided, and if so,
+                # broadcast them as RGB arrays
+                color = self._sel_c_transp(
+                    np.rec.fromarrays(np.broadcast_arrays(*color))
+                )
         elif isinstance(color, np.ndarray) and (color.shape[-1] in [3, 4]):
             color = self._sel_c_transp(np.rec.fromarrays(color.T))
         elif isinstance(color, np.ndarray) and (color.shape[-1] in [3, 4]):
