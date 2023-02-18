@@ -656,7 +656,7 @@ def _from_file(
         )
     else:
         if layer is None:
-            layer = 0
+            layer = "base"
         # get crs from file
         if crs is None:
             crs = data.get("crs", None)
