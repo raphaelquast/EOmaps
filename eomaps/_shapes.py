@@ -249,7 +249,6 @@ class shapes(object):
                 # (recarrays are used to convert 3/4 arrays into an rgb(a) array
                 # in m._handle_explicit_colors() )
                 if isinstance(color, np.recarray):
-                    print("HERE")
                     color_vals[c_key] = color[mask].view(
                         (float, len(color.dtype.names))
                     )  # .ravel()
