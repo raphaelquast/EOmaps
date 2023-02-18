@@ -13,11 +13,11 @@ jobs:
         # set operating systems to test
         os: [ubuntu-latest]
         # set python versions to test
-        python-version: ['3.7']
+        python-version: ['3.9']
 
     name: test_Maps ${{ matrix.os }}  ${{ matrix.python-version }}
     steps:
-      # checkout the repository
+      # checkout repository
       - uses: actions/checkout@v3
       # install miniconda environment
       - uses: conda-incubator/setup-miniconda@v2
@@ -52,5 +52,6 @@ jobs:
         with:
           env_vars: ${{ matrix.os }}, ${{ matrix.python-version }}
           name: maps_coverage
+          token: ${{ secrets.CODECOV_TOKEN }}
           fail_ci_if_error: true
           verbose: true
