@@ -3518,7 +3518,7 @@ class Maps(object):
         if self.data is not None:
             size = np.size(self.data)
 
-            if len(self.data.shape) == 2 and size > 200_000:
+            if len(np.shape(self.data)) == 2 and size > 200_000:
                 if size > 5e6 and _register_datashader():
                     # only try to use datashader for very large 2D datasets
                     self.set_shape.shade_raster()
