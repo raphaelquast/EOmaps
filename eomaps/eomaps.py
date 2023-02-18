@@ -3517,14 +3517,17 @@ class Maps(object):
     def _set_default_shape(self):
         if self.data is not None:
             size = np.size(self.data)
-            if size > 500_000:
-                if _register_datashader():
-                    if len(self.data.shape) == 2:
-                        # shade_raster requires 2D data!
-                        self.set_shape.shade_raster()
-                    else:
-                        # shade_points should work for any dataset
-                        self.set_shape.shade_points()
+
+            if len(self.data.shape) == 2 and size > 200_000:
+                if size > 5e6 and _register_datashader():
+                    # only try to use datashader for very large 2D datasets
+                    self.set_shape.shade_raster()
+                else:
+                    self.set_shape.raster()
+            else:
+                if size > 500_000 and _register_datashader():
+                    # shade_points should work for any dataset
+                    self.set_shape.shade_points()
                 else:
                     print(
                         "EOmaps-Warning: you attempt to plot a large dataset"
@@ -3533,8 +3536,6 @@ class Maps(object):
                         + "... defaulting to 'ellipses' as plot-shape."
                     )
                     self.set_shape.ellipses()
-            else:
-                self.set_shape.ellipses()
         else:
             self.set_shape.ellipses()
 
