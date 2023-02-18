@@ -645,16 +645,41 @@ Colors can also be set **manually** by providing one of the following arguments 
 Uniform colors
 **************
 
-To apply a uniform color to all datapoints, you can use matpltolib's color-names or pass an RGB or RGBA tuple.
+To apply a uniform color to all datapoints, you can use `matpltolib's named colors <https://matplotlib.org/stable/gallery/color/named_colors.html>`_ or pass an RGB or RGBA tuple.
+
+- ``m.plot_map(fc="orange")``
+- ``m.plot_map(fc=(0.4, 0.3, 0.2))``
+- ``m.plot_map(fc=(1, 0, 0.2, 0.5))``
 
 .. code-block:: python
 
-    m.plot_map(fc="r")
-    m.plot_map(fc="orange")
-    m.plot_map(fc=(1, 0, 0.5))
-    m.plot_map(fc=(1, 0, 0.5, .25))
-    # for grayscale use a string of a number between 0 and 1
-    m.plot_map(fc="0.3")
+    from eomaps import Maps
+
+    m = Maps()
+    m.set_data(data=None, x=[10,20,30], y=[10,20,30])
+
+    # Use any of matplotlibs "named colors"
+    m1 = m.new_layer(copy_data_specs=True)
+    m1.set_shape.ellipses(radius=10)
+    m1.plot_map(fc="r", zorder=0)
+
+    m2 = m.new_layer(copy_data_specs=True)
+    m2.set_shape.ellipses(radius=8)
+    m2.plot_map(fc="orange", zorder=1)
+
+    # Use RGB or RGBA tuples
+    m3 = m.new_layer(copy_data_specs=True)
+    m3.set_shape.ellipses(radius=6)
+    m3.plot_map(fc=(1, 0, 0.5), zorder=2)
+
+    m4 = m.new_layer(copy_data_specs=True)
+    m4.set_shape.ellipses(radius=4)
+    m4.plot_map(fc=(1, 1, 1, .75), zorder=3)
+
+    # For grayscale use a string of a number between 0 and 1
+    m5 = m.new_layer(copy_data_specs=True)
+    m5.set_shape.ellipses(radius=2)
+    m5.plot_map(fc="0.3", zorder=4)
 
 
 Explicit colors
@@ -664,33 +689,72 @@ To explicitly color each datapoint with a pre-defined color, simply provide a li
 
 .. code-block:: python
 
-    m.plot_map(fc=["r", "g", "orange"])
-    # for grayscale use a string of a number between 0 and 1
-    m.plot_map(fc=[".1", ".2", "0.3"])
-    # or use RGB / RGBA tuples
-    m.plot_map(fc=[(1, 0, 0.5), (.3, .4, .5), (1, 1, 0)])
-    m.plot_map(fc=[(1, 0, 0.5, .25), (1, 0, 0.5, .75), (.1, .2, 0.5, .5)])
+    from eomaps import Maps
 
+    m = Maps()
+    m.set_data(data=None, x=[10, 20, 30], y=[10, 20, 30])
 
-RGB composites
-**************
+    # Use any of matplotlibs "named colors"
+    # (https://matplotlib.org/stable/gallery/color/named_colors.html)
+    m1 = m.new_layer(copy_data_specs=True)
+    m1.set_shape.ellipses(radius=10)
+    m1.plot_map(fc=["indigo", "g", "orange"], zorder=1)
+
+    # Use RGB tuples
+    m2 = m.new_layer(copy_data_specs=True)
+    m2.set_shape.ellipses(radius=6)
+    m2.plot_map(fc=[(1, 0, 0.5),
+                    (0.3, 0.4, 0.5),
+                    (1, 1, 0)], zorder=2)
+
+    # Use RGBA tuples
+    m3 = m.new_layer(copy_data_specs=True)
+    m3.set_shape.ellipses(radius=8)
+    m3.plot_map(fc=[(1, 0, 0.5, 0.25),
+                    (1, 0, 0.5, 0.75),
+                    (0.1, 0.2, 0.5, 0.5)], zorder=3)
+
+    # For grayscale use a string of a number between 0 and 1
+    m4 = m.new_layer(copy_data_specs=True)
+    m4.set_shape.ellipses(radius=4)
+    m4.plot_map(fc=[".1", ".2", "0.3"], zorder=4)
+
+RGB/RGBA composites
+*******************
 
 To create an RGB or RGBA composite from 3 (or 4) datasets, pass the datasets as tuple:
 
 - the datasets must have the same size as the coordinate arrays!
 - the datasets must be scaled between 0 and 1
 
+If you pass a tuple of 3 or 4 arrays, they will be used to set the
+RGB (or RGBA) colors of the shapes, e.g.:
+
+- ``m.plot_map(fc=(<R-array>, <G-array>, <B-array>))``
+- ``m.plot_map(fc=(<R-array>, <G-array>, <B-array>, <A-array>))``
+
+You can fix individual color channels by passing a list with 1 element, e.g.:
+
+- ``m.plot_map(fc=(<R-array>, [0.12345], <B-array>, <A-array>))``
+
 .. code-block:: python
 
-    # if you pass a tuple of 3 or 4 arrays, they will be used to set the
-    # RGB (or RGBA) colors of the shapes
-    m.plot_map(fc=(<R-array>, <G-array>, <B-array>))
-    m.plot_map(fc=(<R-array>, <G-array>, <B-array>, <A-array>))
+    from eomaps import Maps
+    import numpy as np
 
-    # you can fix individual color channels by passing a list with 1 element
-    m.plot_map(fc=(<R-array>, [0.12345], <B-array>, <A-array>))
+    x, y = np.meshgrid(np.linspace(-20, 40, 100),
+                    np.linspace(50, 70, 50))
 
+    # values must be between 0 and 1
+    r = np.random.randint(0, 100, x.shape) / 100
+    g = np.random.randint(0, 100, x.shape) / 100
+    b = [0.4]
+    a = np.random.randint(0, 100, x.shape) / 100
 
+    m = Maps()
+    m.add_feature.preset.ocean()
+    m.set_data(data=None, x=x, y=y)
+    m.plot_map(fc=(r, g, b, a))
 
 
 🍱 Multiple Maps (and/or plots) in one figure
