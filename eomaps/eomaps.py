@@ -3752,13 +3752,61 @@ class Maps(object):
         except Exception as ex:
             raise ex
 
+    def _sel_c_transp(self, c):
+        return self._data_manager._select_vals(
+            c.T if self._data_manager._z_transposed else c
+        )
+
+    def _handle_explicit_colors(self, color):
+        current_zshape = self._data_manager._current_data["z_data"].shape
+        if isinstance(color, (int, float, str, np.number)):
+            # if a scalar is provided, broadcast it
+            color = np.broadcast_to(color, current_zshape)
+        elif isinstance(color, (list, tuple, np.ndarray)):
+            if len(color) in [3, 4]:
+                if all(map(lambda i: isinstance(i, (int, float, np.number)), color)):
+                    # check if a tuple of numbers is provided, and if so broadcast
+                    # it as a rgb or rgba tuple
+                    color = np.broadcast_to(np.rec.fromarrays(color), current_zshape)
+                elif all(map(lambda i: isinstance(i, (list, np.ndarray)), color)):
+                    # check if a tuple of lists or arrays is provided, and if so,
+                    # broadcast them as RGB arrays
+                    color = self._sel_c_transp(
+                        np.rec.fromarrays(np.broadcast_arrays(*color))
+                    )
+        elif isinstance(color, np.ndarray) and (color.shape[-1] in [3, 4]):
+            color = self._sel_c_transp(np.rec.fromarrays(color.T))
+        elif isinstance(color, np.ndarray) and (color.shape[-1] in [3, 4]):
+            color = self._sel_c_transp(np.rec.fromarrays(color.T))
+        else:
+            # still use np.asanyarray in here in case lists are provided
+            color = self._sel_c_transp(np.asanyarray(color).reshape(self._zshape))
+
+        return color
+
     def _get_coll(self, props, **kwargs):
-        # don't pass the array if explicit facecolors are set
+        # handle selection of explicitly provided facecolors
+        # (e.g. for rgb composits)
+
+        # allow only one of the synonyms "color", "fc" and "facecolor"
         if (
-            ("color" in kwargs and kwargs["color"] is not None)
-            or ("facecolor" in kwargs and kwargs["facecolor"] is not None)
-            or ("fc" in kwargs and kwargs["fc"] is not None)
+            np.count_nonzero(
+                [kwargs.get(i, None) is not None for i in ["color", "fc", "facecolor"]]
+            )
+            > 1
         ):
+            raise TypeError(
+                "EOmaps: only one of 'color', 'facecolor' or 'fc' " "can be specified!"
+            )
+
+        explicit_fc = False
+        for key in ("color", "facecolor", "fc"):
+            if kwargs.get(key, None) is not None:
+                explicit_fc = True
+                kwargs[key] = self._handle_explicit_colors(kwargs[key])
+
+        # don't pass the array if explicit facecolors are set
+        if explicit_fc:
             args = dict(array=None, cmap=None, norm=None, **kwargs)
         else:
             args = dict(

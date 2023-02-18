@@ -208,9 +208,12 @@ class DataManager:
                 # remember 1 dimensional coordinate vectors for querying
                 self._x0_1D = xorig
                 self._y0_1D = yorig
-                if used_shape.name not in ["shade_raster"]:
+                if used_shape.name in ["shade_raster"]:
+                    pass
+                else:
                     # convert 1D data to 2D (required for all shapes but shade_raster)
                     xorig, yorig = np.meshgrid(xorig, yorig, copy=False)
+
                     z_data = z_data.T
                     self._z_transposed = True
 
@@ -490,8 +493,8 @@ class DataManager:
             return True
         return False
 
-    def get_props(self, *args, **kwargs):
-
+    def _get_q(self, *args, **kwargs):
+        # identify the data mask
         x0, x1, y0, y1 = self.current_extent
 
         if self._radius_margin is not None:
@@ -510,14 +513,14 @@ class DataManager:
         if not self.data_in_extent((x0, x1, y0, y1)):
             self.last_extent = (x0, x1, y0, y1)
             self._current_data = None
-            return self._current_data
+            return None, None, None
 
         # in case the extent is larger than the full data,
         # there is no need to query!
         if self.full_data_in_extent((x0, x1, y0, y1)):
             self.last_extent = self.current_extent
             self._current_data = {**self._all_data}
-            return self._current_data
+            return None, None, None
 
         # get mask
         if self.x0_1D is not None:
@@ -535,6 +538,40 @@ class DataManager:
                 # in case coordinates are 2D, query the relevant 2D array
                 qx = q.any(axis=0)
                 qy = q.any(axis=1)
+            else:
+                qx = None
+                qx = None
+
+        return q, qx, qy
+
+    def _select_vals(self, val):
+        # select data based on currently visible region
+        q, qx, qy = self._last_qs
+        if all(i is None for i in (q, qx, qy)):
+            ret = val
+
+        val = np.asanyarray(val)
+
+        if len(val.shape) == 2 and qx is not None and qy is not None:
+            ret = val[qy.squeeze()][:, qx.squeeze()]
+
+        else:
+            if q is not None:
+                ret = val.ravel()[q.squeeze()]
+            else:
+                ret = val
+
+        if self.m.shape.name not in ["raster", "shade_raster"]:
+            ret = ret.ravel()
+
+        return ret
+
+    def _select_ids(self):
+        # identify ids based on currently visible region
+        q, qx, qy = self._last_qs
+
+        if all(i is None for i in (q, qx, qy)):
+            return self.ids
 
         if q is None or len(q.shape) == 2:
             # select columns that contain at least one value
@@ -561,19 +598,19 @@ class DataManager:
             else:
                 idq = None
 
+        return idq
+
+    def get_props(self, *args, **kwargs):
+        q, qx, qy = self._get_q()
+        self._last_qs = [q, qx, qy]
+
         self._current_data = dict(
-            xorig=self.xorig[qy][:, qx]
-            if len(self.xorig.shape) == 2
-            else self.xorig[q],
-            yorig=self.yorig[qy][:, qx]
-            if len(self.yorig.shape) == 2
-            else self.yorig[q],
-            x0=self.x0[qy][:, qx] if len(self.x0.shape) == 2 else self.x0[q],
-            y0=self.y0[qy][:, qx] if len(self.y0.shape) == 2 else self.y0[q],
-            z_data=self.z_data[qy][:, qx]
-            if len(self.z_data.shape) == 2
-            else self.z_data[q],
-            ids=idq,
+            xorig=self._select_vals(self.xorig),
+            yorig=self._select_vals(self.yorig),
+            x0=self._select_vals(self.x0),
+            y0=self._select_vals(self.y0),
+            z_data=self._select_vals(self.z_data),
+            ids=self._select_ids(),
         )
         self.last_extent = self.current_extent
 
