@@ -244,7 +244,16 @@ class shapes(object):
         for c_key in ["fc", "facecolor", "color"]:
             color = kwargs.pop("fc", None)
             if color is not None:
-                if isinstance(color, np.ndarray):
+                # explicit treatment for recarrays (to avoid performance issues)
+                # with matplotlib.colors.to_rgba_array()
+                # (recarrays are used to convert 3/4 arrays into an rgb(a) array
+                # in m._handle_explicit_colors() )
+                if isinstance(color, np.recarray):
+                    print("HERE")
+                    color_vals[c_key] = color[mask].view(
+                        (float, len(color.dtype.names))
+                    )  # .ravel()
+                elif isinstance(color, np.ndarray):
                     color_vals[c_key] = color[mask]
                 else:
                     color_vals[c_key] = color
@@ -1695,11 +1704,6 @@ class shapes(object):
             color_and_array = shapes._get_colors_and_array(
                 kwargs, np.full_like(mask, True)
             )
-            for key, val in color_and_array.items():
-                if val is not None:
-                    # convert to 1D to avoid indexing issues in
-                    # matplotlib.collections.QuadMesh.get_cursor_data
-                    color_and_array[key] = val.ravel()
 
             coll = QuadMesh(
                 verts,
