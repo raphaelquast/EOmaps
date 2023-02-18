@@ -540,7 +540,7 @@ class DataManager:
                 qy = q.any(axis=1)
             else:
                 qx = None
-                qx = None
+                qy = None
 
         return q, qx, qy
 
