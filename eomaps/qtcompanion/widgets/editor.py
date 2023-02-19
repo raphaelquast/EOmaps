@@ -663,9 +663,16 @@ class LayerTabBar(QtWidgets.QTabBar):
         if layer in self.m.BM._bg_layers:
             del self.m.BM._bg_layers[layer]
 
-        # also remove not-yet-fetched WMS services!
-        if layer in self.m.BM._on_layer_activation:
-            del self.m.BM._on_layer_activation[layer]
+        # also remove the layer from any layer-change/layer-activation triggers
+        # (e.g. to deal with not-yet-fetched WMS services)
+
+        for permanent, d in self.m.BM._on_layer_activation.items():
+            if layer in d:
+                del d[layer]
+
+        for permanent, d in self.m.BM._on_layer_change.items():
+            if layer in d:
+                del d[layer]
 
         self.populate()
 

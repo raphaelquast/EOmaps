@@ -2262,10 +2262,17 @@ class Maps(object):
             (required for QuadMesh if unsorted coordinates are provided)
 
             The default is True.
-        indicate_masked_points : bool
+        indicate_masked_points : bool or dict
+            If False, masked points are not indicated.
+
             If True, any datapoints that could not be properly plotted
             with the currently assigned shape are indicated with a
             circle with a red boundary.
+
+            If a dict is provided, it can be used to update the appearance of the
+            masked points (arguments are passed to matpltolibs `plt.scatter()`)
+            ('s': markersize, 'marker': the shape of the marker, ...)
+
             The default is False
 
         Other Parameters
@@ -3510,14 +3517,17 @@ class Maps(object):
     def _set_default_shape(self):
         if self.data is not None:
             size = np.size(self.data)
-            if size > 500_000:
-                if _register_datashader():
-                    if len(self.data.shape) == 2:
-                        # shade_raster requires 2D data!
-                        self.set_shape.shade_raster()
-                    else:
-                        # shade_points should work for any dataset
-                        self.set_shape.shade_points()
+
+            if len(np.shape(self.data)) == 2 and size > 200_000:
+                if size > 5e6 and _register_datashader():
+                    # only try to use datashader for very large 2D datasets
+                    self.set_shape.shade_raster()
+                else:
+                    self.set_shape.raster()
+            else:
+                if size > 500_000 and _register_datashader():
+                    # shade_points should work for any dataset
+                    self.set_shape.shade_points()
                 else:
                     print(
                         "EOmaps-Warning: you attempt to plot a large dataset"
@@ -3526,8 +3536,6 @@ class Maps(object):
                         + "... defaulting to 'ellipses' as plot-shape."
                     )
                     self.set_shape.ellipses()
-            else:
-                self.set_shape.ellipses()
         else:
             self.set_shape.ellipses()
 
@@ -3745,13 +3753,59 @@ class Maps(object):
         except Exception as ex:
             raise ex
 
+    def _sel_c_transp(self, c):
+        return self._data_manager._select_vals(
+            c.T if self._data_manager._z_transposed else c
+        )
+
+    def _handle_explicit_colors(self, color):
+        if isinstance(color, (int, float, str, np.number)):
+            # if a scalar is provided, broadcast it
+            pass
+        elif isinstance(color, (list, tuple)) and len(color) in [3, 4]:
+            if all(map(lambda i: isinstance(i, (int, float, np.number)), color)):
+                # check if a tuple of numbers is provided, and if so broadcast
+                # it as a rgb or rgba tuple
+                pass
+            elif all(map(lambda i: isinstance(i, (list, np.ndarray)), color)):
+                # check if a tuple of lists or arrays is provided, and if so,
+                # broadcast them as RGB arrays
+                color = self._sel_c_transp(
+                    np.rec.fromarrays(np.broadcast_arrays(*color))
+                )
+        elif isinstance(color, np.ndarray) and (color.shape[-1] in [3, 4]):
+            color = self._sel_c_transp(np.rec.fromarrays(color.T))
+        elif isinstance(color, np.ndarray) and (color.shape[-1] in [3, 4]):
+            color = self._sel_c_transp(np.rec.fromarrays(color.T))
+        else:
+            # still use np.asanyarray in here in case lists are provided
+            color = self._sel_c_transp(np.asanyarray(color).reshape(self._zshape))
+
+        return color
+
     def _get_coll(self, props, **kwargs):
-        # don't pass the array if explicit facecolors are set
+        # handle selection of explicitly provided facecolors
+        # (e.g. for rgb composits)
+
+        # allow only one of the synonyms "color", "fc" and "facecolor"
         if (
-            ("color" in kwargs and kwargs["color"] is not None)
-            or ("facecolor" in kwargs and kwargs["facecolor"] is not None)
-            or ("fc" in kwargs and kwargs["fc"] is not None)
+            np.count_nonzero(
+                [kwargs.get(i, None) is not None for i in ["color", "fc", "facecolor"]]
+            )
+            > 1
         ):
+            raise TypeError(
+                "EOmaps: only one of 'color', 'facecolor' or 'fc' " "can be specified!"
+            )
+
+        explicit_fc = False
+        for key in ("color", "facecolor", "fc"):
+            if kwargs.get(key, None) is not None:
+                explicit_fc = True
+                kwargs[key] = self._handle_explicit_colors(kwargs[key])
+
+        # don't pass the array if explicit facecolors are set
+        if explicit_fc:
             args = dict(array=None, cmap=None, norm=None, **kwargs)
         else:
             args = dict(

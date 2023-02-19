@@ -231,51 +231,37 @@ class shapes(object):
     @staticmethod
     def _get_colors_and_array(kwargs, mask):
         # identify colors and the array
-
         # special treatment of array input to properly mask values
         array = kwargs.pop("array", None)
 
         if array is not None:
-            array = array[mask]
+            if mask is not None:
+                array = array[mask]
         else:
             array = None
 
-        # ----------- manual color specifications
-        # allow the synonyms "color", "fc" and "facecolor"
-        color = None
-        for i in ["color", "fc", "facecolor"]:
-            if color is None:
-                color = kwargs.pop(i, None)
-                if color is not None:
-                    c_key = i
-            elif kwargs.pop(i, None) is not None:
-                raise TypeError(
-                    "EOmaps: only one of 'color', 'facecolor' or 'fc' "
-                    + "can be specified!"
-                )
+        color_vals = dict()
+        for c_key in ["fc", "facecolor", "color"]:
+            color = kwargs.pop("fc", None)
+            if color is not None:
+                # explicit treatment for recarrays (to avoid performance issues)
+                # with matplotlib.colors.to_rgba_array()
+                # (recarrays are used to convert 3/4 arrays into an rgb(a) array
+                # in m._handle_explicit_colors() )
+                if isinstance(color, np.recarray):
+                    color_vals[c_key] = color[mask].view(
+                        (float, len(color.dtype.names))
+                    )  # .ravel()
+                elif isinstance(color, np.ndarray):
+                    color_vals[c_key] = color[mask]
+                else:
+                    color_vals[c_key] = color
 
-        if color is None:
+        if len(color_vals) == 0:
             return {"array": array}
-
-        if isinstance(color, (int, float, str, np.number)):
-            # if a scalar is provided, broadcast it
-            color = np.broadcast_to(color, mask.shape)
-        elif isinstance(color, (list, tuple)):
-            if len(color) in [3, 4]:
-                if all(map(lambda i: isinstance(i, (int, float, np.number)), color)):
-                    # check if a tuple of numbers is provided, and if so broadcast
-                    # it as a rgb or rgba tuple
-                    color = np.broadcast_to(np.rec.fromarrays(color), mask.shape)
-                elif all(map(lambda i: isinstance(i, (list, np.ndarray)), color)):
-                    # check if a tuple of lists or arrays is provided, and if so,
-                    # broadcast them as RGB arrays
-                    color = np.rec.fromarrays(np.broadcast_arrays(*color))
-        elif isinstance(color, np.ndarray) and (color.shape[-1] in [3, 4]):
-            color = np.rec.fromarrays(color.T)
         else:
-            # still use np.asanyarray in here in case lists are provided
-            color = np.asanyarray(color).reshape(*mask.shape, -1)[mask].squeeze()
-        return {c_key: color, "array": array}
+            color_vals["array"] = None
+            return color_vals
 
     @staticmethod
     @lru_cache()
@@ -760,10 +746,10 @@ class shapes(object):
                 for i, (x, y) in enumerate(zip(xs, ys))
                 if mask[i]
             )
-
-            color_and_array = shapes._get_colors_and_array(kwargs, mask)
             # remember masked points
             self._m._data_mask = mask
+
+            color_and_array = shapes._get_colors_and_array(kwargs, mask)
 
             coll = PolyCollection(
                 verts,
@@ -976,7 +962,6 @@ class shapes(object):
 
             # remember masked points
             self._m._data_mask = mask
-
             color_and_array = shapes._get_colors_and_array(kwargs, mask)
 
             coll = PolyCollection(
@@ -1641,7 +1626,6 @@ class shapes(object):
             # the number of intermediate points is fixed to 1 when using a QuadMesh
             # (e.g. no intermediate points, only vertices)
             n = 1
-
             # estimate the radius (make sure only finite values are considered)
 
             # try to find the radius based on the first row/col of the data
@@ -1719,11 +1703,6 @@ class shapes(object):
             color_and_array = shapes._get_colors_and_array(
                 kwargs, np.full_like(mask, True)
             )
-            for key, val in color_and_array.items():
-                if val is not None:
-                    # convert to 1D to avoid indexing issues in
-                    # matplotlib.collections.QuadMesh.get_cursor_data
-                    color_and_array[key] = val.ravel()
 
             coll = QuadMesh(
                 verts,
