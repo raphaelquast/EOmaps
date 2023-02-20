@@ -503,7 +503,15 @@ class _wms_layer(_WebMap_layer):
     def _add_wms(ax, wms, layers, wms_kwargs=None, **kwargs):
         from cartopy.io.ogc_clients import WMSRasterSource
 
-        wms = WMSRasterSource(wms, layers, getmap_extra_kwargs=wms_kwargs)
+        class WMSRasterSource_NEW(WMSRasterSource):
+
+            # Temporary fix for WMS services provided in a known srs but not in
+            # the srs of the axis
+            # (for example m.add_wms.ESA_WorldCover.add_layer.WORLDCOVER_2020_MAP())
+            def _native_srs(self, *args, **kwargs):
+                return None
+
+        wms = WMSRasterSource_NEW(wms, layers, getmap_extra_kwargs=wms_kwargs)
 
         # Allow a fail-fast error if the raster source cannot provide
         # images in the current projection.
@@ -1275,12 +1283,10 @@ class SlippyImageArtist_NEW(AxesImage):
                 except:
                     print("EOmaps: unable to set clippath for WMS images")
 
-                self.set_array(img)
                 with ax.hold_limits():
+                    self.set_array(img)
                     self.set_extent(extent)
-
-            super().draw(renderer, *args, **kwargs)
-
+                    super().draw(renderer, *args, **kwargs)
             self.stale = False
 
         except Exception:
