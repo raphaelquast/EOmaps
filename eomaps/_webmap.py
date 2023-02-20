@@ -1294,6 +1294,10 @@ class SlippyImageArtist_NEW(AxesImage):
             for img, extent in self.cache:
                 try:
                     clippath = self.axes.spines["geo"]
+                    # make sure the geo-spine is updated before setting it as clippath
+                    # (otherwise the path might still correspond to a previous extent)
+                    clippath._adjust_location()
+
                     self.set_clip_path(
                         clippath.get_path(),
                         transform=self.axes.projection._as_mpl_transform(self.axes),
