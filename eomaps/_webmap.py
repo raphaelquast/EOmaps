@@ -509,7 +509,25 @@ class _wms_layer(_WebMap_layer):
             # the srs of the axis
             # (for example m.add_wms.ESA_WorldCover.add_layer.WORLDCOVER_2020_MAP())
             def _native_srs(self, *args, **kwargs):
-                return None
+                native_srs = super()._native_srs(*args, **kwargs)
+
+                # if the native_srs cannot be identified, try to use fallback srs
+                if native_srs is None:
+                    return None
+
+                else:
+                    # check if the native_srs is actually provided.
+                    # if not try to use fallback srs
+                    contents = self.service.contents
+                    native_OK = all(
+                        native_srs in contents[layer].crsOptions
+                        for layer in self.layers
+                    )
+
+                    if native_OK:
+                        return native_srs
+                    else:
+                        return None
 
         wms = WMSRasterSource_NEW(wms, layers, getmap_extra_kwargs=wms_kwargs)
 
