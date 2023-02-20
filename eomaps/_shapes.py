@@ -702,7 +702,7 @@ class shapes(object):
                 self._m.CRS.NearsidePerspective(),
             ):
                 # avoid masking in those crs
-                mask = np.full(xs.shape, True)
+                mask = np.full(xs.shape[0], True)
             else:
 
                 # check if any points are in different halfspaces with respect to x
