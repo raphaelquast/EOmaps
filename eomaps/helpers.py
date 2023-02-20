@@ -1739,7 +1739,8 @@ class BlitManager:
         try:
             # reset all background-layers and re-fetch the default one
             if self._refetch_bg:
-                self._bg_layers = dict()
+                self._bg_layers.clear()
+                self._layers_to_refetch.clear()
                 self._refetch_bg = False
             else:
                 # remove all cached backgrounds that were tagged for refetch
