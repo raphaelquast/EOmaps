@@ -222,16 +222,22 @@ class _cb_container(object):
         if self._method == "click":
             self._m.cb._click_move.share_events(*args)
 
-    def add_temporary_artist(self, artist):
+    def add_temporary_artist(self, artist, layer=None):
         """
         Make an artist temporary (remove it from the map at the next event).
 
         Parameters
         ----------
         artist : matplotlib.artist
-            the artist to use
+            The artist to use
+        layer : str or None, optional
+            The layer to put the artist on.
+            If None, the layer of the used Maps-object is used. (e.g. `m.layer`)
         """
-        self._m.BM.add_artist(artist)
+        if layer is None:
+            layer = self._m.layer
+
+        self._m.BM.add_artist(artist, layer=layer)
         self._temporary_artists.append(artist)
 
     def _execute_cb(self, layer):
