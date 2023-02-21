@@ -12,6 +12,8 @@ from .draw import DrawerTabs
 
 
 class AddFeaturesMenuButton(QtWidgets.QPushButton):
+    FeatureAdded = pyqtSignal(str)
+
     def __init__(self, *args, m=None, **kwargs):
         super().__init__(*args, **kwargs)
 
@@ -113,8 +115,8 @@ class AddFeaturesMenuButton(QtWidgets.QPushButton):
                 else:
                     f(layer=layer, **self.props)
 
-                self.m.BM._refetch_layer(layer)
-                self.m.BM.on_draw(None)
+                self.m.f.canvas.draw_idle()
+                self.FeatureAdded.emit(str(layer))
             except Exception:
                 import traceback
 
@@ -572,7 +574,7 @@ class LayerTabBar(QtWidgets.QTabBar):
                 "</ul>",
             )
 
-    def repopulate_and_activate_current(self):
+    def repopulate_and_activate_current(self, *args, **kwargs):
         self.populate()
 
         # activate the currently visible layer tab
@@ -845,7 +847,7 @@ class ArtistEditorTabs(LayerArtistTabs):
         self.m.BM._on_add_bg_artist.append(self.populate)
         self.m.BM._on_remove_bg_artist.append(self.populate)
 
-    def repopulate_and_activate_current(self):
+    def repopulate_and_activate_current(self, *args, **kwargs):
         self.populate()
 
         # activate the currently visible layer tab
@@ -1125,8 +1127,7 @@ class ArtistEditorTabs(LayerArtistTabs):
         artist.remove()
 
         self.populate_layer(layer)
-        self.m.BM._refetch_layer(layer)
-        self.m.BM.on_draw(None)
+        self.m.redraw(layer)
 
     def remove(self, artist, layer):
         @pyqtSlot()
@@ -1228,10 +1229,17 @@ class ArtistEditor(QtWidgets.QWidget):
         self.addannotation = AddAnnotationInput(m=self.m)
         self.draw = DrawerTabs(m=self.m)
 
+        # make sure the layer is properly set
+        self.set_layer()
+
         self.option_tabs = OptionTabs()
         self.option_tabs.addTab(self.addfeature, "Add Features")
         self.option_tabs.addTab(self.addannotation, "Add Annotations")
         self.option_tabs.addTab(self.draw, "Draw Shapes")
+
+        # repopulate the layer if features or webmaps are added
+        self.addfeature.selector.FeatureAdded.connect(self.artist_tabs.populate_layer)
+        self.newlayer.addwms.wmsLayerCreated.connect(self.artist_tabs.populate_layer)
 
         option_widget = QtWidgets.QWidget()
         option_layout = QtWidgets.QVBoxLayout()
@@ -1251,8 +1259,6 @@ class ArtistEditor(QtWidgets.QWidget):
         layout.addWidget(splitter)
 
         self.setLayout(layout)
-
-        # self.artist_tabs.populate()
 
         # connect a callback to update the layer of the feature-button
         # with respect to the currently selected layer-tab

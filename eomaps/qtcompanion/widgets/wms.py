@@ -314,7 +314,7 @@ class StatusTipFilter(QObject):
 
 
 class AddWMSMenuButton(QtWidgets.QPushButton):
-    wmsLayerCreated = pyqtSignal()
+    wmsLayerCreated = pyqtSignal(str)
 
     def __init__(self, *args, m=None, new_layer=False, show_layer=False, **kwargs):
         super().__init__(*args, **kwargs)
@@ -520,14 +520,13 @@ class AddWMSMenuButton(QtWidgets.QPushButton):
             self._update_layer_cache(wmsname, wms.wmslayers)
 
             # emit a signal that a new layer has been created
-            self.wmsLayerCreated.emit()
-
-            self.m.BM._refetch_layer(layer)
+            self.wmsLayerCreated.emit(str(layer))
 
             if self._show_layer:
                 self.m.show_layer(layer)
-            else:
-                self.m.BM.on_draw(None)
+
+            # call draw to make sure the wms service is properly fetched
+            self.m.BM.canvas.draw_idle()
 
         return wms_cb
 
