@@ -399,6 +399,7 @@ class NewLayerWidget(QtWidgets.QFrame):
 
         m2 = self.m.new_layer(layer)
         self.NewLayerCreated.emit(layer)
+        self.new_layer_name.clear()
         # self.m.show_layer(layer)
 
         return m2
