@@ -642,19 +642,40 @@ class LayerTabBar(QtWidgets.QTabBar):
             print("can't delete the base-layer")
             return
 
+        # get currently active layers
+        active_with_transp = self.m.BM.bg_layer.split("|")
+        # strip off transparency assignments
+        active_layers = [i.split("{")[0] for i in active_with_transp]
+
+        # cleanup the layer and remove any artists etc.
         for m in list(self.m._children):
             if layer == m.layer:
                 m.cleanup()
                 m.BM._bg_layers.pop(layer, None)
 
-        if self.m.BM._bg_layer == layer:
-            try:
-                switchlayer = next((i for i in self.m.BM._bg_artists if i != layer))
-                self.m.show_layer(switchlayer)
-            except StopIteration:
-                # don't allow deletion of last layer
-                print("you cannot delete the last available layer!")
-                return
+        # in case the layer was visible, try to activate a suitable replacement
+        if layer in active_layers:
+            # if possible, show the currently active multi-layer but without
+            # the deleted layer
+            layer_idx = active_layers.index(layer)
+            active_with_transp.pop(layer_idx)
+
+            if len(active_with_transp) > 0:
+                try:
+                    self.m.show_layer(*active_with_transp)
+                except Exception:
+                    pass
+            else:
+                # otherwise switch to the first available layer
+                try:
+                    switchlayer = next(
+                        (i for i in self.m.BM._bg_artists if layer not in i.split("|"))
+                    )
+                    self.m.show_layer(switchlayer)
+                except StopIteration:
+                    # don't allow deletion of last layer
+                    print("you cannot delete the last available layer!")
+                    return
 
         if layer in list(self.m.BM._bg_artists):
             for a in self.m.BM._bg_artists[layer]:
