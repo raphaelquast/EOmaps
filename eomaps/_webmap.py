@@ -3,6 +3,8 @@ from warnings import warn, filterwarnings, catch_warnings
 from types import SimpleNamespace
 from contextlib import contextmanager
 
+from packaging import version
+
 from PIL import Image
 from io import BytesIO
 from pprint import PrettyPrinter
@@ -20,6 +22,7 @@ from urllib3.exceptions import InsecureRequestWarning
 
 from .helpers import _sanitize
 
+import cartopy
 from cartopy.io import ogc_clients
 from cartopy.io import RasterSource
 from cartopy.io.ogc_clients import _target_extents
@@ -39,14 +42,18 @@ class _WebMap_layer:
         else:
             self._style = "default" if "default" in styles else styles[0]
 
-        # hardcode support for EPSG:3857 == GOOGLE_MERCATOR for now since cartopy
-        # hardcoded only  EPSG:900913
-        # (see from cartopy.io.ogc_clients import _CRS_TO_OGC_SRS)
-        if hasattr(self.wms_layer, "crsOptions"):
-            if "EPSG:3857" in self.wms_layer.crsOptions:
-                ogc_clients._CRS_TO_OGC_SRS[ccrs.GOOGLE_MERCATOR] = "EPSG:3857"
-            if "epsg:3857" in self.wms_layer.crsOptions:
-                ogc_clients._CRS_TO_OGC_SRS[ccrs.GOOGLE_MERCATOR] = "epsg:3857"
+        # fix of OCG_CRS assignments for older cartopy versions
+        # ...ported to cartopy >= 0.21.2:
+        #    https://github.com/SciTools/cartopy/pull/2138
+        if version.parse(cartopy.__version__) < version.parse("0.21.2"):
+            # hardcode support for EPSG:3857 == GOOGLE_MERCATOR for now
+            # since cartopy hardcoded only  EPSG:900913
+            # (see from cartopy.io.ogc_clients import _CRS_TO_OGC_SRS)
+            if hasattr(self.wms_layer, "crsOptions"):
+                if "EPSG:3857" in self.wms_layer.crsOptions:
+                    ogc_clients._CRS_TO_OGC_SRS[ccrs.GOOGLE_MERCATOR] = "EPSG:3857"
+                    if "epsg:3857" in self.wms_layer.crsOptions:
+                        ogc_clients._CRS_TO_OGC_SRS[ccrs.GOOGLE_MERCATOR] = "epsg:3857"
 
     @property
     def info(self):
@@ -501,35 +508,41 @@ class _wms_layer(_WebMap_layer):
 
     @staticmethod
     def _add_wms(ax, wms, layers, wms_kwargs=None, **kwargs):
-        from cartopy.io.ogc_clients import WMSRasterSource
+        # fix of native-crs identifications for older cartopy versions
+        # ...ported to cartopy >= 0.21.2:
+        #    https://github.com/SciTools/cartopy/pull/2136
+        if version.parse(cartopy.__version__) < version.parse("0.21.2"):
+            from cartopy.io.ogc_clients import WMSRasterSource
 
-        class WMSRasterSource_NEW(WMSRasterSource):
+            class WMSRasterSource_NEW(WMSRasterSource):
 
-            # Temporary fix for WMS services provided in a known srs but not in
-            # the srs of the axis
-            # (for example m.add_wms.ESA_WorldCover.add_layer.WORLDCOVER_2020_MAP())
-            def _native_srs(self, *args, **kwargs):
-                native_srs = super()._native_srs(*args, **kwargs)
+                # Temporary fix for WMS services provided in a known srs but not
+                # in the srs of the axis
+                # (for example ESA_WorldCover.add_layer.WORLDCOVER_2020_MAP())
+                def _native_srs(self, *args, **kwargs):
+                    native_srs = super()._native_srs(*args, **kwargs)
 
-                # if the native_srs cannot be identified, try to use fallback srs
-                if native_srs is None:
-                    return None
-
-                else:
-                    # check if the native_srs is actually provided.
-                    # if not try to use fallback srs
-                    contents = self.service.contents
-                    native_OK = all(
-                        native_srs in contents[layer].crsOptions
-                        for layer in self.layers
-                    )
-
-                    if native_OK:
-                        return native_srs
-                    else:
+                    # if native_srs cannot be identified, try to use fallback
+                    if native_srs is None:
                         return None
 
-        wms = WMSRasterSource_NEW(wms, layers, getmap_extra_kwargs=wms_kwargs)
+                    else:
+                        # check if the native_srs is actually provided.
+                        # if not try to use fallback srs
+                        contents = self.service.contents
+                        native_OK = all(
+                            native_srs in contents[layer].crsOptions
+                            for layer in self.layers
+                        )
+
+                        if native_OK:
+                            return native_srs
+                        else:
+                            return None
+
+            wms = WMSRasterSource_NEW(wms, layers, getmap_extra_kwargs=wms_kwargs)
+        else:
+            wms = WMSRasterSource(wms, layers, getmap_extra_kwargs=wms_kwargs)
 
         # Allow a fail-fast error if the raster source cannot provide
         # images in the current projection.
