@@ -38,7 +38,7 @@ m3.set_classify_specs(
 for m_i in [m, m2, m3]:
     m_i.set_data(data=data, x="lon", y="lat", crs=4326)
     m_i.plot_map()
-    m_i.add_colorbar()
+    m_i.add_colorbar(extend="neither")
 
     m_i.add_feature.preset.ocean()
     m_i.add_feature.preset.land()
@@ -55,7 +55,7 @@ m21.inherit_data(m2)
 m21.set_shape.delaunay_triangulation(mask_radius=0.5)
 m21.set_classify_specs(scheme="Quantiles", k=4)
 m21.plot_map(cmap="RdYlBu")
-m21.add_colorbar()
+m21.add_colorbar(extend="neither")
 # add an annotation that is only executed if "layer 2" is active
 m21.cb.click.attach.annotate(text="callbacks are layer-sensitive!")
 
