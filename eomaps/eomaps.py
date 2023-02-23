@@ -3531,16 +3531,20 @@ class Maps(object):
                 else:
                     self.set_shape.raster()
             else:
-                if size > 500_000 and _register_datashader():
-                    # shade_points should work for any dataset
-                    self.set_shape.shade_points()
+                if size > 500_000:
+                    if _register_datashader():
+                        # shade_points should work for any dataset
+                        self.set_shape.shade_points()
+                    else:
+                        print(
+                            "EOmaps-Warning: Attempting to plot a large dataset "
+                            f"({size} datapoints) but the 'datashader' library "
+                            "could not be imported! The plot might take long "
+                            "to finish! ... defaulting to 'ellipses' "
+                            "as plot-shape."
+                        )
+                        self.set_shape.ellipses()
                 else:
-                    print(
-                        "EOmaps-Warning: you attempt to plot a large dataset"
-                        + f"({size} datapoints) but the 'datashader' library could"
-                        + " not be imported! The plot might take long to finish!"
-                        + "... defaulting to 'ellipses' as plot-shape."
-                    )
                     self.set_shape.ellipses()
         else:
             self.set_shape.ellipses()
