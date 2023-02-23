@@ -622,6 +622,10 @@ class DataManager:
     def _set_n(self, s):
         shape = self.m.shape
 
+        # in case an explicit n is provided, keep using it!
+        if getattr(shape, "_n", None) is not None:
+            return shape._n
+
         if shape.name == "rectangles":
             # mesh currently onls supports n=1
             if shape.mesh is True:

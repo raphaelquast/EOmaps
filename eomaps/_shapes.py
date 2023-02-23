@@ -414,18 +414,25 @@ class shapes(object):
 
             xs, ys = np.ma.masked_invalid(plot_t.transform(lons, lats), copy=False)
 
-            # get the mask for invalid, very distorted or very large shapes
-            dx = xs.max(axis=0) - xs.min(axis=0)
-            dy = ys.max(axis=0) - ys.min(axis=0)
-            mask = (
-                ~xs.mask.any(axis=0)
-                & ~ys.mask.any(axis=0)
-                & ((dx / dy) < 10)
-                & (dx < np.max(radius) * 50)
-                & (dy < np.max(radius) * 50)
-            )
+            if self._m._crs_plot in (
+                self._m.CRS.Orthographic(),
+                self._m.CRS.Geostationary(),
+                self._m.CRS.NearsidePerspective(),
+            ):
+                mask = np.full(lons.shape, True)
+            else:
+                # get the mask for invalid, very distorted or very large shapes
+                dx = xs.max(axis=0) - xs.min(axis=0)
+                dy = ys.max(axis=0) - ys.min(axis=0)
+                mask = (
+                    ~xs.mask.any(axis=0)
+                    & ~ys.mask.any(axis=0)
+                    & ((dx / dy) < 10)
+                    & (dx < np.max(radius) * 50)
+                    & (dy < np.max(radius) * 50)
+                )
 
-            mask = np.broadcast_to(mask[:, None].T, lons.shape)
+                mask = np.broadcast_to(mask[:, None].T, lons.shape)
 
             return xs, ys, mask
 
@@ -689,49 +696,57 @@ class shapes(object):
                 )
 
             # ------------------------- implement some kind of "wraparound"
+            if self._m._crs_plot in (
+                self._m.CRS.Orthographic(),
+                self._m.CRS.Geostationary(),
+                self._m.CRS.NearsidePerspective(),
+            ):
+                # avoid masking in those crs
+                mask = np.full(xs.shape[0], True)
+            else:
 
-            # check if any points are in different halfspaces with respect to x
-            # and if so, mask the ones in the wrong halfspace
-            # (required for proper longitude wrapping)
-            # TODO this might be a lot easier (and faster) to implement!
+                # check if any points are in different halfspaces with respect to x
+                # and if so, mask the ones in the wrong halfspace
+                # (required for proper longitude wrapping)
+                # TODO this might be a lot easier (and faster) to implement!
 
-            xc = 0  # the center-point (e.g. (-180 + 180)/2 = 0 )
+                xc = 0  # the center-point (e.g. (-180 + 180)/2 = 0 )
 
-            def getQ(x, xc):
-                quadrants = np.full_like(x, -1)
+                def getQ(x, xc):
+                    quadrants = np.full_like(x, -1)
 
-                quadrant = x < xc
-                quadrants[quadrant] = 0
-                quadrant = x > xc
-                quadrants[quadrant] = 1
+                    quadrant = x < xc
+                    quadrants[quadrant] = 0
+                    quadrant = x > xc
+                    quadrants[quadrant] = 1
 
-                return quadrants
+                    return quadrants
 
-            t_in_lonlat = shapes._get_transformer(crs, 4326)
-            t_plot_lonlat = shapes._get_transformer(self._m.crs_plot, 4326)
+                t_in_lonlat = shapes._get_transformer(crs, 4326)
+                t_plot_lonlat = shapes._get_transformer(self._m.crs_plot, 4326)
 
-            # transform the coordinates to lon/lat
-            xp, _ = t_in_lonlat.transform(x, y)
-            xsp, _ = t_plot_lonlat.transform(xs, ys)
+                # transform the coordinates to lon/lat
+                xp, _ = t_in_lonlat.transform(x, y)
+                xsp, _ = t_plot_lonlat.transform(xs, ys)
 
-            quadrants, pts_quadrants = getQ(xp, xc), getQ(xsp, xc)
+                quadrants, pts_quadrants = getQ(xp, xc), getQ(xsp, xc)
 
-            # mask any point that is in a different quadrant than the center point
-            maskx = pts_quadrants != quadrants[:, np.newaxis]
-            # take care of points that are on the center line (e.g. don't mask them)
-            # (use a +- 25 degree around 0 as threshold)
-            cpoints = np.broadcast_to(
-                np.isclose(xp, xc, atol=25)[:, np.newaxis], xs.shape
-            )
+                # mask any point that is in a different quadrant than the center point
+                maskx = pts_quadrants != quadrants[:, np.newaxis]
+                # take care of points that are on the center line (e.g. don't mask them)
+                # (use a +- 25 degree around 0 as threshold)
+                cpoints = np.broadcast_to(
+                    np.isclose(xp, xc, atol=25)[:, np.newaxis], xs.shape
+                )
 
-            maskx[cpoints] = False
-            xs.mask[maskx] = True
-            ys.mask = xs.mask
+                maskx[cpoints] = False
+                xs.mask[maskx] = True
+                ys.mask = xs.mask
 
-            # mask any datapoint that has less than 4 of the ellipse-points unmasked
-            mask = ~(
-                n - np.count_nonzero(xs.mask, axis=1) <= min(n / 2, 4)
-            ) & np.isfinite(theta)
+                # mask any datapoint that has less than 4 of the ellipse-points unmasked
+                mask = ~(
+                    n - np.count_nonzero(xs.mask, axis=1) <= min(n / 2, 4)
+                ) & np.isfinite(theta)
             return xs, ys, mask
 
         def get_coll(self, x, y, crs, **kwargs):

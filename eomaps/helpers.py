@@ -1739,18 +1739,18 @@ class BlitManager:
         try:
             # reset all background-layers and re-fetch the default one
             if self._refetch_bg:
-                self._bg_layers = dict()
+                self._bg_layers.clear()
+                self._layers_to_refetch.clear()
                 self._refetch_bg = False
             else:
                 # remove all cached backgrounds that were tagged for refetch
                 while len(self._layers_to_refetch) > 0:
                     self._bg_layers.pop(self._layers_to_refetch.pop(), None)
 
-            show_layer = self._get_showlayer_name()
-
-            if show_layer not in self._bg_layers:
-                # TODO there might be other reasons to re-fetch a background!
-                self.fetch_bg(layer=show_layer)
+            # # fetching relevant backgrounds is done in self.update()!
+            # show_layer = self._get_showlayer_name()
+            # if show_layer not in self._bg_layers:
+            #     self.fetch_bg(layer=show_layer)
 
             # workaround for nbagg backend to avoid glitches
             # it's slow but at least it works...
@@ -2089,7 +2089,7 @@ class BlitManager:
         # add additional layers (background, spines etc.)
         show_layer = self._get_showlayer_name()
         if show_layer not in self._bg_layers:
-            # paranoia in case the background was not properly fetched before
+            # make sure the background is properly fetched
             self.fetch_bg(show_layer)
 
         cv.restore_region(self._bg_layers[show_layer])

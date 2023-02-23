@@ -2089,7 +2089,7 @@ class Maps(object):
         position="lr",
         size=0.12,
         pad=0.1,
-        layer="all",
+        layer=None,
         fix_position=False,
     ):
         """
@@ -2115,8 +2115,10 @@ class Maps(object):
             Padding between the axis-edge and the logo as a fraction of the logo-width.
             If a tuple is passed, (x-pad, y-pad)
             The default is 0.1.
-        layer : str, optional
-            The layer at which the logo should be visible. The default is "all".
+        layer : str or None, optional
+            The layer at which the logo should be visible.
+            If None, the logo will be added to all layers and will be drawn on
+            top of all background artists. The default is None.
         fix_position : bool, optional
             If True, the relative position of the logo (with respect to the map-axis)
             is fixed (and dynamically updated on zoom / resize events)
@@ -2125,6 +2127,10 @@ class Maps(object):
             The default is False.
 
         """
+
+        if layer is None:
+            layer = "__SPINES__"
+
         if filepath is None:
             filepath = Path(__file__).parent / "logo.png"
 
@@ -3525,16 +3531,20 @@ class Maps(object):
                 else:
                     self.set_shape.raster()
             else:
-                if size > 500_000 and _register_datashader():
-                    # shade_points should work for any dataset
-                    self.set_shape.shade_points()
+                if size > 500_000:
+                    if _register_datashader():
+                        # shade_points should work for any dataset
+                        self.set_shape.shade_points()
+                    else:
+                        print(
+                            "EOmaps-Warning: Attempting to plot a large dataset "
+                            f"({size} datapoints) but the 'datashader' library "
+                            "could not be imported! The plot might take long "
+                            "to finish! ... defaulting to 'ellipses' "
+                            "as plot-shape."
+                        )
+                        self.set_shape.ellipses()
                 else:
-                    print(
-                        "EOmaps-Warning: you attempt to plot a large dataset"
-                        + f"({size} datapoints) but the 'datashader' library could"
-                        + " not be imported! The plot might take long to finish!"
-                        + "... defaulting to 'ellipses' as plot-shape."
-                    )
                     self.set_shape.ellipses()
         else:
             self.set_shape.ellipses()
