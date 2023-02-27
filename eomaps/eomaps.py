@@ -2191,6 +2191,74 @@ class Maps(object):
         self.BM._refetch_layer(self.layer)
         return colorbar
 
+    def add_gridlines(
+        self, dlon=5, dlat=5, layer=None, bounds=(-180, 180, -90, 90), **kwargs
+    ):
+        """
+        Add gridlines to the map.
+
+        Parameters
+        ----------
+        dlon, dlat : int or float
+            The longutude- and latitude- separation of the gridlines.
+            The default is 5.
+        layer : str
+            The name of the layer on which the gridlines should be visible.
+        bounds : tuple
+            A tuple of boundaries to limit the gridlines to a certain area.
+            (lon_min, lon_max, lat_min, lat_max)
+            The default is: (-180, 180, -90, 90)
+        kwargs :
+            Additional kwargs to style the gridlines
+
+            - edgecolor (or ec)
+            - linewidth (or lw)
+            - linestyle (or ls)
+            - ...
+
+        Returns
+        -------
+        m_grid : EOmaps.Maps
+            The Maps-object used to draw the gridlines.
+
+        Examples
+        --------
+        >>> m = Maps(Maps.CRS.InterruptedGoodeHomolosine())
+        >>> m.add_feature.preset.ocean()
+        >>> g0 = m.add_gridlines(10, 10, ec=".5", lw=0.25, zorder=1, layer="g")
+        >>> g1 = m.add_gridlines(20, 20, ec="k", lw=0.5, zorder=2, layer="g")
+        >>> g2 = m.add_gridlines(5, 5, ec="darkred", lw=0.25, zorder=0,
+        >>>                      bounds=(-20, 40, -20, 60), layer="g")
+        >>> m.show_layer(m.layer, "g")
+
+        """
+        fc = kwargs.pop("facecolor", "none")
+        ec = kwargs.pop("edgecolor", "k")
+        lw = kwargs.pop("linewidth", 0.5)
+
+        kwargs.setdefault("fc", fc)
+        kwargs.setdefault("ec", ec)
+        kwargs.setdefault("lw", lw)
+        kwargs.setdefault("zorder", 100)
+        kwargs.setdefault("set_extent", False)
+
+        if all(isinstance(i, (int, float, np.number)) for i in (dlon, dlat)):
+            gx, gy = np.meshgrid(
+                np.arange(bounds[0], bounds[1], dlon),
+                np.arange(bounds[2], bounds[3], dlat),
+            )
+        else:
+            raise TypeError("EOmaps: dlon and dlat must be numbers!")
+
+        m_grid = self.new_layer(layer=layer)
+        m_grid.set_data(
+            data=None, x=gx, y=gy, crs=4326, cpos="ll", cpos_radius=(dlon / 2, dlat / 2)
+        )
+        m_grid.set_shape.rectangles()
+        m_grid.plot_map(**kwargs)
+
+        return m_grid
+
     def _get_alpha_cmap_name(self, alpha):
         # get a unique name for the colormap
         try:
