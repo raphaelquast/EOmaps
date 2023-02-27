@@ -1046,7 +1046,12 @@ class cb_move_container(cb_click_container):
 
     def _add_move_callback(self):
         def movecb(event):
-            if not self._m.cb.get_execute_callbacks():
+            try:
+                if not self._m.cb.get_execute_callbacks():
+                    return
+            except ReferenceError:
+                # In case the weakref-proxy (self._m) no longer exists,
+                # don't raise an error and ignore the event.
                 return
 
             try:
