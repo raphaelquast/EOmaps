@@ -589,6 +589,13 @@ class Maps(object):
         return self._parent
 
     @property
+    def _real_self(self):
+        # workaround to obtain a non-weak reference for the parent
+        # (e.g. self.parent._real_self is a non-weak ref to parent)
+        # see https://stackoverflow.com/a/49319989/9703451
+        return self
+
+    @property
     def crs_plot(self):
         """The crs used for plotting."""
         return self._crs_plot_cartopy
@@ -3157,12 +3164,15 @@ class Maps(object):
     def _init_figure(self, ax=None, plot_crs=None, **kwargs):
         if self.parent.f is None:
             self._f = plt.figure(**kwargs)
-            self.parent.f._EOmaps_parent = self.parent
+            # make sure we keep a "real" reference otherwise overwriting the
+            # variable of the parent Maps-object while keeping the figure open
+            # causes all weakrefs to be garbage-collected!
+            self.parent.f._EOmaps_parent = self.parent._real_self
             newfig = True
         else:
             newfig = False
             if not hasattr(self.parent.f, "_EOmaps_parent"):
-                self.parent.f._EOmaps_parent = self.parent
+                self.parent.f._EOmaps_parent = self.parent._real_self
             self.parent._add_child(self)
 
         if isinstance(ax, plt.Axes):
@@ -3618,7 +3628,7 @@ class Maps(object):
         # check if the figure to which the Maps-object is added already has a parent
         parent = None
         if getattr(self._f, "_EOmaps_parent", False):
-            parent = self._f._EOmaps_parent
+            parent = self._proxy(self._f._EOmaps_parent)
 
         if parent is None:
             parent = self
