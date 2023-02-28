@@ -2195,16 +2195,32 @@ class Maps(object):
         return colorbar
 
     def add_gridlines(
-        self, dlon=5, dlat=5, layer=None, bounds=(-180, 180, -90, 90), **kwargs
+        self, d=None, auto_n=10, layer=None, bounds=(-180, 180, -90, 90), **kwargs
     ):
         """
         Add gridlines to the map.
 
+
+        By default, an appropriate grid-spacing is determined via the "auto_n" kwarg.
+
+        An explicit grid-spacing can be used by providing the grid-separation
+        via the "d" kwarg.
+
         Parameters
         ----------
-        dlon, dlat : int or float
-            The longutude- and latitude- separation of the gridlines.
-            The default is 5.
+        d : tuple, int or float or None
+            The separation of the gridlines in degrees.
+            To use a different separation for longitude/latitude, provide a tuple
+            of numbers, e.g.: `(d_lon, d_lat)`
+
+            If None, "auto_n" is used to automatically determine an appropriate
+            grid-spacing.
+            The default is None.
+        auto_n : int or (int, int)
+            The (rough) number of gridlines to use when evaluating the automatic
+            grid-spacing. To use different numbers of gridlines in each direction,
+            provide a tuple of ints, e.g.: `(n_lon, n_lat)`.
+            The default is 10.
         layer : str
             The name of the layer on which the gridlines should be visible.
         bounds : tuple
@@ -2228,16 +2244,16 @@ class Maps(object):
         --------
         >>> m = Maps(Maps.CRS.InterruptedGoodeHomolosine())
         >>> m.add_feature.preset.ocean()
-        >>> g0 = m.add_gridlines(10, 10, ec=".5", lw=0.25, zorder=1, layer="g")
-        >>> g1 = m.add_gridlines(20, 20, ec="k", lw=0.5, zorder=2, layer="g")
-        >>> g2 = m.add_gridlines(5, 5, ec="darkred", lw=0.25, zorder=0,
+        >>> g0 = m.add_gridlines(d=10, ec=".5", lw=0.25, zorder=1, layer="g")
+        >>> g1 = m.add_gridlines(d=(10, 20), ec="k", lw=0.5, zorder=2, layer="g")
+        >>> g2 = m.add_gridlines(d=5, ec="darkred", lw=0.25, zorder=0,
         >>>                      bounds=(-20, 40, -20, 60), layer="g")
         >>> m.show_layer(m.layer, "g")
 
         """
         fc = kwargs.pop("facecolor", "none")
-        ec = kwargs.pop("edgecolor", "k")
-        lw = kwargs.pop("linewidth", 0.5)
+        ec = kwargs.pop("edgecolor", ".2")
+        lw = kwargs.pop("linewidth", 0.25)
 
         kwargs.setdefault("fc", fc)
         kwargs.setdefault("ec", ec)
@@ -2245,20 +2261,42 @@ class Maps(object):
         kwargs.setdefault("zorder", 100)
         kwargs.setdefault("set_extent", False)
 
-        if all(isinstance(i, (int, float, np.number)) for i in (dlon, dlat)):
-            gx, gy = np.meshgrid(
-                np.arange(bounds[0], bounds[1], dlon),
-                np.arange(bounds[2], bounds[3], dlat),
-            )
-        else:
-            raise TypeError("EOmaps: dlon and dlat must be numbers!")
-
         m_grid = self.new_layer(layer=layer)
-        m_grid.set_data(
-            data=None, x=gx, y=gy, crs=4326, cpos="ll", cpos_radius=(dlon / 2, dlat / 2)
-        )
-        m_grid.set_shape.rectangles()
-        m_grid.plot_map(**kwargs)
+
+        if d is not None:
+            if isinstance(d, tuple) and len(d) == 2:
+                dlon, dlat = d
+            elif isinstance(d, (int, float, np.number)):
+                dlon = dlat = d
+            else:
+                raise TypeError(f"EOmaps: d={d} is not a valid grid-spacing.")
+
+            if all(isinstance(i, (int, float, np.number)) for i in (dlon, dlat)):
+                gx, gy = np.meshgrid(
+                    np.arange(bounds[0], bounds[1], dlon),
+                    np.arange(bounds[2], bounds[3], dlat),
+                )
+            else:
+                raise TypeError("EOmaps: dlon and dlat must be numbers!")
+
+            m_grid.set_data(
+                data=None,
+                x=gx,
+                y=gy,
+                crs=4326,
+                cpos="ll",
+                cpos_radius=(dlon / 2, dlat / 2),
+            )
+            m_grid.set_shape.rectangles()
+            m_grid.plot_map(**kwargs)
+
+        else:
+            m_grid._data_manager._auto_grid_size = auto_n
+            # plot some dummy-data (will be auto-replaced by the data-manager
+            # prior to plotting!)
+            m_grid.set_data(data=None, x=[1, 2, 3], y=[1, 2, 3], crs=4326)
+            m_grid.set_shape.rectangles()
+            m_grid.plot_map(**kwargs)
 
         return m_grid
 
