@@ -2205,9 +2205,9 @@ class Maps(object):
         return colorbar
 
     @wraps(GridFactory.add_grid)
-    def add_gridlines(self, **kwargs):
+    def add_gridlines(self, *args, **kwargs):
         """Add gridlines to the Map."""
-        return self._grid.add_grid(m=self, **kwargs)
+        return self._grid.add_grid(m=self, *args, **kwargs)
 
     def _get_alpha_cmap_name(self, alpha):
         # get a unique name for the colormap
