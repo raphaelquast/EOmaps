@@ -75,19 +75,6 @@ class GridLines:
         self._d = d
         self._redraw()
 
-    def set_layer(self, layer):
-        """
-        The layer at which the gridlines will be drawn.
-
-        Parameters
-        ----------
-        layer : str
-            The name of the layer on which the gridlines should be visible.
-
-        """
-        self._layer = layer
-        self._redraw()
-
     def set_auto_n(self, auto_n):
         """
         The number of gridlines to draw in the currently visible extent.
@@ -246,7 +233,6 @@ class GridLines:
 
     def _remove(self):
         if self._coll is None:
-            print("EOmaps: there is no grid to remove... ")
             return
 
         self.m.BM.remove_bg_artist(self._coll, layer=self.layer)
@@ -254,6 +240,8 @@ class GridLines:
             self._coll.remove()
         except ValueError:
             pass
+
+        self._coll = None
 
     def remove(self):
         """Remove the grid from the map."""
