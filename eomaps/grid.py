@@ -48,12 +48,6 @@ class GridLines:
             (lon_min, lon_max, lat_min, lat_max)
 
         """
-        if self._d is None:
-            print(
-                "EOmaps: Setting bounds for automatically determined gridlines "
-                "has no effect! Provide an explicit grid-spacing to use bounds!"
-            )
-
         self._bounds = bounds
         self._redraw()
 
@@ -136,7 +130,7 @@ class GridLines:
             Number of intermedate points.
 
         """
-        self._n = val
+        self._n = n
         self._redraw()
 
     def _get_lines(self):
@@ -175,7 +169,12 @@ class GridLines:
         else:
             nlon = nlat = self.auto_n
 
-        bounds = np.array(self.m.ax.get_extent(self.m.CRS.PlateCarree()))
+        extent = self.m.ax.get_extent(self.m.CRS.PlateCarree())
+
+        x0, _, y0, _ = np.max((self.bounds, extent), axis=0)
+        _, x1, _, y1 = np.min((self.bounds, extent), axis=0)
+
+        bounds = np.array([x0, x1, y0, y1])
 
         b_lon = bounds[1] - bounds[0]
         b_lat = bounds[3] - bounds[2]
@@ -195,12 +194,22 @@ class GridLines:
         lats = np.arange(bounds[2], min(90 + dlat, bounds[3] + 10 * dlat), dlat)
 
         lines = [
-            np.linspace([x, lats[0]], [x, lats[-1]], self.n, endpoint=True)
-            for x in lons
+            np.linspace(
+                [x, max(lats[0], self.bounds[2])],
+                [x, min(lats[-1], self.bounds[3])],
+                self.n,
+                endpoint=True,
+            )
+            for x in np.unique(lons.clip(*self.bounds[:2]))
         ]
         linesy = [
-            np.linspace([lons[0], y], [lons[-1], y], self.n, endpoint=True)
-            for y in lats
+            np.linspace(
+                [max(lons[0], self.bounds[0]), y],
+                [min(lons[-1], self.bounds[1]), y],
+                self.n,
+                endpoint=True,
+            )
+            for y in np.unique(lats.clip(*self.bounds[2:]))
         ]
 
         lines.extend(linesy)
@@ -209,7 +218,10 @@ class GridLines:
 
     def _get_coll(self, **kwargs):
         lines = self._get_lines()
-        l0, l1 = self.m._transf_lonlat_to_plot.transform(lines[..., 0], lines[..., 1])
+
+        l0, l1 = lines[..., 0], lines[..., 1]
+
+        l0, l1 = self.m._transf_lonlat_to_plot.transform(l0, l1)
 
         coll = LineCollection(np.dstack((l0, l1)), **kwargs)
         return coll
@@ -218,6 +230,7 @@ class GridLines:
         self._update_line_props(**kwargs)
 
         self._coll = self._get_coll(**self._kwargs)
+
         self.m.ax.add_collection(self._coll)
         self.m.BM.add_bg_artist(self._coll, layer=self.layer)
 
@@ -228,7 +241,6 @@ class GridLines:
             # catch exceptions to avoid issues with dynamic re-drawing of
             # invisible grids
             pass
-
         self._add_grid()
 
     def _remove(self):
@@ -259,12 +271,13 @@ class GridFactory:
 
     def add_grid(
         self,
-        m,
         d=None,
         auto_n=10,
         n=100,
         bounds=None,
         layer=None,
+        *,
+        m=None,
         **kwargs,
     ):
         """
@@ -286,6 +299,7 @@ class GridFactory:
             grid-spacing.
             The default is None.
         auto_n : int or (int, int)
+            Only relevant if "d" is None!
             The (rough) number of gridlines to use when evaluating the automatic
             grid-spacing. To use different numbers of gridlines in each direction,
             provide a tuple of ints, e.g.: `(n_lon, n_lat)`.
@@ -293,7 +307,7 @@ class GridFactory:
         layer : str
             The name of the layer on which the gridlines should be visible.
         bounds : tuple
-            A tuple of boundaries to limit the gridlines to a certain area.
+            A tuple of boundaries to limit the gridlines to a given extent.
             (lon_min, lon_max, lat_min, lat_max)
             The default is None in which case (-180, 180, -90, 90) is used.
         n : int
@@ -329,12 +343,6 @@ class GridFactory:
         kwargs.setdefault("ec", ec)
         kwargs.setdefault("lw", lw)
         kwargs.setdefault("zorder", 100)
-
-        if d is None and bounds is not None:
-            print(
-                "EOmaps: Setting bounds for automatically determined gridlines "
-                "has no effect! Provide an explicit grid-spacing to use bounds!"
-            )
 
         if bounds is None:
             bounds = (-180, 180, -90, 90)
