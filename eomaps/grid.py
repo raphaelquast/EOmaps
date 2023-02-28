@@ -86,6 +86,19 @@ class GridLines:
         self._auto_n = auto_n
         self._redraw()
 
+    def set_n(self, n):
+        """
+        Set the number of intermediate points to calculate for each gridline.
+
+        Parameters
+        ----------
+        n : int
+            Number of intermedate points.
+
+        """
+        self._n = n
+        self._redraw()
+
     def _update_line_props(self, **kwargs):
         color = None
         if "c" in kwargs:
@@ -100,7 +113,7 @@ class GridLines:
 
     def update_line_props(self, **kwargs):
         """
-        Update the properties of the drawn lines.
+        Update the properties of the drawn lines (e.g. color, linewidth etc.).
 
         Any kwargs accepted by `matplotlib.collections.LineCollection` are supported.
 
@@ -117,20 +130,6 @@ class GridLines:
 
         """
         self._update_line_props(**kwargs)
-        self._redraw()
-
-    @n.setter
-    def n(self, n):
-        """
-        Set the number of intermediate points to calculate for each line.
-
-        Parameters
-        ----------
-        n : int
-            Number of intermedate points.
-
-        """
-        self._n = n
         self._redraw()
 
     def _get_lines(self):
