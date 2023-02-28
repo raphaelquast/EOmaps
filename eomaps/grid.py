@@ -48,6 +48,12 @@ class GridLines:
             (lon_min, lon_max, lat_min, lat_max)
 
         """
+        if self._d is None:
+            print(
+                "EOmaps: Setting bounds for automatically determined gridlines "
+                "has no effect! Provide an explicit grid-spacing to use bounds!"
+            )
+
         self._bounds = bounds
         self._redraw()
 
@@ -269,7 +275,7 @@ class GridFactory:
         d=None,
         auto_n=10,
         n=100,
-        bounds=(-180, 180, -90, 90),
+        bounds=None,
         layer=None,
         **kwargs,
     ):
@@ -301,7 +307,7 @@ class GridFactory:
         bounds : tuple
             A tuple of boundaries to limit the gridlines to a certain area.
             (lon_min, lon_max, lat_min, lat_max)
-            The default is: (-180, 180, -90, 90)
+            The default is None in which case (-180, 180, -90, 90) is used.
         n : int
             The number of intermediate points to draw for each line.
             (e.g. to nicely draw curved grid lines)
@@ -335,6 +341,15 @@ class GridFactory:
         kwargs.setdefault("ec", ec)
         kwargs.setdefault("lw", lw)
         kwargs.setdefault("zorder", 100)
+
+        if d is None and bounds is not None:
+            print(
+                "EOmaps: Setting bounds for automatically determined gridlines "
+                "has no effect! Provide an explicit grid-spacing to use bounds!"
+            )
+
+        if bounds is None:
+            bounds = (-180, 180, -90, 90)
 
         g = GridLines(m=m, d=d, auto_n=auto_n, n=n, bounds=bounds, layer=layer)
         g._add_grid(**kwargs)
