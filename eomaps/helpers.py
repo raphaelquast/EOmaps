@@ -1346,12 +1346,20 @@ class BlitManager:
     def canvas(self):
         return self.figure.canvas
 
-    def _do_on_layer_change(self, layer):
-        # general callbacks executed on any layer change
-        # persistent callbacks
-        for f in self._on_layer_change[True]:
-            f(layer=layer)
+    def _do_on_layer_change(self, layer, new=False):
+        # do not execute layer-change callbacks on private layer activation!
+        if layer.startswith("__"):
+            return
+
+        # only execute persistent layer-change callbacks if the layer changed!
+        if new:
+            # general callbacks executed on any layer change
+            # persistent callbacks
+            for f in self._on_layer_change[True]:
+                f(layer=layer)
+
         # single-shot callbacks
+        # (execute also if the layer is already active)
         while len(self._on_layer_change[False]) > 0:
             try:
                 f = self._on_layer_change[False].pop(-1)
@@ -1362,12 +1370,14 @@ class BlitManager:
                     f"layer-change action: {ex}"
                 )
 
-        for l in layer.split("|"):
-            # individual callables executed if a specific layer is activate
-            # persistent callbacks
-            for f in self._on_layer_activation[True].get(layer, []):
-                f(layer=l)
+        if new:
+            for l in layer.split("|"):
+                # individual callables executed if a specific layer is activate
+                # persistent callbacks
+                for f in self._on_layer_activation[True].get(layer, []):
+                    f(layer=l)
 
+        for l in layer.split("|"):
             # single-shot callbacks
             single_shot_funcs = self._on_layer_activation[False].get(l, [])
             while len(single_shot_funcs) > 0:
@@ -1426,13 +1436,22 @@ class BlitManager:
 
     @bg_layer.setter
     def bg_layer(self, val):
+        if val == self._bg_layer:
+            # in case the layer did not change, do nothing
+            return
+
+        # check if a new layer is activated (or added to a multi-layer)
+        old_layers = self._bg_layer.split("|")
+        new = val != self._bg_layer or any(l not in old_layers for l in val.split("|"))
+
         # make sure we use a "full" update for webagg and ipympl backends
         # (e.g. force full redraw of canvas instead of a diff)
         self.canvas._force_full = True
         self._bg_layer = val
 
         # a general callable to be called on every layer change
-        self._do_on_layer_change(layer=val)
+
+        self._do_on_layer_change(layer=val, new=new)
 
         layer_names = val.split("|")
 
@@ -1577,7 +1596,7 @@ class BlitManager:
             if l not in self._bg_layers:
                 # execute actions on layer-changes
                 # (to make sure all lazy WMS services are properly added)
-                self._do_on_layer_change(layer=l)
+                self._do_on_layer_change(layer=l, new=False)
                 self._do_fetch_bg(l)
 
         gc = self.canvas.renderer.new_gc()

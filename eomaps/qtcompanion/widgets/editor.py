@@ -543,6 +543,8 @@ class LayerTabBar(QtWidgets.QTabBar):
             # NOTE this is done by the TabWidget if tabs have content!!
             self.populate()
             self.m._after_add_child.append(self.populate)
+            # re-populate on show to make sure currently active layers are shown
+            self.m._on_show_companion_widget.append(self.populate)
 
     def sizeHint(self):
         # make sure the TabBar does not expand the window width
@@ -744,6 +746,9 @@ class LayerTabBar(QtWidgets.QTabBar):
 
     @pyqtSlot()
     def populate(self):
+        if not self.isVisible():
+            return
+
         self._current_tab_idx = self.currentIndex()
         self._current_tab_name = self.tabText(self._current_tab_idx)
 
@@ -853,6 +858,9 @@ class LayerTabBar(QtWidgets.QTabBar):
             # forwarded to the canvas if it is not in focus
             self.m.f.canvas.key_release_event("shift")
 
+        # make sure to reflect the layer-changes in the tab-colors (and positions)
+        self.color_active_tab()
+
 
 class ArtistEditorTabs(LayerArtistTabs):
     def __init__(self, m=None):
@@ -868,6 +876,9 @@ class ArtistEditorTabs(LayerArtistTabs):
         self.currentChanged.connect(self.populate_layer)
         self.m.BM._on_add_bg_artist.append(self.populate)
         self.m.BM._on_remove_bg_artist.append(self.populate)
+
+        self.m._on_show_companion_widget.append(self.populate)
+        self.m._on_show_companion_widget.append(self.populate_layer)
 
     def repopulate_and_activate_current(self, *args, **kwargs):
         self.populate()
@@ -1043,6 +1054,9 @@ class ArtistEditorTabs(LayerArtistTabs):
 
     @pyqtSlot()
     def populate(self):
+        if not self.isVisible():
+            return
+
         self._current_tab_idx = self.currentIndex()
         self._current_tab_name = self.tabText(self._current_tab_idx)
 
@@ -1096,6 +1110,8 @@ class ArtistEditorTabs(LayerArtistTabs):
 
     @pyqtSlot()
     def populate_layer(self, layer=None):
+        if not self.isVisible():
+            return
 
         if layer is None:
             layer = self.tabText(self.currentIndex())

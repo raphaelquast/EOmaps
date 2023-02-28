@@ -373,6 +373,9 @@ class Maps(object):
         # a list to remember newly registered colormaps
         self._registered_cmaps = []
 
+        # a list of actions that are executed whenever the widget is shown
+        self._on_show_companion_widget = []
+
         # preferred way of accessing WMS services (used in the WMS container)
         assert preferred_wms_service in [
             "wms",
@@ -4399,6 +4402,11 @@ class Maps(object):
             else:
                 self._companion_widget.show()
                 self._indicate_companion_map(True)
+
+                # execute all actions that should trigger before opening the widget
+                # (e.g. update tabs to show visible layers etc.)
+                for f in self._on_show_companion_widget:
+                    f()
 
                 # Do NOT activate the companion widget in here!!
                 # Activating the window during the callback steals focus and
