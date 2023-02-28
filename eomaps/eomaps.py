@@ -3066,6 +3066,7 @@ class Maps(object):
     def _init_figure(self, ax=None, plot_crs=None, **kwargs):
         if self.parent.f is None:
             self._f = plt.figure(**kwargs)
+
             # make sure we keep a "real" reference otherwise overwriting the
             # variable of the parent Maps-object while keeping the figure open
             # causes all weakrefs to be garbage-collected!
@@ -3119,8 +3120,11 @@ class Maps(object):
             )
 
         self._ax = ax
-
         self._gridspec = ax.get_gridspec()
+
+        # add support for "frameon" kwarg
+        if kwargs.get("frameon", True) is False:
+            self.ax.spines["geo"].set_edgecolor("none")
 
         # initialize the callbacks
         self.cb._init_cbs()
