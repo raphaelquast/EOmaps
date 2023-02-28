@@ -1162,7 +1162,16 @@ class ArtistEditorTabs(LayerArtistTabs):
             return
 
         self.m.BM.remove_bg_artist(artist, layer)
-        artist.remove()
+        try:
+            artist.remove()
+        except Exception as ex:
+            print(f"EOmaps: There was an error while trying to remove the artist: {ex}")
+
+        # explicit treatment for gridlines
+        grids = self.m.parent._grid._gridlines
+        for g in grids:
+            if artist == g._coll:
+                g.remove()
 
         self.populate_layer(layer)
         self.m.redraw(layer)

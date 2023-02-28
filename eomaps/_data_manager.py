@@ -278,42 +278,6 @@ class DataManager:
     def current_extent(self):
         return self.m.ax.get_extent(self.m.ax.projection)
 
-    def _auto_grid_space(self, nlines=10):
-        # this function is used to auto-update update grid-spacings
-        # (it is effectively attached when calling "m.add_gridlines(n_auto=...)")
-        if isinstance(nlines, tuple):
-            nlon, nlat = nlines
-        else:
-            nlon = nlat = nlines
-
-        bounds = np.array(self.m.ax.get_extent(self.m.CRS.PlateCarree()))
-
-        b_lon = bounds[1] - bounds[0]
-        b_lat = bounds[3] - bounds[2]
-
-        # get the magnitude
-        glon = 10 ** np.floor(np.log10(b_lon))
-        glat = 10 ** np.floor(np.log10(b_lat))
-
-        bounds[0] = bounds[0] - bounds[0] % glon
-        bounds[1] = bounds[1] - bounds[1] % glon + glon
-        bounds[2] = bounds[2] - bounds[2] % glat
-        bounds[3] = bounds[3] - bounds[3] % glat + glat
-
-        dlon, dlat = (bounds[1] - bounds[0]) / nlon, (bounds[3] - bounds[2]) / nlat
-
-        lons = (np.arange(bounds[0], bounds[1], dlon),)
-        lats = (np.arange(bounds[2], bounds[3], dlat),)
-
-        gx, gy = np.meshgrid(lons, lats)
-
-        self.m.set_data(
-            data=None, x=gx, y=gy, crs=4326, cpos="ll", cpos_radius=(dlon / 2, dlat / 2)
-        )
-
-        self.set_props(self.layer)
-        self.m.set_shape.rectangles(radius=(dlon, dlat))
-
     @property
     def extent_changed(self):
         return not self.current_extent == self.last_extent
@@ -441,9 +405,6 @@ class DataManager:
                 print(ex)
 
     def on_fetch_bg(self, layer=None, bbox=None):
-        if getattr(self, "_auto_grid_size", None) is not None:
-            self._auto_grid_space(self._auto_grid_size)
-
         # TODO support providing a bbox as extent?
         if layer is None:
             layer = self.layer
