@@ -367,16 +367,26 @@ class ClickCallbacks(QtWidgets.QFrame):
                     name += f" ({m.layer})"
 
             self.map_dropdown.addItem(name, m)
-        self.set_pick_map(0)
+
+        # use None to keep already selected maps selected!
+        self.set_pick_map(None)
 
         # set the size of the dropdown to be 10 + the longest item
         view.setFixedWidth(view.sizeHintForColumn(0) + 10)
 
-    def set_pick_map(self, index):
+    def set_pick_map(self, index=None):
         maps = self.identify_pick_map()
         if len(maps) == 0:
             self._pick_map = None
             return
+
+        if index is None and self._pick_map is not None and self._pick_map in maps:
+            # if a map was already selected (and it is still a valid target, keep it)
+            return
+
+        # if not map was explicitly selected, select the first one
+        if index is None:
+            index = 0
 
         self._pick_map = self.map_dropdown.itemData(index)
         self.reattach_pick_callbacks()
