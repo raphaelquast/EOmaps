@@ -874,7 +874,7 @@ class LayoutEditor:
             self._scale_direction = "horizontal"
         elif event.key == "v":
             self._scale_direction = "vertical"
-        elif event.key == "control":
+        elif event.key in ("control", "ctrl", "ctrl++", "ctrl+-"):
             self._scale_direction = "set_hist_size"
 
         elif event.key == "shift":
@@ -886,22 +886,22 @@ class LayoutEditor:
             self._show_snap_grid()
 
         # assign snaps with keys 0-9
-        if event.key in ["+", "-"]:
+        if event.key in ["+", "-", "ctrl++", "ctrl+-"]:
 
             class dummyevent:
                 pass
 
             d = dummyevent()
             d.key = event.key
-            d.step = 1 * {"+": 1, "-": -1}[event.key]
+            d.step = 1 * {"+": 1, "ctrl++": 1, "ctrl+-": -1, "-": -1}[event.key]
 
             self.cb_scroll(d)
 
     def cb_key_release(self, event):
         # reset scale direction on every key release event
-        if event.key in ["h", "v", "control"]:
+        if event.key in ("h", "v", "control", "ctrl", "ctrl++", "ctrl+-"):
             self._scale_direction = "both"
-        if event.key in ["shift"]:
+        if event.key in ("shift"):
             self._shift_pressed = False
 
     @property
