@@ -1596,14 +1596,14 @@ by using ``m.make_dataset_pickable()``.
     is sufficient!
 
 
-.. currentmodule:: eomaps.Maps
+.. currentmodule:: eomaps
 
 .. autosummary::
     :toctree: generated
     :nosignatures:
     :template: only_names_in_toc.rst
 
-    make_dataset_pickable
+    Maps.make_dataset_pickable
 
 
 .. _webmap_layers:
@@ -2004,14 +2004,14 @@ Static markers can be added to the map via ``m.add_marker()``.
 🛸 For dynamic markers checkout ``m.cb.click.attach.mark()`` or ``m.cb.pick.attach.mark()``
 
 
-.. currentmodule:: eomaps.Maps
+.. currentmodule:: eomaps
 
 .. autosummary::
     :toctree: generated
     :nosignatures:
     :template: only_names_in_toc.rst
 
-    add_marker
+    Maps.add_marker
 
 .. table::
     :widths: 50 50
@@ -2073,14 +2073,14 @@ Static annotations can be added to the map via ``m.add_annotation()``.
 
 🛸 For dynamic annotations checkout ``m.cb.click.attach.annotate()`` or ``m.cb.pick.attach.annotate()``
 
-.. currentmodule:: eomaps.Maps
+.. currentmodule:: eomaps
 
 .. autosummary::
     :toctree: generated
     :nosignatures:
     :template: only_names_in_toc.rst
 
-    add_annotation
+    Maps.add_annotation
 
 
 .. table::
@@ -2168,14 +2168,14 @@ Lines can be added to a map with ``m.add_line()``.
 
   - This gives a lot of flexibility to style the lines!
 
-.. currentmodule:: eomaps.Maps
+.. currentmodule:: eomaps
 
 .. autosummary::
     :toctree: generated
     :nosignatures:
     :template: only_names_in_toc.rst
 
-    add_line
+    Maps.add_line
 
 
 .. table::
@@ -2219,14 +2219,14 @@ Lines can be added to a map with ``m.add_line()``.
 
 To indicate rectangular areas in any given crs, simply use ``m.indicate_extent``:
 
-.. currentmodule:: eomaps.Maps
+.. currentmodule:: eomaps
 
 .. autosummary::
     :toctree: generated
     :nosignatures:
     :template: only_names_in_toc.rst
 
-    indicate_extent
+    Maps.indicate_extent
 
 
 .. table::
@@ -2285,14 +2285,14 @@ Logos can be re-positioned and re-sized with the :ref:`layout_editor`!
 |     m.add_logo(position="ll", size=.4, fix_position=True)                                  |                                       |
 +--------------------------------------------------------------------------------------------+---------------------------------------+
 
-.. currentmodule:: eomaps.Maps
+.. currentmodule:: eomaps
 
 .. autosummary::
     :toctree: generated
     :nosignatures:
     :template: only_names_in_toc.rst
 
-    add_logo
+    Maps.add_logo
 
 
 .. _colorbar:
@@ -2320,14 +2320,14 @@ Logos can be re-positioned and re-sized with the :ref:`layout_editor`!
         m2.add_colorbar()  # this colorbar is only visible on the "data" layer
 
 
-.. currentmodule:: eomaps.Maps
+.. currentmodule:: eomaps
 
 .. autosummary::
     :toctree: generated
     :nosignatures:
     :template: only_names_in_toc.rst
 
-    add_colorbar
+    Maps.add_colorbar
 
 .. table::
     :widths: 70 30
