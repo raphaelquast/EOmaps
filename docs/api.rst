@@ -2569,8 +2569,15 @@ The returned ``compass`` object has the following useful methods assigned:
 
 Gridlines can be added to the map via ``m.add_gridlines()``.
 
-If no explicit grid-spacing is provided (e.g. ``d=...``), the grid spacing is dynamically updated based on the visible extent.
-(use ``auto_n=...`` to adjust the density of the auto-gridlines.)
+If ``d`` is provided, the gridlines will be **fixed**
+
+- If you provide a number, it is used as grid-spcing (in degrees)
+- If you provide a ``list`` or ``numpy.array``, it is used to draw lines only at the specific coordinates
+- To use different settings for latitude and longitude lines, provide a ``2-tuple`` of the aforementioned types.
+
+If no explicit grid-spacing is provided (e.g. ``d=None``), the grid is dynamically updated based on the visible extent.
+
+- Use ``auto_n=...`` to adjust the density of the auto-gridlines.
 
 
 .. currentmodule:: eomaps
@@ -2589,8 +2596,8 @@ If no explicit grid-spacing is provided (e.g. ``d=...``), the grid spacing is dy
     :align: center
 
     +-------------------------------------------------------------------+-----------------------------------------+
-    | .. code-block:: python                                            | .. image:: _static/minigifs/grid_01.png |
-    |                                                                   |   :align: center                        |
+    | .. code_block:: python                                            | .. image:: _static/minigifs/grid_01.png |
+    |                                                                   |     :align: center                      |
     |   from eomaps import Maps                                         |                                         |
     |   m = Maps(Maps.CRS.Mollweide(), frameon=False)                   |                                         |
     |   m.add_feature.preset.ocean()                                    |                                         |
@@ -2603,12 +2610,17 @@ If no explicit grid-spacing is provided (e.g. ``d=...``), the grid spacing is dy
     |   # add fine-grained gridlines in a specific area                 |                                         |
     |   g2 = mg.add_gridlines(d=2, ec="darkred", lw=0.5, zorder=0,      |                                         |
     |                         bounds=(-20, 20, -10, 30))                |                                         |
-    |   g2 = mg.add_gridlines(d=2, ec="b", lw=0.5, zorder=0,            |                                         |
+    |   g3 = mg.add_gridlines(d=2, ec="b", lw=0.5, zorder=0,            |                                         |
     |                         bounds=(60, 100, 30, 70))                 |                                         |
     |                                                                   |                                         |
-    |   m.show_layer(m.layer, "g")                                      |                                         |
+    |   # add dedicated gridlines at specific coordinates               |                                         |
+    |   g4 = mg.add_gridlines(([-123, -112, -75], [35, 65]),            |                                         |
+    |                         ec="k", lw=2, ls="--", zorder=20,         |                                         |
+    |                         bounds=(-140, 20, -50, 70)                |                                         |
+    |                         )                                         |                                         |
+    |                                                                   |                                         |
+    |   m.show_layer(m.layer, "grid")                                   |                                         |
     +-------------------------------------------------------------------+-----------------------------------------+
-
 
 In addition, the returned ``GridLines`` instance supports the following
 useful methods:
