@@ -2345,7 +2345,7 @@ Logos can be re-positioned and re-sized with the :ref:`layout_editor`!
     |   m.set_data(data=x+y, x=x, y=y, crs=4326)                         |                                          |
     |   m.set_classify_specs(scheme=Maps.CLASSIFIERS.EqualInterval, k=5) |                                          |
     |   m.plot_map()                                                     |                                          |
-    |   m.add_colorbar(label="what a nice colorbar", histbins="bins")    |                                          |
+    |   m.add_colorbar(label="what a nice colorbar", hist_bins="bins")   |                                          |
     |                                                                    |                                          |
     +--------------------------------------------------------------------+------------------------------------------+
 
@@ -2432,7 +2432,7 @@ distribution of the shaded pixels within the current field of view by setting ``
     |   m.set_data(data=x+y, x=x, y=y, crs=4326)                         |                                                  |
     |   m.set_shape.shade_raster()                                       |                                                  |
     |   m.plot_map()                                                     |                                                  |
-    |   m.add_colorbar(dynamic_shade_indicator=True, histbins=20)        |                                                  |
+    |   m.add_colorbar(dynamic_shade_indicator=True, hist_bins=20)       |                                                  |
     |                                                                    |                                                  |
     +--------------------------------------------------------------------+--------------------------------------------------+
 
