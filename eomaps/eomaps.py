@@ -648,6 +648,79 @@ class Maps(object):
         """Create a new layer from a file."""
         return self._new_layer_from_file
 
+    def new_map(self, ax=None, **kwargs):
+        """
+        Create a new map that shares the figure with this Maps-object.
+
+
+        Note
+        ----
+
+        Using this function, for example:
+
+        >>> m = Maps(ax=211)
+        >>> m2 = m.new_map(ax=212, ...)
+
+        is equivalent to:
+
+        >>> m = Maps(ax=211)
+        >>> m2 = Maps(f=m.f, ax=212, ...)
+
+
+        Parameters
+        ----------
+        ax : int, list, tuple, matplotlib.Axes, matplotlib.gridspec.SubplotSpec or None
+            Explicitly specify the position of the axes or use already existing axes.
+
+            Possible values are:
+
+            - None:
+                Initialize a new axes at the center of the figure (the default)
+            - A tuple of 4 floats (*left*, *bottom*, *width*, *height*)
+                The absolute position of the axis in relative figure-coordinates
+                (e.g. in the range [0 , 1])
+                NOTE: since the axis-size is dependent on the plot-extent, the size of
+                the map will be adjusted to fit in the provided bounding-box.
+            - A tuple of 3 integers (*nrows*, *ncols*, *index*)
+                The map will be positioned at the *index* position of a grid
+                with *nrows* rows and *ncols* columns. *index* starts at 1 in the
+                upper left corner and increases to the right. *index* can also be
+                a two-tuple specifying the (*first*, *last*) indices (1-based, and
+                including *last*) of the subplot, e.g., ``ax = (3, 1, (1, 2))``
+                makes a map that spans the upper 2/3 of the figure.
+            - A 3-digit integer
+                Same as using a tuple of three single-digit integers.
+                (e.g. 111 is the same as (1, 1, 1) )
+            - `matplotilb.gridspec.SubplotSpec`:
+                Use the SubplotSpec for initializing the axes.
+            - `matplotilb.Axes`:
+                Directly use the provided figure and axes instances for plotting.
+                NOTE: The axes MUST be a geo-axes with `m.crs_plot` projection!
+        preferred_wms_service : str, optional
+            Set the preferred way for accessing WebMap services if both WMS and WMTS
+            capabilities are possible.
+            The default is "wms"
+        kwargs :
+            additional kwargs are passed to `matplotlib.pyplot.figure()`
+            - e.g. figsize=(10,5)
+
+        Returns
+        -------
+        m: EOmaps.Maps
+            The Maps object representing the new map.
+
+        """
+
+        m2 = Maps(f=self.f, ax=ax, **kwargs)
+
+        if np.allclose(self.ax.bbox.bounds, m2.ax.bbox.bounds):
+            print(
+                "EOmaps: Warning! The new map overlaps exactly with the parent map! "
+                "Use `ax=...` or the LayoutEditor to adjust the position of the map."
+            )
+
+        return m2
+
     def new_layer(
         self,
         layer=None,
