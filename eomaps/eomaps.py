@@ -4572,19 +4572,17 @@ class _InsetMaps(Maps):
 
         x, y = xy
         plot_x, plot_y = plot_position
-
-        # setup a gridspec at the desired position
-        gs = GridSpec(
-            1,
-            1,
-            left=plot_x - plot_size / 2,
-            bottom=plot_y - plot_size / 2,
-            top=plot_y + plot_size / 2,
-            right=plot_x + plot_size / 2,
-        )[0]
+        left = plot_x - plot_size / 2
+        bottom = plot_y - plot_size / 2
 
         # initialize a new maps-object with a new axis
-        super().__init__(crs=crs, f=parent.f, ax=gs, layer=layer, **kwargs)
+        super().__init__(
+            crs=crs,
+            f=parent.f,
+            ax=(left, bottom, plot_size, plot_size),
+            layer=layer,
+            **kwargs,
+        )
 
         # get the boundary of a ellipse in the inset_crs
         bnd, bnd_verts = self._get_inset_boundary(
@@ -4628,7 +4626,7 @@ class _InsetMaps(Maps):
         set_extent = kwargs.pop("set_extent", False)
         super().plot_map(*args, **kwargs, set_extent=set_extent)
 
-    # add a convenience-method to add a boundary-polygon to a map
+    # a convenience-method to add a boundary-polygon to a map
     def indicate_inset_extent(self, m, n=100, **kwargs):
         """
         Add a polygon to a  map that indicates the extent of the inset-map.
@@ -4663,7 +4661,7 @@ class _InsetMaps(Maps):
             **kwargs,
         )
 
-    # add a convenience-method to set the position based on the center of the axis
+    # a convenience-method to set the position based on the center of the axis
     def set_inset_position(self, x=None, y=None, size=None):
         """
         Set the (center) position and size of the inset-map.
@@ -4680,7 +4678,7 @@ class _InsetMaps(Maps):
             The default is None.
 
         """
-        y0, y1, x0, x1 = self._gridspec.get_grid_positions(self.f)
+        x0, y1, x1, y0 = self.ax.get_position().bounds
 
         if size is None:
             size = abs(x1 - x0)
@@ -4690,14 +4688,32 @@ class _InsetMaps(Maps):
         if y is None:
             y = (y0 + y1) / 2
 
-        self._gridspec.update(
-            left=x - size / 2,
-            bottom=y - size / 2,
-            right=x + size / 2,
-            top=y + size / 2,
-        )
+        self.ax.set_position((x - size / 2, y - size / 2, size, size))
+        self.redraw("__inset_" + self.layer, "__inset___SPINES__")
 
-        self.redraw(self.layer)
+    # a convenience-method to get the position based on the center of the axis
+    def get_inset_position(self, precision=3):
+        """
+        Get the current inset position (and size).
+
+        Parameters
+        ----------
+        precision : int, optional
+            The precision of the returned position and size.
+            The default is 3.
+
+        Returns
+        -------
+        (x, y, size) : (float, float, float)
+            The position and size of the inset-map.
+
+        """
+        bbox = self.ax.get_position()
+        size = round(max(bbox.width, bbox.height), precision)
+        x = round((bbox.x0 + bbox.width / 2), precision)
+        y = round((bbox.y0 + bbox.height / 2), precision)
+
+        return x, y, size
 
     def _get_inset_boundary(self, x, y, xy_crs, radius, radius_crs, shape, n=100):
         # get the inset-shape boundary
