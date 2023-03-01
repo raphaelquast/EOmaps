@@ -908,6 +908,10 @@ class TestBasicPlotting(unittest.TestCase):
         g.set_d(10)
         g.update_line_props(c="r", lw=2, ls="--")
 
+        m.new_layer("asdf")
+        g1 = m.add_gridlines(4)
+        g1.remove()
+
         plt.close("all")
 
     def test_a_complex_figure(self):
