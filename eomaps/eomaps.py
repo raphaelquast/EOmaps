@@ -2191,6 +2191,11 @@ class Maps(object):
     @wraps(ColorBar.__init__)
     def add_colorbar(self, *args, **kwargs):
         """Add a colorbar to the map."""
+        if self.coll is None:
+            raise AttributeError(
+                "EOmaps: You must plot a dataset before " "adding a colorbar!"
+            )
+
         colorbar = ColorBar(
             self,
             *args,
