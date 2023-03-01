@@ -3791,7 +3791,7 @@ class Maps(object):
             # NOTE: the actual plot is performed by the data-manager
             # at the next call to m.BM.fetch_bg() for the corresponding layer
             # this is called to make sure m.coll is properly set
-            self._data_manager.on_fetch_bg()
+            self._data_manager.on_fetch_bg(check_redraw=False)
 
         except Exception as ex:
             raise ex

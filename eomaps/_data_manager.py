@@ -409,12 +409,12 @@ class DataManager:
             except Exception as ex:
                 print(ex)
 
-    def on_fetch_bg(self, layer=None, bbox=None):
+    def on_fetch_bg(self, layer=None, bbox=None, check_redraw=True):
         # TODO support providing a bbox as extent?
         if layer is None:
             layer = self.layer
         try:
-            if not self.redraw_required(layer):
+            if check_redraw and not self.redraw_required(layer):
                 return
 
             # check if the data_manager has no data assigned
