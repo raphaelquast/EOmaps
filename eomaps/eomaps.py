@@ -648,7 +648,7 @@ class Maps(object):
         """Create a new layer from a file."""
         return self._new_layer_from_file
 
-    def new_map(self, ax=None, **kwargs):
+    def new_map(self, ax=None, keep_on_top=False, **kwargs):
         """
         Create a new map that shares the figure with this Maps-object.
 
@@ -694,6 +694,10 @@ class Maps(object):
             - `matplotilb.Axes`:
                 Directly use the provided figure and axes instances for plotting.
                 NOTE: The axes MUST be a geo-axes with `m.crs_plot` projection!
+        keep_on_top : bool
+            If True, this axis will be drawn on top of all other maps.
+            (same as InsetMaps)
+            The default is False.
         preferred_wms_service : str, optional
             Set the preferred way for accessing WebMap services if both WMS and WMTS
             capabilities are possible.
@@ -715,6 +719,15 @@ class Maps(object):
                 "EOmaps: Warning! The new map overlaps exactly with the parent map! "
                 "Use `ax=...` or the LayoutEditor to adjust the position of the map."
             )
+
+        if keep_on_top is True:
+            m2.ax.set_label("inset_map")
+
+            spine = m2.ax.spines["geo"]
+            if spine in self.BM._bg_artists.get("___SPINES__", []):
+                self.BM.remove_bg_artist(spine, layer="___SPINES__")
+            if spine not in self.BM._bg_artists.get("__inset___SPINES__", []):
+                self.BM.add_bg_artist(spine, layer="__inset___SPINES__")
 
         return m2
 
