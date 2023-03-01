@@ -2435,10 +2435,6 @@ class Maps(object):
 
         self._data_plotted = True
 
-        # call draw after plotting a dataset to make sure axis sizes are properly
-        # adjusted (otherwise the startup size of axes might be incorrect if other
-        # features are added before draw is actually called.)
-
     def make_dataset_pickable(
         self,
     ):
