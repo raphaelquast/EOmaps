@@ -2311,10 +2311,12 @@ Logos can be re-positioned and re-sized with the :ref:`layout_editor`!
 
         m = Maps(layer=0)
         ...
+        m.plot_map()
         m.add_colorbar()   # this colorbar is only visible on the layer 0
 
         m2 = m.new_layer("data")
         ...
+        m2.plot_map()
         m2.add_colorbar()  # this colorbar is only visible on the "data" layer
 
 
