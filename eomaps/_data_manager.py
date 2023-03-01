@@ -92,7 +92,10 @@ class DataManager:
         update_coll_on_fetch=True,
         indicate_masked_points=True,
         dynamic=False,
+        only_pick=False,
     ):
+        self._only_pick = only_pick
+
         if self.m._data_plotted:
             self._remove_existing_coll()
 
@@ -426,6 +429,9 @@ class DataManager:
             s = self._get_datasize(props)
             self._print_datasize_warnings(s)
             self._set_n(s)
+
+            if self._only_pick:
+                return
 
             if props["x0"].size < 1 or props["y0"].size < 1:
                 # keep original data if too low amount of data is attempted

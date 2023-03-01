@@ -2474,7 +2474,7 @@ class Maps(object):
 
         # ---------------------- prepare the data
         self._data_manager = DataManager(self._proxy(self))
-        self._data_manager.set_props(layer=self.layer)
+        self._data_manager.set_props(layer=self.layer, only_pick=True)
 
         x0, x1 = self._data_manager.x0.min(), self._data_manager.x0.max()
         y0, y1 = self._data_manager.y0.min(), self._data_manager.y0.max()
@@ -2488,6 +2488,9 @@ class Maps(object):
         self.cb.pick._set_artist(art)
         self.cb.pick._init_cbs()
         self.cb._methods.add("pick")
+
+        self._coll_kwargs = dict()
+        self._coll_dynamic = True
 
     def _get_combined_layer_name(self, *args):
         if len(args) == 1:
