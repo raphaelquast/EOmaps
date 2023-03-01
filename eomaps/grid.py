@@ -40,7 +40,7 @@ class GridLines:
 
     def set_bounds(self, bounds):
         """
-        Set the boundaries in which gridlines are drawn.
+        Set the extent of the area in which gridlines are drawn.
 
         Parameters
         ----------
@@ -53,7 +53,7 @@ class GridLines:
 
     def set_d(self, d):
         """
-        Set a fixed grid-distance.
+        Set a fixed gridline distance (in degrees).
 
         Parameters
         ----------
@@ -71,7 +71,7 @@ class GridLines:
 
     def set_auto_n(self, auto_n):
         """
-        The number of gridlines to draw in the currently visible extent.
+        Set the number of (auto) gridlines to draw in the currently visible extent.
 
         Note: this is an approximate value!
 
@@ -113,7 +113,7 @@ class GridLines:
 
     def update_line_props(self, **kwargs):
         """
-        Update the properties of the drawn lines (e.g. color, linewidth etc.).
+        Set/update the properties of the drawn lines (e.g. color, linewidth etc.).
 
         Any kwargs accepted by `matplotlib.collections.LineCollection` are supported.
 
