@@ -139,17 +139,31 @@ from ._data_manager import DataManager
 
 from ._version import __version__
 
-if plt.isinteractive():
-    if plt.get_backend() == "module://ipympl.backend_nbagg":
-        warnings.warn(
-            "EOmaps disables matplotlib's interactive mode (e.g. 'plt.ioff()') "
-            + "when using the 'ipympl' backend to avoid recursions during callbacks!"
-            + "call `plt.show()` or `m.show()` to show the map!"
-        )
-        plt.ioff()
-    else:
-        plt.ion()
+_backend_warning_shown = False
 
+
+def _handle_backends():
+    global _backend_warning_shown
+
+    if plt.isinteractive():
+        if plt.get_backend() in [
+            "module://ipympl.backend_nbagg",
+            "module://matplotlib_inline.backend_inline",
+        ]:
+            plt.ioff()
+
+            if not _backend_warning_shown:
+                warnings.warn(
+                    "EOmaps disables matplotlib's interactive mode (e.g. 'plt.ioff()') "
+                    f"for the backend {plt.get_backend()}.\n"
+                    "Call `m.snapshot()` to print a static snapshot of the map "
+                    "to a Jupyter Notebook cell (or an IPython console)!"
+                )
+
+                _backend_warning_shown = True
+
+
+_handle_backends()
 
 # hardcoded list of available mapclassify-classifiers
 # (to avoid importing it on startup)
@@ -3073,6 +3087,11 @@ class Maps(object):
         return layer
 
     def _init_figure(self, ax=None, plot_crs=None, **kwargs):
+        # do this on any new figure since "%matpltolib inline" tries to re-activate
+        # interactive mode all the time!
+
+        _handle_backends()
+
         if self.parent.f is None:
             self._f = plt.figure(**kwargs)
 
