@@ -2494,6 +2494,9 @@ class Maps(object):
         self._coll_kwargs = dict()
         self._coll_dynamic = True
 
+        # set _data_plotted to True to trigger updates in the data-manager
+        self._data_plotted = True
+
     def _get_combined_layer_name(self, *args):
         if len(args) == 1:
             assert isinstance(

@@ -363,6 +363,8 @@ class DataManager:
         layer : str
             The layer for which the background is fetched.
         """
+        if not self.m._data_plotted:
+            return
 
         # don't re-draw while the layout-editor is active!
         if self.m.parent._layout_editor.modifier_pressed:
@@ -430,6 +432,7 @@ class DataManager:
             self._print_datasize_warnings(s)
             self._set_n(s)
 
+            # stop here in case we are dealing with a pick-only dataset
             if self._only_pick:
                 return
 
