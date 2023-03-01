@@ -2596,7 +2596,7 @@ If no explicit grid-spacing is provided (e.g. ``d=None``), the grid is dynamical
     :align: center
 
     +-------------------------------------------------------------------+-----------------------------------------+
-    | .. code_block:: python                                            | .. image:: _static/minigifs/grid_01.png |
+    | .. code-block:: python                                            | .. image:: _static/minigifs/grid_01.png |
     |                                                                   |     :align: center                      |
     |   from eomaps import Maps                                         |                                         |
     |   m = Maps(Maps.CRS.Mollweide(), frameon=False)                   |                                         |
