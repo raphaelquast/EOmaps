@@ -2567,6 +2567,10 @@ The returned ``compass`` object has the following useful methods assigned:
 
 Gridlines can be added to the map via ``m.add_gridlines()``.
 
+If no explicit grid-spacing is provided (e.g. ``d=...``), the grid spacing is dynamically updated based on the visible extent.
+(use ``auto_n=...`` to adjust the density of the auto-gridlines.)
+
+
 .. currentmodule:: eomaps
 
 .. autosummary::
