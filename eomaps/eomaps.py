@@ -2202,6 +2202,8 @@ class Maps(object):
 
         self._colorbars.append(colorbar)
         self.BM._refetch_layer(self.layer)
+        self.BM._refetch_layer("__SPINES__")
+
         return colorbar
 
     @wraps(GridFactory.add_grid)
