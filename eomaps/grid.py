@@ -147,11 +147,11 @@ class GridLines:
 
                 lines = [
                     np.linspace([x, lats[0]], [x, lats[-1]], self.n, endpoint=True)
-                    for x in lons
+                    for x in np.unique(lons.clip(*self.bounds[:2]))
                 ]
                 linesy = [
                     np.linspace([lons[0], y], [lons[-1], y], self.n, endpoint=True)
-                    for y in lats
+                    for y in np.unique(lats.clip(*self.bounds[2:]))
                 ]
                 lines.extend(linesy)
 
