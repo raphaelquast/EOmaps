@@ -2357,18 +2357,18 @@ Logos can be re-positioned and re-sized with the :ref:`layout_editor`!
 Once the colorbar has been created, the colorbar-object can be accessed via ``m.colorbar``.
 It has the following useful methods defined:
 
-.. currentmodule:: eomaps.colorbar.ColorBar
+.. currentmodule:: eomaps.colorbar
 
 .. autosummary::
     :toctree: generated
     :nosignatures:
     :template: only_names_in_toc.rst
 
-    set_position
-    set_hist_size
-    tick_params
-    set_visible
-    remove
+    ColorBar.set_position
+    ColorBar.set_hist_size
+    ColorBar.tick_params
+    ColorBar.set_visible
+    ColorBar.remove
 
 
 📎 Set colorbar tick labels based on bins
@@ -2400,12 +2400,15 @@ To label the colorbar with custom names for a given set of bins, use ``m.colorba
 |     m.colorbar.set_bin_labels(bins, names)                                    |                                                |
 +-------------------------------------------------------------------------------+------------------------------------------------+
 
+
+.. currentmodule:: eomaps.colorbar
+
 .. autosummary::
     :toctree: generated
     :nosignatures:
     :template: only_names_in_toc.rst
 
-    set_bin_labels
+    ColorBar.set_bin_labels
 
 
 
@@ -2439,14 +2442,14 @@ distribution of the shaded pixels within the current field of view by setting ``
 
 A scalebar can be added to a map via ``s = m.add_scalebar()``:
 
-.. currentmodule:: eomaps.Maps
+.. currentmodule:: eomaps
 
 .. autosummary::
     :toctree: generated
     :nosignatures:
     :template: only_names_in_toc.rst
 
-    add_scalebar
+    Maps.add_scalebar
 
 .. table::
     :widths: 70 30
@@ -2484,7 +2487,6 @@ The returned ``ScaleBar`` object provides the following useful methods:
     :nosignatures:
     :template: only_names_in_toc.rst
 
-    ScaleBar.remove
     ScaleBar.set_position
     ScaleBar.get_position
     ScaleBar.set_label_props
@@ -2492,6 +2494,7 @@ The returned ``ScaleBar`` object provides the following useful methods:
     ScaleBar.set_scale_props
     ScaleBar.cb_offset_interval
     ScaleBar.cb_rotate_interval
+    ScaleBar.remove
 
 
 .. _compass:
@@ -2516,14 +2519,14 @@ A compass can be added to the map via ``m.add_compass()``:
 
 
 
-.. currentmodule:: eomaps.Maps
+.. currentmodule:: eomaps
 
 .. autosummary::
     :toctree: generated
     :nosignatures:
     :template: only_names_in_toc.rst
 
-    add_compass
+    Maps.add_compass
 
 .. table::
     :widths: 70 30
@@ -2544,18 +2547,83 @@ dragged around on the map with the mouse.
 
 The returned ``compass`` object has the following useful methods assigned:
 
-.. currentmodule:: eomaps.scalebar.Compass
+.. currentmodule:: eomaps.scalebar
 
 .. autosummary::
     :toctree: generated
     :nosignatures:
     :template: only_names_in_toc.rst
 
-    set_patch
-    set_scale
-    set_pickable
-    set_ignore_invalid_angles
-    remove
+    Compass.set_patch
+    Compass.set_scale
+    Compass.set_pickable
+    Compass.set_ignore_invalid_angles
+    Compass.remove
+
+.. _gridlines:
+
+▦ Gridlines
+------------
+
+Gridlines can be added to the map via ``m.add_gridlines()``.
+
+.. currentmodule:: eomaps
+
+.. autosummary::
+    :toctree: generated
+    :nosignatures:
+    :template: only_names_in_toc.rst
+
+    Maps.add_gridlines
+
+
+
+.. table::
+    :widths: 50 50
+    :align: center
+
+    +-------------------------------------------------------------------+-----------------------------------------+
+    | .. code-block:: python                                            | .. image:: _static/minigifs/grid_01.png |
+    |                                                                   |   :align: center                        |
+    |   from eomaps import Maps                                         |                                         |
+    |   m = Maps(Maps.CRS.Mollweide(), frameon=False)                   |                                         |
+    |   m.add_feature.preset.ocean()                                    |                                         |
+    |                                                                   |                                         |
+    |   # add gridlines with a fixed grid-spacing                       |                                         |
+    |   mg = m.new_layer("grid")                                        |                                         |
+    |   g0 = mg.add_gridlines(d=40, ec="orange", lw=3, zorder=2)        |                                         |
+    |   g1 = mg.add_gridlines(d=(10, 20), ec="orange", lw=.5, zorder=1) |                                         |
+    |                                                                   |                                         |
+    |   # add fine-grained gridlines in a specific area                 |                                         |
+    |   g2 = mg.add_gridlines(d=2, ec="darkred", lw=0.5, zorder=0,      |                                         |
+    |                         bounds=(-20, 20, -10, 30))                |                                         |
+    |   g2 = mg.add_gridlines(d=2, ec="b", lw=0.5, zorder=0,            |                                         |
+    |                         bounds=(60, 100, 30, 70))                 |                                         |
+    |                                                                   |                                         |
+    |   m.show_layer(m.layer, "g")                                      |                                         |
+    +-------------------------------------------------------------------+-----------------------------------------+
+
+
+In addition, the returned ``GridLines`` instance supports the following
+useful methods:
+
+.. currentmodule:: eomaps.grid
+
+.. autosummary::
+    :toctree: generated
+    :nosignatures:
+    :template: only_names_in_toc.rst
+
+    GridLines.set_d
+    GridLines.set_auto_n
+    GridLines.set_n
+    GridLines.set_bounds
+    GridLines.update_line_props
+    GridLines.remove
+
+
+
+
 
 .. _utility:
 
@@ -2568,6 +2636,7 @@ Some helpful utility widgets can be added to a map via ``m.util.<...>``
 .. currentmodule:: eomaps
 
 .. autosummary::
+    :toctree: generated
     :nosignatures:
     :template: only_names_in_toc.rst
 
