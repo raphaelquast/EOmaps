@@ -652,10 +652,8 @@ class Maps(object):
         """
         Create a new map that shares the figure with this Maps-object.
 
-
         Note
         ----
-
         Using this function, for example:
 
         >>> m = Maps(ax=211)
@@ -710,7 +708,6 @@ class Maps(object):
             The Maps object representing the new map.
 
         """
-
         m2 = Maps(f=self.f, ax=ax, **kwargs)
 
         if np.allclose(self.ax.bbox.bounds, m2.ax.bbox.bounds):
