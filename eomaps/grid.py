@@ -162,6 +162,9 @@ class GridLines:
         else:
             return self._get_auto_grid_lines()
 
+    def _round_up(self, a, precision=0):
+        return np.true_divide(np.ceil(a * 10**precision), 10**precision)
+
     def _get_auto_grid_lines(self):
         if isinstance(self.auto_n, tuple):
             nlon, nlat = self.auto_n
@@ -188,6 +191,12 @@ class GridLines:
         bounds[3] = min(90, bounds[3] - bounds[3] % glat + glat)
 
         dlon, dlat = (bounds[1] - bounds[0]) / nlon, (bounds[3] - bounds[2]) / nlat
+        # round auto-separation distances to 2 significant digits
+        dlon = self._round_up(dlon, -int(np.log10(dlon)) + 2)
+        dlat = self._round_up(dlat, -int(np.log10(dlat)) + 2)
+
+        if nlon == nlat:
+            dlon = dlat = min(dlon, dlat)
 
         lons = np.arange(bounds[0], min(180 + dlon, bounds[1] + 10 * dlon), dlon)
         lats = np.arange(bounds[2], min(90 + dlat, bounds[3] + 10 * dlat), dlat)
