@@ -2763,6 +2763,9 @@ class Maps(object):
         from PIL import Image
         from IPython.display import display
 
+        if len(layer) == 0:
+            layer = None
+
         # hide companion-widget indicator
         self._indicate_companion_map(False)
 
@@ -2780,13 +2783,11 @@ class Maps(object):
             # restore the previous layer
             self.BM._refetch_layer(layer_with_bg)
             self.show_layer(initial_layer)
-            self.redraw()
         else:
             if layer is not None:
                 self.show_layer(layer)
                 sn = self._get_snapshot(layer=layer)
                 self.show_layer(initial_layer)
-                self.redraw()
             else:
                 sn = self._get_snapshot(layer=layer)
 
