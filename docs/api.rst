@@ -762,13 +762,17 @@ You can fix individual color channels by passing a list with 1 element, e.g.:
 
 It is possible to combine multiple ``EOmaps`` maps and/or ordinary ``matpltolib`` plots in one figure.
 
+The **figure** used by a ``Maps`` object is set via the ``f`` argument, e.g.: ``m = Maps(f=...)``.
+If no figure is provided, a new figure is created whenever you initialize a ``Maps`` object.
+The figure-instance of an existing ``Maps`` object is accessible via ``m.f``
 
-The **figure** used by a ``Maps`` object is set via the ``f`` argument, e.g.: ``m = Maps(f=...)``
 
-- If no figure is provided, a new figure is created whenever you initialize a ``Maps`` object.
-- The figure-instance of an existing ``Maps`` object is accessible via ``m.f``
+- To add a map to an existing figure, use ``m2 = m.new_map()`` (requires EOmaps >= v6.1) or pass the figure-instance on initialization of a new ``Maps`` object.
+- To add a ordinary ``matplotlib`` plot to a figure containing an eomaps-map, use ``m.f.add_subplot()`` or ``m.f.add_axes()``.
 
-The **initial position of the axes** used by a ``Maps`` object is set via the ``ax`` argument, e.g.: ``m = Maps(ax=...)``
+
+The **initial position of the axes** used by a ``Maps`` object is set via the ``ax`` argument,
+e.g.: ``m = Maps(ax=...)`` or ``m2 = m.new_map(ax=...)``
 
 - The syntax for positioning axes is similar to matplotlibs ``f.add_subplot()`` or ``f.add_axes()``
 - The axis-instance of an existing ``Maps`` object is accessible via ``m.ax``
@@ -778,6 +782,17 @@ The **initial position of the axes** used by a ``Maps`` object is set via the ``
 .. note::
 
     Make sure to have a look at the :ref:`layout_editor` on how to re-position and re-scale axes to arbitrary positions!
+
+
+.. currentmodule:: eomaps
+
+.. autosummary::
+    :toctree: generated
+    :nosignatures:
+    :template: only_names_in_toc.rst
+
+    Maps
+    Maps.new_map
 
 
 In the following, the most commonly used cases are introduced:
@@ -818,7 +833,7 @@ To position the map in a (virtual) grid, one of the following options are possib
     |     m = Maps(ax=(2, 2, 1))                         |                                    |
     |     # ----- add another Map to the same figure     |                                    |
     |     # position = item 3 of a 2x2 grid              |                                    |
-    |     m2 = Maps(f=m.f, ax=(2, 2, 3))                 |                                    |
+    |     m2 = m.new_map(ax=(2, 2, 3))                   |                                    |
     |     # ----- add a normal matplotlib axes           |                                    |
     |     # position = second item of a 1x2 grid         |                                    |
     |     ax = m.f.add_subplot(1, 2, 2)                  |                                    |
@@ -864,8 +879,8 @@ To position the map in a (virtual) grid, one of the following options are possib
     |     # ----- initialize a figure with an EOmaps map |                                    |
     |     m = Maps(ax=221)                               |                                    |
     |     # ----- add 2 more Maps to the same figure     |                                    |
-    |     m2 = Maps(f=m.f, ax=222)                       |                                    |
-    |     m3 = Maps(f=m.f, ax=223)                       |                                    |
+    |     m2 = m.new_map(ax=222)                         |                                    |
+    |     m3 = m.new_map(ax=223)                         |                                    |
     |     # ----- add a normal matplotlib axes           |                                    |
     |     ax = m.f.add_subplot(224)                      |                                    |
     +----------------------------------------------------+------------------------------------+
@@ -883,7 +898,7 @@ To position the map in a (virtual) grid, one of the following options are possib
     |                                              |                                    |
     |     gs = GridSpec(2, 2)                      |                                    |
     |     m = Maps(ax=gs[0,0])                     |                                    |
-    |     m2 = Maps(f= m.f, ax=gs[0,1])            |                                    |
+    |     m2 = m.new_map(ax=gs[0,1])               |                                    |
     |     ax = m.f.add_subplot(gs[1,:])            |                                    |
     +----------------------------------------------+------------------------------------+
 
@@ -968,7 +983,7 @@ Here's an example to show how it works:
     |         m.cb.click.attach.mark(radius=20, fc="none", ec="r", lw=2)                  |                                                      |
     |                                                                                     |                                                      |
     |         # Add another map to the figure                                             |                                                      |
-    |         m2 = Maps(f=m.f, ax=224, crs=Maps.CRS.Mollweide())                          |                                                      |
+    |         m2 = m.new_map(ax=224, crs=Maps.CRS.Mollweide())                            |                                                      |
     |         m2.add_feature.preset.coastline()                                           |                                                      |
     |         m2.add_feature.preset.ocean()                                               |                                                      |
     |         m2.cb.click.attach.mark(radius=20, fc="none", ec="r", lw=2, n=200)          |                                                      |
@@ -1596,14 +1611,14 @@ by using ``m.make_dataset_pickable()``.
     is sufficient!
 
 
-.. currentmodule:: eomaps.Maps
+.. currentmodule:: eomaps
 
 .. autosummary::
     :toctree: generated
     :nosignatures:
     :template: only_names_in_toc.rst
 
-    make_dataset_pickable
+    Maps.make_dataset_pickable
 
 
 .. _webmap_layers:
@@ -2004,14 +2019,14 @@ Static markers can be added to the map via ``m.add_marker()``.
 🛸 For dynamic markers checkout ``m.cb.click.attach.mark()`` or ``m.cb.pick.attach.mark()``
 
 
-.. currentmodule:: eomaps.Maps
+.. currentmodule:: eomaps
 
 .. autosummary::
     :toctree: generated
     :nosignatures:
     :template: only_names_in_toc.rst
 
-    add_marker
+    Maps.add_marker
 
 .. table::
     :widths: 50 50
@@ -2073,14 +2088,14 @@ Static annotations can be added to the map via ``m.add_annotation()``.
 
 🛸 For dynamic annotations checkout ``m.cb.click.attach.annotate()`` or ``m.cb.pick.attach.annotate()``
 
-.. currentmodule:: eomaps.Maps
+.. currentmodule:: eomaps
 
 .. autosummary::
     :toctree: generated
     :nosignatures:
     :template: only_names_in_toc.rst
 
-    add_annotation
+    Maps.add_annotation
 
 
 .. table::
@@ -2168,14 +2183,14 @@ Lines can be added to a map with ``m.add_line()``.
 
   - This gives a lot of flexibility to style the lines!
 
-.. currentmodule:: eomaps.Maps
+.. currentmodule:: eomaps
 
 .. autosummary::
     :toctree: generated
     :nosignatures:
     :template: only_names_in_toc.rst
 
-    add_line
+    Maps.add_line
 
 
 .. table::
@@ -2219,14 +2234,14 @@ Lines can be added to a map with ``m.add_line()``.
 
 To indicate rectangular areas in any given crs, simply use ``m.indicate_extent``:
 
-.. currentmodule:: eomaps.Maps
+.. currentmodule:: eomaps
 
 .. autosummary::
     :toctree: generated
     :nosignatures:
     :template: only_names_in_toc.rst
 
-    indicate_extent
+    Maps.indicate_extent
 
 
 .. table::
@@ -2285,14 +2300,14 @@ Logos can be re-positioned and re-sized with the :ref:`layout_editor`!
 |     m.add_logo(position="ll", size=.4, fix_position=True)                                  |                                       |
 +--------------------------------------------------------------------------------------------+---------------------------------------+
 
-.. currentmodule:: eomaps.Maps
+.. currentmodule:: eomaps
 
 .. autosummary::
     :toctree: generated
     :nosignatures:
     :template: only_names_in_toc.rst
 
-    add_logo
+    Maps.add_logo
 
 
 .. _colorbar:
@@ -2311,21 +2326,23 @@ Logos can be re-positioned and re-sized with the :ref:`layout_editor`!
 
         m = Maps(layer=0)
         ...
+        m.plot_map()
         m.add_colorbar()   # this colorbar is only visible on the layer 0
 
         m2 = m.new_layer("data")
         ...
+        m2.plot_map()
         m2.add_colorbar()  # this colorbar is only visible on the "data" layer
 
 
-.. currentmodule:: eomaps.Maps
+.. currentmodule:: eomaps
 
 .. autosummary::
     :toctree: generated
     :nosignatures:
     :template: only_names_in_toc.rst
 
-    add_colorbar
+    Maps.add_colorbar
 
 .. table::
     :widths: 70 30
@@ -2343,7 +2360,7 @@ Logos can be re-positioned and re-sized with the :ref:`layout_editor`!
     |   m.set_data(data=x+y, x=x, y=y, crs=4326)                         |                                          |
     |   m.set_classify_specs(scheme=Maps.CLASSIFIERS.EqualInterval, k=5) |                                          |
     |   m.plot_map()                                                     |                                          |
-    |   m.add_colorbar(label="what a nice colorbar", histbins="bins")    |                                          |
+    |   m.add_colorbar(label="what a nice colorbar", hist_bins="bins")   |                                          |
     |                                                                    |                                          |
     +--------------------------------------------------------------------+------------------------------------------+
 
@@ -2357,18 +2374,18 @@ Logos can be re-positioned and re-sized with the :ref:`layout_editor`!
 Once the colorbar has been created, the colorbar-object can be accessed via ``m.colorbar``.
 It has the following useful methods defined:
 
-.. currentmodule:: eomaps.colorbar.ColorBar
+.. currentmodule:: eomaps.colorbar
 
 .. autosummary::
     :toctree: generated
     :nosignatures:
     :template: only_names_in_toc.rst
 
-    set_position
-    set_hist_size
-    tick_params
-    set_visible
-    remove
+    ColorBar.set_position
+    ColorBar.set_hist_size
+    ColorBar.tick_params
+    ColorBar.set_visible
+    ColorBar.remove
 
 
 📎 Set colorbar tick labels based on bins
@@ -2400,12 +2417,15 @@ To label the colorbar with custom names for a given set of bins, use ``m.colorba
 |     m.colorbar.set_bin_labels(bins, names)                                    |                                                |
 +-------------------------------------------------------------------------------+------------------------------------------------+
 
+
+.. currentmodule:: eomaps.colorbar
+
 .. autosummary::
     :toctree: generated
     :nosignatures:
     :template: only_names_in_toc.rst
 
-    set_bin_labels
+    ColorBar.set_bin_labels
 
 
 
@@ -2427,7 +2447,7 @@ distribution of the shaded pixels within the current field of view by setting ``
     |   m.set_data(data=x+y, x=x, y=y, crs=4326)                         |                                                  |
     |   m.set_shape.shade_raster()                                       |                                                  |
     |   m.plot_map()                                                     |                                                  |
-    |   m.add_colorbar(dynamic_shade_indicator=True, histbins=20)        |                                                  |
+    |   m.add_colorbar(dynamic_shade_indicator=True, hist_bins=20)       |                                                  |
     |                                                                    |                                                  |
     +--------------------------------------------------------------------+--------------------------------------------------+
 
@@ -2439,14 +2459,14 @@ distribution of the shaded pixels within the current field of view by setting ``
 
 A scalebar can be added to a map via ``s = m.add_scalebar()``:
 
-.. currentmodule:: eomaps.Maps
+.. currentmodule:: eomaps
 
 .. autosummary::
     :toctree: generated
     :nosignatures:
     :template: only_names_in_toc.rst
 
-    add_scalebar
+    Maps.add_scalebar
 
 .. table::
     :widths: 70 30
@@ -2484,7 +2504,6 @@ The returned ``ScaleBar`` object provides the following useful methods:
     :nosignatures:
     :template: only_names_in_toc.rst
 
-    ScaleBar.remove
     ScaleBar.set_position
     ScaleBar.get_position
     ScaleBar.set_label_props
@@ -2492,6 +2511,7 @@ The returned ``ScaleBar`` object provides the following useful methods:
     ScaleBar.set_scale_props
     ScaleBar.cb_offset_interval
     ScaleBar.cb_rotate_interval
+    ScaleBar.remove
 
 
 .. _compass:
@@ -2516,14 +2536,14 @@ A compass can be added to the map via ``m.add_compass()``:
 
 
 
-.. currentmodule:: eomaps.Maps
+.. currentmodule:: eomaps
 
 .. autosummary::
     :toctree: generated
     :nosignatures:
     :template: only_names_in_toc.rst
 
-    add_compass
+    Maps.add_compass
 
 .. table::
     :widths: 70 30
@@ -2544,18 +2564,99 @@ dragged around on the map with the mouse.
 
 The returned ``compass`` object has the following useful methods assigned:
 
-.. currentmodule:: eomaps.scalebar.Compass
+.. currentmodule:: eomaps.scalebar
 
 .. autosummary::
     :toctree: generated
     :nosignatures:
     :template: only_names_in_toc.rst
 
-    set_patch
-    set_scale
-    set_pickable
-    set_ignore_invalid_angles
-    remove
+    Compass.set_patch
+    Compass.set_scale
+    Compass.set_pickable
+    Compass.set_ignore_invalid_angles
+    Compass.remove
+
+.. _gridlines:
+
+▦ Gridlines
+------------
+
+Gridlines can be added to the map via ``m.add_gridlines()``.
+
+If ``d`` is provided, the gridlines will be **fixed**
+
+- If you provide a number, it is used as grid-spcing (in degrees)
+- If you provide a ``list`` or ``numpy.array``, it is used to draw lines only at the specific coordinates
+- To use different settings for latitude and longitude lines, provide a ``2-tuple`` of the aforementioned types.
+
+If no explicit grid-spacing is provided (e.g. ``d=None``), the grid is dynamically updated based on the visible extent.
+
+- Use ``auto_n=...`` to adjust the density of the auto-gridlines.
+
+
+.. currentmodule:: eomaps
+
+.. autosummary::
+    :toctree: generated
+    :nosignatures:
+    :template: only_names_in_toc.rst
+
+    Maps.add_gridlines
+
+
+
+.. table::
+    :widths: 50 50
+    :align: center
+
+    +-------------------------------------------------------------------+-----------------------------------------+
+    | .. code-block:: python                                            | .. image:: _static/minigifs/grid_01.png |
+    |                                                                   |     :align: center                      |
+    |   from eomaps import Maps                                         |                                         |
+    |   m = Maps(Maps.CRS.Mollweide(), frameon=False)                   |                                         |
+    |   m.add_feature.preset.ocean()                                    |                                         |
+    |                                                                   |                                         |
+    |   # add gridlines with a fixed grid-spacing                       |                                         |
+    |   mg = m.new_layer("grid")                                        |                                         |
+    |   g0 = mg.add_gridlines(d=40, ec="orange", lw=3, zorder=2)        |                                         |
+    |   g1 = mg.add_gridlines(d=(10, 20), ec="orange", lw=.5, zorder=1) |                                         |
+    |                                                                   |                                         |
+    |   # add fine-grained gridlines in a specific area                 |                                         |
+    |   g2 = mg.add_gridlines(d=2, ec="darkred", lw=0.5, zorder=0,      |                                         |
+    |                         bounds=(-20, 20, -10, 30))                |                                         |
+    |   g3 = mg.add_gridlines(d=2, ec="b", lw=0.5, zorder=0,            |                                         |
+    |                         bounds=(60, 100, 30, 70))                 |                                         |
+    |                                                                   |                                         |
+    |   # add dedicated gridlines at specific coordinates               |                                         |
+    |   g4 = mg.add_gridlines(([-123, -112, -75], [35, 65]),            |                                         |
+    |                         ec="k", lw=2, ls="--", zorder=20,         |                                         |
+    |                         bounds=(-140, 20, -50, 70)                |                                         |
+    |                         )                                         |                                         |
+    |                                                                   |                                         |
+    |   m.show_layer(m.layer, "grid")                                   |                                         |
+    +-------------------------------------------------------------------+-----------------------------------------+
+
+In addition, the returned ``GridLines`` instance supports the following
+useful methods:
+
+.. currentmodule:: eomaps.grid
+
+.. autosummary::
+    :toctree: generated
+    :nosignatures:
+    :template: only_names_in_toc.rst
+
+    GridLines.set_d
+    GridLines.set_auto_n
+    GridLines.set_n
+    GridLines.set_bounds
+    GridLines.update_line_props
+    GridLines.remove
+
+
+
+
 
 .. _utility:
 
@@ -2568,6 +2669,7 @@ Some helpful utility widgets can be added to a map via ``m.util.<...>``
 .. currentmodule:: eomaps
 
 .. autosummary::
+    :toctree: generated
     :nosignatures:
     :template: only_names_in_toc.rst
 
@@ -2764,6 +2866,9 @@ You can use it to simply drag the axes the mouse to the desired locations and ch
     | Press keys ``1-9`` to set the grid-spacing for the **"snap-to-grid"** functionality     |                                               |
     |                                                                                         |                                               |
     | - Press ``0`` to deactivate **"snap-to-grid"**                                          |                                               |
+    |                                                                                         |                                               |
+    | Press ``control + z`` to undo the last step                                             |                                               |
+    | Press ``control + y`` to redo the last undone step                                      |                                               |
     |                                                                                         |                                               |
     +-----------------------------------------------------------------------------------------+-----------------------------------------------+
 

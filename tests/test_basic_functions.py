@@ -882,6 +882,38 @@ class TestBasicPlotting(unittest.TestCase):
 
         m.show_layer("base", ("ocean", 0.9), ("land", 0.25))
 
+    def test_add_gridlines(self):
+
+        for crs in [
+            Maps.CRS.Orthographic(),
+            Maps.CRS.Mollweide(),
+            4326,
+            Maps.CRS.Equi7_EU,
+        ]:
+            m = Maps(crs)
+            m.add_gridlines()
+
+            m.add_gridlines(d=(10, 20), lw=2, ec="r", alpha=0.5, layer="redgrid")
+            m.add_gridlines(
+                auto_n=4, bounds=(-20, 40, -40, 40), ec="b", lw=1, layer="finegrid"
+            )
+
+            m.show_layer(m.layer, "finegrid", "redgrid")
+
+        m = Maps(3857)
+        m.add_gridlines()
+        g = m.add_gridlines(bounds=(-50, 50, -30, 40))
+        g.set_auto_n(20)
+        g.set_bounds((-50, 50, -30, 40))
+        g.set_d(10)
+        g.update_line_props(c="r", lw=2, ls="--")
+
+        m.new_layer("asdf")
+        g1 = m.add_gridlines(4)
+        g1.remove()
+
+        plt.close("all")
+
     def test_a_complex_figure(self):
         # %%
         lon, lat = np.linspace(-180, 180, 500), np.linspace(-90, 90, 500)

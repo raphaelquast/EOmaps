@@ -113,6 +113,10 @@ class AutoUpdateLayerMenuButton(QtWidgets.QPushButton):
 
         # update layers on every change of the Maps-object background layer
         self.m.BM.on_layer(self.update_visible_layer, persistent=True)
+        # update layers before the widget is shown to make sure they always
+        # represent the currently visible layers on startup of the widget
+        # (since "update_visible_layer" only triggers if the widget is actually visible)
+        self.m._on_show_companion_widget.append(self.update_visible_layer)
         self.update_layers()
 
     def enterEvent(self, e):
@@ -185,6 +189,8 @@ class AutoUpdateLayerMenuButton(QtWidgets.QPushButton):
         self.setText(l)
 
     def update_visible_layer(self, *args, **kwargs):
+        if not self.isVisible():
+            return
         # make sure to re-fetch layers first
         self.update_layers()
         self.update_display_text(self.m.BM._bg_layer)

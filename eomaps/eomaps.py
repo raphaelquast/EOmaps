@@ -130,6 +130,7 @@ from ._cb_container import cb_container, _gpd_picker
 from .scalebar import ScaleBar, Compass
 from .projections import Equi7Grid_projection  # import to supercharge cartopy.ccrs
 from .reader import read_file, from_file, new_layer_from_file
+from .grid import GridFactory
 
 from .utilities import utilities
 from .draw import ShapeDrawer
@@ -138,17 +139,31 @@ from ._data_manager import DataManager
 
 from ._version import __version__
 
-if plt.isinteractive():
-    if plt.get_backend() == "module://ipympl.backend_nbagg":
-        warnings.warn(
-            "EOmaps disables matplotlib's interactive mode (e.g. 'plt.ioff()') "
-            + "when using the 'ipympl' backend to avoid recursions during callbacks!"
-            + "call `plt.show()` or `m.show()` to show the map!"
-        )
-        plt.ioff()
-    else:
-        plt.ion()
+_backend_warning_shown = False
 
+
+def _handle_backends():
+    global _backend_warning_shown
+
+    if plt.isinteractive():
+        if plt.get_backend() in [
+            "module://ipympl.backend_nbagg",
+            "module://matplotlib_inline.backend_inline",
+        ]:
+            plt.ioff()
+
+            if not _backend_warning_shown:
+                warnings.warn(
+                    "EOmaps disables matplotlib's interactive mode (e.g. 'plt.ioff()') "
+                    f"for the backend {plt.get_backend()}.\n"
+                    "Call `m.snapshot()` to print a static snapshot of the map "
+                    "to a Jupyter Notebook cell (or an IPython console)!"
+                )
+
+                _backend_warning_shown = True
+
+
+_handle_backends()
 
 # hardcoded list of available mapclassify-classifiers
 # (to avoid importing it on startup)
@@ -177,9 +192,13 @@ class Maps(object):
 
     See Also
     --------
-    MapsGrid : Initialize a grid of Maps objects
+    Maps.new_layer : Create a new layer for the map.
 
-    Maps.new_layer : Get a Maps-object that represents a new layer on the map
+    Maps.new_map : Add a new map to the figure.
+
+    Maps.new_inset_map : Add a new inset-map to the figure.
+
+    MapsGrid : Initialize a grid of Maps objects
 
     Parameters
     ----------
@@ -373,6 +392,9 @@ class Maps(object):
         # a list to remember newly registered colormaps
         self._registered_cmaps = []
 
+        # a list of actions that are executed whenever the widget is shown
+        self._on_show_companion_widget = []
+
         # preferred way of accessing WMS services (used in the WMS container)
         assert preferred_wms_service in [
             "wms",
@@ -465,6 +487,10 @@ class Maps(object):
         # is viewed on its own, but overlapping spines cause blurry boundaries)
         # TODO find a better way to deal with this!
         self._handle_spines()
+
+        # a factory to create gridlines
+        if self.parent == self:
+            self._grid = GridFactory(self.parent)
 
     def _handle_spines(self):
         spine = self.ax.spines["geo"]
@@ -586,6 +612,13 @@ class Maps(object):
         return self._parent
 
     @property
+    def _real_self(self):
+        # workaround to obtain a non-weak reference for the parent
+        # (e.g. self.parent._real_self is a non-weak ref to parent)
+        # see https://stackoverflow.com/a/49319989/9703451
+        return self
+
+    @property
     def crs_plot(self):
         """The crs used for plotting."""
         return self._crs_plot_cartopy
@@ -618,6 +651,89 @@ class Maps(object):
     def new_layer_from_file(self):
         """Create a new layer from a file."""
         return self._new_layer_from_file
+
+    def new_map(self, ax=None, keep_on_top=False, **kwargs):
+        """
+        Create a new map that shares the figure with this Maps-object.
+
+        Note
+        ----
+        Using this function, for example:
+
+        >>> m = Maps(ax=211)
+        >>> m2 = m.new_map(ax=212, ...)
+
+        is equivalent to:
+
+        >>> m = Maps(ax=211)
+        >>> m2 = Maps(f=m.f, ax=212, ...)
+
+
+        Parameters
+        ----------
+        ax : int, list, tuple, matplotlib.Axes, matplotlib.gridspec.SubplotSpec or None
+            Explicitly specify the position of the axes or use already existing axes.
+
+            Possible values are:
+
+            - None:
+                Initialize a new axes at the center of the figure (the default)
+            - A tuple of 4 floats (*left*, *bottom*, *width*, *height*)
+                The absolute position of the axis in relative figure-coordinates
+                (e.g. in the range [0 , 1])
+                NOTE: since the axis-size is dependent on the plot-extent, the size of
+                the map will be adjusted to fit in the provided bounding-box.
+            - A tuple of 3 integers (*nrows*, *ncols*, *index*)
+                The map will be positioned at the *index* position of a grid
+                with *nrows* rows and *ncols* columns. *index* starts at 1 in the
+                upper left corner and increases to the right. *index* can also be
+                a two-tuple specifying the (*first*, *last*) indices (1-based, and
+                including *last*) of the subplot, e.g., ``ax = (3, 1, (1, 2))``
+                makes a map that spans the upper 2/3 of the figure.
+            - A 3-digit integer
+                Same as using a tuple of three single-digit integers.
+                (e.g. 111 is the same as (1, 1, 1) )
+            - `matplotilb.gridspec.SubplotSpec`:
+                Use the SubplotSpec for initializing the axes.
+            - `matplotilb.Axes`:
+                Directly use the provided figure and axes instances for plotting.
+                NOTE: The axes MUST be a geo-axes with `m.crs_plot` projection!
+        keep_on_top : bool
+            If True, this axis will be drawn on top of all other maps.
+            (same as InsetMaps)
+            The default is False.
+        preferred_wms_service : str, optional
+            Set the preferred way for accessing WebMap services if both WMS and WMTS
+            capabilities are possible.
+            The default is "wms"
+        kwargs :
+            additional kwargs are passed to `matplotlib.pyplot.figure()`
+            - e.g. figsize=(10,5)
+
+        Returns
+        -------
+        m: EOmaps.Maps
+            The Maps object representing the new map.
+
+        """
+        m2 = Maps(f=self.f, ax=ax, **kwargs)
+
+        if np.allclose(self.ax.bbox.bounds, m2.ax.bbox.bounds):
+            print(
+                "EOmaps: Warning! The new map overlaps exactly with the parent map! "
+                "Use `ax=...` or the LayoutEditor to adjust the position of the map."
+            )
+
+        if keep_on_top is True:
+            m2.ax.set_label("inset_map")
+
+            spine = m2.ax.spines["geo"]
+            if spine in self.BM._bg_artists.get("___SPINES__", []):
+                self.BM.remove_bg_artist(spine, layer="___SPINES__")
+            if spine not in self.BM._bg_artists.get("__inset___SPINES__", []):
+                self.BM.add_bg_artist(spine, layer="__inset___SPINES__")
+
+        return m2
 
     def new_layer(
         self,
@@ -2127,7 +2243,6 @@ class Maps(object):
             The default is False.
 
         """
-
         if layer is None:
             layer = "__SPINES__"
 
@@ -2177,6 +2292,10 @@ class Maps(object):
     @wraps(ColorBar.__init__)
     def add_colorbar(self, *args, **kwargs):
         """Add a colorbar to the map."""
+        if self.coll is None:
+            raise AttributeError(
+                "EOmaps: You must plot a dataset before " "adding a colorbar!"
+            )
 
         colorbar = ColorBar(
             self,
@@ -2189,7 +2308,14 @@ class Maps(object):
 
         self._colorbars.append(colorbar)
         self.BM._refetch_layer(self.layer)
+        self.BM._refetch_layer("__SPINES__")
+
         return colorbar
+
+    @wraps(GridFactory.add_grid)
+    def add_gridlines(self, *args, **kwargs):
+        """Add gridlines to the Map."""
+        return self.parent._grid.add_grid(m=self, *args, **kwargs)
 
     def _get_alpha_cmap_name(self, alpha):
         # get a unique name for the colormap
@@ -2410,10 +2536,6 @@ class Maps(object):
 
         self._data_plotted = True
 
-        # call draw after plotting a dataset to make sure axis sizes are properly
-        # adjusted (otherwise the startup size of axes might be incorrect if other
-        # features are added before draw is actually called.)
-
     def make_dataset_pickable(
         self,
     ):
@@ -2456,7 +2578,7 @@ class Maps(object):
 
         # ---------------------- prepare the data
         self._data_manager = DataManager(self._proxy(self))
-        self._data_manager.set_props(layer=self.layer)
+        self._data_manager.set_props(layer=self.layer, only_pick=True)
 
         x0, x1 = self._data_manager.x0.min(), self._data_manager.x0.max()
         y0, y1 = self._data_manager.y0.min(), self._data_manager.y0.max()
@@ -2470,6 +2592,12 @@ class Maps(object):
         self.cb.pick._set_artist(art)
         self.cb.pick._init_cbs()
         self.cb._methods.add("pick")
+
+        self._coll_kwargs = dict()
+        self._coll_dynamic = True
+
+        # set _data_plotted to True to trigger updates in the data-manager
+        self._data_plotted = True
 
     def _get_combined_layer_name(self, *args):
         if len(args) == 1:
@@ -2633,7 +2761,7 @@ class Maps(object):
 
     @wraps(plt.Figure.text)
     def text(self, *args, **kwargs):
-
+        """Add text to the map."""
         kwargs.setdefault("animated", True)
         kwargs.setdefault("horizontalalignment", "center")
         kwargs.setdefault("verticalalignment", "center")
@@ -3046,14 +3174,23 @@ class Maps(object):
         return layer
 
     def _init_figure(self, ax=None, plot_crs=None, **kwargs):
+        # do this on any new figure since "%matpltolib inline" tries to re-activate
+        # interactive mode all the time!
+
+        _handle_backends()
+
         if self.parent.f is None:
             self._f = plt.figure(**kwargs)
-            self.parent.f._EOmaps_parent = self.parent
+
+            # make sure we keep a "real" reference otherwise overwriting the
+            # variable of the parent Maps-object while keeping the figure open
+            # causes all weakrefs to be garbage-collected!
+            self.parent.f._EOmaps_parent = self.parent._real_self
             newfig = True
         else:
             newfig = False
             if not hasattr(self.parent.f, "_EOmaps_parent"):
-                self.parent.f._EOmaps_parent = self.parent
+                self.parent.f._EOmaps_parent = self.parent._real_self
             self.parent._add_child(self)
 
         if isinstance(ax, plt.Axes):
@@ -3098,8 +3235,11 @@ class Maps(object):
             )
 
         self._ax = ax
-
         self._gridspec = ax.get_gridspec()
+
+        # add support for "frameon" kwarg
+        if kwargs.get("frameon", True) is False:
+            self.ax.spines["geo"].set_edgecolor("none")
 
         # initialize the callbacks
         self.cb._init_cbs()
@@ -3509,7 +3649,7 @@ class Maps(object):
         # check if the figure to which the Maps-object is added already has a parent
         parent = None
         if getattr(self._f, "_EOmaps_parent", False):
-            parent = self._f._EOmaps_parent
+            parent = self._proxy(self._f._EOmaps_parent)
 
         if parent is None:
             parent = self
@@ -3758,7 +3898,7 @@ class Maps(object):
             # NOTE: the actual plot is performed by the data-manager
             # at the next call to m.BM.fetch_bg() for the corresponding layer
             # this is called to make sure m.coll is properly set
-            self._data_manager.on_fetch_bg()
+            self._data_manager.on_fetch_bg(check_redraw=False)
 
         except Exception as ex:
             raise ex
@@ -4332,6 +4472,11 @@ class Maps(object):
                 self._companion_widget.show()
                 self._indicate_companion_map(True)
 
+                # execute all actions that should trigger before opening the widget
+                # (e.g. update tabs to show visible layers etc.)
+                for f in self._on_show_companion_widget:
+                    f()
+
                 # Do NOT activate the companion widget in here!!
                 # Activating the window during the callback steals focus and
                 # as a consequence the key-released-event is never triggered
@@ -4537,19 +4682,17 @@ class _InsetMaps(Maps):
 
         x, y = xy
         plot_x, plot_y = plot_position
-
-        # setup a gridspec at the desired position
-        gs = GridSpec(
-            1,
-            1,
-            left=plot_x - plot_size / 2,
-            bottom=plot_y - plot_size / 2,
-            top=plot_y + plot_size / 2,
-            right=plot_x + plot_size / 2,
-        )[0]
+        left = plot_x - plot_size / 2
+        bottom = plot_y - plot_size / 2
 
         # initialize a new maps-object with a new axis
-        super().__init__(crs=crs, f=parent.f, ax=gs, layer=layer, **kwargs)
+        super().__init__(
+            crs=crs,
+            f=parent.f,
+            ax=(left, bottom, plot_size, plot_size),
+            layer=layer,
+            **kwargs,
+        )
 
         # get the boundary of a ellipse in the inset_crs
         bnd, bnd_verts = self._get_inset_boundary(
@@ -4593,7 +4736,7 @@ class _InsetMaps(Maps):
         set_extent = kwargs.pop("set_extent", False)
         super().plot_map(*args, **kwargs, set_extent=set_extent)
 
-    # add a convenience-method to add a boundary-polygon to a map
+    # a convenience-method to add a boundary-polygon to a map
     def indicate_inset_extent(self, m, n=100, **kwargs):
         """
         Add a polygon to a  map that indicates the extent of the inset-map.
@@ -4628,7 +4771,7 @@ class _InsetMaps(Maps):
             **kwargs,
         )
 
-    # add a convenience-method to set the position based on the center of the axis
+    # a convenience-method to set the position based on the center of the axis
     def set_inset_position(self, x=None, y=None, size=None):
         """
         Set the (center) position and size of the inset-map.
@@ -4645,7 +4788,7 @@ class _InsetMaps(Maps):
             The default is None.
 
         """
-        y0, y1, x0, x1 = self._gridspec.get_grid_positions(self.f)
+        x0, y1, x1, y0 = self.ax.get_position().bounds
 
         if size is None:
             size = abs(x1 - x0)
@@ -4655,14 +4798,32 @@ class _InsetMaps(Maps):
         if y is None:
             y = (y0 + y1) / 2
 
-        self._gridspec.update(
-            left=x - size / 2,
-            bottom=y - size / 2,
-            right=x + size / 2,
-            top=y + size / 2,
-        )
+        self.ax.set_position((x - size / 2, y - size / 2, size, size))
+        self.redraw("__inset_" + self.layer, "__inset___SPINES__")
 
-        self.redraw(self.layer)
+    # a convenience-method to get the position based on the center of the axis
+    def get_inset_position(self, precision=3):
+        """
+        Get the current inset position (and size).
+
+        Parameters
+        ----------
+        precision : int, optional
+            The precision of the returned position and size.
+            The default is 3.
+
+        Returns
+        -------
+        (x, y, size) : (float, float, float)
+            The position and size of the inset-map.
+
+        """
+        bbox = self.ax.get_position()
+        size = round(max(bbox.width, bbox.height), precision)
+        x = round((bbox.x0 + bbox.width / 2), precision)
+        y = round((bbox.y0 + bbox.height / 2), precision)
+
+        return x, y, size
 
     def _get_inset_boundary(self, x, y, xy_crs, radius, radius_crs, shape, n=100):
         # get the inset-shape boundary

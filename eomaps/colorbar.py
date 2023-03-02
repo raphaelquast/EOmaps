@@ -1160,6 +1160,7 @@ class ColorBar:
 
     # @wraps(plt.Axes.tick_params)
     def tick_params(self, what="colorbar", **kwargs):
+        """Set the appearance of the colorbar (or histogram) ticks."""
         if what == "colorbar":
             self.ax_cb.tick_params(**kwargs)
         elif what == "histogram":
