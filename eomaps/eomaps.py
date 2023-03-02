@@ -2725,7 +2725,7 @@ class Maps(object):
         if not plt.isinteractive():
             plt.show()
 
-    def snapshot(self, clear=False, layer=None):
+    def snapshot(self, *layer, transparent=False, clear=False):
         """
         Print a static image of the figure to the active IPython display.
 
@@ -2738,24 +2738,58 @@ class Maps(object):
 
         Parameters
         ----------
+        *layer: str or None
+            The layer to show on the snapshot.
+            Any positional arguments are used as layer-assignments similar
+            to `m.show_layer()`
+            If None, the currently visible layer is used.
+            The default is None.
+        transparent: bool
+            Indicator if the snapshot should have a transparent background or not.
+            The default is False.
         clear: bool
             Indicator if the current cell-output should be cleared prior
             to showing the snapshot or not. The default is False
 
         Examples
         --------
-        >>> m = Maps()
+        >>> m = Maps(layer="base")
         >>> m.add_feature.preset.coastline()
-        >>> m.snapshot(clear=True)
+        >>> m2 = m.new_layer("ocean")
+        >>> m.add_feature.preset.ocean()
+        >>> m.snapshot("base", ("ocean", .5), transparent=True)
 
         """
         from PIL import Image
         from IPython.display import display
 
+        if len(layer) == 0:
+            layer = None
+
         # hide companion-widget indicator
         self._indicate_companion_map(False)
 
-        sn = self._get_snapshot(layer=layer)
+        if layer is not None:
+            layer = self._get_combined_layer_name(*layer)
+
+        # add the figure background patch as the bottom layer
+        initial_layer = self.BM.bg_layer
+
+        if transparent is False:
+            showlayer_name = self.BM._get_showlayer_name(layer=layer)
+            layer_with_bg = "|".join(["__BG__", showlayer_name])
+            self.show_layer(layer_with_bg)
+            sn = self._get_snapshot()
+            # restore the previous layer
+            self.BM._refetch_layer(layer_with_bg)
+            self.show_layer(initial_layer)
+        else:
+            if layer is not None:
+                self.show_layer(layer)
+                sn = self._get_snapshot()
+                self.show_layer(initial_layer)
+            else:
+                sn = self._get_snapshot()
 
         display(Image.fromarray(sn, "RGBA"), display_id=True, clear=clear)
 
