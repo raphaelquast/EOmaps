@@ -2075,7 +2075,6 @@ class BlitManager:
                     pass
 
     def _get_showlayer_name(self, layer=None):
-
         # combine all layers that should be shown
         # (e.g. to add spines, backgrounds and inset-maps)
 
@@ -2086,11 +2085,11 @@ class BlitManager:
         if layer.startswith("__"):
             return layer
 
-        show_layers = [self.bg_layer, "__SPINES__"]
+        show_layers = [layer, "__SPINES__"]
 
         # show inset map layers and spines only if they contain at least 1 artist
         inset_Q = False
-        for l in self.bg_layer.split("|"):
+        for l in layer.split("|"):
             narts = len(self._bg_artists.get("__inset_" + l, []))
 
             if narts > 0:

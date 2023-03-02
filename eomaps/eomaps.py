@@ -2773,21 +2773,22 @@ class Maps(object):
         initial_layer = self.BM.bg_layer
 
         if transparent is False:
-            showlayer_name = self.BM._get_showlayer_name(layer)
+            showlayer_name = self.BM._get_showlayer_name(layer=layer)
             layer_with_bg = "|".join(["__BG__", showlayer_name])
             self.show_layer(layer_with_bg)
-            sn = self._get_snapshot()
+            sn = self._get_snapshot(layer=layer_with_bg)
             # restore the previous layer
             self.BM._refetch_layer(layer_with_bg)
             self.show_layer(initial_layer)
-
+            self.redraw()
         else:
             if layer is not None:
                 self.show_layer(layer)
-                sn = self._get_snapshot()
+                sn = self._get_snapshot(layer=layer)
                 self.show_layer(initial_layer)
+                self.redraw()
             else:
-                sn = self._get_snapshot()
+                sn = self._get_snapshot(layer=layer)
 
         display(Image.fromarray(sn, "RGBA"), display_id=True, clear=clear)
 
