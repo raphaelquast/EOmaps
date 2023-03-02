@@ -158,9 +158,35 @@ class TestLayoutEditor(unittest.TestCase):
         y6 = (mg.m_1_1.colorbar.ax_cb.bbox.y1 + mg.m_1_1.colorbar.ax_cb.bbox.y0) / 2
         button_press_event(cv, x6, y6, 1, False)
 
+        # undo the last 5 events
+        nhist = len(mg.parent._layout_editor._history)
+        nhist_undone = len(mg.parent._layout_editor._history_undone)
+        for i in range(5):
+            key_press_event(cv, "ctrl+z")
+            self.assertTrue(len(mg.parent._layout_editor._history) == nhist - i - 1)
+            self.assertTrue(
+                len(mg.parent._layout_editor._history_undone) == nhist_undone + i + 1
+            )
+
+        # redo the last 5 events
+        nhist = len(mg.parent._layout_editor._history)
+        nhist_undone = len(mg.parent._layout_editor._history_undone)
+        for i in range(5):
+            key_press_event(cv, "ctrl+y")
+            self.assertTrue(
+                len(mg.parent._layout_editor._history_undone) == nhist_undone - i - 1
+            )
+            self.assertTrue(len(mg.parent._layout_editor._history) == nhist + i + 1)
+
         # deactivate draggable axes
         key_press_event(cv, "alt+l")
         key_release_event(cv, "alt+l")
+
+        # check that history has been properly cleared
+        nhist = len(mg.parent._layout_editor._history)
+        nhist_undone = len(mg.parent._layout_editor._history_undone)
+        self.assertTrue(nhist == 0)
+        self.assertTrue(nhist_undone == 0)
 
         # save the new layout
         new_layout = mg.get_layout()
