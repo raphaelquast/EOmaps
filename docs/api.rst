@@ -762,13 +762,17 @@ You can fix individual color channels by passing a list with 1 element, e.g.:
 
 It is possible to combine multiple ``EOmaps`` maps and/or ordinary ``matpltolib`` plots in one figure.
 
+The **figure** used by a ``Maps`` object is set via the ``f`` argument, e.g.: ``m = Maps(f=...)``.
+If no figure is provided, a new figure is created whenever you initialize a ``Maps`` object.
+The figure-instance of an existing ``Maps`` object is accessible via ``m.f``
 
-The **figure** used by a ``Maps`` object is set via the ``f`` argument, e.g.: ``m = Maps(f=...)``
 
-- If no figure is provided, a new figure is created whenever you initialize a ``Maps`` object.
-- The figure-instance of an existing ``Maps`` object is accessible via ``m.f``
+- To add a map to an existing figure, use ``m2 = m.new_map()`` (requires EOmaps >= v6.1) or pass the figure-instance on initialization of a new ``Maps`` object.
+- To add a ordinary ``matplotlib`` plot to a figure containing an eomaps-map, use ``m.f.add_subplot()`` or ``m.f.add_axes()``.
 
-The **initial position of the axes** used by a ``Maps`` object is set via the ``ax`` argument, e.g.: ``m = Maps(ax=...)``
+
+The **initial position of the axes** used by a ``Maps`` object is set via the ``ax`` argument,
+e.g.: ``m = Maps(ax=...)`` or ``m2 = m.new_map(ax=...)``
 
 - The syntax for positioning axes is similar to matplotlibs ``f.add_subplot()`` or ``f.add_axes()``
 - The axis-instance of an existing ``Maps`` object is accessible via ``m.ax``
@@ -778,6 +782,17 @@ The **initial position of the axes** used by a ``Maps`` object is set via the ``
 .. note::
 
     Make sure to have a look at the :ref:`layout_editor` on how to re-position and re-scale axes to arbitrary positions!
+
+
+.. currentmodule:: eomaps
+
+.. autosummary::
+    :toctree: generated
+    :nosignatures:
+    :template: only_names_in_toc.rst
+
+    Maps
+    Maps.new_map
 
 
 In the following, the most commonly used cases are introduced:
@@ -818,7 +833,7 @@ To position the map in a (virtual) grid, one of the following options are possib
     |     m = Maps(ax=(2, 2, 1))                         |                                    |
     |     # ----- add another Map to the same figure     |                                    |
     |     # position = item 3 of a 2x2 grid              |                                    |
-    |     m2 = Maps(f=m.f, ax=(2, 2, 3))                 |                                    |
+    |     m2 = m.new_map(ax=(2, 2, 3))                   |                                    |
     |     # ----- add a normal matplotlib axes           |                                    |
     |     # position = second item of a 1x2 grid         |                                    |
     |     ax = m.f.add_subplot(1, 2, 2)                  |                                    |
@@ -864,8 +879,8 @@ To position the map in a (virtual) grid, one of the following options are possib
     |     # ----- initialize a figure with an EOmaps map |                                    |
     |     m = Maps(ax=221)                               |                                    |
     |     # ----- add 2 more Maps to the same figure     |                                    |
-    |     m2 = Maps(f=m.f, ax=222)                       |                                    |
-    |     m3 = Maps(f=m.f, ax=223)                       |                                    |
+    |     m2 = m.new_map(ax=222)                         |                                    |
+    |     m3 = m.new_map(ax=223)                         |                                    |
     |     # ----- add a normal matplotlib axes           |                                    |
     |     ax = m.f.add_subplot(224)                      |                                    |
     +----------------------------------------------------+------------------------------------+
@@ -883,7 +898,7 @@ To position the map in a (virtual) grid, one of the following options are possib
     |                                              |                                    |
     |     gs = GridSpec(2, 2)                      |                                    |
     |     m = Maps(ax=gs[0,0])                     |                                    |
-    |     m2 = Maps(f= m.f, ax=gs[0,1])            |                                    |
+    |     m2 = m.new_map(ax=gs[0,1])               |                                    |
     |     ax = m.f.add_subplot(gs[1,:])            |                                    |
     +----------------------------------------------+------------------------------------+
 
@@ -968,7 +983,7 @@ Here's an example to show how it works:
     |         m.cb.click.attach.mark(radius=20, fc="none", ec="r", lw=2)                  |                                                      |
     |                                                                                     |                                                      |
     |         # Add another map to the figure                                             |                                                      |
-    |         m2 = Maps(f=m.f, ax=224, crs=Maps.CRS.Mollweide())                          |                                                      |
+    |         m2 = m.new_map(ax=224, crs=Maps.CRS.Mollweide())                            |                                                      |
     |         m2.add_feature.preset.coastline()                                           |                                                      |
     |         m2.add_feature.preset.ocean()                                               |                                                      |
     |         m2.cb.click.attach.mark(radius=20, fc="none", ec="r", lw=2, n=200)          |                                                      |
