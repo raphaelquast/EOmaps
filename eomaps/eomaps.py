@@ -2779,17 +2779,17 @@ class Maps(object):
             showlayer_name = self.BM._get_showlayer_name(layer=layer)
             layer_with_bg = "|".join(["__BG__", showlayer_name])
             self.show_layer(layer_with_bg)
-            sn = self._get_snapshot(layer=layer_with_bg)
+            sn = self._get_snapshot()
             # restore the previous layer
             self.BM._refetch_layer(layer_with_bg)
             self.show_layer(initial_layer)
         else:
             if layer is not None:
                 self.show_layer(layer)
-                sn = self._get_snapshot(layer=layer)
+                sn = self._get_snapshot()
                 self.show_layer(initial_layer)
             else:
-                sn = self._get_snapshot(layer=layer)
+                sn = self._get_snapshot()
 
         display(Image.fromarray(sn, "RGBA"), display_id=True, clear=clear)
 
