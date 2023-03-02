@@ -2867,6 +2867,9 @@ You can use it to simply drag the axes the mouse to the desired locations and ch
     |                                                                                         |                                               |
     | - Press ``0`` to deactivate **"snap-to-grid"**                                          |                                               |
     |                                                                                         |                                               |
+    | Press ``control + z`` to undo the last step                                             |                                               |
+    | Press ``control + y`` to redo the last undone step                                      |                                               |
+    |                                                                                         |                                               |
     +-----------------------------------------------------------------------------------------+-----------------------------------------------+
 
 
