@@ -60,11 +60,15 @@ class WMS_GEBCO(WMSBase):
 
     def __init__(self, m=None):
         self.m = m
-        self.wmslayers = [
-            key
-            for key in self.m.add_wms.GEBCO.add_layer.__dict__.keys()
-            if not (key in ["m"] or key.startswith("_"))
-        ]
+        try:
+            self.wmslayers = [
+                key
+                for key in self.m.add_wms.GEBCO.add_layer.__dict__.keys()
+                if not (key in ["m"] or key.startswith("_"))
+            ]
+        except Exception as ex:
+            self.wmslayers = []
+            print("EOmaps: Problem while fetching wmslayers for GEBCO", ex)
 
     def do_add_layer(self, wmslayer, layer):
         wms = getattr(self.m.add_wms.GEBCO.add_layer, wmslayer)
@@ -78,11 +82,15 @@ class WMS_CAMS(WMSBase):
 
     def __init__(self, m=None):
         self.m = m
-        self.wmslayers = [
-            key
-            for key in self.m.add_wms.CAMS.add_layer.__dict__.keys()
-            if not (key in ["m"] or key.startswith("_"))
-        ]
+        try:
+            self.wmslayers = [
+                key
+                for key in self.m.add_wms.CAMS.add_layer.__dict__.keys()
+                if not (key in ["m"] or key.startswith("_"))
+            ]
+        except Exception as ex:
+            self.wmslayers = []
+            print("EOmaps: Problem while fetching wmslayers for CAMS", ex)
 
     def do_add_layer(self, wmslayer, layer):
         wms = getattr(self.m.add_wms.CAMS.add_layer, wmslayer)
@@ -108,11 +116,15 @@ class WMS_NASA_GIBS(WMSBase):
         else:
             self.usewms = self.m.add_wms.NASA_GIBS.EPSG_3857
 
-        self.wmslayers = [
-            key
-            for key in self.usewms.add_layer.__dict__.keys()
-            if not (key in ["m"] or key.startswith("_"))
-        ]
+        try:
+            self.wmslayers = [
+                key
+                for key in self.usewms.add_layer.__dict__.keys()
+                if not (key in ["m"] or key.startswith("_"))
+            ]
+        except Exception as ex:
+            self.wmslayers = []
+            print("EOmaps: Problem while fetching wmslayers for NASA_GIBS", ex)
 
     def do_add_layer(self, wmslayer, layer):
         wms = getattr(self.usewms.add_layer, wmslayer)
@@ -127,15 +139,23 @@ class WMS_Austria(WMSBase):
     def __init__(self, m=None):
         self.m = m
 
-        self._AT_layers = [
-            "Austria__" + key
-            for key in self.m.add_wms.Austria.AT_basemap.add_layer.__dict__
-        ]
+        try:
+            self._AT_layers = [
+                "Austria__" + key
+                for key in self.m.add_wms.Austria.AT_basemap.add_layer.__dict__
+            ]
+        except Exception as ex:
+            self._AT_layers = []
+            print("EOmaps: Problem while fetching wmslayers for AT_Austria", ex)
 
-        self._Wien_layers = [
-            "Wien__" + key
-            for key in self.m.add_wms.Austria.Wien_basemap.add_layer.__dict__
-        ]
+        try:
+            self._Wien_layers = [
+                "Wien__" + key
+                for key in self.m.add_wms.Austria.Wien_basemap.add_layer.__dict__
+            ]
+        except Exception as ex:
+            self._Wien_layers = []
+            print("EOmaps: Problem while fetching wmslayers for AT_Wien", ex)
 
         self.wmslayers = [*self._AT_layers, *self._Wien_layers]
 
@@ -161,27 +181,51 @@ class WMS_OSM(WMSBase):
 
     def __init__(self, m=None):
         self.m = m
-        self.wmslayers = [
-            key
-            for key in self.m.add_wms.OpenStreetMap.add_layer.__dict__.keys()
-            if not (key in ["m"] or key.startswith("_"))
-        ]
+        try:
+            self.wmslayers = [
+                key
+                for key in self.m.add_wms.OpenStreetMap.add_layer.__dict__.keys()
+                if not (key in ["m"] or key.startswith("_"))
+            ]
+        except Exception as ex:
+            self.wmslayers = []
+            print("EOmaps: Problem while fetching wmslayers for OSM", ex)
 
-        self._terrestis = [
-            "Terrestis__" + i
-            for i in m.add_wms.OpenStreetMap.OSM_terrestis.add_layer.__dict__
-        ]
-        self._mundialis = [
-            "Mundialis__" + i
-            for i in m.add_wms.OpenStreetMap.OSM_mundialis.add_layer.__dict__
-        ]
-        self._OSM_landuse = [
-            "OSM_landuse__" + i
-            for i in m.add_wms.OpenStreetMap.OSM_landuse.add_layer.__dict__
-        ]
-        self._OSM_wms = [
-            "OSM_wms__" + i for i in m.add_wms.OpenStreetMap.OSM_wms.add_layer.__dict__
-        ]
+        try:
+            self._terrestis = [
+                "Terrestis__" + i
+                for i in m.add_wms.OpenStreetMap.OSM_terrestis.add_layer.__dict__
+            ]
+        except Exception as ex:
+            self._terrestis = []
+            print("EOmaps: Problem while fetching wmslayers for OSM_terrestis", ex)
+
+        try:
+            self._mundialis = [
+                "Mundialis__" + i
+                for i in m.add_wms.OpenStreetMap.OSM_mundialis.add_layer.__dict__
+            ]
+        except Exception as ex:
+            self._mundialis = []
+            print("EOmaps: Problem while fetching wmslayers for OSM_mundialis", ex)
+
+        try:
+            self._OSM_landuse = [
+                "OSM_landuse__" + i
+                for i in m.add_wms.OpenStreetMap.OSM_landuse.add_layer.__dict__
+            ]
+        except Exception as ex:
+            self._OSM_landuse = []
+            print("Problem while fetching wmslayers for OSM_landuse", ex)
+
+        try:
+            self._OSM_wms = [
+                "OSM_wms__" + i
+                for i in m.add_wms.OpenStreetMap.OSM_wms.add_layer.__dict__
+            ]
+        except Exception as ex:
+            self._OSM_wms = []
+            print("Problem while fetching wmslayers for OSM_wms", ex)
 
         self.wmslayers += self._terrestis
         self.wmslayers += self._mundialis
@@ -223,8 +267,11 @@ class WMS_S2_cloudless(WMSBase):
 
     def __init__(self, m=None):
         self.m = m
-        wmslayers = sorted(self.m.add_wms.S2_cloudless.layers)
-        self.wmslayers = wmslayers
+        try:
+            self.wmslayers = sorted(self.m.add_wms.S2_cloudless.layers)
+        except Exception as ex:
+            self.wmslayers = []
+            print("EOmaps: Problem while fetching wmslayers for S2_cloudless", ex)
 
     def do_add_layer(self, wmslayer, layer):
         wms = getattr(self.m.add_wms.S2_cloudless.add_layer, wmslayer)
@@ -238,7 +285,11 @@ class WMS_ESA_WorldCover(WMSBase):
 
     def __init__(self, m=None):
         self.m = m
-        self.wmslayers = self.m.add_wms.ESA_WorldCover.layers
+        try:
+            self.wmslayers = self.m.add_wms.ESA_WorldCover.layers
+        except Exception as ex:
+            self.wmslayers = []
+            print("EOmaps: Problem while fetching wmslayers for ESA_WorldCover", ex)
 
     def do_add_layer(self, wmslayer, layer):
         wms = getattr(self.m.add_wms.ESA_WorldCover.add_layer, wmslayer)
@@ -271,15 +322,22 @@ class WMS_ISRIC_SoilGrids(WMSBase):
 
         self.wmslayers = []
         for l in subs:
-            self.wmslayers.extend(
-                [
-                    key
-                    for key in getattr(
-                        self.m.add_wms.ISRIC_SoilGrids, l
-                    ).add_layer.__dict__.keys()
-                    if not (key in ["m"] or key.startswith("_"))
-                ]
-            )
+            try:
+                self.wmslayers.extend(
+                    [
+                        key
+                        for key in getattr(
+                            self.m.add_wms.ISRIC_SoilGrids, l
+                        ).add_layer.__dict__.keys()
+                        if not (key in ["m"] or key.startswith("_"))
+                    ]
+                )
+            except Exception as ex:
+                print(
+                    "EOmaps: Problem while fetching wmslayers for ISRIC_SoilGrids "
+                    f"{subs}",
+                    ex,
+                )
 
     def do_add_layer(self, wmslayer, layer):
 
@@ -296,7 +354,11 @@ class WMS_DLR_basemaps(WMSBase):
 
     def __init__(self, m=None):
         self.m = m
-        self.wmslayers = self.m.add_wms.DLR_basemaps.layers
+        try:
+            self.wmslayers = self.m.add_wms.DLR_basemaps.layers
+        except Exception as ex:
+            self.wmslayers = []
+            print("EOmaps: Problem while fetching wmslayers for DLR_basemaps", ex)
 
     def do_add_layer(self, wmslayer, layer):
         wms = getattr(self.m.add_wms.DLR_basemaps.add_layer, wmslayer)
@@ -449,10 +511,13 @@ class AddWMSMenuButton(QtWidgets.QPushButton):
         self.layer = layer
 
     def fetch_submenu(self, wmsname):
-        # disconnect callbacks to avoid recursions
-        self.sub_menus[wmsname].aboutToShow.disconnect()
+        try:
+            # disconnect callbacks to avoid recursions
+            self.sub_menus[wmsname].aboutToShow.disconnect()
 
-        self._fetch_submenu(wmsname)
+            self._fetch_submenu(wmsname)
+        except Exception as ex:
+            print(f"EOmaps: problem while trying to fetch the submenu for {wmsname}")
 
     def _fetch_submenu(self, wmsname):
         if wmsname in getattr(Maps, "_companion_wms_submenus", dict()):
@@ -488,7 +553,7 @@ class AddWMSMenuButton(QtWidgets.QPushButton):
                 action = submenu.addAction(wmslayer)
                 action.triggered.connect(self.menu_callback_factory(wmsname, wmslayer))
 
-        except:
+        except Exception:
             print("There was a problem with the WMS: " + wmsname)
 
     @pyqtSlot()
