@@ -192,9 +192,13 @@ class Maps(object):
 
     See Also
     --------
-    MapsGrid : Initialize a grid of Maps objects
+    Maps.new_layer : Create a new layer for the map.
 
-    Maps.new_layer : Get a Maps-object that represents a new layer on the map
+    Maps.new_map : Add a new map to the figure.
+
+    Maps.new_inset_map : Add a new inset-map to the figure.
+
+    MapsGrid : Initialize a grid of Maps objects
 
     Parameters
     ----------
