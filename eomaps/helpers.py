@@ -1701,7 +1701,10 @@ class BlitManager:
                 # avoid fetching artists from the "all" layer for private layers
                 allartists = self.get_bg_artists(layer)
             else:
-                allartists = self.get_bg_artists(["all", layer])
+                if layer.startswith("__inset"):
+                    allartists = self.get_bg_artists(["__inset_all", layer])
+                else:
+                    allartists = self.get_bg_artists(["all", layer])
 
             # check if all artists are not stale
             no_stale_artists = all(not art.stale for art in allartists)
@@ -1721,9 +1724,15 @@ class BlitManager:
 
     @contextmanager
     def _make_layer_artists_visible(self, layer):
+        layers = [layer]
+        if layer.startswith("__inset_"):
+            layers.append("__inset_all")
+        else:
+            layers.append("all")
+
         try:
             for l, artists in self._bg_artists.items():
-                if l not in [layer, "all"]:
+                if l not in layers:
                     # artists on "all" are always visible!
                     # make all artists of other layers invisible
                     for a in artists:
