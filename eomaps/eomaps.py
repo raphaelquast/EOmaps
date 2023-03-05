@@ -2349,6 +2349,11 @@ class Maps(object):
         # resetted when plotting data!
 
         # ( e.g. once .set_extent is called .plot_map does NOT set the extent!)
+        if crs is not None:
+            crs = self._get_cartopy_crs(crs)
+        else:
+            crs = Maps.CRS.PlateCarree()
+
         self.ax.set_extent(extent, crs=crs)
         self._set_extent_on_plot = False
 
