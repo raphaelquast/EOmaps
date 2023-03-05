@@ -1366,16 +1366,24 @@ class BlitManager:
 
         self._clear_on_layer_change = False
 
+    def _get_all_map_axes(self):
+        maxes = {
+            m.ax for m in (self._m.parent, *self._m.parent._children) if m._new_axis_map
+        }
+        return maxes
+
+    def _get_managed_axes(self):
+        return (*self._get_all_map_axes(), *self._managed_axes)
+
     def _get_unmanaged_axes(self):
         # return a list of all axes that are not managed by the blit-manager
         # (to ensure that "unmanaged" axes are drawn as well)
 
         # EOmaps axes
-        maxes = {m.ax for m in (self._m.parent, *self._m.parent._children)}
+        managed_axes = self._get_managed_axes()
         allaxes = set(self._m.f.axes)
 
-        unmanaged_axes = allaxes.difference(maxes, self._managed_axes)
-
+        unmanaged_axes = allaxes.difference(managed_axes)
         return unmanaged_axes
 
     @property
@@ -1462,7 +1470,7 @@ class BlitManager:
                 # (done by putting the patch on the __BG__ layer!)
 
                 # get rid of the axes background patch
-                for ax_i in self._m.f.axes:
+                for ax_i in self._get_all_map_axes():
                     stack.enter_context(
                         ax_i.patch._cm_set(facecolor="none", edgecolor="none")
                     )
@@ -1683,7 +1691,7 @@ class BlitManager:
         with ExitStack() as stack:
             # get rid of the axes background patches
             # (the figure background patch is on the "__BG__" layer)
-            for ax_i in self._m.f.axes:
+            for ax_i in self._get_all_map_axes():
                 stack.enter_context(
                     ax_i.patch._cm_set(facecolor="none", edgecolor="none")
                 )
@@ -1701,7 +1709,10 @@ class BlitManager:
                 # avoid fetching artists from the "all" layer for private layers
                 allartists = self.get_bg_artists(layer)
             else:
-                allartists = self.get_bg_artists(["all", layer])
+                if layer.startswith("__inset"):
+                    allartists = self.get_bg_artists(["__inset_all", layer])
+                else:
+                    allartists = self.get_bg_artists(["all", layer])
 
             # check if all artists are not stale
             no_stale_artists = all(not art.stale for art in allartists)
@@ -1721,9 +1732,15 @@ class BlitManager:
 
     @contextmanager
     def _make_layer_artists_visible(self, layer):
+        layers = [layer]
+        if layer.startswith("__inset_"):
+            layers.append("__inset_all")
+        else:
+            layers.append("all")
+
         try:
             for l, artists in self._bg_artists.items():
-                if l not in [layer, "all"]:
+                if l not in layers:
                     # artists on "all" are always visible!
                     # make all artists of other layers invisible
                     for a in artists:
@@ -1923,6 +1940,15 @@ class BlitManager:
             f()
 
     def remove_bg_artist(self, art, layer=None):
+        # handle the "__inset_" prefix of inset-map artists
+        if (
+            layer is not None
+            and getattr(art, "axes", None) is not None
+            and art.axes.get_label() == "inset_map"
+            and not layer.startswith("__inset_")
+        ):
+            layer = "__inset_" + str(layer)
+
         removed = False
         if layer is None:
             layers = []
@@ -2183,7 +2209,7 @@ class BlitManager:
 
         # let the GUI event loop process anything it has to do
         # don't do this! it is causing infinite loops
-        cv.flush_events()
+        # cv.flush_events()
 
     def blit_artists(self, artists, bg="active", blit=True):
         """
