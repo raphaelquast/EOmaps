@@ -794,7 +794,7 @@ class Maps(object):
 
         """
         if len(args) == 0:
-            args = (211,)
+            args = (212,)
 
         kwargs.setdefault("zorder", 100)
 
