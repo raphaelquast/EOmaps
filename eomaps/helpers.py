@@ -1366,16 +1366,24 @@ class BlitManager:
 
         self._clear_on_layer_change = False
 
+    def _get_all_map_axes(self):
+        maxes = {
+            m.ax for m in (self._m.parent, *self._m.parent._children) if m._new_axis_map
+        }
+        return maxes
+
+    def _get_managed_axes(self):
+        return (*self._get_all_map_axes(), *self._managed_axes)
+
     def _get_unmanaged_axes(self):
         # return a list of all axes that are not managed by the blit-manager
         # (to ensure that "unmanaged" axes are drawn as well)
 
         # EOmaps axes
-        maxes = {m.ax for m in (self._m.parent, *self._m.parent._children)}
+        managed_axes = self._get_managed_axes()
         allaxes = set(self._m.f.axes)
 
-        unmanaged_axes = allaxes.difference(maxes, self._managed_axes)
-
+        unmanaged_axes = allaxes.difference(managed_axes)
         return unmanaged_axes
 
     @property
@@ -1462,7 +1470,7 @@ class BlitManager:
                 # (done by putting the patch on the __BG__ layer!)
 
                 # get rid of the axes background patch
-                for ax_i in self._m.f.axes:
+                for ax_i in self._get_all_map_axes():
                     stack.enter_context(
                         ax_i.patch._cm_set(facecolor="none", edgecolor="none")
                     )
@@ -1683,7 +1691,7 @@ class BlitManager:
         with ExitStack() as stack:
             # get rid of the axes background patches
             # (the figure background patch is on the "__BG__" layer)
-            for ax_i in self._m.f.axes:
+            for ax_i in self._get_all_map_axes():
                 stack.enter_context(
                     ax_i.patch._cm_set(facecolor="none", edgecolor="none")
                 )
