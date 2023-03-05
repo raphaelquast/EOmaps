@@ -3311,6 +3311,21 @@ class Maps(object):
             # variable of the parent Maps-object while keeping the figure open
             # causes all weakrefs to be garbage-collected!
             self.parent.f._EOmaps_parent = self.parent._real_self
+
+            if self.parent._cid_companion_key is None:
+                # attach a callback to show/hide the window with the "w" key
+
+                # NOTE the companion-widget is ONLY attahed to the parent map
+                # since it will identify the clicked map automatically! The
+                # widget will only be initialized on Maps-objects that create
+                # NEW axes. This is required to make sure that any additional
+                # Maps-object on the same axes will then always use the
+                # same widget. (otherwise each layer would get its own widget)
+
+                self.parent._cid_companion_key = self.f.canvas.mpl_connect(
+                    "key_press_event", self.parent._open_companion_widget_cb
+                )
+
             newfig = True
         else:
             newfig = False
@@ -3370,6 +3385,7 @@ class Maps(object):
         self.cb._init_cbs()
 
         if newax:  # only if a new axis has been created
+            self._new_axis_map = True
 
             # explicitly set initial limits to global to avoid issues if NE-features
             # are added (and clipped) before actual limits are set
@@ -3383,17 +3399,8 @@ class Maps(object):
             self._cid_xlim = self.ax.callbacks.connect(
                 "ylim_changed", self._on_ylims_change
             )
-
-            if self._cid_companion_key is None:
-                # attach a callback to show/hide the window with the "w" key
-
-                # NOTE the companion-widget is ONLY initialized on Maps-objects that
-                # create NEW axes. This is required to make sure that any additional
-                # Maps-object on the same axes will then always use the same widget.
-                # (otherwise each layer would get its own widget)
-                self._cid_companion_key = self.f.canvas.mpl_connect(
-                    "key_press_event", self._open_companion_widget_cb
-                )
+        else:
+            self._new_axis_map = False
 
         if self.parent == self:  # use == instead of "is" since the parent is a proxy!
             # only attach resize- and close-callbacks if we initialize a parent
@@ -4575,39 +4582,52 @@ class Maps(object):
         if event.key != self._companion_widget_key:
             return
 
-        if event.inaxes != self.ax:
+        clicked_map = None
+        for m in (self.parent, *self.parent._children):
+            if not m._new_axis_map:
+                # only search for Maps-object that initialized new axes
+                continue
+
+            if m.ax.contains_point((event.x, event.y)):
+                clicked_map = m
+
+        if clicked_map is None:
+            print(
+                "EOmaps: To activate the 'Companion Widget' you must "
+                "position the mouse on top of an EOmaps Map!"
+            )
             return
 
         # hide all other companion-widgets
         for m in (self.parent, *self.parent._children):
-            if m == self:
+            if m == clicked_map:
                 continue
             if m._companion_widget is not None and m._companion_widget.isVisible():
                 m._companion_widget.hide()
                 m._indicate_companion_map(False)
 
-        if self._companion_widget is None:
-            self._init_companion_widget()
+        if clicked_map._companion_widget is None:
+            clicked_map._init_companion_widget()
 
-        if self._companion_widget is not None:
-            if self._companion_widget.isVisible():
-                self._companion_widget.hide()
-                self._indicate_companion_map(False)
+        if clicked_map._companion_widget is not None:
+            if clicked_map._companion_widget.isVisible():
+                clicked_map._companion_widget.hide()
+                clicked_map._indicate_companion_map(False)
             else:
-                self._companion_widget.show()
-                self._indicate_companion_map(True)
+                clicked_map._companion_widget.show()
+                clicked_map._indicate_companion_map(True)
 
                 # execute all actions that should trigger before opening the widget
                 # (e.g. update tabs to show visible layers etc.)
-                for f in self._on_show_companion_widget:
+                for f in clicked_map._on_show_companion_widget:
                     f()
 
                 # Do NOT activate the companion widget in here!!
                 # Activating the window during the callback steals focus and
                 # as a consequence the key-released-event is never triggered
                 # on the figure and "w" would remain activated permanently.
-                self.f.canvas.key_release_event("w")
-                self._companion_widget.activateWindow()
+                clicked_map.f.canvas.key_release_event("w")
+                clicked_map._companion_widget.activateWindow()
 
     def _init_companion_widget(self, show_hide_key="w"):
         """
