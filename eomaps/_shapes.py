@@ -316,7 +316,7 @@ class shapes(object):
 
         @property
         def _initargs(self):
-            return dict(radius=self._radius, n=self.n)
+            return dict(radius=self._radius, n=self._n)
 
         @property
         def n(self):
@@ -572,7 +572,7 @@ class shapes(object):
 
         @property
         def _initargs(self):
-            return dict(radius=self._radius, radius_crs=self.radius_crs, n=self.n)
+            return dict(radius=self._radius, radius_crs=self.radius_crs, n=self._n)
 
         @property
         def n(self):
@@ -835,7 +835,7 @@ class shapes(object):
             return dict(
                 radius=self._radius,
                 radius_crs=self.radius_crs,
-                n=self.n,
+                n=self._n,
                 mesh=self.mesh,
             )
 
