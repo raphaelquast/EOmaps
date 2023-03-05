@@ -2200,7 +2200,7 @@ class BlitManager:
 
         # let the GUI event loop process anything it has to do
         # don't do this! it is causing infinite loops
-        cv.flush_events()
+        # cv.flush_events()
 
     def blit_artists(self, artists, bg="active", blit=True):
         """
