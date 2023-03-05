@@ -1940,6 +1940,15 @@ class BlitManager:
             f()
 
     def remove_bg_artist(self, art, layer=None):
+        # handle the "__inset_" prefix of inset-map artists
+        if (
+            layer is not None
+            and getattr(art, "axes", None) is not None
+            and art.axes.get_label() == "inset_map"
+            and not layer.startswith("__inset_")
+        ):
+            layer = "__inset_" + str(layer)
+
         removed = False
         if layer is None:
             layers = []
