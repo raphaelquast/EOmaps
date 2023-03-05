@@ -897,6 +897,7 @@ class Maps(object):
         inset_crs=4326,
         layer=None,
         boundary=True,
+        background_color="w",
         shape="ellipses",
         indicate_extent=True,
     ):
@@ -963,6 +964,14 @@ class Maps(object):
               "lw" (e.g. linewidth)
 
             The default is True.
+        background_color: str, tuple or None
+            The background color to use.
+
+            - if str: a matplotlib color identifier (e.g. "r", "#162347")
+            - if tuple: a RGB or RGBA tuple (values must be in the range 0-1)
+            - If None, no background patch will be drawn (e.g. transparent)
+
+            The default is "w" (e.g. white)
         shape : str, optional
             The shape to use. Can be either "ellipses", "rectangles" or "geod_circles".
             The default is "ellipses".
@@ -1051,6 +1060,7 @@ class Maps(object):
             xy_crs=xy_crs,
             radius_crs=radius_crs,
             boundary=boundary,
+            background_color=background_color,
             shape=shape,
             indicate_extent=indicate_extent,
         )
@@ -4745,6 +4755,7 @@ class _InsetMaps(Maps):
         shape="ellipses",
         indicate_extent=True,
         boundary=True,
+        background_color="w",
         **kwargs,
     ):
 
@@ -4831,6 +4842,21 @@ class _InsetMaps(Maps):
             self.indicate_inset_extent(
                 parent, layer=parent.layer, permanent=True, **extent_kwargs
             )
+
+        # add a background patch to the "all" layer
+        if background_color is not None:
+            self._add_background_patch(color=background_color, layer="all")
+
+    def _add_background_patch(self, color, layer="all"):
+        (art,) = self.ax.fill(
+            [0, 0, 1, 1],
+            [0, 1, 1, 0],
+            fc=color,
+            ec="none",
+            zorder=-np.inf,
+            transform=self.ax.transAxes,
+        )
+        self.BM.add_bg_artist(art, layer=layer)
 
     def _handle_spines(self):
         spine = self.ax.spines["geo"]
