@@ -39,7 +39,7 @@ setup(
     long_description=long_description,
     long_description_content_type="text/markdown",
     install_requires=[
-        "numpy",
+        "numpy<1.24",  # check progress of https://github.com/numba/numba/pull/8691
         "scipy",
         "pandas",
         "matplotlib>=3.4",

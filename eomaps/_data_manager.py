@@ -92,7 +92,10 @@ class DataManager:
         update_coll_on_fetch=True,
         indicate_masked_points=True,
         dynamic=False,
+        only_pick=False,
     ):
+        self._only_pick = only_pick
+
         if self.m._data_plotted:
             self._remove_existing_coll()
 
@@ -360,6 +363,8 @@ class DataManager:
         layer : str
             The layer for which the background is fetched.
         """
+        if not self.m._data_plotted:
+            return
 
         # don't re-draw while the layout-editor is active!
         if self.m.parent._layout_editor.modifier_pressed:
@@ -404,12 +409,12 @@ class DataManager:
             except Exception as ex:
                 print(ex)
 
-    def on_fetch_bg(self, layer=None, bbox=None):
+    def on_fetch_bg(self, layer=None, bbox=None, check_redraw=True):
         # TODO support providing a bbox as extent?
         if layer is None:
             layer = self.layer
         try:
-            if not self.redraw_required(layer):
+            if check_redraw and not self.redraw_required(layer):
                 return
 
             # check if the data_manager has no data assigned
@@ -426,6 +431,10 @@ class DataManager:
             s = self._get_datasize(props)
             self._print_datasize_warnings(s)
             self._set_n(s)
+
+            # stop here in case we are dealing with a pick-only dataset
+            if self._only_pick:
+                return
 
             if props["x0"].size < 1 or props["y0"].size < 1:
                 # keep original data if too low amount of data is attempted

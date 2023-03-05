@@ -496,6 +496,10 @@ class LayoutEditor:
         # indicator if multiple-axis select key is pressed or not (e.g. "shift")
         self._shift_pressed = False
 
+        self._max_hist_steps = 1000
+        self._history = list()
+        self._history_undone = list()
+
     @property
     def modifier_pressed(self):
         return self._modifier_pressed
@@ -669,6 +673,25 @@ class LayoutEditor:
             for i in (*self._ax_picked, *(cb._ax for cb in self._cb_picked))
         }
 
+    def _add_to_history(self):
+        self._history_undone.clear()
+        self._history = self._history[: self._max_hist_steps]
+        self._history.append(self.get_layout())
+
+    def _undo(self):
+        if len(self._history) > 0:
+            l = self._history.pop(-1)
+            self._history_undone.append(l)
+            self.m.apply_layout(l)
+            self.m.redraw()
+
+    def _redo(self):
+        if len(self._history_undone) > 0:
+            l = self._history_undone.pop(-1)
+            self._history.append(l)
+            self.m.apply_layout(l)
+            self.m.redraw()
+
     def cb_release(self, event):
         self._set_startpos(event)
         self._remove_snap_grid()
@@ -768,6 +791,7 @@ class LayoutEditor:
 
         self._color_axes()
         self.m.redraw()
+        self._add_to_history()
 
     def cb_move(self, event):
         if (self.f.canvas.toolbar is not None) and self.f.canvas.toolbar.mode != "":
@@ -794,6 +818,7 @@ class LayoutEditor:
             cb.set_position(bbox)
 
         self.m.redraw()
+        self._add_to_history()
 
     def cb_scroll(self, event):
         if (self.f.canvas.toolbar is not None) and self.f.canvas.toolbar.mode != "":
@@ -827,6 +852,7 @@ class LayoutEditor:
 
         self._color_axes()
         self.m.redraw()
+        self._add_to_history()
 
     def cb_key_press(self, event):
         # release shift key on every keypress
@@ -870,11 +896,17 @@ class LayoutEditor:
                 # only continue if  modifier is pressed!
                 return
 
-        if event.key == "h":
+        if event.key in ("ctrl+z", "control+z"):
+            self._undo()
+            return
+        elif event.key in ("ctrl+y", "control+y"):
+            self._redo()
+            return
+        elif event.key == "h":
             self._scale_direction = "horizontal"
         elif event.key == "v":
             self._scale_direction = "vertical"
-        elif event.key == "control":
+        elif event.key in ("control", "ctrl", "ctrl++", "ctrl+-"):
             self._scale_direction = "set_hist_size"
 
         elif event.key == "shift":
@@ -886,22 +918,22 @@ class LayoutEditor:
             self._show_snap_grid()
 
         # assign snaps with keys 0-9
-        if event.key in ["+", "-"]:
+        if event.key in ["+", "-", "ctrl++", "ctrl+-"]:
 
             class dummyevent:
                 pass
 
             d = dummyevent()
             d.key = event.key
-            d.step = 1 * {"+": 1, "-": -1}[event.key]
+            d.step = 1 * {"+": 1, "ctrl++": 1, "ctrl+-": -1, "-": -1}[event.key]
 
             self.cb_scroll(d)
 
     def cb_key_release(self, event):
         # reset scale direction on every key release event
-        if event.key in ["h", "v", "control"]:
+        if event.key in ("h", "v", "control", "ctrl", "ctrl++", "ctrl+-"):
             self._scale_direction = "both"
-        if event.key in ["shift"]:
+        if event.key in ("shift"):
             self._shift_pressed = False
 
     @property
@@ -920,6 +952,10 @@ class LayoutEditor:
         self._filepath = filepath
         self.modifier_pressed = True
         print("EOmaps: Layout Editor activated! (press 'esc' to exit and 'q' for info)")
+
+        self._history.clear()
+        self._history_undone.clear()
+        self._add_to_history()
 
         self._revert_props = []
         for ax in self.f.axes:
@@ -996,6 +1032,10 @@ class LayoutEditor:
         self.m.redraw()
 
     def _undo_draggable(self):
+
+        self._history.clear()
+        self._history_undone.clear()
+
         toolbar = getattr(self.m.f, "toolbar", None)
         if toolbar is not None:
             # Reset the axes stack to make sure the "home" "back" and "forward" buttons
@@ -2035,7 +2075,6 @@ class BlitManager:
                     pass
 
     def _get_showlayer_name(self, layer=None):
-
         # combine all layers that should be shown
         # (e.g. to add spines, backgrounds and inset-maps)
 
@@ -2046,11 +2085,11 @@ class BlitManager:
         if layer.startswith("__"):
             return layer
 
-        show_layers = [self.bg_layer, "__SPINES__"]
+        show_layers = [layer, "__SPINES__"]
 
         # show inset map layers and spines only if they contain at least 1 artist
         inset_Q = False
-        for l in self.bg_layer.split("|"):
+        for l in layer.split("|"):
             narts = len(self._bg_artists.get("__inset_" + l, []))
 
             if narts > 0:

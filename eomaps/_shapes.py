@@ -277,7 +277,7 @@ class shapes(object):
             self._m = m
             self._n = None
 
-        def __call__(self, radius=1000, n=None):
+        def __call__(self, radius=None, n=None):
             """
             Draw geodesic circles with a radius defined in meters.
 
@@ -299,6 +299,12 @@ class shapes(object):
                 The class representing the plot-shape.
 
             """
+            if radius is None:
+                raise TypeError(
+                    "EOmaps: If 'm.set_shape.geod_circles(...)' is used, "
+                    "you must provide a radius!"
+                )
+
             from . import MapsGrid  # do this here to avoid circular imports!
 
             for m in self._m if isinstance(self._m, MapsGrid) else [self._m]:

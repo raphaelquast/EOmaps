@@ -40,38 +40,45 @@ class GridLines:
 
     def set_bounds(self, bounds):
         """
-        Set the boundaries in which gridlines are drawn.
+        Set the extent of the area in which gridlines are drawn.
 
         Parameters
         ----------
-        bounds : tuple
-            (lon_min, lon_max, lat_min, lat_max)
+        bounds : tuple or None
+            A tuple of boundaries in the form:  (lon_min, lon_max, lat_min, lat_max).
+            If None, global boundaries are used (e.g. (-180, 180, -90, 90))
 
         """
+        if bounds is None:
+            bounds = (-180, 180, -90, 90)
         self._bounds = bounds
         self._redraw()
 
     def set_d(self, d):
         """
-        Set a fixed grid-distance.
+        Set a fixed gridline distance (in degrees).
 
         Parameters
         ----------
-        d : int, float or None
-            The separation of the gridlines in degrees.
-            To use a different separation for longitude/latitude, provide a tuple
-            of numbers, e.g.: `(d_lon, d_lat)`
+        d : int, float, tuple, list, numpy.array or None
+            Set the properties (separation or specific coordinates) for a fixed grid.
 
-            If None, "auto_n" is used to automatically determine an appropriate
-            grid-spacing.
+            - If `int` or `float`, the provided number is used as grid-spacing.
+            - If a `list` or `numpy.array` is provided, it is used to draw gridlines
+              at the provided coordinates.
+            - If a `tuple` of lengh 2 is provided, it represents separate assignments of
+              the aforementioned types for longitude/latitude , e.g.: `(d_lon, d_lat)`.
+            - If `None`, gridlines are automatically determined based on the "auto_n"
+              parameter.
 
+        The default is None
         """
         self._d = d
         self._redraw()
 
     def set_auto_n(self, auto_n):
         """
-        The number of gridlines to draw in the currently visible extent.
+        Set the number of (auto) gridlines to draw in the currently visible extent.
 
         Note: this is an approximate value!
 
@@ -84,6 +91,19 @@ class GridLines:
 
         """
         self._auto_n = auto_n
+        self._redraw()
+
+    def set_n(self, n):
+        """
+        Set the number of intermediate points to calculate for each gridline.
+
+        Parameters
+        ----------
+        n : int
+            Number of intermedate points.
+
+        """
+        self._n = n
         self._redraw()
 
     def _update_line_props(self, **kwargs):
@@ -100,7 +120,7 @@ class GridLines:
 
     def update_line_props(self, **kwargs):
         """
-        Update the properties of the drawn lines.
+        Set/update the properties of the drawn lines (e.g. color, linewidth etc.).
 
         Any kwargs accepted by `matplotlib.collections.LineCollection` are supported.
 
@@ -119,49 +139,60 @@ class GridLines:
         self._update_line_props(**kwargs)
         self._redraw()
 
-    @n.setter
-    def n(self, n):
-        """
-        Set the number of intermediate points to calculate for each line.
-
-        Parameters
-        ----------
-        n : int
-            Number of intermedate points.
-
-        """
-        self._n = n
-        self._redraw()
-
     def _get_lines(self):
+        lons, lats = None, None
+
         if self.d is not None:
-            if isinstance(self.d, tuple) and len(self.d) == 2:
-                dlon, dlat = self.d
+            if isinstance(self.d, tuple):
+                # tuples are used to
+                if len(self.d) == 2:
+                    if all(isinstance(i, (int, float, np.number)) for i in self.d):
+                        dlon, dlat = self.d
+                    elif all(isinstance(i, (list, np.ndarray)) for i in self.d):
+                        dlon = dlat = "manual"
+                        lons, lats = map(np.asanyarray, self.d)
+                else:
+                    raise TypeError(
+                        f"EOmaps: If you provide a tuple as grid-spacing "
+                        "'d=(dlon, dlat)' it must contain 2 items!"
+                    )
             elif isinstance(self.d, (int, float, np.number)):
                 dlon = dlat = self.d
+            elif isinstance(self.d, (list, np.ndarray)):
+                dlon = dlat = "manual"
+                lons = lats = np.asanyarray(self.d)
             else:
                 raise TypeError(f"EOmaps: d={self.d} is not a valid grid-spacing.")
 
-            if all(isinstance(i, (int, float, np.number)) for i in (dlon, dlat)):
-                lons = np.arange(self.bounds[0], self.bounds[1] + dlon, dlon)
-                lats = np.arange(self.bounds[2], self.bounds[3] + dlat, dlat)
+            # evaluate line positions if no explicit positions are provided
+            if lons is None and lats is None:
+                if all(isinstance(i, (int, float, np.number)) for i in (dlon, dlat)):
+                    lons = np.arange(self.bounds[0], self.bounds[1] + dlon, dlon)
+                    lats = np.arange(self.bounds[2], self.bounds[3] + dlat, dlat)
+                else:
+                    raise TypeError("EOmaps: dlon and dlat must be numbers!")
 
-                lines = [
-                    np.linspace([x, lats[0]], [x, lats[-1]], self.n, endpoint=True)
-                    for x in lons
-                ]
-                linesy = [
-                    np.linspace([lons[0], y], [lons[-1], y], self.n, endpoint=True)
-                    for y in lats
-                ]
-                lines.extend(linesy)
+            lines = [
+                np.linspace(
+                    [x, self.bounds[2]], [x, self.bounds[3]], self.n, endpoint=True
+                )
+                for x in np.unique(lons.clip(*self.bounds[:2]))
+            ]
+            linesy = [
+                np.linspace(
+                    [self.bounds[0], y], [self.bounds[1], y], self.n, endpoint=True
+                )
+                for y in np.unique(lats.clip(*self.bounds[2:]))
+            ]
+            lines.extend(linesy)
 
-                return np.array(lines)
+            return np.array(lines)
 
-            else:
-                raise TypeError("EOmaps: dlon and dlat must be numbers!")
         else:
             return self._get_auto_grid_lines()
+
+    def _round_up(self, a, precision=0):
+        return np.true_divide(np.ceil(a * 10**precision), 10**precision)
 
     def _get_auto_grid_lines(self):
         if isinstance(self.auto_n, tuple):
@@ -189,6 +220,12 @@ class GridLines:
         bounds[3] = min(90, bounds[3] - bounds[3] % glat + glat)
 
         dlon, dlat = (bounds[1] - bounds[0]) / nlon, (bounds[3] - bounds[2]) / nlat
+        # round auto-separation distances to 2 significant digits
+        dlon = self._round_up(dlon, -int(np.log10(dlon)) + 2)
+        dlat = self._round_up(dlat, -int(np.log10(dlat)) + 2)
+
+        if nlon == nlat:
+            dlon = dlat = min(dlon, dlat)
 
         lons = np.arange(bounds[0], min(180 + dlon, bounds[1] + 10 * dlon), dlon)
         lats = np.arange(bounds[2], min(90 + dlat, bounds[3] + 10 * dlat), dlat)
@@ -290,15 +327,19 @@ class GridFactory:
 
         Parameters
         ----------
-        d : tuple, int or float or None
-            The separation of the gridlines in degrees.
-            To use a different separation for longitude/latitude, provide a tuple
-            of numbers, e.g.: `(d_lon, d_lat)`
+        d : int, float, 2-tuple, list, numpy.array or None
+            Set the properties (separation or specific coordinates) for a fixed grid.
 
-            If None, "auto_n" is used to automatically determine an appropriate
-            grid-spacing.
-            The default is None.
-        auto_n : int or (int, int)
+            - If `int` or `float`, the provided number is used as grid-spacing.
+            - If a `list` or `numpy.array` is provided, it is used to draw gridlines
+              at the provided coordinates.
+            - If a `tuple` of lengh 2 is provided, it represents separate assignments of
+              the aforementioned types for longitude/latitude , e.g.: `(d_lon, d_lat)`.
+            - If `None`, gridlines are automatically determined based on the "auto_n"
+              parameter.
+
+            The default is None
+        auto_n : int or 2-tuple
             Only relevant if "d" is None!
             The (rough) number of gridlines to use when evaluating the automatic
             grid-spacing. To use different numbers of gridlines in each direction,
@@ -306,7 +347,7 @@ class GridFactory:
             The default is 10.
         layer : str
             The name of the layer on which the gridlines should be visible.
-        bounds : tuple
+        bounds : 4-tuple
             A tuple of boundaries to limit the gridlines to a given extent.
             (lon_min, lon_max, lat_min, lat_max)
             The default is None in which case (-180, 180, -90, 90) is used.

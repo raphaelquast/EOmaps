@@ -624,6 +624,8 @@ class ColorBar:
                 self._m.BM.add_bg_artist(a, self._m.layer)
         # we need to re-draw since the background axis size has changed!
         self._m.BM._refetch_layer(self._m.layer)
+        self._m.BM._refetch_layer("__SPINES__")
+        self._m.redraw("__SPINES__")
 
     @property
     def _axes(self):
@@ -1160,6 +1162,7 @@ class ColorBar:
 
     # @wraps(plt.Axes.tick_params)
     def tick_params(self, what="colorbar", **kwargs):
+        """Set the appearance of the colorbar (or histogram) ticks."""
         if what == "colorbar":
             self.ax_cb.tick_params(**kwargs)
         elif what == "histogram":
