@@ -2231,7 +2231,7 @@ class Maps(object):
         # resetted when plotting data!
 
         # ( e.g. once .set_extent is called .plot_map does NOT set the extent!)
-        self.ax.set_extent(extent)
+        self.ax.set_extent(extent, crs=crs)
         self._set_extent_on_plot = False
 
     def plot_map(
