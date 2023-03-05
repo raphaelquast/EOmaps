@@ -735,7 +735,7 @@ class Maps(object):
 
         return m2
 
-    def new_axes(self, ax=None, layer=None, dynamic=True, **kwargs):
+    def new_axes(self, *args, layer=None, dynamic=True, **kwargs):
         """
         Create a new matplotlib axes that shares the figure with this Maps-object.
 
@@ -750,7 +750,7 @@ class Maps(object):
 
         Parameters
         ----------
-        ax : int, list, tuple, matplotlib.Axes, matplotlib.gridspec.SubplotSpec or None
+        args : int, list, tuple, matplotlib.Axes, matplotlib.gridspec.SubplotSpec or None
             Explicitly specify the position of the axes or use already existing axes.
 
             Possible values are:
@@ -783,7 +783,9 @@ class Maps(object):
             The default is None
         kwargs :
             Additional kwargs are passed to the initialization of the
-            matplotlib axes, e.g. `matplotlib.figure.add_axes(...)`
+            matplotlib axes, e.g. `matplotlib.figure.add_subplot(...)`
+
+            The default is {'zorder': 100}
 
         Returns
         -------
@@ -791,10 +793,15 @@ class Maps(object):
             The created matplotlib axes.
 
         """
-        if ax is None:
-            ax = 212
+        if len(args) == 0:
+            args = (211,)
 
-        ax = self.f.add_axes(ax, **kwargs)
+        kwargs.setdefault("zorder", 100)
+
+        if isinstance(args[0], plt.Axes):
+            pass
+        else:
+            ax = self.f.add_subplot(*args, **kwargs)
 
         if np.allclose(self.ax.bbox.bounds, ax.bbox.bounds):
             print(
