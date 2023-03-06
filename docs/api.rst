@@ -1974,7 +1974,7 @@ Once the ``picker_name`` is specified, pick-callbacks can be attached via:
     |     from eomaps import Maps                                                |                                              |
     |     m = Maps()                                                             |                                              |
     |     # get the GeoDataFrame for a given NaturalEarth feature                |                                              |
-    |     gdf = m.add_feature.cultural_110m.admin_0_countries.get_gdf()          |                                              |
+    |     gdf = m.add_feature.cultural.admin_0_countries.get_gdf(scale=110)      |                                              |
     |                                                                            |                                              |
     |     # pick the shapes of the GeoDataFrame based on a "contains" query      |                                              |
     |     m.add_gdf(gdf, picker_name="countries", pick_method="contains")        |                                              |
@@ -2769,10 +2769,10 @@ Make sure to checkout the :ref:`layout_editor` which can be used to quickly re-p
     |     m2.add_feature.preset.countries()                          |                                            |
     |     m2.add_feature.preset.ocean()                              |                                            |
     |                                                                |                                            |
-    |     m2.add_feature.cultural_10m.urban_areas(fc="r")            |                                            |
-    |     m2.add_feature.physical_10m.rivers_europe(ec="b", lw=0.25, |                                            |
-    |                                               fc="none")       |                                            |
-    |     m2.add_feature.physical_10m.lakes_europe(fc="b")           |                                            |
+    |     m2.add_feature.cultural.urban_areas(fc="r", scale=10)      |                                            |
+    |     m2.add_feature.physical.rivers_europe(ec="b", lw=0.25,     |                                            |
+    |                                           fc="none", scale=10) |                                            |
+    |     m2.add_feature.physical.lakes_europe(fc="b", scale=10)     |                                            |
     |                                                                |                                            |
     +----------------------------------------------------------------+--------------------------------------------+
 
