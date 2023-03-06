@@ -2119,12 +2119,12 @@ Static annotations can be added to the map via ``m.add_annotation()``.
     |     # annotate an arbitrary position (in the plot-crs)                            |                                             |
     |     m.add_annotation(                                                             |                                             |
     |         xy=(20,25), text="A formula:\n $z=\sqrt{x^2+y^2}$",                       |                                             |
-    |         fontweight="bold", bbox=dict(fc=".6", ec="none", pad=2))                  |                                             |
+    |         fontweight="bold", bbox=dict(fc=".6", ec="none", pad=0.2))                |                                             |
     |     # annotate coordinates defined in arbitrary crs                               |                                             |
     |     m.add_annotation(                                                             |                                             |
     |         xy=(2873921, 6527868), xy_crs=3857, xytext=(5,5),                         |                                             |
     |         text="A location defined \nin epsg 3857", fontsize=8,                     |                                             |
-    |         rotation=-45, bbox=dict(fc="skyblue", ec="k", ls="--", pad=2))            |                                             |
+    |         rotation=-45, bbox=dict(fc="skyblue", ec="k", ls="--", pad=0.2))          |                                             |
     |                                                                                   |                                             |
     |     # functions can be used for more complex text                                 |                                             |
     |     def text(m, ID, val, pos, ind):                                               |                                             |
