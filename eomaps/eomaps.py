@@ -3749,13 +3749,15 @@ class Maps(object):
         # explicitly treat range-like indices (for very large datasets)
         ids = self._data_manager.ids
         if isinstance(ids, range):
-            ret = []
+            ind, mask = [], []
             for i in np.atleast_1d(ID):
                 if i in ids:
-                    ret.append(ids.index(i))
+
+                    found = ids.index(i)
+                    ind.append(found)
+                    mask.append(found)
                 else:
-                    ret.append(None)
-            return ret, ret
+                    ind.append(None)
 
         elif isinstance(ids, (list, np.ndarray)):
             mask = np.isin(ids, ID)
