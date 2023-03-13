@@ -8,7 +8,7 @@
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 | EOmaps is all about ``Maps`` objects.
-| To start creating a new map (in this case a plot in ``epsg=4326``, e.g. lon/lat), simply use:
+| To start creating a new map (in this case a plot in ``epsg=4326``, lon/lat projection), simply use:
 
 .. code-block:: python
 
