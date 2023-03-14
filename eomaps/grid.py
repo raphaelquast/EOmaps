@@ -24,7 +24,10 @@ class GridLines:
 
     @property
     def layer(self):
-        return self._layer
+        if self._layer is None:
+            return self.m.layer
+        else:
+            return self._layer
 
     @property
     def auto_n(self):

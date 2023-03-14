@@ -1266,9 +1266,8 @@ class ArtistEditor(QtWidgets.QWidget):
         self.artist_tabs = ArtistEditorTabs(m=self.m)
 
         self.newlayer = NewLayerWidget(m=self.m)
-        # self.newlayer.new_layer_name.returnPressed.connect(self.artist_tabs.tabBar().populate)
         # # re-populate layers on new layer creation
-        # self.newlayer.NewLayerCreated.connect(self.artist_tabs.tabBar().populate)
+        self.newlayer.NewLayerCreated.connect(self.artist_tabs.populate)
         # set active tab to the new tab on layer creation
         # self.newlayer.NewLayerCreated[str].connect(self.artist_tabs.set_current_tab_by_name)
 
