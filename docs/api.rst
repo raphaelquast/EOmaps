@@ -114,6 +114,34 @@ Once you have created your first ``Maps`` object, you can:
         m_ocean.add_feature.preset.ocean()   # add ocean-coloring to the "ocean" layer
         m.show_layer("ocean")                # show the "ocean" layer (note that it has coastlines as well!)
 
+
+.. admonition:: Artists added with methods **outside of EOmaps**
+
+    If you use methods that are **NOT provided by EOmaps**, the corresponding artists will always appear on the ``"base"`` layer by default!
+    (e.g. ``cartopy`` or ``matplotlib`` methods accessible via ``m.ax.`` or ``m.f.`` like ``m.ax.plot(...)``)
+
+    In most cases this behavior is sufficient... for more complicated use-cases, artists must be explicitly added to the **Blit Manager** (``m.BM``) so that ``EOmaps`` can handle drawing accordingly.
+
+    To put the artists on dedicated layers, use one of the the following options:
+
+    - For artists that are dynamically updated on each event, use ``m.BM.add_artist(artist, layer=...)``
+    - For "background" artists that only require updates on pan/zoom/resize, use ``m.BM.add_bg_artist(artist, layer=...)``
+
+
+    .. code-block:: python
+
+        m = Maps()
+        m.all.add_feature.preset.coastline() # add coastlines to ALL layers of the map
+
+        # draw a red X over the whole axis and put the lines
+        # as background-artists on the layer "mylayer"
+        (l1, ) = m.ax.plot([0, 1], [0, 1], lw=5, c="r", transform=m.ax.transAxes)
+        (l2, ) = m.ax.plot([0, 1], [1, 0], lw=5, c="r", transform=m.ax.transAxes)
+
+        m.BM.add_bg_artist(l1, layer="mylayer")
+        m.BM.add_bg_artist(l2, layer="mylayer")
+        m.show_layer("mylayer")
+
 .. _combine_layers:
 
 🗗 Combine & compare multiple layers
