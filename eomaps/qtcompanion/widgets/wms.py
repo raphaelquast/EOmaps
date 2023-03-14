@@ -227,34 +227,73 @@ class WMS_OSM(WMSBase):
             self._OSM_wms = []
             print("Problem while fetching wmslayers for OSM_wms", ex)
 
+        try:
+            self._OSM_wheregroup = [
+                "WhereGroup__" + i
+                for i in m.add_wms.OpenStreetMap.OSM_wheregroup.add_layer.__dict__
+            ]
+        except Exception as ex:
+            self._OSM_wheregroup = []
+            print("Problem while fetching wmslayers for OSM_wheregroup", ex)
+
+        try:
+            self._OSM_waymarkedtrails = [
+                "WaymarkedTrails__" + i
+                for i in m.add_wms.OpenStreetMap.OSM_waymarkedtrails.add_layer.__dict__
+            ]
+        except Exception as ex:
+            self._OSM_waymarkedtrails = []
+            print("Problem while fetching wmslayers for OSM_waymarkedtrails", ex)
+
+        try:
+            self._OSM_openrailwaymap = [
+                "OpenRailwayMap__" + i
+                for i in m.add_wms.OpenStreetMap.OSM_openrailwaymap.add_layer.__dict__
+            ]
+        except Exception as ex:
+            self._OSM_openrailwaymap = []
+            print("Problem while fetching wmslayers for OSM_openrailwaymap", ex)
+
+        try:
+            self._OSM_cartodb = [
+                "CartoDB__" + i
+                for i in m.add_wms.OpenStreetMap.OSM_cartodb.add_layer.__dict__
+            ]
+        except Exception as ex:
+            self._OSM_cartodb = []
+            print("Problem while fetching wmslayers for OSM_cartodb", ex)
+
         self.wmslayers += self._terrestis
         self.wmslayers += self._mundialis
         self.wmslayers += self._OSM_landuse
         self.wmslayers += self._OSM_wms
+        self.wmslayers += self._OSM_wheregroup
+        self.wmslayers += self._OSM_waymarkedtrails
+        self.wmslayers += self._OSM_openrailwaymap
+        self.wmslayers += self._OSM_cartodb
 
     def do_add_layer(self, wmslayer, layer):
 
-        if wmslayer in self._OSM_wms:
-            wms = getattr(
-                self.m.add_wms.OpenStreetMap.OSM_wms.add_layer,
-                remove_prefix(wmslayer, "OSM_wms__"),
-            )
-        elif wmslayer in self._OSM_landuse:
-            wms = getattr(
-                self.m.add_wms.OpenStreetMap.OSM_landuse.add_layer,
-                remove_prefix(wmslayer, "OSM_landuse__"),
-            )
-        elif wmslayer in self._mundialis:
-            wms = getattr(
-                self.m.add_wms.OpenStreetMap.OSM_mundialis.add_layer,
-                remove_prefix(wmslayer, "Mundialis__"),
-            )
-        elif wmslayer in self._terrestis:
-            wms = getattr(
-                self.m.add_wms.OpenStreetMap.OSM_terrestis.add_layer,
-                remove_prefix(wmslayer, "Terrestis__"),
-            )
-        else:
+        wms = None
+
+        # check if we need to remove a prefix (e.g. from the dropdown-names)
+        for layers, servicename, prefix in (
+            (self._OSM_wms, "OSM_wms", "OSM_wms__"),
+            (self._OSM_landuse, "OSM_landuse", "OSM_landuse__"),
+            (self._mundialis, "OSM_mundialis", "Mundialis__"),
+            (self._terrestis, "OSM_terrestis", "Terrestis__"),
+            (self._OSM_wheregroup, "OSM_wheregroup", "WhereGroup__"),
+            (self._OSM_waymarkedtrails, "OSM_waymarkedtrails", "WaymarkedTrails__"),
+            (self._OSM_openrailwaymap, "OSM_openrailwaymap", "OpenRailwayMap__"),
+            (self._OSM_cartodb, "OSM_cartodb", "CartoDB__"),
+        ):
+
+            if wmslayer in layers:
+                service = getattr(self.m.add_wms.OpenStreetMap, servicename, None)
+                wms = getattr(service.add_layer, remove_prefix(wmslayer, prefix))
+                break
+
+        if wms is None:
             wms = getattr(self.m.add_wms.OpenStreetMap.add_layer, wmslayer)
 
         wms(layer=layer, transparent=True)

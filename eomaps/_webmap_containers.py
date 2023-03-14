@@ -387,6 +387,10 @@ class wms_container(object):
             self._m = m
             self.add_layer = self._OSM(self._m)
 
+            self.OSM_waymarkedtrails = self._OSM_waymarkedtrails(self._m)
+            self.OSM_openrailwaymap = self._OSM_openrailwaymap(self._m)
+            self.OSM_cartodb = self._OSM_cartodb(self._m)
+
         class _OSM:
             def __init__(self, m):
                 self._m = m
@@ -448,7 +452,123 @@ class wms_container(object):
 
                     check: https://wiki.openstreetmap.org/wiki/OpenTopoMap
                     """,
-                    self.default_german.__call__.__doc__,
+                    self.OpenTopoMap.__call__.__doc__,
+                )
+
+                self.OpenRiverboatMap = _xyz_tile_service(
+                    m=self._m,
+                    url="https://a.tile.openstreetmap.fr/openriverboatmap/{z}/{x}/{y}.png",
+                    maxzoom=16,
+                    name="OSM_OpenRiverboatMap",
+                )
+                self.OpenRiverboatMap.__doc__ = combdoc(
+                    """
+                    Open Riverboat Map plans to make an open source CartoCSS map style
+                    of navigable waterways, on top of OpenStreetMap project.
+
+                    https://github.com/tilery/OpenRiverboatMap
+
+                    Note
+                    ----
+                    **LICENSE-info (without any warranty for correctness!!)**
+
+                    check:
+
+                        - https://github.com/tilery/OpenRiverboatMap
+                        - https://openstreetmap.fr
+                        - https://operations.osmfoundation.org/policies/tiles/
+
+                    """,
+                    self.OpenRiverboatMap.__call__.__doc__,
+                )
+
+                self.CyclOSM = _xyz_tile_service(
+                    m=self._m,
+                    url="https://a.tile-cyclosm.openstreetmap.fr/cyclosm/{z}/{x}/{y}.png",
+                    maxzoom=16,
+                    name="CyclOSM",
+                )
+                self.CyclOSM.__doc__ = combdoc(
+                    """
+                    CyclOSM is a bicycle-oriented map built on top of OpenStreetMap data.
+                    It aims at providing a beautiful and practical map for cyclists, no
+                    matter their cycling habits or abilities.
+
+                    https://www.cyclosm.org/
+
+                    A legend is available here: https://www.cyclosm.org/legend.html
+
+                    Note
+                    ----
+                    **LICENSE-info (without any warranty for correctness!!)**
+
+                    check:
+
+                        - https://www.cyclosm.org/
+                        - https://openstreetmap.fr
+                        - https://operations.osmfoundation.org/policies/tiles/
+
+                    """,
+                    self.CyclOSM.__call__.__doc__,
+                )
+
+                self.CyclOSM_lite = _xyz_tile_service(
+                    m=self._m,
+                    url="https://a.tile-cyclosm.openstreetmap.fr/cyclosm-lite/{z}/{x}/{y}.png",
+                    maxzoom=16,
+                    name="CyclOSM",
+                )
+
+                self.CyclOSM_lite.__doc__ = combdoc(
+                    """
+                    CyclOSM is a bicycle-oriented map built on top of OpenStreetMap data.
+                    It aims at providing a beautiful and practical map for cyclists, no
+                    matter their cycling habits or abilities.
+
+                    https://www.cyclosm.org/
+
+                    A legend is available here: https://www.cyclosm.org/legend.html
+
+                    Note
+                    ----
+                    **LICENSE-info (without any warranty for correctness!!)**
+
+                    check:
+
+                        - https://www.cyclosm.org/
+                        - https://openstreetmap.fr
+                        - https://operations.osmfoundation.org/policies/tiles/
+
+                    """,
+                    self.CyclOSM_lite.__call__.__doc__,
+                )
+
+                self.OEPNV_public_transport = _xyz_tile_service(
+                    m=self._m,
+                    url="http://tile.memomaps.de/tilegen/{z}/{x}/{y}.png",
+                    maxzoom=16,
+                    name="CyclOSM",
+                )
+
+                self.OEPNV_public_transport.__doc__ = combdoc(
+                    """
+                    We display worldwide public transport facilities on a uniform map,
+                    so that you can forget about browsing individual operators websites.
+
+                    https://www.öpnvkarte.de
+
+                    Note
+                    ----
+                    **LICENSE-info (without any warranty for correctness!!)**
+
+                    check:
+
+                        - https://www.öpnvkarte.de
+                        - https://memomaps.de/
+                        - https://operations.osmfoundation.org/policies/tiles/
+
+                    """,
+                    self.OEPNV_public_transport.__call__.__doc__,
                 )
 
                 self.stamen_toner = _xyz_tile_service(
@@ -578,6 +698,138 @@ class wms_container(object):
 
                 self.stamen_watercolor.__doc__ = stamen_watercolor_doc
 
+        class _OSM_waymarkedtrails:
+            def __init__(self, m):
+                self._m = m
+
+                self.add_layer = self._add_layer(m)
+
+            class _add_layer:
+                def __init__(self, m):
+                    for v in [
+                        "hiking",
+                        "cycling",
+                        "mtb",
+                        "slopes",
+                        "riding",
+                        "skating",
+                    ]:
+
+                        srv = _xyz_tile_service(
+                            m,
+                            (
+                                "https://tile.waymarkedtrails.org/"
+                                + v
+                                + "/{z}/{x}/{y}.png"
+                            ),
+                            name=f"OSM_WaymarkedTrails_{v}",
+                        )
+
+                        setattr(self, v, srv)
+
+                        getattr(self, v).__doc__ = combdoc(
+                            (
+                                f"WaymarkedTrails {v} layer\n"
+                                "\n"
+                                "Note\n"
+                                "----\n"
+                                "**LICENSE-info (without any warranty for correctness!!)**\n"
+                                "\n"
+                                f"check: https://{v}.waymarkedtrails.org/#help-legal\n"
+                            ),
+                            getattr(self, v).__call__.__doc__,
+                        )
+
+        class _OSM_openrailwaymap:
+            def __init__(self, m):
+                self._m = m
+
+                self.add_layer = self._add_layer(m)
+
+            class _add_layer:
+                def __init__(self, m):
+                    for v in [
+                        "standard",
+                        "maxspeed",
+                        "signals",
+                        "electrification",
+                        "gauge",
+                    ]:
+
+                        srv = _xyz_tile_service(
+                            m,
+                            (
+                                "https://a.tiles.openrailwaymap.org/"
+                                + v
+                                + "/{z}/{x}/{y}.png"
+                            ),
+                            name=f"OSM_OpenRailwayMap_{v}",
+                        )
+
+                        setattr(self, v, srv)
+
+                        getattr(self, v).__doc__ = combdoc(
+                            (
+                                f"OpenRailwayMap {v} layer\n"
+                                "\n"
+                                "Note\n"
+                                "----\n"
+                                "**LICENSE-info (without any warranty for correctness!!)**\n"
+                                "\n"
+                                f"check: https://wiki.openstreetmap.org/wiki/OpenRailwayMap/API\n"
+                            ),
+                            getattr(self, v).__call__.__doc__,
+                        )
+
+        class _OSM_cartodb:
+            def __init__(self, m):
+                self._m = m
+
+                self.add_layer = self._add_layer(m)
+
+            class _add_layer:
+                def __init__(self, m):
+                    for v in [
+                        "light_all",
+                        "dark_all",
+                        "light_nolabels",
+                        "light_only_labels",
+                        "dark_nolabels",
+                        "dark_only_labels",
+                        "base-antique",
+                        "rastertiles/voyager",
+                        "rastertiles/voyager_nolabels",
+                        "rastertiles/voyager_only_labels",
+                        "rastertiles/voyager_labels_under",
+                    ]:
+
+                        srv = _xyz_tile_service(
+                            m,
+                            (
+                                "https://cartodb-basemaps-a.global.ssl.fastly.net/"
+                                + v
+                                + "/{z}/{x}/{y}.png"
+                            ),
+                            name=f"OSM_CartoDB_{v}",
+                        )
+
+                        name = v.replace(r"/", "_").replace("-", "_")
+
+                        setattr(self, name, srv)
+
+                        getattr(self, name).__doc__ = combdoc(
+                            (
+                                f"CartoDB basemap {v} layer\n"
+                                "\n"
+                                "Note\n"
+                                "----\n"
+                                "**LICENSE-info (without any warranty for correctness!!)**\n"
+                                "\n"
+                                f"check: https://github.com/CartoDB/basemap-styles\n"
+                            ),
+                            getattr(self, name).__call__.__doc__,
+                        )
+
         @property
         @lru_cache()
         def OSM_terrestis(self):
@@ -616,6 +868,30 @@ class wms_container(object):
 
                 ... this service is hosted by Mundialis... check:
                 https://www.mundialis.de/en/ows-mundialis/
+                """,
+            )
+            return WMS
+
+        @property
+        @lru_cache()
+        def OSM_wheregroup(self):
+            WMS = _WebServiec_collection(
+                m=self._m,
+                service_type="wms",
+                url="https://osm-demo.wheregroup.com/service?REQUEST=GetCapabilities",
+            )
+            WMS.__doc__ = combdoc(
+                type(self).__doc__,
+                """
+                Note
+                ----
+                **LICENSE-info (without any warranty for correctness!!)**
+
+                ... this service is hosted by WhereGroup...
+
+                It is ONLY allowed for private use and testing! For more details, check:
+
+                https://wheregroup.com/kontakt/
                 """,
             )
             return WMS
