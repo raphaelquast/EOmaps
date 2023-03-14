@@ -2860,7 +2860,7 @@ class Maps(object):
                 self.show_layer(layer_with_bg)
 
             redraw = False
-            if dpi is not None and dpi != self.f.dpi:
+            if dpi is not None and dpi != self.f.dpi or "bbox_inches" in kwargs:
                 redraw = True
 
                 # clear all cached background layers before saving to make sure they
