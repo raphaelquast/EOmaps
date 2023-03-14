@@ -1322,6 +1322,9 @@ class BlitManager:
         self._bg_artists = dict()
         self._bg_layers = dict()
 
+        # the name of the layer at which all "unmanaged" artists are drawn
+        self._unmanaged_artists_layer = "base"
+
         # grab the background on every draw
         self.cid = self.canvas.mpl_connect("draw_event", self.on_draw)
 
@@ -1617,6 +1620,9 @@ class BlitManager:
             layer_artists = set(self._bg_artists.get(l, []))
             artists = artists.union(layer_artists)
 
+            if l == self._unmanaged_artists_layer:
+                artists = artists.union(self._get_unmanaged_artists())
+
         artists = sorted(artists, key=self._bg_artists_sort)
 
         return artists
@@ -1727,6 +1733,7 @@ class BlitManager:
                 for art in allartists:
                     if art not in self._hidden_artists:
                         art.draw(cv.get_renderer())
+                        art.stale = False
 
                 self._bg_layers[layer] = cv.copy_from_bbox(bbox)
 
@@ -1806,8 +1813,19 @@ class BlitManager:
 
     def on_draw(self, event):
         """Callback to register with 'draw_event'."""
-
         cv = self.canvas
+
+        if "RendererBase._draw_disabled" in cv.renderer.draw_image.__qualname__:
+            # TODO this fixes issues when saving figues with a "tight" bbox, e.g.:
+            # m.savefig(bbox_inches='tight', pad_inches=0.1)
+
+            # This workaround is necessary but the implementation is suboptimal since
+            # it relies on the __qualname__ to identify if the
+            # `matplotlib.backend_bases.RendererBase._draw_disabled()` context is active
+            # The reason why the "_draw_disabled" context has to be handled explicitly
+            # is because otherwise empty backgrounds would be fetched (and cached) by
+            # the draw-event and the export would result in an empty figure.
+            return
 
         if event is not None:
             if event.canvas != cv:
@@ -1819,6 +1837,15 @@ class BlitManager:
                 self._layers_to_refetch.clear()
                 self._refetch_bg = False
             else:
+
+                # in case there is a stale (unmanaged) artists and the
+                # stale-artist layer is attempted to be drawn, re-draw the
+                # cached background for the unmanaged-artists layer
+                if self._unmanaged_artists_layer in self._bg_layer.split("|") and any(
+                    a.stale for a in self._get_unmanaged_artists()
+                ):
+                    self._refetch_layer(self._unmanaged_artists_layer)
+
                 # remove all cached backgrounds that were tagged for refetch
                 while len(self._layers_to_refetch) > 0:
                     self._bg_layers.pop(self._layers_to_refetch.pop(), None)
@@ -2054,6 +2081,29 @@ class BlitManager:
 
         for a in sorted(allartists, key=self._get_artist_zorder):
             fig.draw_artist(a)
+
+    def _get_unmanaged_artists(self):
+        # return all artists not explicitly managed by the blit-manager
+        # (e.g. any artist added via cartopy or matplotlib functions)
+        managed_artists = set(
+            chain(*self._bg_artists.values(), *self._artists.values())
+        )
+
+        axes = {m.ax for m in (self._m, *self._m._children)}
+
+        allartists = set()
+        for ax in axes:
+            axartists = {
+                *ax._children,
+                ax.title,
+                ax._left_title,
+                ax._right_title,
+                *([ax.legend_] if ax.legend_ is not None else []),
+            }
+
+            allartists.update(axartists)
+
+        return allartists.difference(managed_artists)
 
     def _clear_temp_artists(self, method, forward=True):
         # clear artists from connected methods
