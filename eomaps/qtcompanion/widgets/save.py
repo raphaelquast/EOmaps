@@ -32,7 +32,8 @@ class TightBboxCheckBox(QtWidgets.QCheckBox):
                 e.globalPos(),
                 "<h3>Export figure with a tight bbox</h3>"
                 "If checked, The exported figure will use the smallest "
-                "bounding-box that contains all artists.",
+                "bounding-box that contains all artists. "
+                "The input-box can be used to add a padding (in inches) on all sides.",
             )
 
 
