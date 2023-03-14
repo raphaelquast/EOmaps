@@ -341,7 +341,11 @@ class wms_container(object):
 
             - default: standard OSM layer
             - default_german: standard OSM layer in german
-            - standard: standard OSM layer
+            - CyclOSM: a bycicle oriented style
+            - OEPNV_public_transport: a layer indicating global public transportation
+            - OpenRiverboatMap: a style to navigate waterways
+            - OpenTopoMap: SRTM + OSM for nice topography
+            -
             - stamen_toner: Black and white style by stamen
                 - stamen_toner_lines
                 - stamen_toner_background
@@ -355,6 +359,10 @@ class wms_container(object):
                 - stamen_terrain_background
             - OSM_terrestis: Styles hosted as free WMS service by Terrestis
             - OSM_mundialis: Styles hosted as free WMS service by Mundialis
+            - OSM_cartodb: Styles hosted as free WMS service by CartoDB
+            - OSM_wheregroup: Styles hosted as free WMS service by WhereGroup
+            - OSM_openrailwaymap: layers provided by OSM-OpenRailwayMap
+            - OSM_waymarkedtrails: layers provided by OSM-WayMarkedTrails
             - OSM_wms and OSM_landuse: WMS hosted by Heidelberg Institute for
               Geoinformation Technology
 
@@ -369,8 +377,15 @@ class wms_container(object):
 
         - for OSM_terrestis: https://www.terrestris.de/en/openstreetmap-wms/
         - for OSM_mundialis: https://www.mundialis.de/en/ows-mundialis/
+        - for OSM_cartodb: https://github.com/CartoDB/basemap-styles
+        - for OSM_WhereGroup: https://wheregroup.com/kontakt/
         - for OSM_wms and OSM_landuse : https://heigit.org
-
+        - for CyclOSM: https://www.cyclosm.org
+        - for OEPNV: http://öpnvkarte.de
+        - for Stamen: http://maps.stamen.com
+        - for OpenRailwayMap: https://wiki.openstreetmap.org/wiki/OpenRailwayMap
+        - for OSM_WaymarkedTrails: https://waymarkedtrails.org
+        - for OpenTopoMap: https://wiki.openstreetmap.org/wiki/OpenTopoMap
         """
 
         WMS = self._OpenStreetMap(self._m)
