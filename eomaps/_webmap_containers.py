@@ -714,10 +714,25 @@ class wms_container(object):
                 self.stamen_watercolor.__doc__ = stamen_watercolor_doc
 
         class _OSM_waymarkedtrails:
+            """
+            OSM layers from WaymarkedTrails.
+
+            Note
+            ----
+            **LICENSE-info (withowayut any warranty for correctness!!)**
+
+            check:
+
+            - https://waymarkedtrails.org
+            - https://hiking.waymarkedtrails.org/#help-legal
+
+            """
+
             def __init__(self, m):
                 self._m = m
 
                 self.add_layer = self._add_layer(m)
+                self.layers = list(self.add_layer.__dict__)
 
             class _add_layer:
                 def __init__(self, m):
@@ -756,10 +771,24 @@ class wms_container(object):
                         )
 
         class _OSM_openrailwaymap:
+            """
+            OSM layers from OpenRailwayMap.
+
+            Note
+            ----
+            **LICENSE-info (withowayut any warranty for correctness!!)**
+
+            check:
+
+            - https://wiki.openstreetmap.org/wiki/OpenRailwayMap/API
+
+            """
+
             def __init__(self, m):
                 self._m = m
 
                 self.add_layer = self._add_layer(m)
+                self.layers = list(self.add_layer.__dict__)
 
             class _add_layer:
                 def __init__(self, m):
@@ -797,10 +826,25 @@ class wms_container(object):
                         )
 
         class _OSM_cartodb:
+            """
+            OSM basemap styles hosted by CartoDB.
+
+            Note
+            ----
+            **LICENSE-info (without any warranty for correctness!!)**
+
+            check:
+
+            - https://github.com/CartoDB/basemap-styles
+            - https://carto.com
+
+            """
+
             def __init__(self, m):
                 self._m = m
 
                 self.add_layer = self._add_layer(m)
+                self.layers = list(self.add_layer.__dict__)
 
             class _add_layer:
                 def __init__(self, m):
