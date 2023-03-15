@@ -448,6 +448,39 @@ class wms_container(object):
                     self.default_german.__call__.__doc__,
                 )
 
+                self.humanitarian = _xyz_tile_service(
+                    self._m,
+                    "https://a.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png",
+                    name="OSM_humanitarian",
+                )
+                self.humanitarian.__doc__ = combdoc(
+                    """
+                    OpenStreetMap's Humanitarian style
+
+                    Focuses on the developing countries with an emphasis on features
+                    related to development and humanitarian work.
+
+                    Good contrasting style in terms of overall colour choices. Terrain
+                    shading. Many new/different icons (particularly for basic amenities
+                    in developing countries) and more nuanced surface track-type
+                    rendering.
+
+                    https://www.openstreetmap.org/
+                    https://wiki.openstreetmap.org/wiki/HOT_style
+                    https://wiki.openstreetmap.org/wiki/Humanitarian_OSM_Team
+
+                    Note
+                    ----
+                    **LICENSE-info (without any warranty for correctness!!)**
+
+                    check:
+
+                    - https://operations.osmfoundation.org/policies/tiles/
+                    - https://www.openstreetmap.fr/fonds-de-carte/
+                    """,
+                    self.humanitarian.__call__.__doc__,
+                )
+
                 self.OpenTopoMap = _xyz_tile_service(
                     m=self._m,
                     url="https://c.tile.opentopomap.org/{z}/{x}/{y}.png",
@@ -495,6 +528,38 @@ class wms_container(object):
 
                     """,
                     self.OpenRiverboatMap.__call__.__doc__,
+                )
+
+                self.OpenSeaMap = _xyz_tile_service(
+                    m=self._m,
+                    url="http://tiles.openseamap.org/seamark/{z}/{x}/{y}.png",
+                    maxzoom=16,
+                    name="OSM_OpenSeaMap",
+                )
+                self.OpenSeaMap.__doc__ = combdoc(
+                    """
+                    OpenSeaMap is an open source, worldwide project to create a free
+                    nautical chart. There is a great need for freely accessible maps
+                    for navigation purposes, so in 2009, OpenSeaMap came into life.
+                    The goal of OpenSeaMap is to record interesting and useful nautical
+                    information for the sailor which is then incorporated into a free
+                    map of the world. This includes beacons, buoys and other navigation
+                    aids as well as port information, repair shops and chandlerys.
+                    OpenSeaMap is a subproject of OpenStreetMap and uses its database.
+
+                    http://openseamap.org
+
+                    Note
+                    ----
+                    **LICENSE-info (without any warranty for correctness!!)**
+
+                    check:
+
+                        - https://wiki.openstreetmap.org/wiki/OpenSeaMap
+                        - https://operations.osmfoundation.org/policies/tiles/
+
+                    """,
+                    self.OpenSeaMap.__call__.__doc__,
                 )
 
                 self.CyclOSM = _xyz_tile_service(
