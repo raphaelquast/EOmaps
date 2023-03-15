@@ -243,6 +243,73 @@ class wms_container(object):
 
     @property
     @lru_cache()
+    def GMRT(self):
+        """
+        Global Multi-Resolution Topography (GMRT) Synthesis
+        https://gmrt.org/
+
+        The Global Multi-Resolution Topography (GMRT) synthesis is a multi-resolutional
+        compilation of edited multibeam sonar data collected by scientists and
+        institutions worldwide, that is reviewed, processed and gridded by the GMRT
+        Team and merged into a single continuously updated compilation of global
+        elevation data. The synthesis began in 1992 as the Ridge Multibeam
+        Synthesis (RMBS), was expanded to include multibeam bathymetry data from the
+        Southern Ocean, and now includes bathymetry from throughout the global and
+        coastal oceans. GMRT is included in the ocean basemap in Google Earth
+        (since June 2011) and the GEBCO compilation since 2014.
+
+        Note
+        ----
+        **LICENSE-info (without any warranty for correctness!!)**
+
+        For use of the GMRT synthesis, an appropriate reference is:
+
+        Ryan, W. B. F., S.M. Carbotte, J. Coplan, S. O'Hara, A. Melkonian, R. Arko,
+        R.A. Weissel, V. Ferrini, A. Goodwillie, F. Nitsche, J. Bonczkowski, and
+        R. Zemsky (2009), Global Multi-Resolution Topography (GMRT) synthesis data set,
+        Geochem. Geophys. Geosyst., 10, Q03014, doi:10.1029/2008GC002332.
+        Data doi: 10.1594/IEDA.100001
+
+        (check: https://gmrt.org/about/terms_of_use.php for full details)
+
+        """
+        WMS = _WebServiec_collection(
+            m=self._m,
+            service_type="wms",
+            url="https://www.gmrt.org/services/mapserver/wms_merc?request=GetCapabilities&service=WMS&version=1.3.0",
+        )
+
+        WMS.__doc__ = type(self).GMRT.__doc__
+        return WMS
+
+    @property
+    @lru_cache()
+    def GLAD(self):
+        """
+        Several datasets from University of Maryland, Global Land Analysis and Discovery
+        (GLAD) Team.
+
+        https://glad.umd.edu/
+        https://glad.earthengine.app/
+
+        Note
+        ----
+        **LICENSE-info (without any warranty for correctness!!)**
+
+        (check: https://glad.earthengine.app/ for full details)
+
+        """
+        WMS = _WebServiec_collection(
+            m=self._m,
+            service_type="wms",
+            url="https://glad.umd.edu/mapcache/?SERVICE=WMS",
+        )
+
+        WMS.__doc__ = type(self).GLAD.__doc__
+        return WMS
+
+    @property
+    @lru_cache()
     def NASA_GIBS(self):
         """
         NASA Global Imagery Browse Services (GIBS)
