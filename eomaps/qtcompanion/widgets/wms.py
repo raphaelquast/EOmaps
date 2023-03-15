@@ -76,6 +76,50 @@ class WMS_GEBCO(WMSBase):
         self.ask_for_legend(wms, wmslayer)
 
 
+class WMS_GMRT(WMSBase):
+    layer_prefix = "GMRT_"
+    name = "GMRT"
+
+    def __init__(self, m=None):
+        self.m = m
+        try:
+            self.wmslayers = [
+                key
+                for key in self.m.add_wms.GMRT.add_layer.__dict__.keys()
+                if not (key in ["m"] or key.startswith("_"))
+            ]
+        except Exception as ex:
+            self.wmslayers = []
+            print("EOmaps: Problem while fetching wmslayers for GMRT", ex)
+
+    def do_add_layer(self, wmslayer, layer):
+        wms = getattr(self.m.add_wms.GMRT.add_layer, wmslayer)
+        wms(layer=layer)
+        self.ask_for_legend(wms, wmslayer)
+
+
+class WMS_GLAD(WMSBase):
+    layer_prefix = "GLAD_"
+    name = "GLAD"
+
+    def __init__(self, m=None):
+        self.m = m
+        try:
+            self.wmslayers = [
+                key
+                for key in self.m.add_wms.GLAD.add_layer.__dict__.keys()
+                if not (key in ["m"] or key.startswith("_"))
+            ]
+        except Exception as ex:
+            self.wmslayers = []
+            print("EOmaps: Problem while fetching wmslayers for GLAD", ex)
+
+    def do_add_layer(self, wmslayer, layer):
+        wms = getattr(self.m.add_wms.GLAD.add_layer, wmslayer)
+        wms(layer=layer)
+        self.ask_for_legend(wms, wmslayer)
+
+
 class WMS_CAMS(WMSBase):
     layer_prefix = "CAMS_"
     name = "CAMS"
@@ -430,6 +474,8 @@ class AddWMSMenuButton(QtWidgets.QPushButton):
             "ESA WorldCover": WMS_ESA_WorldCover,
             "S1GBM": WMS_S1GBM,
             "GEBCO": WMS_GEBCO,
+            "GMRT": WMS_GMRT,
+            "GLAD": WMS_GLAD,
             "NASA GIBS": WMS_NASA_GIBS,
             "CAMS": WMS_CAMS,
             "ISRIC SoilGrids": WMS_ISRIC_SoilGrids,
