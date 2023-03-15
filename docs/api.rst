@@ -1734,6 +1734,8 @@ Pre-defined WebMap services:
     S1GBM
     S2_cloudless
     GEBCO
+    GMRT
+    GLAD
     CAMS
     DLR_basemaps
 
