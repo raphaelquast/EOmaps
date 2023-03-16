@@ -2937,7 +2937,7 @@ class Maps(object):
 
     def join_limits(self, *args):
         """
-        Join the x- and y- limits of the axes (e.g. on zoom).
+        Join the x- and y- limits of the maps (crs must be equal!).
 
         Parameters
         ----------
