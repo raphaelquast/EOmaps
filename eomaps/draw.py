@@ -208,6 +208,17 @@ class ShapeDrawer:
         self._active_drawer = None
 
     def save_shapes(self, filename, **kwargs):
+        """
+        Save the drawn shapes to a file.
+
+        Parameters
+        ----------
+        filename : str
+            The path to the file to which the shapes are written.
+        kwargs :
+            Additional kwargs are passed to Geopandas.GeoDataFrame.to_file(...)
+
+        """
         if len(self.gdf) > 0:
             self.gdf.to_file(filename, **kwargs)
         else:
