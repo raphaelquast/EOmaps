@@ -21,6 +21,21 @@ def _register_imports():
     )
 
 
+class _XyzLayerCollection:
+    def __init__(self, m):
+        self._m = m
+
+    def _addlayer(self, name, url, srv_name, docstring, maxzoom=19):
+        srv = _xyz_tile_service(self._m, url, name=srv_name, maxzoom=maxzoom)
+
+        setattr(self, name, srv)
+
+        getattr(self, name).__doc__ = combdoc(
+            docstring,
+            getattr(self, name).__call__.__doc__,
+        )
+
+
 class wms_container(object):
     """
     A collection of open-access WebMap services that can be added to the maps.
@@ -1582,6 +1597,257 @@ class wms_container(object):
             )
             WMS.__doc__ = combdoc("Polarization: VH", type(self).__doc__)
             return WMS
+
+    @property
+    def OpenPlanetary(self):
+        """
+        Map layers provided by OpenPlanetary.
+
+        https://www.openplanetary.org
+
+        """
+        WMS = self._OpenPlanetary(self._m)
+        WMS.__doc__ = type(self)._OpenPlanetary.__doc__
+        return WMS
+
+    class _OpenPlanetary:
+        def __init__(self, m):
+            self._m = m
+
+            self.Moon = self._OPM_moon_basemap(self._m)
+            self.Mars = self._OPM_mars_basemap(self._m)
+
+        class _OPM_moon_basemap:
+            """
+            This basemap of the Moon in a combination of multiple raster and vector
+            datasets that provides a characteristic view for a broader audience.
+
+            https://www.openplanetary.org/opm-basemaps/opm-moon-basemap-v0-1
+
+            Note
+            ----
+            **LICENSE-info (withowayut any warranty for correctness!!)**
+
+            check:  https://www.openplanetary.org
+
+            """
+
+            def __init__(self, m):
+                self._m = m
+
+                self.add_layer = self._add_layer(m)
+                self.layers = list(self.add_layer.__dict__)
+
+            class _add_layer(_XyzLayerCollection):
+                def __init__(self, m):
+                    super().__init__(m=m)
+                    for i, v in [
+                        ("all", "all"),
+                        (1, "basemap_layer"),
+                        (2, "hillshaded_albedo"),
+                        (3, "opm_301_moon_contours_polygons_1km_interval"),
+                        (4, "opm_301_moon_nomenclature_polygons"),
+                        (5, "opm_301_apollo_sites"),
+                        (6, "opm_301_luna_sites"),
+                    ]:
+
+                        url = (
+                            "https://cartocdn-gusc.global.ssl.fastly.net/opmbuilder/api/v1/map/named/opm-moon-basemap-v0-1/"
+                            + str(i)
+                            + "/{z}/{x}/{y}.png"
+                        )
+
+                        docstring = (
+                            f"OpenPlanetary Moon basemap {v} layer\n"
+                            "\n"
+                            "Note\n"
+                            "----\n"
+                            "**LICENSE-info (without any warranty for correctness!!)**\n"
+                            "\n"
+                            f"check: https://www.openplanetary.org\n"
+                        )
+
+                        self._addlayer(v, url, f"OPM_Moon_{v}", docstring)
+
+        class _OPM_mars_basemap:
+            """
+            This basemap of the Mars in a combination of multiple raster and vector
+            datasets that provides a characteristic view for a broader audience.
+
+            https://www.openplanetary.org/opm-basemaps/opm-mars-basemap-v0-2
+
+            Note
+            ----
+            **LICENSE-info (withowayut any warranty for correctness!!)**
+
+            check:  https://www.openplanetary.org
+
+            """
+
+            def __init__(self, m):
+                self._m = m
+
+                self.add_layer = self._add_layer(m)
+                self.layers = [
+                    i for i in self.add_layer.__dict__ if not i.startswith("_")
+                ]
+
+            class _add_layer(_XyzLayerCollection):
+                def __init__(self, m):
+                    super().__init__(m=m)
+
+                    for i, v in [
+                        ("all", "all"),
+                        (1, "mars_hillshade"),
+                        (2, "opm_499_mars_contours_200m_polygons"),
+                        (3, "opm_499_mars_albedo_tes_7classes"),
+                        (4, "opm_499_mars_contours_200m_lines"),
+                        (5, "opm_499_mars_nomenclature_polygons"),
+                    ]:
+
+                        url = (
+                            "https://cartocdn-gusc.global.ssl.fastly.net/opmbuilder/api/v1/map/named/opm-mars-basemap-v0-2/"
+                            + str(i)
+                            + "/{z}/{x}/{y}.png"
+                        )
+
+                        docstring = (
+                            f"OpenPlanetary Mars basemap {v} layer\n"
+                            "\n"
+                            "Note\n"
+                            "----\n"
+                            "**LICENSE-info (without any warranty for correctness!!)**\n"
+                            "\n"
+                            f"check: https://www.openplanetary.org\n"
+                        )
+
+                        self._addlayer(v, url, f"OPM_Mars_{v}", docstring)
+
+                    docstring = f"""
+                        OpenPlanetary Mars hillshade basemap
+
+                        This basemap is a single hillshade raster data layer based on
+                        MOLA dataset.
+
+                        Note
+                        ----
+                        **LICENSE-info (without any warranty for correctness!!)**\n"
+
+                        check: https://www.openplanetary.org
+                        """
+
+                    self._addlayer(
+                        "hillshade",
+                        "https://s3.us-east-2.amazonaws.com/opmmarstiles/hillshade-tiles/{z}/{x}/{y}.png",
+                        f"OPM_Mars_hillshade",
+                        docstring=docstring,
+                        maxzoom=6,
+                    )
+
+                    docstring = f"""
+                        OpenPlanetary Mars viking_mdim21_global basemap
+
+                        This basemap is a single raster data layer based on Viking
+                        MDIM 2.1 dataset.
+
+                        Note
+                        ----
+                        **LICENSE-info (without any warranty for correctness!!)**\n"
+
+                        check: https://www.openplanetary.org
+                        """
+
+                    self._addlayer(
+                        "viking_mdim21_global",
+                        lambda x, y, z: f"http://s3-eu-west-1.amazonaws.com/whereonmars.cartodb.net/viking_mdim21_global/{z}/{x}/{2**z-1-y}.png",
+                        f"OPM_Mars_viking_mdim21_global",
+                        docstring=docstring,
+                        maxzoom=7,
+                    )
+
+                    docstring = f"""
+                        OpenPlanetary Mars celestia_mars_shaded_16k basemap
+
+                        This basemap is a single Mars texture raster data layer based
+                        on a Celestia community dataset.
+
+                        Note
+                        ----
+                        **LICENSE-info (without any warranty for correctness!!)**\n"
+
+                        check: https://www.openplanetary.org
+                        """
+
+                    self._addlayer(
+                        "celestia_mars_shaded_16k",
+                        lambda x, y, z: f"http://s3-eu-west-1.amazonaws.com/whereonmars.cartodb.net/celestia_mars-shaded-16k_global/{z}/{x}/{2**z-1-y}.png",
+                        f"OPM_Mars_celestia_mars_shaded_16k",
+                        docstring=docstring,
+                        maxzoom=5,
+                    )
+
+                    docstring = f"""
+                        OpenPlanetary Mars mola_gray basemap
+
+                        This basemap is a single shared grayscale raster data layer
+                        based on MOLA dataset.
+
+                        Note
+                        ----
+                        **LICENSE-info (without any warranty for correctness!!)**\n"
+
+                        check: https://www.openplanetary.org
+                        """
+
+                    self._addlayer(
+                        "mola_gray",
+                        lambda x, y, z: f"http://s3-eu-west-1.amazonaws.com/whereonmars.cartodb.net/mola-gray/{z}/{x}/{2**z-1-y}.png",
+                        f"OPM_Mars_mola_gray",
+                        docstring=docstring,
+                        maxzoom=9,
+                    )
+
+                    docstring = f"""
+                        OpenPlanetary Mars mola_color basemap
+
+                        This basemap is a single shared color-coded raster data layer
+                        based on MOLA dataset.
+
+                        Note
+                        ----
+                        **LICENSE-info (without any warranty for correctness!!)**\n"
+
+                        check: https://www.openplanetary.org
+                        """
+
+                    self._addlayer(
+                        "mola_color",
+                        lambda x, y, z: f"http://s3-eu-west-1.amazonaws.com/whereonmars.cartodb.net/mola-color/{z}/{x}/{2**z-1-y}.png",
+                        f"OPM_Mars_mola_color",
+                        docstring=docstring,
+                        maxzoom=6,
+                    )
+
+                    docstring = f"""
+                        OpenPlanetary Mars mola_color_noshade basemap
+
+                        This basemap is a single color-coded raster data layer based
+                        on MOLA dataset.
+
+                        Note
+                        ----
+                        **LICENSE-info (without any warranty for correctness!!)**\n"
+
+                        check: https://www.openplanetary.org
+                        """
+
+                    self._addlayer(
+                        "mola_color_noshade",
+                        lambda x, y, z: f"http://s3-eu-west-1.amazonaws.com/whereonmars.cartodb.net/mola_color-noshade_global/{z}/{x}/{2**z-1-y}.png",
+                        f"OPM_Mars_mola_color_noshade",
+                        docstring=docstring,
+                        maxzoom=6,
+                    )
 
     @property
     @lru_cache()

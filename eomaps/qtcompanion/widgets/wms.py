@@ -449,6 +449,60 @@ class WMS_DLR_basemaps(WMSBase):
         self.ask_for_legend(wms, wmslayer)
 
 
+class WMS_OpenPlanetary(WMSBase):
+    layer_prefix = "OPM_"
+    name = "OpenPlanetary"
+
+    def __init__(self, m=None):
+        self.m = m
+        self.wmslayers = []
+
+        try:
+            self._moon = [
+                "Moon__" + i
+                for i in m.add_wms.OpenPlanetary.Moon.add_layer.__dict__
+                if not i.startswith("_")
+            ]
+        except Exception as ex:
+            self._moon = []
+            print("EOmaps: Problem while fetching wmslayers for OpenPlanetary", ex)
+
+        try:
+            self._mars = [
+                "Mars__" + i
+                for i in m.add_wms.OpenPlanetary.Mars.add_layer.__dict__
+                if not i.startswith("_")
+            ]
+        except Exception as ex:
+            self._mars = []
+            print("EOmaps: Problem while fetching wmslayers for OpenPlanetary", ex)
+
+        self.wmslayers += self._moon
+        self.wmslayers += self._mars
+
+    def do_add_layer(self, wmslayer, layer):
+
+        wms = None
+
+        # check if we need to remove a prefix (e.g. from the dropdown-names)
+        for layers, servicename, prefix in (
+            (self._moon, "Moon", "Moon__"),
+            (self._mars, "Mars", "Mars__"),
+        ):
+
+            if wmslayer in layers:
+                service = getattr(self.m.add_wms.OpenPlanetary, servicename, None)
+                wms = getattr(service.add_layer, remove_prefix(wmslayer, prefix))
+                break
+
+        if wms is None:
+            print("EOmaps: the wms service {wmslayer} does not exist")
+            return
+
+        wms(layer=layer, transparent=True)
+        self.ask_for_legend(wms, wmslayer)
+
+
 # an event-filter to catch StatusTipFilter events
 # (e.g. to avoid clearing the statusbar on mouse hoover over QMenu)
 class StatusTipFilter(QObject):
@@ -481,6 +535,7 @@ class AddWMSMenuButton(QtWidgets.QPushButton):
             "ISRIC SoilGrids": WMS_ISRIC_SoilGrids,
             "DLR Basemaps": WMS_DLR_basemaps,
             "Austria Basemaps": WMS_Austria,
+            "OpenPlanetary": WMS_OpenPlanetary,
         }
 
         if self._new_layer:
