@@ -428,16 +428,20 @@ class wms_container(object):
             - OpenRiverboatMap: a style to navigate waterways
             - OpenTopoMap: SRTM + OSM for nice topography
             - stamen_toner: Black and white style by stamen
+
                 - stamen_toner_lines
                 - stamen_toner_background
                 - stamen_toner_lite
                 - stamen_toner_hybrid
                 - stamen_toner_labels
-            - stamen_watercolor: a watercolor-like style by stamen
+
             - stamen_terrain: a terrain layer by stamen
+
                 - stamen_terrain_lines
                 - stamen_terrain_labels
                 - stamen_terrain_background
+
+            - stamen_watercolor: a watercolor-like style by stamen
             - OSM_terrestis: Styles hosted as free WMS service by Terrestis
             - OSM_mundialis: Styles hosted as free WMS service by Mundialis
             - OSM_cartodb: Styles hosted as free WMS service by CartoDB
