@@ -67,14 +67,10 @@ class wms_container(object):
 
         self._m = m
 
-    @property
-    @lru_cache()
-    def ISRIC_SoilGrids(self):
-        # make this a property to avoid fetching layers on
-        # initialization of Maps-objects
+    class _ISRIC:
         """
-        Interface to the ISRIC SoilGrids database.
-        https://www.isric.org/explore/soilgrids/faq-soilgrids
+        Interface to the ISRIC SoilGrids database
+        https://www.isric.org
 
         ...
         SoilGrids is a system for global digital soil mapping that makes
@@ -89,10 +85,9 @@ class wms_container(object):
         **LICENSE-info (without any warranty for correctness!!)**
 
         check: https://www.isric.org/about/data-policy
-        """
-        return self._ISRIC(self._m)
 
-    class _ISRIC:
+        """
+
         # since this is not an ArcGIS REST API it needs some special treatment...
         def __init__(self, m, service_type="wms"):
             self._m = m
@@ -165,6 +160,13 @@ class wms_container(object):
                 delattr(self, i)
 
             self._layers = found_layers
+
+    @property
+    @lru_cache()
+    def ISRIC_SoilGrids(self):
+        return self._ISRIC(self._m)
+
+    ISRIC_SoilGrids.__doc__ = _ISRIC.__doc__
 
     @property
     @lru_cache()
@@ -301,10 +303,9 @@ class wms_container(object):
     @lru_cache()
     def GLAD(self):
         """
-        Several datasets from University of Maryland, Global Land Analysis and Discovery
-        (GLAD) Team.
-
+        Datasets from University of Maryland, Global Land Analysis and Discovery Team
         https://glad.umd.edu/
+
         https://glad.earthengine.app/
 
         Note
@@ -413,8 +414,7 @@ class wms_container(object):
             WMS.__doc__ = type(self).__doc__
             return WMS
 
-    @property
-    def OpenStreetMap(self):
+    class _OpenStreetMap:
         """
         OpenStreetMap WebMap layers
         https://wiki.openstreetmap.org/wiki/WMS
@@ -427,7 +427,6 @@ class wms_container(object):
             - OEPNV_public_transport: a layer indicating global public transportation
             - OpenRiverboatMap: a style to navigate waterways
             - OpenTopoMap: SRTM + OSM for nice topography
-            -
             - stamen_toner: Black and white style by stamen
                 - stamen_toner_lines
                 - stamen_toner_background
@@ -468,16 +467,6 @@ class wms_container(object):
         - for OpenRailwayMap: https://wiki.openstreetmap.org/wiki/OpenRailwayMap
         - for OSM_WaymarkedTrails: https://waymarkedtrails.org
         - for OpenTopoMap: https://wiki.openstreetmap.org/wiki/OpenTopoMap
-        """
-
-        WMS = self._OpenStreetMap(self._m)
-        WMS.__doc__ = type(self)._OpenStreetMap.__doc__
-        return WMS
-
-    class _OpenStreetMap:
-        """
-        (global) OpenStreetMap WebMap layers
-        https://wiki.openstreetmap.org/wiki/WMS
         """
 
         def __init__(self, m):
@@ -1200,6 +1189,14 @@ class wms_container(object):
             return WMS
 
     @property
+    def OpenStreetMap(self):
+        WMS = self._OpenStreetMap(self._m)
+        WMS.__doc__ = type(self)._OpenStreetMap.__doc__
+        return WMS
+
+    OpenStreetMap.__doc__ = _OpenStreetMap.__doc__
+
+    @property
     @lru_cache()
     def EEA_DiscoMap(self):
         """
@@ -1598,19 +1595,13 @@ class wms_container(object):
             WMS.__doc__ = combdoc("Polarization: VH", type(self).__doc__)
             return WMS
 
-    @property
-    def OpenPlanetary(self):
+    class _OpenPlanetary:
         """
-        Map layers provided by OpenPlanetary.
-
+        Planetary layers (Moon & Mars) provided by OpenPlanetary
         https://www.openplanetary.org
 
         """
-        WMS = self._OpenPlanetary(self._m)
-        WMS.__doc__ = type(self)._OpenPlanetary.__doc__
-        return WMS
 
-    class _OpenPlanetary:
         def __init__(self, m):
             self._m = m
 
@@ -1848,6 +1839,14 @@ class wms_container(object):
                         docstring=docstring,
                         maxzoom=6,
                     )
+
+    @property
+    def OpenPlanetary(self):
+        WMS = self._OpenPlanetary(self._m)
+        WMS.__doc__ = type(self)._OpenPlanetary.__doc__
+        return WMS
+
+    OpenPlanetary.__doc__ = _OpenPlanetary.__doc__
 
     @property
     @lru_cache()

@@ -1738,6 +1738,7 @@ Pre-defined WebMap services:
     GLAD
     CAMS
     DLR_basemaps
+    OpenPlanetary
 
 **Services specific for Austria (Europe)**
 
