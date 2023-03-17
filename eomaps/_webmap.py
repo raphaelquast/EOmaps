@@ -917,7 +917,10 @@ class xyzRasterSource(RasterSource):
         # see https://wiki.openstreetmap.org/wiki/Zoom_levels
         # see https://stackoverflow.com/a/75251360/9703451
 
-        z = int(np.clip(np.ceil(np.log2(1 / d * 40075016.68557849)), 0, zmax))
+        equatorial_circumfence = 40075016.68557849
+        # (e.g. self._crs.globe.semiminor_axis * np.pi * 2)
+
+        z = int(np.clip(np.ceil(np.log2(1 / d * equatorial_circumfence)), 0, zmax))
         return z
 
     def getz(self, extent, target_resolution, zmax):
