@@ -999,7 +999,7 @@ class xyzRasterSource(RasterSource):
 
             # reproject the extent to the output-crs
 
-            target_extent = ogc_clients._target_extents(extent, self._crs, output_proj)
+            target_extent = ogc_clients._target_extents(extent, wms_proj, output_proj)
             if len(target_extent) > 0:
                 target_extent = target_extent[0]
             else:
@@ -1018,7 +1018,7 @@ class xyzRasterSource(RasterSource):
             original_extent = extent
             img, extent = warp_array(
                 img,
-                source_proj=self._crs,
+                source_proj=wms_proj,
                 source_extent=original_extent,
                 target_proj=output_proj,
                 target_res=regrid_shape,
