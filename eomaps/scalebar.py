@@ -173,18 +173,6 @@ class ScaleBar:
 
         # geod from plot_crs
         self._geod = self._m.crs_plot.get_geod()
-        # Transformer from lon/lat to the plot_crs
-        self._t_plot = Transformer.from_crs(
-            CRS.from_epsg(4326),
-            CRS.from_user_input(self._m.crs_plot),
-            always_xy=True,
-        )
-        # Transformer from in-crs to lon/lat
-        self._t_lonlat = Transformer.from_crs(
-            CRS.from_user_input(self._m.crs_plot),
-            CRS.from_epsg(4326),
-            always_xy=True,
-        )
 
         self._artists = OrderedDict(patch=None, scale=None)
         self._picker_name = None
@@ -485,7 +473,7 @@ class ScaleBar:
             lats.append(p.lats)
 
         # transform points to plot-crs
-        pts_t = self._t_plot.transform(np.array(lons), np.array(lats))
+        pts_t = self._m._transf_lonlat_to_plot.transform(np.array(lons), np.array(lats))
         pts_t = np.stack(pts_t, axis=2)
 
         return pts_t
@@ -509,7 +497,7 @@ class ScaleBar:
 
         # get the position in figure coordinates
         x, y = self._m.ax.transData.transform(
-            self._t_plot.transform(self._lon, self._lat)
+            self._m._transf_lonlat_to_plot.transform(self._lon, self._lat)
         )
 
         d_fig = max(self._m.ax.bbox.height, self._m.ax.bbox.width) / 100
@@ -560,7 +548,7 @@ class ScaleBar:
 
     def _get_txt_coords(self, lon, lat, d, ang):
         # get the base point for the text
-        xt, yt = self._t_plot.transform(lon, lat)
+        xt, yt = self._m._transf_lonlat_to_plot.transform(lon, lat)
         xt = xt - d * self._label_props["offset"] * np.sin(ang)
         yt = yt + d * self._label_props["offset"] * np.cos(ang)
         return xt, yt
@@ -836,7 +824,7 @@ class ScaleBar:
             # s._artists["patch"].set_pickradius(150)
             # if not s._artists["patch"].contains(self.cb.click._event)[0]:
             #     return
-            lon, lat = s._t_lonlat.transform(*pos)
+            lon, lat = self._m._transf_plot_to_lonlat.transform(*pos)
             # don't update here... the click callback updates itself!
             s.set_position(lon, lat, update=False)
 
