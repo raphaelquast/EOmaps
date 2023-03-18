@@ -203,7 +203,9 @@ class GridLines:
         else:
             nlon = nlat = self.auto_n
 
-        extent = self.m.ax.get_extent(self.m.CRS.PlateCarree())
+        extent = self.m.ax.get_extent(
+            self.m.CRS.PlateCarree(globe=self.m.crs_plot.globe)
+        )
 
         x0, _, y0, _ = np.max((self.bounds, extent), axis=0)
         _, x1, _, y1 = np.min((self.bounds, extent), axis=0)

@@ -407,11 +407,13 @@ class shapes(object):
 
             # transform from in-crs to lon/lat
             radius_t = shapes._get_transformer(
-                self._m.get_crs(crs), CRS.from_epsg(4326)
+                self._m.get_crs(crs),
+                self._m.CRS.PlateCarree(globe=self._m.crs_plot.globe),
             )
             # transform from lon/lat to the plot_crs
             plot_t = shapes._get_transformer(
-                CRS.from_epsg(4326), CRS.from_user_input(self._m.crs_plot)
+                self._m.CRS.PlateCarree(globe=self._m.crs_plot.globe),
+                CRS.from_user_input(self._m.crs_plot),
             )
 
             lon, lat = radius_t.transform(x, y)
