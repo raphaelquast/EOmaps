@@ -1178,6 +1178,16 @@ class _xyz_tile_service:
         m.BM.add_bg_artist(self._artist, layer=layer)
 
 
+class _xyz_tile_service_nonearth(_xyz_tile_service):
+    def __call__(self, *args, **kwargs):
+        print(
+            f"EOmaps WARNING: The WebMap service '{self.name}' shows images from a "
+            "different celestrial body projected to an earth-based crs! "
+            "Units used in scalebars, geod_crices etc. represent earth-based units!"
+        )
+        super().__call__(*args, **kwargs)
+
+
 # ------------------------------------------------------------------------------
 # The following is very much copied from cartopy.mpl.slippy_image_artist.py
 # https://github.com/SciTools/cartopy/blob/main/lib/cartopy/mpl/slippy_image_artist.py

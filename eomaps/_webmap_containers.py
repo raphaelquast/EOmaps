@@ -13,27 +13,14 @@ def _register_imports():
     global _WebServiec_collection
     global REST_API_services
     global _xyz_tile_service
+    global _xyz_tile_service_nonearth
 
     from ._webmap import (
         _WebServiec_collection,
         REST_API_services,
         _xyz_tile_service,
+        _xyz_tile_service_nonearth,
     )
-
-
-class _XyzLayerCollection:
-    def __init__(self, m):
-        self._m = m
-
-    def _addlayer(self, name, url, srv_name, docstring, maxzoom=19):
-        srv = _xyz_tile_service(self._m, url, name=srv_name, maxzoom=maxzoom)
-
-        setattr(self, name, srv)
-
-        getattr(self, name).__doc__ = combdoc(
-            docstring,
-            getattr(self, name).__call__.__doc__,
-        )
 
 
 class wms_container(object):
@@ -1633,9 +1620,9 @@ class wms_container(object):
                 self.add_layer = self._add_layer(m)
                 self.layers = list(self.add_layer.__dict__)
 
-            class _add_layer(_XyzLayerCollection):
+            class _add_layer:
                 def __init__(self, m):
-                    super().__init__(m=m)
+                    self._m = m
                     for i, v in [
                         ("all", "all"),
                         (1, "basemap_layer"),
@@ -1664,6 +1651,18 @@ class wms_container(object):
 
                         self._addlayer(v, url, f"OPM_Moon_{v}", docstring)
 
+                def _addlayer(self, name, url, srv_name, docstring, maxzoom=19):
+                    srv = _xyz_tile_service_nonearth(
+                        self._m, url, name=srv_name, maxzoom=maxzoom
+                    )
+
+                    setattr(self, name, srv)
+
+                    getattr(self, name).__doc__ = combdoc(
+                        docstring,
+                        getattr(self, name).__call__.__doc__,
+                    )
+
         class _OPM_mars_basemap:
             """
             This basemap of the Mars in a combination of multiple raster and vector
@@ -1687,9 +1686,9 @@ class wms_container(object):
                     i for i in self.add_layer.__dict__ if not i.startswith("_")
                 ]
 
-            class _add_layer(_XyzLayerCollection):
+            class _add_layer:
                 def __init__(self, m):
-                    super().__init__(m=m)
+                    self._m = m
 
                     for i, v in [
                         ("all", "all"),
@@ -1842,6 +1841,18 @@ class wms_container(object):
                         f"OPM_Mars_mola_color_noshade",
                         docstring=docstring,
                         maxzoom=6,
+                    )
+
+                def _addlayer(self, name, url, srv_name, docstring, maxzoom=19):
+                    srv = _xyz_tile_service_nonearth(
+                        self._m, url, name=srv_name, maxzoom=maxzoom
+                    )
+
+                    setattr(self, name, srv)
+
+                    getattr(self, name).__doc__ = combdoc(
+                        docstring,
+                        getattr(self, name).__call__.__doc__,
                     )
 
     @property
