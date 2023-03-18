@@ -120,6 +120,28 @@ class WMS_GLAD(WMSBase):
         self.ask_for_legend(wms, wmslayer)
 
 
+class WMS_GOOGLE(WMSBase):
+    layer_prefix = "GOOGLE_"
+    name = "GOOGLE"
+
+    def __init__(self, m=None):
+        self.m = m
+        try:
+            self.wmslayers = [
+                key
+                for key in self.m.add_wms.GOOGLE.add_layer.__dict__.keys()
+                if not (key in ["m"] or key.startswith("_"))
+            ]
+        except Exception as ex:
+            self.wmslayers = []
+            print("EOmaps: Problem while fetching wmslayers for GOOGLE", ex)
+
+    def do_add_layer(self, wmslayer, layer):
+        wms = getattr(self.m.add_wms.GOOGLE.add_layer, wmslayer)
+        wms(layer=layer)
+        self.ask_for_legend(wms, wmslayer)
+
+
 class WMS_CAMS(WMSBase):
     layer_prefix = "CAMS_"
     name = "CAMS"
@@ -530,6 +552,7 @@ class AddWMSMenuButton(QtWidgets.QPushButton):
             "GEBCO": WMS_GEBCO,
             "GMRT": WMS_GMRT,
             "GLAD": WMS_GLAD,
+            "GOOGLE": WMS_GOOGLE,
             "NASA GIBS": WMS_NASA_GIBS,
             "CAMS": WMS_CAMS,
             "ISRIC SoilGrids": WMS_ISRIC_SoilGrids,
