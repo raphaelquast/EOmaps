@@ -1863,6 +1863,62 @@ class wms_container(object):
 
     OpenPlanetary.__doc__ = _OpenPlanetary.__doc__
 
+    class _GOOGLE_layers:
+        def __init__(self, m):
+            self._m = m
+            self.add_layer = self._add_layer(m)
+            self.layers = [i for i in self.add_layer.__dict__ if not i.startswith("_")]
+
+        class _add_layer:
+            def __init__(self, m):
+                self._m = m
+
+                for i, v in [
+                    ("h", "roadmap_overlay"),
+                    ("m", "roadmap_standard"),
+                    ("p", "roadmap_terrain"),
+                    ("r", "roadmap_white_streets"),
+                    ("s", "satellite"),
+                    ("t", "terrain_shade"),
+                    ("y", "hybrid"),
+                ]:
+
+                    url = (
+                        "http://mt.google.com/vt/lyrs="
+                        + str(i)
+                        + "&hl=en&x={x}&y={y}&z={z}&s=Ga"
+                    )
+
+                    docstring = (
+                        f"GOOGLE Maps {v} layer\n"
+                        "\n"
+                        "Note\n"
+                        "----\n"
+                        "**LICENSE-info (without any warranty for correctness!!)**\n"
+                        "\n"
+                        f"check: https://www.google.com\n"
+                    )
+
+                    self._addlayer(v, url, f"GOOGLE_{v}", docstring)
+
+            def _addlayer(self, name, url, srv_name, docstring, maxzoom=19):
+                srv = _xyz_tile_service(self._m, url, name=srv_name, maxzoom=maxzoom)
+
+                setattr(self, name, srv)
+
+                getattr(self, name).__doc__ = combdoc(
+                    docstring,
+                    getattr(self, name).__call__.__doc__,
+                )
+
+    @property
+    def GOOGLE(self):
+        WMS = self._GOOGLE_layers(self._m)
+        WMS.__doc__ = type(self)._GOOGLE_layers.__doc__
+        return WMS
+
+    GOOGLE.__doc__ = _GOOGLE_layers.__doc__
+
     @property
     @lru_cache()
     def S2_cloudless(self):
