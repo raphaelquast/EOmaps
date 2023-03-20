@@ -3043,7 +3043,7 @@ Similar to ``Maps.from_file``, a new layer based on a file can be added to an ex
 
 .. code-block:: python
 
-    m = Maps8()
+    m = Maps()
     m.add_feature.preset.coastline()
 
     m2 = m.new_layer_from_file(
