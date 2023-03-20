@@ -72,7 +72,7 @@ class WMS_GEBCO(WMSBase):
 
     def do_add_layer(self, wmslayer, layer):
         wms = getattr(self.m.add_wms.GEBCO.add_layer, wmslayer)
-        wms(layer=layer)
+        wms(layer=layer, transparent=True)
         self.ask_for_legend(wms, wmslayer)
 
 
@@ -94,7 +94,7 @@ class WMS_GMRT(WMSBase):
 
     def do_add_layer(self, wmslayer, layer):
         wms = getattr(self.m.add_wms.GMRT.add_layer, wmslayer)
-        wms(layer=layer)
+        wms(layer=layer, transparent=True)
         self.ask_for_legend(wms, wmslayer)
 
 
@@ -116,7 +116,7 @@ class WMS_GLAD(WMSBase):
 
     def do_add_layer(self, wmslayer, layer):
         wms = getattr(self.m.add_wms.GLAD.add_layer, wmslayer)
-        wms(layer=layer)
+        wms(layer=layer, transparent=True)
         self.ask_for_legend(wms, wmslayer)
 
 
@@ -138,7 +138,7 @@ class WMS_GOOGLE(WMSBase):
 
     def do_add_layer(self, wmslayer, layer):
         wms = getattr(self.m.add_wms.GOOGLE.add_layer, wmslayer)
-        wms(layer=layer)
+        wms(layer=layer, transparent=True)
         self.ask_for_legend(wms, wmslayer)
 
 
@@ -160,7 +160,7 @@ class WMS_CAMS(WMSBase):
 
     def do_add_layer(self, wmslayer, layer):
         wms = getattr(self.m.add_wms.CAMS.add_layer, wmslayer)
-        wms(layer=layer)
+        wms(layer=layer, transparent=True)
         self.ask_for_legend(wms, wmslayer)
 
 
