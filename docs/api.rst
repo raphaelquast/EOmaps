@@ -11,6 +11,7 @@
 | To start creating a new map (in this case a plot in ``epsg=4326``, e.g. lon/lat), simply use:
 
 .. code-block:: python
+    :name: test_init_map_objects
 
     from eomaps import Maps
     m = Maps(crs=4326, layer="first layer", figsize=(10, 5))  # initialize a Maps-object
@@ -424,6 +425,7 @@ Possible shapes that can be used to quickly generate a plot for extremely large 
 
 
 .. code-block:: python
+    :name: test_set_shape
 
     from eomaps import Maps
     data, x, y = [.3,.64,.2,.5,1], [1,2,3,4,5], [2,5,3,7,5]
@@ -557,6 +559,7 @@ By default, the plot-extent of the axis is adjusted to the extent of the data **
 To always keep the extent as-is, use ``m.plot_map(set_extent=False)``.
 
 .. code-block:: python
+    :name: test_plot_data
 
     from eomaps import Maps
     m = Maps()
@@ -597,6 +600,7 @@ To adjust the margins of the subplots, use ``m.subplots_adjust()``, ``m.f.tight_
 have a look at the :ref:`layout_editor`!
 
 .. code-block:: python
+    :name: test_subplots_adjust
 
     from eomaps import Maps
     m = Maps()
@@ -680,6 +684,7 @@ To apply a uniform color to all datapoints, you can use `matpltolib's named colo
 - ``m.plot_map(fc=(1, 0, 0.2, 0.5))``
 
 .. code-block:: python
+    :name: test_uniform_colors
 
     from eomaps import Maps
 
@@ -716,6 +721,7 @@ Explicit colors
 To explicitly color each datapoint with a pre-defined color, simply provide a list or array of the aforementioned types.
 
 .. code-block:: python
+    :name: test_explicit_colors
 
     from eomaps import Maps
 
@@ -766,6 +772,7 @@ You can fix individual color channels by passing a list with 1 element, e.g.:
 - ``m.plot_map(fc=(<R-array>, [0.12345], <B-array>, <A-array>))``
 
 .. code-block:: python
+    :name: test_rgba_composites
 
     from eomaps import Maps
     import numpy as np
@@ -1921,6 +1928,7 @@ If you want to get a ``geopandas.GeoDataFrame`` containing all shapes and metada
 (Have a look at :ref:`geodataframe` on how to add the obtained ``GeoDataFrame`` to the map)
 
 .. code-block:: python
+    :name: test_get_gdf
 
     from eomaps import Maps
     m = Maps()
