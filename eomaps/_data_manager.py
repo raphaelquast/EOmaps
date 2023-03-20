@@ -753,10 +753,10 @@ class DataManager:
         """
 
         # TODO
-        # Note datashader transposes the data by itself!
+        # Note datashader transposes the data by itself if 1D coords are provided!
         # (to pick the correct value, we need to pick the transposed one!)
 
-        if self.m.shape.name == "shade_raster":
+        if self.m.shape.name == "shade_raster" and self.x0_1D is not None:
             val = self.z_data.T.flat[ind]
         else:
             val = self.z_data.flat[ind]
