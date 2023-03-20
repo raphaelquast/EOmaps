@@ -241,6 +241,52 @@ class WMS_Austria(WMSBase):
         self.ask_for_legend(wms, wmslayer)
 
 
+class ESRI_ArcGIS(WMSBase):
+    layer_prefix = "ESRI"
+    name = "ESRI_ArcGIS"
+
+    def __init__(self, m=None):
+        self.m = m
+
+        self.m.add_wms.ESRI_ArcGIS
+
+        self.wmslayers = []
+
+        for servicename in self.m.add_wms.ESRI_ArcGIS._layers:
+            self.wmslayers.extend(
+                [
+                    servicename + "__" + key
+                    for key in getattr(
+                        self.m.add_wms.ESRI_ArcGIS, servicename
+                    ).__dict__.keys()
+                    if not (key in ["m"] or key.startswith("_"))
+                ]
+            )
+
+    def do_add_layer(self, wmslayer, layer):
+
+        wms = None
+
+        # check if we need to remove a prefix (e.g. from the dropdown-names)
+        for servicename in self.m.add_wms.ESRI_ArcGIS._layers:
+            prefix = f"{servicename}__"
+            layers = [i for i in self.wmslayers if i.startswith(prefix)]
+            if wmslayer in layers:
+                service = getattr(self.m.add_wms.ESRI_ArcGIS, servicename, None)
+
+                wms = getattr(
+                    service, remove_prefix(wmslayer, prefix)
+                ).add_layer.xyz_layer
+                break
+
+        if wms is None:
+            print(f"EOaps: WebMap layer {wmslayer}, {layer} not found")
+            return
+
+        wms(layer=layer, transparent=True)
+        self.ask_for_legend(wms, wmslayer)
+
+
 class WMS_OSM(WMSBase):
     layer_prefix = "OSM_"
     name = "OpenStreetMap"
@@ -557,6 +603,7 @@ class AddWMSMenuButton(QtWidgets.QPushButton):
             "CAMS": WMS_CAMS,
             "ISRIC SoilGrids": WMS_ISRIC_SoilGrids,
             "DLR Basemaps": WMS_DLR_basemaps,
+            "ESRI_ArcGIS": ESRI_ArcGIS,
             "Austria Basemaps": WMS_Austria,
             "OpenPlanetary": WMS_OpenPlanetary,
         }
