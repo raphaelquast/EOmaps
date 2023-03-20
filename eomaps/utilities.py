@@ -65,7 +65,7 @@ class SelectorButtons(Artist):
 
         self.leg = f.legend(circles, self.labels, **kwargs)
 
-        self.circles = self.leg.legend_handles
+        self.circles = self.leg.legendHandles
 
         for c in self.circles:
             c.set_picker(10)
