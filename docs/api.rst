@@ -2467,8 +2467,14 @@ To label the colorbar with custom names for a given set of bins, use ``m.colorba
 🌠 Using the colorbar as a "dynamic shade indicator"
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-If you use ``shade_raster`` or ``shade_points`` as plot-shape, the colorbar can be used to indicate the
-distribution of the shaded pixels within the current field of view by setting ``dynamic_shade_indicator=True``.
+
+.. note::
+
+    This will only work if you use ``m.set_shape.shade_raster()`` or ``m.set_shape.shade_points()`` as plot-shape!
+
+
+For shade shapes, the colorbar can be used to indicate the distribution of the shaded
+pixels within the current field of view by setting ``dynamic_shade_indicator=True``.
 
     +--------------------------------------------------------------------+--------------------------------------------------+
     | .. code-block:: python                                             | .. image:: _static/minigifs/dynamic_colorbar.gif |
