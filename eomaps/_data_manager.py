@@ -117,10 +117,14 @@ class DataManager:
             self._y0min, self._y0max = np.nanmin(self.y0), np.nanmax(self.y0)
 
         # estimate the radius (used as margin on data selection)
-        self._r = self.m._shapes._estimate_radius(self.m, "out")
-        if self._r is not None and all(np.isfinite(i) for i in self._r):
-            self._radius_margin = [i * self._radius_margin_factor for i in self._r]
-        else:
+        try:
+            self._r = self.m._shapes._estimate_radius(self.m, "out")
+            if self._r is not None and all(np.isfinite(i) for i in self._r):
+                self._radius_margin = [i * self._radius_margin_factor for i in self._r]
+            else:
+                self._radius_margin = None
+        except Exception:
+            self._r = None
             self._radius_margin = None
 
         if update_coll_on_fetch:
@@ -294,10 +298,13 @@ class DataManager:
         # (1 x radius) to the map
         if self._r is not None and all(np.isfinite(self._r)):
             rx, ry = self._r
-            x0min = self._x0min - rx
-            y0min = self._y0min - ry
-            x0max = self._x0max + rx
-            y0max = self._y0max + ry
+        else:
+            rx, ry = (0, 0)
+
+        x0min = self._x0min - rx
+        y0min = self._y0min - ry
+        x0max = self._x0max + rx
+        y0max = self._y0max + ry
 
         ymin, ymax = self.m.ax.projection.y_limits
         xmin, xmax = self.m.ax.projection.x_limits
@@ -746,10 +753,10 @@ class DataManager:
         """
 
         # TODO
-        # Note datashader transposes the data by itself!
+        # Note datashader transposes the data by itself if 1D coords are provided!
         # (to pick the correct value, we need to pick the transposed one!)
 
-        if self.m.shape.name == "shade_raster":
+        if self.m.shape.name == "shade_raster" and self.x0_1D is not None:
             val = self.z_data.T.flat[ind]
         else:
             val = self.z_data.flat[ind]

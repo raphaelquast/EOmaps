@@ -13,11 +13,13 @@ def _register_imports():
     global _WebServiec_collection
     global REST_API_services
     global _xyz_tile_service
+    global _xyz_tile_service_nonearth
 
     from ._webmap import (
         _WebServiec_collection,
         REST_API_services,
         _xyz_tile_service,
+        _xyz_tile_service_nonearth,
     )
 
 
@@ -52,14 +54,10 @@ class wms_container(object):
 
         self._m = m
 
-    @property
-    @lru_cache()
-    def ISRIC_SoilGrids(self):
-        # make this a property to avoid fetching layers on
-        # initialization of Maps-objects
+    class _ISRIC:
         """
-        Interface to the ISRIC SoilGrids database.
-        https://www.isric.org/explore/soilgrids/faq-soilgrids
+        Interface to the ISRIC SoilGrids database
+        https://www.isric.org
 
         ...
         SoilGrids is a system for global digital soil mapping that makes
@@ -74,10 +72,9 @@ class wms_container(object):
         **LICENSE-info (without any warranty for correctness!!)**
 
         check: https://www.isric.org/about/data-policy
-        """
-        return self._ISRIC(self._m)
 
-    class _ISRIC:
+        """
+
         # since this is not an ArcGIS REST API it needs some special treatment...
         def __init__(self, m, service_type="wms"):
             self._m = m
@@ -150,6 +147,13 @@ class wms_container(object):
                 delattr(self, i)
 
             self._layers = found_layers
+
+    @property
+    @lru_cache()
+    def ISRIC_SoilGrids(self):
+        return self._ISRIC(self._m)
+
+    ISRIC_SoilGrids.__doc__ = _ISRIC.__doc__
 
     @property
     @lru_cache()
@@ -243,6 +247,72 @@ class wms_container(object):
 
     @property
     @lru_cache()
+    def GMRT(self):
+        """
+        Global Multi-Resolution Topography (GMRT) Synthesis
+        https://gmrt.org/
+
+        The Global Multi-Resolution Topography (GMRT) synthesis is a multi-resolutional
+        compilation of edited multibeam sonar data collected by scientists and
+        institutions worldwide, that is reviewed, processed and gridded by the GMRT
+        Team and merged into a single continuously updated compilation of global
+        elevation data. The synthesis began in 1992 as the Ridge Multibeam
+        Synthesis (RMBS), was expanded to include multibeam bathymetry data from the
+        Southern Ocean, and now includes bathymetry from throughout the global and
+        coastal oceans. GMRT is included in the ocean basemap in Google Earth
+        (since June 2011) and the GEBCO compilation since 2014.
+
+        Note
+        ----
+        **LICENSE-info (without any warranty for correctness!!)**
+
+        For use of the GMRT synthesis, an appropriate reference is:
+
+        Ryan, W. B. F., S.M. Carbotte, J. Coplan, S. O'Hara, A. Melkonian, R. Arko,
+        R.A. Weissel, V. Ferrini, A. Goodwillie, F. Nitsche, J. Bonczkowski, and
+        R. Zemsky (2009), Global Multi-Resolution Topography (GMRT) synthesis data set,
+        Geochem. Geophys. Geosyst., 10, Q03014, doi:10.1029/2008GC002332.
+        Data doi: 10.1594/IEDA.100001
+
+        (check: https://gmrt.org/about/terms_of_use.php for full details)
+
+        """
+        WMS = _WebServiec_collection(
+            m=self._m,
+            service_type="wms",
+            url="https://www.gmrt.org/services/mapserver/wms_merc?request=GetCapabilities&service=WMS&version=1.3.0",
+        )
+
+        WMS.__doc__ = type(self).GMRT.__doc__
+        return WMS
+
+    @property
+    @lru_cache()
+    def GLAD(self):
+        """
+        Datasets from University of Maryland, Global Land Analysis and Discovery Team
+        https://glad.umd.edu/
+
+        https://glad.earthengine.app/
+
+        Note
+        ----
+        **LICENSE-info (without any warranty for correctness!!)**
+
+        (check: https://glad.earthengine.app/ for full details)
+
+        """
+        WMS = _WebServiec_collection(
+            m=self._m,
+            service_type="wms",
+            url="https://glad.umd.edu/mapcache/?SERVICE=WMS",
+        )
+
+        WMS.__doc__ = type(self).GLAD.__doc__
+        return WMS
+
+    @property
+    @lru_cache()
     def NASA_GIBS(self):
         """
         NASA Global Imagery Browse Services (GIBS)
@@ -331,8 +401,7 @@ class wms_container(object):
             WMS.__doc__ = type(self).__doc__
             return WMS
 
-    @property
-    def OpenStreetMap(self):
+    class _OpenStreetMap:
         """
         OpenStreetMap WebMap layers
         https://wiki.openstreetmap.org/wiki/WMS
@@ -345,18 +414,21 @@ class wms_container(object):
             - OEPNV_public_transport: a layer indicating global public transportation
             - OpenRiverboatMap: a style to navigate waterways
             - OpenTopoMap: SRTM + OSM for nice topography
-            -
             - stamen_toner: Black and white style by stamen
+
                 - stamen_toner_lines
                 - stamen_toner_background
                 - stamen_toner_lite
                 - stamen_toner_hybrid
                 - stamen_toner_labels
-            - stamen_watercolor: a watercolor-like style by stamen
+
             - stamen_terrain: a terrain layer by stamen
+
                 - stamen_terrain_lines
                 - stamen_terrain_labels
                 - stamen_terrain_background
+
+            - stamen_watercolor: a watercolor-like style by stamen
             - OSM_terrestis: Styles hosted as free WMS service by Terrestis
             - OSM_mundialis: Styles hosted as free WMS service by Mundialis
             - OSM_cartodb: Styles hosted as free WMS service by CartoDB
@@ -386,16 +458,6 @@ class wms_container(object):
         - for OpenRailwayMap: https://wiki.openstreetmap.org/wiki/OpenRailwayMap
         - for OSM_WaymarkedTrails: https://waymarkedtrails.org
         - for OpenTopoMap: https://wiki.openstreetmap.org/wiki/OpenTopoMap
-        """
-
-        WMS = self._OpenStreetMap(self._m)
-        WMS.__doc__ = type(self)._OpenStreetMap.__doc__
-        return WMS
-
-    class _OpenStreetMap:
-        """
-        (global) OpenStreetMap WebMap layers
-        https://wiki.openstreetmap.org/wiki/WMS
         """
 
         def __init__(self, m):
@@ -448,6 +510,39 @@ class wms_container(object):
                     self.default_german.__call__.__doc__,
                 )
 
+                self.humanitarian = _xyz_tile_service(
+                    self._m,
+                    "https://a.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png",
+                    name="OSM_humanitarian",
+                )
+                self.humanitarian.__doc__ = combdoc(
+                    """
+                    OpenStreetMap's Humanitarian style
+
+                    Focuses on the developing countries with an emphasis on features
+                    related to development and humanitarian work.
+
+                    Good contrasting style in terms of overall colour choices. Terrain
+                    shading. Many new/different icons (particularly for basic amenities
+                    in developing countries) and more nuanced surface track-type
+                    rendering.
+
+                    https://www.openstreetmap.org/
+                    https://wiki.openstreetmap.org/wiki/HOT_style
+                    https://wiki.openstreetmap.org/wiki/Humanitarian_OSM_Team
+
+                    Note
+                    ----
+                    **LICENSE-info (without any warranty for correctness!!)**
+
+                    check:
+
+                    - https://operations.osmfoundation.org/policies/tiles/
+                    - https://www.openstreetmap.fr/fonds-de-carte/
+                    """,
+                    self.humanitarian.__call__.__doc__,
+                )
+
                 self.OpenTopoMap = _xyz_tile_service(
                     m=self._m,
                     url="https://c.tile.opentopomap.org/{z}/{x}/{y}.png",
@@ -495,6 +590,38 @@ class wms_container(object):
 
                     """,
                     self.OpenRiverboatMap.__call__.__doc__,
+                )
+
+                self.OpenSeaMap = _xyz_tile_service(
+                    m=self._m,
+                    url="http://tiles.openseamap.org/seamark/{z}/{x}/{y}.png",
+                    maxzoom=16,
+                    name="OSM_OpenSeaMap",
+                )
+                self.OpenSeaMap.__doc__ = combdoc(
+                    """
+                    OpenSeaMap is an open source, worldwide project to create a free
+                    nautical chart. There is a great need for freely accessible maps
+                    for navigation purposes, so in 2009, OpenSeaMap came into life.
+                    The goal of OpenSeaMap is to record interesting and useful nautical
+                    information for the sailor which is then incorporated into a free
+                    map of the world. This includes beacons, buoys and other navigation
+                    aids as well as port information, repair shops and chandlerys.
+                    OpenSeaMap is a subproject of OpenStreetMap and uses its database.
+
+                    http://openseamap.org
+
+                    Note
+                    ----
+                    **LICENSE-info (without any warranty for correctness!!)**
+
+                    check:
+
+                        - https://wiki.openstreetmap.org/wiki/OpenSeaMap
+                        - https://operations.osmfoundation.org/policies/tiles/
+
+                    """,
+                    self.OpenSeaMap.__call__.__doc__,
                 )
 
                 self.CyclOSM = _xyz_tile_service(
@@ -1053,6 +1180,14 @@ class wms_container(object):
             return WMS
 
     @property
+    def OpenStreetMap(self):
+        WMS = self._OpenStreetMap(self._m)
+        WMS.__doc__ = type(self)._OpenStreetMap.__doc__
+        return WMS
+
+    OpenStreetMap.__doc__ = _OpenStreetMap.__doc__
+
+    @property
     @lru_cache()
     def EEA_DiscoMap(self):
         """
@@ -1451,6 +1586,339 @@ class wms_container(object):
             WMS.__doc__ = combdoc("Polarization: VH", type(self).__doc__)
             return WMS
 
+    class _OpenPlanetary:
+        """
+        Planetary layers (Moon & Mars) provided by OpenPlanetary
+        https://www.openplanetary.org
+
+        """
+
+        def __init__(self, m):
+            self._m = m
+
+            self.Moon = self._OPM_moon_basemap(self._m)
+            self.Mars = self._OPM_mars_basemap(self._m)
+
+        class _OPM_moon_basemap:
+            """
+            This basemap of the Moon in a combination of multiple raster and vector
+            datasets that provides a characteristic view for a broader audience.
+
+            https://www.openplanetary.org/opm-basemaps/opm-moon-basemap-v0-1
+
+            Note
+            ----
+            **LICENSE-info (withowayut any warranty for correctness!!)**
+
+            check:  https://www.openplanetary.org
+
+            """
+
+            def __init__(self, m):
+                self._m = m
+
+                self.add_layer = self._add_layer(m)
+                self.layers = list(self.add_layer.__dict__)
+
+            class _add_layer:
+                def __init__(self, m):
+                    self._m = m
+                    for i, v in [
+                        ("all", "all"),
+                        (1, "basemap_layer"),
+                        (2, "hillshaded_albedo"),
+                        (3, "opm_301_moon_contours_polygons_1km_interval"),
+                        (4, "opm_301_moon_nomenclature_polygons"),
+                        (5, "opm_301_apollo_sites"),
+                        (6, "opm_301_luna_sites"),
+                    ]:
+
+                        url = (
+                            "https://cartocdn-gusc.global.ssl.fastly.net/opmbuilder/api/v1/map/named/opm-moon-basemap-v0-1/"
+                            + str(i)
+                            + "/{z}/{x}/{y}.png"
+                        )
+
+                        docstring = (
+                            f"OpenPlanetary Moon basemap {v} layer\n"
+                            "\n"
+                            "Note\n"
+                            "----\n"
+                            "**LICENSE-info (without any warranty for correctness!!)**\n"
+                            "\n"
+                            f"check: https://www.openplanetary.org\n"
+                        )
+
+                        self._addlayer(v, url, f"OPM_Moon_{v}", docstring)
+
+                def _addlayer(self, name, url, srv_name, docstring, maxzoom=19):
+                    srv = _xyz_tile_service_nonearth(
+                        self._m, url, name=srv_name, maxzoom=maxzoom
+                    )
+
+                    setattr(self, name, srv)
+
+                    getattr(self, name).__doc__ = combdoc(
+                        docstring,
+                        getattr(self, name).__call__.__doc__,
+                    )
+
+        class _OPM_mars_basemap:
+            """
+            This basemap of the Mars in a combination of multiple raster and vector
+            datasets that provides a characteristic view for a broader audience.
+
+            https://www.openplanetary.org/opm-basemaps/opm-mars-basemap-v0-2
+
+            Note
+            ----
+            **LICENSE-info (withowayut any warranty for correctness!!)**
+
+            check:  https://www.openplanetary.org
+
+            """
+
+            def __init__(self, m):
+                self._m = m
+
+                self.add_layer = self._add_layer(m)
+                self.layers = [
+                    i for i in self.add_layer.__dict__ if not i.startswith("_")
+                ]
+
+            class _add_layer:
+                def __init__(self, m):
+                    self._m = m
+
+                    for i, v in [
+                        ("all", "all"),
+                        (1, "mars_hillshade"),
+                        (2, "opm_499_mars_contours_200m_polygons"),
+                        (3, "opm_499_mars_albedo_tes_7classes"),
+                        (4, "opm_499_mars_contours_200m_lines"),
+                        (5, "opm_499_mars_nomenclature_polygons"),
+                    ]:
+
+                        url = (
+                            "https://cartocdn-gusc.global.ssl.fastly.net/opmbuilder/api/v1/map/named/opm-mars-basemap-v0-2/"
+                            + str(i)
+                            + "/{z}/{x}/{y}.png"
+                        )
+
+                        docstring = (
+                            f"OpenPlanetary Mars basemap {v} layer\n"
+                            "\n"
+                            "Note\n"
+                            "----\n"
+                            "**LICENSE-info (without any warranty for correctness!!)**\n"
+                            "\n"
+                            f"check: https://www.openplanetary.org\n"
+                        )
+
+                        self._addlayer(v, url, f"OPM_Mars_{v}", docstring)
+
+                    docstring = f"""
+                        OpenPlanetary Mars hillshade basemap
+
+                        This basemap is a single hillshade raster data layer based on
+                        MOLA dataset.
+
+                        Note
+                        ----
+                        **LICENSE-info (without any warranty for correctness!!)**\n"
+
+                        check: https://www.openplanetary.org
+                        """
+
+                    self._addlayer(
+                        "hillshade",
+                        "https://s3.us-east-2.amazonaws.com/opmmarstiles/hillshade-tiles/{z}/{x}/{y}.png",
+                        f"OPM_Mars_hillshade",
+                        docstring=docstring,
+                        maxzoom=6,
+                    )
+
+                    docstring = f"""
+                        OpenPlanetary Mars viking_mdim21_global basemap
+
+                        This basemap is a single raster data layer based on Viking
+                        MDIM 2.1 dataset.
+
+                        Note
+                        ----
+                        **LICENSE-info (without any warranty for correctness!!)**\n"
+
+                        check: https://www.openplanetary.org
+                        """
+
+                    self._addlayer(
+                        "viking_mdim21_global",
+                        lambda x, y, z: f"http://s3-eu-west-1.amazonaws.com/whereonmars.cartodb.net/viking_mdim21_global/{z}/{x}/{2**z-1-y}.png",
+                        f"OPM_Mars_viking_mdim21_global",
+                        docstring=docstring,
+                        maxzoom=7,
+                    )
+
+                    docstring = f"""
+                        OpenPlanetary Mars celestia_mars_shaded_16k basemap
+
+                        This basemap is a single Mars texture raster data layer based
+                        on a Celestia community dataset.
+
+                        Note
+                        ----
+                        **LICENSE-info (without any warranty for correctness!!)**\n"
+
+                        check: https://www.openplanetary.org
+                        """
+
+                    self._addlayer(
+                        "celestia_mars_shaded_16k",
+                        lambda x, y, z: f"http://s3-eu-west-1.amazonaws.com/whereonmars.cartodb.net/celestia_mars-shaded-16k_global/{z}/{x}/{2**z-1-y}.png",
+                        f"OPM_Mars_celestia_mars_shaded_16k",
+                        docstring=docstring,
+                        maxzoom=5,
+                    )
+
+                    docstring = f"""
+                        OpenPlanetary Mars mola_gray basemap
+
+                        This basemap is a single shared grayscale raster data layer
+                        based on MOLA dataset.
+
+                        Note
+                        ----
+                        **LICENSE-info (without any warranty for correctness!!)**\n"
+
+                        check: https://www.openplanetary.org
+                        """
+
+                    self._addlayer(
+                        "mola_gray",
+                        lambda x, y, z: f"http://s3-eu-west-1.amazonaws.com/whereonmars.cartodb.net/mola-gray/{z}/{x}/{2**z-1-y}.png",
+                        f"OPM_Mars_mola_gray",
+                        docstring=docstring,
+                        maxzoom=9,
+                    )
+
+                    docstring = f"""
+                        OpenPlanetary Mars mola_color basemap
+
+                        This basemap is a single shared color-coded raster data layer
+                        based on MOLA dataset.
+
+                        Note
+                        ----
+                        **LICENSE-info (without any warranty for correctness!!)**\n"
+
+                        check: https://www.openplanetary.org
+                        """
+
+                    self._addlayer(
+                        "mola_color",
+                        lambda x, y, z: f"http://s3-eu-west-1.amazonaws.com/whereonmars.cartodb.net/mola-color/{z}/{x}/{2**z-1-y}.png",
+                        f"OPM_Mars_mola_color",
+                        docstring=docstring,
+                        maxzoom=6,
+                    )
+
+                    docstring = f"""
+                        OpenPlanetary Mars mola_color_noshade basemap
+
+                        This basemap is a single color-coded raster data layer based
+                        on MOLA dataset.
+
+                        Note
+                        ----
+                        **LICENSE-info (without any warranty for correctness!!)**\n"
+
+                        check: https://www.openplanetary.org
+                        """
+
+                    self._addlayer(
+                        "mola_color_noshade",
+                        lambda x, y, z: f"http://s3-eu-west-1.amazonaws.com/whereonmars.cartodb.net/mola_color-noshade_global/{z}/{x}/{2**z-1-y}.png",
+                        f"OPM_Mars_mola_color_noshade",
+                        docstring=docstring,
+                        maxzoom=6,
+                    )
+
+                def _addlayer(self, name, url, srv_name, docstring, maxzoom=19):
+                    srv = _xyz_tile_service_nonearth(
+                        self._m, url, name=srv_name, maxzoom=maxzoom
+                    )
+
+                    setattr(self, name, srv)
+
+                    getattr(self, name).__doc__ = combdoc(
+                        docstring,
+                        getattr(self, name).__call__.__doc__,
+                    )
+
+    @property
+    def OpenPlanetary(self):
+        WMS = self._OpenPlanetary(self._m)
+        WMS.__doc__ = type(self)._OpenPlanetary.__doc__
+        return WMS
+
+    OpenPlanetary.__doc__ = _OpenPlanetary.__doc__
+
+    class _GOOGLE_layers:
+        def __init__(self, m):
+            self._m = m
+            self.add_layer = self._add_layer(m)
+            self.layers = [i for i in self.add_layer.__dict__ if not i.startswith("_")]
+
+        class _add_layer:
+            def __init__(self, m):
+                self._m = m
+
+                for i, v in [
+                    ("h", "roadmap_overlay"),
+                    ("m", "roadmap_standard"),
+                    ("p", "roadmap_terrain"),
+                    ("r", "roadmap_white_streets"),
+                    ("s", "satellite"),
+                    ("t", "terrain_shade"),
+                    ("y", "hybrid"),
+                ]:
+
+                    url = (
+                        "http://mt.google.com/vt/lyrs="
+                        + str(i)
+                        + "&hl=en&x={x}&y={y}&z={z}&s=Ga"
+                    )
+
+                    docstring = (
+                        f"GOOGLE Maps {v} layer\n"
+                        "\n"
+                        "Note\n"
+                        "----\n"
+                        "**LICENSE-info (without any warranty for correctness!!)**\n"
+                        "\n"
+                        f"check: https://www.google.com\n"
+                    )
+
+                    self._addlayer(v, url, f"GOOGLE_{v}", docstring)
+
+            def _addlayer(self, name, url, srv_name, docstring, maxzoom=19):
+                srv = _xyz_tile_service(self._m, url, name=srv_name, maxzoom=maxzoom)
+
+                setattr(self, name, srv)
+
+                getattr(self, name).__doc__ = combdoc(
+                    docstring,
+                    getattr(self, name).__call__.__doc__,
+                )
+
+    @property
+    def GOOGLE(self):
+        WMS = self._GOOGLE_layers(self._m)
+        WMS.__doc__ = type(self)._GOOGLE_layers.__doc__
+        return WMS
+
+    GOOGLE.__doc__ = _GOOGLE_layers.__doc__
+
     @property
     @lru_cache()
     def S2_cloudless(self):
@@ -1587,11 +2055,12 @@ class wms_container(object):
         http://services.arcgisonline.com/arcgis/rest/services
 
         """
+
         API = REST_API_services(
             m=self._m,
             url="http://server.arcgisonline.com/arcgis/rest/services",
             name="ERSI_ArcGIS_REST",
-            service_type="wmts",
+            service_type="xyz",
             layers={
                 "Canvas",
                 "Elevation",

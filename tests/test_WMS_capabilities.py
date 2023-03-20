@@ -67,7 +67,7 @@ class TestWMS(unittest.TestCase):
         m = Maps(Maps.CRS.GOOGLE_MERCATOR)
         m.add_feature.preset.ocean(ec="k", zorder=100)
         hillshade = m.add_wms.ESRI_ArcGIS.Elevation.Elevation_World_Hillshade
-        hillshade.add_layer.layer_Elevation_World_Hillshade()
+        hillshade.add_layer.xyz_layer()
         plt.close(m.f)
 
     def test_WMS_legend_capabilities_NASA_GIBS(self):

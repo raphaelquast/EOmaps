@@ -72,7 +72,73 @@ class WMS_GEBCO(WMSBase):
 
     def do_add_layer(self, wmslayer, layer):
         wms = getattr(self.m.add_wms.GEBCO.add_layer, wmslayer)
-        wms(layer=layer)
+        wms(layer=layer, transparent=True)
+        self.ask_for_legend(wms, wmslayer)
+
+
+class WMS_GMRT(WMSBase):
+    layer_prefix = "GMRT_"
+    name = "GMRT"
+
+    def __init__(self, m=None):
+        self.m = m
+        try:
+            self.wmslayers = [
+                key
+                for key in self.m.add_wms.GMRT.add_layer.__dict__.keys()
+                if not (key in ["m"] or key.startswith("_"))
+            ]
+        except Exception as ex:
+            self.wmslayers = []
+            print("EOmaps: Problem while fetching wmslayers for GMRT", ex)
+
+    def do_add_layer(self, wmslayer, layer):
+        wms = getattr(self.m.add_wms.GMRT.add_layer, wmslayer)
+        wms(layer=layer, transparent=True)
+        self.ask_for_legend(wms, wmslayer)
+
+
+class WMS_GLAD(WMSBase):
+    layer_prefix = "GLAD_"
+    name = "GLAD"
+
+    def __init__(self, m=None):
+        self.m = m
+        try:
+            self.wmslayers = [
+                key
+                for key in self.m.add_wms.GLAD.add_layer.__dict__.keys()
+                if not (key in ["m"] or key.startswith("_"))
+            ]
+        except Exception as ex:
+            self.wmslayers = []
+            print("EOmaps: Problem while fetching wmslayers for GLAD", ex)
+
+    def do_add_layer(self, wmslayer, layer):
+        wms = getattr(self.m.add_wms.GLAD.add_layer, wmslayer)
+        wms(layer=layer, transparent=True)
+        self.ask_for_legend(wms, wmslayer)
+
+
+class WMS_GOOGLE(WMSBase):
+    layer_prefix = "GOOGLE_"
+    name = "GOOGLE"
+
+    def __init__(self, m=None):
+        self.m = m
+        try:
+            self.wmslayers = [
+                key
+                for key in self.m.add_wms.GOOGLE.add_layer.__dict__.keys()
+                if not (key in ["m"] or key.startswith("_"))
+            ]
+        except Exception as ex:
+            self.wmslayers = []
+            print("EOmaps: Problem while fetching wmslayers for GOOGLE", ex)
+
+    def do_add_layer(self, wmslayer, layer):
+        wms = getattr(self.m.add_wms.GOOGLE.add_layer, wmslayer)
+        wms(layer=layer, transparent=True)
         self.ask_for_legend(wms, wmslayer)
 
 
@@ -94,7 +160,7 @@ class WMS_CAMS(WMSBase):
 
     def do_add_layer(self, wmslayer, layer):
         wms = getattr(self.m.add_wms.CAMS.add_layer, wmslayer)
-        wms(layer=layer)
+        wms(layer=layer, transparent=True)
         self.ask_for_legend(wms, wmslayer)
 
 
@@ -170,6 +236,52 @@ class WMS_Austria(WMSBase):
                 self.m.add_wms.Austria.Wien_basemap.add_layer,
                 remove_prefix(wmslayer, "Wien__"),
             )
+
+        wms(layer=layer, transparent=True)
+        self.ask_for_legend(wms, wmslayer)
+
+
+class ESRI_ArcGIS(WMSBase):
+    layer_prefix = "ESRI"
+    name = "ESRI_ArcGIS"
+
+    def __init__(self, m=None):
+        self.m = m
+
+        self.m.add_wms.ESRI_ArcGIS
+
+        self.wmslayers = []
+
+        for servicename in self.m.add_wms.ESRI_ArcGIS._layers:
+            self.wmslayers.extend(
+                [
+                    servicename + "__" + key
+                    for key in getattr(
+                        self.m.add_wms.ESRI_ArcGIS, servicename
+                    ).__dict__.keys()
+                    if not (key in ["m"] or key.startswith("_"))
+                ]
+            )
+
+    def do_add_layer(self, wmslayer, layer):
+
+        wms = None
+
+        # check if we need to remove a prefix (e.g. from the dropdown-names)
+        for servicename in self.m.add_wms.ESRI_ArcGIS._layers:
+            prefix = f"{servicename}__"
+            layers = [i for i in self.wmslayers if i.startswith(prefix)]
+            if wmslayer in layers:
+                service = getattr(self.m.add_wms.ESRI_ArcGIS, servicename, None)
+
+                wms = getattr(
+                    service, remove_prefix(wmslayer, prefix)
+                ).add_layer.xyz_layer
+                break
+
+        if wms is None:
+            print(f"EOaps: WebMap layer {wmslayer}, {layer} not found")
+            return
 
         wms(layer=layer, transparent=True)
         self.ask_for_legend(wms, wmslayer)
@@ -405,6 +517,60 @@ class WMS_DLR_basemaps(WMSBase):
         self.ask_for_legend(wms, wmslayer)
 
 
+class WMS_OpenPlanetary(WMSBase):
+    layer_prefix = "OPM_"
+    name = "OpenPlanetary"
+
+    def __init__(self, m=None):
+        self.m = m
+        self.wmslayers = []
+
+        try:
+            self._moon = [
+                "Moon__" + i
+                for i in m.add_wms.OpenPlanetary.Moon.add_layer.__dict__
+                if not i.startswith("_")
+            ]
+        except Exception as ex:
+            self._moon = []
+            print("EOmaps: Problem while fetching wmslayers for OpenPlanetary", ex)
+
+        try:
+            self._mars = [
+                "Mars__" + i
+                for i in m.add_wms.OpenPlanetary.Mars.add_layer.__dict__
+                if not i.startswith("_")
+            ]
+        except Exception as ex:
+            self._mars = []
+            print("EOmaps: Problem while fetching wmslayers for OpenPlanetary", ex)
+
+        self.wmslayers += self._moon
+        self.wmslayers += self._mars
+
+    def do_add_layer(self, wmslayer, layer):
+
+        wms = None
+
+        # check if we need to remove a prefix (e.g. from the dropdown-names)
+        for layers, servicename, prefix in (
+            (self._moon, "Moon", "Moon__"),
+            (self._mars, "Mars", "Mars__"),
+        ):
+
+            if wmslayer in layers:
+                service = getattr(self.m.add_wms.OpenPlanetary, servicename, None)
+                wms = getattr(service.add_layer, remove_prefix(wmslayer, prefix))
+                break
+
+        if wms is None:
+            print("EOmaps: the wms service {wmslayer} does not exist")
+            return
+
+        wms(layer=layer, transparent=True)
+        self.ask_for_legend(wms, wmslayer)
+
+
 # an event-filter to catch StatusTipFilter events
 # (e.g. to avoid clearing the statusbar on mouse hoover over QMenu)
 class StatusTipFilter(QObject):
@@ -430,11 +596,16 @@ class AddWMSMenuButton(QtWidgets.QPushButton):
             "ESA WorldCover": WMS_ESA_WorldCover,
             "S1GBM": WMS_S1GBM,
             "GEBCO": WMS_GEBCO,
+            "GMRT": WMS_GMRT,
+            "GLAD": WMS_GLAD,
+            "GOOGLE": WMS_GOOGLE,
             "NASA GIBS": WMS_NASA_GIBS,
             "CAMS": WMS_CAMS,
             "ISRIC SoilGrids": WMS_ISRIC_SoilGrids,
             "DLR Basemaps": WMS_DLR_basemaps,
+            "ESRI_ArcGIS": ESRI_ArcGIS,
             "Austria Basemaps": WMS_Austria,
+            "OpenPlanetary": WMS_OpenPlanetary,
         }
 
         if self._new_layer:

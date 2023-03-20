@@ -1734,8 +1734,11 @@ Pre-defined WebMap services:
     S1GBM
     S2_cloudless
     GEBCO
+    GMRT
+    GLAD
     CAMS
     DLR_basemaps
+    OpenPlanetary
 
 **Services specific for Austria (Europe)**
 
@@ -2343,8 +2346,17 @@ Logos can be re-positioned and re-sized with the :ref:`layout_editor`!
 🌈 Colorbars (with a histogram)
 -------------------------------
 
-| Before adding a colorbar, you must plot the data using ``m.plot_map()``.
-| A colorbar with a colored histogram on top can then be added to the map via ``m.add_colorbar``.
+Before adding a colorbar, you must plot the data using ``m.plot_map(vmin=..., vmax=...)``.
+
+- ``vmin`` and ``vmax`` hereby specify the value-range used for assigning colors (e.g. the limits of the colorbar).
+- If no explicit limits are provided, the min/max values of the data are used.
+
+Once a dataset has been plotted, a colorbar with a colored histogram on top can be added to the map by calling ``m.add_colorbar()``.
+
+
+.. note::
+    | The colorbar always represents the dataset that was used in the last call to ``m.plot_map()``.
+    | If you need multiple colorbars, use an individual ``Maps`` object for each dataset! (e.g. via ``m2  = m.new_layer()``)
 
 
 .. note::
@@ -2391,11 +2403,6 @@ Logos can be re-positioned and re-sized with the :ref:`layout_editor`!
     |   m.add_colorbar(label="what a nice colorbar", hist_bins="bins")   |                                          |
     |                                                                    |                                          |
     +--------------------------------------------------------------------+------------------------------------------+
-
-.. note::
-    | You must plot a dataset first! (e.g. by calling ``m.plot_map()``)
-    | The colorbar always represents the dataset that was used in the last call to ``m.plot_map()``.
-    | If you need multiple colorbars, use an individual ``Maps`` object for each dataset! (e.g. via ``m2  = m.new_layer()``)
 
 
 

@@ -651,7 +651,7 @@ class REST_API_services:
         name : str
             The name of the API.
         service_type : str, optional
-            the service-type to use ("wms" or "wmts"). The default is "wmts".
+            the service-type to use ("wms", "wmts" or "xyz"). The default is "wmts".
         layers : set, optional
             A set of default layers used for delayed fetching (and autocompletion...)
             As soon as one of the layers is accessed, the API is fetched and the
@@ -668,6 +668,8 @@ class REST_API_services:
         self._service_type = service_type
         self._params = _params
         self._fetched = False
+        self._REST_API = None
+
         if layers is None:
             layers = set()
         self._layers = layers
@@ -695,35 +697,35 @@ class REST_API_services:
         # set _fetched to True immediately to avoid issues in __getattribute__
         self._fetched = True
 
-        print(f"EOmaps: ... fetching services for '{self._name}'")
+        if self._REST_API is None:
+            print(f"EOmaps: ... fetching services for '{self._name}'")
+            self._REST_API = _REST_API(self._REST_url, _params=self._params)
 
-        self._REST_API = _REST_API(self._REST_url, _params=self._params)
+            found_folders = set()
+            for foldername, services in self._REST_API._structure.items():
+                setattr(
+                    self,
+                    foldername,
+                    _multi_REST_WMSservice(
+                        m=self._m,
+                        services=services,
+                        service_type=self._service_type,
+                        url=self._REST_url,
+                    ),
+                )
+                found_folders.add(foldername)
 
-        found_folders = set()
-        for foldername, services in self._REST_API._structure.items():
-            setattr(
-                self,
-                foldername,
-                _multi_REST_WMSservice(
-                    m=self._m,
-                    services=services,
-                    service_type=self._service_type,
-                    url=self._REST_url,
-                ),
-            )
-            found_folders.add(foldername)
+            new_layers = found_folders - self._layers
+            if len(new_layers) > 0:
+                print(f"EOmaps: ... found some new folders: {new_layers}")
 
-        new_layers = found_folders - self._layers
-        if len(new_layers) > 0:
-            print(f"EOmaps: ... found some new folders: {new_layers}")
+            invalid_layers = self._layers - found_folders
+            if len(invalid_layers) > 0:
+                print(f"EOmaps: ... could not find the folders: {invalid_layers}")
+            for i in invalid_layers:
+                delattr(self, i)
 
-        invalid_layers = self._layers - found_folders
-        if len(invalid_layers) > 0:
-            print(f"EOmaps: ... could not find the folders: {invalid_layers}")
-        for i in invalid_layers:
-            delattr(self, i)
-
-        print("EOmaps: done!")
+            print("EOmaps: done!")
 
 
 class _REST_WMSservice(_WebServiec_collection):
@@ -754,6 +756,13 @@ class _REST_WMSservice(_WebServiec_collection):
                 url = WMSurl
             else:
                 url = None
+        elif self._service_type == "xyz":
+            suffix = "/tile/{z}/{y}/{x}"
+            WMSurl = url + suffix
+            if requests.get(url + "/tile/{2}/{1}/{1}").status_code == 200:
+                url = WMSurl
+            else:
+                url = None
         return url
 
     def _fetch_layers(self):
@@ -774,6 +783,10 @@ class _REST_WMSservice(_WebServiec_collection):
                     self._layers["layer_" + _sanitize(lname)] = _wmts_layer(
                         self._m, wmts, lname
                     )
+            elif self._service_type == "xyz":
+                self._layers["xyz_layer"] = _xyz_tile_service(
+                    self._m, url, 19, "xyz_layer"
+                )
 
     @property
     @lru_cache()
@@ -917,7 +930,10 @@ class xyzRasterSource(RasterSource):
         # see https://wiki.openstreetmap.org/wiki/Zoom_levels
         # see https://stackoverflow.com/a/75251360/9703451
 
-        z = int(np.clip(np.ceil(np.log2(1 / d * 40075016.68557849)), 0, zmax))
+        equatorial_circumfence = 40075016.68557849
+        # (e.g. self._crs.globe.semiminor_axis * np.pi * 2)
+
+        z = int(np.clip(np.ceil(np.log2(1 / d * equatorial_circumfence)), 0, zmax))
         return z
 
     def getz(self, extent, target_resolution, zmax):
@@ -996,7 +1012,7 @@ class xyzRasterSource(RasterSource):
 
             # reproject the extent to the output-crs
 
-            target_extent = ogc_clients._target_extents(extent, self._crs, output_proj)
+            target_extent = ogc_clients._target_extents(extent, wms_proj, output_proj)
             if len(target_extent) > 0:
                 target_extent = target_extent[0]
             else:
@@ -1015,7 +1031,7 @@ class xyzRasterSource(RasterSource):
             original_extent = extent
             img, extent = warp_array(
                 img,
-                source_proj=self._crs,
+                source_proj=wms_proj,
                 source_extent=original_extent,
                 target_proj=output_proj,
                 target_res=regrid_shape,
@@ -1173,6 +1189,16 @@ class _xyz_tile_service:
         self._artist = img
 
         m.BM.add_bg_artist(self._artist, layer=layer)
+
+
+class _xyz_tile_service_nonearth(_xyz_tile_service):
+    def __call__(self, *args, **kwargs):
+        print(
+            f"EOmaps WARNING: The WebMap service '{self.name}' shows images from a "
+            "different celestrial body projected to an earth-based crs! "
+            "Units used in scalebars, geod_crices etc. represent earth-based units!"
+        )
+        super().__call__(*args, **kwargs)
 
 
 # ------------------------------------------------------------------------------

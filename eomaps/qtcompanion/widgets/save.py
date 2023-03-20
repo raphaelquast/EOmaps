@@ -25,6 +25,29 @@ class TransparentCheckBox(QtWidgets.QCheckBox):
             )
 
 
+class TightBboxCheckBox(QtWidgets.QCheckBox):
+    def enterEvent(self, e):
+        if self.window().showhelp is True:
+            QtWidgets.QToolTip.showText(
+                e.globalPos(),
+                "<h3>Export figure with a tight bbox</h3>"
+                "If checked, The exported figure will use the smallest "
+                "bounding-box that contains all artists. "
+                "The input-box can be used to add a padding (in inches) on all sides.",
+            )
+
+
+class TightBboxInput(QtWidgets.QLineEdit):
+    def enterEvent(self, e):
+        if self.window().showhelp is True:
+            QtWidgets.QToolTip.showText(
+                e.globalPos(),
+                "<h3>Tight Bbox padding</h3>"
+                "Set the padding (in inches) that is added to each side of the "
+                "figure when exporting it with a tight bounding-box",
+            )
+
+
 class RefetchWMSCheckBox(QtWidgets.QCheckBox):
     def enterEvent(self, e):
         if self.window().showhelp is True:
@@ -93,6 +116,23 @@ class SaveFileWidget(QtWidgets.QFrame):
         width = transp_label.fontMetrics().boundingRect(refetch_label.text()).width()
         refetch_label.setFixedWidth(width + 5)
 
+        # tight bbox
+        self.tightbbox_cb = TightBboxCheckBox()
+        tightbbox_label = QtWidgets.QLabel("Tight Bbox")
+        width = (
+            tightbbox_label.fontMetrics().boundingRect(tightbbox_label.text()).width()
+        )
+        tightbbox_label.setFixedWidth(width + 5)
+
+        self.tightbbox_input = TightBboxInput()
+        self.tightbbox_input.setMaximumWidth(50)
+        validator = QtGui.QDoubleValidator()
+        self.tightbbox_input.setValidator(validator)
+        self.tightbbox_input.setText("0.1")
+        self.tightbbox_input.setVisible(False)
+
+        self.tightbbox_cb.stateChanged.connect(self.tight_cb_callback)
+
         layout = QtWidgets.QHBoxLayout()
         layout.addWidget(b_edit)
         layout.addStretch(1)
@@ -102,6 +142,10 @@ class SaveFileWidget(QtWidgets.QFrame):
         layout.addWidget(self.transp_cb)
         layout.addWidget(refetch_label)
         layout.addWidget(self.refetch_cb)
+
+        layout.addWidget(tightbbox_label)
+        layout.addWidget(self.tightbbox_cb)
+        layout.addWidget(self.tightbbox_input)
 
         layout.addWidget(b1)
 
@@ -118,12 +162,26 @@ class SaveFileWidget(QtWidgets.QFrame):
         )
 
     @pyqtSlot()
+    def tight_cb_callback(self):
+        if self.tightbbox_cb.isChecked():  # e.g. checked
+            self.tightbbox_input.setVisible(True)
+        else:
+            self.tightbbox_input.setVisible(False)
+
+    @pyqtSlot()
     def save_file(self):
         savepath = QtWidgets.QFileDialog.getSaveFileName()[0]
         if savepath is not None and savepath != "":
+
+            kwargs = dict()
+            if self.tightbbox_cb.isChecked():
+                kwargs["bbox_inches"] = "tight"
+                kwargs["pad_inches"] = float(self.tightbbox_input.text())
+
             self.m.savefig(
                 savepath,
                 dpi=int(self.dpi_input.text()),
                 transparent=self.transp_cb.isChecked(),
                 refetch_wms=self.refetch_cb.isChecked(),
+                **kwargs
             )

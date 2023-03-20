@@ -448,11 +448,11 @@ class Maps(object):
         # cache commonly used transformers
         self._transf_plot_to_lonlat = Transformer.from_crs(
             self.crs_plot,
-            self.get_crs(4326),
+            self.get_crs(Maps.CRS.PlateCarree(globe=self.crs_plot.globe)),
             always_xy=True,
         )
         self._transf_lonlat_to_plot = Transformer.from_crs(
-            self.get_crs(4326),
+            self.get_crs(Maps.CRS.PlateCarree(globe=self.crs_plot.globe)),
             self.crs_plot,
             always_xy=True,
         )
@@ -2860,7 +2860,7 @@ class Maps(object):
                 self.show_layer(layer_with_bg)
 
             redraw = False
-            if dpi is not None and dpi != self.f.dpi:
+            if dpi is not None and dpi != self.f.dpi or "bbox_inches" in kwargs:
                 redraw = True
 
                 # clear all cached background layers before saving to make sure they
@@ -2937,7 +2937,7 @@ class Maps(object):
 
     def join_limits(self, *args):
         """
-        Join the x- and y- limits of the axes (e.g. on zoom).
+        Join the x- and y- limits of the maps (crs must be equal!).
 
         Parameters
         ----------
