@@ -2055,11 +2055,12 @@ class wms_container(object):
         http://services.arcgisonline.com/arcgis/rest/services
 
         """
+
         API = REST_API_services(
             m=self._m,
             url="http://server.arcgisonline.com/arcgis/rest/services",
             name="ERSI_ArcGIS_REST",
-            service_type="wmts",
+            service_type="xyz",
             layers={
                 "Canvas",
                 "Elevation",
