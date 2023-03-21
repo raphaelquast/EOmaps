@@ -1367,7 +1367,7 @@ class BlitManager:
 
         self._managed_axes = set()
 
-        self._clear_on_layer_change = True
+        self._clear_on_layer_change = False
 
     def _get_all_map_axes(self):
         maxes = {
