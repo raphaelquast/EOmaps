@@ -2778,33 +2778,37 @@ class Maps(object):
         from PIL import Image
         from IPython.display import display
 
-        if len(layer) == 0:
-            layer = None
+        with ExitStack() as stack:
+            # don't clear on layer-changes
+            stack.enter_context(self.BM._cx_dont_clear_on_layer_change())
 
-        # hide companion-widget indicator
-        self._indicate_companion_map(False)
+            if len(layer) == 0:
+                layer = None
 
-        if layer is not None:
-            layer = self._get_combined_layer_name(*layer)
+            # hide companion-widget indicator
+            self._indicate_companion_map(False)
 
-        # add the figure background patch as the bottom layer
-        initial_layer = self.BM.bg_layer
-
-        if transparent is False:
-            showlayer_name = self.BM._get_showlayer_name(layer=layer)
-            layer_with_bg = "|".join(["__BG__", showlayer_name])
-            self.show_layer(layer_with_bg)
-            sn = self._get_snapshot()
-            # restore the previous layer
-            self.BM._refetch_layer(layer_with_bg)
-            self.show_layer(initial_layer)
-        else:
             if layer is not None:
-                self.show_layer(layer)
+                layer = self._get_combined_layer_name(*layer)
+
+            # add the figure background patch as the bottom layer
+            initial_layer = self.BM.bg_layer
+
+            if transparent is False:
+                showlayer_name = self.BM._get_showlayer_name(layer=layer)
+                layer_with_bg = "|".join(["__BG__", showlayer_name])
+                self.show_layer(layer_with_bg)
                 sn = self._get_snapshot()
+                # restore the previous layer
+                self.BM._refetch_layer(layer_with_bg)
                 self.show_layer(initial_layer)
             else:
-                sn = self._get_snapshot()
+                if layer is not None:
+                    self.show_layer(layer)
+                    sn = self._get_snapshot()
+                    self.show_layer(initial_layer)
+                else:
+                    sn = self._get_snapshot()
 
         display(Image.fromarray(sn, "RGBA"), display_id=True, clear=clear)
 
