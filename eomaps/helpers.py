@@ -2079,8 +2079,16 @@ class BlitManager:
         # (sorted by zorder)
         allartists = chain(*(self._artists.get(layer, []) for layer in layers), artists)
 
-        for a in sorted(allartists, key=self._get_artist_zorder):
-            fig.draw_artist(a)
+        with ExitStack() as stack:
+            # avoid drawing the background-patches of managed (dynamic) axes
+            # since they might interfere with consecutive draws issued by callbacks
+            for ax_i in self._managed_axes:
+                stack.enter_context(
+                    ax_i.patch._cm_set(facecolor="none", edgecolor="none")
+                )
+
+            for a in sorted(allartists, key=self._get_artist_zorder):
+                fig.draw_artist(a)
 
     def _get_unmanaged_artists(self):
         # return all artists not explicitly managed by the blit-manager
