@@ -1443,10 +1443,9 @@ class cb_pick_container(_click_container):
                 # make sure temporary artists are cleared before executing new callbacks
                 # to avoid having old artists around when callbacks are triggered again
                 self._m.BM._clear_temp_artists(self._method)
+                self._clear_temporary_artists()
 
                 self._event = event
-                self._clear_temporary_artists()
-                # self._m.BM._clear_temp_artists(self._method)
 
                 # execute "_onpick" on the maps-object that belongs to the clicked axes
                 # and forward the event to all forwarded maps-objects
