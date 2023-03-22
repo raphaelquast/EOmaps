@@ -820,7 +820,7 @@ class TestBasicPlotting(unittest.TestCase):
         m.add_feature.preset.countries()
         m.set_extent_to_location("Austria")
 
-        e = m.ax.get_extent()
+        e = m.get_extent()
         bbox = list(map(float, resp["boundingbox"]))
 
         self.assertTrue(np.allclose([e[2], e[3], e[0], e[1]], bbox, atol=0.1))

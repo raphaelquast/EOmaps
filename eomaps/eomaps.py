@@ -1392,14 +1392,14 @@ class Maps(object):
     @contextmanager
     def _disable_autoscale(self, set_extent):
         if set_extent is False:
-            init_extent = self.ax.get_extent()
+            init_extent = self.get_extent()
 
         try:
 
             yield
         finally:
             if set_extent is False:
-                self.ax.set_extent(init_extent)
+                self.set_extent(init_extent)
 
     def add_gdf(
         self,
@@ -2356,6 +2356,12 @@ class Maps(object):
 
         self.ax.set_extent(extent, crs=crs)
         self._set_extent_on_plot = False
+
+    @wraps(GeoAxes.get_extent)
+    def get_extent(self, crs=None):
+        """Get the extent of the map."""
+        # just a wrapper to avoid using m.ax.get_extent()
+        return self.ax.get_extent(crs=crs)
 
     def plot_map(
         self,
@@ -3855,12 +3861,12 @@ class Maps(object):
             ).to_crs(gdf.crs)
         elif how == "extent" or how == "extent_invert":
             self.BM.update()
-            x0, x1, y0, y1 = self.ax.get_extent()
+            x0, x1, y0, y1 = self.get_extent()
             clip_shp = self._make_rect_poly(x0, y0, x1, y1, self.crs_plot).to_crs(
                 gdf.crs
             )
         elif how == "crs_bounds" or how == "crs_bounds_invert":
-            x0, x1, y0, y1 = self.ax.get_extent()
+            x0, x1, y0, y1 = self.get_extent()
             clip_shp = self._make_rect_poly(
                 *self.crs_plot.boundary.bounds, self.crs_plot
             ).to_crs(gdf.crs)
@@ -4304,7 +4310,7 @@ class Maps(object):
         else:
             # update here to ensure bounds are set
             self.BM.update()
-            x0, x1, y0, y1 = self.ax.get_extent()
+            x0, x1, y0, y1 = self.get_extent()
             x_range = (x0, x1)
             y_range = (y0, y1)
 
