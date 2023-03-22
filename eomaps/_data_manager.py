@@ -437,7 +437,6 @@ class DataManager:
             # update the number of immediate points calculated for plot-shapes
             s = self._get_datasize(props)
             self._print_datasize_warnings(s)
-            self._set_n(s)
 
             # stop here in case we are dealing with a pick-only dataset
             if self._only_pick:
@@ -634,37 +633,6 @@ class DataManager:
 
     def _get_datasize(self, props):
         return np.size(props["z_data"])
-
-    def _set_n(self, s):
-        shape = self.m.shape
-
-        # in case an explicit n is provided, keep using it!
-        if getattr(shape, "_n", None) is not None:
-            return shape._n
-
-        if shape.name == "rectangles":
-            # mesh currently onls supports n=1
-            if shape.mesh is True:
-                shape.n = 1
-                return
-            # if plot crs is same as input-crs there is no need for
-            # intermediate points since the rectangles are not curved!
-            if self.m._crs_plot == self.m.data_specs.crs:
-                shape.n = 1
-                return
-
-        if s < 10:
-            n = 100
-        elif s < 100:
-            n = 75
-        elif s < 1000:
-            n = 50
-        elif s < 10000:
-            n = 20
-        else:
-            n = 12
-
-        shape.n = n
 
     def _print_datasize_warnings(self, s):
         if s < 1e5:

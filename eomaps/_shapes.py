@@ -270,12 +270,67 @@ class shapes(object):
         t = Transformer.from_crs(in_crs, out_crs, always_xy=True)
         return t
 
-    class _geod_circles(object):
-        name = "geod_circles"
+    # a base class for shapes that support setting the number of intermediate points
+    class _ShapeBase:
+        name = "none"
 
         def __init__(self, m):
             self._m = m
             self._n = None
+
+        def _get_auto_n(self):
+            if self._m.data is not None:
+                data = self._m._data_manager._current_data.get("z_data", self._m.data)
+                s = np.size(data)
+
+                if self.name == "rectangles":
+                    # mesh currently only supports n=1
+                    if self.mesh is True:
+                        return 1
+
+                    # if plot crs is same as input-crs there is no need for
+                    # intermediate points since the rectangles are not curved!
+                    if self._m._crs_plot == self._m.data_specs.crs:
+                        return 1
+
+                if s < 10:
+                    n = 100
+                elif s < 100:
+                    n = 75
+                elif s < 1000:
+                    n = 50
+                elif s < 10000:
+                    n = 20
+                else:
+                    n = 12
+
+                return n
+            else:
+                return 12
+
+        @property
+        def n(self):
+            if self._n is None:
+                return self._get_auto_n()
+            else:
+                return self._n
+
+        @n.setter
+        def n(self, val):
+            if self.name == "rectangles" and self.mesh is True:
+                if val is not None and val != 1:
+                    warnings.warn(
+                        "EOmaps: rectangles with 'mesh=True' only supports n=1"
+                    )
+                self._n = 1
+            else:
+                self._n = val
+
+    class _geod_circles(_ShapeBase):
+        name = "geod_circles"
+
+        def __init__(self, m):
+            super().__init__(m=m)
 
         def __call__(self, radius=None, n=None):
             """
@@ -319,22 +374,6 @@ class shapes(object):
             return dict(radius=self._radius, n=self._n)
 
         @property
-        def n(self):
-            if self._n is None:
-                if self._m.data is not None:
-                    if np.size(self._m.data) < 10000:
-                        return 100
-                    else:
-                        return 20
-                else:
-                    return 20
-            return self._n
-
-        @n.setter
-        def n(self, val):
-            self._n = val
-
-        @property
         def radius(self):
             return self._radius
 
@@ -355,7 +394,7 @@ class shapes(object):
 
         def _calc_geod_circle_points(self, lon, lat, radius, n=20, start_angle=0):
             """
-            calculate points on a geodetic circle with a given radius
+            Calculate points on a geodetic circle with a given radius.
 
             Parameters
             ----------
@@ -474,71 +513,11 @@ class shapes(object):
 
             return coll
 
-    class _scatter_points(object):
-        name = "scatter_points"
-
-        def __init__(self, m):
-            self._m = m
-            self._n = None
-
-        def __call__(self, size=None, marker=None):
-            """
-            Draw each datapoint as a shape with a size defined in points**2.
-
-            All arguments are forwarded to `m.ax.scatter()`.
-
-            Parameters
-            ----------
-            size : int, float, array-like or str, optional
-                The marker size in points**2.
-
-                If you provide an array of sizes, each datapoint will be drawn with
-                the respective size!
-            marker : str
-                The marker style. Can be either an instance of the class or the text
-                shorthand for a particular marker. Some examples are:
-
-                - `".", "o", "s", "<", ">", "^", "$A^2$"`
-
-                See matplotlib.markers for more information about marker styles.
-            """
-            from . import MapsGrid  # do this here to avoid circular imports!
-
-            for m in self._m if isinstance(self._m, MapsGrid) else [self._m]:
-                shape = self.__class__(m)
-                shape._size = size
-                shape._marker = marker
-                m._shape = shape
-
-        @property
-        def _initargs(self):
-            return dict(size=self._size, marker=self._marker)
-
-        @property
-        def radius(self):
-            radius = shapes._get_radius(self._m, "estimate", "in")
-            return radius
-
-        @property
-        def radius_crs(self):
-            return "in"
-
-        def get_coll(self, x, y, crs, **kwargs):
-            color_and_array = shapes._get_colors_and_array(
-                kwargs, np.full((x.size,), True)
-            )
-            color_and_array["c"] = color_and_array["array"]
-            coll = self._m.ax.scatter(
-                x, y, s=self._size, marker=self._marker, **color_and_array, **kwargs
-            )
-            return coll
-
-    class _ellipses(object):
+    class _ellipses(_ShapeBase):
         name = "ellipses"
 
         def __init__(self, m):
-            self._m = m
-            self._n = None
+            super().__init__(m=m)
 
         def __call__(self, radius="estimate", radius_crs="in", n=None):
             """
@@ -577,22 +556,6 @@ class shapes(object):
             return dict(radius=self._radius, radius_crs=self.radius_crs, n=self._n)
 
         @property
-        def n(self):
-            if self._n is None:
-                if self._m.data is not None:
-                    if np.size(self._m.data) < 10000:
-                        return 100
-                    else:
-                        return 20
-                else:
-                    return 20
-            return self._n
-
-        @n.setter
-        def n(self, val):
-            self._n = val
-
-        @property
         def radius(self):
             radius = shapes._get_radius(self._m, self._radius, self.radius_crs)
             return radius
@@ -616,7 +579,7 @@ class shapes(object):
 
         def _calc_ellipse_points(self, x0, y0, a, b, theta, n, start_angle=0):
             """
-            calculate points on a rotated ellipse
+            Calculate points on a rotated ellipse.
 
             Parameters
             ----------
@@ -783,15 +746,15 @@ class shapes(object):
 
             return coll
 
-    class _rectangles(object):
+    class _rectangles(_ShapeBase):
         name = "rectangles"
 
         def __init__(self, m):
-            self._m = m
+            super().__init__(m=m)
 
         def __call__(self, radius="estimate", radius_crs="in", mesh=False, n=None):
             """
-            Draw projected rectangles with fixed dimensions (and possibly curved edges)
+            Draw projected rectangles with fixed dimensions (and possibly curved edges).
 
             Parameters
             ----------
@@ -840,33 +803,6 @@ class shapes(object):
                 n=self._n,
                 mesh=self.mesh,
             )
-
-        @property
-        def n(self):
-            if self._n is None:
-                if self._m.data is not None:
-                    # if plot crs is same as input-crs there is no need for
-                    # intermediate points since the rectangles are not curved!
-                    if self._m._crs_plot == self._m.data_specs.crs:
-                        return 1
-                    elif np.size(self._m.data) < 10000:
-                        return 40
-                    else:
-                        return 10
-                else:
-                    return 10
-            return self._n
-
-        @n.setter
-        def n(self, val):
-            if self.mesh is True:
-                if val is not None and val != 1:
-                    warnings.warn(
-                        "EOmaps: rectangles with 'mesh=True' only supports n=1"
-                    )
-                self._n = 1
-            else:
-                self._n = val
 
         @property
         def radius(self):
@@ -1069,6 +1005,64 @@ class shapes(object):
                 return self._get_trimesh_coll(x, y, crs, **kwargs)
             else:
                 return self._get_polygon_coll(x, y, crs, **kwargs)
+
+    class _scatter_points(object):
+        name = "scatter_points"
+
+        def __init__(self, m):
+            self._m = m
+
+        def __call__(self, size=None, marker=None):
+            """
+            Draw each datapoint as a shape with a size defined in points**2.
+
+            All arguments are forwarded to `m.ax.scatter()`.
+
+            Parameters
+            ----------
+            size : int, float, array-like or str, optional
+                The marker size in points**2.
+
+                If you provide an array of sizes, each datapoint will be drawn with
+                the respective size!
+            marker : str
+                The marker style. Can be either an instance of the class or the text
+                shorthand for a particular marker. Some examples are:
+
+                - `".", "o", "s", "<", ">", "^", "$A^2$"`
+
+                See matplotlib.markers for more information about marker styles.
+            """
+            from . import MapsGrid  # do this here to avoid circular imports!
+
+            for m in self._m if isinstance(self._m, MapsGrid) else [self._m]:
+                shape = self.__class__(m)
+                shape._size = size
+                shape._marker = marker
+                m._shape = shape
+
+        @property
+        def _initargs(self):
+            return dict(size=self._size, marker=self._marker)
+
+        @property
+        def radius(self):
+            radius = shapes._get_radius(self._m, "estimate", "in")
+            return radius
+
+        @property
+        def radius_crs(self):
+            return "in"
+
+        def get_coll(self, x, y, crs, **kwargs):
+            color_and_array = shapes._get_colors_and_array(
+                kwargs, np.full((x.size,), True)
+            )
+            color_and_array["c"] = color_and_array["array"]
+            coll = self._m.ax.scatter(
+                x, y, s=self._size, marker=self._marker, **color_and_array, **kwargs
+            )
+            return coll
 
     class _voronoi_diagram(object):
         name = "voronoi_diagram"
@@ -1646,9 +1640,6 @@ class shapes(object):
             return s
 
         def _get_rectangle_verts(self, x, y, crs):
-            # the number of intermediate points is fixed to 1 when using a QuadMesh
-            # (e.g. no intermediate points, only vertices)
-            n = 1
             # estimate the radius (make sure only finite values are considered)
 
             # try to find the radius based on the first row/col of the data
