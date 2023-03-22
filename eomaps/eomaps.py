@@ -2343,7 +2343,7 @@ class Maps(object):
         return f"EOmaps_alpha_{ncmaps + 1}"
 
     @wraps(GeoAxes.set_extent)
-    def set_extent(self, extent, crs=None):
+    def set_extent(self, extents, crs=None):
         """Set the extent of the map."""
         # just a wrapper to make sure that previously set extents are not
         # resetted when plotting data!
@@ -2354,7 +2354,7 @@ class Maps(object):
         else:
             crs = Maps.CRS.PlateCarree()
 
-        self.ax.set_extent(extent, crs=crs)
+        self.ax.set_extent(extents, crs=crs)
         self._set_extent_on_plot = False
 
     @wraps(GeoAxes.get_extent)
