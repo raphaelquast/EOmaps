@@ -14,8 +14,9 @@
     :name: test_init_map_objects
 
     from eomaps import Maps
-    m = Maps(crs=4326, layer="first layer", figsize=(10, 5))  # initialize a Maps-object
-    m.add_feature.preset.coastline()                          # add coastlines to the map
+    m = Maps(crs=4326, layer="first layer", figsize=(7, 5))  # initialize a Maps-object
+    m.set_extent((-25, 35, 25, 70))                          # set the map extent
+    m.add_feature.preset.coastline()                         # add coastlines to the map
 
 - ``crs`` represents the projection used for plotting
 - ``layer`` represents the name of the layer associated with the Maps-object (see below)
@@ -45,8 +46,7 @@ Possible ways for specifying the ``crs`` for plotting are:
 
     Maps
     Maps.CRS
-
-
+    Maps.set_extent
 
 
 ▤ Layers
