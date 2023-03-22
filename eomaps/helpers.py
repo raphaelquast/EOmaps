@@ -2054,18 +2054,23 @@ class BlitManager:
 
         # make sure to strip-off transparency-assignments (e.g. "layer1{0.5}")
         if layers is None:
-            layers = {l.split("{", maxsplit=1)[0] for l in self.bg_layer.split("|")}
-            layers.add(self.bg_layer)
+            layers = [self.bg_layer]
+            layers.extend(
+                (l.split("{", maxsplit=1)[0] for l in self.bg_layer.split("|"))
+            )
         else:
-            layers = set(chain(*(i.split("|") for i in layers)))
+            layers = list(chain(*(i.split("|") for i in layers)))
             for l in layers:
-                layers.add(l.split("{", maxsplit=1)[0])
+                layers.append(l.split("{", maxsplit=1)[0])
 
         if artists is None:
             artists = []
 
         # always redraw artists from the "all" layer
-        layers.add("all")
+        layers.append("all")
+
+        # make the list unique but maintain order (dicts keep order for python>3.7)
+        layers = list(dict.fromkeys(layers))
 
         # draw all "unmanaged" axes (e.g. axes that are found in the figure but
         # not in the blit-manager)
@@ -2076,8 +2081,11 @@ class BlitManager:
             ax.draw(self.canvas.renderer)
 
         # redraw artists from the selected layers and explicitly provided artists
-        # (sorted by zorder)
-        allartists = chain(*(self._artists.get(layer, []) for layer in layers), artists)
+        # (sorted by zorder for each layer)
+        layer_artists = list(
+            sorted(self._artists.get(layer, []), key=self._get_artist_zorder)
+            for layer in layers
+        )
 
         with ExitStack() as stack:
             # avoid drawing the background-patches of managed (dynamic) axes
@@ -2087,7 +2095,7 @@ class BlitManager:
                     ax_i.patch._cm_set(facecolor="none", edgecolor="none")
                 )
 
-            for a in sorted(allartists, key=self._get_artist_zorder):
+            for a in chain(*layer_artists, artists):
                 fig.draw_artist(a)
 
     def _get_unmanaged_artists(self):
