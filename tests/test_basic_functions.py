@@ -813,6 +813,31 @@ class TestBasicPlotting(unittest.TestCase):
 
         plt.close("all")
 
+    def test_utility_widgets(self):
+        m = Maps()
+        m2 = m.new_layer("coastline")
+        m2.add_feature.preset.coastline()
+        m3 = m.new_layer("ocean")
+        m3.add_feature.preset.ocean()
+        m4 = m.new_layer("land")
+        m2.add_feature.preset.land()
+
+        s1 = m.util.layer_selector(loc="upper left")
+        s2 = m.util.layer_selector(
+            loc="upper right", layers=["ocean", ("ocean", "land", "coastline")]
+        )
+
+        s1.remove()
+        s2.remove()
+
+        s3 = m.util.layer_slider()
+        s4 = m.util.layer_slider(
+            pos=(0.1, 0.2, 0.6, 0.1), layers=["ocean", ("ocean", "land", "coastline")]
+        )
+
+        s3.remove()
+        s4.remove()
+
     def test_set_extent_to_location(self):
         m = Maps()
         resp = m._get_nominatim_response("austria")
