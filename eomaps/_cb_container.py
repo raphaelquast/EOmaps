@@ -157,7 +157,9 @@ class _cb_container(object):
                 for m in [*self._m.parent._children, self._m.parent]:
                     # always execute keypress callbacks irrespective of the mouse-pos
                     obj = self._getobj(m)
-                    if obj is not None:
+
+                    # only include objects that are on the same layer
+                    if obj is not None and self._execute_cb(obj._m.layer):
                         objs.append(obj)
             else:
                 for m in [*self._m.parent._children, self._m.parent]:
@@ -165,7 +167,8 @@ class _cb_container(object):
                     # (and so are their attributes)!
                     if event.inaxes == m.ax:
                         obj = self._getobj(m)
-                        if obj is not None:
+                        # only include objects that are on the same layer
+                        if obj is not None and self._execute_cb(obj._m.layer):
                             objs.append(obj)
         return objs
 
