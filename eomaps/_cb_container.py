@@ -1380,6 +1380,11 @@ class cb_pick_container(_click_container):
         ) and self._m.f.canvas.toolbar.mode != "":
             return
 
+        # make sure temporary artists are cleared before executing new callbacks
+        # to avoid having old artists around when callbacks are triggered again
+        self._clear_temporary_artists()
+        self._m.BM._clear_temp_artists(self._method)
+
         clickdict = self._get_pickdict(event)
 
         if event.mouseevent.dblclick:
@@ -1443,11 +1448,6 @@ class cb_pick_container(_click_container):
                 if not self._artist is event.artist:
                     return
 
-                # make sure temporary artists are cleared before executing new callbacks
-                # to avoid having old artists around when callbacks are triggered again
-                self._m.BM._clear_temp_artists(self._method)
-                self._clear_temporary_artists()
-
                 self._event = event
 
                 # execute "_onpick" on the maps-object that belongs to the clicked axes
@@ -1456,8 +1456,6 @@ class cb_pick_container(_click_container):
                 # forward callbacks to the connected maps-objects
                 self._fwd_cb(event, self._picker_name)
 
-                self._m.BM._after_update_actions.append(self._clear_temporary_artists)
-                self._m.BM._clear_temp_artists(self._method)
                 # don't update here... the click-callback will take care of it!
             except ReferenceError:
                 pass
@@ -1474,7 +1472,6 @@ class cb_pick_container(_click_container):
             return
         for key, m in self._fwd_cbs.items():
             obj = self._getobj(m)
-            obj._clear_temporary_artists()
             if obj is None:
                 continue
 
