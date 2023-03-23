@@ -132,7 +132,7 @@ class shapes(object):
         return radius
 
     @staticmethod
-    def _estimate_radius(m, radius_crs, method=np.median):
+    def _estimate_radius(m, radius_crs, method=np.nanmedian):
 
         assert radius_crs in [
             "in",
@@ -152,8 +152,8 @@ class shapes(object):
         if len(x.shape) == 2 and len(y.shape) == 2:
             userange = int(np.sqrt(m.set_shape._radius_estimation_range))
 
-            radiusx = np.nanmedian(np.diff(x[:userange, :userange], axis=1)) / 2
-            radiusy = np.nanmedian(np.diff(y[:userange, :userange], axis=0)) / 2
+            radiusx = method(np.diff(x[:userange, :userange], axis=1)) / 2
+            radiusy = method(np.diff(y[:userange, :userange], axis=0)) / 2
 
             radius = (radiusx, radiusy)
 
