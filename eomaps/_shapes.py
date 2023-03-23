@@ -1640,28 +1640,18 @@ class shapes(object):
             return s
 
         def _get_rectangle_verts(self, x, y, crs):
-            # estimate the radius (make sure only finite values are considered)
+            # estimate distance between pixels
+            dx = np.diff(x, axis=1, prepend=x[:, 1][:, np.newaxis]) / 2
+            dy = np.diff(y, axis=0, prepend=y[1, :][np.newaxis, :]) / 2
 
-            # try to find the radius based on the first row/col of the data
-            # (a shortcut for very large datasets...)
-            rx = np.diff(x[0])[0] / 2
-            ry = np.diff(y.T[0])[0] / 2
-            if not np.isfinite([rx, ry]).all():
-                # if no finite radius is found, search for the radius in the whole array
-                dx = np.diff(x, axis=1)
-                dy = np.diff(y, axis=0)
-                rx = abs(dx[np.isfinite(dx)][0]) / 2
-                ry = abs(dy[np.isfinite(dy)][0]) / 2
+            # since prepend will result in a inverted diff (val - prepended_val)
+            # instead of (prepended_val - val) we need to invert the sign!
+            dx[:, 0] = -dx[:, 0]
+            dy[0, :] = -dy[0, :]
 
-            assert rx != 0 and ry != 0, (
-                "EOmaps: it seems the radius of the raster-data is 0... "
-                "Are the coordinates transposed?"
-            )
+            x = x - dx
+            y = y - dy
 
-            self._radius = rx, ry
-            # TODO switch to estimating the radius?
-            # rx, ry = self.radius
-            p = x, y
             in_crs = self._m.get_crs(crs)
 
             # transform corner-points
@@ -1683,16 +1673,15 @@ class shapes(object):
                 clipx, clipy = lambda x: x, lambda y: y
 
             # distribute the values as rectangle vertices
-            v = np.full((p[0].shape[0] + 1, p[0].shape[1] + 1, 2), None, dtype=float)
+            v = np.full((x.shape[0] + 1, x.shape[1] + 1, 2), None, dtype=float)
 
-            v[:-1, :-1, 0] = p[0] - rx
-            v[:-1, :-1, 1] = p[1] - ry
+            v[:-1, :-1, 0] = x
+            v[:-1, :-1, 1] = y
 
             # treat bottom vertices values
-            v[-1, :-1] = v[-2, :-1] + [0, 2 * ry]
-
+            v[-1, :-1] = v[-2, :-1] + [0, 2 * dy[-1, 0]]
             # treat right most vertices values
-            v[:, -1] = v[:, -2] + [2 * rx, 0]
+            v[:, -1] = v[:, -2] + [2 * dx[0, -1], 0]
 
             px, py = t.transform(clipx(v[:, :, 0]), clipy(v[:, :, 1]))
             verts = np.stack((px, py), axis=2)
