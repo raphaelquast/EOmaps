@@ -1608,7 +1608,7 @@ class BlitManager:
         return sortp
 
     def get_bg_artists(self, layer):
-        artists = set()
+        artists = list()
         for l in np.atleast_1d(layer):
             # get all relevant artists for combined background layers
             l = str(l)  # w make sure we convert non-string layer names to string!
@@ -1616,13 +1616,14 @@ class BlitManager:
             # get artists defined on the layer itself
             # Note: it's possible to create explicit multi-layers and attach
             # artists that are only visible if both layers are visible! (e.g. "l1|l2")
-
-            layer_artists = set(self._bg_artists.get(l, []))
-            artists = artists.union(layer_artists)
+            artists.extend(self._bg_artists.get(l, []))
 
             if l == self._unmanaged_artists_layer:
-                artists = artists.union(self._get_unmanaged_artists())
+                artists.extend(self._get_unmanaged_artists())
 
+        # make the list unique but maintain order (dicts keep order for python>3.7)
+        artists = dict.fromkeys(artists)
+        # sort artists by zorder (respecting inset-map priority)
         artists = sorted(artists, key=self._bg_artists_sort)
 
         return artists
@@ -2054,18 +2055,23 @@ class BlitManager:
 
         # make sure to strip-off transparency-assignments (e.g. "layer1{0.5}")
         if layers is None:
-            layers = {l.split("{", maxsplit=1)[0] for l in self.bg_layer.split("|")}
-            layers.add(self.bg_layer)
+            layers = [self.bg_layer]
+            layers.extend(
+                (l.split("{", maxsplit=1)[0] for l in self.bg_layer.split("|"))
+            )
         else:
-            layers = set(chain(*(i.split("|") for i in layers)))
+            layers = list(chain(*(i.split("|") for i in layers)))
             for l in layers:
-                layers.add(l.split("{", maxsplit=1)[0])
+                layers.append(l.split("{", maxsplit=1)[0])
 
         if artists is None:
             artists = []
 
         # always redraw artists from the "all" layer
-        layers.add("all")
+        layers.append("all")
+
+        # make the list unique but maintain order (dicts keep order for python>3.7)
+        layers = list(dict.fromkeys(layers))
 
         # draw all "unmanaged" axes (e.g. axes that are found in the figure but
         # not in the blit-manager)
@@ -2076,11 +2082,22 @@ class BlitManager:
             ax.draw(self.canvas.renderer)
 
         # redraw artists from the selected layers and explicitly provided artists
-        # (sorted by zorder)
-        allartists = chain(*(self._artists.get(layer, []) for layer in layers), artists)
+        # (sorted by zorder for each layer)
+        layer_artists = list(
+            sorted(self._artists.get(layer, []), key=self._get_artist_zorder)
+            for layer in layers
+        )
 
-        for a in sorted(allartists, key=self._get_artist_zorder):
-            fig.draw_artist(a)
+        with ExitStack() as stack:
+            # avoid drawing the background-patches of managed (dynamic) axes
+            # since they might interfere with consecutive draws issued by callbacks
+            for ax_i in self._managed_axes:
+                stack.enter_context(
+                    ax_i.patch._cm_set(facecolor="none", edgecolor="none")
+                )
+
+            for a in chain(*layer_artists, artists):
+                fig.draw_artist(a)
 
     def _get_unmanaged_artists(self):
         # return all artists not explicitly managed by the blit-manager
@@ -2212,8 +2229,7 @@ class BlitManager:
         if bg_layer is None:
             bg_layer = self.bg_layer
 
-        while len(self._before_update_actions) > 0:
-            action = self._before_update_actions.pop(0)
+        for action in self._before_update_actions:
             action()
 
         if clear:

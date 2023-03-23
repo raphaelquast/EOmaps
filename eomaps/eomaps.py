@@ -1392,14 +1392,14 @@ class Maps(object):
     @contextmanager
     def _disable_autoscale(self, set_extent):
         if set_extent is False:
-            init_extent = self.ax.get_extent()
+            init_extent = self.get_extent()
 
         try:
 
             yield
         finally:
             if set_extent is False:
-                self.ax.set_extent(init_extent)
+                self.set_extent(init_extent)
 
     def add_gdf(
         self,
@@ -2343,7 +2343,7 @@ class Maps(object):
         return f"EOmaps_alpha_{ncmaps + 1}"
 
     @wraps(GeoAxes.set_extent)
-    def set_extent(self, extent, crs=None):
+    def set_extent(self, extents, crs=None):
         """Set the extent of the map."""
         # just a wrapper to make sure that previously set extents are not
         # resetted when plotting data!
@@ -2354,8 +2354,20 @@ class Maps(object):
         else:
             crs = Maps.CRS.PlateCarree()
 
-        self.ax.set_extent(extent, crs=crs)
+        self.ax.set_extent(extents, crs=crs)
         self._set_extent_on_plot = False
+
+    @wraps(GeoAxes.get_extent)
+    def get_extent(self, crs=None):
+        """Get the extent of the map."""
+        # just a wrapper to avoid using m.ax.get_extent()
+
+        if crs is not None:
+            crs = self._get_cartopy_crs(crs)
+        else:
+            crs = Maps.CRS.PlateCarree()
+
+        return self.ax.get_extent(crs=crs)
 
     def plot_map(
         self,
@@ -2778,33 +2790,37 @@ class Maps(object):
         from PIL import Image
         from IPython.display import display
 
-        if len(layer) == 0:
-            layer = None
+        with ExitStack() as stack:
+            # don't clear on layer-changes
+            stack.enter_context(self.BM._cx_dont_clear_on_layer_change())
 
-        # hide companion-widget indicator
-        self._indicate_companion_map(False)
+            if len(layer) == 0:
+                layer = None
 
-        if layer is not None:
-            layer = self._get_combined_layer_name(*layer)
+            # hide companion-widget indicator
+            self._indicate_companion_map(False)
 
-        # add the figure background patch as the bottom layer
-        initial_layer = self.BM.bg_layer
-
-        if transparent is False:
-            showlayer_name = self.BM._get_showlayer_name(layer=layer)
-            layer_with_bg = "|".join(["__BG__", showlayer_name])
-            self.show_layer(layer_with_bg)
-            sn = self._get_snapshot()
-            # restore the previous layer
-            self.BM._refetch_layer(layer_with_bg)
-            self.show_layer(initial_layer)
-        else:
             if layer is not None:
-                self.show_layer(layer)
+                layer = self._get_combined_layer_name(*layer)
+
+            # add the figure background patch as the bottom layer
+            initial_layer = self.BM.bg_layer
+
+            if transparent is False:
+                showlayer_name = self.BM._get_showlayer_name(layer=layer)
+                layer_with_bg = "|".join(["__BG__", showlayer_name])
+                self.show_layer(layer_with_bg)
                 sn = self._get_snapshot()
+                # restore the previous layer
+                self.BM._refetch_layer(layer_with_bg)
                 self.show_layer(initial_layer)
             else:
-                sn = self._get_snapshot()
+                if layer is not None:
+                    self.show_layer(layer)
+                    sn = self._get_snapshot()
+                    self.show_layer(initial_layer)
+                else:
+                    sn = self._get_snapshot()
 
         display(Image.fromarray(sn, "RGBA"), display_id=True, clear=clear)
 
@@ -3851,12 +3867,12 @@ class Maps(object):
             ).to_crs(gdf.crs)
         elif how == "extent" or how == "extent_invert":
             self.BM.update()
-            x0, x1, y0, y1 = self.ax.get_extent()
+            x0, x1, y0, y1 = self.get_extent()
             clip_shp = self._make_rect_poly(x0, y0, x1, y1, self.crs_plot).to_crs(
                 gdf.crs
             )
         elif how == "crs_bounds" or how == "crs_bounds_invert":
-            x0, x1, y0, y1 = self.ax.get_extent()
+            x0, x1, y0, y1 = self.get_extent()
             clip_shp = self._make_rect_poly(
                 *self.crs_plot.boundary.bounds, self.crs_plot
             ).to_crs(gdf.crs)
@@ -4300,7 +4316,7 @@ class Maps(object):
         else:
             # update here to ensure bounds are set
             self.BM.update()
-            x0, x1, y0, y1 = self.ax.get_extent()
+            x0, x1, y0, y1 = self.get_extent(self.crs_plot)
             x_range = (x0, x1)
             y_range = (y0, y1)
 

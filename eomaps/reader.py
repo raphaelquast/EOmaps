@@ -406,10 +406,10 @@ class read_file:
         try:
             if isinstance(path_or_dataset, (str, Path)):
                 # if a path is provided, open the file (and close it in the end)
-                opened = True
                 ncfile = xar.open_dataset(
                     path_or_dataset, mask_and_scale=mask_and_scale
                 )
+                opened = True
             elif isinstance(path_or_dataset, xar.Dataset):
                 # if an xar.Dataset is provided, use it
                 ncfile = path_or_dataset
@@ -537,7 +537,6 @@ class read_file:
                     parameter=parameter,
                     encoding=encoding,
                 )
-
         finally:
             if opened:
                 ncfile.close()
@@ -797,6 +796,7 @@ class from_file:
         val_transform=None,
         coastline=False,
         mask_and_scale=False,
+        extent=None,
         **kwargs,
     ):
         """
@@ -902,7 +902,7 @@ class from_file:
             - If a tuple is provided, it is used to set the plot-extent
               before plotting via `m.set_extent(extent)`
 
-              - (x0, x1, y0, y1) : provide the extent in lat/lon
+              - (x0, x1, y0, y1) : provide the extent in lat/lon (epsg 4326)
               - ((x0, x1, y0, y1), crs) : provide the extent in the given crs
 
             - If a string is provided, it is used to attempt to set the plot-extent
@@ -971,6 +971,7 @@ class from_file:
             classify_specs=classify_specs,
             val_transform=val_transform,
             coastline=coastline,
+            extent=extent,
             **kwargs,
         )
 
@@ -987,6 +988,7 @@ class from_file:
         val_transform=None,
         coastline=False,
         mask_and_scale=False,
+        extent=None,
         **kwargs,
     ):
         """
@@ -1080,7 +1082,7 @@ class from_file:
             - If a tuple is provided, it is used to set the plot-extent
               before plotting via `m.set_extent(extent)`
 
-              - (x0, x1, y0, y1) : provide the extent in lat/lon
+              - (x0, x1, y0, y1) : provide the extent in lat/lon (epsg 4326)
               - ((x0, x1, y0, y1), crs) : provide the extent in the given crs
 
             - If a string is provided, it is used to attempt to set the plot-extent
@@ -1164,6 +1166,7 @@ class from_file:
             classify_specs=classify_specs,
             val_transform=val_transform,
             coastline=coastline,
+            extent=extent,
             **kwargs,
         )
 
@@ -1180,6 +1183,7 @@ class from_file:
         val_transform=None,
         coastline=False,
         read_kwargs=None,
+        extent=None,
         **kwargs,
     ):
         """
@@ -1248,7 +1252,7 @@ class from_file:
             - If a tuple is provided, it is used to set the plot-extent
               before plotting via `m.set_extent(extent)`
 
-              - (x0, x1, y0, y1) : provide the extent in lat/lon
+              - (x0, x1, y0, y1) : provide the extent in lat/lon (epsg 4326)
               - ((x0, x1, y0, y1), crs) : provide the extent in the given crs
 
             - If a string is provided, it is used to attempt to set the plot-extent
@@ -1280,6 +1284,7 @@ class from_file:
             classify_specs=classify_specs,
             val_transform=val_transform,
             coastline=coastline,
+            extent=extent,
             **kwargs,
         )
 

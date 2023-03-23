@@ -34,6 +34,7 @@ class TestFromFile(unittest.TestCase):
             data_crs=4326,
             layer="second",
             cmap="cividis",
+            extent=(-20, 20, -56, 78),
         )
         m.show_layer(m2.layer)
 
@@ -44,7 +45,11 @@ class TestFromFile(unittest.TestCase):
         m = Maps.from_file.GeoTIFF(self.tiffpath)
 
         m2 = m.new_layer_from_file.GeoTIFF(
-            self.tiffpath, layer="second", cmap="cividis", shape="shade_points"
+            self.tiffpath,
+            layer="second",
+            cmap="cividis",
+            shape="shade_points",
+            extent=(7, 9, 41, 42),
         )
         m.show_layer(m2.layer)
         plt.close("all")
@@ -59,7 +64,9 @@ class TestFromFile(unittest.TestCase):
             self.netcdfpath,
             layer="second",
             cmap="cividis",
-            shape="shade_points",
+            shape="shade_raster",
             data_crs=4326,
+            extent=((7, 9, 41, 42), 4326),
         )
+        m.show_layer(m2.layer)
         plt.close("all")

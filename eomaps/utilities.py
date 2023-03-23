@@ -171,7 +171,10 @@ class LayerSelector(SelectorButtons):
         Parameters
         ----------
         layers : list or None, optional
-            A list of layer-names that should appear in the selector.
+            A list of layer-names (or tuples of layer-names to combine) that are
+            used in the selector. For details on how to use combined layers, check
+            the docstring of `m.show_layer()`
+
             If None, all available layers (except the "all" layer) are shown, and the
             layers are automatically updated whenever a new layer is created on the map.
             (check the 'exclude_layers' parameter for excluding specific layers)
@@ -208,10 +211,22 @@ class LayerSelector(SelectorButtons):
         >>> m2 = m.new_layer(layer="ocean")
         >>> m.add_feature.preset.coastline()
         >>> m2.add_feature.preset.ocean()
-        >>> s = m.util.layer_selector()
+        >>> s = m.util.layer_selector(loc="upper left")
+        >>> s2 = m.util.layer_selector(
+        >>>          layers=["ocean",
+        >>>                  (("ocean", .5), "coastline")],
+        >>>          loc="upper right")
 
-        # to remove the widget, simply use
+
+        To remove the widget (`s`), simply use:
+
         >>> s.remove()
+
+        See Also
+        --------
+
+        - m.util.layer_slider() : A slider widget to switch between layers.
+        - m.show_layer(): Set the currently visible layer.
 
         """
 
@@ -226,6 +241,14 @@ class LayerSelector(SelectorButtons):
             if exclude_layers is None:
                 exclude_layers = ["all"]
             layers = m._get_layers(exclude=exclude_layers)
+        else:
+            uselayers = []
+            for l in layers:
+                if not isinstance(l, str):
+                    uselayers.append(m._get_combined_layer_name(*l))
+                else:
+                    uselayers.append(l)
+            layers = uselayers
 
         # assert (
         #     len(layers) > 0
@@ -336,7 +359,10 @@ class LayerSlider(Slider):
         Parameters
         ----------
         layers : list or None, optional
-            A list of layer-names that should appear in the selector.
+            A list of layer-names (or tuples of layer-names to combine) that are
+            be used in the slider. For details on how to use combined layers, check
+            the docstring of `m.show_layer()`
+
             If None, all available layers (except the "all" layer) are shown, and the
             layers are automatically updated whenever a new layer is created on the map.
             (check the 'exclude_layers' parameter for excluding specific layers)
@@ -383,9 +409,12 @@ class LayerSlider(Slider):
         >>> m2 = m.new_layer(layer="ocean")
         >>> m.add_feature.preset.coastline()
         >>> m2.add_feature.preset.ocean()
-        >>> s = m.util.layer_slider()
+        >>> s = m.util.layer_slider(
+        >>>          layers=["ocean", "coastline",
+        >>>                  (("ocean", .5), "coastline")])
 
-        # to remove the widget, simply use
+        To remove the widget (`s`), simply use:
+
         >>> s.remove()
 
         """
@@ -402,10 +431,14 @@ class LayerSlider(Slider):
             if exclude_layers is None:
                 exclude_layers = ["all"]
             layers = self._m._get_layers(exclude=exclude_layers)
-
-        # assert (
-        #     len(layers) > 0
-        # ), "EOmaps: There are no layers with artists available.. plot something first!"
+        else:
+            uselayers = []
+            for l in layers:
+                if not isinstance(l, str):
+                    uselayers.append(m._get_combined_layer_name(*l))
+                else:
+                    uselayers.append(l)
+            layers = uselayers
 
         if pos is None:
             ax_slider = self._m.f.add_axes(
@@ -584,29 +617,6 @@ class utilities:
 
         for s in (*self._sliders.values(), *self._selectors.values()):
             s._reinit()
-
-    def remove(self, name=None, what="all"):
-        # TODO doc
-        if name is not None:
-            if name in self._sliders:
-                self._sliders[name].remove()
-            elif name in self._selectors:
-                self._selectors[name].remove()
-            return
-
-        if what == "sliders":
-            for s in self._sliders.values():
-                s.remove()
-        elif what == "selectors":
-            for s in self._selectors.values():
-                s.remove()
-        elif what == "all":
-            for s in (*self._sliders.values(), *self._selectors.values()):
-                s.remove()
-        else:
-            raise TypeError(
-                "EOmaps: 'what' must be one of 'sliders', 'selectors' or 'all'"
-            )
 
     @wraps(LayerSelector.__init__)
     def layer_selector(self, **kwargs):

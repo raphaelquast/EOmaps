@@ -118,7 +118,9 @@ class DataManager:
 
         # estimate the radius (used as margin on data selection)
         try:
-            self._r = self.m._shapes._estimate_radius(self.m, "out")
+            self._r = self.m._shapes._estimate_radius(
+                self.m, radius_crs="out", method=np.nanmax
+            )
             if self._r is not None and all(np.isfinite(i) for i in self._r):
                 self._radius_margin = [i * self._radius_margin_factor for i in self._r]
             else:
@@ -283,7 +285,7 @@ class DataManager:
 
     @property
     def current_extent(self):
-        return self.m.ax.get_extent(self.m.ax.projection)
+        return self.m.get_extent(self.m.ax.projection)
 
     @property
     def extent_changed(self):
@@ -434,10 +436,8 @@ class DataManager:
                 # fail-fast in case the data is completely outside the extent
                 return
 
-            # update the number of immediate points calculated for plot-shapes
             s = self._get_datasize(props)
             self._print_datasize_warnings(s)
-            self._set_n(s)
 
             # stop here in case we are dealing with a pick-only dataset
             if self._only_pick:
@@ -634,37 +634,6 @@ class DataManager:
 
     def _get_datasize(self, props):
         return np.size(props["z_data"])
-
-    def _set_n(self, s):
-        shape = self.m.shape
-
-        # in case an explicit n is provided, keep using it!
-        if getattr(shape, "_n", None) is not None:
-            return shape._n
-
-        if shape.name == "rectangles":
-            # mesh currently onls supports n=1
-            if shape.mesh is True:
-                shape.n = 1
-                return
-            # if plot crs is same as input-crs there is no need for
-            # intermediate points since the rectangles are not curved!
-            if self.m._crs_plot == self.m.data_specs.crs:
-                shape.n = 1
-                return
-
-        if s < 10:
-            n = 100
-        elif s < 100:
-            n = 75
-        elif s < 1000:
-            n = 50
-        elif s < 10000:
-            n = 20
-        else:
-            n = 12
-
-        shape.n = n
 
     def _print_datasize_warnings(self, s):
         if s < 1e5:

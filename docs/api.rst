@@ -11,10 +11,12 @@
 | To start creating a new map (in this case a plot in ``epsg=4326``, e.g. lon/lat), simply use:
 
 .. code-block:: python
+    :name: test_init_map_objects
 
     from eomaps import Maps
-    m = Maps(crs=4326, layer="first layer", figsize=(10, 5))  # initialize a Maps-object
-    m.add_feature.preset.coastline()                          # add coastlines to the map
+    m = Maps(crs=4326, layer="first layer", figsize=(7, 5))  # initialize a Maps-object
+    m.set_extent((-25, 35, 25, 70))                          # set the map extent
+    m.add_feature.preset.coastline()                         # add coastlines to the map
 
 - ``crs`` represents the projection used for plotting
 - ``layer`` represents the name of the layer associated with the Maps-object (see below)
@@ -44,8 +46,7 @@ Possible ways for specifying the ``crs`` for plotting are:
 
     Maps
     Maps.CRS
-
-
+    Maps.set_extent
 
 
 ▤ Layers
@@ -424,6 +425,7 @@ Possible shapes that can be used to quickly generate a plot for extremely large 
 
 
 .. code-block:: python
+    :name: test_set_shape
 
     from eomaps import Maps
     data, x, y = [.3,.64,.2,.5,1], [1,2,3,4,5], [2,5,3,7,5]
@@ -557,6 +559,7 @@ By default, the plot-extent of the axis is adjusted to the extent of the data **
 To always keep the extent as-is, use ``m.plot_map(set_extent=False)``.
 
 .. code-block:: python
+    :name: test_plot_data
 
     from eomaps import Maps
     m = Maps()
@@ -597,6 +600,7 @@ To adjust the margins of the subplots, use ``m.subplots_adjust()``, ``m.f.tight_
 have a look at the :ref:`layout_editor`!
 
 .. code-block:: python
+    :name: test_subplots_adjust
 
     from eomaps import Maps
     m = Maps()
@@ -680,6 +684,7 @@ To apply a uniform color to all datapoints, you can use `matpltolib's named colo
 - ``m.plot_map(fc=(1, 0, 0.2, 0.5))``
 
 .. code-block:: python
+    :name: test_uniform_colors
 
     from eomaps import Maps
 
@@ -716,6 +721,7 @@ Explicit colors
 To explicitly color each datapoint with a pre-defined color, simply provide a list or array of the aforementioned types.
 
 .. code-block:: python
+    :name: test_explicit_colors
 
     from eomaps import Maps
 
@@ -766,6 +772,7 @@ You can fix individual color channels by passing a list with 1 element, e.g.:
 - ``m.plot_map(fc=(<R-array>, [0.12345], <B-array>, <A-array>))``
 
 .. code-block:: python
+    :name: test_rgba_composites
 
     from eomaps import Maps
     import numpy as np
@@ -840,7 +847,8 @@ To position the map in a (virtual) grid, one of the following options are possib
 
     +----------------------------------------------------+------------------------------------+
     | .. code-block:: python                             | .. image:: _static/grids/grid1.png |
-    |                                                    |   :align: center                   |
+    |     :name: test_gridpos_1                          |   :align: center                   |
+    |                                                    |                                    |
     |     from eomaps import Maps                        |                                    |
     |     # ----- initialize a figure with an EOmaps map |                                    |
     |     # position = item 1 of a 2x1 grid              |                                    |
@@ -854,7 +862,8 @@ To position the map in a (virtual) grid, one of the following options are possib
 
     +----------------------------------------------------+------------------------------------+
     | .. code-block:: python                             | .. image:: _static/grids/grid2.png |
-    |                                                    |   :align: center                   |
+    |     :name: test_gridpos_2                          |   :align: center                   |
+    |                                                    |                                    |
     |     from eomaps import Maps                        |                                    |
     |     # ----- initialize a figure with an EOmaps map |                                    |
     |     # position = item 1 of a 2x2 grid              |                                    |
@@ -871,7 +880,8 @@ To position the map in a (virtual) grid, one of the following options are possib
 
     +----------------------------------------------------+------------------------------------+
     | .. code-block:: python                             | .. image:: _static/grids/grid3.png |
-    |                                                    |   :align: center                   |
+    |     :name: test_gridpos_3                          |   :align: center                   |
+    |                                                    |                                    |
     |     from eomaps import Maps                        |                                    |
     |     # ----- initialize a figure with an EOmaps map |                                    |
     |     # position = span 2 rows of a 3x1 grid         |                                    |
@@ -890,7 +900,8 @@ To position the map in a (virtual) grid, one of the following options are possib
 
     +----------------------------------------------------+------------------------------------+
     | .. code-block:: python                             | .. image:: _static/grids/grid4.png |
-    |                                                    |   :align: center                   |
+    |     :name: test_gridpos_4                          |   :align: center                   |
+    |                                                    |                                    |
     |     from eomaps import Maps                        |                                    |
     |     # ----- initialize a figure with an EOmaps map |                                    |
     |     m = Maps(ax=211)                               |                                    |
@@ -902,7 +913,8 @@ To position the map in a (virtual) grid, one of the following options are possib
 
     +----------------------------------------------------+------------------------------------+
     | .. code-block:: python                             | .. image:: _static/grids/grid5.png |
-    |                                                    |   :align: center                   |
+    |     :name: test_gridpos_5                          |   :align: center                   |
+    |                                                    |                                    |
     |     from eomaps import Maps                        |                                    |
     |     # ----- initialize a figure with an EOmaps map |                                    |
     |     m = Maps(ax=221)                               |                                    |
@@ -920,7 +932,8 @@ To position the map in a (virtual) grid, one of the following options are possib
 
     +----------------------------------------------+------------------------------------+
     | .. code-block:: python                       | .. image:: _static/grids/grid6.png |
-    |                                              |   :align: center                   |
+    |     :name: test_gridpos_6                    |   :align: center                   |
+    |                                              |                                    |
     |     from matplotlib.gridspec import GridSpec |                                    |
     |     from eomaps import Maps                  |                                    |
     |                                              |                                    |
@@ -1921,6 +1934,7 @@ If you want to get a ``geopandas.GeoDataFrame`` containing all shapes and metada
 (Have a look at :ref:`geodataframe` on how to add the obtained ``GeoDataFrame`` to the map)
 
 .. code-block:: python
+    :name: test_get_gdf
 
     from eomaps import Maps
     m = Maps()
@@ -2467,8 +2481,14 @@ To label the colorbar with custom names for a given set of bins, use ``m.colorba
 🌠 Using the colorbar as a "dynamic shade indicator"
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-If you use ``shade_raster`` or ``shade_points`` as plot-shape, the colorbar can be used to indicate the
-distribution of the shaded pixels within the current field of view by setting ``dynamic_shade_indicator=True``.
+
+.. note::
+
+    This will only work if you use ``m.set_shape.shade_raster()`` or ``m.set_shape.shade_points()`` as plot-shape!
+
+
+For shade shapes, the colorbar can be used to indicate the distribution of the shaded
+pixels within the current field of view by setting ``dynamic_shade_indicator=True``.
 
     +--------------------------------------------------------------------+--------------------------------------------------+
     | .. code-block:: python                                             | .. image:: _static/minigifs/dynamic_colorbar.gif |
@@ -3029,7 +3049,7 @@ Similar to ``Maps.from_file``, a new layer based on a file can be added to an ex
 
 .. code-block:: python
 
-    m = Maps8()
+    m = Maps()
     m.add_feature.preset.coastline()
 
     m2 = m.new_layer_from_file(

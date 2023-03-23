@@ -272,7 +272,7 @@ class ScaleBar:
 
         if not all(np.isfinite([x0, y0])):
             # if it fails, try to position it at the center of the extent
-            extent = self._m.ax.get_extent()
+            extent = self._m.get_extent()
             lon, lat = self._m._transf_plot_to_lonlat.transform(
                 np.mean(extent[:2]),
                 np.mean(extent[2:]),

@@ -620,7 +620,7 @@ class NaturalEarth_features(object):
 
                 if what == "geoms_intersecting":
                     try:
-                        extent = self._m.ax.get_extent(feature.crs)
+                        extent = self._m.get_extent(feature.crs)
                         feature.scaler.scale_from_extent(extent)
                     except:
                         print("EOmaps: unable to determine extent")
@@ -628,7 +628,7 @@ class NaturalEarth_features(object):
                     geoms = list(feature.geometries())
                 elif what == "geoms":
                     try:
-                        extent = self._m.ax.get_extent(feature.crs)
+                        extent = self._m.get_extent(feature.crs)
                         geoms = list(feature.intersecting_geometries(extent))
                     except ValueError:
                         geoms = list(feature.geometries())
