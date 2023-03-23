@@ -2361,6 +2361,12 @@ class Maps(object):
     def get_extent(self, crs=None):
         """Get the extent of the map."""
         # just a wrapper to avoid using m.ax.get_extent()
+
+        if crs is not None:
+            crs = self._get_cartopy_crs(crs)
+        else:
+            crs = Maps.CRS.PlateCarree()
+
         return self.ax.get_extent(crs=crs)
 
     def plot_map(
