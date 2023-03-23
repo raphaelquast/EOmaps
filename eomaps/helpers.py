@@ -2229,8 +2229,7 @@ class BlitManager:
         if bg_layer is None:
             bg_layer = self.bg_layer
 
-        while len(self._before_update_actions) > 0:
-            action = self._before_update_actions.pop(0)
+        for action in self._before_update_actions:
             action()
 
         if clear:
