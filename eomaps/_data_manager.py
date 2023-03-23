@@ -118,7 +118,9 @@ class DataManager:
 
         # estimate the radius (used as margin on data selection)
         try:
-            self._r = self.m._shapes._estimate_radius(self.m, "out")
+            self._r = self.m._shapes._estimate_radius(
+                self.m, radius_crs="out", method=np.nanmax
+            )
             if self._r is not None and all(np.isfinite(i) for i in self._r):
                 self._radius_margin = [i * self._radius_margin_factor for i in self._r]
             else:
