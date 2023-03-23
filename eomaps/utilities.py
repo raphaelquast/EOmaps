@@ -618,29 +618,6 @@ class utilities:
         for s in (*self._sliders.values(), *self._selectors.values()):
             s._reinit()
 
-    def remove(self, name=None, what="all"):
-        # TODO doc
-        if name is not None:
-            if name in self._sliders:
-                self._sliders[name].remove()
-            elif name in self._selectors:
-                self._selectors[name].remove()
-            return
-
-        if what == "sliders":
-            for s in self._sliders.values():
-                s.remove()
-        elif what == "selectors":
-            for s in self._selectors.values():
-                s.remove()
-        elif what == "all":
-            for s in (*self._sliders.values(), *self._selectors.values()):
-                s.remove()
-        else:
-            raise TypeError(
-                "EOmaps: 'what' must be one of 'sliders', 'selectors' or 'all'"
-            )
-
     @wraps(LayerSelector.__init__)
     def layer_selector(self, **kwargs):
         s = LayerSelector(m=self._m, **kwargs)
