@@ -406,10 +406,10 @@ class read_file:
         try:
             if isinstance(path_or_dataset, (str, Path)):
                 # if a path is provided, open the file (and close it in the end)
-                opened = True
                 ncfile = xar.open_dataset(
                     path_or_dataset, mask_and_scale=mask_and_scale
                 )
+                opened = True
             elif isinstance(path_or_dataset, xar.Dataset):
                 # if an xar.Dataset is provided, use it
                 ncfile = path_or_dataset
@@ -537,7 +537,6 @@ class read_file:
                     parameter=parameter,
                     encoding=encoding,
                 )
-
         finally:
             if opened:
                 ncfile.close()
