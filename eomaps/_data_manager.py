@@ -436,7 +436,6 @@ class DataManager:
                 # fail-fast in case the data is completely outside the extent
                 return
 
-            # update the number of immediate points calculated for plot-shapes
             s = self._get_datasize(props)
             self._print_datasize_warnings(s)
 
