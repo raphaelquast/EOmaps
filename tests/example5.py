@@ -50,6 +50,8 @@ m3.plot_map(
 # define a callback that changes the values of the previously plotted dataset
 # NOTE: this is not possible for the shapes:  "shade_points" and "shade_raster"!
 def callback(m, **kwargs):
+    # NOTE: Since we change the array of a dynamic collection, the changes will be
+    # reverted as soon as the background is re-drawn (e.g. on pan/zoom events)
     selection = np.random.randint(0, len(m.data), 1000)
     m.coll.set_array(data_OK.param.iloc[selection])
 
