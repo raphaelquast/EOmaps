@@ -4316,7 +4316,7 @@ class Maps(object):
         else:
             # update here to ensure bounds are set
             self.BM.update()
-            x0, x1, y0, y1 = self.get_extent()
+            x0, x1, y0, y1 = self.get_extent(self.crs_plot)
             x_range = (x0, x1)
             y_range = (y0, y1)
 
