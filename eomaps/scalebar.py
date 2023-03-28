@@ -157,6 +157,10 @@ class ScaleBar:
         else:
             self._autoscale = None
 
+        assert (
+            isinstance(auto_position, tuple) or auto_position is False
+        ), "EOmaps: Scalebar 'auto_position' must be either a tuple (x, y) or False!"
+
         self._auto_position = auto_position
 
         self.set_scale_props(scale=scale, **(scale_props if scale_props else {}))
@@ -845,6 +849,9 @@ class ScaleBar:
             # don't update here... the click callback updates itself!
             s.set_position(lon, lat, update=False)
 
+            if self._auto_position is not False:
+                self._auto_position = self._get_current_pos_as_autopos()
+
         def scb_remove(s, **kwargs):
             if not s._m.cb.pick[s._picker_name].is_picked:
                 return
@@ -924,9 +931,6 @@ class ScaleBar:
         def scb_unpick(s, **kwargs):
             s._remove_callbacks()
 
-            if self._auto_position is not False:
-                self._auto_position = self._get_current_pos_as_autopos()
-
         self._picker_name = f"_scalebar{len(self._existing_pickers)}"
 
         self._m.cb.add_picker(self._picker_name, self._artists["patch"], True)
@@ -975,8 +979,11 @@ class ScaleBar:
                 self._estimate_scale()
             except Exception:
                 self._scale_props["scale"] = prev_scale
+
         if self._auto_position is not False:
             self.auto_position(self._auto_position)
+        else:
+            self.set_position()
 
     def _get_current_pos_as_autopos(self):
         pos = self._m._transf_lonlat_to_plot.transform(self._lon, self._lat)

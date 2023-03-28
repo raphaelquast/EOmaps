@@ -1970,7 +1970,7 @@ class Maps(object):
             lon, lat = s._get_autopos(auto_position)
         else:
             # don't auto-reposition if lon/lat has been provided
-            s._auto_position = None
+            s._auto_position = False
 
         s._add_scalebar(lon, lat, azim)
         s._make_pickable()
