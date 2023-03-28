@@ -2459,11 +2459,14 @@ class Maps(object):
         """
         verbose = kwargs.pop("verbose", 1)
         if verbose >= 1:
-            if getattr(self, "coll", None) is not None:
+            if (
+                getattr(self, "coll", None) is not None
+                and len(self.cb.pick.get.cbs) > 0
+            ):
                 print(
                     "EOmaps-warning: Calling `m.plot_map()` or "
                     "`m.make_dataset_pickable()` more than once on the "
-                    "same Maps-object will override the assigned PICK-dataset!"
+                    "same Maps-object overrides the assigned PICK-dataset!"
                 )
 
         # convert vmin/vmax values to respect the encoding of the data
