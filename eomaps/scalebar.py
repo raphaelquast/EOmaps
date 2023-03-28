@@ -175,7 +175,11 @@ class ScaleBar:
         self._geod = self._m.crs_plot.get_geod()
 
         self._artists = OrderedDict(patch=None, scale=None)
+        self._texts = dict()
         self._picker_name = None
+
+        # renderer cache
+        self._renderer = None
 
     def _get_preset_props(self, preset):
         scale_props = dict(n=10, width=5, colors=("k", "w"))
@@ -230,40 +234,47 @@ class ScaleBar:
             return res
 
     def _estimate_scale(self):
-        try:
-            ax2data = self._m.ax.transAxes + self._m.ax.transData.inverted()
-            ang = np.deg2rad(self._azim)
+        if getattr(self._m.f, "_cachedRenderer", None) is None:
+            # ensure that the figure has been drawn before adding a scalebar
+            # to avoid using outdated axis transforms when estimating the scale
 
-            x0, y0 = ax2data.inverted().transform((self._lon, self._lat))
+            # otherwise the scalebar might show up wrong on startup
+            self._m.f.canvas.draw()
 
-            aspect = self._m.ax.bbox.height / self._m.ax.bbox.width
-            d = self._autoscale * aspect
+        ax2data = self._m.ax.transAxes + self._m.ax.transData.inverted()
 
-            dx = abs(d * np.cos(ang))
-            dy = abs(d * np.sin(ang))
+        lon, lat, ang = self.get_position()
 
-            p0 = ax2data.transform((x0, y0))
-            p1 = ax2data.transform((x0 + dx, y0 + dy))
+        # get current pos in axis coordinates
+        x0, y0 = ax2data.inverted().transform(
+            self._m._transf_lonlat_to_plot.transform(lon, lat)
+        )
 
-            l0 = self._m._transf_plot_to_lonlat.transform(*p0)
-            l1 = self._m._transf_plot_to_lonlat.transform(*p1)
+        aspect = self._m.ax.bbox.height / self._m.ax.bbox.width
+        d = self._autoscale * aspect
 
-            geod = self._m.ax.projection.get_geod()
+        dx = abs(d * np.cos(ang))
+        dy = abs(d * np.sin(ang))
 
-            faz, baz, dist = geod.inv(*l0, *l1)
+        p0 = ax2data.transform((x0, y0))
+        p1 = ax2data.transform(((x0 + dx), (y0 + dy)))
 
-            scale = dist / self._scale_props["n"]
-            # round to 1 significant digit
-            scale = self._round_to_n(scale)
+        l0 = self._m._transf_plot_to_lonlat.transform(*p0)
+        l1 = self._m._transf_plot_to_lonlat.transform(*p1)
 
-            self._scale_props["scale"] = scale
-            return scale
+        l0 = np.clip(l0[0], -180, 180), np.clip(l0[1], -90, 90)
+        l1 = np.clip(l1[0], -180, 180), np.clip(l1[1], -90, 90)
 
-        except Exception:
-            raise AssertionError(
-                "EOmaps: Unable to determine a suitable 'scale' for the scalebar...\n"
-                + "Please provide the scale explicitly via `m.add_scalebar(scale=10000)`"
-            )
+        geod = self._m.ax.projection.get_geod()
+
+        scale = (
+            self._round_to_n(geod.line_length(*list(zip(l0, l1))))
+            / self._scale_props["n"]
+        )
+
+        scale = self._round_to_n(scale)
+        self._scale_props["scale"] = scale
+        return scale
 
     def _get_autopos(self, pos):
         # try to position the colorbar at the lower right corner of the axis
@@ -560,34 +571,35 @@ class ScaleBar:
     def _get_maxw(self, sscale, sn, lscale, lrotation, levery):
         # arguments are only used for caching!
 
-        # update here to make sure axis-transformations etc. are properly set
-        self._m.BM.update(blit=False)
-
         # the max. width of the texts
         _maxw = 0
-        for key, val in self._artists.items():
-            if not key.startswith("text_"):
-                continue
-
-            # use try-except here since the renderer can only estimate the size
-            # if the object is within the canvas!
-            try:
-                # get the widths of the text patches in data-coordinates
-                bbox = val.get_window_extent(self._m.f.canvas.get_renderer())
-                bbox = bbox.transformed(self._m.ax.transData.inverted())
-                # use the max to account for rotated text objects
-                w = max(bbox.width, bbox.height)
-                if w > _maxw:
-                    _maxw = w
-            except Exception:
-                pass
-
         _top_h = 0
+
+        _transf_data_inverted = self._m.ax.transData.inverted()
+
+        # make sure to cache the renderer instance to avoid performance issues!
+        if self._renderer is None:
+            self._renderer = self._m.f.canvas.get_renderer()
+
+        # use the longest label to evaluate the max. width of the texts
         try:
-            _top_label = next(i for i in sorted(self._artists) if i.startswith("text_"))
+            txtartist = self._artists[
+                max(self._texts, key=lambda x: len(self._texts[x]))
+            ]
+            bbox = txtartist.get_window_extent(self._renderer).transformed(
+                _transf_data_inverted
+            )
+            _maxw = max(bbox.width, bbox.height)
+        except Exception:
+            pass
+
+        # evaluate the size of the "top" label
+        try:
+            _top_label = next(i for i in sorted(self._texts))
             val = self._artists[_top_label]
-            bbox = val.get_window_extent(self._m.f.canvas.get_renderer())
-            bbox = bbox.transformed(self._m.ax.transData.inverted())
+            bbox = val.get_window_extent(self._renderer).transformed(
+                _transf_data_inverted
+            )
             _top_h = min(bbox.width, bbox.height)
         except Exception:
             pass
@@ -602,6 +614,7 @@ class ScaleBar:
             self._lon, self._lat, self._azim, npts=self._scale_props["n"] + 2
         )
 
+        self._texts.clear()
         for i, (lon, lat, ang) in enumerate(zip(pts.lons, pts.lats, angs)):
             if i % self._label_props["every"] != 0:
                 continue
@@ -615,17 +628,16 @@ class ScaleBar:
                 xy, txt, size=self._label_props["scale"] * d / 2, prop=self._font_props
             )
 
-            self._artists[f"text_{i}"] = self._m.ax.add_artist(
-                PathPatch(tp, color=self._label_props["color"], lw=0)
-            )
-            self._artists[f"text_{i}"].set_transform(
+            patch = PathPatch(tp, color=self._label_props["color"], lw=0, zorder=1)
+            patch.set_transform(
                 Affine2D().rotate_around(
                     *xy, ang + np.pi / 2 + np.deg2rad(self._label_props["rotation"])
                 )
                 + self._m.ax.transData
             )
 
-            self._artists[f"text_{i}"].set_zorder(1)
+            self._artists[f"text_{i}"] = self._m.ax.add_artist(patch)
+            self._texts[f"text_{i}"] = txt
             self._m.BM.add_artist(self._artists[f"text_{i}"], layer=self.layer)
 
     def _redraw_minitxt(self):
@@ -670,6 +682,8 @@ class ScaleBar:
                 ),
                 lw=0,
             )
+
+            self._texts[f"text_{i}"] = txt
             self._artists[f"text_{i}"].set_path(tp.get_path())
             self._artists[f"text_{i}"].set_transform(
                 Affine2D().rotate_around(
@@ -741,7 +755,10 @@ class ScaleBar:
 
         self._m.BM.update(artists=self._artists.values())
         # make sure to update the artists on zoom
-        self._decorate_zooms()
+
+        # update scalebar props whenever new backgrounds are fetched
+        # (e.g. this happens on pan/zoom/resize)
+        self._m.BM._before_fetch_bg_actions.append(self._update)
 
     def set_position(self, lon=None, lat=None, azim=None, update=False):
         """
@@ -907,6 +924,9 @@ class ScaleBar:
         def scb_unpick(s, **kwargs):
             s._remove_callbacks()
 
+            if self._auto_position is not False:
+                self._auto_position = self._get_current_pos_as_autopos()
+
         self._picker_name = f"_scalebar{len(self._existing_pickers)}"
 
         self._m.cb.add_picker(self._picker_name, self._artists["patch"], True)
@@ -946,56 +966,22 @@ class ScaleBar:
 
         self.set_position()
 
-    def _decorate_zooms(self):
-        toolbar = self._m.f.canvas.toolbar
+    def _update(self, **kwargs):
+        # clear the cache to re-evaluate the text-width
+        self.__class__._get_maxw.cache_clear()
+        if self._autoscale is not None:
+            prev_scale = self._scale_props["scale"]
+            try:
+                self._estimate_scale()
+            except Exception:
+                self._scale_props["scale"] = prev_scale
+        if self._auto_position is not False:
+            self.auto_position(self._auto_position)
 
-        if toolbar is not None:
-            toolbar.release_zoom = self._zoom_decorator(toolbar.release_zoom)
-            toolbar.release_pan = self._zoom_decorator(toolbar.release_pan)
-            toolbar._update_view = self._update_decorator(toolbar._update_view)
-
-    def _zoom_decorator(self, f):
-        def newzoom(event):
-            ret = f(event)
-
-            # clear the cache to re-evaluate the text-width
-            self.__class__._get_maxw.cache_clear()
-            if self._autoscale is not None:
-                prev_scale = self._scale_props["scale"]
-                try:
-                    self._estimate_scale()
-                except Exception:
-                    self._scale_props["scale"] = prev_scale
-            if self._auto_position:
-                self.auto_position(self._auto_position)
-
-            self.set_position()
-            self._m.BM.update()
-            return ret
-
-        return newzoom
-
-    def _update_decorator(self, f):
-        def newupdate():
-            # clear the cache to re-evaluate the text-width
-            ret = f()
-            self.__class__._get_maxw.cache_clear()
-            if self._autoscale is not None:
-                prev_scale = self._scale_props["scale"]
-                try:
-                    self._estimate_scale()
-                except Exception:
-                    self._scale_props["scale"] = prev_scale
-
-            if self._auto_position:
-                self.auto_position(self._auto_position)
-
-            self.set_position()
-            self._m.BM.update()
-
-            return ret
-
-        return newupdate
+    def _get_current_pos_as_autopos(self):
+        pos = self._m._transf_lonlat_to_plot.transform(self._lon, self._lat)
+        pos = (self._m.ax.transData + self._m.ax.transAxes.inverted()).transform(pos)
+        return pos
 
     def get_position(self):
         """
@@ -1014,6 +1000,12 @@ class ScaleBar:
         for a in self._artists.values():
             self._m.BM.remove_artist(a)
             a.remove()
+
+        # remove trigger to update scalebar properties on fetch_bg
+        if self._update in self._m.BM._before_fetch_bg_actions:
+            self._m.BM._before_fetch_bg_actions.remove(self._update)
+
+        self._renderer = None
 
         self._m.BM.update()
 
