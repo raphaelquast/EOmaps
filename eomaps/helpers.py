@@ -1896,7 +1896,10 @@ class BlitManager:
         """
 
         if art.figure != self.figure:
-            raise RuntimeError
+            raise RuntimeError(
+                "EOmaps: The artist does not belong to the figure"
+                "of this Maps-object!"
+            )
 
         if layer is None:
             layer = self._m.layer
