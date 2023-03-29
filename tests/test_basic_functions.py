@@ -736,7 +736,7 @@ class TestBasicPlotting(unittest.TestCase):
         m.add_feature.preset.ocean(ec="k", scale="110m")
 
         s = m.add_scalebar(scale=250000)
-        s.set_position(10, 20, 30)
+        s.set_position((10, 20), azim=30)
         s.set_label_props(every=2, scale=1.25, offset=0.5, weight="bold")
         s.set_scale_props(n=6, colors=("k", "r"))
         s.set_patch_props(offsets=(1, 1.5, 1, 0.75))
