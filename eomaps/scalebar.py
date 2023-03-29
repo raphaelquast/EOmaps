@@ -340,7 +340,7 @@ class ScaleBar:
         """
         self._apply_preset(preset)
         self._estimate_scale()
-        self.set_position()
+        self._update(BM_update=True)
 
     @staticmethod
     def _round_to_n(x, n=0):
@@ -354,52 +354,19 @@ class ScaleBar:
             return res
 
     def _estimate_scale(self):
-        x0, x1, y0, y1 = self._m.get_extent(4326)
-
-        x0, x1 = np.clip((x0, x1), -180, 180)
-        y0, y1 = np.clip((y0, y1), -90, 90)
-
-        n = 100
-
-        lons, lats = np.meshgrid(np.linspace(x0, x1, n), np.linspace(y0, y1, n))
-
-        geod = self._m.crs_plot.get_geod()
-        ls = geod.line_lengths(lons, lats)
-        scale = np.nanmedian(ls) / self._scale_props["n"] * self._autoscale * 100
-
-        scale = self._round_to_n(scale, 1)
-        self._scale_props["scale"] = scale
-        return scale
-
-    def _estimate_scale_OLD(self):
         try:
-            ax2data = self._m.ax.transAxes + self._m.ax.transData.inverted()
+            x0, x1, y0, y1 = self._m.get_extent(4326)
 
-            lon, lat, ang = self.get_position()
-            ang = np.deg2rad(ang)
-            # get current pos in axis coordinates
-            x0, y0 = ax2data.inverted().transform(
-                self._m._transf_lonlat_to_plot.transform(lon, lat)
-            )
+            x0, x1 = np.clip((x0, x1), -180, 180)
+            y0, y1 = np.clip((y0, y1), -90, 90)
 
-            aspect = self._m.ax.bbox.height / self._m.ax.bbox.width
-            d = self._autoscale * aspect
+            n = 100
 
-            dx = abs(d * np.cos(ang))
-            dy = abs(d * np.sin(ang))
+            lons, lats = np.meshgrid(np.linspace(x0, x1, n), np.linspace(y0, y1, n))
 
-            p0 = ax2data.transform((x0, y0))
-            p1 = ax2data.transform(((x0 + dx), (y0 + dy)))
-
-            l0 = self._m._transf_plot_to_lonlat.transform(*p0)
-            l1 = self._m._transf_plot_to_lonlat.transform(*p1)
-
-            l0 = np.clip(l0[0], -180, 180), np.clip(l0[1], -90, 90)
-            l1 = np.clip(l1[0], -180, 180), np.clip(l1[1], -90, 90)
-
-            geod = self._m.ax.projection.get_geod()
-
-            scale = geod.line_length(*list(zip(l0, l1))) / self._scale_props["n"]
+            geod = self._m.crs_plot.get_geod()
+            ls = geod.line_lengths(lons, lats)
+            scale = np.nanmedian(ls) / self._scale_props["n"] * self._autoscale * 100
 
             scale = self._round_to_n(scale, 1)
             self._scale_props["scale"] = scale
@@ -425,10 +392,10 @@ class ScaleBar:
             )
         return lon, lat
 
-    def auto_position(self, pos):
+    def _set_auto_position(self, pos):
         """Move the scalebar to the desired position and apply auto-scaling."""
         lon, lat = self._get_autopos(pos)
-        self.set_position(lon, lat, self._azim)
+        self._set_position(lon, lat, self._azim)
 
     @property
     def cb_rotate_interval(self):
@@ -475,6 +442,7 @@ class ScaleBar:
         """
         if scale is not None:
             self._scale_props["scale"] = scale
+            self._autoscale = None
         if n is not None:
             self._scale_props["n"] = n
             self._redraw_minitxt()
@@ -691,8 +659,6 @@ class ScaleBar:
             / self._size_factor_base
             * self._size_factor
         )
-
-        return np.abs(xb[1] - yb[1])
 
     def _get_patch_verts(self, pts, lon, lat, ang, d):
         # top bottom left right referrs to a horizontally oriented colorbar!
@@ -980,9 +946,59 @@ class ScaleBar:
         """
         return [self._lon, self._lat, self._azim]
 
-    def set_position(self, lon=None, lat=None, azim=None, update=False):
+    def set_auto_position(self, autopos=(0.5, 0.5)):
+        """
+        Set the location used to automatically place the scalebar.
+
+
+        Parameters
+        ----------
+        autopos : tuple or False, optional
+
+            A tuple of (x, y) in axis-coordinates (e.g. between 0 and 1) or False.
+
+            If a tuple is provided, it will be used to update the scalebar
+            position with respect to the currently visible extent.
+
+            If False, the current position is maintained on pan/zoom events.
+
+            The default is (.5, .5).
+        """
+        self._auto_position = autopos
+        self._update(BM_update=True)
+
+    def set_auto_scale(self, autoscale_fraction=0.25):
+        """
+        Automatically evaluate an appropriate scale for the scalebar.
+
+        (and dynamically update the scale on pan/zoom events.)
+
+
+        Parameters
+        ----------
+        autoscale_fraction : float, or None, optional
+            The (approximate) fraction of the axis width to use as size for the scalebar
+            in the autoscale procedure. Note that this is number is not exact since
+            (depending on the crs) the final scalebar might be curved.
+
+            If None, the current scale is maintained.
+            The default is 0.25.
+        """
+        self._autoscale = autoscale_fraction
+        self._update(BM_update=True)
+
+    def set_position(self, lon=None, lat=None, azim=None):
         """
         Set the position of the colorbar.
+
+        The position hereby represents the starting-point of the scalebar!
+
+        Note
+        ----
+        If you set the position explicitly, the scalebar will no longer
+        automatically update its position on pan/zoom events.
+
+        To re-enable auto-positioning, use m.set_auto_position()
 
         Parameters
         ----------
@@ -993,11 +1009,20 @@ class ScaleBar:
         azim : float, optional
             The azimuth-direction in which to calculate the intermediate
             points for the scalebar. The default is None.
-        update : bool
-            Indicator if the plot should be immediately updated (True) or at the next
-            event (False). The default is False.
 
         """
+        q = (lon is not None, lat is not None)
+        if any(q):
+            assert all(
+                q
+            ), "EOmaps: Both 'lon' and 'lat' are required to set the scalebar position"
+
+            self._auto_position = False
+
+        self._set_position(lon=lon, lat=lat, azim=azim)
+        self._update(BM_update=True)
+
+    def _set_position(self, lon=None, lat=None, azim=None, update=False):
         if lon is None:
             lon = self._lon
         if lat is None:
@@ -1043,9 +1068,6 @@ class ScaleBar:
             self._artists["patch"].set_edgecolor("r")
             self._artists["patch"].set_linewidth(2)
             self._artists["patch"].set_linestyle("-")
-
-        if update:
-            self._m.BM.update(artists=self._artists.values())
 
     def _make_pickable(self):
         """
@@ -1277,9 +1299,9 @@ class ScaleBar:
         if self._auto_position is not False:
             if lon is not None and lat is not None:
                 self._auto_position = self._get_pos_as_autopos(lon, lat)
-            self.auto_position(self._auto_position)
+            self._set_auto_position(self._auto_position)
         else:
-            self.set_position(lon=lon, lat=lat, azim=azim)
+            self._set_position(lon=lon, lat=lat, azim=azim)
 
         if BM_update:
             # note: when using this function as before_fetch_bg action, updates
