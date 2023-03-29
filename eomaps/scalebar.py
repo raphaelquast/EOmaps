@@ -210,7 +210,12 @@ class ScaleBar:
         self._pick_start_offset = (0.0, 0.0)
 
     @property
-    def _current_scale(self):
+    def scale(self):
+        """
+        The currently active scale of the scalebar.
+
+        (e.g. the estimated scale in case auto-scaling is used)
+        """
         if self._scale is None:
             if self._estimated_scale is None:
                 self._estimated_scale()
@@ -618,7 +623,7 @@ class ScaleBar:
             lat1=lat,
             azi1=azim,
             npts=npts,
-            del_s=self._current_scale,
+            del_s=self.scale,
             initial_idx=0,
             terminus_idx=0,
         )
@@ -654,7 +659,7 @@ class ScaleBar:
         return pts_t
 
     def _get_txt(self, n):
-        scale = self._current_scale
+        scale = self.scale
         # the text displayed above the scalebar
         units = {" mm": 0.001, " m": 1, " km": 1000, "k km": 1000000}
         for key, val in units.items():
@@ -879,7 +884,7 @@ class ScaleBar:
                 + self._m.ax.transData
             )
         self._get_maxw(
-            self._current_scale,
+            self.scale,
             self._scale_props["n"],
             self._label_props["scale"],
             self._label_props["rotation"],
@@ -913,7 +918,7 @@ class ScaleBar:
 
         # -------------- add the patch
         self._get_maxw(
-            self._current_scale,
+            self.scale,
             self._scale_props["n"],
             self._label_props["scale"],
             self._label_props["rotation"],
@@ -963,27 +968,6 @@ class ScaleBar:
         """
         return [self._lon, self._lat, self._azim]
 
-    def set_auto_position(self, autopos=(0.5, 0.5)):
-        """
-        Set the location used to automatically place the scalebar.
-
-
-        Parameters
-        ----------
-        autopos : tuple or False, optional
-
-            A tuple of (x, y) in axis-coordinates (e.g. between 0 and 1) or False.
-
-            If a tuple is provided, it will be used to update the scalebar
-            position with respect to the currently visible extent.
-
-            If False, the current position is maintained on pan/zoom events.
-
-            The default is (.5, .5).
-        """
-        self._auto_position = autopos
-        self._update(BM_update=True)
-
     def set_auto_scale(self, autoscale_fraction=0.25):
         """
         Automatically evaluate an appropriate scale for the scalebar.
@@ -1004,7 +988,7 @@ class ScaleBar:
         self._autoscale = autoscale_fraction
         self._update(BM_update=True)
 
-    def set_position(self, lon=None, lat=None, azim=None):
+    def set_position(self, pos=None, auto_pos=None, azim=None):
         """
         Set the position of the colorbar.
 
@@ -1012,31 +996,43 @@ class ScaleBar:
 
         Note
         ----
-        If you set the position explicitly, the scalebar will no longer
-        automatically update its position on pan/zoom events.
-
-        To re-enable auto-positioning, use m.set_auto_position()
+        If you set the position explicitly via the "pos" kwarg, the scalebar will no
+        longer automatically update its position on pan/zoom events.
+        (it can still be dragged to another position)
 
         Parameters
         ----------
-        lon : float, optional
-            The longitude of the starting-point. The default is None.
-        lat : float, optional
-            The latitude of the starting point. The default is None.
+        pos : (float, float) or None, optional
+            (longitude, latitude) of the starting-point of the scalebar.
+
+            The default is None.
+        auto_pos : (float, float) or None, optional
+            (x, y) of the starting-point of the scalebar in relative axis-coordinates.
+            (e.g. (0, 0) = lower left corner and (1, 1) = upper right corner).
+
+            Note: If you specify a point outside the map the scalebar will not be
+            visible!
+
+            The default is None.
         azim : float, optional
             The azimuth-direction in which to calculate the intermediate
             points for the scalebar. The default is None.
 
         """
-        q = (lon is not None, lat is not None)
-        if any(q):
-            assert all(
-                q
-            ), "EOmaps: Both 'lon' and 'lat' are required to set the scalebar position"
 
+        if pos is not None and auto_pos is not None:
+            raise TypeError(
+                "EOmaps: You can only provide either pos or auto_pos, "
+                "to set the position of the scalebar, not both!"
+            )
+
+        if pos is not None:
             self._auto_position = False
+            self._set_position(*pos, azim=azim)
 
-        self._set_position(lon=lon, lat=lat, azim=azim)
+        if auto_pos is not None:
+            self._auto_position = auto_pos
+
         self._update(BM_update=True)
 
     def _set_position(self, lon=None, lat=None, azim=None, update=False):
@@ -1195,14 +1191,14 @@ class ScaleBar:
         elif event.key == "r":
             self._azim += event.step * self.cb_rotate_interval
         else:
-            if self._autoscale is not None:
+            if self._scale is None:
                 self._autoscale = np.clip(
                     self._autoscale + event.step / self._scale_factor_base, 0.01, 0.99
                 )
             else:
                 print(
                     "EOmaps: Adjusting the scale of a fixed scalebar is "
-                    "not supported!"
+                    "not supported. Use s.set_scale(None) to enable autoscaling!"
                 )
 
         self._update(BM_update=True)
