@@ -1951,7 +1951,9 @@ class Maps(object):
         scale_props=None,
         patch_props=None,
         label_props=None,
+        line_props=None,
         layer=None,
+        size_factor=1,
     ):
         """Add a scalebar to the map."""
         s = ScaleBar(
@@ -1963,7 +1965,9 @@ class Maps(object):
             scale_props=scale_props,
             patch_props=patch_props,
             label_props=label_props,
+            line_props=line_props,
             layer=layer,
+            size_factor=size_factor,
         )
 
         if lon is None or lat is None:
