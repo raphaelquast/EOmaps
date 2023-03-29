@@ -127,7 +127,8 @@ except ImportError as ex:
 from .ne_features import NaturalEarth_features
 
 from ._cb_container import cb_container, _gpd_picker
-from .scalebar import ScaleBar, Compass
+from .scalebar import ScaleBar
+from .compass import Compass
 from .projections import Equi7Grid_projection  # import to supercharge cartopy.ccrs
 from .reader import read_file, from_file, new_layer_from_file
 from .grid import GridFactory
