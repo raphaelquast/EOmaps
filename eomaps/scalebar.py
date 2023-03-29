@@ -1323,7 +1323,7 @@ class ScaleBar:
         if BM_update:
             # note: when using this function as before_fetch_bg action, updates
             # would cause a recursion!
-            self._m.BM.update(artists=self._artists.values())
+            self._m.BM.update()
 
     def _get_pos_as_autopos(self, lon, lat):
         pos = self._m._transf_lonlat_to_plot.transform(lon, lat)
@@ -1343,4 +1343,4 @@ class ScaleBar:
 
         self._renderer = None
 
-        self._m.BM.update(artists=self._artists.values())
+        self._m.BM.update()
