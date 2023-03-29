@@ -35,15 +35,13 @@ s3 = m.add_scalebar(
     scale_props=dict(n=6, width=3, colors=("w", "r")),
     patch_props=dict(fc=".25", ec="k", lw=0.5, offsets=(1, 1, 1, 2)),
     label_props=dict(color="w", rotation=45, weight="bold", family="Impact"),
+    line_props=dict(color="w"),
 )
 
 # it's also possible to update the properties of an existing scalebar
 # via the setter-functions!
-s4 = m.add_scalebar()
-s4.set_position(-140, -55, 0)
-s4.set_scale_props(scale=750000, n=10, width=4, colors=("k", "w"))
-s4.set_patch_props(fc="none", ec="none", offsets=(1, 1.6, 1, 1))
-s4.set_label_props(scale=1.5, offset=0.5, every=2, weight="bold", family="Courier New")
+s4 = m.add_scalebar(preset="bw")
+s4.set_scale_props(n=6, width=3)
 
 # NOTE that the black-and-white scalebar is automatically re-scaled and re-positioned
 #      on zoom events (the default if you don't provide an explicit scale & position)!
