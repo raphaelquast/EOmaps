@@ -1114,6 +1114,7 @@ class ScaleBar:
                 self._add_cbs()
                 # forward mouseevent to start dragging if button remains pressed
                 self._cb_click(event.mouseevent)
+
             else:
                 # this is needed to make sure overlapping scalebars are not picked
                 # together
@@ -1121,7 +1122,6 @@ class ScaleBar:
                     self._picked = False
                     self._pick_drag = False
                     self._remove_cbs()
-
             self._update(BM_update=True)
 
     def _cb_release(self, event):
@@ -1160,7 +1160,9 @@ class ScaleBar:
             self._picked = False
             self._pick_drag = False
             self._remove_cbs()
-            self._update(BM_update=True)
+            self._update()
+            # use a full update here to avoid blitting-glitches
+            self._m.BM.update()
 
     def _cb_move(self, event):
         if not self._picked or not self._pick_drag:
