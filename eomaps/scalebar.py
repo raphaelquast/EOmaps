@@ -180,7 +180,10 @@ class ScaleBar:
 
         self._auto_position = auto_position
 
-        self.set_scale_props(scale=scale, **(scale_props if scale_props else {}))
+        self._scale = scale
+        self._estimated_scale = None
+
+        self.set_scale_props(**(scale_props if scale_props else {}))
         # set the label properties
         self.set_label_props(**(label_props if label_props else {}))
         # set the patch properties
@@ -205,6 +208,15 @@ class ScaleBar:
         self._renderer = None
 
         self._pick_start_offset = (0.0, 0.0)
+
+    @property
+    def _current_scale(self):
+        if self._scale is None:
+            if self._estimated_scale is None:
+                self._estimated_scale()
+            return self._estimated_scale
+        else:
+            return self._scale
 
     def print_code(self, fixed=True):
         """
@@ -252,9 +264,6 @@ class ScaleBar:
 
         """
 
-        scaleprops = {**self._scale_props}
-        scale = scaleprops.pop("scale")
-
         offsets = [round(i, 3) for i in self._patch_offsets]
         patchprops = {"offsets": offsets, **self._patch_props}
 
@@ -269,8 +278,8 @@ class ScaleBar:
                 f"lat={np.format_float_positional(self._lat, precision)}, "
                 f"azim={np.format_float_positional(self._azim, precision=10)}, "
                 f"preset={self.preset if self.preset else 'None'}, "
-                f"scale={scale}, "
-                f"scale_props={str(scaleprops)}, "
+                f"scale={self._scale if self._scale else 'None'}, "
+                f"scale_props={self._scale_props}, "
                 f"patch_props={patchprops}, "
                 f"label_props={labelprops}, "
                 f"line_props={self._line_props}, "
@@ -286,7 +295,7 @@ class ScaleBar:
                 f"autoscale_fraction={self._autoscale}, "
                 f"auto_position=({autopos[0]}, {autopos[1]}), "
                 f"preset={self.preset if self.preset else 'None'}, "
-                f"scale_props={scaleprops}, "
+                f"scale_props={self._scale_props}, "
                 f"patch_props={patchprops}, "
                 f"label_props={labelprops}, "
                 f"line_props={self._line_props}, "
@@ -369,8 +378,7 @@ class ScaleBar:
             scale = np.nanmedian(ls) / self._scale_props["n"] * self._autoscale * 100
 
             scale = self._round_to_n(scale, 1)
-            self._scale_props["scale"] = scale
-            return scale
+            self._estimated_scale = scale
         except Exception:
             raise AssertionError(
                 "EOmaps: Unable to automatically determine an "
@@ -420,15 +428,27 @@ class ScaleBar:
     def cb_offset_interval(self, val):
         self._cb_offset_interval = val
 
-    def set_scale_props(self, scale=None, n=None, width=None, colors=None, update=True):
+    def set_scale(self, scale=None):
         """
-        Set the properties of the scalebar (and update the plot accordingly).
+        Set the length of a segment of the scalebar in meters.
 
         Parameters
         ----------
         scale  : float, optional
             The length (in meters) of the individual line-segments.
-            The default is 10000.
+            If None, the scale will be determined automatically based on the currently
+            visible plot-extent. The default is None.
+
+        """
+        self._scale = scale
+        self._update(BM_update=True)
+
+    def set_scale_props(self, n=None, width=None, colors=None, update=True):
+        """
+        Set the properties of the scalebar (and update the plot accordingly).
+
+        Parameters
+        ----------
         n : int, optional
             The number of scales (e.g. line-segments) to draw.
             The default is 10.
@@ -440,9 +460,6 @@ class ScaleBar:
             line-fragments of the scalebar. (you can provide more than 2 colors!)
             The default is ("k", "w").
         """
-        if scale is not None:
-            self._scale_props["scale"] = scale
-            self._autoscale = None
         if n is not None:
             self._scale_props["n"] = n
             self._redraw_minitxt()
@@ -601,7 +618,7 @@ class ScaleBar:
             lat1=lat,
             azi1=azim,
             npts=npts,
-            del_s=self._scale_props["scale"],
+            del_s=self._current_scale,
             initial_idx=0,
             terminus_idx=0,
         )
@@ -637,7 +654,7 @@ class ScaleBar:
         return pts_t
 
     def _get_txt(self, n):
-        scale = self._scale_props["scale"]
+        scale = self._current_scale
         # the text displayed above the scalebar
         units = {" mm": 0.001, " m": 1, " km": 1000, "k km": 1000000}
         for key, val in units.items():
@@ -862,7 +879,7 @@ class ScaleBar:
                 + self._m.ax.transData
             )
         self._get_maxw(
-            self._scale_props["scale"],
+            self._current_scale,
             self._scale_props["n"],
             self._label_props["scale"],
             self._label_props["rotation"],
@@ -884,7 +901,7 @@ class ScaleBar:
         self._lat = lat
         self._azim = azim
 
-        if self._scale_props["scale"] is None:
+        if self._scale is None:
             self._estimate_scale()
 
         pts = self._get_pts(lon, lat, azim)
@@ -896,7 +913,7 @@ class ScaleBar:
 
         # -------------- add the patch
         self._get_maxw(
-            self._scale_props["scale"],
+            self._current_scale,
             self._scale_props["n"],
             self._label_props["scale"],
             self._label_props["rotation"],
@@ -1276,6 +1293,8 @@ class ScaleBar:
         return [i for i in self._m.cb.__dict__ if i.startswith("_pick__scalebar")]
 
     def _update(self, lon=None, lat=None, azim=None, BM_update=False, **kwargs):
+        # check if the scalebar is in the current field-of-view
+        # if not, avoid updating it and make it invisible
         if self._auto_position is False:
             bbox = self._artists["patch"].get_extents()
             if not self._m.ax.bbox.overlaps(bbox):
@@ -1289,12 +1308,12 @@ class ScaleBar:
         # clear the cache to re-evaluate the text-width if label props have changed
         self.__class__._get_maxw.cache_clear()
 
-        if self._autoscale is not None:
-            prev_scale = self._scale_props["scale"]
+        if self._scale is None:
+            prev_scale = self._scale
             try:
                 self._estimate_scale()
             except Exception:
-                self._scale_props["scale"] = prev_scale
+                self._scale = prev_scale
 
         if self._auto_position is not False:
             if lon is not None and lat is not None:
