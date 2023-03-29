@@ -317,7 +317,9 @@ class ScaleBar:
         label_props = dict(scale=2, offset=1, every=2, rotation=0, color="k")
         line_props = dict(ec="k", lw=0.5, linestyle=(0, (5, 5)))
 
-        if preset == "bw":
+        if preset is None:
+            pass
+        elif preset == "bw":
             scale_props.update(dict(n=10, width=4, colors=("k", "w")))
             patch_props.update(dict(fc="none", ec="none"))
             label_props.update(
@@ -329,6 +331,9 @@ class ScaleBar:
                     family="Courier New",
                 )
             )
+        else:
+            raise TypeError(f"EOmaps: The scalebar preset '{preset}' is not available.")
+
         return scale_props, patch_props, label_props, line_props
 
     def _apply_preset(self, preset):
@@ -345,6 +350,11 @@ class ScaleBar:
     def apply_preset(self, preset):
         """
         Apply a style-preset to the Scalebar.
+
+        Currently available presets are:
+
+            - "bw" : a simple black-and-white style
+
 
         Parameters
         ----------
