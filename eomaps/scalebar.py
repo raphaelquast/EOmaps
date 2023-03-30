@@ -448,29 +448,6 @@ class ScaleBar:
         lon, lat = self._get_autopos(pos)
         self._set_position(lon, lat, self._azim)
 
-    @property
-    def cb_rotate_interval(self):
-        """Get/set the rotation interval when rotating the scalebar with +/- keys."""
-        return self._cb_rotate_inverval
-
-    @cb_rotate_interval.setter
-    def cb_rotate_interval(self, val):
-        self._cb_rotate_inverval = val
-
-    @property
-    def cb_offset_interval(self):
-        """
-        Get/set the interval for changing the text-offset with keyboard-shortcuts.
-
-        e.g.: when using the <alt> + <+>/<-> keyboard-shortcut to set the offset for
-        the scalebar-labels.
-        """
-        return self._cb_offset_interval
-
-    @cb_offset_interval.setter
-    def cb_offset_interval(self, val):
-        self._cb_offset_interval = val
-
     def set_scale(self, scale=None):
         """
         Set the length of a segment of the scalebar in meters.
