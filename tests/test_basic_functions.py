@@ -735,15 +735,27 @@ class TestBasicPlotting(unittest.TestCase):
         m = Maps()
         m.add_feature.preset.ocean(ec="k", scale="110m")
 
+        # test presets
+        for preset in ["bw", "bw_2", "kr"]:
+            s_auto = m.add_scalebar(preset=preset)
+            s_auto.remove()
+
+        s_auto = m.add_scalebar()
+
         s = m.add_scalebar(scale=250000)
-        s.set_position((10, 20), azim=30)
-        s.set_label_props(every=2, scale=1.25, offset=0.5, weight="bold")
+        s.set_position((-155, 60), azim=30)
+        s.set_label_props(every=2, scale=1.25, offset=1.5, weight="bold")
         s.set_scale_props(n=6, colors=("k", "r"))
         s.set_patch_props(offsets=(1, 1.5, 1, 0.75))
+        s.set_line_props(ls="-", color="r")
+
+        s.set_scale(None)
+        s.set_pickable(False)
+        s.set_pickable(True)
+        s.set_size_factor(0.95)
 
         s1 = m.add_scalebar(
-            -31,
-            -50,
+            (-31, -50),
             90,
             scale=500000,
             scale_props=dict(n=10, width=3, colors=("k", ".25", ".5", ".75", ".95")),
@@ -752,8 +764,7 @@ class TestBasicPlotting(unittest.TestCase):
         )
 
         s2 = m.add_scalebar(
-            -45,
-            45,
+            (120, 50),
             45,
             scale=500000,
             scale_props=dict(n=6, width=3, colors=("k", "r")),
@@ -762,8 +773,7 @@ class TestBasicPlotting(unittest.TestCase):
         )
 
         s3 = m.add_scalebar(
-            78,
-            -60,
+            (-128, -60),
             0,
             scale=250000,
             scale_props=dict(n=20, width=3, colors=("k", "w")),
@@ -771,44 +781,65 @@ class TestBasicPlotting(unittest.TestCase):
             label_props=dict(scale=1.5, weight="bold", family="Courier New"),
         )
 
-        # test_presets
-        s_bw = m.add_scalebar(preset="bw")
-
         # ----------------- TEST interactivity
         cv = m.f.canvas
-        x, y = m.ax.transData.transform(s3.get_position()[:2])
-        x1, y1 = (
-            (m.f.bbox.x0 + m.f.bbox.x1) / 2,
-            (m.f.bbox.y0 + m.f.bbox.y1) / 2,
-        )
 
-        # click on scalebar
-        button_press_event(cv, x, y, 1, False)
+        for i, s_check in enumerate([s, s1, s2, s3, s_auto]):
 
-        # move the scalebar
-        motion_notify_event(cv, x1, y1, False)
+            x, y = m.ax.transData.transform(s_check.get_position()[:2])
+            x1, y1 = (
+                m.f.bbox.x0 + (i + 0.5) * m.f.bbox.width / 6,
+                (m.f.bbox.y0 + m.f.bbox.y1) / 2,
+            )
 
-        # increase bbox size
-        key_press_event(cv, "left")
-        key_press_event(cv, "right")
-        key_press_event(cv, "up")
-        key_press_event(cv, "down")
+            # click on scalebar
+            button_press_event(cv, x, y, 1, False)
 
-        # deincrease bbox size
-        key_press_event(cv, "alt+left")
-        key_press_event(cv, "alt+right")
-        key_press_event(cv, "alt+up")
-        key_press_event(cv, "alt+down")
+            # move the scalebar
+            motion_notify_event(cv, x1, y1, False)
+            button_release_event(cv, x1, y1, 1, False)
 
-        # rotate the scalebar
-        key_press_event(cv, "+")
-        key_press_event(cv, "-")
+            button_press_event(cv, x1, y1, 1, False)
+            # adjust scalebar scale
+            scroll_event(cv, x1, y1, -50, False)
+            scroll_event(cv, x1, y1, 50, False)
 
-        # adjust the padding between the ruler and the text
-        key_press_event(cv, "alt+-")
-        key_press_event(cv, "alt++")
+            # adjust label size
+            key_press_event(cv, "control")
+            scroll_event(cv, x1, y1, -5, False)
+            scroll_event(cv, x1, y1, 5, False)
+            key_release_event(cv, "control")
 
-        for si in [s, s1, s2, s3, s_bw]:
+            button_release_event(cv, x1, y1, 1, False)
+
+            # increase bbox size
+            key_press_event(cv, "left")
+            key_press_event(cv, "right")
+            key_press_event(cv, "up")
+            key_press_event(cv, "down")
+
+            # deincrease bbox size
+            key_press_event(cv, "alt+left")
+            key_press_event(cv, "alt+right")
+            key_press_event(cv, "alt+up")
+            key_press_event(cv, "alt+down")
+
+            # rotate the scalebar
+            key_press_event(cv, "+")
+            key_press_event(cv, "-")
+
+            # adjust the padding between the ruler and the text
+            key_press_event(cv, "ctrl+left")
+            key_press_event(cv, "ctrl+right")
+
+            # rotate the text
+            key_press_event(cv, "ctrl+up")
+            key_press_event(cv, "ctrl+down")
+
+        # set the extent to test autoscaling behavior
+        m.set_extent((-20, 20, -40, 40))
+
+        for si in [s, s1, s2, s3, s_auto]:
             si.remove()
 
         plt.close("all")

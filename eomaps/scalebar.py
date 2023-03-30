@@ -157,7 +157,10 @@ class ScaleBar:
             The layer at which the scalebar should be visible.
             If None, the layer of the Maps-object used to create the scalebar is used.
             The default is None.
-
+        pickable : bool, optional
+            If True, the scalebar can be interactively adjusted using the mouse
+            and keyboard-shortcuts. If False, the scalebar is non-interactive.
+            The default is True
         """
         self._m = m
 
@@ -171,6 +174,7 @@ class ScaleBar:
         self._size_factor = size_factor
 
         # ----- Interactivity parameters
+        self._pickable = False
         # click offset relative to the start-position of the scale
         self._pick_start_offset = (0.0, 0.0)
         # multiplier for changing the scale of the scalebar
@@ -568,7 +572,7 @@ class ScaleBar:
 
         """
         for key in kwargs:
-            if not hasattr(self._artists["lines"], f"set_{key}"):
+            if not hasattr(self._artists["patch_lines"], f"set_{key}"):
                 raise AttributeError(f"EOmaps: '{key}' is not a valid line property!")
 
         self._set_line_props(**kwargs)
@@ -792,6 +796,70 @@ class ScaleBar:
         """
         return self._size_factor
 
+    def get_position(self):
+        """
+        Return the current position (and orientation) of the scalebar.
+
+        Returns
+        -------
+        list
+            a list corresponding to [longitude, latitude, azimuth].
+        """
+        return [self._lon, self._lat, self._azim]
+
+    def set_auto_scale(self, autoscale_fraction=0.25):
+        """
+        Automatically evaluate an appropriate scale for the scalebar.
+
+        (and dynamically update the scale on pan/zoom events.)
+
+
+        Parameters
+        ----------
+        autoscale_fraction : float, or None, optional
+            The (approximate) fraction of the axis width to use as size for the scalebar
+            in the autoscale procedure. Note that this is number is not exact since
+            (depending on the crs) the final scalebar might be curved.
+
+            If None, the current scale is maintained.
+            The default is 0.25.
+        """
+        self._autoscale = autoscale_fraction
+        self._update(BM_update=True)
+
+    def set_pickable(self, q):
+        """
+        Set if the scalebar is interactive (True) or not (False).
+
+        If True, the following interactions can be performed:
+
+        - **LEFT-CLICK** on the scalebar to make the scalebar interactive
+        - drag the scalebar with the <LEFT MOUSE BUTTON>
+        - use the **SCROLL WHEEL** to adjust the (auto-)scale of the scalebar
+        - use < control > + **SCROLL WHEEL** to adjust the size of the labels
+
+        Keyboard-shortcuts (only active if a scalebar is selected):
+
+        - use < + > and < - > to rotate the scalebar
+        - use the < arrow-keys > to increase the frame size
+        - use < alt > + < arrow-keys > to decrease the frame size
+        - use < control > + < left > and < right > keys to adjust the label-offset
+        - use < control > + < up > and < down > keys to rotate the labels
+
+        - use < delete > to remove the scalebar from the plot
+        - use the < escape > to exit editing the scalebar
+
+        Parameters
+        ----------
+        q : bool
+            Indicator if the scalebar is interactive (True) or not (False).
+
+        """
+        if q is True:
+            self._make_pickable()
+        else:
+            self._undo_pickable()
+
     def _get_base_pts(self, lon, lat, azim, npts=None):
         if npts is None:
             npts = self._scale_props["n"] + 1
@@ -812,11 +880,6 @@ class ScaleBar:
 
         lons, lats = [], []
         for [lon1, lon2], [lat1, lat2] in zip(pairwise(pts.lons), pairwise(pts.lats)):
-            if abs(lon1 - lon2) > 180:
-                continue
-            if abs(lat1 - lat2) > 90:
-                continue
-
             # get intermediate points
             p = self._geod.inv_intermediate(
                 lon1=lon1,
@@ -1071,7 +1134,7 @@ class ScaleBar:
             self._label_props["every"],
         )
 
-    def _add_scalebar(self, lon, lat, azim):
+    def _add_scalebar(self, pos, azim, pickable=True):
 
         assert (
             self._artists["scale"] is None
@@ -1081,6 +1144,13 @@ class ScaleBar:
         # ax-transformations work as expected
         # TODO is there a way to omit this?
         self._m.f.canvas.draw()
+
+        if pos is None:
+            lon, lat = self._get_autopos(self._auto_position)
+        else:
+            # don't auto-reposition if lon/lat has been provided
+            lon, lat = pos
+            self._auto_position = False
 
         self._lon = lon
         self._lat = lat
@@ -1130,56 +1200,18 @@ class ScaleBar:
         self._artists["patch"].set_zorder(0)
 
         self._m.BM.add_artist(self._artists["scale"], layer=self._layer)
-        # self._m.BM.add_artist(self._artists["text"])
         self._m.BM.add_artist(self._artists["patch"], layer=self._layer)
 
         # update scalebar props whenever new backgrounds are fetched
         # (e.g. to take care of updates on pan/zoom/resize)
         self._m.BM._before_fetch_bg_actions.append(self._update)
 
-    def get_position(self):
-        """
-        Return the current position (and orientation) of the scalebar.
-
-        Returns
-        -------
-        list
-            a list corresponding to [longitude, latitude, azimuth].
-        """
-        return [self._lon, self._lat, self._azim]
-
-    def set_auto_scale(self, autoscale_fraction=0.25):
-        """
-        Automatically evaluate an appropriate scale for the scalebar.
-
-        (and dynamically update the scale on pan/zoom events.)
-
-
-        Parameters
-        ----------
-        autoscale_fraction : float, or None, optional
-            The (approximate) fraction of the axis width to use as size for the scalebar
-            in the autoscale procedure. Note that this is number is not exact since
-            (depending on the crs) the final scalebar might be curved.
-
-            If None, the current scale is maintained.
-            The default is 0.25.
-        """
-        self._autoscale = autoscale_fraction
-        self._update(BM_update=True)
+        if pickable is True:
+            self._make_pickable()
 
     def _make_pickable(self):
-        """
-        Add callbacks to adjust the scalebar position manually.
-
-            - <LEFT>-click on the scalebar with the mouse to pick it up
-                - hold down <LEFT> to drag the scalebar
-            - use "+" and "-" keys to rotate the colorbar
-            - <RIGHT>-click on the scalebar to detach the callbacks again
-              (e.g. make it non-interactive)
-            - use <ARROW-keys> to set the size of the patch
-
-        """
+        if self._pickable is True:
+            return
 
         self._picked = False
         self._pick_drag = False
@@ -1189,6 +1221,27 @@ class ScaleBar:
         # if not hasattr(self, "_cid_PICK"):
         if getattr(self, "_cid_PICK", None) is None:
             self._cid_PICK = self._m.f.canvas.mpl_connect("pick_event", self._cb_pick)
+
+        self._pickable = True
+
+    def _undo_pickable(self):
+        if not self._pickable:
+            return
+
+        self._unpick()
+        self._artists["patch"].set_picker(None)
+
+        if getattr(self, "_cid_PICK", None) is not None:
+            self._m.f.canvas.mpl_disconnect(self._cb_pick)
+            self._cid_PICK = None
+
+        self._pickable = False
+
+    def _unpick(self):
+        if self._picked:
+            self._picked = False
+            self._pick_drag = False
+            self._remove_cbs()
 
     def _cb_pick(self, event):
         if event.mouseevent.button == 1:
@@ -1202,12 +1255,8 @@ class ScaleBar:
                 self._cb_click(event.mouseevent)
 
             else:
-                # this is needed to make sure overlapping scalebars are not picked
-                # together
-                if self._picked:
-                    self._picked = False
-                    self._pick_drag = False
-                    self._remove_cbs()
+                # required to make sure overlapping scalebars are not picked together
+                self._unpick()
             self._update(BM_update=True)
 
     def _cb_release(self, event):
@@ -1218,9 +1267,7 @@ class ScaleBar:
         ):
             self._pick_drag = True
         elif self._picked:
-            self._picked = False
-            self._pick_drag = False
-            self._remove_cbs()
+            self._unpick()
             self._update(BM_update=True)
 
     def _cb_click(self, event):
@@ -1243,12 +1290,8 @@ class ScaleBar:
             # (they are handled explicitly in "cb_scroll" )
             pass
         elif self._picked:
-            self._picked = False
-            self._pick_drag = False
-            self._remove_cbs()
-            self._update()
-            # use a full update here to avoid blitting-glitches
-            self._m.BM.update()
+            self._unpick()
+            self._update(BM_update=True)
 
     def _cb_move(self, event):
         if not self._picked or not self._pick_drag:
@@ -1336,9 +1379,7 @@ class ScaleBar:
             self._set_patch_props(offsets=patch_offsets)
         # unpick scalebar
         elif event.key == "escape":
-            self._picked = False
-            self._pick_drag = False
-            self._remove_cbs()
+            self._unpick()
 
         self._update(BM_update=True)
 
@@ -1409,7 +1450,7 @@ class ScaleBar:
 
     def remove(self):
         """Remove the scalebar from the map."""
-        self._remove_cbs()
+        self._unpick()
         for a in self._artists.values():
             self._m.BM.remove_artist(a)
             a.remove()

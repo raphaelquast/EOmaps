@@ -1941,11 +1941,10 @@ class Maps(object):
     @wraps(ScaleBar.__init__)
     def add_scalebar(
         self,
-        lon=None,
-        lat=None,
-        azim=0,
-        preset=None,
+        pos=None,
+        rotation=0,
         scale=None,
+        preset=None,
         autoscale_fraction=0.25,
         auto_position=(0.8, 0.25),
         scale_props=None,
@@ -1954,6 +1953,7 @@ class Maps(object):
         line_props=None,
         layer=None,
         size_factor=1,
+        pickable=True,
     ):
         """Add a scalebar to the map."""
         s = ScaleBar(
@@ -1970,15 +1970,8 @@ class Maps(object):
             size_factor=size_factor,
         )
 
-        if lon is None or lat is None:
-            s._auto_position = auto_position
-            lon, lat = s._get_autopos(auto_position)
-        else:
-            # don't auto-reposition if lon/lat has been provided
-            s._auto_position = False
-
-        s._add_scalebar(lon, lat, azim)
-        s._make_pickable()
+        # add the scalebar to the map at the desired position
+        s._add_scalebar(pos=pos, azim=rotation, pickable=pickable)
 
         return s
 
