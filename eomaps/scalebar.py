@@ -234,6 +234,10 @@ class ScaleBar:
         else:
             return self._scale
 
+    @scale.setter
+    def scale(self, val):
+        raise AttributeError("EOmaps: Use s.set_scale() to set the scale!")
+
     def print_code(self, fixed=True):
         """
         Print a string to reproduce the appearance of the scalebar in its current state.
