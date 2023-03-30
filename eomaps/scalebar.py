@@ -156,30 +156,42 @@ class ScaleBar:
         """
         self._m = m
 
-        self._artists = OrderedDict(patch=None, scale=None)
-        self._texts = dict()
-
-        # multipliers for changing values with the scrollwheel
-        self._size_factor_base = 50
-        self._scale_factor_base = 500
-
-        self._size_factor = size_factor
-
         if layer is None:
             layer = self._m.layer
         self.layer = layer
 
-        self._scale_props = dict(scale=None)
+        # number of intermediate points for evaluating the curvature
+        self._interm_pts = 20
+        # size-factor to adjust the size of the labels
+        self._size_factor = size_factor
+
+        # ----- Interactivity parameters
+        # click offset relative to the start-position of the scale
+        self._pick_start_offset = (0.0, 0.0)
+        # multiplier for changing the scale of the scalebar
+        self._scale_factor_base = 500
+        # multipliers for changing the label size
+        self._size_factor_base = 50
+        # inverval for adjusting the text-offset
+        self._cb_offset_interval = 0.05
+        # interval for rotating the scalebar
+        self._cb_rotate_inverval = 1
+
+        self._scale = scale
+        self._estimated_scale = None
+
+        self._artists = OrderedDict(patch=None, scale=None)
+        self._texts = dict()
+        self._scale_props = dict()
         self._label_props = dict()
-        self._patch_props = dict()
         self._line_props = dict()
+        self._patch_props = dict()
         self._patch_offsets = (1, 1, 1, 1)
 
         self._font_kwargs = dict()
         self._fontkeys = ("family", "style", "variant", "stretch", "weight")
 
-        # apply preset styling (so that any additional properties are applied on top
-        # of the preset)
+        # apply preset styling (so that additional properties are applied on top)
         self.preset = None
         self._apply_preset(preset)
 
@@ -194,9 +206,6 @@ class ScaleBar:
 
         self._auto_position = auto_position
 
-        self._scale = scale
-        self._estimated_scale = None
-
         self._set_scale_props(**(scale_props if scale_props else {}))
         # set the label properties
         self._set_label_props(**(label_props if label_props else {}))
@@ -205,19 +214,10 @@ class ScaleBar:
         # set the line properties
         self._set_line_props(**(line_props if line_props else {}))
 
-        # number of intermediate points for evaluating the curvature
-        self._interm_pts = 20
-
-        self._cb_offset_interval = 0.05
-        self._cb_rotate_inverval = 1
-
-        # geod from plot_crs
+        # cache geod from plot_crs
         self._geod = self._m.crs_plot.get_geod()
-
-        # renderer cache
+        # cache renderer
         self._renderer = None
-
-        self._pick_start_offset = (0.0, 0.0)
 
     @property
     def scale(self):
@@ -406,7 +406,7 @@ class ScaleBar:
 
             lons, lats = np.meshgrid(np.linspace(x0, x1, n), np.linspace(y0, y1, n))
 
-            geod = self._m.crs_plot.get_geod()
+            geod = self._geod
             ls = geod.line_lengths(lons, lats)
             scale = np.nanmedian(ls) / self._scale_props["n"] * self._autoscale * 100
 
@@ -432,6 +432,11 @@ class ScaleBar:
                 np.mean(extent[2:]),
             )
         return lon, lat
+
+    def _get_pos_as_autopos(self, lon, lat):
+        pos = self._m._transf_lonlat_to_plot.transform(lon, lat)
+        pos = (self._m.ax.transData + self._m.ax.transAxes.inverted()).transform(pos)
+        return pos
 
     def _set_auto_position(self, pos):
         """Move the scalebar to the desired position and apply auto-scaling."""
@@ -538,7 +543,7 @@ class ScaleBar:
             - "facecolor", "edgecolor", "linewidth", "linestyle", "alpha" ...
         """
         for key in kwargs:
-            if not hasattr(self._artists["patch"], "set_{key}"):
+            if not hasattr(self._artists["patch"], f"set_{key}"):
                 raise AttributeError(f"EOmaps: '{key}' is not a valid patch property!")
 
         self._set_patch_props(offsets=offsets, **kwargs)
@@ -579,7 +584,7 @@ class ScaleBar:
 
         """
         for key in kwargs:
-            if not hasattr(self._artists["lines"], "set_{key}"):
+            if not hasattr(self._artists["lines"], f"set_{key}"):
                 raise AttributeError(f"EOmaps: '{key}' is not a valid line property!")
 
         self._set_line_props(**kwargs)
@@ -639,7 +644,7 @@ class ScaleBar:
 
         """
         for key in kwargs:
-            if not hasattr(FontProperties, "set_{key}"):
+            if not hasattr(FontProperties, f"set_{key}"):
                 raise AttributeError(f"EOmaps: '{key}' is not a valid font property!")
 
         self._set_label_props(
@@ -1288,7 +1293,7 @@ class ScaleBar:
                 0.01, self._size_factor + event.step / self._size_factor_base
             )
         elif event.key == "r":
-            self._azim += event.step * self.cb_rotate_interval
+            self._azim += event.step * self._cb_rotate_interval
         else:
             if self._scale is None:
                 self._autoscale = np.clip(
@@ -1315,9 +1320,9 @@ class ScaleBar:
 
         # rotate
         if key == "+":
-            self._azim += self.cb_rotate_interval
+            self._azim += self._cb_rotate_interval
         elif key == "-":
-            self._azim -= self.cb_rotate_interval
+            self._azim -= self._cb_rotate_interval
         # set text offset
         elif key == "ctrl+right":
             o = self._label_props["offset"]
@@ -1330,11 +1335,11 @@ class ScaleBar:
         # set text rotation
         elif key == "ctrl+up":
             o = self._label_props["rotation"]
-            o += self.cb_rotate_interval
+            o += self._cb_rotate_interval
             self._set_label_props(rotation=o)
         elif key == "ctrl+down":
             o = self._label_props["rotation"]
-            o -= self.cb_rotate_interval
+            o -= self._cb_rotate_interval
             self._set_label_props(rotation=o)
         # set patch offsets
         elif key in udlr:
@@ -1417,11 +1422,6 @@ class ScaleBar:
             # note: when using this function as before_fetch_bg action, updates
             # would cause a recursion!
             self._m.BM.update()
-
-    def _get_pos_as_autopos(self, lon, lat):
-        pos = self._m._transf_lonlat_to_plot.transform(lon, lat)
-        pos = (self._m.ax.transData + self._m.ax.transAxes.inverted()).transform(pos)
-        return pos
 
     def remove(self):
         """Remove the scalebar from the map."""
