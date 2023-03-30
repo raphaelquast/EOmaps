@@ -37,7 +37,10 @@ class ScaleBar:
         Note
         ----
         You can click on the scalebar to dynamically adjust its position,
-        orientation and size! (hold down the left mouse-button to use the keys)
+        orientation and size!
+
+        Use ` .print_code()` to print the command that will reproduce the current
+        appearance of the scalebar to the console.
 
         - **LEFT-CLICK** on the scalebar to make the scalebar interactive
         - drag the scalebar with the <LEFT MOUSE BUTTON>
@@ -66,7 +69,9 @@ class ScaleBar:
         preset : str
             The name of the style preset to use.
 
-            - "bw" : a simple black-and white ruler without a background patch
+            - "bw" : a black and white scalebar with no background color
+            - "bw_2" : a black and white scalebar with white background
+            - "kr" : a black and red scalebar with semi-transparent white background
 
         scale : float or None, optional
             The distance of the individual segments of the scalebar.
@@ -175,7 +180,7 @@ class ScaleBar:
         # inverval for adjusting the text-offset
         self._cb_offset_interval = 0.05
         # interval for rotating the scalebar
-        self._cb_rotate_inverval = 1
+        self._cb_rotate_interval = 1
 
         self._scale = scale
         self._estimated_scale = None
@@ -1301,8 +1306,8 @@ class ScaleBar:
                 )
             else:
                 print(
-                    "EOmaps: Adjusting the scale of a fixed scalebar is "
-                    "not supported. Use s.set_scale(None) to enable autoscaling!"
+                    "EOmaps: The scale of the scalebar is fixed! "
+                    "Use s.set_scale(None) to use autoscaling!"
                 )
 
         self._update(BM_update=True)
