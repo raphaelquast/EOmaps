@@ -45,6 +45,7 @@ class ScaleBar:
         - **LEFT-CLICK** on the scalebar to make the scalebar interactive
         - drag the scalebar with the <LEFT MOUSE BUTTON>
         - use the **SCROLL WHEEL** to adjust the (auto-)scale of the scalebar
+          (hold < shift > to make bigger steps)
         - use < control > + **SCROLL WHEEL** to adjust the size of the labels
 
         Keyboard-shortcuts (only active if a scalebar is selected):
@@ -134,7 +135,9 @@ class ScaleBar:
             - "rotation" : the rotation angle of the labels (in degrees)
               relative to the curvature of the scalebar
             - "color" : The color of the text
-            - "every" : indicator which scales should be labelled (e.g. every nth)
+            - "every" : indicator which sections should be labelled
+              If an integer is provided, every nth section is labelled,
+              If a list or tuple is provided, it is used to label the selected sections.
             - ... additional kwargs are passed to `matplotlib.font_manager.FontProperties`
               to set the used font-properties. Possible values are:
 
@@ -178,7 +181,7 @@ class ScaleBar:
         # click offset relative to the start-position of the scale
         self._pick_start_offset = (0.0, 0.0)
         # multiplier for changing the scale of the scalebar
-        self._scale_factor_base = 500
+        self._scale_factor_base = 1000
         # multipliers for changing the label size
         self._size_factor_base = 50
         # inverval for adjusting the text-offset
@@ -419,9 +422,10 @@ class ScaleBar:
 
             geod = self._geod
             ls = geod.line_lengths(lons, lats)
-            scale = np.nanmedian(ls) / self._scale_props["n"] * self._autoscale * 100
+            scale = np.nanmedian(ls) * self._autoscale * 100
 
-            scale = self._round_to_n(scale, 1)
+            scale = self._round_to_n(scale, 1) / self._scale_props["n"]
+
             self._estimated_scale = scale
         except Exception:
             raise AssertionError(
@@ -611,10 +615,15 @@ class ScaleBar:
         scale : int, optional
             A scaling factor for the fontsize of the labels. The default is 1.
         rotation : float, optional
-            the rotation angle of the labels (in degrees) relative to the
+            The rotation angle of the labels (in degrees) relative to the
             curvature of the scalebar. The default is 0.
-        every : int, optional
-            DESCRIPTION. The default is 2.
+        every : int, list or tuple of ints, optional
+            Indicator which sections of the scalebar should be labelled.
+
+            - if int: every nth section is labelled
+            - if a list/tuple is provided, only the selected sections are labelled.
+
+            The default is 2.
         offset : float, optional
             A scaling factor to adjust the offset of the labels relative to the
             scalebar. The default is 1.
@@ -873,6 +882,13 @@ class ScaleBar:
             initial_idx=0,
             terminus_idx=0,
         )
+
+        if isinstance(self._label_props["every"], int):
+            self._every = [
+                i for i in range(pts.npts) if i % self._label_props["every"] == 0
+            ]
+        else:
+            self._every = [i for i in self._label_props["every"] if i <= pts.npts]
         return pts
 
     def _get_pts(self, lon, lat, azim):
@@ -930,13 +946,13 @@ class ScaleBar:
         o_l = d * self._patch_offsets[2]
         o_r = d * self._patch_offsets[3]
 
-        # in case the top scale has a label, add a margin to encompass the text!
-        if len(pts) % self._label_props["every"] == 0:
-            o_r += self._top_h * 1.5
-
         dxy = np.gradient(pts.reshape((-1, 2)), axis=0)
         alpha = np.arctan2(dxy[:, 1], -dxy[:, 0])
         t = np.column_stack([np.sin(alpha), np.cos(alpha)])
+
+        # in case the top scale has a label, add a margin to encompass the text!
+        if len(pts) in self._every:
+            o_r += self._top_h / 2
 
         ptop = pts.reshape((-1, 2)) - ot * t
         pbottom = pts.reshape((-1, 2)) + ob * t
@@ -994,8 +1010,10 @@ class ScaleBar:
 
         lines = []
         for i, (lon, lat, ang) in enumerate(zip(line_lons, line_lats, angs)):
-            if i % self._label_props["every"] == 0:
-                lines.append(self._get_line_pts(lon, lat, d, ang))
+            if i not in self._every:
+                continue
+
+            lines.append(self._get_line_pts(lon, lat, d, ang))
 
         return lines
 
@@ -1033,7 +1051,7 @@ class ScaleBar:
             bbox = val.get_window_extent(self._renderer).transformed(
                 _transf_data_inverted
             )
-            _top_h = min(bbox.width, bbox.height)
+            _top_h = np.sqrt(bbox.width**2 + bbox.height**2)
         except Exception:
             pass
 
@@ -1049,8 +1067,9 @@ class ScaleBar:
 
         self._texts.clear()
         for i, (lon, lat, ang) in enumerate(zip(pts.lons, pts.lats, angs)):
-            if i % self._label_props["every"] != 0:
+            if i not in self._every:
                 continue
+
             if i == 0:
                 txt = "0"
             else:
@@ -1098,7 +1117,7 @@ class ScaleBar:
         )
 
         for i, (lon, lat, ang) in enumerate(zip(pts.lons, pts.lats, angs)):
-            if i % self._label_props["every"] != 0:
+            if i not in self._every:
                 continue
 
             if i == 0:
@@ -1126,12 +1145,19 @@ class ScaleBar:
                 )
                 + self._m.ax.transData
             )
+
+        # do this to allow using every as key for the lru_cache
+        if isinstance(self._label_props["every"], int):
+            hashable_every = self._label_props["every"]
+        else:
+            hashable_every = frozenset(self._label_props["every"])
+
         self._get_maxw(
             self._current_scale,
             self._scale_props["n"],
             self._label_props["scale"],
             self._label_props["rotation"],
-            self._label_props["every"],
+            hashable_every,
         )
 
     def _add_scalebar(self, pos, azim, pickable=True):
@@ -1322,9 +1348,17 @@ class ScaleBar:
         elif event.key == "r":
             self._azim += event.step * self._cb_rotate_interval
         else:
+
+            if event.key == "shift":
+                multip = 5
+            else:
+                multip = 1
+
             if self._scale is None:
                 self._autoscale = np.clip(
-                    self._autoscale + event.step / self._scale_factor_base, 0.01, 0.99
+                    self._autoscale + multip * event.step / self._scale_factor_base,
+                    0.01,
+                    0.99,
                 )
             else:
                 print(
