@@ -705,28 +705,47 @@ class TestBasicPlotting(unittest.TestCase):
         c2 = m.add_compass((0.9, 0.9))
         self.assertTrue(np.allclose(c2.get_position("axis"), np.array([0.9, 0.9])))
 
+        for t in "NESW":
+            ci = m.add_compass(txt=t)
+            ci.remove()
+
         cv = m.f.canvas
 
         # click on compass to move it around
-        button_press_event(cv, *m.ax.transAxes.transform((0.1, 0.1)), 1, False)
+        button_press_event(
+            cv, *m.ax.transAxes.transform(c1.get_position("axis")), 1, False
+        )
         motion_notify_event(cv, *m.ax.transAxes.transform((0.5, 0.5)), False)
         button_release_event(cv, *m.ax.transAxes.transform((0.5, 0.5)), 1, False)
+        self.assertTrue(np.allclose(c1.get_position("axis"), np.array([0.5, 0.5])))
 
         c1.set_position((-30000000, -2000000))
         c1.set_patch("r", "g", 5)
-        c1.set_pickable(False)
-        c1.remove()
+
+        # delete the compass with a keypress event
+        button_press_event(
+            cv, *m.ax.transAxes.transform(c1.get_position("axis")), 1, False
+        )
+        key_press_event(cv, "delete")
+        button_release_event(cv, *m.ax.transAxes.transform((0.5, 0.5)), 1, False)
 
         c2.set_position((0.75, 0.25), "axis")
         c2.set_patch((1, 0, 1, 0.5), False)
+        c2.set_pickable(False)
         c2.remove()
 
-        c = m.add_compass((0.5, 0.5), scale=7, style="north arrow", patch="g")
+        c = m.add_compass(
+            (45, 45), pos_transform="lonlat", scale=7, style="north arrow", patch="g"
+        )
         c.set_position((-30000000, -2000000))
         c.set_patch("r", "g", 5)
         c.set_position((0.75, 0.25), "axis")
         c.set_patch((1, 0, 1, 0.5), False)
         c.set_pickable(False)
+        c.remove()
+
+        c = m.add_compass((-30000000, -2000000), pos_transform="plot_crs")
+        c.remove()
 
         plt.close("all")
 
