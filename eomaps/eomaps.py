@@ -1947,7 +1947,7 @@ class Maps(object):
         preset=None,
         scale=None,
         autoscale_fraction=0.25,
-        auto_position=(0.75, 0.25),
+        auto_position=(0.8, 0.25),
         scale_props=None,
         patch_props=None,
         label_props=None,

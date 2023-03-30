@@ -19,7 +19,7 @@ class ScaleBar:
         m,
         preset=None,
         scale=None,
-        autoscale_fraction=0.25,
+        autoscale_fraction=0.1,
         auto_position=(0.75, 0.25),
         size_factor=1,
         scale_props=None,
@@ -163,7 +163,7 @@ class ScaleBar:
 
         if layer is None:
             layer = self._m.layer
-        self.layer = layer
+        self._layer = layer
 
         # number of intermediate points for evaluating the curvature
         self._interm_pts = 20
@@ -197,13 +197,10 @@ class ScaleBar:
         self._fontkeys = ("family", "style", "variant", "stretch", "weight")
 
         # apply preset styling (so that additional properties are applied on top)
-        self.preset = None
+        self._preset = None
         self._apply_preset(preset)
 
-        if scale is None:
-            self._autoscale = autoscale_fraction
-        else:
-            self._autoscale = None
+        self._autoscale = autoscale_fraction
 
         assert (
             isinstance(auto_position, tuple) or auto_position is False
@@ -225,7 +222,7 @@ class ScaleBar:
         self._renderer = None
 
     @property
-    def scale(self):
+    def _current_scale(self):
         """The currently used scale of the scalebar."""
         if self._scale is None:
             if self._estimated_scale is None:
@@ -234,9 +231,10 @@ class ScaleBar:
         else:
             return self._scale
 
-    @scale.setter
-    def scale(self, val):
-        raise AttributeError("EOmaps: Use s.set_scale() to set the scale!")
+    def get_scale(self):
+        """The currently used scale of the scalebar."""
+
+        return self._current_scale
 
     def print_code(self, fixed=True):
         """
@@ -289,7 +287,7 @@ class ScaleBar:
 
         labelprops = {**self._label_props, **self._font_kwargs}
 
-        layer = f"'{self.layer}'" if self.layer else "None"
+        layer = f"'{self._layer}'" if self._layer else "None"
 
         if fixed:
             s = (
@@ -297,7 +295,7 @@ class ScaleBar:
                 f"lon={np.format_float_positional(self._lon, precision)}, "
                 f"lat={np.format_float_positional(self._lat, precision)}, "
                 f"azim={np.format_float_positional(self._azim, precision=10)}, "
-                f"preset={self.preset if self.preset else 'None'}, "
+                f"preset={self._preset if self._preset else 'None'}, "
                 f"scale={self._scale if self._scale else 'None'}, "
                 f"scale_props={self._scale_props}, "
                 f"patch_props={patchprops}, "
@@ -314,7 +312,7 @@ class ScaleBar:
                 "m.add_scalebar("
                 f"autoscale_fraction={self._autoscale}, "
                 f"auto_position=({autopos[0]}, {autopos[1]}), "
-                f"preset={self.preset if self.preset else 'None'}, "
+                f"preset={self._preset if self._preset else 'None'}, "
                 f"scale_props={self._scale_props}, "
                 f"patch_props={patchprops}, "
                 f"label_props={labelprops}, "
@@ -362,7 +360,7 @@ class ScaleBar:
         return scale_props, patch_props, label_props, line_props
 
     def _apply_preset(self, preset):
-        self.preset = preset
+        self._preset = preset
 
         scale_props, patch_props, label_props, line_props = self._get_preset_props(
             preset
@@ -803,7 +801,7 @@ class ScaleBar:
             lat1=lat,
             azi1=azim,
             npts=npts,
-            del_s=self.scale,
+            del_s=self._current_scale,
             initial_idx=0,
             terminus_idx=0,
         )
@@ -839,7 +837,7 @@ class ScaleBar:
         return pts_t
 
     def _get_txt(self, n):
-        scale = self.scale
+        scale = self._current_scale
         # the text displayed above the scalebar
         units = {" mm": 0.001, " m": 1, " km": 1000, "k km": 1000000}
         for key, val in units.items():
@@ -1010,7 +1008,7 @@ class ScaleBar:
 
             self._artists[f"text_{i}"] = self._m.ax.add_artist(patch)
             self._texts[f"text_{i}"] = txt
-            self._m.BM.add_artist(self._artists[f"text_{i}"], layer=self.layer)
+            self._m.BM.add_artist(self._artists[f"text_{i}"], layer=self._layer)
 
     def _redraw_minitxt(self):
         # re-draw the text patches in case the number of texts changed
@@ -1066,7 +1064,7 @@ class ScaleBar:
                 + self._m.ax.transData
             )
         self._get_maxw(
-            self.scale,
+            self._current_scale,
             self._scale_props["n"],
             self._label_props["scale"],
             self._label_props["rotation"],
@@ -1100,7 +1098,7 @@ class ScaleBar:
 
         # -------------- add the patch
         self._get_maxw(
-            self.scale,
+            self._current_scale,
             self._scale_props["n"],
             self._label_props["scale"],
             self._label_props["rotation"],
@@ -1115,7 +1113,7 @@ class ScaleBar:
         line_verts = self._get_line_verts(pts, lon, lat, self._azim, d)
         lc = LineCollection(line_verts, **self._line_props)
         self._artists["patch_lines"] = self._m.ax.add_artist(lc)
-        self._m.BM.add_artist(self._artists["patch_lines"], layer=self.layer)
+        self._m.BM.add_artist(self._artists["patch_lines"], layer=self._layer)
 
         # -------------- add the scalebar
         coll = LineCollection(pts)
@@ -1131,9 +1129,9 @@ class ScaleBar:
         self._artists["scale"].set_zorder(1)
         self._artists["patch"].set_zorder(0)
 
-        self._m.BM.add_artist(self._artists["scale"], layer=self.layer)
+        self._m.BM.add_artist(self._artists["scale"], layer=self._layer)
         # self._m.BM.add_artist(self._artists["text"])
-        self._m.BM.add_artist(self._artists["patch"], layer=self.layer)
+        self._m.BM.add_artist(self._artists["patch"], layer=self._layer)
 
         # update scalebar props whenever new backgrounds are fetched
         # (e.g. to take care of updates on pan/zoom/resize)
