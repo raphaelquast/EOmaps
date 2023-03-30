@@ -800,6 +800,9 @@ class TestBasicPlotting(unittest.TestCase):
             label_props=dict(scale=1.5, weight="bold", family="Courier New"),
         )
 
+        s3.print_code(fixed=True)
+        s3.print_code(fixed=False)
+
         # ----------------- TEST interactivity
         cv = m.f.canvas
 

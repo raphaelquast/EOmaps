@@ -315,7 +315,10 @@ class ScaleBar:
                 ")"
             )
         else:
-            autopos = [np.format_float_positional(i, 3) for i in self._auto_position]
+            autopos = [
+                np.format_float_positional(i, 3)
+                for i in self._get_pos_as_autopos(self._lon, self._lat)
+            ]
 
             s = (
                 "m.add_scalebar("
@@ -1292,12 +1295,7 @@ class ScaleBar:
                 # forward mouseevent to start dragging if button remains pressed
                 self._cb_click(event.mouseevent)
                 picked_callbacks.add(self)
-
-            # else:
-            #     # required to make sure overlapping scalebars are not picked together
-            #     self._unpick()
-            print("HERE")
-            self._update(BM_update=True)
+                self._update(BM_update=True)
 
     def _cb_click(self, event):
         if (
