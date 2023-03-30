@@ -10,6 +10,8 @@ from matplotlib.patches import Polygon, PathPatch
 from matplotlib.transforms import Affine2D
 from matplotlib.font_manager import FontProperties
 
+picked_callbacks = set()
+
 
 class ScaleBar:
     """Base class for EOmaps scalebars."""
@@ -299,9 +301,9 @@ class ScaleBar:
         if fixed:
             s = (
                 "m.add_scalebar("
-                f"lon={np.format_float_positional(self._lon, precision)}, "
-                f"lat={np.format_float_positional(self._lat, precision)}, "
-                f"azim={np.format_float_positional(self._azim, precision=10)}, "
+                f"pos=({np.format_float_positional(self._lon, precision)}, "
+                f"{np.format_float_positional(self._lat, precision)}), "
+                f"rotation={np.format_float_positional(self._azim, precision=10)}, "
                 f"preset={self._preset if self._preset else 'None'}, "
                 f"scale={self._scale if self._scale else 'None'}, "
                 f"scale_props={self._scale_props}, "
@@ -1264,36 +1266,37 @@ class ScaleBar:
         self._pickable = False
 
     def _unpick(self):
+        global picked_callbacks
+
         if self._picked:
             self._picked = False
             self._pick_drag = False
             self._remove_cbs()
+            if self in picked_callbacks:
+                picked_callbacks.remove(self)
 
     def _cb_pick(self, event):
+        global picked_callbacks
+
         if event.mouseevent.button == 1:
             if event.artist is self._artists["patch"]:
                 # unpick all other scalebars to make sure overlapping scalebars
                 # are not picked together
+                while len(picked_callbacks) > 0:
+                    s = picked_callbacks.pop()
+                    s._unpick()
+                    s._update()
 
                 self._picked = True
                 self._add_cbs()
                 # forward mouseevent to start dragging if button remains pressed
                 self._cb_click(event.mouseevent)
+                picked_callbacks.add(self)
 
-            else:
-                # required to make sure overlapping scalebars are not picked together
-                self._unpick()
-            self._update(BM_update=True)
-
-    def _cb_release(self, event):
-        if (
-            self._picked
-            and event.button == 1
-            and self._artists["patch"].contains(event)[0]
-        ):
-            self._pick_drag = True
-        elif self._picked:
-            self._unpick()
+            # else:
+            #     # required to make sure overlapping scalebars are not picked together
+            #     self._unpick()
+            print("HERE")
             self._update(BM_update=True)
 
     def _cb_click(self, event):
@@ -1302,8 +1305,12 @@ class ScaleBar:
             and event.button == 1
             and self._artists["patch"].contains(event)[0]
         ):
-            self._pick_drag = True
+            # TODO
+            # if self._auto_position is False:
+            #     print("The position of this scalebar is fixed!")
+            #     return
 
+            self._pick_drag = True
             # get the offset_position of the click with respect to the
             # reference point of the scalebar
             lon0, lat0 = self._m._transf_plot_to_lonlat.transform(
@@ -1427,9 +1434,6 @@ class ScaleBar:
         self._cid_CLICK = self._m.f.canvas.mpl_connect(
             "button_press_event", self._cb_click
         )
-        self._cid_RELEASE = self._m.f.canvas.mpl_connect(
-            "button_release_event", self._cb_release
-        )
         self._cid_KEYPRESS = self._m.f.canvas.mpl_connect(
             "key_press_event", self._cb_keypress
         )
@@ -1439,7 +1443,6 @@ class ScaleBar:
             "_cid_MOVE",
             "_cid_SCROLL",
             "_cid_CLICK",
-            "_cid_RELEASE",
             "_cid_KEYPRESS",
         ):
             cid = getattr(self, cidname, None)
