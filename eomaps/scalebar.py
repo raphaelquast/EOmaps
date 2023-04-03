@@ -10,7 +10,7 @@ from matplotlib.patches import Polygon, PathPatch
 from matplotlib.transforms import Affine2D
 from matplotlib.font_manager import FontProperties
 
-picked_callbacks = set()
+_picked_scalebars = set()
 
 
 class ScaleBar:
@@ -1299,24 +1299,24 @@ class ScaleBar:
         self._pickable = False
 
     def _unpick(self):
-        global picked_callbacks
+        global _picked_scalebars
 
         if self._picked:
             self._picked = False
             self._pick_drag = False
             self._remove_cbs()
-            if self in picked_callbacks:
-                picked_callbacks.remove(self)
+            if self in _picked_scalebars:
+                _picked_scalebars.remove(self)
 
     def _cb_pick(self, event):
-        global picked_callbacks
+        global _picked_scalebars
 
         if event.mouseevent.button == 1:
             if event.artist is self._artists["patch"]:
                 # unpick all other scalebars to make sure overlapping scalebars
                 # are not picked together
-                while len(picked_callbacks) > 0:
-                    s = picked_callbacks.pop()
+                while len(_picked_scalebars) > 0:
+                    s = _picked_scalebars.pop()
                     s._unpick()
                     s._update()
 
@@ -1324,7 +1324,7 @@ class ScaleBar:
                 self._add_cbs()
                 # forward mouseevent to start dragging if button remains pressed
                 self._cb_click(event.mouseevent)
-                picked_callbacks.add(self)
+                _picked_scalebars.add(self)
                 self._update(BM_update=True)
 
     def _cb_click(self, event):
