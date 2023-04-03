@@ -21,6 +21,7 @@ class ScaleBar:
         m,
         preset=None,
         scale=None,
+        n=10,
         autoscale_fraction=0.1,
         auto_position=(0.75, 0.25),
         size_factor=1,
@@ -77,14 +78,17 @@ class ScaleBar:
             - "kr" : a black and red scalebar with semi-transparent white background
 
         scale : float or None, optional
-            The distance of the individual segments of the scalebar.
+            The distance of the segments of the scalebar.
 
             - If None: the scale is automatically updated based on the current
               zoom level and the provided "autoscale_fraction".
             - If float: A fixed length of the segments (in meters).
-              (e.g. the total length of the scalebar will be `scale_props["n"] * scale`
+              (e.g. the total length of the scalebar will be `n * scale`
 
             The default is None.
+        n : int, optional
+            The number of segments to use.
+            The default is 10.
         autoscale_fraction : float, optional
             The (approximate) fraction of the axis width to use as size for the scalebar
             in the autoscale procedure. Note that this is number is not exact since
@@ -192,6 +196,7 @@ class ScaleBar:
         self._cb_rotate_interval = 1
 
         self._scale = scale
+        self._n = n
         self._estimated_scale = None
 
         self._artists = OrderedDict(patch=None, scale=None)
@@ -241,32 +246,45 @@ class ScaleBar:
             return self._scale
 
     def get_scale(self):
-        """The currently used scale of the scalebar."""
-
+        """Get the currently used scale of the scalebar."""
         return self._current_scale
 
-    def print_code(self, fixed=True):
+    def print_code(self, fixed=True, return_str=False):
         """
-        Print a string to reproduce the appearance of the scalebar in its current state.
+        Print the command that will reproduce the scalebar in its current state.
 
         Parameters
         ----------
         fixed : bool, optional
             - If True, the returned command will produce a scalebar that is fixed
-              with respect to its scale, position and properties.
+              with respect to its scale, and position.
             - If False, the command will produce a scalebar that autoscales itself
               with respect to the currently set autoscale parameters.
 
             The default is True.
+        return_str: bool, optional
+            If True, the string is returned.
+            If False, the string is only printed and None is returned.
+            The default is False.
+
+        Returns
+        -------
+        code : str
+            A string of the command that will reproduce the scalebar.
 
         """
         s = self._get_code(fixed=fixed)
         try:
             import black
 
-            return print(black.format_str(s, mode=black.Mode()))
+            code = black.format_str(s, mode=black.Mode())
+            print(code)
+            if return_str:
+                return s
         except ImportError:
-            return print(s)
+            print(s)
+            if return_str:
+                return s
 
     def _get_code(self, fixed=True, precision=10):
         """
@@ -291,8 +309,8 @@ class ScaleBar:
             A command that will add the scalebar to the map when executed.
 
         """
-        offsets = [round(i, 3) for i in self._patch_offsets]
-        patchprops = {"offsets": offsets, **self._patch_props}
+        patch_offsets = [round(i, 3) for i in self._patch_offsets]
+        patchprops = {"offsets": patch_offsets, **self._patch_props}
 
         labelprops = {**self._label_props, **self._font_kwargs}
 
@@ -304,8 +322,9 @@ class ScaleBar:
                 f"pos=({np.format_float_positional(self._lon, precision)}, "
                 f"{np.format_float_positional(self._lat, precision)}), "
                 f"rotation={np.format_float_positional(self._azim, precision=10)}, "
-                f"preset={self._preset if self._preset else 'None'}, "
                 f"scale={self._scale if self._scale else 'None'}, "
+                f"n={self._n}, "
+                f"preset={self._preset if self._preset else 'None'}, "
                 f"scale_props={self._scale_props}, "
                 f"patch_props={patchprops}, "
                 f"label_props={labelprops}, "
@@ -324,6 +343,7 @@ class ScaleBar:
                 "m.add_scalebar("
                 f"autoscale_fraction={self._autoscale}, "
                 f"auto_position=({autopos[0]}, {autopos[1]}), "
+                f"n={self._n}, "
                 f"preset={self._preset if self._preset else 'None'}, "
                 f"scale_props={self._scale_props}, "
                 f"patch_props={patchprops}, "
@@ -337,7 +357,7 @@ class ScaleBar:
         return s
 
     def _get_preset_props(self, preset):
-        scale_props = dict(n=10, width=5, colors=("k", "w"))
+        scale_props = dict(width=5, colors=("k", "w"))
         patch_props = dict(fc=".75", ec="k", lw=1, ls="-")
         label_props = dict(scale=2, offset=1, every=2, rotation=0, color="k")
         line_props = dict(ec="k", lw=0.5, linestyle=(0, (5, 5)))
@@ -345,7 +365,7 @@ class ScaleBar:
         if preset is None:
             pass
         elif preset == "bw":
-            scale_props.update(dict(n=10, width=4, colors=("k", "w")))
+            scale_props.update(dict(width=4, colors=("k", "w")))
             patch_props.update(dict(fc="none", ec="none"))
             label_props.update(
                 dict(
@@ -357,13 +377,11 @@ class ScaleBar:
                 )
             )
         elif preset == "bw_2":
-            scale_props.update(
-                dict(n=10, width=3, colors=("k", ".25", ".5", ".75", ".95"))
-            )
+            scale_props.update(dict(width=3, colors=("k", ".25", ".5", ".75", ".95")))
             patch_props.update(dict(fc="w"))
             label_props.update(dict(every=5, weight="bold", family="Calibri"))
         elif preset == "kr":
-            scale_props.update(dict(n=6, width=3, colors=("k", "r")))
+            scale_props.update(dict(width=3, colors=("k", "r")))
             patch_props.update(dict(fc=(1, 1, 1, 0.25), ec="r", lw=0.25))
             label_props.update(dict(weight="bold", family="Impact"))
         else:
@@ -378,7 +396,7 @@ class ScaleBar:
             preset
         )
         self._set_scale_props(**scale_props)
-        self._set_patch_props(offsets=self._patch_offsets, **patch_props)
+        self._set_patch_props(**patch_props)
         self._set_label_props(**label_props)
         self._set_line_props(**line_props)
 
@@ -429,7 +447,7 @@ class ScaleBar:
             ls = geod.line_lengths(lons, lats)
             scale = np.nanmedian(ls) * self._autoscale * 100
 
-            scale = self._round_to_n(scale, 1) / self._scale_props["n"]
+            scale = self._round_to_n(scale, 1) / self._n
 
             self._estimated_scale = scale
         except Exception:
@@ -474,19 +492,40 @@ class ScaleBar:
             If None, the scale will be determined automatically based on the currently
             visible plot-extent. The default is None.
 
+        See Also
+        --------
+        set_n : Set the number of segments to use.
+
         """
         self._scale = scale
         self._update(BM_update=True)
 
-    def set_scale_props(self, n=None, width=None, colors=None):
+    def set_n(self, n=None):
         """
-        Set the properties of the scalebar.
+        Set number of segments to use for the scalebar.
 
         Parameters
         ----------
-        n : int, optional
-            The number of scales (e.g. line-segments) to draw.
-            The default is 10.
+        n  : int, optional
+            The number of segments. The default is None.
+
+        See Also
+        --------
+        set_scale : Set the length of the scalebar segments.
+
+        """
+        self._n = n
+
+        # if the number of segments changed, re-draw labels completely!
+        self._redraw_minitxt()
+        self._update(BM_update=True)
+
+    def set_scale_props(self, width=None, colors=None):
+        """
+        Set the style properties of the scale.
+
+        Parameters
+        ----------
         width : float, optional
             The width of the scalebar (in ordinary matplotlib linewidth units).
             The default is 5.
@@ -497,24 +536,19 @@ class ScaleBar:
 
         See Also
         --------
-        - set_scale : Set a fixed scale for the scalebar.
+        - set_scale : Set a fixed length of the scalebar segments.
+        - set_n : Set the number of segments to use.
         - set_position : Set the position of the scalebar.
         - set_scale_props : Set the properties of the scalebar frame.
         - set_label_props : Set the properties of the labels.
         - set_line_props : Set the properties of the lines between scalebar and labels.
         - print_code : Print the command to re-create the scalebar to the console.
         """
-        self._set_scale_props(n=n, width=width, colors=colors)
-
-        # if the number of segments changed, re-draw labels completely!
-        if n is not None:
-            self._redraw_minitxt()
+        self._set_scale_props(width=width, colors=colors)
 
         self._update(BM_update=True)
 
-    def _set_scale_props(self, n=None, width=None, colors=None):
-        if n is not None:
-            self._scale_props["n"] = n
+    def _set_scale_props(self, width=None, colors=None):
         if width is not None:
             self._scale_props["width"] = width
         if colors is not None:
@@ -522,7 +556,7 @@ class ScaleBar:
 
     def set_patch_props(self, offsets=None, **kwargs):
         """
-        Set the properties of the scalebar frame.
+        Set the style properties of the background patch.
 
         Parameters
         ----------
@@ -547,10 +581,6 @@ class ScaleBar:
         self._update(BM_update=True)
 
     def _set_patch_props(self, offsets=None, **kwargs):
-
-        if offsets is not None:
-            self._patch_offsets = offsets
-
         for key, synonym in [
             ["fc", "facecolor"],
             ["ec", "edgecolor"],
@@ -562,11 +592,14 @@ class ScaleBar:
                     key, kwargs.pop(synonym, self._patch_props[key])
                 )
 
+        if offsets is not None:
+            self._patch_offsets = offsets
+
         self._patch_props.update(kwargs)
 
     def set_line_props(self, update=True, **kwargs):
         """
-        Set the properties of the lines connecting the scale and the labels.
+        Set the style properties of the lines connecting the scale and the labels.
 
         Parameters
         ----------
@@ -613,7 +646,7 @@ class ScaleBar:
         **kwargs,
     ):
         """
-        Set the properties of the labels.
+        Set the style properties of the labels.
 
         Parameters
         ----------
@@ -723,7 +756,6 @@ class ScaleBar:
             points for the scalebar. The default is None.
 
         """
-
         if pos is not None and auto_pos is not None:
             raise TypeError(
                 "EOmaps: You can only provide either pos or auto_pos, "
@@ -800,7 +832,7 @@ class ScaleBar:
 
     def get_size_factor(self):
         """
-        Get the current size-factor of the scalebar
+        Get the current size-factor of the scalebar.
 
         Returns
         -------
@@ -876,7 +908,7 @@ class ScaleBar:
 
     def _get_base_pts(self, lon, lat, azim, npts=None):
         if npts is None:
-            npts = self._scale_props["n"] + 1
+            npts = self._n + 1
 
         pts = self._geod.fwd_intermediate(
             lon1=lon,
@@ -932,7 +964,7 @@ class ScaleBar:
         return f"{scale} m"
 
     def _txt(self):
-        return self._get_txt(self._scale_props["n"])
+        return self._get_txt(self._n)
 
     def _get_d(self):
         # the base length used to define the size of the scalebar
@@ -945,11 +977,13 @@ class ScaleBar:
         )
 
     def _get_patch_verts(self, pts, lon, lat, ang, d):
+        offsets = self._patch_offsets
+
         # top bottom left right referrs to a horizontally oriented colorbar!
-        ot = d * self._patch_offsets[0]
-        ob = self._maxw + d * (self._label_props["offset"] + self._patch_offsets[1])
-        o_l = d * self._patch_offsets[2]
-        o_r = d * self._patch_offsets[3]
+        ot = d * offsets[0]
+        ob = self._maxw + d * (self._label_props["offset"] + offsets[1])
+        o_l = d * offsets[2]
+        o_r = d * offsets[3]
 
         dxy = np.gradient(pts.reshape((-1, 2)), axis=0)
         alpha = np.arctan2(dxy[:, 1], -dxy[:, 0])
@@ -1066,9 +1100,7 @@ class ScaleBar:
     def _set_minitxt(self, d, pts):
         angs = np.arctan2(*np.array([p[0] - p[-1] for p in pts]).T[::-1])
         angs = [*angs, angs[-1]]
-        pts = self._get_base_pts(
-            self._lon, self._lat, self._azim, npts=self._scale_props["n"] + 2
-        )
+        pts = self._get_base_pts(self._lon, self._lat, self._azim, npts=self._n + 2)
 
         self._texts.clear()
         for i, (lon, lat, ang) in enumerate(zip(pts.lons, pts.lats, angs)):
@@ -1117,9 +1149,7 @@ class ScaleBar:
     def _update_minitxt(self, d, pts):
         angs = np.arctan2(*np.array([p[0] - p[-1] for p in pts]).T[::-1])
         angs = [*angs, angs[-1]]
-        pts = self._get_base_pts(
-            self._lon, self._lat, self._azim, npts=self._scale_props["n"] + 2
-        )
+        pts = self._get_base_pts(self._lon, self._lat, self._azim, npts=self._n + 2)
 
         for i, (lon, lat, ang) in enumerate(zip(pts.lons, pts.lats, angs)):
             if i not in self._every:
@@ -1159,7 +1189,7 @@ class ScaleBar:
 
         self._get_maxw(
             self._current_scale,
-            self._scale_props["n"],
+            self._n,
             self._label_props["scale"],
             self._label_props["rotation"],
             hashable_every,
@@ -1200,7 +1230,7 @@ class ScaleBar:
         # -------------- add the patch
         self._get_maxw(
             self._current_scale,
-            self._scale_props["n"],
+            self._n,
             self._label_props["scale"],
             self._label_props["rotation"],
             self._label_props["every"],

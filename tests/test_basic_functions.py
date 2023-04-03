@@ -761,10 +761,12 @@ class TestBasicPlotting(unittest.TestCase):
 
         s_auto = m.add_scalebar()
 
-        s = m.add_scalebar(scale=250000)
+        s = m.add_scalebar()
+        s.set_scale(250000)
+        s.set_n(6)
         s.set_position((-155, 60), azim=30)
         s.set_label_props(every=2, scale=1.25, offset=1.5, weight="bold")
-        s.set_scale_props(n=6, colors=("k", "r"))
+        s.set_scale_props(colors=("k", "r"))
         s.set_patch_props(offsets=(1, 1.5, 1, 0.75))
         s.set_line_props(ls="-", color="r")
 
@@ -777,7 +779,8 @@ class TestBasicPlotting(unittest.TestCase):
             (-31, -50),
             90,
             scale=500000,
-            scale_props=dict(n=10, width=3, colors=("k", ".25", ".5", ".75", ".95")),
+            n=10,
+            scale_props=dict(width=3, colors=("k", ".25", ".5", ".75", ".95")),
             patch_props=dict(fc=(1, 1, 1, 1)),
             label_props=dict(every=5, weight="bold", family="Calibri"),
         )
@@ -786,7 +789,8 @@ class TestBasicPlotting(unittest.TestCase):
             (120, 50),
             45,
             scale=500000,
-            scale_props=dict(n=6, width=3, colors=("k", "r")),
+            n=6,
+            scale_props=dict(width=3, colors=("k", "r")),
             patch_props=dict(fc="none", ec="r", lw=0.25, offsets=(1, 1, 1, 1)),
             label_props=dict(rotation=45, weight="bold", family="Impact"),
         )
@@ -795,13 +799,11 @@ class TestBasicPlotting(unittest.TestCase):
             (-128, -60),
             0,
             scale=250000,
-            scale_props=dict(n=20, width=3, colors=("k", "w")),
+            n=20,
+            scale_props=dict(width=3, colors=("k", "w")),
             patch_props=dict(fc="none", ec="none"),
             label_props=dict(scale=1.5, weight="bold", family="Courier New"),
         )
-
-        s3.print_code(fixed=True)
-        s3.print_code(fixed=False)
 
         # ----------------- TEST interactivity
         cv = m.f.canvas
@@ -860,6 +862,12 @@ class TestBasicPlotting(unittest.TestCase):
 
         # set the extent to test autoscaling behavior
         m.set_extent((-20, 20, -40, 40))
+
+        s3.print_code(fixed=True)
+        exec(s3._get_code(fixed=True))
+
+        s3.print_code(fixed=False)
+        exec(s3._get_code(fixed=False))
 
         for si in [s, s1, s2, s3, s_auto]:
             si.remove()
