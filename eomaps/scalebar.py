@@ -447,7 +447,14 @@ class ScaleBar:
             ls = geod.line_lengths(lons, lats)
             scale = np.nanmedian(ls) * self._autoscale * 100
 
-            scale = self._round_to_n(scale, 1) / self._n
+            # estimate the scale so that the actually drawn labels are properly rounded
+            if isinstance(self._label_props["every"], int):
+                scale = (
+                    self._round_to_n(scale / self._n * self._label_props["every"], 1)
+                    / self._label_props["every"]
+                )
+            else:
+                scale = self._round_to_n(scale, 1) / self._n
 
             self._estimated_scale = scale
         except Exception:
