@@ -2546,11 +2546,12 @@ In addition, many style properties of the scalebar can be adjusted to get the lo
     |   s = m.add_scalebar()            |                                          |
     +-----------------------------------+------------------------------------------+
 
-.. Note::
+.. admonition:: Interacting with the scalebar
 
     The scalebar is a pickable object!
+
     Click on it with the LEFT mouse button to drag it around, and use the RIGHT
-    mouse button to make it fixed again.
+    mouse button (or press ``escape``) to make it fixed again.
 
     If the scalebar is picked (indicated by a red border), you can use the following
     functionalities to adjust some of the ScaleBar properties:
@@ -2565,8 +2566,8 @@ In addition, many style properties of the scalebar can be adjusted to get the lo
     - press ``control + left/right``: to increase / decrease the spacing between labels and scale
     - press ``control + up/down``: to rotate the labels
 
-    Once you have created a nice scalebar, you can always use ``s.print_code()`` to get an executable code that will
-    reproduce the current appearance of the scalebar.
+    Note: Once you have created a nice scalebar, you can always use ``s.print_code()`` to get an
+    executable code that will reproduce the current appearance of the scalebar.
 
 
 The returned ``ScaleBar`` object provides the following useful methods:
