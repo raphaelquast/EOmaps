@@ -10,6 +10,7 @@ from matplotlib.textpath import TextPath
 from matplotlib.patches import Polygon, PathPatch
 from matplotlib.transforms import Affine2D
 from matplotlib.font_manager import FontProperties
+from matplotlib.colors import to_hex
 
 _picked_scalebars = set()
 
@@ -828,9 +829,10 @@ class ScaleBar:
         # update scale properties
         self._artists["scale"].set_verts(pts)
         # don't use first and last scale (they are just used as placeholders)
+        color_names = self._get_scale_color_names()
         colors = np.tile(
-            self._scale_props["colors"],
-            int(np.ceil(len(pts) / len(self._scale_props["colors"]))),
+            color_names,
+            int(np.ceil(len(pts) / len(color_names))),
         )[: len(pts)]
         self._artists["scale"].set_colors(colors)
         self._artists["scale"].set_linewidth(self._scale_props["width"])
@@ -1283,9 +1285,11 @@ class ScaleBar:
 
         # -------------- add the scalebar
         coll = LineCollection(pts)
+
+        color_names = self._get_scale_color_names()
         colors = np.tile(
-            self._scale_props["colors"],
-            int(np.ceil(len(pts) / len(self._scale_props["colors"]))),
+            color_names,
+            int(np.ceil(len(pts) / len(color_names))),
         )[: len(pts)]
         coll.set_colors(colors)
         coll.set_linewidth(self._scale_props["width"])
@@ -1304,6 +1308,15 @@ class ScaleBar:
 
         if pickable is True:
             self._make_pickable()
+
+    def _get_scale_color_names(self):
+        colors = []
+        for i in self._scale_props["colors"]:
+            if isinstance(i, tuple):
+                colors.append(to_hex(i, keep_alpha=True))
+            else:
+                colors.append(i)
+        return colors
 
     def _make_pickable(self):
         if self._pickable is True:
