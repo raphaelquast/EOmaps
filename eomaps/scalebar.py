@@ -545,13 +545,16 @@ class ScaleBar:
 
         See Also
         --------
-        - set_scale : Set a fixed length of the scalebar segments.
-        - set_n : Set the number of segments to use.
-        - set_position : Set the position of the scalebar.
-        - set_scale_props : Set the properties of the scalebar frame.
-        - set_label_props : Set the properties of the labels.
-        - set_line_props : Set the properties of the lines between scalebar and labels.
-        - print_code : Print the command to re-create the scalebar to the console.
+        set_scale : Set a fixed length of the scalebar segments.
+
+        set_n : Set the number of segments to use.
+
+        set_patch_props : Set style properties of the scalebar frame.
+
+        set_label_props : Set style properties of the labels.
+
+        set_line_props : Set style properties of the lines between scalebar and labels.
+
         """
         self._set_scale_props(width=width, colors=colors, **kwargs)
 
@@ -608,6 +611,15 @@ class ScaleBar:
             Possible values are:
 
             - "facecolor", "edgecolor", "linewidth", "linestyle", "alpha" ...
+
+        See Also
+        --------
+        set_scale_props : Set style properties of the scale.
+
+        set_label_props : Set style properties of the labels.
+
+        set_line_props : Set style properties of the lines between scalebar and labels.
+
         """
         for key in kwargs:
             if not hasattr(self._artists["patch"], f"set_{key}"):
@@ -647,6 +659,14 @@ class ScaleBar:
             Possible values are:
 
             - "edgecolor" (or "ec"), "linewidth" (or "lw"), "linestyle" (or "ls") ...
+
+        See Also
+        --------
+        set_scale_props : Set style properties of the scale.
+
+        set_patch_props : Set style properties of the scalebar frame.
+
+        set_label_props : Set style properties of the labels.
 
         """
         for key in kwargs:
@@ -712,6 +732,14 @@ class ScaleBar:
 
             For example:
                 >>> dict(family="Helvetica", style="italic").
+
+        See Also
+        --------
+        set_scale_props : Set style properties of the scale.
+
+        set_patch_props : Set style properties of the scalebar frame.
+
+        set_line_props : Set style properties of the lines between scalebar and labels.
 
         """
         for key in kwargs:
