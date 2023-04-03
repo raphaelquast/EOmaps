@@ -2512,7 +2512,17 @@ pixels within the current field of view by setting ``dynamic_shade_indicator=Tru
 📏 Scalebars
 ------------
 
-A scalebar can be added to a map via ``s = m.add_scalebar()``:
+A scalebar can be added to a map via ``s = m.add_scalebar()``.
+
+- By default, the scalebar will **dynamically estimate an appropriate scale and position** based on the currently visible map extent.
+
+  - To change the number of segments for the scalebar, use ``s = m.add_scalebar(n=5)`` or ``s.set_n(5)``
+  - To set the length of the segments to a fixed distance, use ``s = m.add_scalebar(scale=1000)`` or ``s.set_scale(1000)``
+  - To fix the position of the scalebar, use ``s = m.add_scalebar(pos=(20, 40))`` or ``s.set_position(20, 40)``
+
+In addition, many style properties of the scalebar can be adjusted to get the look you want.
+
+ - check the associated setter-functions ``ScaleBar.set_< label / scale / lines / labels >_props`` below!
 
 .. currentmodule:: eomaps
 
@@ -2543,12 +2553,21 @@ A scalebar can be added to a map via ``s = m.add_scalebar()``:
     mouse button to make it fixed again.
 
     If the scalebar is picked (indicated by a red border), you can use the following
-    keys for adjusting some of the ScaleBar properties:
+    functionalities to adjust some of the ScaleBar properties:
 
-    - ``delte``: remove the scalebar from the plot
-    - ``+``  and ``-``: rotate the scalebar
-    - ``up/down/left/right``: increase the size of the frame
-    - ``alt + up/down/left/right``: decrease the size of the frame
+    - use the ``scroll-wheel`` to adjust the auto-scale of the scalebar (hold down ``shift`` for larger steps)
+    - use ``control`` + ``scroll-wheel`` to adjust the size of the labels
+
+    - press ``delte`` to remove the scalebar from the plot
+    - press ``+``  or ``-`` to rotate the scalebar
+    - press ``up/down/left/right`` to increase the size of the frame
+    - press ``alt + up/down/left/right``: decrease the size of the frame
+    - press ``control + left/right``: to increase / decrease the spacing between labels and scale
+    - press ``control + up/down``: to rotate the labels
+
+    Once you have created a nice scalebar, you can always use ``s.print_code()`` to get an executable code that will
+    reproduce the current appearance of the scalebar.
+
 
 The returned ``ScaleBar`` object provides the following useful methods:
 
@@ -2559,14 +2578,22 @@ The returned ``ScaleBar`` object provides the following useful methods:
     :nosignatures:
     :template: only_names_in_toc.rst
 
-    ScaleBar.set_position
-    ScaleBar.get_position
-    ScaleBar.set_label_props
-    ScaleBar.set_patch_props
-    ScaleBar.set_scale_props
-    ScaleBar.cb_offset_interval
-    ScaleBar.cb_rotate_interval
+    ScaleBar.print_code
+    ScaleBar.apply_preset
     ScaleBar.remove
+    ScaleBar.set_scale
+    ScaleBar.set_n
+    ScaleBar.set_position
+    ScaleBar.set_label_props
+    ScaleBar.set_scale_props
+    ScaleBar.set_line_props
+    ScaleBar.set_patch_props
+    ScaleBar.set_auto_scale
+    ScaleBar.set_pickable
+    ScaleBar.set_size_factor
+    ScaleBar.get_position
+    ScaleBar.get_scale
+    ScaleBar.get_size_factor
 
 
 .. _compass:
@@ -2619,18 +2646,20 @@ dragged around on the map with the mouse.
 
 The returned ``compass`` object has the following useful methods assigned:
 
-.. currentmodule:: eomaps.scalebar
+.. currentmodule:: eomaps.compass
 
 .. autosummary::
     :toctree: generated
     :nosignatures:
     :template: only_names_in_toc.rst
 
+    Compass.remove
     Compass.set_patch
     Compass.set_scale
     Compass.set_pickable
     Compass.set_ignore_invalid_angles
-    Compass.remove
+    Compass.get_position
+    Compass.get_scale
 
 .. _gridlines:
 
