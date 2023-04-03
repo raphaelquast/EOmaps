@@ -18,15 +18,7 @@ s1 = m.add_scalebar(
     label_props=dict(offset=0.5, scale=1.4, every=5, weight="bold", family="Calibri"),
 )
 
-s2 = m.add_scalebar(
-    (0, 45),
-    30,
-    scale=10e5,
-    n=8,
-    scale_props=dict(width=3, colors=("k", "r")),
-    patch_props=dict(fc="none", ec="none", offsets=(1, 1, 1, 2)),
-    label_props=dict(scale=2, rotation=0, weight="bold", family="Impact", offset=0.5),
-)
+s2 = m.add_scalebar((0, 45), 30, scale=10e5, n=8, preset="kr")
 
 s3 = m.add_scalebar(
     (-120, -20),
