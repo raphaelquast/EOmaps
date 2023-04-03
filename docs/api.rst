@@ -1251,21 +1251,21 @@ Everything related to callbacks is grouped under the ``cb`` accessor.
 Starting with v5.0, EOmaps comes with an awesome **companion widget** that greatly
 simplifies using interactive capabilities.
 
-- To activate the widget, **press** ``w`` on the keyboard **while the mouse is over the map you want to edit**.
+- To activate the widget, press ``w`` on the keyboard **while the mouse is on top of the map you want to edit**.
 
   - If multiple maps are present in the figure, a green border indicates the map that is currently targeted by the widget.
   - Once the widget is initialized, pressing ``w`` will show/hide the widget.
 
 
-.. image:: _static/minigifs/companion_widget.gif
-    :align: center
-
-
-.. admonition:: What are the buttons and sliders doing?
+.. admonition:: What are all those buttons and sliders for??
 
     To get information on how the individual controls work, simply **click on the** ``?`` **symbol** in the top left corner of the widget!
 
     - This will activate **help tooltips** that explain the individual controls.
+
+
+.. image:: _static/minigifs/companion_widget.gif
+    :align: center
 
 
 .. note::
@@ -1280,6 +1280,7 @@ simplifies using interactive capabilities.
         import matplotlib
         matplotlib.use("qt5agg")
 
+    For more details, have a look at :ref:`configuring_the_editor`.
 
 The main purpose of the widget is to provide easy-access to features that usually don't need to go into
 a python-script, such as:
@@ -2606,10 +2607,11 @@ A compass can be added to the map via ``m.add_compass()``:
 
 - To add a **North-Arrow**, use ``m.add_compass(style="north arrow")``
 
-.. Note::
+.. admonition:: Interacting with the compass
 
-    | The compass is a pickable object!
-    | Click on it with the LEFT mouse button to drag it around!
+    The compass is a pickable object!
+
+    Click on it with the LEFT mouse button to drag it around!
 
     While a compass is picked (and the LEFT mouse button is pressed), the following
     additional interactions are available:
