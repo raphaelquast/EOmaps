@@ -1338,7 +1338,8 @@ class shapes(object):
 
             # find the masked points that are not masked by the datamask
             mask = ~datamask.copy()
-            mask[np.where(datamask)[0][list(set(maskedTris.flat))]] = True
+            if self.masked:
+                mask[np.where(datamask)[0][list(set(maskedTris.flat))]] = True
 
             # remember the mask
             self._m._data_mask = mask
