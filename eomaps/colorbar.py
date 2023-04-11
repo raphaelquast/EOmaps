@@ -270,13 +270,19 @@ class ColorBar:
 
         self._inherit_position = inherit_position
 
-        self._hist_size = hist_size
+        if hist_size is None:
+            self._hist_size = 0
+        else:
+            self._hist_size = hist_size
+
         self._hist_bins = hist_bins
 
         if hist_kwargs is None:
             self._hist_kwargs = dict()
         else:
             self._hist_kwargs = copy.deepcopy(hist_kwargs)
+
+        self._histogram_plotted = False  # indicator if histogram has been plotted
 
         self._orientation = orientation
         self._dynamic_shade_indicator = dynamic_shade_indicator
@@ -325,7 +331,14 @@ class ColorBar:
             - False: colorbar not visible
         """
         for ax in self._axes:
+            if ax is self.ax_cb_plot:
+                pass
             ax.set_visible(vis)
+
+        if self._hist_size <= 0.0001:
+            self.ax_cb_plot.set_visible(False)
+        else:
+            self.ax_cb_plot.set_visible(vis)
 
     def _default_cb_tick_formatter(self, x, pos, precision=None):
         """
@@ -397,9 +410,12 @@ class ColorBar:
                 _TransformedBoundsLocator(cbpos, self._ax.transAxes)
             )
 
-        # only show histogram if it is larger than 1 pixel
-        if self.ax_cb_plot.bbox.width > 1 and self.ax_cb_plot.bbox.height > 1:
+        if self._hist_size > 0.0001:
             self.ax_cb_plot.set_visible(True)
+
+            # in case the histogram has not yet been plotted, plot it!
+            if not self._histogram_plotted:
+                self._plot_histogram()
         else:
             self.ax_cb_plot.set_visible(False)  # to avoid singular matrix errors
 
@@ -413,7 +429,7 @@ class ColorBar:
             [i.set_visible(False) for i in self.ax_cb.collections]
 
         # tag layer for refetch
-        self._m.BM._refetch_layer(self._m.layer)
+        self._m.redraw(self._m.layer)
 
     def _identify_parent_cb(self):
         parent_cb = None
@@ -447,7 +463,7 @@ class ColorBar:
 
     def _setup_axes(self):
         horizontal = self._orientation == "horizontal"
-        add_hist = self._hist_size > 0
+        add_hist = self._hist_size > 0.0001
 
         # check if one of the parent colorbars has a colorbar, and if so,
         # use it to set the position of the colorbar.
@@ -692,7 +708,7 @@ class ColorBar:
             try:
                 z_data = self._coll.get_ds_data().values
             except:
-                self._m.redraw(self.layer)
+                self._m.redraw(self._m.layer)
                 z_data = self._coll.get_ds_data().values
 
             if "count" in aggname:
@@ -845,11 +861,11 @@ class ColorBar:
         self.set_hist_size()
 
     def _plot_histogram(self):
-        horizontal = self._orientation == "horizontal"
-        n_cmap = plt.cm.ScalarMappable(cmap=self._cmap, norm=self._norm)
-
         if self._hist_size <= 0.0001:
             return
+
+        horizontal = self._orientation == "horizontal"
+        n_cmap = plt.cm.ScalarMappable(cmap=self._cmap, norm=self._norm)
 
         # plot the histogram
         h = self.ax_cb_plot.hist(
@@ -979,6 +995,8 @@ class ColorBar:
             if self._log is False:
                 # self.ax_cb_plot.xaxis.set_major_locator(plt.MaxNLocator(5))
                 self.ax_cb_plot.set_xlim(None, 0)
+
+        self._histogram_plotted = True
 
     def _redraw_colorbar(self, *args, **kwargs):
         self._set_data()
