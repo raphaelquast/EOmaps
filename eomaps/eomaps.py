@@ -3265,6 +3265,11 @@ class Maps(object):
             # check if the axis is already used by another maps-object
             if ax not in (i.ax for i in (self.parent, *self.parent._children)):
                 newax = True
+                ax.set_animated(True)
+                # make sure axes are drawn once to properly set transforms etc.
+                # (otherwise pan/zoom, ax.contains_point etc. will not work)
+                ax.draw(self.f.canvas.get_renderer())
+
             else:
                 newax = False
         else:
@@ -3300,7 +3305,11 @@ class Maps(object):
                 aspect="equal",
                 adjustable="box",
                 label=self._get_ax_label(),
+                animated=True,
             )
+            # make sure axes are drawn once to properly set transforms etc.
+            # (otherwise pan/zoom, ax.contains_point etc. will not work)
+            ax.draw(self.f.canvas.get_renderer())
 
         self._ax = ax
         self._gridspec = ax.get_gridspec()

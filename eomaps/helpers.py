@@ -1684,6 +1684,7 @@ class BlitManager:
 
     def _do_fetch_bg(self, layer, bbox=None):
         cv = self.canvas
+        renderer = cv.get_renderer()
 
         if bbox is None:
             bbox = self.figure.bbox
@@ -1692,6 +1693,11 @@ class BlitManager:
             if layer not in self._bg_layers:
                 self._combine_bgs(layer)
             return
+
+        # update axes spines and patches since they are used to clip artists!
+        for ax in self._get_all_map_axes():
+            ax.spines["geo"]._adjust_location()
+            ax.patch._adjust_location()
 
         # use contextmanagers to make sure the background patches are not stored
         # in the buffer regions!
@@ -1702,8 +1708,6 @@ class BlitManager:
                 stack.enter_context(
                     ax_i.patch._cm_set(facecolor="none", edgecolor="none")
                 )
-
-            stack.enter_context(self._make_layer_artists_visible(layer=layer))
 
             # execute actions before fetching new artists
             # (e.g. update data based on extent etc.)
@@ -1733,36 +1737,9 @@ class BlitManager:
             if not self._m.parent._layout_editor._modifier_pressed:
                 for art in allartists:
                     if art not in self._hidden_artists:
-                        art.draw(cv.get_renderer())
+                        art.draw(renderer)
                         art.stale = False
-
                 self._bg_layers[layer] = cv.copy_from_bbox(bbox)
-
-    @contextmanager
-    def _make_layer_artists_visible(self, layer):
-        layers = [layer]
-        if layer.startswith("__inset_"):
-            layers.append("__inset_all")
-        else:
-            layers.append("all")
-
-        try:
-            for l, artists in self._bg_artists.items():
-                if l not in layers:
-                    # artists on "all" are always visible!
-                    # make all artists of other layers invisible
-                    for a in artists:
-                        a.set_visible(False)
-                else:
-                    for a in artists:
-                        a.set_visible(True)
-            yield
-
-        finally:
-            # hide all artists (to avoid triggering re-draws of webmaps etc.)
-            for a in chain(*self._m.BM._bg_artists.values()):
-                a.set_visible(False)
-            pass
 
     def _do_fetch_blank(self):
         # fetch a blank background
