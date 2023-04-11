@@ -1577,6 +1577,11 @@ class ScaleBar:
             except Exception:
                 self._scale = prev_scale
 
+        # make sure scalebars are not positioned out of bounds
+        if lon is not None and lat is not None:
+            lon = np.clip(lon, -179, 179)
+            lat = np.clip(lat, -89, 89)
+
         if self._auto_position is not False:
             if lon is not None and lat is not None:
                 self._auto_position = self._get_pos_as_autopos(lon, lat)
