@@ -458,9 +458,6 @@ class Maps(object):
         if not hasattr(self.parent, "_execute_callbacks"):
             self.parent._execute_callbacks = True
 
-        # initialize the shape-drawer
-        self._shape_drawer = ShapeDrawer(weakref.proxy(self))
-
         # initialize the data-manager
         self._data_manager = DataManager(self._proxy(self))
         self._data_plotted = False
@@ -4661,6 +4658,12 @@ class Maps(object):
             self.get_crs(self.crs_plot.as_geodetic()),
             self.crs_plot,
         )
+
+    @property
+    @lru_cache()
+    def _shape_drawer(self):
+        # initialize the shape-drawer
+        return ShapeDrawer(weakref.proxy(self))
 
     @staticmethod
     def _make_rect_poly(x0, y0, x1, y1, crs=None, npts=100):
