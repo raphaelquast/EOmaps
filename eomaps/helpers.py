@@ -2341,6 +2341,8 @@ class BlitManager:
             # make sure the background is fetched
             if layer not in self._bg_layers:
                 self.fetch_bg(layer)
+                # update to make sure spines etc. are properly displayed
+                self.update()
 
             x0, y0, w, h = bbox.bounds
 
