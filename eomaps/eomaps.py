@@ -343,6 +343,9 @@ class Maps(object):
 
     CLASSIFIERS = SimpleNamespace(**dict(zip(_CLASSIFIERS, _CLASSIFIERS)))
 
+    _crs_cache = dict()
+    _transformer_cache = dict()
+
     def __init__(
         self,
         crs=None,
@@ -445,18 +448,6 @@ class Maps(object):
 
         # the radius is estimated when plot_map is called
         self._estimated_radius = None
-
-        # cache commonly used transformers
-        self._transf_plot_to_lonlat = Transformer.from_crs(
-            self.crs_plot,
-            self.get_crs(Maps.CRS.PlateCarree(globe=self.crs_plot.globe)),
-            always_xy=True,
-        )
-        self._transf_lonlat_to_plot = Transformer.from_crs(
-            self.get_crs(Maps.CRS.PlateCarree(globe=self.crs_plot.globe)),
-            self.crs_plot,
-            always_xy=True,
-        )
 
         # a set to hold references to the compass objects
         self._compass = set()
@@ -1331,9 +1322,6 @@ class Maps(object):
             the pyproj CRS instance
 
         """
-        if not hasattr(self, "_crs_cache"):
-            self._crs_cache = dict()
-
         # check for strings first to avoid expensive equality checking for CRS objects!
         if isinstance(crs, str):
             if crs == "in":
@@ -1752,10 +1740,9 @@ class Maps(object):
             ID = None
             if xy_crs is not None:
                 # get coordinate transformation
-                transformer = Transformer.from_crs(
+                transformer = self._get_transformer(
                     self.get_crs(xy_crs),
                     self.crs_plot,
-                    always_xy=True,
                 )
                 # transform coordinates
                 xy = transformer.transform(*xy)
@@ -1898,10 +1885,9 @@ class Maps(object):
 
         if xy_crs is not None:
             # get coordinate transformation
-            transformer = Transformer.from_crs(
+            transformer = self._get_transformer(
                 CRS.from_user_input(xy_crs),
                 self.crs_plot,
-                always_xy=True,
             )
             # transform coordinates
             xy = transformer.transform(*xy)
@@ -2118,16 +2104,18 @@ class Maps(object):
             n = 100
             del_s = 0
 
-        t_xy_plot = Transformer.from_crs(
-            self.get_crs(xy_crs), self.crs_plot, always_xy=True
+        t_xy_plot = self._get_transformer(
+            self.get_crs(xy_crs),
+            self.crs_plot,
         )
         xplot, yplot = t_xy_plot.transform(*zip(*xy))
 
         if connect == "geod":
             # connect points via geodesic lines
             if xy_crs != 4326:
-                t = Transformer.from_crs(
-                    self.get_crs(xy_crs), self.get_crs(4326), always_xy=True
+                t = self._get_transformer(
+                    self.get_crs(xy_crs),
+                    self.get_crs(4326),
                 )
                 x, y = t.transform(*zip(*xy))
             else:
@@ -4291,10 +4279,9 @@ class Maps(object):
                 crs1 = CRS.from_user_input(self.data_specs.crs)
                 crs2 = CRS.from_user_input(self._crs_plot)
                 if crs1 != crs2:
-                    transformer = Transformer.from_crs(
+                    transformer = self._get_transformer(
                         crs1,
                         crs2,
-                        always_xy=True,
                     )
                     xg, yg = transformer.transform(xg, yg)
 
@@ -4648,6 +4635,32 @@ class Maps(object):
         else:
             raise AssertionError(f"EOmaps: cannot identify the CRS for: {crs}")
         return cartopy_proj
+
+    @staticmethod
+    def _get_transformer(crs_from, crs_to):
+        # create a pyproj Transformer object or return a cached version of it
+        # if it has already been created.
+        c_from = Maps._transformer_cache.setdefault(hash(crs_from), dict())
+        return c_from.setdefault(
+            hash(crs_to), Transformer.from_crs(crs_from, crs_to, always_xy=True)
+        )
+
+    @property
+    @lru_cache()
+    def _transf_plot_to_lonlat(self):
+        # cache commonly used transformers
+        return self._get_transformer(
+            self.crs_plot,
+            self.get_crs(self.crs_plot.as_geodetic()),
+        )
+
+    @property
+    @lru_cache()
+    def _transf_lonlat_to_plot(self):
+        return self._get_transformer(
+            self.get_crs(self.crs_plot.as_geodetic()),
+            self.crs_plot,
+        )
 
     @staticmethod
     def _make_rect_poly(x0, y0, x1, y1, crs=None, npts=100):
