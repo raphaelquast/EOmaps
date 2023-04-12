@@ -307,12 +307,11 @@ class ColorBar:
                 "for classified datasets!"
             )
 
-        self._redraw = False
         self._ax = None
         self.ax_cb = None
         self.ax_cb_plot = None
 
-        self._cid_redraw = None
+        self._cid_redraw = False
 
         self._set_data()
         self._setup_axes()
@@ -637,7 +636,11 @@ class ColorBar:
         for a in self._axes:
             a.set_navigate(False)
             if a is not None:
-                self._m.BM.add_bg_artist(a, self._m.layer)
+                if self._dynamic_shade_indicator is True:
+                    self._m.BM.add_artist(a, self._m.layer)
+                else:
+                    self._m.BM.add_bg_artist(a, self._m.layer)
+
         # we need to re-draw since the background axis size has changed!
         self._m.BM._refetch_layer(self._m.layer)
         self._m.BM._refetch_layer("__SPINES__")
@@ -732,9 +735,30 @@ class ColorBar:
             else:
                 norm = self._m.classify_specs._norm
 
-            # TODO remove cid on figure close
-            if self._cid_redraw is None:
-                self._cid_redraw = self._coll.add_callback(self._redraw_colorbar)
+            if self._cid_redraw is False:
+                # TODO check why this no longer triggers on data-updates...
+                # self._m.coll.add_callback(self._redraw_colorbar)
+
+                def check_data_updated(*args, **kwargs):
+                    # make sure the artist is drawn before checking for new data
+                    self._m.f.draw_artist(self._m.coll)
+                    dsdata = self._m.coll.get_ds_data()
+                    if getattr(self, "_last_ds_data", None) is not None:
+                        if not self._last_ds_data.equals(dsdata):
+                            # if the data has changed, redraw the colorbar
+                            self._redraw_colorbar()
+                    self._last_ds_data = dsdata
+
+                self._m.BM._before_fetch_bg_actions.append(check_data_updated)
+
+                self._m.BM.on_layer(
+                    lambda *args, **kwargs: self._redraw_colorbar,
+                    layer=self._m.layer,
+                    persistent=True,
+                )
+
+                self._cid_redraw = True
+
                 # TODO colorbar not properly updated on layer change after zoom?
                 self._m.BM.on_layer(
                     self._redraw_colorbar,
@@ -781,18 +805,6 @@ class ColorBar:
             self._norm.boundaries = np.clip(
                 self._norm.boundaries, self._vmin, self._vmax
             )
-
-        if self._dynamic_shade_indicator:
-            if not hasattr(self, "_ds_data"):
-                self._ds_data = self._z_data
-                self._redraw = True
-                return
-            if self._ds_data.shape == self._z_data.shape:
-                if np.allclose(self._ds_data, self._z_data, equal_nan=True):
-                    self._redraw = False
-                    return
-            self._ds_data = self._z_data
-            self._redraw = True
 
     def _plot_colorbar(self):
         # plot the colorbar
@@ -999,9 +1011,11 @@ class ColorBar:
         self._histogram_plotted = True
 
     def _redraw_colorbar(self, *args, **kwargs):
-        self._set_data()
-        if not self._redraw:
+        # only re-draw if the corresponding layer is visible
+        if self._m.layer not in self._m.BM.bg_layer.split("|"):
             return
+
+        self._set_data()
         self.ax_cb_plot.clear()
         self._plot_histogram()
 
