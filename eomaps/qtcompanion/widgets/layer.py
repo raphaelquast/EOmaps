@@ -108,6 +108,7 @@ class AutoUpdateLayerMenuButton(QtWidgets.QPushButton):
         self._last_layers = []
 
         menu = QtWidgets.QMenu()
+        menu.setStyleSheet("QMenu { menu-scrollable: 1;}")
         menu.aboutToShow.connect(self.update_layers)
         self.setMenu(menu)
 

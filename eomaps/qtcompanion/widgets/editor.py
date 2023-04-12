@@ -497,6 +497,7 @@ class OptionTabs(QtWidgets.QTabWidget):
 
 class LayerTabBar(QtWidgets.QTabBar):
     _number_of_min_tabs_for_size = 8
+    _n_layer_msg_shown = False
 
     def __init__(self, m=None, populate=False, *args, **kwargs):
         """
@@ -535,15 +536,15 @@ class LayerTabBar(QtWidgets.QTabBar):
         self.setTabsClosable(True)
         self.tabCloseRequested.connect(self.close_handler)
 
-        self.m.BM.on_layer(self.color_active_tab, persistent=True)
         self.tabMoved.connect(self.tab_moved)
 
         if populate:
             # re-populate tabs if a new layer is created
             # NOTE this is done by the TabWidget if tabs have content!!
             self.populate()
-            self.m._after_add_child.append(self.populate)
             # re-populate on show to make sure currently active layers are shown
+            self.m.BM.on_layer(self.populate_on_layer, persistent=True)
+            self.m._after_add_child.append(self.populate)
             self.m._on_show_companion_widget.append(self.populate)
 
     def sizeHint(self):
@@ -745,7 +746,17 @@ class LayerTabBar(QtWidgets.QTabBar):
         self.tabMoved.connect(self.tab_moved)
 
     @pyqtSlot()
-    def populate(self):
+    def populate_on_layer(self, *args, **kwargs):
+        lastlayer = getattr(self, "_last_populated_layer", "")
+        currlayer = self.m.BM.bg_layer
+        # only populate if the current layer is not part of the last set of layers
+        # (e.g. to allow show/hide of selected layers without removing the tabs)
+        if not set(lastlayer.split("|")).issuperset(set(currlayer.split("|"))):
+            self.populate(*args, **kwargs)
+            self._last_populated_layer = currlayer
+
+    @pyqtSlot()
+    def populate(self, *args, **kwargs):
         if not self.isVisible():
             return
 
@@ -753,19 +764,35 @@ class LayerTabBar(QtWidgets.QTabBar):
         self._current_tab_name = self.tabText(self._current_tab_idx)
 
         alllayers = set(self.m._get_layers())
+        nlayers = len(alllayers)
+        max_n_layers = self.m._companion_widget_n_layer_tabs
+        if nlayers > max_n_layers:
+            if not LayerTabBar._n_layer_msg_shown:
+                print(
+                    "EOmaps-companion: The map has more than "
+                    f"{max_n_layers} layers... only last active layers "
+                    "are shown in the layer-tabs!"
+                )
+                LayerTabBar._n_layer_msg_shown = True
 
-        # go through the layers in reverse and remove any no longer existing layers
-        existing_layers = set()
-        for i in range(self.count(), -1, -1):
-            layer = self.tabText(i)
-            # remove all tabs that do not represent existing layers of the map
-            if layer not in alllayers:
+            # if more than 200 layers are available, show only active tabs to
+            # avoid performance issues when too many tabs are created
+            alllayers = [i for i in self.m.BM._bg_layer.split("|") if i in alllayers]
+            for i in range(self.count(), -1, -1):
                 self.removeTab(i)
-            else:
-                existing_layers.add(layer)
+        else:
+            # go through the layers in reverse and remove any no longer existing layers
+            existing_layers = set()
+            for i in range(self.count(), -1, -1):
+                layer = self.tabText(i)
+                # remove all tabs that do not represent existing layers of the map
+                if layer not in alllayers:
+                    self.removeTab(i)
+                else:
+                    existing_layers.add(layer)
 
-        # pop all existing layers from the alllayers set (no need to re-create them)
-        alllayers.difference_update(existing_layers)
+            # pop all existing layers from the alllayers set (no need to re-create them)
+            alllayers.difference_update(existing_layers)
 
         for i, layer in enumerate(sorted(alllayers)):
 
@@ -872,6 +899,7 @@ class ArtistEditorTabs(LayerArtistTabs):
         # re-populate tabs if a new layer is created
         self.populate()
         self.m._after_add_child.append(self.populate)
+        self.m.BM.on_layer(self.populate_on_layer, persistent=True)
 
         self.currentChanged.connect(self.populate_layer)
         self.m.BM._on_add_bg_artist.append(self.populate)
@@ -1053,10 +1081,21 @@ class ArtistEditorTabs(LayerArtistTabs):
         return layout
 
     @pyqtSlot()
-    def populate(self):
+    def populate_on_layer(self, *args, **kwargs):
+        lastlayer = getattr(self, "_last_populated_layer", "")
+        currlayer = self.m.BM.bg_layer
+        # only populate if the current layer is not part of the last set of layers
+        # (e.g. to allow show/hide of selected layers without removing the tabs)
+        if not set(lastlayer.split("|")).issuperset(set(currlayer.split("|"))):
+            self.populate(*args, **kwargs)
+            self._last_populated_layer = currlayer
+
+    @pyqtSlot()
+    def populate(self, *args, **kwargs):
         if not self.isVisible():
             return
 
+        tabbar = self.tabBar()
         self._current_tab_idx = self.currentIndex()
         self._current_tab_name = self.tabText(self._current_tab_idx)
 
@@ -1068,17 +1107,36 @@ class ArtistEditorTabs(LayerArtistTabs):
         alllayers = set(self.m._get_layers())
 
         # go through the layers in reverse and remove any no longer existing layers
-        existing_layers = set()
-        for i in range(self.count(), -1, -1):
-            layer = self.tabText(i)
-            # remove all tabs that do not represent existing layers of the map
-            if layer not in alllayers:
-                self.removeTab(i)
-            else:
-                existing_layers.add(layer)
 
-        # pop all existing layers from the alllayers set (no need to re-create them)
-        alllayers.difference_update(existing_layers)
+        alllayers = set(self.m._get_layers())
+        nlayers = len(alllayers)
+        max_n_layers = self.m._companion_widget_n_layer_tabs
+        if nlayers > max_n_layers:
+            if not LayerTabBar._n_layer_msg_shown:
+                print(
+                    "EOmaps-companion: The map has more than "
+                    f"{max_n_layers} layers... only last active layers "
+                    "are shown in the layer-tabs!"
+                )
+                LayerTabBar._n_layer_msg_shown = True
+
+            # if more than max_n_layers layers are available, show only active tabs to
+            # avoid performance issues when too many tabs are created
+            alllayers = [i for i in self.m.BM._bg_layer.split("|") if i in alllayers]
+            for i in range(self.count(), -1, -1):
+                self.removeTab(i)
+        else:
+            existing_layers = set()
+            for i in range(self.count(), -1, -1):
+                layer = self.tabText(i)
+                # remove all tabs that do not represent existing layers of the map
+                if layer not in alllayers:
+                    self.removeTab(i)
+                else:
+                    existing_layers.add(layer)
+
+            # pop all existing layers from the alllayers set (no need to re-create them)
+            alllayers.difference_update(existing_layers)
 
         for i, layer in enumerate(sorted(alllayers)):
 
@@ -1099,14 +1157,11 @@ class ArtistEditorTabs(LayerArtistTabs):
 
             if layer == "all" or layer == self.m.layer:
                 # don't show the close button for this tab
-                self.tabBar().setTabButton(
-                    self.count() - 1, self.tabBar().RightSide, None
-                )
+                tabbar.setTabButton(self.count() - 1, tabbar.RightSide, None)
 
         # try to restore the previously opened tab
-        self.tabBar().set_current_tab_by_name(self._current_tab_name)
-
-        self.tabBar().color_active_tab()
+        tabbar.set_current_tab_by_name(self._current_tab_name)
+        tabbar.color_active_tab()
 
     @pyqtSlot()
     def populate_layer(self, layer=None):

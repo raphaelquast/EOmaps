@@ -339,7 +339,11 @@ class Maps(object):
 
     CRS = ccrs
 
+    # the keybord shortcut to activate the companion-widget
     _companion_widget_key = "w"
+    # max. number of layers to show all layers as tabs in the widget
+    # (otherwise only recently active layers are shown as tabs)
+    _companion_widget_n_layer_tabs = 50
 
     CLASSIFIERS = SimpleNamespace(**dict(zip(_CLASSIFIERS, _CLASSIFIERS)))
 
