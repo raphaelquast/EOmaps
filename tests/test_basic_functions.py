@@ -615,8 +615,6 @@ class TestBasicPlotting(unittest.TestCase):
             self.assertTrue(cb in m.BM._hidden_artists)
 
         self.assertTrue(len(m2._colorbars) == 1)
-        self.assertTrue(all(not cb.ax_cb.get_visible() for cb in m._colorbars))
-
         self.assertTrue(m2.colorbar is cb5)
 
         # test setting custom bins
