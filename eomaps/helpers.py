@@ -1793,7 +1793,7 @@ class BlitManager:
         """Callback to register with 'draw_event'."""
         cv = self.canvas
 
-        if "RendererBase._draw_disabled" in cv.renderer.draw_image.__qualname__:
+        if "RendererBase._draw_disabled" in cv.get_renderer().draw_image.__qualname__:
             # TODO this fixes issues when saving figues with a "tight" bbox, e.g.:
             # m.savefig(bbox_inches='tight', pad_inches=0.1)
 
