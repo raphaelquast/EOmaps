@@ -57,7 +57,7 @@ m.cb.pick.attach.annotate(
     button=1,
     permanent=False,
     bbox=dict(boxstyle="round", fc="w", alpha=0.75),
-    zorder=10,
+    zorder=999,
 )
 ### save all picked values to a dict accessible via m.cb.get.picked_vals
 m.cb.pick.attach.get_values(button=1)
