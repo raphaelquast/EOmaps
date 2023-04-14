@@ -1884,13 +1884,13 @@ class BlitManager:
         # make sure all layers are converted to string
         layer = str(layer)
 
-        self._artists.setdefault(layer, set())
+        self._artists.setdefault(layer, list())
 
         if art in self._artists[layer]:
             return
         else:
             art.set_animated(True)
-            self._artists[layer].add(art)
+            self._artists[layer].append(art)
 
             if isinstance(art, plt.Axes):
                 self._managed_axes.add(art)
