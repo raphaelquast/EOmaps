@@ -2817,14 +2817,17 @@ class Maps(object):
         display(Image.fromarray(sn, "RGBA"), display_id=True, clear=clear)
 
     @wraps(plt.Figure.text)
-    def text(self, *args, **kwargs):
+    def text(self, *args, layer=None, **kwargs):
         """Add text to the map."""
         kwargs.setdefault("animated", True)
         kwargs.setdefault("horizontalalignment", "center")
         kwargs.setdefault("verticalalignment", "center")
 
         a = self.f.text(*args, **kwargs)
-        self.BM.add_artist(a)
+
+        if layer is None:
+            layer = self.layer
+        self.BM.add_artist(a, layer=layer)
 
         return a
 
