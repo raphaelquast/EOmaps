@@ -4162,6 +4162,11 @@ class Maps(object):
         self.classify_specs._bins = bins
         self.classify_specs._classified = classified
 
+        self._cbcmap = cbcmap
+        self._norm = norm
+        self._bins = bins
+        self._classified = classified
+
         # in case the aggregation does not represent data-values
         # (e.g. count, std, var ... ) use an automatic "linear" normalization
         if aggname in ["first", "last", "max", "min", "mean", "mode"]:
