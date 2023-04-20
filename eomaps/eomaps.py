@@ -4913,6 +4913,9 @@ class _InsetMaps(Maps):
         if not any((i in kwargs for i in ["lw", "linewidth"])):
             kwargs["lw"] = 1
 
+        kwargs.setdefault("permanent", True)
+        kwargs.setdefault("zorder", 9999)
+
         m.add_marker(
             shape=self._inset_props["shape"],
             xy=self._inset_props["xy"],
