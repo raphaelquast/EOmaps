@@ -1369,7 +1369,13 @@ class shapes(object):
                     if key == "array":
                         color_and_array[key] = val[maskedTris].mean(axis=1)
                     else:
-                        color_and_array[key] = val[maskedTris[:, 0]]
+                        # explicitly handle single-color entries
+                        # (e.g. int, float, str rgb-tuples etc.)
+                        if isinstance(val, (int, float, str, tuple)):
+                            pass
+                        elif isinstance(val, np.ndarray):
+                            # if arrays of colors have been provided, broadcast them
+                            color_and_array[key] = val[maskedTris[:, 0]]
 
                 # Vertices of triangles.
                 verts = np.stack((tri.x[maskedTris], tri.y[maskedTris]), axis=-1)
