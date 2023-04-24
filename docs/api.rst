@@ -2314,13 +2314,11 @@ To indicate rectangular areas in any given crs, simply use ``m.indicate_extent``
     |         m.indicate_extent(*pos0, crs=3857, hatch=h, lw=0.25, ec=c)    |                                                 |
     |         m.indicate_extent(*pos1, crs=3857, hatch=h, lw=0.25, ec=c)    |                                                 |
     |                                                                       |                                                 |
-    |     # indicate a rectangle in Equi7Grid projection                    |                                                 |
-    |     try: # (requires equi7grid package)                               |                                                 |
-    |         m.indicate_extent(1000000, 1000000, 4800000, 4800000,         |                                                 |
-    |                           crs=Maps.CRS.Equi7Grid_projection("EU"),    |                                                 |
-    |                           fc="g", alpha=0.5, ec="k")                  |                                                 |
-    |     except:                                                           |                                                 |
-    |         pass                                                          |                                                 |
+    |     # indicate a rectangle in European Equi7Grid  projection          |                                                 |
+    |     m.indicate_extent(1000000, 1000000, 4800000, 4800000,             |                                                 |
+    |                       crs=Maps.CRS.Equi7_EU,                          |                                                 |
+    |                       fc="g", alpha=0.5, ec="k")                      |                                                 |
+    |                                                                       |                                                 |
     +-----------------------------------------------------------------------+-------------------------------------------------+
 
 🥦 Logos
