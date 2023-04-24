@@ -2358,6 +2358,58 @@ class Maps(object):
 
         return self.ax.get_extent(crs=crs)
 
+    def _set_vmin_vmax(self, vmin=None, vmax=None):
+        self._vmin = vmin
+        self._vmax = vmax
+
+        if self._inherit_classification is not None:
+            if not (vmin is None and vmax is None):
+                raise TypeError(
+                    "EOmaps: 'vmin' and 'vmax' cannot be set explicitly "
+                    "if the classification is inherited!"
+                )
+            self._vmin = self._inherit_classification._vmin
+            self._vmax = self._inherit_classification._vmax
+            return
+
+        if not self.shape.name.startswith("shade_"):
+            if vmin is None and self.data is not None:
+                self._vmin = self._encode_values(np.nanmin(self._data_manager.z_data))
+            if vmax is None and self.data is not None:
+                self._vmax = self._encode_values(np.nanmax(self._data_manager.z_data))
+        else:
+            # get the name of the used aggretation reduction
+            aggname = self.shape.aggregator.__class__.__name__
+            if aggname in ["first", "last", "max", "min", "mean", "mode"]:
+                # set vmin/vmax in case the aggregation still represents data-values
+                if vmin is None:
+                    self._vmin = self._encode_values(
+                        np.nanmin(self._data_manager.z_data)
+                    )
+                if vmax is None:
+                    self._vmax = self._encode_values(
+                        np.nanmax(self._data_manager.z_data)
+                    )
+            else:
+                # set vmin/vmax for aggregations that do NOT represent data values
+
+                # allow vmin/vmax = None (e.g. autoscaling)
+                if "count" in aggname:
+                    # if the reduction represents a count, don't count empty pixels
+                    if vmin and vmin <= 0:
+                        print(
+                            "EOmaps: setting vmin=1 to avoid counting empty pixels..."
+                        )
+                        self._vmin = 1
+
+                    if vmax and vmax > 0:
+                        self._vmax = vmax
+
+        if any((self._vmin is None, self._vmax is None)):
+            raise AssertionError(
+                "EOmaps: Unable to determine vmin/vmax of the dataset."
+            )
+
     def plot_map(
         self,
         layer=None,
@@ -2447,6 +2499,11 @@ class Maps(object):
 
         """
         verbose = kwargs.pop("verbose", 1)
+
+        # make sure zorder is set to 1 by default
+        # (by default shading would use 0 while ordinary collections use 1)
+        kwargs.setdefault("zorder", 1)
+
         if verbose >= 1:
             if (
                 getattr(self, "coll", None) is not None
@@ -2458,14 +2515,6 @@ class Maps(object):
                     "same Maps-object overrides the assigned PICK-dataset!"
                 )
 
-        # convert vmin/vmax values to respect the encoding of the data
-        vmin = kwargs.get("vmin", None)
-        if vmin is not None:
-            kwargs["vmin"] = self._encode_values(vmin)
-        vmax = kwargs.get("vmax", None)
-        if vmax is not None:
-            kwargs["vmax"] = self._encode_values(vmax)
-
         if layer is None:
             layer = self.layer
         else:
@@ -2474,43 +2523,73 @@ class Maps(object):
                 layer = str(layer)
 
         useshape = self.shape  # invoke the setter to set the default shape
+        shade_q = useshape.name.startswith("shade_")  # indicator if shading is used
 
         # make sure the colormap is properly set and transparencies are assigned
-        cmap = kwargs.setdefault("cmap", "viridis")
+        cmap = kwargs.pop("cmap", "viridis")
+
         if "alpha" in kwargs and kwargs["alpha"] < 1:
             # get a unique name for the colormap
             cmapname = self._get_alpha_cmap_name(kwargs["alpha"])
 
-            kwargs["cmap"] = cmap_alpha(
+            cmap = cmap_alpha(
                 cmap=cmap,
                 alpha=kwargs["alpha"],
                 name=cmapname,
             )
 
-            plt.colormaps.register(name=cmapname, cmap=kwargs["cmap"])
+            plt.colormaps.register(name=cmapname, cmap=cmap)
             if self._companion_widget is not None:
                 self._companion_widget.cmapsChanged.emit()
             # remember registered colormaps (to de-register on close)
             self._registered_cmaps.append(cmapname)
 
-        # make sure zorder is set to 1 by default
-        # (by default shading would use 0 while ordinary collections use 1)
-        kwargs.setdefault("zorder", 1)
-
         # ---------------------- prepare the data
         if verbose >= 10:
             print("EOmaps: Preparing the data")
 
-        if useshape.name.startswith("shade"):
-            # shade shapes use datashader to update the data of the collections!
-            self._data_manager.set_props(
-                layer=layer,
-                assume_sorted=assume_sorted,
-                update_coll_on_fetch=False,
-                indicate_masked_points=indicate_masked_points,
-                dynamic=dynamic,
-            )
+        # ---------------------- assign the data to the data_manager
 
+        # shade shapes use datashader to update the data of the collections!
+        update_coll_on_fetch = False if shade_q else True
+
+        self._data_manager.set_props(
+            layer=layer,
+            assume_sorted=assume_sorted,
+            update_coll_on_fetch=update_coll_on_fetch,
+            indicate_masked_points=indicate_masked_points,
+            dynamic=dynamic,
+        )
+
+        # ---------------------- classify the data
+        if verbose > 0:
+            print("EOmaps: Classifying...")
+
+        self._set_vmin_vmax(
+            vmin=kwargs.pop("vmin", None), vmax=kwargs.pop("vmax", None)
+        )
+
+        cbcmap, norm, bins, classified = self._classify_data(
+            vmin=self._vmin,
+            vmax=self._vmax,
+            cmap=cmap,
+            classify_specs=self.classify_specs,
+        )
+
+        # todo remove duplicate attributes
+        self.classify_specs._cbcmap = cbcmap
+        self.classify_specs._norm = norm
+        self.classify_specs._bins = bins
+        self.classify_specs._classified = classified
+
+        self._cbcmap = cbcmap
+        self._norm = norm
+        self._bins = bins
+        self._classified = classified
+
+        # ---------------------- plot the data
+
+        if shade_q:
             self._shade_map(
                 layer=layer,
                 dynamic=dynamic,
@@ -2518,17 +2597,7 @@ class Maps(object):
                 assume_sorted=assume_sorted,
                 **kwargs,
             )
-            self.BM._refetch_layer(layer)
-
         else:
-            self._data_manager.set_props(
-                layer=layer,
-                assume_sorted=assume_sorted,
-                update_coll_on_fetch=True,
-                indicate_masked_points=indicate_masked_points,
-                dynamic=dynamic,
-            )
-
             # dont set extent if "m.set_extent" was called explicitly
             if set_extent and self._set_extent_on_plot:
                 # note bg-layers are automatically triggered for re-draw
@@ -2542,10 +2611,8 @@ class Maps(object):
                 assume_sorted=assume_sorted,
                 **kwargs,
             )
-            self.BM._refetch_layer(layer)
 
-            # if dynamic is False:
-            #     self.BM._refetch_layer(layer)
+        self.BM._refetch_layer(layer)
 
         if verbose >= 1:
             if getattr(self, "_data_mask", None) is not None and not np.all(
@@ -3930,47 +3997,12 @@ class Maps(object):
         **kwargs,
     ):
 
-        cmap = kwargs.pop("cmap", "viridis")
-        vmin = kwargs.pop("vmin", None)
-        vmax = kwargs.pop("vmax", None)
-
         for key in ("array", "norm"):
             assert (
                 key not in kwargs
             ), f"The key '{key}' is assigned internally by EOmaps!"
 
         try:
-            if vmin is None and self.data is not None:
-                vmin = np.nanmin(self._data_manager.z_data)
-            if vmax is None and self.data is not None:
-                vmax = np.nanmax(self._data_manager.z_data)
-
-            # clip the data to properly account for vmin and vmax
-            # (do this only if we don't intend to use the full dataset!)
-            # if vmin or vmax:
-            #     props["z_data"] = props["z_data"].clip(vmin, vmax)
-
-            # ---------------------- classify the data
-            cbcmap, norm, bins, classified = self._classify_data(
-                vmin=vmin,
-                vmax=vmax,
-                cmap=cmap,
-                classify_specs=self.classify_specs,
-            )
-
-            # TODO remove duplicated attributes!!
-            self.classify_specs._cbcmap = cbcmap
-            self.classify_specs._norm = norm
-            self.classify_specs._bins = bins
-            self.classify_specs._classified = classified
-
-            self._cbcmap = cbcmap
-            self._norm = norm
-            self._bins = bins
-            self._classified = classified
-
-            self._vmin = vmin
-            self._vmax = vmax
             self._set_extent = set_extent
 
             # ------------- plot the data
@@ -4118,70 +4150,22 @@ class Maps(object):
             + "'shade_points' and 'shade_raster'"
         )
 
-        cmap = kwargs.pop("cmap", "viridis")
-        vmin = kwargs.pop("vmin", None)
-        vmax = kwargs.pop("vmin", None)
-
         # remove previously fetched backgrounds for the used layer
         if dynamic is False:
             self.BM._refetch_layer(layer)
             # del self.BM._bg_layers[layer]
             # self.BM._refetch_bg = True
 
-        # get the name of the used aggretation reduction
-        aggname = self.shape.aggregator.__class__.__name__
-        if aggname in ["first", "last", "max", "min", "mean", "mode"]:
-            # set vmin/vmax in case the aggregation still represents data-values
-            if vmin is None:
-                vmin = np.nanmin(self._data_manager.z_data)
-            if vmax is None:
-                vmax = np.nanmax(self._data_manager.z_data)
-        else:
-            # set vmin/vmax for aggregations that do NOT represent data values
-
-            # allow vmin/vmax = None (e.g. autoscaling)
-            if "count" in aggname:
-                # if the reduction represents a count, don't count empty pixels
-                if vmin and vmin <= 0:
-                    print("EOmaps: setting vmin=1 to avoid counting empty pixels...")
-                    vmin = 1
-
-        if verbose > 0:
-            print("EOmaps: Classifying...")
-
-        # ---------------------- classify the data
-        cbcmap, norm, bins, classified = self._classify_data(
-            vmin=vmin,
-            vmax=vmax,
-            cmap=cmap,
-            classify_specs=self.classify_specs,
-        )
-
-        self.classify_specs._cbcmap = cbcmap
-        self.classify_specs._norm = norm
-        self.classify_specs._bins = bins
-        self.classify_specs._classified = classified
-
-        self._cbcmap = cbcmap
-        self._norm = norm
-        self._bins = bins
-        self._classified = classified
-
         # in case the aggregation does not represent data-values
         # (e.g. count, std, var ... ) use an automatic "linear" normalization
+
+        # get the name of the used aggretation reduction
+        aggname = self.shape.aggregator.__class__.__name__
+
         if aggname in ["first", "last", "max", "min", "mean", "mode"]:
             kwargs.setdefault("norm", self.classify_specs._norm)
-            kwargs.setdefault("vmin", vmin)
-            kwargs.setdefault("vmax", vmax)
-
-            # clip the data to properly account for vmin and vmax
-            # (do this only if we don't intend to use the full dataset!)
-            # if vmin or vmax:
-            #     props["z_data"] = props["z_data"].clip(vmin, vmax)
         else:
             kwargs.setdefault("norm", "linear")
-            kwargs.setdefault("vmin", vmin)
-            kwargs.setdefault("vmax", vmax)
 
         if verbose > 0:
             print("EOmaps: Plotting...")
@@ -4346,6 +4330,8 @@ class Maps(object):
             # y_range=(df.y.min(), df.y.max()),
             x_range=x_range,
             y_range=y_range,
+            vmin=self._vmin,
+            vmax=self._vmax,
             **kwargs,
         )
 
