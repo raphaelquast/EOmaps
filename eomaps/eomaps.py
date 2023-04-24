@@ -2564,7 +2564,8 @@ class Maps(object):
 
         # ---------------------- classify the data
         if verbose > 0 and not self._inherit_classification:
-            print("EOmaps: Classifying...")
+            if self.classify_specs.scheme is not None:
+                print("EOmaps: Classifying...")
 
         self._set_vmin_vmax(
             vmin=kwargs.pop("vmin", None), vmax=kwargs.pop("vmax", None)
