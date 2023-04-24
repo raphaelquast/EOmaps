@@ -1,39 +1,119 @@
 import unittest
+from pathlib import Path
+
+from matplotlib.testing import compare
+
+import numpy as np
+from eomaps import Maps
+
+basepath = Path(__file__).parent
+img_folder = basepath / "test_images" / "examples"
+
+
+def compareit(tol=1, **save_kwargs):
+    def decorator(f):
+        def wrapper(*args, **kwargs):
+            test_img = img_folder / (f.__name__ + ".png")
+            compare_img = test_img.parent / (
+                test_img.stem + "_compare" + test_img.suffix
+            )
+
+            m = f(*args, **kwargs)
+
+            # if not test_img.exists():
+            #     m.savefig(test_img, **save_kwargs)
+            #     print("Image did not yet exist!!")
+            #     return
+
+            m.savefig(compare_img, **save_kwargs)
+            ret = compare.compare_images(test_img, compare_img, tol, False)
+
+            if ret is not None:
+                raise compare.ImageComparisonFailure(ret)
+
+            return ret
+
+        return wrapper
+
+    return decorator
 
 
 class TestExamples(unittest.TestCase):
+    @compareit()
     def test_example1(self):
-        import example1
+        np.random.seed(1)
 
+        from example1 import m
+
+        return m
+
+    @compareit()
     def test_example2(self):
-        import example2
+        np.random.seed(1)
 
+        from example2 import m
+
+        return m
+
+    @compareit()
     def test_example3(self):
-        import example3
+        np.random.seed(1)
 
+        from example3 import m
+
+        return m
+
+    @compareit()
     def test_example4(self):
-        import example4
+        from example4 import m
 
+        return m
+
+    @compareit()
     def test_example5(self):
-        import example5
+        from example5 import m
 
+        return m
+
+    @compareit(tol=10)
     def test_example6(self):
-        import example6
+        # increase tolerance here since we deal with webmaps!
+        from example6 import m
 
+        return m
+
+    @compareit()
     def test_example7(self):
-        import example7
+        from example7 import m
 
+        return m
+
+    @compareit()
     def test_example8(self):
-        import example8
+        from example8 import m
 
+        return m
+
+    @compareit()
     def test_example9(self):
-        import example9
+        from example9 import m
 
+        return m
+
+    @compareit()
     def test_example_inset_maps(self):
-        import example_inset_maps
+        from example_inset_maps import m
 
+        return m
+
+    @compareit()
     def test_example_row_col_selector(self):
-        import example_row_col_selector
+        from example_row_col_selector import m
 
+        return m
+
+    @compareit()
     def test_example_lines(self):
-        import example_lines
+        from example_lines import m
+
+        return m
