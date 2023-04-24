@@ -2562,7 +2562,7 @@ class Maps(object):
         )
 
         # ---------------------- classify the data
-        if verbose > 0:
+        if verbose > 0 and not self._inherit_classification:
             print("EOmaps: Classifying...")
 
         self._set_vmin_vmax(
@@ -4320,7 +4320,7 @@ class Maps(object):
             agg_hook=self.shape.agg_hook,
             # norm="eq_hist",
             # norm=plt.Normalize(vmin, vmax),
-            cmap=cbcmap,
+            cmap=self._cbcmap,
             ax=self.ax,
             plot_width=plot_width,
             plot_height=plot_height,
