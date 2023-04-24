@@ -2368,6 +2368,12 @@ class Maps(object):
                     "EOmaps: 'vmin' and 'vmax' cannot be set explicitly "
                     "if the classification is inherited!"
                 )
+
+            if self._vmin is None:
+                print("EOmaps: Warning, inherited value for 'vmin' is None!")
+            if self._vmax is None:
+                print("EOmaps: Warning, inherited value for 'vmax' is None!")
+
             self._vmin = self._inherit_classification._vmin
             self._vmax = self._inherit_classification._vmax
             return
@@ -2404,11 +2410,6 @@ class Maps(object):
 
                     if vmax and vmax > 0:
                         self._vmax = vmax
-
-        if any((self._vmin is None, self._vmax is None)):
-            raise AssertionError(
-                "EOmaps: Unable to determine vmin/vmax of the dataset."
-            )
 
     def plot_map(
         self,
