@@ -1914,7 +1914,7 @@ The call-signature is: ``m.add_feature.< CATEGORY >.< FEATURE >(...)``:
 |     m.add_feature.preset.countries()                                    |                                                 |
 |                                                                         |                                                 |
 |     m.add_feature.physical.lakes(scale=110, ec="b")                     |                                                 |
-|     m.add_feature.cultural.admin_0_pacific_groupings(ec="m", lw=2)      |                                                 |
+|     m.add_feature.cultural.admin_0_pacific_groupings(fc="none", ec="m") |                                                 |
 |                                                                         |                                                 |
 |     # (only if geopandas is installed)                                  |                                                 |
 |     places = m.add_feature.cultural.populated_places.get_gdf(scale=110) |                                                 |
