@@ -127,7 +127,8 @@ except ImportError as ex:
 from .ne_features import NaturalEarth_features
 
 from ._cb_container import cb_container, _gpd_picker
-from .scalebar import ScaleBar, Compass
+from .scalebar import ScaleBar
+from .compass import Compass
 from .projections import Equi7Grid_projection  # import to supercharge cartopy.ccrs
 from .reader import read_file, from_file, new_layer_from_file
 from .grid import GridFactory
@@ -338,9 +339,16 @@ class Maps(object):
 
     CRS = ccrs
 
+    # the keybord shortcut to activate the companion-widget
     _companion_widget_key = "w"
+    # max. number of layers to show all layers as tabs in the widget
+    # (otherwise only recently active layers are shown as tabs)
+    _companion_widget_n_layer_tabs = 50
 
     CLASSIFIERS = SimpleNamespace(**dict(zip(_CLASSIFIERS, _CLASSIFIERS)))
+
+    _crs_cache = dict()
+    _transformer_cache = dict()
 
     def __init__(
         self,
@@ -445,18 +453,6 @@ class Maps(object):
         # the radius is estimated when plot_map is called
         self._estimated_radius = None
 
-        # cache commonly used transformers
-        self._transf_plot_to_lonlat = Transformer.from_crs(
-            self.crs_plot,
-            self.get_crs(Maps.CRS.PlateCarree(globe=self.crs_plot.globe)),
-            always_xy=True,
-        )
-        self._transf_lonlat_to_plot = Transformer.from_crs(
-            self.get_crs(Maps.CRS.PlateCarree(globe=self.crs_plot.globe)),
-            self.crs_plot,
-            always_xy=True,
-        )
-
         # a set to hold references to the compass objects
         self._compass = set()
 
@@ -465,9 +461,6 @@ class Maps(object):
 
         if not hasattr(self.parent, "_execute_callbacks"):
             self.parent._execute_callbacks = True
-
-        # initialize the shape-drawer
-        self._shape_drawer = ShapeDrawer(weakref.proxy(self))
 
         # initialize the data-manager
         self._data_manager = DataManager(self._proxy(self))
@@ -1330,9 +1323,6 @@ class Maps(object):
             the pyproj CRS instance
 
         """
-        if not hasattr(self, "_crs_cache"):
-            self._crs_cache = dict()
-
         # check for strings first to avoid expensive equality checking for CRS objects!
         if isinstance(crs, str):
             if crs == "in":
@@ -1751,10 +1741,9 @@ class Maps(object):
             ID = None
             if xy_crs is not None:
                 # get coordinate transformation
-                transformer = Transformer.from_crs(
+                transformer = self._get_transformer(
                     self.get_crs(xy_crs),
                     self.crs_plot,
-                    always_xy=True,
                 )
                 # transform coordinates
                 xy = transformer.transform(*xy)
@@ -1897,10 +1886,9 @@ class Maps(object):
 
         if xy_crs is not None:
             # get coordinate transformation
-            transformer = Transformer.from_crs(
+            transformer = self._get_transformer(
                 CRS.from_user_input(xy_crs),
                 self.crs_plot,
-                always_xy=True,
             )
             # transform coordinates
             xy = transformer.transform(*xy)
@@ -1940,40 +1928,39 @@ class Maps(object):
     @wraps(ScaleBar.__init__)
     def add_scalebar(
         self,
-        lon=None,
-        lat=None,
-        azim=0,
-        preset=None,
+        pos=None,
+        rotation=0,
         scale=None,
+        n=10,
+        preset=None,
         autoscale_fraction=0.25,
-        auto_position=(0.75, 0.25),
+        auto_position=(0.8, 0.25),
         scale_props=None,
         patch_props=None,
         label_props=None,
+        line_props=None,
         layer=None,
+        size_factor=1,
+        pickable=True,
     ):
         """Add a scalebar to the map."""
         s = ScaleBar(
             m=self,
             preset=preset,
             scale=scale,
+            n=n,
             autoscale_fraction=autoscale_fraction,
             auto_position=auto_position,
             scale_props=scale_props,
             patch_props=patch_props,
             label_props=label_props,
+            line_props=line_props,
             layer=layer,
+            size_factor=size_factor,
         )
 
-        if lon is None or lat is None:
-            s._auto_position = auto_position
-            lon, lat = s._get_autopos(auto_position)
-        else:
-            # don't auto-reposition if lon/lat has been provided
-            s._auto_position = None
-
-        s._add_scalebar(lon, lat, azim)
-        s._make_pickable()
+        # add the scalebar to the map at the desired position
+        s._add_scalebar(pos=pos, azim=rotation, pickable=pickable)
 
         return s
 
@@ -2118,16 +2105,18 @@ class Maps(object):
             n = 100
             del_s = 0
 
-        t_xy_plot = Transformer.from_crs(
-            self.get_crs(xy_crs), self.crs_plot, always_xy=True
+        t_xy_plot = self._get_transformer(
+            self.get_crs(xy_crs),
+            self.crs_plot,
         )
         xplot, yplot = t_xy_plot.transform(*zip(*xy))
 
         if connect == "geod":
             # connect points via geodesic lines
             if xy_crs != 4326:
-                t = Transformer.from_crs(
-                    self.get_crs(xy_crs), self.get_crs(4326), always_xy=True
+                t = self._get_transformer(
+                    self.get_crs(xy_crs),
+                    self.get_crs(4326),
                 )
                 x, y = t.transform(*zip(*xy))
             else:
@@ -2369,6 +2358,59 @@ class Maps(object):
 
         return self.ax.get_extent(crs=crs)
 
+    def _set_vmin_vmax(self, vmin=None, vmax=None):
+        self._vmin = vmin
+        self._vmax = vmax
+
+        if self._inherit_classification is not None:
+            if not (vmin is None and vmax is None):
+                raise TypeError(
+                    "EOmaps: 'vmin' and 'vmax' cannot be set explicitly "
+                    "if the classification is inherited!"
+                )
+
+            if self._vmin is None:
+                print("EOmaps: Warning, inherited value for 'vmin' is None!")
+            if self._vmax is None:
+                print("EOmaps: Warning, inherited value for 'vmax' is None!")
+
+            self._vmin = self._inherit_classification._vmin
+            self._vmax = self._inherit_classification._vmax
+            return
+
+        if not self.shape.name.startswith("shade_"):
+            if vmin is None and self.data is not None:
+                self._vmin = self._encode_values(np.nanmin(self._data_manager.z_data))
+            if vmax is None and self.data is not None:
+                self._vmax = self._encode_values(np.nanmax(self._data_manager.z_data))
+        else:
+            # get the name of the used aggretation reduction
+            aggname = self.shape.aggregator.__class__.__name__
+            if aggname in ["first", "last", "max", "min", "mean", "mode"]:
+                # set vmin/vmax in case the aggregation still represents data-values
+                if vmin is None:
+                    self._vmin = self._encode_values(
+                        np.nanmin(self._data_manager.z_data)
+                    )
+                if vmax is None:
+                    self._vmax = self._encode_values(
+                        np.nanmax(self._data_manager.z_data)
+                    )
+            else:
+                # set vmin/vmax for aggregations that do NOT represent data values
+
+                # allow vmin/vmax = None (e.g. autoscaling)
+                if "count" in aggname:
+                    # if the reduction represents a count, don't count empty pixels
+                    if vmin and vmin <= 0:
+                        print(
+                            "EOmaps: setting vmin=1 to avoid counting empty pixels..."
+                        )
+                        self._vmin = 1
+
+                    if vmax and vmax > 0:
+                        self._vmax = vmax
+
     def plot_map(
         self,
         layer=None,
@@ -2458,21 +2500,21 @@ class Maps(object):
 
         """
         verbose = kwargs.pop("verbose", 1)
+
+        # make sure zorder is set to 1 by default
+        # (by default shading would use 0 while ordinary collections use 1)
+        kwargs.setdefault("zorder", 1)
+
         if verbose >= 1:
-            if getattr(self, "coll", None) is not None:
+            if (
+                getattr(self, "coll", None) is not None
+                and len(self.cb.pick.get.cbs) > 0
+            ):
                 print(
                     "EOmaps-warning: Calling `m.plot_map()` or "
                     "`m.make_dataset_pickable()` more than once on the "
-                    "same Maps-object will override the assigned PICK-dataset!"
+                    "same Maps-object overrides the assigned PICK-dataset!"
                 )
-
-        # convert vmin/vmax values to respect the encoding of the data
-        vmin = kwargs.get("vmin", None)
-        if vmin is not None:
-            kwargs["vmin"] = self._encode_values(vmin)
-        vmax = kwargs.get("vmax", None)
-        if vmax is not None:
-            kwargs["vmax"] = self._encode_values(vmax)
 
         if layer is None:
             layer = self.layer
@@ -2482,43 +2524,74 @@ class Maps(object):
                 layer = str(layer)
 
         useshape = self.shape  # invoke the setter to set the default shape
+        shade_q = useshape.name.startswith("shade_")  # indicator if shading is used
 
         # make sure the colormap is properly set and transparencies are assigned
-        cmap = kwargs.setdefault("cmap", "viridis")
+        cmap = kwargs.pop("cmap", "viridis")
+
         if "alpha" in kwargs and kwargs["alpha"] < 1:
             # get a unique name for the colormap
             cmapname = self._get_alpha_cmap_name(kwargs["alpha"])
 
-            kwargs["cmap"] = cmap_alpha(
+            cmap = cmap_alpha(
                 cmap=cmap,
                 alpha=kwargs["alpha"],
                 name=cmapname,
             )
 
-            plt.colormaps.register(name=cmapname, cmap=kwargs["cmap"])
+            plt.colormaps.register(name=cmapname, cmap=cmap)
             if self._companion_widget is not None:
                 self._companion_widget.cmapsChanged.emit()
             # remember registered colormaps (to de-register on close)
             self._registered_cmaps.append(cmapname)
 
-        # make sure zorder is set to 1 by default
-        # (by default shading would use 0 while ordinary collections use 1)
-        kwargs.setdefault("zorder", 1)
-
         # ---------------------- prepare the data
         if verbose >= 10:
             print("EOmaps: Preparing the data")
 
-        if useshape.name.startswith("shade"):
-            # shade shapes use datashader to update the data of the collections!
-            self._data_manager.set_props(
-                layer=layer,
-                assume_sorted=assume_sorted,
-                update_coll_on_fetch=False,
-                indicate_masked_points=indicate_masked_points,
-                dynamic=dynamic,
-            )
+        # ---------------------- assign the data to the data_manager
 
+        # shade shapes use datashader to update the data of the collections!
+        update_coll_on_fetch = False if shade_q else True
+
+        self._data_manager.set_props(
+            layer=layer,
+            assume_sorted=assume_sorted,
+            update_coll_on_fetch=update_coll_on_fetch,
+            indicate_masked_points=indicate_masked_points,
+            dynamic=dynamic,
+        )
+
+        # ---------------------- classify the data
+        if verbose > 0 and not self._inherit_classification:
+            if self.classify_specs.scheme is not None:
+                print("EOmaps: Classifying...")
+
+        self._set_vmin_vmax(
+            vmin=kwargs.pop("vmin", None), vmax=kwargs.pop("vmax", None)
+        )
+
+        cbcmap, norm, bins, classified = self._classify_data(
+            vmin=self._vmin,
+            vmax=self._vmax,
+            cmap=cmap,
+            classify_specs=self.classify_specs,
+        )
+
+        # todo remove duplicate attributes
+        self.classify_specs._cbcmap = cbcmap
+        self.classify_specs._norm = norm
+        self.classify_specs._bins = bins
+        self.classify_specs._classified = classified
+
+        self._cbcmap = cbcmap
+        self._norm = norm
+        self._bins = bins
+        self._classified = classified
+
+        # ---------------------- plot the data
+
+        if shade_q:
             self._shade_map(
                 layer=layer,
                 dynamic=dynamic,
@@ -2526,17 +2599,7 @@ class Maps(object):
                 assume_sorted=assume_sorted,
                 **kwargs,
             )
-            self.BM._refetch_layer(layer)
-
         else:
-            self._data_manager.set_props(
-                layer=layer,
-                assume_sorted=assume_sorted,
-                update_coll_on_fetch=True,
-                indicate_masked_points=indicate_masked_points,
-                dynamic=dynamic,
-            )
-
             # dont set extent if "m.set_extent" was called explicitly
             if set_extent and self._set_extent_on_plot:
                 # note bg-layers are automatically triggered for re-draw
@@ -2550,10 +2613,8 @@ class Maps(object):
                 assume_sorted=assume_sorted,
                 **kwargs,
             )
-            self.BM._refetch_layer(layer)
 
-            # if dynamic is False:
-            #     self.BM._refetch_layer(layer)
+        self.BM._refetch_layer(layer)
 
         if verbose >= 1:
             if getattr(self, "_data_mask", None) is not None and not np.all(
@@ -2825,14 +2886,17 @@ class Maps(object):
         display(Image.fromarray(sn, "RGBA"), display_id=True, clear=clear)
 
     @wraps(plt.Figure.text)
-    def text(self, *args, **kwargs):
+    def text(self, *args, layer=None, **kwargs):
         """Add text to the map."""
         kwargs.setdefault("animated", True)
         kwargs.setdefault("horizontalalignment", "center")
         kwargs.setdefault("verticalalignment", "center")
 
         a = self.f.text(*args, **kwargs)
-        self.BM.add_artist(a)
+
+        if layer is None:
+            layer = self.layer
+        self.BM.add_artist(a, layer=layer)
 
         return a
 
@@ -3277,6 +3341,11 @@ class Maps(object):
             # check if the axis is already used by another maps-object
             if ax not in (i.ax for i in (self.parent, *self.parent._children)):
                 newax = True
+                ax.set_animated(True)
+                # make sure axes are drawn once to properly set transforms etc.
+                # (otherwise pan/zoom, ax.contains_point etc. will not work)
+                ax.draw(self.f.canvas.get_renderer())
+
             else:
                 newax = False
         else:
@@ -3312,7 +3381,11 @@ class Maps(object):
                 aspect="equal",
                 adjustable="box",
                 label=self._get_ax_label(),
+                animated=True,
             )
+            # make sure axes are drawn once to properly set transforms etc.
+            # (otherwise pan/zoom, ax.contains_point etc. will not work)
+            ax.draw(self.f.canvas.get_renderer())
 
         self._ax = ax
         self._gridspec = ax.get_gridspec()
@@ -3926,47 +3999,12 @@ class Maps(object):
         **kwargs,
     ):
 
-        cmap = kwargs.pop("cmap", "viridis")
-        vmin = kwargs.pop("vmin", None)
-        vmax = kwargs.pop("vmax", None)
-
         for key in ("array", "norm"):
             assert (
                 key not in kwargs
             ), f"The key '{key}' is assigned internally by EOmaps!"
 
         try:
-            if vmin is None and self.data is not None:
-                vmin = np.nanmin(self._data_manager.z_data)
-            if vmax is None and self.data is not None:
-                vmax = np.nanmax(self._data_manager.z_data)
-
-            # clip the data to properly account for vmin and vmax
-            # (do this only if we don't intend to use the full dataset!)
-            # if vmin or vmax:
-            #     props["z_data"] = props["z_data"].clip(vmin, vmax)
-
-            # ---------------------- classify the data
-            cbcmap, norm, bins, classified = self._classify_data(
-                vmin=vmin,
-                vmax=vmax,
-                cmap=cmap,
-                classify_specs=self.classify_specs,
-            )
-
-            # TODO remove duplicated attributes!!
-            self.classify_specs._cbcmap = cbcmap
-            self.classify_specs._norm = norm
-            self.classify_specs._bins = bins
-            self.classify_specs._classified = classified
-
-            self._cbcmap = cbcmap
-            self._norm = norm
-            self._bins = bins
-            self._classified = classified
-
-            self._vmin = vmin
-            self._vmax = vmax
             self._set_extent = set_extent
 
             # ------------- plot the data
@@ -4114,65 +4152,22 @@ class Maps(object):
             + "'shade_points' and 'shade_raster'"
         )
 
-        cmap = kwargs.pop("cmap", "viridis")
-        vmin = kwargs.pop("vmin", None)
-        vmax = kwargs.pop("vmin", None)
-
         # remove previously fetched backgrounds for the used layer
         if dynamic is False:
             self.BM._refetch_layer(layer)
             # del self.BM._bg_layers[layer]
             # self.BM._refetch_bg = True
 
-        # get the name of the used aggretation reduction
-        aggname = self.shape.aggregator.__class__.__name__
-        if aggname in ["first", "last", "max", "min", "mean", "mode"]:
-            # set vmin/vmax in case the aggregation still represents data-values
-            if vmin is None:
-                vmin = np.nanmin(self._data_manager.z_data)
-            if vmax is None:
-                vmax = np.nanmax(self._data_manager.z_data)
-        else:
-            # set vmin/vmax for aggregations that do NOT represent data values
-
-            # allow vmin/vmax = None (e.g. autoscaling)
-            if "count" in aggname:
-                # if the reduction represents a count, don't count empty pixels
-                if vmin and vmin <= 0:
-                    print("EOmaps: setting vmin=1 to avoid counting empty pixels...")
-                    vmin = 1
-
-        if verbose > 0:
-            print("EOmaps: Classifying...")
-
-        # ---------------------- classify the data
-        cbcmap, norm, bins, classified = self._classify_data(
-            vmin=vmin,
-            vmax=vmax,
-            cmap=cmap,
-            classify_specs=self.classify_specs,
-        )
-
-        self.classify_specs._cbcmap = cbcmap
-        self.classify_specs._norm = norm
-        self.classify_specs._bins = bins
-        self.classify_specs._classified = classified
-
         # in case the aggregation does not represent data-values
         # (e.g. count, std, var ... ) use an automatic "linear" normalization
+
+        # get the name of the used aggretation reduction
+        aggname = self.shape.aggregator.__class__.__name__
+
         if aggname in ["first", "last", "max", "min", "mean", "mode"]:
             kwargs.setdefault("norm", self.classify_specs._norm)
-            kwargs.setdefault("vmin", vmin)
-            kwargs.setdefault("vmax", vmax)
-
-            # clip the data to properly account for vmin and vmax
-            # (do this only if we don't intend to use the full dataset!)
-            # if vmin or vmax:
-            #     props["z_data"] = props["z_data"].clip(vmin, vmax)
         else:
             kwargs.setdefault("norm", "linear")
-            kwargs.setdefault("vmin", vmin)
-            kwargs.setdefault("vmax", vmax)
 
         if verbose > 0:
             print("EOmaps: Plotting...")
@@ -4288,10 +4283,9 @@ class Maps(object):
                 crs1 = CRS.from_user_input(self.data_specs.crs)
                 crs2 = CRS.from_user_input(self._crs_plot)
                 if crs1 != crs2:
-                    transformer = Transformer.from_crs(
+                    transformer = self._get_transformer(
                         crs1,
                         crs2,
-                        always_xy=True,
                     )
                     xg, yg = transformer.transform(xg, yg)
 
@@ -4328,7 +4322,7 @@ class Maps(object):
             agg_hook=self.shape.agg_hook,
             # norm="eq_hist",
             # norm=plt.Normalize(vmin, vmax),
-            cmap=cbcmap,
+            cmap=self._cbcmap,
             ax=self.ax,
             plot_width=plot_width,
             plot_height=plot_height,
@@ -4338,6 +4332,8 @@ class Maps(object):
             # y_range=(df.y.min(), df.y.max()),
             x_range=x_range,
             y_range=y_range,
+            vmin=self._vmin,
+            vmax=self._vmax,
             **kwargs,
         )
 
@@ -4647,6 +4643,38 @@ class Maps(object):
         return cartopy_proj
 
     @staticmethod
+    def _get_transformer(crs_from, crs_to):
+        # create a pyproj Transformer object or return a cached version of it
+        # if it has already been created.
+        c_from = Maps._transformer_cache.setdefault(hash(crs_from), dict())
+        return c_from.setdefault(
+            hash(crs_to), Transformer.from_crs(crs_from, crs_to, always_xy=True)
+        )
+
+    @property
+    @lru_cache()
+    def _transf_plot_to_lonlat(self):
+        # cache commonly used transformers
+        return self._get_transformer(
+            self.crs_plot,
+            self.get_crs(self.crs_plot.as_geodetic()),
+        )
+
+    @property
+    @lru_cache()
+    def _transf_lonlat_to_plot(self):
+        return self._get_transformer(
+            self.get_crs(self.crs_plot.as_geodetic()),
+            self.crs_plot,
+        )
+
+    @property
+    @lru_cache()
+    def _shape_drawer(self):
+        # initialize the shape-drawer
+        return ShapeDrawer(weakref.proxy(self))
+
+    @staticmethod
     def _make_rect_poly(x0, y0, x1, y1, crs=None, npts=100):
         """
         Return a geopandas.GeoDataFrame with a rectangle in the given crs.
@@ -4818,7 +4846,11 @@ class _InsetMaps(Maps):
 
         # add a background patch to the "all" layer
         if background_color is not None:
-            self._add_background_patch(color=background_color, layer="all")
+            self._bg_patch = self._add_background_patch(
+                color=background_color, layer="all"
+            )
+        else:
+            self._bg_patch = None
 
     def _add_background_patch(self, color, layer="all"):
         (art,) = self.ax.fill(
@@ -4830,6 +4862,7 @@ class _InsetMaps(Maps):
             transform=self.ax.transAxes,
         )
         self.BM.add_bg_artist(art, layer=layer)
+        return art
 
     def _handle_spines(self):
         spine = self.ax.spines["geo"]
@@ -4867,6 +4900,9 @@ class _InsetMaps(Maps):
             kwargs["ec"] = "r"
         if not any((i in kwargs for i in ["lw", "linewidth"])):
             kwargs["lw"] = 1
+
+        kwargs.setdefault("permanent", True)
+        kwargs.setdefault("zorder", 9999)
 
         m.add_marker(
             shape=self._inset_props["shape"],

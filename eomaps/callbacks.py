@@ -734,6 +734,9 @@ class _click_callbacks(object):
         if not isinstance(layer, str):
             layer = self.m._get_combined_layer_name(*layer)
 
+        # add spines and relevant inset-map layers to the specified peek-layer
+        layer = self.m.BM._get_showlayer_name(layer)
+
         ID, pos, val, ind, picker_name, val_color = self._popargs(kwargs)
 
         ax = self.m.ax

@@ -279,34 +279,30 @@ class shapes(object):
             self._n = None
 
         def _get_auto_n(self):
-            if self._m.data is not None:
-                data = self._m._data_manager._current_data.get("z_data", self._m.data)
-                s = np.size(data)
+            s = self._m._data_manager._get_current_datasize()
 
-                if self.name == "rectangles":
-                    # mesh currently only supports n=1
-                    if self.mesh is True:
-                        return 1
+            if self.name == "rectangles":
+                # mesh currently only supports n=1
+                if self.mesh is True:
+                    return 1
 
-                    # if plot crs is same as input-crs there is no need for
-                    # intermediate points since the rectangles are not curved!
-                    if self._m._crs_plot == self._m.data_specs.crs:
-                        return 1
+                # if plot crs is same as input-crs there is no need for
+                # intermediate points since the rectangles are not curved!
+                if self._m._crs_plot == self._m.data_specs.crs:
+                    return 1
 
-                if s < 10:
-                    n = 100
-                elif s < 100:
-                    n = 75
-                elif s < 1000:
-                    n = 50
-                elif s < 10000:
-                    n = 20
-                else:
-                    n = 12
-
-                return n
+            if s < 10:
+                n = 100
+            elif s < 100:
+                n = 75
+            elif s < 1000:
+                n = 50
+            elif s < 10000:
+                n = 20
             else:
-                return 12
+                n = 12
+
+            return n
 
         @property
         def n(self):
@@ -1338,7 +1334,8 @@ class shapes(object):
 
             # find the masked points that are not masked by the datamask
             mask = ~datamask.copy()
-            mask[np.where(datamask)[0][list(set(maskedTris.flat))]] = True
+            if self.masked:
+                mask[np.where(datamask)[0][list(set(maskedTris.flat))]] = True
 
             # remember the mask
             self._m._data_mask = mask
@@ -1368,7 +1365,13 @@ class shapes(object):
                     if key == "array":
                         color_and_array[key] = val[maskedTris].mean(axis=1)
                     else:
-                        color_and_array[key] = val[maskedTris[:, 0]]
+                        # explicitly handle single-color entries
+                        # (e.g. int, float, str rgb-tuples etc.)
+                        if isinstance(val, (int, float, str, tuple)):
+                            pass
+                        elif isinstance(val, np.ndarray):
+                            # if arrays of colors have been provided, broadcast them
+                            color_and_array[key] = val[maskedTris[:, 0]]
 
                 # Vertices of triangles.
                 verts = np.stack((tri.x[maskedTris], tri.y[maskedTris]), axis=-1)

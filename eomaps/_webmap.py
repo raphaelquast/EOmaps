@@ -1279,6 +1279,7 @@ class SlippyImageArtist_NEW(AxesImage):
         # This artist fills the Axes, so should not influence layout.
         kwargs.setdefault("in_layout", False)
         kwargs.setdefault("zorder", -5)
+        kwargs.setdefault("animated", True)
 
         super().__init__(ax, **kwargs)
 

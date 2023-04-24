@@ -1251,21 +1251,21 @@ Everything related to callbacks is grouped under the ``cb`` accessor.
 Starting with v5.0, EOmaps comes with an awesome **companion widget** that greatly
 simplifies using interactive capabilities.
 
-- To activate the widget, **press** ``w`` on the keyboard **while the mouse is over the map you want to edit**.
+- To activate the widget, press ``w`` on the keyboard **while the mouse is on top of the map you want to edit**.
 
   - If multiple maps are present in the figure, a green border indicates the map that is currently targeted by the widget.
   - Once the widget is initialized, pressing ``w`` will show/hide the widget.
 
 
-.. image:: _static/minigifs/companion_widget.gif
-    :align: center
-
-
-.. admonition:: What are the buttons and sliders doing?
+.. admonition:: What are all those buttons and sliders for??
 
     To get information on how the individual controls work, simply **click on the** ``?`` **symbol** in the top left corner of the widget!
 
     - This will activate **help tooltips** that explain the individual controls.
+
+
+.. image:: _static/minigifs/companion_widget.gif
+    :align: center
 
 
 .. note::
@@ -1280,6 +1280,7 @@ simplifies using interactive capabilities.
         import matplotlib
         matplotlib.use("qt5agg")
 
+    For more details, have a look at :ref:`configuring_the_editor`.
 
 The main purpose of the widget is to provide easy-access to features that usually don't need to go into
 a python-script, such as:
@@ -1913,7 +1914,7 @@ The call-signature is: ``m.add_feature.< CATEGORY >.< FEATURE >(...)``:
 |     m.add_feature.preset.countries()                                    |                                                 |
 |                                                                         |                                                 |
 |     m.add_feature.physical.lakes(scale=110, ec="b")                     |                                                 |
-|     m.add_feature.cultural.admin_0_pacific_groupings(ec="m", lw=2)      |                                                 |
+|     m.add_feature.cultural.admin_0_pacific_groupings(fc="none", ec="m") |                                                 |
 |                                                                         |                                                 |
 |     # (only if geopandas is installed)                                  |                                                 |
 |     places = m.add_feature.cultural.populated_places.get_gdf(scale=110) |                                                 |
@@ -2313,13 +2314,11 @@ To indicate rectangular areas in any given crs, simply use ``m.indicate_extent``
     |         m.indicate_extent(*pos0, crs=3857, hatch=h, lw=0.25, ec=c)    |                                                 |
     |         m.indicate_extent(*pos1, crs=3857, hatch=h, lw=0.25, ec=c)    |                                                 |
     |                                                                       |                                                 |
-    |     # indicate a rectangle in Equi7Grid projection                    |                                                 |
-    |     try: # (requires equi7grid package)                               |                                                 |
-    |         m.indicate_extent(1000000, 1000000, 4800000, 4800000,         |                                                 |
-    |                           crs=Maps.CRS.Equi7Grid_projection("EU"),    |                                                 |
-    |                           fc="g", alpha=0.5, ec="k")                  |                                                 |
-    |     except:                                                           |                                                 |
-    |         pass                                                          |                                                 |
+    |     # indicate a rectangle in European Equi7Grid  projection          |                                                 |
+    |     m.indicate_extent(1000000, 1000000, 4800000, 4800000,             |                                                 |
+    |                       crs=Maps.CRS.Equi7_EU,                          |                                                 |
+    |                       fc="g", alpha=0.5, ec="k")                      |                                                 |
+    |                                                                       |                                                 |
     +-----------------------------------------------------------------------+-------------------------------------------------+
 
 🥦 Logos
@@ -2512,7 +2511,17 @@ pixels within the current field of view by setting ``dynamic_shade_indicator=Tru
 📏 Scalebars
 ------------
 
-A scalebar can be added to a map via ``s = m.add_scalebar()``:
+A scalebar can be added to a map via ``s = m.add_scalebar()``.
+
+- By default, the scalebar will **dynamically estimate an appropriate scale and position** based on the currently visible map extent.
+
+  - To change the number of segments for the scalebar, use ``s = m.add_scalebar(n=5)`` or ``s.set_n(5)``
+  - To set the length of the segments to a fixed distance, use ``s = m.add_scalebar(scale=1000)`` or ``s.set_scale(1000)``
+  - To fix the position of the scalebar, use ``s = m.add_scalebar(pos=(20, 40))`` or ``s.set_position(20, 40)``
+
+In addition, many style properties of the scalebar can be adjusted to get the look you want.
+
+ - check the associated setter-functions ``ScaleBar.set_< label / scale / lines / labels >_props`` below!
 
 .. currentmodule:: eomaps
 
@@ -2536,19 +2545,29 @@ A scalebar can be added to a map via ``s = m.add_scalebar()``:
     |   s = m.add_scalebar()            |                                          |
     +-----------------------------------+------------------------------------------+
 
-.. Note::
+.. admonition:: Interacting with the scalebar
 
     The scalebar is a pickable object!
+
     Click on it with the LEFT mouse button to drag it around, and use the RIGHT
-    mouse button to make it fixed again.
+    mouse button (or press ``escape``) to make it fixed again.
 
     If the scalebar is picked (indicated by a red border), you can use the following
-    keys for adjusting some of the ScaleBar properties:
+    functionalities to adjust some of the ScaleBar properties:
 
-    - ``delte``: remove the scalebar from the plot
-    - ``+``  and ``-``: rotate the scalebar
-    - ``up/down/left/right``: increase the size of the frame
-    - ``alt + up/down/left/right``: decrease the size of the frame
+    - use the ``scroll-wheel`` to adjust the auto-scale of the scalebar (hold down ``shift`` for larger steps)
+    - use ``control`` + ``scroll-wheel`` to adjust the size of the labels
+
+    - press ``delte`` to remove the scalebar from the plot
+    - press ``+``  or ``-`` to rotate the scalebar
+    - press ``up/down/left/right`` to increase the size of the frame
+    - press ``alt + up/down/left/right``: decrease the size of the frame
+    - press ``control + left/right``: to increase / decrease the spacing between labels and scale
+    - press ``control + up/down``: to rotate the labels
+
+    Note: Once you have created a nice scalebar, you can always use ``s.print_code()`` to get an
+    executable code that will reproduce the current appearance of the scalebar.
+
 
 The returned ``ScaleBar`` object provides the following useful methods:
 
@@ -2559,14 +2578,22 @@ The returned ``ScaleBar`` object provides the following useful methods:
     :nosignatures:
     :template: only_names_in_toc.rst
 
-    ScaleBar.set_position
-    ScaleBar.get_position
-    ScaleBar.set_label_props
-    ScaleBar.set_patch_props
-    ScaleBar.set_scale_props
-    ScaleBar.cb_offset_interval
-    ScaleBar.cb_rotate_interval
+    ScaleBar.print_code
+    ScaleBar.apply_preset
     ScaleBar.remove
+    ScaleBar.set_scale
+    ScaleBar.set_n
+    ScaleBar.set_position
+    ScaleBar.set_label_props
+    ScaleBar.set_scale_props
+    ScaleBar.set_line_props
+    ScaleBar.set_patch_props
+    ScaleBar.set_auto_scale
+    ScaleBar.set_pickable
+    ScaleBar.set_size_factor
+    ScaleBar.get_position
+    ScaleBar.get_scale
+    ScaleBar.get_size_factor
 
 
 .. _compass:
@@ -2578,10 +2605,11 @@ A compass can be added to the map via ``m.add_compass()``:
 
 - To add a **North-Arrow**, use ``m.add_compass(style="north arrow")``
 
-.. Note::
+.. admonition:: Interacting with the compass
 
-    | The compass is a pickable object!
-    | Click on it with the LEFT mouse button to drag it around!
+    The compass is a pickable object!
+
+    Click on it with the LEFT mouse button to drag it around!
 
     While a compass is picked (and the LEFT mouse button is pressed), the following
     additional interactions are available:
@@ -2619,18 +2647,20 @@ dragged around on the map with the mouse.
 
 The returned ``compass`` object has the following useful methods assigned:
 
-.. currentmodule:: eomaps.scalebar
+.. currentmodule:: eomaps.compass
 
 .. autosummary::
     :toctree: generated
     :nosignatures:
     :template: only_names_in_toc.rst
 
+    Compass.remove
     Compass.set_patch
     Compass.set_scale
     Compass.set_pickable
     Compass.set_ignore_invalid_angles
-    Compass.remove
+    Compass.get_position
+    Compass.get_scale
 
 .. _gridlines:
 
@@ -2782,10 +2812,10 @@ Inset maps that show zoomed-in regions can be created with ``m.new_inset_map()``
 
 .. code-block:: python
 
-    m = Maps()                                  # the "parent" Maps-object (e.g. the "big" map)
+    m = Maps()                                      # the "parent" Maps-object (e.g. the "big" map)
     m.add_feature.preset.coastline()
-    m2 = m.new_inset_map(xy=(5, 5), radius=10)  # a new Maps-object that represents the inset-map
-    m2.add_feature.preset.ocean()               # it can be used just like any other Maps-objects!
+    m_i = m.new_inset_map(xy=(125, 40), radius=10)  # a new Maps-object that represents the inset-map
+    m_i.add_feature.preset.ocean()                  # it can be used just like any other Maps-objects!
 
 - An inset-map is defined by it's center-position and a radius
 - The used boundary-shape can be one of:
@@ -2809,27 +2839,28 @@ Make sure to checkout the :ref:`layout_editor` which can be used to quickly re-p
     :widths: 60 40
     :align: center
 
-    +----------------------------------------------------------------+--------------------------------------------+
-    | .. code-block:: python                                         | .. image:: _static/minigifs/inset_maps.png |
-    |                                                                |   :align: center                           |
-    |     m = Maps(Maps.CRS.PlateCarree(central_longitude=-60))      |                                            |
-    |     m.add_feature.preset.ocean()                               |                                            |
-    |     m2 = m.new_inset_map(xy=(5, 45), radius=10,                |                                            |
-    |                          plot_position=(.3, .5), plot_size=.7, |                                            |
-    |                          boundary=dict(ec="r", lw=4),          |                                            |
-    |                          indicate_extent=dict(fc=(1,0,0,.5),   |                                            |
-    |                                               ec="r", lw=1)    |                                            |
-    |                          )                                     |                                            |
-    |     m2.add_feature.preset.coastline()                          |                                            |
-    |     m2.add_feature.preset.countries()                          |                                            |
-    |     m2.add_feature.preset.ocean()                              |                                            |
-    |                                                                |                                            |
-    |     m2.add_feature.cultural.urban_areas(fc="r", scale=10)      |                                            |
-    |     m2.add_feature.physical.rivers_europe(ec="b", lw=0.25,     |                                            |
-    |                                           fc="none", scale=10) |                                            |
-    |     m2.add_feature.physical.lakes_europe(fc="b", scale=10)     |                                            |
-    |                                                                |                                            |
-    +----------------------------------------------------------------+--------------------------------------------+
+    +-----------------------------------------------------------------+--------------------------------------------+
+    | .. code-block:: python                                          | .. image:: _static/minigifs/inset_maps.png |
+    |                                                                 |   :align: center                           |
+    |     m = Maps(Maps.CRS.PlateCarree(central_longitude=-60))       |                                            |
+    |     m.add_feature.preset.ocean()                                |                                            |
+    |                                                                 |                                            |
+    |     m_i = m.new_inset_map(xy=(5, 45), radius=10,                |                                            |
+    |                           plot_position=(.3, .5), plot_size=.7, |                                            |
+    |                           boundary=dict(ec="r", lw=4),          |                                            |
+    |                           indicate_extent=dict(fc=(1,0,0,.5),   |                                            |
+    |                                                ec="r", lw=1)    |                                            |
+    |                           )                                     |                                            |
+    |     m_i.add_feature.preset.coastline()                          |                                            |
+    |     m_i.add_feature.preset.countries()                          |                                            |
+    |     m_i.add_feature.preset.ocean()                              |                                            |
+    |                                                                 |                                            |
+    |     m_i.add_feature.cultural.urban_areas(fc="r", scale=10)      |                                            |
+    |     m_i.add_feature.physical.rivers_europe(ec="b", lw=0.25,     |                                            |
+    |                                            fc="none", scale=10) |                                            |
+    |     m_i.add_feature.physical.lakes_europe(fc="b", scale=10)     |                                            |
+    |                                                                 |                                            |
+    +-----------------------------------------------------------------+--------------------------------------------+
 
 .. currentmodule:: eomaps.Maps
 
@@ -2839,6 +2870,7 @@ Make sure to checkout the :ref:`layout_editor` which can be used to quickly re-p
     :template: only_names_in_toc.rst
 
     new_inset_map
+
 
 .. _shape_drawer:
 

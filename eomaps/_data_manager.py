@@ -418,6 +418,12 @@ class DataManager:
             except Exception as ex:
                 print(ex)
 
+    def _get_current_datasize(self):
+        if self._current_data:
+            return self._get_datasize(**self._current_data)
+        else:
+            return 99
+
     def on_fetch_bg(self, layer=None, bbox=None, check_redraw=True):
         # TODO support providing a bbox as extent?
         if layer is None:
@@ -436,7 +442,7 @@ class DataManager:
                 # fail-fast in case the data is completely outside the extent
                 return
 
-            s = self._get_datasize(props)
+            s = self._get_datasize(**props)
             self._print_datasize_warnings(s)
 
             # stop here in case we are dealing with a pick-only dataset
@@ -632,8 +638,26 @@ class DataManager:
 
         return self._current_data
 
-    def _get_datasize(self, props):
-        return np.size(props["z_data"])
+    def _get_datasize(self, z_data, x0, y0, **kwargs):
+        # if a dataset is provided, use it to identify the data-size
+        if z_data is not None:
+            return np.size(z_data)
+
+        sx = np.size(x0)
+
+        if len(x0.shape) == 2:
+            return sx
+
+        sy = np.size(y0)
+
+        # TODO add better treatment for 1D2D datasets with data=None
+        if len(x0.shape) == 1 and len(y0.shape) == 1:
+            if sx == sy:
+                return sx
+            else:
+                return sx * sy
+
+        return 99
 
     def _print_datasize_warnings(self, s):
         if s < 1e5:

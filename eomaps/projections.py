@@ -35,10 +35,8 @@ class Equi7Grid_projection(ccrs.Projection):
     """
     Equi7Grid projection for cartopy.
 
-    >>> m = Maps(Equi7Grid_projection("EU"))
+    >>> m = Maps(Equi7Grid_EU)
     >>> m.add_feature.preset.coastline()
-    >>> m.ax.add_geometries([m.ax.projection.equi7_zone_polygon],
-    >>>                     m.ax.projection, fc="none", ec="r")
 
     possible subgrid's are:
         - "EU": Europe

@@ -41,6 +41,8 @@ ax_right = m.f.add_subplot(224)
 ax_right.set_ylabel("data-values")
 ax_right.set_xlabel("histogram count")
 
+ax_left.sharey(ax_right)
+
 # -------- assign data to the map and plot it
 m.set_data(data=data, x="lon", y="lat", crs=4326)
 m.set_classify_specs(
@@ -59,14 +61,17 @@ def update_plots(ID, **kwargs):
     # plot the lines and histograms
     (l,) = ax_left.plot(x, lw=0.5, marker=".", c="C0")
     cnt, val, art = ax_right.hist(x.values, bins=50, orientation="horizontal", fc="C0")
-    # add all artists as "temporary pick artists" so that they
-    # are removed when the next datapoint is selected
-    for a in [l, *art]:
-        m.cb.pick.add_temporary_artist(a)
 
     # re-compute axis limits based on the new artists
     ax_left.relim()
     ax_right.relim()
+    ax_left.autoscale()
+    ax_right.autoscale()
+
+    # add all artists as "temporary pick artists" so that they
+    # are removed when the next datapoint is selected
+    for a in [l, *art]:
+        m.cb.pick.add_temporary_artist(a)
 
 
 # attach the custom callback (and some pre-defined callbacks)

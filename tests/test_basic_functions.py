@@ -615,8 +615,6 @@ class TestBasicPlotting(unittest.TestCase):
             self.assertTrue(cb in m.BM._hidden_artists)
 
         self.assertTrue(len(m2._colorbars) == 1)
-        self.assertTrue(all(not cb.ax_cb.get_visible() for cb in m._colorbars))
-
         self.assertTrue(m2.colorbar is cb5)
 
         # test setting custom bins
@@ -705,28 +703,47 @@ class TestBasicPlotting(unittest.TestCase):
         c2 = m.add_compass((0.9, 0.9))
         self.assertTrue(np.allclose(c2.get_position("axis"), np.array([0.9, 0.9])))
 
+        for t in "NESW":
+            ci = m.add_compass(txt=t)
+            ci.remove()
+
         cv = m.f.canvas
 
         # click on compass to move it around
-        button_press_event(cv, *m.ax.transAxes.transform((0.1, 0.1)), 1, False)
+        button_press_event(
+            cv, *m.ax.transAxes.transform(c1.get_position("axis")), 1, False
+        )
         motion_notify_event(cv, *m.ax.transAxes.transform((0.5, 0.5)), False)
         button_release_event(cv, *m.ax.transAxes.transform((0.5, 0.5)), 1, False)
+        self.assertTrue(np.allclose(c1.get_position("axis"), np.array([0.5, 0.5])))
 
         c1.set_position((-30000000, -2000000))
         c1.set_patch("r", "g", 5)
-        c1.set_pickable(False)
-        c1.remove()
+
+        # delete the compass with a keypress event
+        button_press_event(
+            cv, *m.ax.transAxes.transform(c1.get_position("axis")), 1, False
+        )
+        key_press_event(cv, "delete")
+        button_release_event(cv, *m.ax.transAxes.transform((0.5, 0.5)), 1, False)
 
         c2.set_position((0.75, 0.25), "axis")
         c2.set_patch((1, 0, 1, 0.5), False)
+        c2.set_pickable(False)
         c2.remove()
 
-        c = m.add_compass((0.5, 0.5), scale=7, style="north arrow", patch="g")
+        c = m.add_compass(
+            (45, 45), pos_transform="lonlat", scale=7, style="north arrow", patch="g"
+        )
         c.set_position((-30000000, -2000000))
         c.set_patch("r", "g", 5)
         c.set_position((0.75, 0.25), "axis")
         c.set_patch((1, 0, 1, 0.5), False)
         c.set_pickable(False)
+        c.remove()
+
+        c = m.add_compass((-30000000, -2000000), pos_transform="plot_crs")
+        c.remove()
 
         plt.close("all")
 
@@ -735,80 +752,122 @@ class TestBasicPlotting(unittest.TestCase):
         m = Maps()
         m.add_feature.preset.ocean(ec="k", scale="110m")
 
-        s = m.add_scalebar(scale=250000)
-        s.set_position(10, 20, 30)
-        s.set_label_props(every=2, scale=1.25, offset=0.5, weight="bold")
-        s.set_scale_props(n=6, colors=("k", "r"))
+        # test presets
+        for preset in ["bw", "bw_2", "kr"]:
+            s_auto = m.add_scalebar(preset=preset)
+            s_auto.remove()
+
+        s_auto = m.add_scalebar()
+
+        s = m.add_scalebar()
+        s.set_scale(250000)
+        s.set_n(6)
+        s.set_position((-155, 60), azim=30)
+        s.set_label_props(every=2, scale=1.25, offset=1.5, weight="bold")
+        s.set_scale_props(colors=("k", "r"))
         s.set_patch_props(offsets=(1, 1.5, 1, 0.75))
+        s.set_line_props(ls="-", color="r")
+
+        s.set_scale(None)
+        s.set_pickable(False)
+        s.set_pickable(True)
+        s.set_size_factor(0.95)
 
         s1 = m.add_scalebar(
-            -31,
-            -50,
+            (-31, -50),
             90,
             scale=500000,
-            scale_props=dict(n=10, width=3, colors=("k", ".25", ".5", ".75", ".95")),
+            n=10,
+            scale_props=dict(width=3, colors=("k", ".25", ".5", ".75", ".95")),
             patch_props=dict(fc=(1, 1, 1, 1)),
             label_props=dict(every=5, weight="bold", family="Calibri"),
         )
 
         s2 = m.add_scalebar(
-            -45,
-            45,
+            (120, 50),
             45,
             scale=500000,
-            scale_props=dict(n=6, width=3, colors=("k", "r")),
+            n=6,
+            scale_props=dict(width=3, colors=("k", "r")),
             patch_props=dict(fc="none", ec="r", lw=0.25, offsets=(1, 1, 1, 1)),
             label_props=dict(rotation=45, weight="bold", family="Impact"),
         )
 
         s3 = m.add_scalebar(
-            78,
-            -60,
+            (-128, -60),
             0,
             scale=250000,
-            scale_props=dict(n=20, width=3, colors=("k", "w")),
+            n=20,
+            scale_props=dict(width=3, colors=("k", "w")),
             patch_props=dict(fc="none", ec="none"),
             label_props=dict(scale=1.5, weight="bold", family="Courier New"),
         )
 
-        # test_presets
-        s_bw = m.add_scalebar(preset="bw")
-
         # ----------------- TEST interactivity
         cv = m.f.canvas
-        x, y = m.ax.transData.transform(s3.get_position()[:2])
-        x1, y1 = (
-            (m.f.bbox.x0 + m.f.bbox.x1) / 2,
-            (m.f.bbox.y0 + m.f.bbox.y1) / 2,
-        )
 
-        # click on scalebar
-        button_press_event(cv, x, y, 1, False)
+        for i, s_check in enumerate([s, s1, s2, s3, s_auto]):
 
-        # move the scalebar
-        motion_notify_event(cv, x1, y1, False)
+            x, y = m.ax.transData.transform(s_check.get_position()[:2])
+            x1, y1 = (
+                m.f.bbox.x0 + (i + 0.5) * m.f.bbox.width / 6,
+                (m.f.bbox.y0 + m.f.bbox.y1) / 2,
+            )
 
-        # increase bbox size
-        key_press_event(cv, "left")
-        key_press_event(cv, "right")
-        key_press_event(cv, "up")
-        key_press_event(cv, "down")
+            # click on scalebar
+            button_press_event(cv, x, y, 1, False)
 
-        # deincrease bbox size
-        key_press_event(cv, "alt+left")
-        key_press_event(cv, "alt+right")
-        key_press_event(cv, "alt+up")
-        key_press_event(cv, "alt+down")
+            # move the scalebar
+            motion_notify_event(cv, x1, y1, False)
+            button_release_event(cv, x1, y1, 1, False)
 
-        # rotate the scalebar
-        key_press_event(cv, "+")
-        key_press_event(cv, "-")
+            button_press_event(cv, x1, y1, 1, False)
+            # adjust scalebar scale
+            scroll_event(cv, x1, y1, -50, False)
+            scroll_event(cv, x1, y1, 50, False)
 
-        # adjust the padding between the ruler and the text
-        key_press_event(cv, "alt+-")
-        key_press_event(cv, "alt++")
+            # adjust label size
+            key_press_event(cv, "control")
+            scroll_event(cv, x1, y1, -5, False)
+            scroll_event(cv, x1, y1, 5, False)
+            key_release_event(cv, "control")
 
-        for si in [s, s1, s2, s3, s_bw]:
+            button_release_event(cv, x1, y1, 1, False)
+
+            # increase bbox size
+            key_press_event(cv, "left")
+            key_press_event(cv, "right")
+            key_press_event(cv, "up")
+            key_press_event(cv, "down")
+
+            # deincrease bbox size
+            key_press_event(cv, "alt+left")
+            key_press_event(cv, "alt+right")
+            key_press_event(cv, "alt+up")
+            key_press_event(cv, "alt+down")
+
+            # rotate the scalebar
+            key_press_event(cv, "+")
+            key_press_event(cv, "-")
+
+            # adjust the padding between the ruler and the text
+            key_press_event(cv, "ctrl+left")
+            key_press_event(cv, "ctrl+right")
+
+            # rotate the text
+            key_press_event(cv, "ctrl+up")
+            key_press_event(cv, "ctrl+down")
+
+        # set the extent to test autoscaling behavior
+        m.set_extent((-20, 20, -40, 40))
+
+        s3.print_code(fixed=True)
+        exec(s3._get_code(fixed=True))
+
+        s3.print_code(fixed=False)
+        exec(s3._get_code(fixed=False))
+
+        for si in [s, s1, s2, s3, s_auto]:
             si.remove()
 
         plt.close("all")
