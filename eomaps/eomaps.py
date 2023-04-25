@@ -2359,8 +2359,8 @@ class Maps(object):
         return self.ax.get_extent(crs=crs)
 
     def _set_vmin_vmax(self, vmin=None, vmax=None):
-        self._vmin = vmin
-        self._vmax = vmax
+        self._vmin = self._encode_values(vmin)
+        self._vmax = self._encode_values(vmax)
 
         if self._inherit_classification is not None:
             if not (vmin is None and vmax is None):
@@ -2380,22 +2380,18 @@ class Maps(object):
 
         if not self.shape.name.startswith("shade_"):
             if vmin is None and self.data is not None:
-                self._vmin = self._encode_values(np.nanmin(self._data_manager.z_data))
+                self._vmin = np.nanmin(self._data_manager.z_data)
             if vmax is None and self.data is not None:
-                self._vmax = self._encode_values(np.nanmax(self._data_manager.z_data))
+                self._vmax = np.nanmax(self._data_manager.z_data)
         else:
             # get the name of the used aggretation reduction
             aggname = self.shape.aggregator.__class__.__name__
             if aggname in ["first", "last", "max", "min", "mean", "mode"]:
                 # set vmin/vmax in case the aggregation still represents data-values
                 if vmin is None:
-                    self._vmin = self._encode_values(
-                        np.nanmin(self._data_manager.z_data)
-                    )
+                    self._vmin = np.nanmin(self._data_manager.z_data)
                 if vmax is None:
-                    self._vmax = self._encode_values(
-                        np.nanmax(self._data_manager.z_data)
-                    )
+                    self._vmax = np.nanmax(self._data_manager.z_data)
             else:
                 # set vmin/vmax for aggregations that do NOT represent data values
 
@@ -4377,10 +4373,15 @@ class Maps(object):
             The encoded data values
         """
         encoding = self.data_specs.encoding
+
         if encoding is not None:
             try:
                 scale_factor = encoding.get("scale_factor", None)
                 add_offset = encoding.get("add_offset", None)
+                fill_value = encoding.get("_FillValue", None)
+
+                if val is None:
+                    return fill_value
 
                 if add_offset:
                     val = val - add_offset
@@ -4389,7 +4390,9 @@ class Maps(object):
 
                 return val
             except:
-                print("EOmaps: There was an error while trying to encode the data.")
+                print(
+                    "EOmaps: There was an error while trying to encode the data:", val
+                )
                 return val
         else:
             return val
