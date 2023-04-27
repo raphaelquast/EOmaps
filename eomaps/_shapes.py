@@ -279,34 +279,30 @@ class shapes(object):
             self._n = None
 
         def _get_auto_n(self):
-            if self._m.data is not None:
-                data = self._m._data_manager._current_data.get("z_data", self._m.data)
-                s = np.size(data)
+            s = self._m._data_manager._get_current_datasize()
 
-                if self.name == "rectangles":
-                    # mesh currently only supports n=1
-                    if self.mesh is True:
-                        return 1
+            if self.name == "rectangles":
+                # mesh currently only supports n=1
+                if self.mesh is True:
+                    return 1
 
-                    # if plot crs is same as input-crs there is no need for
-                    # intermediate points since the rectangles are not curved!
-                    if self._m._crs_plot == self._m.data_specs.crs:
-                        return 1
+                # if plot crs is same as input-crs there is no need for
+                # intermediate points since the rectangles are not curved!
+                if self._m._crs_plot == self._m.data_specs.crs:
+                    return 1
 
-                if s < 10:
-                    n = 100
-                elif s < 100:
-                    n = 75
-                elif s < 1000:
-                    n = 50
-                elif s < 10000:
-                    n = 20
-                else:
-                    n = 12
-
-                return n
+            if s < 10:
+                n = 100
+            elif s < 100:
+                n = 75
+            elif s < 1000:
+                n = 50
+            elif s < 10000:
+                n = 20
             else:
-                return 12
+                n = 12
+
+            return n
 
         @property
         def n(self):

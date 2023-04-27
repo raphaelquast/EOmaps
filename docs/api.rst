@@ -1914,7 +1914,7 @@ The call-signature is: ``m.add_feature.< CATEGORY >.< FEATURE >(...)``:
 |     m.add_feature.preset.countries()                                    |                                                 |
 |                                                                         |                                                 |
 |     m.add_feature.physical.lakes(scale=110, ec="b")                     |                                                 |
-|     m.add_feature.cultural.admin_0_pacific_groupings(ec="m", lw=2)      |                                                 |
+|     m.add_feature.cultural.admin_0_pacific_groupings(fc="none", ec="m") |                                                 |
 |                                                                         |                                                 |
 |     # (only if geopandas is installed)                                  |                                                 |
 |     places = m.add_feature.cultural.populated_places.get_gdf(scale=110) |                                                 |
@@ -2314,13 +2314,11 @@ To indicate rectangular areas in any given crs, simply use ``m.indicate_extent``
     |         m.indicate_extent(*pos0, crs=3857, hatch=h, lw=0.25, ec=c)    |                                                 |
     |         m.indicate_extent(*pos1, crs=3857, hatch=h, lw=0.25, ec=c)    |                                                 |
     |                                                                       |                                                 |
-    |     # indicate a rectangle in Equi7Grid projection                    |                                                 |
-    |     try: # (requires equi7grid package)                               |                                                 |
-    |         m.indicate_extent(1000000, 1000000, 4800000, 4800000,         |                                                 |
-    |                           crs=Maps.CRS.Equi7Grid_projection("EU"),    |                                                 |
-    |                           fc="g", alpha=0.5, ec="k")                  |                                                 |
-    |     except:                                                           |                                                 |
-    |         pass                                                          |                                                 |
+    |     # indicate a rectangle in European Equi7Grid  projection          |                                                 |
+    |     m.indicate_extent(1000000, 1000000, 4800000, 4800000,             |                                                 |
+    |                       crs=Maps.CRS.Equi7_EU,                          |                                                 |
+    |                       fc="g", alpha=0.5, ec="k")                      |                                                 |
+    |                                                                       |                                                 |
     +-----------------------------------------------------------------------+-------------------------------------------------+
 
 🥦 Logos
@@ -2814,10 +2812,10 @@ Inset maps that show zoomed-in regions can be created with ``m.new_inset_map()``
 
 .. code-block:: python
 
-    m = Maps()                                  # the "parent" Maps-object (e.g. the "big" map)
+    m = Maps()                                      # the "parent" Maps-object (e.g. the "big" map)
     m.add_feature.preset.coastline()
-    m2 = m.new_inset_map(xy=(5, 5), radius=10)  # a new Maps-object that represents the inset-map
-    m2.add_feature.preset.ocean()               # it can be used just like any other Maps-objects!
+    m_i = m.new_inset_map(xy=(125, 40), radius=10)  # a new Maps-object that represents the inset-map
+    m_i.add_feature.preset.ocean()                  # it can be used just like any other Maps-objects!
 
 - An inset-map is defined by it's center-position and a radius
 - The used boundary-shape can be one of:
@@ -2841,27 +2839,28 @@ Make sure to checkout the :ref:`layout_editor` which can be used to quickly re-p
     :widths: 60 40
     :align: center
 
-    +----------------------------------------------------------------+--------------------------------------------+
-    | .. code-block:: python                                         | .. image:: _static/minigifs/inset_maps.png |
-    |                                                                |   :align: center                           |
-    |     m = Maps(Maps.CRS.PlateCarree(central_longitude=-60))      |                                            |
-    |     m.add_feature.preset.ocean()                               |                                            |
-    |     m2 = m.new_inset_map(xy=(5, 45), radius=10,                |                                            |
-    |                          plot_position=(.3, .5), plot_size=.7, |                                            |
-    |                          boundary=dict(ec="r", lw=4),          |                                            |
-    |                          indicate_extent=dict(fc=(1,0,0,.5),   |                                            |
-    |                                               ec="r", lw=1)    |                                            |
-    |                          )                                     |                                            |
-    |     m2.add_feature.preset.coastline()                          |                                            |
-    |     m2.add_feature.preset.countries()                          |                                            |
-    |     m2.add_feature.preset.ocean()                              |                                            |
-    |                                                                |                                            |
-    |     m2.add_feature.cultural.urban_areas(fc="r", scale=10)      |                                            |
-    |     m2.add_feature.physical.rivers_europe(ec="b", lw=0.25,     |                                            |
-    |                                           fc="none", scale=10) |                                            |
-    |     m2.add_feature.physical.lakes_europe(fc="b", scale=10)     |                                            |
-    |                                                                |                                            |
-    +----------------------------------------------------------------+--------------------------------------------+
+    +-----------------------------------------------------------------+--------------------------------------------+
+    | .. code-block:: python                                          | .. image:: _static/minigifs/inset_maps.png |
+    |                                                                 |   :align: center                           |
+    |     m = Maps(Maps.CRS.PlateCarree(central_longitude=-60))       |                                            |
+    |     m.add_feature.preset.ocean()                                |                                            |
+    |                                                                 |                                            |
+    |     m_i = m.new_inset_map(xy=(5, 45), radius=10,                |                                            |
+    |                           plot_position=(.3, .5), plot_size=.7, |                                            |
+    |                           boundary=dict(ec="r", lw=4),          |                                            |
+    |                           indicate_extent=dict(fc=(1,0,0,.5),   |                                            |
+    |                                                ec="r", lw=1)    |                                            |
+    |                           )                                     |                                            |
+    |     m_i.add_feature.preset.coastline()                          |                                            |
+    |     m_i.add_feature.preset.countries()                          |                                            |
+    |     m_i.add_feature.preset.ocean()                              |                                            |
+    |                                                                 |                                            |
+    |     m_i.add_feature.cultural.urban_areas(fc="r", scale=10)      |                                            |
+    |     m_i.add_feature.physical.rivers_europe(ec="b", lw=0.25,     |                                            |
+    |                                            fc="none", scale=10) |                                            |
+    |     m_i.add_feature.physical.lakes_europe(fc="b", scale=10)     |                                            |
+    |                                                                 |                                            |
+    +-----------------------------------------------------------------+--------------------------------------------+
 
 .. currentmodule:: eomaps.Maps
 
@@ -2871,6 +2870,7 @@ Make sure to checkout the :ref:`layout_editor` which can be used to quickly re-p
     :template: only_names_in_toc.rst
 
     new_inset_map
+
 
 .. _shape_drawer:
 
