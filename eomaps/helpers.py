@@ -1895,8 +1895,6 @@ class BlitManager:
             if isinstance(art, plt.Axes):
                 self._managed_axes.add(art)
 
-        self.update()
-
     def add_bg_artist(self, art, layer=None):
         """
         Add a background-artist to be managed.
@@ -2020,8 +2018,6 @@ class BlitManager:
                 # remove axes from the managed_axes set as well!
                 if art in self._managed_axes:
                     self._managed_axes.remove(art)
-
-        self.update()
 
     def _get_artist_zorder(self, a):
         try:
