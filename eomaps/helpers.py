@@ -252,7 +252,7 @@ class searchtree:
                     print(
                         "EOmaps: Unable to estimate search-radius based on data."
                         "Defaulting to `np.inf`. "
-                        "See `m.tree.set_search_radius` for more details!"
+                        "See `m.cb.pick.set_props(search_radius=...)` for more details!"
                     )
                     radius = [np.inf]
             else:
@@ -1895,6 +1895,8 @@ class BlitManager:
             if isinstance(art, plt.Axes):
                 self._managed_axes.add(art)
 
+        self.update()
+
     def add_bg_artist(self, art, layer=None):
         """
         Add a background-artist to be managed.
@@ -1947,6 +1949,8 @@ class BlitManager:
         for f in self._on_add_bg_artist:
             f()
 
+        self.canvas.draw_idle()
+
     def remove_bg_artist(self, art, layer=None):
         # handle the "__inset_" prefix of inset-map artists
         if (
@@ -1992,6 +1996,8 @@ class BlitManager:
             # tag all relevant layers for refetch
             self._refetch_layer(layer)
 
+        self.canvas.draw_idle()
+
     def remove_artist(self, art, layer=None):
         # this only removes the artist from the blit-manager,
         # it does not clear it from the plot!
@@ -2014,6 +2020,8 @@ class BlitManager:
                 # remove axes from the managed_axes set as well!
                 if art in self._managed_axes:
                     self._managed_axes.remove(art)
+
+        self.update()
 
     def _get_artist_zorder(self, a):
         try:
