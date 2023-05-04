@@ -2358,10 +2358,50 @@ class Maps(object):
 
         return self.ax.get_extent(crs=crs)
 
+    def _calc_vmin_vmax(self, calc_min=True, calc_max=True):
+        vmin, vmax = None, None
+
+        if self.data is None:
+            return vmin, vmax
+
+        # ignore fill_values when evaluating vmin/vmax on integer-encoded datasets
+        if (
+            self.data_specs.encoding is not None
+            and isinstance(self._data_manager.z_data, np.ndarray)
+            and issubclass(self._data_manager.z_data.dtype.type, np.integer)
+        ):
+
+            # note the specific way how to check for integer-dtype based on issubclass
+            # since isinstance() fails to identify all integer dtypes!!
+            #   isinstance(np.dtype("uint8"), np.integer)       (incorrect) False
+            #   issubclass(np.dtype("uint8").type, np.integer)  (correct)   True
+            # for details, see https://stackoverflow.com/a/934652/9703451
+
+            fill_value = self.data_specs.encoding.get("_FillValue", None)
+            if fill_value:
+                # find values that are not fill-values
+                use_vals = self._data_manager.z_data[
+                    self._data_manager.z_data != fill_value
+                ]
+
+                if calc_min:
+                    vmin = np.min(use_vals)
+                if calc_max:
+                    vmax = np.max(use_vals)
+        else:
+            # use nanmin/nanmax for all other arrays
+            if calc_min:
+                vmin = np.nanmin(self._data_manager.z_data)
+            if calc_max:
+                vmax = np.nanmax(self._data_manager.z_data)
+
+        return vmin, vmax
+
     def _set_vmin_vmax(self, vmin=None, vmax=None):
         self._vmin = self._encode_values(vmin)
         self._vmax = self._encode_values(vmax)
 
+        # handle inherited bounds
         if self._inherit_classification is not None:
             if not (vmin is None and vmax is None):
                 raise TypeError(
@@ -2379,22 +2419,20 @@ class Maps(object):
             return
 
         if not self.shape.name.startswith("shade_"):
-            if vmin is None and self.data is not None:
-                self._vmin = np.nanmin(self._data_manager.z_data)
-            if vmax is None and self.data is not None:
-                self._vmax = np.nanmax(self._data_manager.z_data)
+            # ignore fill_values when evaluating vmin/vmax on integer-encoded datasets
+            self._vmin, self._vmax = self._calc_vmin_vmax(
+                calc_min=vmin is None, calc_max=vmax is None
+            )
         else:
             # get the name of the used aggretation reduction
             aggname = self.shape.aggregator.__class__.__name__
             if aggname in ["first", "last", "max", "min", "mean", "mode"]:
                 # set vmin/vmax in case the aggregation still represents data-values
-                if vmin is None:
-                    self._vmin = np.nanmin(self._data_manager.z_data)
-                if vmax is None:
-                    self._vmax = np.nanmax(self._data_manager.z_data)
+                self._vmin, self._vmax = self._calc_vmin_vmax(
+                    calc_min=vmin is None, calc_max=vmax is None
+                )
             else:
                 # set vmin/vmax for aggregations that do NOT represent data values
-
                 # allow vmin/vmax = None (e.g. autoscaling)
                 if "count" in aggname:
                     # if the reduction represents a count, don't count empty pixels
