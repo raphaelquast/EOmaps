@@ -4634,6 +4634,7 @@ class Maps(object):
         elif isinstance(crs, (int, np.integer)):
             cartopy_proj = ccrs.epsg(crs)
         elif isinstance(crs, CRS):  # pyproj CRS
+            cartopy_proj = None
             for (
                 subgrid,
                 equi7crs,
@@ -4641,8 +4642,12 @@ class Maps(object):
                 if equi7crs == crs:
                     cartopy_proj = Maps.CRS.Equi7Grid_projection(subgrid)
                     break
+            if cartopy_proj is None:
+                cartopy_proj = ccrs.CRS(crs)
+
         else:
             raise AssertionError(f"EOmaps: cannot identify the CRS for: {crs}")
+
         return cartopy_proj
 
     @staticmethod
