@@ -2358,11 +2358,11 @@ class Maps(object):
 
         return self.ax.get_extent(crs=crs)
 
-    def _calc_vmin_vmax(self, calc_min=True, calc_max=True):
-        vmin, vmax = None, None
-
-        if self.data is None:
+    def _calc_vmin_vmax(self, vmin=None, vmax=None):
+        if self._data_manager.z_data is None:
             return vmin, vmax
+
+        calc_min, calc_max = vmin is None, vmax is None
 
         # ignore fill_values when evaluating vmin/vmax on integer-encoded datasets
         if (
@@ -2420,17 +2420,13 @@ class Maps(object):
 
         if not self.shape.name.startswith("shade_"):
             # ignore fill_values when evaluating vmin/vmax on integer-encoded datasets
-            self._vmin, self._vmax = self._calc_vmin_vmax(
-                calc_min=vmin is None, calc_max=vmax is None
-            )
+            self._vmin, self._vmax = self._calc_vmin_vmax(vmin=vmin, vmax=vmax)
         else:
             # get the name of the used aggretation reduction
             aggname = self.shape.aggregator.__class__.__name__
             if aggname in ["first", "last", "max", "min", "mean", "mode"]:
                 # set vmin/vmax in case the aggregation still represents data-values
-                self._vmin, self._vmax = self._calc_vmin_vmax(
-                    calc_min=vmin is None, calc_max=vmax is None
-                )
+                self._vmin, self._vmax = self._calc_vmin_vmax(vmin=vmin, vmax=vmax)
             else:
                 # set vmin/vmax for aggregations that do NOT represent data values
                 # allow vmin/vmax = None (e.g. autoscaling)
@@ -2604,7 +2600,6 @@ class Maps(object):
         self._set_vmin_vmax(
             vmin=kwargs.pop("vmin", None), vmax=kwargs.pop("vmax", None)
         )
-
         cbcmap, norm, bins, classified = self._classify_data(
             vmin=self._vmin,
             vmax=self._vmax,
