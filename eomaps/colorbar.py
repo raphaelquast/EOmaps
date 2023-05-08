@@ -259,6 +259,7 @@ class ColorBar:
         self._m = m
         self._pos = pos
         self._margin = margin
+        self._orientation = orientation
 
         self._init_extend = extend
         self._extend_frac = extend_frac
@@ -287,7 +288,6 @@ class ColorBar:
 
         self._histogram_plotted = False  # indicator if histogram has been plotted
 
-        self._orientation = orientation
         self._dynamic_shade_indicator = dynamic_shade_indicator
         self._hist_label_kwargs = None
 
@@ -514,8 +514,10 @@ class ColorBar:
                         if m.colorbar._parent_cb is None:
                             parent_cb = m.colorbar
                             break
-
-        return parent_cb
+        if parent_cb and parent_cb._orientation == self._orientation:
+            return parent_cb
+        else:
+            return None
 
     def _get_parent_cb(self):
         if self._parent_cb is None:
