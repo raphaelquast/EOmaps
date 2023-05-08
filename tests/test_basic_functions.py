@@ -651,7 +651,7 @@ class TestBasicPlotting(unittest.TestCase):
         m.show_layer(m3.layer)
         m.redraw()
 
-        self.assertTrue(labels == [i.get_text() for i in cb6.ax_cb.get_xticklabels()])
+        self.assertTrue(labels == [i.get_text() for i in cb6.ax_cb.get_yticklabels()])
 
         cb6.set_bin_labels(bins, labels, show_values=True)
         cb6.tick_params(which="minor", rotation=90)
