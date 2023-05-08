@@ -1219,6 +1219,7 @@ class ColorBar:
                 self.ax_cb.tick_params(
                     labelright=True, which="minor", labelsize="xx-small"
                 )
+
         else:
             if horizontal:
                 self.ax_cb.tick_params(
@@ -1232,9 +1233,18 @@ class ColorBar:
                     which="minor",
                 )
 
-        self.ax_cb_plot.tick_params(
-            right=False, bottom=False, labelright=False, labelbottom=False, which="both"
-        )
+        if horizontal:
+            self.ax_cb_plot.tick_params(
+                right=False,
+                bottom=False,
+                labelright=False,
+                labelbottom=False,
+                which="both",
+            )
+        else:
+            self.ax_cb_plot.tick_params(
+                left=False, top=False, labelleft=False, labeltop=False, which="both"
+            )
 
         self._m.BM._refetch_layer(self._m.layer)
 
