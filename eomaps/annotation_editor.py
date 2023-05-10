@@ -2,7 +2,7 @@ from matplotlib.offsetbox import DraggableBase
 from types import SimpleNamespace
 import numpy as np
 
-picked_ann = None
+EOmaps_picked_ann = None
 
 
 class DraggableAnnotationNew(DraggableBase):
@@ -39,11 +39,11 @@ class DraggableAnnotationNew(DraggableBase):
     def on_pick(self, evt):
         # global variable to store the currently picked annotation
         # (to avoid picking multiple annotations at once)
-        global picked_ann
+        global EOmaps_picked_ann
 
-        if picked_ann is not None and evt.artist is not picked_ann:
-            picked_ann._draggable.on_release(None)
-            picked_ann = None
+        if EOmaps_picked_ann is not None and evt.artist is not EOmaps_picked_ann:
+            EOmaps_picked_ann._draggable.on_release(None)
+            EOmaps_picked_ann = None
 
         if evt.artist is not self.annotation:
             return
@@ -55,7 +55,7 @@ class DraggableAnnotationNew(DraggableBase):
 
         self.annotation.get_bbox_patch().set_edgecolor("r")
 
-        picked_ann = self.annotation
+        EOmaps_picked_ann = self.annotation
 
     def save_offset(self):
         ann = self.annotation
