@@ -135,6 +135,7 @@ from .grid import GridFactory
 
 from .utilities import utilities
 from .draw import ShapeDrawer
+from .annotation_editor import AnnotationEditor
 
 from ._data_manager import DataManager
 
@@ -466,6 +467,8 @@ class Maps(object):
         self._data_manager = DataManager(self._proxy(self))
         self._data_plotted = False
         self._set_extent_on_plot = True
+
+        self.edit_annotations = AnnotationEditor(self)
 
         # Make sure the figure-background patch is on an explicit layer
         # This is used to avoid having the background patch on each fetched
@@ -1860,6 +1863,13 @@ class Maps(object):
         >>>                  )
 
         """
+        inp_ID = ID
+
+        if xy is None and ID is None:
+            x = self.ax.bbox.x0 + self.ax.bbox.width / 2
+            y = self.ax.bbox.y0 + self.ax.bbox.height / 2
+            xy = self.ax.transData.inverted().transform((x, y))
+
         if ID is not None:
             assert xy is None, "You can only provide 'ID' or 'pos' not both!"
             # avoid using np.isin directly since it needs a lot of ram
@@ -1873,10 +1883,14 @@ class Maps(object):
             val = self._data_manager.z_data.ravel()[mask]
             ID = np.atleast_1d(ID)
             xy_crs = self.data_specs.crs
+
+            is_ID_annotation = False
         else:
             val = repeat(None)
             ind = repeat(None)
             ID = repeat(None)
+
+            is_ID_annotation = True
 
         assert (
             xy is not None
@@ -1892,21 +1906,21 @@ class Maps(object):
             )
             # transform coordinates
             xy = transformer.transform(*xy)
+        else:
+            transformer = None
 
         kwargs.setdefault("permanent", None)
 
         if isinstance(text, str) or callable(text):
-            text = repeat(text)
+            usetext = repeat(text)
         else:
             try:
-                iter(text)
+                usetext = iter(text)
             except TypeError:
-                text = repeat(text)
+                usetext = repeat(text)
 
-        for x, y, texti, vali, indi, IDi in zip(xy[0], xy[1], text, val, ind, ID):
-
-            # add marker
-            self.cb.click._cb.annotate(
+        for x, y, texti, vali, indi, IDi in zip(xy[0], xy[1], usetext, val, ind, ID):
+            ann = self.cb.click._cb.annotate(
                 ID=IDi,
                 pos=(x, y),
                 val=vali,
@@ -1914,6 +1928,23 @@ class Maps(object):
                 text=texti,
                 **kwargs,
             )
+
+            if not hasattr(self, "_draggable_annotations"):
+                self._draggable_annotations = list()
+
+            self.edit_annotations._add(
+                a=ann,
+                kwargs={
+                    "ID": inp_ID,
+                    "xy": (x, y),
+                    "xy_crs": xy_crs,
+                    "text": text,
+                    **kwargs,
+                },
+                transf=transformer,
+                drag_coords=is_ID_annotation,
+            )
+
         self.BM.update(clear=False)
 
     @wraps(Compass.__call__)

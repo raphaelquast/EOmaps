@@ -138,6 +138,135 @@ class _click_callbacks(object):
 
         print(printstr)
 
+    def _get_annotation_text(
+        self,
+        ID=None,
+        pos=None,
+        val=None,
+        ind=None,
+        pos_precision=4,
+        val_precision=4,
+        text=None,
+    ):
+
+        if isinstance(ind, (list, np.ndarray)):
+            try:
+                n_ids = len(ind)
+            except TypeError:
+                n_ids = "??"
+
+            if n_ids == 1:
+                multipick = False
+            else:
+                multipick = True
+        else:
+            multipick = False
+
+        if isinstance(self.m.data_specs.x, str):
+            xlabel = self.m.data_specs.x
+        else:
+            xlabel = "x"
+        if isinstance(self.m.data_specs.y, str):
+            ylabel = self.m.data_specs.y
+        else:
+            ylabel = "y"
+
+        if self.m.data_specs.parameter is None:
+            parameter = "value"
+        else:
+            parameter = self.m.data_specs.parameter
+
+        if text is None:
+            # use "ind is not None" to distinguish between click and pick
+            # TODO implement better distinction between click and pick!
+            if self.m.data is not None and ind is not None:
+                if not multipick:
+                    x, y = [
+                        np.format_float_positional(i, trim="-", precision=pos_precision)
+                        for i in self.m._data_manager._get_xy_from_index(ind)
+                    ]
+                    x0, y0 = [
+                        np.format_float_positional(i, trim="-", precision=pos_precision)
+                        for i in pos
+                    ]
+
+                    if isinstance(val, (int, float)):
+                        val = np.format_float_positional(
+                            val, trim="-", precision=val_precision
+                        )
+                else:
+                    coords = [
+                        *self.m._data_manager._get_xy_from_index(ind),
+                        *self.m._data_manager._get_xy_from_index(ind, reprojected=True),
+                    ]
+
+                    for n, c in enumerate(coords):
+                        mi = np.format_float_positional(
+                            np.nanmin(c), trim="-", precision=pos_precision
+                        )
+                        ma = np.format_float_positional(
+                            np.nanmax(c), trim="-", precision=pos_precision
+                        )
+                        coords[n] = f"{mi} ... {ma}"
+
+                    x, y, x0, y0 = coords
+
+                    if ID is not None:
+                        ID = f"{np.nanmin(ID)} ... {np.nanmax(ID)}"
+
+                    if val is not None:
+                        val = np.array(val, dtype=float)  # to handle None
+
+                        # catch warnings here to avoid showing "all-nan-slice"
+                        # all the time when clicking on empty pixels
+                        with warnings.catch_warnings():
+                            mi = np.format_float_positional(
+                                np.nanmin(val), trim="-", precision=pos_precision
+                            )
+                            ma = np.format_float_positional(
+                                np.nanmax(val), trim="-", precision=pos_precision
+                            )
+                        val = f"{mi}...{ma}"
+
+                equal_crs = self.m.data_specs.crs != self.m._crs_plot
+                printstr = (
+                    (f"Picked {n_ids} points\n" if multipick else "")
+                    + f"{xlabel} = {x}"
+                    + (f" ({x0})\n" if equal_crs else "\n")
+                    + f"{ylabel} = {y}"
+                    + (f" ({y0})\n" if equal_crs else "\n")
+                    + (f"ID = {ID}" if ID is not None else "")
+                    + (f"\n{parameter} = {val}" if val is not None else "")
+                )
+
+            else:
+                lon, lat = self.m._transf_plot_to_lonlat.transform(*pos)
+                x, y = [
+                    np.format_float_positional(i, trim="-", precision=pos_precision)
+                    for i in pos
+                ]
+                lon, lat = [
+                    np.format_float_positional(i, trim="-", precision=pos_precision)
+                    for i in (lon, lat)
+                ]
+
+                printstr = (
+                    f"x = {x}\n"
+                    + f"y = {y}\n"
+                    + f"lon = {lon}\n"
+                    + f"lat = {lat}"
+                    + (f"\nvalue = {val}" if val is not None else "")
+                )
+
+        elif isinstance(text, str):
+            printstr = text
+        elif callable(text):
+            printstr = text(m=self.m, ID=ID, val=val, pos=pos, ind=ind)
+        else:
+            printstr = None
+
+        return printstr
+
     def annotate(
         self,
         pos_precision=4,
@@ -228,107 +357,15 @@ class _click_callbacks(object):
             multipick = False
             picked_pos = pos
 
-        if isinstance(self.m.data_specs.x, str):
-            xlabel = self.m.data_specs.x
-        else:
-            xlabel = "x"
-        if isinstance(self.m.data_specs.y, str):
-            ylabel = self.m.data_specs.y
-        else:
-            ylabel = "y"
-
-        if self.m.data_specs.parameter is None:
-            parameter = "value"
-        else:
-            parameter = self.m.data_specs.parameter
-
-        ax = self.m.ax
-        if text is None:
-            # use "ind is not None" to distinguish between click and pick
-            # TODO implement better distinction between click and pick!
-            if self.m.data is not None and ind is not None:
-                if not multipick:
-                    x, y = [
-                        np.format_float_positional(i, trim="-", precision=pos_precision)
-                        for i in self.m._data_manager._get_xy_from_index(ind)
-                    ]
-                    x0, y0 = [
-                        np.format_float_positional(i, trim="-", precision=pos_precision)
-                        for i in pos
-                    ]
-
-                    if isinstance(val, (int, float)):
-                        val = np.format_float_positional(
-                            val, trim="-", precision=val_precision
-                        )
-                else:
-                    coords = [
-                        *self.m._data_manager._get_xy_from_index(ind),
-                        *self.m._data_manager._get_xy_from_index(ind, reprojected=True),
-                    ]
-
-                    for n, c in enumerate(coords):
-                        mi = np.format_float_positional(
-                            np.nanmin(c), trim="-", precision=pos_precision
-                        )
-                        ma = np.format_float_positional(
-                            np.nanmax(c), trim="-", precision=pos_precision
-                        )
-                        coords[n] = f"{mi} ... {ma}"
-
-                    x, y, x0, y0 = coords
-
-                    if ID is not None:
-                        ID = f"{np.nanmin(ID)} ... {np.nanmax(ID)}"
-
-                    if val is not None:
-                        val = np.array(val, dtype=float)  # to handle None
-
-                        # catch warnings here to avoid showing "all-nan-slice"
-                        # all the time when clicking on empty pixels
-                        with warnings.catch_warnings():
-                            mi = np.format_float_positional(
-                                np.nanmin(val), trim="-", precision=pos_precision
-                            )
-                            ma = np.format_float_positional(
-                                np.nanmax(val), trim="-", precision=pos_precision
-                            )
-                        val = f"{mi}...{ma}"
-
-                equal_crs = self.m.data_specs.crs != self.m._crs_plot
-                printstr = (
-                    (f"Picked {n_ids} points\n" if multipick else "")
-                    + f"{xlabel} = {x}"
-                    + (f" ({x0})\n" if equal_crs else "\n")
-                    + f"{ylabel} = {y}"
-                    + (f" ({y0})\n" if equal_crs else "\n")
-                    + (f"ID = {ID}" if ID is not None else "")
-                    + (f"\n{parameter} = {val}" if val is not None else "")
-                )
-
-            else:
-                lon, lat = self.m._transf_plot_to_lonlat.transform(*pos)
-                x, y = [
-                    np.format_float_positional(i, trim="-", precision=pos_precision)
-                    for i in pos
-                ]
-                lon, lat = [
-                    np.format_float_positional(i, trim="-", precision=pos_precision)
-                    for i in (lon, lat)
-                ]
-
-                printstr = (
-                    f"x = {x}\n"
-                    + f"y = {y}\n"
-                    + f"lon = {lon}\n"
-                    + f"lat = {lat}"
-                    + (f"\nvalue = {val}" if val is not None else "")
-                )
-
-        elif isinstance(text, str):
-            printstr = text
-        elif callable(text):
-            printstr = text(m=self.m, ID=ID, val=val, pos=pos, ind=ind)
+        printstr = self._get_annotation_text(
+            ID=ID,
+            pos=pos,
+            val=val,
+            ind=ind,
+            pos_precision=4,
+            val_precision=4,
+            text=text,
+        )
 
         if printstr is not None:
             # create a new annotation
@@ -348,8 +385,15 @@ class _click_callbacks(object):
             )
 
             styledict.update(**kwargs)
-            annotation = ax.annotate("", xy=picked_pos, **styledict)
+            annotation = self.m.ax.annotate("", xy=picked_pos, **styledict)
             annotation.set_zorder(zorder)
+
+            # remember text (in case functions are used so that annotation texts can be
+            # dynamically updated later as well)
+            if text is None:
+                annotation._EOmaps_text = self._get_annotation_text
+            else:
+                annotation._EOmaps_text = text
 
             if permanent is False:
                 # make the annotation temporary
@@ -360,13 +404,23 @@ class _click_callbacks(object):
 
                 if permanent is True:
                     if not hasattr(self, "permanent_annotations"):
-                        self.permanent_annotations = [annotation]
-                    else:
-                        self.permanent_annotations.append(annotation)
+                        self.permanent_annotations = []
+
+                    self.permanent_annotations.append(annotation)
+
+                    # permanent annotations are also editable!
+                    self.m.edit_annotations._add(
+                        a=annotation,
+                        kwargs={"ID": ID, "xy": picked_pos, "text": text, **styledict},
+                        transf=None,
+                        drag_coords=ID is None,
+                    )
 
             annotation.set_visible(True)
             annotation.xy = picked_pos
             annotation.set_text(printstr)
+
+            return annotation
 
     def clear_annotations(self, **kwargs):
         """Remove all temporary and permanent annotations from the plot."""
