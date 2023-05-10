@@ -16,11 +16,13 @@ class DraggableAnnotationNew(DraggableBase):
         self._init_ec = self.annotation.get_bbox_patch().get_edgecolor()
         self._ax_bbox = self.annotation.axes.bbox
 
+    @property
+    def _text_func(self):
         t = self.annotation._EOmaps_text
         if callable(t):
-            self._text_func = t
+            return t
         else:
-            self._text_func = None
+            return None
 
     def _get_what(self, key):
         if key == "control":
@@ -35,7 +37,6 @@ class DraggableAnnotationNew(DraggableBase):
         return what
 
     def on_pick(self, evt):
-        print(evt.artist)
         # global variable to store the currently picked annotation
         # (to avoid picking multiple annotations at once)
         global picked_ann
@@ -95,6 +96,9 @@ class DraggableAnnotationNew(DraggableBase):
 
             # dynamically update the text if a function is used to set the text
             if self._text_func:
+                # TODO allow additional args (ID, val, ind) used in pick-annotations?
+                # (currently only click-annotations can be dragged so this should
+                # not be an issue..)
                 txt = self._text_func(pos=ann.xy)
                 ann.set_text(txt)
 
@@ -211,18 +215,94 @@ class AnnotationEditor:
         if drag:
             drag.disconnect()
 
-    def print_code(self, m="m", what="all", sanitize_coordinates=True):
-        """
-        Print the code to reproduce the annotations to the console.
+    @property
+    def annotations(self):
+        d = [ann.a for ann in self._annotations]
 
-        NOTE: While this works nicely in most standard cases, it can not be guaranteed
-        that extensively customized annotations are properly translated to code!
+        return d
+
+    def _get_what(self, what):
+        if what == "all":
+            use_anns = self._annotations
+        elif isinstance(what, int):
+            use_anns = [self._annotations[what]]
+        elif isinstance(what, (list, tuple)):
+            use_anns = [self._annotations[i] for i in what]
+
+        return use_anns
+
+    def update_text(self, text, what="all"):
+        """
+        Update the text of one (or more) annotations.
+
+        You can either provide a static string, or a function that is used to
+        dynamically update the annotation-text
+
 
         Parameters
         ----------
-        m : str, optional
+        text : str or callable
+            if str: the string to print
+            if callable: A function that returns the string that should be
+            printed in the annotation with the following call-signature:
+
+            >>> def text(m, ID, val, pos, ind):
+            >>>     # m   ... the Maps object
+            >>>     # ID  ... the ID
+            >>>     # pos ... the position
+            >>>     # val ... the value
+            >>>     # ind ... the index of the clicked pixel
+            >>>
+            >>>     return "the string to print"
+
+        what : TYPE, optional
+            DESCRIPTION. The default is "all".
+
+        """
+        use_anns = self._get_what(what)
+
+        for ann in use_anns:
+            ann.kwargs["text"] = text
+            ann.a._EOmaps_text = text
+
+            if callable(text):
+                txt = text(
+                    pos=ann.a.xy,
+                    ID=ann.kwargs.get("ID", None),
+                    val=ann.kwargs.get("val", None),
+                    ind=ann.kwargs.get("ind", None),
+                )
+                ann.a.set_text(txt)
+            else:
+                ann.a.set_text(str(text))
+
+        self.m.BM.update()
+
+    def print_code(
+        self, m_name="m", what="all", sanitize_coordinates=True, replace=None
+    ):
+        """
+        Print the code to reproduce the annotations to the console.
+
+
+        Note
+        ----
+        While this works nicely in most standard cases, it can not be guaranteed
+        that extensively customized annotations are properly translated to code!
+
+        Text-functions that are used to dynamically update the annotation-text will
+        be replaced by the currently visible text! To maintain interactivity, you can
+        replace individual arguments via the `replace` dict.
+
+        If coordinates are provided in a custom crs, they will be reprojected to
+        epsg=4326 to avoid issues with incorrect string-representations of the crs and
+        to make the annotation independent of the current map-crs (in case xy_crs=None).
+
+        Parameters
+        ----------
+        m_name : str, optional
             The variable-name of the Maps-object used in the code.
-            (code will be generated as `< object name >.add_annotation(...)`)
+            (code will be generated as `< m_name >.add_annotation(...)`)
             The default is "m".
         what : str, int or list of int, optional
             Indicator which annotation codes should be printed.
@@ -239,26 +319,33 @@ class AnnotationEditor:
 
             If False, coordinates will be returned as-is (which might lead to incorrect
             results in some cases). The default is True
+        replace : dict or None, optional
+            A dictionary of values used to replace the arguments of the annotation-call.
+            This is particularly useful if you want to keep annotations interactive,
+            for example if you use a function to set the text, you can use the following
+            to maintain the function in the printed text:
+
+            >>> my_textfunc = lambda ID, **kwargs: str(ID)
+            >>> m.edit_annotations.print_code(replace={"text": my_textfunc})
 
         """
+
+        if replace is None:
+            replace = dict()
+
         prefix = "\n"
 
-        if what == "all":
-            use_anns = self._annotations
-        elif isinstance(what, int):
-            use_anns = (self._annotations[what],)
-        elif isinstance(what, (list, tuple)):
-            use_anns = (self._annotations[i] for i in what)
+        use_anns = self._get_what(what)
 
         anns = []
         for i, ann in enumerate(use_anns):
             a = ann.a
             kwargs = {**ann.kwargs}
 
-            s = f"{m}.add_annotation("
+            s = f"{m_name}.add_annotation("
 
             txt = kwargs["text"]
-            if txt is not None and callable(a._EOmaps_text):
+            if txt is not None and callable(a._EOmaps_text) and "text" not in replace:
                 # if a function was provided as txt
                 s = "# NOTE: Text function has been replaced by output!\n" + s
 
@@ -278,7 +365,8 @@ class AnnotationEditor:
                 else:
                     xy = self.m._transf_plot_to_lonlat.transform(*a.xy)
 
-                s = "# NOTE: Anchor coordinates reprojected to epsg=4326!\n" + s
+                if not all(i in replace for i in ("xy", "xy_crs")):
+                    s = "# NOTE: Anchor coordinates reprojected to epsg=4326!\n" + s
             else:
                 xy_crs = kwargs["xy_crs"]
                 if xy_crs is not None and not isinstance(xy_crs, (int)):
@@ -306,6 +394,10 @@ class AnnotationEditor:
                     kwargs.pop("xy_crs")
 
             for key, val in kwargs.items():
+                if key in replace:
+                    s += f"{key}={replace[key]}, "
+                    continue
+
                 if isinstance(val, str):
                     val = val.encode("unicode-escape").decode()
                     s += rf"{key}='{val}', "
