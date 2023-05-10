@@ -894,9 +894,7 @@ class ColorBar:
 
         # ensure that ticklabels are correct if a classification is used
         if self._classified and "ticks" not in self._kwargs:
-            self.cb.set_ticks(
-                [i for i in self._bins if i >= self._vmin and i <= self._vmax]
-            )
+            self.cb.set_ticks(np.unique(self._bins.clip(self._vmin, self._vmax)))
 
             if self._tick_formatter is None:
                 self._tick_formatter = self._classified_cb_tick_formatter
