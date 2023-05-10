@@ -1958,21 +1958,19 @@ class Maps(object):
                 **kwargs,
             )
 
-            if not hasattr(self, "_draggable_annotations"):
-                self._draggable_annotations = list()
-
-            self.edit_annotations._add(
-                a=ann,
-                kwargs={
-                    "ID": inp_ID,
-                    "xy": (x, y),
-                    "xy_crs": xy_crs,
-                    "text": text,
-                    **kwargs,
-                },
-                transf=transformer,
-                drag_coords=is_ID_annotation,
-            )
+            if kwargs.get("permanent", False) is not False:
+                self.edit_annotations._add(
+                    a=ann,
+                    kwargs={
+                        "ID": inp_ID,
+                        "xy": (x, y),
+                        "xy_crs": xy_crs,
+                        "text": text,
+                        **kwargs,
+                    },
+                    transf=transformer,
+                    drag_coords=is_ID_annotation,
+                )
 
         self.BM.update(clear=False)
 
