@@ -304,8 +304,8 @@ Connect the anchor-points via:
 
 
 
-🚲 Gridlines and Grid Labels
-----------------------------
+🌐 Gridlines and Grid Labels
+-----------------------------
 
 Draw custom grids and add grid labels.
 
