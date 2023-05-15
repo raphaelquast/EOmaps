@@ -301,3 +301,22 @@ Connect the anchor-points via:
 
 .. image:: _static/example_lines.png
   :width: 75%
+
+
+
+🚲 Gridlines and Grid Labels
+----------------------------
+
+Draw custom grids and add grid labels.
+
+(requires EOmaps >= v6.5)
+
+|toggleStart|
+
+.. literalinclude:: ../tests/example_gridlines.py
+
+|toggleEnd|
+
+
+.. image:: _static/example_gridlines.png
+  :width: 75%
