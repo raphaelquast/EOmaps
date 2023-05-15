@@ -5025,6 +5025,9 @@ class _InsetMaps(Maps):
             )
             bnd_verts = np.stack(shp_pts[:2], axis=2)[0]
 
+            # make sure vertices are right-handed
+            bnd_verts = bnd_verts[::-1]
+
         elif shape == "rectangles":
             shp_pts = shp._get_rectangle_verts(
                 x=np.atleast_1d(x),
@@ -5046,6 +5049,9 @@ class _InsetMaps(Maps):
                 n=n,
             )
             bnd_verts = np.stack(shp_pts[:2], axis=2).squeeze()
+            # make sure vertices are right-handed
+            bnd_verts = bnd_verts[::-1]
+
         boundary = mpl.path.Path(bnd_verts)
 
         return boundary, bnd_verts
