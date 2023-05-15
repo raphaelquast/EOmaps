@@ -546,14 +546,19 @@ class TestBasicPlotting(unittest.TestCase):
         m = Maps(ax=gs[0, 0])
         m.set_data_specs(data=self.data, x="x", y="y", crs=3857)
         m.plot_map()
-        cb1 = m.add_colorbar(
-            gs[1, 0],
-            orientation="horizontal",
-        )
+        cb1 = m.add_colorbar(gs[1, 0], orientation="horizontal")
+        cb1.set_labels("colorbar", "histogram", fontsize=10, color="r")
+
+        self.assertTrue(cb1.ax_cb.get_xlabel() == "colorbar")
+        self.assertTrue(cb1.ax_cb_plot.get_ylabel() == "histogram")
         self.assertTrue(len(m._colorbars) == 1)
         self.assertTrue(m.colorbar is cb1)
 
         cb2 = m.add_colorbar(gs[0, 1], orientation="vertical")
+        cb2.set_labels("colorbar", "histogram", fontsize=10, color="r")
+
+        self.assertTrue(cb2.ax_cb.get_ylabel() == "colorbar")
+        self.assertTrue(cb2.ax_cb_plot.get_xlabel() == "histogram")
         self.assertTrue(len(m._colorbars) == 2)
         self.assertTrue(m.colorbar is cb2)
 
@@ -633,6 +638,24 @@ class TestBasicPlotting(unittest.TestCase):
 
         cb6.set_bin_labels(bins, labels, show_values=True)
         cb6.tick_params(which="minor", rotation=90)
+
+        # test setting custom bins (same but for "vertical" colorbars)
+        bins = [-5e6, 5e6, 1e7]
+        labels = ["A", "b", "c", "d"]
+        m3 = m.new_layer("asdf_vert")
+        m3.set_data_specs(data=self.data, x="x", y="y", crs=3857)
+        m3.set_classify.UserDefined(bins=bins)
+        m3.plot_map()
+        cb6 = m3.add_colorbar(orientation="vertical")
+        cb6.set_bin_labels(bins, labels)
+        m.show_layer(m3.layer)
+        m.redraw()
+
+        self.assertTrue(labels == [i.get_text() for i in cb6.ax_cb.get_yticklabels()])
+
+        cb6.set_bin_labels(bins, labels, show_values=True)
+        cb6.tick_params(which="minor", rotation=90)
+
         plt.close("all")
 
     def test_MapsGrid(self):

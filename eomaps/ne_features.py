@@ -205,6 +205,12 @@ class _NaturalEarth_presets:
                 f"PRESET using {kwargs} \n", self.feature.__doc__, add_params
             )
 
+        def _handle_synonyms(self, kwargs):
+            # make sure to replace shortcuts with long names
+            # (since "facecolor=..." will override "fc=..." if both are specified)
+            subst = dict(fc="facecolor", ec="edgecolor", lw="linewidth", ls="linestyle")
+            return {subst.get(key, key): val for key, val in kwargs.items()}
+
         def __call__(self, scale=50, **kwargs):
             k = dict(**self.kwargs)
             k.update(kwargs)
@@ -215,7 +221,7 @@ class _NaturalEarth_presets:
                 )
 
             self.__doc__ = self.feature.__doc__
-            return self.feature(scale=scale, **k)
+            return self.feature(scale=scale, **self._handle_synonyms(k))
 
 
 _NE_features_path = Path(__file__).parent / "NE_features.json"

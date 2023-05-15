@@ -252,7 +252,7 @@ class searchtree:
                     print(
                         "EOmaps: Unable to estimate search-radius based on data."
                         "Defaulting to `np.inf`. "
-                        "See `m.tree.set_search_radius` for more details!"
+                        "See `m.cb.pick.set_props(search_radius=...)` for more details!"
                     )
                     radius = [np.inf]
             else:
@@ -1947,6 +1947,8 @@ class BlitManager:
         for f in self._on_add_bg_artist:
             f()
 
+        self.canvas.draw_idle()
+
     def remove_bg_artist(self, art, layer=None):
         # handle the "__inset_" prefix of inset-map artists
         if (
@@ -1991,6 +1993,8 @@ class BlitManager:
 
             # tag all relevant layers for refetch
             self._refetch_layer(layer)
+
+        self.canvas.draw_idle()
 
     def remove_artist(self, art, layer=None):
         # this only removes the artist from the blit-manager,

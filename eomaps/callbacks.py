@@ -132,10 +132,8 @@ class _click_callbacks(object):
 
             printstr = (
                 "---------------\n"
-                f"x = {self._fmt(pos[0], **kwargs)}\n"
-                f"y = {self._fmt(pos[1], **kwargs)}\n"
-                f"lon = {self._fmt(lon, **kwargs)}\n"
-                f"lat = {self._fmt(lat, **kwargs)}"
+                f"xy = ({self._fmt(pos[0], **kwargs)}, {self._fmt(pos[1], **kwargs)})\n"
+                f"lonlat = ({self._fmt(lon, **kwargs)}, {self._fmt(lat, **kwargs)})\n"
             )
 
         print(printstr)
