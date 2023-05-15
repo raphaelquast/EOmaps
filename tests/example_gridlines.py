@@ -22,7 +22,7 @@ g.add_labels(where="W", fontsize=12, fontweight="bold")
 
 
 # ----------------- first inset-map
-mi = m.new_inset_map(xy=(45, 45), radius=10, inset_crs=Maps.CRS.Mollweide())
+mi = m.new_inset_map(xy=(45, 45), radius=10, inset_crs=m.crs_plot)
 mi.add_feature.preset.ocean()
 mi.add_feature.preset.land()
 
@@ -35,25 +35,29 @@ g.add_labels(where="EW", offset=7, fontsize=6, c="g")
 g = mi.add_gridlines(([40, 45, 50], None), c="b", lw=2)
 g.add_labels(where="NS", offset=7, fontsize=6, c="b")
 
+mi.indicate_inset_extent(m, fc="darkred", ec="none", alpha=0.5)
 
 # ----------------- second inset-map
 mi = m.new_inset_map(
-    xy=(-10, 10), radius=10, inset_crs=4326, shape="rectangles", boundary=dict(ec="k")
+    inset_crs=m.crs_plot,
+    xy=(-10, 10),
+    radius=20,
+    shape="rectangles",
+    boundary=dict(ec="k"),
 )
 mi.add_feature.preset.ocean()
 mi.add_feature.preset.land()
 
-# draw a regular 1 degree grid
-g = mi.add_gridlines(1, lw=0.25)
-# add some specific latitude gridlines and add labels
-g = mi.add_gridlines((None, [5, 10, 15]), c="g", lw=2)
-g.add_labels(where="E", offset=12, fontsize=6, c="g")
-g.add_labels(where="W", offset=10, fontsize=6, c="g")
-# add some specific longitude gridlines and add labels
-g = mi.add_gridlines(([-15, -10, -5], None), c="b", lw=2)
-g.add_labels(where="N", offset=7, fontsize=6, c="b")
-g.add_labels(where="S", offset=10, fontsize=6, c="b")
+mi.indicate_inset_extent(m, fc=".5", ec="none", alpha=0.5)
 
+# draw a regular 1 degree grid
+g = mi.add_gridlines(5, lw=0.25)
+# add some specific latitude gridlines and add labels
+g = mi.add_gridlines((None, [0, 10, 25]), c="g", lw=2)
+g.add_labels(where="W", fontsize=10, c="g")
+# add some specific longitude gridlines and add labels
+g = mi.add_gridlines(([-25, -10, 0], None), c="b", lw=2)
+g.add_labels(where="N", fontsize=10, c="b")
 
 m.apply_layout(
     {
