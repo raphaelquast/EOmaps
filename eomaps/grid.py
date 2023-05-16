@@ -348,6 +348,9 @@ class GridLabels:
         precision=2,
         every=None,
         exclude=None,
+        labels=None,
+        rotation=0,
+        rotation_type="relative",
         **kwargs,
     ):
         self._g = g
@@ -361,9 +364,13 @@ class GridLabels:
         self._g.m.BM._before_fetch_bg_actions.append(self._redraw)
 
         self._where = where
-        self._offset = offset
 
+        self._labels = labels
+        self._rotation_type = rotation_type
         self._precision = precision
+
+        self._set_offset(offset)
+        self._set_rotation(rotation)
 
         self._kwargs = kwargs
         self._every = every
@@ -376,6 +383,24 @@ class GridLabels:
                 exclude, (list, tuple)
             ), "EOmaps: exclude must be a list or tuple of tick-values!"
             self._exclude = exclude
+
+    def _set_offset(self, offset):
+        # float                 : offset in text-rotation direction (r)
+        # (float, float)        : offsets in x-y direction (x, y)
+        # (float, float, float) : both (r, x, y)
+
+        if isinstance(offset, (int, float, np.number)):
+            self._offset = (0, 0)
+            self._relative_offset = offset
+        elif len(offset) == 2:
+            self._offset = offset
+            self._relative_offset = 0
+        elif len(offset) == 3:
+            self._offset = (offset[1], offset[2])
+            self._relative_offset = offset[0]
+
+    def _set_rotation(self, rotation):
+        self._rotation = np.deg2rad(rotation)
 
     def ccw(self, A, B, C):
         # determine if 3 points are listed in a counter-clockwise order
@@ -573,9 +598,23 @@ class GridLabels:
                     (ba[0] - bb[0]),
                 )
 
+                r = (
+                    (r + self._rotation)
+                    if self._rotation_type == "relative"
+                    else self._rotation
+                )
+
                 # add offset to label positions
-                x = x - self._offset * np.sin(r) * m.f.dpi / self._default_dpi
-                y = y + self._offset * np.cos(r) * m.f.dpi / self._default_dpi
+                x = (
+                    x
+                    - self._relative_offset * np.sin(r) * m.f.dpi / self._default_dpi
+                    + self._offset[0]
+                )
+                y = (
+                    y
+                    + self._relative_offset * np.cos(r) * m.f.dpi / self._default_dpi
+                    + self._offset[1]
+                )
 
                 # round to avoid "jumpy" labels
                 x, y = np.round((x, y))
@@ -606,7 +645,16 @@ class GridLabels:
 
         return intersection_points
 
-    def _add_axis_labels(self, lines, axis, precision=2, txt_kwargs=None):
+    def _add_axis_labels(
+        self,
+        lines,
+        axis,
+        precision=2,
+        rotation=0,
+        rotation_type="relative",
+        txt_kwargs=None,
+        labels=None,
+    ):
         m = self._g.m
 
         if txt_kwargs is None:
@@ -620,8 +668,7 @@ class GridLabels:
         if len(intersection_points) > 0:
             # make sure only unique pairs of coordinates are used
             # pts = np.unique(np.rec.fromarrays(pts)).view((pts.dtype, 2)).T
-
-            for label, pts in intersection_points.items():
+            for i, (label, pts) in enumerate(intersection_points.items()):
                 # TODO currently we take only the first 2 points
                 # to avoid issues with 180° lines etc.
                 for (x, y, r) in pts[:2]:
@@ -635,10 +682,12 @@ class GridLabels:
                     t = m.ax.text(
                         x,
                         y,
-                        label,
+                        label if labels is None else labels[i],
                         transform=None,  # None is the same as using IdentityTransform()
                         animated=True,
-                        rotation=r,
+                        rotation=r + rotation
+                        if rotation_type == "relative"
+                        else rotation,
                         ha="center",
                         va="center",
                         **txt_kwargs,
@@ -666,6 +715,9 @@ class GridLabels:
                 axis=axis,
                 txt_kwargs=self._kwargs,
                 precision=self._precision,
+                labels=self._labels,
+                rotation=self._rotation,
+                rotation_type=self._rotation_type,
             )
 
 
