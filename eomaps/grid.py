@@ -347,19 +347,21 @@ class GridLines:
 
         Parameters
         ----------
-        where : str, optional
+        where : str or int, optional
             Specify where labels should be added to the gridlines.
 
-            The position of labels is determined by the intersection-points of the
-            gridlines with the axis-boundary.
+            In general, the position of labels is determined by the intersection-points
+            of the gridlines with the axis-boundary.
 
-            By default, latitude-lines are labeled on the "left" and "right"
-            sides and longitude-lines are labeled on the "top" and "bottom"
-            sides of the plot.
+            To select specific labels, use one of the following options:
 
-            - Use combinations of the letters "tblr" (top, bottom, left, right)
-              to draw labels only at the selected directions. (e.g. "tb" for top+bottom)
-            - Use "all" to add labels on ALL intersection-points of the gridline.
+            - Use a combination of the letters `"tblr"` (top, bottom, left, right) to
+              draw labels only at the selected sides of the plot.
+              (NOTE: With this option, latitude-lines are labeled only on "l" and "r",
+              and longitude-lines are labeled only on "t" and "b"!)
+            - Use `"all"` to add all labels without any restrictions
+            - Use an integer to add labels only to the nth found intersection point
+              (e.g. 0 for the first intersection-point, 1 for the second etc.)
 
             The default is "tblr".
         offset : number or tuple of numbers, optional
@@ -449,9 +451,14 @@ class GridLabels:
         self._last_dpi = None  # to avoid wrong label positions on dpi changes
         self._default_dpi = 100
 
-        self._g.m.BM._before_fetch_bg_actions.append(self._redraw)
-
-        self._where = where
+        if isinstance(where, int):
+            self._where = "all"
+            # draw only the nth found point
+            self._n_pts = slice(where, where + 1)
+        else:
+            self._where = where
+            # label max. 2 points (to avoid issues with corner points etc.)
+            self._n_pts = slice(0, 2, 1)
 
         self._labels = labels
         self._rotation_relative = rotation_relative
@@ -471,6 +478,8 @@ class GridLabels:
                 exclude, (list, tuple)
             ), "EOmaps: exclude must be a list or tuple of tick-values!"
             self._exclude = exclude
+
+        self._g.m.BM._before_fetch_bg_actions.append(self._redraw)
 
     def _set_offset(self, offset):
         # float                 : offset in text-rotation direction (r)
@@ -726,7 +735,7 @@ class GridLabels:
             for i, (label, pts) in enumerate(intersection_points.items()):
                 # TODO currently we take only the first 2 points
                 # to avoid issues with 180° lines etc.
-                for (x, y, r) in pts[:2]:
+                for (x, y, r) in pts[self._n_pts]:
                     if self._rotation_relative:
                         r = np.rad2deg(r)
                         # make sure that labels on straight axes are oriented the same
@@ -739,10 +748,18 @@ class GridLabels:
                     else:
                         r = self._rotation
 
+                    if self._labels is None:
+                        uselabel = label
+                    else:
+                        # use the provided labels (keep existing if None)
+                        uselabel = self._labels[i]
+                        if uselabel is None:
+                            uselabel = label
+
                     t = m.ax.text(
                         x,
                         y,
-                        label if self._labels is None else self._labels[i],
+                        uselabel,
                         transform=None,  # None is the same as using IdentityTransform()
                         animated=True,
                         rotation=r,
