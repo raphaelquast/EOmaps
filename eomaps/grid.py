@@ -6,9 +6,7 @@ from .helpers import pairwise
 
 
 class GridLines:
-    def __init__(
-        self, m, d=None, auto_n=10, layer=None, bounds=(-180, 180, -90, 90), n=100
-    ):
+    def __init__(self, m, d=None, auto_n=10, layer=None, bounds=None, n=100):
         self.m = m._proxy(m)
 
         self._d = d
@@ -43,6 +41,8 @@ class GridLines:
 
     @property
     def bounds(self):
+        if self._bounds is None:
+            return (-180, 180, -90, 90)
         return self._bounds
 
     def set_bounds(self, bounds):
@@ -56,8 +56,6 @@ class GridLines:
             If None, global boundaries are used (e.g. (-180, 180, -90, 90))
 
         """
-        if bounds is None:
-            bounds = (-180, 180, -90, 90)
         self._bounds = bounds
         self._redraw()
 
@@ -463,23 +461,38 @@ class GridLabels:
         self._labels = labels
         self._rotation_relative = rotation_relative
         self._precision = precision
+        self._every = every
+        self._kwargs = kwargs
 
         self._set_offset(offset)
         self._set_rotation(rotation)
+        self._set_exclude(exclude)
 
-        self._kwargs = kwargs
-        self._every = every
-
-        # a list of tick values to exclude
-        if exclude is None:
-            self._exclude = []
-        else:
-            assert isinstance(
-                exclude, (list, tuple)
-            ), "EOmaps: exclude must be a list or tuple of tick-values!"
-            self._exclude = exclude
+        # in case a custom boundary is used for gridlines,
+        # draw the labels only inside the axes
+        if self._g._bounds is not None:
+            self._kwargs.setdefault("clip_on", True)
+            self._kwargs.setdefault("clip_box", self._g.m.ax.bbox)
 
         self._g.m.BM._before_fetch_bg_actions.append(self._redraw)
+
+    def _set_exclude(self, exclude):
+        # a list of tick values to exclude
+        if exclude is None:
+            # if grid-labels are added to a grid that uses a custom boundary,
+            # exclude corner-values by default to avoid overlaps
+            bnds = self._g._bounds
+            if bnds is not None:
+                self._exclude = (bnds[:2], bnds[2:])
+            else:
+                self._exclude = ([], [])
+
+        elif isinstance(exclude, (list, np.ndarray)):
+            self._exclude = (exclude, exclude)
+        elif isinstance(exclude, tuple):
+            self._exclude = exclude
+        else:
+            raise TypeError(f"EOmaps: {exclude} is not a valid value for exclude.")
 
     def _set_offset(self, offset):
         # float                 : offset in text-rotation direction (r)
@@ -569,12 +582,31 @@ class GridLabels:
             )
             pass
 
+    def _get_bound_verts(self, n=300):
+        # get vertices of the grid-boundaries with n intermediate points
+        m = self._g.m
+        if self._g._bounds is not None:
+            x0, x1, y0, y1 = self._g.bounds
+
+            xs, ys = np.linspace([x0, y0], [x1, y1], n).T
+            x0, y0, x1, y1, xs, ys = np.broadcast_arrays(x0, y0, x1, y1, xs, ys)
+            verts = np.column_stack(
+                ((x0, ys), (xs, y1), (x1, ys[::-1]), (xs[::-1], y0))
+            ).T
+
+            verts = m._transf_lonlat_to_plot.transform(*verts.T)
+            verts = m.ax.transData.transform(np.column_stack(verts))
+        else:
+            verts = m.ax.spines["geo"].get_verts()
+
+        return verts
+
     def _get_spine_intersections(self, lines, axis=None):
 
         m = self._g.m
 
         # get boundary vertices of current axis spine (in figure coordinates)
-        bl = m.ax.spines["geo"].get_verts()
+        bl = self._get_bound_verts()
 
         # get gridlines
         uselines = np.array(lines[axis])
@@ -609,7 +641,7 @@ class GridLabels:
             if axis == 1 and label == -90:
                 label = 90.0
 
-            if label in self._exclude:
+            if label in self._exclude[axis]:
                 continue
 
             label = np.format_float_positional(
@@ -641,7 +673,7 @@ class GridLabels:
 
                 # TODO find a better way to identify position of label
                 # select which lines to draw (e.g. tblr)
-                if self._where != "all" and self._g.d != "manual":
+                if self._where != "all":
                     if axis == 0:
                         if xt > 0.99 or xt < 0.01:
                             continue
@@ -878,9 +910,6 @@ class GridFactory:
         kwargs.setdefault("ec", ec)
         kwargs.setdefault("lw", lw)
         kwargs.setdefault("zorder", 100)
-
-        if bounds is None:
-            bounds = (-180, 180, -90, 90)
 
         g = GridLines(m=m, d=d, auto_n=auto_n, n=n, bounds=bounds, layer=layer)
         g._add_grid(**kwargs)
