@@ -382,9 +382,15 @@ class GridLines:
               (use stop=-1 if you want to draw all labels)
 
             The default is None.
-        exclude : list or None, optional
-            A list of grid values to exclude as labels.
-            (e.g. [10, -45])
+        exclude : list, tuple or None, optional
+            A list of grid values to exclude as lon/lat labels. (e.g. `[10, -45]`)
+
+            To exclude lon/lat values separately, provide a tuple of lists.
+            (e.g. `([-120, 60], [-40, 40])`)
+
+            NOTE: If the grid-lines are defined within a custom boundary,
+            the corner-points of the boundary are excluded by default!
+
             The default is None.
         labels : list or None, optional
             A list of strings to use as custom labels.
