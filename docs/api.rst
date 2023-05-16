@@ -2778,12 +2778,16 @@ which provides a lot of options to style the labels (e.g. `color`, `fontsize`, `
     |     m.add_feature.preset.coastline()                                     |                                                |
     |     m.add_feature.preset.ocean()                                         |                                                |
     |                                                                          |                                                |
+    |     # draw a regular grid with 10 degree grid-spacing                    |                                                |
+    |     # and add labels to all lines except some selected lines             |                                                |
     |     g = m.add_gridlines(10, lw=0.25, alpha=0.5)                          |                                                |
     |     g.add_labels(fontsize=6, exclude=([-40, -30], [-30]))                |                                                |
     |                                                                          |                                                |
+    |     # draw some specific gridlines and add bold green labels             |                                                |
     |     g = m.add_gridlines(([-40, -30], [-30]), c="g", lw=1.5)              |                                                |
     |     gl0 = g.add_labels(where="tlr", c="g", offset=15, fontweight="bold") |                                                |
     |                                                                          |                                                |
+    |     # draw a bounded grid and add labels                                 |                                                |
     |     g = m.add_gridlines(10, bounds=[-50, -20, -40, -20], c="b", lw=2)    |                                                |
     |     g = m.add_gridlines(5,  bounds=[-50, -20, -40, -20], c="b")          |                                                |
     |     gl = g.add_labels(where=0, fontsize=8, every=(1, -1, 2), c="b")      |                                                |
@@ -2791,7 +2795,6 @@ which provides a lot of options to style the labels (e.g. `color`, `fontsize`, `
 
 
 .. _utility:
-
 
 🦜 Utility widgets
 ------------------
