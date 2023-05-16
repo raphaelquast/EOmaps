@@ -692,7 +692,7 @@ class GridLabels:
                         va="center",
                         **txt_kwargs,
                     )
-                    m.BM.add_bg_artist(t)
+                    m.BM.add_bg_artist(t, layer=self._g.layer)
                     self._texts.append(t)
 
     def add_labels(self):
