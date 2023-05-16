@@ -2,6 +2,7 @@ from matplotlib.collections import LineCollection
 import numpy as np
 from itertools import chain
 from functools import lru_cache
+from .helpers import pairwise
 
 
 class GridLines:
@@ -329,8 +330,95 @@ class GridLines:
         if self in self.m._grid._gridlines:
             self.m._grid._gridlines.remove(self)
 
-    def add_labels(self, **kwargs):
-        gl = GridLabels(self, **kwargs)
+    def add_labels(
+        self,
+        where="tblr",
+        offset=10,
+        precision=2,
+        every=None,
+        exclude=None,
+        labels=None,
+        rotation=0,
+        rotation_relative=True,
+        **kwargs,
+    ):
+        """
+        Add labels to the gridlines.
+
+        Parameters
+        ----------
+        where : str, optional
+            Specify where labels should be added to the gridlines.
+
+            The position of labels is determined by the intersection-points of the
+            gridlines with the axis-boundary.
+
+            By default, latitude-lines are labeled on the "left" and "right"
+            sides and longitude-lines are labeled on the "top" and "bottom"
+            sides of the plot.
+
+            - Use combinations of the letters "tblr" (top, bottom, left, right)
+              to draw labels only at the selected directions. (e.g. "tb" for top+bottom)
+            - Use "all" to add labels on ALL intersection-points of the gridline.
+
+            The default is "tblr".
+        offset : number or tuple of numbers, optional
+            The offset of the labels relative to the intersection point of the
+            gridline with the axes-boundary.
+
+            - number (d): the offset in the direction of of the rotation of the label.
+            - 2-tuple (x, y): the offset in x- and y- direction.
+            - 3-tuple (d, x, y): all of the above
+
+            The default is 10.
+        precision : int, optional
+            The floating point precision of the labels.
+            The default is 2.
+        every : int, slice, tuple or None, optional
+            Specify if all labels (None) or only every nth label should be drawn.
+
+            - if int: draw every nth label
+            - if 3-tuple: draw every nth label according to `(start, stop, step)`
+              (use stop=-1 if you want to draw all labels)
+
+            The default is None.
+        exclude : list or None, optional
+            A list of grid values to exclude as labels.
+            (e.g. [10, -45])
+            The default is None.
+        labels : list or None, optional
+            A list of strings to use as custom labels.
+            If None, the grid-values are used.
+            The default is None.
+        rotation : float, optional
+            The rotation of the label. The default is 0.
+        rotation_relative : bool, optional
+            Indicator if the rotation is performed relative to the current
+            label-rotation (True) or the rotation is set to the provided value (False).
+            The default is True.
+        kwargs :
+            Additional kwargs passed to matplotlib's `plt.text(...)` for additional
+            styling of the labels.
+            (e.g. fontsize, fontweight, color, ...)
+
+        Returns
+        -------
+        gl : GridLabels
+            The class that handles the drawing of the grid-labels.
+
+        """
+        gl = GridLabels(
+            self,
+            where=where,
+            offset=offset,
+            precision=precision,
+            every=every,
+            exclude=exclude,
+            labels=labels,
+            rotation=rotation,
+            rotation_relative=rotation_relative,
+            **kwargs,
+        )
         gl.add_labels()
 
         # remember attached labels
@@ -343,14 +431,14 @@ class GridLabels:
     def __init__(
         self,
         g,
-        where="NSEW",
+        where="tblr",
         offset=10,
         precision=2,
         every=None,
         exclude=None,
         labels=None,
         rotation=0,
-        rotation_type="relative",
+        rotation_relative=True,
         **kwargs,
     ):
         self._g = g
@@ -366,7 +454,7 @@ class GridLabels:
         self._where = where
 
         self._labels = labels
-        self._rotation_type = rotation_type
+        self._rotation_relative = rotation_relative
         self._precision = precision
 
         self._set_offset(offset)
@@ -402,30 +490,24 @@ class GridLabels:
     def _set_rotation(self, rotation):
         self._rotation = np.deg2rad(rotation)
 
-    def ccw(self, A, B, C):
-        # determine if 3 points are listed in a counter-clockwise order
-        return (C[:, 1] - A[:, 1]) * (B[:, 0] - A[:, 0]) > (B[:, 1] - A[:, 1]) * (
-            C[:, 0] - A[:, 0]
-        )
-
-    def ccw(self, A, B, C):
+    def _ccw(self, A, B, C):
         # determine if 3 points are listed in a counter-clockwise order
         return (C[..., 1] - A[..., 1]) * (B[..., 0] - A[..., 0]) > (
             B[..., 1] - A[..., 1]
         ) * (C[..., 0] - A[..., 0])
 
-    def intersect(self, A, B, C, D):
+    def _intersect(self, A, B, C, D):
         # determine if 2 line-segments intersect with each other
         # see https://stackoverflow.com/a/9997374/9703451
         # see https://bryceboe.com/2006/10/23/line-segment-intersection-algorithm/
 
         A, B, C, D = map(np.atleast_2d, (A, B, C, D))
         return np.logical_and(
-            self.ccw(A, C, D) != self.ccw(B, C, D),
-            self.ccw(A, B, C) != self.ccw(A, B, D),
+            self._ccw(A, C, D) != self._ccw(B, C, D),
+            self._ccw(A, B, C) != self._ccw(A, B, D),
         )
 
-    def get_intersect(self, a1, a2, b1, b2):
+    def _get_intersect(self, a1, a2, b1, b2):
         # get the intersection-point between 2 lines defined by points
         # taken from https://stackoverflow.com/a/42727584/9703451
 
@@ -437,24 +519,6 @@ class GridLabels:
         if z == 0:  # lines are parallel
             return (float("inf"), float("inf"))
         return (x / z, y / z)
-
-    def get_intersection_point(self, l, bl, axis=0):
-        # get the intersection-points between 2 lines
-        seg_id = self.get_segment_id(l, bl, axis)
-
-        if seg_id is None:
-            return
-
-        nsegs = len(bl)
-        if seg_id < (nsegs - 1):
-            seg0 = seg_id
-            seg1 = seg_id + 1
-        else:
-            seg0 = seg_id - 1
-            seg1 = seg_id
-
-        x, y = self.get_intersect(l[0], l[-1], bl[seg0], bl[seg1])
-        return x, y
 
     def _redraw(self, **kwargs):
         try:
@@ -496,8 +560,7 @@ class GridLabels:
             )
             pass
 
-    def get_spine_intersections(self, lines, axis=None):
-        from .helpers import pairwise
+    def _get_spine_intersections(self, lines, axis=None):
 
         m = self._g.m
 
@@ -506,31 +569,32 @@ class GridLabels:
 
         # get gridlines
         uselines = np.array(lines[axis])
+
         if len(uselines) == 0:
             return
 
         tick_label_values = [*uselines[:, 0, axis]]
 
         # get gridline vertices in plot-coordinates
-        uselines = m._transf_lonlat_to_plot.transform(
+        lines_plot = m._transf_lonlat_to_plot.transform(
             uselines[..., 0], uselines[..., 1]
         )
-        uselines = np.stack(uselines, axis=-1)
+        lines_plot = np.stack(lines_plot, axis=-1)
         # transform grid-lines to figure coordinates
-        all_lines = m.ax.transData.transform(uselines.reshape(-1, 2)).reshape(
+        lines_fig = m.ax.transData.transform(lines_plot.reshape(-1, 2)).reshape(
             uselines.shape
         )
 
         # elongate the gridlines to make sure they extent outside the spine
-        all_lines[:, 0, 0 if axis == 1 else 1] -= 0.01
-        all_lines[:, -1, 0 if axis == 1 else 1] += 0.01
+        lines_fig[:, 0, 0 if axis == 1 else 1] -= 0.01
+        lines_fig[:, -1, 0 if axis == 1 else 1] += 0.01
 
         tr = m.ax.transData.inverted()
         tr_ax = m.ax.transAxes.inverted()
 
         # TODO would be nice to vectorize over gridlines as well
         intersection_points = dict()
-        for l, label in zip(all_lines, tick_label_values):
+        for l, label in zip(lines_fig, tick_label_values):
             if axis == 0 and label == -180:
                 label = 180.0
             if axis == 1 and label == -90:
@@ -559,36 +623,38 @@ class GridLabels:
             b0 = np.stack((b0x, b0y), axis=2)
             b1 = np.stack((b1x, b1y), axis=2)
 
-            q = self.intersect(l0, l1, b0, b1)
+            q = self._intersect(l0, l1, b0, b1)
 
             for la, lb, ba, bb in zip(l0[q], l1[q], b0[q], b1[q]):
-                x, y = self.get_intersect(la, lb, ba, bb)
+                x, y = self._get_intersect(la, lb, ba, bb)
+
                 xt, yt = tr_ax.transform((x, y))
 
-                # select which lines to draw (e.g. NSEW)
+                # TODO find a better way to identify position of label
+                # select which lines to draw (e.g. tblr)
                 if self._where != "all" and self._g.d != "manual":
                     if axis == 0:
                         if xt > 0.99 or xt < 0.01:
                             continue
 
-                        if "N" in self._where:
-                            if "S" not in self._where:
+                        if "t" in self._where:
+                            if "b" not in self._where:
                                 # don't draw the second intersection point
                                 if yt <= 0.5:
                                     continue
-                        elif "S" in self._where:
+                        elif "b" in self._where:
                             if yt > 0.5:
                                 continue
                     else:
                         if yt > 0.99 or yt < 0.01:
                             continue
 
-                        if "E" in self._where:
-                            if "W" not in self._where:
+                        if "r" in self._where:
+                            if "l" not in self._where:
                                 # don't draw the second intersection point
                                 if xt <= 0.5:
                                     continue
-                        elif "W" in self._where:
+                        elif "l" in self._where:
                             if xt > 0.5:
                                 continue
 
@@ -598,11 +664,7 @@ class GridLabels:
                     (ba[0] - bb[0]),
                 )
 
-                r = (
-                    (r + self._rotation)
-                    if self._rotation_type == "relative"
-                    else self._rotation
-                )
+                r = (r + self._rotation) if self._rotation_relative else self._rotation
 
                 # add offset to label positions
                 x = (
@@ -623,7 +685,7 @@ class GridLabels:
 
         return intersection_points
 
-    def get_grid_line_intersections(self, lines, axis=0):
+    def _get_grid_line_intersections(self, lines, axis=0):
         # calculate intersection point of a grid witih a set of lines
 
         if self._every:
@@ -641,26 +703,19 @@ class GridLabels:
         else:
             uselines = lines
 
-        intersection_points = self.get_spine_intersections(uselines, axis=axis)
+        intersection_points = self._get_spine_intersections(uselines, axis=axis)
 
         return intersection_points
 
-    def _add_axis_labels(
-        self,
-        lines,
-        axis,
-        precision=2,
-        rotation=0,
-        rotation_type="relative",
-        txt_kwargs=None,
-        labels=None,
-    ):
+    def _add_axis_labels(self, lines, axis):
         m = self._g.m
 
-        if txt_kwargs is None:
+        if self._kwargs is None:
             txt_kwargs = dict()
+        else:
+            txt_kwargs = self._kwargs
 
-        intersection_points = self.get_grid_line_intersections(lines, axis)
+        intersection_points = self._get_grid_line_intersections(lines, axis)
 
         if intersection_points is None:
             return
@@ -672,22 +727,25 @@ class GridLabels:
                 # TODO currently we take only the first 2 points
                 # to avoid issues with 180° lines etc.
                 for (x, y, r) in pts[:2]:
-                    r = np.rad2deg(r)
-                    # make sure that labels on straight axes are oriented the same
-                    if r == 180:
-                        r = 0
-                    if r == 270:
-                        r = 90
+                    if self._rotation_relative:
+                        r = np.rad2deg(r)
+                        # make sure that labels on straight axes are oriented the same
+                        if r == 180:
+                            r = 0
+                        if r == 270:
+                            r = 90
+
+                        r = r + self._rotation
+                    else:
+                        r = self._rotation
 
                     t = m.ax.text(
                         x,
                         y,
-                        label if labels is None else labels[i],
+                        label if self._labels is None else self._labels[i],
                         transform=None,  # None is the same as using IdentityTransform()
                         animated=True,
-                        rotation=r + rotation
-                        if rotation_type == "relative"
-                        else rotation,
+                        rotation=r,
                         ha="center",
                         va="center",
                         **txt_kwargs,
@@ -704,21 +762,13 @@ class GridLabels:
             use_axes = (0, 1)
         else:
             use_axes = []
-            if "N" in self._where or "S" in self._where:
+            if "t" in self._where or "b" in self._where:
                 use_axes.append(0)
-            if "E" in self._where or "W" in self._where:
+            if "l" in self._where or "r" in self._where:
                 use_axes.append(1)
 
         for axis in use_axes:
-            self._add_axis_labels(
-                lines=lines,
-                axis=axis,
-                txt_kwargs=self._kwargs,
-                precision=self._precision,
-                labels=self._labels,
-                rotation=self._rotation,
-                rotation_type=self._rotation_type,
-            )
+            self._add_axis_labels(lines=lines, axis=axis)
 
 
 class GridFactory:

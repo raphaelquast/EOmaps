@@ -18,15 +18,15 @@ g = m.add_gridlines((None, 20), c="g", n=500)
 g.add_labels(offset=10, fontsize=8, c="g", exclude=[10])
 # explicitly highlight 10° lon/lat lines and add a label on one side of the map
 g = m.add_gridlines(([-10], [10]), c="k", n=500, lw=2)
-g.add_labels(where="W", fontsize=12, fontweight="bold")
+g.add_labels(where="l", fontsize=12, fontweight="bold")
 
 
 # add a custom label on a gridline
 g = m.add_gridlines((None, [0]), c="m", n=500, lw=2)
 g.add_labels(
-    where="W",
+    where="l",
     rotation=-90,
-    rotation_type="fixed",
+    rotation_relative=False,
     offset=(50, 10),
     c="m",
     fontsize=12,
@@ -44,10 +44,10 @@ mi.add_feature.preset.land()
 g = mi.add_gridlines((None, 1), c="g", lw=0.6)
 # add some specific latitude gridlines and add labels
 g = mi.add_gridlines((None, [40, 45, 50]), c="g", lw=2)
-g.add_labels(where="EW", offset=7, fontsize=6, c="g")
+g.add_labels(where="lr", offset=7, fontsize=6, c="g")
 # add some specific longitude gridlines and add labels
 g = mi.add_gridlines(([40, 45, 50], None), c="b", lw=2)
-g.add_labels(where="NS", offset=7, fontsize=6, c="b")
+g.add_labels(where="tb", offset=7, fontsize=6, c="b")
 
 mi.indicate_inset_extent(m, fc="darkred", ec="none", alpha=0.5)
 
@@ -69,10 +69,10 @@ mi.indicate_inset_extent(m, fc=".5", ec="none", alpha=0.5)
 g = mi.add_gridlines(5, lw=0.25)
 # add some specific latitude gridlines and add labels
 g = mi.add_gridlines((None, [0, 10, 25]), c="g", lw=2)
-g.add_labels(where="W", fontsize=10, c="g")
+g.add_labels(where="l", fontsize=10, c="g")
 # add some specific longitude gridlines and add labels
 g = mi.add_gridlines(([-25, -10, 0], None), c="b", lw=2)
-g.add_labels(where="N", fontsize=10, c="b")
+g.add_labels(where="t", fontsize=10, c="b")
 
 m.apply_layout(
     {
