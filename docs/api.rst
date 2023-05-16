@@ -2738,9 +2738,56 @@ useful methods:
     GridLines.set_bounds
     GridLines.update_line_props
     GridLines.remove
+    GridLines.add_labels
+
+Adding Labels to the Grid
+~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Labels can be added to the grid via the ``g.add_labels(...)`` directive.
+
+In general, labels are added at points where the lines of the grid intersects with the axis-boundary.
+Note that this provides a lot of flexibility since a map can have as many grids as you like and each grid can have its own labels!
+
+To control where grid labels are added, use the ``where`` parameter:
+
+- an arbitrary combination of the letters ``"tblr"`` can be used to draw labels at the top, bottom, left or right boundaries.
+
+  - if this option is used, longitude-lines are only labeled top/bottom and latitude-lines are only labeled left/right
+
+- use ``"all"`` to label all intersection points
+- use an integer to draw labels only at the nth found intersection-points
+
+In addition, the ``exclude`` parameter can be used to exclude specific labels and the ``every`` parameter can
+be used to add a label to every nth grid line.
+
+Any additional kwargs are passed to `matplotlib.pyplot.text <https://matplotlib.org/stable/api/_as_gen/matplotlib.pyplot.text.html>`_
+which provides a lot of options to style the labels (e.g. `color`, `fontsize`, `fontweight`, ...).
 
 
+.. table::
+    :widths: 50 50
+    :align: center
 
+    +--------------------------------------------------------------------------+------------------------------------------------+
+    | .. code-block:: python                                                   | .. image:: _static/minigifs/grid_labels_01.png |
+    |     :name: test_grid_labels_01                                           |     :align: center                             |
+    |                                                                          |                                                |
+    |     from eomaps import Maps                                              |                                                |
+    |     m = Maps(Maps.CRS.Stereographic(), figsize=(5, 6))                   |                                                |
+    |     m.set_extent((-83, -20, -59, 13))                                    |                                                |
+    |     m.add_feature.preset.coastline()                                     |                                                |
+    |     m.add_feature.preset.ocean()                                         |                                                |
+    |                                                                          |                                                |
+    |     g = m.add_gridlines(10, lw=0.25, alpha=0.5)                          |                                                |
+    |     g.add_labels(fontsize=6, exclude=([-40, -30], [-30]))                |                                                |
+    |                                                                          |                                                |
+    |     g = m.add_gridlines(([-40, -30], [-30]), c="g", lw=1.5)              |                                                |
+    |     gl0 = g.add_labels(where="tlr", c="g", offset=15, fontweight="bold") |                                                |
+    |                                                                          |                                                |
+    |     g = m.add_gridlines(10, bounds=[-50, -20, -40, -20], c="b", lw=2)    |                                                |
+    |     g = m.add_gridlines(5,  bounds=[-50, -20, -40, -20], c="b")          |                                                |
+    |     gl = g.add_labels(where=0, fontsize=8, every=(1, -1, 2), c="b")      |                                                |
+    +--------------------------------------------------------------------------+------------------------------------------------+
 
 
 .. _utility:
