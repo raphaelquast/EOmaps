@@ -620,21 +620,22 @@ class GridLabels:
         if len(uselines) == 0:
             return
 
+        # get the tick-label values
         tick_label_values = [*uselines[:, 0, axis]]
 
+        # elongate the gridlines to make sure they reach outside the spine or boundary
+        uselines[:, 0, 0 if axis == 1 else 1] -= 0.01
+        uselines[:, -1, 0 if axis == 1 else 1] += 0.01
+
         # get gridline vertices in plot-coordinates
-        lines_plot = m._transf_lonlat_to_plot.transform(
-            uselines[..., 0], uselines[..., 1]
+        lines_plot = np.stack(
+            m._transf_lonlat_to_plot.transform(uselines[..., 0], uselines[..., 1]),
+            axis=-1,
         )
-        lines_plot = np.stack(lines_plot, axis=-1)
         # transform grid-lines to figure coordinates
         lines_fig = m.ax.transData.transform(lines_plot.reshape(-1, 2)).reshape(
             uselines.shape
         )
-
-        # elongate the gridlines to make sure they extent outside the spine
-        lines_fig[:, 0, 0 if axis == 1 else 1] -= 0.01
-        lines_fig[:, -1, 0 if axis == 1 else 1] += 0.01
 
         tr = m.ax.transData.inverted()
         tr_ax = m.ax.transAxes.inverted()
