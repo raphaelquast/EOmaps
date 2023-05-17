@@ -894,8 +894,8 @@ class GridFactory:
 
         Returns
         -------
-        m_grid : EOmaps.Maps
-            The Maps-object used to draw the gridlines.
+        g : GridLines
+            The GridLines-object.
 
         Examples
         --------
