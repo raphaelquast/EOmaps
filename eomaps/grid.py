@@ -382,16 +382,17 @@ class GridLines:
               (use stop=-1 if you want to draw all labels)
 
             The default is None.
-        exclude : list, tuple or None, optional
-            A list of grid values to exclude as lon/lat labels. (e.g. `[10, -45]`)
+        exclude : str, list, tuple or None, optional
+            Exclude one (or more) labels.
 
-            To exclude lon/lat values separately, provide a tuple of lists.
-            (e.g. `([-120, 60], [-40, 40])`)
+            - A list of grid values to exclude as lon/lat labels. (e.g. `[10, -45]`)
+            - Provide a tuple of lists to exclude lon/lat values separately
+              (e.g. `([-120, 60], [-40, 40])`).
+            - If `"corners"`, the corner-points of the boundaries are excluded (this
+              is the default to avoid overlapping lon/lat labels at the corners).
+            - If `None`, no points are excluded.
 
-            NOTE: If the grid-lines are defined within a custom boundary,
-            the corner-points of the boundary are excluded by default!
-
-            The default is None.
+            The default is "corners".
         labels : list or None, optional
             A list of strings to use as custom labels.
             If None, the grid-values are used.
@@ -441,7 +442,7 @@ class GridLabels:
         offset=10,
         precision=2,
         every=None,
-        exclude=None,
+        exclude="corners",
         labels=None,
         rotation=0,
         rotation_relative=True,
@@ -485,13 +486,15 @@ class GridLabels:
     def _set_exclude(self, exclude):
         # a list of tick values to exclude
         if exclude is None:
+            self._exclude = ([], [])
+        elif isinstance(exclude, str) and exclude == "corners":
             # if grid-labels are added to a grid that uses a custom boundary,
             # exclude corner-values by default to avoid overlaps
             bnds = self._g._bounds
             if bnds is not None:
                 self._exclude = (bnds[:2], bnds[2:])
             else:
-                self._exclude = ([], [])
+                self._exclude = ([-180, 180], [-90, 90])
 
         elif isinstance(exclude, (list, np.ndarray)):
             self._exclude = (exclude, exclude)
@@ -624,18 +627,28 @@ class GridLabels:
         tick_label_values = [*uselines[:, 0, axis]]
 
         # elongate the gridlines to make sure they reach outside the spine or boundary
-        uselines[:, 0, 0 if axis == 1 else 1] -= 0.01
-        uselines[:, -1, 0 if axis == 1 else 1] += 0.01
+        # (elongate in lon/lat for grids defined inside the axes (e.g. with bounds))
+        if self._g._bounds is not None:
+            uselines[:, 0, 0 if axis == 1 else 1] -= 0.1
+            uselines[:, -1, 0 if axis == 1 else 1] += 0.1
 
         # get gridline vertices in plot-coordinates
         lines_plot = np.stack(
             m._transf_lonlat_to_plot.transform(uselines[..., 0], uselines[..., 1]),
             axis=-1,
         )
+
         # transform grid-lines to figure coordinates
         lines_fig = m.ax.transData.transform(lines_plot.reshape(-1, 2)).reshape(
             uselines.shape
         )
+
+        # elongate the gridlines to make sure they reach outside the spine or boundary
+        # (do this in figure coordinates for gridlines outside the axes since otherwise
+        # the transformations would result in infinite values!)
+        if self._g._bounds is None:
+            lines_fig[:, 0, 0 if axis == 1 else 1] -= 0.01
+            lines_fig[:, -1, 0 if axis == 1 else 1] += 0.01
 
         tr = m.ax.transData.inverted()
         tr_ax = m.ax.transAxes.inverted()
