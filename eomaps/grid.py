@@ -334,7 +334,7 @@ class GridLines:
         offset=10,
         precision=2,
         every=None,
-        exclude=None,
+        exclude="corners",
         labels=None,
         rotation=0,
         rotation_relative=True,
