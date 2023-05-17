@@ -234,8 +234,7 @@ class ColorBar:
 
         See Also
         --------
-
-        - label_bin_center
+        set_bin_labels:  Use custom names for classified colorbar bins.
 
         Examples
         --------
@@ -326,7 +325,7 @@ class ColorBar:
 
     def set_visible(self, vis):
         """
-        Set the visibility of the colorbar
+        Set the visibility of the colorbar.
 
         Parameters
         ----------
@@ -1283,6 +1282,7 @@ class ColorBar:
         self._m.redraw(self._m.layer)
 
     tick_params.__doc__ = (
+        "Set the appearance of the colorbar (or histogram) ticks.\n\n"
         "NOTE\n"
         "----\n"
         "This is a wrapper for `m.colorbar.ax_cb.tick_params` or "
