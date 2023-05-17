@@ -819,6 +819,7 @@ class Maps(object):
         background_color="w",
         shape="ellipses",
         indicate_extent=True,
+        indicator_line=False,
     ):
         """
         Create a new (empty) inset-map that shows a zoomed-in view on a given extent.
@@ -875,10 +876,12 @@ class Maps(object):
             The layer associated with the inset-map.
             If None (the default), the layer of the Maps-object used to create
             the inset-map is used.
-        boundary: bool or dict, optional
+        boundary: bool, str or dict, optional
             - If True: indicate the boundary of the inset-map with default colors
               (e.g.: {"ec":"r", "lw":2})
             - If False: don't add edgecolors to the boundary of the inset-map
+            - If a string is provided, it is identified as the edge-color of the
+              boundary (e.g. any named matplotlib color like "r", "g", "darkblue"...)
             - if dict: use the provided values for "ec" (e.g. edgecolor) and
               "lw" (e.g. linewidth)
 
@@ -903,6 +906,18 @@ class Maps(object):
             NOTE: you can also use `m_inset.indicate_inset_extent(...)` to manually
             indicate the inset-shape on arbitrary Maps-objects.
 
+            The default is True.
+        indicator_line : bool or dict, optional
+
+            - If True: add a line that connects the inset-map to the indicated extent
+              on the parent map
+            - If a dict is provided, it is used to update the appearance of the line
+              (e.g. c="r", lw=2, ...)
+
+            NOTE: you can also use `m_inset.add_indicator_line(...)` to manually
+            indicate the inset-shape on arbitrary Maps-objects.
+
+            The default is False.
         Returns
         -------
         m : eomaps.Maps
@@ -982,6 +997,7 @@ class Maps(object):
             background_color=background_color,
             shape=shape,
             indicate_extent=indicate_extent,
+            indicator_line=indicator_line,
         )
 
         return m2
@@ -4809,15 +4825,18 @@ class _InsetMaps(Maps):
         plot_size=0.5,
         shape="ellipses",
         indicate_extent=True,
+        indicator_line=False,
         boundary=True,
         background_color="w",
         **kwargs,
     ):
 
+        self._parent = self._proxy(parent)
+
         # inherit the layer from the parent Maps-object if not explicitly
         # provided
         if layer is None:
-            layer = parent.layer
+            layer = self._parent.layer
 
         # put all inset-map artists on dedicated layers
         # NOTE: all artists of inset-map axes are put on a dedicated layer
@@ -4840,6 +4859,7 @@ class _InsetMaps(Maps):
             radius_crs = xy_crs
 
         extent_kwargs = dict(ec="r", lw=1, fc="none")
+        line_kwargs = dict(c="r", lw=1)
         boundary_kwargs = dict(ec="r", lw=2)
 
         if isinstance(boundary, dict):
@@ -4850,9 +4870,18 @@ class _InsetMaps(Maps):
             boundary_kwargs.update(boundary)
             # use same edgecolor for boundary and indicator by default
             extent_kwargs["ec"] = boundary["ec"]
+            line_kwargs["c"] = boundary["ec"]
+        elif isinstance(boundary, str):
+            boundary_kwargs.update({"ec": boundary})
+            # use same edgecolor for boundary and indicator by default
+            extent_kwargs["ec"] = boundary
+            line_kwargs["c"] = boundary
 
         if isinstance(indicate_extent, dict):
             extent_kwargs.update(indicate_extent)
+
+        if isinstance(indicator_line, dict):
+            line_kwargs.update(indicator_line)
 
         x, y = xy
         plot_x, plot_y = plot_position
@@ -4862,7 +4891,7 @@ class _InsetMaps(Maps):
         # initialize a new maps-object with a new axis
         super().__init__(
             crs=crs,
-            f=parent.f,
+            f=self._parent.f,
             ax=(left, bottom, plot_size, plot_size),
             layer=layer,
             **kwargs,
@@ -4895,8 +4924,12 @@ class _InsetMaps(Maps):
 
         if indicate_extent is not False:
             self.indicate_inset_extent(
-                parent, layer=parent.layer, permanent=True, **extent_kwargs
+                self._parent, layer=self._parent.layer, permanent=True, **extent_kwargs
             )
+
+        self._indicator_lines = []
+        if indicator_line is not False:
+            self.add_indicator_line(**line_kwargs)
 
         # add a background patch to the "all" layer
         if background_color is not None:
@@ -4905,8 +4938,6 @@ class _InsetMaps(Maps):
             )
         else:
             self._bg_patch = None
-
-        self._indicator_lines = []
 
     def _add_background_patch(self, color, layer="all"):
         (art,) = self.ax.fill(
@@ -4970,7 +5001,7 @@ class _InsetMaps(Maps):
             **kwargs,
         )
 
-    def add_indicator_line(self, m, **kwargs):
+    def add_indicator_line(self, m=None, **kwargs):
         """
         Add a line that connects the inset-map to the inset location on a given map.
 
@@ -4983,8 +5014,11 @@ class _InsetMaps(Maps):
 
         Parameters
         ----------
-        m : eomaps.Maps
+        m : eomaps.Maps or None
             The Maps object for which the inset-line should be added.
+            If None, the parent Maps-object that was used to create the inset-map
+            is used. The default is None.
+
         kwargs :
             Additional kwargs are passed to plt.Line2D to style the appearance of the
             line (e.g. "c", "ls", "lw", ...)
@@ -4994,6 +5028,9 @@ class _InsetMaps(Maps):
         --------
 
         """
+        if m is None:
+            m = self._parent
+
         kwargs.setdefault("c", "r")
         kwargs.setdefault("lw", 2)
         kwargs.setdefault("zorder", -np.inf)
