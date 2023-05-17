@@ -4906,6 +4906,8 @@ class _InsetMaps(Maps):
         else:
             self._bg_patch = None
 
+        self._indicator_lines = []
+
     def _add_background_patch(self, color, layer="all"):
         (art,) = self.ax.fill(
             [0, 0, 1, 1],
@@ -4967,6 +4969,73 @@ class _InsetMaps(Maps):
             n=n,
             **kwargs,
         )
+
+    def add_indicator_line(self, m, **kwargs):
+        """
+        Add a line that connects the inset-map to the inset location on a given map.
+
+        The line connects the current inset-map (center) position to the center of the
+        inset extent on the provided Maps-object.
+
+        It is possible to add multiple indicator-lines for different maps!
+
+        The lines will be automatically updated if axes sizes or positions change.
+
+        Parameters
+        ----------
+        m : eomaps.Maps
+            The Maps object for which the inset-line should be added.
+        kwargs :
+            Additional kwargs are passed to plt.Line2D to style the appearance of the
+            line (e.g. "c", "ls", "lw", ...)
+
+
+        Examples
+        --------
+
+        """
+        kwargs.setdefault("c", "r")
+        kwargs.setdefault("lw", 2)
+        kwargs.setdefault("zorder", -np.inf)
+
+        l = plt.Line2D([0, 0], [1, 1], **kwargs)
+        l = self.f.add_artist(l)
+        self.BM.add_bg_artist(l, "__inset_all")
+        self._indicator_lines.append((l, m))
+
+        if isinstance(m, _InsetMaps):
+            # in order to make the line visible on top of another inset-map
+            # but NOT on the inset-map whose extent is indicated, the line has to
+            # be drawn on the inset-map explicitly.
+
+            # This is because all artists on inset-map axes are always on top of other
+            # (normal map) artists... (and so the line would be behind the background)
+
+            kwargs["zorder"] = np.inf
+            l2 = plt.Line2D([0, 0], [1, 1], **kwargs, transform=m.f.transFigure)
+            l2 = m.ax.add_artist(l2)
+            self.BM.add_bg_artist(l2, "__inset_all")
+            self._indicator_lines.append((l2, m))
+
+        self._update_indicator_lines()
+        self.BM._before_fetch_bg_actions.append(self._update_indicator_lines)
+
+    def _update_indicator_lines(self, *args, **kwargs):
+        props = self._inset_props
+        bbox = self.ax.get_position()
+        # get current inset-map position
+        x1 = (bbox.x1 + bbox.x0) / 2
+        y1 = (bbox.y1 + bbox.y0) / 2
+
+        for l, m in self._indicator_lines:
+            # get inset map extent in ax projection
+            t = m._get_transformer(props["xy_crs"], m.ax.projection)
+            xy = t.transform(*props["xy"])
+            # get inset map extent in figure coordinates
+            x0, y0 = (m.ax.transData + m.f.transFigure.inverted()).transform(xy)
+
+            l.set_xdata([x0, x1])
+            l.set_ydata([y0, y1])
 
     # a convenience-method to set the position based on the center of the axis
     def set_inset_position(self, x=None, y=None, size=None):
