@@ -15,14 +15,14 @@ g = m.add_gridlines((20, None), c="b", n=500)
 g.add_labels(offset=10, fontsize=8, c="b")
 # draw a grid with 20 degree latitude spacing, add labels and exclude the 10° tick
 g = m.add_gridlines((None, 20), c="g", n=500)
-g.add_labels(offset=10, fontsize=8, c="g", exclude=[10])
-# explicitly highlight 10° lon/lat lines and add a label on one side of the map
-g = m.add_gridlines(([-10], [10]), c="k", n=500, lw=2)
-g.add_labels(where="l", fontsize=12, fontweight="bold")
+g.add_labels(where="l", offset=10, fontsize=8, c="g", exclude=[10])
+# explicitly highlight 10°N line and add a label on one side of the map
+g = m.add_gridlines((None, [10]), c="indigo", n=500, lw=1.5)
+g.add_labels(where="l", fontsize=12, fontweight="bold", c="indigo")
 
 
 # add a custom label on a gridline
-g = m.add_gridlines((None, [0]), c="m", n=500, lw=2)
+g = m.add_gridlines((None, [0]), c="m", n=500, lw=1.5)
 g.add_labels(
     where="l",
     rotation=-90,
@@ -50,7 +50,7 @@ g = mi.add_gridlines(([40, 45, 50], None), c="b", lw=2)
 g.add_labels(where="tb", offset=7, fontsize=6, c="b")
 
 mi.indicate_inset_extent(m, fc="darkred", ec="none", alpha=0.5)
-
+mi.add_indicator_line()
 
 # ----------------- second inset-map
 mi = m.new_inset_map(
@@ -64,6 +64,7 @@ mi.add_feature.preset.ocean()
 mi.add_feature.preset.land()
 
 mi.indicate_inset_extent(m, fc=".5", ec="none", alpha=0.5)
+mi.add_indicator_line(c="k")
 
 # draw a regular 1 degree grid
 g = mi.add_gridlines(5, lw=0.25)
