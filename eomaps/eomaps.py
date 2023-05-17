@@ -4859,7 +4859,7 @@ class _InsetMaps(Maps):
             radius_crs = xy_crs
 
         extent_kwargs = dict(ec="r", lw=1, fc="none")
-        line_kwargs = dict(c="r", lw=1)
+        line_kwargs = dict(c="r", lw=2)
         boundary_kwargs = dict(ec="r", lw=2)
 
         if isinstance(boundary, dict):
