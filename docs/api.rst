@@ -2889,14 +2889,18 @@ For convenience, inset-map objects have the following special methods defined:
 
 .. currentmodule:: eomaps.eomaps
 
-- :py:meth:`InsetMaps.set_inset_position`: Set the size and (center) position of the inset-map relative to the figure size.
-- :py:meth:`InsetMaps.indicate_inset_extent`: Indicate the extent of the inset-map on arbitrary Maps-objects.
-- :py:meth:`InsetMaps.add_indicator_line`: Add a line that connects the inset-map to the indicated extent on another map.
+.. autosummary::
+    :toctree: generated
+    :nosignatures:
+    :template: only_names_in_toc.rst
 
+    InsetMaps.set_inset_position
+    InsetMaps.indicate_inset_extent
+    InsetMaps.add_indicator_line
 
 Checkout the associated example on how to use inset-maps: :ref:`EOmaps_examples_inset_maps`
 
-Make sure to checkout the :ref:`layout_editor` which can be used to quickly re-position (and re-size) inset-maps with the mouse!
+To quickly re-position (and re-size) inset-maps, have a look at the :ref:`layout_editor`!
 
 .. table::
     :widths: 60 40
@@ -2936,19 +2940,6 @@ Make sure to checkout the :ref:`layout_editor` which can be used to quickly re-p
     :template: only_names_in_toc.rst
 
     new_inset_map
-
-
-.. currentmodule:: eomaps.eomaps
-
-.. autosummary::
-    :toctree: generated
-    :nosignatures:
-    :template: only_names_in_toc.rst
-
-    InsetMaps.set_inset_position
-    InsetMaps.indicate_inset_extent
-    InsetMaps.add_indicator_line
-
 
 
 🔎 Zoomed in views on datasets
