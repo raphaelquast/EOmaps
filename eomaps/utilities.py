@@ -565,7 +565,14 @@ class LayerSlider(Slider):
 
 class utilities:
     """
-    A collection of utility tools that can be added to EOmaps plots
+    A collection of utility tools that can be added to EOmaps plots.
+
+    Methods
+    -------
+    layer_selector: A legend-like widget to switch between layers
+
+    layer_slider: A slider widget to switch between layers
+
     """
 
     def __init__(self, m):
