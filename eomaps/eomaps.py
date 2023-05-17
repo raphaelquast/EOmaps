@@ -926,7 +926,7 @@ class Maps(object):
 
         See Also
         --------
-        The following additional methods are defined on `_InsetMaps` objects
+        The following additional methods are defined on `InsetMaps` objects
 
         m.indicate_inset_extent :
             Plot a polygon representing the extent of the inset map on another Maps
@@ -983,7 +983,7 @@ class Maps(object):
 
         >>> m.util.layer_selector()
         """
-        m2 = _InsetMaps(
+        m2 = InsetMaps(
             parent=self,
             crs=inset_crs,
             layer=layer,
@@ -4809,7 +4809,7 @@ class Maps(object):
             refetch_wms_on_size_change(*args, **kwargs)
 
 
-class _InsetMaps(Maps):
+class InsetMaps(Maps):
     # a subclass of Maps that includes some special functions for inset maps
 
     def __init__(
@@ -5040,7 +5040,7 @@ class _InsetMaps(Maps):
         self.BM.add_bg_artist(l, "__inset_all")
         self._indicator_lines.append((l, m))
 
-        if isinstance(m, _InsetMaps):
+        if isinstance(m, InsetMaps):
             # in order to make the line visible on top of another inset-map
             # but NOT on the inset-map whose extent is indicated, the line has to
             # be drawn on the inset-map explicitly.

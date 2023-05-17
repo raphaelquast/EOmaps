@@ -3,7 +3,7 @@ from PyQt5.QtCore import Qt, pyqtSignal, pyqtSlot, QSize
 
 from matplotlib.colors import to_rgba_array
 
-from ...eomaps import _InsetMaps
+from ...eomaps import InsetMaps
 from ..common import iconpath
 from .wms import AddWMSMenuButton
 from .utils import GetColorWidget, AlphaSlider
@@ -1173,7 +1173,7 @@ class ArtistEditorTabs(LayerArtistTabs):
 
         # make sure we fetch artists of inset-maps from the layer with
         # the "__inset_" prefix
-        if isinstance(self.m, _InsetMaps) and not layer.startswith("__inset_"):
+        if isinstance(self.m, InsetMaps) and not layer.startswith("__inset_"):
             layer = "__inset_" + layer
         widget = self.currentWidget()
 
