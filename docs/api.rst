@@ -2887,8 +2887,11 @@ Inset maps that show zoomed-in regions can be created with :py:meth:`Maps.new_in
 
 For convenience, inset-map objects have the following special methods defined:
 
-- ``m.set_inset_position()``: Set the size and (center) position of the inset-map relative to the figure size.
-- ``m.indicate_inset_extent()``: Indicate the extent of the inset-map on arbitrary Maps-objects.
+.. currentmodule:: eomaps.eomaps
+
+- :py:meth:`InsetMaps.set_inset_position`: Set the size and (center) position of the inset-map relative to the figure size.
+- :py:meth:`InsetMaps.indicate_inset_extent`: Indicate the extent of the inset-map on arbitrary Maps-objects.
+- :py:meth:`InsetMaps.add_indicator_line`: Add a line that connects the inset-map to the indicated extent on another map.
 
 
 Checkout the associated example on how to use inset-maps: :ref:`EOmaps_examples_inset_maps`
@@ -2901,7 +2904,9 @@ Make sure to checkout the :ref:`layout_editor` which can be used to quickly re-p
 
     +-----------------------------------------------------------------+--------------------------------------------+
     | .. code-block:: python                                          | .. image:: _static/minigifs/inset_maps.png |
-    |                                                                 |   :align: center                           |
+    |     :name: test_inset_maps_01                                   |   :align: center                           |
+    |                                                                 |                                            |
+    |     from eomaps import Maps                                     |                                            |
     |     m = Maps(Maps.CRS.PlateCarree(central_longitude=-60))       |                                            |
     |     m.add_feature.preset.ocean()                                |                                            |
     |                                                                 |                                            |
@@ -2911,10 +2916,11 @@ Make sure to checkout the :ref:`layout_editor` which can be used to quickly re-p
     |                           indicate_extent=dict(fc=(1,0,0,.5),   |                                            |
     |                                                ec="r", lw=1)    |                                            |
     |                           )                                     |                                            |
+    |     m_i.add_indicator_line(m, c="r")                            |                                            |
+    |                                                                 |                                            |
     |     m_i.add_feature.preset.coastline()                          |                                            |
     |     m_i.add_feature.preset.countries()                          |                                            |
     |     m_i.add_feature.preset.ocean()                              |                                            |
-    |                                                                 |                                            |
     |     m_i.add_feature.cultural.urban_areas(fc="r", scale=10)      |                                            |
     |     m_i.add_feature.physical.rivers_europe(ec="b", lw=0.25,     |                                            |
     |                                            fc="none", scale=10) |                                            |
@@ -2930,6 +2936,19 @@ Make sure to checkout the :ref:`layout_editor` which can be used to quickly re-p
     :template: only_names_in_toc.rst
 
     new_inset_map
+
+
+.. currentmodule:: eomaps.eomaps
+
+.. autosummary::
+    :toctree: generated
+    :nosignatures:
+    :template: only_names_in_toc.rst
+
+    InsetMaps.set_inset_position
+    InsetMaps.indicate_inset_extent
+    InsetMaps.add_indicator_line
+
 
 
 🔎 Zoomed in views on datasets
