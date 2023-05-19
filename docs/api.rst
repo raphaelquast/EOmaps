@@ -2767,8 +2767,10 @@ useful methods:
     GridLines.remove
     GridLines.add_labels
 
-Adding Labels to the Grid
-~~~~~~~~~~~~~~~~~~~~~~~~~
+.. _add_labels_to_the_grid:
+
+Add Labels to the Grid
+~~~~~~~~~~~~~~~~~~~~~~~
 
 Labels can be added to a grid via the :py:meth:`GridLines.add_labels` directive.
 
