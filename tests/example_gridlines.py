@@ -21,20 +21,6 @@ g = m.add_gridlines((None, [10]), c="indigo", n=500, lw=1.5)
 g.add_labels(where="l", fontsize=12, fontweight="bold", c="indigo")
 
 
-# add a custom label on a gridline
-g = m.add_gridlines((None, [0]), c="m", n=500, lw=1.5)
-g.add_labels(
-    where="l",
-    rotation=-90,
-    rotation_relative=False,
-    offset=(50, 10),
-    c="m",
-    fontsize=12,
-    fontweight="bold",
-    labels=["Meridian"],
-)
-
-
 # ----------------- first inset-map
 mi = m.new_inset_map(xy=(45, 45), radius=10, inset_crs=m.crs_plot)
 mi.add_feature.preset.ocean()
