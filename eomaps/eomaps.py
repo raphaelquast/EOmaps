@@ -819,6 +819,7 @@ class Maps(object):
         background_color="w",
         shape="ellipses",
         indicate_extent=True,
+        indicator_line=False,
     ):
         """
         Create a new (empty) inset-map that shows a zoomed-in view on a given extent.
@@ -875,10 +876,12 @@ class Maps(object):
             The layer associated with the inset-map.
             If None (the default), the layer of the Maps-object used to create
             the inset-map is used.
-        boundary: bool or dict, optional
+        boundary: bool, str or dict, optional
             - If True: indicate the boundary of the inset-map with default colors
               (e.g.: {"ec":"r", "lw":2})
             - If False: don't add edgecolors to the boundary of the inset-map
+            - If a string is provided, it is identified as the edge-color of the
+              boundary (e.g. any named matplotlib color like "r", "g", "darkblue"...)
             - if dict: use the provided values for "ec" (e.g. edgecolor) and
               "lw" (e.g. linewidth)
 
@@ -903,6 +906,18 @@ class Maps(object):
             NOTE: you can also use `m_inset.indicate_inset_extent(...)` to manually
             indicate the inset-shape on arbitrary Maps-objects.
 
+            The default is True.
+        indicator_line : bool or dict, optional
+
+            - If True: add a line that connects the inset-map to the indicated extent
+              on the parent map
+            - If a dict is provided, it is used to update the appearance of the line
+              (e.g. c="r", lw=2, ...)
+
+            NOTE: you can also use `m_inset.add_indicator_line(...)` to manually
+            indicate the inset-shape on arbitrary Maps-objects.
+
+            The default is False.
         Returns
         -------
         m : eomaps.Maps
@@ -911,7 +926,7 @@ class Maps(object):
 
         See Also
         --------
-        The following additional methods are defined on `_InsetMaps` objects
+        The following additional methods are defined on `InsetMaps` objects
 
         m.indicate_inset_extent :
             Plot a polygon representing the extent of the inset map on another Maps
@@ -968,7 +983,7 @@ class Maps(object):
 
         >>> m.util.layer_selector()
         """
-        m2 = _InsetMaps(
+        m2 = InsetMaps(
             parent=self,
             crs=inset_crs,
             layer=layer,
@@ -982,6 +997,7 @@ class Maps(object):
             background_color=background_color,
             shape=shape,
             indicate_extent=indicate_extent,
+            indicator_line=indicator_line,
         )
 
         return m2
@@ -1145,7 +1161,44 @@ class Maps(object):
 
     @property
     def set_classify(self):
-        """Accessor to set the data-classification."""
+        """
+        Interface to the classifiers provided by the 'mapclassify' module.
+
+        To set a classification scheme for a given Maps-object, simply use:
+
+        >>> m.set_classify.< SCHEME >(...)
+
+        Where `< SCHEME >` is the name of the desired classification and additional
+        parameters are passed in the call. (check docstrings for more info!)
+
+        A list of available classification-schemes is accessible via
+        `m.classify_specs.SCHEMES`
+
+            - BoxPlot (hinge)
+            - EqualInterval (k)
+            - FisherJenks (k)
+            - FisherJenksSampled (k, pct, truncate)
+            - HeadTailBreaks ()
+            - JenksCaspall (k)
+            - JenksCaspallForced (k)
+            - JenksCaspallSampled (k, pct)
+            - MaxP (k, initial)
+            - MaximumBreaks (k, mindiff)
+            - NaturalBreaks (k, initial)
+            - Quantiles (k)
+            - Percentiles (pct)
+            - StdMean (multiples)
+            - UserDefined (bins)
+
+        Examples
+        --------
+        >>> m.set_classify.Quantiles(k=5)
+
+        >>> m.set_classify.EqualInterval(k=5)
+
+        >>> m.set_classify.UserDefined(bins=[5, 10, 25, 50])
+
+        """
         assert _register_mapclassify(), (
             "EOmaps: Missing dependency: 'mapclassify' \n ... please install"
             + " (conda install -c conda-forge mapclassify) to use data-classifications."
@@ -1158,38 +1211,13 @@ class Maps(object):
             }
         )
 
-        s.__doc__ = dedent(
-            """
-            Interface to the classifiers provided by the 'mapclassify' module.
-
-            To set a classification scheme for a given Maps-object, simply use:
-
-            >>> m.set_classify.<SCHEME>(...)
-
-            Where `<SCHEME>` is the name of the desired classification and additional
-            parameters are passed in the call. (check docstrings for more info!)
-
-
-            Note
-            ----
-            The following calls have the same effect:
-
-            >>> m.set_classify.Quantiles(k=5)
-            >>> m.set_classify_specs(scheme="Quantiles", k=5)
-
-            Using `m.set_classify()` is the same as using `m.set_classify_specs()`!
-            However, `m.set_classify()` will provide autocompletion and proper
-            docstrings once the Maps-object is initialized which greatly enhances
-            the usability.
-
-            """
-        )
+        s.__doc__ = Maps.set_classify.__doc__
 
         return s
 
     def set_classify_specs(self, scheme=None, **kwargs):
         """
-        Set classification specifications for the data.
+        Optional way to set classification specifications for the data.
 
         The classification is ultimately performed by the `mapclassify` module!
 
@@ -1233,6 +1261,7 @@ class Maps(object):
             kwargs passed to the call to the respective mapclassify classifier
             (dependent on the selected scheme... see above)
         """
+
         assert _register_mapclassify(), (
             "EOmaps: Missing dependency: 'mapclassify' \n ... please install"
             + " (conda install -c conda-forge mapclassify) to use data-classifications."
@@ -2358,10 +2387,50 @@ class Maps(object):
 
         return self.ax.get_extent(crs=crs)
 
+    def _calc_vmin_vmax(self, vmin=None, vmax=None):
+        if self._data_manager.z_data is None:
+            return vmin, vmax
+
+        calc_min, calc_max = vmin is None, vmax is None
+
+        # ignore fill_values when evaluating vmin/vmax on integer-encoded datasets
+        if (
+            self.data_specs.encoding is not None
+            and isinstance(self._data_manager.z_data, np.ndarray)
+            and issubclass(self._data_manager.z_data.dtype.type, np.integer)
+        ):
+
+            # note the specific way how to check for integer-dtype based on issubclass
+            # since isinstance() fails to identify all integer dtypes!!
+            #   isinstance(np.dtype("uint8"), np.integer)       (incorrect) False
+            #   issubclass(np.dtype("uint8").type, np.integer)  (correct)   True
+            # for details, see https://stackoverflow.com/a/934652/9703451
+
+            fill_value = self.data_specs.encoding.get("_FillValue", None)
+            if fill_value:
+                # find values that are not fill-values
+                use_vals = self._data_manager.z_data[
+                    self._data_manager.z_data != fill_value
+                ]
+
+                if calc_min:
+                    vmin = np.min(use_vals)
+                if calc_max:
+                    vmax = np.max(use_vals)
+        else:
+            # use nanmin/nanmax for all other arrays
+            if calc_min:
+                vmin = np.nanmin(self._data_manager.z_data)
+            if calc_max:
+                vmax = np.nanmax(self._data_manager.z_data)
+
+        return vmin, vmax
+
     def _set_vmin_vmax(self, vmin=None, vmax=None):
         self._vmin = self._encode_values(vmin)
         self._vmax = self._encode_values(vmax)
 
+        # handle inherited bounds
         if self._inherit_classification is not None:
             if not (vmin is None and vmax is None):
                 raise TypeError(
@@ -2379,22 +2448,16 @@ class Maps(object):
             return
 
         if not self.shape.name.startswith("shade_"):
-            if vmin is None and self.data is not None:
-                self._vmin = np.nanmin(self._data_manager.z_data)
-            if vmax is None and self.data is not None:
-                self._vmax = np.nanmax(self._data_manager.z_data)
+            # ignore fill_values when evaluating vmin/vmax on integer-encoded datasets
+            self._vmin, self._vmax = self._calc_vmin_vmax(vmin=vmin, vmax=vmax)
         else:
             # get the name of the used aggretation reduction
             aggname = self.shape.aggregator.__class__.__name__
             if aggname in ["first", "last", "max", "min", "mean", "mode"]:
                 # set vmin/vmax in case the aggregation still represents data-values
-                if vmin is None:
-                    self._vmin = np.nanmin(self._data_manager.z_data)
-                if vmax is None:
-                    self._vmax = np.nanmax(self._data_manager.z_data)
+                self._vmin, self._vmax = self._calc_vmin_vmax(vmin=vmin, vmax=vmax)
             else:
                 # set vmin/vmax for aggregations that do NOT represent data values
-
                 # allow vmin/vmax = None (e.g. autoscaling)
                 if "count" in aggname:
                     # if the reduction represents a count, don't count empty pixels
@@ -2566,7 +2629,6 @@ class Maps(object):
         self._set_vmin_vmax(
             vmin=kwargs.pop("vmin", None), vmax=kwargs.pop("vmax", None)
         )
-
         cbcmap, norm, bins, classified = self._classify_data(
             vmin=self._vmin,
             vmax=self._vmax,
@@ -4634,6 +4696,7 @@ class Maps(object):
         elif isinstance(crs, (int, np.integer)):
             cartopy_proj = ccrs.epsg(crs)
         elif isinstance(crs, CRS):  # pyproj CRS
+            cartopy_proj = None
             for (
                 subgrid,
                 equi7crs,
@@ -4641,8 +4704,12 @@ class Maps(object):
                 if equi7crs == crs:
                     cartopy_proj = Maps.CRS.Equi7Grid_projection(subgrid)
                     break
+            if cartopy_proj is None:
+                cartopy_proj = ccrs.CRS(crs)
+
         else:
             raise AssertionError(f"EOmaps: cannot identify the CRS for: {crs}")
+
         return cartopy_proj
 
     @staticmethod
@@ -4742,7 +4809,7 @@ class Maps(object):
             refetch_wms_on_size_change(*args, **kwargs)
 
 
-class _InsetMaps(Maps):
+class InsetMaps(Maps):
     # a subclass of Maps that includes some special functions for inset maps
 
     def __init__(
@@ -4758,15 +4825,18 @@ class _InsetMaps(Maps):
         plot_size=0.5,
         shape="ellipses",
         indicate_extent=True,
+        indicator_line=False,
         boundary=True,
         background_color="w",
         **kwargs,
     ):
 
+        self._parent = self._proxy(parent)
+
         # inherit the layer from the parent Maps-object if not explicitly
         # provided
         if layer is None:
-            layer = parent.layer
+            layer = self._parent.layer
 
         # put all inset-map artists on dedicated layers
         # NOTE: all artists of inset-map axes are put on a dedicated layer
@@ -4789,6 +4859,7 @@ class _InsetMaps(Maps):
             radius_crs = xy_crs
 
         extent_kwargs = dict(ec="r", lw=1, fc="none")
+        line_kwargs = dict(c="r", lw=2)
         boundary_kwargs = dict(ec="r", lw=2)
 
         if isinstance(boundary, dict):
@@ -4799,9 +4870,18 @@ class _InsetMaps(Maps):
             boundary_kwargs.update(boundary)
             # use same edgecolor for boundary and indicator by default
             extent_kwargs["ec"] = boundary["ec"]
+            line_kwargs["c"] = boundary["ec"]
+        elif isinstance(boundary, str):
+            boundary_kwargs.update({"ec": boundary})
+            # use same edgecolor for boundary and indicator by default
+            extent_kwargs["ec"] = boundary
+            line_kwargs["c"] = boundary
 
         if isinstance(indicate_extent, dict):
             extent_kwargs.update(indicate_extent)
+
+        if isinstance(indicator_line, dict):
+            line_kwargs.update(indicator_line)
 
         x, y = xy
         plot_x, plot_y = plot_position
@@ -4811,7 +4891,7 @@ class _InsetMaps(Maps):
         # initialize a new maps-object with a new axis
         super().__init__(
             crs=crs,
-            f=parent.f,
+            f=self._parent.f,
             ax=(left, bottom, plot_size, plot_size),
             layer=layer,
             **kwargs,
@@ -4844,8 +4924,12 @@ class _InsetMaps(Maps):
 
         if indicate_extent is not False:
             self.indicate_inset_extent(
-                parent, layer=parent.layer, permanent=True, **extent_kwargs
+                self._parent, layer=self._parent.layer, permanent=True, **extent_kwargs
             )
+
+        self._indicator_lines = []
+        if indicator_line is not False:
+            self.add_indicator_line(**line_kwargs)
 
         # add a background patch to the "all" layer
         if background_color is not None:
@@ -4917,6 +5001,79 @@ class _InsetMaps(Maps):
             **kwargs,
         )
 
+    def add_indicator_line(self, m=None, **kwargs):
+        """
+        Add a line that connects the inset-map to the inset location on a given map.
+
+        The line connects the current inset-map (center) position to the center of the
+        inset extent on the provided Maps-object.
+
+        It is possible to add multiple indicator-lines for different maps!
+
+        The lines will be automatically updated if axes sizes or positions change.
+
+        Parameters
+        ----------
+        m : eomaps.Maps or None
+            The Maps object for which the inset-line should be added.
+            If None, the parent Maps-object that was used to create the inset-map
+            is used. The default is None.
+
+        kwargs :
+            Additional kwargs are passed to plt.Line2D to style the appearance of the
+            line (e.g. "c", "ls", "lw", ...)
+
+
+        Examples
+        --------
+
+        """
+        if m is None:
+            m = self._parent
+
+        kwargs.setdefault("c", "r")
+        kwargs.setdefault("lw", 2)
+        kwargs.setdefault("zorder", -np.inf)
+
+        l = plt.Line2D([0, 0], [1, 1], **kwargs)
+        l = self.f.add_artist(l)
+        self.BM.add_bg_artist(l, "__inset_all")
+        self._indicator_lines.append((l, m))
+
+        if isinstance(m, InsetMaps):
+            # in order to make the line visible on top of another inset-map
+            # but NOT on the inset-map whose extent is indicated, the line has to
+            # be drawn on the inset-map explicitly.
+
+            # This is because all artists on inset-map axes are always on top of other
+            # (normal map) artists... (and so the line would be behind the background)
+
+            kwargs["zorder"] = np.inf
+            l2 = plt.Line2D([0, 0], [1, 1], **kwargs, transform=m.f.transFigure)
+            l2 = m.ax.add_artist(l2)
+            self.BM.add_bg_artist(l2, "__inset_all")
+            self._indicator_lines.append((l2, m))
+
+        self._update_indicator_lines()
+        self.BM._before_fetch_bg_actions.append(self._update_indicator_lines)
+
+    def _update_indicator_lines(self, *args, **kwargs):
+        props = self._inset_props
+        bbox = self.ax.get_position()
+        # get current inset-map position
+        x1 = (bbox.x1 + bbox.x0) / 2
+        y1 = (bbox.y1 + bbox.y0) / 2
+
+        for l, m in self._indicator_lines:
+            # get inset map extent in ax projection
+            t = m._get_transformer(props["xy_crs"], m.ax.projection)
+            xy = t.transform(*props["xy"])
+            # get inset map extent in figure coordinates
+            x0, y0 = (m.ax.transData + m.f.transFigure.inverted()).transform(xy)
+
+            l.set_xdata([x0, x1])
+            l.set_ydata([y0, y1])
+
     # a convenience-method to set the position based on the center of the axis
     def set_inset_position(self, x=None, y=None, size=None):
         """
@@ -4987,6 +5144,9 @@ class _InsetMaps(Maps):
             )
             bnd_verts = np.stack(shp_pts[:2], axis=2)[0]
 
+            # make sure vertices are right-handed
+            bnd_verts = bnd_verts[::-1]
+
         elif shape == "rectangles":
             shp_pts = shp._get_rectangle_verts(
                 x=np.atleast_1d(x),
@@ -5008,6 +5168,9 @@ class _InsetMaps(Maps):
                 n=n,
             )
             bnd_verts = np.stack(shp_pts[:2], axis=2).squeeze()
+            # make sure vertices are right-handed
+            bnd_verts = bnd_verts[::-1]
+
         boundary = mpl.path.Path(bnd_verts)
 
         return boundary, bnd_verts

@@ -18,6 +18,9 @@ class Compass:
         self._patch = False
         self._txt = "N"
 
+        self._last_patch_ec = None
+        self._last_patch_lw = None
+
     def __call__(
         self,
         pos=None,
@@ -67,8 +70,8 @@ class Compass:
 
             The default is "compass".
         patch : False, str or tuple, optional
-            The color of the background-patch.
-            (can be any color specification supported by matplotlib)
+            The color of the background-patch (can be any color specification supported
+            by matplotlib). See `Compass.set_patch(...)` for more styling options.
             The default is "w".
         txt : str, optional
             Indicator which directions should be indicated.
@@ -152,6 +155,8 @@ class Compass:
 
         if self._update_offset not in self._m.BM._before_fetch_bg_actions:
             self._m.BM._before_fetch_bg_actions.append(self._update_offset)
+
+        self._m.BM.update()
 
     def _get_artist(self, pos):
         if self._style == "north arrow":
@@ -319,6 +324,8 @@ class Compass:
         if self._check_still_parented() and self._got_artist:
             self.set_scale(max(1, self._scale + event.step))
 
+            self._m.BM.update(artists=[self._artist])
+
     def _on_pick(self, evt):
         if not self._layer_visible:
             return
@@ -330,6 +337,12 @@ class Compass:
             self._got_artist = True
             self._c1 = self._canvas.mpl_connect("motion_notify_event", self._on_motion)
             self._c2 = self._canvas.mpl_connect("key_press_event", self._on_keypress)
+
+            # make red 1pt edgecolor while compass is picked
+            self._last_patch_ec = self._artist.get_children()[0].get_edgecolor()
+            self._last_patch_lw = self._artist.get_children()[0].get_linewidth()[0]
+
+            self.set_patch(edgecolor="r", linewidth=1)
 
     def _on_keypress(self, event):
         if not self._layer_visible:
@@ -361,6 +374,12 @@ class Compass:
                 pass
             else:
                 self._canvas.mpl_disconnect(c2)
+
+            self.set_patch(
+                edgecolor=self._last_patch_ec,
+                linewidth=self._last_patch_lw,
+            )
+
             self._m.BM.update()
 
     def _check_still_parented(self):

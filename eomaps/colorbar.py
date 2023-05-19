@@ -222,7 +222,10 @@ class ColorBar:
             A dictionary with keyword-arguments passed to the creation of the histogram
             (e.g. passed to `plt.hist()` )
         label : str, optional
-            The label used for the colorbar. The default is None
+            The label used for the colorbar.
+            Use `ColorBar.set_labels()` to set the labels (and styling) for the
+            colorbar and the histogram.
+            The default is None.
         ylabel : str, optional
             The label used for the y-axis of the colorbar. The default is None
         kwargs :
@@ -231,8 +234,7 @@ class ColorBar:
 
         See Also
         --------
-
-        - label_bin_center
+        set_bin_labels:  Use custom names for classified colorbar bins.
 
         Examples
         --------
@@ -256,6 +258,7 @@ class ColorBar:
         self._m = m
         self._pos = pos
         self._margin = margin
+        self._orientation = orientation
 
         self._init_extend = extend
         self._extend_frac = extend_frac
@@ -284,8 +287,9 @@ class ColorBar:
 
         self._histogram_plotted = False  # indicator if histogram has been plotted
 
-        self._orientation = orientation
         self._dynamic_shade_indicator = dynamic_shade_indicator
+        self._hist_label_kwargs = None
+
         self._show_outline = show_outline
         self._tick_precision = tick_precision
         self._tick_formatter = tick_formatter
@@ -321,7 +325,7 @@ class ColorBar:
 
     def set_visible(self, vis):
         """
-        Set the visibility of the colorbar
+        Set the visibility of the colorbar.
 
         Parameters
         ----------
@@ -338,6 +342,68 @@ class ColorBar:
             self.ax_cb_plot.set_visible(False)
         else:
             self.ax_cb_plot.set_visible(vis)
+
+    def _set_labels(self, cb_label=None, hist_label=None, **kwargs):
+        if self._dynamic_shade_indicator and hist_label is not None:
+            # remember kwargs to re-draw the histogram
+            self._hist_label_kwargs = {
+                "cb_label": None,
+                "hist_label": hist_label,
+                **kwargs,
+            }
+
+        if self._orientation == "horizontal":
+            if cb_label:
+                self._cb_label = self.ax_cb.set_xlabel(cb_label, **kwargs)
+            if hist_label:
+                self._hist_label = self.ax_cb_plot.set_ylabel(hist_label, **kwargs)
+        else:
+            if cb_label:
+                self._cb_label = self.ax_cb.set_ylabel(cb_label, **kwargs)
+            if hist_label:
+                self._hist_label = self.ax_cb_plot.set_xlabel(hist_label, **kwargs)
+
+    def set_labels(self, cb_label=None, hist_label=None, **kwargs):
+        """
+        Set the labels (and the styling) for the colorbar (and the histogram).
+
+        For more details, see `ColorBar.ax_cb.set_xlabel(..)` and matplotlib's `.Text`
+        properties.
+
+        Parameters
+        ----------
+        cb_label : str or None
+            The label of the colorbar. If None, the existing label is maintained.
+            The default is None.
+        hist_label : str or None
+            The label of the histogram. If None, the existing label is maintained.
+            The default is None.
+
+        Other Parameters
+        ----------------
+        kwargs :
+           Additional kwargs passed to `Axes.set_xlabel` to control the appearance of
+           the label (e.g. color, fontsize, labelpad etc.).
+
+        Examples
+        --------
+        Set both colorbar and histogram label in one go
+
+        >>> cb.set_labels("The parameter", "histogram count", fontsize=10, color="r")
+
+        Use different styles for the colorbar and histogram labels
+
+        >>> cb.set_labels(cb_label="The parameter", color="r", labelpad=10)
+        >>> cb.set_labels(hist_label="histogram count", fontsize=6, color="k")
+
+        """
+        self._set_labels(cb_label=cb_label, hist_label=hist_label, **kwargs)
+
+        if not self._dynamic_shade_indicator:
+            # no need to redraw the background for dynamically updated artists
+            self._m.redraw(self._m.layer)
+        else:
+            self._m.BM.update()
 
     def _default_cb_tick_formatter(self, x, pos, precision=None):
         """
@@ -447,8 +513,10 @@ class ColorBar:
                         if m.colorbar._parent_cb is None:
                             parent_cb = m.colorbar
                             break
-
-        return parent_cb
+        if parent_cb and parent_cb._orientation == self._orientation:
+            return parent_cb
+        else:
+            return None
 
     def _get_parent_cb(self):
         if self._parent_cb is None:
@@ -825,9 +893,7 @@ class ColorBar:
 
         # ensure that ticklabels are correct if a classification is used
         if self._classified and "ticks" not in self._kwargs:
-            self.cb.set_ticks(
-                [i for i in self._bins if i >= self._vmin and i <= self._vmax]
-            )
+            self.cb.set_ticks(np.unique(np.clip(self._bins, self._vmin, self._vmax)))
 
             if self._tick_formatter is None:
                 self._tick_formatter = self._classified_cb_tick_formatter
@@ -1019,6 +1085,9 @@ class ColorBar:
         self.ax_cb_plot.clear()
         self._plot_histogram()
 
+        if self._hist_label_kwargs:
+            self._set_labels(**self._hist_label_kwargs)
+
     def set_bin_labels(self, bins, names, tick_lines="center", show_values=False):
         """
         Set the tick-labels of the colorbar to custom names with respect to a given
@@ -1147,6 +1216,7 @@ class ColorBar:
                 self.ax_cb.tick_params(
                     labelright=True, which="minor", labelsize="xx-small"
                 )
+
         else:
             if horizontal:
                 self.ax_cb.tick_params(
@@ -1160,9 +1230,18 @@ class ColorBar:
                     which="minor",
                 )
 
-        self.ax_cb_plot.tick_params(
-            right=False, bottom=False, labelright=False, labelbottom=False, which="both"
-        )
+        if horizontal:
+            self.ax_cb_plot.tick_params(
+                right=False,
+                bottom=False,
+                labelright=False,
+                labelbottom=False,
+                which="both",
+            )
+        else:
+            self.ax_cb_plot.tick_params(
+                left=False, top=False, labelleft=False, labeltop=False, which="both"
+            )
 
         self._m.BM._refetch_layer(self._m.layer)
 
@@ -1203,6 +1282,7 @@ class ColorBar:
         self._m.redraw(self._m.layer)
 
     tick_params.__doc__ = (
+        "Set the appearance of the colorbar (or histogram) ticks.\n\n"
         "NOTE\n"
         "----\n"
         "This is a wrapper for `m.colorbar.ax_cb.tick_params` or "

@@ -37,3 +37,6 @@ class TestExamples(unittest.TestCase):
 
     def test_example_lines(self):
         import example_lines
+
+    def test_example_gridlines(self):
+        import example_gridlines

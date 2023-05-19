@@ -119,6 +119,7 @@ class read_file:
         isel=None,
         set_data=None,
         mask_and_scale=False,
+        fill_values="mask",
     ):
         """
         Read all relevant information necessary to add a GeoTIFF to the map.
@@ -169,6 +170,29 @@ class read_file:
             values for callbacks and colorbars, even if `mask_and_scale=False`!
 
             The default is False.
+        fill_values : str ("mask", "keep")
+            Indicator how to treat fill-values to avoid performance issues for
+            extremely large (integer encoded) datasets.
+
+            Only relevant for integer-encoded data if "mask_and_scale" is False
+            and a "_FillValue" is provided in the metadata.
+
+            - If "mask", a "numpy.masked_array" is used to incorporate fill-value
+              masking while maintaining integer dtype. NOTE that this can lead to
+              performance issues for very large datasets due to the increased memory
+              usage (and reduced performance) of masked_arrays.
+            - If "keep", no masking with respect to fill-values is performed and a
+              normal "numpy.array" is returned that still contains fill_values.
+
+              The fill-value is accessible via `m.data_specs.encoding["_FillValue"]`
+
+              To adjust the color of fill_values in the plot without explicit masking,
+              set the "over" and "unuder" colors of the used colorbar:
+
+               - `plt.cm.viridis.with_extremes(over=... under=...)`
+               - `cmap.set_over(...)`, `cmap.set_under(...)`)
+
+              (fill-values are excluded when evaluating data-limits)
 
         Returns
         -------
@@ -275,8 +299,16 @@ class read_file:
             if mask_and_scale is False:
                 encoding = usencfile.attrs
                 fill_value = encoding.get("_FillValue", None)
-                if fill_value:
-                    data = np.ma.masked_where(data == fill_value, data, copy=False)
+
+                if fill_value and fill_values == "mask":
+                    data = np.ma.MaskedArray(
+                        data=data,
+                        mask=data == fill_value,
+                        copy=False,
+                        fill_value=fill_value,
+                        hard_mask=True,
+                    )
+
             else:
                 encoding = None
 
@@ -311,6 +343,7 @@ class read_file:
         isel=None,
         set_data=None,
         mask_and_scale=False,
+        fill_values="mask",
     ):
         """
         Read all relevant information necessary to add a NetCDF to the map.
@@ -370,6 +403,29 @@ class read_file:
             values for callbacks and colorbars, even if `mask_and_scale=False`!
 
             The default is False.
+        fill_values : str ("mask", "keep")
+            Indicator how to treat fill-values to avoid performance issues for
+            extremely large (integer encoded) datasets.
+
+            Only relevant for integer-encoded data if "mask_and_scale" is False
+            and a "_FillValue" is provided in the metadata.
+
+            - If "mask", a "numpy.masked_array" is used to incorporate fill-value
+              masking while maintaining integer dtype. NOTE that this can lead to
+              performance issues for very large datasets due to the increased memory
+              usage (and reduced performance) of masked_arrays.
+            - If "keep", no masking with respect to fill-values is performed and a
+              normal "numpy.array" is returned that still contains fill_values.
+
+              The fill-value is accessible via `m.data_specs.encoding["_FillValue"]`
+
+              To adjust the color of fill_values in the plot without explicit masking,
+              set the "over" and "unuder" colors of the used colorbar:
+
+               - `plt.cm.viridis.with_extremes(over=... under=...)`
+               - `cmap.set_over(...)`, `cmap.set_under(...)`)
+
+              (fill-values are excluded when evaluating data-limits)
 
         Returns
         -------
@@ -514,8 +570,15 @@ class read_file:
                     _FillValue=getattr(usencfile[parameter], "_FillValue", None),
                 )
                 fill_value = encoding.get("_FillValue", None)
-                if fill_value:
-                    data = np.ma.masked_where(data == fill_value, data, copy=False)
+                if fill_value and fill_values == "mask":
+                    data = np.ma.MaskedArray(
+                        data=data,
+                        mask=data == fill_value,
+                        copy=False,
+                        fill_value=fill_value,
+                        hard_mask=True,
+                    )
+
             else:
                 encoding = None
 
@@ -796,6 +859,7 @@ class from_file:
         val_transform=None,
         coastline=False,
         mask_and_scale=False,
+        fill_values="mask",
         extent=None,
         **kwargs,
     ):
@@ -895,6 +959,29 @@ class from_file:
             values for callbacks and colorbars, even if `mask_and_scale=False`!
 
             The default is False.
+        fill_values : str ("mask", "keep")
+            Indicator how to treat fill-values to avoid performance issues for
+            extremely large (integer encoded) datasets.
+
+            Only relevant for integer-encoded data if "mask_and_scale" is False
+            and a "_FillValue" is provided in the metadata.
+
+            - If "mask", a "numpy.masked_array" is used to incorporate fill-value
+              masking while maintaining integer dtype. NOTE that this can lead to
+              performance issues for very large datasets due to the increased memory
+              usage (and reduced performance) of masked_arrays.
+            - If "keep", no masking with respect to fill-values is performed and a
+              normal "numpy.array" is returned that still contains fill_values.
+
+              The fill-value is accessible via `m.data_specs.encoding["_FillValue"]`
+
+              To adjust the color of fill_values in the plot without explicit masking,
+              set the "over" and "unuder" colors of the used colorbar:
+
+               - `plt.cm.viridis.with_extremes(over=... under=...)`
+               - `cmap.set_over(...)`, `cmap.set_under(...)`)
+
+              (fill-values are excluded when evaluating data-limits)
         extent : tuple or string
             Set the extent of the map prior to plotting
             (can provide great speedups if only a subset of the dataset is shown!)
@@ -959,6 +1046,7 @@ class from_file:
             isel=isel,
             set_data=None,
             mask_and_scale=mask_and_scale,
+            fill_values=fill_values,
         )
 
         if val_transform:
@@ -988,6 +1076,7 @@ class from_file:
         val_transform=None,
         coastline=False,
         mask_and_scale=False,
+        fill_values="mask",
         extent=None,
         **kwargs,
     ):
@@ -1075,6 +1164,29 @@ class from_file:
             values for callbacks and colorbars, even if `mask_and_scale=False`!
 
             The default is False.
+        fill_values : str ("mask", "keep")
+            Indicator how to treat fill-values to avoid performance issues for
+            extremely large (integer encoded) datasets.
+
+            Only relevant for integer-encoded data if "mask_and_scale" is False
+            and a "_FillValue" is provided in the metadata.
+
+            - If "mask", a "numpy.masked_array" is used to incorporate fill-value
+              masking while maintaining integer dtype. NOTE that this can lead to
+              performance issues for very large datasets due to the increased memory
+              usage (and reduced performance) of masked_arrays.
+            - If "keep", no masking with respect to fill-values is performed and a
+              normal "numpy.array" is returned that still contains fill_values.
+
+              The fill-value is accessible via `m.data_specs.encoding["_FillValue"]`
+
+              To adjust the color of fill_values in the plot without explicit masking,
+              set the "over" and "unuder" colors of the used colorbar:
+
+               - `plt.cm.viridis.with_extremes(over=... under=...)`
+               - `cmap.set_over(...)`, `cmap.set_under(...)`)
+
+              (fill-values are excluded when evaluating data-limits)
         extent : tuple or string
             Set the extent of the map prior to plotting
             (can provide great speedups if only a subset of the dataset is shown!)
@@ -1135,6 +1247,7 @@ class from_file:
             data_crs=data_crs,
             crs_key=data_crs_key,
             mask_and_scale=mask_and_scale,
+            fill_values=fill_values,
         )
 
         if val_transform:
