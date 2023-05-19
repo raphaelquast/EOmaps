@@ -911,6 +911,13 @@ class GridFactory:
         g : GridLines
             The GridLines-object.
 
+        Note
+        ----
+        To add labels to the grid, use:
+
+        >>> g = m.add_gridlines(...)
+        >>> g.add_labels(...)
+
         Examples
         --------
         >>> m = Maps(Maps.CRS.InterruptedGoodeHomolosine())
