@@ -47,7 +47,6 @@ Possible ways for specifying the ``crs`` for plotting are:
 
 .. autosummary::
     :toctree: generated
-    :hidden:
     :nosignatures:
     :template: only_names_in_toc.rst
 
@@ -212,7 +211,6 @@ To programmatically switch between layers or view a layer that represents a **co
 
 .. autosummary::
     :toctree: generated
-    :hidden:
     :nosignatures:
     :template: only_names_in_toc.rst
 
@@ -247,7 +245,6 @@ To programmatically switch between layers or view a layer that represents a **co
 
 .. autosummary::
     :toctree: generated
-    :hidden:
     :nosignatures:
     :template: only_names_in_toc.rst
 
@@ -283,7 +280,6 @@ have a look at the :ref:`layout_editor`!
 
 .. autosummary::
     :toctree: generated
-    :hidden:
     :nosignatures:
     :template: only_names_in_toc.rst
 
@@ -343,7 +339,6 @@ e.g.: ``m = Maps(ax=...)`` or ``m2 = m.new_map(ax=...)``
 
 .. autosummary::
     :toctree: generated
-    :hidden:
     :nosignatures:
     :template: only_names_in_toc.rst
 
@@ -682,7 +677,6 @@ The individual ``Maps``-objects and ``matpltolib-Axes`` are then accessible via:
 
 .. autosummary::
     :toctree: generated
-    :hidden:
     :nosignatures:
     :template: only_names_in_toc.rst
 
@@ -789,7 +783,6 @@ To assign a dataset to a :py:class:`Maps` object, use :py:meth:`Maps.set_data`.
 
 .. autosummary::
     :toctree: generated
-    :hidden:
     :nosignatures:
     :template: only_names_in_toc.rst
 
@@ -880,7 +873,6 @@ To specify how a dataset is visualized on the map, you have to set the *"plot-sh
 
 .. autosummary::
     :toctree: generated
-    :hidden:
     :nosignatures:
     :template: only_names_in_toc.rst
 
@@ -906,7 +898,6 @@ Possible shapes that work nicely for datasets with up to ~500 000 data-points:
 
 .. autosummary::
     :toctree: generated
-    :hidden:
     :nosignatures:
     :template: only_names_in_toc.rst
 
@@ -920,7 +911,6 @@ Possible shapes that work nicely for up to a few million data-points:
 
 .. autosummary::
     :toctree: generated
-    :hidden:
     :nosignatures:
     :template: only_names_in_toc.rst
 
@@ -935,7 +925,6 @@ Possible shapes that can be used to quickly generate a plot for extremely large 
 
 .. autosummary::
     :toctree: generated
-    :hidden:
     :nosignatures:
     :template: only_names_in_toc.rst
 
@@ -964,9 +953,12 @@ Possible shapes that can be used to quickly generate a plot for extremely large 
 
 .. note::
 
-    The "shade"-shapes require the additional ``datashader`` dependency!
+    The "shade"-shapes require the additional `datashader <https://datashader.org/>`_ dependency!
     You can install it via:
-    ``mamba install -c conda-forge datashader``
+
+    .. code-block:: python
+
+       mamba install -c conda-forge datashader
 
 .. admonition:: What's used by default?
 
@@ -997,7 +989,6 @@ To assign a classification scheme to a :py:class:`Maps` object, use ``m.set_clas
 
 .. autosummary::
     :toctree: generated
-    :hidden:
     :nosignatures:
     :template: only_names_in_toc.rst
 
@@ -1072,7 +1063,6 @@ You can then continue to add a :ref:`colorbar` or create :ref:`zoomed_in_views_o
 
 .. autosummary::
     :toctree: generated
-    :hidden:
     :nosignatures:
     :template: only_names_in_toc.rst
 
@@ -1278,7 +1268,6 @@ Once a dataset has been plotted, a colorbar with a colored histogram on top can 
 
 .. autosummary::
     :toctree: generated
-    :hidden:
     :nosignatures:
     :template: only_names_in_toc.rst
 
@@ -1313,7 +1302,6 @@ It has the following useful methods defined:
 
 .. autosummary::
     :toctree: generated
-    :hidden:
     :nosignatures:
     :template: only_names_in_toc.rst
 
@@ -1359,7 +1347,6 @@ To label the colorbar with custom names for a given set of bins, use :py:meth:`C
 
 .. autosummary::
     :toctree: generated
-    :hidden:
     :nosignatures:
     :template: only_names_in_toc.rst
 
@@ -1575,7 +1562,6 @@ Callbacks that can be used with ``m.cb.click``, ``m.cb.pick`` and ``m.cb.move``:
 
 .. autosummary::
     :toctree: generated
-    :hidden:
     :nosignatures:
     :template: only_names_in_toc.rst
 
@@ -1591,7 +1577,6 @@ Callbacks that can be used with ``m.cb.click`` and ``m.cb.pick``:
 
 .. autosummary::
     :toctree: generated
-    :hidden:
     :nosignatures:
     :template: only_names_in_toc.rst
 
@@ -1606,7 +1591,6 @@ Callbacks that can be used only with ``m.cb.pick``:
 
 .. autosummary::
     :toctree: generated
-    :hidden:
     :nosignatures:
     :template: only_names_in_toc.rst
 
@@ -1623,7 +1607,6 @@ Callbacks that can be used with ``m.cb.keypress``
 
 .. autosummary::
     :toctree: generated
-    :hidden:
     :nosignatures:
     :template: only_names_in_toc.rst
 
@@ -1840,7 +1823,6 @@ by using :py:meth:`Maps.make_dataset_pickable`.
 
 .. autosummary::
     :toctree: generated
-    :hidden:
     :nosignatures:
     :template: only_names_in_toc.rst
 
@@ -1872,7 +1854,6 @@ and ``< LAYER >`` indicates the actual layer-name.
 
 .. autosummary::
     :toctree: generated
-    :hidden:
     :nosignatures:
     :template: only_names_in_toc.rst
 
@@ -1922,7 +1903,6 @@ Pre-defined WebMap services:
 
 .. autosummary::
     :toctree: generated
-    :hidden:
     :nosignatures:
     :template: only_names_in_toc.rst
 
@@ -1947,7 +1927,6 @@ Pre-defined WebMap services:
 
 .. autosummary::
     :toctree: generated
-    :hidden:
     :nosignatures:
     :template: only_names_in_toc.rst
 
@@ -1978,7 +1957,6 @@ It is also possible to use custom WMS/WMTS/XYZ services.
 
 .. autosummary::
     :toctree: generated
-    :hidden:
     :nosignatures:
     :template: only_names_in_toc.rst
 
@@ -2076,7 +2054,6 @@ Feature-layers provided by `NaturalEarth <https://www.naturalearthdata.com>`_ ca
 
 .. autosummary::
     :toctree: generated
-    :hidden:
     :nosignatures:
     :template: only_names_in_toc.rst
 
@@ -2137,7 +2114,6 @@ The most commonly used features are accessible with pre-defined colors via the `
 
 .. autosummary::
     :toctree: generated
-    :hidden:
     :nosignatures:
     :template: only_names_in_toc.rst
 
@@ -2173,7 +2149,6 @@ supercharged with EOmaps features.
 
 .. autosummary::
     :toctree: generated
-    :hidden:
     :nosignatures:
     :template: only_names_in_toc.rst
 
@@ -2269,7 +2244,6 @@ Static markers can be added to the map via :py:meth:`Maps.add_marker`.
 
 .. autosummary::
     :toctree: generated
-    :hidden:
     :nosignatures:
     :template: only_names_in_toc.rst
 
@@ -2341,7 +2315,6 @@ Static annotations can be added to the map via :py:meth:`Maps.add_annotation`.
 
 .. autosummary::
     :toctree: generated
-    :hidden:
     :nosignatures:
     :template: only_names_in_toc.rst
 
@@ -2438,7 +2411,6 @@ Lines can be added to a map with :py:meth:`Maps.add_line`.
 
 .. autosummary::
     :toctree: generated
-    :hidden:
     :nosignatures:
     :template: only_names_in_toc.rst
 
@@ -2490,7 +2462,6 @@ To indicate rectangular areas in any given crs, simply use :py:meth:`Maps.indica
 
 .. autosummary::
     :toctree: generated
-    :hidden:
     :nosignatures:
     :template: only_names_in_toc.rst
 
@@ -2556,7 +2527,6 @@ Logos can be re-positioned and re-sized with the :ref:`layout_editor`!
 
 .. autosummary::
     :toctree: generated
-    :hidden:
     :nosignatures:
     :template: only_names_in_toc.rst
 
@@ -2585,7 +2555,6 @@ In addition, many style properties of the scalebar can be adjusted to get the lo
 
 .. autosummary::
     :toctree: generated
-    :hidden:
     :nosignatures:
     :template: only_names_in_toc.rst
 
@@ -2634,7 +2603,6 @@ The returned ``ScaleBar`` object provides the following useful methods:
 
 .. autosummary::
     :toctree: generated
-    :hidden:
     :nosignatures:
     :template: only_names_in_toc.rst
 
@@ -2683,7 +2651,6 @@ A compass can be added to the map via :py:meth:`Maps.add_compass`:
 
 .. autosummary::
     :toctree: generated
-    :hidden:
     :nosignatures:
     :template: only_names_in_toc.rst
 
@@ -2712,7 +2679,6 @@ The returned ``compass`` object has the following useful methods assigned:
 
 .. autosummary::
     :toctree: generated
-    :hidden:
     :nosignatures:
     :template: only_names_in_toc.rst
 
@@ -2748,7 +2714,6 @@ If no explicit grid-spacing is provided (e.g. ``d=None``), the grid is dynamical
 
 .. autosummary::
     :toctree: generated
-    :hidden:
     :nosignatures:
     :template: only_names_in_toc.rst
 
@@ -2794,7 +2759,6 @@ useful methods:
 
 .. autosummary::
     :toctree: generated
-    :hidden:
     :nosignatures:
     :template: only_names_in_toc.rst
 
@@ -2873,7 +2837,6 @@ Some helpful utility widgets can be added to a map via :py:class:`Maps.util`.
 
 .. autosummary::
     :toctree: generated
-    :hidden:
     :nosignatures:
     :template: only_names_in_toc.rst
 
@@ -2900,7 +2863,6 @@ By default, the widgets will show all available layers (except the "all" layer) 
 
 .. autosummary::
     :toctree: generated
-    :hidden:
     :nosignatures:
     :template: only_names_in_toc.rst
 
@@ -2952,7 +2914,6 @@ For convenience, inset-map objects have the following special methods defined:
 
 .. autosummary::
     :toctree: generated
-    :hidden:
     :nosignatures:
     :template: only_names_in_toc.rst
 
@@ -2998,7 +2959,6 @@ To quickly re-position (and re-size) inset-maps, have a look at the :ref:`layout
 
 .. autosummary::
     :toctree: generated
-    :hidden:
     :nosignatures:
     :template: only_names_in_toc.rst
 
@@ -3092,7 +3052,6 @@ Starting with EOmaps v5.0 it is possible to draw simple shapes on the map using 
 
 .. autosummary::
     :toctree: generated
-    :hidden:
     :nosignatures:
     :template: only_names_in_toc.rst
 
@@ -3171,7 +3130,6 @@ It is also possible to enter the **Layout Editor** and save the layout automatic
 
 .. autosummary::
     :toctree: generated
-    :hidden:
     :nosignatures:
     :template: only_names_in_toc.rst
 
@@ -3206,7 +3164,6 @@ with ``shade_raster`` (if it fails it will fallback to ``shade_points`` and fina
 
 .. autosummary::
     :toctree: generated
-    :hidden:
     :nosignatures:
     :template: only_names_in_toc.rst
 
@@ -3237,7 +3194,6 @@ Read relevant data from a file
 
 .. autosummary::
     :toctree: generated
-    :hidden:
     :nosignatures:
     :template: only_names_in_toc.rst
 
@@ -3265,7 +3221,6 @@ Initialize Maps-objects from a file
 
 .. autosummary::
     :toctree: generated
-    :hidden:
     :nosignatures:
     :template: only_names_in_toc.rst
 
@@ -3297,7 +3252,6 @@ Similar to ``Maps.from_file``, a new layer based on a file can be added to an ex
 
 .. autosummary::
     :toctree: generated
-    :hidden:
     :nosignatures:
     :template: only_names_in_toc.rst
 
@@ -3315,7 +3269,6 @@ some additional functions and properties that might come in handy:
 
 .. autosummary::
     :toctree: generated
-    :hidden:
     :nosignatures:
 
     Maps.on_layer_activation
