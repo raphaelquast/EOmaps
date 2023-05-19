@@ -43,7 +43,7 @@ It is built on top of [matplotlib](matplotlib.org/) and [cartopy](https://scitoo
 
 
  ... and much more!  
- Checkout the [🚀 Basics]() in the documentation to get started!
+ Checkout the [🚀 Basics](https://eomaps.readthedocs.io/en/dev/api.html#basics) in the documentation to get started!
 
 
 ## 🔨 Installation
