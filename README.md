@@ -27,9 +27,8 @@
 
 It is built on top of [matplotlib](matplotlib.org/) and [cartopy](https://scitools.org.uk/cartopy/docs/latest/) and provides an intuitive and easy-to-use interface to speed up and simplify the creation and comparison of maps.
 
-With a few lines of code, you to create [▤ multi-layered maps](https://eomaps.readthedocs.io/en/dev/api.html#basics) and interactively compare different layers with each other.
-
 ### What can EOmaps do for you?
+- Create [▤ multi-layered maps](https://eomaps.readthedocs.io/en/dev/api.html#basics) and interactively compare different layers with each other
 - [🔴 Visualize datasets](https://eomaps.readthedocs.io/en/dev/api.html#data-visualization) with  millions of datapoints and handle reprojections
 - Provide a comprehensive set of tools to customize the map
   - [🌵NaturalEarth features](https://eomaps.readthedocs.io/en/dev/api.html#naturalearth-features)
