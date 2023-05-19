@@ -23,19 +23,29 @@
 
 # EOmaps - Interactive maps in python!
 
-EOmaps is a <tt>python</tt> package to visualize and analyze geographical datasets.
+**EOmaps** is a <tt>python</tt> package to visualize and analyze geographical datasets.
 
-It is built on top of [matplotlib](matplotlib.org/) and [cartopy](https://scitools.org.uk/cartopy/docs/latest/) and aims to provide an
-intuitive and easy-to-use interface to speed up and simplify the creation and comparison of maps.
+It is built on top of [matplotlib](matplotlib.org/) and [cartopy](https://scitools.org.uk/cartopy/docs/latest/) and provides an intuitive and easy-to-use interface to speed up and simplify the creation and comparison of maps.
 
-- Visualize small datasets as well as millions of datapoints
-- Handle 1D and 2D datasets with the same interface and create plots from NetCDF, GeoTIFF or CSV files
-- Take care of re-projecting the data
-- Compare, combine or (transparently) overlay multiple plot-layers
-- Turn the maps into interactive data-analysis widgets with a few lines of code
-- Provide a versatile set of tools to customize the maps (Features, WebMaps, Markers, Annotations etc.)
-- Simplify the process of composing multiple maps (and other plots/images) in a single figure
-- Export high resolution images (png, jpeg etc.)
+With a few lines of code, you to create [▤ multi-layered maps](https://eomaps.readthedocs.io/en/dev/api.html#basics) and interactively compare different layers with each other.
+
+### What can EOmaps do for you?
+- [🔴 Visualize datasets](https://eomaps.readthedocs.io/en/dev/api.html#data-visualization) with  millions of datapoints and handle reprojections
+- Provide a comprehensive set of tools to customize the map
+  - [🌵NaturalEarth features](https://eomaps.readthedocs.io/en/dev/api.html#naturalearth-features)
+  - [📏Scalebars](https://eomaps.readthedocs.io/en/dev/api.html#scalebars)
+  - [▦ Gridlines](https://eomaps.readthedocs.io/en/dev/api.html#gridlines)
+  - [🛰 WebMap layers](https://eomaps.readthedocs.io/en/dev/api.html#webmap-layers)
+  - [🏕 Annotations, Markers, Lines, Logos...](https://eomaps.readthedocs.io/en/latest/api.html#annotations-markers-lines-logos-etc)
+  - . . .
+- Use [🛸 Callbacks](https://eomaps.readthedocs.io/en/latest/api.html#callbacks-make-the-map-interactive) and the [🧰 CompanionWidget](https://eomaps.readthedocs.io/en/dev/api.html#companion-widget) to interact with the figure
+- Interactively re-arrange multiple maps in a figure with the [🏗️ LayoutEditor](https://eomaps.readthedocs.io/en/dev/api.html#layout-editor)
+- [🗺 Export](https://eomaps.readthedocs.io/en/dev/api.html#export-the-map-as-jpeg-png-etc) publication ready high resolution images (png, jpeg etc.)
+
+
+ ... and much more!  
+ Checkout the [🚀 Basics]() in the documentation to get started!
+
 
 ## 🔨 Installation
 
