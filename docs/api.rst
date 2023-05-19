@@ -5,6 +5,7 @@
 ---------
 
 .. image:: _static/intro.png
+   :width: 50%
 
 🌐 Initialization of Maps objects
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -2772,8 +2773,8 @@ useful methods:
 
 .. _add_labels_to_the_grid:
 
-Add Labels to the Grid
-~~~~~~~~~~~~~~~~~~~~~~~
+✍ Add Labels to the Grid
+~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Labels can be added to a grid via the :py:meth:`GridLines.add_labels` directive.
 
