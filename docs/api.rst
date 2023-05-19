@@ -254,8 +254,8 @@ To programmatically switch between layers or view a layer that represents a **co
     Maps.show_layer
     Maps.fetch_layers
 
-🗺 Exporting the map as jpeg/png, etc.
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+🗺 Export the map as jpeg/png, etc.
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Once the map is ready, an image of the map can be saved at any time by using :py:meth:`Maps.savefig`
 
