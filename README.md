@@ -62,7 +62,7 @@ Need more information?
 
 ## 📖 Documentation
 
-Make sure to have a look at the <a href=https://eomaps.readthedocs.io/en/latest><b>🌳 Documentation 🌳</b></a> which provides a lot of <a href=https://eomaps.readthedocs.io/en/latest/EOmaps_examples.html><b>🌐Examples</b></a> on how to create awesome interactive maps (incl. 🐍 source code)!
+Make sure to have a look at the <a href=https://eomaps.readthedocs.io/en/latest><b>📖 Documentation </b></a> which provides a lot of <a href=https://eomaps.readthedocs.io/en/latest/EOmaps_examples.html><b>🌐Examples</b></a> on how to create awesome interactive maps (incl. 🐍 source code)!
 
 ## ✔️ Citation
 Did EOmaps help in your research?  
