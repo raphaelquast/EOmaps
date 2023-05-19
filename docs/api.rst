@@ -766,10 +766,10 @@ Everything related to callbacks is grouped under the ``cb`` accessor.
 🔴 Data Visualization
 ----------------------
 
-To visualize a dataset, first assign the dataset to the ``Maps``-object,
+To visualize a dataset, first assign the dataset to the :py:class:`Maps` object,
 then select how you want to visualize the data and finally call :py:meth:`Maps.plot_map`.
 
-1. **Assign the data** to a ``Maps`` object via :py:meth:`Maps.set_data`
+1. **Assign the data** to a :py:class:`Maps` object via :py:meth:`Maps.set_data`
 2. (optional) **set the shape** used to represent the data via  :py:class:`Maps.set_shape`
 3. (optional) **assign a classification scheme** for the data via  :py:class:`Maps.set_classify`
 4. **Plot the data** by calling :py:meth:`Maps.plot_map`
@@ -777,7 +777,7 @@ then select how you want to visualize the data and finally call :py:meth:`Maps.p
 🗃 Assign the data
 ~~~~~~~~~~~~~~~~~~
 
-To assign a dataset to a ``Maps`` object, use ``m.set_data(...)``.
+To assign a dataset to a :py:class:`Maps` object, use :py:meth:`Maps.set_data`.
 
 .. currentmodule:: eomaps
 
@@ -800,8 +800,8 @@ A dataset is fully specified by setting the following properties:
 
 .. note::
 
-    Make sure to use a individual ``Maps`` object (e.g. with ``m2 = m.new_layer()`` for each dataset!
-    Calling ``m.plot_map()`` multiple times on the same ``Maps`` object will remove
+    Make sure to use a individual :py:class:`Maps` object (e.g. with ``m2 = m.new_layer()`` for each dataset!
+    Calling :py:meth:`Maps.plot_map` multiple times on the same :py:class:`Maps`object will remove
     and override the previously plotted dataset!
 
 
@@ -864,10 +864,10 @@ The following data-types are accepted as input:
 +---------------------------------------------------------------------+------------------------------------------------------------------------------------+
 
 
-💠 Set the shape used to represent the data
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+💠 Specify how to visualize the data
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-To specify how the data is represented on the map, you have to set the *"plot-shape"* via ``m.set_shape``.
+To specify how a dataset is visualized on the map, you have to set the *"plot-shape"* via :py:meth:`Maps.set_shape`.
 
 .. currentmodule:: eomaps
 
@@ -881,14 +881,14 @@ To specify how the data is represented on the map, you have to set the *"plot-sh
 
 .. admonition:: A note on speed and performance
 
-    Some *"plot-shapes"* require more computational effort than others!
+    Some ways to visualize the data require more computational effort than others!
     Make sure to select an appropriate shape based on the size of the dataset you want to plot!
 
     EOmaps dynamically pre-selects the data with respect to the current plot-extent before the actual plot is created!
     If you do not need to see the whole extent of the data, make sure to **set the desired plot-extent**
-    via ``m.set_extent(...)`` or ``m.set_shape_to_extent(...)`` **BEFORE** calling ``m.plot_map()`` to get a (possibly huge) speedup!
+    via :py:meth:`Maps.set_extent` or :py:meth:`Maps.set_shape_to_extent` **BEFORE** calling :py:meth:`Maps.plot_map` to get a (possibly huge) speedup!
 
-    The numbers of datapoints mentioned in the following always refer to the number of datapoints that are
+    The number of datapoints mentioned in the following always refer to the number of datapoints that are
     visible in the desired plot-extent.
 
 
@@ -916,7 +916,7 @@ Possible shapes that work nicely for up to a few million data-points:
 
     raster
 
-While ``raster`` can still be used for datasets with a few million datapoints, for extremely large datasets
+While :py:class:`raster` can still be used for datasets with a few million datapoints, for extremely large datasets
 (> 10 million datapoints) it is recommended to use "shading" to **greatly speed-up plotting**.
 If shading is used, a dynamic averaging of the data based on the screen-resolution and the
 currently visible plot-extent is performed (resampling based on the mean-value is used by default).
@@ -1054,11 +1054,7 @@ To always keep the extent as-is, use ``m.plot_map(set_extent=False)``.
     m.plot_map(cmap="viridis", ec="b", lw=1.5, alpha=0.85, set_extent=False)
 
 
-You can then continue to add :ref:`colorbar`, :ref:`annotations_and_markers`,
-:ref:`scalebar`, :ref:`compass`,  :ref:`webmap_layers`, :ref:`ne_features` or :ref:`geodataframe` to the map,
-or you can start to :ref:`shape_drawer`, add :ref:`utility` and :ref:`callbacks`.
-
-
+You can then continue to add a :ref:`colorbar` or create :ref:`zoomed_in_views_on_datasets`.
 
 .. currentmodule:: eomaps
 
@@ -1071,10 +1067,12 @@ or you can start to :ref:`shape_drawer`, add :ref:`utility` and :ref:`callbacks`
     Maps.savefig
 
 
-🎨 Customizing the plot
-~~~~~~~~~~~~~~~~~~~~~~~~
+🎨 Customize the plot
+~~~~~~~~~~~~~~~~~~~~~~
 
-All arguments to customize the appearance of a dataset are passed to ``m.plot_map(...)``.
+.. currentmodule:: eomaps
+
+All arguments to customize the appearance of a dataset are passed to :py:meth:`Maps.plot_map`.
 
 In general, the colors assigned to the shapes are specified by
 
@@ -1096,7 +1094,7 @@ In general, the colors assigned to the shapes are specified by
 
 ------
 
-Colors can also be set **manually** by providing one of the following arguments to ``m.plot_map(...)``:
+Colors can also be set **manually** by providing one of the following arguments to :py:meth:`Maps.plot_map`:
 
 - to set both **facecolor** AND **edgecolor** use ``color=...``
 - to set the **facecolor** use ``fc=...`` or ``facecolor=...``
@@ -1228,6 +1226,161 @@ You can fix individual color channels by passing a list with 1 element, e.g.:
 
 
 
+.. _colorbar:
+
+🌈 Colorbars (with a histogram)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. currentmodule:: eomaps
+
+Before adding a colorbar, you must plot the data using ``m.plot_map(vmin=..., vmax=...)``.
+
+- ``vmin`` and ``vmax`` hereby specify the value-range used for assigning colors (e.g. the limits of the colorbar).
+- If no explicit limits are provided, the min/max values of the data are used.
+- For more details, see :ref:`visualize_data`.
+
+Once a dataset has been plotted, a colorbar with a colored histogram on top can be added to the map by calling :py:meth:`Maps.add_colorbar`.
+
+
+.. note::
+    | The colorbar always represents the dataset that was used in the last call to :py:meth:`Maps.plot_map`.
+    | If you need multiple colorbars, use an individual ``Maps`` object for each dataset! (e.g. via ``m2  = m.new_layer()``)
+
+
+.. note::
+    Colorbars are only visible if the layer at which the data was plotted is visible!
+
+    .. code-block:: python
+
+        m = Maps(layer=0)
+        ...
+        m.plot_map()
+        m.add_colorbar()   # this colorbar is only visible on the layer 0
+
+        m2 = m.new_layer("data")
+        ...
+        m2.plot_map()
+        m2.add_colorbar()  # this colorbar is only visible on the "data" layer
+
+
+.. autosummary::
+    :toctree: generated
+    :nosignatures:
+    :template: only_names_in_toc.rst
+
+    Maps.add_colorbar
+
+.. table::
+    :widths: 70 30
+    :align: center
+
+    +--------------------------------------------------------------------+------------------------------------------+
+    | .. code-block:: python                                             | .. image:: _static/minigifs/colorbar.png |
+    |                                                                    |   :align: center                         |
+    |   from eomaps import Maps                                          |                                          |
+    |   import numpy as np                                               |                                          |
+    |   x, y = np.mgrid[-45:45, 20:60]                                   |                                          |
+    |                                                                    |                                          |
+    |   m = Maps()                                                       |                                          |
+    |   m.add_feature.preset.coastline()                                 |                                          |
+    |   m.set_data(data=x+y, x=x, y=y, crs=4326)                         |                                          |
+    |   m.set_classify_specs(scheme=Maps.CLASSIFIERS.EqualInterval, k=5) |                                          |
+    |   m.plot_map()                                                     |                                          |
+    |   m.add_colorbar(label="what a nice colorbar", hist_bins="bins")   |                                          |
+    |                                                                    |                                          |
+    +--------------------------------------------------------------------+------------------------------------------+
+
+
+
+Once the colorbar has been created, the colorbar-object can be accessed via ``m.colorbar``.
+It has the following useful methods defined:
+
+.. currentmodule:: eomaps.colorbar
+
+.. autosummary::
+    :toctree: generated
+    :nosignatures:
+    :template: only_names_in_toc.rst
+
+    ColorBar.set_position
+    ColorBar.set_labels
+    ColorBar.set_hist_size
+    ColorBar.tick_params
+    ColorBar.set_visible
+    ColorBar.remove
+
+
+📎 Set colorbar tick labels based on bins
+*****************************************
+
+.. currentmodule:: eomaps.colorbar
+
+To label the colorbar with custom names for a given set of bins, use :py:meth:`ColorBar.set_bin_labels`:
+
++-------------------------------------------------------------------------------+------------------------------------------------+
+| .. code-block:: python                                                        | .. image:: _static/minigifs/colorbar_ticks.png |
+|                                                                               |   :align: center                               |
+|     import numpy as np                                                        |                                                |
+|     from eomaps import Maps                                                   |                                                |
+|     # specify some random data                                                |                                                |
+|     lon, lat = np.mgrid[-45:45, -45:45]                                       |                                                |
+|     data = np.random.normal(0, 50, lon.shape)                                 |                                                |
+|                                                                               |                                                |
+|     # use a custom set of bins to classify the data                           |                                                |
+|     bins = np.array([-50, -30, -20, 20, 30, 40, 50])                          |                                                |
+|     names = np.array(["below -50", "A", "B", "C", "D", "E", "F", "above 50"]) |                                                |
+|                                                                               |                                                |
+|     m = Maps()                                                                |                                                |
+|     m.add_feature.preset.coastline()                                          |                                                |
+|     m.set_data(data, lon, lat)                                                |                                                |
+|     m.set_classify.UserDefined(bins=bins)                                     |                                                |
+|     m.plot_map(cmap="tab10")                                                  |                                                |
+|     m.add_colorbar()                                                          |                                                |
+|                                                                               |                                                |
+|     # set custom colorbar-ticks based on the bins                             |                                                |
+|     m.colorbar.set_bin_labels(bins, names)                                    |                                                |
++-------------------------------------------------------------------------------+------------------------------------------------+
+
+
+.. autosummary::
+    :toctree: generated
+    :nosignatures:
+    :template: only_names_in_toc.rst
+
+    ColorBar.set_bin_labels
+
+
+
+🌠 Using the colorbar as a "dynamic shade indicator"
+*****************************************************
+
+
+.. note::
+
+    This will only work if you use ``m.set_shape.shade_raster()`` or ``m.set_shape.shade_points()`` as plot-shape!
+
+
+For shade shapes, the colorbar can be used to indicate the distribution of the shaded
+pixels within the current field of view by setting ``dynamic_shade_indicator=True``.
+
+    +--------------------------------------------------------------------+--------------------------------------------------+
+    | .. code-block:: python                                             | .. image:: _static/minigifs/dynamic_colorbar.gif |
+    |                                                                    |   :align: center                                 |
+    |   from eomaps import Maps                                          |                                                  |
+    |   import numpy as np                                               |                                                  |
+    |   x, y = np.mgrid[-45:45, 20:60]                                   |                                                  |
+    |                                                                    |                                                  |
+    |   m = Maps()                                                       |                                                  |
+    |   m.add_feature.preset.coastline()                                 |                                                  |
+    |   m.set_data(data=x+y, x=x, y=y, crs=4326)                         |                                                  |
+    |   m.set_shape.shade_raster()                                       |                                                  |
+    |   m.plot_map()                                                     |                                                  |
+    |   m.add_colorbar(dynamic_shade_indicator=True, hist_bins=20)       |                                                  |
+    |                                                                    |                                                  |
+    +--------------------------------------------------------------------+--------------------------------------------------+
+
+
+
 
 .. _companion_widget:
 
@@ -1288,9 +1441,11 @@ a python-script, such as:
 🛸 Callbacks - make the map interactive!
 ----------------------------------------
 
+.. currentmodule:: eomaps
+
 Callbacks are used to execute functions when you click on the map or press a key on the keyboard.
 
-They can be attached to a ``Maps`` object via:
+They can be attached to a :py:class:`Maps` object via:
 
 .. code-block:: python
 
@@ -1355,7 +1510,7 @@ There are many :ref:`predefined_callbacks`, but it is also possible to define :r
 
 .. Note::
 
-    Callbacks are only executed if the layer of the associated ``Maps`` object is actually visible!
+    Callbacks are only executed if the layer of the associated :py:class:`Maps` object is actually visible!
     (This assures that pick-callbacks always refer to the visible dataset.)
 
     To define callbacks that are executed independent of the visible layer, attach it to the ``"all"``
@@ -1641,6 +1796,9 @@ To customize the picking-behavior, use ``m.cb.pick.set_props()``. The following 
 
 📍 Picking a dataset without plotting it first
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. currentmodule:: eomaps
+
 It is possible to attach ``pick`` callbacks to a ``Maps`` object without plotting the data first
 by using :py:meth:`Maps.make_dataset_pickable`.
 
@@ -1656,12 +1814,9 @@ by using :py:meth:`Maps.make_dataset_pickable`.
 
 .. note::
 
-    Using ``m.make_dataset_pickable()`` is ONLY necessary if you want to use ``pick``
-    callbacks without actually plotting the data! Otherwise a call to ``m.plot_map()``
+    Using :py:meth:`make_dataset_pickable` is ONLY necessary if you want to use ``pick``
+    callbacks without actually plotting the data! Otherwise a call to :py:meth:`Maps.plot_map`
     is sufficient!
-
-
-.. currentmodule:: eomaps
 
 .. autosummary::
     :toctree: generated
@@ -1982,7 +2137,7 @@ This is basically just a wrapper for the plotting capabilities of `geopandas <ht
 (e.g. `GeoDataFrame.plot(...) <https://geopandas.org/en/stable/docs/reference/api/geopandas.GeoDataFrame.plot.html>`_ )
 supercharged with EOmaps features.
 
-- If you provide a string or `pathlib.Path` object to ``m.add_gdf()``, the contents of the file will be read into a ``GeoDataFrame``
+- If you provide a string or `pathlib.Path` object to :py:meth:`Maps.add_gdf`, the contents of the file will be read into a ``GeoDataFrame``
   via `geopandas.read_file() <https://geopandas.org/en/stable/docs/user_guide/io.html#reading-spatial-data>`_.
 
   - Many file-types such as *shapefile*, *GeoPackage*, *geojson* ... are supported!
@@ -2238,7 +2393,7 @@ Lines can be added to a map with :py:meth:`Maps.add_line`.
       -  use ``n=10`` to calculate 10 intermediate points between each anchor-point
       -  or use ``del_s=1000`` to calculate intermediate points (approximately) every 1000 meters
 
-         - check the return-values of ``m.add_line()`` to get the actual distances used in each line-segment
+         - check the return-values of :py:meth:`Maps.add_line` to get the actual distances used in each line-segment
 
   - ``connect="straight"``: connect points via **straight lines**
   - ``connect="straight_crs"``: connect points with reprojected lines that are **straight in a given projection**
@@ -2373,160 +2528,6 @@ Logos can be re-positioned and re-sized with the :ref:`layout_editor`!
     :template: only_names_in_toc.rst
 
     Maps.add_logo
-
-
-.. _colorbar:
-
-🌈 Colorbars (with a histogram)
--------------------------------
-
-.. currentmodule:: eomaps
-
-Before adding a colorbar, you must plot the data using ``m.plot_map(vmin=..., vmax=...)``.
-
-- ``vmin`` and ``vmax`` hereby specify the value-range used for assigning colors (e.g. the limits of the colorbar).
-- If no explicit limits are provided, the min/max values of the data are used.
-- For more details, see :ref:`visualize_data`.
-
-Once a dataset has been plotted, a colorbar with a colored histogram on top can be added to the map by calling :py:meth:`Maps.add_colorbar`.
-
-
-.. note::
-    | The colorbar always represents the dataset that was used in the last call to ``m.plot_map()``.
-    | If you need multiple colorbars, use an individual ``Maps`` object for each dataset! (e.g. via ``m2  = m.new_layer()``)
-
-
-.. note::
-    Colorbars are only visible if the layer at which the data was plotted is visible!
-
-    .. code-block:: python
-
-        m = Maps(layer=0)
-        ...
-        m.plot_map()
-        m.add_colorbar()   # this colorbar is only visible on the layer 0
-
-        m2 = m.new_layer("data")
-        ...
-        m2.plot_map()
-        m2.add_colorbar()  # this colorbar is only visible on the "data" layer
-
-
-.. autosummary::
-    :toctree: generated
-    :nosignatures:
-    :template: only_names_in_toc.rst
-
-    Maps.add_colorbar
-
-.. table::
-    :widths: 70 30
-    :align: center
-
-    +--------------------------------------------------------------------+------------------------------------------+
-    | .. code-block:: python                                             | .. image:: _static/minigifs/colorbar.png |
-    |                                                                    |   :align: center                         |
-    |   from eomaps import Maps                                          |                                          |
-    |   import numpy as np                                               |                                          |
-    |   x, y = np.mgrid[-45:45, 20:60]                                   |                                          |
-    |                                                                    |                                          |
-    |   m = Maps()                                                       |                                          |
-    |   m.add_feature.preset.coastline()                                 |                                          |
-    |   m.set_data(data=x+y, x=x, y=y, crs=4326)                         |                                          |
-    |   m.set_classify_specs(scheme=Maps.CLASSIFIERS.EqualInterval, k=5) |                                          |
-    |   m.plot_map()                                                     |                                          |
-    |   m.add_colorbar(label="what a nice colorbar", hist_bins="bins")   |                                          |
-    |                                                                    |                                          |
-    +--------------------------------------------------------------------+------------------------------------------+
-
-
-
-Once the colorbar has been created, the colorbar-object can be accessed via ``m.colorbar``.
-It has the following useful methods defined:
-
-.. currentmodule:: eomaps.colorbar
-
-.. autosummary::
-    :toctree: generated
-    :nosignatures:
-    :template: only_names_in_toc.rst
-
-    ColorBar.set_position
-    ColorBar.set_labels
-    ColorBar.set_hist_size
-    ColorBar.tick_params
-    ColorBar.set_visible
-    ColorBar.remove
-
-
-📎 Set colorbar tick labels based on bins
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-.. currentmodule:: eomaps.colorbar
-
-To label the colorbar with custom names for a given set of bins, use :py:meth:`ColorBar.set_bin_labels`:
-
-+-------------------------------------------------------------------------------+------------------------------------------------+
-| .. code-block:: python                                                        | .. image:: _static/minigifs/colorbar_ticks.png |
-|                                                                               |   :align: center                               |
-|     import numpy as np                                                        |                                                |
-|     from eomaps import Maps                                                   |                                                |
-|     # specify some random data                                                |                                                |
-|     lon, lat = np.mgrid[-45:45, -45:45]                                       |                                                |
-|     data = np.random.normal(0, 50, lon.shape)                                 |                                                |
-|                                                                               |                                                |
-|     # use a custom set of bins to classify the data                           |                                                |
-|     bins = np.array([-50, -30, -20, 20, 30, 40, 50])                          |                                                |
-|     names = np.array(["below -50", "A", "B", "C", "D", "E", "F", "above 50"]) |                                                |
-|                                                                               |                                                |
-|     m = Maps()                                                                |                                                |
-|     m.add_feature.preset.coastline()                                          |                                                |
-|     m.set_data(data, lon, lat)                                                |                                                |
-|     m.set_classify.UserDefined(bins=bins)                                     |                                                |
-|     m.plot_map(cmap="tab10")                                                  |                                                |
-|     m.add_colorbar()                                                          |                                                |
-|                                                                               |                                                |
-|     # set custom colorbar-ticks based on the bins                             |                                                |
-|     m.colorbar.set_bin_labels(bins, names)                                    |                                                |
-+-------------------------------------------------------------------------------+------------------------------------------------+
-
-
-.. autosummary::
-    :toctree: generated
-    :nosignatures:
-    :template: only_names_in_toc.rst
-
-    ColorBar.set_bin_labels
-
-
-
-🌠 Using the colorbar as a "dynamic shade indicator"
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-
-.. note::
-
-    This will only work if you use ``m.set_shape.shade_raster()`` or ``m.set_shape.shade_points()`` as plot-shape!
-
-
-For shade shapes, the colorbar can be used to indicate the distribution of the shaded
-pixels within the current field of view by setting ``dynamic_shade_indicator=True``.
-
-    +--------------------------------------------------------------------+--------------------------------------------------+
-    | .. code-block:: python                                             | .. image:: _static/minigifs/dynamic_colorbar.gif |
-    |                                                                    |   :align: center                                 |
-    |   from eomaps import Maps                                          |                                                  |
-    |   import numpy as np                                               |                                                  |
-    |   x, y = np.mgrid[-45:45, 20:60]                                   |                                                  |
-    |                                                                    |                                                  |
-    |   m = Maps()                                                       |                                                  |
-    |   m.add_feature.preset.coastline()                                 |                                                  |
-    |   m.set_data(data=x+y, x=x, y=y, crs=4326)                         |                                                  |
-    |   m.set_shape.shade_raster()                                       |                                                  |
-    |   m.plot_map()                                                     |                                                  |
-    |   m.add_colorbar(dynamic_shade_indicator=True, hist_bins=20)       |                                                  |
-    |                                                                    |                                                  |
-    +--------------------------------------------------------------------+--------------------------------------------------+
 
 
 .. _scalebar:
@@ -2839,10 +2840,12 @@ Some helpful utility widgets can be added to a map via :py:class:`Maps.util`.
 Layer switching
 ~~~~~~~~~~~~~~~
 
+.. currentmodule:: eomaps.utilities
+
 To simplify switching between layers, there are currently 2 widgets available:
 
-- ``m.util.layer_selector()`` : Add a set of clickable buttons to the map that activates the corresponding layers.
-- ``m.util.layer_slider()`` : Add a slider to the map that iterates through the available layers.
+- ``m.util.layer_selector()`` : Add a set of clickable :py:class:`LayerSelector` buttons to the map that activates the corresponding layers.
+- ``m.util.layer_slider()`` : Add a :py:class:`LayerSlider` to the map that iterates through the available layers.
 
 By default, the widgets will show all available layers (except the "all" layer) and the widget will be
 **automatically updated** whenever a new layer is created on the map.
@@ -2850,7 +2853,6 @@ By default, the widgets will show all available layers (except the "all" layer) 
 - To show only a subset of layers, provide an explicit list via: ``layers=[...layer names...]``.
 - To exclude certain layers from the widget, use ``exclude_layers=[...layer-names to exclude...]``
 - To remove a previously created widget ``s`` from the map, simply use ``s.remove()``
-
 
 .. currentmodule:: eomaps.utilities.utilities
 
@@ -2958,6 +2960,8 @@ To quickly re-position (and re-size) inset-maps, have a look at the :ref:`layout
     new_inset_map
 
 
+.. _zoomed_in_views_on_datasets:
+
 🔎 Zoomed in views on datasets
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -2968,11 +2972,10 @@ of the data must be the same.
 
 For this purpose, EOmaps provides 2 convenience-functions:
 
-- :py:meth:`Maps.inherit_data` : Use the same dataset as another ``Maps`` object
-- :py:meth:`Maps.inherit_classification`: Use the same classification as another ``Maps`` object
+- :py:meth:`Maps.inherit_data` : Use the same dataset as another :py:class:`Maps` object
+- :py:meth:`Maps.inherit_classification`: Use the same classification as another :py:class:`Maps` object
 
   - Note that this means that the classification specs as well as ``vmin``, ``vmax`` and the used ``colormap`` will be the same!
-
 
 
 .. code-block:: python
