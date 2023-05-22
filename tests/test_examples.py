@@ -115,11 +115,11 @@ class TestExamples(unittest.TestCase):
     @compareit()
     def test_example_lines(self):
         from example_lines import m
-        
+
         return m
 
     @compareit()
     def test_example_gridlines(self):
         from example_gridlines import m
-        
+
         return m
