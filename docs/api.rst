@@ -4,17 +4,16 @@
 🚀 Basics
 ---------
 
-.. image:: _static/intro.png
-   :width: 50%
-
 🌐 Initialization of Maps objects
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. currentmodule:: eomaps
 
 | EOmaps is all about :py:class:`Maps` objects.
-| The first :py:class:`Maps` object that is created will initialize a `matplotlib.Figure <https://matplotlib.org/stable/api/_as_gen/matplotlib.pyplot.figure.html>`_
-and a `cartopy.GeoAxes <https://scitools.org.uk/cartopy/docs/latest/reference/generated/cartopy.mpl.geoaxes.GeoAxes.html?highlight=geoaxes#cartopy.mpl.geoaxes.GeoAxes>`_
+
+The first :py:class:`Maps` object that is created will initialize a
+`matplotlib.Figure <https://matplotlib.org/stable/api/_as_gen/matplotlib.pyplot.figure.html>`_ and a
+`cartopy.GeoAxes <https://scitools.org.uk/cartopy/docs/latest/reference/generated/cartopy.mpl.geoaxes.GeoAxes.html?highlight=geoaxes#cartopy.mpl.geoaxes.GeoAxes>`_
 for a map.
 
 .. code-block:: python
@@ -62,6 +61,10 @@ Possible ways for specifying the ``crs`` for plotting are:
 ▤ Layers
 ~~~~~~~~~
 
+.. image:: _static/intro.png
+   :width: 40%
+
+
 A :py:class:`Maps` object represents a collection of features, callbacks,.. **on the assigned layer**.
 
 Once you have created a map, you can create **additional** :py:class:`Maps` **objects for the same map** by using :py:meth:`Maps.new_layer`.
@@ -105,7 +108,7 @@ Once you have created a map, you can create **additional** :py:class:`Maps` **ob
     You can add features and callbacks to the ``all`` layer via:
 
     - using the shortcut ``m.all. ...``
-    - creating a dedicated ``Maps`` object via ``m_all = Maps(layer="all")`` or ``m_all = m.new_layer("all")``
+    - creating a dedicated :py:class:`Maps` object via ``m_all = Maps(layer="all")`` or ``m_all = m.new_layer("all")``
     - using the "layer" kwarg of functions e.g. ``m.plot_map(layer="all")``
 
     .. code-block:: python
@@ -314,20 +317,20 @@ have a look at the :ref:`layout_editor`!
 
 It is possible to combine multiple ``EOmaps`` maps and/or ordinary ``matpltolib`` plots in one figure.
 
-The **figure** used by a ``Maps`` object is set via the ``f`` argument, e.g.: ``m = Maps(f=...)``.
-If no figure is provided, a new figure is created whenever you initialize a ``Maps`` object.
-The figure-instance of an existing ``Maps`` object is accessible via ``m.f``
+The **figure** used by a :py:class:`Maps` object is set via the ``f`` argument, e.g.: ``m = Maps(f=...)``.
+If no figure is provided, a new figure is created whenever you initialize a :py:class:`Maps` object.
+The figure-instance of an existing :py:class:`Maps` object is accessible via ``m.f``
 
 
-- To add a map to an existing figure, use ``m2 = m.new_map()`` (requires EOmaps >= v6.1) or pass the figure-instance on initialization of a new ``Maps`` object.
+- To add a map to an existing figure, use ``m2 = m.new_map()`` (requires EOmaps >= v6.1) or pass the figure-instance on initialization of a new :py:class:`Maps` object.
 - To add a ordinary ``matplotlib`` plot to a figure containing an eomaps-map, use ``m.f.add_subplot()`` or ``m.f.add_axes()``.
 
 
-The **initial position of the axes** used by a ``Maps`` object is set via the ``ax`` argument,
+The **initial position of the axes** used by a :py:class:`Maps` object is set via the ``ax`` argument,
 e.g.: ``m = Maps(ax=...)`` or ``m2 = m.new_map(ax=...)``
 
 - The syntax for positioning axes is similar to matplotlibs ``f.add_subplot()`` or ``f.add_axes()``
-- The axis-instance of an existing ``Maps`` object is accessible via ``m.ax``
+- The axis-instance of an existing :py:class:`Maps` object is accessible via ``m.ax``
 - ...for more information, checkout the matplotlib tutorial: `Customizing Figure Layouts <https://matplotlib.org/3.1.1/tutorials/intermediate/gridspec.html#sphx-glr-tutorials-intermediate-gridspec-py>`_
 
 
@@ -511,7 +514,7 @@ It is also possible to insert an EOmaps map into an existing figure or re-use an
 Dynamic updates of plots in the same figure
 *******************************************
 
-    As soon as a ``Maps``-object is attached to a figure, EOmaps will handle re-drawing of the figure!
+    As soon as a :py:class:`Maps`-object is attached to a figure, EOmaps will handle re-drawing of the figure!
     Therefore **dynamically updated** artists must be added to the "blit-manager" (``m.BM``) to ensure
     that they are correctly updated.
 
@@ -569,16 +572,17 @@ Here's an example to show how it works:
 
 𝄜 MapsGrid objects
 *******************
+.. currentmodule:: eomaps
 
-``MapsGrid`` objects can be used to create (and manage) multiple maps in one figure.
+:py:class:`MapsGrid` objects can be used to create (and manage) multiple maps in one figure.
 
 .. note::
 
-    While ``MapsGrid`` objects provide some convenience, starting with EOmaps v6.x,
+    While :py:class:`MapsGrid` objects provide some convenience, starting with EOmaps v6.x,
     the preferred way of combining multiple maps and/or matplotlib axes in a figure
     is by using one of the options presented in the previous sections!
 
-A ``MapsGrid`` creates a grid of ``Maps`` objects (and/or ordinary ``matpltolib`` axes),
+A :py:class:`MapsGrid` creates a grid of :py:class:`Maps` objects (and/or ordinary ``matpltolib`` axes),
 and provides convenience-functions to perform actions on all maps of the figure.
 
 .. code-block:: python
@@ -629,10 +633,10 @@ of the following structure:
         name4 = (slice(row_start, row_end), col) # span the axis over multiple rows
         )
 
-- ``m_inits`` is used to initialize ``Maps`` objects
+- ``m_inits`` is used to initialize :py:class:`Maps` objects
 - ``ax_inits`` is used to initialize ordinary ``matplotlib`` axes
 
-The individual ``Maps``-objects and ``matpltolib-Axes`` are then accessible via:
+The individual :py:class:`Maps` objects and ``matpltolib-Axes`` are then accessible via:
 
 .. code-block:: python
 
@@ -652,7 +656,7 @@ The individual ``Maps``-objects and ``matpltolib-Axes`` are then accessible via:
 - The initialization of the axes is based on matplotlib's `GridSpec <https://matplotlib.org/stable/api/_as_gen/matplotlib.gridspec.GridSpec.html>`_ functionality.
   All additional keyword-arguments (``width_ratios, height_ratios, etc.``) are passed to the initialization of the ``GridSpec`` object.
 
-- To specify unique ``crs`` for each ``Maps`` object, provide a dictionary of ``crs`` specifications.
+- To specify unique ``crs`` for each :py:class:`Maps` object, provide a dictionary of ``crs`` specifications.
 
 .. code-block:: python
 
@@ -707,7 +711,7 @@ Once a few basics keywords have been remembered, finding the right functions and
 .. note::
 
     EOmaps works best in conjunction with "dynamic autocompletion", e.g. by using an interactive
-    console where you instantiate a ``Maps`` object first and then access dynamically updated properties
+    console where you instantiate a :py:class:`Maps` object first and then access dynamically updated properties
     and docstrings on the object.
 
     To clarify:
@@ -716,9 +720,10 @@ Once a few basics keywords have been remembered, finding the right functions and
     - then (inside the console, not inside the editor!) use autocompletion on ``m.`` to get
       autocompletion for dynamically updated attributes.
 
-    For example the following accessors only work properly after the ``Maps`` object has been initialized:
-    - ``m.add_wms``: browse available WebMap services
-    - ``m.set_classify``: browse available classification schemes
+    For example the following accessors only work properly after the :py:class:`Maps` object has been initialized
+
+    - :py:class:`Maps.add_wms` browse available WebMap services
+    - :py:class:`Maps.set_classify` browse available classification schemes
 
 
 The following list provides an overview of the naming-conventions used within EOmaps:
@@ -726,11 +731,13 @@ The following list provides an overview of the naming-conventions used within EO
 Add features to a map - "m.add\_"
 *********************************
 All functions that add features to a map start with ``add_``, e.g.:
-- ``m.add_feature``, ``m.add_wms``, ``m.add_annotation``, ``m.add_marker``, ``m.add_gdf``, ...
 
-WebMap services (e.g. ``m.add_wms``) are fetched dynamically from the respective APIs.
+- :py:class:`Maps.add_feature`, :py:class:`Maps.add_wms`, :py:meth:`Maps.add_annotation`, :py:meth:`Maps.add_marker`, :py:meth:`Maps.add_gdf`, ...
+
+WebMap services (e.g. :py:class:`Maps.add_wms`) are fetched dynamically from the respective APIs.
 Therefore the structure can vary from one WMS to another.
 The used convention is the following:
+
 - You can navigate into the structure of the API by using "dot-access" continuously
 - once you reach a level that provides layers that can be added to the map, the ``.add_layer.`` directive will be visible
 - any ``<LAYER>`` returned by ``.add_layer.<LAYER>`` can be added to the map by simply calling it, e.g.:
@@ -741,12 +748,14 @@ The used convention is the following:
 Set data specifications - "m.set\_"
 ***********************************
 All functions that set properties of the associated dataset start with ``set_``, e.g.:
-- ``m.set_data``, ``m.set_classify``, ``m.set_shape``, ...
+
+- :py:meth:`Maps.set_data`, :py:class:`Maps.set_classify`, :py:class:`Maps.set_shape`, ...
 
 Create new Maps-objects - "m.new\_"
 ***********************************
-Actions that result in a new ``Maps`` objects start with ``new_``.
-- ``m.new_layer``, ``m.new_inset_map``, ...
+Actions that result in a new :py:class:`Maps` objects start with ``new_``.
+
+- :py:meth:`Maps.new_layer`, :py:meth:`Maps.new_inset_map`, ...
 
 Callbacks - "m.cb."
 *******************
@@ -802,7 +811,7 @@ A dataset is fully specified by setting the following properties:
 .. note::
 
     Make sure to use a individual :py:class:`Maps` object (e.g. with ``m2 = m.new_layer()`` for each dataset!
-    Calling :py:meth:`Maps.plot_map` multiple times on the same :py:class:`Maps`object will remove
+    Calling :py:meth:`Maps.plot_map` multiple times on the same :py:class:`Maps` object will remove
     and override the previously plotted dataset!
 
 
@@ -1248,7 +1257,7 @@ Once a dataset has been plotted, a colorbar with a colored histogram on top can 
 
 .. note::
     | The colorbar always represents the dataset that was used in the last call to :py:meth:`Maps.plot_map`.
-    | If you need multiple colorbars, use an individual ``Maps`` object for each dataset! (e.g. via ``m2  = m.new_layer()``)
+    | If you need multiple colorbars, use an individual :py:class:`Maps` object for each dataset! (e.g. via ``m2  = m.new_layer()``)
 
 
 .. note::
@@ -1803,7 +1812,7 @@ To customize the picking-behavior, use ``m.cb.pick.set_props()``. The following 
 
 .. currentmodule:: eomaps
 
-It is possible to attach ``pick`` callbacks to a ``Maps`` object without plotting the data first
+It is possible to attach ``pick`` callbacks to a :py:class:`Maps` object without plotting the data first
 by using :py:meth:`Maps.make_dataset_pickable`.
 
 .. code-block:: python
@@ -2597,16 +2606,16 @@ In addition, many style properties of the scalebar can be adjusted to get the lo
     Note: Once you have created a nice scalebar, you can always use ``s.print_code()`` to get an
     executable code that will reproduce the current appearance of the scalebar.
 
-
-The returned ``ScaleBar`` object provides the following useful methods:
-
 .. currentmodule:: eomaps.scalebar
+
+The returned :py:class:`ScaleBar` object provides the following useful methods:
 
 .. autosummary::
     :toctree: generated
     :nosignatures:
     :template: only_names_in_toc.rst
 
+    ScaleBar
     ScaleBar.print_code
     ScaleBar.apply_preset
     ScaleBar.remove
@@ -2753,16 +2762,18 @@ If no explicit grid-spacing is provided (e.g. ``d=None``), the grid is dynamical
     |   m.show_layer(m.layer, "grid")                                   |                                         |
     +-------------------------------------------------------------------+-----------------------------------------+
 
-In addition, the returned ``GridLines`` instance supports the following
-useful methods:
 
 .. currentmodule:: eomaps.grid
+
+In addition, the returned :py:class:`GridLines` instance supports the following
+useful methods:
 
 .. autosummary::
     :toctree: generated
     :nosignatures:
     :template: only_names_in_toc.rst
 
+    GridLines
     GridLines.set_d
     GridLines.set_auto_n
     GridLines.set_n
@@ -3153,7 +3164,7 @@ with ``shade_raster`` (if it fails it will fallback to ``shade_points`` and fina
 .. note::
 
     At the moment, the readers are intended as a "shortcut" to read well-structured datasets!
-    If they fail, read the data manually and then set the data as usual via ``m.set_data(...)``.
+    If they fail, read the data manually and then set the data as usual via :py:meth:`Maps.set_data`.
 
     Under the hood, EOmaps uses the following libraries to read data:
 
@@ -3205,7 +3216,7 @@ Read relevant data from a file
 Initialize Maps-objects from a file
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-``Maps.from_file.<filetype>(...)`` can be used to directly initialize a ``Maps`` object from a file.
+``Maps.from_file.<filetype>(...)`` can be used to directly initialize a :py:class:`Maps` object from a file.
 (This is particularly useful if you have a well-defined file-structure that you need to access regularly)
 
 .. code-block:: python
@@ -3232,7 +3243,7 @@ Initialize Maps-objects from a file
 Add new layers to existing Maps-objects from a file
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Similar to ``Maps.from_file``, a new layer based on a file can be added to an existing ``Maps`` object via ``Maps.new_layer_from_file.<filetype>(...)``.
+Similar to :py:class:`Maps.from_file` , a new layer based on a file can be added to an existing :py:class:`Maps` object via ``Maps.new_layer_from_file.<filetype>(...)``.
 
 .. code-block:: python
 
