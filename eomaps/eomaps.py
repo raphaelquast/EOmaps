@@ -1331,8 +1331,9 @@ class Maps(object):
 
     def set_clipboard_kwargs(self, **kwargs):
         """
-        Set the arguments passed to `m.savefig()` when pressing "control + c" to
-        export the figure to the clipboard.
+        Set arguments passed to `m.savefig()` for export of the figure to the clipboard.
+
+        - press "control + c" to export the figure to the clipboard
 
 
         Useful options are:
@@ -1350,6 +1351,10 @@ class Maps(object):
         ----------
         kwargs :
             Keyword-arguments passed to `m.savefig()`.
+
+        Note
+        ----
+        Exporting to the clipboard only works if `PyQt5` is used as matplotlib backend!
 
         See Also
         --------
