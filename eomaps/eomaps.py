@@ -194,11 +194,8 @@ class Maps(object):
     See Also
     --------
     Maps.new_layer : Create a new layer for the map.
-
     Maps.new_map : Add a new map to the figure.
-
     Maps.new_inset_map : Add a new inset-map to the figure.
-
     MapsGrid : Initialize a grid of Maps objects
 
     Parameters
@@ -926,13 +923,8 @@ class Maps(object):
 
         See Also
         --------
-        The following additional methods are defined on `InsetMaps` objects
-
-        m.indicate_inset_extent :
-            Plot a polygon representing the extent of the inset map on another Maps
-            object.
-        m.set_inset_position :
-            Set the (center) position and size of the inset-map.
+        m.indicate_inset_extent : Indicate inset-extent on another map (as polygon).
+        m.set_inset_position : Set the (center) position and size of the inset-map.
 
         Examples
         --------
@@ -2818,8 +2810,8 @@ class Maps(object):
 
         See Also
         --------
-        - Maps.util.layer_selector
-        - Maps.util.layer_slider
+        Maps.util.layer_selector : Add a button-widget to switch layers to the map.
+        Maps.util.layer_slider : Add a slider to switch layers to the map.
 
         """
         name = self._get_combined_layer_name(*args)
@@ -3243,7 +3235,7 @@ class Maps(object):
         See Also
         --------
         m.layer : The layer-name associated with the Maps-object
-        m.fetch_layers() : Fetch and cache all layers of the map
+        m.fetch_layers : Fetch and cache all layers of the map
 
         Examples
         --------
