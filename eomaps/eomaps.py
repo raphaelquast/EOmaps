@@ -3374,26 +3374,25 @@ class Maps(object):
             # causes all weakrefs to be garbage-collected!
             self.parent.f._EOmaps_parent = self.parent._real_self
 
-            if self.parent._cid_companion_key is None:
-                # attach a callback to show/hide the window with the "w" key
-
-                # NOTE the companion-widget is ONLY attahed to the parent map
-                # since it will identify the clicked map automatically! The
-                # widget will only be initialized on Maps-objects that create
-                # NEW axes. This is required to make sure that any additional
-                # Maps-object on the same axes will then always use the
-                # same widget. (otherwise each layer would get its own widget)
-
-                self.parent._cid_companion_key = self.f.canvas.mpl_connect(
-                    "key_press_event", self.parent._open_companion_widget_cb
-                )
-
             newfig = True
         else:
             newfig = False
             if not hasattr(self.parent.f, "_EOmaps_parent"):
                 self.parent.f._EOmaps_parent = self.parent._real_self
             self.parent._add_child(self)
+
+        # attach a callback to show/hide the companion-widget with the "w" key
+        if self.parent._cid_companion_key is None:
+            # NOTE the companion-widget is ONLY attached to the parent map
+            # since it will identify the clicked map automatically! The
+            # widget will only be initialized on Maps-objects that create
+            # NEW axes. This is required to make sure that any additional
+            # Maps-object on the same axes will then always use the
+            # same widget. (otherwise each layer would get its own widget)
+
+            self.parent._cid_companion_key = self.f.canvas.mpl_connect(
+                "key_press_event", self.parent._open_companion_widget_cb
+            )
 
         if isinstance(ax, plt.Axes):
             # check if the axis is already used by another maps-object
