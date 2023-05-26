@@ -2237,9 +2237,10 @@ supercharged with EOmaps features.
     # import geopandas as gpd
     # gdf = gpd.GeoDataFrame(geometries=[...], crs=...)<>
 
-    gdf = m.add_feature.physical.ocean.get_gdf(scale=50)
-
     m = Maps()
+    # load the "ocean" data from NaturalEarth as a GeoDataFrame
+    gdf = m.add_feature.physical.ocean.get_gdf(scale=50)
+    # add the GeoDataFrame to the map
     m.add_gdf(gdf, fc="r", ec="g", lw=2)
 
 
