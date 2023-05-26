@@ -785,7 +785,8 @@ class Maps(object):
 
         See Also
         --------
-        copy : general way for copying Maps objects
+        Maps.copy : general way for copying Maps objects
+
         """
         if layer is None:
             layer = copy.deepcopy(self.layer)
@@ -926,8 +927,8 @@ class Maps(object):
 
         See Also
         --------
-        m.indicate_inset_extent : Indicate inset-extent on another map (as polygon).
-        m.set_inset_position : Set the (center) position and size of the inset-map.
+        Maps.indicate_inset_extent : Indicate inset-extent on another map (as polygon).
+        Maps.set_inset_position : Set the (center) position and size of the inset-map.
 
         Examples
         --------
@@ -3074,7 +3075,7 @@ class Maps(object):
 
         See Also
         --------
-        m.cb.keypress.attach.fetch_layers : use a keypress callback to fetch layers
+        Maps.cb.keypress.attach.fetch_layers : use a keypress callback to fetch layers
 
         """
         active_layer = self.BM._bg_layer
@@ -3271,8 +3272,8 @@ class Maps(object):
 
         See Also
         --------
-        m.layer : The layer-name associated with the Maps-object
-        m.fetch_layers : Fetch and cache all layers of the map
+        Maps.layer : The layer-name associated with the Maps-object
+        Maps.fetch_layers : Fetch and cache all layers of the map
 
         Examples
         --------

@@ -234,7 +234,7 @@ class ColorBar:
 
         See Also
         --------
-        set_bin_labels:  Use custom names for classified colorbar bins.
+        ColorBar.set_bin_labels:  Use custom names for classified colorbar bins.
 
         Examples
         --------

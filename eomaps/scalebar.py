@@ -503,7 +503,7 @@ class ScaleBar:
 
         See Also
         --------
-        set_n : Set the number of segments to use.
+        ScaleBar.set_n : Set the number of segments to use.
 
         """
         self._scale = scale
@@ -520,7 +520,7 @@ class ScaleBar:
 
         See Also
         --------
-        set_scale : Set the length of the scalebar segments.
+        ScaleBar.set_scale : Set the length of the scalebar segments.
 
         """
         self._n = n
@@ -545,15 +545,11 @@ class ScaleBar:
 
         See Also
         --------
-        set_scale : Set a fixed length of the scalebar segments.
-
-        set_n : Set the number of segments to use.
-
-        set_patch_props : Set style properties of the scalebar frame.
-
-        set_label_props : Set style properties of the labels.
-
-        set_line_props : Set style properties of the lines between scalebar and labels.
+        ScaleBar.set_scale : Set a fixed length of the scalebar segments.
+        ScaleBar.set_n : Set the number of segments to use.
+        ScaleBar.set_patch_props : Set style properties of the scalebar frame.
+        ScaleBar.set_label_props : Set style properties of the labels.
+        ScaleBar.set_line_props : Set style of the lines between scalebar and labels.
 
         """
         self._set_scale_props(width=width, colors=colors, **kwargs)
@@ -614,11 +610,9 @@ class ScaleBar:
 
         See Also
         --------
-        set_scale_props : Set style properties of the scale.
-
-        set_label_props : Set style properties of the labels.
-
-        set_line_props : Set style properties of the lines between scalebar and labels.
+        ScaleBar.set_scale_props : Set style of the scale.
+        ScaleBar.set_label_props : Set style of the labels.
+        ScaleBar.set_line_props : Set style of the lines between scalebar and labels.
 
         """
         for key in kwargs:
@@ -662,11 +656,9 @@ class ScaleBar:
 
         See Also
         --------
-        set_scale_props : Set style properties of the scale.
-
-        set_patch_props : Set style properties of the scalebar frame.
-
-        set_label_props : Set style properties of the labels.
+        ScaleBar.set_scale_props : Set style of the scale.
+        ScaleBar.set_patch_props : Set style of the scalebar frame.
+        ScaleBar.set_label_props : Set style of the labels.
 
         """
         for key in kwargs:
@@ -735,11 +727,9 @@ class ScaleBar:
 
         See Also
         --------
-        set_scale_props : Set style properties of the scale.
-
-        set_patch_props : Set style properties of the scalebar frame.
-
-        set_line_props : Set style properties of the lines between scalebar and labels.
+        ScaleBar.set_scale_props : Set style of the scale.
+        ScaleBar.set_patch_props : Set style of the scalebar frame.
+        ScaleBar.set_line_props : Set style of the lines between scalebar and labels.
 
         """
         for key in kwargs:
