@@ -113,7 +113,7 @@ class ColorBar:
               The axes of the Maps-object will be shrinked accordingly to make space
               for the colorbar.
             - 4-tuple (x0, y0, width, height):
-              Absolute position at which the colorbar should be placed in units.
+              Absolute position of the colorbar in relative figure-units (0-1).
               In this case, existing axes are NOT automatically re-positioned!
 
             Note: By default, multiple colorbars on different layers share their
