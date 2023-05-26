@@ -1331,12 +1331,13 @@ class Maps(object):
 
     def set_clipboard_kwargs(self, **kwargs):
         """
-        Set arguments passed to `m.savefig()` for export of the figure to the clipboard.
+        Set arguments when exporting the figure to the clipboard.
 
         - press "control + c" to export the figure to the clipboard
 
+        All arguments are passed to :meth:`Maps.savefig`
 
-        Useful options are:
+        Useful options are
 
         - dpi : the dots-per-inch of the figure
         - refetch_wms: re-fetch webmaps with respect to the export-`dpi`
@@ -1345,12 +1346,11 @@ class Maps(object):
         - transparent: if `True`, export with a transparent background
         - facecolor: the background color
 
-        See `m.savefig()` for more details.
 
         Parameters
         ----------
         kwargs :
-            Keyword-arguments passed to `m.savefig()`.
+            Keyword-arguments passed to :meth:`Maps.savefig`.
 
         Note
         ----
@@ -1358,7 +1358,7 @@ class Maps(object):
 
         See Also
         --------
-        m.savefig : Save the figure as jpeg, png, etc.
+        Maps.savefig : Save the figure as jpeg, png, etc.
 
         """
         self._clipboard_kwargs = kwargs
