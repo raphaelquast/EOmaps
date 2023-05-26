@@ -280,8 +280,7 @@ Once the map is ready, an image of the map can be saved at any time by using :py
     m.savefig("snapshot1.png", dpi=200, transparent=True)
 
 
-To adjust the margins of the subplots, use ``m.subplots_adjust()``, ``m.f.tight_layout()`` or
-have a look at the :ref:`layout_editor`!
+To adjust the margins of the subplots, use :py:meth:`m.subplots_adjust`, or have a look at the :ref:`layout_editor`!
 
 .. code-block:: python
     :name: test_subplots_adjust
@@ -290,15 +289,11 @@ have a look at the :ref:`layout_editor`!
     m = Maps()
     m.subplots_adjust(left=0.1, right=0.9, bottom=0.05, top=0.95)
 
-.. currentmodule:: eomaps
+.. admonition:: Export to clipboard
 
-.. autosummary::
-    :toctree: generated
-    :nosignatures:
-    :template: only_names_in_toc.rst
+    If you use ``PyQt5`` as matplotlib-backend, you can also press (``control`` + ``c``) to export the figure to the clipboard.
 
-    Maps.subplots_adjust
-
+    - Export parameters can be set via :py:meth:`Maps.set_clipboard_kwargs`
 
 .. admonition:: Notes on exporting high-dpi figures
 
@@ -319,6 +314,16 @@ have a look at the :ref:`layout_editor`!
         - Note: increasing the dpi will result in an increase in the number of tiles that have to be fetched. If the number of required tiles is too large, the server might reject the request and the map might have gaps or no tiles at all.
 
 
+.. currentmodule:: eomaps
+
+.. autosummary::
+    :toctree: generated
+    :nosignatures:
+    :template: only_names_in_toc.rst
+
+    Maps.savefig
+    Maps.subplots_adjust
+    Maps.set_clipboard_kwargs
 
 .. _multiple_maps:
 
