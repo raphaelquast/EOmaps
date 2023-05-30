@@ -347,6 +347,9 @@ class Maps(object):
     _crs_cache = dict()
     _transformer_cache = dict()
 
+    # arguments passed to m.savefig when using "ctrl+c" to export figure to clipboard
+    _clipboard_kwargs = dict()
+
     def __init__(
         self,
         crs=None,
@@ -383,8 +386,6 @@ class Maps(object):
         self._coll = None  # slot for the collection created by m.plot_map()
 
         self._layer = layer
-
-        self._clipboard_kwargs = dict()
 
         # check if the self represents a new-layer or an object on an existing layer
         if any(
@@ -1330,7 +1331,8 @@ class Maps(object):
         else:
             print("Centering Map to:\n    ", r["display_name"])
 
-    def set_clipboard_kwargs(self, **kwargs):
+    @classmethod
+    def set_clipboard_kwargs(cls, **kwargs):
         """
         Set arguments when exporting the figure to the clipboard.
 
@@ -1355,14 +1357,17 @@ class Maps(object):
 
         Note
         ----
+        This function sets the clipboard kwargs for all Maps-objects!
+
         Exporting to the clipboard only works if `PyQt5` is used as matplotlib backend!
+        (the default if `PyQt` is installed)
 
         See Also
         --------
         Maps.savefig : Save the figure as jpeg, png, etc.
 
         """
-        self._clipboard_kwargs = kwargs
+        Maps._clipboard_kwargs = kwargs
 
     def get_crs(self, crs="plot"):
         """
@@ -3391,18 +3396,28 @@ class Maps(object):
         return layer
 
     def _cb_save_to_clipboard(self, event):
-        import io
-        from PyQt5.QtGui import QImage
-        from PyQt5.QtWidgets import QApplication
-
-        verbose = self._clipboard_kwargs.pop("verbose", True)
-
         if event.key == "ctrl+c":
+            import io
+            import mimetypes
+            from PyQt5.QtCore import QMimeData
+            from PyQt5.QtWidgets import QApplication
+
+            verbose = Maps._clipboard_kwargs.pop("verbose", True)
+
+            # guess the MIME type from the provided file-extension
+            mimetype, _ = mimetypes.guess_type(
+                "dummy." + Maps._clipboard_kwargs.get("format", "png")
+            )
+
             if verbose:
                 print("EOmaps: Exporting figure to clipboard...")
             with io.BytesIO() as buffer:
-                self.savefig(buffer, **self._clipboard_kwargs)
-                QApplication.clipboard().setImage(QImage.fromData(buffer.getvalue()))
+                self.savefig(buffer, **Maps._clipboard_kwargs)
+                data = QMimeData()
+                data.setData(mimetype, buffer.getvalue())
+                QApplication.clipboard().setMimeData(data)
+                # QApplication.clipboard().setImage(QImage.fromData(buffer.getvalue()))
+
             if verbose:
                 print("EOmaps: Figure copied to clipboard!")
 
