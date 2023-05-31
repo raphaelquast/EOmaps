@@ -8,7 +8,7 @@ from matplotlib.colors import LinearSegmentedColormap
 import numpy as np
 import copy
 
-from functools import partial, wraps
+from functools import partial, wraps, lru_cache
 from textwrap import dedent
 
 from .helpers import pairwise, _TransformedBoundsLocator
@@ -405,6 +405,7 @@ class ColorBar:
         else:
             self._m.BM.update()
 
+    @lru_cache()
     def _default_cb_tick_formatter(self, x, pos, precision=None):
         """
         A formatter to format the tick-labels of the colorbar for encoded datasets.
@@ -413,6 +414,7 @@ class ColorBar:
         # if precision=None the shortest representation of the number is used
         return np.format_float_positional(self._m._decode_values(x), precision)
 
+    @lru_cache()
     def _classified_cb_tick_formatter(self, x, pos, precision=None):
         """
         A formatter to format the tick-labels of the colorbar for classified datasets.
