@@ -1895,7 +1895,7 @@ class BlitManager:
             if isinstance(art, plt.Axes):
                 self._managed_axes.add(art)
 
-    def add_bg_artist(self, art, layer=None):
+    def add_bg_artist(self, art, layer=None, draw=True):
         """
         Add a background-artist to be managed.
         (Background artists are only updated on zoom-events... they are NOT animated!)
@@ -1903,7 +1903,6 @@ class BlitManager:
         Parameters
         ----------
         art : Artist
-
             The artist to be added.  Will be set to 'animated' (just
             to be safe).  *art* must be in the figure associated with
             the canvas this class is managing.
@@ -1913,6 +1912,9 @@ class BlitManager:
             - If "all": the corresponding feature will be added to ALL layers
 
             The default is None in which case the layer of the base-Maps object is used.
+        draw : bool, optional
+            If True, `figure.draw_idle()` is called after adding the artist.
+            The default is True.
         """
 
         if layer is None:
@@ -1947,9 +1949,25 @@ class BlitManager:
         for f in self._on_add_bg_artist:
             f()
 
-        self.canvas.draw_idle()
+        if draw:
+            self.canvas.draw_idle()
 
-    def remove_bg_artist(self, art, layer=None):
+    def remove_bg_artist(self, art, layer=None, draw=True):
+        """
+        Remove a background-artist from the map.
+
+        Parameters
+        ----------
+        art : Artist
+            The artist that should be removed.
+        layer : str or None, optional
+            If provided, the artist is only searched on the provided layer, otherwise
+            all map layers are searched. The default is None.
+        draw : bool, optional
+            If True, `figure.draw_idle()` is called after removing the artist.
+            The default is True.
+
+        """
         # handle the "__inset_" prefix of inset-map artists
         if (
             layer is not None
@@ -1994,7 +2012,8 @@ class BlitManager:
             # tag all relevant layers for refetch
             self._refetch_layer(layer)
 
-        self.canvas.draw_idle()
+        if draw:
+            self.canvas.draw_idle()
 
     def remove_artist(self, art, layer=None):
         # this only removes the artist from the blit-manager,
