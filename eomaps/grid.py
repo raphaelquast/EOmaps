@@ -293,7 +293,9 @@ class GridLines:
         self._coll = self._get_coll(**self._kwargs)
         if self._coll is not None:
             self.m.ax.add_collection(self._coll)
-            self.m.BM.add_bg_artist(self._coll, layer=self.layer)
+            # don't trigger draw since this would result in a recursion!
+            # (_redraw is called on each fetch-bg event)
+            self.m.BM.add_bg_artist(self._coll, layer=self.layer, draw=False)
 
     def _redraw(self):
         self._get_lines.cache_clear()
@@ -313,7 +315,9 @@ class GridLines:
         if self._coll is None:
             return
 
-        self.m.BM.remove_bg_artist(self._coll, layer=self.layer)
+        # don't trigger draw since this would result in a recursion!
+        # (_redraw is called on each fetch-bg event)
+        self.m.BM.remove_bg_artist(self._coll, layer=self.layer, draw=False)
         try:
             self._coll.remove()
         except ValueError:
