@@ -345,7 +345,6 @@ class Maps(object):
     CLASSIFIERS = SimpleNamespace(**dict(zip(_CLASSIFIERS, _CLASSIFIERS)))
 
     _crs_cache = dict()
-    _transformer_cache = dict()
 
     # arguments passed to m.savefig when using "ctrl+c" to export figure to clipboard
     _clipboard_kwargs = dict()
@@ -4781,25 +4780,19 @@ class Maps(object):
         return cartopy_proj
 
     @staticmethod
+    @lru_cache()
     def _get_transformer(crs_from, crs_to):
-        # create a pyproj Transformer object or return a cached version of it
-        # if it has already been created.
-        c_from = Maps._transformer_cache.setdefault(hash(crs_from), dict())
-        return c_from.setdefault(
-            hash(crs_to), Transformer.from_crs(crs_from, crs_to, always_xy=True)
-        )
+        # create a pyproj Transformer object and cache it for later use
+        return Transformer.from_crs(crs_from, crs_to, always_xy=True)
 
     @property
-    @lru_cache()
     def _transf_plot_to_lonlat(self):
-        # cache commonly used transformers
         return self._get_transformer(
             self.crs_plot,
             self.get_crs(self.crs_plot.as_geodetic()),
         )
 
     @property
-    @lru_cache()
     def _transf_lonlat_to_plot(self):
         return self._get_transformer(
             self.get_crs(self.crs_plot.as_geodetic()),
