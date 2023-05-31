@@ -393,8 +393,7 @@ class Maps(object):
             self._is_sublayer = False
 
         self._companion_widget = None  # slot for the pyqt widget
-        self._cid_companion_key = None  # callback id for the companion-cb
-        self._cid_clipboard = None  # callback id for the clipboard-cb
+        self._cid_keypress = None  # callback id for PyQt5 keypress callbacks
         # a list to remember newly registered colormaps
         self._registered_cmaps = []
 
@@ -3389,31 +3388,40 @@ class Maps(object):
 
         return layer
 
-    def _cb_save_to_clipboard(self, event):
-        if event.key == "ctrl+c":
-            import io
-            import mimetypes
-            from PyQt5.QtCore import QMimeData
-            from PyQt5.QtWidgets import QApplication
+    def _save_to_clipboard(self, **kwargs):
+        """
+        Export the figure to the clipboard.
 
-            verbose = Maps._clipboard_kwargs.pop("verbose", True)
+        Parameters
+        ----------
+        kwargs :
+            Keyword-arguments passed to :py:meth:`Maps.savefig`
+        """
+        import io
+        import mimetypes
+        from PyQt5.QtCore import QMimeData
+        from PyQt5.QtWidgets import QApplication
 
-            # guess the MIME type from the provided file-extension
-            mimetype, _ = mimetypes.guess_type(
-                "dummy." + Maps._clipboard_kwargs.get("format", "png")
-            )
+        # guess the MIME type from the provided file-extension
+        fmt = kwargs.get("format", "png")
+        mimetype, _ = mimetypes.guess_type(f"dummy.{fmt}")
 
-            if verbose:
-                print("EOmaps: Exporting figure to clipboard...")
-            with io.BytesIO() as buffer:
-                self.savefig(buffer, **Maps._clipboard_kwargs)
-                data = QMimeData()
-                data.setData(mimetype, buffer.getvalue())
-                QApplication.clipboard().setMimeData(data)
-                # QApplication.clipboard().setImage(QImage.fromData(buffer.getvalue()))
+        print(f"EOmaps: Exporting figure as '{fmt}' to clipboard...")
 
-            if verbose:
-                print("EOmaps: Figure copied to clipboard!")
+        with io.BytesIO() as buffer:
+            self.savefig(buffer, **kwargs)
+            data = QMimeData()
+            data.setData(mimetype, buffer.getvalue())
+            QApplication.clipboard().setMimeData(data)
+            # QApplication.clipboard().setImage(QImage.fromData(buffer.getvalue()))
+
+    def _on_keypress(self, event):
+        # NOTE: callback is only attached if PyQt5 is used as backend!
+        #       callback is only attached to the parent Maps object!
+        if event.key == self._companion_widget_key:
+            self._open_companion_widget((event.x, event.y))
+        elif event.key == "ctrl+c":
+            self._save_to_clipboard(**Maps._clipboard_kwargs)
 
     def _init_figure(self, ax=None, plot_crs=None, **kwargs):
         # do this on any new figure since "%matpltolib inline" tries to re-activate
@@ -3438,7 +3446,7 @@ class Maps(object):
 
         if plt.get_backend() == "Qt5Agg":
             # attach a callback to show/hide the companion-widget with the "w" key
-            if self.parent._cid_companion_key is None:
+            if self.parent._cid_keypress is None:
                 # NOTE the companion-widget is ONLY attached to the parent map
                 # since it will identify the clicked map automatically! The
                 # widget will only be initialized on Maps-objects that create
@@ -3446,15 +3454,8 @@ class Maps(object):
                 # Maps-object on the same axes will then always use the
                 # same widget. (otherwise each layer would get its own widget)
 
-                self.parent._cid_companion_key = self.f.canvas.mpl_connect(
-                    "key_press_event", self.parent._open_companion_widget_cb
-                )
-
-            # attach a callback to copy the figure to the clipboard
-            if self.parent._cid_clipboard is None:
-                self.parent._cid_clipboard = self.f.canvas.mpl_connect(
-                    "key_press_event",
-                    self._cb_save_to_clipboard,
+                self.parent._cid_keypress = self.f.canvas.mpl_connect(
+                    "key_press_event", self.parent._on_keypress
                 )
 
         if isinstance(ax, plt.Axes):
@@ -4647,18 +4648,30 @@ class Maps(object):
 
         self.BM.update()
 
-    def _open_companion_widget_cb(self, event):
-        if event.key != self._companion_widget_key:
-            return
+    def _open_companion_widget(self, xy=None):
+        """
+        Open the companion-widget.
 
-        clicked_map = None
-        for m in (self.parent, *self.parent._children):
-            if not m._new_axis_map:
-                # only search for Maps-object that initialized new axes
-                continue
+        Parameters
+        ----------
+        xy : tuple, optional
+            The click position to identify the relevant Maps-object
+            (in figure coordinates).
+            If None, the calling Maps-object is used
 
-            if m.ax.contains_point((event.x, event.y)):
-                clicked_map = m
+            The default is None.
+
+        """
+
+        clicked_map = self
+        if xy is not None:
+            for m in (self.parent, *self.parent._children):
+                if not m._new_axis_map:
+                    # only search for Maps-object that initialized new axes
+                    continue
+
+                if m.ax.contains_point(xy):
+                    clicked_map = m
 
         if clicked_map is None:
             print(
