@@ -285,7 +285,7 @@ class DataManager:
 
     @property
     def current_extent(self):
-        return self.m.get_extent(self.m.ax.projection)
+        return self.m.get_extent(self.m.crs_plot)
 
     @property
     def extent_changed(self):

@@ -2404,13 +2404,31 @@ class Maps(object):
 
     @wraps(GeoAxes.get_extent)
     def get_extent(self, crs=None):
-        """Get the extent of the map."""
-        # just a wrapper to avoid using m.ax.get_extent()
+        """
+        Get the extent (x0, x1, y0, y1) of the map in the given coordinate system.
+
+        Parameters
+        ----------
+        crs : a crs identifier, optional
+            The coordinate-system in which the extent is evaluated.
+
+            - if None, the extent is provided in epsg=4326 (e.g. lon/lat projection)
+
+            The default is None.
+
+        Returns
+        -------
+        extent : The extent in the given crs (x0, x1, y0, y1).
+
+        """
+        # fast track if plot-crs is requested
+        if crs == self.crs_plot:
+            return (*self.ax.get_xlim(), *self.ax.get_ylim())
 
         if crs is not None:
             crs = self._get_cartopy_crs(crs)
         else:
-            crs = Maps.CRS.PlateCarree()
+            crs = self._get_cartopy_crs(4326)
 
         return self.ax.get_extent(crs=crs)
 
