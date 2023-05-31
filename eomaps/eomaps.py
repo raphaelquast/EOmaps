@@ -2773,6 +2773,7 @@ class Maps(object):
         # set _data_plotted to True to trigger updates in the data-manager
         self._data_plotted = True
 
+    @lru_cache()
     def _get_combined_layer_name(self, *args):
         if len(args) == 1:
             assert isinstance(
