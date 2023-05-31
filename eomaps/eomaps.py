@@ -344,8 +344,6 @@ class Maps(object):
 
     CLASSIFIERS = SimpleNamespace(**dict(zip(_CLASSIFIERS, _CLASSIFIERS)))
 
-    _crs_cache = dict()
-
     # arguments passed to m.savefig when using "ctrl+c" to export figure to clipboard
     _clipboard_kwargs = dict()
 
@@ -1368,6 +1366,7 @@ class Maps(object):
         """
         Maps._clipboard_kwargs = kwargs
 
+    @lru_cache()
     def get_crs(self, crs="plot"):
         """
         Get the pyproj CRS instance of a given crs specification.
@@ -1393,12 +1392,7 @@ class Maps(object):
             elif crs == "out" or crs == "plot":
                 crs = self.crs_plot
 
-        h = hash(crs)
-        if h in self._crs_cache:
-            crs = self._crs_cache[h]
-        else:
-            crs = CRS.from_user_input(crs)
-            self._crs_cache[h] = crs
+        crs = CRS.from_user_input(crs)
         return crs
 
     @wraps(LayoutEditor.get_layout)
