@@ -1816,18 +1816,6 @@ class BlitManager:
         """Callback to register with 'draw_event'."""
         cv = self.canvas
 
-        if "RendererBase._draw_disabled" in cv.get_renderer().draw_image.__qualname__:
-            # TODO this fixes issues when saving figues with a "tight" bbox, e.g.:
-            # m.savefig(bbox_inches='tight', pad_inches=0.1)
-
-            # This workaround is necessary but the implementation is suboptimal since
-            # it relies on the __qualname__ to identify if the
-            # `matplotlib.backend_bases.RendererBase._draw_disabled()` context is active
-            # The reason why the "_draw_disabled" context has to be handled explicitly
-            # is because otherwise empty backgrounds would be fetched (and cached) by
-            # the draw-event and the export would result in an empty figure.
-            return
-
         if event is not None:
             if event.canvas != cv:
                 raise RuntimeError
