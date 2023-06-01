@@ -3091,12 +3091,13 @@ class Maps(object):
                     i = savelayers.index(key)
                     for a in val:
                         zorder = a.get_zorder() + i * max_zorder
-                        alpha = a.get_alpha()
-                        if alpha is None:
-                            alpha = 1
-                        stack.enter_context(
-                            a._cm_set(zorder=zorder, alpha=alpha * alphas[i])
-                        )
+                        stack.enter_context(a._cm_set(zorder=zorder))
+
+                        if alphas[i] < 1:
+                            alpha = a.get_alpha()
+                            if alpha is None:
+                                alpha = alphas[i]
+                            stack.enter_context(a._cm_set(alpha=alpha * alphas[i]))
                 else:
                     for a in val:
                         stack.enter_context(a._cm_set(visible=False))
