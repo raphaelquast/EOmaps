@@ -1647,12 +1647,12 @@ class BlitManager:
 
         return artists
 
-    def _combine_bgs(self, layer):
+    def _get_layers_alphas(self, layer):
         layers, alphas = [], []
         for l in layer.split("|"):
             if l.endswith("}") and "{" in l:
                 try:
-                    name, a = l.split("{")
+                    name, a = l.split("{", maxsplit=1)
                     a = float(a.replace("}", ""))
 
                     layers.append(name)
@@ -1664,6 +1664,10 @@ class BlitManager:
             else:
                 layers.append(l)
                 alphas.append(1)
+        return layers, alphas
+
+    def _combine_bgs(self, layer):
+        layers, alphas = self._get_layers_alphas(layer)
 
         # make sure all layers are already fetched
         for l in layers:
