@@ -988,27 +988,21 @@ class LayoutEditor:
             ax.set_frame_on(True)
 
             for child in ax.get_children():
-                for prop in [
-                    "facecolor",
+                revert_props = [
                     "edgecolor",
                     "linewidth",
                     "linestyle",
                     "alpha",
                     "animated",
                     "visible",
-                ]:
-                    if hasattr(child, f"set_{prop}") and hasattr(child, f"get_{prop}"):
-                        self._revert_props.append(
-                            (
-                                getattr(child, f"set_{prop}"),
-                                getattr(child, f"get_{prop}")(),
-                            )
-                        )
+                ]
+                self._add_revert_props(child, *revert_props)
 
                 if isinstance(child, Spine) and not cbaxQ:
                     # make sure spines are visible (and re-drawn on draw)
                     child.set_animated(False)
                     child.set_visible(True)
+
                 elif (
                     ax not in self.maxes
                     and showXY
@@ -1017,11 +1011,17 @@ class LayoutEditor:
                     # keep all tick labels etc. of normal axes and colorbars visible
                     child.set_animated(False)
                     child.set_visible(True)
+
                 elif child is ax.patch and not cbaxQ:
                     # make sure patches are visible (and re-drawn on draw)
                     child.set_visible(True)
                     child.set_facecolor("w")
                     child.set_alpha(0.75)  # for overlapping axes
+
+                    # only reset facecolors for axes-patches to avoid issues with
+                    # black spines (TODO check why this happens!)
+                    self._add_revert_props(child, "facecolor")
+
                 else:
                     # make all other childs invisible (to avoid drawing them)
                     child.set_visible(False)
@@ -1030,6 +1030,16 @@ class LayoutEditor:
         self._color_axes()
         self._attach_callbacks()
         self.m.redraw()
+
+    def _add_revert_props(self, child, *args):
+        for prop in args:
+            if hasattr(child, f"set_{prop}") and hasattr(child, f"get_{prop}"):
+                self._revert_props.append(
+                    (
+                        getattr(child, f"set_{prop}"),
+                        getattr(child, f"get_{prop}")(),
+                    )
+                )
 
     def _undo_draggable(self):
 
