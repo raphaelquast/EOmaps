@@ -1369,6 +1369,8 @@ class BlitManager:
 
         self._clear_on_layer_change = False
 
+        self._on_layer_change_running = False
+
     def _get_all_map_axes(self):
         maxes = {
             m.ax for m in (self._m.parent, *self._m.parent._children) if m._new_axis_map
@@ -1397,50 +1399,67 @@ class BlitManager:
     def canvas(self):
         return self.figure.canvas
 
+    @contextmanager
+    def _cx_on_layer_change_running(self):
+        # a context-manager to avoid recursive on_layer_change calls
+        try:
+            self._on_layer_change_running = True
+            yield
+        finally:
+            self._on_layer_change_running = False
+
     def _do_on_layer_change(self, layer, new=False):
+        # avoid recursive calls to "_do_on_layer_change"
+        # This is required in case the executed functions trigger actions that would
+        # trigger "_do_on_layer_change" again which can result in a mixed-up order of
+        # the scheduled functions.
+        if self._on_layer_change_running is True:
+            return
+
         # do not execute layer-change callbacks on private layer activation!
         if layer.startswith("__"):
             return
 
-        # only execute persistent layer-change callbacks if the layer changed!
-        if new:
-            # general callbacks executed on any layer change
-            # persistent callbacks
-            for f in self._on_layer_change[True]:
-                f(layer=layer)
-
-        # single-shot callbacks
-        # (execute also if the layer is already active)
-        while len(self._on_layer_change[False]) > 0:
-            try:
-                f = self._on_layer_change[False].pop(-1)
-                f(layer=layer)
-            except Exception as ex:
-                print(
-                    "EOmaps: there was an issue while trying to execute a "
-                    f"layer-change action: {ex}"
-                )
-
-        if new:
-            for l in layer.split("|"):
-                # individual callables executed if a specific layer is activate
+        with self._cx_on_layer_change_running():
+            # only execute persistent layer-change callbacks if the layer changed!
+            if new:
+                # general callbacks executed on any layer change
                 # persistent callbacks
-                for f in self._on_layer_activation[True].get(layer, []):
-                    f(layer=l)
+                for f in reversed(self._on_layer_change[True]):
+                    f(layer=layer)
 
-        for l in layer.split("|"):
             # single-shot callbacks
-            single_shot_funcs = self._on_layer_activation[False].get(l, [])
-            while len(single_shot_funcs) > 0:
+            # (execute also if the layer is already active)
+            while len(self._on_layer_change[False]) > 0:
                 try:
-                    f = single_shot_funcs.pop(-1)
-                    f(layer=l)
+                    f = self._on_layer_change[False].pop(0)
+                    f(layer=layer)
                 except Exception as ex:
-                    raise (ex)
                     print(
                         "EOmaps: there was an issue while trying to execute a "
                         f"layer-change action: {ex}"
                     )
+
+            if new:
+                for l in layer.split("|"):
+                    # individual callables executed if a specific layer is activate
+                    # persistent callbacks
+                    for f in reversed(self._on_layer_activation[True].get(layer, [])):
+                        f(layer=l)
+
+            for l in layer.split("|"):
+                # single-shot callbacks
+                single_shot_funcs = self._on_layer_activation[False].get(l, [])
+                while len(single_shot_funcs) > 0:
+                    try:
+                        f = single_shot_funcs.pop(0)
+                        f(layer=l)
+                    except Exception as ex:
+                        raise (ex)
+                        print(
+                            "EOmaps: there was an issue while trying to execute a "
+                            f"layer-change action: {ex}"
+                        )
 
     @contextmanager
     def _without_artists(self, artists=None, layer=None):
