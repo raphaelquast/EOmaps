@@ -1,7 +1,7 @@
 """A collection of helper-functions to generate map-plots."""
 
 from functools import lru_cache, wraps
-from itertools import repeat
+from itertools import repeat, chain
 from textwrap import dedent
 import warnings
 import copy
@@ -2215,7 +2215,6 @@ class Maps(object):
                 ys = np.linspace(y[:-1], y[1:], n).T.ravel()
             else:
                 # use different number of points for individual segments
-                from itertools import chain
 
                 xs = list(
                     chain(
@@ -3020,7 +3019,7 @@ class Maps(object):
         }
     )
     @wraps(plt.savefig)
-    def savefig(self, *args, refetch_wms=False, **kwargs):
+    def savefig(self, *args, refetch_wms=False, rasterize_data=True, **kwargs):
         """Save the figure."""
         with ExitStack() as stack:
             if refetch_wms is False:
@@ -3033,8 +3032,6 @@ class Maps(object):
             # hide companion-widget indicator
             self._indicate_companion_map(False)
 
-            dpi = kwargs.get("dpi", None)
-
             # add the figure background patch as the bottom layer
             transparent = kwargs.get("transparent", False)
             if transparent is False:
@@ -3042,6 +3039,8 @@ class Maps(object):
                 showlayer_name = self.BM._get_showlayer_name(initial_layer)
                 layer_with_bg = "|".join(["__BG__", showlayer_name])
                 self.show_layer(layer_with_bg)
+
+            dpi = kwargs.get("dpi", None)
 
             redraw = False
             if dpi is not None and dpi != self.f.dpi or "bbox_inches" in kwargs:
@@ -3053,6 +3052,65 @@ class Maps(object):
 
                 # set the shading-axis-size to reflect the used dpi setting
                 self._update_shade_axis_size(dpi=dpi)
+
+            savelayers, alphas = self.BM._get_layers_alphas(
+                self.BM._get_showlayer_name()
+            )
+            nlayers = len(savelayers)
+
+            # identify maximum zorder of all artists
+            max_zorder = max(
+                a.get_zorder()
+                for key, val in chain(
+                    self.BM._bg_artists.items(), self.BM._artists.items()
+                )
+                for a in val
+            )
+
+            for m in (self.parent, *self.parent._children):
+                # re-enable normal axis draw cycle by making axes non-animated.
+                # This is needed for backward-compatibility, since saving a figure ignores
+                # the animated attribute for axis-children but not for the axis itself. See:
+                # https://github.com/matplotlib/matplotlib/issues/26007#issuecomment-1568812089
+                stack.enter_context(m.ax._cm_set(animated=False))
+
+                # handle colorbars
+                for cb in m._colorbars:
+                    for a in cb._axes:
+                        stack.enter_context(a._cm_set(animated=False))
+
+                # handle data rasterization
+                if m.coll is not None:
+                    stack.enter_context(m.coll._cm_set(rasterized=rasterize_data))
+
+            # select artists to export
+            # adjust zorder to respect layer order
+            # set global transparency for background artists
+            for key, val in self.BM._bg_artists.items():
+                if key in savelayers:
+                    i = savelayers.index(key)
+                    for a in val:
+                        zorder = a.get_zorder() + i * max_zorder
+                        alpha = a.get_alpha()
+                        if alpha is None:
+                            alpha = 1
+                        stack.enter_context(
+                            a._cm_set(zorder=zorder, alpha=alpha * alphas[i])
+                        )
+                else:
+                    for a in val:
+                        stack.enter_context(a._cm_set(visible=False))
+
+            # always draw dynamic artists on top of background artists
+            for key, val in self.BM._artists.items():
+                if key in savelayers:
+                    i = savelayers.index(key)
+                    for a in val:
+                        zorder = a.get_zorder() + (i + nlayers) * max_zorder
+                        stack.enter_context(a._cm_set(zorder=zorder))
+                else:
+                    for a in val:
+                        stack.enter_context(a._cm_set(visible=False))
 
             self.f.savefig(*args, **kwargs)
 
