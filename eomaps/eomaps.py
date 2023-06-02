@@ -3099,6 +3099,10 @@ class Maps(object):
                 if m.coll is not None:
                     stack.enter_context(m.coll._cm_set(rasterized=rasterize_data))
 
+            # explicitly set axes to non-animated to re-enable draw cycle
+            for a in m.BM._managed_axes:
+                stack.enter_context(a._cm_set(animated=False))
+
             # select artists to export
             # adjust zorder to respect layer order
             # set global transparency for background artists
@@ -3129,6 +3133,9 @@ class Maps(object):
                     for a in val:
                         stack.enter_context(a._cm_set(visible=False))
 
+            # trigger a redraw of all savelayers to make sure unmanaged artists
+            # and ordinary matplotlib axes are properly drawn
+            self.redraw(*savelayers)
             self.f.savefig(*args, **kwargs)
 
         if redraw is True:
