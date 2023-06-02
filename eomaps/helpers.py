@@ -1013,14 +1013,14 @@ class LayoutEditor:
                     child.set_visible(True)
 
                 elif child is ax.patch and not cbaxQ:
+                    # only reset facecolors for axes-patches to avoid issues with
+                    # black spines (TODO check why this happens!)
+                    self._add_revert_props(child, "facecolor")
+
                     # make sure patches are visible (and re-drawn on draw)
                     child.set_visible(True)
                     child.set_facecolor("w")
                     child.set_alpha(0.75)  # for overlapping axes
-
-                    # only reset facecolors for axes-patches to avoid issues with
-                    # black spines (TODO check why this happens!)
-                    self._add_revert_props(child, "facecolor")
 
                 else:
                     # make all other childs invisible (to avoid drawing them)
