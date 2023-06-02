@@ -1330,7 +1330,7 @@ class Maps(object):
     @classmethod
     def set_clipboard_kwargs(cls, **kwargs):
         """
-        Set arguments when exporting the figure to the clipboard.
+        Set GLOBAL savefig parameters for all Maps objects on export to the clipboard.
 
         - press "control + c" to export the figure to the clipboard
 
@@ -1364,6 +1364,16 @@ class Maps(object):
 
         """
         Maps._clipboard_kwargs = kwargs
+
+        # trigger companion-widget setter for all open figures that contain maps
+        for i in plt.get_fignums():
+            try:
+                m = getattr(plt.figure(i), "_EOmaps_parent", None)
+                if m is not None:
+                    if m._companion_widget is not None:
+                        m._companion_widget.clipboardKwargsChanged.emit()
+            except Exception:
+                pass
 
     @lru_cache()
     def get_crs(self, crs="plot"):
@@ -3079,7 +3089,7 @@ class Maps(object):
                     for a in cb._axes:
                         stack.enter_context(a._cm_set(animated=False))
 
-                # handle data rasterization
+                # set if data should be rasterized on vektor export
                 if m.coll is not None:
                     stack.enter_context(m.coll._cm_set(rasterized=rasterize_data))
 

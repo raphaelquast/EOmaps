@@ -1381,6 +1381,20 @@ class BlitManager:
 
         self._on_layer_change_running = False
 
+    def _get_renderer(self):
+        # don't return the renderer if the figure is saved.
+        # in this case the normal draw-routines are used (see m.savefig) so there is
+        # no need to trigger updates (also `canvas.get_renderer` is undefined for
+        # pdf/svg exports since those canvas do not expose the renderer)
+        # ... this is required to support vektor format outputs!
+        if self.canvas.is_saving():
+            return None
+
+        try:
+            return self.canvas.get_renderer()
+        except Exception:
+            return None
+
     def _get_all_map_axes(self):
         maxes = {
             m.ax for m in (self._m.parent, *self._m.parent._children) if m._new_axis_map
@@ -1687,28 +1701,34 @@ class BlitManager:
                 self._do_on_layer_change(layer=l, new=False)
                 self._do_fetch_bg(l)
 
-        gc = self.canvas.renderer.new_gc()
-        gc.set_clip_rectangle(self.canvas.figure.bbox)
+        renderer = self._get_renderer()
+        if renderer:
+            gc = renderer.new_gc()
+            gc.set_clip_rectangle(self.canvas.figure.bbox)
 
-        # switch to a blank background layer before merging backgrounds
-        # TODO is there a beter way to avoid drawing on initial backgrounds?
-        self.canvas.restore_region(self._blank_bg)
+            # switch to a blank background layer before merging backgrounds
+            # TODO is there a beter way to avoid drawing on initial backgrounds?
+            self.canvas.restore_region(self._blank_bg)
 
-        x0, y0, w, h = self.figure.bbox.bounds
-        for l, a in zip(layers, alphas):
-
-            rgba = self._get_array(l, a=a)
-            self.canvas.renderer.draw_image(
-                gc,
-                int(x0),
-                int(y0),
-                rgba[int(y0) : int(y0 + h), int(x0) : int(x0 + w), :],
-            )
-        # cache the combined background
-        self._bg_layers[layer] = self._m.f.canvas.copy_from_bbox(self._m.f.bbox)
-        gc.restore()
+            x0, y0, w, h = self.figure.bbox.bounds
+            for l, a in zip(layers, alphas):
+                rgba = self._get_array(l, a=a)
+                if rgba is None:
+                    # to handle completely empty layers
+                    continue
+                renderer.draw_image(
+                    gc,
+                    int(x0),
+                    int(y0),
+                    rgba[int(y0) : int(y0 + h), int(x0) : int(x0 + w), :],
+                )
+            # cache the combined background
+            self._bg_layers[layer] = self._m.f.canvas.copy_from_bbox(self._m.f.bbox)
+            gc.restore()
 
     def _get_array(self, l, a=1):
+        if l not in self._bg_layers:
+            return None
         rgba = np.array(self._bg_layers[l])[::-1, :, :]
         if a != 1:
             rgba = rgba.copy()
@@ -1717,7 +1737,7 @@ class BlitManager:
 
     def _do_fetch_bg(self, layer, bbox=None):
         cv = self.canvas
-        renderer = cv.get_renderer()
+        renderer = self._get_renderer()
 
         if bbox is None:
             bbox = self.figure.bbox
@@ -1765,14 +1785,15 @@ class BlitManager:
             if no_stale_artists and (self._bg_layers.get(layer, None) is not None):
                 return
 
-            self.canvas.restore_region(self._blank_bg)
+            if renderer:
+                self.canvas.restore_region(self._blank_bg)
 
-            if not self._m.parent._layout_editor._modifier_pressed:
-                for art in allartists:
-                    if art not in self._hidden_artists:
-                        art.draw(renderer)
-                        art.stale = False
-                self._bg_layers[layer] = cv.copy_from_bbox(bbox)
+                if not self._m.parent._layout_editor._modifier_pressed:
+                    for art in allartists:
+                        if art not in self._hidden_artists:
+                            art.draw(renderer)
+                            art.stale = False
+                            self._bg_layers[layer] = cv.copy_from_bbox(bbox)
 
     def _do_fetch_blank(self):
         # fetch a blank background
@@ -1825,6 +1846,25 @@ class BlitManager:
     def on_draw(self, event):
         """Callback to register with 'draw_event'."""
         cv = self.canvas
+
+        try:
+            if (
+                "RendererBase._draw_disabled"
+                in cv.get_renderer().draw_image.__qualname__
+            ):
+                # TODO this fixes issues when saving figues with a "tight" bbox, e.g.:
+                # m.savefig(bbox_inches='tight', pad_inches=0.1)
+
+                # This workaround is necessary but the implementation is suboptimal since
+                # it relies on the __qualname__ to identify if the
+                # `matplotlib.backend_bases.RendererBase._draw_disabled()` context is active
+                # The reason why the "_draw_disabled" context has to be handled explicitly
+                # is because otherwise empty backgrounds would be fetched (and cached) by
+                # the draw-event and the export would result in an empty figure.
+                return
+        except AttributeError:
+            # return on AttributeError to handle backends that don't expose the renderer
+            return
 
         if event is not None:
             if event.canvas != cv:
@@ -2076,6 +2116,9 @@ class BlitManager:
 
         """
         fig = self.canvas.figure
+        renderer = self._get_renderer()
+        if renderer is None:
+            return
 
         # make sure to strip-off transparency-assignments (e.g. "layer1{0.5}")
         if layers is None:
@@ -2103,7 +2146,7 @@ class BlitManager:
         # - NOTE: this must be done before drawing managed artists to properly support
         #   temporary artists on unmanaged axes!
         for ax in self._get_unmanaged_axes():
-            ax.draw(self.canvas.renderer)
+            ax.draw(renderer)
 
         # redraw artists from the selected layers and explicitly provided artists
         # (sorted by zorder for each layer)
@@ -2262,6 +2305,7 @@ class BlitManager:
         # restore the background
         # add additional layers (background, spines etc.)
         show_layer = self._get_showlayer_name()
+
         if show_layer not in self._bg_layers:
             # make sure the background is properly fetched
             self.fetch_bg(show_layer)
@@ -2317,11 +2361,10 @@ class BlitManager:
             The default is True
         """
         cv = self.canvas
-
-        # paranoia in case we missed the first draw event
-        if getattr(self.figure, "_cachedRenderer", None) is None:
-            with self._disconnect_draw():
-                self.figure.canvas.draw()
+        renderer = self._get_renderer()
+        if renderer is None:
+            print("EOmaps: encountered a problem while trying to blit artists...")
+            return
 
         # restore the background
         if bg is not None:
@@ -2349,13 +2392,16 @@ class BlitManager:
 
         bbox_bounds = (x, y, width, height)
         """
-
         if bbox_bounds is None:
             bbox = self.figure.bbox
         else:
             bbox = Bbox.from_bounds(*bbox_bounds)
 
         def action():
+            renderer = self._get_renderer()
+            if renderer is None:
+                return
+
             if self.bg_layer == layer:
                 return
 
@@ -2380,13 +2426,13 @@ class BlitManager:
 
             argb[:, :, -1] = (argb[:, :, -1] * alpha).astype(np.int8)
 
-            gc = self.canvas.renderer.new_gc()
+            gc = renderer.new_gc()
 
             gc.set_clip_rectangle(bbox)
             if set_clip_path is True:
                 gc.set_clip_path(clip_path)
 
-            self.canvas.renderer.draw_image(
+            renderer.draw_image(
                 gc,
                 int(x0),
                 int(y0),
