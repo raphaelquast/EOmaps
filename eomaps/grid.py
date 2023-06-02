@@ -58,6 +58,7 @@ class GridLines:
         """
         self._bounds = bounds
         self._redraw()
+        self.m.redraw(self.layer)
 
     def set_d(self, d):
         """
@@ -80,6 +81,7 @@ class GridLines:
         """
         self._d = d
         self._redraw()
+        self.m.redraw(self.layer)
 
     def set_auto_n(self, auto_n):
         """
@@ -97,6 +99,7 @@ class GridLines:
         """
         self._auto_n = auto_n
         self._redraw()
+        self.m.redraw(self.layer)
 
     def set_n(self, n):
         """
@@ -110,6 +113,7 @@ class GridLines:
         """
         self._n = n
         self._redraw()
+        self.m.redraw(self.layer)
 
     def _update_line_props(self, **kwargs):
         color = None
@@ -143,6 +147,7 @@ class GridLines:
         """
         self._update_line_props(**kwargs)
         self._redraw()
+        self.m.redraw(self.layer)
 
     @staticmethod
     def _calc_lines(d, bounds, n=100):
@@ -953,6 +958,7 @@ class GridFactory:
         g._add_grid(**kwargs)
         self._gridlines.append(g)
 
+        self.m.f.canvas.draw_idle()
         return g
 
     def _update_autogrid(self, *args, **kwargs):
