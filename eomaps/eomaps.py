@@ -1327,8 +1327,13 @@ class Maps(object):
         else:
             print("Centering Map to:\n    ", r["display_name"])
 
-    @classmethod
-    def set_clipboard_kwargs(cls, **kwargs):
+    @staticmethod
+    def _set_clipboard_kwargs(**kwargs):
+        # use Maps to make sure InsetMaps do the same thing!
+        Maps._clipboard_kwargs = kwargs
+
+    @staticmethod
+    def set_clipboard_kwargs(**kwargs):
         """
         Set GLOBAL savefig parameters for all Maps objects on export to the clipboard.
 
@@ -1363,7 +1368,8 @@ class Maps(object):
         Maps.savefig : Save the figure as jpeg, png, etc.
 
         """
-        Maps._clipboard_kwargs = kwargs
+        # use Maps to make sure InsetMaps do the same thing!
+        Maps._set_clipboard_kwargs(kwargs)
 
         # trigger companion-widget setter for all open figures that contain maps
         for i in plt.get_fignums():

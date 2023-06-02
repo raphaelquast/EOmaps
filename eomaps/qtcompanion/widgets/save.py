@@ -303,7 +303,8 @@ class SaveFileWidget(QtWidgets.QFrame):
             clipboard_kwargs["bbox_inches"] = "tight"
             clipboard_kwargs["pad_inches"] = float(self.tightbbox_input.text())
 
-        self.m.__class__._clipboard_kwargs = clipboard_kwargs
+        # use private setter to avoid triggering callbacks on set
+        self.m._set_clipboard_kwargs(**clipboard_kwargs)
 
     @pyqtSlot()
     def set_export_props(self, *args, **kwargs):
