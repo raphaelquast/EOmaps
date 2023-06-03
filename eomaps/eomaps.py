@@ -2717,6 +2717,7 @@ class Maps(object):
                 assume_sorted=assume_sorted,
                 **kwargs,
             )
+            self.f.canvas.draw_idle()
         else:
             # dont set extent if "m.set_extent" was called explicitly
             if set_extent and self._set_extent_on_plot:
@@ -2732,7 +2733,7 @@ class Maps(object):
                 **kwargs,
             )
 
-        self.BM._refetch_layer(layer)
+            self.BM._refetch_layer(layer)
 
         if verbose >= 1:
             if getattr(self, "_data_mask", None) is not None and not np.all(
