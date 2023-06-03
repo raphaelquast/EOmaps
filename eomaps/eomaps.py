@@ -4863,6 +4863,7 @@ class Maps(object):
             return obj
 
     @staticmethod
+    @lru_cache()
     def _get_cartopy_crs(crs):
         if isinstance(crs, Maps.CRS.CRS):  # already a cartopy CRS
             cartopy_proj = crs
