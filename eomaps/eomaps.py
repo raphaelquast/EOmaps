@@ -3073,8 +3073,11 @@ class Maps(object):
                 # set the shading-axis-size to reflect the used dpi setting
                 self._update_shade_axis_size(dpi=dpi)
 
+            # make sure that artists from the "all" layer are drawn as well
             savelayers, alphas = self.BM._get_layers_alphas(
-                self.BM._get_showlayer_name()
+                self.BM._get_showlayer_name(
+                    self._get_combined_layer_name(self.BM.bg_layer, "all")
+                )
             )
             nlayers = len(savelayers)
 
@@ -3115,7 +3118,7 @@ class Maps(object):
                     i = savelayers.index(key)
                     for a in val:
                         zorder = a.get_zorder() + i * max_zorder
-                        stack.enter_context(a._cm_set(zorder=zorder))
+                        stack.enter_context(a._cm_set(zorder=zorder, animated=False))
 
                         if alphas[i] < 1:
                             alpha = a.get_alpha()
@@ -3124,7 +3127,7 @@ class Maps(object):
                             stack.enter_context(a._cm_set(alpha=alpha * alphas[i]))
                 else:
                     for a in val:
-                        stack.enter_context(a._cm_set(visible=False))
+                        stack.enter_context(a._cm_set(visible=False, animated=True))
 
             # always draw dynamic artists on top of background artists
             for key, val in self.BM._artists.items():
@@ -3132,10 +3135,10 @@ class Maps(object):
                     i = savelayers.index(key)
                     for a in val:
                         zorder = a.get_zorder() + (i + nlayers) * max_zorder
-                        stack.enter_context(a._cm_set(zorder=zorder))
+                        stack.enter_context(a._cm_set(zorder=zorder, animated=False))
                 else:
                     for a in val:
-                        stack.enter_context(a._cm_set(visible=False))
+                        stack.enter_context(a._cm_set(visible=False, animated=True))
 
             # trigger a redraw of all savelayers to make sure unmanaged artists
             # and ordinary matplotlib axes are properly drawn
