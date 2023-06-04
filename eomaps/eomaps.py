@@ -3508,6 +3508,7 @@ class Maps(object):
         import mimetypes
         from PyQt5.QtCore import QMimeData
         from PyQt5.QtWidgets import QApplication
+        from PyQt5.QtGui import QImage
 
         # guess the MIME type from the provided file-extension
         fmt = kwargs.get("format", "png")
@@ -3518,9 +3519,17 @@ class Maps(object):
         with io.BytesIO() as buffer:
             self.savefig(buffer, **kwargs)
             data = QMimeData()
-            data.setData(mimetype, buffer.getvalue())
-            QApplication.clipboard().setMimeData(data)
-            # QApplication.clipboard().setImage(QImage.fromData(buffer.getvalue()))
+
+            cb = QApplication.clipboard()
+
+            # TODO check why files copied with setMimeData(...) cannot be pasted
+            # properly in other apps
+            if fmt in ["svg", "svgz", "pdf", "eps"]:
+                data.setData(mimetype, buffer.getvalue())
+                cb.clear(mode=cb.Clipboard)
+                cb.setMimeData(data, mode=cb.Clipboard)
+            else:
+                cb.setImage(QImage.fromData(buffer.getvalue()))
 
     def _on_keypress(self, event):
         # NOTE: callback is only attached if PyQt5 is used as backend!
