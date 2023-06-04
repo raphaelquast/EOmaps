@@ -515,7 +515,6 @@ class ColorBar:
 
         # avoid singular matrix errors caused by visible axes with 0 size
         # when activating the layout editor
-        print(self._hist_size)
         if self._hist_size > 0.999:
             self.ax_cb.set_visible(False)  # to avoid singular matrix errors
             self.ax_cb_plot.set_visible(True)
