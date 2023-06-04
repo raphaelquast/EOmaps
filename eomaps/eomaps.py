@@ -2498,10 +2498,13 @@ class Maps(object):
                     "if the classification is inherited!"
                 )
 
-            if self._vmin is None:
-                print("EOmaps: Warning, inherited value for 'vmin' is None!")
-            if self._vmax is None:
-                print("EOmaps: Warning, inherited value for 'vmax' is None!")
+            # in case data is NOT inherited, warn if vmin/vmax is None
+            # (different limits might cause a different appearance of the data!)
+            if self.data_specs._m == self:
+                if self._vmin is None:
+                    print("EOmaps: Warning, inherited value for 'vmin' is None!")
+                if self._vmax is None:
+                    print("EOmaps: Warning, inherited value for 'vmax' is None!")
 
             self._vmin = self._inherit_classification._vmin
             self._vmax = self._inherit_classification._vmax
