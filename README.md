@@ -39,7 +39,8 @@ It is built on top of [matplotlib](matplotlib.org/) and [cartopy](https://scitoo
   - . . .
 - Use [🛸 Callbacks](https://eomaps.readthedocs.io/en/latest/api.html#callbacks-make-the-map-interactive) and the [🧰 CompanionWidget](https://eomaps.readthedocs.io/en/dev/api.html#companion-widget) to interact with the figure
 - Interactively re-arrange multiple maps in a figure with the [🏗️ LayoutEditor](https://eomaps.readthedocs.io/en/dev/api.html#layout-editor)
-- [🗺 Export](https://eomaps.readthedocs.io/en/dev/api.html#export-the-map-as-jpeg-png-etc) publication ready high resolution images (png, jpeg etc.)
+- [🗺 Export](https://eomaps.readthedocs.io/en/dev/api.html#export-the-map-as-jpeg-png-etc) publication ready high resolution images (png, jpeg, tiff, ...)  
+or export figures as vektor graphics (svg, eps, pdf ...)
 - . . . and much more!  
 
 Checkout the [🚀 Basics](https://eomaps.readthedocs.io/en/dev/api.html#basics) in the documentation to get started!
