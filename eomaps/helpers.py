@@ -2312,11 +2312,12 @@ class BlitManager:
 
         cv.restore_region(self._bg_layers[show_layer])
 
-        # draw all of the animated artists
+        # execute after restore actions (e.g. peek layer callbacks)
         while len(self._after_restore_actions) > 0:
             action = self._after_restore_actions.pop(0)
             action()
 
+        # draw all of the animated artists
         self._draw_animated(layers=layers, artists=artists)
         if blit:
             # workaround for nbagg backend to avoid glitches
