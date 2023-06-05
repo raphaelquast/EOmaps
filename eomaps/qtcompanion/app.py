@@ -8,7 +8,6 @@ if app is None:
     # if it does not exist then a QApplication is created
     app = QtWidgets.QApplication([])
 
-
 from .base import transparentWindow
 from .widgets.peek import PeekTabs
 from .widgets.editor import ArtistEditor
@@ -20,6 +19,7 @@ from .widgets.extent import SetExtentToLocation
 from .widgets.click_callbacks import ClickCallbacks
 
 from .widgets.editor import LayerTabBar
+from .widgets.utils import EditLayoutButton
 
 
 class OpenFileButton(QtWidgets.QPushButton):
@@ -35,7 +35,7 @@ class Tab1(QtWidgets.QWidget):
         peektabs = PeekTabs(m=self.m)
 
         setextent = SetExtentToLocation(m=self.m)
-        save = SaveFileWidget(m=self.m)
+        self.save_widget = SaveFileWidget(m=self.m)
 
         # -------------
         self.layer_tabs = LayerTabBar(self.m, populate=True)
@@ -48,20 +48,29 @@ class Tab1(QtWidgets.QWidget):
 
         click_cbs = ClickCallbacks(m=self.m)
 
+        # add wms button
         try:
             addwms = AddWMSMenuButton(m=self.m, new_layer=True)
             addwms.wmsLayerCreated.connect(
                 self.layer_tabs.repopulate_and_activate_current
             )
         except:
-            addwms = QtWidgets.QPushButton("WMS services unavailable")
+            addwms = None
 
+        # open file button
         self.open_file_button = OpenFileButton("Open File")
         self.open_file_button.setFixedSize(self.open_file_button.sizeHint())
 
+        # edit layout button
+        b_edit = EditLayoutButton("Edit layout", m=self.m)
+        width = b_edit.fontMetrics().boundingRect(b_edit.text()).width()
+        b_edit.setFixedWidth(width + 30)
+
         l2 = QtWidgets.QHBoxLayout()
-        l2.addWidget(addwms)
+        if addwms:
+            l2.addWidget(addwms)
         l2.addWidget(self.open_file_button)
+        l2.addWidget(b_edit)
         l2.addStretch(1)
         l2.addWidget(setextent)
 
@@ -78,7 +87,7 @@ class Tab1(QtWidgets.QWidget):
         layout.addLayout(l2)
         layout.addStretch(1)
         layout.addLayout(layer_tab_layout)
-        layout.addWidget(save)
+        layout.addWidget(self.save_widget)
 
         self.setLayout(layout)
 
@@ -130,6 +139,7 @@ class ControlTabs(QtWidgets.QTabWidget):
 class MenuWindow(transparentWindow):
 
     cmapsChanged = pyqtSignal()
+    clipboardKwargsChanged = pyqtSignal()
 
     def __init__(self, *args, m=None, **kwargs):
 
@@ -142,10 +152,6 @@ class MenuWindow(transparentWindow):
         self.showhelp = False
 
         super().__init__(*args, m=self.m, **kwargs)
-
-        # clear the colormaps-dropdown pixmap cache if the colormaps have changed
-        # (the pyqtSignal is emmited by Maps-objects if a new colormap is registered)
-        self.cmapsChanged.connect(self.clear_pixmap_cache)
 
         self.tabs = ControlTabs(m=self.m)
         self.tabs.setMouseTracking(True)
@@ -177,6 +183,13 @@ class MenuWindow(transparentWindow):
 
         # sh = self.sizeHint()
         # self.resize(int(sh.width() * 1.35), sh.height())
+
+        # clear the colormaps-dropdown pixmap cache if the colormaps have changed
+        # (the pyqtSignal is emmited by Maps-objects if a new colormap is registered)
+        self.cmapsChanged.connect(self.clear_pixmap_cache)
+
+        # set save-file args to values set as clipboard kwargs
+        self.clipboardKwargsChanged.connect(self.tabs.tab1.save_widget.set_export_props)
 
     def show(self):
         super().show()

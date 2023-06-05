@@ -58,6 +58,7 @@ class GridLines:
         """
         self._bounds = bounds
         self._redraw()
+        self.m.redraw(self.layer)
 
     def set_d(self, d):
         """
@@ -80,6 +81,7 @@ class GridLines:
         """
         self._d = d
         self._redraw()
+        self.m.redraw(self.layer)
 
     def set_auto_n(self, auto_n):
         """
@@ -97,6 +99,7 @@ class GridLines:
         """
         self._auto_n = auto_n
         self._redraw()
+        self.m.redraw(self.layer)
 
     def set_n(self, n):
         """
@@ -110,6 +113,7 @@ class GridLines:
         """
         self._n = n
         self._redraw()
+        self.m.redraw(self.layer)
 
     def _update_line_props(self, **kwargs):
         color = None
@@ -143,6 +147,7 @@ class GridLines:
         """
         self._update_line_props(**kwargs)
         self._redraw()
+        self.m.redraw(self.layer)
 
     @staticmethod
     def _calc_lines(d, bounds, n=100):
@@ -579,7 +584,7 @@ class GridLabels:
                 try:
                     t = self._texts.pop(-1)
                     t.remove()
-                    self._g.m.BM.remove_bg_artist(t)
+                    self._g.m.BM.remove_bg_artist(t, draw=False)
                 except Exception as ex:
                     print("EOmaps: Problem while trying to remove a grid-label:", ex)
                     pass
@@ -610,8 +615,8 @@ class GridLabels:
             verts = m._transf_lonlat_to_plot.transform(*verts.T)
             verts = m.ax.transData.transform(np.column_stack(verts))
         else:
+            m.ax.spines["geo"]._adjust_location()
             verts = m.ax.spines["geo"].get_verts()
-
         return verts
 
     def _get_spine_intersections(self, lines, axis=None):
@@ -785,6 +790,9 @@ class GridLabels:
         if intersection_points is None:
             return
 
+        transf = m.f.transFigure
+        transf_inv = transf.inverted()
+
         if len(intersection_points) > 0:
             # make sure only unique pairs of coordinates are used
             # pts = np.unique(np.rec.fromarrays(pts)).view((pts.dtype, 2)).T
@@ -812,18 +820,22 @@ class GridLabels:
                         if uselabel is None:
                             uselabel = label
 
+                    # route positions through dpi_scale_trans to avoid wrong positioning
+                    # on figure export with different dpi since (x, y) are in
+                    # display-coordinates!
+                    x, y = transf_inv.transform((x, y))
                     t = m.ax.text(
                         x,
                         y,
                         uselabel,
-                        transform=None,  # None is the same as using IdentityTransform()
+                        transform=transf,  # None,
                         animated=True,
                         rotation=r,
                         ha="center",
                         va="center",
                         **txt_kwargs,
                     )
-                    m.BM.add_bg_artist(t, layer=self._g.layer)
+                    m.BM.add_bg_artist(t, layer=self._g.layer, draw=False)
                     self._texts.append(t)
 
     def add_labels(self):
@@ -946,6 +958,7 @@ class GridFactory:
         g._add_grid(**kwargs)
         self._gridlines.append(g)
 
+        self.m.f.canvas.draw_idle()
         return g
 
     def _update_autogrid(self, *args, **kwargs):

@@ -1,7 +1,7 @@
 """A collection of helper-functions to generate map-plots."""
 
 from functools import lru_cache, wraps
-from itertools import repeat
+from itertools import repeat, chain
 from textwrap import dedent
 import warnings
 import copy
@@ -1327,10 +1327,15 @@ class Maps(object):
         else:
             print("Centering Map to:\n    ", r["display_name"])
 
-    @classmethod
-    def set_clipboard_kwargs(cls, **kwargs):
+    @staticmethod
+    def _set_clipboard_kwargs(**kwargs):
+        # use Maps to make sure InsetMaps do the same thing!
+        Maps._clipboard_kwargs = kwargs
+
+    @staticmethod
+    def set_clipboard_kwargs(**kwargs):
         """
-        Set arguments when exporting the figure to the clipboard.
+        Set GLOBAL savefig parameters for all Maps objects on export to the clipboard.
 
         - press "control + c" to export the figure to the clipboard
 
@@ -1363,7 +1368,18 @@ class Maps(object):
         Maps.savefig : Save the figure as jpeg, png, etc.
 
         """
-        Maps._clipboard_kwargs = kwargs
+        # use Maps to make sure InsetMaps do the same thing!
+        Maps._set_clipboard_kwargs(kwargs)
+
+        # trigger companion-widget setter for all open figures that contain maps
+        for i in plt.get_fignums():
+            try:
+                m = getattr(plt.figure(i), "_EOmaps_parent", None)
+                if m is not None:
+                    if m._companion_widget is not None:
+                        m._companion_widget.clipboardKwargsChanged.emit()
+            except Exception:
+                pass
 
     @lru_cache()
     def get_crs(self, crs="plot"):
@@ -2215,7 +2231,6 @@ class Maps(object):
                 ys = np.linspace(y[:-1], y[1:], n).T.ravel()
             else:
                 # use different number of points for individual segments
-                from itertools import chain
 
                 xs = list(
                     chain(
@@ -2483,10 +2498,13 @@ class Maps(object):
                     "if the classification is inherited!"
                 )
 
-            if self._vmin is None:
-                print("EOmaps: Warning, inherited value for 'vmin' is None!")
-            if self._vmax is None:
-                print("EOmaps: Warning, inherited value for 'vmax' is None!")
+            # in case data is NOT inherited, warn if vmin/vmax is None
+            # (different limits might cause a different appearance of the data!)
+            if self.data_specs._m == self:
+                if self._vmin is None:
+                    print("EOmaps: Warning, inherited value for 'vmin' is None!")
+                if self._vmax is None:
+                    print("EOmaps: Warning, inherited value for 'vmax' is None!")
 
             self._vmin = self._inherit_classification._vmin
             self._vmax = self._inherit_classification._vmax
@@ -2702,6 +2720,7 @@ class Maps(object):
                 assume_sorted=assume_sorted,
                 **kwargs,
             )
+            self.f.canvas.draw_idle()
         else:
             # dont set extent if "m.set_extent" was called explicitly
             if set_extent and self._set_extent_on_plot:
@@ -2717,7 +2736,7 @@ class Maps(object):
                 **kwargs,
             )
 
-        self.BM._refetch_layer(layer)
+            self.BM._refetch_layer(layer)
 
         if verbose >= 1:
             if getattr(self, "_data_mask", None) is not None and not np.all(
@@ -3020,7 +3039,7 @@ class Maps(object):
         }
     )
     @wraps(plt.savefig)
-    def savefig(self, *args, refetch_wms=False, **kwargs):
+    def savefig(self, *args, refetch_wms=False, rasterize_data=True, **kwargs):
         """Save the figure."""
         with ExitStack() as stack:
             if refetch_wms is False:
@@ -3033,8 +3052,6 @@ class Maps(object):
             # hide companion-widget indicator
             self._indicate_companion_map(False)
 
-            dpi = kwargs.get("dpi", None)
-
             # add the figure background patch as the bottom layer
             transparent = kwargs.get("transparent", False)
             if transparent is False:
@@ -3042,6 +3059,8 @@ class Maps(object):
                 showlayer_name = self.BM._get_showlayer_name(initial_layer)
                 layer_with_bg = "|".join(["__BG__", showlayer_name])
                 self.show_layer(layer_with_bg)
+
+            dpi = kwargs.get("dpi", None)
 
             redraw = False
             if dpi is not None and dpi != self.f.dpi or "bbox_inches" in kwargs:
@@ -3054,6 +3073,76 @@ class Maps(object):
                 # set the shading-axis-size to reflect the used dpi setting
                 self._update_shade_axis_size(dpi=dpi)
 
+            # make sure that artists from the "all" layer are drawn as well
+            savelayers, alphas = self.BM._get_layers_alphas(
+                self.BM._get_showlayer_name(
+                    self._get_combined_layer_name(self.BM.bg_layer, "all")
+                )
+            )
+            nlayers = len(savelayers)
+
+            # identify maximum zorder of all artists
+            max_zorder = max(
+                a.get_zorder()
+                for key, val in chain(
+                    self.BM._bg_artists.items(), self.BM._artists.items()
+                )
+                for a in val
+            )
+
+            for m in (self.parent, *self.parent._children):
+                # re-enable normal axis draw cycle by making axes non-animated.
+                # This is needed for backward-compatibility, since saving a figure ignores
+                # the animated attribute for axis-children but not for the axis itself. See:
+                # https://github.com/matplotlib/matplotlib/issues/26007#issuecomment-1568812089
+                stack.enter_context(m.ax._cm_set(animated=False))
+
+                # handle colorbars
+                for cb in m._colorbars:
+                    for a in cb._axes:
+                        stack.enter_context(a._cm_set(animated=False))
+
+                # set if data should be rasterized on vektor export
+                if m.coll is not None:
+                    stack.enter_context(m.coll._cm_set(rasterized=rasterize_data))
+
+            # explicitly set axes to non-animated to re-enable draw cycle
+            for a in m.BM._managed_axes:
+                stack.enter_context(a._cm_set(animated=False))
+
+            # select artists to export
+            # adjust zorder to respect layer order
+            # set global transparency for background artists
+            for key, val in self.BM._bg_artists.items():
+                if key in savelayers:
+                    i = savelayers.index(key)
+                    for a in val:
+                        zorder = a.get_zorder() + i * max_zorder
+                        stack.enter_context(a._cm_set(zorder=zorder, animated=False))
+
+                        if alphas[i] < 1:
+                            alpha = a.get_alpha()
+                            if alpha is None:
+                                alpha = alphas[i]
+                            stack.enter_context(a._cm_set(alpha=alpha * alphas[i]))
+                else:
+                    for a in val:
+                        stack.enter_context(a._cm_set(visible=False, animated=True))
+
+            # always draw dynamic artists on top of background artists
+            for key, val in self.BM._artists.items():
+                if key in savelayers:
+                    i = savelayers.index(key)
+                    for a in val:
+                        zorder = a.get_zorder() + (i + nlayers) * max_zorder
+                        stack.enter_context(a._cm_set(zorder=zorder, animated=False))
+                else:
+                    for a in val:
+                        stack.enter_context(a._cm_set(visible=False, animated=True))
+
+            # trigger a redraw of all savelayers to make sure unmanaged artists
+            # and ordinary matplotlib axes are properly drawn
+            self.redraw(*savelayers)
             self.f.savefig(*args, **kwargs)
 
         if redraw is True:
@@ -3419,6 +3508,7 @@ class Maps(object):
         import mimetypes
         from PyQt5.QtCore import QMimeData
         from PyQt5.QtWidgets import QApplication
+        from PyQt5.QtGui import QImage
 
         # guess the MIME type from the provided file-extension
         fmt = kwargs.get("format", "png")
@@ -3429,9 +3519,17 @@ class Maps(object):
         with io.BytesIO() as buffer:
             self.savefig(buffer, **kwargs)
             data = QMimeData()
-            data.setData(mimetype, buffer.getvalue())
-            QApplication.clipboard().setMimeData(data)
-            # QApplication.clipboard().setImage(QImage.fromData(buffer.getvalue()))
+
+            cb = QApplication.clipboard()
+
+            # TODO check why files copied with setMimeData(...) cannot be pasted
+            # properly in other apps
+            if fmt in ["svg", "svgz", "pdf", "eps"]:
+                data.setData(mimetype, buffer.getvalue())
+                cb.clear(mode=cb.Clipboard)
+                cb.setMimeData(data, mode=cb.Clipboard)
+            else:
+                cb.setImage(QImage.fromData(buffer.getvalue()))
 
     def _on_keypress(self, event):
         # NOTE: callback is only attached if PyQt5 is used as backend!
@@ -4781,6 +4879,7 @@ class Maps(object):
             return obj
 
     @staticmethod
+    @lru_cache()
     def _get_cartopy_crs(crs):
         if isinstance(crs, Maps.CRS.CRS):  # already a cartopy CRS
             cartopy_proj = crs

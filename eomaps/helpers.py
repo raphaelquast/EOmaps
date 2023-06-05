@@ -988,27 +988,21 @@ class LayoutEditor:
             ax.set_frame_on(True)
 
             for child in ax.get_children():
-                for prop in [
-                    "facecolor",
+                revert_props = [
                     "edgecolor",
                     "linewidth",
                     "linestyle",
                     "alpha",
                     "animated",
                     "visible",
-                ]:
-                    if hasattr(child, f"set_{prop}") and hasattr(child, f"get_{prop}"):
-                        self._revert_props.append(
-                            (
-                                getattr(child, f"set_{prop}"),
-                                getattr(child, f"get_{prop}")(),
-                            )
-                        )
+                ]
+                self._add_revert_props(child, *revert_props)
 
                 if isinstance(child, Spine) and not cbaxQ:
                     # make sure spines are visible (and re-drawn on draw)
                     child.set_animated(False)
                     child.set_visible(True)
+
                 elif (
                     ax not in self.maxes
                     and showXY
@@ -1017,11 +1011,17 @@ class LayoutEditor:
                     # keep all tick labels etc. of normal axes and colorbars visible
                     child.set_animated(False)
                     child.set_visible(True)
+
                 elif child is ax.patch and not cbaxQ:
+                    # only reset facecolors for axes-patches to avoid issues with
+                    # black spines (TODO check why this happens!)
+                    self._add_revert_props(child, "facecolor")
+
                     # make sure patches are visible (and re-drawn on draw)
                     child.set_visible(True)
                     child.set_facecolor("w")
                     child.set_alpha(0.75)  # for overlapping axes
+
                 else:
                     # make all other childs invisible (to avoid drawing them)
                     child.set_visible(False)
@@ -1030,6 +1030,16 @@ class LayoutEditor:
         self._color_axes()
         self._attach_callbacks()
         self.m.redraw()
+
+    def _add_revert_props(self, child, *args):
+        for prop in args:
+            if hasattr(child, f"set_{prop}") and hasattr(child, f"get_{prop}"):
+                self._revert_props.append(
+                    (
+                        getattr(child, f"set_{prop}"),
+                        getattr(child, f"get_{prop}")(),
+                    )
+                )
 
     def _undo_draggable(self):
 
@@ -1369,6 +1379,22 @@ class BlitManager:
 
         self._clear_on_layer_change = False
 
+        self._on_layer_change_running = False
+
+    def _get_renderer(self):
+        # don't return the renderer if the figure is saved.
+        # in this case the normal draw-routines are used (see m.savefig) so there is
+        # no need to trigger updates (also `canvas.get_renderer` is undefined for
+        # pdf/svg exports since those canvas do not expose the renderer)
+        # ... this is required to support vektor format outputs!
+        if self.canvas.is_saving():
+            return None
+
+        try:
+            return self.canvas.get_renderer()
+        except Exception:
+            return None
+
     def _get_all_map_axes(self):
         maxes = {
             m.ax for m in (self._m.parent, *self._m.parent._children) if m._new_axis_map
@@ -1397,50 +1423,67 @@ class BlitManager:
     def canvas(self):
         return self.figure.canvas
 
+    @contextmanager
+    def _cx_on_layer_change_running(self):
+        # a context-manager to avoid recursive on_layer_change calls
+        try:
+            self._on_layer_change_running = True
+            yield
+        finally:
+            self._on_layer_change_running = False
+
     def _do_on_layer_change(self, layer, new=False):
+        # avoid recursive calls to "_do_on_layer_change"
+        # This is required in case the executed functions trigger actions that would
+        # trigger "_do_on_layer_change" again which can result in a mixed-up order of
+        # the scheduled functions.
+        if self._on_layer_change_running is True:
+            return
+
         # do not execute layer-change callbacks on private layer activation!
         if layer.startswith("__"):
             return
 
-        # only execute persistent layer-change callbacks if the layer changed!
-        if new:
-            # general callbacks executed on any layer change
-            # persistent callbacks
-            for f in self._on_layer_change[True]:
-                f(layer=layer)
-
-        # single-shot callbacks
-        # (execute also if the layer is already active)
-        while len(self._on_layer_change[False]) > 0:
-            try:
-                f = self._on_layer_change[False].pop(-1)
-                f(layer=layer)
-            except Exception as ex:
-                print(
-                    "EOmaps: there was an issue while trying to execute a "
-                    f"layer-change action: {ex}"
-                )
-
-        if new:
-            for l in layer.split("|"):
-                # individual callables executed if a specific layer is activate
+        with self._cx_on_layer_change_running():
+            # only execute persistent layer-change callbacks if the layer changed!
+            if new:
+                # general callbacks executed on any layer change
                 # persistent callbacks
-                for f in self._on_layer_activation[True].get(layer, []):
-                    f(layer=l)
+                for f in reversed(self._on_layer_change[True]):
+                    f(layer=layer)
 
-        for l in layer.split("|"):
             # single-shot callbacks
-            single_shot_funcs = self._on_layer_activation[False].get(l, [])
-            while len(single_shot_funcs) > 0:
+            # (execute also if the layer is already active)
+            while len(self._on_layer_change[False]) > 0:
                 try:
-                    f = single_shot_funcs.pop(-1)
-                    f(layer=l)
+                    f = self._on_layer_change[False].pop(0)
+                    f(layer=layer)
                 except Exception as ex:
-                    raise (ex)
                     print(
                         "EOmaps: there was an issue while trying to execute a "
                         f"layer-change action: {ex}"
                     )
+
+            if new:
+                for l in layer.split("|"):
+                    # individual callables executed if a specific layer is activate
+                    # persistent callbacks
+                    for f in reversed(self._on_layer_activation[True].get(layer, [])):
+                        f(layer=l)
+
+            for l in layer.split("|"):
+                # single-shot callbacks
+                single_shot_funcs = self._on_layer_activation[False].get(l, [])
+                while len(single_shot_funcs) > 0:
+                    try:
+                        f = single_shot_funcs.pop(0)
+                        f(layer=l)
+                    except Exception as ex:
+                        raise (ex)
+                        print(
+                            "EOmaps: there was an issue while trying to execute a "
+                            f"layer-change action: {ex}"
+                        )
 
     @contextmanager
     def _without_artists(self, artists=None, layer=None):
@@ -1628,12 +1671,12 @@ class BlitManager:
 
         return artists
 
-    def _combine_bgs(self, layer):
+    def _get_layers_alphas(self, layer):
         layers, alphas = [], []
         for l in layer.split("|"):
             if l.endswith("}") and "{" in l:
                 try:
-                    name, a = l.split("{")
+                    name, a = l.split("{", maxsplit=1)
                     a = float(a.replace("}", ""))
 
                     layers.append(name)
@@ -1645,6 +1688,10 @@ class BlitManager:
             else:
                 layers.append(l)
                 alphas.append(1)
+        return layers, alphas
+
+    def _combine_bgs(self, layer):
+        layers, alphas = self._get_layers_alphas(layer)
 
         # make sure all layers are already fetched
         for l in layers:
@@ -1654,28 +1701,34 @@ class BlitManager:
                 self._do_on_layer_change(layer=l, new=False)
                 self._do_fetch_bg(l)
 
-        gc = self.canvas.renderer.new_gc()
-        gc.set_clip_rectangle(self.canvas.figure.bbox)
+        renderer = self._get_renderer()
+        if renderer:
+            gc = renderer.new_gc()
+            gc.set_clip_rectangle(self.canvas.figure.bbox)
 
-        # switch to a blank background layer before merging backgrounds
-        # TODO is there a beter way to avoid drawing on initial backgrounds?
-        self.canvas.restore_region(self._blank_bg)
+            # switch to a blank background layer before merging backgrounds
+            # TODO is there a beter way to avoid drawing on initial backgrounds?
+            self.canvas.restore_region(self._blank_bg)
 
-        x0, y0, w, h = self.figure.bbox.bounds
-        for l, a in zip(layers, alphas):
-
-            rgba = self._get_array(l, a=a)
-            self.canvas.renderer.draw_image(
-                gc,
-                int(x0),
-                int(y0),
-                rgba[int(y0) : int(y0 + h), int(x0) : int(x0 + w), :],
-            )
-        # cache the combined background
-        self._bg_layers[layer] = self._m.f.canvas.copy_from_bbox(self._m.f.bbox)
-        gc.restore()
+            x0, y0, w, h = self.figure.bbox.bounds
+            for l, a in zip(layers, alphas):
+                rgba = self._get_array(l, a=a)
+                if rgba is None:
+                    # to handle completely empty layers
+                    continue
+                renderer.draw_image(
+                    gc,
+                    int(x0),
+                    int(y0),
+                    rgba[int(y0) : int(y0 + h), int(x0) : int(x0 + w), :],
+                )
+            # cache the combined background
+            self._bg_layers[layer] = self._m.f.canvas.copy_from_bbox(self._m.f.bbox)
+            gc.restore()
 
     def _get_array(self, l, a=1):
+        if l not in self._bg_layers:
+            return None
         rgba = np.array(self._bg_layers[l])[::-1, :, :]
         if a != 1:
             rgba = rgba.copy()
@@ -1684,7 +1737,7 @@ class BlitManager:
 
     def _do_fetch_bg(self, layer, bbox=None):
         cv = self.canvas
-        renderer = cv.get_renderer()
+        renderer = self._get_renderer()
 
         if bbox is None:
             bbox = self.figure.bbox
@@ -1732,14 +1785,15 @@ class BlitManager:
             if no_stale_artists and (self._bg_layers.get(layer, None) is not None):
                 return
 
-            self.canvas.restore_region(self._blank_bg)
+            if renderer:
+                self.canvas.restore_region(self._blank_bg)
 
-            if not self._m.parent._layout_editor._modifier_pressed:
-                for art in allartists:
-                    if art not in self._hidden_artists:
-                        art.draw(renderer)
-                        art.stale = False
-                self._bg_layers[layer] = cv.copy_from_bbox(bbox)
+                if not self._m.parent._layout_editor._modifier_pressed:
+                    for art in allartists:
+                        if art not in self._hidden_artists:
+                            art.draw(renderer)
+                            art.stale = False
+                            self._bg_layers[layer] = cv.copy_from_bbox(bbox)
 
     def _do_fetch_blank(self):
         # fetch a blank background
@@ -1793,16 +1847,23 @@ class BlitManager:
         """Callback to register with 'draw_event'."""
         cv = self.canvas
 
-        if "RendererBase._draw_disabled" in cv.get_renderer().draw_image.__qualname__:
-            # TODO this fixes issues when saving figues with a "tight" bbox, e.g.:
-            # m.savefig(bbox_inches='tight', pad_inches=0.1)
+        try:
+            if (
+                "RendererBase._draw_disabled"
+                in cv.get_renderer().draw_image.__qualname__
+            ):
+                # TODO this fixes issues when saving figues with a "tight" bbox, e.g.:
+                # m.savefig(bbox_inches='tight', pad_inches=0.1)
 
-            # This workaround is necessary but the implementation is suboptimal since
-            # it relies on the __qualname__ to identify if the
-            # `matplotlib.backend_bases.RendererBase._draw_disabled()` context is active
-            # The reason why the "_draw_disabled" context has to be handled explicitly
-            # is because otherwise empty backgrounds would be fetched (and cached) by
-            # the draw-event and the export would result in an empty figure.
+                # This workaround is necessary but the implementation is suboptimal since
+                # it relies on the __qualname__ to identify if the
+                # `matplotlib.backend_bases.RendererBase._draw_disabled()` context is active
+                # The reason why the "_draw_disabled" context has to be handled explicitly
+                # is because otherwise empty backgrounds would be fetched (and cached) by
+                # the draw-event and the export would result in an empty figure.
+                return
+        except AttributeError:
+            # return on AttributeError to handle backends that don't expose the renderer
             return
 
         if event is not None:
@@ -2055,6 +2116,9 @@ class BlitManager:
 
         """
         fig = self.canvas.figure
+        renderer = self._get_renderer()
+        if renderer is None:
+            return
 
         # make sure to strip-off transparency-assignments (e.g. "layer1{0.5}")
         if layers is None:
@@ -2082,7 +2146,7 @@ class BlitManager:
         # - NOTE: this must be done before drawing managed artists to properly support
         #   temporary artists on unmanaged axes!
         for ax in self._get_unmanaged_axes():
-            ax.draw(self.canvas.renderer)
+            ax.draw(renderer)
 
         # redraw artists from the selected layers and explicitly provided artists
         # (sorted by zorder for each layer)
@@ -2241,17 +2305,19 @@ class BlitManager:
         # restore the background
         # add additional layers (background, spines etc.)
         show_layer = self._get_showlayer_name()
+
         if show_layer not in self._bg_layers:
             # make sure the background is properly fetched
             self.fetch_bg(show_layer)
 
         cv.restore_region(self._bg_layers[show_layer])
 
-        # draw all of the animated artists
+        # execute after restore actions (e.g. peek layer callbacks)
         while len(self._after_restore_actions) > 0:
             action = self._after_restore_actions.pop(0)
             action()
 
+        # draw all of the animated artists
         self._draw_animated(layers=layers, artists=artists)
         if blit:
             # workaround for nbagg backend to avoid glitches
@@ -2296,11 +2362,10 @@ class BlitManager:
             The default is True
         """
         cv = self.canvas
-
-        # paranoia in case we missed the first draw event
-        if getattr(self.figure, "_cachedRenderer", None) is None:
-            with self._disconnect_draw():
-                self.figure.canvas.draw()
+        renderer = self._get_renderer()
+        if renderer is None:
+            print("EOmaps: encountered a problem while trying to blit artists...")
+            return
 
         # restore the background
         if bg is not None:
@@ -2328,13 +2393,16 @@ class BlitManager:
 
         bbox_bounds = (x, y, width, height)
         """
-
         if bbox_bounds is None:
             bbox = self.figure.bbox
         else:
             bbox = Bbox.from_bounds(*bbox_bounds)
 
         def action():
+            renderer = self._get_renderer()
+            if renderer is None:
+                return
+
             if self.bg_layer == layer:
                 return
 
@@ -2359,13 +2427,13 @@ class BlitManager:
 
             argb[:, :, -1] = (argb[:, :, -1] * alpha).astype(np.int8)
 
-            gc = self.canvas.renderer.new_gc()
+            gc = renderer.new_gc()
 
             gc.set_clip_rectangle(bbox)
             if set_clip_path is True:
                 gc.set_clip_path(clip_path)
 
-            self.canvas.renderer.draw_image(
+            renderer.draw_image(
                 gc,
                 int(x0),
                 int(y0),
