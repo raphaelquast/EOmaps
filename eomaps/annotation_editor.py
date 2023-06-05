@@ -103,7 +103,8 @@ class DraggableAnnotationNew(DraggableBase):
                 ann.set_text(txt)
 
         elif self._what == "rotate":
-            ann.set_rotation(self.rot - dx / ann.figure.bbox.width * 180)
+            d = dx / ann.figure.bbox.width - dy / ann.figure.bbox.height
+            ann.set_rotation(self.rot - d * 360)
         elif self._what == "size":
             d = 1 + (dx / ann.figure.bbox.width + dy / ann.figure.bbox.height)
             ann.set_size(self.size * d)
