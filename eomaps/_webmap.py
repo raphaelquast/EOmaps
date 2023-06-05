@@ -9,28 +9,27 @@ from PIL import Image
 from io import BytesIO
 from pprint import PrettyPrinter
 
-from cartopy.io.img_tiles import GoogleWTS
-from cartopy import crs as ccrs
 import numpy as np
 
 from pyproj import CRS, Transformer
 
-from owslib.wmts import WebMapTileService
-from owslib.wms import WebMapService
-import requests
 from urllib3.exceptions import InsecureRequestWarning
 
 from .helpers import _sanitize
 
 import cartopy
-from cartopy.io import ogc_clients
+from cartopy import crs as ccrs
+from cartopy.io.img_tiles import GoogleWTS
 from cartopy.io import RasterSource
-from cartopy.io.ogc_clients import _target_extents
+
+import requests
 
 
 class _WebMap_layer:
     # base class for adding methods to the _wms_layer- and wmts_layer objects
     def __init__(self, m, wms, name):
+        from cartopy.io.ogc_clients import _CRS_TO_OGC_SRS
+
         self._m = m
         self.name = name
         self._wms = wms
@@ -51,9 +50,9 @@ class _WebMap_layer:
             # (see from cartopy.io.ogc_clients import _CRS_TO_OGC_SRS)
             if hasattr(self.wms_layer, "crsOptions"):
                 if "EPSG:3857" in self.wms_layer.crsOptions:
-                    ogc_clients._CRS_TO_OGC_SRS[ccrs.GOOGLE_MERCATOR] = "EPSG:3857"
+                    _CRS_TO_OGC_SRS[ccrs.GOOGLE_MERCATOR] = "EPSG:3857"
                     if "epsg:3857" in self.wms_layer.crsOptions:
-                        ogc_clients._CRS_TO_OGC_SRS[ccrs.GOOGLE_MERCATOR] = "epsg:3857"
+                        _CRS_TO_OGC_SRS[ccrs.GOOGLE_MERCATOR] = "epsg:3857"
 
     @property
     def info(self):
@@ -610,11 +609,19 @@ class _WebServiec_collection(object):
     @staticmethod
     def _get_wmts(url):
         # TODO expose useragent
+
+        # lazy import used to avoid long import times
+        from owslib.wmts import WebMapTileService
+
         return WebMapTileService(url)
 
     @staticmethod
     def _get_wms(url):
         # TODO expose useragent
+
+        # lazy import used to avoid long import times
+        from owslib.wms import WebMapService
+
         return WebMapService(url)
 
     @property
@@ -978,6 +985,7 @@ class xyzRasterSource(RasterSource):
         target_resolution,
     ):
         import shapely.geometry as sgeom
+        from cartopy.io.ogc_clients import LocatedImage, _target_extents
 
         x0, x1, y0, y1 = wms_extent
 
@@ -1012,7 +1020,7 @@ class xyzRasterSource(RasterSource):
 
             # reproject the extent to the output-crs
 
-            target_extent = ogc_clients._target_extents(extent, wms_proj, output_proj)
+            target_extent = _target_extents(extent, wms_proj, output_proj)
             if len(target_extent) > 0:
                 target_extent = target_extent[0]
             else:
@@ -1043,11 +1051,11 @@ class xyzRasterSource(RasterSource):
                 # revert to the initial origin
                 img = img[::-1]
 
-        from cartopy.io.ogc_clients import LocatedImage
-
         return LocatedImage(img, extent)
 
     def fetch_raster(self, projection, extent, target_resolution):
+        from cartopy.io.ogc_clients import _target_extents
+
         target_resolution = [np.ceil(val) for val in target_resolution]
 
         if projection == self._crs:
