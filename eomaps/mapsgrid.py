@@ -445,6 +445,13 @@ class MapsGrid:
 
     add_scalebar.__doc__ = _doc_prefix + add_scalebar.__doc__
 
+    @wraps(Maps.add_compass)
+    def add_compass(self, *args, **kwargs):
+        for m in self:
+            m.add_compass(*args, **kwargs)
+
+    add_compass.__doc__ = _doc_prefix + add_compass.__doc__
+
     @wraps(Maps.add_colorbar)
     def add_colorbar(self, *args, **kwargs):
         for m in self:

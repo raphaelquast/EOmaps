@@ -118,13 +118,14 @@ class _gpd_picker:
 class _cb_container(object):
     """Base-class for callback containers."""
 
-    def __init__(self, m, cb_class=None, method="click", tmp_artists=None):
+    def __init__(self, m, cb_class=None, method="click", parent_container=None):
         self._m = m
+        self._parent_container = parent_container
 
-        if tmp_artists is None:
+        if self._parent_container is None:
             self._temporary_artists = []
         else:
-            self._temporary_artists = tmp_artists
+            self._temporary_artists = self._parent_container._temporary_artists
 
         self._cb = cb_class(m, self._temporary_artists)
         self._cb_list = cb_class._cb_list
@@ -136,6 +137,8 @@ class _cb_container(object):
 
         self._method = method
         self._event = None
+
+        self._execute_on_all_layers = False
 
     def _getobj(self, m):
         """Get the equivalent callback container on another maps object."""
@@ -263,6 +266,10 @@ class _cb_container(object):
             Indicator if the callback should be executed on the currently visible
             layer or not.
         """
+
+        if self.execute_on_all_layers:
+            return True
+
         visible_layer = self._m.BM.bg_layer
         if layer == "all":
             # the all layer is always executed
@@ -279,6 +286,32 @@ class _cb_container(object):
                 )
         else:
             return layer == visible_layer
+
+    @property
+    def execute_on_all_layers(self):
+        if self._parent_container is not None:
+            return self._parent_container._execute_on_all_layers
+
+        return self._execute_on_all_layers
+
+    def set_execute_on_all_layers(self, q):
+        """
+        If True, callbacks of this container are executed even if the associated
+        layer is not visible.
+
+        (By default, callbacks are only executed if the associated layer is visible!)
+
+        Parameters
+        ----------
+        q : bool
+            True if callbacks should be executed irrespective of the visible layer.
+        """
+
+        if self._parent_container is not None:
+            raise TypeError(
+                f"EOmaps: 'execute_on_all_layers' is inherited for {self._method}!"
+            )
+        self._execute_on_all_layers = q
 
 
 class _click_container(_cb_container):
@@ -1844,7 +1877,7 @@ class cb_container:
             m=self._m,
             cb_cls=click_callbacks,
             method="_click_move",
-            tmp_artists=self._click._temporary_artists,
+            parent_container=self._click,
             button_down=True,
         )
 

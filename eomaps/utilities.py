@@ -224,9 +224,8 @@ class LayerSelector(SelectorButtons):
 
         See Also
         --------
-
-        - m.util.layer_slider() : A slider widget to switch between layers.
-        - m.show_layer(): Set the currently visible layer.
+        utilities.layer_slider : A slider widget to switch between layers.
+        Maps.show_layer: Set the currently visible layer.
 
         """
 
@@ -570,7 +569,6 @@ class utilities:
     Methods
     -------
     layer_selector: A legend-like widget to switch between layers
-
     layer_slider: A slider widget to switch between layers
 
     """

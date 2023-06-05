@@ -289,9 +289,16 @@ class Compass:
         r = transforms.Affine2D().rotate(ang)
         # apply the scale-factor with respect to the current figure dpi to keep the
         # relative size of the north-arrow on dpi-changes!
-        s = transforms.Affine2D().scale(self._scale * self._m.f.dpi / self._init_dpi)
+        s = transforms.Affine2D().scale(
+            self._scale
+        )  # * self._m.f.dpi / self._init_dpi)
         t = transforms.Affine2D().translate(*self._m.ax.transData.transform(pos))
         trans = r + s + t
+
+        # cycle position once through transFigure to ensure correct positioning
+        # of the compass for agg exports (png, jpeg.. pixel-based) and
+        # svg/pdf based exports (point-based)
+        trans = trans + self._m.f.transFigure.inverted() + self._m.f.transFigure
         return trans
 
     def _on_motion(self, evt):
