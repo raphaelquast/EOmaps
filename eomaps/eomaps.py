@@ -1,7 +1,7 @@
 """A collection of helper-functions to generate map-plots."""
 
 from functools import lru_cache, wraps
-from itertools import repeat
+from itertools import repeat, chain
 from textwrap import dedent
 import warnings
 import copy
@@ -194,11 +194,8 @@ class Maps(object):
     See Also
     --------
     Maps.new_layer : Create a new layer for the map.
-
     Maps.new_map : Add a new map to the figure.
-
     Maps.new_inset_map : Add a new inset-map to the figure.
-
     MapsGrid : Initialize a grid of Maps objects
 
     Parameters
@@ -347,8 +344,8 @@ class Maps(object):
 
     CLASSIFIERS = SimpleNamespace(**dict(zip(_CLASSIFIERS, _CLASSIFIERS)))
 
-    _crs_cache = dict()
-    _transformer_cache = dict()
+    # arguments passed to m.savefig when using "ctrl+c" to export figure to clipboard
+    _clipboard_kwargs = dict()
 
     def __init__(
         self,
@@ -396,7 +393,7 @@ class Maps(object):
             self._is_sublayer = False
 
         self._companion_widget = None  # slot for the pyqt widget
-        self._cid_companion_key = None  # callback id for the companion-cb
+        self._cid_keypress = None  # callback id for PyQt5 keypress callbacks
         # a list to remember newly registered colormaps
         self._registered_cmaps = []
 
@@ -785,7 +782,8 @@ class Maps(object):
 
         See Also
         --------
-        copy : general way for copying Maps objects
+        Maps.copy : general way for copying Maps objects
+
         """
         if layer is None:
             layer = copy.deepcopy(self.layer)
@@ -926,13 +924,8 @@ class Maps(object):
 
         See Also
         --------
-        The following additional methods are defined on `InsetMaps` objects
-
-        m.indicate_inset_extent :
-            Plot a polygon representing the extent of the inset map on another Maps
-            object.
-        m.set_inset_position :
-            Set the (center) position and size of the inset-map.
+        Maps.indicate_inset_extent : Indicate inset-extent on another map (as polygon).
+        Maps.set_inset_position : Set the (center) position and size of the inset-map.
 
         Examples
         --------
@@ -1334,6 +1327,61 @@ class Maps(object):
         else:
             print("Centering Map to:\n    ", r["display_name"])
 
+    @staticmethod
+    def _set_clipboard_kwargs(**kwargs):
+        # use Maps to make sure InsetMaps do the same thing!
+        Maps._clipboard_kwargs = kwargs
+
+    @staticmethod
+    def set_clipboard_kwargs(**kwargs):
+        """
+        Set GLOBAL savefig parameters for all Maps objects on export to the clipboard.
+
+        - press "control + c" to export the figure to the clipboard
+
+        All arguments are passed to :meth:`Maps.savefig`
+
+        Useful options are
+
+        - dpi : the dots-per-inch of the figure
+        - refetch_wms: re-fetch webmaps with respect to the export-`dpi`
+        - bbox_inches: use "tight" to export figure with a tight boundary
+        - pad_inches: the size of the boundary if `bbox_inches="tight"`
+        - transparent: if `True`, export with a transparent background
+        - facecolor: the background color
+
+
+        Parameters
+        ----------
+        kwargs :
+            Keyword-arguments passed to :meth:`Maps.savefig`.
+
+        Note
+        ----
+        This function sets the clipboard kwargs for all Maps-objects!
+
+        Exporting to the clipboard only works if `PyQt5` is used as matplotlib backend!
+        (the default if `PyQt` is installed)
+
+        See Also
+        --------
+        Maps.savefig : Save the figure as jpeg, png, etc.
+
+        """
+        # use Maps to make sure InsetMaps do the same thing!
+        Maps._set_clipboard_kwargs(kwargs)
+
+        # trigger companion-widget setter for all open figures that contain maps
+        for i in plt.get_fignums():
+            try:
+                m = getattr(plt.figure(i), "_EOmaps_parent", None)
+                if m is not None:
+                    if m._companion_widget is not None:
+                        m._companion_widget.clipboardKwargsChanged.emit()
+            except Exception:
+                pass
+
+    @lru_cache()
     def get_crs(self, crs="plot"):
         """
         Get the pyproj CRS instance of a given crs specification.
@@ -1359,12 +1407,7 @@ class Maps(object):
             elif crs == "out" or crs == "plot":
                 crs = self.crs_plot
 
-        h = hash(crs)
-        if h in self._crs_cache:
-            crs = self._crs_cache[h]
-        else:
-            crs = CRS.from_user_input(crs)
-            self._crs_cache[h] = crs
+        crs = CRS.from_user_input(crs)
         return crs
 
     @wraps(LayoutEditor.get_layout)
@@ -2188,7 +2231,6 @@ class Maps(object):
                 ys = np.linspace(y[:-1], y[1:], n).T.ravel()
             else:
                 # use different number of points for individual segments
-                from itertools import chain
 
                 xs = list(
                     chain(
@@ -2377,13 +2419,31 @@ class Maps(object):
 
     @wraps(GeoAxes.get_extent)
     def get_extent(self, crs=None):
-        """Get the extent of the map."""
-        # just a wrapper to avoid using m.ax.get_extent()
+        """
+        Get the extent (x0, x1, y0, y1) of the map in the given coordinate system.
+
+        Parameters
+        ----------
+        crs : a crs identifier, optional
+            The coordinate-system in which the extent is evaluated.
+
+            - if None, the extent is provided in epsg=4326 (e.g. lon/lat projection)
+
+            The default is None.
+
+        Returns
+        -------
+        extent : The extent in the given crs (x0, x1, y0, y1).
+
+        """
+        # fast track if plot-crs is requested
+        if crs == self.crs_plot:
+            return (*self.ax.get_xlim(), *self.ax.get_ylim())
 
         if crs is not None:
             crs = self._get_cartopy_crs(crs)
         else:
-            crs = Maps.CRS.PlateCarree()
+            crs = self._get_cartopy_crs(4326)
 
         return self.ax.get_extent(crs=crs)
 
@@ -2438,10 +2498,13 @@ class Maps(object):
                     "if the classification is inherited!"
                 )
 
-            if self._vmin is None:
-                print("EOmaps: Warning, inherited value for 'vmin' is None!")
-            if self._vmax is None:
-                print("EOmaps: Warning, inherited value for 'vmax' is None!")
+            # in case data is NOT inherited, warn if vmin/vmax is None
+            # (different limits might cause a different appearance of the data!)
+            if self.data_specs._m == self:
+                if self._vmin is None:
+                    print("EOmaps: Warning, inherited value for 'vmin' is None!")
+                if self._vmax is None:
+                    print("EOmaps: Warning, inherited value for 'vmax' is None!")
 
             self._vmin = self._inherit_classification._vmin
             self._vmax = self._inherit_classification._vmax
@@ -2657,6 +2720,7 @@ class Maps(object):
                 assume_sorted=assume_sorted,
                 **kwargs,
             )
+            self.f.canvas.draw_idle()
         else:
             # dont set extent if "m.set_extent" was called explicitly
             if set_extent and self._set_extent_on_plot:
@@ -2672,7 +2736,7 @@ class Maps(object):
                 **kwargs,
             )
 
-        self.BM._refetch_layer(layer)
+            self.BM._refetch_layer(layer)
 
         if verbose >= 1:
             if getattr(self, "_data_mask", None) is not None and not np.all(
@@ -2745,6 +2809,7 @@ class Maps(object):
         # set _data_plotted to True to trigger updates in the data-manager
         self._data_plotted = True
 
+    @lru_cache()
     def _get_combined_layer_name(self, *args):
         if len(args) == 1:
             assert isinstance(
@@ -2818,8 +2883,8 @@ class Maps(object):
 
         See Also
         --------
-        - Maps.util.layer_selector
-        - Maps.util.layer_slider
+        Maps.util.layer_selector : Add a button-widget to switch layers to the map.
+        Maps.util.layer_slider : Add a slider to switch layers to the map.
 
         """
         name = self._get_combined_layer_name(*args)
@@ -2974,7 +3039,7 @@ class Maps(object):
         }
     )
     @wraps(plt.savefig)
-    def savefig(self, *args, refetch_wms=False, **kwargs):
+    def savefig(self, *args, refetch_wms=False, rasterize_data=True, **kwargs):
         """Save the figure."""
         with ExitStack() as stack:
             if refetch_wms is False:
@@ -2987,8 +3052,6 @@ class Maps(object):
             # hide companion-widget indicator
             self._indicate_companion_map(False)
 
-            dpi = kwargs.get("dpi", None)
-
             # add the figure background patch as the bottom layer
             transparent = kwargs.get("transparent", False)
             if transparent is False:
@@ -2996,6 +3059,8 @@ class Maps(object):
                 showlayer_name = self.BM._get_showlayer_name(initial_layer)
                 layer_with_bg = "|".join(["__BG__", showlayer_name])
                 self.show_layer(layer_with_bg)
+
+            dpi = kwargs.get("dpi", None)
 
             redraw = False
             if dpi is not None and dpi != self.f.dpi or "bbox_inches" in kwargs:
@@ -3008,6 +3073,76 @@ class Maps(object):
                 # set the shading-axis-size to reflect the used dpi setting
                 self._update_shade_axis_size(dpi=dpi)
 
+            # make sure that artists from the "all" layer are drawn as well
+            savelayers, alphas = self.BM._get_layers_alphas(
+                self.BM._get_showlayer_name(
+                    self._get_combined_layer_name(self.BM.bg_layer, "all")
+                )
+            )
+            nlayers = len(savelayers)
+
+            # identify maximum zorder of all artists
+            max_zorder = max(
+                a.get_zorder()
+                for key, val in chain(
+                    self.BM._bg_artists.items(), self.BM._artists.items()
+                )
+                for a in val
+            )
+
+            for m in (self.parent, *self.parent._children):
+                # re-enable normal axis draw cycle by making axes non-animated.
+                # This is needed for backward-compatibility, since saving a figure ignores
+                # the animated attribute for axis-children but not for the axis itself. See:
+                # https://github.com/matplotlib/matplotlib/issues/26007#issuecomment-1568812089
+                stack.enter_context(m.ax._cm_set(animated=False))
+
+                # handle colorbars
+                for cb in m._colorbars:
+                    for a in cb._axes:
+                        stack.enter_context(a._cm_set(animated=False))
+
+                # set if data should be rasterized on vektor export
+                if m.coll is not None:
+                    stack.enter_context(m.coll._cm_set(rasterized=rasterize_data))
+
+            # explicitly set axes to non-animated to re-enable draw cycle
+            for a in m.BM._managed_axes:
+                stack.enter_context(a._cm_set(animated=False))
+
+            # select artists to export
+            # adjust zorder to respect layer order
+            # set global transparency for background artists
+            for key, val in self.BM._bg_artists.items():
+                if key in savelayers:
+                    i = savelayers.index(key)
+                    for a in val:
+                        zorder = a.get_zorder() + i * max_zorder
+                        stack.enter_context(a._cm_set(zorder=zorder, animated=False))
+
+                        if alphas[i] < 1:
+                            alpha = a.get_alpha()
+                            if alpha is None:
+                                alpha = alphas[i]
+                            stack.enter_context(a._cm_set(alpha=alpha * alphas[i]))
+                else:
+                    for a in val:
+                        stack.enter_context(a._cm_set(visible=False, animated=True))
+
+            # always draw dynamic artists on top of background artists
+            for key, val in self.BM._artists.items():
+                if key in savelayers:
+                    i = savelayers.index(key)
+                    for a in val:
+                        zorder = a.get_zorder() + (i + nlayers) * max_zorder
+                        stack.enter_context(a._cm_set(zorder=zorder, animated=False))
+                else:
+                    for a in val:
+                        stack.enter_context(a._cm_set(visible=False, animated=True))
+
+            # trigger a redraw of all savelayers to make sure unmanaged artists
+            # and ordinary matplotlib axes are properly drawn
+            self.redraw(*savelayers)
             self.f.savefig(*args, **kwargs)
 
         if redraw is True:
@@ -3045,7 +3180,7 @@ class Maps(object):
 
         See Also
         --------
-        m.cb.keypress.attach.fetch_layers : use a keypress callback to fetch layers
+        Maps.cb.keypress.attach.fetch_layers : use a keypress callback to fetch layers
 
         """
         active_layer = self.BM._bg_layer
@@ -3242,8 +3377,8 @@ class Maps(object):
 
         See Also
         --------
-        m.layer : The layer-name associated with the Maps-object
-        m.fetch_layers() : Fetch and cache all layers of the map
+        Maps.layer : The layer-name associated with the Maps-object
+        Maps.fetch_layers : Fetch and cache all layers of the map
 
         Examples
         --------
@@ -3360,6 +3495,50 @@ class Maps(object):
 
         return layer
 
+    def _save_to_clipboard(self, **kwargs):
+        """
+        Export the figure to the clipboard.
+
+        Parameters
+        ----------
+        kwargs :
+            Keyword-arguments passed to :py:meth:`Maps.savefig`
+        """
+        import io
+        import mimetypes
+        from PyQt5.QtCore import QMimeData
+        from PyQt5.QtWidgets import QApplication
+        from PyQt5.QtGui import QImage
+
+        # guess the MIME type from the provided file-extension
+        fmt = kwargs.get("format", "png")
+        mimetype, _ = mimetypes.guess_type(f"dummy.{fmt}")
+
+        print(f"EOmaps: Exporting figure as '{fmt}' to clipboard...")
+
+        with io.BytesIO() as buffer:
+            self.savefig(buffer, **kwargs)
+            data = QMimeData()
+
+            cb = QApplication.clipboard()
+
+            # TODO check why files copied with setMimeData(...) cannot be pasted
+            # properly in other apps
+            if fmt in ["svg", "svgz", "pdf", "eps"]:
+                data.setData(mimetype, buffer.getvalue())
+                cb.clear(mode=cb.Clipboard)
+                cb.setMimeData(data, mode=cb.Clipboard)
+            else:
+                cb.setImage(QImage.fromData(buffer.getvalue()))
+
+    def _on_keypress(self, event):
+        # NOTE: callback is only attached if PyQt5 is used as backend!
+        #       callback is only attached to the parent Maps object!
+        if event.key == self._companion_widget_key:
+            self._open_companion_widget((event.x, event.y))
+        elif event.key == "ctrl+c":
+            self._save_to_clipboard(**Maps._clipboard_kwargs)
+
     def _init_figure(self, ax=None, plot_crs=None, **kwargs):
         # do this on any new figure since "%matpltolib inline" tries to re-activate
         # interactive mode all the time!
@@ -3374,26 +3553,26 @@ class Maps(object):
             # causes all weakrefs to be garbage-collected!
             self.parent.f._EOmaps_parent = self.parent._real_self
 
-            if self.parent._cid_companion_key is None:
-                # attach a callback to show/hide the window with the "w" key
-
-                # NOTE the companion-widget is ONLY attahed to the parent map
-                # since it will identify the clicked map automatically! The
-                # widget will only be initialized on Maps-objects that create
-                # NEW axes. This is required to make sure that any additional
-                # Maps-object on the same axes will then always use the
-                # same widget. (otherwise each layer would get its own widget)
-
-                self.parent._cid_companion_key = self.f.canvas.mpl_connect(
-                    "key_press_event", self.parent._open_companion_widget_cb
-                )
-
             newfig = True
         else:
             newfig = False
             if not hasattr(self.parent.f, "_EOmaps_parent"):
                 self.parent.f._EOmaps_parent = self.parent._real_self
             self.parent._add_child(self)
+
+        if plt.get_backend() == "Qt5Agg":
+            # attach a callback to show/hide the companion-widget with the "w" key
+            if self.parent._cid_keypress is None:
+                # NOTE the companion-widget is ONLY attached to the parent map
+                # since it will identify the clicked map automatically! The
+                # widget will only be initialized on Maps-objects that create
+                # NEW axes. This is required to make sure that any additional
+                # Maps-object on the same axes will then always use the
+                # same widget. (otherwise each layer would get its own widget)
+
+                self.parent._cid_keypress = self.f.canvas.mpl_connect(
+                    "key_press_event", self.parent._on_keypress
+                )
 
         if isinstance(ax, plt.Axes):
             # check if the axis is already used by another maps-object
@@ -4585,18 +4764,30 @@ class Maps(object):
 
         self.BM.update()
 
-    def _open_companion_widget_cb(self, event):
-        if event.key != self._companion_widget_key:
-            return
+    def _open_companion_widget(self, xy=None):
+        """
+        Open the companion-widget.
 
-        clicked_map = None
-        for m in (self.parent, *self.parent._children):
-            if not m._new_axis_map:
-                # only search for Maps-object that initialized new axes
-                continue
+        Parameters
+        ----------
+        xy : tuple, optional
+            The click position to identify the relevant Maps-object
+            (in figure coordinates).
+            If None, the calling Maps-object is used
 
-            if m.ax.contains_point((event.x, event.y)):
-                clicked_map = m
+            The default is None.
+
+        """
+
+        clicked_map = self
+        if xy is not None:
+            for m in (self.parent, *self.parent._children):
+                if not m._new_axis_map:
+                    # only search for Maps-object that initialized new axes
+                    continue
+
+                if m.ax.contains_point(xy):
+                    clicked_map = m
 
         if clicked_map is None:
             print(
@@ -4688,6 +4879,7 @@ class Maps(object):
             return obj
 
     @staticmethod
+    @lru_cache()
     def _get_cartopy_crs(crs):
         if isinstance(crs, Maps.CRS.CRS):  # already a cartopy CRS
             cartopy_proj = crs
@@ -4713,25 +4905,19 @@ class Maps(object):
         return cartopy_proj
 
     @staticmethod
+    @lru_cache()
     def _get_transformer(crs_from, crs_to):
-        # create a pyproj Transformer object or return a cached version of it
-        # if it has already been created.
-        c_from = Maps._transformer_cache.setdefault(hash(crs_from), dict())
-        return c_from.setdefault(
-            hash(crs_to), Transformer.from_crs(crs_from, crs_to, always_xy=True)
-        )
+        # create a pyproj Transformer object and cache it for later use
+        return Transformer.from_crs(crs_from, crs_to, always_xy=True)
 
     @property
-    @lru_cache()
     def _transf_plot_to_lonlat(self):
-        # cache commonly used transformers
         return self._get_transformer(
             self.crs_plot,
             self.get_crs(self.crs_plot.as_geodetic()),
         )
 
     @property
-    @lru_cache()
     def _transf_lonlat_to_plot(self):
         return self._get_transformer(
             self.get_crs(self.crs_plot.as_geodetic()),
