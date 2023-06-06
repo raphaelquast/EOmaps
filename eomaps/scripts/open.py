@@ -1,5 +1,14 @@
 import sys
+import os
 import click
+
+try:
+    # make sure qt5 is used as backend
+    import matplotlib
+
+    matplotlib.use("qt5agg")
+except Exception:
+    click.echo("... unable to activate PyQt5 backend... defaulting to 'tkinter'")
 
 
 def _identify_crs(crs):
@@ -68,15 +77,14 @@ def _identify_crs(crs):
     type=str,
     default=None,
     help=(
-        "Set the projection used for plotting the map. "
-        "(Integers are identified as epsg-codes, "
-        "strings are identified as cartopy-crs names)."
+        "The projection of the map."
+        "\n\n\b\n"
+        "- integer (4326,3857 ...epsg code)"
+        "\b\n"
+        "- string (web, equi7_eu ...Maps.CRS name)"
+        "\n\b\n"
         "The default is 'web' (e.g. Web Mercator Projection)."
         "\n\n\b\n"
-        "- web (Web Mercator)\n"
-        "- stereographic\n"
-        "- 4326\n"
-        "- equi7_eu\n"
     ),
 )
 @click.option(
@@ -84,9 +92,9 @@ def _identify_crs(crs):
     type=str,
     default="",
     help=(
-        "A path to a file (or a filename in the current working directory) "
-        "that should be plotted. "
-        "(Supported filetypes: csv, GeoTIFF, NetCDF"
+        "Path to a file that should be plotted. "
+        "\n\n\b\n"
+        "Supported filetypes: csv, GeoTIFF, NetCDF, Shapefile, GeoJson, ... "
     ),
 )
 @click.option(
@@ -127,16 +135,30 @@ def _identify_crs(crs):
     multiple=False,
     help=("Add one (or multiple) WebMap services to the map."),
 )
-def cli(crs=None, file=None, ne=None, wms=None):
-    """A simple command line interface for EOmaps."""
-    try:
-        # make sure qt5 is used as backend
-        import matplotlib
+@click.option(
+    "--location",
+    type=str,
+    default=None,
+    multiple=False,
+    help=("Query OpenStreetMap for a location and set the map extent accordingly."),
+)
+def cli(crs=None, file=None, ne=None, wms=None, location=None):
+    """
+    Command line interface for EOmaps.
 
-        matplotlib.use("qt5agg")
-    except Exception:
-        click.echo("... unable to activate PyQt5 backend... defaulting to tkinter")
+    Keyboard-shortcuts for the map:
 
+    \b
+    "w" : open the companion widget
+
+    \b
+    "ctrl + c" : export to clipboard
+
+    \b
+    "f" : fullscreen
+
+    \b
+    """
     from eomaps import Maps
 
     # disable interactive mode (e.g. tell show to block)
@@ -154,6 +176,9 @@ def cli(crs=None, file=None, ne=None, wms=None):
     if usecrs is None:
         return
     m = Maps(crs=usecrs)
+
+    if location is not None:
+        m.set_extent_to_location(location)
 
     for ne_feature in ne:
         try:
@@ -189,9 +214,16 @@ def cli(crs=None, file=None, ne=None, wms=None):
         m._companion_widget.tabs.tab_open.new_file_tab(file)
 
     def on_close(*args, **kwargs):
-        sys.exit()
+        try:
+            # TODO check why ordinary exists cause the following qt errors
+            # see https://stackoverflow.com/a/13723190/9703451 for os._exit
+            # "QGuiApplication::font(): no QGuiApplication instance
+            #  and no application font set."
+            sys.exit(0)
+        except SystemExit:
+            os._exit(0)
+        else:
+            os._exit(0)
 
     m.BM.canvas.mpl_connect("close_event", on_close)
-
     m.show()
-    sys.exit()
