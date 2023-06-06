@@ -1,24 +1,12 @@
-from PyQt5 import QtWidgets, QtGui
-
-# import pyqt before matplotlib to avoid QtGui font warnings
-
-import matplotlib
-
-matplotlib.use("qt5agg")
-
+import sys
 import click
-
-
-_app = QtWidgets.QApplication.instance()
-if _app is None:
-    # if it does not exist then a QApplication is created
-    app = QtWidgets.QApplication([])
-else:
-    app = _app
 
 
 def _identify_crs(crs):
     from eomaps import Maps
+
+    if crs == "web":
+        crs = "google_mercator"
 
     # if crs can be idenified as integer, return it
     try:
@@ -83,10 +71,12 @@ def _identify_crs(crs):
         "Set the projection used for plotting the map. "
         "(Integers are identified as epsg-codes, "
         "strings are identified as cartopy-crs names)."
-        "The default is 4326."
+        "The default is 'web' (e.g. Web Mercator Projection)."
         "\n\n\b\n"
-        "- GOOGLE_MERCATOR\n"
-        "- asdf\n"
+        "- web (Web Mercator)\n"
+        "- stereographic\n"
+        "- 4326\n"
+        "- equi7_eu\n"
     ),
 )
 @click.option(
@@ -122,8 +112,9 @@ def _identify_crs(crs):
     type=click.Choice(
         [
             "osm",
-            "satellite",
-            "landcover",
+            "google_satellite",
+            "google_roadmap",
+            "s2_cloudless" "landcover",
             "topo",
             "terrain_light",
             "basemap",
@@ -136,14 +127,27 @@ def _identify_crs(crs):
     multiple=False,
     help=("Add one (or multiple) WebMap services to the map."),
 )
-def cli(crs, file, ne, wms):
-    """Command line interface for EOmaps."""
+def cli(crs=None, file=None, ne=None, wms=None):
+    """A simple command line interface for EOmaps."""
+    try:
+        # make sure qt5 is used as backend
+        import matplotlib
+
+        matplotlib.use("qt5agg")
+    except Exception:
+        click.echo("... unable to activate PyQt5 backend... defaulting to tkinter")
+
     from eomaps import Maps
+
+    # disable interactive mode (e.g. tell show to block)
+    import matplotlib.pyplot as plt
+
+    plt.ioff()
 
     if crs is None and wms is not None:
         crs = "google_mercator"
     elif crs is None:
-        crs = "4326"
+        crs = "google_mercator"
 
     usecrs = _identify_crs(crs)
 
@@ -151,19 +155,20 @@ def cli(crs, file, ne, wms):
         return
     m = Maps(crs=usecrs)
 
-    if _app is None:
-        m.BM.canvas.mpl_connect("close_event", lambda *args: app.exit(0))
-
     for ne_feature in ne:
         try:
             getattr(m.add_feature.preset, ne_feature.lower())()
-        except:
+        except Exception:
             click.echo(f"EOmaps: Unable to add NaturalEarth feature: {ne_feature}")
 
     if wms is not None:
         if wms in ["osm"]:
             m.add_wms.OpenStreetMap.add_layer.default()
-        elif wms in ["satellite"]:
+        elif wms in ["google_roadmap"]:
+            m.add_wms.GOOGLE.add_layer.roadmap_standard()
+        elif wms in ["google_satellite"]:
+            m.add_wms.GOOGLE.add_layer.satellite()
+        elif wms in ["s2_cloudless"]:
             m.add_wms.S2_cloudless.add_layer.s2cloudless_3857()
         elif wms in ["landcover"]:
             m.add_wms.ESA_WorldCover.add_layer.WORLDCOVER_2020_MAP()
@@ -183,10 +188,10 @@ def cli(crs, file, ne, wms):
         m._companion_widget.show()
         m._companion_widget.tabs.tab_open.new_file_tab(file)
 
-    m.show()
-    print("closing")
-    QtWidgets.QApplication.quit()
-    import sys
+    def on_close(*args, **kwargs):
+        sys.exit()
 
+    m.BM.canvas.mpl_connect("close_event", on_close)
+
+    m.show()
     sys.exit()
-    print("done")
