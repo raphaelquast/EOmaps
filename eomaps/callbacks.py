@@ -850,11 +850,12 @@ class _click_callbacks(object):
             marker = self.m.ax.add_patch(patch)
             self.m.cb.click.add_temporary_artist(marker)
 
-            # make sure to clear the marker at the next update
+            # make sure to clear the marker at the next update to avoid savefig issues
             def doit():
-                self.m.BM._artists_to_clear.setdefault("move", []).append(marker)
+                self.m.BM._artists_to_clear.setdefault("peek", []).append(marker)
+                self.m.BM._clear_temp_artists("peek")
 
-            self.m.BM._after_restore_actions.append(doit)
+            self.m.BM._after_update_actions.append(doit)
 
         # create a TransformedPath as needed for clipping
         clip_path = TransformedPath(
