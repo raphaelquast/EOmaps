@@ -381,14 +381,12 @@ class MapsGrid:
 
         return s
 
-    @wraps(Maps.set_data_specs)
-    def set_data_specs(self, *args, **kwargs):
+    @wraps(Maps.set_data)
+    def set_data(self, *args, **kwargs):
         for m in self:
-            m.set_data_specs(*args, **kwargs)
+            m.set_data(*args, **kwargs)
 
-    set_data_specs.__doc__ = _doc_prefix + set_data_specs.__doc__
-
-    set_data = set_data_specs
+    set_data.__doc__ = _doc_prefix + set_data.__doc__
 
     @wraps(Maps.set_classify_specs)
     def set_classify_specs(self, scheme=None, **kwargs):

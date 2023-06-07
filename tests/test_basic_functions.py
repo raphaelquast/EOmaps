@@ -68,7 +68,7 @@ class TestBasicPlotting(unittest.TestCase):
     def test_simple_map(self):
         m = Maps(4326)
         m.data = self.data
-        m.set_data_specs(x="x", y="y", crs=3857)
+        m.set_data(x="x", y="y", crs=3857)
         m.plot_map()
         plt.close(m.f)
 
@@ -77,9 +77,7 @@ class TestBasicPlotting(unittest.TestCase):
         m = Maps()
         m.add_feature.preset.ocean()
         m.add_feature.preset.coastline()
-        m.set_data_specs(
-            data=self.data, x="x", y="y", crs=3857, cpos="ur", cpos_radius=1
-        )
+        m.set_data(data=self.data, x="x", y="y", crs=3857, cpos="ur", cpos_radius=1)
         m.plot_map()
         m.indicate_extent(20, 10, 60, 76, crs=4326, fc="r", ec="k", alpha=0.5)
         plt.close(m.f)
@@ -238,7 +236,7 @@ class TestBasicPlotting(unittest.TestCase):
     def test_alpha_and_splitbins(self):
         m = Maps(4326)
         m.data = self.data
-        m.set_data_specs(x="x", y="y", crs=3857)
+        m.set_data(x="x", y="y", crs=3857)
         m.set_shape.rectangles()
         m.set_classify_specs(scheme="Percentiles", pct=[0.1, 0.2])
 
@@ -249,7 +247,7 @@ class TestBasicPlotting(unittest.TestCase):
     def test_classification(self):
         m = Maps(4326)
         m.data = self.data
-        m.set_data_specs(x="x", y="y", crs=3857)
+        m.set_data(x="x", y="y", crs=3857)
         m.set_shape.rectangles(radius=1, radius_crs="out")
 
         m.set_classify_specs(scheme="Quantiles", k=5)
@@ -261,7 +259,7 @@ class TestBasicPlotting(unittest.TestCase):
     def test_add_callbacks(self):
         m = Maps(3857, layer="layername")
         m.data = self.data.sample(10)
-        m.set_data_specs(x="x", y="y", crs=3857)
+        m.set_data(x="x", y="y", crs=3857)
         m.set_shape.ellipses(radius=200000)
 
         m.plot_map()
@@ -341,7 +339,7 @@ class TestBasicPlotting(unittest.TestCase):
     def test_add_annotate(self):
         m = Maps()
         m.data = self.data
-        m.set_data_specs(x="x", y="y", crs=3857)
+        m.set_data(x="x", y="y", crs=3857)
 
         m.plot_map()
 
@@ -362,7 +360,7 @@ class TestBasicPlotting(unittest.TestCase):
         crs = Maps.CRS.Orthographic(central_latitude=45, central_longitude=45)
         m = Maps(crs)
         m.data = self.data
-        m.set_data_specs(x="x", y="y", crs=3857)
+        m.set_data(x="x", y="y", crs=3857)
         m.plot_map(set_extent=True)
 
         m.add_marker(
@@ -449,7 +447,7 @@ class TestBasicPlotting(unittest.TestCase):
     def test_copy(self):
         m = Maps(3857)
         m.data = self.data
-        m.set_data_specs(x="x", y="y", crs=3857)
+        m.set_data(x="x", y="y", crs=3857)
 
         m.set_classify_specs(scheme="Quantiles", k=5)
 
@@ -478,7 +476,7 @@ class TestBasicPlotting(unittest.TestCase):
     def test_copy_connect(self):
         m = Maps(3857)
         m.data = self.data
-        m.set_data_specs(x="x", y="y", crs=3857)
+        m.set_data(x="x", y="y", crs=3857)
         m.set_shape.rectangles()
         m.set_classify_specs(scheme="Quantiles", k=5)
         m.plot_map()
@@ -519,7 +517,7 @@ class TestBasicPlotting(unittest.TestCase):
     def test_prepare_data(self):
         m = Maps()
         m.data = self.data
-        m.set_data_specs(x="x", y="y", crs=3857, parameter="value")
+        m.set_data(x="x", y="y", crs=3857, parameter="value")
         data = m._data_manager._prepare_data()
 
         # TODO add proper checks here!
@@ -544,7 +542,7 @@ class TestBasicPlotting(unittest.TestCase):
         gs = GridSpec(2, 2)
 
         m = Maps(ax=gs[0, 0])
-        m.set_data_specs(data=self.data, x="x", y="y", crs=3857)
+        m.set_data(data=self.data, x="x", y="y", crs=3857)
         m.plot_map()
         cb1 = m.add_colorbar(gs[1, 0], orientation="horizontal")
         cb1.set_labels("colorbar", "histogram", fontsize=10, color="r")
@@ -604,7 +602,7 @@ class TestBasicPlotting(unittest.TestCase):
         self.assertTrue(m.colorbar is cb4)
 
         m2 = m.new_layer("asdf")
-        m2.set_data_specs(data=self.data, x="x", y="y", crs=3857)
+        m2.set_data(data=self.data, x="x", y="y", crs=3857)
         m2.set_classify.Quantiles(k=4)
         m2.plot_map()
         cb5 = m2.add_colorbar()
@@ -626,7 +624,7 @@ class TestBasicPlotting(unittest.TestCase):
         bins = [-5e6, 5e6, 1e7]
         labels = ["A", "b", "c", "d"]
         m3 = m.new_layer("asdf")
-        m3.set_data_specs(data=self.data, x="x", y="y", crs=3857)
+        m3.set_data(data=self.data, x="x", y="y", crs=3857)
         m3.set_classify.UserDefined(bins=bins)
         m3.plot_map()
         cb6 = m3.add_colorbar()
@@ -643,7 +641,7 @@ class TestBasicPlotting(unittest.TestCase):
         bins = [-5e6, 5e6, 1e7]
         labels = ["A", "b", "c", "d"]
         m3 = m.new_layer("asdf_vert")
-        m3.set_data_specs(data=self.data, x="x", y="y", crs=3857)
+        m3.set_data(data=self.data, x="x", y="y", crs=3857)
         m3.set_classify.UserDefined(bins=bins)
         m3.plot_map()
         cb6 = m3.add_colorbar(orientation="vertical")
@@ -979,7 +977,7 @@ class TestBasicPlotting(unittest.TestCase):
     def test_combine_layers(self):
         m = Maps(4326)
         m.data = self.data
-        m.set_data_specs(x="x", y="y", crs=3857)
+        m.set_data(x="x", y="y", crs=3857)
         m.plot_map()
 
         m2 = m.new_layer("ocean")

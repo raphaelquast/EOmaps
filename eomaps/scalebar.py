@@ -557,30 +557,6 @@ class ScaleBar:
         self._update(BM_update=True)
 
     def _set_scale_props(self, width=None, colors=None, **kwargs):
-        if "n" in kwargs:
-            warnings.warn(
-                "EOmaps: Setting the number of scalebar segments ('n') via the "
-                "`scale_props` is depreciated and will raise an error in the next "
-                "major release! \n"
-                "Use `s = m.add_scalebar(n=...)` or `s.set_n(...)` instead! ",
-                FutureWarning,
-                stacklevel=4,
-            )
-            self._n = kwargs.pop("n")
-            if hasattr(self, "_lon"):
-                self._redraw_minitxt()
-
-        if "scale" in kwargs:
-            warnings.warn(
-                "EOmaps: Setting the length of the scalebar segments ('scale') via the "
-                "`scale_props` is depreciated and will raise an error in the next major "
-                " release! \n"
-                "Use `s = m.add_scalebar(scale=...)` or `s.set_scale(...)` instead! ",
-                FutureWarning,
-                stacklevel=4,
-            )
-            self._scale = kwargs.pop("scale")
-
         if len(kwargs) > 0:
             raise TypeError(f"{list(kwargs)} are not allowed as 'scale_props' kwargs.")
 
