@@ -705,7 +705,7 @@ class PlotGeoTIFFWidget(PlotXarrayWidget):
         self.y.setText("y")
 
         # set layer-name to filename by default
-        self.layer.setPlaceholderText(file_path.stem)
+        self.layer.setPlaceholderText(self.m.BM.bg_layer)
 
         # set values for autocompletion
         cols = sorted(set(variables + coords))
@@ -770,7 +770,8 @@ class PlotNetCDFWidget(PlotXarrayWidget):
         self.layout.addLayout(sel_layout)
 
         # set layer-name to filename by default
-        self.layer.setPlaceholderText(file_path.stem)
+        # self.layer.setPlaceholderText(file_path.stem)
+        self.layer.setPlaceholderText(self.m.BM.bg_layer)
 
         # update info text
         self.update_info_text()
@@ -859,7 +860,8 @@ class PlotCSVWidget(PlotFileWidget):
             self.parameter.setText(cols[3])
 
         # set layer-name to filename by default
-        self.layer.setPlaceholderText(file_path.stem)
+        # self.layer.setPlaceholderText(file_path.stem)
+        self.layer.setPlaceholderText(self.m.BM.bg_layer)
 
     def get_info_text(self):
         import pandas as pd
