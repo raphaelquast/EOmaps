@@ -107,7 +107,7 @@ class ControlTabs(QtWidgets.QTabWidget):
 
         self.addTab(self.tab1, "Compare")
         self.addTab(self.tab_edit, "Edit")
-        self.addTab(self.tab_open, "Open Files")
+        self.addTab(self.tab_open, "Plotted Files")
 
         # re-populate artists on tab-change
         self.currentChanged.connect(self.tabchanged)
@@ -173,6 +173,8 @@ class MenuWindow(transparentWindow):
         menu_widget.setLayout(menu_layout)
 
         statusbar = QtWidgets.QStatusBar(self)
+        statusbar.addPermanentWidget(QtWidgets.QLabel(f"EOmaps v{self.m.__version__}"))
+
         self.setStatusBar(statusbar)
 
         # prevent context-menu's from appearing to avoid the "hide toolbar"

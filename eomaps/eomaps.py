@@ -1474,7 +1474,7 @@ class Maps(object):
         clip=False,
         reproject="gpd",
         verbose=False,
-        only_valid=True,
+        only_valid=False,
         set_extent=True,
         **kwargs,
     ):
@@ -1682,7 +1682,14 @@ class Maps(object):
 
         # drop all invalid geometries
         if only_valid:
-            gdf = gdf[gdf.is_valid]
+            valid = gdf.is_valid
+            n_invald = np.count_nonzero(~valid)
+            gdf = gdf[valid]
+            if len(gdf) == 0:
+                print("EOmaps: GeoDataFrame contains only invalid geometries!")
+                return
+            elif n_invald > 0:
+                print("EOmaps: {n_invald} invalid GeoDataFrame geometries are ignored!")
 
         with self._disable_autoscale(set_extent):
             for geomtype, geoms in gdf.groupby(gdf.geom_type):

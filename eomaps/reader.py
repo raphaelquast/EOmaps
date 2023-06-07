@@ -660,9 +660,13 @@ class read_file:
                 + f"Available columns are: {list(data)}"
             )
 
+        # make sure only unique columns are selected
+        # (multiple columns with the same name cause problems!)
+        usecols = list(dict.fromkeys([parameter, x, y]))
+
         if set_data is not None:
             set_data.set_data(
-                data=data[[parameter, x, y]],
+                data=data[usecols],
                 x=x,
                 y=y,
                 crs=crs,
@@ -670,7 +674,7 @@ class read_file:
             )
         else:
             return dict(
-                data=data[[parameter, x, y]],
+                data=data[usecols],
                 x=x,
                 y=y,
                 crs=crs,

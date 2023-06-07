@@ -25,10 +25,14 @@ class TransparentQToolButton(QtWidgets.QToolButton):
 
 
 class ToolBar(QtWidgets.QToolBar):
-    def __init__(self, *args, m=None, left_widget=None, title=None, **kwargs):
+    def __init__(
+        self, *args, m=None, left_widget=None, title=None, on_close=None, **kwargs
+    ):
         super().__init__(*args, **kwargs)
 
         self.m = m
+
+        self._on_close = on_close
 
         logo = QtGui.QPixmap(str(iconpath / "logo.png"))
         logolabel = QtWidgets.QLabel()
@@ -111,6 +115,9 @@ class ToolBar(QtWidgets.QToolBar):
         if self.m is not None:
             self.m._indicate_companion_map(False)
 
+        if self._on_close is not None:
+            self._on_close()
+
     @pyqtSlot()
     def maximize_button_callback(self):
         if not self.window().isMaximized():
@@ -142,14 +149,14 @@ class ToolBar(QtWidgets.QToolBar):
 
 
 class NewWindow(QtWidgets.QMainWindow):
-    def __init__(self, *args, m=None, title=None, **kwargs):
+    def __init__(self, *args, m=None, title=None, on_close=None, **kwargs):
         super().__init__(*args, **kwargs)
         self.m = m
         self.setWindowTitle("OpenFile")
 
         self.showhelp = False
 
-        toolbar = ToolBar(title=title)
+        toolbar = ToolBar(title=title, on_close=on_close)
         self.addToolBar(toolbar)
 
         self.layout = QtWidgets.QVBoxLayout()
