@@ -280,18 +280,6 @@ class NaturalEarth_features(object):
 
     def __init__(self, m):
         self._m = m
-
-        self._depreciated_names = dict()
-
-        for scale, scale_items in _NE_features.items():
-            for category, category_items in scale_items.items():
-                ns = dict()
-                for name in category_items:
-                    ns[name] = self._get_feature(category, name)
-
-                c = self._category(scale, category, **ns)
-                self._depreciated_names[f"{category}_{scale}"] = c
-
         for category, names in _NE_features_all.items():
             func = lambda name: self._feature(self._m, category, name)
             ns = dict(zip(names, map(func, names)))
@@ -302,17 +290,6 @@ class NaturalEarth_features(object):
     def __call__(self, category, scale, name, **kwargs):
         feature = self._get_feature(category, name)
         return feature(**kwargs)
-
-    def __getattribute__(self, key):
-        if key != "_depreciated_names" and key in self._depreciated_names:
-            warn(
-                f"EOmaps: Using 'm.add_feature.{key}.< name >()' is depreciated! "
-                f"use 'm.add_feature.{key.split('_')[0]}.< name >(scale=...)' instead! ",
-                stacklevel=99,
-            )
-            return self._depreciated_names[key]
-        else:
-            return object.__getattribute__(self, key)
 
     def __getitem__(self, key):
         return getattr(self, key)
