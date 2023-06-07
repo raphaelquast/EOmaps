@@ -1001,7 +1001,7 @@ class Maps(object):
         """Set the plot-shape."""
         return self._shapes
 
-    def set_data_specs(
+    def set_data(
         self,
         data=None,
         x=None,
@@ -1150,7 +1150,20 @@ class Maps(object):
         if parameter is not None:
             self.data_specs.parameter = parameter
 
-    set_data = set_data_specs
+    @wraps(set_data)
+    def set_data_specs(self, *args, **kwargs):
+        warnings.warn(
+            "EOmaps: `m.set_data_specs(...)` is depreciated and will raise  an "
+            "error in future versions! Use `m.set_data(...)` instead!",
+            FutureWarning,
+            stacklevel=2,
+        )
+        self.set_data(*args, **kwargs)
+
+    set_data_specs.__doc__ = (
+        "WARNING: `m.set_data_specs(...)` is depreciated! "
+        "Use `m.set_data(...)` instead!\n\n"
+    ) + set_data_specs.__doc__
 
     @property
     def set_classify(self):
@@ -3262,7 +3275,7 @@ class Maps(object):
 
         if data_specs is True:
             data_specs = list(self.data_specs.keys())
-            copy_cls.set_data_specs(
+            copy_cls.set_data(
                 **{key: copy.deepcopy(val) for key, val in self.data_specs}
             )
 
@@ -3953,11 +3966,10 @@ class Maps(object):
         """
         if m is not None:
             self.data_specs = m.data_specs
-            self.set_data_specs = lambda *args, **kwargs: (
+            self.set_data = lambda *args, **kwargs: (
                 "EOmaps: You cannot set data_specs for a Maps object that "
                 "inherits data!"
             )
-            self.set_data = self.set_data_specs
 
     def _classify_data(
         self,
