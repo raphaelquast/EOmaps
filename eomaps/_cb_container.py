@@ -156,8 +156,17 @@ class _cb_container(object):
             else:
                 event = self._event
 
+            # make sure that "all" layer callbacks are executed before other callbacks
+            ms, malls = [], []
+            for m in reversed((*self._m.parent._children, self._m.parent)):
+                if m.layer == "all":
+                    malls.append(m)
+                else:
+                    ms.append(m)
+            ms = ms + malls
+
             if self._method in ["keypress"]:
-                for m in [*self._m.parent._children, self._m.parent]:
+                for m in ms:
                     # always execute keypress callbacks irrespective of the mouse-pos
                     obj = self._getobj(m)
 
@@ -165,7 +174,7 @@ class _cb_container(object):
                     if obj is not None and self._execute_cb(obj._m.layer):
                         objs.append(obj)
             else:
-                for m in [*self._m.parent._children, self._m.parent]:
+                for m in ms:
                     # don't use "is" in here since Maps-children are proxies
                     # (and so are their attributes)!
                     if event.inaxes == m.ax:
