@@ -898,9 +898,6 @@ class LayoutEditor:
         # release shift key on every keypress
         self._shift_pressed = False
 
-        if (self.f.canvas.toolbar is not None) and self.f.canvas.toolbar.mode != "":
-            return False
-
         if (event.key == self.modifier) and (not self.modifier_pressed):
             self._make_draggable()
             return
@@ -991,6 +988,14 @@ class LayoutEditor:
         return snap
 
     def _make_draggable(self, filepath=None):
+        # Uncheck avtive pan/zoom actions of the matplotlib toolbar.
+        toolbar = getattr(self.m.BM.canvas, "toolbar", None)
+        if toolbar is not None:
+            for key in ["pan", "zoom"]:
+                val = toolbar._actions.get(key, None)
+                if val is not None and val.isCheckable() and val.isChecked():
+                    val.trigger()
+
         self._filepath = filepath
         self.modifier_pressed = True
         print("EOmaps: Layout Editor activated! (press 'esc' to exit and 'q' for info)")
