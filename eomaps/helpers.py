@@ -482,6 +482,7 @@ class LayoutEditor:
         self._reattach_pick_cb = False
 
         self.f.canvas.mpl_connect("key_press_event", self.cb_key_press)
+        self.f.canvas.mpl_connect("resize_event", self._on_resize)
 
         # the snap-to-grid interval (0 means no snapping)
         self._snap_id = 5
@@ -499,6 +500,12 @@ class LayoutEditor:
         self._max_hist_steps = 1000
         self._history = list()
         self._history_undone = list()
+
+        self._current_bg = None
+
+    def _on_resize(self, *args, **kwargs):
+        # update snap-grid on resize
+        self._add_snap_grid()
 
     @property
     def modifier_pressed(self):
@@ -694,7 +701,6 @@ class LayoutEditor:
 
     def cb_release(self, event):
         self._set_startpos(event)
-        self._remove_snap_grid()
 
     def cb_pick(self, event):
         if not self.modifier_pressed:
@@ -714,7 +720,9 @@ class LayoutEditor:
             self._cb_picked = []
             self._m_picked = []
             self._color_axes()
-            self.m.redraw()
+            self._remove_snap_grid()
+            self.fetch_current_background()
+            self.blit_artists()
             return
 
         if self._shift_pressed:
@@ -763,14 +771,36 @@ class LayoutEditor:
                         self._cb_picked = []
                         self._ax_picked.append(eventax)
 
-                    self._show_snap_grid()
+                    self._add_snap_grid()
 
             else:
-                self._show_snap_grid()
+                self._add_snap_grid()
 
-        self._color_axes()
         self._set_startpos(event)
-        self.m.redraw()
+        self._color_axes()
+        self.fetch_current_background()
+        self.blit_artists()
+
+    def fetch_current_background(self):
+        # make sure blank background has been fetched
+        self.m.BM._do_fetch_blank()
+
+        with ExitStack() as stack:
+            for ax in self._ax_picked:
+                stack.enter_context(ax._cm_set(visible=False))
+
+            for cb in self._cb_picked:
+                stack.enter_context(cb.ax_cb._cm_set(visible=False))
+                stack.enter_context(cb.ax_cb_plot._cm_set(visible=False))
+
+            self.m.BM.blit_artists(self.axes, self.m.BM._blank_bg, False)
+
+            grid = getattr(self, "_snap_grid_artist", None)
+            if grid is not None:
+                self.m.BM.blit_artists([grid], None, False)
+
+            self.m.BM.canvas.blit()
+            self._current_bg = self.m.BM.canvas.copy_from_bbox(self.m.f.bbox)
 
     def cb_move_with_key(self, event):
         if not self.modifier_pressed:
@@ -789,9 +819,9 @@ class LayoutEditor:
             bbox = self._get_move_with_key_bbox(cb._ax, event.key)
             cb.set_position(bbox)
 
-        self._color_axes()
-        self.m.redraw()
         self._add_to_history()
+        self._color_axes()
+        self.blit_artists()
 
     def cb_move(self, event):
         if (self.f.canvas.toolbar is not None) and self.f.canvas.toolbar.mode != "":
@@ -817,8 +847,18 @@ class LayoutEditor:
             bbox = self._get_move_bbox(cb._ax, event.x, event.y)
             cb.set_position(bbox)
 
-        self.m.redraw()
         self._add_to_history()
+        self._color_axes()
+        self.blit_artists()
+
+    def blit_artists(self, draw_grid=True):
+        artists = [*self._ax_picked]
+
+        for cb in self._cb_picked:
+            artists.append(cb.ax_cb)
+            artists.append(cb.ax_cb_plot)
+
+        self.m.BM.blit_artists(artists, self._current_bg)
 
     def cb_scroll(self, event):
         if (self.f.canvas.toolbar is not None) and self.f.canvas.toolbar.mode != "":
@@ -850,9 +890,9 @@ class LayoutEditor:
                 if resize_bbox is not None:
                     cb.set_position(resize_bbox)
 
-        self._color_axes()
-        self.m.redraw()
         self._add_to_history()
+        # self._color_axes()
+        self.blit_artists()
 
     def cb_key_press(self, event):
         # release shift key on every keypress
@@ -915,7 +955,9 @@ class LayoutEditor:
         # assign snaps with keys 0-9
         if event.key in map(str, range(10)):
             self._snap_id = int(event.key)
-            self._show_snap_grid()
+            self._add_snap_grid()
+            self.fetch_current_background()
+            self.blit_artists()
 
         # assign snaps with keys 0-9
         if event.key in ["+", "-", "ctrl++", "ctrl+-"]:
@@ -1114,7 +1156,7 @@ class LayoutEditor:
         for event, cb in events:
             self.cids.append(self.f.canvas.mpl_connect(event, cb))
 
-    def _show_snap_grid(self, snap=None):
+    def _add_snap_grid(self, snap=None):
         # snap = (snapx, snapy)
 
         if snap is None:
@@ -1147,15 +1189,10 @@ class LayoutEditor:
         )
         self._snap_grid_artist = self.m.f.add_artist(l)
 
-        self.f.draw_artist(self._snap_grid_artist)
-        self.f.canvas.blit()
-
     def _remove_snap_grid(self):
         if hasattr(self, "_snap_grid_artist"):
             self._snap_grid_artist.remove()
             del self._snap_grid_artist
-
-        self.m.redraw()
 
     def get_layout(self, filepath=None, override=False, precision=5):
         """
@@ -1326,7 +1363,6 @@ class BlitManager:
 
         self._m = m
 
-        self._bg = None
         self._artists = dict()
 
         self._bg_artists = dict()
@@ -1340,7 +1376,7 @@ class BlitManager:
 
         self._after_update_actions = []
         self._after_restore_actions = []
-        self._bg_layer = 0
+        self._bg_layer = "base"
 
         self._artists_to_clear = dict()
 
