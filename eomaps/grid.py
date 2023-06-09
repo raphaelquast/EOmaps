@@ -855,6 +855,8 @@ class GridLabels:
         for axis in use_axes:
             self._add_axis_labels(lines=lines, axis=axis)
 
+        m.f.canvas.draw_idle()
+
 
 class GridFactory:
     def __init__(self, m):
