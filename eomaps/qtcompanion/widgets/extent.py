@@ -8,7 +8,7 @@ class SetExtentToLocation(QtWidgets.QWidget):
         super().__init__(*args, **kwargs)
         self.m = m
 
-        label = QtWidgets.QLabel("Set map-extent to location:")
+        label = QtWidgets.QLabel("<b>Set extent to location:</b>")
         self.inp = QtWidgets.QLineEdit()
         self.inp.returnPressed.connect(self.set_extent)
         layout = QtWidgets.QHBoxLayout()

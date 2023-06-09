@@ -83,7 +83,6 @@ class Tab1(QtWidgets.QWidget):
         layout.addWidget(peektabs)
         layout.addStretch(1)
         layout.addWidget(click_cbs)
-        layout.addStretch(1)
         layout.addLayout(l2)
         layout.addStretch(1)
         layout.addLayout(layer_tab_layout)
