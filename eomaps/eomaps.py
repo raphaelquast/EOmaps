@@ -2,7 +2,6 @@
 
 from functools import lru_cache, wraps
 from itertools import repeat, chain
-from textwrap import dedent
 import warnings
 import copy
 from types import SimpleNamespace
@@ -325,7 +324,7 @@ class Maps(object):
 
     CLASSIFIERS : Accessor for available classifiers (provided by mapclassify)
 
-    _companion_widget_key : Keyboard shortcut assigned to show/hide the companion-widget.
+    _companion_widget_key : Keyboard shortcut assigned to show/hide the companion-widget
 
     """
 
@@ -1824,7 +1823,7 @@ class Maps(object):
         --------
             >>> m.add_marker(ID=1, buffer=5)
             >>> m.add_marker(ID=1, radius=2, radius_crs=4326, shape="rectangles")
-            >>> m.add_marker(xy=(45, 35), xy_crs=4326, radius=20000, shape="geod_circles")
+            >>> m.add_marker(xy=(4, 3), xy_crs=4326, radius=20000, shape="geod_circles")
         """
         if ID is not None:
             assert xy is None, "You can only provide 'ID' or 'pos' not both!"
@@ -2575,10 +2574,9 @@ class Maps(object):
 
         NOTE
         ----
-        Each call to plot_map will replace the collection used for picking!
-        (only the last collection remains interactive on multiple calls to `m.plot_map()`)
+        Each call to `plot_map(...)` will override the previously plotted dataset!
 
-        If you need multiple responsive datasets, use a new layer for each dataset!
+        If you want to plot multiple datasets, use a new layer for each dataset!
         (e.g. via `m2 = m.new_layer()`)
 
         Parameters
@@ -3872,14 +3870,14 @@ class Maps(object):
 
         if isinstance(x, tuple) and isinstance(y, tuple):
             assert data is not None, (
-                "EOmaps: If x- and y are provided as tuples, the data must be a 2D list "
-                "or numpy-array!"
+                "EOmaps: If x- and y are provided as tuples, the data must be a 2D list"
+                " or numpy-array!"
             )
 
             shape = np.shape(data)
             assert len(shape) == 2, (
-                "EOmaps: If x- and y are provided as tuples, the data must be a 2D list "
-                "or numpy-array!"
+                "EOmaps: If x- and y are provided as tuples, the data must be a 2D list"
+                " or numpy-array!"
             )
 
             # get the data-coordinates
@@ -4652,7 +4650,7 @@ class Maps(object):
                     val = val / scale_factor
 
                 return val
-            except:
+            except Exception:
                 print(
                     "EOmaps: There was an error while trying to encode the data:", val
                 )
@@ -4695,7 +4693,7 @@ class Maps(object):
                     val = val + add_offset
 
                 return val
-            except:
+            except Exception:
                 print("EOmaps: There was an error while trying to decode the data.")
                 return val
         else:
@@ -4715,12 +4713,12 @@ class Maps(object):
 
         # exclude private layers
         if exclude_private:
-            layers = {l for l in layers if not l.startswith("__")}
+            layers = {i for i in layers if not i.startswith("__")}
 
         if exclude:
-            for l in exclude:
-                if l in layers:
-                    layers.remove(l)
+            for i in exclude:
+                if i in layers:
+                    layers.remove(i)
 
         # sort the layers
         layers = sorted(layers, key=lambda x: str(x))
@@ -4867,8 +4865,8 @@ class Maps(object):
         try:
             if plt.get_backend() not in ["QtAgg", "Qt5Agg"]:
                 print(
-                    "EOmaps: Using m.open_widget() is only possible if you use matplotlibs"
-                    + f" 'Qt5Agg' backend! (active backend: '{plt.get_backend()}')"
+                    "EOmaps: Using m.open_widget() is only possible if you use"
+                    + f" 'Qt5Agg' as backend! (active backend: '{plt.get_backend()}')"
                 )
                 return
 
