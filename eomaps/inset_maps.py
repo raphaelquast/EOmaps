@@ -27,12 +27,12 @@ class InsetMaps(Maps):
         **kwargs,
     ):
 
-        self._parent = self._proxy(parent)
+        self._parent_m = self._proxy(parent)
 
         # inherit the layer from the parent Maps-object if not explicitly
         # provided
         if layer is None:
-            layer = self._parent.layer
+            layer = self._parent_m.layer
 
         # put all inset-map artists on dedicated layers
         # NOTE: all artists of inset-map axes are put on a dedicated layer
@@ -87,7 +87,7 @@ class InsetMaps(Maps):
         # initialize a new maps-object with a new axis
         super().__init__(
             crs=crs,
-            f=self._parent.f,
+            f=self._parent_m.f,
             ax=(left, bottom, plot_size, plot_size),
             layer=layer,
             **kwargs,
@@ -120,7 +120,10 @@ class InsetMaps(Maps):
 
         if indicate_extent is not False:
             self.indicate_inset_extent(
-                self._parent, layer=self._parent.layer, permanent=True, **extent_kwargs
+                self._parent_m,
+                layer=self._parent_m.layer,
+                permanent=True,
+                **extent_kwargs,
             )
 
         self._indicator_lines = []
@@ -225,7 +228,7 @@ class InsetMaps(Maps):
 
         """
         if m is None:
-            m = self._parent
+            m = self._parent_m
 
         kwargs.setdefault("c", "r")
         kwargs.setdefault("lw", 2)
