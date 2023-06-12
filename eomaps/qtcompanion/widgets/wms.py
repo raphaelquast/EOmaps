@@ -1,5 +1,5 @@
 from PyQt5 import QtWidgets
-from PyQt5.QtCore import Qt, QThread, QObject, pyqtSignal, pyqtSlot
+from PyQt5.QtCore import Qt, QThread, QObject, pyqtSignal, pyqtSlot, QTimer
 from PyQt5.QtGui import QStatusTipEvent
 
 from ... import Maps, _data_dir
@@ -770,6 +770,14 @@ class AddWMSMenuButton(QtWidgets.QPushButton):
     def menu_callback_factory(self, wmsname, wmslayer):
         @pyqtSlot()
         def wms_cb():
+
+            self.window().statusBar().showMessage(
+                f"Adding WebMap service:   {wmsname} - {wmslayer}   . . ."
+            )
+            # trigger an immediate repaint of the statusbar to show the messge
+            # before fetching the service
+            self.window().statusBar().repaint()
+
             wmsclass = self.wms_dict[wmsname]
             wms = wmsclass(m=self.m)
 
@@ -788,6 +796,11 @@ class AddWMSMenuButton(QtWidgets.QPushButton):
                         5000,
                     )
                     return
+
+                self.window().statusBar().showMessage(
+                    f"WebMap service added!   {wmsname} - {wmslayer}   . . .", 2000
+                )
+            self.window().statusBar().repaint()
 
             wms.do_add_layer(wmslayer, layer=layer)
 
