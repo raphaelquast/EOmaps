@@ -1137,6 +1137,9 @@ class LayoutEditor:
             for cb in m._colorbars:
                 cb.set_hist_size()
 
+        # remove snap-grid (if it's still visible)
+        self._remove_snap_grid()
+
         self.m.redraw()
 
     def _reset_callbacks(self):
