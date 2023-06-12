@@ -54,8 +54,8 @@ class InsetMaps(Maps):
         if radius_crs is None:
             radius_crs = xy_crs
 
-        extent_kwargs = dict(ec="r", lw=1, fc="none")
-        line_kwargs = dict(c="r", lw=2)
+        self._extent_kwargs = dict(ec="r", lw=1, fc="none")
+        self._line_kwargs = dict(c="r", lw=2)
         boundary_kwargs = dict(ec="r", lw=2)
 
         if isinstance(boundary, dict):
@@ -65,19 +65,19 @@ class InsetMaps(Maps):
 
             boundary_kwargs.update(boundary)
             # use same edgecolor for boundary and indicator by default
-            extent_kwargs["ec"] = boundary["ec"]
-            line_kwargs["c"] = boundary["ec"]
+            self._extent_kwargs["ec"] = boundary["ec"]
+            self._line_kwargs["c"] = boundary["ec"]
         elif isinstance(boundary, str):
             boundary_kwargs.update({"ec": boundary})
             # use same edgecolor for boundary and indicator by default
-            extent_kwargs["ec"] = boundary
-            line_kwargs["c"] = boundary
+            self._extent_kwargs["ec"] = boundary
+            self._line_kwargs["c"] = boundary
 
         if isinstance(indicate_extent, dict):
-            extent_kwargs.update(indicate_extent)
+            self._extent_kwargs.update(indicate_extent)
 
         if isinstance(indicator_line, dict):
-            line_kwargs.update(indicator_line)
+            self._line_kwargs.update(indicator_line)
 
         x, y = xy
         plot_x, plot_y = plot_position
@@ -127,12 +127,12 @@ class InsetMaps(Maps):
                 self._parent_m,
                 layer=self._parent_m.layer,
                 permanent=True,
-                **extent_kwargs,
+                **self._extent_kwargs,
             )
 
         self._indicator_lines = []
         if indicator_line is not False:
-            self.add_indicator_line(**line_kwargs)
+            self.add_indicator_line(**self._line_kwargs)
 
         # add a background patch to the "all" layer
         if background_color is not None:
@@ -184,15 +184,20 @@ class InsetMaps(Maps):
             (e.g. "facecolor", "edgecolor" etc.)
 
         """
-        if not any((i in kwargs for i in ["fc", "facecolor"])):
-            kwargs["fc"] = "none"
-        if not any((i in kwargs for i in ["ec", "edgecolor"])):
-            kwargs["ec"] = "r"
-        if not any((i in kwargs for i in ["lw", "linewidth"])):
-            kwargs["lw"] = 1
 
-        kwargs.setdefault("permanent", True)
-        kwargs.setdefault("zorder", 9999)
+        defaultargs = {**self._extent_kwargs}
+
+        defaultargs.setdefault("permanent", True)
+        defaultargs.setdefault("zorder", 9999)
+
+        defaultargs.update(kwargs)
+
+        if not any((i in defaultargs for i in ["fc", "facecolor"])):
+            defaultargs["fc"] = "none"
+        if not any((i in defaultargs for i in ["ec", "edgecolor"])):
+            defaultargs["ec"] = "r"
+        if not any((i in defaultargs for i in ["lw", "linewidth"])):
+            defaultargs["lw"] = 1
 
         m.add_marker(
             shape=self._inset_props["shape"],
@@ -201,7 +206,7 @@ class InsetMaps(Maps):
             radius=self._inset_props["radius"],
             radius_crs=self._inset_props["radius_crs"],
             n=n,
-            **kwargs,
+            **defaultargs,
         )
 
     def add_indicator_line(self, m=None, **kwargs):
@@ -234,11 +239,13 @@ class InsetMaps(Maps):
         if m is None:
             m = self._parent_m
 
-        kwargs.setdefault("c", "r")
-        kwargs.setdefault("lw", 2)
-        kwargs.setdefault("zorder", 99999)
+        defaultargs = {**self._line_kwargs}
+        defaultargs.setdefault("c", "r")
+        defaultargs.setdefault("lw", 2)
+        defaultargs.setdefault("zorder", 99999)
+        defaultargs.update(kwargs)
 
-        l = plt.Line2D([0, 0], [1, 1], transform=self.f.transFigure, **kwargs)
+        l = plt.Line2D([0, 0], [1, 1], transform=self.f.transFigure, **defaultargs)
         l = self._parent.ax.add_artist(l)
         l.set_clip_on(False)
 
@@ -258,8 +265,8 @@ class InsetMaps(Maps):
                 m.ax.patch.get_path(), m.ax.projection._as_mpl_transform(m.ax)
             )
 
-            kwargs["zorder"] = 99999
-            l2 = plt.Line2D([0, 0], [1, 1], **kwargs, transform=m.f.transFigure)
+            defaultargs["zorder"] = 99999
+            l2 = plt.Line2D([0, 0], [1, 1], **defaultargs, transform=m.f.transFigure)
             l2.set_clip_path(clip_path)
             l2.set_clip_on(True)
 
