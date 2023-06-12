@@ -148,6 +148,8 @@ class AnnotationEditor:
 
         self._drag_active = False
 
+        self._ann_kwargs = dict()
+
     def _add(self, a, kwargs, transf=None, drag_coords=True):
         if a not in self._annotations:
             self._annotations.append(
@@ -190,6 +192,7 @@ class AnnotationEditor:
         if q:
             for ann in self._annotations:
                 self._make_ann_editable(ann.a, ann.drag_coords)
+
                 self._drag_active = True
             if print_msg:
                 print(
@@ -204,6 +207,8 @@ class AnnotationEditor:
                 self._undo_ann_editable(ann.a)
                 self._drag_active = False
 
+            self._ann_kwargs.clear()
+
     def _make_ann_editable(self, ann, drag_coords=True):
         drag = getattr(ann, "_draggable", None)
         if drag:
@@ -211,10 +216,36 @@ class AnnotationEditor:
 
         ann._draggable = DraggableAnnotationNew(ann, drag_coords=drag_coords)
 
+        # indicate editable annotations with a green border
+        self._ann_kwargs[ann] = dict(
+            edgecolor=ann.get_bbox_patch().get_edgecolor(),
+            linewidth=ann.get_bbox_patch().get_linewidth(),
+        )
+
+        # update init_ec for key release events (see DraggableAnnotationNew)
+        ann._draggable._init_ec = "g"
+
+        ann.get_bbox_patch().set_edgecolor("g")
+        ann.get_bbox_patch().set_linewidth(2)
+
+        self.m.BM.update()
+
     def _undo_ann_editable(self, ann):
         drag = getattr(ann, "_draggable", None)
         if drag:
             drag.disconnect()
+
+        # reset patch properties
+        args = self._ann_kwargs.get(ann, dict())
+        patch = ann.get_bbox_patch()
+        for key, val in args.items():
+            getattr(patch, f"set_{key}")(val)
+
+            # update init_ec for key release events (see DraggableAnnotationNew)
+            if key == "edgecolor":
+                ann._draggable._init_ec = val
+
+        self.m.BM.update()
 
     @property
     def annotations(self):
@@ -327,7 +358,7 @@ class AnnotationEditor:
             to maintain the function in the printed text:
 
             >>> my_textfunc = lambda ID, **kwargs: str(ID)
-            >>> m.edit_annotations.print_code(replace={"text": my_textfunc})
+            >>> m._edit_annotations.print_code(replace={"text": my_textfunc})
 
         """
 
