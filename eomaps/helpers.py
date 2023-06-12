@@ -505,7 +505,8 @@ class LayoutEditor:
 
     def _on_resize(self, *args, **kwargs):
         # update snap-grid on resize
-        self._add_snap_grid()
+        if self.modifier_pressed:
+            self._add_snap_grid()
 
     @property
     def modifier_pressed(self):
