@@ -252,6 +252,10 @@ class Maps(object):
         Set the preferred way for accessing WebMap services if both WMS and WMTS
         capabilities are possible.
         The default is "wms"
+    keep_on_top : bool, optional
+        Keep the PyQt figure window on top of other windows.
+        (only relevant if PyQt5 is used as backend!)
+        The default is False.
     kwargs :
         additional kwargs are passed to `matplotlib.pyplot.figure()`
         - e.g. figsize=(10,5)
@@ -353,6 +357,7 @@ class Maps(object):
         f=None,
         ax=None,
         preferred_wms_service="wms",
+        keep_on_top=False,
         **kwargs,
     ):
         # make sure the used layer-name is valid
@@ -480,6 +485,9 @@ class Maps(object):
         # a factory to create gridlines
         if self.parent == self:
             self._grid = GridFactory(self.parent)
+
+        if keep_on_top:
+            self._keep_window_on_top()
 
     def _handle_spines(self):
         spine = self.ax.spines["geo"]
@@ -996,6 +1004,19 @@ class Maps(object):
         )
 
         return m2
+
+    def _keep_window_on_top(self):
+        # keep pyqt window on top
+        if "qt" in plt.get_backend().lower():
+            from PyQt5 import QtCore
+
+            w = self.f.canvas.window()
+
+            # only do this if necessary to avoid flickering
+            # see https://stackoverflow.com/a/40007740/9703451
+            if not bool(w.windowFlags() & QtCore.Qt.WindowStaysOnTopHint):
+                w.setWindowFlags(QtCore.Qt.WindowStaysOnTopHint)
+                w.show()
 
     @property
     @wraps(shapes)

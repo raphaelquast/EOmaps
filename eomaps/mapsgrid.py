@@ -138,6 +138,7 @@ class MapsGrid:
         figsize=None,
         layer="base",
         f=None,
+        keep_on_top=False,
         **kwargs,
     ):
 
@@ -182,6 +183,7 @@ class MapsGrid:
                             f=self.parent.f,
                             ax=self.gridspec[i, j],
                             layer=layer,
+                            keep_on_top=keep_on_top,
                         )
                         mij.ax.set_label(f"mg_map_{i}_{j}")
                     self._Maps.append(mij)
@@ -215,6 +217,7 @@ class MapsGrid:
                             figsize=figsize,
                             layer=layer,
                             f=f,
+                            keep_on_top=keep_on_top,
                         )
                         mi.ax.set_label(f"mg_map_{key}")
                         self.parent = mi
@@ -224,6 +227,7 @@ class MapsGrid:
                             ax=self.gridspec[val],
                             layer=layer,
                             f=self.parent.f,
+                            keep_on_top=keep_on_top,
                         )
                         mi.ax.set_label(f"mg_map_{key}")
 
