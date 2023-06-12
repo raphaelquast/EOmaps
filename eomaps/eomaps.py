@@ -3981,10 +3981,14 @@ class Maps(object):
         """
         if m is not None:
             self.data_specs = m.data_specs
-            self.set_data = lambda *args, **kwargs: (
-                "EOmaps: You cannot set data_specs for a Maps object that "
-                "inherits data!"
-            )
+
+            def set_data(*args, **kwargs):
+                raise AssertionError(
+                    "EOmaps: You cannot set data for a Maps object that "
+                    "inherits data!"
+                )
+
+            self.set_data = set_data
 
     def _classify_data(
         self,
