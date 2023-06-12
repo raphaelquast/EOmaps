@@ -93,6 +93,10 @@ class InsetMaps(Maps):
             **kwargs,
         )
 
+        # make sure inset-map axes are on a very high zorder
+        # (needed for ordinary draw-cycle in savefig)
+        self.ax.set_zorder(99999)
+
         # get the boundary of a ellipse in the inset_crs
         bnd, bnd_verts = self._get_inset_boundary(
             x, y, xy_crs, radius, radius_crs, shape
@@ -133,7 +137,7 @@ class InsetMaps(Maps):
         # add a background patch to the "all" layer
         if background_color is not None:
             self._bg_patch = self._add_background_patch(
-                color=background_color, layer="all"
+                color=background_color, layer=self.layer
             )
         else:
             self._bg_patch = None
@@ -144,7 +148,7 @@ class InsetMaps(Maps):
             [0, 1, 1, 0],
             fc=color,
             ec="none",
-            zorder=-np.inf,
+            zorder=-9999,
             transform=self.ax.transAxes,
         )
         self.BM.add_bg_artist(art, layer=layer)
@@ -232,11 +236,13 @@ class InsetMaps(Maps):
 
         kwargs.setdefault("c", "r")
         kwargs.setdefault("lw", 2)
-        kwargs.setdefault("zorder", -np.inf)
+        kwargs.setdefault("zorder", 99999)
 
-        l = plt.Line2D([0, 0], [1, 1], **kwargs)
-        l = self.f.add_artist(l)
-        self.BM.add_bg_artist(l, "__inset_all")
+        l = plt.Line2D([0, 0], [1, 1], transform=self.f.transFigure, **kwargs)
+        l = self._parent.ax.add_artist(l)
+        l.set_clip_on(False)
+
+        self.BM.add_bg_artist(l, self.layer)
         self._indicator_lines.append((l, m))
 
         if isinstance(m, InsetMaps):
@@ -246,11 +252,19 @@ class InsetMaps(Maps):
 
             # This is because all artists on inset-map axes are always on top of other
             # (normal map) artists... (and so the line would be behind the background)
+            from matplotlib.transforms import Path, TransformedPath
 
-            kwargs["zorder"] = np.inf
+            clip_path = TransformedPath(
+                m.ax.patch.get_path(), m.ax.projection._as_mpl_transform(m.ax)
+            )
+
+            kwargs["zorder"] = 99999
             l2 = plt.Line2D([0, 0], [1, 1], **kwargs, transform=m.f.transFigure)
+            l2.set_clip_path(clip_path)
+            l2.set_clip_on(True)
+
             l2 = m.ax.add_artist(l2)
-            self.BM.add_bg_artist(l2, "__inset_all")
+            self.BM.add_bg_artist(l2, self.layer)
             self._indicator_lines.append((l2, m))
 
         self._update_indicator_lines()
