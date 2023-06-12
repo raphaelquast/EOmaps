@@ -293,7 +293,8 @@ To adjust the margins of the subplots, use :py:meth:`m.subplots_adjust`, or have
 
     If you use ``PyQt5`` as matplotlib-backend, you can also press (``control`` + ``c``) to export the figure to the clipboard.
 
-    - Export parameters can be set via :py:meth:`Maps.set_clipboard_kwargs`
+    The export will be performed using the **currently set export-parameters** in the :ref:`companion_widget` .
+    Alternatively, you can also programmatically set the export-parameters via :py:meth:`Maps.set_clipboard_kwargs` .
 
 .. admonition:: Notes on exporting high-dpi figures
 
@@ -798,6 +799,25 @@ Everything related to callbacks is grouped under the ``cb`` accessor.
 - use ``m.cb.<METHOD>.attach(custom_cb)`` to attach a custom callback
 
 
+.. _command_line_interface:
+
+✑ Command Line Interface
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+EOmapss provides a basic command line interface to quickly create simple maps or to get a quick-look at a dataset without having to open an editor.
+
+To start a new EOmaps map from the command-line, simply type ``eomaps`` and hit enter.
+
+In addition, the following optional parameters can be provided:
+
+- ``--help`` get additionnal help on how to use the ``eomaps`` command
+- ``--crs`` set the coordinate reference system of the map
+- ``--location`` query the location via the OpenStreetMap Nominatim service and set the map-extent
+- ``--file`` a path to a file that should be opened for plotting
+- ``--ne`` add NaturalEarth features to the map
+- ``--wms`` add some selected WebMap services to the map
+
+Make sure to checkout the :ref:`companion_widget` which provides a lot of features to customize the map once it's created!
 
 
 .. _visualize_data:

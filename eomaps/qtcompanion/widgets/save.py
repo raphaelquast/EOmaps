@@ -197,7 +197,9 @@ class SaveFileWidget(QtWidgets.QFrame):
 
         # ------------ LAYOUT ------------
 
-        save_label = QtWidgets.QLabel("<b>Export Figure:</b>")
+        save_label = QtWidgets.QLabel(
+            "<b>Export Figure:</b><br>" "<small>[<code>ctrl + c</code>]</small>"
+        )
 
         layout = QtWidgets.QHBoxLayout()
         layout.addWidget(save_label)

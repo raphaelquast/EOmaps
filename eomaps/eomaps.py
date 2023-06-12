@@ -2,7 +2,6 @@
 
 from functools import lru_cache, wraps
 from itertools import repeat, chain
-from textwrap import dedent
 import warnings
 import copy
 from types import SimpleNamespace
@@ -254,6 +253,10 @@ class Maps(object):
         Set the preferred way for accessing WebMap services if both WMS and WMTS
         capabilities are possible.
         The default is "wms"
+    keep_on_top : bool, optional
+        Keep the PyQt figure window on top of other windows.
+        (only relevant if PyQt5 is used as backend!)
+        The default is False.
     kwargs :
         additional kwargs are passed to `matplotlib.pyplot.figure()`
         - e.g. figsize=(10,5)
@@ -326,7 +329,7 @@ class Maps(object):
 
     CLASSIFIERS : Accessor for available classifiers (provided by mapclassify)
 
-    _companion_widget_key : Keyboard shortcut assigned to show/hide the companion-widget.
+    _companion_widget_key : Keyboard shortcut assigned to show/hide the companion-widget
 
     """
 
@@ -355,6 +358,7 @@ class Maps(object):
         f=None,
         ax=None,
         preferred_wms_service="wms",
+        keep_on_top=False,
         **kwargs,
     ):
         # make sure the used layer-name is valid
@@ -484,6 +488,9 @@ class Maps(object):
         # a factory to create gridlines
         if self.parent == self:
             self._grid = GridFactory(self.parent)
+
+        if keep_on_top:
+            self._keep_window_on_top()
 
     def _handle_spines(self):
         spine = self.ax.spines["geo"]
@@ -979,6 +986,9 @@ class Maps(object):
 
         >>> m.util.layer_selector()
         """
+        # to avoid circular imports
+        from .inset_maps import InsetMaps
+
         m2 = InsetMaps(
             parent=self,
             crs=inset_crs,
@@ -998,13 +1008,26 @@ class Maps(object):
 
         return m2
 
+    def _keep_window_on_top(self):
+        # keep pyqt window on top
+        if "qt" in plt.get_backend().lower():
+            from PyQt5 import QtCore
+
+            w = self.f.canvas.window()
+
+            # only do this if necessary to avoid flickering
+            # see https://stackoverflow.com/a/40007740/9703451
+            if not bool(w.windowFlags() & QtCore.Qt.WindowStaysOnTopHint):
+                w.setWindowFlags(QtCore.Qt.WindowStaysOnTopHint)
+                w.show()
+
     @property
     @wraps(shapes)
     def set_shape(self):
         """Set the plot-shape."""
         return self._shapes
 
-    def set_data_specs(
+    def set_data(
         self,
         data=None,
         x=None,
@@ -1153,7 +1176,20 @@ class Maps(object):
         if parameter is not None:
             self.data_specs.parameter = parameter
 
-    set_data = set_data_specs
+    @wraps(set_data)
+    def set_data_specs(self, *args, **kwargs):
+        warnings.warn(
+            "EOmaps: `m.set_data_specs(...)` is depreciated and will raise  an "
+            "error in future versions! Use `m.set_data(...)` instead!",
+            FutureWarning,
+            stacklevel=2,
+        )
+        self.set_data(*args, **kwargs)
+
+    set_data_specs.__doc__ = (
+        "WARNING: `m.set_data_specs(...)` is depreciated! "
+        "Use `m.set_data(...)` instead!\n\n"
+    ) + set_data_specs.__doc__
 
     @property
     def set_classify(self):
@@ -1477,7 +1513,7 @@ class Maps(object):
         clip=False,
         reproject="gpd",
         verbose=False,
-        only_valid=True,
+        only_valid=False,
         set_extent=True,
         **kwargs,
     ):
@@ -1685,7 +1721,14 @@ class Maps(object):
 
         # drop all invalid geometries
         if only_valid:
-            gdf = gdf[gdf.is_valid]
+            valid = gdf.is_valid
+            n_invald = np.count_nonzero(~valid)
+            gdf = gdf[valid]
+            if len(gdf) == 0:
+                print("EOmaps: GeoDataFrame contains only invalid geometries!")
+                return
+            elif n_invald > 0:
+                print("EOmaps: {n_invald} invalid GeoDataFrame geometries are ignored!")
 
         with self._disable_autoscale(set_extent):
             for geomtype, geoms in gdf.groupby(gdf.geom_type):
@@ -1804,7 +1847,7 @@ class Maps(object):
         --------
             >>> m.add_marker(ID=1, buffer=5)
             >>> m.add_marker(ID=1, radius=2, radius_crs=4326, shape="rectangles")
-            >>> m.add_marker(xy=(45, 35), xy_crs=4326, radius=20000, shape="geod_circles")
+            >>> m.add_marker(xy=(4, 3), xy_crs=4326, radius=20000, shape="geod_circles")
         """
         if ID is not None:
             assert xy is None, "You can only provide 'ID' or 'pos' not both!"
@@ -2581,10 +2624,9 @@ class Maps(object):
 
         NOTE
         ----
-        Each call to plot_map will replace the collection used for picking!
-        (only the last collection remains interactive on multiple calls to `m.plot_map()`)
+        Each call to `plot_map(...)` will override the previously plotted dataset!
 
-        If you need multiple responsive datasets, use a new layer for each dataset!
+        If you want to plot multiple datasets, use a new layer for each dataset!
         (e.g. via `m2 = m.new_layer()`)
 
         Parameters
@@ -3102,27 +3144,20 @@ class Maps(object):
                 # set the shading-axis-size to reflect the used dpi setting
                 self._update_shade_axis_size(dpi=dpi)
 
-            # make sure that artists from the "all" layer are drawn as well
+            # get all layer names that should be drawn
             savelayers, alphas = self.BM._get_layers_alphas(
                 self.BM._get_showlayer_name(
-                    self._get_combined_layer_name(self.BM.bg_layer, "all")
+                    self._get_combined_layer_name(self.BM.bg_layer)
                 )
             )
-            nlayers = len(savelayers)
-
-            # identify maximum zorder of all artists
-            max_zorder = max(
-                a.get_zorder()
-                for key, val in chain(
-                    self.BM._bg_artists.items(), self.BM._artists.items()
-                )
-                for a in val
-            )
+            # make sure inset-maps are drawn on top of normal maps
+            savelayers.sort(key=lambda x: x.startswith("__inset_"))
 
             for m in (self.parent, *self.parent._children):
                 # re-enable normal axis draw cycle by making axes non-animated.
-                # This is needed for backward-compatibility, since saving a figure ignores
-                # the animated attribute for axis-children but not for the axis itself. See:
+                # This is needed for backward-compatibility, since saving a figure
+                # ignores the animated attribute for axis-children but not for the axis
+                # itself. See:
                 # https://github.com/matplotlib/matplotlib/issues/26007#issuecomment-1568812089
                 stack.enter_context(m.ax._cm_set(animated=False))
 
@@ -3139,33 +3174,54 @@ class Maps(object):
             for a in m.BM._managed_axes:
                 stack.enter_context(a._cm_set(animated=False))
 
-            # select artists to export
-            # adjust zorder to respect layer order
-            # set global transparency for background artists
-            for key, val in self.BM._bg_artists.items():
-                if key in savelayers:
-                    i = savelayers.index(key)
-                    for a in val:
-                        zorder = a.get_zorder() + i * max_zorder
-                        stack.enter_context(a._cm_set(zorder=zorder, animated=False))
-
-                        if alphas[i] < 1:
-                            alpha = a.get_alpha()
-                            if alpha is None:
-                                alpha = alphas[i]
-                            stack.enter_context(a._cm_set(alpha=alpha * alphas[i]))
+            zorder = 0
+            for layer, alpha in zip(savelayers, alphas):
+                # get all (sorted) artists of a layer
+                if layer.startswith("__inset"):
+                    artists = self.BM.get_bg_artists(["__inset_all", layer])
                 else:
+                    if layer.startswith("__"):
+                        artists = self.BM.get_bg_artists([layer])
+                    else:
+                        artists = self.BM.get_bg_artists(["all", layer])
+
+                for a in artists:
+                    if isinstance(a, plt.Axes):
+                        continue
+                    zorder += 1
+                    stack.enter_context(a._cm_set(zorder=zorder, animated=False))
+
+                    if alpha < 1:
+                        current_alpha = a.get_alpha()
+                        if current_alpha is None:
+                            current_alpha = alpha
+                        else:
+                            current_alpha = current_alpha * alpha
+
+                        stack.enter_context(a._cm_set(alpha=current_alpha))
+
+            for key, val in self.BM._bg_artists.items():
+                if key not in savelayers:
                     for a in val:
                         stack.enter_context(a._cm_set(visible=False, animated=True))
 
             # always draw dynamic artists on top of background artists
-            for key, val in self.BM._artists.items():
-                if key in savelayers:
-                    i = savelayers.index(key)
-                    for a in val:
-                        zorder = a.get_zorder() + (i + nlayers) * max_zorder
-                        stack.enter_context(a._cm_set(zorder=zorder, animated=False))
+            for layer, alpha in zip(savelayers, alphas):
+                # get all (sorted) artists of a layer
+                if layer.startswith("__inset"):
+                    artists = self.BM.get_bg_artists(["__inset_all", layer])
                 else:
+                    if layer.startswith("__"):
+                        artists = self.BM.get_bg_artists([layer])
+                    else:
+                        artists = self.BM.get_bg_artists(["all", layer])
+
+                for a in artists:
+                    zorder += 1
+                    stack.enter_context(a._cm_set(zorder=zorder, animated=False))
+
+            for key, val in self.BM._artists.items():
+                if key not in savelayers:
                     for a in val:
                         stack.enter_context(a._cm_set(visible=False, animated=True))
 
@@ -3284,7 +3340,7 @@ class Maps(object):
 
         if data_specs is True:
             data_specs = list(self.data_specs.keys())
-            copy_cls.set_data_specs(
+            copy_cls.set_data(
                 **{key: copy.deepcopy(val) for key, val in self.data_specs}
             )
 
@@ -3878,14 +3934,14 @@ class Maps(object):
 
         if isinstance(x, tuple) and isinstance(y, tuple):
             assert data is not None, (
-                "EOmaps: If x- and y are provided as tuples, the data must be a 2D list "
-                "or numpy-array!"
+                "EOmaps: If x- and y are provided as tuples, the data must be a 2D list"
+                " or numpy-array!"
             )
 
             shape = np.shape(data)
             assert len(shape) == 2, (
-                "EOmaps: If x- and y are provided as tuples, the data must be a 2D list "
-                "or numpy-array!"
+                "EOmaps: If x- and y are provided as tuples, the data must be a 2D list"
+                " or numpy-array!"
             )
 
             # get the data-coordinates
@@ -3975,11 +4031,14 @@ class Maps(object):
         """
         if m is not None:
             self.data_specs = m.data_specs
-            self.set_data_specs = lambda *args, **kwargs: (
-                "EOmaps: You cannot set data_specs for a Maps object that "
-                "inherits data!"
-            )
-            self.set_data = self.set_data_specs
+
+            def set_data(*args, **kwargs):
+                raise AssertionError(
+                    "EOmaps: You cannot set data for a Maps object that "
+                    "inherits data!"
+                )
+
+            self.set_data = set_data
 
     def _classify_data(
         self,
@@ -4659,7 +4718,7 @@ class Maps(object):
                     val = val / scale_factor
 
                 return val
-            except:
+            except Exception:
                 print(
                     "EOmaps: There was an error while trying to encode the data:", val
                 )
@@ -4702,7 +4761,7 @@ class Maps(object):
                     val = val + add_offset
 
                 return val
-            except:
+            except Exception:
                 print("EOmaps: There was an error while trying to decode the data.")
                 return val
         else:
@@ -4722,12 +4781,12 @@ class Maps(object):
 
         # exclude private layers
         if exclude_private:
-            layers = {l for l in layers if not l.startswith("__")}
+            layers = {i for i in layers if not i.startswith("__")}
 
         if exclude:
-            for l in exclude:
-                if l in layers:
-                    layers.remove(l)
+            for i in exclude:
+                if i in layers:
+                    layers.remove(i)
 
         # sort the layers
         layers = sorted(layers, key=lambda x: str(x))
@@ -4874,8 +4933,8 @@ class Maps(object):
         try:
             if plt.get_backend() not in ["QtAgg", "Qt5Agg"]:
                 print(
-                    "EOmaps: Using m.open_widget() is only possible if you use matplotlibs"
-                    + f" 'Qt5Agg' backend! (active backend: '{plt.get_backend()}')"
+                    "EOmaps: Using m.open_widget() is only possible if you use"
+                    + f" 'Qt5Agg' as backend! (active backend: '{plt.get_backend()}')"
                 )
                 return
 
@@ -5022,370 +5081,3 @@ class Maps(object):
         def refetch_wms_on_size_change(self, *args, **kwargs):
             """Set the behavior for WebMap services on axis or figure size changes."""
             refetch_wms_on_size_change(*args, **kwargs)
-
-
-class InsetMaps(Maps):
-    # a subclass of Maps that includes some special functions for inset maps
-
-    def __init__(
-        self,
-        parent,
-        crs=4326,
-        layer=None,
-        xy=(45, 45),
-        xy_crs=4326,
-        radius=5,
-        radius_crs=None,
-        plot_position=(0.5, 0.5),
-        plot_size=0.5,
-        shape="ellipses",
-        indicate_extent=True,
-        indicator_line=False,
-        boundary=True,
-        background_color="w",
-        **kwargs,
-    ):
-
-        self._parent = self._proxy(parent)
-
-        # inherit the layer from the parent Maps-object if not explicitly
-        # provided
-        if layer is None:
-            layer = self._parent.layer
-
-        # put all inset-map artists on dedicated layers
-        # NOTE: all artists of inset-map axes are put on a dedicated layer
-        # with a "__inset_" prefix to ensure they appear on top of other artists
-        # (AND on top of spines of normal maps)!
-        # layer = "__inset_" + str(layer)
-
-        possible_shapes = ["ellipses", "rectangles", "geod_circles"]
-        assert (
-            shape in possible_shapes
-        ), f"EOmaps: the inset shape can only be one of {possible_shapes}"
-
-        if shape == "geod_circles":
-            assert radius_crs is None, (
-                "EOmaps: Using 'radius_crs' is not possible if 'geod_circles' is "
-                + "used as shape! (the radius for `geod_circles` is always in meters!)"
-            )
-
-        if radius_crs is None:
-            radius_crs = xy_crs
-
-        extent_kwargs = dict(ec="r", lw=1, fc="none")
-        line_kwargs = dict(c="r", lw=2)
-        boundary_kwargs = dict(ec="r", lw=2)
-
-        if isinstance(boundary, dict):
-            assert (
-                len(set(boundary.keys()).difference({"ec", "lw"})) == 0
-            ), "EOmaps: only 'ec' and 'lw' keys are allowed for the 'boundary' dict!"
-
-            boundary_kwargs.update(boundary)
-            # use same edgecolor for boundary and indicator by default
-            extent_kwargs["ec"] = boundary["ec"]
-            line_kwargs["c"] = boundary["ec"]
-        elif isinstance(boundary, str):
-            boundary_kwargs.update({"ec": boundary})
-            # use same edgecolor for boundary and indicator by default
-            extent_kwargs["ec"] = boundary
-            line_kwargs["c"] = boundary
-
-        if isinstance(indicate_extent, dict):
-            extent_kwargs.update(indicate_extent)
-
-        if isinstance(indicator_line, dict):
-            line_kwargs.update(indicator_line)
-
-        x, y = xy
-        plot_x, plot_y = plot_position
-        left = plot_x - plot_size / 2
-        bottom = plot_y - plot_size / 2
-
-        # initialize a new maps-object with a new axis
-        super().__init__(
-            crs=crs,
-            f=self._parent.f,
-            ax=(left, bottom, plot_size, plot_size),
-            layer=layer,
-            **kwargs,
-        )
-
-        # get the boundary of a ellipse in the inset_crs
-        bnd, bnd_verts = self._get_inset_boundary(
-            x, y, xy_crs, radius, radius_crs, shape
-        )
-
-        # set the map boundary
-        self.ax.set_boundary(bnd)
-        # set the plot-extent to the envelope of the shape
-        (x0, y0), (x1, y1) = bnd_verts.min(axis=0), bnd_verts.max(axis=0)
-        self.ax.set_extent((x0, x1, y0, y1), crs=self.ax.projection)
-
-        # TODO turn off navigation until the matpltolib pull-request on
-        # zoom-events in overlapping axes is resolved
-        # https://github.com/matplotlib/matplotlib/pull/22347
-        self.ax.set_navigate(False)
-
-        if boundary is not False:
-            spine = self.ax.spines["geo"]
-            spine.set_edgecolor(boundary_kwargs["ec"])
-            spine.set_lw(boundary_kwargs["lw"])
-
-        self._inset_props = dict(
-            xy=xy, xy_crs=xy_crs, radius=radius, radius_crs=radius_crs, shape=shape
-        )
-
-        if indicate_extent is not False:
-            self.indicate_inset_extent(
-                self._parent, layer=self._parent.layer, permanent=True, **extent_kwargs
-            )
-
-        self._indicator_lines = []
-        if indicator_line is not False:
-            self.add_indicator_line(**line_kwargs)
-
-        # add a background patch to the "all" layer
-        if background_color is not None:
-            self._bg_patch = self._add_background_patch(
-                color=background_color, layer="all"
-            )
-        else:
-            self._bg_patch = None
-
-    def _add_background_patch(self, color, layer="all"):
-        (art,) = self.ax.fill(
-            [0, 0, 1, 1],
-            [0, 1, 1, 0],
-            fc=color,
-            ec="none",
-            zorder=-np.inf,
-            transform=self.ax.transAxes,
-        )
-        self.BM.add_bg_artist(art, layer=layer)
-        return art
-
-    def _handle_spines(self):
-        spine = self.ax.spines["geo"]
-        if spine not in self.BM._bg_artists.get("__inset___SPINES__", []):
-            self.BM.add_bg_artist(spine, layer="__inset___SPINES__")
-
-    def _get_ax_label(self):
-        return "inset_map"
-
-    def plot_map(self, *args, **kwargs):
-        set_extent = kwargs.pop("set_extent", False)
-        super().plot_map(*args, **kwargs, set_extent=set_extent)
-
-    # a convenience-method to add a boundary-polygon to a map
-    def indicate_inset_extent(self, m, n=100, **kwargs):
-        """
-        Add a polygon to a  map that indicates the extent of the inset-map.
-
-        Parameters
-        ----------
-        m : eomaps.Maps
-            The Maps-object that will be used to draw the marker.
-            (e.g. the map on which the extent of the inset should be indicated)
-        n : int
-            The number of points used to represent the polygon.
-            The default is 100.
-        kwargs :
-            additional keyword-arguments passed to `m.add_marker`
-            (e.g. "facecolor", "edgecolor" etc.)
-
-        """
-        if not any((i in kwargs for i in ["fc", "facecolor"])):
-            kwargs["fc"] = "none"
-        if not any((i in kwargs for i in ["ec", "edgecolor"])):
-            kwargs["ec"] = "r"
-        if not any((i in kwargs for i in ["lw", "linewidth"])):
-            kwargs["lw"] = 1
-
-        kwargs.setdefault("permanent", True)
-        kwargs.setdefault("zorder", 9999)
-
-        m.add_marker(
-            shape=self._inset_props["shape"],
-            xy=self._inset_props["xy"],
-            xy_crs=self._inset_props["xy_crs"],
-            radius=self._inset_props["radius"],
-            radius_crs=self._inset_props["radius_crs"],
-            n=n,
-            **kwargs,
-        )
-
-    def add_indicator_line(self, m=None, **kwargs):
-        """
-        Add a line that connects the inset-map to the inset location on a given map.
-
-        The line connects the current inset-map (center) position to the center of the
-        inset extent on the provided Maps-object.
-
-        It is possible to add multiple indicator-lines for different maps!
-
-        The lines will be automatically updated if axes sizes or positions change.
-
-        Parameters
-        ----------
-        m : eomaps.Maps or None
-            The Maps object for which the inset-line should be added.
-            If None, the parent Maps-object that was used to create the inset-map
-            is used. The default is None.
-
-        kwargs :
-            Additional kwargs are passed to plt.Line2D to style the appearance of the
-            line (e.g. "c", "ls", "lw", ...)
-
-
-        Examples
-        --------
-
-        """
-        if m is None:
-            m = self._parent
-
-        kwargs.setdefault("c", "r")
-        kwargs.setdefault("lw", 2)
-        kwargs.setdefault("zorder", -np.inf)
-
-        l = plt.Line2D([0, 0], [1, 1], **kwargs)
-        l = self.f.add_artist(l)
-        self.BM.add_bg_artist(l, "__inset_all")
-        self._indicator_lines.append((l, m))
-
-        if isinstance(m, InsetMaps):
-            # in order to make the line visible on top of another inset-map
-            # but NOT on the inset-map whose extent is indicated, the line has to
-            # be drawn on the inset-map explicitly.
-
-            # This is because all artists on inset-map axes are always on top of other
-            # (normal map) artists... (and so the line would be behind the background)
-
-            kwargs["zorder"] = np.inf
-            l2 = plt.Line2D([0, 0], [1, 1], **kwargs, transform=m.f.transFigure)
-            l2 = m.ax.add_artist(l2)
-            self.BM.add_bg_artist(l2, "__inset_all")
-            self._indicator_lines.append((l2, m))
-
-        self._update_indicator_lines()
-        self.BM._before_fetch_bg_actions.append(self._update_indicator_lines)
-
-    def _update_indicator_lines(self, *args, **kwargs):
-        props = self._inset_props
-        bbox = self.ax.get_position()
-        # get current inset-map position
-        x1 = (bbox.x1 + bbox.x0) / 2
-        y1 = (bbox.y1 + bbox.y0) / 2
-
-        for l, m in self._indicator_lines:
-            # get inset map extent in ax projection
-            t = m._get_transformer(props["xy_crs"], m.ax.projection)
-            xy = t.transform(*props["xy"])
-            # get inset map extent in figure coordinates
-            x0, y0 = (m.ax.transData + m.f.transFigure.inverted()).transform(xy)
-
-            l.set_xdata([x0, x1])
-            l.set_ydata([y0, y1])
-
-    # a convenience-method to set the position based on the center of the axis
-    def set_inset_position(self, x=None, y=None, size=None):
-        """
-        Set the (center) position and size of the inset-map.
-
-        Parameters
-        ----------
-        x, y : int or float, optional
-            The center position in relative units (0-1) with respect to the figure.
-            If None, the existing position is used.
-            The default is None.
-        size : float, optional
-            The relative radius (0-1) of the inset in relation to the figure width.
-            If None, the existing size is used.
-            The default is None.
-
-        """
-        x0, y1, x1, y0 = self.ax.get_position().bounds
-
-        if size is None:
-            size = abs(x1 - x0)
-
-        if x is None:
-            x = (x0 + x1) / 2
-        if y is None:
-            y = (y0 + y1) / 2
-
-        self.ax.set_position((x - size / 2, y - size / 2, size, size))
-        self.redraw("__inset_" + self.layer, "__inset___SPINES__")
-
-    # a convenience-method to get the position based on the center of the axis
-    def get_inset_position(self, precision=3):
-        """
-        Get the current inset position (and size).
-
-        Parameters
-        ----------
-        precision : int, optional
-            The precision of the returned position and size.
-            The default is 3.
-
-        Returns
-        -------
-        (x, y, size) : (float, float, float)
-            The position and size of the inset-map.
-
-        """
-        bbox = self.ax.get_position()
-        size = round(max(bbox.width, bbox.height), precision)
-        x = round((bbox.x0 + bbox.width / 2), precision)
-        y = round((bbox.y0 + bbox.height / 2), precision)
-
-        return x, y, size
-
-    def _get_inset_boundary(self, x, y, xy_crs, radius, radius_crs, shape, n=100):
-        # get the inset-shape boundary
-
-        shp = self.set_shape._get(shape)
-
-        if shape == "ellipses":
-            shp_pts = shp._get_ellipse_points(
-                x=np.atleast_1d(x),
-                y=np.atleast_1d(y),
-                crs=xy_crs,
-                radius=radius,
-                radius_crs=radius_crs,
-                n=n,
-            )
-            bnd_verts = np.stack(shp_pts[:2], axis=2)[0]
-
-            # make sure vertices are right-handed
-            bnd_verts = bnd_verts[::-1]
-
-        elif shape == "rectangles":
-            shp_pts = shp._get_rectangle_verts(
-                x=np.atleast_1d(x),
-                y=np.atleast_1d(y),
-                crs=xy_crs,
-                radius=radius,
-                radius_crs=radius_crs,
-                n=n,
-            )
-            bnd_verts = shp_pts[0][0]
-
-        elif shape == "geod_circles":
-            shp_pts = shp._get_geod_circle_points(
-                x=np.atleast_1d(x),
-                y=np.atleast_1d(y),
-                crs=xy_crs,
-                radius=radius,
-                # radius_crs=radius_crs,
-                n=n,
-            )
-            bnd_verts = np.stack(shp_pts[:2], axis=2).squeeze()
-            # make sure vertices are right-handed
-            bnd_verts = bnd_verts[::-1]
-
-        boundary = mpl.path.Path(bnd_verts)
-
-        return boundary, bnd_verts

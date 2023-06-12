@@ -2,6 +2,8 @@ from PyQt5 import QtWidgets, QtGui
 from PyQt5.QtCore import Qt, QLocale
 from pathlib import Path
 import io
+import numpy as np
+
 
 from .utils import (
     LineEditComplete,
@@ -15,7 +17,7 @@ from .utils import (
     AlphaSlider,
 )
 
-from ..base import NewWindow
+from ..base import NewWindow, get_dummy_spacer
 
 
 def _none_or_val(val):
@@ -39,6 +41,17 @@ def _identify_radius(r):
         return rx, ry
     except:
         return r
+
+
+def _get_gdf_file_endings():
+    try:
+        from fiona.drvsupport import vector_driver_extensions
+
+        file_endings = [f".{i}" for i in vector_driver_extensions()]
+    except Exception as ex:
+        file_endings = []
+
+    return file_endings
 
 
 class ShapeSelector(QtWidgets.QFrame):
@@ -300,13 +313,21 @@ class PlotFileWidget(QtWidgets.QWidget):
         self.ID = LineEditComplete("ID")
         self.crs = InputCRS()
 
-        tx = QtWidgets.QLabel("x:")
-        ty = QtWidgets.QLabel("y:")
-        tparam = QtWidgets.QLabel("parameter:")
-        tcrs = QtWidgets.QLabel("crs:")
-        self.tID = QtWidgets.QLabel("ID:")
+        # update info-text with respect to the selected columns
+        self.x.textChanged.connect(self.update_info_text)
+        self.y.textChanged.connect(self.update_info_text)
+        self.parameter.textChanged.connect(self.update_info_text)
+        self.ID.textChanged.connect(self.update_info_text)
+
+        tx = QtWidgets.QLabel("<b>x:</b>")
+        ty = QtWidgets.QLabel("<b>y:</b>")
+        tparam = QtWidgets.QLabel("<b>parameter:</b>")
+        tcrs = QtWidgets.QLabel("<b>crs:</b>")
+        self.tID = QtWidgets.QLabel("<b>ID:</b>")
 
         plotargs = QtWidgets.QHBoxLayout()
+        plotargs.addWidget(self.tID)
+        plotargs.addWidget(self.ID)
         plotargs.addWidget(tx)
         plotargs.addWidget(self.x)
         plotargs.addWidget(ty)
@@ -315,8 +336,6 @@ class PlotFileWidget(QtWidgets.QWidget):
         plotargs.addWidget(self.parameter)
         plotargs.addWidget(tcrs)
         plotargs.addWidget(self.crs)
-        plotargs.addWidget(self.tID)
-        plotargs.addWidget(self.ID)
 
         plotargs.addWidget(self.b_plot)
 
@@ -332,6 +351,17 @@ class PlotFileWidget(QtWidgets.QWidget):
 
         self.setLayout(self.layout)
 
+        self._file_handle = None
+
+    def get_info_text(self):
+        return "???"
+
+    def update_info_text(self):
+        try:
+            self.file_info.setText(self.get_info_text())
+        except Exception:
+            self.file_info.setText("???")
+
     def get_layer(self):
         layer = self.layer.text()
         if layer == "":
@@ -340,7 +370,9 @@ class PlotFileWidget(QtWidgets.QWidget):
         return layer
 
     def open_file(self, file_path=None):
-        info = self.do_open_file(file_path)
+        self._open_filehandle(file_path)
+
+        self.do_open_file(file_path)
 
         if self.file_endings is not None:
             if file_path.suffix.lower() not in self.file_endings:
@@ -353,24 +385,31 @@ class PlotFileWidget(QtWidgets.QWidget):
         if file_path is not None:
             self.file_path = file_path
 
-        if info is not None:
-            self.file_info.setText(info)
+        self.file_info.setText(self.get_info_text())
 
         self.layer.set_complete_vals(
             [file_path.name]
             + [i for i in self.m._get_layers() if not i.startswith("_")]
         )
 
-        self.newwindow = NewWindow(m=self.m, title=self.window_title)
+        self.newwindow = NewWindow(
+            m=self.m,
+            title=self.window_title,
+            on_close=self._close_filehandle,
+        )
+
         self.newwindow.statusBar().showMessage(str(self.file_path))
 
         self.newwindow.setWindowFlags(
-            Qt.FramelessWindowHint | Qt.Dialog | Qt.WindowStaysOnTopHint
+            Qt.FramelessWindowHint | Qt.WindowStaysOnTopHint | Qt.Dialog
         )
 
         self.newwindow.layout.addWidget(self)
         self.newwindow.resize(800, 500)
+        # self.newwindow.setWindowModality(Qt.ApplicationModal) make the popup blocking
         self.newwindow.show()
+
+        self.newwindow.on_close
 
     def b_plot_file(self):
         try:
@@ -397,11 +436,14 @@ class PlotFileWidget(QtWidgets.QWidget):
             )
             return
 
-        if self.close_on_plot:
-            self.newwindow.close()
+        try:
+            if self.close_on_plot:
+                self.newwindow.close()
 
-        if self.attach_tab_after_plot:
-            self.attach_as_tab()
+            if self.attach_tab_after_plot:
+                self.attach_as_tab()
+        finally:
+            self._close_filehandle()
 
     def do_open_file(self):
         file_path = Path(QtWidgets.QFileDialog.getOpenFileName()[0])
@@ -410,6 +452,19 @@ class PlotFileWidget(QtWidgets.QWidget):
             file_path,
             f"The file {file_path.stem} has\n {file_path.stat().st_size} bytes.",
         )
+
+    def _open_filehandle(self, file_path):
+        self._file_handle = open(file_path, "r")
+
+    def _close_filehandle(self):
+
+        if self._file_handle is not None:
+            try:
+                self._file_handle.close()
+            except Exception as ex:
+                print("EOmaps: encountered a problem while closing the file.", ex)
+
+        self._file_handle = None
 
     def do_plot_file(self):
         self.file_info.setText("Implement `.do_plot_file()` to plot the data!")
@@ -422,12 +477,17 @@ class PlotFileWidget(QtWidgets.QWidget):
             return
 
         if self.file_path is not None:
-            name = self.file_path.stem
+            name = self.file_path.name
         else:
             return
 
-        if len(name) > 10:
-            name = name[:7] + "..."
+        if len(name) > 15:
+            name = (
+                self.file_path.stem[:6]
+                + "..."
+                + self.file_path.stem[-3:]
+                + self.file_path.suffix
+            )
         self.tab.addTab(self, name)
 
         tabindex = self.tab.indexOf(self)
@@ -460,10 +520,7 @@ class PlotFileWidget(QtWidgets.QWidget):
         self.b_plot.close()
 
 
-class PlotGeoTIFFWidget(PlotFileWidget):
-
-    file_endings = (".tif", ".tiff")
-
+class PlotXarrayWidget(PlotFileWidget):
     def __init__(self, *args, window_title="Plot GeoTIFF FIle", **kwargs):
 
         super().__init__(*args, **kwargs)
@@ -472,73 +529,56 @@ class PlotGeoTIFFWidget(PlotFileWidget):
         self.tID.hide()
         self.ID.hide()
 
+        self.default_sel_args = dict()
+
     def get_crs(self):
         return get_crs(self.crs.text())
 
-    def do_open_file(self, file_path):
+    def _open_filehandle(self, file_path):
         import xarray as xar
 
-        with xar.open_dataset(file_path, mask_and_scale=False) as f:
-            import io
+        self._file_handle = xar.open_dataset(file_path, mask_and_scale=False)
 
-            info = io.StringIO()
-            f.info(info)
-
-            coords = list(f.coords)
-            variables = list(f.variables)
-
-            crs = f.rio.crs
-            if crs is not None:
-                self.crs.setText(crs.to_string())
-            self.parameter.setText(next((i for i in variables if i not in coords)))
-
-        self.x.setText("x")
-        self.y.setText("y")
-
-        # set layer-name to filename by default
-        self.layer.setPlaceholderText(file_path.stem)
-
-        # set values for autocompletion
-        cols = sorted(set(variables + coords))
-        self.x.set_complete_vals(cols)
-        self.y.set_complete_vals(cols)
-        self.parameter.set_complete_vals(cols)
-
-        return info.getvalue()
-
-    def do_plot_file(self):
-        if self.file_path is None:
-            return
-
-        m2 = self.m.new_layer_from_file.GeoTIFF(
-            self.file_path,
-            shape=self.shape_selector.shape_args,
-            coastline=False,
-            layer=self.get_layer(),
-            cmap=self.cmaps.currentText(),
-            vmin=to_float_none(self.vmin.text()),
-            vmax=to_float_none(self.vmax.text()),
-            data_crs=self.get_crs(),
-        )
-
-        if self.cb_colorbar.isChecked():
-            m2.add_colorbar()
-
-        m2.show_layer(m2.layer)
-
-        self.m2 = m2
-
-    def do_update_vals(self):
+    def get_info_text(self):
+        f = self._file_handle
         import xarray as xar
 
         try:
-            with xar.open_dataset(self.file_path) as f:
-                vmin = f[self.parameter.text()].min()
-                vmax = f[self.parameter.text()].max()
+            selargs = self.get_sel_args()
+            usef = f[self.parameter.text()].sel(**selargs)
+            s = usef.__repr__()
+            return s
+        except Exception:
+            return f.__repr__()
 
-                self.vmin.setText(str(float(vmin)))
-                self.vmax.setText(str(float(vmax)))
+    def attach_as_tab(self, *args, **kwargs):
+        super().attach_as_tab(*args, **kwargs)
 
+        for key, val in self.sel_inputs.items():
+            val["inp"].setEnabled(False)
+
+    def get_sel_args(self):
+        # use isVisibleTo to avoid issues
+        # (see https://stackoverflow.com/a/40174748/9703451)
+        s = dict()
+        for key, val in self.sel_inputs.items():
+            sel = val["inp"].text()
+            if val["inp"].isVisibleTo(self) and sel != "":
+                # convert to the correct dtype
+                sel = np.array(sel).astype(val["dtype"])
+
+                s[key] = sel
+        return s
+
+    def do_update_vals(self):
+        f = self._file_handle
+
+        try:
+            vmin = f[self.parameter.text()].min()
+            vmax = f[self.parameter.text()].max()
+
+            self.vmin.setText(str(float(vmin)))
+            self.vmax.setText(str(float(vmax)))
         except Exception:
             import traceback
 
@@ -548,53 +588,8 @@ class PlotGeoTIFFWidget(PlotFileWidget):
                 details=traceback.format_exc(),
             )
 
-
-class PlotNetCDFWidget(PlotFileWidget):
-
-    file_endings = ".nc"
-
-    def __init__(self, *args, **kwargs):
-
-        super().__init__(*args, window_title="Plot NetCDF FIle", **kwargs)
-
-        # hide ID inputs... not (yet) supported for NetCDF
-        self.tID.hide()
-        self.ID.hide()
-
-        l = QtWidgets.QHBoxLayout()
-
-        self.sel_title = QtWidgets.QLabel("<b>Select index-labels to plot:</b>")
-
-        l.addWidget(self.sel_title)
-
-        withtitle = QtWidgets.QWidget()
-        withtitlelayout = QtWidgets.QVBoxLayout()
-        withtitlelayout.addLayout(l)
-        withtitle.setLayout(withtitlelayout)
-
-        withtitle.setMaximumHeight(60)
-
-        self.layout.addWidget(withtitle)
-
-    def _deactivate_sel_factory(self, d):
-        def cb():
-            selected_dims = [self.x.text(), self.y.text()]
-            if d in selected_dims:
-                self.sel_inputs[d]["label"].hide()
-                self.sel_inputs[d]["inp"].hide()
-
-            else:
-                self.sel_inputs[d]["label"].show()
-                self.sel_inputs[d]["inp"].show()
-
-            if any(i["inp"].isVisible() for i in self.sel_inputs.values()):
-                self.sel_title.show()
-            else:
-                self.sel_title.hide()
-
-        return cb
-
     def get_sel_layout(self, f):
+        self.sel_title = QtWidgets.QLabel("<b>Select index-labels to plot:</b>")
 
         layout = QtWidgets.QHBoxLayout()
         dims = list(f.dims)
@@ -608,137 +603,71 @@ class PlotNetCDFWidget(PlotFileWidget):
             inp = LineEditComplete()
             inp.set_complete_vals(vals)
 
+            if d in self.default_sel_args:
+                inp.setText(str(self.default_sel_args[d]))
+
+            inp.textChanged.connect(self.update_info_text)
+
             layout.addWidget(label)
             layout.addWidget(inp)
 
             self.sel_inputs[d] = dict(inp=inp, label=label, dtype=f[d].dtype)
 
-            deactivate_func = self._deactivate_sel_factory(d)
-            deactivate_func()
+        self.x.textEdited.connect(self.deactivate_sel_cb)
+        self.x.completer().activated.connect(self.deactivate_sel_cb)
+        self.y.textEdited.connect(self.deactivate_sel_cb)
+        self.y.completer().activated.connect(self.deactivate_sel_cb)
+        self.parameter.textEdited.connect(self.deactivate_sel_cb)
+        self.parameter.completer().activated.connect(self.deactivate_sel_cb)
+        self.deactivate_sel_cb()
+        layout.addWidget(get_dummy_spacer())
 
-            self.x.textEdited.connect(deactivate_func)
-            self.x.completer().activated.connect(deactivate_func)
-            self.y.textEdited.connect(deactivate_func)
-            self.y.completer().activated.connect(deactivate_func)
+        sel_layout = QtWidgets.QVBoxLayout()
+        sel_layout.addWidget(self.sel_title)
+        sel_layout.addLayout(layout)
 
-        return layout
+        return sel_layout
 
-    def get_sel_args(self):
-
-        s = dict()
-
-        for key, val in self.sel_inputs.items():
-            sel = val["inp"].text()
-            if val["inp"].isVisible() and sel != "":
-                # convert to the correct dtype
-                import numpy as np
-
-                sel = np.array(sel).astype(val["dtype"])
-
-                s[key] = sel
-        return s
-
-    def get_crs(self):
-        return get_crs(self.crs.text())
-
-    def do_open_file(self, file_path):
-        import xarray as xar
-
-        with xar.open_dataset(file_path, mask_and_scale=False) as f:
-
-            info = io.StringIO()
-            f.info(info)
-
-            coords = list(f.coords)
-            variables = list(f.variables)
-
-            if len(coords) >= 2:
-                self.x.setText(coords[0])
-                self.y.setText(coords[1])
-
-            # set values for autocompletion
-            cols = sorted(set(variables + coords))
-            self.x.set_complete_vals(cols)
-            self.y.set_complete_vals(cols)
-
-            if "lon" in cols:
-                self.x.setText("lon")
-            elif "x" in cols:
-                self.x.setText("x")
-            else:
-                self.x.setText(cols[0])
-
-            if "lat" in cols:
-                self.y.setText("lat")
-            elif "y" in cols:
-                self.y.setText("y")
-            else:
-                self.x.setText(cols[1])
-
-            self.parameter.set_complete_vals(cols)
-            self.parameter.setText(
-                next(
-                    (
-                        i
-                        for i in variables
-                        if (i != self.x.text() and i != self.y.text())
-                    )
-                )
-            )
-
-            sel_layout = self.get_sel_layout(f)
-            self.layout.addLayout(sel_layout)
-
-        # set layer-name to filename by default
-        self.layer.setPlaceholderText(file_path.stem)
-
-        return info.getvalue()
-
-    def do_update_vals(self):
-        import xarray as xar
+    def deactivate_sel_cb(self):
+        selected_dims = [self.x.text(), self.y.text()]
 
         try:
-            with xar.open_dataset(self.file_path) as f:
-                vmin = f[self.parameter.text()].min()
-                vmax = f[self.parameter.text()].max()
-
-                self.vmin.setText(str(float(vmin)))
-                self.vmax.setText(str(float(vmax)))
-
+            param_dims = self._file_handle[self.parameter.text()].dims
         except Exception:
-            import traceback
+            param_dims = None
 
-            show_error_popup(
-                text="There was an error while trying to update the values.",
-                title="Unable to update values.",
-                details=traceback.format_exc(),
-            )
+        for d in self.sel_inputs:
+            if d in selected_dims or (param_dims is not None and d not in param_dims):
+                self.sel_inputs[d]["label"].hide()
+                self.sel_inputs[d]["inp"].hide()
+            else:
+                self.sel_inputs[d]["label"].show()
+                self.sel_inputs[d]["inp"].show()
+
+            if any(i["inp"].isVisibleTo(self) for i in self.sel_inputs.values()):
+                self.sel_title.show()
+            else:
+                self.sel_title.hide()
 
     def do_plot_file(self):
-        if self.file_path is None:
+        f = self._file_handle
+
+        if f is None:
             return
 
-        import xarray as xar
-
-        with xar.open_dataset(self.file_path) as f:
-            selargs = self.get_sel_args()
-            usef = f.sel(**self.get_sel_args())
-            if len(selargs) > 0:
-                self.file_info.setText(usef.__repr__())
-
-            m2 = self.m.new_layer_from_file.NetCDF(
-                usef,
-                shape=self.shape_selector.shape_args,
-                coastline=False,
-                layer=self.get_layer(),
-                coords=(self.x.text(), self.y.text()),
-                parameter=self.parameter.text(),
-                data_crs=self.get_crs(),
-                # sel=self.get_sel_args(),
-                cmap=self.cmaps.currentText(),
-                vmin=to_float_none(self.vmin.text()),
-                vmax=to_float_none(self.vmax.text()),
-            )
+        m2 = self.m.new_layer_from_file.NetCDF(
+            f,
+            shape=self.shape_selector.shape_args,
+            coastline=False,
+            layer=self.get_layer(),
+            coords=(self.x.text(), self.y.text()),
+            parameter=self.parameter.text(),
+            data_crs=self.get_crs(),
+            sel=self.get_sel_args(),
+            cmap=self.cmaps.currentText(),
+            vmin=to_float_none(self.vmin.text()),
+            vmax=to_float_none(self.vmax.text()),
+        )
 
         if self.cb_colorbar.isChecked():
             m2.add_colorbar()
@@ -746,6 +675,106 @@ class PlotNetCDFWidget(PlotFileWidget):
         m2.show_layer(m2.layer)
 
         self.m2 = m2
+
+
+class PlotGeoTIFFWidget(PlotXarrayWidget):
+
+    file_endings = (".tif", ".tiff")
+
+    def __init__(self, *args, window_title="Plot GeoTIFF FIle", **kwargs):
+
+        super().__init__(*args, **kwargs)
+
+        # hide ID inputs... not supported for GeoTIFF
+        self.tID.hide()
+        self.ID.hide()
+        self.default_sel_args = dict(band=1)
+
+    def do_open_file(self, file_path):
+        f = self._file_handle
+
+        coords = list(f.coords)
+        variables = list(f.variables)
+
+        crs = f.rio.crs
+        if crs is not None:
+            self.crs.setText(crs.to_string())
+        self.parameter.setText(next((i for i in variables if i not in coords)))
+
+        self.x.setText("x")
+        self.y.setText("y")
+
+        # set layer-name to filename by default
+        self.layer.setPlaceholderText(self.m.BM.bg_layer)
+
+        # set values for autocompletion
+        cols = sorted(set(variables + coords))
+        self.x.set_complete_vals(cols)
+        self.y.set_complete_vals(cols)
+        self.parameter.set_complete_vals(cols)
+
+        sel_layout = self.get_sel_layout(f)
+        self.layout.addLayout(sel_layout)
+
+        # update info text
+        self.update_info_text()
+
+
+class PlotNetCDFWidget(PlotXarrayWidget):
+
+    file_endings = (".nc",)
+
+    def __init__(self, *args, **kwargs):
+
+        super().__init__(*args, window_title="Plot NetCDF FIle", **kwargs)
+
+        # hide ID inputs... not (yet) supported for NetCDF
+        self.tID.hide()
+        self.ID.hide()
+
+    def do_open_file(self, file_path):
+        f = self._file_handle
+
+        coords = list(f.coords)
+        variables = list(f.variables)
+
+        if len(coords) >= 2:
+            self.x.setText(coords[0])
+            self.y.setText(coords[1])
+
+        # set values for autocompletion
+        cols = sorted(set(variables + coords))
+        self.x.set_complete_vals(cols)
+        self.y.set_complete_vals(cols)
+
+        if "lon" in cols:
+            self.x.setText("lon")
+        elif "x" in cols:
+            self.x.setText("x")
+        else:
+            self.x.setText(cols[0])
+
+        if "lat" in cols:
+            self.y.setText("lat")
+        elif "y" in cols:
+            self.y.setText("y")
+        else:
+            self.x.setText(cols[1])
+
+        self.parameter.set_complete_vals(cols)
+        self.parameter.setText(
+            next((i for i in variables if (i != self.x.text() and i != self.y.text())))
+        )
+
+        sel_layout = self.get_sel_layout(f)
+        self.layout.addLayout(sel_layout)
+
+        # set layer-name to filename by default
+        # self.layer.setPlaceholderText(file_path.stem)
+        self.layer.setPlaceholderText(self.m.BM.bg_layer)
+
+        # update info text
+        self.update_info_text()
 
 
 class PlotCSVWidget(PlotFileWidget):
@@ -760,10 +789,17 @@ class PlotCSVWidget(PlotFileWidget):
     def get_crs(self):
         return get_crs(self.crs.text())
 
-    def do_open_file(self, file_path):
+    def _open_filehandle(self, file_path):
         import pandas as pd
 
-        df = pd.read_csv(file_path)
+        self._data = pd.read_csv(file_path)
+
+    def _close_filehandle(self):
+        del self._data
+        pass
+
+    def do_open_file(self, file_path):
+        df = self._data
 
         if len(df) > 50000:
             # use "shade_points" as default shape if more than 50000 columns are found
@@ -781,47 +817,90 @@ class PlotCSVWidget(PlotFileWidget):
 
             if "lon" in cols:
                 self.x.setText("lon")
+            elif "x" in cols:
+                self.x.setText("x")
             else:
                 self.x.setText(cols[0])
 
             if "lat" in cols:
                 self.y.setText("lat")
+            elif "y" in cols:
+                self.y.setText("x")
             else:
-                self.x.setText(cols[1])
+                self.y.setText(cols[1])
 
             self.parameter.setText(cols[2])
 
             # if there are only 3 columns there is no column left to use as ID!
-            self.ID.hide()
-            self.tID.hide()
+            self.ID.setText("")
+            self.ID.setPlaceholderText("index")
+            self.ID.setEnabled(False)
+            # self.ID.hide()
+            # self.tID.hide()
 
         if len(cols) > 3:
-
-            self.ID.setText(cols[0])
+            self.ID.setText("")
+            self.ID.setPlaceholderText("index")
+            self.ID.setEnabled(True)
 
             if "lon" in cols:
                 self.x.setText("lon")
+            elif "x" in cols:
+                self.x.setText("x")
             else:
                 self.x.setText(cols[1])
 
             if "lat" in cols:
                 self.y.setText("lat")
+            elif "y" in cols:
+                self.y.setText("y")
             else:
-                self.x.setText(cols[2])
+                self.y.setText(cols[2])
 
             self.parameter.setText(cols[3])
 
         # set layer-name to filename by default
-        self.layer.setPlaceholderText(file_path.stem)
+        # self.layer.setPlaceholderText(file_path.stem)
+        self.layer.setPlaceholderText(self.m.BM.bg_layer)
 
-        return df.__repr__()
+    def get_info_text(self):
+        import pandas as pd
+
+        cols = dict()
+
+        ID = self.ID.text()
+        if self.ID.isVisibleTo(self) and len(ID) > 0 and ID != "index":
+            cols["ID"] = ID
+            show_index = False
+        else:
+            show_index = True
+
+        cols["x"] = self.x.text()
+        cols["y"] = self.y.text()
+        cols["parameter"] = self.parameter.text()
+
+        try:
+            usecols = list(cols.keys())
+            usevals = list(cols.values())
+
+            df = self._data[usevals]
+            init_cols = df.columns
+            df.columns = [f"{usecols[i]}: {val}" for i, val in enumerate(usevals)]
+            info = df.to_html(index=show_index, max_rows=100, max_cols=10)
+            df.columns = init_cols
+            return info
+        except:
+            try:
+                return self._data._repr_html_()
+            except Exception:
+                return self._data.__repr__()
 
     def do_plot_file(self):
         if self.file_path is None:
             return
 
         ID = self.ID.text()
-        if self.ID.isVisible() and ID != "":
+        if self.ID.isVisibleTo(self) and len(ID) > 0 and ID != "index":
             read_kwargs = dict(index_col=ID)
         else:
             read_kwargs = dict()
@@ -850,9 +929,7 @@ class PlotCSVWidget(PlotFileWidget):
 
     def do_update_vals(self):
         try:
-            import pandas as pd
-
-            df = pd.read_csv(self.file_path)
+            df = self._data
 
             vmin = df[self.parameter.text()].min()
             vmax = df[self.parameter.text()].max()
@@ -870,11 +947,13 @@ class PlotCSVWidget(PlotFileWidget):
             )
 
 
-class PlotShapeFileWidget(QtWidgets.QWidget):
+class PlotGeoDataFrameWidget(QtWidgets.QWidget):
     def __init__(self, *args, m=None, **kwargs):
         super().__init__(*args, **kwargs)
+
+        self.file_endings = _get_gdf_file_endings()
+
         self.m = m
-        self.file_endings = [".shp"]
 
         self.file_path = None
 
@@ -983,16 +1062,17 @@ class PlotShapeFileWidget(QtWidgets.QWidget):
         self.window().close()
 
     def do_open_file(self, file_path=None):
+        try:
+            import geopandas as gpd
+        except ImportError:
+            print("EOmaps: missing required dependency 'geopandas' to open the file.")
+            return
         self.file_path = file_path
-
-        import geopandas as gpd
-
         self.gdf = gpd.read_file(self.file_path)
 
         self.file_info.setText(self.gdf.__repr__())
 
     def open_file(self, file_path=None):
-
         if self.file_endings is not None:
             if file_path.suffix.lower() not in self.file_endings:
                 self.file_info.setText(
@@ -1112,6 +1192,8 @@ class OpenFileTabs(QtWidgets.QTabWidget):
 
         self.m = m
 
+        self.gdf_file_endings = _get_gdf_file_endings()
+
         self.starttab = OpenDataStartTab(m=self.m)
         self.starttab.open_button.clicked.connect(
             lambda: self.new_file_tab(file_path=None)
@@ -1131,8 +1213,11 @@ class OpenFileTabs(QtWidgets.QTabWidget):
 
         self._msg = QtWidgets.QMessageBox(self)
         self._msg.setIcon(QtWidgets.QMessageBox.Question)
-        self._msg.setText(f"Do you really want to close the dataset \n\n '{path}'?")
-        self._msg.setWindowTitle("Close dataset?")
+        self._msg.setText(
+            f"Do you really want to REMOVE the dataset \n\n '{path}' \n\n"
+            "from the map?"
+        )
+        self._msg.setWindowTitle("Remove dataset?")
 
         self._msg.setStandardButtons(
             QtWidgets.QMessageBox.Yes | QtWidgets.QMessageBox.No
@@ -1210,12 +1295,22 @@ class OpenFileTabs(QtWidgets.QTabWidget):
             plc = PlotCSVWidget(m=self.m, tab=self)
         elif ending in [".tif", ".tiff"]:
             plc = PlotGeoTIFFWidget(m=self.m, tab=self)
-        elif ending in [".shp"]:
-            plc = PlotShapeFileWidget(m=self.m)
+        elif ending in self.gdf_file_endings:
+            plc = PlotGeoDataFrameWidget(m=self.m)
         else:
+            print(f"EOmaps Error: Unknown file extension '{ending}'")
             self.window().statusBar().showMessage(
-                f"Unknown file extension {ending}", 5000
+                f"ERROR: Unknown file extension {ending}", 5000
             )
+            show_error_popup(
+                text=f"Unknown file extension {ending}.",
+                title="Unknown file extension.",
+                details=(
+                    "Supported file extensions: "
+                    f"{['.tiff', '.netcdf', *self.gdf_file_endings]}"
+                ),
+            )
+
             return
 
         self.window().statusBar().clearMessage()
@@ -1223,8 +1318,12 @@ class OpenFileTabs(QtWidgets.QTabWidget):
         try:
             plc.open_file(file_path)
         except Exception:
-            self.window().statusBar().showMessage("File could not be opened...", 5000)
             import traceback
+
+            print(f"EOmaps Error: Unable to open file {file_path}")
+            self.window().statusBar().showMessage(
+                "ERROR: File could not be opened...", 5000
+            )
 
             show_error_popup(
                 text="There was an error while trying to open the file.",

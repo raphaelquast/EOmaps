@@ -3,7 +3,7 @@ from PyQt5.QtCore import Qt, pyqtSignal, pyqtSlot, QSize
 
 from matplotlib.colors import to_rgba_array
 
-from ...eomaps import InsetMaps
+from ...inset_maps import InsetMaps
 from ..common import iconpath
 from .wms import AddWMSMenuButton
 from .utils import GetColorWidget, AlphaSlider

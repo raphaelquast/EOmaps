@@ -2,19 +2,7 @@ from textwrap import dedent
 from warnings import warn
 from pathlib import Path
 import json
-from matplotlib.colors import rgb2hex
 from cartopy import crs as ccrs
-
-cfeature = None
-shapereader = None
-
-
-def _register_cartopy_feature_io():
-    global cfeature
-    global shapereader
-    import cartopy.feature as cfeature
-    from cartopy.io import shapereader
-
 
 gpd = None
 
@@ -36,7 +24,6 @@ def combdoc(*args):
 
 class _NaturalEarth_presets:
     def __init__(self, m):
-        _register_cartopy_feature_io()
         self._m = m
 
     @property
@@ -71,7 +58,7 @@ class _NaturalEarth_presets:
         - fc=(0.59375, 0.71484375, 0.8828125), ec="none", zorder=-2, reproject="cartopy"
         """
         # convert color to hex to avoid issues with geopandas
-        color = rgb2hex(cfeature.COLORS["water"])
+        color = "#97b6e1"  # rgb2hex(cfeature.COLORS["water"])
 
         return self._feature(
             self._m, "physical", "ocean", facecolor=color, edgecolor="none", zorder=-2
@@ -90,7 +77,7 @@ class _NaturalEarth_presets:
 
         """
         # convert color to hex to avoid issues with geopandas
-        color = rgb2hex(cfeature.COLORS["land"])
+        color = "#efefdb"  # rgb2hex(cfeature.COLORS["land"])
 
         return self._feature(
             self._m, "physical", "land", facecolor=color, edgecolor="none", zorder=-1
@@ -292,21 +279,7 @@ class NaturalEarth_features(object):
     """
 
     def __init__(self, m):
-        _register_cartopy_feature_io()
-
         self._m = m
-
-        self._depreciated_names = dict()
-
-        for scale, scale_items in _NE_features.items():
-            for category, category_items in scale_items.items():
-                ns = dict()
-                for name in category_items:
-                    ns[name] = self._get_feature(category, name)
-
-                c = self._category(scale, category, **ns)
-                self._depreciated_names[f"{category}_{scale}"] = c
-
         for category, names in _NE_features_all.items():
             func = lambda name: self._feature(self._m, category, name)
             ns = dict(zip(names, map(func, names)))
@@ -317,17 +290,6 @@ class NaturalEarth_features(object):
     def __call__(self, category, scale, name, **kwargs):
         feature = self._get_feature(category, name)
         return feature(**kwargs)
-
-    def __getattribute__(self, key):
-        if key != "_depreciated_names" and key in self._depreciated_names:
-            warn(
-                f"EOmaps: Using 'm.add_feature.{key}.< name >()' is depreciated! "
-                f"use 'm.add_feature.{key.split('_')[0]}.< name >(scale=...)' instead! ",
-                stacklevel=99,
-            )
-            return self._depreciated_names[key]
-        else:
-            return object.__getattribute__(self, key)
 
     def __getitem__(self, key):
         return getattr(self, key)
@@ -526,9 +488,9 @@ class NaturalEarth_features(object):
                 )
 
         def get_validated_scaler(self, *args, **kwargs):
-            _register_cartopy_feature_io()
+            from cartopy.feature import AdaptiveScaler
 
-            class AdaptiveValidatedScaler(cfeature.AdaptiveScaler):
+            class AdaptiveValidatedScaler(AdaptiveScaler):
                 # subclass of the AdaptiveScaler to make sure the dataset exists
                 def __init__(self, default_scale, limits, validator=None):
                     super().__init__(default_scale, limits)
@@ -547,6 +509,8 @@ class NaturalEarth_features(object):
             return AdaptiveValidatedScaler(*args, **kwargs)
 
         def _get_cartopy_feature(self, scale):
+            from cartopy.feature import NaturalEarthFeature
+
             self._set_scale(scale)
 
             if (
@@ -566,7 +530,7 @@ class NaturalEarth_features(object):
                 usescale = self._scale
 
             # get an instance of the corresponding cartopy-feature
-            self._cartopy_feature = cfeature.NaturalEarthFeature(
+            self._cartopy_feature = NaturalEarthFeature(
                 category=self._category, name=self._name, scale=usescale
             )
 
@@ -616,6 +580,8 @@ class NaturalEarth_features(object):
             self._set_scale(scale)
 
             if what == "full":
+                from cartopy.io import shapereader
+
                 gdf = gpd.read_file(
                     shapereader.natural_earth(
                         resolution=self._scale, category=self._category, name=self._name

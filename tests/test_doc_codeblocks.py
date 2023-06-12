@@ -41,8 +41,11 @@ class _TestSequenceMeta(type):
             )
 
         # get a list of all code-blocks in the file
-        # TODO replace .traverse with .findall once docutils > 18.1 is used!
-        code_blocks = list(doctree.traverse(condition=is_code_block))
+        # replace .traverse with .findall once docutils > 18.1 is used!
+        if hasattr(doctree, "findall"):
+            code_blocks = list(doctree.findall(condition=is_code_block))
+        else:
+            code_blocks = list(doctree.traverse(condition=is_code_block))
 
         # generate unique tests for each code snippet
         for i, node in enumerate(code_blocks):
