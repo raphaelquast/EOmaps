@@ -570,6 +570,8 @@ class ColorBar:
             return parent
 
     def _setup_axes(self):
+        zorder = 9999
+
         horizontal = self._orientation == "horizontal"
         hide_hist = self._hist_size < 0.0001
         hide_axes = self._hist_size > 0.999
@@ -587,13 +589,13 @@ class ColorBar:
                     self._ax = self._m.f.add_subplot(
                         parent_subplotspec,
                         label="cb",
-                        zorder=9999,
+                        zorder=zorder,
                     )
                 else:
                     self._ax = self._m.f.add_axes(
                         self._parent_cb._ax.get_position(),
                         label="cb",
-                        zorder=9999,
+                        zorder=zorder,
                     )
 
                 parent_extend = getattr(
@@ -639,7 +641,7 @@ class ColorBar:
                     self._ax = self._m.f.add_subplot(
                         gs[1, 0],
                         label="cb",
-                        zorder=9999,
+                        zorder=zorder,
                     )
                 else:
                     gs = GridSpecFromSubplotSpec(
@@ -653,13 +655,13 @@ class ColorBar:
                     self._ax = self._m.f.add_subplot(
                         gs[0, 1],
                         label="cb",
-                        zorder=9999,
+                        zorder=zorder,
                     )
             elif isinstance(self._pos, SubplotSpec):
                 self._ax = self._m.f.add_subplot(
                     self._pos,
                     label="cb",
-                    zorder=9999,
+                    zorder=zorder,
                 )
             elif isinstance(self._pos, (list, tuple)):
                 x0, y0, w, h = self._pos
@@ -668,7 +670,7 @@ class ColorBar:
                 bbox = mtransforms.Bbox(((x0, y0), (x1, y1)))
 
                 # the parent axes holding the 2 child-axes
-                self._ax = plt.Axes(self._m.f, bbox, label="cb", zorder=9999)
+                self._ax = plt.Axes(self._m.f, bbox, label="cb", zorder=zorder)
                 self._m.f.add_axes(self._ax)
 
         # make all spines, labels etc. invisible for the base-axis
@@ -678,14 +680,14 @@ class ColorBar:
         self.ax_cb = self._ax.figure.add_axes(
             self._ax.get_position(),
             label="EOmaps_cb",
-            zorder=9998,
+            zorder=zorder - 1,  # make zorder 1 lower than container axes for picking
         )
 
         # histogram axes
         self.ax_cb_plot = self._ax.figure.add_axes(
             self._ax.get_position(),
             label="EOmaps_cb_hist",
-            zorder=9998,
+            zorder=zorder - 1,  # make zorder 1 lower than container axes for picking
         )
         # hide histogram and coorbar axes if they are 0 size
         if hide_axes:
