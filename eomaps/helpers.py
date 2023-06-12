@@ -1715,6 +1715,24 @@ class BlitManager:
 
         return artists
 
+    def get_artists(self, layer):
+        artists = list()
+        for l in np.atleast_1d(layer):
+            # get all relevant artists for combined background layers
+            l = str(l)  # w make sure we convert non-string layer names to string!
+
+            # get artists defined on the layer itself
+            # Note: it's possible to create explicit multi-layers and attach
+            # artists that are only visible if both layers are visible! (e.g. "l1|l2")
+            artists.extend(self._artists.get(l, []))
+
+        # make the list unique but maintain order (dicts keep order for python>3.7)
+        artists = dict.fromkeys(artists)
+        # sort artists by zorder (respecting inset-map priority)
+        artists = sorted(artists, key=self._bg_artists_sort)
+
+        return artists
+
     def _get_layers_alphas(self, layer):
         layers, alphas = [], []
         for l in layer.split("|"):
