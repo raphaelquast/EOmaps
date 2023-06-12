@@ -409,7 +409,7 @@ class _click_callbacks(object):
                     self.permanent_annotations.append(annotation)
 
                     # permanent annotations are also editable!
-                    self.m.edit_annotations._add(
+                    self.m._edit_annotations._add(
                         a=annotation,
                         kwargs={"ID": ID, "xy": picked_pos, "text": text, **styledict},
                         transf=None,

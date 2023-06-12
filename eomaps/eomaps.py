@@ -469,7 +469,7 @@ class Maps(object):
         self._data_plotted = False
         self._set_extent_on_plot = True
 
-        self.edit_annotations = AnnotationEditor(self)
+        self._edit_annotations = AnnotationEditor(self)
 
         # Make sure the figure-background patch is on an explicit layer
         # This is used to avoid having the background patch on each fetched
@@ -1481,6 +1481,10 @@ class Maps(object):
         """
         self.parent._layout_editor._make_draggable(filepath=filepath)
 
+    @wraps(AnnotationEditor.__call__)
+    def edit_annotations(self, b=True, **kwargs):
+        self._edit_annotations(b, **kwargs)
+
     @property
     @wraps(NaturalEarth_features)
     def add_feature(self):
@@ -2045,7 +2049,7 @@ class Maps(object):
             )
 
             if kwargs.get("permanent", False) is not False:
-                self.edit_annotations._add(
+                self._edit_annotations._add(
                     a=ann,
                     kwargs={
                         "ID": inp_ID,
