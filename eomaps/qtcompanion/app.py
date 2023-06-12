@@ -119,11 +119,19 @@ class ControlTabs(QtWidgets.QTabWidget):
 
     @pyqtSlot()
     def tabchanged(self):
+        self.m._edit_annotations(False)
+        self.window().statusBar().showMessage("")
+
         if self.currentWidget() == self.tab1:
             self.tab1.layer_tabs.repopulate_and_activate_current()
 
         elif self.currentWidget() == self.tab_edit:
             self.tab_edit.artist_tabs.repopulate_and_activate_current()
+            self.m._edit_annotations(True, print_msg=False)
+            self.window().statusBar().showMessage(
+                "Annotations editable!    "
+                "< control >: Move  |  < shift >: Resize  |   < R >: Rotate"
+            )
 
     def dragEnterEvent(self, e):
         self.tab_open.dragEnterEvent(e)
