@@ -873,6 +873,7 @@ class GridFactory:
         layer=None,
         *,
         m=None,
+        labels=False,
         **kwargs,
     ):
         """
@@ -919,6 +920,16 @@ class GridFactory:
             The number of intermediate points to draw for each line.
             (e.g. to nicely draw curved grid lines)
             The default is 100
+        labels : bool or dict, optional
+            If True, add grid-labels to the map.
+            If a dict is provided, it is passed to :py:meth:`GridLines.add_labels`.
+
+            This is a shortcut for using:
+
+            >>> g = m.add_gridlines()
+            >>> g.add_labels(fontsize=7, color="b", ...)
+
+            The default is False.
         kwargs :
             Additional kwargs passed to matplotlib.collections.LineCollection.
 
@@ -959,6 +970,14 @@ class GridFactory:
         g = GridLines(m=m, d=d, auto_n=auto_n, n=n, bounds=bounds, layer=layer)
         g._add_grid(**kwargs)
         self._gridlines.append(g)
+
+        if labels:
+            if labels is True:
+                g.add_labels()
+            elif isinstance(labels, dict):
+                g.add_labels(**labels)
+            else:
+                raise TypeError(f"{labels} is not a valid input for labels")
 
         self.m.f.canvas.draw_idle()
         return g
