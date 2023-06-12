@@ -3094,27 +3094,20 @@ class Maps(object):
                 # set the shading-axis-size to reflect the used dpi setting
                 self._update_shade_axis_size(dpi=dpi)
 
-            # make sure that artists from the "all" layer are drawn as well
+            # get all layer names that should be drawn
             savelayers, alphas = self.BM._get_layers_alphas(
                 self.BM._get_showlayer_name(
-                    self._get_combined_layer_name(self.BM.bg_layer, "all")
+                    self._get_combined_layer_name(self.BM.bg_layer)
                 )
             )
-            nlayers = len(savelayers)
-
-            # identify maximum zorder of all artists
-            max_zorder = max(
-                a.get_zorder()
-                for key, val in chain(
-                    self.BM._bg_artists.items(), self.BM._artists.items()
-                )
-                for a in val
-            )
+            # make sure inset-maps are drawn on top of normal maps
+            savelayers.sort(key=lambda x: x.startswith("__inset_"))
 
             for m in (self.parent, *self.parent._children):
                 # re-enable normal axis draw cycle by making axes non-animated.
-                # This is needed for backward-compatibility, since saving a figure ignores
-                # the animated attribute for axis-children but not for the axis itself. See:
+                # This is needed for backward-compatibility, since saving a figure
+                # ignores the animated attribute for axis-children but not for the axis
+                # itself. See:
                 # https://github.com/matplotlib/matplotlib/issues/26007#issuecomment-1568812089
                 stack.enter_context(m.ax._cm_set(animated=False))
 
@@ -3131,33 +3124,54 @@ class Maps(object):
             for a in m.BM._managed_axes:
                 stack.enter_context(a._cm_set(animated=False))
 
-            # select artists to export
-            # adjust zorder to respect layer order
-            # set global transparency for background artists
-            for key, val in self.BM._bg_artists.items():
-                if key in savelayers:
-                    i = savelayers.index(key)
-                    for a in val:
-                        zorder = a.get_zorder() + i * max_zorder
-                        stack.enter_context(a._cm_set(zorder=zorder, animated=False))
-
-                        if alphas[i] < 1:
-                            alpha = a.get_alpha()
-                            if alpha is None:
-                                alpha = alphas[i]
-                            stack.enter_context(a._cm_set(alpha=alpha * alphas[i]))
+            zorder = 0
+            for layer, alpha in zip(savelayers, alphas):
+                # get all (sorted) artists of a layer
+                if layer.startswith("__inset"):
+                    artists = self.BM.get_bg_artists(["__inset_all", layer])
                 else:
+                    if layer.startswith("__"):
+                        artists = self.BM.get_bg_artists([layer])
+                    else:
+                        artists = self.BM.get_bg_artists(["all", layer])
+
+                for a in artists:
+                    if isinstance(a, plt.Axes):
+                        continue
+                    zorder += 1
+                    stack.enter_context(a._cm_set(zorder=zorder, animated=False))
+
+                    if alpha < 1:
+                        current_alpha = a.get_alpha()
+                        if current_alpha is None:
+                            current_alpha = alpha
+                        else:
+                            current_alpha = current_alpha * alpha
+
+                        stack.enter_context(a._cm_set(alpha=current_alpha))
+
+            for key, val in self.BM._bg_artists.items():
+                if key not in savelayers:
                     for a in val:
                         stack.enter_context(a._cm_set(visible=False, animated=True))
 
             # always draw dynamic artists on top of background artists
-            for key, val in self.BM._artists.items():
-                if key in savelayers:
-                    i = savelayers.index(key)
-                    for a in val:
-                        zorder = a.get_zorder() + (i + nlayers) * max_zorder
-                        stack.enter_context(a._cm_set(zorder=zorder, animated=False))
+            for layer, alpha in zip(savelayers, alphas):
+                # get all (sorted) artists of a layer
+                if layer.startswith("__inset"):
+                    artists = self.BM.get_bg_artists(["__inset_all", layer])
                 else:
+                    if layer.startswith("__"):
+                        artists = self.BM.get_bg_artists([layer])
+                    else:
+                        artists = self.BM.get_bg_artists(["all", layer])
+
+                for a in artists:
+                    zorder += 1
+                    stack.enter_context(a._cm_set(zorder=zorder, animated=False))
+
+            for key, val in self.BM._artists.items():
+                if key not in savelayers:
                     for a in val:
                         stack.enter_context(a._cm_set(visible=False, animated=True))
 
