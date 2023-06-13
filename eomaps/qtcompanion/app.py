@@ -140,6 +140,7 @@ class MenuWindow(transparentWindow):
     cmapsChanged = pyqtSignal()
     clipboardKwargsChanged = pyqtSignal()
     annotationSelected = pyqtSignal()
+    annotationEdited = pyqtSignal()
 
     def __init__(self, *args, m=None, **kwargs):
 
@@ -199,8 +200,9 @@ class MenuWindow(transparentWindow):
             self.tabs.tab_edit.addannotation.set_selected_annotation_props
         )
 
-    def update_inputs(self, *args, **kwargs):
-        print("UUUUPDAE")
+        self.annotationEdited.connect(
+            self.tabs.tab_edit.addannotation.set_edited_annotation_props
+        )
 
     def show(self):
         super().show()

@@ -6,7 +6,14 @@ _eomaps_picked_ann = None
 
 
 class DraggableAnnotationNew(DraggableBase):
-    def __init__(self, annotation, use_blit=False, drag_coords=True, emit_signal=None):
+    def __init__(
+        self,
+        annotation,
+        use_blit=False,
+        drag_coords=True,
+        select_signal=None,
+        edit_signal=None,
+    ):
         super().__init__(annotation, use_blit=use_blit)
 
         self.annotation = annotation
@@ -16,7 +23,8 @@ class DraggableAnnotationNew(DraggableBase):
         self._init_ec = self.annotation.get_bbox_patch().get_edgecolor()
         self._ax_bbox = self.annotation.axes.bbox
 
-        self._emit_signal = emit_signal
+        self._select_signal = select_signal
+        self._edit_signal = edit_signal
 
     @property
     def _text_func(self):
@@ -63,8 +71,8 @@ class DraggableAnnotationNew(DraggableBase):
         _eomaps_picked_ann = self.annotation
 
         # emit signal if provided
-        if self._emit_signal is not None:
-            self._emit_signal()
+        if self._select_signal is not None:
+            self._select_signal()
 
     def save_offset(self):
         ann = self.annotation
@@ -140,8 +148,8 @@ class DraggableAnnotationNew(DraggableBase):
 
                 _eomaps_picked_ann = None
                 # emit signal if provided
-                if self._emit_signal is not None:
-                    self._emit_signal()
+                if self._select_signal is not None:
+                    self._select_signal()
 
     def on_motion(self, evt):
         # check if a keypress event triggered a change of the interaction
@@ -158,8 +166,8 @@ class DraggableAnnotationNew(DraggableBase):
         super().on_motion(evt)
 
         # emit signal if provided
-        if self._emit_signal is not None:
-            self._emit_signal()
+        if self._edit_signal is not None:
+            self._edit_signal()
 
     def disconnect(self):
         try:
@@ -185,8 +193,11 @@ class AnnotationEditor:
         global _eomaps_picked_ann
         _eomaps_picked_ann = ann
 
-    def emit_update_signal(self, *args, **kwargs):
+    def emit_selected_signal(self, *args, **kwargs):
         self.m._companion_widget.annotationSelected.emit()
+
+    def emit_edit_signal(self, *args, **kwargs):
+        self.m._companion_widget.annotationEdited.emit()
 
     def _add(self, a, kwargs, transf=None, drag_coords=True):
         if a not in self._annotations:
@@ -197,7 +208,10 @@ class AnnotationEditor:
             )
             if self._drag_active:
                 a._draggable = DraggableAnnotationNew(
-                    a, drag_coords=drag_coords, emit_signal=self.emit_update_signal
+                    a,
+                    drag_coords=drag_coords,
+                    select_signal=self.emit_selected_signal,
+                    edit_signal=self.emit_edit_signal,
                 )
 
     def __call__(self, q=True, print_msg=True):
@@ -261,7 +275,10 @@ class AnnotationEditor:
             drag.disconnect()
 
         ann._draggable = DraggableAnnotationNew(
-            ann, drag_coords=drag_coords, emit_signal=self.emit_update_signal
+            ann,
+            drag_coords=drag_coords,
+            select_signal=self.emit_selected_signal,
+            edit_signal=self.emit_edit_signal,
         )
 
     def _undo_ann_editable(self, ann):

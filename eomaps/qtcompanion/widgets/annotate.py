@@ -236,6 +236,16 @@ class AddAnnotationInput(QtWidgets.QWidget):
         else:
             return None
 
+    def set_edited_annotation_props(self, *args, **kwargs):
+        # update dynamically updated props of the annotation to reflect values in the
+        # companion widget controls
+        ann = self.selected_annotation
+        if ann:
+            # set the rotation position of the dial
+            rotation = ann.get_rotation()
+            self.dial.setValue(int(180 - rotation))
+            self.dial.repaint()
+
     def set_selected_annotation_props(self, *args, **kwargs):
         # update the annotation-widget with respect to the properties of the
         # currently selected annotation
@@ -252,8 +262,15 @@ class AddAnnotationInput(QtWidgets.QWidget):
             rotation = ann.get_rotation()
             self.dial.setValue(int(180 - rotation))
 
-            # set patch colors and linewidth
             patch = ann.get_bbox_patch()
+
+            # set current boxstyle in dropdown
+            self._boxstyle = box_styles_reversed.get(
+                patch.get_boxstyle().__class__, "none"
+            )
+            self.boxstyle_dropdown.setCurrentText(self._boxstyle)
+
+            # set patch colors and linewidth
             fc = patch.get_facecolor()
             ec = ann._draggable._init_ec
             lw = patch.get_linewidth()
@@ -264,12 +281,6 @@ class AddAnnotationInput(QtWidgets.QWidget):
 
             self.b_rem.setEnabled(True)
             self.b_rem.setStyleSheet("background-color : rgb(100,150,100);")
-
-            # set current boxstyle in dropdown
-            self._boxstyle = box_styles_reversed.get(
-                patch.get_boxstyle().__class__, "none"
-            )
-            self.boxstyle_dropdown.setCurrentText(self._boxstyle)
 
             if ann.arrow_patch is None:
                 self._arrowstyle = "none"
@@ -384,23 +395,21 @@ class AddAnnotationInput(QtWidgets.QWidget):
             self.window().statusBar().showMessage("There is no annotation to remove!")
 
     def colorselected(self):
-
         if self._boxstyle == "none":
             boxstyle = "round"
-            fc = (0, 0, 0, 0)
-            ec = (0, 0, 0, 0)
+            fc = self.color.facecolor.getRgbF()
+            ec = self.color.edgecolor.getRgbF()
+            alpha = 0
             lw = self.color.linewidth
         else:
             boxstyle = self._boxstyle
             fc = self.color.facecolor.getRgbF()
             ec = self.color.edgecolor.getRgbF()
+            alpha = self.color.alpha
             lw = self.color.linewidth
 
         self.annotate_props["bbox"] = dict(
-            boxstyle=boxstyle,
-            facecolor=fc,
-            edgecolor=ec,
-            linewidth=lw,
+            boxstyle=boxstyle, facecolor=fc, edgecolor=ec, linewidth=lw, alpha=alpha
         )
 
         self.update_selected_patch(fc, ec, lw)
