@@ -27,7 +27,7 @@ class OpenFileButton(QtWidgets.QPushButton):
         OpenDataStartTab.enterEvent(self, e)
 
 
-class Tab1(QtWidgets.QWidget):
+class CompareTab(QtWidgets.QWidget):
     def __init__(self, *args, m=None, **kwargs):
         super().__init__(*args, **kwargs)
         self.m = m
@@ -96,15 +96,14 @@ class ControlTabs(QtWidgets.QTabWidget):
         super().__init__(*args, **kwargs)
         self.m = m
 
-        self.tab1 = Tab1(m=self.m)
+        self.tab_compare = CompareTab(m=self.m)
         self.tab_open = OpenFileTabs(m=self.m)
-
-        # connect the open-file-button to the button from the "Open Files" tab
-        self.tab1.open_file_button.clicked.connect(self.trigger_open_file_button)
-
         self.tab_edit = ArtistEditor(m=self.m)
 
-        self.addTab(self.tab1, "Compare")
+        # connect the open-file-button to the button from the "Open Files" tab
+        self.tab_compare.open_file_button.clicked.connect(self.trigger_open_file_button)
+
+        self.addTab(self.tab_compare, "Compare")
         self.addTab(self.tab_edit, "Edit")
         self.addTab(self.tab_open, "Plotted Files")
 
@@ -119,19 +118,12 @@ class ControlTabs(QtWidgets.QTabWidget):
 
     @pyqtSlot()
     def tabchanged(self):
-        self.m._edit_annotations(False)
-        self.window().statusBar().showMessage("")
 
-        if self.currentWidget() == self.tab1:
-            self.tab1.layer_tabs.repopulate_and_activate_current()
+        if self.currentWidget() == self.tab_compare:
+            self.tab_compare.layer_tabs.repopulate_and_activate_current()
 
         elif self.currentWidget() == self.tab_edit:
             self.tab_edit.artist_tabs.repopulate_and_activate_current()
-            self.m._edit_annotations(True, print_msg=False)
-            self.window().statusBar().showMessage(
-                "Annotations editable!    "
-                "< control >: Move  |  < shift >: Resize  |   < R >: Rotate"
-            )
 
     def dragEnterEvent(self, e):
         self.tab_open.dragEnterEvent(e)
@@ -147,6 +139,7 @@ class MenuWindow(transparentWindow):
 
     cmapsChanged = pyqtSignal()
     clipboardKwargsChanged = pyqtSignal()
+    annotationSelected = pyqtSignal()
 
     def __init__(self, *args, m=None, **kwargs):
 
@@ -198,7 +191,16 @@ class MenuWindow(transparentWindow):
         self.cmapsChanged.connect(self.clear_pixmap_cache)
 
         # set save-file args to values set as clipboard kwargs
-        self.clipboardKwargsChanged.connect(self.tabs.tab1.save_widget.set_export_props)
+        self.clipboardKwargsChanged.connect(
+            self.tabs.tab_compare.save_widget.set_export_props
+        )
+
+        self.annotationSelected.connect(
+            self.tabs.tab_edit.addannotation.set_selected_annotation_props
+        )
+
+    def update_inputs(self, *args, **kwargs):
+        print("UUUUPDAE")
 
     def show(self):
         super().show()

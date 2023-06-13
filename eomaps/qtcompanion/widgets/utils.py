@@ -284,6 +284,8 @@ class GetColorWidget(QtWidgets.QFrame):
     def set_facecolor(self, color):
         if isinstance(color, str):
             color = QtGui.QColor(color)
+        elif isinstance(color, (list, tuple)):
+            color = QtGui.QColor(*color)
 
         self.alpha = color.alpha() / 255
 
@@ -295,6 +297,8 @@ class GetColorWidget(QtWidgets.QFrame):
     def set_edgecolor(self, color):
         if isinstance(color, str):
             color = QtGui.QColor(color)
+        elif isinstance(color, (list, tuple)):
+            color = QtGui.QColor(*color)
 
         self.edgecolor = color
         self.update()

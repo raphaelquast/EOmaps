@@ -6,7 +6,7 @@ _eomaps_picked_ann = None
 
 
 class DraggableAnnotationNew(DraggableBase):
-    def __init__(self, annotation, use_blit=False, drag_coords=True):
+    def __init__(self, annotation, use_blit=False, drag_coords=True, emit_signal=None):
         super().__init__(annotation, use_blit=use_blit)
 
         self.annotation = annotation
@@ -15,6 +15,8 @@ class DraggableAnnotationNew(DraggableBase):
         self._what = "xyann"
         self._init_ec = self.annotation.get_bbox_patch().get_edgecolor()
         self._ax_bbox = self.annotation.axes.bbox
+
+        self._emit_signal = emit_signal
 
     @property
     def _text_func(self):
@@ -50,12 +52,19 @@ class DraggableAnnotationNew(DraggableBase):
 
         self._what = self._get_what(evt.mouseevent.key)
 
-        self._init_ec = self.annotation.get_bbox_patch().get_edgecolor()
+        # don't do anything if the picked annotation is already active
+        if evt.artist is not _eomaps_picked_ann:
+            self._init_ec = self.annotation.get_bbox_patch().get_edgecolor()
+
         super().on_pick(evt)
 
         self.annotation.get_bbox_patch().set_edgecolor("r")
 
         _eomaps_picked_ann = self.annotation
+
+        # emit signal if provided
+        if self._emit_signal is not None:
+            self._emit_signal()
 
     def save_offset(self):
         ann = self.annotation
@@ -110,16 +119,31 @@ class DraggableAnnotationNew(DraggableBase):
             ann.set_size(self.size * d)
 
     def on_release(self, event):
-        ann = self.annotation
-        ann.get_bbox_patch().set_edgecolor(self._init_ec)
+        # in case release was outside of text, "unpick" the annotation
+        # (e.g. to avoid keeping the picked annotation until the editor is exited)
+        global _eomaps_picked_ann
+
         super().on_release(event)
-        if ann.figure:
-            # only attempt to draw if the figure still exists
-            # (e.g. to avoid issues with multiple simultaneous figures)
-            ann.figure.canvas.draw_idle()
+
+        if _eomaps_picked_ann is not None:
+            if event is None or not _eomaps_picked_ann.contains(event)[0]:
+
+                _eomaps_picked_ann.get_bbox_patch().set_edgecolor(
+                    _eomaps_picked_ann._draggable._init_ec
+                )
+
+                if _eomaps_picked_ann.figure:
+                    # only attempt to draw if the figure still exists
+                    # (e.g. to avoid issues with multiple simultaneous figures)
+                    _eomaps_picked_ann.axes.draw_artist(_eomaps_picked_ann)
+                    _eomaps_picked_ann.figure.canvas.blit()
+
+                _eomaps_picked_ann = None
+                # emit signal if provided
+                if self._emit_signal is not None:
+                    self._emit_signal()
 
     def on_motion(self, evt):
-
         # check if a keypress event triggered a change of the interaction
         # (e.g. move/rotate etc.)
         if self._check_still_parented() and self.got_artist:
@@ -132,6 +156,10 @@ class DraggableAnnotationNew(DraggableBase):
                 self.mouse_y = evt.y
 
         super().on_motion(evt)
+
+        # emit signal if provided
+        if self._emit_signal is not None:
+            self._emit_signal()
 
     def disconnect(self):
         try:
@@ -148,7 +176,17 @@ class AnnotationEditor:
 
         self._drag_active = False
 
-        self._ann_kwargs = dict()
+    @property
+    def _last_selected_annotation(self):
+        global _eomaps_picked_ann
+        return _eomaps_picked_ann
+
+    def _set_last_selected_annotation(self, ann):
+        global _eomaps_picked_ann
+        _eomaps_picked_ann = ann
+
+    def emit_update_signal(self, *args, **kwargs):
+        self.m._companion_widget.annotationSelected.emit()
 
     def _add(self, a, kwargs, transf=None, drag_coords=True):
         if a not in self._annotations:
@@ -158,7 +196,9 @@ class AnnotationEditor:
                 )
             )
             if self._drag_active:
-                a._draggable = DraggableAnnotationNew(a, drag_coords=drag_coords)
+                a._draggable = DraggableAnnotationNew(
+                    a, drag_coords=drag_coords, emit_signal=self.emit_update_signal
+                )
 
     def __call__(self, q=True, print_msg=True):
         """
@@ -207,45 +247,31 @@ class AnnotationEditor:
                 self._undo_ann_editable(ann.a)
                 self._drag_active = False
 
-            self._ann_kwargs.clear()
+            # reset last picked annotation on exit
+            global _eomaps_picked_ann
+            _eomaps_picked_ann = None
 
     def _make_ann_editable(self, ann, drag_coords=True):
+        # avoid issues with annotations that are removed during interactive editing
+        if ann.figure is not self.m.f:
+            return
+
         drag = getattr(ann, "_draggable", None)
         if drag:
             drag.disconnect()
 
-        ann._draggable = DraggableAnnotationNew(ann, drag_coords=drag_coords)
-
-        # indicate editable annotations with a green border
-        self._ann_kwargs[ann] = dict(
-            edgecolor=ann.get_bbox_patch().get_edgecolor(),
-            linewidth=ann.get_bbox_patch().get_linewidth(),
+        ann._draggable = DraggableAnnotationNew(
+            ann, drag_coords=drag_coords, emit_signal=self.emit_update_signal
         )
 
-        # update init_ec for key release events (see DraggableAnnotationNew)
-        ann._draggable._init_ec = "g"
-
-        ann.get_bbox_patch().set_edgecolor("g")
-        ann.get_bbox_patch().set_linewidth(2)
-
-        self.m.BM.update()
-
     def _undo_ann_editable(self, ann):
+        # avoid issues with annotations that are removed during interactive editing
+        if ann.figure is not self.m.f:
+            return
+
         drag = getattr(ann, "_draggable", None)
         if drag:
             drag.disconnect()
-
-        # reset patch properties
-        args = self._ann_kwargs.get(ann, dict())
-        patch = ann.get_bbox_patch()
-        for key, val in args.items():
-            getattr(patch, f"set_{key}")(val)
-
-            # update init_ec for key release events (see DraggableAnnotationNew)
-            if key == "edgecolor":
-                ann._draggable._init_ec = val
-
-        self.m.BM.update()
 
     @property
     def annotations(self):
@@ -454,3 +480,9 @@ class AnnotationEditor:
         except:
             pass
         print(prefix + "\n\n".join(anns))
+
+    def update_selected_text(self, text=None):
+        if text is not None:
+            _eomaps_picked_ann.set_text(text)
+
+        self.m.BM.update()

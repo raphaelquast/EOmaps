@@ -350,7 +350,7 @@ class NewLayerLineEdit(QtWidgets.QLineEdit):
             )
 
 
-class NewLayerWidget(QtWidgets.QFrame):
+class EditActionsWidget(QtWidgets.QFrame):
     NewLayerCreated = pyqtSignal(str)
 
     def __init__(self, *args, m=None, **kwargs):
@@ -359,31 +359,29 @@ class NewLayerWidget(QtWidgets.QFrame):
 
         self.m = m
 
+        # button to add WebMap services to the currently selected layer
+        try:
+            self.addwms = AddWMSMenuButton(m=self.m, new_layer=False)
+        except:
+            self.addwms = None
+
+        # input-box to create new layers
         new_layer_label = QtWidgets.QLabel("<b>Create a new layer:</b>")
         self.new_layer_name = NewLayerLineEdit()
         self.new_layer_name.setMaximumWidth(300)
         self.new_layer_name.setPlaceholderText("my_layer")
         self.new_layer_name.returnPressed.connect(self.new_layer)
 
-        try:
-            self.addwms = AddWMSMenuButton(m=self.m, new_layer=False)
-        except:
-            self.addwms = None
-
-        newlayer = QtWidgets.QHBoxLayout()
-        newlayer.setAlignment(Qt.AlignLeft)
+        layout = QtWidgets.QHBoxLayout()
+        layout.setAlignment(Qt.AlignLeft)
 
         if self.addwms is not None:
-            newlayer.addWidget(self.addwms)
-        newlayer.addStretch(1)
-        newlayer.addWidget(new_layer_label)
-        newlayer.addWidget(self.new_layer_name)
+            layout.addWidget(self.addwms)
 
-        # addfeature = AddFeatureWidget(m=self.m)
+        layout.addStretch(1)
+        layout.addWidget(new_layer_label)
+        layout.addWidget(self.new_layer_name)
 
-        layout = QtWidgets.QVBoxLayout()
-        # layout.addWidget(addfeature)
-        layout.addLayout(newlayer)
         self.setLayout(layout)
 
     @pyqtSlot()
@@ -1320,11 +1318,9 @@ class ArtistEditor(QtWidgets.QWidget):
 
         self.artist_tabs = ArtistEditorTabs(m=self.m)
 
-        self.newlayer = NewLayerWidget(m=self.m)
+        self.edit_actions = EditActionsWidget(m=self.m)
         # # re-populate layers on new layer creation
-        self.newlayer.NewLayerCreated.connect(self.artist_tabs.populate)
-        # set active tab to the new tab on layer creation
-        # self.newlayer.NewLayerCreated[str].connect(self.artist_tabs.set_current_tab_by_name)
+        self.edit_actions.NewLayerCreated.connect(self.artist_tabs.populate)
 
         self.addfeature = AddFeatureWidget(m=self.m)
         self.addannotation = AddAnnotationInput(m=self.m)
@@ -1340,13 +1336,15 @@ class ArtistEditor(QtWidgets.QWidget):
 
         # repopulate the layer if features or webmaps are added
         self.addfeature.selector.FeatureAdded.connect(self.artist_tabs.populate_layer)
-        self.newlayer.addwms.wmsLayerCreated.connect(self.artist_tabs.populate_layer)
+        self.edit_actions.addwms.wmsLayerCreated.connect(
+            self.artist_tabs.populate_layer
+        )
 
         option_widget = QtWidgets.QWidget()
         option_layout = QtWidgets.QVBoxLayout()
         option_layout.addWidget(self.option_tabs)
 
-        option_layout.addWidget(self.newlayer)
+        option_layout.addWidget(self.edit_actions)
         option_widget.setLayout(option_layout)
 
         splitter = QtWidgets.QSplitter(Qt.Vertical)
@@ -1372,7 +1370,7 @@ class ArtistEditor(QtWidgets.QWidget):
         if self.draw is not None:
             self.draw.set_layer(layer)
 
-        if self.newlayer.addwms is not None:
-            self.newlayer.addwms.set_layer(layer)
+        if self.edit_actions.addwms is not None:
+            self.edit_actions.addwms.set_layer(layer)
 
         self.addannotation.set_layer(layer)
