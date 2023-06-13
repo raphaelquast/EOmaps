@@ -45,6 +45,7 @@ or export figures as vektor graphics (svg, eps, pdf ...)
 
 Checkout the [🚀 Basics](https://eomaps.readthedocs.io/en/dev/api.html#basics) in the documentation to get started!
 
+<img src=https://eomaps.readthedocs.io/en/latest/_images/intro.png width=50%>
 
 ## 🔨 Installation
 
