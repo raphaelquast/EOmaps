@@ -145,31 +145,16 @@ class AddAnnotationInput(QtWidgets.QWidget):
         from math import sin, cos, radians
 
         d = 50
-
-        i = i
         x, y = -d * sin(radians(i)), -d * cos(radians(i))
 
         self.annotate_props["xytext"] = (x, y)
         self.annotate_props["textcoords"] = "offset pixels"
 
-        if x < -d / 3:
-            self._relpos[0] = 1
-            self.annotate_props["horizontalalignment"] = "right"
-        elif -d / 3 < x < d / 3:
-            self._relpos[0] = 0.5
-            self.annotate_props["horizontalalignment"] = "center"
-        else:
-            self._relpos[0] = 0
-            self.annotate_props["horizontalalignment"] = "left"
-        if y < -d / 3:
-            self._relpos[1] = 1
-            self.annotate_props["verticalalignment"] = "top"
-        elif -d / 3 < y < d / 3:
-            self._relpos[1] = 0.5
-            self.annotate_props["verticalalignment"] = "center"
-        else:
-            self._relpos[1] = 0
-            self.annotate_props["verticalalignment"] = "bottom"
+        self.annotate_props["rotation"] = 180 - i
+        self.annotate_props["horizontalalignment"] = "center"
+        self.annotate_props["verticalalignment"] = "center"
+
+        self._relpos = [0.5, 0.5]
 
     @pyqtSlot()
     def do_add_annotation(self):
