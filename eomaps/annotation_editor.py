@@ -193,7 +193,7 @@ class AnnotationEditor:
             for ann in self._annotations:
                 self._make_ann_editable(ann.a, ann.drag_coords)
 
-                self._drag_active = True
+            self._drag_active = True
             if print_msg:
                 print(
                     f"EOmaps: Annotations editable! Shortcuts:\n"
