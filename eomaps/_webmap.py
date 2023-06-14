@@ -424,6 +424,8 @@ class _wmts_layer(_WebMap_layer):
             m.ax, self._wms, self.name, interpolation="spline36", **kwargs
         )
 
+        art.set_label(f"WebMap service: {self.name}")
+
         m.BM.add_bg_artist(art, layer=layer)
 
 
@@ -560,6 +562,8 @@ class _wms_layer(_WebMap_layer):
         art = self._add_wms(
             m.ax, self._wms, self.name, interpolation="spline36", **kwargs
         )
+
+        art.set_label(f"WebMap service: {self.name}")
 
         m.BM.add_bg_artist(art, layer=layer)
 
@@ -1195,6 +1199,8 @@ class _xyz_tile_service:
         with self._m.ax.hold_limits():
             m.ax.add_image(img)
         self._artist = img
+
+        self._artist.set_label(f"WebMap service: {self.name}")
 
         m.BM.add_bg_artist(self._artist, layer=layer)
 

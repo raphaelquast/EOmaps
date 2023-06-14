@@ -297,6 +297,9 @@ class GridLines:
 
         self._coll = self._get_coll(**self._kwargs)
         if self._coll is not None:
+            # exclude artist in companion widget editor
+            self._coll.set_label("__EOmaps_exclude")
+
             self.m.ax.add_collection(self._coll)
             # don't trigger draw since this would result in a recursion!
             # (_redraw is called on each fetch-bg event)
@@ -835,6 +838,8 @@ class GridLabels:
                         va="center",
                         **txt_kwargs,
                     )
+                    # exclude artist in companion widget editor
+                    t.set_label("__EOmaps_exclude")
                     m.BM.add_bg_artist(t, layer=self._g.layer, draw=False)
                     self._texts.append(t)
 
