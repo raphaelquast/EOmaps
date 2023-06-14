@@ -909,7 +909,6 @@ class ArtistEditorTabs(LayerArtistTabs):
         # label
         try:
             name = a.get_label()
-            print(name)
             if len(name) == 0:
                 name = str(a)
 
