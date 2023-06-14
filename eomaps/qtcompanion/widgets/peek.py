@@ -193,7 +193,7 @@ class PeekMethodButtons(QtWidgets.QWidget):
         border = (
             "2px solid black"
             if self.rectangle_size < 0.99
-            else "2px solid rgb(200,200,200)"
+            else "2px solid rgb(140,140,140)"
         )
 
         self.rectangle_slider.setStyleSheet(
