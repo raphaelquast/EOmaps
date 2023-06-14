@@ -1810,7 +1810,7 @@ class Maps(object):
             The index-value of the pixel in m.data.
         xy : tuple
             A tuple of the position of the pixel provided in "xy_crs".
-            If None, xy must be provided in the coordinate-system of the plot!
+            If "xy_crs" is None, xy must be provided in the plot-crs!
             The default is None
         xy_crs : any
             the identifier of the coordinate-system for the xy-coordinates
@@ -1894,11 +1894,7 @@ class Maps(object):
             **kwargs,
         )
 
-        if permanent is True:
-            self.BM.add_bg_artist(marker, layer=layer)
-        else:
-            self.BM.add_artist(marker, layer=layer)
-
+        if permanent is False:
             self.BM.update()
 
         return marker
@@ -3209,16 +3205,18 @@ class Maps(object):
                     for a in val:
                         stack.enter_context(a._cm_set(visible=False, animated=True))
 
+            if any(l.startswith("__inset") for l in savelayers):
+                if "__inset_all" not in savelayers:
+                    savelayers.append("__inset_all")
+                    alphas.append(1)
+            if "all" not in savelayers:
+                savelayers.append("all")
+                alphas.append(1)
+
             # always draw dynamic artists on top of background artists
             for layer, alpha in zip(savelayers, alphas):
                 # get all (sorted) artists of a layer
-                if layer.startswith("__inset"):
-                    artists = self.BM.get_bg_artists(["__inset_all", layer])
-                else:
-                    if layer.startswith("__"):
-                        artists = self.BM.get_bg_artists([layer])
-                    else:
-                        artists = self.BM.get_bg_artists(["all", layer])
+                artists = self.BM.get_artists([layer])
 
                 for a in artists:
                     zorder += 1
