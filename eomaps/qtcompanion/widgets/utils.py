@@ -154,7 +154,15 @@ class CmapDropdown(QtWidgets.QComboBox):
 
 
 class GetColorWidget(QtWidgets.QFrame):
-    def __init__(self, facecolor="#ff0000", edgecolor="#000000", linewidth=1, alpha=1):
+    def __init__(
+        self,
+        facecolor="#ff0000",
+        edgecolor="#000000",
+        linewidth=1,
+        alpha=1,
+        tooltip=None,
+        helptext=None,
+    ):
         """
         A widget that indicates a selected color (and opens a popup to change the
         color on click)
@@ -173,6 +181,22 @@ class GetColorWidget(QtWidgets.QFrame):
             To get the hex-string, use    the  ".name()" property.
 
         """
+
+        if tooltip is None:
+            self._tooltip = (
+                "<b>click</b>: set facecolor <br> <b>alt + click</b>: set edgecolor"
+            )
+        else:
+            self._tooltip = tooltip
+
+        if helptext is None:
+            self._helptext = (
+                "<h3>Facecolor / Edgecolor</h3>"
+                "<ul><li><b>click</b> to set the facecolor</li>"
+                "<li><b>alt+click</b> to set the edgecolor</li></ul>"
+            )
+        else:
+            self._helptext = helptext
 
         super().__init__()
 
@@ -195,9 +219,7 @@ class GetColorWidget(QtWidgets.QFrame):
             QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Expanding
         )
 
-        self.setToolTip(
-            "<b>click</b>: set facecolor <br> <b>alt + click</b>: set edgecolor"
-        )
+        self.setToolTip(self._tooltip)
 
         self.setStyleSheet(
             """QToolTip {
@@ -212,12 +234,7 @@ class GetColorWidget(QtWidgets.QFrame):
 
     def enterEvent(self, e):
         if self.window().showhelp is True:
-            QtWidgets.QToolTip.showText(
-                e.globalPos(),
-                "<h3>Facecolor / Edgecolor</h3>"
-                "<ul><li><b>click</b> to set the facecolor</li>"
-                "<li><b>alt+click</b> to set the edgecolor</li></ul>",
-            )
+            QtWidgets.QToolTip.showText(e.globalPos(), self._helptext)
 
     def resizeEvent(self, e):
         # make frame rectangular
