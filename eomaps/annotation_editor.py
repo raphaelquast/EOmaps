@@ -171,6 +171,10 @@ class DraggableAnnotationNew(DraggableBase):
 
     def disconnect(self):
         try:
+            # reset edgecolor
+            self.annotation.get_bbox_patch().set_edgecolor(self._init_ec)
+            self.annotation.axes.draw_artist(self.annotation)
+
             super().disconnect()
         except Exception:
             # disconnection can fail in case the figure has already been closed
@@ -183,6 +187,8 @@ class AnnotationEditor:
         self._annotations = list()
 
         self._drag_active = False
+
+        self._remove_cid = None
 
     @property
     def _last_selected_annotation(self):
@@ -248,6 +254,11 @@ class AnnotationEditor:
                 self._make_ann_editable(ann.a, ann.drag_coords)
 
             self._drag_active = True
+
+            self._remove_cid = self.m.f.canvas.mpl_connect(
+                "key_press_event", self.remove_selected_annotation
+            )
+
             if print_msg:
                 print(
                     f"EOmaps: Annotations editable! Shortcuts:\n"
@@ -255,6 +266,7 @@ class AnnotationEditor:
                     " - 'control': move anchor\n"
                     " - 'shift':   resize\n"
                     " - 'r':       rotate\n"
+                    " - 'delete':  remove annotation\n"
                 )
         else:
             for ann in self._annotations:
@@ -264,6 +276,11 @@ class AnnotationEditor:
             # reset last picked annotation on exit
             global _eomaps_picked_ann
             _eomaps_picked_ann = None
+
+            if self._remove_cid:
+                self.m.f.canvas.mpl_disconnect(self._remove_cid)
+
+            self.m.BM.update()
 
     def _make_ann_editable(self, ann, drag_coords=True):
         # avoid issues with annotations that are removed during interactive editing
@@ -503,3 +520,12 @@ class AnnotationEditor:
             _eomaps_picked_ann.set_text(text)
 
         self.m.BM.update()
+
+    def remove_selected_annotation(self, event):
+        if event is None or event.key == "delete":
+            global _eomaps_picked_ann
+            if _eomaps_picked_ann:
+                self.m.BM.remove_artist(_eomaps_picked_ann)
+                _eomaps_picked_ann.remove()
+                _eomaps_picked_ann = None
+                self.m.BM.update()

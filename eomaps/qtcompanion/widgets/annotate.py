@@ -68,7 +68,7 @@ class RemoveButton(QtWidgets.QToolButton):
 class AnnotateButton(QtWidgets.QToolButton):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.setText("Annotate")
+        self.setText("Create Annotation")
 
     def enterEvent(self, e):
         if self.window().showhelp is True:
@@ -107,6 +107,27 @@ class EditAnnotationsButton(QtWidgets.QPushButton):
             )
 
 
+patch_color_helptext = (
+    "<h3>Annotation Patch Facecolor / Edgecolor</h3>"
+    "<ul><li><b>click</b> to set the facecolor</li>"
+    "<li><b>alt+click</b> to set the edgecolor</li></ul>"
+)
+patch_color_tooltip = (
+    "<b>click</b>: set annotation patch facecolor <br>"
+    "<b>alt + click</b>: set annotation patch edgecolor"
+)
+
+text_color_helptext = (
+    "<h3>Text color</h3>" "<ul><li><b>click</b> to set the text color</li>"
+)
+text_color_tooltip = "<b>click</b>: set text color"
+
+arrow_color_helptext = (
+    "<h3>Arrow color</h3>" "<ul><li><b>click</b> to set the arrow color</li>"
+)
+arrow_color_tooltip = "<b>click</b>: set arrow color"
+
+
 class AddAnnotationInput(QtWidgets.QWidget):
     widgetShown = pyqtSignal()
 
@@ -117,6 +138,7 @@ class AddAnnotationInput(QtWidgets.QWidget):
         self.layer = None
 
         self.annotate_props = dict()
+
         self._relpos = [0, 0]
 
         self._last_text_inp = ""
@@ -127,22 +149,49 @@ class AddAnnotationInput(QtWidgets.QWidget):
         self.text_inp = AnnotationTextEdit()
 
         self.text_inp.textChanged.connect(self.update_selected_text)
+        self.text_inp.setPlaceholderText(
+            "Enter annotation text (or edit text of existing annoation)\n\n"
+            "Press < SHIFT + ENTER > and click on the map to draw the annotation!"
+        )
+        self.text_inp.setSizePolicy(
+            QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Expanding
+        )
 
-        self.color = GetColorWidget(facecolor="white", edgecolor="black")
-        self.color.cb_colorselected = self.colorselected
-        self.color.setMaximumSize(35, 35)
+        # color selectors
+        self.patch_color = GetColorWidget(
+            facecolor="white",
+            edgecolor="black",
+            helptext=patch_color_helptext,
+            tooltip=patch_color_tooltip,
+        )
+        self.patch_color.cb_colorselected = self.patch_colorselected
+        self.patch_color.setMinimumSize(35, 35)
+
+        self.text_color = GetColorWidget(
+            facecolor="black",
+            edgecolor="k",
+            linewidth=0.5,
+            helptext=text_color_helptext,
+            tooltip=text_color_tooltip,
+        )
+        self.text_color.cb_colorselected = self.text_colorselected
+        self.text_color.setMaximumSize(15, 15)
+
+        self.arrow_color = GetColorWidget(
+            facecolor="black",
+            edgecolor="k",
+            linewidth=0.5,
+            helptext=arrow_color_helptext,
+            tooltip=arrow_color_tooltip,
+        )
+        self.arrow_color.cb_colorselected = self.patch_colorselected
+        self.arrow_color.setMaximumSize(15, 15)
 
         self.b = AnnotateButton()
         self.b.clicked.connect(self.do_add_annotation)
-        self.b.setFixedSize(self.b.sizeHint())
-
-        self.b_rem = RemoveButton()
-        self.b_rem.clicked.connect(self.remove_last_annotation)
-        self.b_rem.setFixedSize(self.b.sizeHint())
-
-        blayout = QtWidgets.QVBoxLayout()
-        blayout.addWidget(self.b, Qt.AlignTop)
-        blayout.addWidget(self.b_rem, Qt.AlignTop)
+        self.b.setSizePolicy(
+            QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Preferred
+        )
 
         self.dial = AnnotationDial()
         self.dial.valueChanged.connect(self.dial_value_changed)
@@ -178,20 +227,35 @@ class AddAnnotationInput(QtWidgets.QWidget):
         )
         self.arrowstyle_dropdown.activated.connect(self.set_arrowstyle)
 
-        layout = QtWidgets.QVBoxLayout()
+        layout_colors = QtWidgets.QVBoxLayout()
+        layout_colors.addWidget(self.text_color)
+        layout_colors.addWidget(self.arrow_color)
+
+        layout_dropdowns = QtWidgets.QVBoxLayout()
+        layout_dropdowns.setAlignment(Qt.AlignTop | Qt.AlignLeft)
+        layout_dropdowns.addWidget(self.boxstyle_dropdown)
+        layout_dropdowns.addWidget(self.arrowstyle_dropdown)
+
+        layout_0 = QtWidgets.QHBoxLayout()
+        layout_0.addWidget(self.patch_color)
+        layout_0.addLayout(layout_colors)
+        layout_0.addWidget(self.dial)
+        layout_0.addLayout(layout_dropdowns)
+
+        layout_1 = QtWidgets.QVBoxLayout()
+        layout_1.addLayout(layout_0)
+        layout_1.addWidget(self.b, 1)
 
         layout_h = QtWidgets.QHBoxLayout()
-        layout_h.setAlignment(Qt.AlignTop | Qt.AlignLeft)
-        layout_h.addWidget(self.color)
-        layout_h.addWidget(self.dial)
-        layout_h.addWidget(self.boxstyle_dropdown)
-        layout_h.addWidget(self.arrowstyle_dropdown)
+        layout_h.addLayout(layout_1)
+        layout_h.addWidget(self.text_inp, 1)
 
-        layout_h.addWidget(self.text_inp)
-        layout_h.addLayout(blayout, Qt.AlignTop)
+        blayout = QtWidgets.QHBoxLayout()
+        blayout.addWidget(self.edit_annotations)
 
+        layout = QtWidgets.QVBoxLayout()
         layout.addLayout(layout_h)
-        layout.addWidget(self.edit_annotations)
+        layout.addLayout(blayout)
         self.setLayout(layout)
 
         self._annotation_active = False
@@ -204,8 +268,14 @@ class AddAnnotationInput(QtWidgets.QWidget):
     def eventFilter(self, widget, event):
         from PyQt5 import QtCore
 
-        if event.type() == QtCore.QEvent.KeyPress and widget is self.text_inp:
+        if (
+            event.type() == QtCore.QEvent.KeyPress
+            and event.key() == QtCore.Qt.Key_Escape
+        ):
+            self.stop()
+            return True
 
+        if event.type() == QtCore.QEvent.KeyPress and widget is self.text_inp:
             # trigger adding the annotation on SHIFT + ENTER
             if (
                 event.key() in (QtCore.Qt.Key_Return, QtCore.Qt.Key_Enter)
@@ -220,14 +290,14 @@ class AddAnnotationInput(QtWidgets.QWidget):
         return super().eventFilter(widget, event)
 
     def set_boxstyle(self, *args, **kwargs):
-        self._boxstyle = self.boxstyle_dropdown.currentText()
+        # self._boxstyle = self.boxstyle_dropdown.currentText()
         # trigger colorselected to set the patch-props
-        self.colorselected()
+        self.patch_colorselected()
 
     def set_arrowstyle(self, *args, **kwargs):
-        self._arrowstyle = self.arrowstyle_dropdown.currentText()
+        # self._arrowstyle = self.arrowstyle_dropdown.currentText()
         # trigger colorselected to set the arrow-props
-        self.colorselected()
+        self.patch_colorselected()
 
     @property
     def selected_annotation(self):
@@ -247,6 +317,10 @@ class AddAnnotationInput(QtWidgets.QWidget):
             self.dial.repaint()
 
     def set_selected_annotation_props(self, *args, **kwargs):
+        # don't update props while a new annotation is added
+        if self._annotation_active:
+            return
+
         # update the annotation-widget with respect to the properties of the
         # currently selected annotation
         ann = self.selected_annotation
@@ -254,6 +328,11 @@ class AddAnnotationInput(QtWidgets.QWidget):
             # put the text of the currently selected annotation in the input-box
             text = ann.get_text()
             self.text_inp.setText(text)
+            # set current annotation text color
+            self.text_color.set_facecolor(
+                [int(i * 255) for i in to_rgba(ann.get_color())]
+            )
+
             # color text-input green to indicate that changes are made on an
             # existing annotation
             self.text_inp.setStyleSheet("background-color: rgba(0,200,0,100)")
@@ -264,42 +343,52 @@ class AddAnnotationInput(QtWidgets.QWidget):
 
             patch = ann.get_bbox_patch()
 
-            # set current boxstyle in dropdown
-            self._boxstyle = box_styles_reversed.get(
-                patch.get_boxstyle().__class__, "none"
-            )
-            self.boxstyle_dropdown.setCurrentText(self._boxstyle)
+            alpha = patch.get_alpha()
+            if alpha == 0:
+                # don't set colors in case a fully transparent bbox is used
+                # (to ensure that colros are reset to the previous value)
+                self._boxstyle = "none"
+            else:
+                # set current boxstyle in dropdown
+                self._boxstyle = box_styles_reversed.get(
+                    patch.get_boxstyle().__class__, "none"
+                )
+                self.boxstyle_dropdown.setCurrentText(self._boxstyle)
 
-            # set patch colors and linewidth
-            fc = patch.get_facecolor()
-            ec = ann._draggable._init_ec
-            lw = patch.get_linewidth()
+                # set patch colors and linewidth
+                fc = patch.get_facecolor()
+                ec = ann._draggable._init_ec
+                lw = patch.get_linewidth()
 
-            self.color.set_facecolor([int(i * 255) for i in to_rgba(fc)])
-            self.color.set_edgecolor([int(i * 255) for i in to_rgba(ec)])
-            self.color.set_linewidth(lw)
-
-            self.b_rem.setEnabled(True)
-            self.b_rem.setStyleSheet("background-color : rgb(100,150,100);")
+                self.patch_color.set_facecolor([int(i * 255) for i in to_rgba(fc)])
+                self.patch_color.set_edgecolor([int(i * 255) for i in to_rgba(ec)])
+                self.patch_color.set_linewidth(lw)
 
             if ann.arrow_patch is None:
                 self._arrowstyle = "none"
             else:
-                self._arrowstyle = ann.arrowprops.get("arrowstyle", "none")
+                self._arrowstyle = arrow_styles_reversed.get(
+                    ann.arrow_patch.get_arrowstyle().__class__, "->"
+                )
 
             # set current arrowstyle in dropdown
             self.arrowstyle_dropdown.setCurrentText(self._arrowstyle)
 
         else:
             self.text_inp.setStyleSheet("background-color: none")
-            self.b_rem.setEnabled(False)
-            self.b_rem.setStyleSheet("background-color : rgba(100,150,100,50);")
 
     def update_selected_text(self, *args, **kwargs):
         ann = self.selected_annotation
         if ann:
             text = self.text_inp.toPlainText()
             ann.set_text(text)
+
+            self.m.BM.update(artists=[ann])
+
+    def update_selected_text_props(self, *args, **kwargs):
+        ann = self.selected_annotation
+        if ann:
+            ann.set_color(self.annotate_props.get("color", "k"))
             self.m.BM.update(artists=[ann])
 
     def update_selected_rotation(self, r):
@@ -316,6 +405,9 @@ class AddAnnotationInput(QtWidgets.QWidget):
             patch.set_facecolor(fc)
             patch.set_edgecolor(ec)
             patch.set_linewidth(lw)
+
+            # remember new edgecolor
+            ann._draggable._init_ec = ec
 
             bbox = self.annotate_props.get("bbox", None)
             if bbox:
@@ -385,7 +477,7 @@ class AddAnnotationInput(QtWidgets.QWidget):
             self.add_annotation(text=self.text_inp.toPlainText())
 
     @pyqtSlot()
-    def remove_last_annotation(self):
+    def remove_selected_annotation(self):
         ann = self.selected_annotation
         if ann:
             self.m.BM.remove_artist(ann)
@@ -394,24 +486,35 @@ class AddAnnotationInput(QtWidgets.QWidget):
         else:
             self.window().statusBar().showMessage("There is no annotation to remove!")
 
-    def colorselected(self):
+    def text_colorselected(self):
+        fc = self.text_color.facecolor.getRgbF()
+        # ec = self.text_color.edgecolor.getRgbF()
+        # alpha = self.text_color.alpha
+        # lw = self.text_color.linewidth
+        self.annotate_props["color"] = fc
+
+        self.update_selected_text_props()
+
+    def patch_colorselected(self):
+        self._boxstyle = self.boxstyle_dropdown.currentText()
+        self._arrowstyle = self.arrowstyle_dropdown.currentText()
+
         if self._boxstyle == "none":
             boxstyle = "round"
-            fc = self.color.facecolor.getRgbF()
-            ec = self.color.edgecolor.getRgbF()
+            fc = self.patch_color.facecolor.getRgbF()
+            ec = self.patch_color.edgecolor.getRgbF()
             alpha = 0
-            lw = self.color.linewidth
+            lw = self.patch_color.linewidth
         else:
             boxstyle = self._boxstyle
-            fc = self.color.facecolor.getRgbF()
-            ec = self.color.edgecolor.getRgbF()
-            alpha = self.color.alpha
-            lw = self.color.linewidth
+            fc = self.patch_color.facecolor.getRgbF()
+            ec = self.patch_color.edgecolor.getRgbF()
+            alpha = self.patch_color.alpha
+            lw = self.patch_color.linewidth
 
         self.annotate_props["bbox"] = dict(
-            boxstyle=boxstyle, facecolor=fc, edgecolor=ec, linewidth=lw, alpha=alpha
+            boxstyle=boxstyle, fc=fc, ec=ec, lw=lw, alpha=alpha
         )
-
         self.update_selected_patch(fc, ec, lw)
 
     def set_layer(self, layer):
@@ -426,31 +529,51 @@ class AddAnnotationInput(QtWidgets.QWidget):
 
         self._annotation_active = False
         self.text_inp.setEnabled(True)
-        self.b.setText("Annotate")
+        self.b.setText("Create Annotation")
 
         self.text_inp.setText(self._last_text_inp)
+        self.text_inp.setStyleSheet("background-color: none")
+        self.enable_widgets(True)
 
     def _get_arrowprops(self):
+        fc = self.arrow_color.facecolor.getRgbF()
+        ec = self.arrow_color.edgecolor.getRgbF()
+
+        if self._arrowstyle not in ["simple", "fancy", "wedge"]:
+            ec = fc
+
         if self._arrowstyle != "none":
             arrowprops = dict(
                 arrowstyle=self._arrowstyle,
                 connectionstyle="angle3",
-                fc="k",
-                ec="k"
-                if self._arrowstyle not in ["simple", "fancy", "wedge"]
-                else "none",
+                fc=fc,
+                ec=ec,
                 relpos=self._relpos.copy(),
             )
-            xytext = (20, 20)
+            xytext = (40, 40)
         else:
             arrowprops = None
             xytext = (0, 0)
 
         return dict(arrowprops=arrowprops, xytext=xytext, textcoords="offset pixels")
 
+    def enable_widgets(self, b):
+        self.text_inp.setEnabled(b)
+        self.boxstyle_dropdown.setEnabled(b)
+        self.arrowstyle_dropdown.setEnabled(b)
+        self.patch_color.setEnabled(b)
+        self.text_color.setEnabled(b)
+        self.arrow_color.setEnabled(b)
+        self.edit_annotations.setEnabled(b)
+
     def add_annotation(self, text):
         # clear selected annotation to avoid updating text
+        if self.selected_annotation:
+            self.m._edit_annotations._undo_ann_editable(self.selected_annotation)
         self.m._edit_annotations._set_last_selected_annotation(None)
+
+        # update args (colors, linewidth etc) with respect to current widget states
+        self.patch_colorselected()
 
         # self.window().hide()
         self.m.f.canvas.show()
@@ -484,8 +607,9 @@ class AddAnnotationInput(QtWidgets.QWidget):
         self._last_text_inp = text
 
         self._annotation_active = True
-        self.text_inp.setEnabled(False)
-        self.b.setText("Stop")
+        self.enable_widgets(False)
+
+        self.b.setText("Cancel")
 
     def showEvent(self, event):
         self.widgetShown.emit()
@@ -514,7 +638,8 @@ class AddAnnotationInput(QtWidgets.QWidget):
         if self._annotations_editable:
             self.edit_annotations.setText(
                 "Annotations editable!    "
-                "< control >: Move  |  < shift >: Resize  |   < R >: Rotate"
+                "< control >: Move  |  < shift >: Resize  |  < R >: Rotate"
+                "  |  < delete >: Delete"
             )
             self.edit_annotations.setStyleSheet("background-color : rgb(100,150,100);")
 
