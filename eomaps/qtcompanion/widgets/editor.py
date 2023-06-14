@@ -907,7 +907,16 @@ class ArtistEditorTabs(LayerArtistTabs):
 
     def _get_artist_layout(self, a, layer):
         # label
-        name = str(a)
+        try:
+            name = a.get_label()
+            print(name)
+            if len(name) == 0:
+                name = str(a)
+
+        except Exception:
+            print("ups")
+            name = str(a)
+
         if len(name) > 50:
             label = QtWidgets.QLabel(name[:46] + "... >")
             label.setToolTip(name)
