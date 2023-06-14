@@ -350,6 +350,15 @@ class NewLayerLineEdit(QtWidgets.QLineEdit):
             )
 
 
+from .files import OpenDataStartTab
+from .utils import EditLayoutButton
+
+
+class OpenFileButton(QtWidgets.QPushButton):
+    def enterEvent(self, e):
+        OpenDataStartTab.enterEvent(self, e)
+
+
 class EditActionsWidget(QtWidgets.QFrame):
     NewLayerCreated = pyqtSignal(str)
 
@@ -365,6 +374,11 @@ class EditActionsWidget(QtWidgets.QFrame):
         except:
             self.addwms = None
 
+        self.edit_layout = EditLayoutButton("Edit Layout", m=self.m)
+
+        self.open_file_button = OpenFileButton("Open File")
+        self.open_file_button.setFixedSize(self.open_file_button.sizeHint())
+
         # input-box to create new layers
         new_layer_label = QtWidgets.QLabel("<b>Create a new layer:</b>")
         self.new_layer_name = NewLayerLineEdit()
@@ -377,8 +391,10 @@ class EditActionsWidget(QtWidgets.QFrame):
 
         if self.addwms is not None:
             layout.addWidget(self.addwms)
+        layout.addWidget(self.open_file_button)
+        layout.addWidget(self.edit_layout)
 
-        layout.addStretch(1)
+        layout.addStretch(0.05)
         layout.addWidget(new_layer_label)
         layout.addWidget(self.new_layer_name)
 
@@ -913,8 +929,11 @@ class ArtistEditorTabs(LayerArtistTabs):
                 name = str(a)
 
         except Exception:
-            print("ups")
             name = str(a)
+
+        # for artists that should not show up in the editor
+        if name.startswith("__EOmaps_exclude"):
+            return [(None, None)]
 
         if len(name) > 50:
             label = QtWidgets.QLabel(name[:46] + "... >")
@@ -1185,7 +1204,8 @@ class ArtistEditorTabs(LayerArtistTabs):
 
         for i, a in enumerate(artists):
             for art, pos in self._get_artist_layout(a, layer):
-                layout.addWidget(art, i, pos)
+                if art is not None:
+                    layout.addWidget(art, i, pos)
 
         tabwidget = QtWidgets.QWidget()
         tabwidget.setLayout(layout)
