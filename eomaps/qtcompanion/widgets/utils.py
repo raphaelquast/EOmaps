@@ -344,7 +344,7 @@ class EditLayoutButton(QtWidgets.QPushButton):
             QtWidgets.QToolTip.showText(
                 e.globalPos(),
                 "<h3>Layout Editor</h3>"
-                "Toggle the EOmaps LayoutEditor to re-arrange the position and size"
+                "Toggle the EOmaps LayoutEditor to re-arrange the position and size "
                 "of the axes in the figure."
                 "<ul>"
                 "<li><b>Right-click</b> on axes with the mouse to select them (hold "
