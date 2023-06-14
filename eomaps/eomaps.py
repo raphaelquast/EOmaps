@@ -3603,7 +3603,11 @@ class Maps(object):
         fmt = kwargs.get("format", "png")
         mimetype, _ = mimetypes.guess_type(f"dummy.{fmt}")
 
-        print(f"EOmaps: Exporting figure as '{fmt}' to clipboard...")
+        message = f"EOmaps: Exporting figure as '{fmt}' to clipboard..."
+        print(message)
+
+        if self._companion_widget is not None:
+            self._companion_widget.window().statusBar().showMessage(message, 2000)
 
         with io.BytesIO() as buffer:
             self.savefig(buffer, **kwargs)
