@@ -277,6 +277,8 @@ class ESRI_ArcGIS(WMSBase):
                 wms = getattr(
                     service, remove_prefix(wmslayer, prefix)
                 ).add_layer.xyz_layer
+
+                wms.name = f"{self.name}_{wmslayer}"
                 break
 
         if wms is None:
