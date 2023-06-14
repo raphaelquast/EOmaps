@@ -198,7 +198,7 @@ class AddFeatureWidget(QtWidgets.QFrame):
     def __init__(self, m=None):
 
         super().__init__()
-        self.setFrameStyle(QtWidgets.QFrame.StyledPanel | QtWidgets.QFrame.Plain)
+        # self.setFrameStyle(QtWidgets.QFrame.StyledPanel | QtWidgets.QFrame.Plain)
 
         self.m = m
 
@@ -246,7 +246,7 @@ class AddFeatureWidget(QtWidgets.QFrame):
         # set stretch factor to expand the color-selector first
         layout.setColumnStretch(0, 1)
 
-        layout.setAlignment(Qt.AlignCenter | Qt.AlignTop)
+        layout.setAlignment(Qt.AlignLeft | Qt.AlignCenter)
         self.setLayout(layout)
 
         # do this at the end to ensure everything has already been set up properly
@@ -406,49 +406,6 @@ class EditActionsWidget(QtWidgets.QFrame):
 class LayerArtistTabs(QtWidgets.QTabWidget):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        stylesheet = """
-            QTabWidget::pane { /* The tab widget frame */
-                border-top: 0px solid rgb(100,100,100);
-            }
-
-            QTabWidget::tab-bar {
-                left: 5px; /* move to the right by 5px */
-            }
-
-            QTabBar::tab {
-                background: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1,
-                                            stop: 0 #E1E1E1, stop: 0.4 #DDDDDD,
-                                            stop: 0.5 #D8D8D8, stop: 1.0 #D3D3D3);
-                border-bottom-color: none;
-                border-top-left-radius: 2px;
-                border-top-right-radius: 2px;
-                min-width: 50px;
-                padding: 1px;
-                margin: 1px;
-            }
-
-            QTabBar::tab:selected, QTabBar::tab:hover {
-                border: 1px solid black;
-                background: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1,
-                                            stop: 0 #fafafa, stop: 0.4 #f4f4f4,
-                                            stop: 0.5 #e7e7e7, stop: 1.0 #fafafa);
-            }
-
-            QTabBar::tab:selected {
-                padding: 0px;
-                border: 2px solid rgb(200,0,0);
-                border-top-left-radius: 4px;
-                border-top-right-radius: 4px;
-                border-bottom-color: rgb(100,100,100); /* same as pane color */
-            }
-
-            QTabBar::tab:!selected {
-                border: 1px solid rgb(200,200,200);
-                margin-top: 4px; /* make non-selected tabs look smaller */
-            }
-            """
-
-        self.setStyleSheet(stylesheet)
 
     def enterEvent(self, e):
         if self.window().showhelp is True:
@@ -544,6 +501,33 @@ class LayerTabBar(QtWidgets.QTabBar):
             self.m.BM.on_layer(self.populate_on_layer, persistent=True)
             self.m._after_add_child.append(self.populate)
             self.m._on_show_companion_widget.append(self.populate)
+
+        self.setStyleSheet(
+            """
+            QTabWidget::pane {
+              border: 0px;
+              top:0px;
+              background: rgb(200, 200, 200);
+              border-radius: 10px;
+            }
+
+            QTabBar::tab {
+              background: rgb(245, 245, 245);
+              border: 1px solid black;
+              padding: 3px;
+              padding-bottom: 6px;
+              margin-left: 2px;
+              margin-bottom: 0px;
+              border-radius: 4px;
+            }
+
+            QTabBar::tab:selected {
+              background: rgb(245, 245, 245);
+              border: 1px solid black;
+              margin-bottom: 0px;
+            }
+            """
+        )
 
     def sizeHint(self):
         # make sure the TabBar does not expand the window width
@@ -704,8 +688,9 @@ class LayerTabBar(QtWidgets.QTabBar):
     def color_active_tab(self, m=None, layer=None):
         currlayers = self.m.BM.bg_layer.split("|")
 
-        defaultcolor = self.palette().color(self.foregroundRole())
-        activecolor = QtGui.QColor(50, 200, 50)
+        # defaultcolor = self.palette().color(self.foregroundRole())
+        defaultcolor = QtGui.QColor(100, 100, 100)
+        activecolor = QtGui.QColor(0, 128, 0)
         multicolor = QtGui.QColor(200, 50, 50)
 
         active_layers = set(self.m.BM._bg_layer.split("|"))
@@ -1317,6 +1302,34 @@ class ArtistEditor(QtWidgets.QWidget):
         self.m = m
 
         self.artist_tabs = ArtistEditorTabs(m=self.m)
+        self.artist_tabs.setStyleSheet(
+            """
+              border: 0px;
+              top:0px;
+              background: rgb(240, 240, 240);
+              border-radius: 10px;
+            """
+        )
+
+        self.artist_tabs.tabBar().setStyleSheet(
+            """
+            QTabBar::tab {
+              background: rgb(220, 220, 220);
+              border: 0px solid black;
+              padding: 1px;
+              padding-bottom: 6px;
+              margin-left: 2px;
+              margin-bottom: -3px;
+              border-radius: 4px;
+            }
+
+            QTabBar::tab:selected {
+              background: rgb(150, 150, 150);
+              border: 2px solid darkred;
+              margin-bottom: -3px;
+            }
+            """
+        )
 
         self.edit_actions = EditActionsWidget(m=self.m)
         # # re-populate layers on new layer creation
@@ -1333,6 +1346,33 @@ class ArtistEditor(QtWidgets.QWidget):
         self.option_tabs.addTab(self.addfeature, "Add Features")
         self.option_tabs.addTab(self.addannotation, "Add Annotations")
         self.option_tabs.addTab(self.draw, "Draw Shapes")
+
+        self.option_tabs.setStyleSheet(
+            """
+            QTabWidget::pane {
+              border: 0px;
+              top:0px;
+              background: rgb(200, 200, 200);
+              border-radius: 10px;
+            }
+
+            QTabBar::tab {
+              background: rgb(220, 220, 220);
+              border: 0px;
+              padding: 3px;
+              padding-bottom: 6px;
+              margin-left: 10px;
+              margin-bottom: -2px;
+              border-radius: 4px;
+            }
+
+            QTabBar::tab:selected {
+              background: rgb(200, 200, 200);
+              border: 0px;
+              margin-bottom: -2px;
+            }
+            """
+        )
 
         # repopulate the layer if features or webmaps are added
         self.addfeature.selector.FeatureAdded.connect(self.artist_tabs.populate_layer)

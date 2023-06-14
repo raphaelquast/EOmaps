@@ -76,12 +76,15 @@ class CompareTab(QtWidgets.QWidget):
 
         layer_tab_layout = QtWidgets.QHBoxLayout()
         layer_tab_layout.setAlignment(Qt.AlignLeft)
-        layer_tab_layout.addWidget(QtWidgets.QLabel("<b>Layers: </b>"))
+        layer_tab_layout.addWidget(
+            QtWidgets.QLabel(
+                "<b>Layers: </b><br>" "<small><code> [ctrl / shift] </code></small>"
+            )
+        )
         layer_tab_layout.addWidget(self.layer_tabs)
 
         layout = QtWidgets.QVBoxLayout()
         layout.addWidget(peektabs)
-        layout.addStretch(1)
         layout.addWidget(click_cbs)
         layout.addLayout(l2)
         layout.addStretch(1)
@@ -105,12 +108,46 @@ class ControlTabs(QtWidgets.QTabWidget):
 
         self.addTab(self.tab_compare, "Compare")
         self.addTab(self.tab_edit, "Edit")
-        self.addTab(self.tab_open, "Plotted Files")
+        self.addTab(self.tab_open, "Data")
 
         # re-populate artists on tab-change
         self.currentChanged.connect(self.tabchanged)
 
         self.setAcceptDrops(True)
+
+        self.setStyleSheet(
+            """
+            ControlTabs {
+                font-size: 10pt;
+                font-weight: bold;
+            }
+
+            QTabWidget::pane {
+              border: 0px;
+              top:0px;
+              background: rgb(240, 240, 240);
+              border-radius: 10px;
+            }
+
+            QTabBar::tab {
+              background: rgb(240, 240, 240);
+              border: 0px;
+              padding: 3px;
+              padding-bottom: 6px;
+              padding-left: 6px;
+              padding-right: 6px;
+              margin-left: 10px;
+              margin-bottom: -2px;
+              border-radius: 4px;
+            }
+
+            QTabBar::tab:selected {
+              background: rgb(150, 150, 150);
+              border: 0px;
+              margin-bottom: 2px;
+            }
+            """
+        )
 
     @pyqtSlot()
     def trigger_open_file_button(self):

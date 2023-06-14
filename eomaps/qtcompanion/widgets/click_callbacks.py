@@ -160,8 +160,9 @@ class ClickCallbacks(QtWidgets.QFrame):
         self.setStyleSheet(
             """
             ClickCallbacks{
-                border: 1px solid rgb(200,200,200);
+                border: 0px solid rgb(200,200,200);
                 border-radius: 10px;
+                background-color: rgb(200,200,200);
                 };
             """
         )
