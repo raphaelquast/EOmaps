@@ -653,6 +653,8 @@ class _click_callbacks(object):
             # make the annotation temporary
             self._temporary_artists.append(marker)
             self.m.BM.add_artist(marker, layer)
+        elif permanent is None:
+            self.m.BM.add_bg_artist(marker, layer)
         elif permanent is True:
             self.m.BM.add_artist(marker, layer)
 
