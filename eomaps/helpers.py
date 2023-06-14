@@ -2240,11 +2240,17 @@ class BlitManager:
 
         allartists = set()
         for ax in axes:
+            # only include axes titles if they are actually set
+            # (otherwise empty artists appear in the widget)
+            titles = [
+                i
+                for i in (ax.title, ax._left_title, ax._right_title)
+                if len(i.get_text()) > 0
+            ]
+
             axartists = {
                 *ax._children,
-                ax.title,
-                ax._left_title,
-                ax._right_title,
+                *titles,
                 *([ax.legend_] if ax.legend_ is not None else []),
             }
 
