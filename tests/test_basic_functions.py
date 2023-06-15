@@ -1277,8 +1277,8 @@ class TestBasicPlotting(unittest.TestCase):
         m.cb.pick.attach.annotate()
         m.cb.keypress.attach.fetch_layers()
         m.f.canvas.draw()  # redraw since otherwise the map might not yet be created!
-        self.assertTrue(len(m.BM._artists[m.layer]) == 2)
-        self.assertTrue(len(m.BM._bg_artists[m.layer]) == 1)
+        self.assertTrue(len(m.BM._artists[m.layer]) == 1)
+        self.assertTrue(len(m.BM._bg_artists[m.layer]) == 2)
 
         self.assertTrue(m._data_manager.x0.size == 3)
         self.assertTrue(hasattr(m, "tree"))
@@ -1307,10 +1307,10 @@ class TestBasicPlotting(unittest.TestCase):
         self.assertTrue(len(m.BM._on_layer_activation[True][m2.layer]) == 1)
         self.assertTrue(len(m.BM._on_layer_activation[False][m2.layer]) == 0)
 
-        self.assertTrue(len(m.BM._artists[m.layer]) == 2)
-        self.assertTrue(len(m.BM._bg_artists[m.layer]) == 1)
-        self.assertTrue(len(m.BM._artists[m2.layer]) == 2)
-        self.assertTrue(len(m.BM._bg_artists[m2.layer]) == 1)
+        self.assertTrue(len(m.BM._artists[m.layer]) == 1)
+        self.assertTrue(len(m.BM._bg_artists[m.layer]) == 2)
+        self.assertTrue(len(m.BM._artists[m2.layer]) == 1)
+        self.assertTrue(len(m.BM._bg_artists[m2.layer]) == 2)
 
         self.assertTrue(m2._data_manager.x0.size == 3)
         self.assertTrue(hasattr(m2, "tree"))
@@ -1322,8 +1322,8 @@ class TestBasicPlotting(unittest.TestCase):
 
         self.assertTrue(m2.layer not in m.BM._on_layer_activation)
 
-        self.assertTrue(len(m.BM._artists[m.layer]) == 2)
-        self.assertTrue(len(m.BM._bg_artists[m.layer]) == 1)
+        self.assertTrue(len(m.BM._artists[m.layer]) == 1)
+        self.assertTrue(len(m.BM._bg_artists[m.layer]) == 2)
         self.assertTrue(m2.layer not in m.BM._artists)
         self.assertTrue(m2.layer not in m.BM._bg_artists)
 

@@ -27,7 +27,7 @@ class OpenFileButton(QtWidgets.QPushButton):
         OpenDataStartTab.enterEvent(self, e)
 
 
-class Tab1(QtWidgets.QWidget):
+class CompareTab(QtWidgets.QWidget):
     def __init__(self, *args, m=None, **kwargs):
         super().__init__(*args, **kwargs)
         self.m = m
@@ -76,12 +76,15 @@ class Tab1(QtWidgets.QWidget):
 
         layer_tab_layout = QtWidgets.QHBoxLayout()
         layer_tab_layout.setAlignment(Qt.AlignLeft)
-        layer_tab_layout.addWidget(QtWidgets.QLabel("<b>Layers: </b>"))
+        layer_tab_layout.addWidget(
+            QtWidgets.QLabel(
+                "<b>Layers: </b><br>" "<small><code> [ctrl / shift] </code></small>"
+            )
+        )
         layer_tab_layout.addWidget(self.layer_tabs)
 
         layout = QtWidgets.QVBoxLayout()
         layout.addWidget(peektabs)
-        layout.addStretch(1)
         layout.addWidget(click_cbs)
         layout.addLayout(l2)
         layout.addStretch(1)
@@ -96,22 +99,55 @@ class ControlTabs(QtWidgets.QTabWidget):
         super().__init__(*args, **kwargs)
         self.m = m
 
-        self.tab1 = Tab1(m=self.m)
+        self.tab_compare = CompareTab(m=self.m)
         self.tab_open = OpenFileTabs(m=self.m)
-
-        # connect the open-file-button to the button from the "Open Files" tab
-        self.tab1.open_file_button.clicked.connect(self.trigger_open_file_button)
-
         self.tab_edit = ArtistEditor(m=self.m)
 
-        self.addTab(self.tab1, "Compare")
+        # connect the open-file-button to the button from the "Open Files" tab
+        self.tab_compare.open_file_button.clicked.connect(self.trigger_open_file_button)
+
+        self.addTab(self.tab_compare, "Compare")
         self.addTab(self.tab_edit, "Edit")
-        self.addTab(self.tab_open, "Plotted Files")
+        self.addTab(self.tab_open, "Data")
 
         # re-populate artists on tab-change
         self.currentChanged.connect(self.tabchanged)
 
         self.setAcceptDrops(True)
+
+        self.setStyleSheet(
+            """
+            ControlTabs {
+                font-size: 10pt;
+                font-weight: bold;
+            }
+
+            QTabWidget::pane {
+              border: 0px;
+              top:0px;
+              background: rgb(240, 240, 240);
+              border-radius: 10px;
+            }
+
+            QTabBar::tab {
+              background: rgb(240, 240, 240);
+              border: 0px;
+              padding: 3px;
+              padding-bottom: 6px;
+              padding-left: 6px;
+              padding-right: 6px;
+              margin-left: 10px;
+              margin-bottom: -2px;
+              border-radius: 4px;
+            }
+
+            QTabBar::tab:selected {
+              background: rgb(150, 150, 150);
+              border: 0px;
+              margin-bottom: 2px;
+            }
+            """
+        )
 
     @pyqtSlot()
     def trigger_open_file_button(self):
@@ -119,8 +155,9 @@ class ControlTabs(QtWidgets.QTabWidget):
 
     @pyqtSlot()
     def tabchanged(self):
-        if self.currentWidget() == self.tab1:
-            self.tab1.layer_tabs.repopulate_and_activate_current()
+
+        if self.currentWidget() == self.tab_compare:
+            self.tab_compare.layer_tabs.repopulate_and_activate_current()
 
         elif self.currentWidget() == self.tab_edit:
             self.tab_edit.artist_tabs.repopulate_and_activate_current()
@@ -139,6 +176,8 @@ class MenuWindow(transparentWindow):
 
     cmapsChanged = pyqtSignal()
     clipboardKwargsChanged = pyqtSignal()
+    annotationSelected = pyqtSignal()
+    annotationEdited = pyqtSignal()
 
     def __init__(self, *args, m=None, **kwargs):
 
@@ -155,15 +194,6 @@ class MenuWindow(transparentWindow):
         self.tabs = ControlTabs(m=self.m)
         self.tabs.setMouseTracking(True)
 
-        self.setStyleSheet(
-            """QToolTip {
-            font-family: "SansSerif";
-            font-size:10;
-            background-color: rgb(53, 53, 53);
-            color: white;
-            border: none;
-            }"""
-        )
         self.cb_transparentQ()
 
         menu_layout = QtWidgets.QVBoxLayout()
@@ -190,7 +220,17 @@ class MenuWindow(transparentWindow):
         self.cmapsChanged.connect(self.clear_pixmap_cache)
 
         # set save-file args to values set as clipboard kwargs
-        self.clipboardKwargsChanged.connect(self.tabs.tab1.save_widget.set_export_props)
+        self.clipboardKwargsChanged.connect(
+            self.tabs.tab_compare.save_widget.set_export_props
+        )
+
+        self.annotationSelected.connect(
+            self.tabs.tab_edit.addannotation.set_selected_annotation_props
+        )
+
+        self.annotationEdited.connect(
+            self.tabs.tab_edit.addannotation.set_edited_annotation_props
+        )
 
     def show(self):
         super().show()

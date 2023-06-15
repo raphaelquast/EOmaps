@@ -5,6 +5,10 @@ from .utils import GetColorWidget, AlphaSlider
 
 
 class TransparencySlider(AlphaSlider):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.set_alpha_stylesheet()
+
     def enterEvent(self, e):
         if self.window().showhelp is True:
             QtWidgets.QToolTip.showText(
@@ -14,6 +18,10 @@ class TransparencySlider(AlphaSlider):
 
 
 class LineWidthSlider(AlphaSlider):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.set_linewidth_stylesheet()
+
     def enterEvent(self, e):
         if self.window().showhelp is True:
             QtWidgets.QToolTip.showText(
@@ -118,6 +126,35 @@ class DrawerTabs(QtWidgets.QTabWidget):
 
         self.tabBarClicked.connect(self.tabbar_clicked)
         self.setCurrentIndex(0)
+
+        self.setStyleSheet(
+            """
+            QTabWidget::pane {
+              border: 0px;
+              top:0px;
+              background: rgb(150, 150, 150);
+              border-radius: 10px;
+            }
+
+            QTabBar::tab {
+              background: rgb(185, 185, 185);
+              border: 0px;
+              padding: 3px;
+              padding-bottom: 6px;
+              padding-left: 6px;
+              padding-right: 6px;
+              margin-left: 10px;
+              margin-bottom: -2px;
+              border-radius: 4px;
+            }
+
+            QTabBar::tab:selected {
+              background: rgb(150, 150, 150);
+              border: 0px;
+              margin-bottom: -2px;
+            }
+            """
+        )
 
     def enterEvent(self, e):
         if self.window().showhelp is True:
@@ -235,7 +272,7 @@ class DrawerWidget(QtWidgets.QWidget):
         layout.addLayout(b_layout, 0, 2, 2, 1)
         layout.addLayout(save_layout, 0, 3, 2, 1)
 
-        layout.setAlignment(Qt.AlignCenter | Qt.AlignTop)
+        layout.setAlignment(Qt.AlignLeft | Qt.AlignCenter)
         self.setLayout(layout)
 
     def enterEvent(self, e):
@@ -267,7 +304,7 @@ class DrawerWidget(QtWidgets.QWidget):
     def draw_shape_callback(self, poly):
         @pyqtSlot()
         def cb():
-            self.window().hide()
+            # self.window().hide()
             self.m.f.canvas.show()
             self.m.f.canvas.activateWindow()
 

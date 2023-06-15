@@ -49,7 +49,7 @@ class TightBboxCheckBox(QtWidgets.QCheckBox):
             QtWidgets.QToolTip.showText(
                 e.globalPos(),
                 "<h3>Export figure with a tight bbox</h3>"
-                "If checked, The exported figure will use the smallest "
+                "If checked, the exported figure will use the smallest "
                 "bounding-box that contains all artists. "
                 "The input-box can be used to add a padding (in inches) on all sides."
                 "<p>"
@@ -77,7 +77,7 @@ class RefetchWMSCheckBox(QtWidgets.QCheckBox):
         if self.window().showhelp is True:
             QtWidgets.QToolTip.showText(
                 e.globalPos(),
-                "<h3>Frame transparency</h3>"
+                "<h3>Re-fetch WebMap services</h3>"
                 "Toggle re-fetching WebMap services on figure-export."
                 "<p>"
                 "If checked, all WebMap services will be re-fetched with respect to "
@@ -232,8 +232,9 @@ class SaveFileWidget(QtWidgets.QFrame):
         self.setStyleSheet(
             """
             SaveFileWidget{
-                border: 1px solid rgb(200,200,200);
+                border: 0px solid rgb(200,200,200);
                 border-radius: 10px;
+                background-color: rgb(200,200,200);
                 };
             """
         )

@@ -462,6 +462,9 @@ class NaturalEarth_features(object):
                 feature = self._get_cartopy_feature(self._scale)
                 feature._kwargs.update(kwargs)
                 art = m.ax.add_feature(feature)
+                art.set_label(
+                    f"NaturalEarth feature: {feature.category}  |  {feature.name}"
+                )
                 m.BM.add_bg_artist(art, layer=uselayer)
 
         def _set_scale(self, scale):

@@ -460,6 +460,10 @@ class DataManager:
             coll = self.m._get_coll(props, **self.m._coll_kwargs)
             coll.set_clim(self.m._vmin, self.m._vmax)
 
+            coll.set_label(
+                "EOmaps Dataset " f"({self.m.shape.name}  |  {self.z_data.shape})"
+            )
+
             if self.m.shape.name != "scatter_points":
                 # avoid use "autolim=True" since it can cause problems in
                 # case the data-limits are infinite (e.g. for projected

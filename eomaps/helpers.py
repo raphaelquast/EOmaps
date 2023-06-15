@@ -503,6 +503,26 @@ class LayoutEditor:
 
         self._current_bg = None
 
+    def add_info_text(self):
+        a = self.m.ax.text(
+            0.5,
+            0.05,
+            (
+                "0-9 : set snap-grid spacing  |  "
+                "SHIFT: select multiple axes\n"
+                "SCROLL: resize     "
+                "H: width  |  "
+                "V: height  |  "
+                "ctrl: histogram"
+            ),
+            transform=self.m.f.transFigure,
+            ha="center",
+            va="bottom",
+            fontsize=min(self.m.f.bbox.width * 72 / self.m.f.dpi / 60, 15),
+            bbox=dict(boxstyle="round", facecolor="w", edgecolor="none", alpha=0.85),
+        )
+        return a
+
     def _on_resize(self, *args, **kwargs):
         # update snap-grid on resize
         if self.modifier_pressed:
@@ -717,6 +737,11 @@ class LayoutEditor:
                 # if there was nothing picked there's nothing to do...
                 return
 
+            if hasattr(self, "_info_text") and self._info_text is not None:
+                self._info_text.remove()
+                # set to None to avoid crating the info-text again
+                self._info_text = None
+
             self._ax_picked = []
             self._cb_picked = []
             self._m_picked = []
@@ -853,6 +878,7 @@ class LayoutEditor:
         self.blit_artists()
 
     def blit_artists(self, draw_grid=True):
+
         artists = [*self._ax_picked]
 
         for cb in self._cb_picked:
@@ -1198,10 +1224,17 @@ class LayoutEditor:
         )
         self._snap_grid_artist = self.m.f.add_artist(l)
 
+        # only re-draw if info-text is not set to None
+        if getattr(self, "_info_text", 0) is not None:
+            self._info_text = self.add_info_text()
+
     def _remove_snap_grid(self):
         if hasattr(self, "_snap_grid_artist"):
             self._snap_grid_artist.remove()
             del self._snap_grid_artist
+        if hasattr(self, "_info_text") and self._info_text is not None:
+            self._info_text.remove()
+            del self._info_text
 
     def get_layout(self, filepath=None, override=False, precision=5):
         """
@@ -2240,11 +2273,17 @@ class BlitManager:
 
         allartists = set()
         for ax in axes:
+            # only include axes titles if they are actually set
+            # (otherwise empty artists appear in the widget)
+            titles = [
+                i
+                for i in (ax.title, ax._left_title, ax._right_title)
+                if len(i.get_text()) > 0
+            ]
+
             axartists = {
                 *ax._children,
-                ax.title,
-                ax._left_title,
-                ax._right_title,
+                *titles,
                 *([ax.legend_] if ax.legend_ is not None else []),
             }
 

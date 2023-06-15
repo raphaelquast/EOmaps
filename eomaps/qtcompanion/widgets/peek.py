@@ -193,7 +193,7 @@ class PeekMethodButtons(QtWidgets.QWidget):
         border = (
             "2px solid black"
             if self.rectangle_size < 0.99
-            else "2px solid rgb(200,200,200)"
+            else "2px solid rgb(140,140,140)"
         )
 
         self.rectangle_slider.setStyleSheet(
@@ -486,6 +486,34 @@ class PeekTabs(QtWidgets.QTabWidget):
         self.tabBarClicked.connect(self.tabbar_clicked)
         self.setCurrentIndex(0)
 
+        self.setTabPosition(0)
+        self.setStyleSheet(
+            """
+            QTabWidget::pane {
+              border: 0px;
+              top:0px;
+              background: rgb(200, 200, 200);
+              border-radius: 10px;
+            }
+
+            QTabBar::tab {
+              background: rgb(220, 220, 220);
+              border: 0px;
+              padding: 3px;
+              padding-bottom: 6px;
+              margin-left: 10px;
+              margin-bottom: -2px;
+              border-radius: 4px;
+            }
+
+            QTabBar::tab:selected {
+              background: rgb(200, 200, 200);
+              border: 0px;
+              margin-bottom: -2px;
+            }
+            """
+        )
+
     def setTabText(self, index, tip):
         # set ToolTip as well wenn setting the TabText
         super().setTabText(index, tip)
@@ -534,9 +562,10 @@ class PeekTabs(QtWidgets.QTabWidget):
             self.setTabIcon(self.indexOf(w), peek_icons[w.buttons._method])
             mod = w.modifier.text().strip()
 
-            txt = ""
             if mod != "":
-                txt += f"[{mod}] "
+                txt = f"[{mod}] "
+            else:
+                txt = "  "
 
             tabtext = txt + (w.current_layer if w.current_layer is not None else "")
 
