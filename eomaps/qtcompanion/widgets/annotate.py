@@ -45,9 +45,8 @@ class AnnotationDial(QtWidgets.QDial):
         if self.window().showhelp is True:
             QtWidgets.QToolTip.showText(
                 e.globalPos(),
-                "<h3>Set Text Position</h3>"
-                "Use the dial to set the position of the text-box relative to the "
-                "annotated point.",
+                "<h3>Set Text Rotation</h3>"
+                "Use the dial to set the rotation of the text-box.",
             )
 
 
@@ -104,6 +103,26 @@ class EditAnnotationsButton(QtWidgets.QPushButton):
                 "<li>Hold down <b>R</b> to rotate the text-box</li>"
                 "<li>Hold down <b>control</b> to move the anchor position</li>"
                 "</ul>",
+            )
+
+
+class BoxstyleComboBox(QtWidgets.QComboBox):
+    def enterEvent(self, e):
+        if self.window().showhelp is True:
+            QtWidgets.QToolTip.showText(
+                e.globalPos(),
+                "<h3>Box Style</h3>"
+                "Set the style of the text-box used by the annotation.",
+            )
+
+
+class ArrowstyleComboBox(QtWidgets.QComboBox):
+    def enterEvent(self, e):
+        if self.window().showhelp is True:
+            QtWidgets.QToolTip.showText(
+                e.globalPos(),
+                "<h3>Arrow Style</h3>"
+                "Set the style of the arrow used by the annotation.",
             )
 
 
@@ -195,7 +214,7 @@ class AddAnnotationInput(QtWidgets.QWidget):
 
         self.dial = AnnotationDial()
         self.dial.valueChanged.connect(self.dial_value_changed)
-        self.dial.setValue(225)
+        self.dial.setValue(180)
 
         # button to make annotations editable
         self.edit_annotations = EditAnnotationsButton("Edit Annotations")
@@ -204,7 +223,7 @@ class AddAnnotationInput(QtWidgets.QWidget):
         # drop-down menu to select boxstyle
 
         self._boxstyle = "round"
-        self.boxstyle_dropdown = QtWidgets.QComboBox()
+        self.boxstyle_dropdown = BoxstyleComboBox()
         self.boxstyle_dropdown.addItem("none")
 
         for i in box_styles:
@@ -217,7 +236,7 @@ class AddAnnotationInput(QtWidgets.QWidget):
         # drop-down menu to select arrow style
 
         self._arrowstyle = "fancy"
-        self.arrowstyle_dropdown = QtWidgets.QComboBox()
+        self.arrowstyle_dropdown = ArrowstyleComboBox()
         self.arrowstyle_dropdown.addItem("none")
 
         for i in arrow_styles:
