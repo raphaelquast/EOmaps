@@ -503,30 +503,52 @@ class LayoutEditor:
 
         self._current_bg = None
 
+        self._info_text = None
+        self._info_text_hidden = False
+
     def add_info_text(self):
-        a = self.m.ax.text(
-            0.5,
-            0.05,
+        self._info_text_hidden = False
+
+        a = self.m.f.text(
+            0.72,
+            0.98,
             (
-                "0-9 : set snap-grid spacing  |  "
-                "SHIFT: select multiple axes\n"
-                "SCROLL: resize     "
-                "H: width  |  "
-                "V: height  |  "
-                "ctrl: histogram"
+                "LayoutEditor Controls:\n\n"
+                "0 - 9:  Snap-grid spacing\n"
+                "SHIFT:  Multi-select\n"
+                "P:      Print to console\n"
+                "ESCAPE: Exit\n"
+                "\n"
+                "ARROW-KEYS:   Move\n"
+                "SCROLL (+/-): Resize\n"
+                "  H:    horizontal\n"
+                "  V:    vertical\n"
+                "  ctrl: histogram"
+                "\n\n(right-click to hide info)"
             ),
             transform=self.m.f.transFigure,
-            ha="center",
-            va="bottom",
-            fontsize=min(self.m.f.bbox.width * 72 / self.m.f.dpi / 60, 15),
-            bbox=dict(boxstyle="round", facecolor="w", edgecolor="none", alpha=0.85),
+            ha="left",
+            va="top",
+            fontsize=min(self.m.f.bbox.width * 72 / self.m.f.dpi / 60, 12),
+            bbox=dict(
+                boxstyle="round", facecolor=".8", edgecolor="k", lw=0.5, alpha=0.9
+            ),
+            zorder=1e6,
+            fontfamily="monospace",
         )
         return a
+
+    def _update_info_text(self):
+        if getattr(self, "_info_text", None) is not None:
+            self._info_text.set_fontsize(
+                min(self.m.f.bbox.width * 72 / self.m.f.dpi / 60, 15)
+            )
 
     def _on_resize(self, *args, **kwargs):
         # update snap-grid on resize
         if self.modifier_pressed:
             self._add_snap_grid()
+            self._update_info_text()
 
     @property
     def modifier_pressed(self):
@@ -729,18 +751,25 @@ class LayoutEditor:
         if (self.f.canvas.toolbar is not None) and self.f.canvas.toolbar.mode != "":
             return False
 
+        # toggle info-text visibility on left-click
+        if event.button == 3:
+            if getattr(self, "_info_text", None) is not None:
+                vis = not self._info_text.get_visible()
+                self._info_text.set_visible(vis)
+                self._info_text_hidden = not vis
+
         eventax = event.inaxes
 
         if eventax not in self.axes:
             # if no axes is clicked "unpick" previously picked axes
             if len(self._ax_picked) + len(self._cb_picked) == 0:
-                # if there was nothing picked there's nothing to do...
-                return
+                # if there was nothing picked there's nothing to do
+                # except updating the info-text visibility
 
-            if hasattr(self, "_info_text") and self._info_text is not None:
-                self._info_text.remove()
-                # set to None to avoid crating the info-text again
-                self._info_text = None
+                if getattr(self, "_info_text", None) is not None:
+                    self.blit_artists()
+
+                return
 
             self._ax_picked = []
             self._cb_picked = []
@@ -877,13 +906,14 @@ class LayoutEditor:
         self._color_axes()
         self.blit_artists()
 
-    def blit_artists(self, draw_grid=True):
-
+    def blit_artists(self):
         artists = [*self._ax_picked]
-
         for cb in self._cb_picked:
             artists.append(cb.ax_cb)
             artists.append(cb.ax_cb_plot)
+
+        if getattr(self, "_info_text", None) is not None:
+            artists.append(self._info_text)
 
         self.m.BM.blit_artists(artists, self._current_bg)
 
@@ -933,6 +963,13 @@ class LayoutEditor:
         ):
             self._undo_draggable()
             return
+        elif (event.key.lower() == "p") and (self.modifier_pressed):
+            s = "\nlayout = {\n    "
+            s += "\n    ".join(
+                f'"{key}": {val},' for key, val in self.get_layout().items()
+            )
+            s += "\n}\n"
+            print(s)
         elif (event.key.lower() == "q") and (self.modifier_pressed):
             print(
                 "\n##########################\n\n"
@@ -1101,6 +1138,10 @@ class LayoutEditor:
                     child.set_visible(False)
                     child.set_animated(True)
 
+        # only re-draw if info-text is None
+        if getattr(self, "_info_text", None) is None:
+            self._info_text = self.add_info_text()
+
         self._color_axes()
         self._attach_callbacks()
         self.m.redraw()
@@ -1116,6 +1157,10 @@ class LayoutEditor:
                 )
 
     def _undo_draggable(self):
+        if getattr(self, "_info_text", None) not in (None, False):
+            self._info_text.remove()
+            # set to None to avoid crating the info-text again
+            self._info_text = None
 
         self._history.clear()
         self._history_undone.clear()
@@ -1224,17 +1269,10 @@ class LayoutEditor:
         )
         self._snap_grid_artist = self.m.f.add_artist(l)
 
-        # only re-draw if info-text is not set to None
-        if getattr(self, "_info_text", 0) is not None:
-            self._info_text = self.add_info_text()
-
     def _remove_snap_grid(self):
         if hasattr(self, "_snap_grid_artist"):
             self._snap_grid_artist.remove()
             del self._snap_grid_artist
-        if hasattr(self, "_info_text") and self._info_text is not None:
-            self._info_text.remove()
-            del self._info_text
 
     def get_layout(self, filepath=None, override=False, precision=5):
         """
