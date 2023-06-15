@@ -271,7 +271,8 @@ class AnnotationEditor:
         else:
             for ann in self._annotations:
                 self._undo_ann_editable(ann.a)
-                self._drag_active = False
+
+            self._drag_active = False
 
             # reset last picked annotation on exit
             global _eomaps_picked_ann
