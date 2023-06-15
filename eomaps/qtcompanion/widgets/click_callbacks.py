@@ -421,14 +421,30 @@ class ClickCallbacks(QtWidgets.QFrame):
                     val.setEnabled(True)
 
                 if self.cids.get(key, None) is not None:
-                    val.setStyleSheet("background-color : rgb(200,100,100);")
+                    val.setStyleSheet(
+                        "background-color : rgb(200,100,100);"
+                        "padding: 4px;"
+                        "border-radius : 4px;"
+                    )
                 else:
-                    val.setStyleSheet("background-color : rgba(200,100,100,50);")
+                    val.setStyleSheet(
+                        "background-color : rgba(200,100,100,50);"
+                        "padding: 4px;"
+                        "border-radius : 4px;"
+                    )
             else:
                 if self.cids.get(key, None) is not None:
-                    val.setStyleSheet("background-color : rgb(100,150,100);")
+                    val.setStyleSheet(
+                        "background-color : rgb(100,150,100);"
+                        "padding: 4px;"
+                        "border-radius : 4px;"
+                    )
                 else:
-                    val.setStyleSheet("background-color : rgba(100,150,100,50);")
+                    val.setStyleSheet(
+                        "background-color : rgba(100,150,100,50);"
+                        "padding: 4px;"
+                        "border-radius : 4px;"
+                    )
 
     def remove_callback(self, key):
         mcid = self.cids.get(key, None)
