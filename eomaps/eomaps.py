@@ -490,7 +490,7 @@ class Maps(object):
             self._grid = GridFactory(self.parent)
 
         if keep_on_top:
-            self._keep_window_on_top()
+            self._set_keep_window_on_top(True)
 
     def _handle_spines(self):
         spine = self.ax.spines["geo"]
@@ -1008,18 +1008,55 @@ class Maps(object):
 
         return m2
 
-    def _keep_window_on_top(self):
+    def _get_keep_window_on_top(self):
+        if "qt" in plt.get_backend().lower():
+            from PyQt5 import QtCore
+
+            w = self.f.canvas.window()
+            return bool(w.windowFlags() & QtCore.Qt.WindowStaysOnTopHint)
+
+        return False
+
+    def _set_keep_window_on_top(self, q):
         # keep pyqt window on top
         if "qt" in plt.get_backend().lower():
             from PyQt5 import QtCore
 
             w = self.f.canvas.window()
+            ws = w.size()
+            if q:
+                # only do this if necessary to avoid flickering
+                # see https://stackoverflow.com/a/40007740/9703451
+                if not self._get_keep_window_on_top():
+                    w.setWindowFlags(w.windowFlags() | QtCore.Qt.WindowStaysOnTopHint)
+                    w.resize(ws)
+                    w.show()
 
-            # only do this if necessary to avoid flickering
-            # see https://stackoverflow.com/a/40007740/9703451
-            if not bool(w.windowFlags() & QtCore.Qt.WindowStaysOnTopHint):
-                w.setWindowFlags(QtCore.Qt.WindowStaysOnTopHint)
-                w.show()
+                    if self._companion_widget is not None:
+                        cw = self._companion_widget.window()
+                        cws = cw.size()
+                        cw.setWindowFlags(
+                            cw.windowFlags() | QtCore.Qt.WindowStaysOnTopHint
+                        )
+                        cw.resize(cws)
+                        cw.show()
+
+            else:
+                # only do this if necessary to avoid flickering
+                # see https://stackoverflow.com/a/40007740/9703451
+                if self._get_keep_window_on_top():
+                    w.setWindowFlags(w.windowFlags() & ~QtCore.Qt.WindowStaysOnTopHint)
+                    w.resize(ws)
+                    w.show()
+
+                    if self._companion_widget is not None:
+                        cw = self._companion_widget.window()
+                        cws = cw.size()
+                        cw.setWindowFlags(
+                            cw.windowFlags() & ~QtCore.Qt.WindowStaysOnTopHint
+                        )
+                        cw.resize(cws)
+                        cw.show()
 
     @property
     @wraps(shapes)
