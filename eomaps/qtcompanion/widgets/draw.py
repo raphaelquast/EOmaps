@@ -5,6 +5,10 @@ from .utils import GetColorWidget, AlphaSlider
 
 
 class TransparencySlider(AlphaSlider):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.set_alpha_stylesheet()
+
     def enterEvent(self, e):
         if self.window().showhelp is True:
             QtWidgets.QToolTip.showText(
@@ -14,6 +18,10 @@ class TransparencySlider(AlphaSlider):
 
 
 class LineWidthSlider(AlphaSlider):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.set_linewidth_stylesheet()
+
     def enterEvent(self, e):
         if self.window().showhelp is True:
             QtWidgets.QToolTip.showText(

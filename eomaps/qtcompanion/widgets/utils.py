@@ -376,6 +376,7 @@ class AlphaSlider(QtWidgets.QSlider):
         super().__init__(*args, **kwargs)
 
         self.alpha = 1
+        self._style = ""
 
         self.setRange(0, 100)
         self.setSingleStep(1)
@@ -384,7 +385,7 @@ class AlphaSlider(QtWidgets.QSlider):
         self.setValue(100)
 
         # self.setMinimumWidth(50)
-        self.setMaximumWidth(300)
+        # self.setMaximumWidth(300)
         self.setSizePolicy(
             QtWidgets.QSizePolicy.MinimumExpanding, QtWidgets.QSizePolicy.Minimum
         )
@@ -423,6 +424,66 @@ class AlphaSlider(QtWidgets.QSlider):
             """
         )
 
+    def set_stylesheet(self):
+        if self._style == "linewidth":
+            self.set_linewidth_stylesheet()
+        elif self._style == "alpha":
+            self.set_alpha_stylesheet()
+
     @pyqtSlot(int)
     def value_changed(self, i):
         self.alpha = i / 100
+        self.set_stylesheet()
+
+    def set_linewidth_stylesheet(self):
+        self._style = "linewidth"
+
+        self.setStyleSheet(
+            """
+            QSlider::handle:horizontal {
+                background-color: black;
+                border: none;
+                border-radius: 0px;
+                height: 10px;
+                width: 5px;
+                margin: -10px 0;
+                padding: -10px 0px;
+            }
+            QSlider::groove:horizontal {
+                border-radius: 1px;
+                height: 1px;
+                margin: 5px;
+                background-color: rgba(0,0,0,50);
+            }
+            QSlider::groove:horizontal:hover {
+                background-color: rgba(0,0,0,255);
+            }
+            """
+        )
+
+    def set_alpha_stylesheet(self):
+        self._style = "alpha"
+        a = self.alpha * 255
+        s = 12
+        self.setStyleSheet(
+            f"""
+            QSlider::handle:horizontal {{
+                background-color: rgba(0,0,0,{a});
+                border: 1px solid black;
+                border-radius: {s//2}px;
+                height: {s}px;
+                width: {s}px;
+                margin: -{s//2}px 0px;
+                padding: -{s//2}px 0px;
+            }}
+            QSlider::groove:horizontal {{
+                border-radius: 1px;
+                height: 1px;
+                margin: 5px;
+                background-color: rgba(0,0,0,50);
+            }}
+            QSlider::groove:horizontal:hover {{
+                background-color: rgba(0,0,0,255);
+            }}
+            """
+        )
