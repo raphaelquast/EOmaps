@@ -9,25 +9,11 @@ class TransparencySlider(AlphaSlider):
         super().__init__(*args, **kwargs)
         self.set_alpha_stylesheet()
 
-    def enterEvent(self, e):
-        if self.window().showhelp is True:
-            QtWidgets.QToolTip.showText(
-                e.globalPos(),
-                "<h3>Transparency</h3> Set the transparency of the facecolor.",
-            )
-
 
 class LineWidthSlider(AlphaSlider):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.set_linewidth_stylesheet()
-
-    def enterEvent(self, e):
-        if self.window().showhelp is True:
-            QtWidgets.QToolTip.showText(
-                e.globalPos(),
-                "<h3>Linewidth</h3> Set the linewidth of the shape boundary.",
-            )
 
 
 class SaveButton(QtWidgets.QPushButton):

@@ -8,7 +8,7 @@ if app is None:
     # if it does not exist then a QApplication is created
     app = QtWidgets.QApplication([])
 
-from .base import transparentWindow
+from .base import AlwaysOnTopWindow
 from .widgets.peek import PeekTabs
 from .widgets.editor import ArtistEditor
 from .widgets.wms import AddWMSMenuButton
@@ -66,13 +66,13 @@ class CompareTab(QtWidgets.QWidget):
         width = b_edit.fontMetrics().boundingRect(b_edit.text()).width()
         b_edit.setFixedWidth(width + 30)
 
-        l2 = QtWidgets.QHBoxLayout()
+        options_layout = QtWidgets.QHBoxLayout()
         if addwms:
-            l2.addWidget(addwms)
-        l2.addWidget(self.open_file_button)
-        l2.addWidget(b_edit)
-        l2.addStretch(1)
-        l2.addWidget(setextent)
+            options_layout.addWidget(addwms)
+        options_layout.addWidget(self.open_file_button)
+        options_layout.addWidget(b_edit)
+        options_layout.addStretch(1)
+        options_layout.addWidget(setextent)
 
         layer_tab_layout = QtWidgets.QHBoxLayout()
         layer_tab_layout.setAlignment(Qt.AlignLeft)
@@ -86,7 +86,7 @@ class CompareTab(QtWidgets.QWidget):
         layout = QtWidgets.QVBoxLayout()
         layout.addWidget(peektabs)
         layout.addWidget(click_cbs)
-        layout.addLayout(l2)
+        layout.addLayout(options_layout)
         layout.addStretch(1)
         layout.addLayout(layer_tab_layout)
         layout.addWidget(self.save_widget)
@@ -105,6 +105,9 @@ class ControlTabs(QtWidgets.QTabWidget):
 
         # connect the open-file-button to the button from the "Open Files" tab
         self.tab_compare.open_file_button.clicked.connect(self.trigger_open_file_button)
+        self.tab_edit.edit_actions.open_file_button.clicked.connect(
+            self.trigger_open_file_button
+        )
 
         self.addTab(self.tab_compare, "Compare")
         self.addTab(self.tab_edit, "Edit")
@@ -142,8 +145,8 @@ class ControlTabs(QtWidgets.QTabWidget):
             }
 
             QTabBar::tab:selected {
-              background: rgb(150, 150, 150);
-              border: 0px;
+              background: rgb(200, 200, 200);
+              border:1px solid rgb(150, 150, 150);
               margin-bottom: 2px;
             }
             """
@@ -172,7 +175,7 @@ class ControlTabs(QtWidgets.QTabWidget):
         self.tab_open.dropEvent(e)
 
 
-class MenuWindow(transparentWindow):
+class MenuWindow(AlwaysOnTopWindow):
 
     cmapsChanged = pyqtSignal()
     clipboardKwargsChanged = pyqtSignal()
@@ -181,7 +184,7 @@ class MenuWindow(transparentWindow):
 
     def __init__(self, *args, m=None, **kwargs):
 
-        # assign m before calling the init of the transparentWindow
+        # assign m before calling the init of the AlwaysOnTopWindow
         # to show the layer-selector!
         self.m = m
 
@@ -194,7 +197,7 @@ class MenuWindow(transparentWindow):
         self.tabs = ControlTabs(m=self.m)
         self.tabs.setMouseTracking(True)
 
-        self.cb_transparentQ()
+        # self.cb_transparentQ()
 
         menu_layout = QtWidgets.QVBoxLayout()
         menu_layout.addWidget(self.tabs)

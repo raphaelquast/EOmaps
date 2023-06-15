@@ -131,6 +131,19 @@ class InputCRS(LineEditComplete):
 
         return t
 
+    def enterEvent(self, e):
+        if self.window().showhelp is True:
+            QtWidgets.QToolTip.showText(
+                e.globalPos(),
+                "<h3>CRS</h3>"
+                "Set the coordinate reference system of the coordinates (x, y)."
+                "<ul>"
+                "<li>A name of a crs accessible via <code>Maps.CRS</code></li>"
+                "<li>An EPSG code</li>"
+                "<li>A PROJ or WKT string</li>"
+                "</ul>",
+            )
+
 
 class CmapDropdown(QtWidgets.QComboBox):
     def __init__(self, *args, startcmap="viridis", **kwargs):
@@ -147,6 +160,14 @@ class CmapDropdown(QtWidgets.QComboBox):
         idx = self.findText(startcmap)
         if idx != -1:
             self.setCurrentIndex(idx)
+
+    def enterEvent(self, e):
+        if self.window().showhelp is True:
+            QtWidgets.QToolTip.showText(
+                e.globalPos(),
+                "<h3>Colormap</h3>"
+                "Set the colormap that should be used when plotting the data.",
+            )
 
     def wheelEvent(self, e):
         # ignore mouse-wheel events to disable changing the colormap with the mousewheel
@@ -423,6 +444,19 @@ class AlphaSlider(QtWidgets.QSlider):
 
             """
         )
+
+    def enterEvent(self, e):
+        if self.window().showhelp is True:
+            if self._style == "linewidth":
+                QtWidgets.QToolTip.showText(
+                    e.globalPos(),
+                    "<h3>Linewidth</h3> Set the linewidth of the shape boundary.",
+                )
+            elif self._style == "alpha":
+                QtWidgets.QToolTip.showText(
+                    e.globalPos(),
+                    "<h3>Transparency</h3> Set the transparency of the facecolor.",
+                )
 
     def set_stylesheet(self):
         if self._style == "linewidth":

@@ -139,21 +139,15 @@ class ZorderInput(QtWidgets.QLineEdit):
 
 
 class TransparencySlider(AlphaSlider):
-    def enterEvent(self, e):
-        if self.window().showhelp is True:
-            QtWidgets.QToolTip.showText(
-                e.globalPos(),
-                "<h3>Facecolor Transparency</h3> "
-                "Set the transparency for the facecolor of the feature.",
-            )
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.set_alpha_stylesheet()
 
 
 class LinewidthSlider(AlphaSlider):
-    def enterEvent(self, e):
-        if self.window().showhelp is True:
-            QtWidgets.QToolTip.showText(
-                e.globalPos(), "<h3>Linewidth</h3> Set the linewidth of the feature"
-            )
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.set_linewidth_stylesheet()
 
 
 class RemoveArtistToolButton(QtWidgets.QToolButton):

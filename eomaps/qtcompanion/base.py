@@ -24,6 +24,25 @@ class TransparentQToolButton(QtWidgets.QToolButton):
             )
 
 
+class AlwaysOnTopToolButton(QtWidgets.QToolButton):
+    def enterEvent(self, e):
+        if self.window().showhelp is True:
+            QtWidgets.QToolTip.showText(
+                e.globalPos(),
+                "<h3>Keep plot window on top</h3>"
+                "If activated, the figure will remain <b>always on top</b> of other"
+                " applications",
+            )
+
+    def sizeHint(self):
+        hint = super().sizeHint()
+        if hint.width() & 1:
+            hint.setWidth(hint.width() + 1)
+        if hint.height() & 1:
+            hint.setHeight(hint.height() + 1)
+        return hint
+
+
 class ToolBar(QtWidgets.QToolBar):
     def __init__(
         self, *args, m=None, left_widget=None, title=None, on_close=None, **kwargs
@@ -55,9 +74,12 @@ class ToolBar(QtWidgets.QToolBar):
         self.b_minmax.clicked.connect(self.maximize_button_callback)
 
         self.b_showhelp = QtWidgets.QToolButton()
-        self.b_showhelp.setText("?")
+        self.b_showhelp.setIcon(QtGui.QIcon(str(iconpath / "info.png")))
+        self.b_showhelp.setFixedSize(25, 25)
+
+        # self.b_showhelp.setText("?")
         self.b_showhelp.setCheckable(True)
-        self.b_showhelp.setAutoRaise(True)
+        self.b_showhelp.setAutoRaise(False)
         self.b_showhelp.toggled.connect(self.toggle_show_help)
         self.b_showhelp.setToolTip("Toggle showing help-tooltips.")
 
@@ -87,15 +109,23 @@ class ToolBar(QtWidgets.QToolBar):
         self.setMovable(False)
 
         self.setStyleSheet(
-            "QToolBar{border: none; spacing:5px;}"
-            'QToolButton[autoRaise="true"]{text-align:center;}'
-            "QPushButton{border:none;}"
             """
-            QToolButton:checked {background-color:rgba(255,50,50, 150);
-            border: none;
-            border-radius: 5px;}
+            QToolBar{
+                border: none;
+                spacing:5px;
+                }
+            QToolButton:checked {
+                border:none;
+                background-color:rgba(255,50,50, 150);
+                border-radius: 5px;
+                }
+            QPushButton{
+                border:none;
+                border-radius: 5px;
+                }
             """
         )
+
         self.setContentsMargins(0, 0, 0, 0)
 
         self.press_pos = None
@@ -104,10 +134,10 @@ class ToolBar(QtWidgets.QToolBar):
     def toggle_show_help(self):
         if self.b_showhelp.isChecked():
             self.window().showhelp = True
-            self.b_showhelp.setText("Click here to hide help tooltips")
+            # self.b_showhelp.setText("Click to hide help tooltips")
         else:
             self.window().showhelp = False
-            self.b_showhelp.setText("?")
+            # self.b_showhelp.setText("?")
 
     @pyqtSlot()
     def close_button_callback(self):
@@ -175,6 +205,44 @@ class NewWindow(QtWidgets.QMainWindow):
     @pyqtSlot()
     def on_close(self, e):
         self.close()
+
+
+class AlwaysOnTopWindow(QtWidgets.QMainWindow):
+    def __init__(self, *args, m=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.out_alpha = 0.25
+        self.m = m
+
+        # get the current PyQt app and connect the focus-change callback
+        self.app = QtWidgets.QApplication([]).instance()
+
+        # make sure the window does not steal focus from the matplotlib-canvas
+        # on show (otherwise callbacks are inactive as long as the window is focused!)
+        self.setAttribute(Qt.WA_ShowWithoutActivating)
+        self.setWindowFlags(
+            Qt.FramelessWindowHint | Qt.Dialog  # | Qt.WindowStaysOnTopHint
+        )
+        self.setFocusPolicy(Qt.ClickFocus)
+
+        self.on_top = AlwaysOnTopToolButton()
+        self.on_top.setStyleSheet("border:none")
+        self.on_top.setIcon(QtGui.QIcon(str(iconpath / "eye_closed.png")))
+
+        self.toolbar = ToolBar(m=self.m, left_widget=self.on_top)
+        self.on_top.clicked.connect(self.toggle_keep_on_top)
+
+        self.addToolBar(self.toolbar)
+
+    @pyqtSlot()
+    def toggle_keep_on_top(self, *args, **kwargs):
+        q = self.m._get_keep_window_on_top()
+
+        if q:
+            self.m._set_keep_window_on_top(False)
+            self.on_top.setIcon(QtGui.QIcon(str(iconpath / "eye_closed.png")))
+        else:
+            self.m._set_keep_window_on_top(True)
+            self.on_top.setIcon(QtGui.QIcon(str(iconpath / "eye_open.png")))
 
 
 class transparentWindow(QtWidgets.QMainWindow):

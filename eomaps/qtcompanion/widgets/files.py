@@ -54,6 +54,109 @@ def _get_gdf_file_endings():
     return file_endings
 
 
+class AddColorbarCheckbox(QtWidgets.QCheckBox):
+    def enterEvent(self, e):
+        if self.window().showhelp is True:
+            QtWidgets.QToolTip.showText(
+                e.globalPos(),
+                "<h3>Add Colorbar</h3>"
+                "If checked, a colorbar will be added for the data.",
+            )
+
+
+class LayerInput(LineEditComplete):
+    def enterEvent(self, e):
+        if self.window().showhelp is True:
+            QtWidgets.QToolTip.showText(
+                e.globalPos(),
+                "<h3>Layer</h3>"
+                "Set the layer at which the dataset should be plotted.",
+            )
+
+
+class XInput(LineEditComplete):
+    def enterEvent(self, e):
+        if self.window().showhelp is True:
+            QtWidgets.QToolTip.showText(
+                e.globalPos(),
+                "<h3>Set X Coordinate</h3>"
+                "Set the variable that should be used as x-coordinate.",
+            )
+
+
+class YInput(LineEditComplete):
+    def enterEvent(self, e):
+        if self.window().showhelp is True:
+            QtWidgets.QToolTip.showText(
+                e.globalPos(),
+                "<h3>Set Y Coordinate</h3>"
+                "Set the variable that should be used as Y-coordinate.",
+            )
+
+
+class ParameterInput(LineEditComplete):
+    def enterEvent(self, e):
+        if self.window().showhelp is True:
+            QtWidgets.QToolTip.showText(
+                e.globalPos(),
+                "<h3>Set Parameter</h3>"
+                "Set the variable that should be used as data.",
+            )
+
+
+class IDInput(LineEditComplete):
+    def enterEvent(self, e):
+        if self.window().showhelp is True:
+            QtWidgets.QToolTip.showText(
+                e.globalPos(),
+                "<h3>Set ID</h3>"
+                "Set the variable that should be used to identify datapoints.",
+            )
+
+
+class ZorderInput(QtWidgets.QLineEdit):
+    def enterEvent(self, e):
+        if self.window().showhelp is True:
+            QtWidgets.QToolTip.showText(
+                e.globalPos(),
+                "<h3>Set zorder</h3>"
+                "Set the zorder (e.g. the vertical stacking order) that will be "
+                "assigned to the artist.",
+            )
+
+
+class VminInput(QtWidgets.QLineEdit):
+    def enterEvent(self, e):
+        if self.window().showhelp is True:
+            QtWidgets.QToolTip.showText(
+                e.globalPos(),
+                "<h3>Set vmin</h3>"
+                "Set the lower boundary that is used for color scaling."
+                "(by default the minimal value of the dataset is used)",
+            )
+
+
+class VmaxInput(QtWidgets.QLineEdit):
+    def enterEvent(self, e):
+        if self.window().showhelp is True:
+            QtWidgets.QToolTip.showText(
+                e.globalPos(),
+                "<h3>Set vmax</h3>"
+                "Set the upper boundary that is used for color scaling."
+                "(by default the maximal value of the dataset is used)",
+            )
+
+
+class MinMaxUpdateButton(QtWidgets.QPushButton):
+    def enterEvent(self, e):
+        if self.window().showhelp is True:
+            QtWidgets.QToolTip.showText(
+                e.globalPos(),
+                "<h3>Set vmin/vmax to data limits</h3>"
+                "Identify vmin/vmax from the selected dataset.",
+            )
+
+
 class ShapeSelector(QtWidgets.QFrame):
     _ignoreargs = ["shade_hook", "agg_hook"]
 
@@ -102,6 +205,18 @@ class ShapeSelector(QtWidgets.QFrame):
 
         self.shape_selector.setCurrentIndex(self.shape_selector.findText(self.shape))
         self.shape_changed(self.shape)
+
+    def enterEvent(self, e):
+        if self.window().showhelp is True:
+            QtWidgets.QToolTip.showText(
+                e.globalPos(),
+                "<h3>Set Plot Shape</h3>"
+                "Set the plot-shape that is used to visualize the dataset."
+                "<br><br>"
+                "<b>NOTE:</b> Some shapes require more computational effort than "
+                "others! Checkout the docs on how to choose the shape that fits "
+                "your needs!",
+            )
 
     def set_shape(self, shape):
         self.shape_selector.setCurrentIndex(self.shape_selector.findText(shape))
@@ -203,20 +318,6 @@ class PlotFileWidget(QtWidgets.QWidget):
     ):
         """
         A widget to add a layer from a file
-
-        Parameters
-        ----------
-        *args : TYPE
-            DESCRIPTION.
-        m : TYPE, optional
-            DESCRIPTION. The default is None.
-        **kwargs : TYPE
-            DESCRIPTION.
-
-        Returns
-        -------
-        None.
-
         """
         super().__init__(*args, **kwargs)
 
@@ -242,11 +343,11 @@ class PlotFileWidget(QtWidgets.QWidget):
         scroll.setWidget(self.file_info)
 
         # add colorbar checkbox
-        self.cb_colorbar = QtWidgets.QCheckBox("Add colorbar")
+        self.cb_colorbar = AddColorbarCheckbox("Add colorbar")
 
         # layer
         self.layer_label = QtWidgets.QLabel("<b>Layer:</b>")
-        self.layer = LineEditComplete()
+        self.layer = LayerInput()
         self.layer.setPlaceholderText(str(self.m.BM.bg_layer))
 
         setlayername = QtWidgets.QWidget()
@@ -257,7 +358,14 @@ class PlotFileWidget(QtWidgets.QWidget):
 
         # shape selector (with shape options)
         self.shape_selector = ShapeSelector(m=self.m, default_shape=self.default_shape)
-        self.setStyleSheet("ShapeSelector{border:1px dashed;}")
+
+        self.setStyleSheet(
+            """
+            ShapeSelector{
+                border:1px dashed;
+                }
+            """
+        )
 
         # colormaps
         self.cmaps = CmapDropdown()
@@ -268,11 +376,11 @@ class PlotFileWidget(QtWidgets.QWidget):
 
         # vmin / vmax
         vminlabel, vmaxlabel = QtWidgets.QLabel("vmin="), QtWidgets.QLabel("vmax=")
-        self.vmin, self.vmax = QtWidgets.QLineEdit(), QtWidgets.QLineEdit()
+        self.vmin, self.vmax = VminInput(), VmaxInput()
         self.vmin.setValidator(validator)
         self.vmax.setValidator(validator)
 
-        self.minmaxupdate = QtWidgets.QPushButton("🗘")
+        self.minmaxupdate = MinMaxUpdateButton("🗘")
         self.minmaxupdate.clicked.connect(self.do_update_vals)
 
         minmaxlayout = QtWidgets.QHBoxLayout()
@@ -307,10 +415,10 @@ class PlotFileWidget(QtWidgets.QWidget):
         self.options_layout = QtWidgets.QHBoxLayout()
         self.options_layout.addWidget(options_split)
 
-        self.x = LineEditComplete("x")
-        self.y = LineEditComplete("y")
-        self.parameter = LineEditComplete("param")
-        self.ID = LineEditComplete("ID")
+        self.x = XInput("x")
+        self.y = YInput("y")
+        self.parameter = ParameterInput("param")
+        self.ID = IDInput("ID")
         self.crs = InputCRS()
 
         # update info-text with respect to the selected columns
@@ -976,6 +1084,7 @@ class PlotGeoDataFrameWidget(QtWidgets.QWidget):
 
         # alpha of facecolor
         self.alphaslider = AlphaSlider(Qt.Horizontal)
+        self.alphaslider.set_alpha_stylesheet()
         self.alphaslider.valueChanged.connect(
             lambda i: self.colorselector.set_alpha(i / 100)
         )
@@ -983,13 +1092,15 @@ class PlotGeoDataFrameWidget(QtWidgets.QWidget):
 
         # linewidth
         self.linewidthslider = AlphaSlider(Qt.Horizontal)
+        self.linewidthslider.set_linewidth_stylesheet()
+
         self.linewidthslider.valueChanged.connect(
             lambda i: self.colorselector.set_linewidth(i / 10)
         )
         self.linewidthslider.valueChanged.connect(self.update_props)
 
         # zorder
-        self.zorder = QtWidgets.QLineEdit("10")
+        self.zorder = ZorderInput("10")
         validator = QtGui.QIntValidator()
         self.zorder.setValidator(validator)
         self.zorder.setMaximumWidth(30)
@@ -1010,7 +1121,7 @@ class PlotGeoDataFrameWidget(QtWidgets.QWidget):
 
         # layer
         layerlabel = QtWidgets.QLabel("Layer:")
-        self.layer = LineEditComplete()
+        self.layer = LayerInput()
         self.layer.setPlaceholderText(str(self.m.BM.bg_layer))
 
         setlayername = QtWidgets.QWidget()
@@ -1206,6 +1317,33 @@ class OpenFileTabs(QtWidgets.QTabWidget):
         # don't show the close button for this tab
         self.tabBar().setTabButton(self.count() - 1, self.tabBar().RightSide, None)
 
+        self.setStyleSheet(
+            """
+            QTabWidget::pane {
+              border: 0px;
+              top:0px;
+              background: rgb(200, 200, 200);
+              border-radius: 10px;
+            }
+
+            QTabBar::tab {
+              background: rgb(220, 220, 220);
+              border: 0px;
+              padding: 3px;
+              padding-bottom: 6px;
+              margin-left: 10px;
+              margin-bottom: -2px;
+              border-radius: 4px;
+            }
+
+            QTabBar::tab:selected {
+              background: rgb(200, 200, 200);
+              border: 0px;
+              margin-bottom: -2px;
+            }
+            """
+        )
+
     def close_handler(self, index):
         widget = self.widget(index)
 
@@ -1284,6 +1422,9 @@ class OpenFileTabs(QtWidgets.QTabWidget):
                     )
                 )[0]
             )
+            # in case no file is selected, don't raise an error!
+            if len(file_path.name) == 0:
+                return
         elif isinstance(file_path, str):
             file_path = Path(file_path)
 
