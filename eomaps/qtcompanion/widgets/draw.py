@@ -1,5 +1,5 @@
 from PyQt5 import QtWidgets
-from PyQt5.QtCore import Qt, pyqtSlot
+from PyQt5.QtCore import Qt, pyqtSlot, pyqtSignal
 
 from .utils import GetColorWidget, AlphaSlider
 
@@ -98,6 +98,7 @@ class DrawerTabs(QtWidgets.QTabWidget):
 
         w = self._get_new_drawer()
         self.addTab(w, "0")
+        self.update_tab_icon(w=w)
 
         # a tab that is used to create new tabs
         newtabwidget = QtWidgets.QWidget()
@@ -162,6 +163,7 @@ class DrawerTabs(QtWidgets.QTabWidget):
         if self.tabText(index) == "+":
             w = self._get_new_drawer()
             self.insertTab(self.count() - 1, w, "0")
+            self.update_tab_icon(w=w)
 
     @pyqtSlot(int)
     def close_handler(self, index):
@@ -190,7 +192,7 @@ class DrawerTabs(QtWidgets.QTabWidget):
 
         w.drawer._on_new_poly.append(cb)
         w.drawer._on_poly_remove.append(cb)
-
+        w.colorSelected.connect(self.update_tab_icon)
         return w
 
     def set_layer(self, layer):
@@ -198,8 +200,16 @@ class DrawerTabs(QtWidgets.QTabWidget):
             if self.tabText(i) != "+":
                 self.widget(i).set_layer(layer)
 
+    @pyqtSlot()
+    def update_tab_icon(self, w=None):
+        if w is None:
+            w = self.sender()
+        self.setTabIcon(self.indexOf(w), w.get_tab_icon())
+
 
 class DrawerWidget(QtWidgets.QWidget):
+
+    colorSelected = pyqtSignal()
 
     _polynames = {
         "Polygon": "polygon",
@@ -235,6 +245,8 @@ class DrawerWidget(QtWidgets.QWidget):
 
         self.colorselector = GetColorWidget()
 
+        self.colorselector.cb_colorselected = self.color_selected
+
         self.alphaslider = TransparencySlider(Qt.Horizontal)
         self.alphaslider.valueChanged.connect(self.set_alpha_with_slider)
         self.alphaslider.setValue(50)
@@ -260,6 +272,9 @@ class DrawerWidget(QtWidgets.QWidget):
 
         layout.setAlignment(Qt.AlignLeft | Qt.AlignCenter)
         self.setLayout(layout)
+
+    def color_selected(self):
+        self.colorSelected.emit()
 
     def enterEvent(self, e):
         if self.window().showhelp is True:
@@ -352,10 +367,12 @@ class DrawerWidget(QtWidgets.QWidget):
     @pyqtSlot(int)
     def set_alpha_with_slider(self, i):
         self.colorselector.set_alpha(i / 100)
+        self.colorSelected.emit()
 
     @pyqtSlot(int)
     def set_linewidth_with_slider(self, i):
         self.colorselector.set_linewidth(i / 10)
+        self.colorSelected.emit()
 
     def _new_drawer(self):
         self.drawer = self.m.draw.new_drawer()
@@ -367,3 +384,41 @@ class DrawerWidget(QtWidgets.QWidget):
 
     def set_layer(self, layer):
         self.drawer.set_layer(layer)
+
+    @pyqtSlot()
+    def get_tab_icon(self):
+        from PyQt5 import QtGui
+        from PyQt5.QtCore import QRectF
+
+        canvas = QtGui.QPixmap(20, 20)
+        canvas.fill(Qt.transparent)
+
+        painter = QtGui.QPainter(canvas)
+        painter.setRenderHints(QtGui.QPainter.HighQualityAntialiasing)
+
+        painter.setBrush(QtGui.QBrush(self.colorselector.facecolor, Qt.SolidPattern))
+
+        if self.colorselector.linewidth > 0.01:
+            painter.setPen(
+                QtGui.QPen(
+                    self.colorselector.edgecolor,
+                    0.5 * self.colorselector.linewidth,
+                    Qt.SolidLine,
+                )
+            )
+        else:
+            painter.setPen(
+                QtGui.QPen(
+                    self.colorselector.facecolor,
+                    0.5 * self.colorselector.linewidth,
+                    Qt.SolidLine,
+                )
+            )
+
+        rect = QRectF(2.5, 2.5, 15, 15)
+        painter.drawRoundedRect(rect, 5, 5)
+        painter.end()
+
+        icon = QtGui.QIcon(canvas)
+
+        return icon
