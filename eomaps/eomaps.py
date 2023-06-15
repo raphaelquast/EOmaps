@@ -1822,6 +1822,7 @@ class Maps(object):
                     self.cb.pick[temporary_picker].add_temporary_artist(art)
         else:
             for art, prefix in zip(artists, prefixes):
+                art.set_label(f"EOmaps GeoDataframe ({prefix.lstrip('_')}, {len(gdf)})")
                 self.BM.add_bg_artist(art, layer)
         return artists
 
