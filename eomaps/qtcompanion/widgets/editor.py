@@ -1,5 +1,6 @@
 from PyQt5 import QtCore, QtWidgets, QtGui
 from PyQt5.QtCore import Qt, pyqtSignal, pyqtSlot, QSize
+from PyQt5.QtGui import QFont
 
 from matplotlib.colors import to_rgba_array
 
@@ -929,8 +930,8 @@ class ArtistEditorTabs(LayerArtistTabs):
         if name.startswith("__EOmaps_exclude"):
             return [(None, None)]
 
-        if len(name) > 50:
-            label = QtWidgets.QLabel(name[:46] + "... >")
+        if len(name) > 80:
+            label = QtWidgets.QLabel(name[:76] + "... >")
             label.setToolTip(name)
         else:
             label = QtWidgets.QLabel(name)
@@ -939,8 +940,9 @@ class ArtistEditorTabs(LayerArtistTabs):
             "border-style: solid;"
             "border-width: 1px;"
             "border-color: rgba(0, 0, 0,100);"
+            "padding-left: 10px;"
         )
-        label.setAlignment(Qt.AlignCenter)
+        label.setAlignment(Qt.AlignLeft)
         label.setMaximumHeight(25)
 
         # remove
@@ -1361,13 +1363,24 @@ class ArtistEditor(QtWidgets.QWidget):
         self.addannotation = AddAnnotationInput(m=self.m)
         self.draw = DrawerTabs(m=self.m)
 
+        # add a margin to the top of the drawer widget
+        d = QtWidgets.QWidget()
+        layout = QtWidgets.QVBoxLayout()
+        layout.addWidget(self.draw)
+        layout.setContentsMargins(0, 5, 0, 0)
+        d.setLayout(layout)
+
         # make sure the layer is properly set
         self.set_layer()
 
         self.option_tabs = OptionTabs()
         self.option_tabs.addTab(self.addfeature, "Add Features")
         self.option_tabs.addTab(self.addannotation, "Add Annotations")
-        self.option_tabs.addTab(self.draw, "Draw Shapes")
+        self.option_tabs.addTab(d, "Draw Shapes")
+
+        # set font properties before the stylesheet to avoid clipping of bold text!
+        font = QFont("sans seriv", 8, QFont.Bold, False)
+        self.option_tabs.setFont(font)
 
         self.option_tabs.setStyleSheet(
             """
@@ -1381,17 +1394,19 @@ class ArtistEditor(QtWidgets.QWidget):
             QTabBar::tab {
               background: rgb(220, 220, 220);
               border: 0px;
-              padding: 3px;
+              padding: 5px;
               padding-bottom: 6px;
               margin-left: 10px;
               margin-bottom: -2px;
               border-radius: 4px;
+              font-weight: normal;
             }
 
             QTabBar::tab:selected {
               background: rgb(200, 200, 200);
               border: 0px;
               margin-bottom: -2px;
+              font-weight: bold;
             }
             """
         )
@@ -1415,6 +1430,21 @@ class ArtistEditor(QtWidgets.QWidget):
 
         splitter.setStretchFactor(0, 0)
         splitter.setStretchFactor(1, 1)
+
+        splitter.setStyleSheet(
+            """
+            QSplitter::handle {
+                background: rgb(220,220,220);
+                margin: 1px;
+                margin-left: 20px;
+                margin-right: 20px;
+                height:1px;
+                }
+            QSplitter::handle:pressed {
+                background: rgb(180,180,180);
+            }
+            """
+        )
 
         layout = QtWidgets.QVBoxLayout()
         layout.addWidget(splitter)

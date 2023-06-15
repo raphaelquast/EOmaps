@@ -133,12 +133,14 @@ class DrawerTabs(QtWidgets.QTabWidget):
               margin-left: 10px;
               margin-bottom: -2px;
               border-radius: 4px;
+              font-weight: normal;
             }
 
             QTabBar::tab:selected {
               background: rgb(150, 150, 150);
               border: 0px;
               margin-bottom: -2px;
+              font-weight: normal;
             }
             """
         )
