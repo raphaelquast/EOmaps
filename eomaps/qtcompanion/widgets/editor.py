@@ -203,6 +203,8 @@ class AddFeatureWidget(QtWidgets.QFrame):
         self.colorselector = GetColorWidget(facecolor="#aaaa7f")
         self.colorselector.cb_colorselected = self.update_on_color_selection
 
+        self.colorselector.setMaximumWidth(60)
+
         self.alphaslider = TransparencySlider(Qt.Horizontal)
         self.alphaslider.valueChanged.connect(self.set_alpha_with_slider)
         self.alphaslider.valueChanged.connect(self.update_props)
@@ -216,6 +218,7 @@ class AddFeatureWidget(QtWidgets.QFrame):
         validator = QtGui.QIntValidator()
         self.zorder.setValidator(validator)
         self.zorder.setMaximumWidth(30)
+        self.zorder.setMaximumHeight(20)
         self.zorder.setSizePolicy(
             QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Minimum
         )
@@ -228,18 +231,21 @@ class AddFeatureWidget(QtWidgets.QFrame):
 
         zorder_layout = QtWidgets.QHBoxLayout()
         zorder_layout.addWidget(zorder_label)
-        zorder_layout.addWidget(self.zorder)
+        zorder_layout.addWidget(self.zorder, 0)
         zorder_label.setAlignment(Qt.AlignRight | Qt.AlignCenter)
 
-        layout = QtWidgets.QGridLayout()
-        layout.addWidget(self.colorselector, 0, 0, 2, 1)
-        layout.addWidget(self.alphaslider, 0, 1)
-        layout.addWidget(self.linewidthslider, 1, 1)
-        layout.addLayout(zorder_layout, 0, 2)
-        layout.addWidget(self.selector, 1, 2)
+        layout_buttons = QtWidgets.QVBoxLayout()
+        layout_buttons.addWidget(self.selector)
+        layout_buttons.addLayout(zorder_layout)
 
-        # set stretch factor to expand the color-selector first
-        layout.setColumnStretch(0, 1)
+        layout_sliders = QtWidgets.QVBoxLayout()
+        layout_sliders.addWidget(self.alphaslider)
+        layout_sliders.addWidget(self.linewidthslider)
+
+        layout = QtWidgets.QHBoxLayout()
+        layout.addLayout(layout_buttons)
+        layout.addWidget(self.colorselector)
+        layout.addLayout(layout_sliders)
 
         layout.setAlignment(Qt.AlignLeft | Qt.AlignCenter)
         self.setLayout(layout)

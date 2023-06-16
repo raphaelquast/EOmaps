@@ -246,8 +246,8 @@ class DrawerWidget(QtWidgets.QWidget):
             polybuttons.append(poly_b)
 
         self.colorselector = GetColorWidget()
-
         self.colorselector.cb_colorselected = self.color_selected
+        self.colorselector.setMaximumWidth(60)
 
         self.alphaslider = TransparencySlider(Qt.Horizontal)
         self.alphaslider.valueChanged.connect(self.set_alpha_with_slider)
@@ -265,12 +265,15 @@ class DrawerWidget(QtWidgets.QWidget):
         for b in polybuttons:
             b_layout.addWidget(b)
 
-        layout = QtWidgets.QGridLayout()
-        layout.addWidget(self.colorselector, 0, 0, 2, 1)
-        layout.addWidget(self.alphaslider, 0, 1)
-        layout.addWidget(self.linewidthslider, 1, 1)
-        layout.addLayout(b_layout, 0, 2, 2, 1)
-        layout.addLayout(save_layout, 0, 3, 2, 1)
+        layout_sliders = QtWidgets.QVBoxLayout()
+        layout_sliders.addWidget(self.alphaslider)
+        layout_sliders.addWidget(self.linewidthslider)
+
+        layout = QtWidgets.QHBoxLayout()
+        layout.addLayout(b_layout)
+        layout.addLayout(save_layout)
+        layout.addWidget(self.colorselector)
+        layout.addLayout(layout_sliders)
 
         layout.setAlignment(Qt.AlignLeft | Qt.AlignCenter)
         self.setLayout(layout)
