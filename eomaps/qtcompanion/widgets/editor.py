@@ -1,5 +1,5 @@
 from PyQt5 import QtCore, QtWidgets, QtGui
-from PyQt5.QtCore import Qt, pyqtSignal, pyqtSlot, QSize
+from PyQt5.QtCore import Qt, pyqtSignal, pyqtSlot, QSize, QPointF
 from PyQt5.QtGui import QFont
 
 from matplotlib.colors import to_rgba_array
@@ -7,7 +7,7 @@ from matplotlib.colors import to_rgba_array
 from ...inset_maps import InsetMaps
 from ..common import iconpath
 from .wms import AddWMSMenuButton
-from .utils import ColorWithSlidersWidget
+from .utils import ColorWithSlidersWidget, GetColorWidget
 from .annotate import AddAnnotationInput
 from .draw import DrawerTabs
 
@@ -478,6 +478,10 @@ class LayerTabBar(QtWidgets.QTabBar):
             self.m._after_add_child.append(self.populate)
             self.m._on_show_companion_widget.append(self.populate)
 
+        # set font properties before the stylesheet to avoid clipping of bold text!
+        font = QFont("sans seriv", 8, QFont.Bold, False)
+        self.setFont(font)
+
         self.setStyleSheet(
             """
             QTabWidget::pane {
@@ -504,6 +508,30 @@ class LayerTabBar(QtWidgets.QTabBar):
             }
             """
         )
+
+    @pyqtSlot()
+    def get_tab_icon(self, color="red"):
+        if isinstance(color, str):
+            color = QtGui.QColor(color)
+        elif isinstance(color, (list, tuple)):
+            color = QtGui.QColor(*color)
+
+        canvas = QtGui.QPixmap(20, 20)
+        canvas.fill(Qt.transparent)
+
+        painter = QtGui.QPainter(canvas)
+        painter.setRenderHints(QtGui.QPainter.HighQualityAntialiasing)
+
+        pencolor = QtGui.QColor(color)
+        pencolor.setAlpha(100)
+        painter.setPen(QtGui.QPen(pencolor, 2, Qt.SolidLine))
+        painter.setBrush(QtGui.QBrush(color, Qt.SolidPattern))
+
+        painter.drawEllipse(QPointF(10, 12), 7, 7)
+        painter.end()
+
+        icon = QtGui.QIcon(canvas)
+        return icon
 
     def sizeHint(self):
         # make sure the TabBar does not expand the window width
@@ -550,11 +578,12 @@ class LayerTabBar(QtWidgets.QTabBar):
 
     @pyqtSlot()
     def tab_moved(self):
-        currlayers = self.m.BM.bg_layer.split("|")
+        # get currently active layers
+        active_layers, alphas = self.m.BM._get_layers_alphas(self.m.BM.bg_layer)
 
         # get the name of the layer that was moved
         layer = self.tabText(self.currentIndex())
-        if layer not in currlayers:
+        if layer not in active_layers:
             return
 
         # get the current ordering of visible layers
@@ -562,13 +591,18 @@ class LayerTabBar(QtWidgets.QTabBar):
         layer_order = []
         for i in range(ntabs):
             l = self.tabText(i)
-            if l in currlayers:
+            if l in active_layers:
                 layer_order.append(self.tabText(i))
 
         # set the new layer-order
-        if currlayers != layer_order:  # avoid recursions
-            self.m.BM.bg_layer = "|".join(layer_order)
-            self.m.BM.update()
+        if active_layers != layer_order:  # avoid recursions
+
+            alpha_order = [alphas[active_layers.index(i)] for i in layer_order]
+
+            self.m.show_layer(*zip(layer_order, alpha_order))
+
+            # self.m.BM.bg_layer = "|".join(layer_order)
+            # self.m.BM.update()
 
     @pyqtSlot(int)
     def close_handler(self, index):
@@ -601,13 +635,11 @@ class LayerTabBar(QtWidgets.QTabBar):
         layer = self.tabText(index)
 
         if self.m.layer == layer:
-            print("can't delete the base-layer")
+            print("EOmaps: The base-layer cannot be deleted!")
             return
 
         # get currently active layers
-        active_with_transp = self.m.BM.bg_layer.split("|")
-        # strip off transparency assignments
-        active_layers = [i.split("{")[0] for i in active_with_transp]
+        active_layers, alphas = self.m.BM._get_layers_alphas(self.m.BM.bg_layer)
 
         # cleanup the layer and remove any artists etc.
         for m in list(self.m._children):
@@ -620,11 +652,12 @@ class LayerTabBar(QtWidgets.QTabBar):
             # if possible, show the currently active multi-layer but without
             # the deleted layer
             layer_idx = active_layers.index(layer)
-            active_with_transp.pop(layer_idx)
+            active_layers.pop(layer_idx)
+            alphas.pop(layer_idx)
 
-            if len(active_with_transp) > 0:
+            if len(active_layers) > 0:
                 try:
-                    self.m.show_layer(*active_with_transp)
+                    self.m.show_layer(*zip(active_layers, alphas))
                 except Exception:
                     pass
             else:
@@ -662,30 +695,29 @@ class LayerTabBar(QtWidgets.QTabBar):
         self.populate()
 
     def color_active_tab(self, m=None, layer=None):
-        currlayers = self.m.BM.bg_layer.split("|")
-
         # defaultcolor = self.palette().color(self.foregroundRole())
         defaultcolor = QtGui.QColor(100, 100, 100)
         activecolor = QtGui.QColor(0, 128, 0)
         multicolor = QtGui.QColor(200, 50, 50)
 
-        active_layers = set(self.m.BM._bg_layer.split("|"))
-        active_layers.add(self.m.BM._bg_layer)
-
-        if "{" in self.m.BM._bg_layer:  # TODO support transparency
-            for i in range(self.count()):
-                self.setTabTextColor(i, defaultcolor)
-            return
+        # get currently active layers
+        active_layers, alphas = self.m.BM._get_layers_alphas(self.m.BM.bg_layer)
 
         for i in range(self.count()):
-
             selected_layer = self.tabText(i)
-
             color = activecolor if len(active_layers) == 1 else multicolor
             if selected_layer in active_layers:
+                idx = active_layers.index(selected_layer)
                 self.setTabTextColor(i, color)
+
+                if alphas[idx] < 1:
+                    color = QtGui.QColor(color)
+                    color.setAlpha(int(alphas[idx] * 100))
+
+                self.setTabIcon(i, self.get_tab_icon(color))
             else:
                 self.setTabTextColor(i, defaultcolor)
+                self.setTabIcon(i, QtGui.QIcon())
 
             if layer == selected_layer:
                 self.setTabTextColor(i, activecolor)
@@ -696,7 +728,7 @@ class LayerTabBar(QtWidgets.QTabBar):
         # to avoid issues with non-existent and private layers (e.g. the background
         # layer on savefig etc.) use the following strategy:
         # go through the layers in reverse and move each found layer to the position 0
-        for cl in currlayers[::-1]:
+        for cl in active_layers[::-1]:
             for i in range(self.count()):
                 layer = self.tabText(i)
                 if layer == cl:
@@ -813,7 +845,6 @@ class LayerTabBar(QtWidgets.QTabBar):
         #         print("raising", w, w.canvas)
 
         layer = self.tabText(index)
-
         modifiers = QtWidgets.QApplication.keyboardModifiers()
         if modifiers == Qt.ControlModifier:
             if layer != "":
@@ -825,7 +856,7 @@ class LayerTabBar(QtWidgets.QTabBar):
         elif modifiers == Qt.ShiftModifier:
             # The all layer should not be combined with other layers...
             # (it is already visible anyways)
-            if layer == "all" or "|" in layer:
+            if layer == "all" and "|" in layer:
                 return
             currlayers = [i for i in self.m.BM._bg_layer.split("|") if i != "_"]
 
@@ -1310,6 +1341,7 @@ class ArtistEditor(QtWidgets.QWidget):
               border: 0px solid black;
               padding: 1px;
               padding-bottom: 6px;
+              margin: 0px
               margin-left: 2px;
               margin-bottom: -3px;
               border-radius: 4px;
@@ -1322,7 +1354,6 @@ class ArtistEditor(QtWidgets.QWidget):
             }
             """
         )
-
         self.edit_actions = EditActionsWidget(m=self.m)
         # # re-populate layers on new layer creation
         self.edit_actions.NewLayerCreated.connect(self.artist_tabs.populate)

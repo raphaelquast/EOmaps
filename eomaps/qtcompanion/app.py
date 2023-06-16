@@ -66,6 +66,11 @@ class CompareTab(QtWidgets.QWidget):
         width = b_edit.fontMetrics().boundingRect(b_edit.text()).width()
         b_edit.setFixedWidth(width + 30)
 
+        # layer dropdown button
+        from .widgets.layer import AutoUpdateLayerMenuButton
+
+        self.layer_button = AutoUpdateLayerMenuButton(m=self.m)
+
         options_layout = QtWidgets.QHBoxLayout()
         if addwms:
             options_layout.addWidget(addwms)
@@ -76,11 +81,12 @@ class CompareTab(QtWidgets.QWidget):
 
         layer_tab_layout = QtWidgets.QHBoxLayout()
         layer_tab_layout.setAlignment(Qt.AlignLeft)
-        layer_tab_layout.addWidget(
-            QtWidgets.QLabel(
-                "<b>Layers: </b><br>" "<small><code> [ctrl / shift] </code></small>"
-            )
-        )
+        # layer_tab_layout.addWidget(
+        #     QtWidgets.QLabel(
+        #         "<b>Layers: </b><br>" "<small><code> [ctrl / shift] </code></small>"
+        #     )
+        # )
+        layer_tab_layout.addWidget(self.layer_button)
         layer_tab_layout.addWidget(self.layer_tabs)
 
         layout = QtWidgets.QVBoxLayout()

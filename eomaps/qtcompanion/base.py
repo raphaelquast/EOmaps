@@ -45,7 +45,14 @@ class AlwaysOnTopToolButton(QtWidgets.QToolButton):
 
 class ToolBar(QtWidgets.QToolBar):
     def __init__(
-        self, *args, m=None, left_widget=None, title=None, on_close=None, **kwargs
+        self,
+        *args,
+        m=None,
+        left_widget=None,
+        title=None,
+        on_close=None,
+        layers="text",
+        **kwargs,
     ):
         super().__init__(*args, **kwargs)
 
@@ -97,10 +104,16 @@ class ToolBar(QtWidgets.QToolBar):
         self.addWidget(get_dummy_spacer())
 
         if m is not None:
-            from .widgets.layer import AutoUpdateLayerMenuButton
+            if layers == "dropdown":
+                from .widgets.layer import AutoUpdateLayerMenuButton
 
-            showlayer = AutoUpdateLayerMenuButton(m=self.m)
-            self.addWidget(showlayer)
+                showlayer = AutoUpdateLayerMenuButton(m=self.m)
+                self.addWidget(showlayer)
+            elif layers == "text":
+                from .widgets.layer import AutoUpdateLayerLabel
+
+                showlayer = AutoUpdateLayerLabel(m=self.m)
+                self.addWidget(showlayer)
 
         self.addWidget(logolabel)
         self.addWidget(self.b_minmax)
@@ -228,7 +241,7 @@ class AlwaysOnTopWindow(QtWidgets.QMainWindow):
         self.on_top.setStyleSheet("border:none")
         self.on_top.setIcon(QtGui.QIcon(str(iconpath / "eye_closed.png")))
 
-        self.toolbar = ToolBar(m=self.m, left_widget=self.on_top)
+        self.toolbar = ToolBar(m=self.m, left_widget=self.on_top, layers="text")
         self.on_top.clicked.connect(self.toggle_keep_on_top)
 
         self.addToolBar(self.toolbar)

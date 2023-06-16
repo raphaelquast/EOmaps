@@ -242,6 +242,7 @@ class DrawerWidget(QtWidgets.QWidget):
         save_layout.addWidget(self.remove_button)
 
         self.colorselector = ColorWithSlidersWidget()
+        self.colorselector.colorSelected.connect(lambda: self.colorSelected.emit())
 
         layout_colorselector_tight = QtWidgets.QVBoxLayout()
         layout_colorselector_tight.addStretch(1)
@@ -255,9 +256,6 @@ class DrawerWidget(QtWidgets.QWidget):
 
         layout.setAlignment(Qt.AlignLeft | Qt.AlignCenter)
         self.setLayout(layout)
-
-    def color_selected(self):
-        self.colorSelected.emit()
 
     def enterEvent(self, e):
         if self.window().showhelp is True:

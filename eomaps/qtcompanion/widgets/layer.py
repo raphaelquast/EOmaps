@@ -1,5 +1,6 @@
 from PyQt5 import QtWidgets
 from PyQt5.QtCore import Qt, pyqtSlot
+from PyQt5.QtGui import QFont
 
 
 class AutoUpdatePeekLayerDropdown(QtWidgets.QComboBox):
@@ -97,13 +98,45 @@ class AutoUpdatePeekLayerDropdown(QtWidgets.QComboBox):
                 self.setCurrentIndex(idx)
 
 
+class AutoUpdateLayerLabel(QtWidgets.QLabel):
+    def __init__(self, *args, m=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.m = m
+
+        # update layers on every change of the Maps-object background layer
+        self.m.BM.on_layer(self.update, persistent=True)
+        self.setText(self.get_text())
+
+    def get_text(self):
+        layers, alphas = self.m.BM._get_layers_alphas(self.m.BM.bg_layer)
+
+        s = ""
+        for i, (l, a) in enumerate(zip(layers, alphas)):
+            if i > 0:
+                s += "  |  "
+
+            ls = f"<b>{l}</b>"
+            if a < 1:
+                ls += " {" + f"{a*100:.0f}%" + "}"
+
+            s += ls
+
+        return s
+
+    def update(self, *args, **kwargs):
+        self.setText(self.get_text())
+
+
 class AutoUpdateLayerMenuButton(QtWidgets.QPushButton):
-    def __init__(self, *args, m=None, layers=None, exclude=None, **kwargs):
+    def __init__(
+        self, *args, m=None, layers=None, exclude=None, auto_text=False, **kwargs
+    ):
         super().__init__(*args, **kwargs)
 
         self.m = m
         self._layers = layers
         self._exclude = exclude
+        self._auto_text = auto_text
 
         self._last_layers = []
 
@@ -119,6 +152,10 @@ class AutoUpdateLayerMenuButton(QtWidgets.QPushButton):
         # (since "update_visible_layer" only triggers if the widget is actually visible)
         self.m._on_show_companion_widget.append(self.update_visible_layer)
         self.update_layers()
+
+        # set font properties before the stylesheet to avoid clipping of bold text!
+        font = QFont("sans seriv", 8, QFont.Bold, False)
+        self.setFont(font)
 
     def enterEvent(self, e):
         if self.window().showhelp is True:
@@ -173,12 +210,15 @@ class AutoUpdateLayerMenuButton(QtWidgets.QPushButton):
             ]
 
     def update_display_text(self, l):
+        if not self._auto_text:
+            self.setText("Layers:")
+            return
         # make sure that we don't use too long labels as text
         if len(l) > 50:
             l = f"{len([1 for i in l.split('|') if len(i) > 0])} layers visible"
             # txt = txt[:50] + " ..."
 
-        if "{" in l:  # TODO support transparency
+        if "{" in l:
             l = "custom :   " + l
             self.setStyleSheet("QPushButton{color: rgb(200,50,50)}")
         elif "|" in l:
@@ -250,15 +290,12 @@ class AutoUpdateLayerMenuButton(QtWidgets.QPushButton):
 
     def update_checkstatus(self):
         currlayer = str(self.m.BM.bg_layer)
-
-        if "{" in currlayer:  # TODO support transparency
-            active_layers = []
+        layers, alphas = self.m.BM._get_layers_alphas(currlayer)
+        if "|" in currlayer:
+            active_layers = [i for i in layers if not i.startswith("_")]
+            active_layers.append(currlayer)
         else:
-            if "|" in currlayer:
-                active_layers = [i for i in currlayer.split("|") if i != "_"]
-                active_layers.append(currlayer)
-            else:
-                active_layers = [currlayer]
+            active_layers = [currlayer]
 
         for action in self.menu().actions():
             key = action.data()
