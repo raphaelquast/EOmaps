@@ -713,6 +713,9 @@ class LayerTabBar(QtWidgets.QTabBar):
         if not set(lastlayer.split("|")).issuperset(set(currlayer.split("|"))):
             self.populate(*args, **kwargs)
             self._last_populated_layer = currlayer
+        else:
+            # still update tab colors  (e.g. if layers are removed from multi)
+            self.color_active_tab()
 
     @pyqtSlot()
     def populate(self, *args, **kwargs):
