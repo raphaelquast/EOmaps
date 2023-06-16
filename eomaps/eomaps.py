@@ -2933,7 +2933,10 @@ class Maps(object):
                     combnames.append(i)
                 elif isinstance(i, (list, tuple)):
                     assert (
-                        len(i) == 2 and isinstance(i[0], str) and i[1] > 0 and i[1] < 1
+                        len(i) == 2
+                        and isinstance(i[0], str)
+                        and i[1] >= 0
+                        and i[1] <= 1
                     ), (
                         f"EOmaps: unable to identify the layer-assignment: {i} .\n"
                         "You can provide either a single layer-name as string, a list "
