@@ -99,9 +99,11 @@ class AutoUpdatePeekLayerDropdown(QtWidgets.QComboBox):
 
 
 class AutoUpdateLayerLabel(QtWidgets.QLabel):
-    def __init__(self, *args, m=None, **kwargs):
+    def __init__(self, *args, m=None, max_length=100, **kwargs):
         super().__init__(*args, **kwargs)
         self.m = m
+
+        self._max_length = max_length
 
         # update layers on every change of the Maps-object background layer
         self.m.BM.on_layer(self.update, persistent=True)
@@ -110,8 +112,15 @@ class AutoUpdateLayerLabel(QtWidgets.QLabel):
     def get_text(self):
         layers, alphas = self.m.BM._get_layers_alphas(self.m.BM.bg_layer)
 
+        prefix = "&nbsp;&nbsp;&nbsp;&nbsp;" "<font color=gray>"
+        suffix = "<\font>"
+
         s = ""
         for i, (l, a) in enumerate(zip(layers, alphas)):
+            if len(s) > self._max_length:
+                s = f"<b>( {len(layers)} layers visible )</b>"
+                break
+
             if i > 0:
                 s += "  |  "
 
@@ -121,7 +130,7 @@ class AutoUpdateLayerLabel(QtWidgets.QLabel):
 
             s += ls
 
-        return s
+        return prefix + s + suffix
 
     def update(self, *args, **kwargs):
         self.setText(self.get_text())

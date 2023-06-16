@@ -101,8 +101,6 @@ class ToolBar(QtWidgets.QToolBar):
 
         self.addWidget(self.b_showhelp)
 
-        self.addWidget(get_dummy_spacer())
-
         if m is not None:
             if layers == "dropdown":
                 from .widgets.layer import AutoUpdateLayerMenuButton
@@ -112,8 +110,12 @@ class ToolBar(QtWidgets.QToolBar):
             elif layers == "text":
                 from .widgets.layer import AutoUpdateLayerLabel
 
-                showlayer = AutoUpdateLayerLabel(m=self.m)
+                showlayer = AutoUpdateLayerLabel(
+                    m=self.m,
+                )
                 self.addWidget(showlayer)
+
+        self.addWidget(get_dummy_spacer())
 
         self.addWidget(logolabel)
         self.addWidget(self.b_minmax)

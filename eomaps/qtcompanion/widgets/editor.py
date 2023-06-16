@@ -697,8 +697,8 @@ class LayerTabBar(QtWidgets.QTabBar):
     def color_active_tab(self, m=None, layer=None):
         # defaultcolor = self.palette().color(self.foregroundRole())
         defaultcolor = QtGui.QColor(100, 100, 100)
-        activecolor = QtGui.QColor(0, 128, 0)
-        multicolor = QtGui.QColor(200, 50, 50)
+        activecolor = QtGui.QColor(50, 150, 50)  # QtGui.QColor(0, 128, 0)
+        multicolor = QtGui.QColor(50, 150, 50)  # QtGui.QColor(0, 128, 0)
 
         # get currently active layers
         active_layers, alphas = self.m.BM._get_layers_alphas(self.m.BM.bg_layer)
@@ -845,6 +845,9 @@ class LayerTabBar(QtWidgets.QTabBar):
         #         print("raising", w, w.canvas)
 
         layer = self.tabText(index)
+        if len(layer) == 0:
+            return
+
         modifiers = QtWidgets.QApplication.keyboardModifiers()
         if modifiers == Qt.ControlModifier:
             if layer != "":
@@ -858,20 +861,22 @@ class LayerTabBar(QtWidgets.QTabBar):
             # (it is already visible anyways)
             if layer == "all" and "|" in layer:
                 return
-            currlayers = [i for i in self.m.BM._bg_layer.split("|") if i != "_"]
+
+            # get currently active layers
+            active_layers, alphas = self.m.BM._get_layers_alphas(self.m.BM.bg_layer)
 
             for l in (i for i in layer.split("|") if i != "_"):
-                if l not in currlayers:
-                    currlayers.append(l)
+                if l not in active_layers:
+                    active_layers.append(l)
                 else:
-                    currlayers.remove(l)
+                    active_layers.remove(l)
 
-            if len(currlayers) > 1:
-                uselayer = "|".join(currlayers)
+            if len(active_layers) > 1:
+                uselayer = "|".join(active_layers)
 
                 self.m.show_layer(uselayer)
-            elif len(currlayers) == 1:
-                self.m.show_layer(currlayers[0])
+            elif len(active_layers) == 1:
+                self.m.show_layer(active_layers[0])
             else:
                 self.m.show_layer(layer)
             # TODO this is a workaround since modifier-releases are not
