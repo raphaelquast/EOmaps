@@ -1,19 +1,7 @@
 from PyQt5 import QtWidgets
 from PyQt5.QtCore import Qt, pyqtSlot, pyqtSignal
 
-from .utils import GetColorWidget, AlphaSlider
-
-
-class TransparencySlider(AlphaSlider):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.set_alpha_stylesheet()
-
-
-class LineWidthSlider(AlphaSlider):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.set_linewidth_stylesheet()
+from .utils import ColorWithSlidersWidget
 
 
 class SaveButton(QtWidgets.QPushButton):
@@ -245,35 +233,25 @@ class DrawerWidget(QtWidgets.QWidget):
             poly_b.setMaximumWidth(100)
             polybuttons.append(poly_b)
 
-        self.colorselector = GetColorWidget()
-        self.colorselector.cb_colorselected = self.color_selected
-        self.colorselector.setMaximumWidth(60)
-
-        self.alphaslider = TransparencySlider(Qt.Horizontal)
-        self.alphaslider.valueChanged.connect(self.set_alpha_with_slider)
-        self.alphaslider.setValue(50)
-
-        self.linewidthslider = LineWidthSlider(Qt.Horizontal)
-        self.linewidthslider.valueChanged.connect(self.set_linewidth_with_slider)
-        self.linewidthslider.setValue(20)
+        b_layout = QtWidgets.QVBoxLayout()
+        for b in polybuttons:
+            b_layout.addWidget(b)
 
         save_layout = QtWidgets.QVBoxLayout()
         save_layout.addWidget(self.save_button)
         save_layout.addWidget(self.remove_button)
 
-        b_layout = QtWidgets.QVBoxLayout()
-        for b in polybuttons:
-            b_layout.addWidget(b)
+        self.colorselector = ColorWithSlidersWidget()
 
-        layout_sliders = QtWidgets.QVBoxLayout()
-        layout_sliders.addWidget(self.alphaslider)
-        layout_sliders.addWidget(self.linewidthslider)
+        layout_colorselector_tight = QtWidgets.QVBoxLayout()
+        layout_colorselector_tight.addStretch(1)
+        layout_colorselector_tight.addWidget(self.colorselector)
+        layout_colorselector_tight.addStretch(1)
 
         layout = QtWidgets.QHBoxLayout()
         layout.addLayout(b_layout)
         layout.addLayout(save_layout)
-        layout.addWidget(self.colorselector)
-        layout.addLayout(layout_sliders)
+        layout.addLayout(layout_colorselector_tight)
 
         layout.setAlignment(Qt.AlignLeft | Qt.AlignCenter)
         self.setLayout(layout)
@@ -317,7 +295,7 @@ class DrawerWidget(QtWidgets.QWidget):
             getattr(self.drawer, poly)(
                 facecolor=self.colorselector.facecolor.getRgbF(),
                 edgecolor=self.colorselector.edgecolor.getRgbF(),
-                linewidth=self.linewidthslider.alpha * 10,
+                linewidth=self.colorselector.linewidth,
             )
 
         return cb
@@ -368,16 +346,6 @@ class DrawerWidget(QtWidgets.QWidget):
                 "EOmaps: Encountered a problem while trying to remove "
                 "the last drawn shape..."
             )
-
-    @pyqtSlot(int)
-    def set_alpha_with_slider(self, i):
-        self.colorselector.set_alpha(i / 100)
-        self.colorSelected.emit()
-
-    @pyqtSlot(int)
-    def set_linewidth_with_slider(self, i):
-        self.colorselector.set_linewidth(i / 10)
-        self.colorSelected.emit()
 
     def _new_drawer(self):
         self.drawer = self.m.draw.new_drawer()

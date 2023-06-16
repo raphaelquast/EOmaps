@@ -7,7 +7,7 @@ from matplotlib.colors import to_rgba_array
 from ...inset_maps import InsetMaps
 from ..common import iconpath
 from .wms import AddWMSMenuButton
-from .utils import GetColorWidget, AlphaSlider
+from .utils import ColorWithSlidersWidget
 from .annotate import AddAnnotationInput
 from .draw import DrawerTabs
 
@@ -139,18 +139,6 @@ class ZorderInput(QtWidgets.QLineEdit):
             )
 
 
-class TransparencySlider(AlphaSlider):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.set_alpha_stylesheet()
-
-
-class LinewidthSlider(AlphaSlider):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.set_linewidth_stylesheet()
-
-
 class RemoveArtistToolButton(QtWidgets.QToolButton):
     def enterEvent(self, e):
         if self.window().showhelp is True:
@@ -200,19 +188,9 @@ class AddFeatureWidget(QtWidgets.QFrame):
         self.selector = AddFeaturesMenuButton(m=self.m)
         self.selector.clicked.connect(self.update_props)
 
-        self.colorselector = GetColorWidget(facecolor="#aaaa7f")
-        self.colorselector.cb_colorselected = self.update_on_color_selection
+        self.selector.menu().aboutToShow.connect(self.update_props)
 
-        self.colorselector.setMaximumWidth(60)
-
-        self.alphaslider = TransparencySlider(Qt.Horizontal)
-        self.alphaslider.valueChanged.connect(self.set_alpha_with_slider)
-        self.alphaslider.valueChanged.connect(self.update_props)
-
-        self.linewidthslider = LinewidthSlider(Qt.Horizontal)
-        self.linewidthslider.valueChanged.connect(self.set_linewidth_with_slider)
-        self.linewidthslider.valueChanged.connect(self.update_props)
-        self.set_linewidth_slider_stylesheet()
+        self.colorselector = ColorWithSlidersWidget(facecolor="#aaaa7f")
 
         self.zorder = ZorderInput("0")
         validator = QtGui.QIntValidator()
@@ -238,43 +216,28 @@ class AddFeatureWidget(QtWidgets.QFrame):
         layout_buttons.addWidget(self.selector)
         layout_buttons.addLayout(zorder_layout)
 
-        layout_sliders = QtWidgets.QVBoxLayout()
-        layout_sliders.addWidget(self.alphaslider)
-        layout_sliders.addWidget(self.linewidthslider)
-
         layout = QtWidgets.QHBoxLayout()
         layout.addLayout(layout_buttons)
         layout.addWidget(self.colorselector)
-        layout.addLayout(layout_sliders)
-
         layout.setAlignment(Qt.AlignLeft | Qt.AlignCenter)
-        self.setLayout(layout)
 
-        # do this at the end to ensure everything has already been set up properly
-        self.alphaslider.setValue(100)
-        self.linewidthslider.setValue(20)
+        layout_tight = QtWidgets.QVBoxLayout()
+        layout_tight.addStretch(1)
+        layout_tight.addLayout(layout)
+        layout_tight.addStretch(1)
 
-        self.update_props()
-
-    @pyqtSlot(int)
-    def set_alpha_with_slider(self, i):
-        self.colorselector.set_alpha(i / 100)
-
-    @pyqtSlot(int)
-    def set_linewidth_with_slider(self, i):
-        self.colorselector.set_linewidth(i / 10)
+        self.setLayout(layout_tight)
 
     @pyqtSlot()
     def update_props(self):
-        self.set_alpha_slider_stylesheet()
-
+        # don't specify alpha! it interferes with the alpha of the colors!
         self.selector.props.update(
             dict(
                 facecolor=self.colorselector.facecolor.getRgbF(),
                 edgecolor=self.colorselector.edgecolor.getRgbF(),
-                linewidth=self.linewidthslider.alpha * 5,
+                linewidth=self.colorselector.linewidth,
                 zorder=int(self.zorder.text()),
-                # alpha = self.alphaslider.alpha,   # don't specify alpha! it interferes with the alpha of the colors!
+                # alpha = self.colorselector.alpha,
             )
         )
 
@@ -327,10 +290,6 @@ class AddFeatureWidget(QtWidgets.QFrame):
             }}
             """
         )
-
-    def update_on_color_selection(self):
-        self.update_alphaslider()
-        self.update_props()
 
     def update_alphaslider(self):
         # to always round up to closest int use -(-x//1)

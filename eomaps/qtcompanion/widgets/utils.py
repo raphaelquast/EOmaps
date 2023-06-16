@@ -1,5 +1,5 @@
 from PyQt5 import QtWidgets, QtGui
-from PyQt5.QtCore import Qt, QRectF, QSize, pyqtSlot
+from PyQt5.QtCore import Qt, QRectF, QSize, pyqtSlot, pyqtSignal
 from eomaps import Maps
 from functools import lru_cache
 
@@ -521,3 +521,75 @@ class AlphaSlider(QtWidgets.QSlider):
             }}
             """
         )
+
+
+class ColorWithSlidersWidget(QtWidgets.QWidget):
+    colorSelected = pyqtSignal()
+    alpha_slider_scale = 100
+    linewidth_slider_scale = 10
+
+    def __init__(
+        self,
+        *args,
+        facecolor="red",
+        edgecolor="black",
+        linewidth=1,
+        alpha=0.5,
+        **kwargs,
+    ):
+
+        super().__init__(*args, **kwargs)
+
+        self.color = GetColorWidget(
+            facecolor=facecolor, edgecolor=edgecolor, linewidth=linewidth, alpha=alpha
+        )
+        self.color.cb_colorselected = self.color_selected
+        self.color.setMaximumWidth(60)
+
+        self.alphaslider = AlphaSlider(Qt.Horizontal)
+        self.alphaslider.set_alpha_stylesheet()
+        self.alphaslider.valueChanged.connect(self.set_alpha_with_slider)
+        self.alphaslider.setValue(int(alpha * self.alpha_slider_scale))
+
+        self.linewidthslider = AlphaSlider(Qt.Horizontal)
+        self.linewidthslider.set_linewidth_stylesheet()
+        self.linewidthslider.valueChanged.connect(self.set_linewidth_with_slider)
+        self.linewidthslider.setValue(int(linewidth * self.linewidth_slider_scale))
+
+        layout_sliders = QtWidgets.QVBoxLayout()
+        layout_sliders.addWidget(self.alphaslider)
+        layout_sliders.addWidget(self.linewidthslider)
+
+        layout = QtWidgets.QHBoxLayout()
+        layout.addWidget(self.color)
+        layout.addLayout(layout_sliders)
+        self.setLayout(layout)
+
+    @property
+    def facecolor(self):
+        return self.color.facecolor
+
+    @property
+    def edgecolor(self):
+        return self.color.edgecolor
+
+    @property
+    def linewidth(self):
+        return self.color.linewidth
+
+    @property
+    def alpha(self):
+        return self.color.alpha
+
+    @pyqtSlot(int)
+    def set_alpha_with_slider(self, i):
+        self.color.set_alpha(i / self.alpha_slider_scale)
+        self.colorSelected.emit()
+
+    @pyqtSlot(int)
+    def set_linewidth_with_slider(self, i):
+        self.color.set_linewidth(i / self.linewidth_slider_scale)
+        self.colorSelected.emit()
+
+    def color_selected(self):
+        self.colorSelected.emit()
