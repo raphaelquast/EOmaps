@@ -427,7 +427,7 @@ class OptionTabs(QtWidgets.QTabWidget):
 
 
 class LayerTabBar(QtWidgets.QTabBar):
-    _number_of_min_tabs_for_size = 8
+    _number_of_min_tabs_for_size = 6
     _n_layer_msg_shown = False
 
     def __init__(self, m=None, populate=False, *args, **kwargs):
@@ -495,7 +495,6 @@ class LayerTabBar(QtWidgets.QTabBar):
               background: rgb(245, 245, 245);
               border: 1px solid black;
               padding: 3px;
-              padding-bottom: 6px;
               margin-left: 2px;
               margin-bottom: 0px;
               border-radius: 4px;
@@ -1346,7 +1345,7 @@ class ArtistEditor(QtWidgets.QWidget):
               border: 0px solid black;
               padding: 1px;
               padding-bottom: 6px;
-              margin: 0px
+              margin: 0px;
               margin-left: 2px;
               margin-bottom: -3px;
               border-radius: 4px;

@@ -241,7 +241,7 @@ class DrawerWidget(QtWidgets.QWidget):
         save_layout.addWidget(self.save_button)
         save_layout.addWidget(self.remove_button)
 
-        self.colorselector = ColorWithSlidersWidget()
+        self.colorselector = ColorWithSlidersWidget(linewidth=1)
         self.colorselector.colorSelected.connect(lambda: self.colorSelected.emit())
 
         layout_colorselector_tight = QtWidgets.QVBoxLayout()
