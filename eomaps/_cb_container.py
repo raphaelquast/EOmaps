@@ -926,6 +926,10 @@ class cb_click_container(_click_container):
                 cb(**clickdict)
 
     def _reset_cids(self):
+        # clear all temporary artists
+        self._clear_temporary_artists()
+        self._m.BM._clear_temp_artists(self._method)
+
         if self._cid_button_press_event:
             self._m.f.canvas.mpl_disconnect(self._cid_button_press_event)
         self._cid_button_press_event = None
@@ -1085,6 +1089,10 @@ class cb_move_container(cb_click_container):
             self._add_move_callback()
 
     def _reset_cids(self):
+        # clear all temporary artists
+        self._clear_temporary_artists()
+        self._m.BM._clear_temp_artists(self._method)
+
         if self._cid_motion_event:
             self._m.f.canvas.mpl_disconnect(self._cid_motion_event)
         self._cid_motion_event = None
@@ -1465,6 +1473,10 @@ class cb_pick_container(_click_container):
                             cb(**c)
 
     def _reset_cids(self):
+        # clear all temporary artists
+        self._clear_temporary_artists()
+        self._m.BM._clear_temp_artists(self._method)
+
         for method, cid in self._cid_pick_event.items():
             self._m.f.canvas.mpl_disconnect(cid)
         self._cid_pick_event.clear()
@@ -1596,6 +1608,10 @@ class keypress_container(_cb_container):
             self._initialize_callbacks()
 
     def _reset_cids(self):
+        # clear all temporary artists
+        self._clear_temporary_artists()
+        self._m.BM._clear_temp_artists(self._method)
+
         if self._cid_keypress_event:
             self._m.f.canvas.mpl_disconnect(self._cid_keypress_event)
         self._cid_keypress_event = None
@@ -1874,7 +1890,7 @@ class cb_container:
     def __init__(self, m):
         self._m = m
 
-        self._methods = {"click", "move", "keypress", "_click_move"}
+        self._methods = {"click", "pick", "move", "keypress", "_click_move"}
 
         self._click = cb_click_container(
             m=self._m,
