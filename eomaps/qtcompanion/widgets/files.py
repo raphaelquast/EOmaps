@@ -1388,6 +1388,9 @@ class OpenFileTabs(QtWidgets.QTabWidget):
 
         self.removeTab(index)
 
+        # emit a "dataPlotted" signal to update dropdowns etc.
+        self.window.dataPlotted.emit()
+
     def dragEnterEvent(self, e):
         if e.mimeData().hasUrls():
             urls = e.mimeData().urls()
