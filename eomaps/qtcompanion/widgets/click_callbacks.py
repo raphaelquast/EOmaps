@@ -350,7 +350,7 @@ class ClickCallbacks(QtWidgets.QFrame):
             if self.cids.get(key, None) is not None:
                 self.attach_callback(key)
 
-    def populate_dropdown(self):
+    def populate_dropdown(self, *args, **kwargs):
         self.map_dropdown.clear()
 
         # the QAbstractItemView object that holds the dropdown-items

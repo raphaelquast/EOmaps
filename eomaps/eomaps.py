@@ -811,6 +811,10 @@ class Maps(object):
 
         # re-initialize all sliders and buttons to include the new layer
         self.util._reinit_widgets()
+
+        # share the companion-widget with the parent
+        m._companion_widget = self._companion_widget
+
         return m
 
     def new_inset_map(
@@ -2854,6 +2858,9 @@ class Maps(object):
                 print("EOmaps: Warning: some datapoints could not be drawn!")
 
         self._data_plotted = True
+
+        if self._companion_widget is not None:
+            self._companion_widget.dataPlotted.emit()
 
     def make_dataset_pickable(
         self,

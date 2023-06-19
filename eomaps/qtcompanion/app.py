@@ -46,7 +46,7 @@ class CompareTab(QtWidgets.QWidget):
         self.layer_tabs.setTabsClosable(False)
         # -------------
 
-        click_cbs = ClickCallbacks(m=self.m)
+        self.click_cbs = ClickCallbacks(m=self.m)
 
         # add wms button
         try:
@@ -91,7 +91,7 @@ class CompareTab(QtWidgets.QWidget):
 
         layout = QtWidgets.QVBoxLayout()
         layout.addWidget(peektabs)
-        layout.addWidget(click_cbs)
+        layout.addWidget(self.click_cbs)
         layout.addLayout(options_layout)
         layout.addStretch(1)
         layout.addLayout(layer_tab_layout)
@@ -187,6 +187,7 @@ class MenuWindow(AlwaysOnTopWindow):
     clipboardKwargsChanged = pyqtSignal()
     annotationSelected = pyqtSignal()
     annotationEdited = pyqtSignal()
+    dataPlotted = pyqtSignal()
 
     def __init__(self, *args, m=None, **kwargs):
 
@@ -240,6 +241,9 @@ class MenuWindow(AlwaysOnTopWindow):
         self.annotationEdited.connect(
             self.tabs.tab_edit.addannotation.set_edited_annotation_props
         )
+
+        self.dataPlotted.connect(self.tabs.tab_compare.click_cbs.populate_dropdown)
+        self.dataPlotted.connect(self.tabs.tab_compare.click_cbs.update_buttons)
 
     def show(self):
         super().show()
