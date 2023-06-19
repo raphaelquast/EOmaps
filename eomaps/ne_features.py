@@ -23,8 +23,36 @@ def combdoc(*args):
 
 
 class _NaturalEarth_presets:
+    """
+    Feature presets
+
+    To add single preset-features (or customize the appearance), use:
+
+    >>> m.add_feature.preset.coastline(ec="r", scale=50, ...)
+
+    To quickly add multiple features in one go, use:
+
+    >>> m.add_feature.preset("coastline", "ocean", "land")
+
+    """
+
     def __init__(self, m):
         self._m = m
+
+    def __call__(self, *args):
+        """
+        Add multiple preset-features in one go.
+
+        >>> m.add_feature.preset("coastline", "ocean", "land")
+
+        Parameters
+        ----------
+        *args : str
+            The names of the features to add.
+
+        """
+        for a in args:
+            getattr(self, a)()
 
     @property
     def coastline(self):
