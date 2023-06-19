@@ -354,7 +354,7 @@ class EditActionsWidget(QtWidgets.QFrame):
         layout.addWidget(self.open_file_button)
         layout.addWidget(self.edit_layout)
 
-        layout.addStretch(0.05)
+        layout.addStretch(1)
         layout.addWidget(new_layer_label)
         layout.addWidget(self.new_layer_name)
 
