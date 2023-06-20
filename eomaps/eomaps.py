@@ -3487,7 +3487,7 @@ class Maps(object):
 
         self.redraw()
 
-    def on_layer_activation(self, func, persistent=False, **kwargs):
+    def on_layer_activation(self, func, layer=None, persistent=False, **kwargs):
         """
         Attach a callback that is executed if the associated layer is activated.
 
@@ -3502,6 +3502,21 @@ class Maps(object):
 
             >>> def func(m, **kwargs):
             >>>    # m... the Maps-object used for calling this function
+
+            NOTE: The Maps-object that is passed to the function is determined by
+            the 'layer' argument!
+        layer : str or None, optional
+            If provided, a NEW layer will be created and passed to the execution of the
+            function. Otherwise, the calling Maps-object is used.
+
+            To clarify: The following two code-snippets are equivalent:
+
+            >>> m = Maps()
+            >>> m2 = m.new_layer("my_layer")
+            >>> m2.on_layer_activation(func)
+
+            >>> m = Maps()
+            >>> m.on_layer_activation(func, layer="my_layer")
 
         persistent : bool, optional
             Indicator if the function should be called only once (False) or if it
@@ -3532,11 +3547,17 @@ class Maps(object):
         >>> s = m.util.layer_selector()
 
         """
+        if layer is None:
+            layer = self.layer
+            m = self
+        else:
+            layer = str(layer)
+            m = self.new_layer(layer)
 
         def cb(m, layer):
             func(m=m, **kwargs)
 
-        self.BM.on_layer(func=cb, layer=self.layer, persistent=persistent, m=self)
+        self.BM.on_layer(func=cb, layer=layer, persistent=persistent, m=m)
 
     def cleanup(self):
         """
