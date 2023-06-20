@@ -39,7 +39,7 @@ class _NaturalEarth_presets:
     def __init__(self, m):
         self._m = m
 
-    def __call__(self, *args):
+    def __call__(self, *args, scale=50):
         """
         Add multiple preset-features in one go.
 
@@ -49,10 +49,23 @@ class _NaturalEarth_presets:
         ----------
         *args : str
             The names of the features to add.
-
+        scale : int or str
+            Set the scale of the feature preset (10, 50, 110 or "auto")
+            The default is "auto"
         """
+
+        wrong_names = set(args).difference(self._feature_names)
+        assert len(wrong_names) == 0, (
+            f"EOmaps: {wrong_names} are not valid preset-feature names!\n"
+            f"Use one of: {self._feature_names}."
+        )
+
         for a in args:
-            getattr(self, a)()
+            getattr(self, a)(scale=scale)
+
+    @property
+    def _feature_names(self):
+        return [i for i in self.__dir__() if not i.startswith("_")]
 
     @property
     def coastline(self):
