@@ -1714,9 +1714,9 @@ class BlitManager:
             The callable to use.
             The call-signature is:
 
-            >>> def func(m, l):
-            >>>    # m... the Maps-object
-            >>>    # l... the name of the layer
+            >>> def func(m, layer):
+            >>>    # m     ... the Maps-object
+            >>>    # layer ... the name of the layer
 
 
         layer : str or None, optional
@@ -1729,6 +1729,9 @@ class BlitManager:
             Indicator if the function should be called only once (False) or if it
             should be called whenever a layer is activated.
             The default is False.
+        m : eomaps.Maps
+            The Maps-object to pass as argument to the function execution.
+            If None, the parent Maps-object is used.
 
         """
         if m is None:
