@@ -1194,7 +1194,10 @@ class ArtistEditorTabs(LayerArtistTabs):
         layout.setAlignment(Qt.AlignTop | Qt.AlignLeft)
 
         # make sure that we don't create an empty entry !
-        if layer in self.m.BM._bg_artists:
+
+        # TODO the None check is to address possible race-conditions
+        # with Maps objects that have no axes defined.
+        if layer in self.m.BM._bg_artists and self.m.ax is not None:
             artists = [
                 a for a in self.m.BM.get_bg_artists(layer) if a.axes is self.m.ax
             ]
