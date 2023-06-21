@@ -330,7 +330,7 @@ class _wmts_layer(_WebMap_layer):
         super().__init__(*args, **kwargs)
         pass
 
-    def __call__(self, layer=None, zorder=-5, alpha=1, **kwargs):
+    def __call__(self, layer=None, zorder=0, alpha=1, **kwargs):
         """
         Add the WMTS layer to the map
 
@@ -434,7 +434,7 @@ class _wms_layer(_WebMap_layer):
         super().__init__(*args, **kwargs)
         pass
 
-    def __call__(self, layer=None, zorder=-5, alpha=1, **kwargs):
+    def __call__(self, layer=None, zorder=0, alpha=1, **kwargs):
         """
         Add the WMS layer to the map
 
@@ -1109,7 +1109,7 @@ class _xyz_tile_service:
         transparent=False,
         alpha=1,
         interpolation="spline36",
-        zorder=-5,
+        zorder=0,
         **kwargs,
     ):
         """
