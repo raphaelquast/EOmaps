@@ -719,7 +719,7 @@ The individual :py:class:`Maps` objects and ``matpltolib-Axes`` are then accessi
     MapsGrid.join_limits
     MapsGrid.share_click_events
     MapsGrid.share_pick_events
-    MapsGrid.set_data_specs
+    MapsGrid.set_data
     MapsGrid.set_classify_specs
     MapsGrid.add_wms
     MapsGrid.add_feature
@@ -2191,13 +2191,21 @@ The call-signature is: ``m.add_feature.< CATEGORY >.< FEATURE >(...)``:
 +-------------------------------------------------------------------------+-------------------------------------------------+
 
 
-
 `NaturalEarth <https://www.naturalearthdata.com>`_ provides features in 3 different scales: 1:10m, 1:50m, 1:110m.
 By default EOmaps uses features at 1:50m scale. To set the scale manually, simply use the ``scale`` argument
 when calling the feature.
 
 - It is also possible to automatically update the scale based on the map-extent by using ``scale="auto"``.
   (Note that if you zoom into a new scale the data might need to be downloaded and reprojected so the map might be irresponsive for a couple of seconds until everything is properly cached.)
+
+For convenience, multiple preset-features can also be added in one go via:
+
+.. code-block:: python
+    :name: test_add_multi_preset_features
+
+    from eomaps import Maps
+    m = Maps()
+    m.add_feature.preset("coastline", "ocean", "land", scale=50)
 
 If you want to get a ``geopandas.GeoDataFrame`` containing all shapes and metadata of a feature, use:
 (Have a look at :ref:`geodataframe` on how to add the obtained ``GeoDataFrame`` to the map)
@@ -3027,7 +3035,7 @@ Inset maps that show zoomed-in regions can be created with :py:meth:`Maps.new_in
 
 For convenience, inset-map objects have the following special methods defined:
 
-.. currentmodule:: eomaps.eomaps
+.. currentmodule:: eomaps.inset_maps
 
 .. autosummary::
     :toctree: generated
