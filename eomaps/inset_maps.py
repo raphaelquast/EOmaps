@@ -151,6 +151,9 @@ class InsetMaps(Maps):
             zorder=-9999,
             transform=self.ax.transAxes,
         )
+
+        art.set_label("Inset map background patch")
+
         self.BM.add_bg_artist(art, layer=layer)
         return art
 
