@@ -29,8 +29,18 @@ A compass can be added to the map via :py:meth:`Maps.add_compass`:
     :toctree: generated
     :nosignatures:
     :template: only_names_in_toc.rst
+    :hidden:
 
     Maps.add_compass
+
+
+.. autosummary::
+    :nosignatures:
+    :template: only_names_in_toc.rst
+
+    Maps.add_compass
+
+
 
 .. table::
     :widths: 70 30
@@ -56,6 +66,19 @@ The returned ``compass`` object has the following useful methods assigned:
 
 .. autosummary::
     :toctree: generated
+    :nosignatures:
+    :template: only_names_in_toc.rst
+    :hidden:
+
+    Compass.remove
+    Compass.set_patch
+    Compass.set_scale
+    Compass.set_pickable
+    Compass.set_ignore_invalid_angles
+    Compass.get_position
+    Compass.get_scale
+
+.. autosummary::
     :nosignatures:
     :template: only_names_in_toc.rst
 
