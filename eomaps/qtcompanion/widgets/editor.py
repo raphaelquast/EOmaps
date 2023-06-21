@@ -968,8 +968,8 @@ class ArtistEditorTabs(LayerArtistTabs):
 
         # zorder
         b_z = ZorderInput()
-        b_z.setMinimumWidth(25)
-        b_z.setMaximumWidth(25)
+        b_z.setMinimumWidth(30)
+        b_z.setMaximumWidth(30)
         validator = QtGui.QIntValidator()
         b_z.setValidator(validator)
         b_z.setText(str(a.get_zorder()))
