@@ -23,8 +23,17 @@ In addition, many style properties of the scalebar can be adjusted to get the lo
     :toctree: generated
     :nosignatures:
     :template: only_names_in_toc.rst
+    :hidden:
 
     Maps.add_scalebar
+
+.. autosummary::
+    :nosignatures:
+    :template: only_names_in_toc.rst
+
+    Maps.add_scalebar
+
+
 
 .. table::
     :widths: 70 30
@@ -69,6 +78,29 @@ The returned :py:class:`ScaleBar` object provides the following useful methods:
 
 .. autosummary::
     :toctree: generated
+    :nosignatures:
+    :template: only_names_in_toc.rst
+    :hidden:
+
+    ScaleBar
+    ScaleBar.print_code
+    ScaleBar.apply_preset
+    ScaleBar.remove
+    ScaleBar.set_scale
+    ScaleBar.set_n
+    ScaleBar.set_position
+    ScaleBar.set_label_props
+    ScaleBar.set_scale_props
+    ScaleBar.set_line_props
+    ScaleBar.set_patch_props
+    ScaleBar.set_auto_scale
+    ScaleBar.set_pickable
+    ScaleBar.set_size_factor
+    ScaleBar.get_position
+    ScaleBar.get_scale
+    ScaleBar.get_size_factor
+
+.. autosummary::
     :nosignatures:
     :template: only_names_in_toc.rst
 

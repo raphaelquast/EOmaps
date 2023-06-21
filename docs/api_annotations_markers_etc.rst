@@ -39,8 +39,17 @@ Static markers can be added to the map via :py:meth:`Maps.add_marker`.
     :toctree: generated
     :nosignatures:
     :template: only_names_in_toc.rst
+    :hidden:
 
     Maps.add_marker
+
+.. autosummary::
+    :nosignatures:
+    :template: only_names_in_toc.rst
+
+    Maps.add_marker
+
+
 
 .. table::
     :widths: 50 50
@@ -109,6 +118,13 @@ Static annotations can be added to the map via :py:meth:`Maps.add_annotation`.
 
 .. autosummary::
     :toctree: generated
+    :nosignatures:
+    :template: only_names_in_toc.rst
+    :hidden:
+
+    Maps.add_annotation
+
+.. autosummary::
     :nosignatures:
     :template: only_names_in_toc.rst
 
@@ -208,6 +224,13 @@ Lines can be added to a map with :py:meth:`Maps.add_line`.
     :toctree: generated
     :nosignatures:
     :template: only_names_in_toc.rst
+    :hidden:
+
+    Maps.add_line
+
+.. autosummary::
+    :nosignatures:
+    :template: only_names_in_toc.rst
 
     Maps.add_line
 
@@ -258,6 +281,13 @@ To indicate rectangular areas in any given crs, simply use :py:meth:`Maps.indica
 
 .. autosummary::
     :toctree: generated
+    :nosignatures:
+    :template: only_names_in_toc.rst
+    :hidden:
+
+    Maps.indicate_extent
+
+.. autosummary::
     :nosignatures:
     :template: only_names_in_toc.rst
 
@@ -325,6 +355,13 @@ Logos can be re-positioned and re-sized with the :ref:`layout_editor`!
 
 .. autosummary::
     :toctree: generated
+    :nosignatures:
+    :template: only_names_in_toc.rst
+    :hidden:
+
+    Maps.add_logo
+
+.. autosummary::
     :nosignatures:
     :template: only_names_in_toc.rst
 

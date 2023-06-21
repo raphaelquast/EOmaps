@@ -26,8 +26,17 @@ and ``< LAYER >`` indicates the actual layer-name.
     :toctree: generated
     :nosignatures:
     :template: only_names_in_toc.rst
+    :hidden:
 
     Maps.add_wms
+
+
+.. autosummary::
+    :nosignatures:
+    :template: only_names_in_toc.rst
+
+    Maps.add_wms
+
 
 .. note::
 
@@ -75,6 +84,7 @@ Pre-defined WebMap services:
     :toctree: generated
     :nosignatures:
     :template: only_names_in_toc.rst
+    :hidden:
 
     OpenStreetMap
     ESA_WorldCover
@@ -91,6 +101,28 @@ Pre-defined WebMap services:
     DLR_basemaps
     OpenPlanetary
 
+
+.. autosummary::
+    :nosignatures:
+    :template: only_names_in_toc.rst
+
+    OpenStreetMap
+    ESA_WorldCover
+    NASA_GIBS
+    ISRIC_SoilGrids
+    EEA_DiscoMap
+    ESRI_ArcGIS
+    S1GBM
+    S2_cloudless
+    GEBCO
+    GMRT
+    GLAD
+    CAMS
+    DLR_basemaps
+    OpenPlanetary
+
+
+
 **Services specific for Austria (Europe)**
 
 .. currentmodule:: eomaps._webmap_containers
@@ -99,9 +131,18 @@ Pre-defined WebMap services:
     :toctree: generated
     :nosignatures:
     :template: only_names_in_toc.rst
+    :hidden:
 
     Austria.AT_basemap
     Austria.Wien_basemap
+
+.. autosummary::
+    :nosignatures:
+    :template: only_names_in_toc.rst
+
+    Austria.AT_basemap
+    Austria.Wien_basemap
+
 
 
 .. note::
@@ -127,6 +168,13 @@ It is also possible to use custom WMS/WMTS/XYZ services.
 
 .. autosummary::
     :toctree: generated
+    :nosignatures:
+    :template: only_names_in_toc.rst
+    :hidden:
+
+    get_service
+
+.. autosummary::
     :nosignatures:
     :template: only_names_in_toc.rst
 

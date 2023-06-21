@@ -30,10 +30,21 @@ For convenience, inset-map objects have the following special methods defined:
     :toctree: generated
     :nosignatures:
     :template: only_names_in_toc.rst
+    :hidden:
 
     InsetMaps.set_inset_position
     InsetMaps.indicate_inset_extent
     InsetMaps.add_indicator_line
+
+
+.. autosummary::
+    :nosignatures:
+    :template: only_names_in_toc.rst
+
+    InsetMaps.set_inset_position
+    InsetMaps.indicate_inset_extent
+    InsetMaps.add_indicator_line
+
 
 Checkout the associated example on how to use inset-maps: :ref:`EOmaps_examples_inset_maps`
 
@@ -73,6 +84,13 @@ To quickly re-position (and re-size) inset-maps, have a look at the :ref:`layout
 
 .. autosummary::
     :toctree: generated
+    :nosignatures:
+    :template: only_names_in_toc.rst
+    :hidden:
+
+    new_inset_map
+
+.. autosummary::
     :nosignatures:
     :template: only_names_in_toc.rst
 

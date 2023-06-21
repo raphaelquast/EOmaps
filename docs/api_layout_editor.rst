@@ -67,6 +67,15 @@ It is also possible to enter the **Layout Editor** and save the layout automatic
     :toctree: generated
     :nosignatures:
     :template: only_names_in_toc.rst
+    :hidden:
+
+    get_layout
+    apply_layout
+    edit_layout
+
+.. autosummary::
+    :nosignatures:
+    :template: only_names_in_toc.rst
 
     get_layout
     apply_layout

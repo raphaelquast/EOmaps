@@ -25,6 +25,13 @@ If no explicit grid-spacing is provided (e.g. ``d=None``), the grid is dynamical
     :toctree: generated
     :nosignatures:
     :template: only_names_in_toc.rst
+    :hidden:
+
+    Maps.add_gridlines
+
+.. autosummary::
+    :nosignatures:
+    :template: only_names_in_toc.rst
 
     Maps.add_gridlines
 
@@ -71,6 +78,7 @@ useful methods:
     :toctree: generated
     :nosignatures:
     :template: only_names_in_toc.rst
+    :hidden:
 
     GridLines
     GridLines.set_d
@@ -80,6 +88,21 @@ useful methods:
     GridLines.update_line_props
     GridLines.remove
     GridLines.add_labels
+
+.. autosummary::
+    :nosignatures:
+    :template: only_names_in_toc.rst
+
+    GridLines
+    GridLines.set_d
+    GridLines.set_auto_n
+    GridLines.set_n
+    GridLines.set_bounds
+    GridLines.update_line_props
+    GridLines.remove
+    GridLines.add_labels
+
+
 
 .. _add_labels_to_the_grid:
 

@@ -101,12 +101,23 @@ In addition, each callback-container supports the following useful methods:
 .. currentmodule:: eomaps._cb_container._cb_container
 
 .. autosummary::
+    :toctree: generated
+    :nosignatures:
+    :template: only_names_in_toc.rst
+    :hidden:
+
+    share_events
+    forward_events
+    add_temporary_artist
+
+.. autosummary::
     :nosignatures:
     :template: only_names_in_toc.rst
 
     share_events
     forward_events
     add_temporary_artist
+
 
 
 .. _predefined_callbacks:
@@ -125,11 +136,22 @@ Callbacks that can be used with ``m.cb.click``, ``m.cb.pick`` and ``m.cb.move``:
     :toctree: generated
     :nosignatures:
     :template: only_names_in_toc.rst
+    :hidden:
 
     peek_layer
     annotate
     mark
     print_to_console
+
+.. autosummary::
+    :nosignatures:
+    :template: only_names_in_toc.rst
+
+    peek_layer
+    annotate
+    mark
+    print_to_console
+
 
 
 Callbacks that can be used with ``m.cb.click`` and ``m.cb.pick``:
@@ -138,6 +160,15 @@ Callbacks that can be used with ``m.cb.click`` and ``m.cb.pick``:
 
 .. autosummary::
     :toctree: generated
+    :nosignatures:
+    :template: only_names_in_toc.rst
+    :hidden:
+
+    get_values
+    clear_annotations
+    clear_markers
+
+.. autosummary::
     :nosignatures:
     :template: only_names_in_toc.rst
 
@@ -154,6 +185,14 @@ Callbacks that can be used only with ``m.cb.pick``:
     :toctree: generated
     :nosignatures:
     :template: only_names_in_toc.rst
+    :hidden:
+
+    load
+    highlight_geometry
+
+.. autosummary::
+    :nosignatures:
+    :template: only_names_in_toc.rst
 
     load
     highlight_geometry
@@ -168,6 +207,14 @@ Callbacks that can be used with ``m.cb.keypress``
 
 .. autosummary::
     :toctree: generated
+    :nosignatures:
+    :template: only_names_in_toc.rst
+    :hidden:
+
+    switch_layer
+    fetch_layers
+
+.. autosummary::
     :nosignatures:
     :template: only_names_in_toc.rst
 
@@ -314,10 +361,19 @@ To customize the picking-behavior, use ``m.cb.pick.set_props()``. The following 
 .. currentmodule:: eomaps._cb_container.cb_pick_container
 
 .. autosummary::
+    :toctree: generated
+    :nosignatures:
+    :template: only_names_in_toc.rst
+    :hidden:
+
+    set_props
+
+.. autosummary::
     :nosignatures:
     :template: only_names_in_toc.rst
 
     set_props
+
 
 
 .. table::
@@ -391,6 +447,13 @@ by using :py:meth:`Maps.make_dataset_pickable`.
 
 .. autosummary::
     :toctree: generated
+    :nosignatures:
+    :template: only_names_in_toc.rst
+    :hidden:
+
+    Maps.make_dataset_pickable
+
+.. autosummary::
     :nosignatures:
     :template: only_names_in_toc.rst
 

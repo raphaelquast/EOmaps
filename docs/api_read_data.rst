@@ -27,10 +27,18 @@ with ``shade_raster`` (if it fails it will fallback to ``shade_points`` and fina
     :toctree: generated
     :nosignatures:
     :template: only_names_in_toc.rst
-
+    :hidden:
 
     Maps.from_file
     Maps.new_layer_from_file
+
+.. autosummary::
+    :nosignatures:
+    :template: only_names_in_toc.rst
+
+    Maps.from_file
+    Maps.new_layer_from_file
+
 
 Read relevant data from a file
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -57,10 +65,21 @@ Read relevant data from a file
     :toctree: generated
     :nosignatures:
     :template: only_names_in_toc.rst
+    :hidden:
 
     read_file.GeoTIFF
     read_file.NetCDF
     read_file.CSV
+
+.. autosummary::
+    :nosignatures:
+    :template: only_names_in_toc.rst
+
+    read_file.GeoTIFF
+    read_file.NetCDF
+    read_file.CSV
+
+
 
 Initialize Maps-objects from a file
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -84,10 +103,21 @@ Initialize Maps-objects from a file
     :toctree: generated
     :nosignatures:
     :template: only_names_in_toc.rst
+    :hidden:
 
     from_file.GeoTIFF
     from_file.NetCDF
     from_file.CSV
+
+.. autosummary::
+    :nosignatures:
+    :template: only_names_in_toc.rst
+
+    from_file.GeoTIFF
+    from_file.NetCDF
+    from_file.CSV
+
+
 
 Add new layers to existing Maps-objects from a file
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -113,6 +143,16 @@ Similar to :py:class:`Maps.from_file` , a new layer based on a file can be added
 
 .. autosummary::
     :toctree: generated
+    :nosignatures:
+    :template: only_names_in_toc.rst
+    :hidden:
+
+
+    new_layer_from_file.GeoTIFF
+    new_layer_from_file.NetCDF
+    new_layer_from_file.CSV
+
+.. autosummary::
     :nosignatures:
     :template: only_names_in_toc.rst
 

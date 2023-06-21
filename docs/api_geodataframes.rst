@@ -24,8 +24,16 @@ supercharged with EOmaps features.
     :toctree: generated
     :nosignatures:
     :template: only_names_in_toc.rst
+    :hidden:
 
     Maps.add_gdf
+
+.. autosummary::
+    :nosignatures:
+    :template: only_names_in_toc.rst
+
+    Maps.add_gdf
+
 
 .. code-block:: python
     :name: test_add_gdf

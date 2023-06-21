@@ -13,8 +13,16 @@ Some helpful utility widgets can be added to a map via :py:class:`Maps.util`.
     :toctree: generated
     :nosignatures:
     :template: only_names_in_toc.rst
+    :hidden:
 
     Maps.util
+
+.. autosummary::
+    :nosignatures:
+    :template: only_names_in_toc.rst
+
+    Maps.util
+
 
 Layer switching
 ~~~~~~~~~~~~~~~
@@ -39,9 +47,18 @@ By default, the widgets will show all available layers (except the "all" layer) 
     :toctree: generated
     :nosignatures:
     :template: only_names_in_toc.rst
+    :hidden:
 
     layer_selector
     layer_slider
+
+.. autosummary::
+    :nosignatures:
+    :template: only_names_in_toc.rst
+
+    layer_selector
+    layer_slider
+
 
 
 .. table::

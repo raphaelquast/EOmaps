@@ -42,6 +42,10 @@ Possible ways for specifying the ``crs`` for plotting are:
   - ``Maps.CRS`` is just an accessor for ``cartopy.crs``
   - For a full list of available projections see: `Cartopy projections <https://scitools.org.uk/cartopy/docs/v0.15/crs/projections.html>`_
 
+
+..
+  use 2 autosummary directives to create the files but avoid putting them in the TOC
+
 .. autosummary::
     :toctree: generated
     :nosignatures:
@@ -51,6 +55,15 @@ Possible ways for specifying the ``crs`` for plotting are:
     Maps
     Maps.CRS
     Maps.set_extent
+
+.. autosummary::
+    :nosignatures:
+    :template: only_names_in_toc.rst
+
+    Maps
+    Maps.CRS
+    Maps.set_extent
+
 
 
 .. _layers:
@@ -223,8 +236,16 @@ To programmatically switch between layers or view a layer that represents a **co
     :toctree: generated
     :nosignatures:
     :template: only_names_in_toc.rst
+    :hidden:
 
     peek_layer
+
+.. autosummary::
+    :nosignatures:
+    :template: only_names_in_toc.rst
+
+    peek_layer
+
 
 
 .. code-block:: python
@@ -255,6 +276,17 @@ To programmatically switch between layers or view a layer that represents a **co
 
 .. autosummary::
     :toctree: generated
+    :nosignatures:
+    :template: only_names_in_toc.rst
+    :hidden:
+
+    Maps.new_layer
+    Maps.all
+    Maps.show
+    Maps.show_layer
+    Maps.fetch_layers
+
+.. autosummary::
     :nosignatures:
     :template: only_names_in_toc.rst
 
@@ -320,10 +352,20 @@ To adjust the margins of the subplots, use :py:meth:`m.subplots_adjust`, or have
     :toctree: generated
     :nosignatures:
     :template: only_names_in_toc.rst
+    :hidden:
 
     Maps.savefig
     Maps.subplots_adjust
     Maps.set_clipboard_kwargs
+
+.. autosummary::
+    :nosignatures:
+    :template: only_names_in_toc.rst
+
+    Maps.savefig
+    Maps.subplots_adjust
+    Maps.set_clipboard_kwargs
+
 
 
 .. _multiple_maps:
@@ -361,10 +403,17 @@ e.g.: ``m = Maps(ax=...)`` or ``m2 = m.new_map(ax=...)``
     :toctree: generated
     :nosignatures:
     :template: only_names_in_toc.rst
+    :hidden:
 
     Maps
     Maps.new_map
 
+.. autosummary::
+    :nosignatures:
+    :template: only_names_in_toc.rst
+
+    Maps
+    Maps.new_map
 
 In the following, the most commonly used cases are introduced:
 
@@ -714,6 +763,7 @@ The individual :py:class:`Maps` objects and ``matpltolib-Axes`` are then accessi
     :toctree: generated
     :nosignatures:
     :template: only_names_in_toc.rst
+    :hidden:
 
     MapsGrid
     MapsGrid.join_limits
@@ -727,6 +777,21 @@ The individual :py:class:`Maps` objects and ``matpltolib-Axes`` are then accessi
     MapsGrid.add_marker
     MapsGrid.add_gdf
 
+.. autosummary::
+    :nosignatures:
+    :template: only_names_in_toc.rst
+
+    MapsGrid
+    MapsGrid.join_limits
+    MapsGrid.share_click_events
+    MapsGrid.share_pick_events
+    MapsGrid.set_data
+    MapsGrid.set_classify_specs
+    MapsGrid.add_wms
+    MapsGrid.add_feature
+    MapsGrid.add_annotation
+    MapsGrid.add_marker
+    MapsGrid.add_gdf
 
 
 🧱 Naming conventions and autocompletion

@@ -20,10 +20,19 @@ To assign a dataset to a :py:class:`Maps` object, use :py:meth:`Maps.set_data`.
 .. currentmodule:: eomaps
 
 .. autosummary::
+    :toctree: generated
+    :nosignatures:
+    :template: only_names_in_toc.rst
+    :hidden:
+
+    Maps.set_data
+
+.. autosummary::
     :nosignatures:
     :template: only_names_in_toc.rst
 
     Maps.set_data
+
 
 A dataset is fully specified by setting the following properties:
 
@@ -113,11 +122,18 @@ To specify how a dataset is visualized on the map, you have to set the *"plot-sh
 .. currentmodule:: eomaps
 
 .. autosummary::
+    :toctree: generated
+    :nosignatures:
+    :template: only_names_in_toc.rst
+    :hidden:
+
+    Maps.set_shape
+
+.. autosummary::
     :nosignatures:
     :template: only_names_in_toc.rst
 
     Maps.set_shape
-
 
 .. admonition:: A note on speed and performance
 
@@ -137,6 +153,18 @@ Possible shapes that work nicely for datasets with up to ~500 000 data-points:
 .. currentmodule:: eomaps._shapes.shapes
 
 .. autosummary::
+    :toctree: generated
+    :nosignatures:
+    :template: only_names_in_toc.rst
+    :hidden:
+
+    geod_circles
+    ellipses
+    rectangles
+    voronoi_diagram
+    delaunay_triangulation
+
+.. autosummary::
     :nosignatures:
     :template: only_names_in_toc.rst
 
@@ -146,7 +174,17 @@ Possible shapes that work nicely for datasets with up to ~500 000 data-points:
     voronoi_diagram
     delaunay_triangulation
 
+
+
 Possible shapes that work nicely for up to a few million data-points:
+
+.. autosummary::
+    :toctree: generated
+    :nosignatures:
+    :template: only_names_in_toc.rst
+    :hidden:
+
+    raster
 
 .. autosummary::
     :nosignatures:
@@ -154,12 +192,22 @@ Possible shapes that work nicely for up to a few million data-points:
 
     raster
 
+
 While :py:class:`raster` can still be used for datasets with a few million datapoints, for extremely large datasets
 (> 10 million datapoints) it is recommended to use "shading" to **greatly speed-up plotting**.
 If shading is used, a dynamic averaging of the data based on the screen-resolution and the
 currently visible plot-extent is performed (resampling based on the mean-value is used by default).
 
 Possible shapes that can be used to quickly generate a plot for extremely large datasets are:
+
+.. autosummary::
+    :toctree: generated
+    :nosignatures:
+    :template: only_names_in_toc.rst
+    :hidden:
+
+    shade_points
+    shade_raster
 
 .. autosummary::
     :nosignatures:
@@ -222,6 +270,14 @@ EOmaps provides an interface for `mapclassify <https://github.com/pysal/mapclass
 To assign a classification scheme to a :py:class:`Maps` object, use ``m.set_classify.< SCHEME >(...)``.
 
 - Available classifier names are accessible via ``Maps.CLASSIFIERS``.
+
+.. autosummary::
+    :toctree: generated
+    :nosignatures:
+    :template: only_names_in_toc.rst
+    :hidden:
+
+    Maps.set_classify
 
 .. autosummary::
     :nosignatures:
@@ -317,6 +373,15 @@ To always keep the extent as-is, use ``m.plot_map(set_extent=False)``.
 You can then continue to add a :ref:`colorbar` or create :ref:`zoomed_in_views_on_datasets`.
 
 .. currentmodule:: eomaps
+
+.. autosummary::
+    :toctree: generated
+    :nosignatures:
+    :template: only_names_in_toc.rst
+    :hidden:
+
+    Maps.plot_map
+    Maps.savefig
 
 .. autosummary::
     :nosignatures:
@@ -552,14 +617,36 @@ Once a dataset has been plotted, a colorbar with a colored histogram on top can 
     +-----------------------------------------------------------------+------------------------------------------+
 
 .. autosummary::
+    :toctree: generated
+    :nosignatures:
+    :template: only_names_in_toc.rst
+    :hidden:
+
+    Maps.add_colorbar
+
+.. autosummary::
     :nosignatures:
     :template: only_names_in_toc.rst
 
     Maps.add_colorbar
 
+
 The returned ``ColorBar``-object has the following useful methods defined:
 
 .. currentmodule:: eomaps.colorbar
+
+.. autosummary::
+    :toctree: generated
+    :nosignatures:
+    :template: only_names_in_toc.rst
+    :hidden:
+
+    ColorBar.set_position
+    ColorBar.set_labels
+    ColorBar.set_hist_size
+    ColorBar.tick_params
+    ColorBar.set_visible
+    ColorBar.remove
 
 .. autosummary::
     :nosignatures:
@@ -571,7 +658,6 @@ The returned ``ColorBar``-object has the following useful methods defined:
     ColorBar.tick_params
     ColorBar.set_visible
     ColorBar.remove
-
 
 📎 Set colorbar tick labels based on bins
 *****************************************
@@ -607,11 +693,18 @@ To label the colorbar with custom names for a given set of bins, use :py:meth:`C
 
 
 .. autosummary::
+    :toctree: generated
+    :nosignatures:
+    :template: only_names_in_toc.rst
+    :hidden:
+
+    ColorBar.set_bin_labels
+
+.. autosummary::
     :nosignatures:
     :template: only_names_in_toc.rst
 
     ColorBar.set_bin_labels
-
 
 
 🌠 Using the colorbar as a "dynamic shade indicator"

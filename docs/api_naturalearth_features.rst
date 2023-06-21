@@ -12,8 +12,16 @@ Feature-layers provided by `NaturalEarth <https://www.naturalearthdata.com>`_ ca
     :toctree: generated
     :nosignatures:
     :template: only_names_in_toc.rst
+    :hidden:
 
     Maps.add_feature
+
+.. autosummary::
+    :nosignatures:
+    :template: only_names_in_toc.rst
+
+    Maps.add_feature
+
 
 The call-signature is: ``m.add_feature.< CATEGORY >.< FEATURE >(...)``:
 
@@ -79,6 +87,19 @@ The most commonly used features are accessible with pre-defined colors via the `
 
 .. autosummary::
     :toctree: generated
+    :nosignatures:
+    :template: only_names_in_toc.rst
+    :hidden:
+
+    coastline
+    ocean
+    land
+    countries
+    urban_areas
+    lakes
+    rivers_lake_centerlines
+
+.. autosummary::
     :nosignatures:
     :template: only_names_in_toc.rst
 

@@ -46,6 +46,20 @@ Starting with EOmaps v5.0 it is possible to draw simple shapes on the map using 
     :toctree: generated
     :nosignatures:
     :template: only_names_in_toc.rst
+    :hidden:
+
+    ShapeDrawer.new_drawer
+    ShapeDrawer.rectangle
+    ShapeDrawer.circle
+    ShapeDrawer.polygon
+    ShapeDrawer.save_shapes
+    ShapeDrawer.remove_last_shape
+
+.. currentmodule:: eomaps.draw
+
+.. autosummary::
+    :nosignatures:
+    :template: only_names_in_toc.rst
 
     ShapeDrawer.new_drawer
     ShapeDrawer.rectangle
