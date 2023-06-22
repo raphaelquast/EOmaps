@@ -116,12 +116,12 @@ from ._containers import (
 
 try:
     from ._webmap import refetch_wms_on_size_change, _cx_refetch_wms_on_size_change
-    from .webmap_containers import wms_container
+    from .webmap_containers import WebMapContainer
 except ImportError as ex:
     print("EOmaps: Unable to import required WebMap dependencies:", ex)
     refetch_wms_on_size_change = None
     _cx_refetch_wms_on_size_change = None
-    wms_container = None
+    WebMapContainer = None
 
 from .ne_features import NaturalEarth_features
 
@@ -445,8 +445,8 @@ class Maps(object):
         self._cb = cb_container(weakref.proxy(self))  # accessor for the callbacks
 
         self._init_figure(ax=ax, plot_crs=crs, **kwargs)
-        if wms_container is not None:
-            self._wms_container = wms_container(weakref.proxy(self))
+        if WebMapContainer is not None:
+            self._wms_container = WebMapContainer(weakref.proxy(self))
         self._new_layer_from_file = new_layer_from_file(weakref.proxy(self))
 
         self._shapes = Shapes(weakref.proxy(self))
@@ -2150,10 +2150,10 @@ class Maps(object):
 
         return s
 
-    if wms_container is not None:
+    if WebMapContainer is not None:
 
         @property
-        @wraps(wms_container)
+        @wraps(WebMapContainer)
         def add_wms(self):
             """Accessor to attach WebMap services to the map."""
             return self._wms_container

@@ -10,9 +10,9 @@ from .eomaps import Maps
 from .ne_features import NaturalEarth_features
 
 try:
-    from .webmap_containers import wms_container
+    from .webmap_containers import WebMapContainer
 except ImportError:
-    wms_container = None
+    WebMapContainer = None
 
 
 class MapsGrid:
@@ -145,8 +145,8 @@ class MapsGrid:
         self._Maps = []
         self._names = dict()
 
-        if wms_container is not None:
-            self._wms_container = wms_container(self)
+        if WebMapContainer is not None:
+            self._wms_container = WebMapContainer(self)
 
         gskwargs = dict(bottom=0.01, top=0.99, left=0.01, right=0.99)
         gskwargs.update(kwargs)

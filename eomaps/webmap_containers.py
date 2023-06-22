@@ -23,7 +23,7 @@ def _register_imports():
     )
 
 
-class wms_container(object):
+class WebMapContainer(object):
     """
     A collection of open-access WebMap services that can be added to the maps.
 
