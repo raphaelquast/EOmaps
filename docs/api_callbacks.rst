@@ -23,13 +23,13 @@ They can be attached to a :py:class:`Maps` object via:
     :widths: auto
 
     +--------------------------------------------------------------+----------------------------------------------------------------------------------+
-    | :class:`click <eomaps._cb_container.ClickContainer>`         | Callbacks that are executed if you click anywhere on the Map.                    |
+    | :class:`click <eomaps.cb_container.ClickContainer>`         | Callbacks that are executed if you click anywhere on the Map.                    |
     +--------------------------------------------------------------+----------------------------------------------------------------------------------+
-    | :class:`pick <eomaps._cb_container.PickContainer>`           | Callbacks that select the nearest datapoint(s) if you click on the map.          |
+    | :class:`pick <eomaps.cb_container.PickContainer>`           | Callbacks that select the nearest datapoint(s) if you click on the map.          |
     +--------------------------------------------------------------+----------------------------------------------------------------------------------+
-    | :class:`move <eomaps._cb_container.MoveContainer>`           | Callbacks that are executed if you press a key on the keyboard.                  |
+    | :class:`move <eomaps.cb_container.MoveContainer>`           | Callbacks that are executed if you press a key on the keyboard.                  |
     +--------------------------------------------------------------+----------------------------------------------------------------------------------+
-    | :class:`keypress <eomaps._cb_container.KeypressContainer>`   | Callbacks that are executed if you move the mouse without holding down a button. |
+    | :class:`keypress <eomaps.cb_container.KeypressContainer>`   | Callbacks that are executed if you move the mouse without holding down a button. |
     +--------------------------------------------------------------+----------------------------------------------------------------------------------+
 
 
@@ -88,17 +88,17 @@ In addition, each callback-container supports the following useful methods:
     :widths: auto
 
     +---------------------------------------------------------------------------------------------+---------------------------------------------------------------------------+
-    | :class:`attach <eomaps._cb_container.ClickContainer._attach>`                             | Attach custom or pre-defined callbacks to the map.                        |
+    | :class:`attach <eomaps.cb_container.ClickContainer._attach>`                             | Attach custom or pre-defined callbacks to the map.                        |
     +---------------------------------------------------------------------------------------------+---------------------------------------------------------------------------+
-    | :class:`remove <eomaps._cb_container.ClickContainer.remove>`                              | Remove previously attached callbacks from the map.                        |
+    | :class:`remove <eomaps.cb_container.ClickContainer.remove>`                              | Remove previously attached callbacks from the map.                        |
     +---------------------------------------------------------------------------------------------+---------------------------------------------------------------------------+
-    | :class:`get <eomaps._cb_container.ClickContainer._get>`                                   | Accessor for objects generated/retrieved by callbacks.                    |
+    | :class:`get <eomaps.cb_container.ClickContainer._get>`                                   | Accessor for objects generated/retrieved by callbacks.                    |
     +---------------------------------------------------------------------------------------------+---------------------------------------------------------------------------+
-    | :class:`set_sticky_modifiers <eomaps._cb_container.ClickContainer.set_sticky_modifiers>`  | Define keys on the keyboard that should be treated as "sticky modifiers". |
+    | :class:`set_sticky_modifiers <eomaps.cb_container.ClickContainer.set_sticky_modifiers>`  | Define keys on the keyboard that should be treated as "sticky modifiers". |
     +---------------------------------------------------------------------------------------------+---------------------------------------------------------------------------+
 
 
-.. currentmodule:: eomaps._cb_container.CallbackContainer
+.. currentmodule:: eomaps.cb_container.CallbackContainer
 
 .. autosummary::
     :nosignatures:
@@ -304,7 +304,7 @@ To customize the picking-behavior, use ``m.cb.pick.set_props()``. The following 
   - If True, callbacks are executed for each picked point individually
   - If False, callbacks are executed only once and get lists of all picked values as input-arguments.
 
-.. currentmodule:: eomaps._cb_container.PickContainer
+.. currentmodule:: eomaps.cb_container.PickContainer
 
 .. autosummary::
     :nosignatures:
