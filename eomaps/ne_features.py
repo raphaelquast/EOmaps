@@ -22,7 +22,7 @@ def combdoc(*args):
     return "\n".join(dedent(str(i)) for i in args)
 
 
-class _NaturalEarth_presets:
+class NaturalEarth_presets:
     """
     Feature presets
 
@@ -364,7 +364,7 @@ class NaturalEarth_features(object):
         - "land" - beige land coloring
         - "countries" - gray country boarder lines
         """
-        return _NaturalEarth_presets(self._m)
+        return NaturalEarth_presets(self._m)
 
     class _category:
         def __init__(self, scale, category, **kwargs):
