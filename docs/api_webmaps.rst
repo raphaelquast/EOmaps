@@ -67,7 +67,7 @@ Pre-defined WebMap services:
 
 **Global:**
 
-.. currentmodule:: eomaps._webmap_containers.wms_container
+.. currentmodule:: eomaps.webmap_containers.wms_container
 
 .. autosummary::
     :nosignatures:
@@ -91,7 +91,7 @@ Pre-defined WebMap services:
 
 **Services specific for Austria (Europe)**
 
-.. currentmodule:: eomaps._webmap_containers
+.. currentmodule:: eomaps.webmap_containers
 
 .. autosummary::
     :nosignatures:
@@ -117,7 +117,7 @@ Pre-defined WebMap services:
 Using custom WebMap services
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-.. currentmodule:: eomaps._webmap_containers.wms_container
+.. currentmodule:: eomaps.webmap_containers.wms_container
 
 It is also possible to use custom WMS/WMTS/XYZ services.
 (see docstring of :py:meth:`get_service` for more details and examples)

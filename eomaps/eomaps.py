@@ -116,7 +116,7 @@ from ._containers import (
 
 try:
     from ._webmap import refetch_wms_on_size_change, _cx_refetch_wms_on_size_change
-    from ._webmap_containers import wms_container
+    from .webmap_containers import wms_container
 except ImportError as ex:
     print("EOmaps: Unable to import required WebMap dependencies:", ex)
     refetch_wms_on_size_change = None

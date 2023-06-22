@@ -8,4 +8,3 @@ API Reference
    :recursive:
 
    eomaps
-   eomaps._webmap_containers

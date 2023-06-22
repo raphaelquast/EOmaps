@@ -10,7 +10,7 @@ from .eomaps import Maps
 from .ne_features import NaturalEarth_features
 
 try:
-    from ._webmap_containers import wms_container
+    from .webmap_containers import wms_container
 except ImportError:
     wms_container = None
 
