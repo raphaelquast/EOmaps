@@ -1,8 +1,7 @@
 """
-A class to draw shapes on maps created with EOmaps
+Functionalities to draw shapes on maps created with EOmaps.
 
 Known Issues:
--------------
 
 It can happen that geopandas silently ignores the crs when writing shapefiles
 (in case WKT2 strings are required to represent the crs)
