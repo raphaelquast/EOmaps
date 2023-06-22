@@ -20,7 +20,6 @@ In addition, many style properties of the scalebar can be adjusted to get the lo
 
 .. autosummary::
     :nosignatures:
-    :template: only_names_in_toc.rst
 
     Maps.add_scalebar
 
@@ -69,7 +68,6 @@ The returned :py:class:`ScaleBar` object provides the following useful methods:
 
 .. autosummary::
     :nosignatures:
-    :template: only_names_in_toc.rst
 
     ScaleBar
     ScaleBar.print_code

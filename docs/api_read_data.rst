@@ -23,14 +23,12 @@ with ``shade_raster`` (if it fails it will fallback to ``shade_points`` and fina
 
 .. autosummary::
     :nosignatures:
-    :template: only_names_in_toc.rst
 
     Maps.from_file
     Maps.new_layer_from_file
 
 .. autosummary::
     :nosignatures:
-    :template: only_names_in_toc.rst
 
     Maps.from_file
     Maps.new_layer_from_file
@@ -59,7 +57,6 @@ Read relevant data from a file
 
 .. autosummary::
     :nosignatures:
-    :template: only_names_in_toc.rst
 
     read_file.GeoTIFF
     read_file.NetCDF
@@ -67,7 +64,6 @@ Read relevant data from a file
 
 .. autosummary::
     :nosignatures:
-    :template: only_names_in_toc.rst
 
     read_file.GeoTIFF
     read_file.NetCDF
@@ -95,7 +91,6 @@ Initialize Maps-objects from a file
 
 .. autosummary::
     :nosignatures:
-    :template: only_names_in_toc.rst
 
     from_file.GeoTIFF
     from_file.NetCDF
@@ -103,7 +98,6 @@ Initialize Maps-objects from a file
 
 .. autosummary::
     :nosignatures:
-    :template: only_names_in_toc.rst
 
     from_file.GeoTIFF
     from_file.NetCDF
@@ -135,7 +129,6 @@ Similar to :py:class:`Maps.from_file` , a new layer based on a file can be added
 
 .. autosummary::
     :nosignatures:
-    :template: only_names_in_toc.rst
 
 
     new_layer_from_file.GeoTIFF

@@ -23,7 +23,6 @@ To assign a dataset to a :py:class:`Maps` object, use :py:meth:`Maps.set_data`.
 
 .. autosummary::
     :nosignatures:
-    :template: only_names_in_toc.rst
 
     Maps.set_data
 
@@ -117,7 +116,6 @@ To specify how a dataset is visualized on the map, you have to set the *"plot-sh
 
 .. autosummary::
     :nosignatures:
-    :template: only_names_in_toc.rst
 
     Maps.set_shape
 
@@ -140,7 +138,6 @@ Possible shapes that work nicely for datasets with up to ~500 000 data-points:
 
 .. autosummary::
     :nosignatures:
-    :template: only_names_in_toc.rst
 
     geod_circles
     ellipses
@@ -154,7 +151,6 @@ Possible shapes that work nicely for up to a few million data-points:
 
 .. autosummary::
     :nosignatures:
-    :template: only_names_in_toc.rst
 
     raster
 
@@ -168,7 +164,6 @@ Possible shapes that can be used to quickly generate a plot for extremely large 
 
 .. autosummary::
     :nosignatures:
-    :template: only_names_in_toc.rst
 
     shade_points
     shade_raster
@@ -230,7 +225,6 @@ To assign a classification scheme to a :py:class:`Maps` object, use ``m.set_clas
 
 .. autosummary::
     :nosignatures:
-    :template: only_names_in_toc.rst
 
     Maps.set_classify
 
@@ -325,7 +319,6 @@ You can then continue to add a :ref:`colorbar` or create :ref:`zoomed_in_views_o
 
 .. autosummary::
     :nosignatures:
-    :template: only_names_in_toc.rst
 
     Maps.plot_map
     Maps.savefig
@@ -558,7 +551,6 @@ Once a dataset has been plotted, a colorbar with a colored histogram on top can 
 
 .. autosummary::
     :nosignatures:
-    :template: only_names_in_toc.rst
 
     Maps.add_colorbar
 
@@ -569,7 +561,6 @@ The returned ``ColorBar``-object has the following useful methods defined:
 
 .. autosummary::
     :nosignatures:
-    :template: only_names_in_toc.rst
 
     ColorBar.set_position
     ColorBar.set_labels
@@ -613,7 +604,6 @@ To label the colorbar with custom names for a given set of bins, use :py:meth:`C
 
 .. autosummary::
     :nosignatures:
-    :template: only_names_in_toc.rst
 
     ColorBar.set_bin_labels
 

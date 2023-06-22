@@ -37,7 +37,6 @@ Static markers can be added to the map via :py:meth:`Maps.add_marker`.
 
 .. autosummary::
     :nosignatures:
-    :template: only_names_in_toc.rst
 
     Maps.add_marker
 
@@ -109,7 +108,6 @@ Static annotations can be added to the map via :py:meth:`Maps.add_annotation`.
 
 .. autosummary::
     :nosignatures:
-    :template: only_names_in_toc.rst
 
     Maps.add_annotation
 
@@ -204,7 +202,6 @@ Lines can be added to a map with :py:meth:`Maps.add_line`.
 
 .. autosummary::
     :nosignatures:
-    :template: only_names_in_toc.rst
 
     Maps.add_line
 
@@ -255,7 +252,6 @@ To indicate rectangular areas in any given crs, simply use :py:meth:`Maps.indica
 
 .. autosummary::
     :nosignatures:
-    :template: only_names_in_toc.rst
 
     Maps.indicate_extent
 
@@ -321,6 +317,5 @@ Logos can be re-positioned and re-sized with the :ref:`layout_editor`!
 
 .. autosummary::
     :nosignatures:
-    :template: only_names_in_toc.rst
 
     Maps.add_logo

@@ -23,7 +23,6 @@ and ``< LAYER >`` indicates the actual layer-name.
 
 .. autosummary::
     :nosignatures:
-    :template: only_names_in_toc.rst
 
     Maps.add_wms
 
@@ -72,7 +71,6 @@ Pre-defined WebMap services:
 
 .. autosummary::
     :nosignatures:
-    :template: only_names_in_toc.rst
 
     OpenStreetMap
     ESA_WorldCover
@@ -97,7 +95,6 @@ Pre-defined WebMap services:
 
 .. autosummary::
     :nosignatures:
-    :template: only_names_in_toc.rst
 
     Austria.AT_basemap
     Austria.Wien_basemap
@@ -127,7 +124,6 @@ It is also possible to use custom WMS/WMTS/XYZ services.
 
 .. autosummary::
     :nosignatures:
-    :template: only_names_in_toc.rst
 
     get_service
 

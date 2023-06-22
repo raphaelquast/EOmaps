@@ -102,7 +102,6 @@ In addition, each callback-container supports the following useful methods:
 
 .. autosummary::
     :nosignatures:
-    :template: only_names_in_toc.rst
 
     share_events
     forward_events
@@ -124,7 +123,6 @@ Callbacks that can be used with ``m.cb.click``, ``m.cb.pick`` and ``m.cb.move``:
 
 .. autosummary::
     :nosignatures:
-    :template: only_names_in_toc.rst
 
     peek_layer
     annotate
@@ -139,7 +137,6 @@ Callbacks that can be used with ``m.cb.click`` and ``m.cb.pick``:
 
 .. autosummary::
     :nosignatures:
-    :template: only_names_in_toc.rst
 
     get_values
     clear_annotations
@@ -152,7 +149,6 @@ Callbacks that can be used only with ``m.cb.pick``:
 
 .. autosummary::
     :nosignatures:
-    :template: only_names_in_toc.rst
 
     load
     highlight_geometry
@@ -167,7 +163,6 @@ Callbacks that can be used with ``m.cb.keypress``
 
 .. autosummary::
     :nosignatures:
-    :template: only_names_in_toc.rst
 
     switch_layer
     fetch_layers
@@ -313,7 +308,6 @@ To customize the picking-behavior, use ``m.cb.pick.set_props()``. The following 
 
 .. autosummary::
     :nosignatures:
-    :template: only_names_in_toc.rst
 
     set_props
 
@@ -390,6 +384,5 @@ by using :py:meth:`Maps.make_dataset_pickable`.
 
 .. autosummary::
     :nosignatures:
-    :template: only_names_in_toc.rst
 
     Maps.make_dataset_pickable

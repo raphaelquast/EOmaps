@@ -24,7 +24,6 @@ A compass can be added to the map via :py:meth:`Maps.add_compass`:
 
 .. autosummary::
     :nosignatures:
-    :template: only_names_in_toc.rst
 
     Maps.add_compass
 
@@ -54,7 +53,6 @@ The returned ``compass`` object has the following useful methods assigned:
 
 .. autosummary::
     :nosignatures:
-    :template: only_names_in_toc.rst
 
     Compass.remove
     Compass.set_patch

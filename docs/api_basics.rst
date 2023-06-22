@@ -44,7 +44,6 @@ Possible ways for specifying the ``crs`` for plotting are:
 
 .. autosummary::
     :nosignatures:
-    :template: only_names_in_toc.rst
 
     Maps
     Maps.CRS
@@ -219,7 +218,6 @@ To programmatically switch between layers or view a layer that represents a **co
 
 .. autosummary::
     :nosignatures:
-    :template: only_names_in_toc.rst
 
     peek_layer
 
@@ -253,7 +251,6 @@ To programmatically switch between layers or view a layer that represents a **co
 
 .. autosummary::
     :nosignatures:
-    :template: only_names_in_toc.rst
 
     Maps.new_layer
     Maps.all
@@ -315,7 +312,6 @@ To adjust the margins of the subplots, use :py:meth:`m.subplots_adjust`, or have
 
 .. autosummary::
     :nosignatures:
-    :template: only_names_in_toc.rst
 
     Maps.savefig
     Maps.subplots_adjust
@@ -356,7 +352,6 @@ e.g.: ``m = Maps(ax=...)`` or ``m2 = m.new_map(ax=...)``
 
 .. autosummary::
     :nosignatures:
-    :template: only_names_in_toc.rst
 
     Maps
     Maps.new_map
@@ -707,7 +702,6 @@ The individual :py:class:`Maps` objects and ``matpltolib-Axes`` are then accessi
 
 .. autosummary::
     :nosignatures:
-    :template: only_names_in_toc.rst
 
     MapsGrid
     MapsGrid.join_limits

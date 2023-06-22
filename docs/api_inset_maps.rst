@@ -29,7 +29,6 @@ For convenience, inset-map objects have the following special methods defined:
 
 .. autosummary::
     :nosignatures:
-    :template: only_names_in_toc.rst
 
     InsetMaps.set_inset_position
     InsetMaps.indicate_inset_extent
@@ -74,7 +73,6 @@ To quickly re-position (and re-size) inset-maps, have a look at the :ref:`layout
 
 .. autosummary::
     :nosignatures:
-    :template: only_names_in_toc.rst
 
     new_inset_map
 

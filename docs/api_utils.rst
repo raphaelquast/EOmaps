@@ -10,7 +10,6 @@ Some helpful utility widgets can be added to a map via :py:class:`Maps.util`.
 
 .. autosummary::
     :nosignatures:
-    :template: only_names_in_toc.rst
 
     Maps.util
 
@@ -36,7 +35,6 @@ By default, the widgets will show all available layers (except the "all" layer) 
 
 .. autosummary::
     :nosignatures:
-    :template: only_names_in_toc.rst
 
     layer_selector
     layer_slider

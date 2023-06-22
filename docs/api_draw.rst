@@ -44,7 +44,6 @@ Starting with EOmaps v5.0 it is possible to draw simple shapes on the map using 
 
 .. autosummary::
     :nosignatures:
-    :template: only_names_in_toc.rst
 
     ShapeDrawer.new_drawer
     ShapeDrawer.rectangle

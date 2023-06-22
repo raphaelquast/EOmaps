@@ -23,13 +23,11 @@ If no explicit grid-spacing is provided (e.g. ``d=None``), the grid is dynamical
 
 .. autosummary::
     :nosignatures:
-    :template: only_names_in_toc.rst
 
     Maps.add_gridlines
 
 .. autosummary::
     :nosignatures:
-    :template: only_names_in_toc.rst
 
     Maps.add_gridlines
 
@@ -74,7 +72,6 @@ useful methods:
 
 .. autosummary::
     :nosignatures:
-    :template: only_names_in_toc.rst
 
     GridLines
     GridLines.set_d

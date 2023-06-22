@@ -21,7 +21,6 @@ supercharged with EOmaps features.
 
 .. autosummary::
     :nosignatures:
-    :template: only_names_in_toc.rst
 
     Maps.add_gdf
 

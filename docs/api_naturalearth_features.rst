@@ -10,7 +10,6 @@ Feature-layers provided by `NaturalEarth <https://www.naturalearthdata.com>`_ ca
 
 .. autosummary::
     :nosignatures:
-    :template: only_names_in_toc.rst
 
     Maps.add_feature
 
@@ -79,7 +78,6 @@ The most commonly used features are accessible with pre-defined colors via the `
 
 .. autosummary::
     :nosignatures:
-    :template: only_names_in_toc.rst
 
     coastline
     ocean

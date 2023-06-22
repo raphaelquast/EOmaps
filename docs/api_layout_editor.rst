@@ -65,7 +65,6 @@ It is also possible to enter the **Layout Editor** and save the layout automatic
 
 .. autosummary::
     :nosignatures:
-    :template: only_names_in_toc.rst
 
     get_layout
     apply_layout
