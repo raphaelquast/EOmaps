@@ -10,4 +10,3 @@ API Reference
    eomaps
    eomaps._shapes
    eomaps._webmap_containers
-   eomaps._NaturalEarth_presets

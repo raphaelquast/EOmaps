@@ -75,7 +75,7 @@ If you want to get a ``geopandas.GeoDataFrame`` containing all shapes and metada
 
 The most commonly used features are accessible with pre-defined colors via the ``preset`` category:
 
-.. currentmodule:: eomaps.ne_features._NaturalEarth_presets
+.. currentmodule:: eomaps.ne_features.NaturalEarth_presets
 
 .. autosummary::
     :nosignatures:
