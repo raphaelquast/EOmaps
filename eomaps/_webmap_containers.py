@@ -4,7 +4,7 @@ from textwrap import dedent
 from types import SimpleNamespace
 
 
-def combdoc(*args):
+def _combdoc(*args):
     """Combine docstrings."""
     return "\n".join(dedent(str(i)) for i in args)
 
@@ -477,7 +477,7 @@ class wms_container(object):
                     "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
                     name="OSM_default",
                 )
-                self.default.__doc__ = combdoc(
+                self.default.__doc__ = _combdoc(
                     """
                     OpenStreetMap's standard tile layer
                     https://www.openstreetmap.org/
@@ -496,7 +496,7 @@ class wms_container(object):
                     "https://tile.openstreetmap.de/{z}/{x}/{y}.png",
                     name="OSM_default_german",
                 )
-                self.default_german.__doc__ = combdoc(
+                self.default_german.__doc__ = _combdoc(
                     """
                     German fork of OpenStreetMap's standard tile layer
                     https://www.openstreetmap.de/
@@ -515,7 +515,7 @@ class wms_container(object):
                     "https://a.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png",
                     name="OSM_humanitarian",
                 )
-                self.humanitarian.__doc__ = combdoc(
+                self.humanitarian.__doc__ = _combdoc(
                     """
                     OpenStreetMap's Humanitarian style
 
@@ -549,7 +549,7 @@ class wms_container(object):
                     maxzoom=16,
                     name="OSM_OpenTopoMap",
                 )
-                self.OpenTopoMap.__doc__ = combdoc(
+                self.OpenTopoMap.__doc__ = _combdoc(
                     """
                     A project aiming at rendering topographic maps from OSM
                     and SRTM data. The map style is similar to some official
@@ -571,7 +571,7 @@ class wms_container(object):
                     maxzoom=16,
                     name="OSM_OpenRiverboatMap",
                 )
-                self.OpenRiverboatMap.__doc__ = combdoc(
+                self.OpenRiverboatMap.__doc__ = _combdoc(
                     """
                     Open Riverboat Map plans to make an open source CartoCSS map style
                     of navigable waterways, on top of OpenStreetMap project.
@@ -598,7 +598,7 @@ class wms_container(object):
                     maxzoom=16,
                     name="OSM_OpenSeaMap",
                 )
-                self.OpenSeaMap.__doc__ = combdoc(
+                self.OpenSeaMap.__doc__ = _combdoc(
                     """
                     OpenSeaMap is an open source, worldwide project to create a free
                     nautical chart. There is a great need for freely accessible maps
@@ -630,7 +630,7 @@ class wms_container(object):
                     maxzoom=16,
                     name="CyclOSM",
                 )
-                self.CyclOSM.__doc__ = combdoc(
+                self.CyclOSM.__doc__ = _combdoc(
                     """
                     CyclOSM is a bicycle-oriented map built on top of OpenStreetMap data.
                     It aims at providing a beautiful and practical map for cyclists, no
@@ -661,7 +661,7 @@ class wms_container(object):
                     name="CyclOSM",
                 )
 
-                self.CyclOSM_lite.__doc__ = combdoc(
+                self.CyclOSM_lite.__doc__ = _combdoc(
                     """
                     CyclOSM is a bicycle-oriented map built on top of OpenStreetMap data.
                     It aims at providing a beautiful and practical map for cyclists, no
@@ -692,7 +692,7 @@ class wms_container(object):
                     name="CyclOSM",
                 )
 
-                self.OEPNV_public_transport.__doc__ = combdoc(
+                self.OEPNV_public_transport.__doc__ = _combdoc(
                     """
                     We display worldwide public transport facilities on a uniform map,
                     so that you can forget about browsing individual operators websites.
@@ -794,7 +794,7 @@ class wms_container(object):
                     attribution provided in the link above.
                     """
 
-                stamen_toner_doc = combdoc(
+                stamen_toner_doc = _combdoc(
                     """
                     **Stamen Toner**
 
@@ -804,7 +804,7 @@ class wms_container(object):
                     self.stamen_toner.__call__.__doc__,
                 )
 
-                stamen_terrain_doc = combdoc(
+                stamen_terrain_doc = _combdoc(
                     """
                     **Stamen Terrain**
 
@@ -815,7 +815,7 @@ class wms_container(object):
                     self.stamen_toner.__call__.__doc__,
                 )
 
-                stamen_watercolor_doc = combdoc(
+                stamen_watercolor_doc = _combdoc(
                     """
                     **Stamen Watercolor**
 
@@ -884,7 +884,7 @@ class wms_container(object):
 
                         setattr(self, v, srv)
 
-                        getattr(self, v).__doc__ = combdoc(
+                        getattr(self, v).__doc__ = _combdoc(
                             (
                                 f"WaymarkedTrails {v} layer\n"
                                 "\n"
@@ -939,7 +939,7 @@ class wms_container(object):
 
                         setattr(self, v, srv)
 
-                        getattr(self, v).__doc__ = combdoc(
+                        getattr(self, v).__doc__ = _combdoc(
                             (
                                 f"OpenRailwayMap {v} layer\n"
                                 "\n"
@@ -1003,7 +1003,7 @@ class wms_container(object):
 
                         setattr(self, name, srv)
 
-                        getattr(self, name).__doc__ = combdoc(
+                        getattr(self, name).__doc__ = _combdoc(
                             (
                                 f"CartoDB basemap {v} layer\n"
                                 "\n"
@@ -1024,7 +1024,7 @@ class wms_container(object):
                 service_type="wms",
                 url="https://ows.terrestris.de/osm/service?SERVICE=WMS&VERSION=1.1.1&REQUEST=GetCapabilities",
             )
-            WMS.__doc__ = combdoc(
+            WMS.__doc__ = _combdoc(
                 type(self).__doc__,
                 """
                 Note
@@ -1045,7 +1045,7 @@ class wms_container(object):
                 service_type="wms",
                 url="http://ows.mundialis.de/services/service?",
             )
-            WMS.__doc__ = combdoc(
+            WMS.__doc__ = _combdoc(
                 type(self).__doc__,
                 """
                 Note
@@ -1066,7 +1066,7 @@ class wms_container(object):
                 service_type="wms",
                 url="https://osm-demo.wheregroup.com/service?REQUEST=GetCapabilities",
             )
-            WMS.__doc__ = combdoc(
+            WMS.__doc__ = _combdoc(
                 type(self).__doc__,
                 """
                 Note
@@ -1090,7 +1090,7 @@ class wms_container(object):
                 service_type="wms",
                 url=r"https://maps.heigit.org/osm-wms/service?REQUEST=GetCapabilities&SERVICE=WMS",
             )
-            WMS.__doc__ = combdoc(
+            WMS.__doc__ = _combdoc(
                 type(self).__doc__,
                 """
                 The first version of osm-wms.de was put online at 13th of February
@@ -1142,7 +1142,7 @@ class wms_container(object):
                 service_type="wms",
                 url=r"https://maps.heigit.org/osmlanduse/service?REQUEST=GetCapabilities",
             )
-            WMS.__doc__ = combdoc(
+            WMS.__doc__ = _combdoc(
                 type(self).__doc__,
                 """
                 OSM Landuse Landcover is a WebGIS application to explore the
@@ -1235,7 +1235,7 @@ class wms_container(object):
                 name="EEA_REST_Image",
                 service_type="wms",
             )
-            API.__doc__ = combdoc(
+            API.__doc__ = _combdoc(
                 type(self).__doc__,
                 """
                 ... access to the 'Image' subfolder
@@ -1268,7 +1268,7 @@ class wms_container(object):
                 name="EEA_REST_Land",
                 service_type="wms",
             )
-            API.__doc__ = combdoc(
+            API.__doc__ = _combdoc(
                 type(self).__doc__,
                 """
                 ... access to the 'Land' subfolder
@@ -1301,7 +1301,7 @@ class wms_container(object):
                 name="EEA_REST_Climate",
                 service_type="wms",
             )
-            API.__doc__ = combdoc(
+            API.__doc__ = _combdoc(
                 type(self).__doc__,
                 """
                 ... access to the 'Climate' subfolder
@@ -1334,7 +1334,7 @@ class wms_container(object):
                 name="EEA_REST_Bio",
                 service_type="wms",
             )
-            API.__doc__ = combdoc(
+            API.__doc__ = _combdoc(
                 type(self).__doc__,
                 """
                 ... access to the 'Bio' subfolder
@@ -1367,7 +1367,7 @@ class wms_container(object):
                 name="EEA_REST_Copernicus",
                 service_type="wms",
             )
-            API.__doc__ = combdoc(
+            API.__doc__ = _combdoc(
                 type(self).__doc__,
                 """
                 ... access to the 'Copernicus' subfolder
@@ -1400,7 +1400,7 @@ class wms_container(object):
                 name="EEA_REST_Water",
                 service_type="wms",
             )
-            API.__doc__ = combdoc(
+            API.__doc__ = _combdoc(
                 type(self).__doc__,
                 """
                 ... access to the 'Water' subfolder
@@ -1433,7 +1433,7 @@ class wms_container(object):
                 name="EEA_REST_SOER",
                 service_type="wms",
             )
-            API.__doc__ = combdoc(
+            API.__doc__ = _combdoc(
                 type(self).__doc__,
                 """
                 ... access to the 'SOER' subfolder
@@ -1466,7 +1466,7 @@ class wms_container(object):
                 name="EEA_REST_SOER",
                 service_type="wms",
             )
-            API.__doc__ = combdoc(
+            API.__doc__ = _combdoc(
                 type(self).__doc__,
                 """
                 ... access to the 'MARATLAS' subfolder
@@ -1499,7 +1499,7 @@ class wms_container(object):
                 name="EEA_REST_SOER",
                 service_type="wms",
             )
-            API.__doc__ = combdoc(
+            API.__doc__ = _combdoc(
                 type(self).__doc__,
                 """
                 ... access to the 'MARINE' subfolder
@@ -1572,7 +1572,7 @@ class wms_container(object):
                 name="S1GBM_vv",
             )
 
-            WMS.__doc__ = combdoc("Polarization: VV", type(self).__doc__)
+            WMS.__doc__ = _combdoc("Polarization: VV", type(self).__doc__)
             return WMS
 
         @property
@@ -1583,7 +1583,7 @@ class wms_container(object):
                 13,
                 name="S1GBM_vh",
             )
-            WMS.__doc__ = combdoc("Polarization: VH", type(self).__doc__)
+            WMS.__doc__ = _combdoc("Polarization: VH", type(self).__doc__)
             return WMS
 
     class _OpenPlanetary:
@@ -1658,7 +1658,7 @@ class wms_container(object):
 
                     setattr(self, name, srv)
 
-                    getattr(self, name).__doc__ = combdoc(
+                    getattr(self, name).__doc__ = _combdoc(
                         docstring,
                         getattr(self, name).__call__.__doc__,
                     )
@@ -1850,7 +1850,7 @@ class wms_container(object):
 
                     setattr(self, name, srv)
 
-                    getattr(self, name).__doc__ = combdoc(
+                    getattr(self, name).__doc__ = _combdoc(
                         docstring,
                         getattr(self, name).__call__.__doc__,
                     )
@@ -1906,7 +1906,7 @@ class wms_container(object):
 
                 setattr(self, name, srv)
 
-                getattr(self, name).__doc__ = combdoc(
+                getattr(self, name).__doc__ = _combdoc(
                     docstring,
                     getattr(self, name).__call__.__doc__,
                 )
@@ -2037,7 +2037,7 @@ class wms_container(object):
             url="https://geoservice.dlr.de/eoc/basemap/wms?SERVICE=WMS&REQUEST=GetCapabilities",
         )
 
-        WMS.__doc__ = type(self).CAMS.__doc__
+        WMS.__doc__ = type(self).DLR_basemaps.__doc__
         return WMS
 
     @property
@@ -2074,6 +2074,61 @@ class wms_container(object):
 
         return API
 
+    class _Austria:
+        # container for WebMap services specific to Austria
+        def __init__(self, m):
+            _register_imports()
+
+            self._m = m
+
+        @property
+        @lru_cache()
+        def AT_basemap(self):
+            """
+            Basemap for Austria
+            https://basemap.at/
+
+            Note
+            ----
+            **LICENSE-info (without any warranty for correctness!!)**
+
+            (check: https://basemap.at/#lizenz for full details)
+
+            basemap.at ist gemäß der Open Government Data Österreich Lizenz
+            CC-BY 4.0 sowohl für private als auch kommerzielle Zwecke frei
+            sowie entgeltfrei nutzbar.
+            """
+            WMTS = _WebServiec_collection(
+                m=self._m,
+                service_type="wmts",
+                url="http://maps.wien.gv.at/basemap/1.0.0/WMTSCapabilities.xml",
+            )
+            WMTS.__doc__ = type(self).AT_basemap.__doc__
+            return WMTS
+
+        @property
+        @lru_cache()
+        def Wien_basemap(self):
+            """
+            Basemaps for the city of Vienna (Austria)
+            https://www.wien.gv.at
+
+            Note
+            ----
+            **LICENSE-info (without any warranty for correctness!!)**
+
+            check: https://www.data.gv.at/katalog/dataset/stadt-wien_webmaptileservicewmtswien
+
+            Most services are under CC-BY 4.0
+            """
+            WMTS = _WebServiec_collection(
+                m=self._m,
+                service_type="wmts",
+                url="http://maps.wien.gv.at/wmts/1.0.0/WMTSCapabilities.xml",
+            )
+            WMTS.__doc__ = type(self).Wien_basemap.__doc__
+            return WMTS
+
     @property
     @lru_cache()
     def Austria(self):
@@ -2084,7 +2139,7 @@ class wms_container(object):
             - AT_basemap: Basemaps for whole of austria
             - Wien: Basemaps for the city of Vienna
         """
-        WMS = Austria(self._m)
+        WMS = self._Austria(self._m)
         WMS.__doc__ = type(self).Austria.__doc__
         return WMS
 
@@ -2208,59 +2263,3 @@ class wms_container(object):
                 service = _WebServiec_collection(self._m, service_type="wms", url=url)
 
         return service
-
-
-class Austria:
-    # container for WebMap services specific to Austria
-    def __init__(self, m):
-        _register_imports()
-
-        self._m = m
-
-    @property
-    @lru_cache()
-    def AT_basemap(self):
-        """
-        Basemap for Austria
-        https://basemap.at/
-
-        Note
-        ----
-        **LICENSE-info (without any warranty for correctness!!)**
-
-        (check: https://basemap.at/#lizenz for full details)
-
-        basemap.at ist gemäß der Open Government Data Österreich Lizenz
-        CC-BY 4.0 sowohl für private als auch kommerzielle Zwecke frei
-        sowie entgeltfrei nutzbar.
-        """
-        WMTS = _WebServiec_collection(
-            m=self._m,
-            service_type="wmts",
-            url="http://maps.wien.gv.at/basemap/1.0.0/WMTSCapabilities.xml",
-        )
-        WMTS.__doc__ = type(self).AT_basemap.__doc__
-        return WMTS
-
-    @property
-    @lru_cache()
-    def Wien_basemap(self):
-        """
-        Basemaps for the city of Vienna (Austria)
-        https://www.wien.gv.at
-
-        Note
-        ----
-        **LICENSE-info (without any warranty for correctness!!)**
-
-        check: https://www.data.gv.at/katalog/dataset/stadt-wien_webmaptileservicewmtswien
-
-        Most services are under CC-BY 4.0
-        """
-        WMTS = _WebServiec_collection(
-            m=self._m,
-            service_type="wmts",
-            url="http://maps.wien.gv.at/wmts/1.0.0/WMTSCapabilities.xml",
-        )
-        WMTS.__doc__ = type(self).Wien_basemap.__doc__
-        return WMTS
