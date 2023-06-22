@@ -26,7 +26,7 @@ def _register_geopandas():
     return True
 
 
-class _gpd_picker:
+class GeoDataFramePicker:
     # a collection of pick-methods for geopandas.GeoDataFrames
     def __init__(self, gdf, val_key, pick_method):
         self.gdf = gdf
@@ -115,7 +115,7 @@ class _gpd_picker:
             return False, dict()
 
 
-class _cb_container(object):
+class _CallbackContainer(object):
     """Base-class for callback containers."""
 
     def __init__(self, m, cb_class=None, method="click", parent_container=None):
@@ -323,7 +323,7 @@ class _cb_container(object):
         self._execute_on_all_layers = q
 
 
-class _click_container(_cb_container):
+class _ClickContainer(_CallbackContainer):
     """
     A container for attaching callbacks and accessing return-objects.
 
@@ -824,7 +824,7 @@ class _click_container(_cb_container):
         return cbname
 
 
-class cb_click_container(_click_container):
+class ClickContainer(_ClickContainer):
     """
     Callbacks that are executed if you click anywhere on the Map.
 
@@ -1053,7 +1053,7 @@ class cb_click_container(_click_container):
                 obj._onclick(dummymouseevent)
 
 
-class cb_move_container(cb_click_container):
+class MoveContainer(ClickContainer):
     """
     Callbacks that are executed if you move the mouse without holding down a button.
 
@@ -1075,7 +1075,7 @@ class cb_move_container(cb_click_container):
 
     """
 
-    # this is just a copy of cb_click_container to manage motion-sensitive callbacks
+    # this is just a copy of ClickContainer to manage motion-sensitive callbacks
 
     def __init__(self, button_down=False, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -1166,7 +1166,7 @@ class cb_move_container(cb_click_container):
             )
 
 
-class cb_pick_container(_click_container):
+class PickContainer(_ClickContainer):
     """
     Callbacks that select the nearest datapoint if you click on the map.
 
@@ -1573,7 +1573,7 @@ class cb_pick_container(_click_container):
             obj._onpick(dummyevent)
 
 
-class keypress_container(_cb_container):
+class KeypressContainer(_CallbackContainer):
     """
     Callbacks that are executed if you press a key on the keyboard.
 
@@ -1872,7 +1872,7 @@ class keypress_container(_cb_container):
         return cbkey + f"__{key}"
 
 
-class cb_container:
+class CallbackContainer:
     """
     Accessor for attaching callbacks and accessing return-objects.
 
@@ -1892,13 +1892,13 @@ class cb_container:
 
         self._methods = {"click", "pick", "move", "keypress", "_click_move"}
 
-        self._click = cb_click_container(
+        self._click = ClickContainer(
             m=self._m,
             cb_cls=ClickCallbacks,
             method="click",
         )
         # a move-container that shares temporary artists with the click-container
-        self._click_move = cb_move_container(
+        self._click_move = MoveContainer(
             m=self._m,
             cb_cls=ClickCallbacks,
             method="_click_move",
@@ -1906,7 +1906,7 @@ class cb_container:
             button_down=True,
         )
 
-        self._move = cb_move_container(
+        self._move = MoveContainer(
             m=self._m,
             cb_cls=MoveCallbacks,
             method="move",
@@ -1914,13 +1914,13 @@ class cb_container:
             default_button=None,
         )
 
-        self._pick = cb_pick_container(
+        self._pick = PickContainer(
             m=self._m,
             cb_cls=PickCallbacks,
             method="pick",
         )
 
-        self._keypress = keypress_container(
+        self._keypress = KeypressContainer(
             m=self._m,
             cb_cls=KeypressCallbacks,
             method="keypress",
@@ -1950,25 +1950,25 @@ class cb_container:
         self._m.parent._execute_callbacks = val
 
     @property
-    @wraps(cb_click_container)
+    @wraps(ClickContainer)
     def click(self):
         """Attach click callbacks."""
         return self._click
 
     @property
-    @wraps(cb_move_container)
+    @wraps(MoveContainer)
     def move(self):
         """Attach move callbacks."""
         return self._move
 
     @property
-    @wraps(cb_pick_container)
+    @wraps(PickContainer)
     def pick(self):
         """Attach pick callbacks."""
         return self._pick
 
     @property
-    @wraps(keypress_container)
+    @wraps(KeypressContainer)
     def keypress(self):
         """Attach keypress callbacks."""
         return self._keypress
@@ -2025,14 +2025,14 @@ class cb_container:
             else:
                 method = "pick__" + name
 
-        new_pick = cb_pick_container(
+        new_pick = PickContainer(
             m=self._m,
             cb_cls=PickCallbacks,
             method=method,
             picker_name=name,
             picker=picker,
         )
-        new_pick.__doc__ == cb_pick_container.__doc__
+        new_pick.__doc__ == PickContainer.__doc__
         new_pick._set_artist(artist)
         new_pick._init_cbs()
 

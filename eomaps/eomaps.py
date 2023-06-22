@@ -125,7 +125,7 @@ except ImportError as ex:
 
 from .ne_features import NaturalEarth_features
 
-from ._cb_container import cb_container, _gpd_picker
+from ._cb_container import CallbackContainer, GeoDataFramePicker
 from .scalebar import ScaleBar
 from .compass import Compass
 from .projections import Equi7Grid_projection  # import to supercharge cartopy.ccrs
@@ -442,7 +442,7 @@ class Maps(object):
 
         self._layout_editor = None
 
-        self._cb = cb_container(weakref.proxy(self))  # accessor for the callbacks
+        self._cb = CallbackContainer(weakref.proxy(self))  # accessor for the callbacks
 
         self._init_figure(ax=ax, plot_crs=crs, **kwargs)
         if WebMapContainer is not None:
@@ -571,7 +571,7 @@ class Maps(object):
         return self._shape
 
     @property
-    @wraps(cb_container)
+    @wraps(CallbackContainer)
     def cb(self):
         """Accessor to attach callbacks to the map."""
         return self._cb
@@ -1786,7 +1786,7 @@ class Maps(object):
 
         if picker_name is not None:
             if isinstance(pick_method, str):
-                picker_cls = _gpd_picker(
+                picker_cls = GeoDataFramePicker(
                     gdf=gdf, pick_method=pick_method, val_key=val_key
                 )
                 picker = picker_cls.get_picker()
