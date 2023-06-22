@@ -106,7 +106,7 @@ from .helpers import (
     _TransformedBoundsLocator,
     _add_to_docstring,
 )
-from ._shapes import shapes
+from .shapes import Shapes
 from .colorbar import ColorBar
 
 from ._containers import (
@@ -449,7 +449,7 @@ class Maps(object):
             self._wms_container = wms_container(weakref.proxy(self))
         self._new_layer_from_file = new_layer_from_file(weakref.proxy(self))
 
-        self._shapes = shapes(weakref.proxy(self))
+        self._shapes = Shapes(weakref.proxy(self))
         self._shape = None
 
         # the radius is estimated when plot_map is called
@@ -1063,7 +1063,7 @@ class Maps(object):
                         cw.show()
 
     @property
-    @wraps(shapes)
+    @wraps(Shapes)
     def set_shape(self):
         """Set the plot-shape."""
         return self._shapes

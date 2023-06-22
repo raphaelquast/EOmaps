@@ -134,7 +134,7 @@ To specify how a dataset is visualized on the map, you have to set the *"plot-sh
 
 Possible shapes that work nicely for datasets with up to ~500 000 data-points:
 
-.. currentmodule:: eomaps._shapes.shapes
+.. currentmodule:: eomaps.shapes.Shapes
 
 .. autosummary::
     :nosignatures:

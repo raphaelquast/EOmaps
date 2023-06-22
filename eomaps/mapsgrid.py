@@ -4,7 +4,7 @@ import numpy as np
 from matplotlib.gridspec import GridSpec
 import matplotlib.pyplot as plt
 
-from ._shapes import shapes
+from .shapes import Shapes
 from .eomaps import Maps
 
 from .ne_features import NaturalEarth_features
@@ -378,9 +378,9 @@ class MapsGrid:
 
     @property
     @lru_cache()
-    @wraps(shapes)
+    @wraps(Shapes)
     def set_shape(self):
-        s = shapes(self)
+        s = Shapes(self)
         s.__doc__ = self._doc_prefix + s.__doc__
 
         return s

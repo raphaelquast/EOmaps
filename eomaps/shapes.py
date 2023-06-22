@@ -20,7 +20,7 @@ def _register_datashader():
     return True
 
 
-class shapes(object):
+class Shapes(object):
     """
     Set the plot-shape to represent the data-points.
 
@@ -97,7 +97,7 @@ class shapes(object):
                     m._data_manager.set_props(None)
 
                 print("EOmaps: estimating radius...")
-                radiusx, radiusy = shapes._estimate_radius(m, radius_crs)
+                radiusx, radiusy = Shapes._estimate_radius(m, radius_crs)
 
                 if radiusx == radiusy:
                     print(
@@ -491,7 +491,7 @@ class shapes(object):
                 i.compressed().reshape(-1, 2) for i, m in zip(verts, vertmask) if m
             )
 
-            color_and_array = shapes._get_colors_and_array(kwargs, vertmask)
+            color_and_array = Shapes._get_colors_and_array(kwargs, vertmask)
 
             coll = PolyCollection(
                 verts,
@@ -546,7 +546,7 @@ class shapes(object):
 
         @property
         def radius(self):
-            radius = shapes._get_radius(self._m, self._radius, self.radius_crs)
+            radius = Shapes._get_radius(self._m, self._radius, self.radius_crs)
             return radius
 
         @radius.setter
@@ -724,7 +724,7 @@ class shapes(object):
             # remember masked points
             self._m._data_mask = mask
 
-            color_and_array = shapes._get_colors_and_array(kwargs, mask)
+            color_and_array = Shapes._get_colors_and_array(kwargs, mask)
 
             coll = PolyCollection(
                 verts,
@@ -795,7 +795,7 @@ class shapes(object):
 
         @property
         def radius(self):
-            radius = shapes._get_radius(self._m, self._radius, self.radius_crs)
+            radius = Shapes._get_radius(self._m, self._radius, self.radius_crs)
             return radius
 
         @radius.setter
@@ -910,7 +910,7 @@ class shapes(object):
 
             # remember masked points
             self._m._data_mask = mask
-            color_and_array = shapes._get_colors_and_array(kwargs, mask)
+            color_and_array = Shapes._get_colors_and_array(kwargs, mask)
 
             coll = PolyCollection(
                 verts=verts,
@@ -963,7 +963,7 @@ class shapes(object):
             # remember masked points
             self._m._data_mask = mask
 
-            color_and_array = shapes._get_colors_and_array(kwargs, mask)
+            color_and_array = Shapes._get_colors_and_array(kwargs, mask)
 
             def broadcast_colors_and_array(array):
                 if array is None:
@@ -1036,7 +1036,7 @@ class shapes(object):
 
         @property
         def radius(self):
-            radius = shapes._get_radius(self._m, "estimate", "in")
+            radius = Shapes._get_radius(self._m, "estimate", "in")
             return radius
 
         @property
@@ -1044,7 +1044,7 @@ class shapes(object):
             return "in"
 
         def get_coll(self, x, y, crs, **kwargs):
-            color_and_array = shapes._get_colors_and_array(
+            color_and_array = Shapes._get_colors_and_array(
                 kwargs, np.full((x.size,), True)
             )
             color_and_array["c"] = color_and_array["array"]
@@ -1098,7 +1098,7 @@ class shapes(object):
 
         @property
         def mask_radius(self):
-            r = shapes._get_radius(self._m, self._mask_radius, "out")
+            r = Shapes._get_radius(self._m, self._mask_radius, "out")
             if self._mask_radius is None:
                 return (i * 4 for i in r)
             else:
@@ -1166,7 +1166,7 @@ class shapes(object):
             # remember the mask
             self._m._data_mask = mask2
 
-            color_and_array = shapes._get_colors_and_array(
+            color_and_array = Shapes._get_colors_and_array(
                 kwargs, np.logical_and(datamask, mask)
             )
 
@@ -1181,7 +1181,7 @@ class shapes(object):
 
         @property
         def radius(self):
-            radius = shapes._get_radius(self._m, "estimate", "in")
+            radius = Shapes._get_radius(self._m, "estimate", "in")
             return radius
 
         @property
@@ -1250,7 +1250,7 @@ class shapes(object):
         @property
         def mask_radius(self):
             if self.masked:
-                r = shapes._get_radius(self._m, self._mask_radius, self.mask_radius_crs)
+                r = Shapes._get_radius(self._m, self._mask_radius, self.mask_radius_crs)
                 if self._mask_radius is None:
                     return (i * 4 for i in r)
                 else:
@@ -1333,7 +1333,7 @@ class shapes(object):
             # remember the mask
             self._m._data_mask = mask
 
-            color_and_array = shapes._get_colors_and_array(kwargs, datamask)
+            color_and_array = Shapes._get_colors_and_array(kwargs, datamask)
 
             if self.flat == False:
                 for key, val in color_and_array.items():
@@ -1380,7 +1380,7 @@ class shapes(object):
 
         @property
         def radius(self):
-            radius = shapes._get_radius(self._m, "estimate", "in")
+            radius = Shapes._get_radius(self._m, "estimate", "in")
             return radius
 
         @property
@@ -1460,7 +1460,7 @@ class shapes(object):
 
         @property
         def radius(self):
-            radius = shapes._get_radius(self._m, "estimate", "in")
+            radius = Shapes._get_radius(self._m, "estimate", "in")
             return radius
 
         @property
@@ -1560,7 +1560,7 @@ class shapes(object):
 
         @property
         def radius(self):
-            radius = shapes._get_radius(self._m, "estimate", "in")
+            radius = Shapes._get_radius(self._m, "estimate", "in")
             return radius
 
         @property
@@ -1622,7 +1622,7 @@ class shapes(object):
         @property
         def radius(self):
             if self._radius is None:
-                radius = shapes._get_radius(self._m, self._radius, self.radius_crs)
+                radius = Shapes._get_radius(self._m, self._radius, self.radius_crs)
                 return radius
 
             return self._radius
@@ -1699,7 +1699,7 @@ class shapes(object):
             # TODO masking is skipped for now...
             self._m._data_mask = None
             # don't use a mask here since we need the full 2D array
-            color_and_array = shapes._get_colors_and_array(
+            color_and_array = Shapes._get_colors_and_array(
                 kwargs, np.full_like(mask, True)
             )
 

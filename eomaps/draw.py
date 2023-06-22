@@ -16,7 +16,7 @@ from contextlib import contextmanager
 import numpy as np
 import matplotlib.pyplot as plt
 
-import eomaps._shapes as eoshp
+from eomaps.shapes import Shapes
 
 gpd = None
 pd = None
@@ -702,7 +702,7 @@ class ShapeDrawer:
 
                 r = np.sqrt((x - pts[0][0]) ** 2 + (y - pts[0][1]) ** 2)
 
-                pts = eoshp.shapes._ellipses(self._m)._get_ellipse_points(
+                pts = Shapes._ellipses(self._m)._get_ellipse_points(
                     np.array([pts[0][0]]),
                     np.array([pts[0][1]]),
                     "out",
@@ -727,7 +727,7 @@ class ShapeDrawer:
             pts = np.asarray(pts)
 
             r = np.sqrt(sum((pts[1] - pts[0]) ** 2))
-            pts = eoshp.shapes._ellipses(self._m)._get_ellipse_points(
+            pts = Shapes._ellipses(self._m)._get_ellipse_points(
                 np.array([pts[0][0]]), np.array([pts[0][1]]), "out", [r, r], "out", 100
             )
 
@@ -781,7 +781,7 @@ class ShapeDrawer:
                     return
 
                 r = abs(x - pts[0][0]), abs(y - pts[0][1])
-                pts = eoshp.shapes._rectangles(self._m)._get_rectangle_verts(
+                pts = Shapes._rectangles(self._m)._get_rectangle_verts(
                     np.array([pts[0][0]]), np.array([pts[0][1]]), "out", r, "out", 50
                 )[0][0]
 
@@ -801,7 +801,7 @@ class ShapeDrawer:
         if pts is not None and len(pts) == 2:
             r = abs(pts[1][0] - pts[0][0]), abs(pts[1][1] - pts[0][1])
 
-            pts = eoshp.shapes._rectangles(self._m)._get_rectangle_verts(
+            pts = Shapes._rectangles(self._m)._get_rectangle_verts(
                 np.array([pts[0][0]]), np.array([pts[0][1]]), "out", r, "out", 50
             )[0][0]
 
