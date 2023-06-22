@@ -211,7 +211,7 @@ To programmatically switch between layers or view a layer that represents a **co
     m.show_layer("first", ("second", .75))   # overlay the second layer with 25% transparency
 
 
-.. currentmodule:: eomaps.callbacks.click_callbacks
+.. currentmodule:: eomaps.callbacks.ClickCallbacks
 
 🌱 If you want to overlay a part of the screen with a different layer, have a look at :py:meth:`peek_layer` callbacks**!
 

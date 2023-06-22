@@ -1,8 +1,8 @@
 from eomaps.callbacks import (
-    click_callbacks,
-    pick_callbacks,
-    keypress_callbacks,
-    move_callbacks,
+    ClickCallbacks,
+    PickCallbacks,
+    KeypressCallbacks,
+    MoveCallbacks,
 )
 from types import SimpleNamespace
 
@@ -1894,13 +1894,13 @@ class cb_container:
 
         self._click = cb_click_container(
             m=self._m,
-            cb_cls=click_callbacks,
+            cb_cls=ClickCallbacks,
             method="click",
         )
         # a move-container that shares temporary artists with the click-container
         self._click_move = cb_move_container(
             m=self._m,
-            cb_cls=click_callbacks,
+            cb_cls=ClickCallbacks,
             method="_click_move",
             parent_container=self._click,
             button_down=True,
@@ -1908,7 +1908,7 @@ class cb_container:
 
         self._move = cb_move_container(
             m=self._m,
-            cb_cls=move_callbacks,
+            cb_cls=MoveCallbacks,
             method="move",
             button_down=False,
             default_button=None,
@@ -1916,13 +1916,13 @@ class cb_container:
 
         self._pick = cb_pick_container(
             m=self._m,
-            cb_cls=pick_callbacks,
+            cb_cls=PickCallbacks,
             method="pick",
         )
 
         self._keypress = keypress_container(
             m=self._m,
-            cb_cls=keypress_callbacks,
+            cb_cls=KeypressCallbacks,
             method="keypress",
         )
 
@@ -2027,7 +2027,7 @@ class cb_container:
 
         new_pick = cb_pick_container(
             m=self._m,
-            cb_cls=pick_callbacks,
+            cb_cls=PickCallbacks,
             method=method,
             picker_name=name,
             picker=picker,

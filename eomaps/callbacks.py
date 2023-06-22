@@ -5,7 +5,7 @@ from matplotlib.transforms import TransformedPath
 import warnings
 
 
-class _click_callbacks(object):
+class _ClickCallbacks(object):
     """
     A collection of callback-functions.
 
@@ -1060,7 +1060,7 @@ class _click_callbacks(object):
             del self._pick_l
 
 
-class pick_callbacks(_click_callbacks):
+class PickCallbacks(_ClickCallbacks):
     """A collection of callbacks that are executed if you click on a datapoint."""
 
     _cb_list = [
@@ -1098,7 +1098,7 @@ class pick_callbacks(_click_callbacks):
             self.m.add_gdf(geom, temporary_picker=picker_name, **kwargs)
 
 
-class click_callbacks(_click_callbacks):
+class ClickCallbacks(_ClickCallbacks):
     """Collection of callbacks that are executed if you click anywhere on the map."""
 
     _cb_list = [
@@ -1115,7 +1115,7 @@ class click_callbacks(_click_callbacks):
         super().__init__(*args, **kwargs)
 
 
-class move_callbacks(_click_callbacks):
+class MoveCallbacks(_ClickCallbacks):
     """Collection of callbacks that are executed on mouse-movement."""
 
     _cb_list = [
@@ -1129,7 +1129,7 @@ class move_callbacks(_click_callbacks):
         super().__init__(*args, **kwargs)
 
 
-class keypress_callbacks:
+class KeypressCallbacks:
     """Collection of callbacks that are executed if you press a key on the keyboard."""
 
     _cb_list = ["switch_layer", "fetch_layers"]

@@ -119,7 +119,7 @@ Pre-defined click, pick and move callbacks
 
 Callbacks that can be used with ``m.cb.click``, ``m.cb.pick`` and ``m.cb.move``:
 
-.. currentmodule:: eomaps.callbacks.click_callbacks
+.. currentmodule:: eomaps.callbacks.ClickCallbacks
 
 .. autosummary::
     :nosignatures:
@@ -133,7 +133,7 @@ Callbacks that can be used with ``m.cb.click``, ``m.cb.pick`` and ``m.cb.move``:
 
 Callbacks that can be used with ``m.cb.click`` and ``m.cb.pick``:
 
-.. currentmodule:: eomaps.callbacks.click_callbacks
+.. currentmodule:: eomaps.callbacks.ClickCallbacks
 
 .. autosummary::
     :nosignatures:
@@ -145,7 +145,7 @@ Callbacks that can be used with ``m.cb.click`` and ``m.cb.pick``:
 
 Callbacks that can be used only with ``m.cb.pick``:
 
-.. currentmodule:: eomaps.callbacks.pick_callbacks
+.. currentmodule:: eomaps.callbacks.PickCallbacks
 
 .. autosummary::
     :nosignatures:
@@ -159,7 +159,7 @@ Pre-defined keypress callbacks
 
 Callbacks that can be used with ``m.cb.keypress``
 
-.. currentmodule:: eomaps.callbacks.keypress_callbacks
+.. currentmodule:: eomaps.callbacks.KeypressCallbacks
 
 .. autosummary::
     :nosignatures:
