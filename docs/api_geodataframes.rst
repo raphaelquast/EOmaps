@@ -4,7 +4,7 @@
 💠 Vector Data (or GeoDataFrames)
 ----------------------------------
 
-.. currentmodule:: eomaps
+.. currentmodule:: eomaps.eomaps
 
 For vector data visualization, EOmaps utilizes the plotting capabilities of  `geopandas <https://geopandas.org/en/stable/>`_ .
 
@@ -18,15 +18,6 @@ supercharged with EOmaps features.
 
   - Many file-types such as *shapefile*, *GeoPackage*, *geojson* ... are supported!
 
-
-
-.. autosummary::
-    :toctree: generated
-    :nosignatures:
-    :template: only_names_in_toc.rst
-    :hidden:
-
-    Maps.add_gdf
 
 .. autosummary::
     :nosignatures:

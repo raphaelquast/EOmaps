@@ -44,9 +44,3 @@ Contents
    |    api                          |    EOmaps_examples            |
    |    FAQ                          |                               |
    +---------------------------------+-------------------------------+
-
-
-.. toctree::
-  :hidden:
-
-  generated

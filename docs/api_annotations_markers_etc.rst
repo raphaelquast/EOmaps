@@ -7,7 +7,7 @@
 🔴 Markers
 ~~~~~~~~~~~
 
-.. currentmodule:: eomaps
+.. currentmodule:: eomaps.eomaps
 
 Static markers can be added to the map via :py:meth:`Maps.add_marker`.
 
@@ -34,14 +34,6 @@ Static markers can be added to the map via :py:meth:`Maps.add_marker`.
 
 🛸 For dynamic markers checkout ``m.cb.click.attach.mark()`` or ``m.cb.pick.attach.mark()``
 
-
-.. autosummary::
-    :toctree: generated
-    :nosignatures:
-    :template: only_names_in_toc.rst
-    :hidden:
-
-    Maps.add_marker
 
 .. autosummary::
     :nosignatures:
@@ -99,7 +91,7 @@ Static markers can be added to the map via :py:meth:`Maps.add_marker`.
 📑 Annotations
 ~~~~~~~~~~~~~~
 
-.. currentmodule:: eomaps
+.. currentmodule:: eomaps.eomaps
 
 Static annotations can be added to the map via :py:meth:`Maps.add_annotation`.
 
@@ -114,15 +106,6 @@ Static annotations can be added to the map via :py:meth:`Maps.add_annotation`.
 
 
 🛸 For dynamic annotations checkout ``m.cb.click.attach.annotate()`` or ``m.cb.pick.attach.annotate()``
-
-
-.. autosummary::
-    :toctree: generated
-    :nosignatures:
-    :template: only_names_in_toc.rst
-    :hidden:
-
-    Maps.add_annotation
 
 .. autosummary::
     :nosignatures:
@@ -192,7 +175,7 @@ Static annotations can be added to the map via :py:meth:`Maps.add_annotation`.
 🚲 Lines
 ~~~~~~~~~
 
-.. currentmodule:: eomaps
+.. currentmodule:: eomaps.eomaps
 
 Lines can be added to a map with :py:meth:`Maps.add_line`.
 
@@ -218,15 +201,6 @@ Lines can be added to a map with :py:meth:`Maps.add_line`.
 - Additional keyword-arguments are passed to `matplotlib.pyplot.plot <https://matplotlib.org/stable/api/_as_gen/matplotlib.pyplot.plot.html#>`_
 
   - This gives a lot of flexibility to style the lines!
-
-
-.. autosummary::
-    :toctree: generated
-    :nosignatures:
-    :template: only_names_in_toc.rst
-    :hidden:
-
-    Maps.add_line
 
 .. autosummary::
     :nosignatures:
@@ -275,17 +249,9 @@ Lines can be added to a map with :py:meth:`Maps.add_line`.
 ▭ Rectangular areas
 ~~~~~~~~~~~~~~~~~~~
 
-.. currentmodule:: eomaps
+.. currentmodule:: eomaps.eomaps
 
 To indicate rectangular areas in any given crs, simply use :py:meth:`Maps.indicate_extent`:
-
-.. autosummary::
-    :toctree: generated
-    :nosignatures:
-    :template: only_names_in_toc.rst
-    :hidden:
-
-    Maps.indicate_extent
 
 .. autosummary::
     :nosignatures:
@@ -329,7 +295,7 @@ To indicate rectangular areas in any given crs, simply use :py:meth:`Maps.indica
 🥦 Logos
 ~~~~~~~~
 
-.. currentmodule:: eomaps
+.. currentmodule:: eomaps.eomaps
 
 To add a logo (or basically any image file ``.png``, ``.jpeg`` etc.) to the map, you can use :py:meth:`Maps.add_logo`.
 
@@ -352,14 +318,6 @@ Logos can be re-positioned and re-sized with the :ref:`layout_editor`!
 |     m.add_logo(position="ll", size=.4, fix_position=True)                                  |                                       |
 +--------------------------------------------------------------------------------------------+---------------------------------------+
 
-
-.. autosummary::
-    :toctree: generated
-    :nosignatures:
-    :template: only_names_in_toc.rst
-    :hidden:
-
-    Maps.add_logo
 
 .. autosummary::
     :nosignatures:

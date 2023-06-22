@@ -4,7 +4,7 @@
 
 🧭 Compass (or North Arrow)
 ---------------------------
-.. currentmodule:: eomaps
+.. currentmodule:: eomaps.eomaps
 
 A compass can be added to the map via :py:meth:`Maps.add_compass`:
 
@@ -21,18 +21,6 @@ A compass can be added to the map via :py:meth:`Maps.add_compass`:
 
     - press ``delte`` on the keyboard: remove the compass from the plot
     - rotate the ``mouse wheel``: scale the size of the compass
-
-
-
-
-.. autosummary::
-    :toctree: generated
-    :nosignatures:
-    :template: only_names_in_toc.rst
-    :hidden:
-
-    Maps.add_compass
-
 
 .. autosummary::
     :nosignatures:
@@ -63,20 +51,6 @@ dragged around on the map with the mouse.
 The returned ``compass`` object has the following useful methods assigned:
 
 .. currentmodule:: eomaps.compass
-
-.. autosummary::
-    :toctree: generated
-    :nosignatures:
-    :template: only_names_in_toc.rst
-    :hidden:
-
-    Compass.remove
-    Compass.set_patch
-    Compass.set_scale
-    Compass.set_pickable
-    Compass.set_ignore_invalid_angles
-    Compass.get_position
-    Compass.get_scale
 
 .. autosummary::
     :nosignatures:

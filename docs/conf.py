@@ -83,6 +83,12 @@ html_static_path = ["_static"]
 html_theme = "sphinx_rtd_theme"
 
 
+autosummary_generate = ["reference.rst"]
+autodoc_default_options = {
+    "member-order": "groupwise",
+    "inherited-members": True,
+}
+
 # Napoleon settings
 napoleon_numpy_docstring = True
 napoleon_google_docstring = False

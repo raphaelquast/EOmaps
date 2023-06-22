@@ -2,7 +2,7 @@
 📦 Reading data (NetCDF, GeoTIFF, CSV...)
 -----------------------------------------
 
-.. currentmodule:: eomaps
+.. currentmodule:: eomaps.eomaps
 
 EOmaps provides some basic capabilities to read and plot directly from commonly used file-types.
 
@@ -21,13 +21,9 @@ with ``shade_raster`` (if it fails it will fallback to ``shade_points`` and fina
     - NetCDF (``xarray.open_dataset()``)
     - CSV (``pandas.read_csv()``)
 
-.. currentmodule:: eomaps
-
 .. autosummary::
-    :toctree: generated
     :nosignatures:
     :template: only_names_in_toc.rst
-    :hidden:
 
     Maps.from_file
     Maps.new_layer_from_file
@@ -62,10 +58,8 @@ Read relevant data from a file
 .. currentmodule:: eomaps.reader
 
 .. autosummary::
-    :toctree: generated
     :nosignatures:
     :template: only_names_in_toc.rst
-    :hidden:
 
     read_file.GeoTIFF
     read_file.NetCDF
@@ -100,10 +94,8 @@ Initialize Maps-objects from a file
 .. currentmodule:: eomaps.reader
 
 .. autosummary::
-    :toctree: generated
     :nosignatures:
     :template: only_names_in_toc.rst
-    :hidden:
 
     from_file.GeoTIFF
     from_file.NetCDF
@@ -140,17 +132,6 @@ Similar to :py:class:`Maps.from_file` , a new layer based on a file can be added
         )
 
 .. currentmodule:: eomaps.reader
-
-.. autosummary::
-    :toctree: generated
-    :nosignatures:
-    :template: only_names_in_toc.rst
-    :hidden:
-
-
-    new_layer_from_file.GeoTIFF
-    new_layer_from_file.NetCDF
-    new_layer_from_file.CSV
 
 .. autosummary::
     :nosignatures:

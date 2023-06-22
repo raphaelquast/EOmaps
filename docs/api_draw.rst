@@ -6,7 +6,7 @@
 ✏️ Draw Shapes on the map
 -------------------------
 
-.. currentmodule:: eomaps
+.. currentmodule:: eomaps.eomaps
 
 Starting with EOmaps v5.0 it is possible to draw simple shapes on the map using :py:class:`Maps.draw`.
 
@@ -39,21 +39,6 @@ Starting with EOmaps v5.0 it is possible to draw simple shapes on the map using 
     active draws!
 
 
-
-.. currentmodule:: eomaps.draw
-
-.. autosummary::
-    :toctree: generated
-    :nosignatures:
-    :template: only_names_in_toc.rst
-    :hidden:
-
-    ShapeDrawer.new_drawer
-    ShapeDrawer.rectangle
-    ShapeDrawer.circle
-    ShapeDrawer.polygon
-    ShapeDrawer.save_shapes
-    ShapeDrawer.remove_last_shape
 
 .. currentmodule:: eomaps.draw
 

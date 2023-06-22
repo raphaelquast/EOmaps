@@ -4,7 +4,7 @@
 🛰 WebMap layers
 ----------------
 
-.. currentmodule:: eomaps
+.. currentmodule:: eomaps.eomaps
 
 WebMap services (TS/WMS/WMTS) can be attached to the map via :py:meth:`Maps.add_wms`
 
@@ -20,16 +20,6 @@ and ``< LAYER >`` indicates the actual layer-name.
 
     m = Maps(Maps.CRS.GOOGLE_MERCATOR) # (the native crs of the service)
     m.add_wms.OpenStreetMap.add_layer.default()
-
-
-.. autosummary::
-    :toctree: generated
-    :nosignatures:
-    :template: only_names_in_toc.rst
-    :hidden:
-
-    Maps.add_wms
-
 
 .. autosummary::
     :nosignatures:
@@ -81,28 +71,6 @@ Pre-defined WebMap services:
 .. currentmodule:: eomaps._webmap_containers.wms_container
 
 .. autosummary::
-    :toctree: generated
-    :nosignatures:
-    :template: only_names_in_toc.rst
-    :hidden:
-
-    OpenStreetMap
-    ESA_WorldCover
-    NASA_GIBS
-    ISRIC_SoilGrids
-    EEA_DiscoMap
-    ESRI_ArcGIS
-    S1GBM
-    S2_cloudless
-    GEBCO
-    GMRT
-    GLAD
-    CAMS
-    DLR_basemaps
-    OpenPlanetary
-
-
-.. autosummary::
     :nosignatures:
     :template: only_names_in_toc.rst
 
@@ -126,15 +94,6 @@ Pre-defined WebMap services:
 **Services specific for Austria (Europe)**
 
 .. currentmodule:: eomaps._webmap_containers
-
-.. autosummary::
-    :toctree: generated
-    :nosignatures:
-    :template: only_names_in_toc.rst
-    :hidden:
-
-    Austria.AT_basemap
-    Austria.Wien_basemap
 
 .. autosummary::
     :nosignatures:
@@ -165,14 +124,6 @@ Using custom WebMap services
 
 It is also possible to use custom WMS/WMTS/XYZ services.
 (see docstring of :py:meth:`get_service` for more details and examples)
-
-.. autosummary::
-    :toctree: generated
-    :nosignatures:
-    :template: only_names_in_toc.rst
-    :hidden:
-
-    get_service
 
 .. autosummary::
     :nosignatures:

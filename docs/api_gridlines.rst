@@ -4,7 +4,7 @@
 ▦ Gridlines
 ------------
 
-.. currentmodule:: eomaps
+.. currentmodule:: eomaps.eomaps
 
 Gridlines can be added to the map via :py:meth:`Maps.add_gridlines`.
 
@@ -19,13 +19,11 @@ If no explicit grid-spacing is provided (e.g. ``d=None``), the grid is dynamical
 - Use ``auto_n=...`` to adjust the density of the auto-gridlines.
 
 
-.. currentmodule:: eomaps
+.. currentmodule:: eomaps.eomaps
 
 .. autosummary::
-    :toctree: generated
     :nosignatures:
     :template: only_names_in_toc.rst
-    :hidden:
 
     Maps.add_gridlines
 
@@ -73,21 +71,6 @@ If no explicit grid-spacing is provided (e.g. ``d=None``), the grid is dynamical
 
 In addition, the returned :py:class:`GridLines` instance supports the following
 useful methods:
-
-.. autosummary::
-    :toctree: generated
-    :nosignatures:
-    :template: only_names_in_toc.rst
-    :hidden:
-
-    GridLines
-    GridLines.set_d
-    GridLines.set_auto_n
-    GridLines.set_n
-    GridLines.set_bounds
-    GridLines.update_line_props
-    GridLines.remove
-    GridLines.add_labels
 
 .. autosummary::
     :nosignatures:

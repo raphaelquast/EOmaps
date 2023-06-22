@@ -1,6 +1,7 @@
 
 🔬 Inset-maps - zoom-in on interesting areas
 --------------------------------------------
+.. currentmodule:: eomaps.eomaps
 
 Inset maps that show zoomed-in regions can be created with :py:meth:`Maps.new_inset_map`.
 
@@ -25,17 +26,6 @@ Inset maps that show zoomed-in regions can be created with :py:meth:`Maps.new_in
 For convenience, inset-map objects have the following special methods defined:
 
 .. currentmodule:: eomaps.inset_maps
-
-.. autosummary::
-    :toctree: generated
-    :nosignatures:
-    :template: only_names_in_toc.rst
-    :hidden:
-
-    InsetMaps.set_inset_position
-    InsetMaps.indicate_inset_extent
-    InsetMaps.add_indicator_line
-
 
 .. autosummary::
     :nosignatures:
@@ -80,15 +70,7 @@ To quickly re-position (and re-size) inset-maps, have a look at the :ref:`layout
     |                                                                 |                                            |
     +-----------------------------------------------------------------+--------------------------------------------+
 
-.. currentmodule:: eomaps.Maps
-
-.. autosummary::
-    :toctree: generated
-    :nosignatures:
-    :template: only_names_in_toc.rst
-    :hidden:
-
-    new_inset_map
+.. currentmodule:: eomaps.eomaps.Maps
 
 .. autosummary::
     :nosignatures:
@@ -102,7 +84,7 @@ To quickly re-position (and re-size) inset-maps, have a look at the :ref:`layout
 🔎 Zoomed in views on datasets
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-.. currentmodule:: eomaps
+.. currentmodule:: eomaps.eomaps
 
 To simplify the creation of "zoomed-in" views on datasets, both the data and the classification
 of the data must be the same.

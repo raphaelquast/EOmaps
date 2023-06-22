@@ -4,17 +4,9 @@
 🌵 NaturalEarth features
 ------------------------
 
-.. currentmodule:: eomaps
+.. currentmodule:: eomaps.eomaps
 
 Feature-layers provided by `NaturalEarth <https://www.naturalearthdata.com>`_ can be directly added to the map via :py:meth:`Maps.add_feature`.
-
-.. autosummary::
-    :toctree: generated
-    :nosignatures:
-    :template: only_names_in_toc.rst
-    :hidden:
-
-    Maps.add_feature
 
 .. autosummary::
     :nosignatures:
@@ -84,20 +76,6 @@ If you want to get a ``geopandas.GeoDataFrame`` containing all shapes and metada
 The most commonly used features are accessible with pre-defined colors via the ``preset`` category:
 
 .. currentmodule:: eomaps.ne_features._NaturalEarth_presets
-
-.. autosummary::
-    :toctree: generated
-    :nosignatures:
-    :template: only_names_in_toc.rst
-    :hidden:
-
-    coastline
-    ocean
-    land
-    countries
-    urban_areas
-    lakes
-    rivers_lake_centerlines
 
 .. autosummary::
     :nosignatures:

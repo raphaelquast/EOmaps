@@ -6,7 +6,7 @@
 🌐 Initialization of Maps objects
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-.. currentmodule:: eomaps
+.. currentmodule:: eomaps.eomaps
 
 | EOmaps is all about :py:class:`Maps` objects.
 
@@ -42,20 +42,6 @@ Possible ways for specifying the ``crs`` for plotting are:
   - ``Maps.CRS`` is just an accessor for ``cartopy.crs``
   - For a full list of available projections see: `Cartopy projections <https://scitools.org.uk/cartopy/docs/v0.15/crs/projections.html>`_
 
-
-..
-  use 2 autosummary directives to create the files but avoid putting them in the TOC
-
-.. autosummary::
-    :toctree: generated
-    :nosignatures:
-    :template: only_names_in_toc.rst
-    :hidden:
-
-    Maps
-    Maps.CRS
-    Maps.set_extent
-
 .. autosummary::
     :nosignatures:
     :template: only_names_in_toc.rst
@@ -63,8 +49,6 @@ Possible ways for specifying the ``crs`` for plotting are:
     Maps
     Maps.CRS
     Maps.set_extent
-
-
 
 .. _layers:
 
@@ -232,13 +216,6 @@ To programmatically switch between layers or view a layer that represents a **co
 
 🌱 If you want to overlay a part of the screen with a different layer, have a look at :py:meth:`peek_layer` callbacks**!
 
-.. autosummary::
-    :toctree: generated
-    :nosignatures:
-    :template: only_names_in_toc.rst
-    :hidden:
-
-    peek_layer
 
 .. autosummary::
     :nosignatures:
@@ -272,19 +249,7 @@ To programmatically switch between layers or view a layer that represents a **co
       - e.g. ``m.show_layer("A", "B")`` will show the layer ``"B"`` on top of the layer ``"A"``
       - you can stack as many layers as you like! ``m.show_layer("A", "B", ("C", 0.5), "D", ...)``
 
-.. currentmodule:: eomaps
-
-.. autosummary::
-    :toctree: generated
-    :nosignatures:
-    :template: only_names_in_toc.rst
-    :hidden:
-
-    Maps.new_layer
-    Maps.all
-    Maps.show
-    Maps.show_layer
-    Maps.fetch_layers
+.. currentmodule:: eomaps.eomaps
 
 .. autosummary::
     :nosignatures:
@@ -346,17 +311,7 @@ To adjust the margins of the subplots, use :py:meth:`m.subplots_adjust`, or have
         - Note: increasing the dpi will result in an increase in the number of tiles that have to be fetched. If the number of required tiles is too large, the server might reject the request and the map might have gaps or no tiles at all.
 
 
-.. currentmodule:: eomaps
-
-.. autosummary::
-    :toctree: generated
-    :nosignatures:
-    :template: only_names_in_toc.rst
-    :hidden:
-
-    Maps.savefig
-    Maps.subplots_adjust
-    Maps.set_clipboard_kwargs
+.. currentmodule:: eomaps.eomaps
 
 .. autosummary::
     :nosignatures:
@@ -397,16 +352,7 @@ e.g.: ``m = Maps(ax=...)`` or ``m2 = m.new_map(ax=...)``
     Make sure to have a look at the :ref:`layout_editor` on how to re-position and re-scale axes to arbitrary positions!
 
 
-.. currentmodule:: eomaps
-
-.. autosummary::
-    :toctree: generated
-    :nosignatures:
-    :template: only_names_in_toc.rst
-    :hidden:
-
-    Maps
-    Maps.new_map
+.. currentmodule:: eomaps.eomaps
 
 .. autosummary::
     :nosignatures:
@@ -641,7 +587,7 @@ Here's an example to show how it works:
 
 𝄜 MapsGrid objects
 *******************
-.. currentmodule:: eomaps
+.. currentmodule:: eomaps.eomaps
 
 :py:class:`MapsGrid` objects can be used to create (and manage) multiple maps in one figure.
 
@@ -757,25 +703,7 @@ The individual :py:class:`Maps` objects and ``matpltolib-Axes`` are then accessi
     mg.subplots_adjust(left=0.1, right=0.9, bottom=0.1, top=0.9)
 
 
-.. currentmodule:: eomaps
-
-.. autosummary::
-    :toctree: generated
-    :nosignatures:
-    :template: only_names_in_toc.rst
-    :hidden:
-
-    MapsGrid
-    MapsGrid.join_limits
-    MapsGrid.share_click_events
-    MapsGrid.share_pick_events
-    MapsGrid.set_data
-    MapsGrid.set_classify_specs
-    MapsGrid.add_wms
-    MapsGrid.add_feature
-    MapsGrid.add_annotation
-    MapsGrid.add_marker
-    MapsGrid.add_gdf
+.. currentmodule:: eomaps.eomaps
 
 .. autosummary::
     :nosignatures:

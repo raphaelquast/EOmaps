@@ -39,7 +39,7 @@ You can use it to simply drag the axes the mouse to the desired locations and ch
 Save and restore layouts
 ~~~~~~~~~~~~~~~~~~~~~~~~
 
-.. currentmodule:: eomaps
+.. currentmodule:: eomaps.eomaps.eomaps
 
 Once a layout (e.g. the desired position of the axes within a figure) has been arranged,
 the layout can be saved and re-applied with:
@@ -61,17 +61,7 @@ It is also possible to enter the **Layout Editor** and save the layout automatic
     - you always need to save a new layout-file after adding additional axes (or colorbars!) to a map
 
 
-.. currentmodule:: eomaps.Maps
-
-.. autosummary::
-    :toctree: generated
-    :nosignatures:
-    :template: only_names_in_toc.rst
-    :hidden:
-
-    get_layout
-    apply_layout
-    edit_layout
+.. currentmodule:: eomaps.eomaps.Maps
 
 .. autosummary::
     :nosignatures:

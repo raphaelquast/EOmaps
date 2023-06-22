@@ -4,6 +4,9 @@
 🔴 Data Visualization
 ----------------------
 
+.. currentmodule:: eomaps.eomaps
+
+
 To visualize a dataset, first assign the dataset to the :py:class:`Maps` object,
 then select how you want to visualize the data and finally call :py:meth:`Maps.plot_map`.
 
@@ -17,15 +20,6 @@ then select how you want to visualize the data and finally call :py:meth:`Maps.p
 
 To assign a dataset to a :py:class:`Maps` object, use :py:meth:`Maps.set_data`.
 
-.. currentmodule:: eomaps
-
-.. autosummary::
-    :toctree: generated
-    :nosignatures:
-    :template: only_names_in_toc.rst
-    :hidden:
-
-    Maps.set_data
 
 .. autosummary::
     :nosignatures:
@@ -119,15 +113,7 @@ The following data-types are accepted as input:
 
 To specify how a dataset is visualized on the map, you have to set the *"plot-shape"* via :py:meth:`Maps.set_shape`.
 
-.. currentmodule:: eomaps
-
-.. autosummary::
-    :toctree: generated
-    :nosignatures:
-    :template: only_names_in_toc.rst
-    :hidden:
-
-    Maps.set_shape
+.. currentmodule:: eomaps.eomaps
 
 .. autosummary::
     :nosignatures:
@@ -153,18 +139,6 @@ Possible shapes that work nicely for datasets with up to ~500 000 data-points:
 .. currentmodule:: eomaps._shapes.shapes
 
 .. autosummary::
-    :toctree: generated
-    :nosignatures:
-    :template: only_names_in_toc.rst
-    :hidden:
-
-    geod_circles
-    ellipses
-    rectangles
-    voronoi_diagram
-    delaunay_triangulation
-
-.. autosummary::
     :nosignatures:
     :template: only_names_in_toc.rst
 
@@ -179,14 +153,6 @@ Possible shapes that work nicely for datasets with up to ~500 000 data-points:
 Possible shapes that work nicely for up to a few million data-points:
 
 .. autosummary::
-    :toctree: generated
-    :nosignatures:
-    :template: only_names_in_toc.rst
-    :hidden:
-
-    raster
-
-.. autosummary::
     :nosignatures:
     :template: only_names_in_toc.rst
 
@@ -199,15 +165,6 @@ If shading is used, a dynamic averaging of the data based on the screen-resoluti
 currently visible plot-extent is performed (resampling based on the mean-value is used by default).
 
 Possible shapes that can be used to quickly generate a plot for extremely large datasets are:
-
-.. autosummary::
-    :toctree: generated
-    :nosignatures:
-    :template: only_names_in_toc.rst
-    :hidden:
-
-    shade_points
-    shade_raster
 
 .. autosummary::
     :nosignatures:
@@ -263,21 +220,13 @@ To get an overview of the existing shapes and their main use-cases, here's a sim
 📊 Classify the data
 ~~~~~~~~~~~~~~~~~~~~~
 
-.. currentmodule:: eomaps
+.. currentmodule:: eomaps.eomaps
 
 EOmaps provides an interface for `mapclassify <https://github.com/pysal/mapclassify>`_ to classify datasets prior to plotting.
 
 To assign a classification scheme to a :py:class:`Maps` object, use ``m.set_classify.< SCHEME >(...)``.
 
 - Available classifier names are accessible via ``Maps.CLASSIFIERS``.
-
-.. autosummary::
-    :toctree: generated
-    :nosignatures:
-    :template: only_names_in_toc.rst
-    :hidden:
-
-    Maps.set_classify
 
 .. autosummary::
     :nosignatures:
@@ -372,16 +321,7 @@ To always keep the extent as-is, use ``m.plot_map(set_extent=False)``.
 
 You can then continue to add a :ref:`colorbar` or create :ref:`zoomed_in_views_on_datasets`.
 
-.. currentmodule:: eomaps
-
-.. autosummary::
-    :toctree: generated
-    :nosignatures:
-    :template: only_names_in_toc.rst
-    :hidden:
-
-    Maps.plot_map
-    Maps.savefig
+.. currentmodule:: eomaps.eomaps
 
 .. autosummary::
     :nosignatures:
@@ -394,7 +334,7 @@ You can then continue to add a :ref:`colorbar` or create :ref:`zoomed_in_views_o
 🎨 Customize the plot
 ~~~~~~~~~~~~~~~~~~~~~~
 
-.. currentmodule:: eomaps
+.. currentmodule:: eomaps.eomaps
 
 All arguments to customize the appearance of a dataset are passed to :py:meth:`Maps.plot_map`.
 
@@ -559,7 +499,7 @@ You can fix individual color channels by passing a list with 1 element, e.g.:
 🌈 Colorbars (with a histogram)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-.. currentmodule:: eomaps
+.. currentmodule:: eomaps.eomaps
 
 Before adding a colorbar, you must plot the data using ``m.plot_map(vmin=..., vmax=...)``.
 
@@ -617,14 +557,6 @@ Once a dataset has been plotted, a colorbar with a colored histogram on top can 
     +-----------------------------------------------------------------+------------------------------------------+
 
 .. autosummary::
-    :toctree: generated
-    :nosignatures:
-    :template: only_names_in_toc.rst
-    :hidden:
-
-    Maps.add_colorbar
-
-.. autosummary::
     :nosignatures:
     :template: only_names_in_toc.rst
 
@@ -634,19 +566,6 @@ Once a dataset has been plotted, a colorbar with a colored histogram on top can 
 The returned ``ColorBar``-object has the following useful methods defined:
 
 .. currentmodule:: eomaps.colorbar
-
-.. autosummary::
-    :toctree: generated
-    :nosignatures:
-    :template: only_names_in_toc.rst
-    :hidden:
-
-    ColorBar.set_position
-    ColorBar.set_labels
-    ColorBar.set_hist_size
-    ColorBar.tick_params
-    ColorBar.set_visible
-    ColorBar.remove
 
 .. autosummary::
     :nosignatures:
@@ -691,14 +610,6 @@ To label the colorbar with custom names for a given set of bins, use :py:meth:`C
 |     m.colorbar.set_bin_labels(bins, names)                                    |                                                |
 +-------------------------------------------------------------------------------+------------------------------------------------+
 
-
-.. autosummary::
-    :toctree: generated
-    :nosignatures:
-    :template: only_names_in_toc.rst
-    :hidden:
-
-    ColorBar.set_bin_labels
 
 .. autosummary::
     :nosignatures:

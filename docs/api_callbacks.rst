@@ -4,7 +4,7 @@
 🛸 Callbacks - make the map interactive!
 ----------------------------------------
 
-.. currentmodule:: eomaps
+.. currentmodule:: eomaps.eomaps
 
 Callbacks are used to execute functions when you click on the map or press a key on the keyboard.
 
@@ -101,16 +101,6 @@ In addition, each callback-container supports the following useful methods:
 .. currentmodule:: eomaps._cb_container._cb_container
 
 .. autosummary::
-    :toctree: generated
-    :nosignatures:
-    :template: only_names_in_toc.rst
-    :hidden:
-
-    share_events
-    forward_events
-    add_temporary_artist
-
-.. autosummary::
     :nosignatures:
     :template: only_names_in_toc.rst
 
@@ -133,17 +123,6 @@ Callbacks that can be used with ``m.cb.click``, ``m.cb.pick`` and ``m.cb.move``:
 .. currentmodule:: eomaps.callbacks.click_callbacks
 
 .. autosummary::
-    :toctree: generated
-    :nosignatures:
-    :template: only_names_in_toc.rst
-    :hidden:
-
-    peek_layer
-    annotate
-    mark
-    print_to_console
-
-.. autosummary::
     :nosignatures:
     :template: only_names_in_toc.rst
 
@@ -159,16 +138,6 @@ Callbacks that can be used with ``m.cb.click`` and ``m.cb.pick``:
 .. currentmodule:: eomaps.callbacks.click_callbacks
 
 .. autosummary::
-    :toctree: generated
-    :nosignatures:
-    :template: only_names_in_toc.rst
-    :hidden:
-
-    get_values
-    clear_annotations
-    clear_markers
-
-.. autosummary::
     :nosignatures:
     :template: only_names_in_toc.rst
 
@@ -180,15 +149,6 @@ Callbacks that can be used with ``m.cb.click`` and ``m.cb.pick``:
 Callbacks that can be used only with ``m.cb.pick``:
 
 .. currentmodule:: eomaps.callbacks.pick_callbacks
-
-.. autosummary::
-    :toctree: generated
-    :nosignatures:
-    :template: only_names_in_toc.rst
-    :hidden:
-
-    load
-    highlight_geometry
 
 .. autosummary::
     :nosignatures:
@@ -204,15 +164,6 @@ Pre-defined keypress callbacks
 Callbacks that can be used with ``m.cb.keypress``
 
 .. currentmodule:: eomaps.callbacks.keypress_callbacks
-
-.. autosummary::
-    :toctree: generated
-    :nosignatures:
-    :template: only_names_in_toc.rst
-    :hidden:
-
-    switch_layer
-    fetch_layers
 
 .. autosummary::
     :nosignatures:
@@ -361,14 +312,6 @@ To customize the picking-behavior, use ``m.cb.pick.set_props()``. The following 
 .. currentmodule:: eomaps._cb_container.cb_pick_container
 
 .. autosummary::
-    :toctree: generated
-    :nosignatures:
-    :template: only_names_in_toc.rst
-    :hidden:
-
-    set_props
-
-.. autosummary::
     :nosignatures:
     :template: only_names_in_toc.rst
 
@@ -422,7 +365,7 @@ To customize the picking-behavior, use ``m.cb.pick.set_props()``. The following 
 📍 Picking a dataset without plotting it first
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-.. currentmodule:: eomaps
+.. currentmodule:: eomaps.eomaps
 
 It is possible to attach ``pick`` callbacks to a :py:class:`Maps` object without plotting the data first
 by using :py:meth:`Maps.make_dataset_pickable`.
@@ -444,14 +387,6 @@ by using :py:meth:`Maps.make_dataset_pickable`.
     Using :py:meth:`make_dataset_pickable` is ONLY necessary if you want to use ``pick``
     callbacks without actually plotting the data! Otherwise a call to :py:meth:`Maps.plot_map`
     is sufficient!
-
-.. autosummary::
-    :toctree: generated
-    :nosignatures:
-    :template: only_names_in_toc.rst
-    :hidden:
-
-    Maps.make_dataset_pickable
 
 .. autosummary::
     :nosignatures:

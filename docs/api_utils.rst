@@ -4,18 +4,9 @@
 🦜 Utility widgets
 ------------------
 
-.. currentmodule:: eomaps
+.. currentmodule:: eomaps.eomaps
 
 Some helpful utility widgets can be added to a map via :py:class:`Maps.util`.
-
-
-.. autosummary::
-    :toctree: generated
-    :nosignatures:
-    :template: only_names_in_toc.rst
-    :hidden:
-
-    Maps.util
 
 .. autosummary::
     :nosignatures:
@@ -42,15 +33,6 @@ By default, the widgets will show all available layers (except the "all" layer) 
 - To remove a previously created widget ``s`` from the map, simply use ``s.remove()``
 
 .. currentmodule:: eomaps.utilities.utilities
-
-.. autosummary::
-    :toctree: generated
-    :nosignatures:
-    :template: only_names_in_toc.rst
-    :hidden:
-
-    layer_selector
-    layer_slider
 
 .. autosummary::
     :nosignatures:
