@@ -23,13 +23,13 @@ They can be attached to a :py:class:`Maps` object via:
     :widths: auto
 
     +--------------------------------------------------------------+----------------------------------------------------------------------------------+
-    | :class:`click <eomaps.cb_container.ClickContainer>`         | Callbacks that are executed if you click anywhere on the Map.                    |
+    | :class:`click <eomaps.cb_container.ClickContainer>`          | Callbacks that are executed if you click anywhere on the Map.                    |
     +--------------------------------------------------------------+----------------------------------------------------------------------------------+
-    | :class:`pick <eomaps.cb_container.PickContainer>`           | Callbacks that select the nearest datapoint(s) if you click on the map.          |
+    | :class:`pick <eomaps.cb_container.PickContainer>`            | Callbacks that select the nearest datapoint(s) if you click on the map.          |
     +--------------------------------------------------------------+----------------------------------------------------------------------------------+
-    | :class:`move <eomaps.cb_container.MoveContainer>`           | Callbacks that are executed if you press a key on the keyboard.                  |
+    | :class:`move <eomaps.cb_container.MoveContainer>`            | Callbacks that are executed if you press a key on the keyboard.                  |
     +--------------------------------------------------------------+----------------------------------------------------------------------------------+
-    | :class:`keypress <eomaps.cb_container.KeypressContainer>`   | Callbacks that are executed if you move the mouse without holding down a button. |
+    | :class:`keypress <eomaps.cb_container.KeypressContainer>`    | Callbacks that are executed if you move the mouse without holding down a button. |
     +--------------------------------------------------------------+----------------------------------------------------------------------------------+
 
 
