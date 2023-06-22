@@ -91,13 +91,13 @@ Pre-defined WebMap services:
 
 **Services specific for Austria (Europe)**
 
-.. currentmodule:: eomaps.webmap_containers
+.. currentmodule:: eomaps.webmap_containers.wms_container
 
 .. autosummary::
     :nosignatures:
 
-    Austria.AT_basemap
-    Austria.Wien_basemap
+    _Austria.AT_basemap
+    _Austria.Wien_basemap
 
 
 
