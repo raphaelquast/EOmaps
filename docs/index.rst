@@ -43,4 +43,5 @@ Contents
    |    general                      |                               |
    |    api                          |    EOmaps_examples            |
    |    FAQ                          |                               |
+   |    reference                    |                               |
    +---------------------------------+-------------------------------+
