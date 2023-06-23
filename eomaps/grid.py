@@ -1,3 +1,5 @@
+"""Grid lines and grid labels."""
+
 from matplotlib.collections import LineCollection
 import numpy as np
 from itertools import chain

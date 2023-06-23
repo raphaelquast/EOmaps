@@ -4,6 +4,9 @@ from matplotlib.collections import PolyCollection, QuadMesh, TriMesh
 from matplotlib.tri import Triangulation
 from pyproj import CRS, Transformer
 import numpy as np
+
+"""Plot shape classes (for data visualization)."""
+
 from .helpers import register_modules
 
 

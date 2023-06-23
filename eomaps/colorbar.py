@@ -11,6 +11,8 @@ import copy
 from functools import partial, wraps, lru_cache
 from textwrap import dedent
 
+"""Interactive Colorbar."""
+
 from .helpers import pairwise, _TransformedBoundsLocator, register_modules
 
 

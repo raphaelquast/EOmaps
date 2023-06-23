@@ -1,3 +1,6 @@
+"""Interactive scalebar."""
+
+
 from .helpers import pairwise
 from collections import OrderedDict
 from functools import lru_cache

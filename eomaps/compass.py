@@ -1,3 +1,5 @@
+"""Interactive Compass (or North Arrow)."""
+
 import numpy as np
 
 from matplotlib.collections import PolyCollection

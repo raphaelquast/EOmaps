@@ -1,3 +1,5 @@
+"""Functionalities for editable annotations."""
+
 from matplotlib.offsetbox import DraggableBase
 from types import SimpleNamespace
 import numpy as np
@@ -6,6 +8,8 @@ _eomaps_picked_ann = None
 
 
 class DraggableAnnotationNew(DraggableBase):
+    """Base class for draggable annotations."""
+
     def __init__(
         self,
         annotation,
@@ -182,6 +186,8 @@ class DraggableAnnotationNew(DraggableBase):
 
 
 class AnnotationEditor:
+    """Class to handle interactive annotation edits."""
+
     def __init__(self, m):
         self.m = m
         self._annotations = list()

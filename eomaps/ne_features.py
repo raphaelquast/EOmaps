@@ -3,6 +3,8 @@ from warnings import warn
 from pathlib import Path
 import json
 
+"""Classes to fetch and draw NaturalEarth features."""
+
 from .helpers import register_modules
 from cartopy import crs as ccrs
 

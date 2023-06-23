@@ -1,3 +1,5 @@
+"""Projection definitions."""
+
 from cartopy import crs as ccrs
 from pyproj import CRS
 

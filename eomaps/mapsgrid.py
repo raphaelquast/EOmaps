@@ -1,3 +1,5 @@
+"""Mapsgrid class definition (helper for initialization of regular Maps-grids)."""
+
 from functools import wraps, lru_cache
 
 import numpy as np

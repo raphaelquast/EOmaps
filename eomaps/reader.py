@@ -2,6 +2,9 @@ from functools import wraps
 from pathlib import Path
 import numpy as np
 from pyproj import CRS
+
+"""Classes to read files (NetCDF, GeoTIFF, CSV etc.)"""
+
 from .helpers import register_modules
 
 

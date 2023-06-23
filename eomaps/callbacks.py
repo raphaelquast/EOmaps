@@ -1,3 +1,5 @@
+"""Collection of pre-defined click/pick/move/keypress callbacks."""
+
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.patches import PathPatch

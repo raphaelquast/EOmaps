@@ -1,3 +1,5 @@
+"""Collection of WebMap services."""
+
 from functools import lru_cache
 from textwrap import dedent
 
