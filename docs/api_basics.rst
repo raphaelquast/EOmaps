@@ -698,7 +698,7 @@ The individual :py:class:`Maps` objects and ``matpltolib-Axes`` are then accessi
     mg.subplots_adjust(left=0.1, right=0.9, bottom=0.1, top=0.9)
 
 
-.. currentmodule:: eomaps.eomaps
+.. currentmodule:: eomaps.mapsgrid
 
 .. autosummary::
     :nosignatures:

@@ -98,7 +98,7 @@ In addition, each callback-container supports the following useful methods:
     +---------------------------------------------------------------------------------------------+---------------------------------------------------------------------------+
 
 
-.. currentmodule:: eomaps.cb_container.CallbackContainer
+.. currentmodule:: eomaps.cb_container.ClickContainer
 
 .. autosummary::
     :nosignatures:
