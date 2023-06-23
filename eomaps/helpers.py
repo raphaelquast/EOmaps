@@ -26,6 +26,7 @@ def _do_import_module(name):
 
 
 def register_modules(*names, raise_exception=True):
+    """Lazy-loading for optional dependencies."""
     modules = []
     for name in names:
         try:
@@ -132,6 +133,26 @@ def cmap_alpha(cmap, alpha, interpolate=False, name="new_cmap"):
 # a simple progressbar
 # taken from https://stackoverflow.com/a/34482761/9703451
 def progressbar(it, prefix="", size=60, file=sys.stdout):
+    """
+    A (very) simple progressbar generator.
+
+    Parameters
+    ----------
+    it : iter
+        The iterator for which a progressbr should be shown.
+    prefix : str, optional
+        Prefix for the output. The default is "".
+    size : int, optional
+        The size of the progressbar (in characters). The default is 60.
+    file : filehandle, optional
+        The file-handle to write to. The default is sys.stdout.
+
+    Yields
+    ------
+    item :
+        Consecutive items from the iterator.
+
+    """
     count = len(it)
 
     def show(j):

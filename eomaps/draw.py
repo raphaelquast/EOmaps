@@ -270,6 +270,7 @@ class ShapeDrawer:
         )
 
     def redraw(self, blit=True, *args):
+        """Trigger re-drawing shapes."""
         # NOTE: If a drawer is active, this function is also called on any ordinary
         # draw-event (e.g. zoom/pan/resize) to keep the indicators visible.
         # see "m.BM.on_draw()"

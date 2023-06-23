@@ -17,7 +17,8 @@ import numpy as np
 
 
 class GeoDataFramePicker:
-    # a collection of pick-methods for geopandas.GeoDataFrames
+    """Collection of pick-methods for geopandas.GeoDataFrames"""
+
     def __init__(self, gdf, val_key, pick_method):
         self.gdf = gdf
         self.val_key = val_key

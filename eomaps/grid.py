@@ -8,6 +8,8 @@ from .helpers import pairwise
 
 
 class GridLines:
+    """Class to draw grid-lines."""
+
     def __init__(self, m, d=None, auto_n=10, layer=None, bounds=None, n=100):
         self.m = m._proxy(m)
 
@@ -24,10 +26,12 @@ class GridLines:
 
     @property
     def d(self):
+        """The fixed grid-spacing distance (if specified)."""
         return self._d
 
     @property
     def layer(self):
+        """The layer assigned to the grid"""
         if self._layer is None:
             return self.m.layer
         else:
@@ -35,14 +39,17 @@ class GridLines:
 
     @property
     def auto_n(self):
+        """Number of automatic grid-lines to evaluate (if d=None)"""
         return self._auto_n
 
     @property
     def n(self):
+        """Number of intermediate points to draw for each gridline"""
         return self._n
 
     @property
     def bounds(self):
+        """The boundaries of the grid"""
         if self._bounds is None:
             return (-180, 180, -90, 90)
         return self._bounds
@@ -449,6 +456,8 @@ class GridLines:
 
 
 class GridLabels:
+    """Class to draw grid-labels."""
+
     def __init__(
         self,
         g,
@@ -846,6 +855,9 @@ class GridLabels:
                     self._texts.append(t)
 
     def add_labels(self):
+        """
+        Add labels to the grid.
+        """
         m = self._g.m
         lines = self._g._get_lines()
         aspect = m.ax.bbox.height / m.ax.bbox.width
@@ -866,6 +878,8 @@ class GridLabels:
 
 
 class GridFactory:
+    """Class to handle grids on a map."""
+
     def __init__(self, m):
         self.m = m
         self._gridlines = []

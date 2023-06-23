@@ -8,6 +8,8 @@ from . import Maps
 
 
 class InsetMaps(Maps):
+    """Base class to create inset maps."""
+
     # a subclass of Maps that includes some special functions for inset maps
 
     def __init__(
