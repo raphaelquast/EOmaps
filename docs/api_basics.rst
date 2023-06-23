@@ -24,6 +24,7 @@ for a map.
         figsize=(7, 5))              # set the figure-size to 7x5
     m.set_extent((-25, 35, 25, 70))  # set the extent of the map
     m.add_feature.preset.coastline() # add coastlines to the map
+    m.add_title("my map")            # add a title above the map
 
 - ``crs`` represents the projection used for plotting
 - ``layer`` represents the name of the layer associated with the Maps-object (see :ref:`layers`).
@@ -48,6 +49,7 @@ Possible ways for specifying the ``crs`` for plotting are:
     Maps
     Maps.CRS
     Maps.set_extent
+    Maps.add_title
 
 .. _layers:
 
