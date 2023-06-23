@@ -1351,6 +1351,41 @@ class Maps:
             except Exception:
                 pass
 
+    def add_title(self, title, x=0.5, y=1.01, **kwargs):
+        """
+        Convenience function to add a title to the map.
+
+        (The title will be visible at the assigned layer.)
+
+        Parameters
+        ----------
+        title : str
+            The title.
+        x, y : float, optional
+            The position of the text in axis-coordinates (0-1).
+            The default is 0.5, 1.01.
+        kwargs :
+            Additional kwargs are passed to `m.text()`
+            The defaults are:
+
+            - `"fontsize": "large"`
+            - `horizontalalignment="center"`
+            - `verticalalignment="bottom"`
+
+        See Also
+        --------
+
+        :py:meth:`Maps.text` : General function to add text to the figure.
+
+        """
+        kwargs.setdefault("fontsize", "large")
+        kwargs.setdefault("horizontalalignment", "center")
+        kwargs.setdefault("verticalalignment", "bottom")
+
+        self.text(
+            0.5, 1.01, title, transform=self.ax.transAxes, layer=self.layer, **kwargs
+        )
+
     @lru_cache()
     def get_crs(self, crs="plot"):
         """
