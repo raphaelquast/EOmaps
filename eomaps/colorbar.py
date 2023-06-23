@@ -56,6 +56,8 @@ def get_named_bins_formatter(bins, names, show_values=False):
 
 
 class ColorBar:
+    """Class to draw colorbars with a histogram on top."""
+
     def __init__(
         self,
         m,

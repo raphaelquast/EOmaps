@@ -1866,6 +1866,12 @@ class WebMapContainer(object):
     OpenPlanetary.__doc__ = _OpenPlanetary.__doc__
 
     class _GOOGLE_layers:
+        """
+        WebMaps provided by GOOGLE
+        https://www.google.com
+
+        """
+
         def __init__(self, m):
             self._m = m
             self.add_layer = self._add_layer(m)
