@@ -56,10 +56,7 @@ class _WebMap_layer:
 
     @property
     def info(self):
-        """
-        pretty-print the available properties of the wms_layer to the console
-        """
-
+        """Pretty-print the available properties of the wms_layer to the console."""
         txt = ""
         for key, val in self.wms_layer.__dict__.items():
             if not val:
@@ -71,11 +68,7 @@ class _WebMap_layer:
             txt += f"{key} : {s}\n"
 
         try:
-
-            if any(("legend" in val for key, val in self.wms_layer.styles.items())):
-                legQ = True
-            else:
-                legQ = False
+            legQ = any(("legend" in val for key, val in self.wms_layer.styles.items()))
         except Exception:
             legQ = False
 
@@ -109,7 +102,7 @@ class _WebMap_layer:
 
     def add_legend(self, style=None, img=None):
         """
-        Add a legend to the plot (if available)
+        Add a legend to the plot (if available).
 
         If you click on the legend you can drag it around!
         The size of the legend can be changed by turning the mouse-wheel
@@ -121,6 +114,7 @@ class _WebMap_layer:
             The style to use. The default is "default".
         img : BytesIO
             A pre-fetched legend (if provided the "style" kwarg is ignored!)
+
         Returns
         -------
         legax : matpltolib.axes
@@ -328,7 +322,6 @@ class _WebMap_layer:
 class _wmts_layer(_WebMap_layer):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        pass
 
     def __call__(self, layer=None, zorder=0, alpha=1, **kwargs):
         """
@@ -432,7 +425,6 @@ class _wmts_layer(_WebMap_layer):
 class _wms_layer(_WebMap_layer):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        pass
 
     def __call__(self, layer=None, zorder=0, alpha=1, **kwargs):
         """
@@ -568,7 +560,7 @@ class _wms_layer(_WebMap_layer):
         m.BM.add_bg_artist(art, layer=layer)
 
 
-class _WebServiec_collection(object):
+class _WebServiec_collection:
     def __init__(self, m, service_type="wmts", url=None):
         self._m = m
         self._service_type = service_type
@@ -581,8 +573,8 @@ class _WebServiec_collection(object):
     def __repr__(self):
         if hasattr(self, "info"):
             return self.info
-        else:
-            return object.__repr__(self)
+
+        return object.__repr__(self)
 
     @property
     @lru_cache()
@@ -806,8 +798,8 @@ class _REST_WMSservice(_WebServiec_collection):
         if len(self._layers) == 0:
             print(f"EOmaps: found no {self._service_type} layers for {self._s_name}")
             return
-        else:
-            return SimpleNamespace(**self._layers)
+
+        return SimpleNamespace(**self._layers)
 
 
 class _multi_REST_WMSservice:
@@ -906,12 +898,12 @@ class TileFactory(GoogleWTS):
 
 
 class xyzRasterSource(RasterSource):
-    """
-    A RasterSource that can be used with a SlippyImageArtist to fetch tiles.
-    """
+    """RasterSource that can be used with a SlippyImageArtist to fetch tiles."""
 
     def __init__(self, url, crs, maxzoom=19, transparent=True):
         """
+        Class to fetch tiles from xyz services with a SlippyImageArtist.
+
         Parameters
         ----------
         service: string or WebMapService instance
@@ -919,6 +911,7 @@ class xyzRasterSource(RasterSource):
             from whence to retrieve the image.
         layers: string or list of strings
             The name(s) of layers to use from the WMS service.
+
         """
         self.url = url
 
@@ -1085,9 +1078,7 @@ class xyzRasterSource(RasterSource):
 
 
 class _xyz_tile_service:
-    """
-    general class for using x/y/z tile-service urls as WebMap layers
-    """
+    """General class for using x/y/z tile-service urls as WebMap layers."""
 
     def __init__(self, m, url, maxzoom=19, name=None):
         self._m = m
@@ -1099,9 +1090,7 @@ class _xyz_tile_service:
         self.name = name
 
     def _reinit(self, m):
-        return _xyz_tile_service(
-            m, url=self.url, maxzoom=self._maxzoom, name=self._name
-        )
+        return _xyz_tile_service(m, url=self.url, maxzoom=self._maxzoom, name=self.name)
 
     def __call__(
         self,
@@ -1165,7 +1154,7 @@ class _xyz_tile_service:
             kwargs.setdefault("alpha", alpha)
             kwargs.setdefault("origin", "lower")
 
-            if self._layer == "all" or self._m.BM.bg_layer == self._layer:
+            if self._layer in ["all", self._m.BM.bg_layer]:
                 # add the layer immediately if the layer is already active
                 self._do_add_layer(self._m, layer=self._layer, **kwargs)
             else:
@@ -1241,8 +1230,8 @@ def refetch_wms_on_size_change(refetch):
 
     By default, WebMap services are dynamically re-fetched on any size-change.
     (this also means that saving figures at high dpi-values will cause a
-     re-fetch of webmap services which might result in a different look
-     of the exported image!)
+    re-fetch of webmap services which might result in a different look
+    of the exported image!)
 
     Note
     ----
@@ -1271,7 +1260,6 @@ def _cx_refetch_wms_on_size_change(refetch):
 
 
 class SlippyImageArtist_NEW(AxesImage):
-
     """
     A subclass of :class:`~matplotlib.image.AxesImage` which provides an
     interface for getting a raster from the given object with interactive
@@ -1356,7 +1344,7 @@ class SlippyImageArtist_NEW(AxesImage):
                         clippath.get_path(),
                         transform=self.axes.projection._as_mpl_transform(self.axes),
                     )
-                except:
+                except Exception:
                     print("EOmaps: unable to set clippath for WMS images")
 
                 with ax.hold_limits():
