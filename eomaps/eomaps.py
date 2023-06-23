@@ -30,7 +30,7 @@ from .helpers import (
     BlitManager,
     LayoutEditor,
     progressbar,
-    searchtree,
+    SearchTree,
     _TransformedBoundsLocator,
     _add_to_docstring,
     register_modules,
@@ -279,6 +279,7 @@ class Maps:
     _companion_widget_n_layer_tabs = 50
 
     CLASSIFIERS = SimpleNamespace(**dict(zip(_CLASSIFIERS, _CLASSIFIERS)))
+    "Accessor for available classification schemes."
 
     # arguments passed to m.savefig when using "ctrl+c" to export figure to clipboard
     _clipboard_kwargs = dict()
@@ -2838,7 +2839,7 @@ class Maps:
 
         self._coll = art
 
-        self.tree = searchtree(m=self._proxy(self))
+        self.tree = SearchTree(m=self._proxy(self))
         self.cb.pick._set_artist(art)
         self.cb.pick._init_cbs()
         self.cb._methods.add("pick")
@@ -4657,7 +4658,7 @@ class Maps:
             print("EOmaps: Indexing for pick-callbacks...")
 
         # This is now done lazily (only if a pick-callback is attached)
-        # self.tree = searchtree(m=self._proxy(self))
+        # self.tree = SearchTree(m=self._proxy(self))
         # self.cb.pick._set_artist(coll)
         # self.cb.pick._init_cbs()
         # self.cb._methods.add("pick")

@@ -218,10 +218,12 @@ def _add_to_docstring(prefix=None, suffix=None, insert=None):
     return decorator
 
 
-class searchtree:
+class SearchTree:
+    """Class to perform fast nearest-neighbour queries."""
+
     def __init__(self, m):
         """
-        Nearest-neighbour search.
+        Class to perform fast nearest-neighbour queries.
 
         Parameters
         ----------
@@ -236,7 +238,7 @@ class searchtree:
 
     @property
     def d(self):
-        """Side-length of the search-rectangle (in units of the plot-crs)"""
+        """Side-length of the search-rectangle (in units of the plot-crs)."""
         return self._d
 
     def set_search_radius(self, r):
@@ -260,8 +262,8 @@ class searchtree:
               used if possible and else np.inf is used.
 
             The default is "50" (e.g. 50 times the pixel-radius).
-        """
 
+        """
         self._search_radius = r
 
         if isinstance(r, str):
@@ -484,6 +486,8 @@ class searchtree:
 
 
 class LayoutEditor:
+    """Class to handle interactive re-positioning of figure-objects."""
+
     def __init__(self, m, modifier="alt+d", cb_modifier="control"):
         self.modifier = modifier
         self.cb_modifier = cb_modifier
@@ -1449,8 +1453,12 @@ class LayoutEditor:
 
 # taken from https://matplotlib.org/stable/tutorials/advanced/blitting.html#class-based-example
 class BlitManager:
+    """Manager used to schedule draw events, cache backgrounds, etc."""
+
     def __init__(self, m):
         """
+        Manager used to schedule draw events, cache backgrounds, etc.
+
         Parameters
         ----------
         canvas : FigureCanvasAgg
@@ -1460,8 +1468,8 @@ class BlitManager:
 
         animated_artists : Iterable[Artist]
             List of the artists to manage
-        """
 
+        """
         self._m = m
 
         self._artists = dict()

@@ -640,9 +640,9 @@ class _ClickContainer(_CallbackContainer):
         try:
             # Lazily make a plotted dataset pickable a
             if getattr(self._m, "tree", None) is None:
-                from .helpers import searchtree
+                from .helpers import SearchTree
 
-                self._m.tree = searchtree(m=self._m._proxy(self._m))
+                self._m.tree = SearchTree(m=self._m._proxy(self._m))
                 self._m.cb.pick._set_artist(self._m.coll)
                 self._m.cb.pick._init_cbs()
                 self._m.cb._methods.add("pick")
