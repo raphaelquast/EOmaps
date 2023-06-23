@@ -1,3 +1,5 @@
+"""Interactive Colorbar."""
+
 from matplotlib.gridspec import GridSpecFromSubplotSpec, SubplotSpec
 
 import matplotlib.transforms as mtransforms
@@ -8,10 +10,8 @@ from matplotlib.colors import LinearSegmentedColormap
 import numpy as np
 import copy
 
-from functools import partial, wraps, lru_cache
+from functools import partial, lru_cache
 from textwrap import dedent
-
-"""Interactive Colorbar."""
 
 from .helpers import pairwise, _TransformedBoundsLocator, register_modules
 

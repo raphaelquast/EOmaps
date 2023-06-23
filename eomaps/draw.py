@@ -33,6 +33,8 @@ def autoscale_turned_off(ax=None):
 
 
 class ShapeDrawer:
+    """Base-class for drawing shapes on a map."""
+
     def __init__(self, m, layer=None, dynamic=True):
         """
         Base-class for drawing shapes on a map.

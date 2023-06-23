@@ -1,3 +1,5 @@
+"""Container classes for callback management"""
+
 from types import SimpleNamespace
 from functools import update_wrapper, partial, wraps
 

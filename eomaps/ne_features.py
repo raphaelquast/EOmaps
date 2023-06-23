@@ -1,9 +1,8 @@
+"""Classes to fetch and draw NaturalEarth features."""
+
 from textwrap import dedent
-from warnings import warn
 from pathlib import Path
 import json
-
-"""Classes to fetch and draw NaturalEarth features."""
 
 from .helpers import register_modules
 from cartopy import crs as ccrs
@@ -16,7 +15,7 @@ def combdoc(*args):
 
 class NaturalEarth_presets:
     """
-    Feature presets
+    Feature presets.
 
     To add single preset-features (or customize the appearance), use:
 
@@ -44,8 +43,8 @@ class NaturalEarth_presets:
         scale : int or str
             Set the scale of the feature preset (10, 50, 110 or "auto")
             The default is "auto"
-        """
 
+        """
         wrong_names = set(args).difference(self._feature_names)
         assert len(wrong_names) == 0, (
             f"EOmaps: {wrong_names} are not valid preset-feature names!\n"
