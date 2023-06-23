@@ -762,6 +762,14 @@ class _ClickCallbacks(object):
             this transparency will be assigned as a global transparency for the
             obtained "combined layer".
             The default is 1.
+        shape : str, optional
+            The shape of the peek-window.
+
+            - "rectangular": peek a rectangle
+            - "round": peek an ellipse
+
+            The default is "rectangular"
+
         **kwargs :
             additional kwargs passed to a rectangle-marker.
             the default is `(fc="none", ec="k", lw=1)`
