@@ -88,13 +88,13 @@ In addition, each callback-container supports the following useful methods:
     :widths: auto
 
     +---------------------------------------------------------------------------------------------+---------------------------------------------------------------------------+
-    | :class:`attach <eomaps.cb_container.ClickContainer._attach>`                             | Attach custom or pre-defined callbacks to the map.                        |
+    | :class:`attach <eomaps.cb_container.ClickContainer._attach>`                                | Attach custom or pre-defined callbacks to the map.                        |
     +---------------------------------------------------------------------------------------------+---------------------------------------------------------------------------+
-    | :class:`remove <eomaps.cb_container.ClickContainer.remove>`                              | Remove previously attached callbacks from the map.                        |
+    | :class:`remove <eomaps.cb_container.ClickContainer.remove>`                                 | Remove previously attached callbacks from the map.                        |
     +---------------------------------------------------------------------------------------------+---------------------------------------------------------------------------+
-    | :class:`get <eomaps.cb_container.ClickContainer._get>`                                   | Accessor for objects generated/retrieved by callbacks.                    |
+    | :class:`get <eomaps.cb_container.ClickContainer._get>`                                      | Accessor for objects generated/retrieved by callbacks.                    |
     +---------------------------------------------------------------------------------------------+---------------------------------------------------------------------------+
-    | :class:`set_sticky_modifiers <eomaps.cb_container.ClickContainer.set_sticky_modifiers>`  | Define keys on the keyboard that should be treated as "sticky modifiers". |
+    | :class:`set_sticky_modifiers <eomaps.cb_container.ClickContainer.set_sticky_modifiers>`     | Define keys on the keyboard that should be treated as "sticky modifiers". |
     +---------------------------------------------------------------------------------------------+---------------------------------------------------------------------------+
 
 
