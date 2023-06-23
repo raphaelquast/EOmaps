@@ -201,10 +201,11 @@ class Maps:
     >>> m = Maps()
     >>> # add basic background features to the map
     >>> m.add_feature.preset("coastline", "ocean", "land")
-    >>> # create a new layer
+    >>> # create a new layer and add more features
     >>> m1 = m.new_layer("layer 1")
     >>> m1.add_feature.physical.coastline(fc="none", ec="b", lw=2, scale=50)
     >>> m1.add_feature.cultural.admin_0_countries(fc=(.2,.1,.4,.2), ec="b", lw=1, scale=50)
+    >>> # overlay a part of the new layer in a circle if you click on the map
     >>> m.cb.click.attach.peek_layer(m1.layer, how=0.4, shape="round")
 
     Use Maps-objects as context-manager to close the map and free memory
