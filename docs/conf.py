@@ -104,3 +104,7 @@ napoleon_use_rtype = True
 napoleon_preprocess_types = False
 napoleon_type_aliases = None
 napoleon_attr_annotations = True
+
+# handle compiler warnings for duplicate labels due to documents
+# included via the  ..include:: directive
+exclude_patterns = ["introduction.rst"]
