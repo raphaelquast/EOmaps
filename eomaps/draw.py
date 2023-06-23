@@ -22,6 +22,7 @@ from .helpers import register_modules
 
 @contextmanager
 def autoscale_turned_off(ax=None):
+    """Contextmanager to revert axis-limits."""
     ax = ax or plt.gca()
     lims = [ax.get_xlim(), ax.get_ylim()]
     yield
