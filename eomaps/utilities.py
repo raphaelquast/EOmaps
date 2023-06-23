@@ -1,3 +1,5 @@
+"""Collection of utility classes (layer sliders, layer selectors etc.)"""
+
 from matplotlib.legend import DraggableLegend
 from matplotlib.lines import Line2D
 from matplotlib.widgets import Slider

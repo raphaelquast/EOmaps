@@ -1257,12 +1257,10 @@ class PickContainer(_ClickContainer):
             Set the radius of the area that is used to limit the number of
             pixels when searching for nearest-neighbours.
 
-            if `int` or `float`:
-                The radius of the circle in units of the plot_crs
-            if `str:
-                A multiplication-factor for the estimated pixel-radius.
-                (e.g. a circle with (r=search_radius * m.shape.radius) is
-                used if possible and else np.inf is used.
+            - if `int` or `float`, the radius of the circle in units of the plot_crs
+            - if `str`, a multiplication-factor for the estimated pixel-radius.
+              (e.g. a circle with (r=search_radius * m.shape.radius) is
+              used if possible and else np.inf is used.
 
             The default is "50" (e.g. 50 times the pixel-radius).
 
@@ -1993,7 +1991,7 @@ class CallbackContainer:
         ----
         If the name starts with an underscore (e.g. "_MyPicker") then the
         associated container will be accessible via `m._cb._pick__MyPicker`
-        or via `m.cb.pick["_MyPicker"]. (This is useful to setup pickers that
+        or via `m.cb.pick["_MyPicker"]`. (This is useful to setup pickers that
         are only used internally)
         """
         name = str(name)
