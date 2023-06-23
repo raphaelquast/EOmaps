@@ -195,61 +195,21 @@ class Maps:
 
     Examples
     --------
-    Create a new figure and axes
+    Create a new Maps object and initialize a figure and axes for a map.
 
-    >>> m = Maps()
-    >>> ...
-
-    Create a new figure and position the map at (left, bottom, width, height)
-
-    >>> m = Maps(ax=(.25, .5, .5, .5))
-
-    Use an existing figure and position the map at (left, bottom, width, height)
-
-    >>> import matplotlib.pyplot as plt
-    >>> from matplotlib.gridspec import GridSpec
-    >>> f = plt.figure()
-    >>> m = Maps(f=f, ax=(.25, .5, .5, .5))
-
-    Use a 3-digit integer to set the grid-position of the map
-    (nrows, ncols, index)
-
-    >>> from matplotlib.gridspec import GridSpec
-    >>> m = Maps(ax=221)
-
-    Use a tuple of 3 integers to set the grid-position of the map
-    (nrows, ncols, index)
-
-    >>> from matplotlib.gridspec import GridSpec
-    >>> m = Maps(ax=(2, 2, 1))
-
-    Put the map at a grid-position of an existing figure
-
-    >>> import matplotlib.pyplot as plt
-    >>> f = plt.figure()
-    >>> ax = f.add_subplot(211)
-    >>> m = Maps(f=f, ax=212)
-
-    Use a subplotspec to set the axis position
-
-    >>> from matplotlib.gridspec import GridSpec
-    >>> gs = GridSpec(2,2)
-    >>> m = Maps(ax=gs[0,0])
-
-    Use an existing axis to create the Maps-object
-    (the associated figure is automatically detected)
-
-    >>> import matplotlib.pyplot as plt
     >>> from eomaps import Maps
-    >>> f = plt.figure()
-    >>> ax = f.add_subplot(projection=Maps.CRS.Mollweide())
-    >>> m = Maps(ax=ax)
+    >>> m = Maps()
+    >>> # add basic background features to the map
+    >>> m.add_feature.preset("coastline", "ocean", "land")
+    >>> # create a new layer
+    >>> m1 = m.new_layer("layer 1")
+    >>> m1.add_feature.physical.coastline(fc="none", ec="b", lw=2, scale=50)
+    >>> m1.add_feature.cultural.admin_0_countries(fc=(.2,.1,.4,.2), ec="b", lw=1, scale=50)
+    >>> m.cb.click.attach.peek_layer(m1.layer, how=0.4, shape="round")
 
     Use Maps-objects as context-manager to close the map and free memory
     once the map is exported.
 
-    >>> import matplotlib
-    >>> matplotlib.use("agg") # we can use a non-GUI backend since we only export png's
     >>> from eomaps import Maps
     >>> with Maps() as m:
     >>>     m.add_feature.preset.coastline()

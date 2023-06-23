@@ -1,5 +1,5 @@
-API Reference
-=============
+🐍 API Reference
+================
 
 .. autosummary::
    :toctree: generated
