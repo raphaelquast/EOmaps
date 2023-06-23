@@ -123,9 +123,12 @@ class Maps:
     See Also
     --------
     Maps.new_layer : Create a new layer for the map.
+
     Maps.new_map : Add a new map to the figure.
+
     Maps.new_inset_map : Add a new inset-map to the figure.
-    MapsGrid : Initialize a grid of Maps objects
+
+    :py:class:`~eomaps.mapsgrid.MapsGrid` : Initialize a grid of Maps objects
 
     Parameters
     ----------
