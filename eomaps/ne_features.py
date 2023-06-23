@@ -2,19 +2,9 @@ from textwrap import dedent
 from warnings import warn
 from pathlib import Path
 import json
+
+from .helpers import register_modules
 from cartopy import crs as ccrs
-
-gpd = None
-
-
-def _register_geopandas():
-    global gpd
-    try:
-        import geopandas as gpd
-    except ImportError:
-        return False
-
-    return True
 
 
 def combdoc(*args):
@@ -617,9 +607,7 @@ class NaturalEarth_features(object):
             gdf : geopandas.GeoDataFrame
                 A GeoDataFrame with all geometries of the feature
             """
-            assert (
-                _register_geopandas()
-            ), "EOmaps: Missing dependency `geopandas` for `feature.get_gdf()`"
+            (gpd,) = register_modules("geopandas")
 
             self._set_scale(scale)
 

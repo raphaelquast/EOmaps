@@ -11,23 +11,7 @@ import copy
 from functools import partial, wraps, lru_cache
 from textwrap import dedent
 
-from .helpers import pairwise, _TransformedBoundsLocator
-
-
-ds, mpl_ext = None, None
-
-
-def _register_datashader():
-    global ds
-    global mpl_ext
-
-    try:
-        import datashader as ds
-        from datashader import mpl_ext
-    except ImportError:
-        return False
-
-    return True
+from .helpers import pairwise, _TransformedBoundsLocator, register_modules
 
 
 def get_named_bins_formatter(bins, names, show_values=False):
@@ -795,9 +779,9 @@ class ColorBar:
 
         dynamic_shade = False
         if self._dynamic_shade_indicator:
-            if _register_datashader() and isinstance(
-                self._coll, mpl_ext.ScalarDSArtist
-            ):
+            ds, mpl_ext = register_modules("datashader", "datashader.mpl_ext")
+
+            if all((ds, mpl_ext)) and isinstance(self._coll, mpl_ext.ScalarDSArtist):
                 dynamic_shade = True
             else:
                 print(

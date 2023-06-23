@@ -4,8 +4,9 @@ import re
 import sys
 from itertools import chain
 from contextlib import contextmanager, ExitStack
+from importlib import import_module
 from textwrap import indent, dedent
-from functools import wraps
+from functools import wraps, lru_cache
 from pathlib import Path
 import json
 import warnings
@@ -17,7 +18,27 @@ from matplotlib.colors import LinearSegmentedColormap, ListedColormap
 from matplotlib.transforms import Bbox, TransformedBbox
 from matplotlib.axis import XAxis, YAxis
 from matplotlib.spines import Spine
-from matplotlib.text import Text
+
+
+@lru_cache()
+def _do_import_module(name):
+    return import_module(name)
+
+
+def register_modules(*names, raise_exception=True):
+    modules = []
+    for name in names:
+        try:
+            modules.append(_do_import_module(name))
+        except ImportError as ex:
+            if raise_exception:
+                raise ImportError(
+                    f"EOmaps: Missing required dependency: {name} \n {ex}"
+                )
+            else:
+                modules.append(None)
+    return modules
+
 
 # class copied from matplotlib.axes
 class _TransformedBoundsLocator:

@@ -1,29 +1,17 @@
-from eomaps.callbacks import (
+from types import SimpleNamespace
+from functools import update_wrapper, partial, wraps
+
+from .callbacks import (
     ClickCallbacks,
     PickCallbacks,
     KeypressCallbacks,
     MoveCallbacks,
 )
-from types import SimpleNamespace
+from .helpers import register_modules
 
-from functools import update_wrapper, partial, wraps
 import matplotlib.pyplot as plt
-
 from pyproj import Transformer
-
 import numpy as np
-
-gpd = None
-
-
-def _register_geopandas():
-    global gpd
-    try:
-        import geopandas as gpd
-    except ImportError:
-        return False
-
-    return True
 
 
 class GeoDataFramePicker:
@@ -34,12 +22,7 @@ class GeoDataFramePicker:
         self.pick_method = pick_method
 
     def get_picker(self):
-        assert _register_geopandas(), (
-            "EOmaps: Missing dependency `geopandas`!\n"
-            + "please install '(conda install -c conda-forge geopandas)'"
-            + "to make geopandas GeoDataFrames pickable."
-        )
-
+        (gpd,) = register_modules("geopandas")
         if self.pick_method == "contains":
             return self._contains_picker
         elif self.pick_method == "centroids":
@@ -55,6 +38,8 @@ class GeoDataFramePicker:
             )
 
     def _contains_picker(self, artist, mouseevent):
+        (gpd,) = register_modules("geopandas")
+
         try:
             query = getattr(self.gdf, "contains")(
                 gpd.points_from_xy(

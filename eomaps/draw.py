@@ -16,25 +16,8 @@ from contextlib import contextmanager
 import numpy as np
 import matplotlib.pyplot as plt
 
-from eomaps.shapes import Shapes
-
-gpd = None
-pd = None
-shapely_Polygon = None
-
-
-def _register_geopandas():
-    global pd
-    global gpd
-    global shapely_Polygon
-    try:
-        import geopandas as gpd
-        import pandas as pd
-        from shapely.geometry import Polygon as shapely_Polygon
-    except ImportError:
-        return False
-
-    return True
+from .shapes import Shapes
+from .helpers import register_modules
 
 
 @contextmanager
@@ -67,6 +50,11 @@ class ShapeDrawer:
             the background after the draw is finished.
             If False, the shapes are added as background-artists.
         """
+        global gpd, pd, sh_geom
+        gpd, pd, sh_geom = register_modules(
+            "geopandas", "pandas", "shapely.geometry", raise_exception=False
+        )
+        self._can_save = all((gpd, pd, sh_geom))
 
         self._m = m
 
@@ -85,7 +73,7 @@ class ShapeDrawer:
         else:
             self._crs = self._m.crs_plot.to_wkt()
 
-        if _register_geopandas():
+        if gpd:
             self.gdf = gpd.GeoDataFrame(geometry=[], crs=self._crs)
             ShapeDrawer.save_shapes.__doc__ = gpd.GeoDataFrame.to_file.__doc__
         else:
@@ -239,7 +227,7 @@ class ShapeDrawer:
             self._m.BM.remove_bg_artist(a)
         a.remove()
 
-        if _register_geopandas():
+        if self._can_save:
             self.gdf = self.gdf.drop(ID)
 
         for cb in self._on_poly_remove:
@@ -663,8 +651,8 @@ class ShapeDrawer:
                 ID = max(self._artists) + 1 if self._artists else 0
                 self._artists[ID] = ph
 
-            if _register_geopandas():
-                gdf = gpd.GeoDataFrame(index=[ID], geometry=[shapely_Polygon(pts)])
+            if self._can_save:
+                gdf = gpd.GeoDataFrame(index=[ID], geometry=[sh_geom.Polygon(pts)])
                 gdf = gdf.set_crs(crs=self._crs)
                 self.gdf = pd.concat([self.gdf, gdf])
 
@@ -743,9 +731,9 @@ class ShapeDrawer:
                 ID = max(self._artists) + 1 if self._artists else 0
                 self._artists[ID] = ph
 
-            if _register_geopandas():
+            if self._can_save:
                 pts = np.column_stack((pts[0][0], pts[1][0]))
-                gdf = gpd.GeoDataFrame(index=[ID], geometry=[shapely_Polygon(pts)])
+                gdf = gpd.GeoDataFrame(index=[ID], geometry=[sh_geom.Polygon(pts)])
                 gdf = gdf.set_crs(crs=self._crs)
                 self.gdf = pd.concat([self.gdf, gdf])
 
@@ -817,8 +805,8 @@ class ShapeDrawer:
                 ID = max(self._artists) + 1 if self._artists else 0
                 self._artists[ID] = ph
 
-            if _register_geopandas():
-                gdf = gpd.GeoDataFrame(index=[ID], geometry=[shapely_Polygon(pts)])
+            if self._can_save:
+                gdf = gpd.GeoDataFrame(index=[ID], geometry=[sh_geom.Polygon(pts)])
                 gdf = gdf.set_crs(crs=self._crs)
                 self.gdf = pd.concat([self.gdf, gdf])
 

@@ -1,48 +1,9 @@
 from textwrap import dedent, indent, fill
-
 from warnings import warn
 from operator import attrgetter
 from inspect import signature, _empty
 from types import SimpleNamespace
-
-
-pd = None
-
-
-def _register_pandas():
-    global pd
-    try:
-        import pandas as pd
-    except ImportError:
-        return False
-
-    return True
-
-
-gpd = None
-
-
-def _register_geopandas():
-    global gpd
-    try:
-        import geopandas as gpd
-    except ImportError:
-        return False
-
-    return True
-
-
-mapclassify = None
-
-
-def _register_mapclassify():
-    global mapclassify
-    try:
-        import mapclassify
-    except ImportError:
-        return False
-
-    return True
+from .helpers import register_modules
 
 
 class data_specs(object):
@@ -205,14 +166,14 @@ class data_specs(object):
 
     @parameter.getter
     def parameter(self):
+        if self._parameter is None:
+            (pd,) = register_modules("pandas", raise_exception=False)
 
-        if (
-            self._parameter is None
-            and _register_pandas()
-            and isinstance(self.data, pd.DataFrame)
-        ):
-            if self.data is not None and self.x is not None and self.y is not None:
-
+            if (
+                pd
+                and isinstance(self.data, pd.DataFrame)
+                and not any(i is None for i in (self.data, self.x, self.y))
+            ):
                 try:
                     self.parameter = next(
                         i for i in self.data.keys() if i not in [self.x, self.y]
@@ -328,10 +289,7 @@ class classify_specs(object):
 
     def _get_default_args(self):
         if hasattr(self, "_scheme") and self._scheme is not None:
-            assert _register_mapclassify(), (
-                "EOmaps: Missing dependency: 'mapclassify' \n ... please install"
-                + " (conda install -c conda-forge mapclassify) to use data-classifications."
-            )
+            (mapclassify,) = register_modules("mapclassify")
 
             assert self._scheme in mapclassify.CLASSIFIERS, (
                 f"the classification-scheme '{self._scheme}' is not valid... "
@@ -374,10 +332,7 @@ class classify_specs(object):
         """
         accessor for possible classification schemes
         """
-        assert _register_mapclassify(), (
-            "EOmaps: Missing dependency: 'mapclassify' \n ... please install"
-            + " (conda install -c conda-forge mapclassify) to use data-classifications."
-        )
+        (mapclassify,) = register_modules("mapclassify")
 
         return SimpleNamespace(
             **dict(zip(mapclassify.CLASSIFIERS, mapclassify.CLASSIFIERS))

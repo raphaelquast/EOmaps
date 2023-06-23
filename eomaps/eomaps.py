@@ -13,78 +13,6 @@ from contextlib import contextmanager, ExitStack
 
 import numpy as np
 
-# ------- perform lazy delayed imports
-# (for optional dependencies that take long time to import)
-
-
-pd = None
-
-
-def _register_pandas():
-    global pd
-    try:
-        import pandas as pd
-    except ImportError:
-        return False
-
-    return True
-
-
-gpd = None
-
-
-def _register_geopandas():
-    global gpd
-    try:
-        import geopandas as gpd
-    except ImportError:
-        return False
-
-    return True
-
-
-xar = None
-
-
-def _register_xarray():
-    global xar
-    try:
-        import xarray as xar
-    except ImportError:
-        return False
-
-    return True
-
-
-ds, mpl_ext = None, None
-
-
-def _register_datashader():
-    global ds
-    global mpl_ext
-
-    try:
-        import datashader as ds
-        from datashader import mpl_ext
-    except ImportError:
-        return False
-
-    return True
-
-
-mapclassify = None
-
-
-def _register_mapclassify():
-    global mapclassify
-    try:
-        import mapclassify
-    except ImportError:
-        return False
-
-    return True
-
-
 from pyproj import CRS, Transformer
 
 import matplotlib as mpl
@@ -105,6 +33,7 @@ from .helpers import (
     searchtree,
     _TransformedBoundsLocator,
     _add_to_docstring,
+    register_modules,
 )
 from .shapes import Shapes
 from .colorbar import ColorBar
@@ -187,7 +116,7 @@ _CLASSIFIERS = (
 )
 
 
-class Maps(object):
+class Maps:
     """
     The base-class for generating plots with EOmaps.
 
@@ -930,6 +859,7 @@ class Maps(object):
             indicate the inset-shape on arbitrary Maps-objects.
 
             The default is False.
+
         Returns
         -------
         m : eomaps.Maps
@@ -989,6 +919,7 @@ class Maps(object):
         >>> m3.add_feature.preset.land()
 
         >>> m.util.layer_selector()
+
         """
         # to avoid circular imports
         from .inset_maps import InsetMaps
@@ -1192,6 +1123,7 @@ class Maps(object):
           >>> # colorbars and pick-callbacks will now show values as (1 + 0.01 * value)
           >>> # e.g. the "actual" data values are [0.01, 0.02, 0.03, ...]
           >>> m.set_data(vals, x=lon, y=lat, crs=4326, encoding=encoding)
+
         """
         if data is not None:
             self.data_specs.data = data
@@ -1272,10 +1204,7 @@ class Maps(object):
         >>> m.set_classify.UserDefined(bins=[5, 10, 25, 50])
 
         """
-        assert _register_mapclassify(), (
-            "EOmaps: Missing dependency: 'mapclassify' \n ... please install"
-            + " (conda install -c conda-forge mapclassify) to use data-classifications."
-        )
+        (mapclassify,) = register_modules("mapclassify")
 
         s = SimpleNamespace(
             **{
@@ -1290,7 +1219,7 @@ class Maps(object):
 
     def set_classify_specs(self, scheme=None, **kwargs):
         """
-        Optional way to set classification specifications for the data.
+        Set classification specifications for the data.
 
         The classification is ultimately performed by the `mapclassify` module!
 
@@ -1333,13 +1262,9 @@ class Maps(object):
         kwargs :
             kwargs passed to the call to the respective mapclassify classifier
             (dependent on the selected scheme... see above)
+
         """
-
-        assert _register_mapclassify(), (
-            "EOmaps: Missing dependency: 'mapclassify' \n ... please install"
-            + " (conda install -c conda-forge mapclassify) to use data-classifications."
-        )
-
+        register_modules("mapclassify")
         self.classify_specs._set_scheme_and_args(scheme, **kwargs)
 
     def set_extent_to_location(self, location, annotate=False, user_agent=None):
@@ -1693,11 +1618,7 @@ class Maps(object):
             The matplotlib-artists added to the plot
 
         """
-        assert _register_geopandas(), (
-            "EOmaps: Missing dependency `geopandas`!\n"
-            + "please install '(conda install -c conda-forge geopandas)'"
-            + "to use `m.add_gdf()`."
-        )
+        (gpd,) = register_modules("geopandas")
 
         if isinstance(gdf, (str, Path)):
             gdf = gpd.read_file(gdf)
@@ -3425,11 +3346,7 @@ class Maps(object):
         kwargs :
             Additional keyword-arguments passed to `m.add_gdf()`.
         """
-        assert _register_geopandas(), (
-            "EOmaps: Missing dependency `geopandas`!\n"
-            + "please install '(conda install -c conda-forge geopandas)'"
-            + "to use `m.indicate_extent()`."
-        )
+        register_modules("geopandas")
 
         gdf = self._make_rect_poly(x0, y0, x1, y1, self.get_crs(crs), npts)
         self.add_gdf(gdf, **kwargs)
@@ -3955,8 +3872,14 @@ class Maps(object):
 
         # check other types before pandas to avoid unnecessary import
         if data is not None and not isinstance(data, (list, tuple, np.ndarray)):
-            if _register_pandas() and isinstance(data, pd.DataFrame):
+            (pd,) = register_modules("pandas", raise_exception=False)
 
+            if pd is None:
+                raise TypeError(
+                    f"EOmaps: Unable to handle the input-data type: {type(data)}"
+                )
+
+            if isinstance(data, pd.DataFrame):
                 if parameter is not None:
                     # get the data-values
                     z_data = data[parameter].values
@@ -3988,7 +3911,6 @@ class Maps(object):
                 return z_data, xorig, yorig, ids, parameter
 
         # identify all other types except for pandas.DataFrames
-
         # lazily check if pandas was used
         pandas_series_data = False
         for iname, i in zip(("x", "y", "data"), (x, y, data)):
@@ -3997,7 +3919,9 @@ class Maps(object):
                 continue
 
             if not isinstance(i, (list, tuple, np.ndarray)):
-                if _register_pandas() and not isinstance(i, pd.Series):
+                (pd,) = register_modules("pandas", raise_exception=False)
+
+                if pd and not isinstance(i, pd.Series):
                     raise AssertionError(
                         f"{iname} values must be a list, numpy-array or pandas.Series"
                     )
@@ -4006,7 +3930,6 @@ class Maps(object):
                         pandas_series_data = True
 
         # set coordinates by extent
-
         if isinstance(x, tuple) and isinstance(y, tuple):
             assert data is not None, (
                 "EOmaps: If x- and y are provided as tuples, the data must be a 2D list"
@@ -4148,10 +4071,7 @@ class Maps(object):
 
         # evaluate classification
         if classify_specs is not None and classify_specs.scheme is not None:
-            assert _register_mapclassify(), (
-                "EOmaps: Missing dependency: 'mapclassify' \n ... please install "
-                "(conda install -c conda-forge mapclassify) to use classifications."
-            )
+            (mapclassify,) = register_modules("mapclassify")
 
             classified = True
             if self.classify_specs.scheme == "UserDefined":
@@ -4210,14 +4130,22 @@ class Maps(object):
             size = np.size(self.data)
 
             if len(np.shape(self.data)) == 2 and size > 200_000:
-                if size > 5e6 and _register_datashader():
+                if size > 5e6 and all(
+                    register_modules(
+                        "datashader", "datashader.mpl_ext", raise_exception=False
+                    )
+                ):
                     # only try to use datashader for very large 2D datasets
                     self.set_shape.shade_raster()
                 else:
                     self.set_shape.raster()
             else:
                 if size > 500_000:
-                    if _register_datashader():
+                    if all(
+                        register_modules(
+                            "datashader", "datashader.mpl_ext", raise_exception=False
+                        )
+                    ):
                         # shade_points should work for any dataset
                         self.set_shape.shade_points()
                     else:
@@ -4286,11 +4214,7 @@ class Maps(object):
         gdf
             A GeoDataFrame with the clipped geometries
         """
-        assert _register_geopandas(), (
-            "EOmaps: Missing dependency `geopandas`!\n"
-            + "please install '(conda install -c conda-forge geopandas)'"
-            + "to use `m.add_gdf()`."
-        )
+        (gpd,) = register_modules("geopandas")
 
         if how.startswith("gdal"):
             methods = ["SymDifference", "Intersection", "Difference", "Union"]
@@ -4483,32 +4407,35 @@ class Maps(object):
             # TODO make an explicit data-conversion function for 2D-only shapes
             if len(self._xshape) == 2 and len(self._yshape) == 2:
                 coll = self.shape.get_coll(props["xorig"], props["yorig"], "in", **args)
-            elif _register_pandas():
-                if (
-                    (len(self._xshape) == 1)
-                    and (len(self._yshape) == 1)
-                    and (len(self._zshape) == 1)
-                    and (props["x0"].size == props["y0"].size)
-                    and (props["x0"].size == props["z_data"].size)
-                ):
+            else:
+                (pd,) = register_modules("pandas")
+                # TODO avoid having pandas as a dependency here
+                if pd:
+                    if (
+                        (len(self._xshape) == 1)
+                        and (len(self._yshape) == 1)
+                        and (len(self._zshape) == 1)
+                        and (props["x0"].size == props["y0"].size)
+                        and (props["x0"].size == props["z_data"].size)
+                    ):
 
-                    df = (
-                        pd.DataFrame(
-                            dict(
-                                x=props["x0"].ravel(),
-                                y=props["y0"].ravel(),
-                                val=props["z_data"].ravel(),
-                            ),
-                            copy=False,
-                        ).set_index(["x", "y"])
-                    )["val"].unstack("y")
+                        df = (
+                            pd.DataFrame(
+                                dict(
+                                    x=props["x0"].ravel(),
+                                    y=props["y0"].ravel(),
+                                    val=props["z_data"].ravel(),
+                                ),
+                                copy=False,
+                            ).set_index(["x", "y"])
+                        )["val"].unstack("y")
 
-                    xg, yg = np.meshgrid(df.index.values, df.columns.values)
+                        xg, yg = np.meshgrid(df.index.values, df.columns.values)
 
-                    if args["array"] is not None:
-                        args["array"] = df.values.T
+                        if args["array"] is not None:
+                            args["array"] = df.values.T
 
-                    coll = self.shape.get_coll(xg, yg, "out", **args)
+                        coll = self.shape.get_coll(xg, yg, "out", **args)
         else:
             # convert to 1D for further processing
             if args["array"] is not None:
@@ -4546,17 +4473,13 @@ class Maps(object):
             kwargs passed to `datashader.mpl_ext.dsshow`
 
         """
-        assert _register_datashader(), (
-            "EOmaps: Missing dependency: 'datashader' \n ... please install"
-            + " (conda install -c conda-forge datashader) to use the plot-shapes "
-            + "'shade_points' and 'shade_raster'"
+        ds, mpl_ext, pd, xar = register_modules(
+            "datashader", "datashader.mpl_ext", "pandas", "xarray"
         )
 
         # remove previously fetched backgrounds for the used layer
         if dynamic is False:
             self.BM._refetch_layer(layer)
-            # del self.BM._bg_layers[layer]
-            # self.BM._refetch_bg = True
 
         # in case the aggregation does not represent data-values
         # (e.g. count, std, var ... ) use an automatic "linear" normalization
@@ -4586,10 +4509,6 @@ class Maps(object):
 
         # the shape is always set after _prepare data!
         if self.shape.name == "shade_points" and self._data_manager.x0_1D is None:
-            assert (
-                _register_pandas()
-            ), f"EOmaps: missing dependency 'pandas' for {self.shape.name}"
-
             df = pd.DataFrame(
                 dict(
                     x=x0.ravel(),
@@ -4600,9 +4519,6 @@ class Maps(object):
             )
 
         else:
-            assert (
-                _register_xarray()
-            ), "EOmaps: missing dependency `xarray` for 'shade_raster'"
             if len(zdata.shape) == 2:
                 if (zdata.shape == x0.shape) and (zdata.shape == y0.shape):
                     # 2D coordinates and 2D raster
@@ -4659,10 +4575,6 @@ class Maps(object):
             else:
                 # first convert 1D inputs to 2D, then reproject the grid and use
                 # a curvilinear QuadMesh to display the data
-                assert _register_pandas(), (
-                    "EOmaps: missing dependency 'pandas' to convert 1D"
-                    + "datasets to 2D as required for 'shade_raster'"
-                )
 
                 # use pandas to convert to 2D
                 df = (
@@ -5114,10 +5026,7 @@ class Maps(object):
             the geodataframe with the shape and crs defined
 
         """
-        assert _register_geopandas(), (
-            "EOmaps: Missing dependency `geopandas`!\n"
-            + "please install '(conda install -c conda-forge geopandas)'"
-        )
+        (gpd,) = register_modules("geopandas")
 
         from shapely.geometry import Polygon
 

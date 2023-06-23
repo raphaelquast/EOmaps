@@ -1,23 +1,10 @@
-from matplotlib.collections import PolyCollection, QuadMesh, TriMesh
-from matplotlib.tri import Triangulation
-import numpy as np
-
-from pyproj import CRS, Transformer
 from functools import partial, wraps, lru_cache
 import warnings
-
-ds = None
-
-
-def _register_datashader():
-    global ds
-
-    try:
-        import datashader as ds
-    except ImportError:
-        return False
-
-    return True
+from matplotlib.collections import PolyCollection, QuadMesh, TriMesh
+from matplotlib.tri import Triangulation
+from pyproj import CRS, Transformer
+import numpy as np
+from .helpers import register_modules
 
 
 class Shapes(object):
@@ -1420,10 +1407,7 @@ class Shapes(object):
                 The default is None.
             """
 
-            assert _register_datashader(), (
-                "EOmaps: Missing dependency: 'datashader' \n ... please install"
-                + " (conda install -c conda-forge datashader) to use 'shade_points'"
-            )
+            (ds,) = register_modules("datashader")
 
             if aggregator is None:
                 aggregator = ds.mean("val")
@@ -1520,10 +1504,7 @@ class Shapes(object):
                 The default is None.
             """
 
-            assert _register_datashader(), (
-                "EOmaps: Missing dependency: 'datashader' \n ... please install"
-                + " (conda install -c conda-forge datashader) to use 'shade_raster'"
-            )
+            (ds,) = register_modules("datashader")
 
             if aggregator is None:
                 aggregator = ds.mean("val")
