@@ -1562,10 +1562,12 @@ class BlitManager:
 
     @property
     def figure(self):
+        """The matplotlib figure instance."""
         return self._m.f
 
     @property
     def canvas(self):
+        """The figure canvas instance."""
         return self.figure.canvas
 
     @contextmanager
@@ -1671,6 +1673,7 @@ class BlitManager:
 
     @property
     def bg_layer(self):
+        """The currently visible layer-name."""
         return self._bg_layer
 
     @bg_layer.setter
@@ -1799,6 +1802,21 @@ class BlitManager:
         return sortp
 
     def get_bg_artists(self, layer):
+        """
+        Get all (sorted) background artists assigned to a given layer-name.
+
+        Parameters
+        ----------
+        layer : str
+            The layer name for which artists should be fetched.
+
+        Returns
+        -------
+        artists : list
+            A list of artists on the specified layer, sorted with respect to the
+            vertical stacking (layer-order / zorder).
+
+        """
         artists = list()
         for l in np.atleast_1d(layer):
             # get all relevant artists for combined background layers
@@ -1820,6 +1838,22 @@ class BlitManager:
         return artists
 
     def get_artists(self, layer):
+        """
+        Get all (sorted) dynamically updated artists assigned to a given layer-name.
+
+        Parameters
+        ----------
+        layer : str
+            The layer name for which artists should be fetched.
+
+        Returns
+        -------
+        artists : list
+            A list of artists on the specified layer, sorted with respect to the
+            vertical stacking (layer-order / zorder).
+
+        """
+
         artists = list()
         for l in np.atleast_1d(layer):
             # get all relevant artists for combined background layers
@@ -1976,6 +2010,21 @@ class BlitManager:
             self._m.f.set_visible(True)
 
     def fetch_bg(self, layer=None, bbox=None):
+        """
+        Trigger fetching (and caching) the background for a given layer-name.
+
+        Parameters
+        ----------
+        layer : str, optional
+            The layer for which the background should be fetched.
+            If None, the currently visible layer is fetched.
+            The default is None.
+        bbox : bbox, optional
+            The region-boundaries (in figure coordinates) for which the background
+            should be fetched (x0, y0, w, h). If None, the whole figure is fetched.
+            The default is None.
+
+        """
         if self._m.parent._layout_editor._modifier_pressed:
             return
 
@@ -2181,7 +2230,7 @@ class BlitManager:
 
     def remove_bg_artist(self, art, layer=None, draw=True):
         """
-        Remove a background-artist from the map.
+        Remove a (background) artist from the map.
 
         Parameters
         ----------
@@ -2193,6 +2242,11 @@ class BlitManager:
         draw : bool, optional
             If True, `figure.draw_idle()` is called after removing the artist.
             The default is True.
+
+        Note
+        ----
+        This only removes the artist from the blit-manager and does not call its
+        remove method!
 
         """
         # handle the "__inset_" prefix of inset-map artists
@@ -2243,9 +2297,23 @@ class BlitManager:
             self.canvas.draw_idle()
 
     def remove_artist(self, art, layer=None):
-        # this only removes the artist from the blit-manager,
-        # it does not clear it from the plot!
+        """
+        Remove a (dynamically updated) artist from the blit-manager.
 
+        Parameters
+        ----------
+        art : matpltolib.Artist
+            The artist to remove.
+        layer : str, optional
+            The layer to search for the artist. If None, all layers are searched.
+            The default is None.
+
+        Note
+        ----
+        This only removes the artist from the blit-manager and does not call its
+        remove method!
+
+        """
         if layer is None:
             for key, layerartists in self._artists.items():
                 if art in layerartists:
@@ -2616,6 +2684,7 @@ class BlitManager:
         return action
 
     def cleanup_layer(self, layer):
+        """Trigger cleanup methods for a given layer."""
         self._cleanup_bg_artists(layer)
         self._cleanup_artists(layer)
         self._cleanup_bg_layers(layer)
