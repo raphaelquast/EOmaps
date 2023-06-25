@@ -22,7 +22,7 @@ intuitive and easy-to-use interface to handle the following tasks:
 | ▶ Get a nice colorbar with a histogram on top
 | ▶ Export high resolution images
 |
-| A detailed overview on how to use EOmaps is given in the :doc:`api` section.
+| A detailed overview on how to use EOmaps is given in the :doc:`api`.
 | Make sure to check out the :doc:`EOmaps_examples` for an overview of the capabilities (incl. source code)!
 
 ----------
