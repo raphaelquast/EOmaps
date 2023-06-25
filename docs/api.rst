@@ -1,5 +1,5 @@
-⚙ Usage
-=========
+🌍 Users Guide
+===============
 
 The following chapters provide comprehensive overview on the capabilities of EOmaps.
 
@@ -57,7 +57,7 @@ The following chapters provide comprehensive overview on the capabilities of EOm
 
 .. toctree::
     :hidden:
-    :maxdepth: 1
+    :maxdepth: 3
 
     api_basics
     api_data_visualization

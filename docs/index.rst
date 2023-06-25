@@ -31,17 +31,36 @@ intuitive and easy-to-use interface to handle the following tasks:
 Contents
 --------
 
-.. table::
-   :align: center
-   :widths: auto
+ .. toctree::
+    :maxdepth: 2
+    :caption: General
 
-   +---------------------------------+-------------------------------+
-   | .. toctree::                    | .. toctree::                  |
-   |    :maxdepth: 2                 |    :maxdepth: 2               |
-   |    :caption: How to use EOmaps: |    :caption: Code-examples:   |
-   |                                 |                               |
-   |    general                      |                               |
-   |    api                          |    EOmaps_examples            |
-   |    FAQ                          |                               |
-   |    reference                    |                               |
-   +---------------------------------+-------------------------------+
+    general
+
+.. toctree::
+   :maxdepth: 2
+   :glob:
+   :includehidden:
+   :caption: How to use EOmaps
+
+   api
+
+
+.. toctree::
+   :maxdepth: 2
+
+   EOmaps_examples
+
+
+
+.. toctree::
+   :maxdepth: 2
+   :caption: Contribute
+
+   contribute
+
+.. toctree::
+   :maxdepth: 2
+   :caption: API Reference
+
+   reference

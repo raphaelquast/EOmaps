@@ -1,4 +1,4 @@
-"""A collection of helper-functions to generate map-plots."""
+"""General definition of Maps objects."""
 
 from functools import lru_cache, wraps
 from itertools import repeat, chain
@@ -119,6 +119,13 @@ _CLASSIFIERS = (
 class Maps:
     """
     The base-class for generating plots with EOmaps.
+
+    The first Maps object that is initialized will create a new matplotlib `Figure`
+    and a cartopy `GeoAxes` for a map.
+
+    You can then create additional `Maps` objects on the same figure with the following
+    methods:
+
 
     See Also
     --------
