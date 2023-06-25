@@ -1251,9 +1251,9 @@ class ArtistEditorTabs(LayerArtistTabs):
             self._msg.setIcon(QtWidgets.QMessageBox.Question)
             self._msg.setWindowTitle("Delete artist?")
             self._msg.setText(
-                "Do you really want to delete the following artist"
+                "Do you really want to delete the following artist "
                 + f"from the layer '{layer}'?\n\n"
-                + f"    '{artist}'"
+                + f"    '{artist.get_label()}'"
             )
 
             self._msg.setStandardButtons(
