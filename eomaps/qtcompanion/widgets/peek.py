@@ -450,6 +450,18 @@ class TabBar(QtWidgets.QTabBar):
         return QSize(min(size.width(), 150), size.height())
 
 
+class NewPeekTabWidget(QtWidgets.QWidget):
+    def __init__(self, *args, peektabs=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.peektabs = peektabs
+
+    def mousePressEvent(self, e):
+        print("click")
+
+        self.peektabs.make_new_tab()
+        self.peektabs.setCurrentIndex(0)
+
+
 class PeekTabs(QtWidgets.QTabWidget):
     def __init__(self, *args, m=None, **kwargs):
         super().__init__(*args, **kwargs)
@@ -461,7 +473,8 @@ class PeekTabs(QtWidgets.QTabWidget):
         self.tabCloseRequested.connect(self.close_handler)
 
         w = PeekLayerWidget(m=self.m)
-        self.addTab(w, peek_icons[w.buttons._method], "    ")
+        # self.addTab(w, peek_icons[w.buttons._method], "    ")
+
         self.setIconSize(QSize(10, 10))
         # update the tab title with the modifier key
         cb = self.settxt_factory(w)
@@ -473,9 +486,9 @@ class PeekTabs(QtWidgets.QTabWidget):
         w.buttons.methodChanged.emit(w.buttons._method)
 
         # a tab that is used to create new tabs
-        newtabwidget = QtWidgets.QWidget()
+        newtabwidget = NewPeekTabWidget(peektabs=self)
         newtablayout = QtWidgets.QHBoxLayout()
-        l = QtWidgets.QLabel("Click on <b>+</b> to open a new peek layer tab!")
+        l = QtWidgets.QLabel("Click to open a new <b>peek layer</b> tab!")
         newtablayout.addWidget(l)
         newtabwidget.setLayout(newtablayout)
 
@@ -534,19 +547,24 @@ class PeekTabs(QtWidgets.QTabWidget):
                 "on the keyboard.",
             )
 
+    def make_new_tab(self):
+        w = PeekLayerWidget(m=self.m)
+        self.insertTab(self.count() - 1, w, "    ")
+
+        # update the tab title with the modifier key
+        cb = self.settxt_factory(w)
+        w.modifier.textChanged.connect(cb)
+        w.buttons.methodChanged.connect(cb)
+        w.layerselector.currentIndexChanged[str].connect(cb)
+        # emit pyqtSignal to set text
+        w.buttons.methodChanged.emit(w.buttons._method)
+
+        return w
+
     @pyqtSlot(int)
     def tabbar_clicked(self, index):
         if self.tabText(index) == "+":
-            w = PeekLayerWidget(m=self.m)
-            self.insertTab(self.count() - 1, w, "    ")
-
-            # update the tab title with the modifier key
-            cb = self.settxt_factory(w)
-            w.modifier.textChanged.connect(cb)
-            w.buttons.methodChanged.connect(cb)
-            w.layerselector.currentIndexChanged[str].connect(cb)
-            # emit pyqtSignal to set text
-            w.buttons.methodChanged.emit(w.buttons._method)
+            self.make_new_tab()
 
     @pyqtSlot(int)
     def close_handler(self, index):

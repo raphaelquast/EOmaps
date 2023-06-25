@@ -66,7 +66,7 @@ class AddFeaturesMenuButton(QtWidgets.QPushButton):
                         self.menu_callback_factory(featuretype, feature)
                     )
             except:
-                print("there was a problem with the NaturalEarth feature", featuretype)
+                print("There was a problem with the NaturalEarth feature:", featuretype)
                 continue
 
         self._menu_fetched = True
@@ -1248,6 +1248,7 @@ class ArtistEditorTabs(LayerArtistTabs):
         @pyqtSlot()
         def cb():
             self._msg = QtWidgets.QMessageBox(self)
+
             self._msg.setIcon(QtWidgets.QMessageBox.Question)
             self._msg.setWindowTitle("Delete artist?")
             self._msg.setText(
