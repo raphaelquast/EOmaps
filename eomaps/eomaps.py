@@ -3177,7 +3177,7 @@ class Maps:
                         stack.enter_context(a._cm_set(alpha=current_alpha))
 
             for key, val in self.BM._bg_artists.items():
-                if key not in savelayers:
+                if key not in ["all", "__inset_all", *savelayers]:
                     for a in val:
                         stack.enter_context(a._cm_set(visible=False, animated=True))
 
