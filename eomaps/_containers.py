@@ -6,7 +6,7 @@ from types import SimpleNamespace
 from .helpers import register_modules
 
 
-class data_specs(object):
+class DataSpecs(object):
     """
     a container for accessing the data-properties
     """
@@ -215,7 +215,7 @@ class data_specs(object):
         self._cpos_radius = cpos_radius
 
 
-class classify_specs(object):
+class ClassifySpecs(object):
     """
     a container for accessing the data classification specifications
 

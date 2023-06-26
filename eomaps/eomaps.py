@@ -39,8 +39,8 @@ from .shapes import Shapes
 from .colorbar import ColorBar
 
 from ._containers import (
-    data_specs,
-    classify_specs,
+    DataSpecs,
+    ClassifySpecs,
 )
 
 try:
@@ -332,9 +332,9 @@ class Maps:
         self._crs_plot_cartopy = self._get_cartopy_crs(self._crs_plot)
 
         # default classify specs
-        self.classify_specs = classify_specs(weakref.proxy(self))
+        self.classify_specs = ClassifySpecs(weakref.proxy(self))
 
-        self.data_specs = data_specs(
+        self.data_specs = DataSpecs(
             weakref.proxy(self),
             x="lon",
             y="lat",
