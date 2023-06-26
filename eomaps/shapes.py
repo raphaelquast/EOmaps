@@ -73,7 +73,11 @@ class Shapes(object):
         self._radius_estimation_range = 100000
 
     def _get(self, shape, **kwargs):
-        shp = getattr(self, f"_{shape}")(self._m)
+        # get the name of the class for a given shape
+        # (CamelCase without underscores)
+        shapeclass_name = "_" + "".join(i.capitalize() for i in shape.split("_"))
+
+        shp = getattr(self, shapeclass_name)(self._m)
         for key, val in kwargs.items():
             setattr(shp, key, val)
         return shp
