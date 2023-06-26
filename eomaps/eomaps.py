@@ -2878,7 +2878,11 @@ class Maps:
                         "of layer-names or a list of tuples of the form: "
                         "(< layer-name (str) >, < layer-transparency [0-1] > )"
                     )
-                    combnames.append(i[0] + "{" + str(i[1]) + "}")
+
+                    if i[1] < 1:
+                        combnames.append(i[0] + "{" + str(i[1]) + "}")
+                    else:
+                        combnames.append(i[0])
                 else:
                     raise TypeError(
                         f"EOmaps: unable to identify the layer-assignment: {i} .\n"
