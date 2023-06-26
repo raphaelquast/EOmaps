@@ -12,13 +12,13 @@ def _combdoc(*args):
 
 
 def _register_imports():
-    global _WebServieCollection
+    global _WebServiceCollection
     global RestApiServices
     global _XyzTileService
     global _XyzTileServiceNonEarth
 
     from ._webmap import (
-        _WebServieCollection,
+        _WebServiceCollection,
         RestApiServices,
         _XyzTileService,
         _XyzTileServiceNonEarth,
@@ -131,7 +131,7 @@ class WebMapContainer(object):
             found_layers = set()
             for i in _layers:
                 name = i["property"]
-                setattr(self, name, _WebServieCollection(self._m, service_type="wms"))
+                setattr(self, name, _WebServiceCollection(self._m, service_type="wms"))
                 getattr(
                     self, name
                 )._url = f"https://maps.isric.org/mapserv?map=/map/{name}.map"
@@ -187,13 +187,13 @@ class WebMapContainer(object):
         datasets and the journal article as in the following citation.
         """
         if self._m.parent._preferred_wms_service == "wms":
-            WMS = _WebServieCollection(
+            WMS = _WebServiceCollection(
                 m=self._m,
                 service_type="wms",
                 url="https://services.terrascope.be/wms/v2",
             )
         elif self._m.parent._preferred_wms_service == "wmts":
-            WMS = _WebServieCollection(
+            WMS = _WebServiceCollection(
                 m=self._m,
                 service_type="wmts",
                 url="https://services.terrascope.be/wmts/v2",
@@ -238,7 +238,7 @@ class WebMapContainer(object):
         (check: https://www.gebco.net/ for full details)
 
         """
-        WMS = _WebServieCollection(
+        WMS = _WebServiceCollection(
             m=self._m,
             service_type="wms",
             url="https://www.gebco.net/data_and_products/gebco_web_services/web_map_service/mapserv?request=getcapabilities&service=wms&version=1.1.1",
@@ -279,7 +279,7 @@ class WebMapContainer(object):
         (check: https://gmrt.org/about/terms_of_use.php for full details)
 
         """
-        WMS = _WebServieCollection(
+        WMS = _WebServiceCollection(
             m=self._m,
             service_type="wms",
             url="https://www.gmrt.org/services/mapserver/wms_merc?request=GetCapabilities&service=WMS&version=1.3.0",
@@ -304,7 +304,7 @@ class WebMapContainer(object):
         (check: https://glad.earthengine.app/ for full details)
 
         """
-        WMS = _WebServieCollection(
+        WMS = _WebServiceCollection(
             m=self._m,
             service_type="wms",
             url="https://glad.umd.edu/mapcache/?SERVICE=WMS",
@@ -345,7 +345,7 @@ class WebMapContainer(object):
         if self._m._preferred_wms_service == "wms":
             WMS = self._NASA_GIBS(self._m)
         elif self._m._preferred_wms_service == "wmts":
-            WMS = _WebServieCollection(
+            WMS = _WebServiceCollection(
                 m=self._m,
                 service_type="wmts",
                 url="https://gibs.earthdata.nasa.gov/wmts/epsg4326/all/1.0.0/WMTSCapabilities.xml",
@@ -362,7 +362,7 @@ class WebMapContainer(object):
         @property
         @lru_cache()
         def EPSG_4326(self):
-            WMS = _WebServieCollection(
+            WMS = _WebServiceCollection(
                 m=self._m,
                 service_type="wms",
                 url="https://gibs.earthdata.nasa.gov/wms/epsg4326/best/wms.cgi?SERVICE=WMS&REQUEST=GetCapabilities&VERSION=1.1.1",
@@ -373,7 +373,7 @@ class WebMapContainer(object):
         @property
         @lru_cache()
         def EPSG_3857(self):
-            WMS = _WebServieCollection(
+            WMS = _WebServiceCollection(
                 m=self._m,
                 service_type="wms",
                 url="https://gibs.earthdata.nasa.gov/wms/epsg3857/best/wms.cgi?SERVICE=WMS&REQUEST=GetCapabilities&VERSION=1.1.1",
@@ -384,7 +384,7 @@ class WebMapContainer(object):
         @property
         @lru_cache()
         def EPSG_3413(self):
-            WMS = _WebServieCollection(
+            WMS = _WebServiceCollection(
                 m=self._m,
                 service_type="wms",
                 url="https://gibs.earthdata.nasa.gov/wms/epsg3413/best/wms.cgi?SERVICE=WMS&REQUEST=GetCapabilities&VERSION=1.1.1",
@@ -395,7 +395,7 @@ class WebMapContainer(object):
         @property
         @lru_cache()
         def EPSG_3031(self):
-            WMS = _WebServieCollection(
+            WMS = _WebServiceCollection(
                 m=self._m,
                 service_type="wms",
                 url="https://gibs.earthdata.nasa.gov/wms/epsg3031/best/wms.cgi?SERVICE=WMS&REQUEST=GetCapabilities&VERSION=1.1.1",
@@ -1021,7 +1021,7 @@ class WebMapContainer(object):
         @property
         @lru_cache()
         def OSM_terrestis(self):
-            WMS = _WebServieCollection(
+            WMS = _WebServiceCollection(
                 m=self._m,
                 service_type="wms",
                 url="https://ows.terrestris.de/osm/service?SERVICE=WMS&VERSION=1.1.1&REQUEST=GetCapabilities",
@@ -1042,7 +1042,7 @@ class WebMapContainer(object):
         @property
         @lru_cache()
         def OSM_mundialis(self):
-            WMS = _WebServieCollection(
+            WMS = _WebServiceCollection(
                 m=self._m,
                 service_type="wms",
                 url="http://ows.mundialis.de/services/service?",
@@ -1063,7 +1063,7 @@ class WebMapContainer(object):
         @property
         @lru_cache()
         def OSM_wheregroup(self):
-            WMS = _WebServieCollection(
+            WMS = _WebServiceCollection(
                 m=self._m,
                 service_type="wms",
                 url="https://osm-demo.wheregroup.com/service?REQUEST=GetCapabilities",
@@ -1087,7 +1087,7 @@ class WebMapContainer(object):
         @property
         @lru_cache()
         def OSM_wms(self):
-            WMS = _WebServieCollection(
+            WMS = _WebServiceCollection(
                 m=self._m,
                 service_type="wms",
                 url=r"https://maps.heigit.org/osm-wms/service?REQUEST=GetCapabilities&SERVICE=WMS",
@@ -1139,7 +1139,7 @@ class WebMapContainer(object):
         @property
         @lru_cache()
         def OSM_landuse(self):
-            WMS = _WebServieCollection(
+            WMS = _WebServiceCollection(
                 m=self._m,
                 service_type="wms",
                 url=r"https://maps.heigit.org/osmlanduse/service?REQUEST=GetCapabilities",
@@ -1956,7 +1956,7 @@ class WebMapContainer(object):
         (check: https://s2maps.eu/ for full details)
 
         """
-        WMS = _WebServieCollection(
+        WMS = _WebServiceCollection(
             m=self._m,
             service_type="wms",
             url="https://tiles.maps.eox.at/wms?service=wms&request=getcapabilities",
@@ -1995,7 +1995,7 @@ class WebMapContainer(object):
 
         (check: https://apps.ecmwf.int/datasets/licences/copernicus/ for full details)
         """
-        WMS = _WebServieCollection(
+        WMS = _WebServiceCollection(
             m=self._m,
             service_type="wms",
             url="https://eccharts.ecmwf.int/wms/?token=public",
@@ -2039,7 +2039,7 @@ class WebMapContainer(object):
         (check: https://geoservice.dlr.de/web/about for full details)
         """
 
-        WMS = _WebServieCollection(
+        WMS = _WebServiceCollection(
             m=self._m,
             service_type="wms",
             url="https://geoservice.dlr.de/eoc/basemap/wms?SERVICE=WMS&REQUEST=GetCapabilities",
@@ -2106,7 +2106,7 @@ class WebMapContainer(object):
             CC-BY 4.0 sowohl für private als auch kommerzielle Zwecke frei
             sowie entgeltfrei nutzbar.
             """
-            WMTS = _WebServieCollection(
+            WMTS = _WebServiceCollection(
                 m=self._m,
                 service_type="wmts",
                 url="http://maps.wien.gv.at/basemap/1.0.0/WMTSCapabilities.xml",
@@ -2129,7 +2129,7 @@ class WebMapContainer(object):
 
             Most services are under CC-BY 4.0
             """
-            WMTS = _WebServieCollection(
+            WMTS = _WebServiceCollection(
                 m=self._m,
                 service_type="wmts",
                 url="http://maps.wien.gv.at/wmts/1.0.0/WMTSCapabilities.xml",
@@ -2202,7 +2202,7 @@ class WebMapContainer(object):
 
         Returns
         -------
-        service : _WebServieCollection
+        service : _WebServiceCollection
             An object that behaves just like `m.add_wms.<service>`
             and provides easy-access to available WMS layers
 
@@ -2268,6 +2268,6 @@ class WebMapContainer(object):
                     service_type=service_type,
                 )
             else:
-                service = _WebServieCollection(self._m, service_type="wms", url=url)
+                service = _WebServiceCollection(self._m, service_type="wms", url=url)
 
         return service
