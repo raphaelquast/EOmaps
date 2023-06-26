@@ -80,17 +80,17 @@ Getting started
 
 The source code of EOmaps is managed on GitHub.
 
-To get started, create a new **fork** of the `EOmaps repository <https://github.com/raphaelquast/EOmaps>`_
+To get started, create a new **fork** of the `EOmaps repository <https://github.com/raphaelquast/EOmaps/fork>`_
 to get your own copy of the source code.
 
-Then, open a terminal, navigate to the folder you want to work in and clone the repository to get a local copy via:
+Then, open a terminal, navigate to the folder you want to work in and clone the forked repository to get a local copy via:
 
 .. code-block:: console
 
-    git clone < url to fork of eomaps repository>
+    git clone < url to fork of EOmaps repository>
 
-For development, first checkout the ``dev`` branch which contains all pending changes for the next release.
-Then create a new feature or bug-fix branch via:
+For development, make sure that you first checkout the ``dev`` branch which contains all pending changes for the next release.
+Then, create a new feature or bug-fix branch and start coding!
 
 .. code-block:: console
 
@@ -98,4 +98,4 @@ Then create a new feature or bug-fix branch via:
     git checkout -b "awesome_new_feature"
 
 
-Once you're done or want some feedback, open a `pull request <>`_ on GitHub!
+Once you're done or in case you want/need some feedback, open a `pull request <>`_ on GitHub!

@@ -4,8 +4,12 @@
 🏕 Annotations, Markers, Lines, Logos, etc.
 -------------------------------------------
 
-🔴 Markers
-~~~~~~~~~~~
+.. contents:: Contents:
+  :local:
+  :depth: 1
+
+Markers
+~~~~~~~
 
 .. currentmodule:: eomaps.eomaps
 
@@ -87,8 +91,8 @@ Static markers can be added to the map via :py:meth:`Maps.add_marker`.
     +---------------------------------------------------------------------------+-----------------------------------------+
 
 
-📑 Annotations
-~~~~~~~~~~~~~~
+Annotations
+~~~~~~~~~~~
 
 .. currentmodule:: eomaps.eomaps
 
@@ -170,8 +174,8 @@ Static annotations can be added to the map via :py:meth:`Maps.add_annotation`.
     +-----------------------------------------------------------------------------------+---------------------------------------------+
 
 
-🚲 Lines
-~~~~~~~~~
+Lines
+~~~~~
 
 .. currentmodule:: eomaps.eomaps
 
@@ -243,8 +247,8 @@ Lines can be added to a map with :py:meth:`Maps.add_line`.
     +-----------------------------------------------------------------+---------------------------------------+
 
 
-▭ Rectangular areas
-~~~~~~~~~~~~~~~~~~~
+Rectangular areas
+~~~~~~~~~~~~~~~~~
 
 .. currentmodule:: eomaps.eomaps
 
@@ -288,8 +292,8 @@ To indicate rectangular areas in any given crs, simply use :py:meth:`Maps.indica
     |                                                                       |                                                 |
     +-----------------------------------------------------------------------+-------------------------------------------------+
 
-🥦 Logos
-~~~~~~~~
+Logos
+~~~~~
 
 .. currentmodule:: eomaps.eomaps
 

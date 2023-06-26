@@ -7,6 +7,11 @@
 
 ... a collection of examples that show how to create beautiful interactive maps.
 
+.. contents:: Contents:
+  :local:
+  :depth: 1
+
+
 🐣 Quickly visualize your data
 ------------------------------
 

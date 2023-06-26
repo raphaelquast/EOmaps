@@ -4,6 +4,13 @@
 🛰 WebMap layers
 ----------------
 
+.. contents:: Contents:
+    :local:
+    :depth: 1
+
+How to add WebMap services to a map
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
 .. currentmodule:: eomaps.eomaps
 
 WebMap services (TS/WMS/WMTS) can be attached to the map via :py:meth:`Maps.add_wms`
@@ -62,8 +69,8 @@ and ``< LAYER >`` indicates the actual layer-name.
     +------------------------------------------------------------------------------------------------+-----------------------------------------+
 
 
-Pre-defined WebMap services:
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Pre-defined WebMap services
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 **Global:**
 

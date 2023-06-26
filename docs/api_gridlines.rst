@@ -4,6 +4,13 @@
 ▦ Gridlines
 ------------
 
+.. contents:: Contents:
+    :local:
+    :depth: 1
+
+How to add grid lines to a map
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
 .. currentmodule:: eomaps.eomaps
 
 Gridlines can be added to the map via :py:meth:`Maps.add_gridlines`.
@@ -86,8 +93,8 @@ useful methods:
 
 .. _add_labels_to_the_grid:
 
-✍ Add Labels to the Grid
-~~~~~~~~~~~~~~~~~~~~~~~~~~
+How to add labels to a grid
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Labels can be added to a grid via the :py:meth:`GridLines.add_labels` directive.
 
