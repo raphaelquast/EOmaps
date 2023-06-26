@@ -2,6 +2,7 @@
 
 from types import SimpleNamespace
 from functools import update_wrapper, partial, wraps
+from itertools import chain
 
 from .callbacks import (
     ClickCallbacks,
@@ -239,6 +240,14 @@ class _CallbackContainer(object):
         """
         if layer is None:
             layer = self._m.layer
+
+        # in case the artist has already been added as normal or background
+        # artist, remove it first!
+        if artist in chain(*self._m.BM._bg_artists.values()):
+            self._m.BM.remove_bg_artist(artist)
+
+        if artist in chain(*self._m.BM._artists.values()):
+            self._m.BM.remove_artist(artist)
 
         self._m.BM.add_artist(artist, layer=layer)
         self._temporary_artists.append(artist)
