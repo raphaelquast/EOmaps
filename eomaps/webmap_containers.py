@@ -12,16 +12,16 @@ def _combdoc(*args):
 
 
 def _register_imports():
-    global _WebServiec_collection
-    global REST_API_services
-    global _xyz_tile_service
-    global _xyz_tile_service_nonearth
+    global _WebServieCollection
+    global RestApiServices
+    global _XyzTileService
+    global _XyzTileServiceNonEarth
 
     from ._webmap import (
-        _WebServiec_collection,
-        REST_API_services,
-        _xyz_tile_service,
-        _xyz_tile_service_nonearth,
+        _WebServieCollection,
+        RestApiServices,
+        _XyzTileService,
+        _XyzTileServiceNonEarth,
     )
 
 
@@ -83,7 +83,7 @@ class WebMapContainer(object):
             self._service_type = service_type
             self._fetched = False
 
-            # default layers (see REST_API_services for details)
+            # default layers (see RestApiServices for details)
             self._layers = {
                 "nitrogen",
                 "phh2o",
@@ -131,7 +131,7 @@ class WebMapContainer(object):
             found_layers = set()
             for i in _layers:
                 name = i["property"]
-                setattr(self, name, _WebServiec_collection(self._m, service_type="wms"))
+                setattr(self, name, _WebServieCollection(self._m, service_type="wms"))
                 getattr(
                     self, name
                 )._url = f"https://maps.isric.org/mapserv?map=/map/{name}.map"
@@ -187,13 +187,13 @@ class WebMapContainer(object):
         datasets and the journal article as in the following citation.
         """
         if self._m.parent._preferred_wms_service == "wms":
-            WMS = _WebServiec_collection(
+            WMS = _WebServieCollection(
                 m=self._m,
                 service_type="wms",
                 url="https://services.terrascope.be/wms/v2",
             )
         elif self._m.parent._preferred_wms_service == "wmts":
-            WMS = _WebServiec_collection(
+            WMS = _WebServieCollection(
                 m=self._m,
                 service_type="wmts",
                 url="https://services.terrascope.be/wmts/v2",
@@ -238,7 +238,7 @@ class WebMapContainer(object):
         (check: https://www.gebco.net/ for full details)
 
         """
-        WMS = _WebServiec_collection(
+        WMS = _WebServieCollection(
             m=self._m,
             service_type="wms",
             url="https://www.gebco.net/data_and_products/gebco_web_services/web_map_service/mapserv?request=getcapabilities&service=wms&version=1.1.1",
@@ -279,7 +279,7 @@ class WebMapContainer(object):
         (check: https://gmrt.org/about/terms_of_use.php for full details)
 
         """
-        WMS = _WebServiec_collection(
+        WMS = _WebServieCollection(
             m=self._m,
             service_type="wms",
             url="https://www.gmrt.org/services/mapserver/wms_merc?request=GetCapabilities&service=WMS&version=1.3.0",
@@ -304,7 +304,7 @@ class WebMapContainer(object):
         (check: https://glad.earthengine.app/ for full details)
 
         """
-        WMS = _WebServiec_collection(
+        WMS = _WebServieCollection(
             m=self._m,
             service_type="wms",
             url="https://glad.umd.edu/mapcache/?SERVICE=WMS",
@@ -345,7 +345,7 @@ class WebMapContainer(object):
         if self._m._preferred_wms_service == "wms":
             WMS = self._NASA_GIBS(self._m)
         elif self._m._preferred_wms_service == "wmts":
-            WMS = _WebServiec_collection(
+            WMS = _WebServieCollection(
                 m=self._m,
                 service_type="wmts",
                 url="https://gibs.earthdata.nasa.gov/wmts/epsg4326/all/1.0.0/WMTSCapabilities.xml",
@@ -362,7 +362,7 @@ class WebMapContainer(object):
         @property
         @lru_cache()
         def EPSG_4326(self):
-            WMS = _WebServiec_collection(
+            WMS = _WebServieCollection(
                 m=self._m,
                 service_type="wms",
                 url="https://gibs.earthdata.nasa.gov/wms/epsg4326/best/wms.cgi?SERVICE=WMS&REQUEST=GetCapabilities&VERSION=1.1.1",
@@ -373,7 +373,7 @@ class WebMapContainer(object):
         @property
         @lru_cache()
         def EPSG_3857(self):
-            WMS = _WebServiec_collection(
+            WMS = _WebServieCollection(
                 m=self._m,
                 service_type="wms",
                 url="https://gibs.earthdata.nasa.gov/wms/epsg3857/best/wms.cgi?SERVICE=WMS&REQUEST=GetCapabilities&VERSION=1.1.1",
@@ -384,7 +384,7 @@ class WebMapContainer(object):
         @property
         @lru_cache()
         def EPSG_3413(self):
-            WMS = _WebServiec_collection(
+            WMS = _WebServieCollection(
                 m=self._m,
                 service_type="wms",
                 url="https://gibs.earthdata.nasa.gov/wms/epsg3413/best/wms.cgi?SERVICE=WMS&REQUEST=GetCapabilities&VERSION=1.1.1",
@@ -395,7 +395,7 @@ class WebMapContainer(object):
         @property
         @lru_cache()
         def EPSG_3031(self):
-            WMS = _WebServiec_collection(
+            WMS = _WebServieCollection(
                 m=self._m,
                 service_type="wms",
                 url="https://gibs.earthdata.nasa.gov/wms/epsg3031/best/wms.cgi?SERVICE=WMS&REQUEST=GetCapabilities&VERSION=1.1.1",
@@ -474,7 +474,7 @@ class WebMapContainer(object):
             def __init__(self, m):
                 self._m = m
 
-                self.default = _xyz_tile_service(
+                self.default = _XyzTileService(
                     self._m,
                     "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
                     name="OSM_default",
@@ -493,7 +493,7 @@ class WebMapContainer(object):
                     self.default.__call__.__doc__,
                 )
 
-                self.default_german = _xyz_tile_service(
+                self.default_german = _XyzTileService(
                     self._m,
                     "https://tile.openstreetmap.de/{z}/{x}/{y}.png",
                     name="OSM_default_german",
@@ -512,7 +512,7 @@ class WebMapContainer(object):
                     self.default_german.__call__.__doc__,
                 )
 
-                self.humanitarian = _xyz_tile_service(
+                self.humanitarian = _XyzTileService(
                     self._m,
                     "https://a.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png",
                     name="OSM_humanitarian",
@@ -545,7 +545,7 @@ class WebMapContainer(object):
                     self.humanitarian.__call__.__doc__,
                 )
 
-                self.OpenTopoMap = _xyz_tile_service(
+                self.OpenTopoMap = _XyzTileService(
                     m=self._m,
                     url="https://c.tile.opentopomap.org/{z}/{x}/{y}.png",
                     maxzoom=16,
@@ -567,7 +567,7 @@ class WebMapContainer(object):
                     self.OpenTopoMap.__call__.__doc__,
                 )
 
-                self.OpenRiverboatMap = _xyz_tile_service(
+                self.OpenRiverboatMap = _XyzTileService(
                     m=self._m,
                     url="https://a.tile.openstreetmap.fr/openriverboatmap/{z}/{x}/{y}.png",
                     maxzoom=16,
@@ -594,7 +594,7 @@ class WebMapContainer(object):
                     self.OpenRiverboatMap.__call__.__doc__,
                 )
 
-                self.OpenSeaMap = _xyz_tile_service(
+                self.OpenSeaMap = _XyzTileService(
                     m=self._m,
                     url="http://tiles.openseamap.org/seamark/{z}/{x}/{y}.png",
                     maxzoom=16,
@@ -626,7 +626,7 @@ class WebMapContainer(object):
                     self.OpenSeaMap.__call__.__doc__,
                 )
 
-                self.CyclOSM = _xyz_tile_service(
+                self.CyclOSM = _XyzTileService(
                     m=self._m,
                     url="https://a.tile-cyclosm.openstreetmap.fr/cyclosm/{z}/{x}/{y}.png",
                     maxzoom=16,
@@ -656,7 +656,7 @@ class WebMapContainer(object):
                     self.CyclOSM.__call__.__doc__,
                 )
 
-                self.CyclOSM_lite = _xyz_tile_service(
+                self.CyclOSM_lite = _XyzTileService(
                     m=self._m,
                     url="https://a.tile-cyclosm.openstreetmap.fr/cyclosm-lite/{z}/{x}/{y}.png",
                     maxzoom=16,
@@ -687,7 +687,7 @@ class WebMapContainer(object):
                     self.CyclOSM_lite.__call__.__doc__,
                 )
 
-                self.OEPNV_public_transport = _xyz_tile_service(
+                self.OEPNV_public_transport = _XyzTileService(
                     m=self._m,
                     url="http://tile.memomaps.de/tilegen/{z}/{x}/{y}.png",
                     maxzoom=16,
@@ -715,60 +715,60 @@ class WebMapContainer(object):
                     self.OEPNV_public_transport.__call__.__doc__,
                 )
 
-                self.stamen_toner = _xyz_tile_service(
+                self.stamen_toner = _XyzTileService(
                     self._m,
                     "https://stamen-tiles.a.ssl.fastly.net/toner/{z}/{x}/{y}.png",
                     name="OSM_stamen_toner",
                 )
-                self.stamen_toner_lines = _xyz_tile_service(
+                self.stamen_toner_lines = _XyzTileService(
                     self._m,
                     "https://stamen-tiles.a.ssl.fastly.net/toner-lines/{z}/{x}/{y}.png",
                     name="OSM_stamen_toner_lines",
                 )
-                self.stamen_toner_background = _xyz_tile_service(
+                self.stamen_toner_background = _XyzTileService(
                     self._m,
                     "https://stamen-tiles.a.ssl.fastly.net/toner-background/{z}/{x}/{y}.png",
                     name="OSM_stamen_toner_background",
                 )
-                self.stamen_toner_lite = _xyz_tile_service(
+                self.stamen_toner_lite = _XyzTileService(
                     self._m,
                     "https://stamen-tiles.a.ssl.fastly.net/toner-lite/{z}/{x}/{y}.png",
                     name="OSM_stamen_toner_lite",
                 )
-                self.stamen_toner_hybrid = _xyz_tile_service(
+                self.stamen_toner_hybrid = _XyzTileService(
                     self._m,
                     "https://stamen-tiles.a.ssl.fastly.net/toner-hybrid/{z}/{x}/{y}.png",
                     name="OSM_stamen_toner_hybrid",
                 )
-                self.stamen_toner_labels = _xyz_tile_service(
+                self.stamen_toner_labels = _XyzTileService(
                     self._m,
                     "https://stamen-tiles.a.ssl.fastly.net/toner-labels/{z}/{x}/{y}.png",
                     name="OSM_stamen_toner_labels",
                 )
 
-                self.stamen_watercolor = _xyz_tile_service(
+                self.stamen_watercolor = _XyzTileService(
                     self._m,
                     "http://c.tile.stamen.com/watercolor/{z}/{x}/{y}.jpg",
                     name="OSM_stamen_watercolor",
                     maxzoom=18,
                 )
 
-                self.stamen_terrain = _xyz_tile_service(
+                self.stamen_terrain = _XyzTileService(
                     self._m,
                     "http://c.tile.stamen.com/terrain/{z}/{x}/{y}.jpg",
                     name="OSM_stamen_terrain",
                 )
-                self.stamen_terrain_lines = _xyz_tile_service(
+                self.stamen_terrain_lines = _XyzTileService(
                     self._m,
                     "http://c.tile.stamen.com/terrain-lines/{z}/{x}/{y}.jpg",
                     name="OSM_stamen_terrain_lines",
                 )
-                self.stamen_terrain_labels = _xyz_tile_service(
+                self.stamen_terrain_labels = _XyzTileService(
                     self._m,
                     "http://c.tile.stamen.com/terrain-labels/{z}/{x}/{y}.jpg",
                     name="OSM_stamen_terrain_labels",
                 )
-                self.stamen_terrain_background = _xyz_tile_service(
+                self.stamen_terrain_background = _XyzTileService(
                     self._m,
                     "http://c.tile.stamen.com/terrain-background/{z}/{x}/{y}.jpg",
                     name="OSM_stamen_terrain_background",
@@ -874,7 +874,7 @@ class WebMapContainer(object):
                         "skating",
                     ]:
 
-                        srv = _xyz_tile_service(
+                        srv = _XyzTileService(
                             m,
                             (
                                 "https://tile.waymarkedtrails.org/"
@@ -929,7 +929,7 @@ class WebMapContainer(object):
                         "gauge",
                     ]:
 
-                        srv = _xyz_tile_service(
+                        srv = _XyzTileService(
                             m,
                             (
                                 "https://a.tiles.openrailwaymap.org/"
@@ -991,7 +991,7 @@ class WebMapContainer(object):
                         "rastertiles/voyager_labels_under",
                     ]:
 
-                        srv = _xyz_tile_service(
+                        srv = _XyzTileService(
                             m,
                             (
                                 "https://cartodb-basemaps-a.global.ssl.fastly.net/"
@@ -1021,7 +1021,7 @@ class WebMapContainer(object):
         @property
         @lru_cache()
         def OSM_terrestis(self):
-            WMS = _WebServiec_collection(
+            WMS = _WebServieCollection(
                 m=self._m,
                 service_type="wms",
                 url="https://ows.terrestris.de/osm/service?SERVICE=WMS&VERSION=1.1.1&REQUEST=GetCapabilities",
@@ -1042,7 +1042,7 @@ class WebMapContainer(object):
         @property
         @lru_cache()
         def OSM_mundialis(self):
-            WMS = _WebServiec_collection(
+            WMS = _WebServieCollection(
                 m=self._m,
                 service_type="wms",
                 url="http://ows.mundialis.de/services/service?",
@@ -1063,7 +1063,7 @@ class WebMapContainer(object):
         @property
         @lru_cache()
         def OSM_wheregroup(self):
-            WMS = _WebServiec_collection(
+            WMS = _WebServieCollection(
                 m=self._m,
                 service_type="wms",
                 url="https://osm-demo.wheregroup.com/service?REQUEST=GetCapabilities",
@@ -1087,7 +1087,7 @@ class WebMapContainer(object):
         @property
         @lru_cache()
         def OSM_wms(self):
-            WMS = _WebServiec_collection(
+            WMS = _WebServieCollection(
                 m=self._m,
                 service_type="wms",
                 url=r"https://maps.heigit.org/osm-wms/service?REQUEST=GetCapabilities&SERVICE=WMS",
@@ -1139,7 +1139,7 @@ class WebMapContainer(object):
         @property
         @lru_cache()
         def OSM_landuse(self):
-            WMS = _WebServiec_collection(
+            WMS = _WebServieCollection(
                 m=self._m,
                 service_type="wms",
                 url=r"https://maps.heigit.org/osmlanduse/service?REQUEST=GetCapabilities",
@@ -1231,7 +1231,7 @@ class WebMapContainer(object):
             European Environment Agency discomap Image collection
             https://discomap.eea.europa.eu/Index/
             """
-            API = REST_API_services(
+            API = RestApiServices(
                 m=self._m,
                 url="https://image.discomap.eea.europa.eu/arcgis/rest/services",
                 name="EEA_REST_Image",
@@ -1264,7 +1264,7 @@ class WebMapContainer(object):
             European Environment Agency discomap Land collection
             https://discomap.eea.europa.eu/Index/
             """
-            API = REST_API_services(
+            API = RestApiServices(
                 m=self._m,
                 url="https://land.discomap.eea.europa.eu/arcgis/rest/services",
                 name="EEA_REST_Land",
@@ -1297,7 +1297,7 @@ class WebMapContainer(object):
             European Environment Agency discomap Climate collection
             https://discomap.eea.europa.eu/Index/
             """
-            API = REST_API_services(
+            API = RestApiServices(
                 m=self._m,
                 url="https://climate.discomap.eea.europa.eu/arcgis/rest/services",
                 name="EEA_REST_Climate",
@@ -1330,7 +1330,7 @@ class WebMapContainer(object):
             European Environment Agency discomap Bio collection
             https://discomap.eea.europa.eu/Index/
             """
-            API = REST_API_services(
+            API = RestApiServices(
                 m=self._m,
                 url="https://bio.discomap.eea.europa.eu/arcgis/rest/services",
                 name="EEA_REST_Bio",
@@ -1363,7 +1363,7 @@ class WebMapContainer(object):
             European Environment Agency discomap Copernicus collection
             https://discomap.eea.europa.eu/Index/
             """
-            API = REST_API_services(
+            API = RestApiServices(
                 m=self._m,
                 url="https://copernicus.discomap.eea.europa.eu/arcgis/rest/services",
                 name="EEA_REST_Copernicus",
@@ -1396,7 +1396,7 @@ class WebMapContainer(object):
             European Environment Agency discomap Water collection
             https://discomap.eea.europa.eu/Index/
             """
-            API = REST_API_services(
+            API = RestApiServices(
                 m=self._m,
                 url="https://water.discomap.eea.europa.eu/arcgis/rest/services",
                 name="EEA_REST_Water",
@@ -1429,7 +1429,7 @@ class WebMapContainer(object):
             European Environment Agency discomap SOER collection
             https://discomap.eea.europa.eu/Index/
             """
-            API = REST_API_services(
+            API = RestApiServices(
                 m=self._m,
                 url="https://soer.discomap.eea.europa.eu/arcgis/rest/services",
                 name="EEA_REST_SOER",
@@ -1462,7 +1462,7 @@ class WebMapContainer(object):
             European Environment Agency discomap MARATLAS collection
             https://discomap.eea.europa.eu/Index/
             """
-            API = REST_API_services(
+            API = RestApiServices(
                 m=self._m,
                 url="https://maratlas.discomap.eea.europa.eu/arcgis/rest/services",
                 name="EEA_REST_SOER",
@@ -1495,7 +1495,7 @@ class WebMapContainer(object):
             European Environment Agency discomap MARINE collection
             https://discomap.eea.europa.eu/Index/
             """
-            API = REST_API_services(
+            API = RestApiServices(
                 m=self._m,
                 url="https://marine.discomap.eea.europa.eu/arcgis/rest/services",
                 name="EEA_REST_SOER",
@@ -1567,7 +1567,7 @@ class WebMapContainer(object):
 
         @property
         def vv(self):
-            WMS = _xyz_tile_service(
+            WMS = _XyzTileService(
                 self._m,
                 lambda x, y, z: f"https://s1map.eodc.eu/vv/{z}/{x}/{2**z-1-y}.png",
                 13,
@@ -1579,7 +1579,7 @@ class WebMapContainer(object):
 
         @property
         def vh(self):
-            WMS = _xyz_tile_service(
+            WMS = _XyzTileService(
                 self._m,
                 lambda x, y, z: f"https://s1map.eodc.eu/vh/{z}/{x}/{2**z-1-y}.png",
                 13,
@@ -1654,7 +1654,7 @@ class WebMapContainer(object):
                         self._addlayer(v, url, f"OPM_Moon_{v}", docstring)
 
                 def _addlayer(self, name, url, srv_name, docstring, maxzoom=19):
-                    srv = _xyz_tile_service_nonearth(
+                    srv = _XyzTileServiceNonEarth(
                         self._m, url, name=srv_name, maxzoom=maxzoom
                     )
 
@@ -1846,7 +1846,7 @@ class WebMapContainer(object):
                     )
 
                 def _addlayer(self, name, url, srv_name, docstring, maxzoom=19):
-                    srv = _xyz_tile_service_nonearth(
+                    srv = _XyzTileServiceNonEarth(
                         self._m, url, name=srv_name, maxzoom=maxzoom
                     )
 
@@ -1910,7 +1910,7 @@ class WebMapContainer(object):
                     self._addlayer(v, url, f"GOOGLE_{v}", docstring)
 
             def _addlayer(self, name, url, srv_name, docstring, maxzoom=19):
-                srv = _xyz_tile_service(self._m, url, name=srv_name, maxzoom=maxzoom)
+                srv = _XyzTileService(self._m, url, name=srv_name, maxzoom=maxzoom)
 
                 setattr(self, name, srv)
 
@@ -1956,7 +1956,7 @@ class WebMapContainer(object):
         (check: https://s2maps.eu/ for full details)
 
         """
-        WMS = _WebServiec_collection(
+        WMS = _WebServieCollection(
             m=self._m,
             service_type="wms",
             url="https://tiles.maps.eox.at/wms?service=wms&request=getcapabilities",
@@ -1995,7 +1995,7 @@ class WebMapContainer(object):
 
         (check: https://apps.ecmwf.int/datasets/licences/copernicus/ for full details)
         """
-        WMS = _WebServiec_collection(
+        WMS = _WebServieCollection(
             m=self._m,
             service_type="wms",
             url="https://eccharts.ecmwf.int/wms/?token=public",
@@ -2039,7 +2039,7 @@ class WebMapContainer(object):
         (check: https://geoservice.dlr.de/web/about for full details)
         """
 
-        WMS = _WebServiec_collection(
+        WMS = _WebServieCollection(
             m=self._m,
             service_type="wms",
             url="https://geoservice.dlr.de/eoc/basemap/wms?SERVICE=WMS&REQUEST=GetCapabilities",
@@ -2064,7 +2064,7 @@ class WebMapContainer(object):
 
         """
 
-        API = REST_API_services(
+        API = RestApiServices(
             m=self._m,
             url="http://server.arcgisonline.com/arcgis/rest/services",
             name="ERSI_ArcGIS_REST",
@@ -2106,7 +2106,7 @@ class WebMapContainer(object):
             CC-BY 4.0 sowohl für private als auch kommerzielle Zwecke frei
             sowie entgeltfrei nutzbar.
             """
-            WMTS = _WebServiec_collection(
+            WMTS = _WebServieCollection(
                 m=self._m,
                 service_type="wmts",
                 url="http://maps.wien.gv.at/basemap/1.0.0/WMTSCapabilities.xml",
@@ -2129,7 +2129,7 @@ class WebMapContainer(object):
 
             Most services are under CC-BY 4.0
             """
-            WMTS = _WebServiec_collection(
+            WMTS = _WebServieCollection(
                 m=self._m,
                 service_type="wmts",
                 url="http://maps.wien.gv.at/wmts/1.0.0/WMTSCapabilities.xml",
@@ -2202,7 +2202,7 @@ class WebMapContainer(object):
 
         Returns
         -------
-        service : _WebServiec_collection
+        service : _WebServieCollection
             An object that behaves just like `m.add_wms.<service>`
             and provides easy-access to available WMS layers
 
@@ -2256,18 +2256,18 @@ class WebMapContainer(object):
             if rest_API:
                 print("EOmaps: rest_API=True is not supported for service_type='xyz'")
 
-            s = _xyz_tile_service(self._m, url, maxzoom=maxzoom)
+            s = _XyzTileService(self._m, url, maxzoom=maxzoom)
             service = SimpleNamespace(add_layer=SimpleNamespace(xyz_layer=s))
 
         else:
             if rest_API:
-                service = REST_API_services(
+                service = RestApiServices(
                     m=self._m,
                     url=url,
                     name="custom_service",
                     service_type=service_type,
                 )
             else:
-                service = _WebServiec_collection(self._m, service_type="wms", url=url)
+                service = _WebServieCollection(self._m, service_type="wms", url=url)
 
         return service

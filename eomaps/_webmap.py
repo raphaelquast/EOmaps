@@ -25,8 +25,8 @@ from cartopy.io import RasterSource
 import requests
 
 
-class _WebMap_layer:
-    # base class for adding methods to the _wms_layer- and wmts_layer objects
+class _WebMapLayer:
+    # base class for adding methods to the _WMSLayer- and _WMTSLayer objects
     def __init__(self, m, wms, name):
         from cartopy.io.ogc_clients import _CRS_TO_OGC_SRS
 
@@ -319,7 +319,7 @@ class _WebMap_layer:
         return style
 
 
-class _wmts_layer(_WebMap_layer):
+class _WMTSLayer(_WebMapLayer):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
@@ -403,7 +403,7 @@ class _wmts_layer(_WebMap_layer):
         # Allow a fail-fast error if the raster source cannot provide
         # images in the current projection.
         wms.validate_projection(ax.projection)
-        img = SlippyImageArtist_NEW(ax, wms, **kwargs)
+        img = SlippyImageArtistNew(ax, wms, **kwargs)
         with ax.hold_limits():
             ax.add_image(img)
         return img
@@ -422,7 +422,7 @@ class _wmts_layer(_WebMap_layer):
         m.BM.add_bg_artist(art, layer=layer)
 
 
-class _wms_layer(_WebMap_layer):
+class _WMSLayer(_WebMapLayer):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
@@ -507,7 +507,7 @@ class _wms_layer(_WebMap_layer):
         if version.parse(cartopy.__version__) < version.parse("0.21.2"):
             from cartopy.io.ogc_clients import WMSRasterSource
 
-            class WMSRasterSource_NEW(WMSRasterSource):
+            class WMSRasterSourceNew(WMSRasterSource):
 
                 # Temporary fix for WMS services provided in a known srs but not
                 # in the srs of the axis
@@ -533,14 +533,14 @@ class _wms_layer(_WebMap_layer):
                         else:
                             return None
 
-            wms = WMSRasterSource_NEW(wms, layers, getmap_extra_kwargs=wms_kwargs)
+            wms = WMSRasterSourceNew(wms, layers, getmap_extra_kwargs=wms_kwargs)
         else:
             wms = WMSRasterSource(wms, layers, getmap_extra_kwargs=wms_kwargs)
 
         # Allow a fail-fast error if the raster source cannot provide
         # images in the current projection.
         wms.validate_projection(ax.projection)
-        img = SlippyImageArtist_NEW(ax, wms, **kwargs)
+        img = SlippyImageArtistNew(ax, wms, **kwargs)
         with ax.hold_limits():
             ax.add_image(img)
 
@@ -560,7 +560,7 @@ class _wms_layer(_WebMap_layer):
         m.BM.add_bg_artist(art, layer=layer)
 
 
-class _WebServiec_collection:
+class _WebServiceCollection:
     def __init__(self, m, service_type="wmts", url=None):
         self._m = m
         self._service_type = service_type
@@ -627,18 +627,18 @@ class _WebServiec_collection:
             wmts = self._get_wmts(self._url)
             layers = dict()
             for key in wmts.contents.keys():
-                layers[_sanitize(key)] = _wmts_layer(self._m, wmts, key)
+                layers[_sanitize(key)] = _WMTSLayer(self._m, wmts, key)
 
         elif self._service_type == "wms":
             wms = self._get_wms(self._url)
             layers = dict()
             for key in wms.contents.keys():
-                layers[_sanitize(key)] = _wms_layer(self._m, wms, key)
+                layers[_sanitize(key)] = _WMSLayer(self._m, wms, key)
 
         return SimpleNamespace(**layers)
 
 
-class REST_API_services:
+class RestApiServices:
     def __init__(
         self, m, url, name, service_type="wmts", layers=None, _params={"f": "pjson"}
     ):
@@ -666,12 +666,12 @@ class REST_API_services:
 
         """
         self._m = m
-        self._REST_url = url
+        self._rest_url = url
         self._name = name
         self._service_type = service_type
         self._params = _params
         self._fetched = False
-        self._REST_API = None
+        self._rest_api = None
 
         if layers is None:
             layers = set()
@@ -700,20 +700,20 @@ class REST_API_services:
         # set _fetched to True immediately to avoid issues in __getattribute__
         self._fetched = True
 
-        if self._REST_API is None:
+        if self._rest_api is None:
             print(f"EOmaps: ... fetching services for '{self._name}'")
-            self._REST_API = _REST_API(self._REST_url, _params=self._params)
+            self._rest_api = _RestApi(self._rest_url, _params=self._params)
 
             found_folders = set()
-            for foldername, services in self._REST_API._structure.items():
+            for foldername, services in self._rest_api._structure.items():
                 setattr(
                     self,
                     foldername,
-                    _multi_REST_WMSservice(
+                    _MultiRestWmsService(
                         m=self._m,
                         services=services,
                         service_type=self._service_type,
-                        url=self._REST_url,
+                        url=self._rest_url,
                     ),
                 )
                 found_folders.add(foldername)
@@ -731,7 +731,7 @@ class REST_API_services:
             print("EOmaps: done!")
 
 
-class _REST_WMSservice(_WebServiec_collection):
+class _RestWmsService(_WebServiceCollection):
     def __init__(self, service, s_name, s_type, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self._service = service
@@ -776,18 +776,18 @@ class _REST_WMSservice(_WebServiec_collection):
                 wms = self._get_wms(url)
                 layer_names = list(wms.contents.keys())
                 for lname in layer_names:
-                    self._layers["layer_" + _sanitize(lname)] = _wms_layer(
+                    self._layers["layer_" + _sanitize(lname)] = _WMSLayer(
                         self._m, wms, lname
                     )
             elif self._service_type == "wmts":
                 wmts = self._get_wmts(url)
                 layer_names = list(wmts.contents.keys())
                 for lname in layer_names:
-                    self._layers["layer_" + _sanitize(lname)] = _wmts_layer(
+                    self._layers["layer_" + _sanitize(lname)] = _WMTSLayer(
                         self._m, wmts, lname
                     )
             elif self._service_type == "xyz":
-                self._layers["xyz_layer"] = _xyz_tile_service(
+                self._layers["xyz_layer"] = _XyzTileService(
                     self._m, url, 19, "xyz_layer"
                 )
 
@@ -802,7 +802,7 @@ class _REST_WMSservice(_WebServiec_collection):
         return SimpleNamespace(**self._layers)
 
 
-class _multi_REST_WMSservice:
+class _MultiRestWmsService:
     def __init__(self, m, services, service_type, url, *args, **kwargs):
         self._m = m
         self._services = services
@@ -814,7 +814,7 @@ class _multi_REST_WMSservice:
     @lru_cache()
     def _fetch_services(self):
         for (s_name, s_type) in self._services:
-            wms_layer = _REST_WMSservice(
+            wms_layer = _RestWmsService(
                 m=self._m,
                 service=self._url,
                 s_name=s_name,
@@ -825,7 +825,7 @@ class _multi_REST_WMSservice:
             setattr(self, _sanitize(s_name), wms_layer)
 
 
-class _REST_API(object):
+class _RestApi(object):
     # adapted from https://gis.stackexchange.com/a/113213
     def __init__(self, url, _params={"f": "pjson"}):
         self._url = url
@@ -897,7 +897,7 @@ class TileFactory(GoogleWTS):
             return self._url(x=x, y=y, z=z)
 
 
-class xyzRasterSource(RasterSource):
+class XyzRasterSource(RasterSource):
     """RasterSource that can be used with a SlippyImageArtist to fetch tiles."""
 
     def __init__(self, url, crs, maxzoom=19, transparent=True):
@@ -1077,7 +1077,7 @@ class xyzRasterSource(RasterSource):
         return located_images
 
 
-class _xyz_tile_service:
+class _XyzTileService:
     """General class for using x/y/z tile-service urls as WebMap layers."""
 
     def __init__(self, m, url, maxzoom=19, name=None):
@@ -1090,7 +1090,7 @@ class _xyz_tile_service:
         self.name = name
 
     def _reinit(self, m):
-        return _xyz_tile_service(m, url=self.url, maxzoom=self._maxzoom, name=self.name)
+        return _XyzTileService(m, url=self.url, maxzoom=self._maxzoom, name=self.name)
 
     def __call__(
         self,
@@ -1170,7 +1170,7 @@ class _xyz_tile_service:
         # actually add the layer to the map.
         print(f"EOmaps: ... adding wms-layer {self.name}")
 
-        self._raster_source = xyzRasterSource(
+        self._raster_source = XyzRasterSource(
             self.url,
             crs=ccrs.GOOGLE_MERCATOR,
             maxzoom=self._maxzoom,
@@ -1184,7 +1184,7 @@ class _xyz_tile_service:
         #         (only SlippyImageArtist has been subclassed)
 
         self._raster_source.validate_projection(m.ax.projection)
-        img = SlippyImageArtist_NEW(m.ax, self._raster_source, **kwargs)
+        img = SlippyImageArtistNew(m.ax, self._raster_source, **kwargs)
         with self._m.ax.hold_limits():
             m.ax.add_image(img)
         self._artist = img
@@ -1194,7 +1194,7 @@ class _xyz_tile_service:
         m.BM.add_bg_artist(self._artist, layer=layer)
 
 
-class _xyz_tile_service_nonearth(_xyz_tile_service):
+class _XyzTileServiceNonEarth(_XyzTileService):
     def __call__(self, *args, **kwargs):
         print(
             f"EOmaps WARNING: The WebMap service '{self.name}' shows images from a "
@@ -1245,21 +1245,21 @@ def refetch_wms_on_size_change(refetch):
         - If False: WebMap services are only re-fetched if the axis-extent
           changes.
     """
-    SlippyImageArtist_NEW._refetch_on_size_change = refetch
+    SlippyImageArtistNew._refetch_on_size_change = refetch
 
 
 @contextmanager
 def _cx_refetch_wms_on_size_change(refetch):
-    val = SlippyImageArtist_NEW._refetch_on_size_change
+    val = SlippyImageArtistNew._refetch_on_size_change
 
     try:
-        SlippyImageArtist_NEW._refetch_on_size_change = refetch
+        SlippyImageArtistNew._refetch_on_size_change = refetch
         yield
     finally:
-        SlippyImageArtist_NEW._refetch_on_size_change = val
+        SlippyImageArtistNew._refetch_on_size_change = val
 
 
-class SlippyImageArtist_NEW(AxesImage):
+class SlippyImageArtistNew(AxesImage):
     """
     A subclass of :class:`~matplotlib.image.AxesImage` which provides an
     interface for getting a raster from the given object with interactive
