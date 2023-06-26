@@ -309,19 +309,14 @@ class ClickCallbacks(QtWidgets.QFrame):
         self.widgetShown.emit()
 
     def identify_pick_map(self):
+        layers, _ = self.m.BM._get_layers_alphas(self.m.BM.bg_layer)
+        layers.extend(("all", "inset_all"))
+
         pickm = list()
         for m in (self.m.parent, *self.m.parent._children):
-            if (
-                m.coll is not None
-                and m.ax == self.m.ax
-                and m.layer
-                in (
-                    "all",
-                    m.BM._bg_layer,
-                    *m.BM._bg_layer.split("|"),
-                )
-            ):
+            if m.coll is not None and m.ax == self.m.ax and m.layer in layers:
                 pickm.append(m)
+
         return pickm
 
     @pyqtSlot()
