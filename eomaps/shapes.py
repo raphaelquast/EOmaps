@@ -362,7 +362,7 @@ class Shapes(object):
 
         @property
         def radius_crs(self):
-            return self._m.get_crs("geod")
+            return "geod"
 
         def __repr__(self):
             try:

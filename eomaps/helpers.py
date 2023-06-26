@@ -286,10 +286,11 @@ class SearchTree:
 
         """
         self._search_radius = r
-
         if isinstance(r, str):
             # evaluate an appropriate pick-distance
-            if getattr(self._m.shape, "radius_crs", None) != "out":
+            if getattr(self._m.shape, "radius_crs", None) == "out":
+                radius = self._m.shape.radius
+            else:
                 try:
                     radius = self._m.set_shape._estimate_radius(self._m, "out", np.max)
                 except AssertionError:
@@ -299,8 +300,6 @@ class SearchTree:
                         "See `m.cb.pick.set_props(search_radius=...)` for more details!"
                     )
                     radius = [np.inf]
-            else:
-                radius = self._m.shape.radius
 
             self._d = np.max(radius) * float(self._search_radius)
         elif isinstance(r, (int, float, np.number)):
