@@ -37,7 +37,7 @@ Content of ``eomaps.yml``:
     - conda-forge
 
     dependencies:
-    # --------------for eomaps
+    # --------------for EOmaps
     - numpy
     - scipy
     - matplotlib>=3.0
@@ -75,6 +75,16 @@ Content of ``eomaps.yml``:
     - pip:
         - sphinx_rtd_theme
 
+
+As editor, I recommend using the awesome, free and open-source `Spyder <https://github.com/spyder-ide/spyder>`_ IDE.
+You can install it directly into your environment via:
+
+.. code-block:: console
+
+    mamba install -c conda-forge spyder
+
+
+
 Getting started
 ---------------
 
@@ -83,7 +93,7 @@ The source code of EOmaps is managed on GitHub.
 To get started, create a new **fork** of the `EOmaps repository <https://github.com/raphaelquast/EOmaps/fork>`_
 to get your own copy of the source code.
 
-Then, open a terminal, navigate to the folder you want to work in and clone the forked repository to get a local copy via:
+Then, open a terminal, navigate to the folder you want to work in and clone the forked repository via:
 
 .. code-block:: console
 

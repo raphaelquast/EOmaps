@@ -38,16 +38,45 @@ Contents
     general
 
 .. toctree::
-  :maxdepth: 2
-  :glob:
-  :includehidden:
-  :caption: How to use EOmaps
+    :maxdepth: 1
+    :caption: How to use EOmaps
 
-  api
+    api_basics
+    api_data_visualization
+
+.. toctree::
+    :maxdepth: 1
+    :caption: Features
+
+    api_inset_maps
+    api_naturalearth_features
+    api_webmaps
+    api_geodataframes
+
+    api_annotations_markers_etc
+    api_scalebar
+    api_compass
+    api_gridlines
+
+    api_read_data
+    api_misc
+
+
+.. toctree::
+    :maxdepth: 1
+    :caption: Interactivity
+
+    api_callbacks
+    api_companion_widget
+    api_layout_editor
+    api_draw
+    api_utils
+
 
 
 .. toctree::
    :maxdepth: 2
+   :caption: Examples
 
    EOmaps_examples
 

@@ -25,12 +25,16 @@ You can use it to simply drag the axes the mouse to the desired locations and ch
     | - Hold down ``h`` or ``v`` to change horizontal/vertical size                           |                                               |
     | - Hold down ``control`` to change ratio between colorbar and histogram                  |                                               |
     |                                                                                         |                                               |
-    | Press keys ``1-9`` to set the grid-spacing for the **"snap-to-grid"** functionality     |                                               |
+    | **Snap-To-Grid:**                                                                       |                                               |
     |                                                                                         |                                               |
+    | - Press keys ``1-9`` to set the grid-spacing for the **"snap-to-grid"** functionality   |                                               |
     | - Press ``0`` to deactivate **"snap-to-grid"**                                          |                                               |
     |                                                                                         |                                               |
-    | Press ``control + z`` to undo the last step                                             |                                               |
-    | Press ``control + y`` to redo the last undone step                                      |                                               |
+    | **Undo, Redo, Save:**                                                                   |                                               |
+    |                                                                                         |                                               |
+    | - Press ``control + z`` to undo the last step                                           |                                               |
+    | - Press ``control + y`` to redo the last undone step                                    |                                               |
+    | - Press ``P`` to print the current layout to the console                                |                                               |
     |                                                                                         |                                               |
     +-----------------------------------------------------------------------------------------+-----------------------------------------------+
 
@@ -39,7 +43,7 @@ You can use it to simply drag the axes the mouse to the desired locations and ch
 Save and restore layouts
 ~~~~~~~~~~~~~~~~~~~~~~~~
 
-.. currentmodule:: eomaps.eomaps.eomaps
+.. currentmodule:: eomaps.eomaps
 
 Once a layout (e.g. the desired position of the axes within a figure) has been arranged,
 the layout can be saved and re-applied with:
