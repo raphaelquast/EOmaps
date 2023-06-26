@@ -69,7 +69,7 @@ class NaturalEarth_presets:
 
         - fc="none", ec="k", zorder=100
         """
-        return self._feature(
+        return self._Feature(
             self._m,
             "physical",
             "coastline",
@@ -92,7 +92,7 @@ class NaturalEarth_presets:
         # convert color to hex to avoid issues with geopandas
         color = "#97b6e1"  # rgb2hex(cfeature.COLORS["water"])
 
-        return self._feature(
+        return self._Feature(
             self._m, "physical", "ocean", facecolor=color, edgecolor="none", zorder=-2
         )
 
@@ -111,7 +111,7 @@ class NaturalEarth_presets:
         # convert color to hex to avoid issues with geopandas
         color = "#efefdb"  # rgb2hex(cfeature.COLORS["land"])
 
-        return self._feature(
+        return self._Feature(
             self._m, "physical", "land", facecolor=color, edgecolor="none", zorder=-1
         )
 
@@ -127,7 +127,7 @@ class NaturalEarth_presets:
         - fc="none", ec=".5", lw=0.5, zorder=99
 
         """
-        return self._feature(
+        return self._Feature(
             self._m,
             "cultural",
             "admin_0_countries",
@@ -149,7 +149,7 @@ class NaturalEarth_presets:
         - fc="r", lw=0., zorder=100
 
         """
-        return self._feature(
+        return self._Feature(
             self._m,
             "cultural",
             "urban_areas",
@@ -170,7 +170,7 @@ class NaturalEarth_presets:
         - fc="b", ec="none", lw=0., zorder=98
 
         """
-        return self._feature(
+        return self._Feature(
             self._m,
             "physical",
             "lakes",
@@ -191,7 +191,7 @@ class NaturalEarth_presets:
         - fc="none", ec="b", lw=0.75, zorder=97
 
         """
-        return self._feature(
+        return self._Feature(
             self._m,
             "physical",
             "rivers_lake_centerlines",
@@ -201,7 +201,7 @@ class NaturalEarth_presets:
             zorder=97,
         )
 
-    class _feature:
+    class _Feature:
         def __init__(self, m, category, name, **kwargs):
             self._m = m
             self.category = category
@@ -313,10 +313,10 @@ class NaturalEarth_features(object):
     def __init__(self, m):
         self._m = m
         for category, names in _NE_features_all.items():
-            func = lambda name: self._feature(self._m, category, name)
+            func = lambda name: self._Feature(self._m, category, name)
             ns = dict(zip(names, map(func, names)))
 
-            c = self._category(scale, category, **ns)
+            c = self._Category(scale, category, **ns)
             setattr(self, category, c)
 
     def __call__(self, category, scale, name, **kwargs):
@@ -343,7 +343,7 @@ class NaturalEarth_features(object):
                 + (f"did you mean one of {matches}?" if matches else "")
             )
 
-        return self._feature(self._m, category, name)
+        return self._Feature(self._m, category, name)
 
     @property
     def preset(self):
@@ -357,7 +357,7 @@ class NaturalEarth_features(object):
         """
         return NaturalEarth_presets(self._m)
 
-    class _category:
+    class _Category:
         def __init__(self, scale, category, **kwargs):
 
             self._s = scale
@@ -393,7 +393,7 @@ class NaturalEarth_features(object):
                 f"EOmaps interface for {self._s} {self._c} " + "NaturalEarth features"
             )
 
-    class _feature:
+    class _Feature:
         """
         Natural Earth Feature.
 
