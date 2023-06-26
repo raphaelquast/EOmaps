@@ -8,8 +8,8 @@
     :local:
 
 
-🌐 Getting started
-~~~~~~~~~~~~~~~~~~~
+Getting started
+~~~~~~~~~~~~~~~
 
 .. currentmodule:: eomaps.eomaps
 
@@ -59,8 +59,8 @@ Possible ways for specifying the ``crs`` for plotting are:
 .. _layers:
 
 
-🎨 Layer management
-~~~~~~~~~~~~~~~~~~~
+Layer management
+~~~~~~~~~~~~~~~~
 
 .. image:: _static/intro.png
    :width: 40%
@@ -266,8 +266,8 @@ To programmatically switch between layers or view a layer that represents a **co
     Maps.fetch_layers
 
 
-🗺 Image export (jpeg, png, svg, etc.)
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Image export (jpeg, png, svg, etc.)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Once the map is ready, an image of the map can be saved at any time by using :py:meth:`Maps.savefig`
 
@@ -328,8 +328,8 @@ To adjust the margins of the subplots, use :py:meth:`m.subplots_adjust`, or have
 
 .. _multiple_maps:
 
-🍱 Multiple Maps (and/or plots) in one figure
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Multiple Maps (and/or plots) in one figure
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 It is possible to combine multiple ``EOmaps`` maps and/or ordinary ``matpltolib`` plots in one figure.
 
@@ -587,8 +587,8 @@ Here's an example to show how it works:
 
 
 
-𝄜 MapsGrid objects
-*******************
+MapsGrid objects
+****************
 .. currentmodule:: eomaps.eomaps
 
 :py:class:`MapsGrid` objects can be used to create (and manage) multiple maps in one figure.
@@ -723,8 +723,8 @@ The individual :py:class:`Maps` objects and ``matpltolib-Axes`` are then accessi
     MapsGrid.add_gdf
 
 
-🧱 Naming conventions and autocompletion
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Naming conventions and autocompletion
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 The goal of EOmaps is to provide a comprehensive, yet easy-to-use interface.
 
@@ -796,8 +796,8 @@ Everything related to callbacks is grouped under the ``cb`` accessor.
 
 .. _command_line_interface:
 
-✑ Command Line Interface
-~~~~~~~~~~~~~~~~~~~~~~~~~~
+Command Line interface
+~~~~~~~~~~~~~~~~~~~~~~
 
 EOmapss provides a basic command line interface to quickly create simple maps or to get a quick-look at a dataset without having to open an editor.
 

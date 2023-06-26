@@ -367,8 +367,8 @@ You can then continue to add a :ref:`colorbar` or create :ref:`zoomed_in_views_o
     Maps.savefig
 
 
-🎨 Customize the plot
-~~~~~~~~~~~~~~~~~~~~~~
+Customize the plot
+~~~~~~~~~~~~~~~~~~
 
 .. currentmodule:: eomaps.eomaps
 
