@@ -4971,6 +4971,8 @@ class Maps:
             cartopy_proj = crs
         elif crs == 4326:
             cartopy_proj = ccrs.PlateCarree()
+        elif crs == 3857:
+            cartopy_proj = ccrs.Mercator.GOOGLE
         elif isinstance(crs, (int, np.integer)):
             cartopy_proj = ccrs.epsg(crs)
         elif isinstance(crs, CRS):  # pyproj CRS
