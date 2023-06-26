@@ -305,7 +305,7 @@ class Shapes(object):
             else:
                 self._n = val
 
-    class _geod_circles(_ShapeBase):
+    class _GeodCircles(_ShapeBase):
         name = "geod_circles"
 
         def __init__(self, m):
@@ -492,7 +492,7 @@ class Shapes(object):
 
             return coll
 
-    class _ellipses(_ShapeBase):
+    class _Ellipses(_ShapeBase):
         name = "ellipses"
 
         def __init__(self, m):
@@ -725,7 +725,7 @@ class Shapes(object):
 
             return coll
 
-    class _rectangles(_ShapeBase):
+    class _Rectangles(_ShapeBase):
         name = "rectangles"
 
         def __init__(self, m):
@@ -985,7 +985,7 @@ class Shapes(object):
             else:
                 return self._get_polygon_coll(x, y, crs, **kwargs)
 
-    class _scatter_points(object):
+    class _ScatterPoints(object):
         name = "scatter_points"
 
         def __init__(self, m):
@@ -1043,7 +1043,7 @@ class Shapes(object):
             )
             return coll
 
-    class _voronoi_diagram(object):
+    class _VoronoiDiagram(object):
         name = "voronoi_diagram"
 
         def __init__(self, m):
@@ -1178,7 +1178,7 @@ class Shapes(object):
         def radius_crs(self):
             return "in"
 
-    class _delaunay_triangulation(object):
+    class _DelaunayTriangulation(object):
         name = "delaunay_triangulation"
 
         def __init__(self, m):
@@ -1377,7 +1377,7 @@ class Shapes(object):
         def radius_crs(self):
             return "in"
 
-    class _shade_points(object):
+    class _ShadePoints(object):
         name = "shade_points"
 
         def __init__(self, m):
@@ -1454,7 +1454,7 @@ class Shapes(object):
         def radius_crs(self):
             return "in"
 
-    class _shade_raster(object):
+    class _ShadeRaster(object):
         name = "shade_raster"
 
         def __init__(self, m):
@@ -1520,7 +1520,7 @@ class Shapes(object):
             if agg_hook is None:
                 pass
 
-            # this might be changed by m._shade_raster depending on the dataset-shape
+            # this might be changed by m._ShadeRaster depending on the dataset-shape
             glyph = None
 
             from . import MapsGrid  # do this here to avoid circular imports!
@@ -1711,24 +1711,24 @@ class Shapes(object):
 
             return self._get_polygon_coll(x, y, crs, **kwargs)
 
-    @wraps(_scatter_points.__call__)
+    @wraps(_ScatterPoints.__call__)
     def scatter_points(self, *args, **kwargs):
-        shp = self._scatter_points(m=self._m)
+        shp = self._ScatterPoints(m=self._m)
         return shp.__call__(*args, **kwargs)
 
-    @wraps(_geod_circles.__call__)
+    @wraps(_GeodCircles.__call__)
     def geod_circles(self, *args, **kwargs):
-        shp = self._geod_circles(m=self._m)
+        shp = self._GeodCircles(m=self._m)
         return shp.__call__(*args, **kwargs)
 
-    @wraps(_ellipses.__call__)
+    @wraps(_Ellipses.__call__)
     def ellipses(self, *args, **kwargs):
-        shp = self._ellipses(m=self._m)
+        shp = self._Ellipses(m=self._m)
         return shp.__call__(*args, **kwargs)
 
-    @wraps(_rectangles.__call__)
+    @wraps(_Rectangles.__call__)
     def rectangles(self, *args, **kwargs):
-        shp = self._rectangles(m=self._m)
+        shp = self._Rectangles(m=self._m)
         return shp.__call__(*args, **kwargs)
 
     @wraps(_raster.__call__)
@@ -1736,26 +1736,26 @@ class Shapes(object):
         shp = self._raster(m=self._m)
         return shp.__call__(*args, **kwargs)
 
-    @wraps(_voronoi_diagram.__call__)
+    @wraps(_VoronoiDiagram.__call__)
     def voronoi_diagram(self, *args, **kwargs):
-        shp = self._voronoi_diagram(m=self._m)
+        shp = self._VoronoiDiagram(m=self._m)
         # increase radius margins for voronoi diagrams since
         # outer points are otherwise always masked!
         self._m._data_manager.set_margin_factors(20, 0.1)
 
         return shp.__call__(*args, **kwargs)
 
-    @wraps(_delaunay_triangulation.__call__)
+    @wraps(_DelaunayTriangulation.__call__)
     def delaunay_triangulation(self, *args, **kwargs):
-        shp = self._delaunay_triangulation(m=self._m)
+        shp = self._DelaunayTriangulation(m=self._m)
         return shp.__call__(*args, **kwargs)
 
-    @wraps(_shade_points.__call__)
+    @wraps(_ShadePoints.__call__)
     def shade_points(self, *args, **kwargs):
-        shp = self._shade_points(m=self._m)
+        shp = self._ShadePoints(m=self._m)
         return shp.__call__(*args, **kwargs)
 
-    @wraps(_shade_raster.__call__)
+    @wraps(_ShadeRaster.__call__)
     def shade_raster(self, *args, **kwargs):
-        shp = self._shade_raster(m=self._m)
+        shp = self._ShadeRaster(m=self._m)
         return shp.__call__(*args, **kwargs)
