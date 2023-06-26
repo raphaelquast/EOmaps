@@ -456,8 +456,7 @@ class NewPeekTabWidget(QtWidgets.QWidget):
         self.peektabs = peektabs
 
     def mousePressEvent(self, e):
-        print("click")
-
+        # create a new peek-tab if the base-tab of the peek-widget is clicked
         self.peektabs.make_new_tab()
         self.peektabs.setCurrentIndex(0)
 
