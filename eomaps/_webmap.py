@@ -26,7 +26,7 @@ import requests
 
 
 class _WebMapLayer:
-    # base class for adding methods to the _WmsLayer- and _WmtsLayer objects
+    # base class for adding methods to the _WMSLayer- and _WMTSLayer objects
     def __init__(self, m, wms, name):
         from cartopy.io.ogc_clients import _CRS_TO_OGC_SRS
 
@@ -319,7 +319,7 @@ class _WebMapLayer:
         return style
 
 
-class _WmtsLayer(_WebMapLayer):
+class _WMTSLayer(_WebMapLayer):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
@@ -422,7 +422,7 @@ class _WmtsLayer(_WebMapLayer):
         m.BM.add_bg_artist(art, layer=layer)
 
 
-class _WmsLayer(_WebMapLayer):
+class _WMSLayer(_WebMapLayer):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
@@ -627,13 +627,13 @@ class _WebServiceCollection:
             wmts = self._get_wmts(self._url)
             layers = dict()
             for key in wmts.contents.keys():
-                layers[_sanitize(key)] = _WmtsLayer(self._m, wmts, key)
+                layers[_sanitize(key)] = _WMTSLayer(self._m, wmts, key)
 
         elif self._service_type == "wms":
             wms = self._get_wms(self._url)
             layers = dict()
             for key in wms.contents.keys():
-                layers[_sanitize(key)] = _WmsLayer(self._m, wms, key)
+                layers[_sanitize(key)] = _WMSLayer(self._m, wms, key)
 
         return SimpleNamespace(**layers)
 
@@ -776,14 +776,14 @@ class _RestWmsService(_WebServiceCollection):
                 wms = self._get_wms(url)
                 layer_names = list(wms.contents.keys())
                 for lname in layer_names:
-                    self._layers["layer_" + _sanitize(lname)] = _WmsLayer(
+                    self._layers["layer_" + _sanitize(lname)] = _WMSLayer(
                         self._m, wms, lname
                     )
             elif self._service_type == "wmts":
                 wmts = self._get_wmts(url)
                 layer_names = list(wmts.contents.keys())
                 for lname in layer_names:
-                    self._layers["layer_" + _sanitize(lname)] = _WmtsLayer(
+                    self._layers["layer_" + _sanitize(lname)] = _WMTSLayer(
                         self._m, wmts, lname
                     )
             elif self._service_type == "xyz":
