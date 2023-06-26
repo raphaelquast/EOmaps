@@ -32,18 +32,18 @@ Contents
 --------
 
  .. toctree::
-    :maxdepth: 2
+    :maxdepth: 1
     :caption: General
 
     general
 
 .. toctree::
-   :maxdepth: 2
-   :glob:
-   :includehidden:
-   :caption: How to use EOmaps
+  :maxdepth: 2
+  :glob:
+  :includehidden:
+  :caption: How to use EOmaps
 
-   api
+  api
 
 
 .. toctree::
@@ -60,7 +60,7 @@ Contents
    contribute
 
 .. toctree::
-   :maxdepth: 2
+   :maxdepth: 1
    :caption: API Reference
 
    reference

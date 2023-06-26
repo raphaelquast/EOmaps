@@ -3,8 +3,13 @@
 🚀 Basics
 ---------
 
-🌐 Initialization of Maps objects
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+.. contents:: Contents
+    :depth: 1
+    :local:
+
+
+🌐 Getting started
+~~~~~~~~~~~~~~~~~~~
 
 .. currentmodule:: eomaps.eomaps
 
@@ -54,8 +59,8 @@ Possible ways for specifying the ``crs`` for plotting are:
 .. _layers:
 
 
-▤ Layers
-~~~~~~~~~
+🎨 Layer management
+~~~~~~~~~~~~~~~~~~~
 
 .. image:: _static/intro.png
    :width: 40%
@@ -261,8 +266,8 @@ To programmatically switch between layers or view a layer that represents a **co
     Maps.fetch_layers
 
 
-🗺 Export the map as jpeg/png, etc.
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+🗺 Image export (jpeg, png, svg, etc.)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Once the map is ready, an image of the map can be saved at any time by using :py:meth:`Maps.savefig`
 

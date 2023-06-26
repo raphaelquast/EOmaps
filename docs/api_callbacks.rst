@@ -4,6 +4,14 @@
 🛸 Callbacks - make the map interactive!
 ----------------------------------------
 
+.. contents:: Contents:
+    :local:
+    :depth: 1
+
+
+How to attach callbacks to a map
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
 .. currentmodule:: eomaps.eomaps
 
 Callbacks are used to execute functions when you click on the map or press a key on the keyboard.
@@ -111,8 +119,8 @@ In addition, each callback-container supports the following useful methods:
 
 .. _predefined_callbacks:
 
-🍬 Pre-defined callbacks
-~~~~~~~~~~~~~~~~~~~~~~~~~
+Pre-defined callbacks
+~~~~~~~~~~~~~~~~~~~~~
 
 Pre-defined click, pick and move callbacks
 ******************************************
@@ -170,15 +178,13 @@ Callbacks that can be used with ``m.cb.keypress``
 
 .. _custom_callbacks:
 
-👽 Custom callbacks
-~~~~~~~~~~~~~~~~~~~
+Custom callbacks
+~~~~~~~~~~~~~~~~
 
 Custom callback functions can be attached to the map via:
 
 .. code-block:: python
 
-    m = Maps()
-    ...
     m.cb.< EVENT >.attach(< CALLBACK FUNCTION >, **kwargs )
 
 
@@ -196,22 +202,25 @@ The ``< CALLBACK FUNCTION >`` must accept the following keyword-arguments:
 
 
 .. code-block:: python
+    :name: test_custom_callbacks_01
 
+    from eomaps import Maps
     def some_callback(custom_kwarg, **kwargs):
-        print("the value of 'custom_kwarg' is", custom_kwarg)
-        print("the position of the clicked pixel in plot-coordinates", kwargs["pos"])
-        print("the dataset-index of the nearest datapoint", kwargs["ID"])
-        print("data-value of the nearest datapoint", kwargs["val"])
-        print("the color of the nearest datapoint", kwargs["val_color"])
-        print("the numerical index of the nearest datapoint", kwargs["ind"])
-        ...
+        print("\n-------------------------------------------------------")
+        print("The value of 'custom_kwarg' is", custom_kwarg)
+        print("The position of the clicked pixel in plot-coordinates is", kwargs["pos"])
+        print("The dataset-index of the nearest datapoint is", kwargs["ID"])
+        print("The data-value of the nearest datapoint is", kwargs["val"])
+        print("The color of the nearest datapoint is", kwargs["val_color"])
+        print("The numerical index of the nearest datapoint is", kwargs["ind"])
 
-    # attaching custom callbacks works completely similar for "click", "pick" and "keypress"!
+    # attaching custom callbacks works completely similar for "click", "pick", "move" and "keypress"!
     m = Maps()
-    ...
-    m.cb.pick.attach(some_callback, double_click=False, button=1, custom_kwarg=1)
-    m.cb.click.attach(some_callback, double_click=False, button=2, custom_kwarg=2)
-    m.cb.keypress.attach(some_callback, key="x", custom_kwarg=3)
+    m.set_data([1, 2, 3], [10, 20, 30], [10, 20, 30])
+    m.plot_map()
+
+    m.cb.pick.attach.annotate()
+    m.cb.pick.attach(some_callback, button=1, custom_kwarg=123)
 
 
 .. note::
@@ -222,15 +231,21 @@ The ``< CALLBACK FUNCTION >`` must accept the following keyword-arguments:
     For better readability it is recommended that you "unpack" used arguments like this:
 
     .. code-block:: python
+        :name: test_custom_callbacks_02
+
+        from eomaps import Maps
 
         def cb(ID, val, **kwargs):
             print(f"the ID is {ID} and the value is {val}")
 
+        m = Maps()
+        m.set_data([1, 2, 3], [10, 20, 30], [10, 20, 30])
+        m.plot_map()
+        m.cb.pick.attach(cb)
 
 
-
-👾 Using modifiers for pick- click- and move callbacks
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Using modifiers for pick- click- and move callbacks
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 It is possible to trigger ``pick``, ``click`` or ``move`` callbacks **only if a specific key is pressed on the keyboard**.
 
@@ -283,8 +298,8 @@ NOTE: sticky modifiers are defined for each callback method individually!
     m.cb.move.attach.mark(modifier="1", radius=5, fc="r")
 
 
-🍭 Picking N nearest neighbours
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Picking N nearest neighbours
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 [requires EOmaps >= 5.4]
 
@@ -356,8 +371,8 @@ To customize the picking-behavior, use ``m.cb.pick.set_props()``. The following 
     |         m.cb.keypress.attach(pick_n_neighbours, key=key, m=m, n=n)             |                                            |
     +--------------------------------------------------------------------------------+--------------------------------------------+
 
-📍 Picking a dataset without plotting it first
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Picking a dataset without plotting it first
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. currentmodule:: eomaps.eomaps
 

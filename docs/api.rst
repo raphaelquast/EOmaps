@@ -4,10 +4,10 @@
 The following chapters provide comprehensive overview on the capabilities of EOmaps.
 
 |  :doc:`api_basics`
-|  Introduction of the basic on how to create beautiful interactive maps.
+|  The basic concepts how to create beautiful interactive maps.
 
 |  :doc:`api_data_visualization`
-|  Overview on how to visualize datasets (plot-shapes, classification, colorbars etc.).
+|  How to visualize datasets (plot-shapes, classification, colorbars etc.).
 
 .. raw:: html
 
@@ -27,7 +27,7 @@ The following chapters provide comprehensive overview on the capabilities of EOm
 |  Create zoomed-in views on specific regions of a map.
 
 |  :doc:`api_callbacks`
-|  Turn your maps into interactive widgets.
+|  Turn your maps into interactive data-analysis widgets.
 
 .. raw:: html
 
@@ -40,10 +40,10 @@ The following chapters provide comprehensive overview on the capabilities of EOm
 |  Add imagery provided by WebMap services (ts, wms, wmts, xyz) to the map.
 
 |  :doc:`api_geodataframes`
-|  Add ``geopandas.GeoDataFrames`` to the map.
+|  Add vector geometries to the map.
 
 |  :doc:`api_annotations_markers_etc`
-|  Customize the map with markers, annotations, lines, logos etc.
+|  Add markers, annotations, lines, logos etc. to the map.
 
 |  :doc:`api_scalebar`
 |  Add a scalebar to the map.
@@ -68,7 +68,7 @@ The following chapters provide comprehensive overview on the capabilities of EOm
 |  Read data from NetCDF, GeoTIFF or CSV files.
 
 |  :doc:`api_misc`
-|  Some additional functions and properties that might come in handy.
+|  Additional functions and properties that might come in handy.
 
 
 .. toctree::

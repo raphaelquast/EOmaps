@@ -4,18 +4,51 @@
 🔴 Data Visualization
 ----------------------
 
+.. contents:: Contents:
+    :depth: 1
+    :local:
+
+
 .. currentmodule:: eomaps.eomaps
 
+Quick overview
+~~~~~~~~~~~~~~
 
 To visualize a dataset, first assign the dataset to the :py:class:`Maps` object,
 then select how you want to visualize the data and finally call :py:meth:`Maps.plot_map`.
 
-1. **Assign the data** to a :py:class:`Maps` object via :py:meth:`Maps.set_data`
-2. (optional) **set the shape** used to represent the data via  :py:class:`Maps.set_shape`
-3. (optional) **assign a classification scheme** for the data via  :py:class:`Maps.set_classify`
-4. **Plot the data** by calling :py:meth:`Maps.plot_map`
+1. :ref:`Assign the data <assign_the_data>` to a :py:class:`Maps` object via :py:meth:`Maps.set_data`
+2. (optional) :ref:`Set the shape <set_the_shape>` used to represent the data via  :py:class:`Maps.set_shape`
+3. (optional) :ref:`Classify the data <classify_the_data>` via  :py:class:`Maps.set_classify`
+4. :ref:`Plot the data <plot_the_data>` by calling :py:meth:`Maps.plot_map`
 
-🗃 Assign the data
+A :py:class:`Maps` object can only manage a single dataset.
+To plot multiple datasets on the same map, use :py:meth:`Maps.new_layer` to get a unique :py:class:`Maps` object for each dataset!
+
+.. code-block:: python
+    :name: test_data_visualization_quick
+
+    from eomaps import Maps
+    m = Maps()
+    m.add_feature.preset("ocean", "land")
+
+    m_data = m.new_layer()                         # Create a new layer for the data
+    m_data.set_data(                               # Assign the data
+        data=[1, 2, 3, 4, 5],                      #    Data values
+        x=[-10, 20, 30, 40, 50],                   #    x coordinate values
+        y=[-50, -20, 0, 20, 40],                   #    y coordinate values
+        crs=4326                                   #    Coordinate system of (x, y)
+        )
+
+    m_data.set_shape.geod_circles(radius=1e6)      # Draw geodesic circles
+    m_data.set_classify.EqualInterval(k=3)         # Classify into 3 equal intervals
+    m_data.plot_map(vmin=0, ec="k", cmap="magma")  # Plot the data
+    m_data.add_colorbar(hist_bins="bins")          # Add a colorbar
+
+
+.. _assign_the_data:
+
+1) Assign the data
 ~~~~~~~~~~~~~~~~~~
 
 To assign a dataset to a :py:class:`Maps` object, use :py:meth:`Maps.set_data`.
@@ -106,9 +139,11 @@ The following data-types are accepted as input:
 |                                                                     |     m.plot_map()                                                                   |
 +---------------------------------------------------------------------+------------------------------------------------------------------------------------+
 
+.. _set_the_shape:
 
-💠 Specify how to visualize the data
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+2) Set the shape
+~~~~~~~~~~~~~~~~
 
 To specify how a dataset is visualized on the map, you have to set the *"plot-shape"* via :py:meth:`Maps.set_shape`.
 
@@ -212,8 +247,12 @@ To get an overview of the existing shapes and their main use-cases, here's a sim
 
 .. image:: _static/minigifs/plot_shapes.gif
 
-📊 Classify the data
-~~~~~~~~~~~~~~~~~~~~~
+
+.. _classify_the_data:
+
+
+3) Classify the data
+~~~~~~~~~~~~~~~~~~~~
 
 .. currentmodule:: eomaps.eomaps
 
@@ -276,26 +315,30 @@ Currently available classification-schemes are (see `mapclassify <https://github
 - `StdMean(multiples) <https://pysal.org/mapclassify/generated/mapclassify.StdMean.html>`_
 - `UserDefined(bins) <https://pysal.org/mapclassify/generated/mapclassify.UserDefined.html>`_
 
-🖨 Plot the data
+
+.. _plot_the_data:
+
+
+4) Plot the data
 ~~~~~~~~~~~~~~~~
 
-If you want to plot a map based on a dataset, first set the data and then
-call :py:meth:`Maps.plot_map`.
+
+Now that the data is assigned to a :py:class:`Maps` object, you can trigger plotting the data via :py:meth:`Maps.plot_map`.
 
 Any additional keyword-arguments passed to :py:meth:`Maps.plot_map` are forwarded to the actual
-plot-command for the selected shape.
+``matplotlib`` plot-command for the selected shape.
 
 Useful arguments that are supported by all shapes are:
 
-    - "cmap" : the colormap to use
-    - "vmin", "vmax" : the range of values used when assigning the colors
-    - "alpha" : the color transparency
-    - "zorder" : the "stacking-order" of the feature
+    - ``"cmap"`` : the colormap to use
+    - ``"vmin"``, "vmax" : the range of values used when assigning the colors
+    - ``"alpha"`` : the color transparency
+    - ``"zorder"`` : the "stacking-order" of the feature
 
 Arguments that are supported by all shapes except ``shade`` shapes are:
-    - "fc" or "facecolor" : set the face color for the whole dataset
-    - "ec" or "edgecolor" : set the edge color for the whole dataset
-    - "lw" or "linewidth" : the line width of the shapes
+    - ``"fc"`` or ``"facecolor"`` : set the face color for the whole dataset
+    - ``"ec"`` or ``"edgecolor"`` : set the edge color for the whole dataset
+    - ``"lw"`` or ``"linewidth"`` : the line width of the shapes
 
 
 By default, the plot-extent of the axis is adjusted to the extent of the data **if the extent has not been set explicitly before**.
