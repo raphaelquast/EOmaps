@@ -1551,7 +1551,7 @@ class Shapes(object):
         def radius_crs(self):
             return "in"
 
-    class _raster(object):
+    class _Raster(object):
         name = "raster"
 
         def __init__(self, m):
@@ -1731,9 +1731,9 @@ class Shapes(object):
         shp = self._Rectangles(m=self._m)
         return shp.__call__(*args, **kwargs)
 
-    @wraps(_raster.__call__)
+    @wraps(_Raster.__call__)
     def raster(self, *args, **kwargs):
-        shp = self._raster(m=self._m)
+        shp = self._Raster(m=self._m)
         return shp.__call__(*args, **kwargs)
 
     @wraps(_VoronoiDiagram.__call__)
