@@ -1,6 +1,9 @@
 👀 FAQ
 =======
 
+.. contents:: Contents:
+  :local:
+  :depth: 1
 
 .. include:: introduction.rst
 

@@ -1,6 +1,6 @@
 
-🔬 Inset-maps - zoom-in on interesting areas
---------------------------------------------
+🔬 Inset Maps
+--------------
 .. currentmodule:: eomaps.eomaps
 
 Inset maps that show zoomed-in regions can be created with :py:meth:`Maps.new_inset_map`.

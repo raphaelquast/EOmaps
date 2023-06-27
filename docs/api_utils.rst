@@ -1,8 +1,8 @@
 
 .. _utility:
 
-🦜 Utility widgets
-------------------
+🦜 Utilities
+-------------
 
 .. currentmodule:: eomaps.eomaps
 

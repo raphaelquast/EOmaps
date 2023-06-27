@@ -8,23 +8,14 @@
     :local:
     :depth: 1
 
-
 How to attach callbacks to a map
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. currentmodule:: eomaps.eomaps
 
-Callbacks are used to execute functions when you click on the map or press a key on the keyboard.
+Callbacks are used to **execute functions** when you **click on a map** or **press a key** on the keyboard**.
 
-They can be attached to a :py:class:`Maps` object via:
-
-.. code-block:: python
-
-    m = Maps()
-    ...
-    m.cb.< EVENT >.attach.< CALLBACK >( **kwargs )
-
-``< EVENT >`` specifies the event that will trigger the callback:
+They are grouped into the following event categories:
 
 .. table::
     :width: 100 %
@@ -33,7 +24,7 @@ They can be attached to a :py:class:`Maps` object via:
     +--------------------------------------------------------------+----------------------------------------------------------------------------------+
     | :class:`click <eomaps.cb_container.ClickContainer>`          | Callbacks that are executed if you click anywhere on the Map.                    |
     +--------------------------------------------------------------+----------------------------------------------------------------------------------+
-    | :class:`pick <eomaps.cb_container.PickContainer>`            | Callbacks that select the nearest datapoint(s) if you click on the map.          |
+    | :class:`pick <eomaps.cb_container.PickContainer>`            | Callbacks that identify the nearest datapoint(s) if you click on the map.        |
     +--------------------------------------------------------------+----------------------------------------------------------------------------------+
     | :class:`move <eomaps.cb_container.MoveContainer>`            | Callbacks that are executed if you press a key on the keyboard.                  |
     +--------------------------------------------------------------+----------------------------------------------------------------------------------+
@@ -41,9 +32,19 @@ They can be attached to a :py:class:`Maps` object via:
     +--------------------------------------------------------------+----------------------------------------------------------------------------------+
 
 
-``< CALLBACK >`` specifies the action you want to assign to the event.
+There are many useful :ref:`predefined_callbacks`, but it is also possible to define :ref:`custom_callbacks` and attach them to the map.
 
-There are many :ref:`predefined_callbacks`, but it is also possible to define :ref:`custom_callbacks` and attach them to the map.
+To attach a :ref:`pre-defined callback <predefined_callbacks>` to a :py:class:`Maps` object, use  ``m.cb.< EVENT >.attach.< CALLBACK >( **kwargs )``
+
+- ``< EVENT >`` specifies the event that will trigger the callback (e.g. click, pick, move, keypress).
+- ``< CALLBACK >`` specifies the action you want to assign to the event.
+
+To attach a :ref:`custom callback <custom_callbacks>` to a :py:class:`Maps` object, use  ``m.cb.< EVENT >.attach.(< CALLBACK FUNCTION >, **kwargs )``
+
+- ``< EVENT >`` specifies the event that will trigger the callback (e.g. click, pick, move, keypress).
+- ``< CALLBACK FUNCTION >`` is the function you want to execute
+
+
 
 
 .. table::
@@ -82,12 +83,12 @@ There are many :ref:`predefined_callbacks`, but it is also possible to define :r
 
 .. Note::
 
-    Callbacks are only executed if the layer of the associated :py:class:`Maps` object is actually visible!
-    (This assures that pick-callbacks always refer to the visible dataset.)
+    - Callbacks are only executed if the layer of the associated :py:class:`Maps` object is visible!
 
-    To define callbacks that are executed independent of the visible layer, attach it to the ``"all"``
-    layer using something like ``m.all.cb.click.attach.annotate()``.
+        - To define callbacks that are executed independent of the visible layer, attach it to the ``"all"``
+          layer using something like ``m.all.cb.click.attach.annotate()``.
 
+    - Before attaching **pick** callbacks you must plot a dataset first!
 
 In addition, each callback-container supports the following useful methods:
 
@@ -114,6 +115,20 @@ In addition, each callback-container supports the following useful methods:
     share_events
     forward_events
     add_temporary_artist
+
+
+Using callbacks with the companion-widget
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Some of the most commonly used pre-defined callbacks are integrated in the :ref:`companion_widget`.
+
+- **peek layer** callbacks to interactively compare layers
+- basic click/pick callbacks to get information on the clicked point
+
+
+.. image:: _static/widget_callbacks.png
+    :width: 60%
+
 
 
 
@@ -244,8 +259,8 @@ The ``< CALLBACK FUNCTION >`` must accept the following keyword-arguments:
         m.cb.pick.attach(cb)
 
 
-Using modifiers for pick- click- and move callbacks
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Keypress modifiers
+~~~~~~~~~~~~~~~~~~
 
 It is possible to trigger ``pick``, ``click`` or ``move`` callbacks **only if a specific key is pressed on the keyboard**.
 

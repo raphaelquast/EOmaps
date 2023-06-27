@@ -39,7 +39,7 @@ The following chapters provide comprehensive overview on the capabilities of EOm
 |  :doc:`api_webmaps`
 |  Add imagery provided by WebMap services (ts, wms, wmts, xyz) to the map.
 
-|  :doc:`api_geodataframes`
+|  :doc:`api_vector_data`
 |  Add vector geometries to the map.
 
 |  :doc:`api_annotations_markers_etc`

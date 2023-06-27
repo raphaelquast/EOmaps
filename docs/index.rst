@@ -46,7 +46,7 @@ Contents
 
 .. toctree::
     :maxdepth: 1
-    :caption: Features
+    :caption: Map Features
 
     api_inset_maps
     api_naturalearth_features
@@ -58,10 +58,6 @@ Contents
     api_compass
     api_gridlines
 
-    api_read_data
-    api_misc
-
-
 .. toctree::
     :maxdepth: 1
     :caption: Interactivity
@@ -71,6 +67,14 @@ Contents
     api_layout_editor
     api_draw
     api_utils
+
+
+.. toctree::
+    :maxdepth: 1
+    :caption: Miscellaneous
+
+    api_read_data
+    api_misc
 
 
 

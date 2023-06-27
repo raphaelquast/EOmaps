@@ -1,6 +1,6 @@
 
-📦 Reading data (NetCDF, GeoTIFF, CSV...)
------------------------------------------
+📦 Reading data
+----------------
 
 .. currentmodule:: eomaps.eomaps
 

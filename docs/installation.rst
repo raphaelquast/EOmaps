@@ -4,8 +4,12 @@
 🐛 Installation
 ================
 
-🦋 Recommended way (via ``conda``)
-----------------------------------
+.. contents:: Contents:
+    :local:
+    :depth: 1
+
+Recommended way (via ``conda`` and ``mamba``)
+---------------------------------------------
 
 EOmaps is available via the ``conda-forge`` channel and can be installed via:
 
@@ -15,10 +19,10 @@ EOmaps is available via the ``conda-forge`` channel and can be installed via:
 
 This should make sure all required dependencies are correctly installed.
 
-.. admonition:: Speed up the installation
+.. admonition:: Greatly speed up the installation!
 
-  Since EOMaps dependencies can be demanding to solve for ``conda`` it is highly recommended to have a look at `mamba <https://github.com/mamba-org/mamba>`_
-  (a C++ re-implementation of the ``conda`` solver that provides a remarkable speedup)
+  Since the dependencies of EOmaps can be demanding to solve for the classic ``conda`` solver, it is **highly recommended**
+  that you use `mamba <https://github.com/mamba-org/mamba>`_ to install EOmaps!
 
   To install ``mamba``, simply use:
 
@@ -45,89 +49,19 @@ More details on how to **configure your favorite IDE** to work with EOmaps can b
 - :ref:`config_pycharm`
 - :ref:`config_jupyter_notebook`
 
-🐜 optional dependencies
-~~~~~~~~~~~~~~~~~~~~~~~~~
-To use the full potential of EOmaps, some additional dependencies might be required
 
-- `Pandas <https://pandas.pydata.org/>`_
-
-  - The go-to library for data-analysis.
-  - If installed, ``pandas.DataFrames`` can be used as datasets in EOmaps
-
-    - Install via ``conda install -c conda-forge pandas`` (or ``mamba ...``)
-
-- `GeoPandas <https://geopandas.org>`_
-
-  - An awesome extension to ``pandas`` for working with geometric (``shapely``) objects.
-  - Required for ``m.add_gdf()`` and extends the functionalities of ``m.add_feature()``
-
-    - Install via ``conda install -c conda-forge geopandas`` (or ``mamba ...``)
-
-
-- `Datashader <https://datashader.org>`_
-
-  - Provides remarkable capabilities for very fast visualization of extremely large datasets (>1M datapoints)
-  - Required for the plot-shapes: ``m.set_shape.shade_points()`` and ``m.set_shape.shade_raster()``
-
-    - Install via ``conda install -c conda-forge datashader`` (or ``mamba ...``)
-
-
-- `Xarray <https://xarray.pydata.org>`_ and `RioXarray <https://github.com/corteva/rioxarray>`_
-
-  - Reading capabilities for NetCDF and GeoTIFF files
-  - Required for the plot-shape: ``m.set_shape.shade_raster()`` and for ``m.read_file.GeoTIFF`` and ``m.read_file.NetCDF``
-
-    - Install via ``conda install -c conda-forge xarray rioxarray`` (or ``mamba ...``)
-
-
-- `Equi7Grid <https://github.com/TUW-GEO/Equi7Grid>`_
-
-  - A library to work with data provided in Equi7Grid projections
-  - Required for using the projection: ``Maps.CRS.Equi7Grid_projection()``
-
-    - Install via ``pip install equi7grid``
-
-
-🐞 Alternative way (via ``pip``)
------------------------------------
-EOmaps is also available via ``pip`` and can be installed using
+Alternative way (via ``pip``)
+-----------------------------
+EOmaps is also available on ``pip`` and can be installed via
 
   .. code-block:: console
 
     pip install eomaps
 
 
-However, it is not guaranteed that all dependencies are correctly resolved and some manual
+However, it is **not guaranteed that all dependencies are correctly resolved** and some manual
 tweaking of the environment might be required to ensure that all packages work as expected.
+Especially dependencies on C/C++ libraries such as ``geos`` or ``pyproj`` have to be configured
+carefully to set up everying correctly. If you are not sure what you're doing, use ``conda + mamba``!
 
-A list of the dependencies can be found below:
-
-.. code-block:: yaml
-
-    dependencies:
-      - python >=3.7
-      - rtree
-      - numpy
-      - scipy
-      - matplotlib >=3.0
-      - cartopy >=0.20.0
-      - descartes
-      - mapclassify
-      - pyproj
-      - pyepsg
-      # -------------- for WebMaps
-      - owslib
-      - requests
-      - xmltodict
-      - cairosvg
-      # -------------- optional
-      - pandas
-      - geopandas
-      - datashader
-      - xarray
-      - rioxarray
-      # -------------- for building the docs
-      - sphinx
-      - sphinx-copybutton
-      - sphinx_rtd_theme
-      - mock
+A list of all required dependencies can be found in :ref:`setup_a_dev_env`

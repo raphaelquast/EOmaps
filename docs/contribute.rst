@@ -14,6 +14,7 @@ or post a message on `gitter <https://app.gitter.im/#/room/#EOmaps:gitter.im>`_ 
 
 Any contributions are welcome!
 
+.. _setup_a_dev_env:
 
 ⚙ How to set up a development environment
 -----------------------------------------

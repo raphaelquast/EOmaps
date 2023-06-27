@@ -1,8 +1,8 @@
 
-.. _geodataframe:
+.. _vector_data:
 
-💠 Vector Data (or GeoDataFrames)
-----------------------------------
+💠 Vector Data
+---------------
 
 .. currentmodule:: eomaps.eomaps
 

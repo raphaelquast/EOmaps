@@ -63,7 +63,7 @@ For convenience, multiple preset-features can also be added in one go via:
     m.add_feature.preset("coastline", "ocean", "land", scale=50)
 
 If you want to get a ``geopandas.GeoDataFrame`` containing all shapes and metadata of a feature, use:
-(Have a look at :ref:`geodataframe` on how to add the obtained ``GeoDataFrame`` to the map)
+(Have a look at :ref:`vector_data` on how to add the obtained ``GeoDataFrame`` to the map)
 
 .. code-block:: python
     :name: test_get_gdf
