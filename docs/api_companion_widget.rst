@@ -27,10 +27,17 @@ EOmaps comes with an awesome companion widget that provides many useful features
 .. image:: _static/minigifs/companion_widget.gif
     :align: center
 
-
 .. raw:: html
 
   <br>
+
+
+.. admonition:: Setting figure export parameters on ``ctrl + c``
+
+    Starting with EOmaps v7.0 it is possible to use ``ctrl + c`` to export a figure to the clipboard.
+
+    This export will always use the **currently set export parameters** in the Companion Widget!
+
 
 .. note::
 

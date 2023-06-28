@@ -288,7 +288,7 @@ To adjust the margins of the subplots, use :py:meth:`m.subplots_adjust`, or have
     m = Maps()
     m.subplots_adjust(left=0.1, right=0.9, bottom=0.05, top=0.95)
 
-.. admonition:: Export to clipboard
+.. admonition:: Export to clipboard (``ctrl + c``)
 
     If you use ``PyQt5`` as matplotlib-backend, you can also press (``control`` + ``c``) to export the figure to the clipboard.
 

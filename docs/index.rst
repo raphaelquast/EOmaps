@@ -35,7 +35,9 @@ Contents
     :maxdepth: 1
     :caption: General
 
-    general
+    installation
+    FAQ
+
 
 .. toctree::
     :maxdepth: 1

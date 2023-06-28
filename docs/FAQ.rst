@@ -9,13 +9,13 @@
 
 .. _configuring_the_editor:
 
-💻 Configuring the editor (IDE)
-*******************************
+Configuring the editor (IDE)
+****************************
 
 .. _config_spyder:
 
-🕷 Spyder IDE
--------------
+Spyder IDE
+----------
 
 To use the whole potential of EOmaps with the awesome `Spyder IDE <https://www.spyder-ide.org>`_  ,
 the plot-settings must be adjusted to ensure that ``matplotlib`` plots remain interactive.
@@ -27,8 +27,8 @@ the plot-settings must be adjusted to ensure that ``matplotlib`` plots remain in
 
 .. _config_pycharm:
 
-🗖 PyCharm IDE
---------------
+PyCharm IDE
+-----------
 
 The `PyCharm IDE <https://www.jetbrains.com/pycharm/>`_  automatically registers its own matplotlib backend
 which (for some unknown reason) freezes on interactive plots.
@@ -58,8 +58,8 @@ in the **Python Scientific** preferences since it forces plots to be rendered as
 
 .. _config_jupyter_notebook:
 
-📓 Jupyter Notebooks
---------------------
+Jupyter Notebooks
+-----------------
 
 While EOmaps works best with matplotlib's ``Qt5Agg`` backend, most of the functionalities work
 reasonably well if you want the figures embedded in a Jupyter Notebook.
@@ -95,16 +95,16 @@ reasonably well if you want the figures embedded in a Jupyter Notebook.
 Checkout the `matplotlib doc <https://matplotlib.org/stable/users/explain/interactive.html#jupyter-notebooks-jupyterlab>`_
 for more info!
 
-📸 Record interactive maps to create animations
-************************************************
+Record interactive maps to create animations
+********************************************
 
 The best way to record interactions on a EOmaps map is with the
 free and open source `ScreenToGif <https://www.screentogif.com/>`_ software.
 
 All animated gifs in this documentation have been created with this awesome piece of software.
 
-⚠️ Important changes between major versions
-********************************************
+Important changes between major versions
+****************************************
 
 ⚙ From EOmaps v3.x to v4.x
 ---------------------------
@@ -212,8 +212,6 @@ General changes in behavior
   - ``m.show_layer("A|B")`` plots all artists of the layer ``"A"`` **on top of** the layer ``"B"``
   - the ordering of artists inside a layer is determined by their ``zorder``  (e.g. ``m.plot_map(zorder=123)``)
 
-
-
 Removed (previously depreciated) functionalities
 ++++++++++++++++++++++++++++++++++++++++++++++++
 - ❌ the ``m.figure`` accessor has been removed!
@@ -250,3 +248,19 @@ Removed (previously depreciated) functionalities
 - ❌ ``m.indicate_masked_points()`` has been removed, use ``m.plot_map(indicate_masked_points=True)`` instead
 - ❌ ``m.shape.get_transformer`` is now a private (e.g. ``m.shape._get_transformer``)
 - ❌ ``m.shape.radius_estimation_range`` is now a private (e.g. ``m.shape._radius_estimation_range``)
+
+
+⚙ From EOmaps v6.x to v7.x
+---------------------------
+
+- ⚠️ A lot of internal functions and classes have been re-named to better follow PEP8 naming conventions.
+  While this should not interfere with the public API, more extensive customizations might need to be
+  adjusted with respect to the new names.
+
+  If you encounter any problems, feel free to open an `issue <https://github.com/raphaelquast/EOmaps/issues>`_ , and I'll see what I can do!
+
+  - For example: the module `_shapes.py` is now called `shapes.py` and the class `shapes` is now called `Shapes`
+
+- ⚠️ The use of ``m.set_data_specs(...)`` is depreciated. Use ``m.set_data(...)`` instead!
+
+- Figure export routines have been completely re-worked (but should result in the exact same output as in v6.x)
