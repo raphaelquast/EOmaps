@@ -37,7 +37,7 @@ A compass can be added to the map via :py:meth:`Maps.add_compass`:
     | .. code-block:: python               | .. image:: _static/minigifs/compass.gif |
     |   :name: test_add_compass            |   :align: center                        |
     |                                      |                                         |
-    |   from eomaps import Maps            |                                         |
+    |   from eomaps import Maps            | |img_minsize|                           |
     |   m = Maps(Maps.CRS.Stereographic()) |                                         |
     |   m.add_feature.preset.ocean()       |                                         |
     |                                      |                                         |

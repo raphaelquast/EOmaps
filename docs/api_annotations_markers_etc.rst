@@ -54,7 +54,7 @@ Static markers can be added to the map via :py:meth:`Maps.add_marker`.
     | .. code-block:: python                                                    | .. image:: _static/minigifs/markers.png |
     |     :name: test_add_markers                                               |   :align: center                        |
     |                                                                           |                                         |
-    |     from eomaps import Maps                                               |                                         |
+    |     from eomaps import Maps                                               | |img_minsize|                           |
     |     m = Maps(crs=4326)                                                    |                                         |
     |     m.add_feature.preset.coastline()                                      |                                         |
     |                                                                           |                                         |
@@ -124,7 +124,7 @@ Static annotations can be added to the map via :py:meth:`Maps.add_annotation`.
     | .. code-block:: python                                                            | .. image:: _static/minigifs/annotations.png |
     |     :name: test_add_annotations                                                   |   :align: center                            |
     |                                                                                   |                                             |
-    |     from eomaps import Maps                                                       |                                             |
+    |     from eomaps import Maps                                                       | |img_minsize|                               |
     |     import numpy as np                                                            |                                             |
     |     x, y = np.mgrid[-45:45, 20:60]                                                |                                             |
     |                                                                                   |                                             |
@@ -218,7 +218,7 @@ Lines can be added to a map with :py:meth:`Maps.add_line`.
     | .. code-block:: python                                          | .. image:: _static/minigifs/lines.png |
     |     :name: test_add_lines                                       |     :align: center                    |
     |                                                                 |                                       |
-    |     from eomaps import Maps                                     |                                       |
+    |     from eomaps import Maps                                     | |img_minsize|                         |
     |     import matplotlib.patheffects as path_effects               |                                       |
     |                                                                 |                                       |
     |     m = Maps(Maps.CRS.Sinusoidal(), figsize=(8, 4))             |                                       |
@@ -268,7 +268,7 @@ To indicate rectangular areas in any given crs, simply use :py:meth:`Maps.indica
     | .. code-block:: python                                                | .. image:: _static/minigifs/indicate_extent.png |
     |     :name: test_indicate_extent                                       |   :align: center                                |
     |                                                                       |                                                 |
-    |     from eomaps import Maps                                           |                                                 |
+    |     from eomaps import Maps                                           | |img_minsize|                                   |
     |     m = Maps(crs=3035)                                                |                                                 |
     |     m.add_feature.preset.coastline(ec="k")                            |                                                 |
     |                                                                       |                                                 |
@@ -303,20 +303,22 @@ Logos can be re-positioned and re-sized with the :ref:`layout_editor`!
 
 - To fix the relative position of the logo with respect to the map-axis, use ``fix_position=True``
 
-+--------------------------------------------------------------------------------------------+---------------------------------------+
-| .. code-block:: python                                                                     | .. image:: _static/minigifs/logos.png |
-|     :name: test_add_logo                                                                   |   :align: center                      |
-|                                                                                            |                                       |
-|     from eomaps import Maps                                                                |                                       |
-|     m = Maps()                                                                             |                                       |
-|     m.add_feature.preset.coastline()                                                       |                                       |
-|     m.add_logo(position="ul", size=.15)                                                    |                                       |
-|     m.add_logo(position="ur", size=.15)                                                    |                                       |
-|     # notice that the bottom logos maintain their relative position on resize/zoom events! |                                       |
-|     # (and also that they can NOT be moved with the layout-editor)                         |                                       |
-|     m.add_logo(position="lr", size=.3, pad=(0.1,0.05), fix_position=True)                  |                                       |
-|     m.add_logo(position="ll", size=.4, fix_position=True)                                  |                                       |
-+--------------------------------------------------------------------------------------------+---------------------------------------+
+.. table::
+
+  +--------------------------------------------------------------------------------------------+---------------------------------------+
+  | .. code-block:: python                                                                     | .. image:: _static/minigifs/logos.png |
+  |     :name: test_add_logo                                                                   |   :align: center                      |
+  |                                                                                            |                                       |
+  |     from eomaps import Maps                                                                | |img_minsize|                         |
+  |     m = Maps()                                                                             |                                       |
+  |     m.add_feature.preset.coastline()                                                       |                                       |
+  |     m.add_logo(position="ul", size=.15)                                                    |                                       |
+  |     m.add_logo(position="ur", size=.15)                                                    |                                       |
+  |     # notice that the bottom logos maintain their relative position on resize/zoom events! |                                       |
+  |     # (and also that they can NOT be moved with the layout-editor)                         |                                       |
+  |     m.add_logo(position="lr", size=.3, pad=(0.1,0.05), fix_position=True)                  |                                       |
+  |     m.add_logo(position="ll", size=.4, fix_position=True)                                  |                                       |
+  +--------------------------------------------------------------------------------------------+---------------------------------------+
 
 
 .. autosummary::

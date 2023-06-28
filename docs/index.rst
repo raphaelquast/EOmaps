@@ -51,7 +51,7 @@ Contents
     api_inset_maps
     api_naturalearth_features
     api_webmaps
-    api_geodataframes
+    api_vector_data
 
     api_annotations_markers_etc
     api_scalebar

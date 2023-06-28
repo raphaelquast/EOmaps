@@ -51,7 +51,7 @@ and ``< LAYER >`` indicates the actual layer-name.
     | .. code-block:: python                                                                         | .. image:: _static/minigifs/add_wms.png |
     |                                                                                                |   :align: center                        |
     |     from eomaps import MapsGrid                                                                |                                         |
-    |     mg = MapsGrid(crs=Maps.CRS.GOOGLE_MERCATOR)                                                |                                         |
+    |     mg = MapsGrid(crs=Maps.CRS.GOOGLE_MERCATOR)                                                | |img_minsize|                           |
     |     mg.join_limits()                                                                           |                                         |
     |                                                                                                |                                         |
     |     mg.m_0_0.add_wms.OpenStreetMap.add_layer.default()                                         |                                         |
@@ -178,7 +178,7 @@ To show an example, here's how to fetch multiple timestamps for the UV-index of 
     | .. code-block:: python                                                              | .. image:: _static/minigifs/advanced_wms.gif |
     |                                                                                     |   :align: center                             |
     |     from eomaps import Maps                                                         |                                              |
-    |     import pandas as pd                                                             |                                              |
+    |     import pandas as pd                                                             | |img_minsize|                                |
     |                                                                                     |                                              |
     |     m = Maps(layer="all", figsize=(8, 4))                                           |                                              |
     |     m.subplots_adjust(left=0.05, right=0.95)                                        |                                              |

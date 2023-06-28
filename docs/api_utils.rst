@@ -1,7 +1,7 @@
 
 .. _utility:
 
-🦜 Utilities
+🔦 Utilities
 -------------
 
 .. currentmodule:: eomaps.eomaps

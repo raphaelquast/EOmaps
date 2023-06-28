@@ -1,8 +1,8 @@
 
 .. _callbacks:
 
-🛸 Callbacks - make the map interactive!
-----------------------------------------
+🛸 Callbacks
+-------------
 
 .. contents:: Contents:
     :local:
@@ -45,6 +45,14 @@ To attach a :ref:`custom callback <custom_callbacks>` to a :py:class:`Maps` obje
 - ``< CALLBACK FUNCTION >`` is the function you want to execute
 
 
+.. admonition:: Callbacks are layer sensitive!
+
+    - Callbacks are only executed if the layer of the associated :py:class:`Maps` object is visible!
+
+        - To define callbacks that are executed independent of the visible layer, attach it to the ``"all"``
+          layer using something like ``m.all.cb.click.attach.annotate()``.
+
+    - Before attaching **pick** callbacks you must plot a dataset first!
 
 
 .. table::
@@ -81,14 +89,6 @@ To attach a :ref:`custom callback <custom_callbacks>` to a :py:class:`Maps` obje
     +-----------------------------------------------------------------------------------+--------------------------------------------------+
 
 
-.. Note::
-
-    - Callbacks are only executed if the layer of the associated :py:class:`Maps` object is visible!
-
-        - To define callbacks that are executed independent of the visible layer, attach it to the ``"all"``
-          layer using something like ``m.all.cb.click.attach.annotate()``.
-
-    - Before attaching **pick** callbacks you must plot a dataset first!
 
 In addition, each callback-container supports the following useful methods:
 

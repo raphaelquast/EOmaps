@@ -24,26 +24,27 @@ The call-signature is: ``m.add_feature.< CATEGORY >.< FEATURE >(...)``:
 
 ``< FEATURE >`` is the name of the NaturalEarth feature, e.g. ``"coastlines", "admin_0_countries"`` etc..
 
+.. table::
 
-+-------------------------------------------------------------------------+-------------------------------------------------+
-| .. code-block:: python                                                  | .. image:: _static/minigifs/add_feature.gif     |
-|     :name: test_add_features                                            |   :align: center                                |
-|                                                                         |                                                 |
-|     from eomaps import Maps                                             |                                                 |
-|     m = Maps()                                                          |                                                 |
-|     m.add_feature.preset.coastline()                                    |                                                 |
-|     m.add_feature.preset.ocean()                                        |                                                 |
-|     m.add_feature.preset.land()                                         |                                                 |
-|     m.add_feature.preset.countries()                                    |                                                 |
-|                                                                         |                                                 |
-|     m.add_feature.physical.lakes(scale=110, ec="b")                     |                                                 |
-|     m.add_feature.cultural.admin_0_pacific_groupings(fc="none", ec="m") |                                                 |
-|                                                                         |                                                 |
-|     # (only if geopandas is installed)                                  |                                                 |
-|     places = m.add_feature.cultural.populated_places.get_gdf(scale=110) |                                                 |
-|     m.add_gdf(places, markersize=places.NATSCALE/10, fc="r")            |                                                 |
-|                                                                         |                                                 |
-+-------------------------------------------------------------------------+-------------------------------------------------+
+    +-------------------------------------------------------------------------+-------------------------------------------------+
+    | .. code-block:: python                                                  | .. image:: _static/minigifs/add_feature.gif     |
+    |     :name: test_add_features                                            |   :align: center                                |
+    |                                                                         |                                                 |
+    |     from eomaps import Maps                                             | |img_minsize|                                   |
+    |     m = Maps()                                                          |                                                 |
+    |     m.add_feature.preset.coastline()                                    |                                                 |
+    |     m.add_feature.preset.ocean()                                        |                                                 |
+    |     m.add_feature.preset.land()                                         |                                                 |
+    |     m.add_feature.preset.countries()                                    |                                                 |
+    |                                                                         |                                                 |
+    |     m.add_feature.physical.lakes(scale=110, ec="b")                     |                                                 |
+    |     m.add_feature.cultural.admin_0_pacific_groupings(fc="none", ec="m") |                                                 |
+    |                                                                         |                                                 |
+    |     # (only if geopandas is installed)                                  |                                                 |
+    |     places = m.add_feature.cultural.populated_places.get_gdf(scale=110) |                                                 |
+    |     m.add_gdf(places, markersize=places.NATSCALE/10, fc="r")            |                                                 |
+    |                                                                         |                                                 |
+    +-------------------------------------------------------------------------+-------------------------------------------------+
 
 
 `NaturalEarth <https://www.naturalearthdata.com>`_ provides features in 3 different scales: 1:10m, 1:50m, 1:110m.

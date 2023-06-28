@@ -109,4 +109,4 @@ Then, create a new feature or bug-fix branch and start coding!
     git checkout -b "awesome_new_feature"
 
 
-Once you're done or in case you want/need some feedback, open a `pull request <>`_ on GitHub!
+Once you're done or in case you want/need some feedback, open a `pull request <https://github.com/raphaelquast/EOmaps/pulls>`_ on GitHub!

@@ -33,7 +33,7 @@ In addition, many style properties of the scalebar can be adjusted to get the lo
     | .. code-block:: python            | .. image:: _static/minigifs/scalebar.gif |
     |   :name: test_add_scalebar        |   :align: center                         |
     |                                   |                                          |
-    |   from eomaps import Maps         |                                          |
+    |   from eomaps import Maps         | |img_minsize|                            |
     |   m = Maps(Maps.CRS.Sinusoidal()) |                                          |
     |   m.add_feature.preset.ocean()    |                                          |
     |   s = m.add_scalebar()            |                                          |

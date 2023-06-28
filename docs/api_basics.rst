@@ -7,7 +7,6 @@
     :depth: 1
     :local:
 
-
 Getting started
 ~~~~~~~~~~~~~~~
 
@@ -382,7 +381,7 @@ To position the map in a (virtual) grid, one of the following options are possib
     | .. code-block:: python                             | .. image:: _static/grids/grid1.png |
     |     :name: test_gridpos_1                          |   :align: center                   |
     |                                                    |                                    |
-    |     from eomaps import Maps                        |                                    |
+    |     from eomaps import Maps                        | |img_minsize|                      |
     |     # ----- initialize a figure with an EOmaps map |                                    |
     |     # position = item 1 of a 2x1 grid              |                                    |
     |     m = Maps(ax=(2, 1, 1))                         |                                    |
@@ -397,7 +396,7 @@ To position the map in a (virtual) grid, one of the following options are possib
     | .. code-block:: python                             | .. image:: _static/grids/grid2.png |
     |     :name: test_gridpos_2                          |   :align: center                   |
     |                                                    |                                    |
-    |     from eomaps import Maps                        |                                    |
+    |     from eomaps import Maps                        | |img_minsize|                      |
     |     # ----- initialize a figure with an EOmaps map |                                    |
     |     # position = item 1 of a 2x2 grid              |                                    |
     |     m = Maps(ax=(2, 2, 1))                         |                                    |
@@ -415,7 +414,7 @@ To position the map in a (virtual) grid, one of the following options are possib
     | .. code-block:: python                             | .. image:: _static/grids/grid3.png |
     |     :name: test_gridpos_3                          |   :align: center                   |
     |                                                    |                                    |
-    |     from eomaps import Maps                        |                                    |
+    |     from eomaps import Maps                        | |img_minsize|                      |
     |     # ----- initialize a figure with an EOmaps map |                                    |
     |     # position = span 2 rows of a 3x1 grid         |                                    |
     |     m = Maps(ax=(3, 1, (1, 2)))                    |                                    |
@@ -435,7 +434,7 @@ To position the map in a (virtual) grid, one of the following options are possib
     | .. code-block:: python                             | .. image:: _static/grids/grid4.png |
     |     :name: test_gridpos_4                          |   :align: center                   |
     |                                                    |                                    |
-    |     from eomaps import Maps                        |                                    |
+    |     from eomaps import Maps                        | |img_minsize|                      |
     |     # ----- initialize a figure with an EOmaps map |                                    |
     |     m = Maps(ax=211)                               |                                    |
     |     # ----- add a normal matplotlib axes           |                                    |
@@ -448,7 +447,7 @@ To position the map in a (virtual) grid, one of the following options are possib
     | .. code-block:: python                             | .. image:: _static/grids/grid5.png |
     |     :name: test_gridpos_5                          |   :align: center                   |
     |                                                    |                                    |
-    |     from eomaps import Maps                        |                                    |
+    |     from eomaps import Maps                        | |img_minsize|                      |
     |     # ----- initialize a figure with an EOmaps map |                                    |
     |     m = Maps(ax=221)                               |                                    |
     |     # ----- add 2 more Maps to the same figure     |                                    |
@@ -467,7 +466,7 @@ To position the map in a (virtual) grid, one of the following options are possib
     | .. code-block:: python                       | .. image:: _static/grids/grid6.png |
     |     :name: test_gridpos_6                    |   :align: center                   |
     |                                              |                                    |
-    |     from matplotlib.gridspec import GridSpec |                                    |
+    |     from matplotlib.gridspec import GridSpec | |img_minsize|                      |
     |     from eomaps import Maps                  |                                    |
     |                                              |                                    |
     |     gs = GridSpec(2, 2)                      |                                    |
@@ -497,7 +496,7 @@ To set the absolute position of the map, provide a list of 4 floats representing
     | .. code-block:: python                             | .. image:: _static/grids/grid7.png |
     |     :name: test_gridpos_abspos                     |   :align: center                   |
     |                                                    |                                    |
-    |     from eomaps import Maps                        |                                    |
+    |     from eomaps import Maps                        | |img_minsize|                      |
     |     # ----- initialize a figure with an EOmaps map |                                    |
     |     m = Maps(ax=(.07, 0.53, .6, .3))               |                                    |
     |     # ----- add a normal matplotlib axes           |                                    |
@@ -552,7 +551,7 @@ Here's an example to show how it works:
     | .. code-block:: python                                                              | .. image:: _static/minigifs/dynamic_axes_updates.gif |
     |         :name: test_dynamic_axes_updates                                            |   :align: center                                     |
     |                                                                                     |                                                      |
-    |         from eomaps import Maps                                                     |                                                      |
+    |         from eomaps import Maps                                                     | |img_minsize|                                        |
     |                                                                                     |                                                      |
     |         # Initialize a new figure with an EOmaps map                                |                                                      |
     |         m = Maps(ax=223)                                                            |                                                      |

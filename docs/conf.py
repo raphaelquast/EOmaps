@@ -64,3 +64,14 @@ napoleon_attr_annotations = True
 # handle compiler warnings for duplicate labels due to documents
 # included via the  ..include:: directive
 exclude_patterns = ["introduction.rst"]
+
+
+# a global substitution used to fix issues with images in tables
+# in the mobile-theme (without a span they get resized to 0. This forces a size
+# of at least 20% of the browser-window size)
+
+rst_prolog = """
+    .. |img_minsize| raw:: html
+
+       <span style="display: inline-block; width: 20vw; height: 0px;"></span>
+    """

@@ -1,9 +1,17 @@
 
 🔬 Inset Maps
 --------------
+
+.. contents:: Contents:
+    :local:
+    :depth: 1
+
+How to create inset maps
+~~~~~~~~~~~~~~~~~~~~~~~~
+
 .. currentmodule:: eomaps.eomaps
 
-Inset maps that show zoomed-in regions can be created with :py:meth:`Maps.new_inset_map`.
+Inset maps are used to show zoomed-in regions of a map and can be created with :py:meth:`Maps.new_inset_map`.
 
 .. code-block:: python
     :name: test_inset_maps_01
@@ -47,7 +55,7 @@ To quickly re-position (and re-size) inset-maps, have a look at the :ref:`layout
     | .. code-block:: python                                          | .. image:: _static/minigifs/inset_maps.png |
     |     :name: test_inset_maps_02                                   |   :align: center                           |
     |                                                                 |                                            |
-    |     from eomaps import Maps                                     |                                            |
+    |     from eomaps import Maps                                     | |img_minsize|                              |
     |     m = Maps(Maps.CRS.PlateCarree(central_longitude=-60))       |                                            |
     |     m.add_feature.preset.ocean()                                |                                            |
     |                                                                 |                                            |
@@ -79,8 +87,8 @@ To quickly re-position (and re-size) inset-maps, have a look at the :ref:`layout
 
 .. _zoomed_in_views_on_datasets:
 
-🔎 Zoomed in views on datasets
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Zoomed in views on datasets
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. currentmodule:: eomaps.eomaps
 

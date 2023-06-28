@@ -47,7 +47,7 @@ If no explicit grid-spacing is provided (e.g. ``d=None``), the grid is dynamical
     | .. code-block:: python                                            | .. image:: _static/minigifs/grid_01.png |
     |   :name: test_add_gridlines                                       |     :align: center                      |
     |                                                                   |                                         |
-    |   from eomaps import Maps                                         |                                         |
+    |   from eomaps import Maps                                         | |img_minsize|                           |
     |   m = Maps(Maps.CRS.Mollweide(), frameon=False)                   |                                         |
     |   m.add_feature.preset.ocean()                                    |                                         |
     |                                                                   |                                         |
@@ -124,7 +124,7 @@ can be used (e.g. `color`, `fontsize`, `fontweight`, ...).
     | .. code-block:: python                                                   | .. image:: _static/minigifs/grid_labels_01.png |
     |     :name: test_grid_labels_01                                           |     :align: center                             |
     |                                                                          |                                                |
-    |     from eomaps import Maps                                              |                                                |
+    |     from eomaps import Maps                                              | |img_minsize|                                  |
     |     m = Maps(Maps.CRS.Stereographic(), figsize=(5, 6))                   |                                                |
     |     m.set_extent((-83, -20, -59, 13))                                    |                                                |
     |     m.add_feature.preset.coastline()                                     |                                                |

@@ -86,7 +86,7 @@ The following chapters provide comprehensive overview on the capabilities of EOm
 
     api_naturalearth_features
     api_webmaps
-    api_geodataframes
+    api_vector_data
 
     api_annotations_markers_etc
     api_scalebar
