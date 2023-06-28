@@ -300,10 +300,10 @@ class _ClickCallbacks(object):
 
                 printstr = (
                     f"{xlabel} = {x}\n"
-                    + f"{ylabel} = {y}\n"
-                    + (f"lon = {lon}\n" if not crs_is_lonlat else "")
-                    + (f"lat = {lat}\n" if not crs_is_lonlat else "")
-                    + (f"value = {val}" if val is not None else "")
+                    + f"{ylabel} = {y}"
+                    + (f"\nlon = {lon}" if not crs_is_lonlat else "")
+                    + (f"\nlat = {lat}" if not crs_is_lonlat else "")
+                    + (f"\nvalue = {val}" if val is not None else "")
                 )
 
         elif isinstance(text, str):
