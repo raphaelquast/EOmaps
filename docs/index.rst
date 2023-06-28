@@ -74,6 +74,7 @@ Contents
     :caption: Miscellaneous
 
     api_read_data
+    api_command_line_interface
     api_misc
 
 
