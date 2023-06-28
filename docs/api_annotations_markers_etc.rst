@@ -8,88 +8,6 @@
   :local:
   :depth: 1
 
-Markers
-~~~~~~~
-
-.. currentmodule:: eomaps.eomaps
-
-Static markers can be added to the map via :py:meth:`Maps.add_marker`.
-
-- If a dataset has been plotted, you can mark any datapoint via its ID, e.g. ``ID=...``
-- To add a marker at an arbitrary position, use ``xy=(...)``
-
-  - By default, the coordinates are assumed to be provided in the plot-crs
-  - You can specify arbitrary coordinates via ``xy_crs=...``
-
-- The radius is defined via ``radius=...``
-
-  - By default, the radius is assumed to be provided in the plot-crs
-  - You can specify the radius in an arbitrary crs via ``radius_crs=...``
-
-- The marker-shape is set via ``shape=...``
-
-  - Possible arguments are ``"ellipses"``, ``"rectangles"``, ``"geod_circles"``
-
-- Additional keyword-arguments are passed to the matplotlib collections used to draw the shapes
-  (e.g. "facecolor", "edgecolor", "linewidth", "alpha", etc.)
-
-- Multiple markers can be added in one go by using lists for ``xy``, ``radius``, etc.
-
-
-🛸 For dynamic markers checkout ``m.cb.click.attach.mark()`` or ``m.cb.pick.attach.mark()``
-
-
-.. autosummary::
-    :nosignatures:
-
-    Maps.add_marker
-
-
-
-.. table::
-    :widths: 50 50
-    :align: center
-
-    +---------------------------------------------------------------------------+-----------------------------------------+
-    | .. code-block:: python                                                    | .. image:: _static/minigifs/markers.png |
-    |     :name: test_add_markers                                               |   :align: center                        |
-    |                                                                           |                                         |
-    |     from eomaps import Maps                                               | |img_minsize|                           |
-    |     m = Maps(crs=4326)                                                    |                                         |
-    |     m.add_feature.preset.coastline()                                      |                                         |
-    |                                                                           |                                         |
-    |     # ----- SINGLE MARKERS                                                |                                         |
-    |     # by default, MARKER DIMENSIONS are defined in units of the plot-crs! |                                         |
-    |     m.add_marker(xy=(0, 0), radius=20, shape="rectangles",                |                                         |
-    |                  fc="y", ec="r", ls=":", lw=2)                            |                                         |
-    |     m.add_marker(xy=(0, 0), radius=10, shape="ellipses",                  |                                         |
-    |                  fc="darkorange", ec="r", ls=":", lw=2)                   |                                         |
-    |                                                                           |                                         |
-    |     # MARKER DIMENSIONS can be specified in any CRS!                      |                                         |
-    |     m.add_marker(xy=(12000000, 0), xy_crs=3857,                           |                                         |
-    |                  radius=5000000, radius_crs=3857,                         |                                         |
-    |                  fc=(.5, .5, 0, .4), ec="r", lw=3, n=100)                 |                                         |
-    |                                                                           |                                         |
-    |     # GEODETIC CIRCLES with radius defined in meters                      |                                         |
-    |     m.add_marker(xy=(-135, 35), radius=3000000, shape="geod_circles",     |                                         |
-    |                  fc="none", ec="r", hatch="///", lw=2, n=100)             |                                         |
-    |                                                                           |                                         |
-    |     # ----- MULTIPLE MARKERS                                              |                                         |
-    |     x = [-80, -40, 40, 80]    # x-coordinates of the markers              |                                         |
-    |     fc = ["r", "g", "b", "c"] # the colors of the markers                 |                                         |
-    |                                                                           |                                         |
-    |     # N markers with the same radius                                      |                                         |
-    |     m.add_marker(xy=(x, [-60]*4), radius=10, fc=fc)                       |                                         |
-    |                                                                           |                                         |
-    |     # N markers with different radius and properties                      |                                         |
-    |     m.add_marker(xy=(x, [0]*4),  radius=[15, 10, 5, 2],                   |                                         |
-    |                  fc=fc, ec=["none", "r", "g", "b"], alpha=[1, .5, 1, .5]) |                                         |
-    |                                                                           |                                         |
-    |     # N markers with different widths and heights                         |                                         |
-    |     radius = ([15, 10, 5, 15], [5, 15, 15, 2])                            |                                         |
-    |     m.add_marker(xy=(x, [60]*4), radius=radius, fc=fc)                    |                                         |
-    +---------------------------------------------------------------------------+-----------------------------------------+
-
 
 Annotations
 ~~~~~~~~~~~
@@ -98,9 +16,11 @@ Annotations
 
 Static annotations can be added to the map via :py:meth:`Maps.add_annotation`.
 
-- The location is defined completely similar to :py:meth:`m.add_marker` above.
+- If a dataset has been plotted, you can mark any datapoint via its ID, e.g. using ``ID=...``
+- To add a marker at an arbitrary position, use ``xy=(...)``
 
-  - You can annotate a datapoint via its ID, or arbitrary coordinates in any crs.
+  - By default, the coordinates are assumed to be provided in the plot-crs
+  - You can specify arbitrary coordinates via ``xy_crs=...``
 
 - Additional arguments are passed to `matplotlib.pyplot.annotate <https://matplotlib.org/stable/api/_as_gen/matplotlib.pyplot.annotate.html#>`_
   and `matplotlib.pyplot.text <https://matplotlib.org/stable/api/_as_gen/matplotlib.pyplot.text.html#>`_
@@ -108,12 +28,26 @@ Static annotations can be added to the map via :py:meth:`Maps.add_annotation`.
   - This gives a lot of flexibility to style the annotations!
 
 
-🛸 For dynamic annotations checkout ``m.cb.click.attach.annotate()`` or ``m.cb.pick.attach.annotate()``
+To dynamically add annotations if you click on the map, checkout the associated :ref:`pre-defined callback <predefined_callbacks>`
+``m.cb.click.attach.annotate()`` (or ``m.cb.pick.attach.annotate()``)
+
 
 .. autosummary::
     :nosignatures:
 
     Maps.add_annotation
+
+
+.. admonition:: Interactively add annotations and re-position/re-style existing annotations
+
+    The :ref:`Companion Widget <companion_widget>` provides some capabilities to quickly put annotations
+    on a map via the **Add Annotations** tab.
+
+    Starting with EOmaps v7.0 it is also possible to interactively edit existing annotations by activating
+    the **Edit Annotations** button.
+
+    .. image:: _static/widget_annotations.png
+      :width: 50%
 
 
 .. table::
@@ -172,6 +106,89 @@ Static annotations can be added to the map via :py:meth:`Maps.add_annotation`.
     |                          mutation_scale=40, fc="r",                               |                                             |
     |                          connectionstyle="angle3, angleA=90, angleB=-25"))        |                                             |
     +-----------------------------------------------------------------------------------+---------------------------------------------+
+
+
+Markers
+~~~~~~~
+
+.. currentmodule:: eomaps.eomaps
+
+Static markers can be added to the map via :py:meth:`Maps.add_marker`.
+
+- If a dataset has been plotted, you can mark any datapoint via its ID, e.g. ``ID=...``
+- To add a marker at an arbitrary position, use ``xy=(...)``
+
+  - By default, the coordinates are assumed to be provided in the plot-crs
+  - You can specify arbitrary coordinates via ``xy_crs=...``
+
+- The radius is defined via ``radius=...``
+
+  - By default, the radius is assumed to be provided in the plot-crs
+  - You can specify the radius in an arbitrary crs via ``radius_crs=...``
+
+- The marker-shape is set via ``shape=...``
+
+  - Possible arguments are ``"ellipses"``, ``"rectangles"``, ``"geod_circles"``
+
+- Additional keyword-arguments are passed to the matplotlib collections used to draw the shapes
+  (e.g. "facecolor", "edgecolor", "linewidth", "alpha", etc.)
+
+- Multiple markers can be added in one go by using lists for ``xy``, ``radius``, etc.
+
+
+To dynamically add markers if you click on the map, checkout the associated :ref:`pre-defined callback <predefined_callbacks>`
+``m.cb.click.attach.mark()`` (or ``m.cb.pick.attach.mark()``)
+
+.. autosummary::
+    :nosignatures:
+
+    Maps.add_marker
+
+
+
+.. table::
+    :widths: 50 50
+    :align: center
+
+    +---------------------------------------------------------------------------+-----------------------------------------+
+    | .. code-block:: python                                                    | .. image:: _static/minigifs/markers.png |
+    |     :name: test_add_markers                                               |   :align: center                        |
+    |                                                                           |                                         |
+    |     from eomaps import Maps                                               | |img_minsize|                           |
+    |     m = Maps(crs=4326)                                                    |                                         |
+    |     m.add_feature.preset.coastline()                                      |                                         |
+    |                                                                           |                                         |
+    |     # ----- SINGLE MARKERS                                                |                                         |
+    |     # by default, MARKER DIMENSIONS are defined in units of the plot-crs! |                                         |
+    |     m.add_marker(xy=(0, 0), radius=20, shape="rectangles",                |                                         |
+    |                  fc="y", ec="r", ls=":", lw=2)                            |                                         |
+    |     m.add_marker(xy=(0, 0), radius=10, shape="ellipses",                  |                                         |
+    |                  fc="darkorange", ec="r", ls=":", lw=2)                   |                                         |
+    |                                                                           |                                         |
+    |     # MARKER DIMENSIONS can be specified in any CRS!                      |                                         |
+    |     m.add_marker(xy=(12000000, 0), xy_crs=3857,                           |                                         |
+    |                  radius=5000000, radius_crs=3857,                         |                                         |
+    |                  fc=(.5, .5, 0, .4), ec="r", lw=3, n=100)                 |                                         |
+    |                                                                           |                                         |
+    |     # GEODETIC CIRCLES with radius defined in meters                      |                                         |
+    |     m.add_marker(xy=(-135, 35), radius=3000000, shape="geod_circles",     |                                         |
+    |                  fc="none", ec="r", hatch="///", lw=2, n=100)             |                                         |
+    |                                                                           |                                         |
+    |     # ----- MULTIPLE MARKERS                                              |                                         |
+    |     x = [-80, -40, 40, 80]    # x-coordinates of the markers              |                                         |
+    |     fc = ["r", "g", "b", "c"] # the colors of the markers                 |                                         |
+    |                                                                           |                                         |
+    |     # N markers with the same radius                                      |                                         |
+    |     m.add_marker(xy=(x, [-60]*4), radius=10, fc=fc)                       |                                         |
+    |                                                                           |                                         |
+    |     # N markers with different radius and properties                      |                                         |
+    |     m.add_marker(xy=(x, [0]*4),  radius=[15, 10, 5, 2],                   |                                         |
+    |                  fc=fc, ec=["none", "r", "g", "b"], alpha=[1, .5, 1, .5]) |                                         |
+    |                                                                           |                                         |
+    |     # N markers with different widths and heights                         |                                         |
+    |     radius = ([15, 10, 5, 15], [5, 15, 15, 2])                            |                                         |
+    |     m.add_marker(xy=(x, [60]*4), radius=radius, fc=fc)                    |                                         |
+    +---------------------------------------------------------------------------+-----------------------------------------+
 
 
 Lines
