@@ -99,46 +99,63 @@ class _ClickCallbacks(object):
         except Exception:
             return str(x)
 
-    def print_to_console(self, **kwargs):
+    def print_to_console(
+        self,
+        pos_precision=4,
+        val_precision=4,
+        text=None,
+        show_all_values=True,
+        **kwargs,
+    ):
         """
         Print details on the clicked pixel to the console.
 
-        Additional kwargs are passed to `numpy.array2string()`
-        to control the formatting of the printed values.
+        Parameters
+        ----------
+
+        pos_precision : int
+            The floating-point precision of the coordinates.
+            The default is 4.
+        val_precision : int
+            The floating-point precision of the parameter-values (only used if
+            "val_fmt=None"). The default is 4.
+        text : callable or str, optional
+            if str: the string to print
+            if callable: A function that returns the string that should be
+            printed in the annotation with the following call-signature:
+
+                >>> def text(m, ID, val, pos, ind):
+                >>>     # m   ... the Maps object
+                >>>     # ID  ... the ID in the dataframe
+                >>>     # pos ... the position
+                >>>     # val ... the value
+                >>>     # ind ... the index
+                >>>
+                >>>     return "the string to print"
+
+            The default is None.
+        show_all_values : bool, optional
+            If True, show all values and coordinates of picked points.
+            If False, only (min...max) values are shown if multiple datapoints are
+            picked. The default is True.
         """
         ID, pos, val, ind, picker_name, val_color = self._popargs(kwargs)
 
-        if isinstance(self.m.data_specs.x, str):
-            xlabel = self.m.data_specs.x
-            ylabel = self.m.data_specs.y
+        printstr = self._get_annotation_text(
+            ID=ID,
+            pos=pos,
+            val=val,
+            ind=ind,
+            pos_precision=pos_precision,
+            val_precision=val_precision,
+            text=text,
+            show_all_values=show_all_values,
+        )
+
+        if text is None:
+            print("\n# ---------------\n" + printstr)
         else:
-            xlabel = "x"
-            ylabel = "y"
-
-        if ID is not None:
-            x, y = pos
-
-            printstr = (
-                "---------------\n"
-                f"{xlabel} = {self._fmt(x, **kwargs)}\n"
-                f"{ylabel} = {self._fmt(y, **kwargs)}\n"
-                f"ID = {self._fmt(ID, **kwargs)}\n"
-            )
-
-            paramname = self.m.data_specs.parameter
-            if paramname is None:
-                paramname = "val"
-            printstr += f"{paramname} = {self._fmt(val)}"
-        else:
-            lon, lat = self.m._transf_plot_to_lonlat.transform(*pos)
-
-            printstr = (
-                "---------------\n"
-                f"xy = ({self._fmt(pos[0], **kwargs)}, {self._fmt(pos[1], **kwargs)})\n"
-                f"lonlat = ({self._fmt(lon, **kwargs)}, {self._fmt(lat, **kwargs)})\n"
-            )
-
-        print(printstr)
+            print(printstr)
 
     def _get_annotation_text(
         self,
@@ -149,6 +166,7 @@ class _ClickCallbacks(object):
         pos_precision=4,
         val_precision=4,
         text=None,
+        show_all_values=False,
     ):
 
         if isinstance(ind, (list, np.ndarray)):
@@ -178,6 +196,8 @@ class _ClickCallbacks(object):
         else:
             parameter = self.m.data_specs.parameter
 
+        crs_is_lonlat = self.m._get_cartopy_crs(4326) is self.m.crs_plot
+
         if text is None:
             # use "ind is not None" to distinguish between click and pick
             # TODO implement better distinction between click and pick!
@@ -197,67 +217,93 @@ class _ClickCallbacks(object):
                             val, trim="-", precision=val_precision
                         )
                 else:
-                    coords = [
-                        *self.m._data_manager._get_xy_from_index(ind),
-                        *self.m._data_manager._get_xy_from_index(ind, reprojected=True),
-                    ]
+                    if not show_all_values:
+                        # only show min-max values of picked points
+                        coords = [
+                            *self.m._data_manager._get_xy_from_index(ind),
+                            *self.m._data_manager._get_xy_from_index(
+                                ind, reprojected=True
+                            ),
+                        ]
 
-                    for n, c in enumerate(coords):
-                        mi = np.format_float_positional(
-                            np.nanmin(c), trim="-", precision=pos_precision
-                        )
-                        ma = np.format_float_positional(
-                            np.nanmax(c), trim="-", precision=pos_precision
-                        )
-                        coords[n] = f"{mi} ... {ma}"
-
-                    x, y, x0, y0 = coords
-
-                    if ID is not None:
-                        ID = f"{np.nanmin(ID)} ... {np.nanmax(ID)}"
-
-                    if val is not None:
-                        val = np.array(val, dtype=float)  # to handle None
-
-                        # catch warnings here to avoid showing "all-nan-slice"
-                        # all the time when clicking on empty pixels
-                        with warnings.catch_warnings():
+                        for n, c in enumerate(coords):
                             mi = np.format_float_positional(
-                                np.nanmin(val), trim="-", precision=pos_precision
+                                np.nanmin(c), trim="-", precision=pos_precision
                             )
                             ma = np.format_float_positional(
-                                np.nanmax(val), trim="-", precision=pos_precision
+                                np.nanmax(c), trim="-", precision=pos_precision
                             )
-                        val = f"{mi}...{ma}"
+                            coords[n] = f"{mi} ... {ma}"
 
-                equal_crs = self.m.data_specs.crs != self.m._crs_plot
+                        x, y, x0, y0 = coords
+
+                        if ID is not None:
+                            ID = f"{np.nanmin(ID)} ... {np.nanmax(ID)}"
+
+                        if val is not None:
+                            val = np.array(val, dtype=float)  # to handle None
+
+                            # catch warnings here to avoid showing "all-nan-slice"
+                            # all the time when clicking on empty pixels
+                            with warnings.catch_warnings():
+                                mi = np.format_float_positional(
+                                    np.nanmin(val), trim="-", precision=pos_precision
+                                )
+                                ma = np.format_float_positional(
+                                    np.nanmax(val), trim="-", precision=pos_precision
+                                )
+                            val = f"{mi}...{ma}"
+                    else:
+                        coords = (
+                            *self.m._data_manager._get_xy_from_index(ind),
+                            *self.m._data_manager._get_xy_from_index(
+                                ind, reprojected=True
+                            ),
+                        )
+
+                        x, y, x0, y0 = map(
+                            lambda x: self._fmt(x, precision=pos_precision), coords
+                        )
+                        if val is not None:
+                            val = self._fmt(
+                                np.array(val, dtype=float), precision=val_precision
+                            )
+                        if ID is not None:
+                            ID = self._fmt(np.asanyarray(ID))
+
+                equal_crs = self.m.data_specs.crs == self.m._crs_plot
                 printstr = (
-                    (f"Picked {n_ids} points\n" if multipick else "")
-                    + f"{xlabel} = {x}"
-                    + (f" ({x0})\n" if equal_crs else "\n")
-                    + f"{ylabel} = {y}"
-                    + (f" ({y0})\n" if equal_crs else "\n")
-                    + (f"ID = {ID}" if ID is not None else "")
-                    + (f"\n{parameter} = {val}" if val is not None else "")
+                    (f"# Picked {n_ids} points\n" if multipick else "")
+                    + f"{xlabel} = {x}\n"
+                    + (f"{xlabel}_plot = {x0}\n" if not equal_crs else "")
+                    + f"{ylabel} = {y}\n"
+                    + (f"{ylabel}_plot = {y0}\n" if not equal_crs else "")
+                    + (f"ID = {ID}\n" if ID is not None else "")
+                    + (f"{parameter} = {val}" if val is not None else "")
                 )
 
             else:
-                lon, lat = self.m._transf_plot_to_lonlat.transform(*pos)
+                if not crs_is_lonlat:
+                    xlabel, ylabel = "x", "y"
+                    lon, lat = self.m._transf_plot_to_lonlat.transform(*pos)
+                    lon, lat = [
+                        np.format_float_positional(i, trim="-", precision=pos_precision)
+                        for i in (lon, lat)
+                    ]
+                else:
+                    xlabel, ylabel = "lon", "lat"
+
                 x, y = [
                     np.format_float_positional(i, trim="-", precision=pos_precision)
                     for i in pos
                 ]
-                lon, lat = [
-                    np.format_float_positional(i, trim="-", precision=pos_precision)
-                    for i in (lon, lat)
-                ]
 
                 printstr = (
-                    f"x = {x}\n"
-                    + f"y = {y}\n"
-                    + f"lon = {lon}\n"
-                    + f"lat = {lat}"
-                    + (f"\nvalue = {val}" if val is not None else "")
+                    f"{xlabel} = {x}\n"
+                    + f"{ylabel} = {y}\n"
+                    + (f"lon = {lon}\n" if not crs_is_lonlat else "")
+                    + (f"lat = {lat}\n" if not crs_is_lonlat else "")
+                    + (f"value = {val}" if val is not None else "")
                 )
 
         elif isinstance(text, str):
@@ -277,6 +323,7 @@ class _ClickCallbacks(object):
         text=None,
         zorder=20,
         layer=None,
+        show_all_values=False,
         **kwargs,
     ):
         """
@@ -326,6 +373,10 @@ class _ClickCallbacks(object):
             The layer to put the marker on.
             If None, the layer associated with the used Maps-object (e.g. `m.layer`)
             The default is None
+        show_all_values : bool, optional
+            If True, show all values and coordinates of picked points.
+            If False, only (min...max) values are shown if multiple datapoints are
+            picked. The default is True.
         kwargs
             kwargs passed to matplotlib.pyplot.annotate(). The default is:
 
@@ -367,6 +418,7 @@ class _ClickCallbacks(object):
             pos_precision=4,
             val_precision=4,
             text=text,
+            show_all_values=show_all_values,
         )
 
         if printstr is not None:
