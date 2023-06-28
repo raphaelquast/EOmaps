@@ -147,7 +147,7 @@ arrow_color_helptext = (
 arrow_color_tooltip = "<b>click</b>: set arrow color"
 
 
-class AddAnnotationInput(QtWidgets.QWidget):
+class AddAnnotationWidget(QtWidgets.QWidget):
     widgetShown = pyqtSignal()
 
     def __init__(self, *args, m=None, **kwargs):
@@ -206,9 +206,9 @@ class AddAnnotationInput(QtWidgets.QWidget):
         self.arrow_color.cb_colorselected = self.patch_colorselected
         self.arrow_color.setMaximumSize(15, 15)
 
-        self.b = AnnotateButton()
-        self.b.clicked.connect(self.do_add_annotation)
-        self.b.setSizePolicy(
+        self.annotate_button = AnnotateButton()
+        self.annotate_button.clicked.connect(self.do_add_annotation)
+        self.annotate_button.setSizePolicy(
             QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Preferred
         )
 
@@ -263,7 +263,7 @@ class AddAnnotationInput(QtWidgets.QWidget):
 
         layout_1 = QtWidgets.QVBoxLayout()
         layout_1.addLayout(layout_0)
-        layout_1.addWidget(self.b, 1)
+        layout_1.addWidget(self.annotate_button, 1)
 
         layout_h = QtWidgets.QHBoxLayout()
         layout_h.addLayout(layout_1)
@@ -548,7 +548,7 @@ class AddAnnotationInput(QtWidgets.QWidget):
 
         self._annotation_active = False
         self.text_inp.setEnabled(True)
-        self.b.setText("Create Annotation")
+        self.annotate_button.setText("Create Annotation")
 
         self.text_inp.setText(self._last_text_inp)
         self.text_inp.setStyleSheet("background-color: none")
@@ -628,7 +628,7 @@ class AddAnnotationInput(QtWidgets.QWidget):
         self._annotation_active = True
         self.enable_widgets(False)
 
-        self.b.setText("Cancel")
+        self.annotate_button.setText("Cancel")
 
     def showEvent(self, event):
         self.widgetShown.emit()

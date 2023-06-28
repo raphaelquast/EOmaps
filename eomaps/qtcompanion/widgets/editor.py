@@ -8,7 +8,7 @@ from ...inset_maps import InsetMaps
 from ..common import iconpath
 from .wms import AddWMSMenuButton
 from .utils import ColorWithSlidersWidget, GetColorWidget
-from .annotate import AddAnnotationInput
+from .annotate import AddAnnotationWidget
 from .draw import DrawerTabs
 
 
@@ -1367,7 +1367,7 @@ class ArtistEditor(QtWidgets.QWidget):
         self.edit_actions.NewLayerCreated.connect(self.artist_tabs.populate)
 
         self.addfeature = AddFeatureWidget(m=self.m)
-        self.addannotation = AddAnnotationInput(m=self.m)
+        self.addannotation = AddAnnotationWidget(m=self.m)
         self.draw = DrawerTabs(m=self.m)
 
         # add a margin to the top of the drawer widget
