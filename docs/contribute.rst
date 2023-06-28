@@ -38,7 +38,7 @@ Content of ``eomaps.yml``:
     - conda-forge
 
     dependencies:
-    # --------------for EOmaps
+    # -------------- for EOmaps
     - numpy
     - scipy
     - matplotlib>=3.0
@@ -47,28 +47,28 @@ Content of ``eomaps.yml``:
     - mapclassify
     - pyproj
     - pyepsg
-    # --------------for DataFrames
+    # -------------- for DataFrames
     - pandas
-    # --------------for vector data
+    # -------------- for vector data
     - geopandas
-    # --------------for data-shading
+    # -------------- for data-shading
     - datashader
-    # --------------for GeoTIFF and NetCDF files
+    # -------------- for GeoTIFF and NetCDF files
     - netcdf4
     - xarray
     - rioxarray
-    # --------------for WebMaps
+    # -------------- for WebMaps
     - owslib
     - requests
     - xmltodict
     - cairosvg
-    # --------------for testing
+    # -------------- for testing
     - coveralls
     - pytest
     - pytest-cov
-    # ..............for version control
+    # -------------- for version control
     - git
-    # --------------for building the docs
+    # -------------- for building the docs
     - sphinx-copybutton
     - sphinx
     - docutils
