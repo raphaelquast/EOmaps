@@ -1098,12 +1098,17 @@ class LayoutEditor:
 
     def _make_draggable(self, filepath=None):
         # Uncheck avtive pan/zoom actions of the matplotlib toolbar.
-        toolbar = getattr(self.m.BM.canvas, "toolbar", None)
-        if toolbar is not None:
-            for key in ["pan", "zoom"]:
-                val = toolbar._actions.get(key, None)
-                if val is not None and val.isCheckable() and val.isChecked():
-                    val.trigger()
+        # use a try-except block to avoid issues with ipympl in jupyter notebooks
+        # (see https://github.com/matplotlib/ipympl/issues/530#issue-1780919042)
+        try:
+            toolbar = getattr(self.m.BM.canvas, "toolbar", None)
+            if toolbar is not None:
+                for key in ["pan", "zoom"]:
+                    val = toolbar._actions.get(key, None)
+                    if val is not None and val.isCheckable() and val.isChecked():
+                        val.trigger()
+        except AttributeError:
+            pass
 
         self._filepath = filepath
         self.modifier_pressed = True
