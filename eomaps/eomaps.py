@@ -2248,7 +2248,15 @@ class Maps:
             for (x0, x1), (y0, y1), ni, di in zip(pairwise(x), pairwise(y), n, del_s):
 
                 npts, d_int, d_tot, lon, lat, _ = geod.inv_intermediate(
-                    x0, y0, x1, y1, del_s=di, npts=ni, initial_idx=0, terminus_idx=0
+                    lon1=x0,
+                    lat1=y0,
+                    lon2=x1,
+                    lat2=y1,
+                    del_s=di,
+                    npts=ni,
+                    initial_idx=0,
+                    terminus_idx=0,
+                    return_back_azimuth=False,  # to avoid pyproj 3.5+ warning
                 )
 
                 out_d_int.append(d_int)

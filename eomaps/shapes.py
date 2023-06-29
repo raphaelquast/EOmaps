@@ -413,13 +413,14 @@ class Shapes(object):
 
             geod = self._m.crs_plot.get_geod()
             lons, lats, back_azim = geod.fwd(
-                np.broadcast_to(lon[:, None], (size, n)),
-                np.broadcast_to(lat[:, None], (size, n)),
-                np.linspace(
+                lons=np.broadcast_to(lon[:, None], (size, n)),
+                lats=np.broadcast_to(lat[:, None], (size, n)),
+                az=np.linspace(
                     [start_angle] * size, [360 - start_angle] * size, n, axis=1
                 ),
-                radius,
+                dist=radius,
                 radians=False,
+                return_back_azimuth=False,  # to avoid pyproj 3.5+ warning
             )
 
             return lons.T, lats.T

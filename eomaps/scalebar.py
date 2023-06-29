@@ -952,6 +952,7 @@ class ScaleBar:
             del_s=self._current_scale,
             initial_idx=0,
             terminus_idx=0,
+            return_back_azimuth=False,  # to avoid pyproj 3.5+ warning
         )
 
         if isinstance(self._label_props["every"], int):
@@ -976,6 +977,7 @@ class ScaleBar:
                 npts=self._interm_pts,
                 initial_idx=0,
                 terminus_idx=0,
+                return_back_azimuth=False,  # to avoid pyproj 3.5+ warning
             )
             lons.append(p.lons)
             lats.append(p.lats)
