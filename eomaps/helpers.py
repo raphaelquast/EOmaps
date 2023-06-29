@@ -1313,7 +1313,7 @@ class LayoutEditor:
             *g.T,
             lw=0,
             marker=".",
-            markerfacecolor="k",
+            markerfacecolor="steelblue",
             markeredgecolor="none",
             ms=(snapx + snapy) / 6,
         )
