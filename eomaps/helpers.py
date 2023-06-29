@@ -2499,7 +2499,7 @@ class BlitManager:
                     # ignore errors if the artist is not present in the list
                     pass
 
-    def _get_showlayer_name(self, layer=None):
+    def _get_showlayer_name(self, layer=None, transparent=False):
         # combine all layers that should be shown
         # (e.g. to add spines, backgrounds and inset-maps)
 
@@ -2510,7 +2510,10 @@ class BlitManager:
         if layer.startswith("__"):
             return layer
 
-        show_layers = [layer, "__SPINES__"]
+        if transparent is True:
+            show_layers = [layer, "__SPINES__"]
+        else:
+            show_layers = ["__BG__", layer, "__SPINES__"]
 
         # show inset map layers and spines only if they contain at least 1 artist
         inset_Q = False

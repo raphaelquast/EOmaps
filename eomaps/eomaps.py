@@ -77,7 +77,7 @@ def _handle_backends():
 
     if plt.isinteractive():
         if plt.get_backend() in [
-            "module://ipympl.backend_nbagg",
+            "module://ipympl.backend_nbagg",  # to avoid flickering in the layout editor
             "module://matplotlib_inline.backend_inline",
         ]:
             plt.ioff()
