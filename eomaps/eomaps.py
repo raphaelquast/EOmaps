@@ -75,11 +75,10 @@ _backend_warning_shown = False
 def _handle_backends():
     global _backend_warning_shown
 
+    active_backend = plt.get_backend()
+
     if plt.isinteractive():
-        if plt.get_backend() in [
-            "module://ipympl.backend_nbagg",  # to avoid flickering in the layout editor
-            "module://matplotlib_inline.backend_inline",
-        ]:
+        if active_backend in ["module://matplotlib_inline.backend_inline"]:
             plt.ioff()
 
             if not _backend_warning_shown:
@@ -91,6 +90,11 @@ def _handle_backends():
                 )
 
                 _backend_warning_shown = True
+
+    # to avoid flickering in the layout editor in jupyter notebooks
+    if plt.isinteractive():
+        if active_backend in ["module://ipympl.backend_nbagg"]:
+            plt.ioff()
 
 
 _handle_backends()
