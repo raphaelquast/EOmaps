@@ -420,7 +420,6 @@ class Shapes(object):
                 ),
                 dist=radius,
                 radians=False,
-                return_back_azimuth=False,  # to avoid pyproj 3.5+ warning
             )
 
             return lons.T, lats.T

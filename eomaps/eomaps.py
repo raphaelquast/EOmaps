@@ -2260,7 +2260,6 @@ class Maps:
                     npts=ni,
                     initial_idx=0,
                     terminus_idx=0,
-                    return_back_azimuth=False,  # to avoid pyproj 3.5+ warning
                 )
 
                 out_d_int.append(d_int)
