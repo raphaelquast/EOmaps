@@ -98,7 +98,7 @@ Then, open a terminal, navigate to the folder you want to work in and clone the 
 
 .. code-block:: console
 
-    git clone < url to fork of EOmaps repository>
+    git clone < url to fork of EOmaps repository >
 
 For development, make sure that you first checkout the ``dev`` branch which contains all pending changes for the next release.
 Then, create a new feature or bug-fix branch and start coding!
