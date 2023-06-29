@@ -3790,8 +3790,9 @@ class Maps:
         if newfig:
             # we only need to call show if a new figure has been created!
             if (
-                plt.isinteractive()
-                or plt.get_backend() == "module://ipympl.backend_nbagg"
+                # plt.isinteractive() or
+                plt.get_backend()
+                == "module://ipympl.backend_nbagg"
             ):
                 # make sure to call show only if we use an interactive backend...
                 # or within the ipympl backend (otherwise it will block subsequent code!)
