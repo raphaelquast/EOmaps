@@ -99,16 +99,14 @@ class Shapes(object):
 
                 if radiusx == radiusy:
                     _log.info(
-                        "EOmaps: radius:",
-                        np.format_float_scientific(radiusx, precision=4),
+                        "EOmaps: radius: "
+                        f"{np.format_float_scientific(radiusx, precision=4)}"
                     )
                 else:
                     _log.info(
-                        "EOmaps: radius:" "(",
-                        np.format_float_scientific(radiusx, precision=4),
-                        ",",
-                        np.format_float_scientific(radiusy, precision=4),
-                        ")",
+                        "EOmaps: radius: "
+                        f"({np.format_float_scientific(radiusx, precision=4)}, "
+                        f"{np.format_float_scientific(radiusy, precision=4)})"
                     )
                 radius = (radiusx, radiusy)
                 # remember estimated radius to avoid re-calculating it all the time
