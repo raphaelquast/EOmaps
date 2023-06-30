@@ -505,10 +505,9 @@ class DataManager:
             self.m.cb.pick._set_artist(coll)
 
         except Exception as ex:
-            print(
-                f"EOmaps: Unable to plot the data for the layer '{layer}' !"
-                f"\n        {ex}"
-            )
+            raise AssertionError(
+                f"EOmaps: Unable to plot the data for the layer '{layer}'!"
+            ) from ex
 
     def data_in_extent(self, extent):
         # check if the data extent collides with the map extent
