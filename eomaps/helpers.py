@@ -2619,7 +2619,7 @@ class BlitManager:
         if (
             blit
             and not getattr(self._m, "_snapshotting", False)
-            and self._snapshot_on_update is True
+            and BlitManager._snapshot_on_update is True
         ):
             self._m.snapshot(clear=True)
 

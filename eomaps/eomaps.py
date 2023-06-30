@@ -69,8 +69,6 @@ from ._data_manager import DataManager
 
 from ._version import __version__
 
-_backend_warning_shown = False
-
 
 def _handle_backends():
     # make sure that the backend is activated
@@ -81,27 +79,33 @@ def _handle_backends():
     # calls plt.ion() when the backend is loaded.
     plt.switch_backend(plt.get_backend())
 
-    global _backend_warning_shown
-
     active_backend = plt.get_backend()
 
-    if plt.isinteractive():
-        if active_backend in ["module://matplotlib_inline.backend_inline"]:
+    if active_backend in ["module://matplotlib_inline.backend_inline"]:
+        plt.ioff()
+
+        if not Maps._backend_warning_shown and not BlitManager._snapshot_on_update:
+            warnings.warn(
+                "EOmaps disables matplotlib's interactive mode (e.g. 'plt.ioff()') "
+                f"for the backend {plt.get_backend()}.\n"
+                "Call `m.snapshot()` to print a static snapshot of the map "
+                "to a Jupyter Notebook cell (or an IPython console)!"
+            )
+
+            Maps._backend_warning_shown = True
+
+    # to avoid flickering in the layout editor in jupyter notebooks
+    elif active_backend in ["module://ipympl.backend_nbagg"]:
+        plt.ioff()
+    else:
+        if Maps._use_interactive_mode:
+            plt.ion()
+        else:
             plt.ioff()
-
-            if not _backend_warning_shown and not BlitManager._snapshot_on_update:
-                warnings.warn(
-                    "EOmaps disables matplotlib's interactive mode (e.g. 'plt.ioff()') "
-                    f"for the backend {plt.get_backend()}.\n"
-                    "Call `m.snapshot()` to print a static snapshot of the map "
-                    "to a Jupyter Notebook cell (or an IPython console)!"
-                )
-
-                _backend_warning_shown = True
-
-        # to avoid flickering in the layout editor in jupyter notebooks
-        elif active_backend in ["module://ipympl.backend_nbagg"]:
-            plt.ioff()
+            warnings.warn(
+                "EOmaps: matplotlib's interactive mode is turned off. "
+                "Call `m.show()` to show the map!"
+            )
 
     # check if we are in an ipython console using the inline-backend.
     # If yes, put a snapshot of the map into the active cell on each update
@@ -140,11 +144,18 @@ _CLASSIFIERS = (
 
 
 class _MapsMeta(type):
+
+    _use_interactive_mode = True
+    _always_on_top = False
+
+    _backend_warning_shown = False
+
     def config(
         cls,
         snapshot_on_update=None,
         companion_widget_key=None,
         always_on_top=None,
+        use_interactive_mode=True,
     ):
         """
         Set global configuration parameters for figures created with EOmaps.
@@ -176,7 +187,13 @@ class _MapsMeta(type):
             - If True, the figure will be kept "always on top" of other applications.
 
             The default is False.
+        use_interactive_mode : bool, optional
+            If True, matplotlibs interactive mode (`plt.ion()`) is activated by default
+            for all backends except jupyter-notebook backends (`inline` and `ipympl`).
 
+            If False, a call to `m.show()` is required to trigger showing the figure!
+
+            The default is True.
         """
         if companion_widget_key is not None:
             Maps._companion_widget_key = companion_widget_key
@@ -186,6 +203,9 @@ class _MapsMeta(type):
 
         if snapshot_on_update is not None:
             BlitManager._snapshot_on_update = snapshot_on_update
+
+        if use_interactive_mode is not None:
+            Maps._use_interactive_mode = use_interactive_mode
 
 
 class Maps(metaclass=_MapsMeta):
@@ -313,8 +333,6 @@ class Maps(metaclass=_MapsMeta):
     # max. number of layers to show all layers as tabs in the widget
     # (otherwise only recently active layers are shown as tabs)
     _companion_widget_n_layer_tabs = 50
-    # keep the companion-widget (and the figure) on top of other windows
-    _always_on_top = False
 
     CLASSIFIERS = SimpleNamespace(**dict(zip(_CLASSIFIERS, _CLASSIFIERS)))
     "Accessor for available classification schemes."
@@ -3081,6 +3099,8 @@ class Maps(metaclass=_MapsMeta):
                 # inline-backend is used
                 if active_backend in ["module://matplotlib_inline.backend_inline"]:
                     self.snapshot(clear=clear)
+                else:
+                    plt.show()
 
     def snapshot(self, *layer, transparent=False, clear=False):
         """
