@@ -641,7 +641,7 @@ class AddAnnotationWidget(QtWidgets.QWidget):
     @pyqtSlot()
     def toggle_annotations_editable(self):
         if not self._annotations_editable:
-            self.m._edit_annotations(True, print_msg=False)
+            self.m._edit_annotations(True)
             self.window().statusBar().showMessage(
                 "Annotations editable! "
                 "< control >: Move  |  < shift >: Resize  |   < R >: Rotate"

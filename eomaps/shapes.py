@@ -1,13 +1,17 @@
 """Plot shape classes (for data visualization)."""
 
+import logging
 from functools import partial, wraps
-import warnings
+
 from matplotlib.collections import PolyCollection, QuadMesh, TriMesh
 from matplotlib.tri import Triangulation
+
 from pyproj import CRS
 import numpy as np
 
 from .helpers import register_modules
+
+_log = logging.getLogger(__name__)
 
 
 class Shapes(object):
@@ -90,21 +94,19 @@ class Shapes(object):
                 if m._data_manager.x0 is None:
                     m._data_manager.set_props(None)
 
-                print("EOmaps: estimating radius...")
+                _log.info("EOmaps: estimating radius...")
                 radiusx, radiusy = Shapes._estimate_radius(m, radius_crs)
 
                 if radiusx == radiusy:
-                    print(
-                        "EOmaps: radius:",
-                        np.format_float_scientific(radiusx, precision=4),
+                    _log.info(
+                        "EOmaps: radius: "
+                        f"{np.format_float_scientific(radiusx, precision=4)}"
                     )
                 else:
-                    print(
-                        "EOmaps: radius:" "(",
-                        np.format_float_scientific(radiusx, precision=4),
-                        ",",
-                        np.format_float_scientific(radiusy, precision=4),
-                        ")",
+                    _log.info(
+                        "EOmaps: radius: "
+                        f"({np.format_float_scientific(radiusx, precision=4)}, "
+                        f"{np.format_float_scientific(radiusy, precision=4)})"
                     )
                 radius = (radiusx, radiusy)
                 # remember estimated radius to avoid re-calculating it all the time
@@ -302,9 +304,7 @@ class Shapes(object):
         def n(self, val):
             if self.name == "rectangles" and self.mesh is True:
                 if val is not None and val != 1:
-                    warnings.warn(
-                        "EOmaps: rectangles with 'mesh=True' only supports n=1"
-                    )
+                    _log.info("EOmaps: rectangles with 'mesh=True' only support n=1")
                 self._n = 1
             else:
                 self._n = val

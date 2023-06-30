@@ -1,4 +1,6 @@
 """a collection of useful helper-functions."""
+
+import logging
 from itertools import tee
 import re
 import sys
@@ -18,6 +20,8 @@ from matplotlib.colors import LinearSegmentedColormap, ListedColormap
 from matplotlib.transforms import Bbox, TransformedBbox
 from matplotlib.axis import XAxis, YAxis
 from matplotlib.spines import Spine
+
+_log = logging.getLogger(__name__)
 
 
 @lru_cache()
@@ -223,7 +227,9 @@ def _add_to_docstring(prefix=None, suffix=None, insert=None):
                         )
                         doc = "\n".join(docsplit)
                     except ValueError:
-                        print(f"EOmaps: Unable to update docstring for {f.__name__}")
+                        _log.debug(
+                            f"EOmaps: Unable to update docstring for {f.__name__}"
+                        )
 
             if prefix is not None:
                 doc = prefix + "\n" + doc
@@ -233,7 +239,7 @@ def _add_to_docstring(prefix=None, suffix=None, insert=None):
             inner.__doc__ = doc
             return inner
         except Exception:
-            print(f"EOmaps: Unable to update docstring for {f.__name__}")
+            _log.debug(f"EOmaps: Unable to update docstring for {f.__name__}")
             return f
 
     return decorator
@@ -294,7 +300,7 @@ class SearchTree:
                 try:
                     radius = self._m.set_shape._estimate_radius(self._m, "out", np.max)
                 except AssertionError:
-                    print(
+                    _log.error(
                         "EOmaps: Unable to estimate search-radius based on data."
                         "Defaulting to `np.inf`. "
                         "See `m.cb.pick.set_props(search_radius=...)` for more details!"
@@ -1112,7 +1118,9 @@ class LayoutEditor:
 
         self._filepath = filepath
         self.modifier_pressed = True
-        print("EOmaps: Layout Editor activated! (press 'esc' to exit and 'q' for info)")
+        _log.info(
+            "EOmaps: Layout Editor activated! (press 'esc' to exit and 'q' for info)"
+        )
 
         self._history.clear()
         self._history_undone.clear()
@@ -1224,22 +1232,24 @@ class LayoutEditor:
                 try:
                     toolbar.update()
                 except Exception:
-                    print("EOmaps: Error while trying to reset the axes stack!")
+                    _log.exception(
+                        "EOmaps: Error while trying to reset the axes stack!"
+                    )
 
         # clear all picks on exit
         self._ax_picked = []
         self._cb_picked = []
         self._m_picked = []
 
-        print("EOmaps: Exiting layout-editor mode...")
+        _log.info("EOmaps: Exiting layout-editor mode...")
 
         # in case a filepath was provided, save the new layout
         if self._filepath:
             try:
                 self.m.get_layout(filepath=self._filepath, override=True)
             except Exception:
-                print(
-                    "EOmaps WARNING: The layout could not be saved to the provided "
+                _log.exception(
+                    "EOmaps: Layout could not be saved to the provided "
                     + f"filepath: '{self._filepath}'."
                 )
 
@@ -1401,7 +1411,7 @@ class LayoutEditor:
             ), f"The file {filepath} already exists! Use override=True to relace it."
             with open(filepath, "w") as file:
                 json.dump(layout, file)
-            print("EOmaps: Layout saved to:\n       ", filepath)
+            _log.info(f"EOmaps: Layout saved to:\n       {filepath}")
 
         return layout
 
@@ -1633,9 +1643,9 @@ class BlitManager:
                     f = self._on_layer_change[False].pop(0)
                     f(layer=layer)
                 except Exception as ex:
-                    print(
-                        "EOmaps: there was an issue while trying to execute a "
-                        f"layer-change action: {ex}"
+                    _log.error(
+                        "EOmaps: Issue while executing a layer-change action",
+                        exc_info=_log.getEffectiveLevel() == logging.DEBUG,
                     )
 
             if new:
@@ -1653,10 +1663,9 @@ class BlitManager:
                         f = single_shot_funcs.pop(0)
                         f(layer=l)
                     except Exception as ex:
-                        raise (ex)
-                        print(
-                            "EOmaps: there was an issue while trying to execute a "
-                            f"layer-change action: {ex}"
+                        _log.error(
+                            "EOmaps: Issue while executing a layer-change action",
+                            exc_info=_log.getEffectiveLevel() == logging.DEBUG,
                         )
 
     @contextmanager
@@ -2237,7 +2246,7 @@ class BlitManager:
         ):
             layer = "__inset_" + str(layer)
         if layer in self._bg_artists and art in self._bg_artists[layer]:
-            print(f"EOmaps: Background-artist '{art}' already added")
+            _log.info(f"EOmaps: Background-artist '{art}' already added")
             return
 
         art.set_animated(True)
@@ -2364,7 +2373,7 @@ class BlitManager:
         try:
             return a.get_zorder()
         except Exception:
-            print(r"EOmaps: unalble to identify zorder of {a}... using 99")
+            _log.error(r"EOmaps: unalble to identify zorder of {a}... using 99")
             return 99
 
     def _draw_animated(self, layers=None, artists=None):
@@ -2641,7 +2650,7 @@ class BlitManager:
         cv = self.canvas
         renderer = self._get_renderer()
         if renderer is None:
-            print("EOmaps: encountered a problem while trying to blit artists...")
+            _log.error("EOmaps: encountered a problem while trying to blit artists...")
             return
 
         # restore the background
@@ -2740,7 +2749,7 @@ class BlitManager:
                 if not isinstance(a, Spine):
                     a.remove()
             except Exception:
-                print(f"EOmaps-cleanup: Problem while clearing bg artist:\n {a}")
+                _log.debug(f"EOmaps-cleanup: Problem while clearing bg artist:\n {a}")
 
         del self._bg_artists[layer]
 
@@ -2757,7 +2766,9 @@ class BlitManager:
                 if not isinstance(a, Spine):
                     a.remove()
             except Exception:
-                print(f"EOmaps-cleanup: Problem while clearing dynamic artist:\n {a}")
+                _log.debug(
+                    f"EOmaps-cleanup: Problem while clearing dynamic artist:\n {a}"
+                )
 
         del self._artists[layer]
 
@@ -2767,7 +2778,9 @@ class BlitManager:
             if layer in self._bg_layers:
                 del self._bg_layers[layer]
         except Exception:
-            print("EOmaps-cleanup: Problem while clearing cached background layers")
+            _log.debug(
+                "EOmaps-cleanup: Problem while clearing cached background layers"
+            )
 
     def _cleanup_on_layer_activation(self, layer):
 
@@ -2777,4 +2790,6 @@ class BlitManager:
             if layer in self._on_layer_activation:
                 del self._on_layer_activation[layer]
         except Exception:
-            print("EOmaps-cleanup: Problem while clearing layer activation methods")
+            _log.debug(
+                "EOmaps-cleanup: Problem while clearing layer activation methods"
+            )

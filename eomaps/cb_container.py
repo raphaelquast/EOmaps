@@ -1,5 +1,6 @@
 """Container classes for callback management"""
 
+import logging
 from types import SimpleNamespace
 from functools import update_wrapper, partial, wraps
 from itertools import chain
@@ -15,6 +16,8 @@ from .helpers import register_modules
 import matplotlib.pyplot as plt
 from pyproj import Transformer
 import numpy as np
+
+_log = logging.getLogger(__name__)
 
 
 class GeoDataFramePicker:
@@ -499,29 +502,39 @@ class _ClickContainer(_CallbackContainer):
             if hasattr(self.cb, "picked_object"):
                 return self.cb.picked_object
             else:
-                print("EOmaps: attach the 'load' callback first!")
+                _log.warning(
+                    "EOmaps: No picked objects found. Attach "
+                    "the 'load' callback first!"
+                )
 
         @property
         def picked_vals(self):
             if hasattr(self.cb, "picked_vals"):
                 return self.cb.picked_vals
             else:
-                print("EOmaps: attach the 'get_vals' callback first!")
+                _log.warning(
+                    "EOmaps: No picked values found. Attach "
+                    "the 'get_vals' callback first!"
+                )
 
         @property
         def permanent_markers(self):
             if hasattr(self.cb, "permanent_markers"):
                 return self.cb.permanent_markers
             else:
-                print("EOmaps: attach the 'mark' callback with 'permanent=True' first!")
+                _log.warning(
+                    "EOmaps: No permanent markers found. Attach "
+                    "the 'mark' callback with 'permanent=True' first!"
+                )
 
         @property
         def permanent_annotations(self):
             if hasattr(self.cb, "permanent_annotations"):
                 return self.cb.permanent_annotations
             else:
-                print(
-                    "EOmaps: attach the 'annotate' callback with 'permanent=True' first!"
+                _log.warning(
+                    "EOmaps: No permanent annotations found. Attach "
+                    "the 'annotate' callback with 'permanent=True' first!"
                 )
 
         @property
@@ -592,10 +605,10 @@ class _ClickContainer(_CallbackContainer):
             if bname in dsdict:
                 bdict = dsdict.get(bname)
             else:
-                print(f"EOmaps: there is no callback named {callback}")
+                _log.error(f"EOmaps: There is no callback named {callback}")
                 return
         else:
-            print(f"EOmaps: there is no callback named {callback}")
+            _log.error(f"EOmaps: There is no callback named {callback}")
             return
 
         if bdict is not None:
@@ -607,7 +620,7 @@ class _ClickContainer(_CallbackContainer):
                 if hasattr(self._cb, f"_{fname}_cleanup"):
                     getattr(self._cb, f"_{fname}_cleanup")()
             else:
-                print(f"EOmaps: there is no callback named {callback}")
+                _log.error(f"EOmaps: There is no callback named {callback}")
 
     def set_sticky_modifiers(self, *args):
         """
@@ -657,10 +670,9 @@ class _ClickContainer(_CallbackContainer):
                 self._m.cb.pick._init_cbs()
                 self._m.cb._methods.add("pick")
         except Exception as ex:
-            print(
+            _log.exception(
                 "EOmaps: There was an error while trying to initialize "
-                "pick-callbacks!",
-                ex,
+                f"pick-callbacks!",
             )
 
     def _add_callback(
@@ -771,7 +783,9 @@ class _ClickContainer(_CallbackContainer):
                 **kwargs,
             )
         elif on_motion is True:
-            print("EOmaps: 'on_motion=True' is only possible for 'click' callbacks!")
+            _log.warning(
+                "EOmaps: 'on_motion=True' is only possible for " "'click' callbacks!"
+            )
 
         assert not all(
             i in kwargs for i in ["pos", "ID", "val", "double_click", "button"]
@@ -1226,7 +1240,7 @@ class PickContainer(_ClickContainer):
         if hasattr(self._m.cb, container_name):
             return getattr(self._m.cb, container_name)
         else:
-            print(
+            _log.error(
                 f"the picker {name} does not exist...", "use `m.cb.add_picker` first!"
             )
 
@@ -1627,7 +1641,7 @@ class KeypressContainer(_CallbackContainer):
                     k == "ctrl+" + self._modifier or k == "escape"
                 ):
                     self._modifier = None
-                    print("EOmaps: sticky modifier: None")
+                    _log.info("EOmaps: sticky modifier set to: None")
                 elif self._modifier != k:
                     methods = []
                     if k in self._m.cb.click._sticky_modifiers:
@@ -1640,7 +1654,10 @@ class KeypressContainer(_CallbackContainer):
                         methods.append("move")
 
                     if methods:
-                        print(f"EOmaps: sticky modifier: {k} ({', '.join(methods)})")
+                        _log.info(
+                            "EOmaps: sticky modifier set to: "
+                            f"{k} ({', '.join(methods)})"
+                        )
                         self._modifier = k
 
                 for obj in self._objs:
@@ -1801,9 +1818,9 @@ class KeypressContainer(_CallbackContainer):
                 if hasattr(self._cb, f"_{fname}_cleanup"):
                     getattr(self._cb, f"_{fname}_cleanup")()
             else:
-                print(f"EOmaps: there is no callback named {callback}")
+                _log.error(f"EOmaps: there is no callback named {callback}")
         else:
-            print(f"EOmaps: there is no callback named {callback}")
+            _log.error(f"EOmaps: there is no callback named {callback}")
 
     def _add_callback(self, callback, key="x", **kwargs):
         """

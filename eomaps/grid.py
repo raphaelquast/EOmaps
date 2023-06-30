@@ -1,10 +1,14 @@
 """Grid lines and grid labels."""
 
-from matplotlib.collections import LineCollection
-import numpy as np
+import logging
 from itertools import chain
 from functools import lru_cache
-from .helpers import pairwise
+
+import numpy as np
+
+from matplotlib.collections import LineCollection
+
+_log = logging.getLogger(__name__)
 
 
 class GridLines:
@@ -599,18 +603,16 @@ class GridLabels:
                     t = self._texts.pop(-1)
                     t.remove()
                     self._g.m.BM.remove_bg_artist(t, draw=False)
-                except Exception as ex:
-                    print("EOmaps: Problem while trying to remove a grid-label:", ex)
+                except Exception:
+                    _log.exception(
+                        "EOmaps: Problem while trying to remove a grid-label:"
+                    )
                     pass
 
             self.add_labels()
-        except Exception as ex:
-            import traceback
-
-            print(
-                "EOmaps: Encountered a problem while re-drawing grid-labels:",
-                ex,
-                traceback.format_exc(),
+        except Exception:
+            _log.exception(
+                "EOmaps: Encountered a problem while re-drawing grid-labels:"
             )
             pass
 

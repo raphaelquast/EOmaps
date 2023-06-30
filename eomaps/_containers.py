@@ -1,15 +1,16 @@
+import logging
 from textwrap import dedent, indent, fill
-from warnings import warn
 from operator import attrgetter
 from inspect import signature, _empty
 from types import SimpleNamespace
+
 from .helpers import register_modules
+
+_log = logging.getLogger(__name__)
 
 
 class DataSpecs(object):
-    """
-    a container for accessing the data-properties
-    """
+    """Container for accessing the data-properties."""
 
     def __init__(
         self,
@@ -178,12 +179,12 @@ class DataSpecs(object):
                     self.parameter = next(
                         i for i in self.data.keys() if i not in [self.x, self.y]
                     )
-                    print(f"EOmaps: Parameter was set to: '{self.parameter}'")
+                    _log.info(f"EOmaps: Parameter was set to: '{self.parameter}'")
 
                 except Exception:
-                    warn(
+                    _log.error(
                         "EOmaps: Parameter-name could not be identified!"
-                        + "\nCheck the data-specs!"
+                        "Check the data-specs!"
                     )
 
         return self._parameter
@@ -282,7 +283,7 @@ class ClassifySpecs(object):
         self._keys = set()
         s = self._get_default_args()
         if len(self._keys) > 0:
-            print(f"EOmaps: classification has been reset to '{val}{s}'")
+            _log.info(f"EOmaps: classification has been reset to '{val}{s}'")
         for key, val in self._defaults.items():
             if val != _empty:
                 setattr(self, key, val)
@@ -325,7 +326,7 @@ class ClassifySpecs(object):
         )
 
         if reset:
-            print(f"EOmaps: classification has been reset to '{scheme}{args}'")
+            _log.info(f"EOmaps: classification has been reset to '{scheme}{args}'")
 
     @property
     def SCHEMES(self):

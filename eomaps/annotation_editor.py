@@ -1,8 +1,10 @@
 """Functionalities for editable annotations."""
-
+import logging
 from matplotlib.offsetbox import DraggableBase
 from types import SimpleNamespace
 import numpy as np
+
+_log = logging.getLogger(__name__)
 
 _eomaps_picked_ann = None
 
@@ -100,9 +102,11 @@ class DraggableAnnotationNew(DraggableBase):
             )
         elif self._what == "xy":
             if not self._drag_coords:
-                print(
-                    "EOmaps: The annotation-coordinates of annotations based on IDs "
-                    "cannot be dynamically updated!"
+                self.annotation.figure._EOmaps_parent._log_on_event(
+                    "warning",
+                    "EOmaps: The position of annotations based on IDs "
+                    "cannot be dynamically updated!",
+                    "button_release_event",
                 )
                 return
 
@@ -226,7 +230,7 @@ class AnnotationEditor:
                     edit_signal=self.emit_edit_signal,
                 )
 
-    def __call__(self, q=True, print_msg=True):
+    def __call__(self, q=True):
         """
         Toggle if annotations are editable or not.
 
@@ -246,9 +250,6 @@ class AnnotationEditor:
             If True, annotations of this Maps-object will be editable.
             If False, annotations will be set to "fixed".
             The default is True.
-        print_msg: bool, optional
-            Indicator if info-message should be printed or not.
-            The default is True.
 
         See Also
         --------
@@ -265,15 +266,14 @@ class AnnotationEditor:
                 "key_press_event", self.remove_selected_annotation
             )
 
-            if print_msg:
-                print(
-                    f"EOmaps: Annotations editable! Shortcuts:\n"
-                    " -  default : move annotation\n"
-                    " - 'control': move anchor\n"
-                    " - 'shift':   resize\n"
-                    " - 'r':       rotate\n"
-                    " - 'delete':  remove annotation\n"
-                )
+            _log.info(
+                "EOmaps: Annotations editable! Shortcuts:\n"
+                " -    ---   : move annotation\n"
+                " - 'control': move anchor\n"
+                " - 'shift':   resize\n"
+                " - 'r':       rotate\n"
+                " - 'delete':  remove annotation\n"
+            )
         else:
             for ann in self._annotations:
                 self._undo_ann_editable(ann.a)

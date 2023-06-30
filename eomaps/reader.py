@@ -1,11 +1,15 @@
 """Classes to read files (NetCDF, GeoTIFF, CSV etc.)"""
 
+import logging
 from functools import wraps
 from pathlib import Path
+
 import numpy as np
 from pyproj import CRS
 
 from .helpers import register_modules
+
+_log = logging.getLogger(__name__)
 
 
 def identify_geotiff_cmap(path, band=1):
@@ -45,14 +49,14 @@ def identify_geotiff_cmap(path, band=1):
 
             classify_specs = dict(scheme="UserDefined", bins=bins)
         except ValueError:
-            print(
-                f"EOmaps: No cmap found for GeoTIFF band {band}, defaulting to 'viridis'"
+            _log.info(
+                f"EOmaps: No cmap found for GeoTIFF band {band}, using: 'viridis'"
             )
             classify_specs = None
             cmap = "viridis"
         except IndexError:
-            print(
-                f"EOmaps: No cmap found for GeoTIFF band {band}, defaulting to 'viridis'"
+            _log.info(
+                f"EOmaps: No cmap found for GeoTIFF band {band}, using: 'viridis'"
             )
             classify_specs = None
             cmap = "viridis"
@@ -60,7 +64,10 @@ def identify_geotiff_cmap(path, band=1):
         return cmap, classify_specs
 
     except ImportError as ex:
-        print("EOmaps: Unable to identify cmap for GeoTIFF:", ex)
+        _log.info(
+            "EOmaps: Unable to identify cmap for GeoTIFF, using: 'viridis'",
+            exc_info=_log.getEffectiveLevel() == logging.DEBUG,
+        )
         return "viridis", None
 
 
@@ -443,7 +450,7 @@ class read_file:
 
             if parameter is None:
                 parameter = next(iter(ncfile))
-                print(f"EOmaps: Using NetCDF variable '{parameter}' as parameter.")
+                _log.info(f"EOmaps: Using NetCDF variable '{parameter}' as parameter.")
             else:
                 assert parameter in ncfile, (
                     f"EOmaps: The provided parameter-name '{parameter}' is not valid."
@@ -462,7 +469,7 @@ class read_file:
                         + f"Available variables: {list(ncfile)}"
                     )
                 else:
-                    print(f"EOmaps: Using NetCDF coordinates: {coords}")
+                    _log.info(f"EOmaps: Using NetCDF coordinates: {coords}")
 
             if data_crs is None:
                 for crskey in ["spatial_ref", "crs", "crs_wkt"]:
@@ -749,7 +756,9 @@ def _from_file(
 
             except Exception:
                 crs = 4326
-                print(f"EOmaps: could not use native crs... defaulting to epsg={crs}.")
+                _log.warning(
+                    f"EOmaps: could not use native crs... defaulting to epsg={crs}."
+                )
 
         m = Maps(crs=crs, figsize=figsize, layer=layer)
 
@@ -776,14 +785,14 @@ def _from_file(
             elif len(extent) == 4:
                 m.set_extent(extent)
             else:
-                print(
+                _log.warning(
                     "EOmaps: unable to identify the provided extent"
                     f"{extent}... defaulting to global"
                 )
         elif isinstance(extent, str):
             m.set_extent_to_location(extent)
         else:
-            print(
+            _log.warning(
                 "EOmaps: unable to identify the provided extent"
                 f"{extent}... defaulting to global"
             )

@@ -1,28 +1,28 @@
+import logging
+
+import requests
 from functools import lru_cache, partial
 from warnings import warn, filterwarnings, catch_warnings
 from types import SimpleNamespace
 from contextlib import contextmanager
+from urllib3.exceptions import InsecureRequestWarning
+from io import BytesIO
+from pprint import PrettyPrinter
 
 from packaging import version
 
 from PIL import Image
-from io import BytesIO
-from pprint import PrettyPrinter
-
 import numpy as np
-
 from pyproj import CRS, Transformer
-
-from urllib3.exceptions import InsecureRequestWarning
-
-from .helpers import _sanitize
 
 import cartopy
 from cartopy import crs as ccrs
 from cartopy.io.img_tiles import GoogleWTS
 from cartopy.io import RasterSource
 
-import requests
+from .helpers import _sanitize
+
+_log = logging.getLogger(__name__)
 
 
 class _WebMapLayer:
@@ -136,7 +136,9 @@ class _WebMapLayer:
             if not hasattr(self, "_layer"):
                 # use the currently active layer if the webmap service has not yet
                 # been added to the map
-                print("EOmaps: The WebMap for the legend is not yet added to the map!")
+                _log.warning(
+                    "EOmaps: The WebMap for the legend is not yet added to the map!"
+                )
                 self._layer = self._m.BM._bg_layer
 
             axpos = self._m.ax.get_position()
@@ -275,9 +277,10 @@ class _WebMapLayer:
             (x0, y0, x1, y1, crs) = bbox
             incrs = CRS.from_user_input(crs)
         except Exception:
-            print(
+            _log.error(
                 "EOmaps: could not determine bbox from 'boundingBox'... "
-                + "defaulting to 'boundingBoxWGS84'"
+                + "defaulting to 'boundingBoxWGS84'",
+                exc_info=_log.getEffectiveLevel() == logging.DEBUG,
             )
             (x0, y0, x1, y1) = getattr(self.wms_layer, "boundingBoxWGS84", None)
             incrs = CRS.from_user_input(4326)
@@ -410,7 +413,7 @@ class _WMTSLayer(_WebMapLayer):
 
     def _do_add_layer(self, m, layer, **kwargs):
         # actually add the layer to the map.
-        print(f"EOmaps: Adding wmts-layer: {self.name}")
+        _log.info(f"EOmaps: Adding wmts-layer: {self.name}")
 
         # use slightly adapted implementation of cartopy's ax.add_wmts
         art = self._add_wmts(
@@ -548,7 +551,7 @@ class _WMSLayer(_WebMapLayer):
 
     def _do_add_layer(self, m, layer, **kwargs):
         # actually add the layer to the map.
-        print(f"EOmaps: ... adding wms-layer {self.name}")
+        _log.info(f"EOmaps: ... adding wms-layer {self.name}")
 
         # use slightly adapted implementation of cartopy's ax.add_wms
         art = self._add_wms(
@@ -701,7 +704,7 @@ class RestApiServices:
         self._fetched = True
 
         if self._rest_api is None:
-            print(f"EOmaps: ... fetching services for '{self._name}'")
+            _log.info(f"EOmaps: ... fetching services for '{self._name}'")
             self._rest_api = _RestApi(self._rest_url, _params=self._params)
 
             found_folders = set()
@@ -720,15 +723,15 @@ class RestApiServices:
 
             new_layers = found_folders - self._layers
             if len(new_layers) > 0:
-                print(f"EOmaps: ... found some new folders: {new_layers}")
+                _log.info(f"EOmaps: ... found some new folders: {new_layers}")
 
             invalid_layers = self._layers - found_folders
             if len(invalid_layers) > 0:
-                print(f"EOmaps: ... could not find the folders: {invalid_layers}")
+                _log.info(f"EOmaps: ... could not find the folders: {invalid_layers}")
             for i in invalid_layers:
                 delattr(self, i)
 
-            print("EOmaps: done!")
+            _log.info("EOmaps: done!")
 
 
 class _RestWmsService(_WebServiceCollection):
@@ -742,7 +745,6 @@ class _RestWmsService(_WebServiceCollection):
 
     @property
     def _url(self):
-        print(self._s_name)
         url = "/".join([self._service, self._s_name, self._s_type])
 
         if self._service_type == "wms":
@@ -796,7 +798,9 @@ class _RestWmsService(_WebServiceCollection):
     def add_layer(self):
         self._fetch_layers()
         if len(self._layers) == 0:
-            print(f"EOmaps: found no {self._service_type} layers for {self._s_name}")
+            _log.error(
+                f"EOmaps: found no {self._service_type} layers for {self._s_name}"
+            )
             return
 
         return SimpleNamespace(**self._layers)
@@ -1168,7 +1172,7 @@ class _XyzTileService:
 
     def _do_add_layer(self, m, layer, **kwargs):
         # actually add the layer to the map.
-        print(f"EOmaps: ... adding wms-layer {self.name}")
+        _log.info(f"EOmaps: ... adding wms-layer {self.name}")
 
         self._raster_source = XyzRasterSource(
             self.url,
@@ -1196,8 +1200,8 @@ class _XyzTileService:
 
 class _XyzTileServiceNonEarth(_XyzTileService):
     def __call__(self, *args, **kwargs):
-        print(
-            f"EOmaps WARNING: The WebMap service '{self.name}' shows images from a "
+        _log.info(
+            f"EOmaps: The WebMap service '{self.name}' shows images from a "
             "different celestrial body projected to an earth-based crs! "
             "Units used in scalebars, geod_crices etc. represent earth-based units!"
         )
@@ -1345,7 +1349,10 @@ class SlippyImageArtistNew(AxesImage):
                         transform=self.axes.projection._as_mpl_transform(self.axes),
                     )
                 except Exception:
-                    print("EOmaps: unable to set clippath for WMS images")
+                    _log.error(
+                        "EOmaps: unable to set clippath for WMS images",
+                        exc_info=_log.getEffectiveLevel() == logging.DEBUG,
+                    )
 
                 with ax.hold_limits():
                     self.set_array(img)
@@ -1354,7 +1361,11 @@ class SlippyImageArtistNew(AxesImage):
             self.stale = False
 
         except Exception:
-            print("EOmaps: ... could not fetch WebMap service")
+            _log.error(
+                "EOmaps: ... could not fetch WebMap service",
+                exc_info=_log.getEffectiveLevel() == logging.DEBUG,
+            )
+
             if self in self.axes._mouseover_set:
                 self.axes._mouseover_set.remove(self)
 

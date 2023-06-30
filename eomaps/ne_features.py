@@ -1,11 +1,15 @@
 """Classes to fetch and draw NaturalEarth features."""
 
+import logging
 from textwrap import dedent
 from pathlib import Path
 import json
 
-from .helpers import register_modules
 from cartopy import crs as ccrs
+
+from .helpers import register_modules
+
+_log = logging.getLogger(__name__)
 
 
 def combdoc(*args):
@@ -255,9 +259,10 @@ try:
                 _NE_features_all.setdefault(category, set()).update(category_items)
 
 except Exception:
-    print(
+    _log.error(
         "EOmaps: Could not load available NaturalEarth features from\n"
-        f"{_NE_features_path}"
+        f"{_NE_features_path}",
+        exc_info=_log.getEffectiveLevel() == logging.DEBUG,
     )
     _NE_features = dict()
     _NE_features_all = dict()
@@ -517,7 +522,7 @@ class NaturalEarth_features(object):
             self._scale = self._get_available_scale(scale)
 
             if self._scale != scale:
-                print(
+                _log.warning(
                     f"EOmaps: The NaturalEarth feature '{self._name}' is not "
                     f"available at 1:{scale} scale... using 1:{self._scale} instead!"
                 )
@@ -628,7 +633,7 @@ class NaturalEarth_features(object):
                         extent = self._m.get_extent(feature.crs)
                         feature.scaler.scale_from_extent(extent)
                     except:
-                        print("EOmaps: unable to determine extent")
+                        _log.error("EOmaps: unable to determine extent")
                         pass
                     geoms = list(feature.geometries())
                 elif what == "geoms":
