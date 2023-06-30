@@ -1444,7 +1444,7 @@ class ScaleBar:
                     0.99,
                 )
             else:
-                _log(
+                _log.warning(
                     "EOmaps: The scale of the scalebar is fixed! "
                     "Use s.set_scale(None) to use autoscaling!"
                 )
