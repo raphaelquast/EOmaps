@@ -77,6 +77,7 @@ def set_loglevel(level, fmt=None):
     - set EOmaps's root logger level
     - set the root logger handler's level, creating the handler
       if it does not exist yet
+    - set the root logger handler's formatter
 
     Typically, one should call ``set_loglevel("info")`` or
     ``set_loglevel("debug")`` to get additional debugging information.
