@@ -94,17 +94,17 @@ class Shapes(object):
                 if m._data_manager.x0 is None:
                     m._data_manager.set_props(None)
 
-                _log.info("EOmaps: estimating radius...")
+                _log.info("EOmaps: Estimating shape radius...")
                 radiusx, radiusy = Shapes._estimate_radius(m, radius_crs)
 
                 if radiusx == radiusy:
                     _log.info(
-                        "EOmaps: radius: "
+                        "EOmaps: radius = "
                         f"{np.format_float_scientific(radiusx, precision=4)}"
                     )
                 else:
                     _log.info(
-                        "EOmaps: radius: "
+                        "EOmaps: radius = "
                         f"({np.format_float_scientific(radiusx, precision=4)}, "
                         f"{np.format_float_scientific(radiusy, precision=4)})"
                     )

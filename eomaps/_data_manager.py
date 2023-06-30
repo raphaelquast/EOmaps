@@ -245,7 +245,7 @@ class DataManager:
             x0, y0 = xorig, yorig
 
         else:
-            _log.info("EOmaps: Reprojecting...")
+            _log.info("EOmaps: Starting to reproject data")
 
             # transform center-points to the plot_crs
             transformer = Transformer.from_crs(

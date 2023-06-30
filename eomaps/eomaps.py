@@ -4528,7 +4528,10 @@ class Maps(metaclass=_MapsMeta):
         assume_sorted=True,
         **kwargs,
     ):
-        _log.info(f"EOmaps: Plotting data ({self.shape.name})")
+        _log.info(
+            "EOmaps: Plotting "
+            f"{self._data_manager.z_data.size} datapoints ({self.shape.name})"
+        )
 
         for key in ("array", "norm"):
             assert (
@@ -4679,7 +4682,10 @@ class Maps(metaclass=_MapsMeta):
             kwargs passed to `datashader.mpl_ext.dsshow`
 
         """
-        _log.info(f"EOmaps: Plotting data ({self.shape.name})")
+        _log.info(
+            "EOmaps: Plotting "
+            f"{self._data_manager.z_data.size} datapoints ({self.shape.name})"
+        )
 
         ds, mpl_ext, pd, xar = register_modules(
             "datashader", "datashader.mpl_ext", "pandas", "xarray"

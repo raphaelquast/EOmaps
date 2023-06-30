@@ -68,14 +68,18 @@ def _set_logfmt(fmt=None, datefmt=None):
 _log_format_presets = {
     "minimal": ("%(asctime)s.%(msecs)03d: %(message)s", "%H:%M:%S"),
     "timed": (
-        "%(asctime)s:.%(msecs)03d %(levelname)s: %(name)s: %(message)s",
+        "%(asctime)s.%(msecs)03d %(levelname)s: %(message)s",
+        "%H:%M:%S",
+    ),
+    "debug": (
+        "%(asctime)s.%(msecs)03d %(levelname)s: %(name)s: %(message)s",
         "%H:%M:%S",
     ),
     "plain": ("%(message)s", None),
 }
 
 
-def set_loglevel(level, fmt=None):
+def set_loglevel(level, fmt="timed"):
     """
     Configure EOmaps's logging levels (and formatting).
 
@@ -103,9 +107,10 @@ def set_loglevel(level, fmt=None):
 
         Available short-names:
 
-        - "minimal": ``<TIME>: message``
-        - "timed": ``<TIME>: <LEVEL>: <NAME>: message``
         - "plain": ``message``
+        - "basic": ``<TIME>: message``
+        - "timed": ``<TIME>: <LEVEL>: message``
+        - "debug": ``<TIME>: <LEVEL>: <MODULE>: message``
 
         The default is ``logging.BASIC_FORMAT``
 
