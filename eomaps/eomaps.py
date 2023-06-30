@@ -1471,7 +1471,7 @@ class Maps(metaclass=_MapsMeta):
                 xy=(r["lon"], r["lat"]), xy_crs=4326, text=text, fontsize=8
             )
         else:
-            log.info("Centering Map to:\n    ", r["display_name"])
+            _log.info("Centering Map to:\n    ", r["display_name"])
 
     @staticmethod
     def _set_clipboard_kwargs(**kwargs):
