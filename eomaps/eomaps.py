@@ -6,7 +6,6 @@ _log = logging.getLogger(__name__)
 
 from functools import lru_cache, wraps
 from itertools import repeat, chain
-import warnings
 import copy
 from types import SimpleNamespace
 from pathlib import Path
@@ -89,7 +88,7 @@ def _handle_backends():
         plt.ioff()
 
         if not Maps._backend_warning_shown and not BlitManager._snapshot_on_update:
-            warnings.warn(
+            _log.info(
                 "EOmaps disables matplotlib's interactive mode (e.g. 'plt.ioff()') "
                 f"for the backend {plt.get_backend()}.\n"
                 "Call `m.snapshot()` to print a static snapshot of the map "
@@ -106,7 +105,7 @@ def _handle_backends():
             plt.ion()
         else:
             plt.ioff()
-            warnings.warn(
+            _log.info(
                 "EOmaps: matplotlib's interactive mode is turned off. "
                 "Call `m.show()` to show the map!"
             )
@@ -1290,7 +1289,9 @@ class Maps(metaclass=_MapsMeta):
 
     @wraps(set_data)
     def set_data_specs(self, *args, **kwargs):
-        warnings.warn(
+        from warnings import warn
+
+        warn(
             "EOmaps: `m.set_data_specs(...)` is depreciated and will raise  an "
             "error in future versions! Use `m.set_data(...)` instead!",
             FutureWarning,
@@ -4012,7 +4013,7 @@ class Maps(metaclass=_MapsMeta):
 
     def _join_axis_limits(self, m):
         if self.ax.projection != m.ax.projection:
-            warnings.warn(
+            _log.warning(
                 "EOmaps: joining axis-limits is only possible for "
                 + "axes with the same projection!"
             )
