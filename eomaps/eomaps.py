@@ -2882,7 +2882,7 @@ class Maps(metaclass=_MapsMeta):
 
         # ---------------------- prepare the data
 
-        _log.debug("EOmaps: Preparing the data")
+        _log.debug("EOmaps: Preparing dataset")
 
         # ---------------------- assign the data to the data_manager
 
@@ -2924,8 +2924,6 @@ class Maps(metaclass=_MapsMeta):
         self._classified = classified
 
         # ---------------------- plot the data
-
-        _log.debug("EOmaps: Plotting the data")
 
         if shade_q:
             self._shade_map(
@@ -4530,6 +4528,7 @@ class Maps(metaclass=_MapsMeta):
         assume_sorted=True,
         **kwargs,
     ):
+        _log.info(f"EOmaps: Plotting data ({self.shape.name})")
 
         for key in ("array", "norm"):
             assert (
@@ -4680,6 +4679,8 @@ class Maps(metaclass=_MapsMeta):
             kwargs passed to `datashader.mpl_ext.dsshow`
 
         """
+        _log.info(f"EOmaps: Plotting data ({self.shape.name})")
+
         ds, mpl_ext, pd, xar = register_modules(
             "datashader", "datashader.mpl_ext", "pandas", "xarray"
         )
@@ -4698,8 +4699,6 @@ class Maps(metaclass=_MapsMeta):
             kwargs.setdefault("norm", self.classify_specs._norm)
         else:
             kwargs.setdefault("norm", "linear")
-
-        _log.info("EOmaps: Plotting...")
 
         zdata = self._data_manager.z_data
         if len(zdata) == 0:

@@ -197,6 +197,7 @@ class DataManager:
                     and len(yorig.shape) == 1
                     and len(z_data.shape) == 2
                 ):
+                    _log.info("EOmaps: Sorting coordinates...")
 
                     xs, ys = np.argsort(xorig), np.argsort(yorig)
                     np.take(xorig, xs, out=xorig, mode="wrap")
@@ -244,6 +245,8 @@ class DataManager:
             x0, y0 = xorig, yorig
 
         else:
+            _log.info("EOmaps: Reprojecting...")
+
             # transform center-points to the plot_crs
             transformer = Transformer.from_crs(
                 crs1,
@@ -261,6 +264,7 @@ class DataManager:
                 self._z_transposed = True
 
             x0, y0 = transformer.transform(xorig, yorig)
+            _log.info("EOmaps: Done reprojecting")
 
         # use np.asanyarray to ensure that the output is a proper numpy-array
         # (relevant for categorical dtypes in pandas.DataFrames)

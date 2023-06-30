@@ -42,7 +42,7 @@ def _ensure_handler():
     return handler
 
 
-def set_logfmt(fmt=None):
+def _set_logfmt(fmt=None, datefmt=None):
     """
     Set the format string for the logger.
     See `logging.Formatter` for details.
@@ -50,26 +50,34 @@ def set_logfmt(fmt=None):
     Parameters
     ----------
     fmt : str
-        The logging format string to use.
+        The logging format string.
         The default is:  "%(levelname)s: %(asctime)s: %(message)s"
-
+    datefmt : str
+        The datetime format string. ('%Y-%m-%d,%H:%M:%S.%f')
     """
     if fmt is None:
         fmt = "%(levelname)s: %(asctime)s: %(message)s"
 
     handler = _ensure_handler()
-    handler.setFormatter(logging.Formatter(fmt))
+    if datefmt is None:
+        handler.setFormatter(logging.Formatter(fmt))
+    else:
+        handler.setFormatter(logging.Formatter(fmt, datefmt=datefmt))
 
 
-_log_formats = {
-    "timed": "%(asctime)s: %(levelname)s: %(name)s: %(message)s",
-    "plain": "%(message)s",
+_log_format_presets = {
+    "minimal": ("%(asctime)s.%(msecs)03d: %(message)s", "%H:%M:%S"),
+    "timed": (
+        "%(asctime)s:.%(msecs)03d %(levelname)s: %(name)s: %(message)s",
+        "%H:%M:%S",
+    ),
+    "plain": ("%(message)s", None),
 }
 
 
 def set_loglevel(level, fmt=None):
     """
-    Configure EOmaps's logging levels.
+    Configure EOmaps's logging levels (and formatting).
 
     EOmaps uses the standard library `logging` framework under the root
     logger 'eomaps'.  This is a helper function to:
@@ -111,8 +119,7 @@ def set_loglevel(level, fmt=None):
     _ensure_handler().setLevel(level.upper())
 
     if fmt is not None:
-        fmt = _log_formats.get(fmt, fmt)
-        set_logfmt(fmt)
+        _set_logfmt(*_log_format_presets.get(fmt, (fmt,)))
 
 
 # -----------------------------------------------------------------------------------
