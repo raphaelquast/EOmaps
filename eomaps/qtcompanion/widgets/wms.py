@@ -1,3 +1,5 @@
+import logging
+
 from PyQt5 import QtWidgets
 from PyQt5.QtCore import Qt, QThread, QObject, pyqtSignal, pyqtSlot, QTimer
 from PyQt5.QtGui import QStatusTipEvent
@@ -6,6 +8,8 @@ from ... import Maps, _data_dir
 from pathlib import Path
 import json
 import os
+
+_log = logging.getLogger(__name__)
 
 # the path to which already fetched WebMap layers are stored
 # (to avoid fetching available layers on menu-population)
@@ -16,6 +20,13 @@ def remove_prefix(text, prefix):
     if text.startswith(prefix):
         return text[len(prefix) :]
     return text
+
+
+def _log_problem(name):
+    _log.error(
+        "EOmaps: Problem while fetching wmslayers for {name}",
+        exc_info=_log.getEffectiveLevel() == logging.DEBUG,
+    )
 
 
 class WMSBase:
@@ -66,9 +77,9 @@ class WMS_GEBCO(WMSBase):
                 for key in self.m.add_wms.GEBCO.add_layer.__dict__.keys()
                 if not (key in ["m"] or key.startswith("_"))
             ]
-        except Exception as ex:
+        except Exception:
             self.wmslayers = []
-            print("EOmaps: Problem while fetching wmslayers for GEBCO", ex)
+            _log_problem(self.name)
 
     def do_add_layer(self, wmslayer, layer):
         wms = getattr(self.m.add_wms.GEBCO.add_layer, wmslayer)
@@ -88,9 +99,9 @@ class WMS_GMRT(WMSBase):
                 for key in self.m.add_wms.GMRT.add_layer.__dict__.keys()
                 if not (key in ["m"] or key.startswith("_"))
             ]
-        except Exception as ex:
+        except Exception:
             self.wmslayers = []
-            print("EOmaps: Problem while fetching wmslayers for GMRT", ex)
+            _log_problem(self.name)
 
     def do_add_layer(self, wmslayer, layer):
         wms = getattr(self.m.add_wms.GMRT.add_layer, wmslayer)
@@ -110,9 +121,9 @@ class WMS_GLAD(WMSBase):
                 for key in self.m.add_wms.GLAD.add_layer.__dict__.keys()
                 if not (key in ["m"] or key.startswith("_"))
             ]
-        except Exception as ex:
+        except Exception:
             self.wmslayers = []
-            print("EOmaps: Problem while fetching wmslayers for GLAD", ex)
+            _log_problem(self.name)
 
     def do_add_layer(self, wmslayer, layer):
         wms = getattr(self.m.add_wms.GLAD.add_layer, wmslayer)
@@ -132,9 +143,9 @@ class WMS_GOOGLE(WMSBase):
                 for key in self.m.add_wms.GOOGLE.add_layer.__dict__.keys()
                 if not (key in ["m"] or key.startswith("_"))
             ]
-        except Exception as ex:
+        except Exception:
             self.wmslayers = []
-            print("EOmaps: Problem while fetching wmslayers for GOOGLE", ex)
+            _log_problem(self.name)
 
     def do_add_layer(self, wmslayer, layer):
         wms = getattr(self.m.add_wms.GOOGLE.add_layer, wmslayer)
@@ -154,9 +165,9 @@ class WMS_CAMS(WMSBase):
                 for key in self.m.add_wms.CAMS.add_layer.__dict__.keys()
                 if not (key in ["m"] or key.startswith("_"))
             ]
-        except Exception as ex:
+        except Exception:
             self.wmslayers = []
-            print("EOmaps: Problem while fetching wmslayers for CAMS", ex)
+            _log_problem(self.name)
 
     def do_add_layer(self, wmslayer, layer):
         wms = getattr(self.m.add_wms.CAMS.add_layer, wmslayer)
@@ -188,9 +199,9 @@ class WMS_NASA_GIBS(WMSBase):
                 for key in self.usewms.add_layer.__dict__.keys()
                 if not (key in ["m"] or key.startswith("_"))
             ]
-        except Exception as ex:
+        except Exception:
             self.wmslayers = []
-            print("EOmaps: Problem while fetching wmslayers for NASA_GIBS", ex)
+            _log_problem(self.name)
 
     def do_add_layer(self, wmslayer, layer):
         wms = getattr(self.usewms.add_layer, wmslayer)
@@ -210,18 +221,18 @@ class WMS_Austria(WMSBase):
                 "Austria__" + key
                 for key in self.m.add_wms.Austria.AT_basemap.add_layer.__dict__
             ]
-        except Exception as ex:
+        except Exception:
             self._AT_layers = []
-            print("EOmaps: Problem while fetching wmslayers for AT_Austria", ex)
+            _log_problem(self.name)
 
         try:
             self._Wien_layers = [
                 "Wien__" + key
                 for key in self.m.add_wms.Austria.Wien_basemap.add_layer.__dict__
             ]
-        except Exception as ex:
+        except Exception:
             self._Wien_layers = []
-            print("EOmaps: Problem while fetching wmslayers for AT_Wien", ex)
+            _log_problem(self.name)
 
         self.wmslayers = [*self._AT_layers, *self._Wien_layers]
 
@@ -282,7 +293,7 @@ class ESRI_ArcGIS(WMSBase):
                 break
 
         if wms is None:
-            print(f"EOaps: WebMap layer {wmslayer}, {layer} not found")
+            _log.error(f"EOaps: WebMap layer {wmslayer}, {layer} not found")
             return
 
         wms(layer=layer, transparent=True)
@@ -301,81 +312,81 @@ class WMS_OSM(WMSBase):
                 for key in self.m.add_wms.OpenStreetMap.add_layer.__dict__.keys()
                 if not (key in ["m"] or key.startswith("_"))
             ]
-        except Exception as ex:
+        except Exception:
             self.wmslayers = []
-            print("EOmaps: Problem while fetching wmslayers for OSM", ex)
+            _log_problem("OSM")
 
         try:
             self._terrestis = [
                 "Terrestis__" + i
                 for i in m.add_wms.OpenStreetMap.OSM_terrestis.add_layer.__dict__
             ]
-        except Exception as ex:
+        except Exception:
             self._terrestis = []
-            print("EOmaps: Problem while fetching wmslayers for OSM_terrestis", ex)
+            _log_problem("OSM_terrestis")
 
         try:
             self._mundialis = [
                 "Mundialis__" + i
                 for i in m.add_wms.OpenStreetMap.OSM_mundialis.add_layer.__dict__
             ]
-        except Exception as ex:
+        except Exception:
             self._mundialis = []
-            print("EOmaps: Problem while fetching wmslayers for OSM_mundialis", ex)
+            _log_problem("OSM_mundialis")
 
         try:
             self._OSM_landuse = [
                 "OSM_landuse__" + i
                 for i in m.add_wms.OpenStreetMap.OSM_landuse.add_layer.__dict__
             ]
-        except Exception as ex:
+        except Exception:
             self._OSM_landuse = []
-            print("Problem while fetching wmslayers for OSM_landuse", ex)
+            _log_problem("OSM_landuse")
 
         try:
             self._OSM_wms = [
                 "OSM_wms__" + i
                 for i in m.add_wms.OpenStreetMap.OSM_wms.add_layer.__dict__
             ]
-        except Exception as ex:
+        except Exception:
             self._OSM_wms = []
-            print("Problem while fetching wmslayers for OSM_wms", ex)
+            _log_problem("OSM_wms")
 
         try:
             self._OSM_wheregroup = [
                 "WhereGroup__" + i
                 for i in m.add_wms.OpenStreetMap.OSM_wheregroup.add_layer.__dict__
             ]
-        except Exception as ex:
+        except Exception:
             self._OSM_wheregroup = []
-            print("Problem while fetching wmslayers for OSM_wheregroup", ex)
+            _log_problem("OSM_wheregroup")
 
         try:
             self._OSM_waymarkedtrails = [
                 "WaymarkedTrails__" + i
                 for i in m.add_wms.OpenStreetMap.OSM_waymarkedtrails.add_layer.__dict__
             ]
-        except Exception as ex:
+        except Exception:
             self._OSM_waymarkedtrails = []
-            print("Problem while fetching wmslayers for OSM_waymarkedtrails", ex)
+            _log_problem("OSM_waymarkedtrails")
 
         try:
             self._OSM_openrailwaymap = [
                 "OpenRailwayMap__" + i
                 for i in m.add_wms.OpenStreetMap.OSM_openrailwaymap.add_layer.__dict__
             ]
-        except Exception as ex:
+        except Exception:
             self._OSM_openrailwaymap = []
-            print("Problem while fetching wmslayers for OSM_openrailwaymap", ex)
+            _log_problem("OSM_openrailwaymap")
 
         try:
             self._OSM_cartodb = [
                 "CartoDB__" + i
                 for i in m.add_wms.OpenStreetMap.OSM_cartodb.add_layer.__dict__
             ]
-        except Exception as ex:
+        except Exception:
             self._OSM_cartodb = []
-            print("Problem while fetching wmslayers for OSM_cartodb", ex)
+            _log_problem("OSM_cartodb")
 
         self.wmslayers += self._terrestis
         self.wmslayers += self._mundialis
@@ -422,9 +433,9 @@ class WMS_S2_cloudless(WMSBase):
         self.m = m
         try:
             self.wmslayers = sorted(self.m.add_wms.S2_cloudless.layers)
-        except Exception as ex:
+        except Exception:
             self.wmslayers = []
-            print("EOmaps: Problem while fetching wmslayers for S2_cloudless", ex)
+            _log_problem(self.name)
 
     def do_add_layer(self, wmslayer, layer):
         wms = getattr(self.m.add_wms.S2_cloudless.add_layer, wmslayer)
@@ -440,9 +451,9 @@ class WMS_ESA_WorldCover(WMSBase):
         self.m = m
         try:
             self.wmslayers = self.m.add_wms.ESA_WorldCover.layers
-        except Exception as ex:
+        except Exception:
             self.wmslayers = []
-            print("EOmaps: Problem while fetching wmslayers for ESA_WorldCover", ex)
+            _log_problem(self.name)
 
     def do_add_layer(self, wmslayer, layer):
         wms = getattr(self.m.add_wms.ESA_WorldCover.add_layer, wmslayer)
@@ -485,12 +496,8 @@ class WMS_ISRIC_SoilGrids(WMSBase):
                         if not (key in ["m"] or key.startswith("_"))
                     ]
                 )
-            except Exception as ex:
-                print(
-                    "EOmaps: Problem while fetching wmslayers for ISRIC_SoilGrids "
-                    f"{subs}",
-                    ex,
-                )
+            except Exception:
+                _log_problem(f"ISRIC_SoilGrids {subs}")
 
     def do_add_layer(self, wmslayer, layer):
 
@@ -509,9 +516,9 @@ class WMS_DLR_basemaps(WMSBase):
         self.m = m
         try:
             self.wmslayers = self.m.add_wms.DLR_basemaps.layers
-        except Exception as ex:
+        except Exception:
             self.wmslayers = []
-            print("EOmaps: Problem while fetching wmslayers for DLR_basemaps", ex)
+            _log_problem(self.name)
 
     def do_add_layer(self, wmslayer, layer):
         wms = getattr(self.m.add_wms.DLR_basemaps.add_layer, wmslayer)
@@ -535,7 +542,7 @@ class WMS_OpenPlanetary(WMSBase):
             ]
         except Exception as ex:
             self._moon = []
-            print("EOmaps: Problem while fetching wmslayers for OpenPlanetary", ex)
+            _log_problem(self.name)
 
         try:
             self._mars = [
@@ -545,7 +552,7 @@ class WMS_OpenPlanetary(WMSBase):
             ]
         except Exception as ex:
             self._mars = []
-            print("EOmaps: Problem while fetching wmslayers for OpenPlanetary", ex)
+            _log_problem(self.name)
 
         self.wmslayers += self._moon
         self.wmslayers += self._mars
@@ -566,7 +573,7 @@ class WMS_OpenPlanetary(WMSBase):
                 break
 
         if wms is None:
-            print("EOmaps: the wms service {wmslayer} does not exist")
+            _log.error("EOmaps: the wms service {wmslayer} does not exist")
             return
 
         wms(layer=layer, transparent=True)
@@ -633,9 +640,9 @@ class AddWMSMenuButton(QtWidgets.QPushButton):
                 with open(wms_layers_dumppath, "r") as file:
                     self._submenus = json.load(file)
             except Exception:
-                print(
-                    "EOmaps: Unable to load cached wms-layers from:\n    ",
-                    wms_layers_dumppath,
+                _log.error(
+                    f"EOmaps: Unable to load cached wms-layers from: \n"
+                    "{wms_layers_dumppath}",
                 )
                 self._submenus = dict()
         else:
@@ -729,7 +736,10 @@ class AddWMSMenuButton(QtWidgets.QPushButton):
 
             self._fetch_submenu(wmsname)
         except Exception as ex:
-            print(f"EOmaps: problem while trying to fetch the submenu for {wmsname}")
+            _log.error(
+                f"EOmaps: problem while trying to fetch the submenu for {wmsname}",
+                exc_info=_log.getEffectiveLevel() == logging.DEBUG,
+            )
 
     def _fetch_submenu(self, wmsname):
         if wmsname in getattr(Maps, "_companion_wms_submenus", dict()):
@@ -738,7 +748,7 @@ class AddWMSMenuButton(QtWidgets.QPushButton):
         if wmsname in self._submenus:
             return
 
-        print(f"EOmaps: Fetching WMS layers for {wmsname} ...")
+        _log.info(f"EOmaps: Fetching WMS layers for {wmsname} ...")
 
         wmsclass = self.wms_dict[wmsname]
         wms = wmsclass(m=self.m)
@@ -753,7 +763,7 @@ class AddWMSMenuButton(QtWidgets.QPushButton):
 
     def populate_submenu(self, wmsname=None):
         if wmsname not in self._submenus:
-            print("No layers found for the WMS: {wmsname}")
+            _log.info("No layers found for the WMS: {wmsname}")
             return
         else:
             sub_features = self.select_wmslayers(wmsname, self._submenus[wmsname])
@@ -766,7 +776,7 @@ class AddWMSMenuButton(QtWidgets.QPushButton):
                 action.triggered.connect(self.menu_callback_factory(wmsname, wmslayer))
 
         except Exception:
-            print("There was a problem with the WMS: " + wmsname)
+            _log.error(f"There was a problem with the WMS: {wmsname}")
 
     @pyqtSlot()
     def menu_callback_factory(self, wmsname, wmslayer):
@@ -894,7 +904,7 @@ class AddWMSMenuButton(QtWidgets.QPushButton):
             The cached webmap layer names.
 
         """
-        print("EOmaps: Fetching WMS layers for the companion widget...")
+        _log.info("EOmaps: Fetching WMS layers for the companion widget...")
 
         b = cls(m=m)
 

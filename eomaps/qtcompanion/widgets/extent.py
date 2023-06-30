@@ -1,6 +1,10 @@
+import logging
 from datetime import datetime
+
 from PyQt5 import QtWidgets
 from PyQt5.QtCore import pyqtSlot
+
+_log = logging.getLogger(__name__)
 
 
 class SetExtentToLocation(QtWidgets.QWidget):
@@ -50,4 +54,7 @@ class SetExtentToLocation(QtWidgets.QWidget):
             self.m.set_extent_to_location(txt)
             self.m.redraw()
         except Exception as ex:
-            print("There was an error while trying to set the extent:", ex)
+            _log.error(
+                "There was an error while trying to set the extent.",
+                exc_info=_log.getEffectiveLevel() == logging.DEBUG,
+            )

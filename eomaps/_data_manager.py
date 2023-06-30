@@ -1,5 +1,9 @@
+import logging
+
 import numpy as np
 from pyproj import CRS, Transformer
+
+_log = logging.getLogger(__name__)
 
 
 class DataManager:
@@ -107,7 +111,7 @@ class DataManager:
         self.layer = layer
 
         if len(self.x0) == 0:
-            print("EOmaps: There is no data to plot")
+            _log.info("EOmaps: There is no data to plot")
             return
 
         if self.x0_1D is not None:
@@ -205,13 +209,13 @@ class DataManager:
                         mode="wrap",
                     )
                 else:
-                    print(
+                    _log.info(
                         "EOmaps: using 'assume_sorted=False' is only possible"
                         + "if you use 1D coordinates + 2D data!"
                         + "...continuing without sorting."
                     )
             else:
-                print(
+                _log.info(
                     "EOmaps: using 'assume_sorted=False' is only relevant for "
                     + "the shapes ['raster', 'shade_raster']! "
                     + "...continuing without sorting."
@@ -343,8 +347,8 @@ class DataManager:
                 self.m.BM.remove_bg_artist(self._masked_points_artist)
                 self._masked_points_artist.remove()
                 self._masked_points_artist = None
-            except Exception as ex:
-                print(ex)
+            except Exception:
+                _log.exception("EOmaps: Error while indicating masked points.")
 
         if not hasattr(self.m, "_data_mask") or self.m._data_mask is None:
             return
@@ -355,7 +359,7 @@ class DataManager:
             return
 
         if npts > 1e5:
-            print(
+            _log.warning(
                 "EOmaps: There are more than 100 000 masked points! "
                 "... indicating masked points will affect performance!"
             )
@@ -426,8 +430,8 @@ class DataManager:
                 if self.m.coll.axes is not None:
                     self.m.coll.remove()
                 self.m._coll = None
-            except Exception as ex:
-                print(ex)
+            except Exception:
+                _log.exception("EOmaps: Error while trying to remove collection.")
 
     def _get_current_datasize(self):
         if self._current_data:
@@ -684,11 +688,11 @@ class DataManager:
                 txt = f"EOmaps: Plotting {s:.1E} points as {self.m.shape.name}"
 
             if s < 5e6:
-                print(f"{txt}...\n       this might take a few seconds...")
+                _log.info(f"{txt}...\n       this might take a few seconds...")
             elif s < 2e7:
-                print(f"{txt}...\n       this might take some time...")
+                _log.info(f"{txt}...\n       this might take some time...")
             else:
-                print(f"{txt}...\n       this might take A VERY LONG TIME❗❗")
+                _log.info(f"{txt}...\n       this might take A VERY LONG TIME❗❗")
         else:
             if name in ["rectangles", "ellipses", "geod_circles"]:
                 txt = f"EOmaps: Plotting {s:.1E} {self.m.shape.name}"
@@ -698,11 +702,11 @@ class DataManager:
                 return
 
             if s < 5e5:
-                print(f"{txt}...\n       this might take a few seconds...")
+                _log.info(f"{txt}...\n       this might take a few seconds...")
             elif s < 1e6:
-                print(f"{txt}...\n       this might take some time...")
+                _log.info(f"{txt}...\n       this might take some time...")
             else:
-                print(f"{txt}...\n       this might take A VERY LONG TIME❗❗")
+                _log.info(f"{txt}...\n       this might take A VERY LONG TIME❗❗")
 
     def _get_xy_from_index(self, ind, reprojected=False):
         """

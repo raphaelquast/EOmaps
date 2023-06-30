@@ -11,6 +11,8 @@ It can happen that geopandas silently ignores the crs when writing shapefiles
 https://github.com/geopandas/geopandas/issues/2387
 
 """
+
+import logging
 from contextlib import contextmanager
 
 import numpy as np
@@ -18,6 +20,8 @@ import matplotlib.pyplot as plt
 
 from .shapes import Shapes
 from .helpers import register_modules
+
+_log = logging.getLogger(__name__)
 
 
 @contextmanager
@@ -190,7 +194,9 @@ class ShapeDrawer:
             try:
                 cb()
             except Exception:
-                print("EOmaps: There was a problem while executing a draw-callback!")
+                _log.exception(
+                    "EOmaps: There was a problem while executing a draw-callback!"
+                )
 
         active_drawer._clicks.clear()
 
@@ -212,14 +218,14 @@ class ShapeDrawer:
         if len(self.gdf) > 0:
             self.gdf.to_file(filename, **kwargs)
         else:
-            print("EOmaps: There are no polygons to save!")
+            _log.error("EOmaps: There are no polygons to save!")
 
     def remove_last_shape(self):
         """
         Remove the most recently plotted polygon from the map.
         """
         if len(self._artists) == 0:
-            print("EOmaps: There is no shape to remove!")
+            _log.error("EOmaps: There is no shape to remove!")
             return
 
         ID = list(self._artists)[-1]

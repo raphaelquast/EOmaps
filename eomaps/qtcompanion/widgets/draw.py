@@ -1,7 +1,11 @@
+import logging
+
 from PyQt5 import QtWidgets
 from PyQt5.QtCore import Qt, pyqtSlot, pyqtSignal
 
 from .utils import ColorWithSlidersWidget
+
+_log = logging.getLogger(__name__)
 
 
 class SaveButton(QtWidgets.QPushButton):
@@ -164,7 +168,10 @@ class DrawerTabs(QtWidgets.QTabWidget):
             while len(drawerwidget.drawer._artists) > 0:
                 drawerwidget.drawer.remove_last_shape()
         except Exception:
-            print("EOmaps: Encountered some problems while clearing the drawer!")
+            _log.error(
+                "EOmaps: Encountered some problems while clearing the drawer!",
+                exc_info=_log.getEffectiveLevel() == logging.DEBUG,
+            )
 
         self.m.BM.update()
 
@@ -329,8 +336,9 @@ class DrawerWidget(QtWidgets.QWidget):
                 # after saving the polygons, start with a new drawer
                 self._new_drawer()
         except Exception:
-            print(
-                "EOmaps: Encountered a problem while trying to save " "drawn shapes..."
+            _log.error(
+                "EOmaps: Encountered a problem while trying to save " "drawn shapes...",
+                exc_info=_log.getEffectiveLevel() == logging.DEBUG,
             )
 
     @pyqtSlot()
@@ -340,9 +348,10 @@ class DrawerWidget(QtWidgets.QWidget):
             # update to make sure the changes are reflected on the map immediately
             self.m.BM.update()
         except Exception:
-            print(
+            _log.error(
                 "EOmaps: Encountered a problem while trying to remove "
-                "the last drawn shape..."
+                "the last drawn shape...",
+                exc_info=_log.getEffectiveLevel() == logging.DEBUG,
             )
 
     def _new_drawer(self):

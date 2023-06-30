@@ -1,3 +1,5 @@
+import logging
+
 from PyQt5 import QtCore, QtWidgets, QtGui
 from PyQt5.QtCore import Qt, pyqtSignal, pyqtSlot, QSize, QPointF
 from PyQt5.QtGui import QFont
@@ -10,6 +12,8 @@ from .wms import AddWMSMenuButton
 from .utils import ColorWithSlidersWidget, GetColorWidget
 from .annotate import AddAnnotationWidget
 from .draw import DrawerTabs
+
+_log = logging.getLogger(__name__)
 
 
 class AddFeaturesMenuButton(QtWidgets.QPushButton):
@@ -65,8 +69,11 @@ class AddFeaturesMenuButton(QtWidgets.QPushButton):
                     action.triggered.connect(
                         self.menu_callback_factory(featuretype, feature)
                     )
-            except:
-                print("There was a problem with the NaturalEarth feature:", featuretype)
+            except Exception:
+                _log.warning(
+                    f"There was a problem with the NaturalEarth feature: {featuretype}",
+                    exc_info=_log.getEffectiveLevel() == logging.DEBUG,
+                )
                 continue
 
         self._menu_fetched = True
@@ -119,12 +126,13 @@ class AddFeaturesMenuButton(QtWidgets.QPushButton):
                 self.m.f.canvas.draw_idle()
                 self.FeatureAdded.emit(str(layer))
             except Exception:
-                import traceback
-
-                print(
-                    "---- adding the feature", featuretype, feature, "did not work----"
+                _log.error(
+                    "---- adding the feature",
+                    featuretype,
+                    feature,
+                    "did not work----",
+                    exc_info=_log.getEffectiveLevel() == logging.DEBUG,
                 )
-                print(traceback.format_exc())
 
         return cb
 
@@ -634,7 +642,7 @@ class LayerTabBar(QtWidgets.QTabBar):
         layer = self.tabText(index)
 
         if self.m.layer == layer:
-            print("EOmaps: The base-layer cannot be deleted!")
+            _log.error("EOmaps: The base-layer cannot be deleted!")
             return
 
         # get currently active layers
@@ -668,7 +676,7 @@ class LayerTabBar(QtWidgets.QTabBar):
                     self.m.show_layer(switchlayer)
                 except StopIteration:
                     # don't allow deletion of last layer
-                    print("you cannot delete the last available layer!")
+                    _log.error("EOmaps: Unable to delete the last available layer!")
                     return
 
         if layer in list(self.m.BM._bg_artists):
@@ -761,7 +769,7 @@ class LayerTabBar(QtWidgets.QTabBar):
         max_n_layers = self.m._companion_widget_n_layer_tabs
         if nlayers > max_n_layers:
             if not LayerTabBar._n_layer_msg_shown:
-                print(
+                _log.info(
                     "EOmaps-companion: The map has more than "
                     f"{max_n_layers} layers... only last active layers "
                     "are shown in the layer-tabs!"
@@ -841,7 +849,7 @@ class LayerTabBar(QtWidgets.QTabBar):
         #         w.canvas.setFocusPolicy(QtCore.Qt.FocusPolicy.StrongFocus)
         #         w.canvas.setFocus()
         #         w.raise_()
-        #         print("raising", w, w.canvas)
+        #         _log.debug("raising", w, w.canvas)
 
         layer = self.tabText(index)
         if len(layer) == 0:
@@ -1122,7 +1130,7 @@ class ArtistEditorTabs(LayerArtistTabs):
         max_n_layers = self.m._companion_widget_n_layer_tabs
         if nlayers > max_n_layers:
             if not LayerTabBar._n_layer_msg_shown:
-                print(
+                _log.info(
                     "EOmaps-companion: The map has more than "
                     f"{max_n_layers} layers... only last active layers "
                     "are shown in the layer-tabs!"
@@ -1232,8 +1240,11 @@ class ArtistEditorTabs(LayerArtistTabs):
         self.m.BM.remove_bg_artist(artist, layer)
         try:
             artist.remove()
-        except Exception as ex:
-            print(f"EOmaps: There was an error while trying to remove the artist: {ex}")
+        except Exception:
+            _log.error(
+                "EOmaps: There was an error while trying to remove the artist",
+                exc_info=_log.getEffectiveLevel() == logging.DEBUG,
+            )
 
         # explicit treatment for gridlines
         grids = self.m.parent._grid._gridlines

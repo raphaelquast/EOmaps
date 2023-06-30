@@ -1,10 +1,8 @@
 """Interactive scalebar."""
 
-
-from .helpers import pairwise
+import logging
 from collections import OrderedDict
 from functools import lru_cache
-import warnings
 
 import numpy as np
 
@@ -15,7 +13,11 @@ from matplotlib.transforms import Affine2D
 from matplotlib.font_manager import FontProperties
 from matplotlib.colors import to_hex
 
+from .helpers import pairwise
+
 _picked_scalebars = set()
+
+_log = logging.getLogger(__name__)
 
 
 class ScaleBar:
@@ -287,6 +289,7 @@ class ScaleBar:
             if return_str:
                 return s
         except ImportError:
+            _log.debug("Error during code formatting", exc_info=True)
             print(s)
             if return_str:
                 return s
@@ -1412,7 +1415,7 @@ class ScaleBar:
                 event.xdata, event.ydata
             )
         except Exception:
-            print("EOmaps: Unable to position scalebar.")
+            _log.info("EOmaps: Unable to position scalebar.")
             return
 
         self._update(lon=lon + ox, lat=lat + oy, BM_update=True)
@@ -1441,7 +1444,7 @@ class ScaleBar:
                     0.99,
                 )
             else:
-                print(
+                _log(
                     "EOmaps: The scale of the scalebar is fixed! "
                     "Use s.set_scale(None) to use autoscaling!"
                 )

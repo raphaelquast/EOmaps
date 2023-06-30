@@ -1,19 +1,21 @@
 """Interactive Colorbar."""
 
-from matplotlib.gridspec import GridSpecFromSubplotSpec, SubplotSpec
+import logging
+from functools import partial, lru_cache
+from textwrap import dedent
+import copy
 
+import numpy as np
+
+from matplotlib.gridspec import GridSpecFromSubplotSpec, SubplotSpec
 import matplotlib.transforms as mtransforms
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 from matplotlib.colors import LinearSegmentedColormap
 
-import numpy as np
-import copy
-
-from functools import partial, lru_cache
-from textwrap import dedent
-
 from .helpers import pairwise, _TransformedBoundsLocator, register_modules
+
+_log = logging.getLogger(__name__)
 
 
 def get_named_bins_formatter(bins, names, show_values=False):
@@ -598,7 +600,7 @@ class ColorBar:
                         )
 
                     except Exception:
-                        print(
+                        _log.exception(
                             "EOmaps: unable to determine automatic extension arrow"
                             "size of parent colorbar."
                         )
@@ -756,7 +758,7 @@ class ColorBar:
             self._extend = self._parent_cb._extend
             # warn if provided extend behavior differs from the inherited behavior
             if self._extend != self._init_extend:
-                print(
+                _log.warning(
                     f"EOmaps Warning: m.add_colorbar(extend='{self._extend}') is "
                     "inherited from the parent colorbar! Explicitly set the 'extend' "
                     "behavior to silence this warning."
@@ -788,8 +790,8 @@ class ColorBar:
             if all((ds, mpl_ext)) and isinstance(self._coll, mpl_ext.ScalarDSArtist):
                 dynamic_shade = True
             else:
-                print(
-                    "EOmaps: using 'dynamic_shade_indicator=True' is only possible "
+                _log.error(
+                    "EOmaps: Using 'dynamic_shade_indicator=True' is only possible "
                     "with 'shade' shapes (e.g. 'shade_raster' or 'shade_points'.\n"
                     "... creating a normal colorbar instead."
                 )
@@ -802,7 +804,7 @@ class ColorBar:
             else:
                 renorm = True
                 # TODO check this without requiring import of datashader!
-                # print(
+                # _log.error(
                 #     "EOmaps: Only dynamic colorbars are possible when using"
                 #     + f" '{aggname}' as datashader-aggregation reduction method "
                 #     + "...creating a 'dynamic_shade_indicator' colorbar instead."
@@ -960,7 +962,7 @@ class ColorBar:
         if self._vmin != self._vmax:
             limsetfunc(self._vmin, self._vmax)
         else:
-            print(
+            _log.error(
                 "EOMaps-Warning: Attempting to set identical upper and "
                 + "lower limits for the colorbar... limits will be ignored!"
             )

@@ -1,9 +1,12 @@
+import logging
+
 from PyQt5 import QtWidgets, QtGui
 from PyQt5.QtCore import Qt, QLocale
 from pathlib import Path
 import io
 import numpy as np
 
+_log = logging.getLogger(__name__)
 
 from .utils import (
     LineEditComplete,
@@ -237,7 +240,7 @@ class ShapeSelector(QtWidgets.QFrame):
 
             return convval
 
-        print(f"WARNING value-conversion for {key} = {val} did not succeed!")
+        _log.warning(f"EOmaps: value-conversion for {key} = {val} did not succeed!")
         return val
 
     @property
@@ -570,7 +573,10 @@ class PlotFileWidget(QtWidgets.QWidget):
             try:
                 self._file_handle.close()
             except Exception as ex:
-                print("EOmaps: encountered a problem while closing the file.", ex)
+                _log.error(
+                    "EOmaps: encountered a problem while closing the file.",
+                    exc_info=_log.getEffectiveLevel() == logging.DEBUG,
+                )
 
         self._file_handle = None
 
@@ -1176,7 +1182,9 @@ class PlotGeoDataFrameWidget(QtWidgets.QWidget):
         try:
             import geopandas as gpd
         except ImportError:
-            print("EOmaps: missing required dependency 'geopandas' to open the file.")
+            _log.error(
+                "EOmaps: missing required dependency 'geopandas' to open the file."
+            )
             return
         self.file_path = file_path
         self.gdf = gpd.read_file(self.file_path)
@@ -1375,7 +1383,7 @@ class OpenFileTabs(QtWidgets.QTabWidget):
                 self.m.BM.remove_bg_artist(widget.m2.coll, layer=widget.m2.layer)
                 widget.m2.coll.remove()
         except Exception:
-            print("EOmaps_companion: unable to remove dataset artist.")
+            _log.error("EOmaps_companion: unable to remove dataset artist.")
 
         widget.m2.cleanup()
 
@@ -1441,7 +1449,7 @@ class OpenFileTabs(QtWidgets.QTabWidget):
         elif ending in self.gdf_file_endings:
             plc = PlotGeoDataFrameWidget(m=self.m)
         else:
-            print(f"EOmaps Error: Unknown file extension '{ending}'")
+            _log.error(f"EOmaps: Unknown file extension '{ending}'")
             self.window().statusBar().showMessage(
                 f"ERROR: Unknown file extension {ending}", 5000
             )
@@ -1463,7 +1471,7 @@ class OpenFileTabs(QtWidgets.QTabWidget):
         except Exception:
             import traceback
 
-            print(f"EOmaps Error: Unable to open file {file_path}")
+            _log.error(f"EOmaps Error: Unable to open file {file_path}")
             self.window().statusBar().showMessage(
                 "ERROR: File could not be opened...", 5000
             )

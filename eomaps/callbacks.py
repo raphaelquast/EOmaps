@@ -5,6 +5,9 @@ import matplotlib.pyplot as plt
 from matplotlib.patches import PathPatch
 from matplotlib.transforms import TransformedPath
 import warnings
+import logging
+
+_log = logging.getLogger(__name__)
 
 
 class _ClickCallbacks(object):
@@ -640,7 +643,7 @@ class _ClickCallbacks(object):
         if isinstance(radius, str) and radius == "pixel":
             pixelQ = True
             if not hasattr(self.m.shape, "radius"):
-                print(
+                _log.error(
                     "EOmaps: You cannot attach markers with 'radius=pixel' if the "
                     + "plot-shape does not set a radius! Please specify it explicitly."
                 )
@@ -1027,7 +1030,9 @@ class _ClickCallbacks(object):
             else:
                 raise TypeError("load_method must be a string or a callable!")
         except Exception:
-            print(f"could not load object with ID:  '{ID}' from {database}")
+            _log.error(
+                f"EOmaps: Unable to load object with ID:  '{ID}' from {database}"
+            )
         if load_multiple is True:
             self.picked_object = getattr(self, "picked_object", list()) + [pick]
         else:

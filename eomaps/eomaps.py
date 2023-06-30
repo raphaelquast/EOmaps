@@ -1,5 +1,9 @@
 """General definition of Maps objects."""
 
+import logging
+
+_log = logging.getLogger(__name__)
+
 from functools import lru_cache, wraps
 from itertools import repeat, chain
 import warnings
@@ -47,7 +51,7 @@ try:
     from ._webmap import refetch_wms_on_size_change, _cx_refetch_wms_on_size_change
     from .webmap_containers import WebMapContainer
 except ImportError as ex:
-    print("EOmaps: Unable to import required WebMap dependencies:", ex)
+    _log.error(f"EOmaps: Unable to import dependencies required for WebMaps: {ex}")
     refetch_wms_on_size_change = None
     _cx_refetch_wms_on_size_change = None
     WebMapContainer = None
@@ -349,6 +353,9 @@ class Maps(metaclass=_MapsMeta):
         preferred_wms_service="wms",
         **kwargs,
     ):
+        self._log_on_event_messages = dict()
+        self._log_on_event_cids = dict()
+
         # make sure the used layer-name is valid
         layer = self._check_layer_name(layer)
 
@@ -507,6 +514,79 @@ class Maps(metaclass=_MapsMeta):
         if self.parent == self:
             plt.close(self.f)
         gc.collect()
+
+    def _parse_log_level(self, level):
+        """
+        Get the numerical log-level from string (or number).
+
+        Parameters
+        ----------
+        level : str or number
+            The log level
+
+        Returns
+        -------
+        int_level : float
+            The numerical value of the log level.
+
+        """
+        from logging import getLevelNamesMapping
+
+        levels = getLevelNamesMapping()
+
+        if isinstance(level, str) and level.upper() in levels:
+            use_level = levels[level.upper()]
+        else:
+            use_level = float(level)
+
+        return use_level
+
+    def _log_on_event(self, level, msg, event):
+        """
+        Schedule a log message that will be shown on the next matplotlib event.
+
+        Identical scheduled messages are only shown once per event!
+
+        {'CRITICAL': 50, 'FATAL': 50, 'ERROR': 40, 'WARN': 30, 'WARNING': 30,
+         'INFO': 20,  'DEBUG': 10, 'NOTSET': 0}
+
+        Parameters
+        ----------
+        level : int or str
+            The logging level.
+        msg : str
+            The message.
+        event : str
+            The event name (e.g. "button_release_event")
+
+        """
+        level = self._parse_log_level(level)
+
+        messages = self._log_on_event_messages.setdefault(event, [])
+        cid = self._log_on_event_cids.setdefault(event, None)
+
+        # don't attach messages if they are already scheduled
+        if (level, msg) in messages:
+            return
+
+        messages.append((level, msg))
+
+        def log_message(*args, **kwargs):
+            cid = self._log_on_event_cids.get(event, None)
+            messages = self._log_on_event_messages.get(event, [])
+
+            if cid is not None:
+                self.f.canvas.mpl_disconnect(cid)
+                self._log_on_event_cids.pop(event, None)
+
+            while len(messages) > 0:
+                level, msg = messages.pop(0)
+                _log.log(level, msg)
+
+        if cid is None:
+            self._log_on_event_cids[event] = self.f.canvas.mpl_connect(
+                event, log_message
+            )
 
     @property
     def layer(self):
@@ -707,8 +787,8 @@ class Maps(metaclass=_MapsMeta):
         m2 = Maps(f=self.f, ax=ax, **kwargs)
 
         if np.allclose(self.ax.bbox.bounds, m2.ax.bbox.bounds):
-            print(
-                "EOmaps: Warning! The new map overlaps exactly with the parent map! "
+            _log.warning(
+                "EOmaps:The new map overlaps exactly with the parent map! "
                 "Use `ax=...` or the LayoutEditor to adjust the position of the map."
             )
 
@@ -1389,7 +1469,7 @@ class Maps(metaclass=_MapsMeta):
                 xy=(r["lon"], r["lat"]), xy_crs=4326, text=text, fontsize=8
             )
         else:
-            print("Centering Map to:\n    ", r["display_name"])
+            log.info("Centering Map to:\n    ", r["display_name"])
 
     @staticmethod
     def _set_clipboard_kwargs(**kwargs):
@@ -1729,7 +1809,7 @@ class Maps(metaclass=_MapsMeta):
         except Exception:
             # geopandas sometimes has problems exploding geometries...
             # if it does not work, just continue with the Multi-geometries!
-            print("EOmaps: Exploding geometries did not work!")
+            _log.error("EOmaps: Exploding geometries did not work!")
             pass
 
         if clip:
@@ -1785,10 +1865,12 @@ class Maps(metaclass=_MapsMeta):
             n_invald = np.count_nonzero(~valid)
             gdf = gdf[valid]
             if len(gdf) == 0:
-                print("EOmaps: GeoDataFrame contains only invalid geometries!")
+                _log.error("EOmaps: GeoDataFrame contains only invalid geometries!")
                 return
             elif n_invald > 0:
-                print("EOmaps: {n_invald} invalid GeoDataFrame geometries are ignored!")
+                _log.warning(
+                    "EOmaps: {n_invald} invalid GeoDataFrame geometries are ignored!"
+                )
 
         with self._disable_autoscale(set_extent):
             for geomtype, geoms in gdf.groupby(gdf.geom_type):
@@ -1809,11 +1891,14 @@ class Maps(metaclass=_MapsMeta):
                 picker = pick_method
                 picker_cls = None
             else:
-                print("EOmaps: I don't know what to do with the provided pick_method")
+                _log.error(
+                    "EOmaps: The provided pick_method is invalid."
+                    "Please provide either a string or a function."
+                )
                 return
 
             if len(artists) > 1:
-                warnings.warn(
+                _log.warning(
                     "EOmaps: Multiple geometry types encountered in `m.add_gdf`. "
                     + "The pick containers are re-named to"
                     + f"{[picker_name + prefix for prefix in prefixes]}"
@@ -2275,7 +2360,7 @@ class Maps(metaclass=_MapsMeta):
         out_d_int, out_d_tot = [], []
 
         if len(xy) <= 1:
-            print("you must provide at least 2 points")
+            _log.error("you must provide at least 2 points")
 
         if n is not None:
             assert del_s is None, "EOmaps: Provide either `del_s` or `n`, not both!"
@@ -2637,9 +2722,11 @@ class Maps(metaclass=_MapsMeta):
             # (different limits might cause a different appearance of the data!)
             if self.data_specs._m == self:
                 if self._vmin is None:
-                    print("EOmaps: Warning, inherited value for 'vmin' is None!")
+                    _log.warning("EOmaps: Inherited value for 'vmin' is None!")
                 if self._vmax is None:
-                    print("EOmaps: Warning, inherited value for 'vmax' is None!")
+                    _log.warning(
+                        "EOmaps: Inherited inherited value for 'vmax' is None!"
+                    )
 
             self._vmin = self._inherit_classification._vmin
             self._vmax = self._inherit_classification._vmax
@@ -2660,7 +2747,7 @@ class Maps(metaclass=_MapsMeta):
                 if "count" in aggname:
                     # if the reduction represents a count, don't count empty pixels
                     if vmin and vmin <= 0:
-                        print(
+                        _log.warning(
                             "EOmaps: setting vmin=1 to avoid counting empty pixels..."
                         )
                         self._vmin = 1
@@ -2739,14 +2826,6 @@ class Maps(metaclass=_MapsMeta):
         zorder : float
             The zorder of the artist (e.g. the stacking level of overlapping artists)
             The default is 1
-        verbose : int
-            The print-message level.
-
-            - 0: don't print warning and info messages to the console
-            - >= 1: print warnings
-            - >= 10: print warnings and info messages
-
-            The default is 1
         kwargs
             kwargs passed to the initialization of the matpltolib collection
             (dependent on the plot-shape) [linewidth, edgecolor, facecolor, ...]
@@ -2755,28 +2834,26 @@ class Maps(metaclass=_MapsMeta):
             `datashader.mpl_ext.dsshow`
 
         """
-        verbose = kwargs.pop("verbose", 1)
+        verbose = kwargs.pop("verbose", None)
+        if verbose is not None:
+            _log.error("EOmaps: The parameter verbose is ignored.")
 
         # make sure zorder is set to 1 by default
         # (by default shading would use 0 while ordinary collections use 1)
         kwargs.setdefault("zorder", 1)
 
-        if verbose >= 1:
-            if (
-                getattr(self, "coll", None) is not None
-                and len(self.cb.pick.get.cbs) > 0
-            ):
-                print(
-                    "EOmaps-warning: Calling `m.plot_map()` or "
-                    "`m.make_dataset_pickable()` more than once on the "
-                    "same Maps-object overrides the assigned PICK-dataset!"
-                )
+        if getattr(self, "coll", None) is not None and len(self.cb.pick.get.cbs) > 0:
+            _log.info(
+                "EOmaps: Calling `m.plot_map()` or "
+                "`m.make_dataset_pickable()` more than once on the "
+                "same Maps-object overrides the assigned PICK-dataset!"
+            )
 
         if layer is None:
             layer = self.layer
         else:
-            if (verbose > 0) and not isinstance(layer, str):
-                print("EOmaps: The layer-name has been converted to a string!")
+            if not isinstance(layer, str):
+                _log.info("EOmaps: The layer-name has been converted to a string!")
                 layer = str(layer)
 
         useshape = self.shape  # invoke the setter to set the default shape
@@ -2802,8 +2879,8 @@ class Maps(metaclass=_MapsMeta):
             self._registered_cmaps.append(cmapname)
 
         # ---------------------- prepare the data
-        if verbose >= 10:
-            print("EOmaps: Preparing the data")
+
+        _log.debug("EOmaps: Preparing the data")
 
         # ---------------------- assign the data to the data_manager
 
@@ -2819,9 +2896,9 @@ class Maps(metaclass=_MapsMeta):
         )
 
         # ---------------------- classify the data
-        if verbose > 0 and not self._inherit_classification:
+        if not self._inherit_classification:
             if self.classify_specs.scheme is not None:
-                print("EOmaps: Classifying...")
+                _log.debug("EOmaps: Classifying...")
 
         self._set_vmin_vmax(
             vmin=kwargs.pop("vmin", None), vmax=kwargs.pop("vmax", None)
@@ -2845,6 +2922,8 @@ class Maps(metaclass=_MapsMeta):
         self._classified = classified
 
         # ---------------------- plot the data
+
+        _log.debug("EOmaps: Plotting the data")
 
         if shade_q:
             self._shade_map(
@@ -2872,11 +2951,10 @@ class Maps(metaclass=_MapsMeta):
 
             self.BM._refetch_layer(layer)
 
-        if verbose >= 1:
-            if getattr(self, "_data_mask", None) is not None and not np.all(
-                self._data_mask
-            ):
-                print("EOmaps: Warning: some datapoints could not be drawn!")
+        if getattr(self, "_data_mask", None) is not None and not np.all(
+            self._data_mask
+        ):
+            _log.info("EOmaps: Some datapoints could not be drawn!")
 
         self._data_plotted = True
 
@@ -2918,7 +2996,7 @@ class Maps(metaclass=_MapsMeta):
         >>> # ...call m2.plot_map() to make the dataset visible...
         """
         if self.coll is not None:
-            print(
+            _log.error(
                 "EOmaps: There is already a dataset plotted on this Maps-object. "
                 "You MUST use a new layer (`m2 = m.new_layer()`) to use "
                 "`m2.make_dataset_pickable()`!"
@@ -3038,7 +3116,7 @@ class Maps(metaclass=_MapsMeta):
         layers = self._get_layers()
 
         if not isinstance(name, str):
-            print("EOmaps: All layer-names are converted to strings!")
+            _log.info("EOmaps: All layer-names are converted to strings!")
             name = str(name)
 
         if "|" in name:
@@ -3058,7 +3136,7 @@ class Maps(metaclass=_MapsMeta):
             if i not in layers:
                 lstr = " - " + "\n - ".join(map(str, layers))
 
-                print(
+                _log.error(
                     f"EOmaps: The layer '{i}' does not exist...\n"
                     + f"Use one of: \n{lstr}"
                 )
@@ -3344,7 +3422,7 @@ class Maps(metaclass=_MapsMeta):
             self.show_layer(initial_layer)
             self.BM.on_draw(None)
 
-    def fetch_layers(self, layers=None, verbose=True):
+    def fetch_layers(self, layers=None):
         """
         Fetch (and cache) the layers of a map.
 
@@ -3361,9 +3439,6 @@ class Maps(metaclass=_MapsMeta):
             A list of layer-names that should be fetched.
             If None, all layers (except the "all" layer) are fetched.
             The default is None.
-        verbose : bool
-            Indicator if status-messages should be printed or not.
-            The default is True.
 
         See Also
         --------
@@ -3388,8 +3463,7 @@ class Maps(metaclass=_MapsMeta):
         assert nlayers > 0, "EOmaps: There are no layers to fetch."
 
         for i, l in enumerate(layers):
-            if verbose:
-                print("EOmaps: fetching layer", f"{i + 1}/{nlayers}:", l)
+            _log.info("EOmaps: fetching layer", f"{i + 1}/{nlayers}:", l)
             self.show_layer(l)
 
         self.show_layer(active_layer)
@@ -3628,7 +3702,7 @@ class Maps(metaclass=_MapsMeta):
                     self.ax.callbacks.disconnect(self._cid_xlim)
                     del self._cid_xlim
             except Exception:
-                print("EOmaps-cleanup: Problem while clearing xlim-cid")
+                _log.error("EOmaps-cleanup: Problem while clearing xlim-cid")
 
         # clear data-specs and all cached properties of the data
         try:
@@ -3639,7 +3713,7 @@ class Maps(metaclass=_MapsMeta):
                 del self.tree
             self.data_specs.delete()
         except Exception:
-            print("EOmaps-cleanup: Problem while clearing data specs")
+            _log.error("EOmaps-cleanup: Problem while clearing data specs")
 
         # disconnect all click, pick and keypress callbacks
         try:
@@ -3647,7 +3721,7 @@ class Maps(metaclass=_MapsMeta):
             # cleanup callback-containers
             self.cb._clear_callbacks()
         except Exception:
-            print("EOmaps-cleanup: Problem while clearing callbacks")
+            _log.error("EOmaps-cleanup: Problem while clearing callbacks")
 
         # cleanup all artists and cached background-layers from the blit-manager
         if not self._is_sublayer:
@@ -3662,11 +3736,11 @@ class Maps(metaclass=_MapsMeta):
             if self.parent != self:
                 self.show_layer(self.parent.layer)
         except Exception:
-            print("EOmaps-cleanup: Problem while updating map to reflect changes")
+            _log.error("EOmaps-cleanup: Problem while updating map to reflect changes")
 
     def _check_layer_name(self, layer):
         if not isinstance(layer, str):
-            print("EOmaps: All layer-names are converted to strings!")
+            _log.info("EOmaps: All layer-names are converted to strings!")
             layer = str(layer)
 
         if layer.startswith("__") and not layer.startswith("__inset_"):
@@ -3719,7 +3793,7 @@ class Maps(metaclass=_MapsMeta):
         mimetype, _ = mimetypes.guess_type(f"dummy.{fmt}")
 
         message = f"EOmaps: Exporting figure as '{fmt}' to clipboard..."
-        print(message)
+        _log.info(message)
 
         if self._companion_widget is not None:
             self._companion_widget.window().statusBar().showMessage(message, 2000)
@@ -3986,8 +4060,8 @@ class Maps(metaclass=_MapsMeta):
         for action in self._after_add_child:
             try:
                 action()
-            except Exception as ex:
-                print("EOmaps: Problem executing 'on_add_child' action:", ex)
+            except Exception:
+                _log.exception("EOmaps: Problem executing 'on_add_child' action:")
 
     def _identify_data(self, data=None, x=None, y=None, parameter=None):
         # identify the way how the data has been provided and convert to the internal
@@ -4281,8 +4355,8 @@ class Maps(metaclass=_MapsMeta):
                         # shade_points should work for any dataset
                         self.set_shape.shade_points()
                     else:
-                        print(
-                            "EOmaps-Warning: Attempting to plot a large dataset "
+                        _log.warning(
+                            "EOmaps: Attempting to plot a large dataset "
                             f"({size} datapoints) but the 'datashader' library "
                             "could not be imported! The plot might take long "
                             "to finish! ... defaulting to 'ellipses' "
@@ -4434,7 +4508,7 @@ class Maps(metaclass=_MapsMeta):
 
             def __new__(cls, **kwargs):
                 if "y" in kwargs:
-                    print(
+                    _log.error(
                         "EOmaps: The values (e.g. the 'y' parameter) are "
                         + "assigned internally... only provide additional "
                         + "parameters that specify the classification scheme!"
@@ -4580,7 +4654,6 @@ class Maps(metaclass=_MapsMeta):
 
     def _shade_map(
         self,
-        verbose=0,
         layer=None,
         dynamic=False,
         set_extent=True,
@@ -4624,12 +4697,11 @@ class Maps(metaclass=_MapsMeta):
         else:
             kwargs.setdefault("norm", "linear")
 
-        if verbose > 0:
-            print("EOmaps: Plotting...")
+        _log.info("EOmaps: Plotting...")
 
         zdata = self._data_manager.z_data
         if len(zdata) == 0:
-            print("EOmaps: there was no data to plot")
+            _log.error("EOmaps: there was no data to plot")
             return
 
         plot_width, plot_height = int(self.ax.bbox.width), int(self.ax.bbox.height)
@@ -4782,14 +4854,6 @@ class Maps(metaclass=_MapsMeta):
         )
 
         self._coll = coll
-        if verbose > 0:
-            print("EOmaps: Indexing for pick-callbacks...")
-
-        # This is now done lazily (only if a pick-callback is attached)
-        # self.tree = SearchTree(m=self._proxy(self))
-        # self.cb.pick._set_artist(coll)
-        # self.cb.pick._init_cbs()
-        # self.cb._methods.add("pick")
 
         if dynamic is True:
             self.BM.add_artist(coll, layer)
@@ -4838,9 +4902,7 @@ class Maps(metaclass=_MapsMeta):
 
                 return val
             except Exception:
-                print(
-                    "EOmaps: There was an error while trying to encode the data:", val
-                )
+                _log.exception(f"EOmaps: Error while trying to encode the data: {val}")
                 return val
         else:
             return val
@@ -4881,7 +4943,7 @@ class Maps(metaclass=_MapsMeta):
 
                 return val
             except Exception:
-                print("EOmaps: There was an error while trying to decode the data.")
+                _log.exception(f"EOmaps: Error while trying to decode the data {val}.")
                 return val
         else:
             return val
@@ -4916,7 +4978,7 @@ class Maps(metaclass=_MapsMeta):
     def _get_nominatim_response(self, q, user_agent=None):
         import requests
 
-        print(f"Querying {q}")
+        _log.info(f"Querying {q}")
         if user_agent is None:
             user_agent = f"EOMaps v{Maps.__version__}"
 
@@ -4997,7 +5059,7 @@ class Maps(metaclass=_MapsMeta):
                     clicked_map = m
 
         if clicked_map is None:
-            print(
+            _log.error(
                 "EOmaps: To activate the 'Companion Widget' you must "
                 "position the mouse on top of an EOmaps Map!"
             )
@@ -5051,7 +5113,7 @@ class Maps(metaclass=_MapsMeta):
         """
         try:
             if plt.get_backend() not in ["QtAgg", "Qt5Agg"]:
-                print(
+                _log.error(
                     "EOmaps: Using m.open_widget() is only possible if you use"
                     + f" 'Qt5Agg' as backend! (active backend: '{plt.get_backend()}')"
                 )
@@ -5060,7 +5122,7 @@ class Maps(metaclass=_MapsMeta):
             from .qtcompanion.app import MenuWindow
 
             if self._companion_widget is not None:
-                print(
+                _log.error(
                     "EOmaps: There is already an existing companinon widget for this"
                     " Maps-object!"
                 )
@@ -5070,8 +5132,8 @@ class Maps(metaclass=_MapsMeta):
             # make sure that we clear the colormap-pixmap cache on startup
             self._companion_widget.cmapsChanged.emit()
 
-        except Exception as ex:
-            print("EOmaps: Unable to initialize companion widget.", ex)
+        except Exception:
+            _log.exception("EOmaps: Unable to initialize companion widget.")
 
     @staticmethod
     def _proxy(obj):

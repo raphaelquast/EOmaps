@@ -1,9 +1,11 @@
 """Collection of WebMap services."""
 
+import logging
 from functools import lru_cache
 from textwrap import dedent
-
 from types import SimpleNamespace
+
+_log = logging.getLogger(__name__)
 
 
 def _combdoc(*args):
@@ -113,7 +115,7 @@ class WebMapContainer(object):
             return object.__getattribute__(self, name)
 
         def _fetch_services(self):
-            print("EOmaps: fetching IRIS layers...")
+            _log.info("EOmaps: fetching IRIS layers...")
 
             import requests
             import json
@@ -140,11 +142,11 @@ class WebMapContainer(object):
 
             new_layers = found_layers - self._layers
             if len(new_layers) > 0:
-                print(f"EOmaps: ... found some new folders: {new_layers}")
+                _log.info(f"EOmaps: ... found some new folders: {new_layers}")
 
             invalid_layers = self._layers - found_layers
             if len(invalid_layers) > 0:
-                print(f"EOmaps: ... could not find the folders: {invalid_layers}")
+                _log.info(f"EOmaps: ... could not find the folders: {invalid_layers}")
             for i in invalid_layers:
                 delattr(self, i)
 
@@ -2254,7 +2256,9 @@ class WebMapContainer(object):
         """
         if service_type == "xyz":
             if rest_API:
-                print("EOmaps: rest_API=True is not supported for service_type='xyz'")
+                _log.warning(
+                    "EOmaps: rest_API=True is not supported for service_type='xyz'"
+                )
 
             s = _XyzTileService(self._m, url, maxzoom=maxzoom)
             service = SimpleNamespace(add_layer=SimpleNamespace(xyz_layer=s))
