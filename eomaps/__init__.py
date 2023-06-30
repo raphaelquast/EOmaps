@@ -34,6 +34,7 @@ def _ensure_handler():
     same format as `logging.basicConfig` to the EOmaps root logger.
 
     Return this handler every time this function is called.
+
     """
     handler = logging.StreamHandler()
     handler.setFormatter(logging.Formatter(logging.BASIC_FORMAT))
@@ -41,7 +42,32 @@ def _ensure_handler():
     return handler
 
 
-def set_loglevel(level):
+def set_logfmt(fmt=None):
+    """
+    Set the format string for the logger.
+    See `logging.Formatter` for details.
+
+    Parameters
+    ----------
+    fmt : str
+        The logging format string to use.
+        The default is:  "%(levelname)s: %(asctime)s: %(message)s"
+
+    """
+    if fmt is None:
+        fmt = "%(levelname)s: %(asctime)s: %(message)s"
+
+    handler = _ensure_handler()
+    handler.setFormatter(logging.Formatter(fmt))
+
+
+_log_formats = {
+    "timed": "%(asctime)s: %(levelname)s: %(name)s: %(message)s",
+    "plain": "%(message)s",
+}
+
+
+def set_loglevel(level, fmt=None):
     """
     Configure EOmaps's logging levels.
 
@@ -63,6 +89,15 @@ def set_loglevel(level):
     ----------
     level : {"notset", "debug", "info", "warning", "error", "critical"}
         The log level of the handler.
+    fmt : str
+        A short-name or a logging format-string.
+
+        Available short-names:
+
+        - "timed": "%(asctime)s: %(levelname)s: %(name)s: %(message)s"
+        - "plain": "%(message)s"
+
+        The default is ``logging.BASIC_FORMAT``
 
     Notes
     -----
@@ -73,6 +108,10 @@ def set_loglevel(level):
     """
     _log.setLevel(level.upper())
     _ensure_handler().setLevel(level.upper())
+
+    if fmt is not None:
+        fmt = _log_formats.get(fmt, fmt)
+        set_logfmt(fmt)
 
 
 # -----------------------------------------------------------------------------------
