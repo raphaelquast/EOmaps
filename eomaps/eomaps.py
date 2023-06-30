@@ -3748,7 +3748,7 @@ class Maps(metaclass=_MapsMeta):
                 self.parent.f._EOmaps_parent = self.parent._real_self
             self.parent._add_child(self)
 
-        if plt.get_backend() == "Qt5Agg":
+        if plt.get_backend() in ["QtAgg", "Qt5Agg"]:
             # attach a callback to show/hide the companion-widget with the "w" key
             if self.parent._cid_keypress is None:
                 # NOTE the companion-widget is ONLY attached to the parent map
