@@ -9,6 +9,7 @@ from eomaps import Maps
 import matplotlib.pyplot as plt
 from matplotlib.backend_bases import MouseEvent
 import requests
+import xml
 
 
 def button_press_event(canvas, x, y, button, dblclick=False, guiEvent=None):
@@ -134,3 +135,5 @@ class TestWMS(unittest.TestCase):
             warnings.warn("Encountered a connection error for NASA_GIBS")
         except requests.exceptions.ConnectTimeout:
             warnings.warn("Encountered a connection timeout for NASA_GIBS")
+        except xml.etree.ElementTree.ParseError:
+            warnings.warn("Encountered a ParseError for NASA_GIBS legend")

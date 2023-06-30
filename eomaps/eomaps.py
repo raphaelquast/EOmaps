@@ -78,9 +78,10 @@ def _handle_backends():
     # (backends are loaded lazily and values such as plt.isinteractive() might not
     # yet show the correct value in case the backend is not yet fully loaded)
 
-    # This is especially true for the IPython/inline backend which explicitly
+    # This is especially important for the IPython/inline backend which explicitly
     # calls plt.ion() when the backend is loaded.
-    plt.switch_backend(plt.get_backend())
+    # (see https://github.com/matplotlib/matplotlib/issues/26221)
+    plt.install_repl_displayhook()
 
     active_backend = plt.get_backend()
 
