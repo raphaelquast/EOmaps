@@ -103,10 +103,13 @@ def set_loglevel(level, fmt=None):
 
         Available short-names:
 
-        - "timed": "%(asctime)s: %(levelname)s: %(name)s: %(message)s"
-        - "plain": "%(message)s"
+        - "minimal": ``<TIME>: message``
+        - "timed": ``<TIME>: <LEVEL>: <NAME>: message``
+        - "plain": ``message``
 
         The default is ``logging.BASIC_FORMAT``
+
+        >>> "%(levelname)s:%(name)s:%(message)s"
 
     Notes
     -----
