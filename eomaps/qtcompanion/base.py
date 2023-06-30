@@ -253,10 +253,10 @@ class AlwaysOnTopWindow(QtWidgets.QMainWindow):
         q = self.m._get_always_on_top()
 
         if q:
-            self.m._set_always_window_on_top(False)
+            self.m._set_always_on_top(False)
             self.on_top.setIcon(QtGui.QIcon(str(iconpath / "eye_closed.png")))
         else:
-            self.m._set_always_window_on_top(True)
+            self.m._set_always_on_top(True)
             self.on_top.setIcon(QtGui.QIcon(str(iconpath / "eye_open.png")))
 
 
