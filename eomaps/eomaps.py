@@ -73,6 +73,14 @@ _backend_warning_shown = False
 
 
 def _handle_backends():
+    # make sure that the backend is activated
+    # (backends are loaded lazily and values such as plt.isinteractive() might not
+    # yet show the correct value in case the backend is not yet fully loaded)
+
+    # This is especially true for the IPython/inline backend which explicitly
+    # calls plt.ion() when the backend is loaded.
+    plt.switch_backend(plt.get_backend())
+
     global _backend_warning_shown
 
     active_backend = plt.get_backend()
@@ -81,7 +89,7 @@ def _handle_backends():
         if active_backend in ["module://matplotlib_inline.backend_inline"]:
             plt.ioff()
 
-            if not _backend_warning_shown:
+            if not _backend_warning_shown and not BlitManager._snapshot_on_update:
                 warnings.warn(
                     "EOmaps disables matplotlib's interactive mode (e.g. 'plt.ioff()') "
                     f"for the backend {plt.get_backend()}.\n"
@@ -91,13 +99,24 @@ def _handle_backends():
 
                 _backend_warning_shown = True
 
-    # to avoid flickering in the layout editor in jupyter notebooks
-    if plt.isinteractive():
-        if active_backend in ["module://ipympl.backend_nbagg"]:
+        # to avoid flickering in the layout editor in jupyter notebooks
+        elif active_backend in ["module://ipympl.backend_nbagg"]:
             plt.ioff()
 
+    # check if we are in an ipython console using the inline-backend.
+    # If yes, put a snapshot of the map into the active cell on each update
+    if BlitManager._snapshot_on_update is None:
+        try:
+            __IPYTHON__
+        except NameError:
+            BlitManager._snapshot_on_update = False
+        else:
+            active_backend = plt.get_backend()
+            # print a snapshot to the active ipython cell in case the
+            # inline-backend is used
+            if active_backend in ["module://matplotlib_inline.backend_inline"]:
+                BlitManager._snapshot_on_update = True
 
-_handle_backends()
 
 # hardcoded list of available mapclassify-classifiers
 # (to avoid importing it on startup)
@@ -120,7 +139,56 @@ _CLASSIFIERS = (
 )
 
 
-class Maps:
+class _MapsMeta(type):
+    def config(
+        cls,
+        snapshot_on_update=None,
+        companion_widget_key=None,
+        always_on_top=None,
+    ):
+        """
+        Set global configuration parameters for figures created with EOmaps.
+
+        This function must be called before initializing any :py:class:`Maps` object!
+
+        >>> from eomaps import Maps
+        >>> Maps.global_config(always_on_top=True)
+
+        (parameters set to None are NOT updated!)
+
+        Parameters
+        ----------
+        snapshot_on_update : bool, optional
+            Only relevant when using an IPython console or a jupyter notebook together
+            with the `inline` backend! (e.g. using `%matplotlib inline`)
+
+            - If True, figure updates automatically trigger drawing a snapshot
+              of the current state of the figure to the active cell.
+            - If False, an explicit call to `m.show()` is required to draw the figure.
+
+            The default is True.
+        companion_widget_key : str, optional
+            The keyboard shortcut to use for activating the companion-widget.
+            The default is "w".
+        always_on_top : bool, optional
+            Only relevant if `PyQt5` is used as matplotlib backend.
+
+            - If True, the figure will be kept "always on top" of other applications.
+
+            The default is False.
+
+        """
+        if companion_widget_key is not None:
+            Maps._companion_widget_key = companion_widget_key
+
+        if always_on_top is not None:
+            Maps._always_on_top = always_on_top
+
+        if snapshot_on_update is not None:
+            BlitManager._snapshot_on_update = snapshot_on_update
+
+
+class Maps(metaclass=_MapsMeta):
     """
     The base-class for generating plots with EOmaps.
 
@@ -196,10 +264,6 @@ class Maps:
         Set the preferred way for accessing WebMap services if both WMS and WMTS
         capabilities are possible.
         The default is "wms"
-    keep_on_top : bool, optional
-        Keep the PyQt figure window on top of other windows.
-        (only relevant if PyQt5 is used as backend!)
-        The default is False.
     kwargs :
         additional kwargs are passed to `matplotlib.pyplot.figure()`
         - e.g. figsize=(10,5)
@@ -249,6 +313,8 @@ class Maps:
     # max. number of layers to show all layers as tabs in the widget
     # (otherwise only recently active layers are shown as tabs)
     _companion_widget_n_layer_tabs = 50
+    # keep the companion-widget (and the figure) on top of other windows
+    _always_on_top = False
 
     CLASSIFIERS = SimpleNamespace(**dict(zip(_CLASSIFIERS, _CLASSIFIERS)))
     "Accessor for available classification schemes."
@@ -263,7 +329,6 @@ class Maps:
         f=None,
         ax=None,
         preferred_wms_service="wms",
-        keep_on_top=False,
         **kwargs,
     ):
         # make sure the used layer-name is valid
@@ -394,8 +459,8 @@ class Maps:
         if self.parent == self:
             self._grid = GridFactory(self.parent)
 
-        if keep_on_top:
-            self._set_keep_window_on_top(True)
+            if Maps._always_on_top:
+                self._set_always_on_top(True)
 
     def _handle_spines(self):
         spine = self.ax.spines["geo"]
@@ -604,8 +669,8 @@ class Maps:
                 Directly use the provided figure and axes instances for plotting.
                 NOTE: The axes MUST be a geo-axes with `m.crs_plot` projection!
         keep_on_top : bool
-            If True, this axis will be drawn on top of all other maps.
-            (same as InsetMaps)
+            If True, this map will be drawn on top of all other axes.
+            (e.g. similar to InsetMaps)
             The default is False.
         preferred_wms_service : str, optional
             Set the preferred way for accessing WebMap services if both WMS and WMTS
@@ -919,7 +984,7 @@ class Maps:
 
         return m2
 
-    def _get_keep_window_on_top(self):
+    def _get_always_on_top(self):
         if "qt" in plt.get_backend().lower():
             from PyQt5 import QtCore
 
@@ -928,7 +993,7 @@ class Maps:
 
         return False
 
-    def _set_keep_window_on_top(self, q):
+    def _set_always_on_top(self, q):
         # keep pyqt window on top
         if "qt" in plt.get_backend().lower():
             from PyQt5 import QtCore
@@ -938,7 +1003,7 @@ class Maps:
             if q:
                 # only do this if necessary to avoid flickering
                 # see https://stackoverflow.com/a/40007740/9703451
-                if not self._get_keep_window_on_top():
+                if not self._get_always_on_top():
                     w.setWindowFlags(w.windowFlags() | QtCore.Qt.WindowStaysOnTopHint)
                     w.resize(ws)
                     w.show()
@@ -955,7 +1020,7 @@ class Maps:
             else:
                 # only do this if necessary to avoid flickering
                 # see https://stackoverflow.com/a/40007740/9703451
-                if self._get_keep_window_on_top():
+                if self._get_always_on_top():
                     w.setWindowFlags(w.windowFlags() & ~QtCore.Qt.WindowStaysOnTopHint)
                     w.resize(ws)
                     w.show()
@@ -2799,6 +2864,8 @@ class Maps:
 
         if self._companion_widget is not None:
             self._companion_widget.dataPlotted.emit()
+
+        self.BM.update()
 
     def make_dataset_pickable(
         self,

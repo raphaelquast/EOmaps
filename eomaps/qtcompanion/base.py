@@ -244,19 +244,19 @@ class AlwaysOnTopWindow(QtWidgets.QMainWindow):
         self.on_top.setIcon(QtGui.QIcon(str(iconpath / "eye_closed.png")))
 
         self.toolbar = ToolBar(m=self.m, left_widget=self.on_top, layers="text")
-        self.on_top.clicked.connect(self.toggle_keep_on_top)
+        self.on_top.clicked.connect(self.toggle_always_on_top)
 
         self.addToolBar(self.toolbar)
 
     @pyqtSlot()
-    def toggle_keep_on_top(self, *args, **kwargs):
-        q = self.m._get_keep_window_on_top()
+    def toggle_always_on_top(self, *args, **kwargs):
+        q = self.m._get_always_on_top()
 
         if q:
-            self.m._set_keep_window_on_top(False)
+            self.m._set_always_window_on_top(False)
             self.on_top.setIcon(QtGui.QIcon(str(iconpath / "eye_closed.png")))
         else:
-            self.m._set_keep_window_on_top(True)
+            self.m._set_always_window_on_top(True)
             self.on_top.setIcon(QtGui.QIcon(str(iconpath / "eye_open.png")))
 
 

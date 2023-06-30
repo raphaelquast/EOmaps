@@ -1480,6 +1480,8 @@ class LayoutEditor:
 class BlitManager:
     """Manager used to schedule draw events, cache backgrounds, etc."""
 
+    _snapshot_on_update = None
+
     def __init__(self, m):
         """
         Manager used to schedule draw events, cache backgrounds, etc.
@@ -2613,6 +2615,13 @@ class BlitManager:
         # let the GUI event loop process anything it has to do
         # don't do this! it is causing infinite loops
         # cv.flush_events()
+
+        if (
+            blit
+            and not getattr(self._m, "_snapshotting", False)
+            and self._snapshot_on_update is True
+        ):
+            self._m.snapshot(clear=True)
 
     def blit_artists(self, artists, bg="active", blit=True):
         """
