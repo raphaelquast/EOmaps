@@ -94,6 +94,9 @@ class DataManager:
         dynamic=False,
         only_pick=False,
     ):
+        # cleanup existing callbacks before attaching new ones
+        self.cleanup_callbacks()
+
         self._only_pick = only_pick
 
         if self.m._data_plotted:
@@ -133,13 +136,21 @@ class DataManager:
             # attach a hook that updates the collection whenever a new
             # background is fetched
             # ("shade" shapes take care about updating the data themselves!)
+            self.attach_callbacks(dynamic=dynamic)
 
-            if dynamic is True:
-                if self.on_fetch_bg not in self.m.BM._before_update_actions:
-                    self.m.BM._before_update_actions.append(self.on_fetch_bg)
-            else:
-                if self.on_fetch_bg not in self.m.BM._before_fetch_bg_actions:
-                    self.m.BM._before_fetch_bg_actions.append(self.on_fetch_bg)
+    def attach_callbacks(self, dynamic):
+        if dynamic is True:
+            if self.on_fetch_bg not in self.m.BM._before_update_actions:
+                self.m.BM._before_update_actions.append(self.on_fetch_bg)
+        else:
+            if self.on_fetch_bg not in self.m.BM._before_fetch_bg_actions:
+                self.m.BM._before_fetch_bg_actions.append(self.on_fetch_bg)
+
+    def cleanup_callbacks(self):
+        if self.on_fetch_bg in self.m.BM._before_fetch_bg_actions:
+            self.m.BM._before_fetch_bg_actions.remove(self.on_fetch_bg)
+        if self.on_fetch_bg in self.m.BM._before_update_actions:
+            self.m.BM._before_update_actions.remove(self.on_fetch_bg)
 
     def _prepare_data(self, assume_sorted=True):
         in_crs = self.m.data_specs.crs
@@ -817,11 +828,8 @@ class DataManager:
         return self._get_xy_from_index(inds, reprojected=reprojected)
 
     def cleanup(self):
+        self.cleanup_callbacks()
+
         self._all_data.clear()
         self._current_data.clear()
         self.last_extent = None
-
-        if self.on_fetch_bg in self.m.BM._before_fetch_bg_actions:
-            self.m.BM._before_fetch_bg_actions.remove(self.on_fetch_bg)
-        if self.on_fetch_bg in self.m.BM._before_update_actions:
-            self.m.BM._before_update_actions.remove(self.on_fetch_bg)
