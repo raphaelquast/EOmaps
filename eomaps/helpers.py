@@ -2361,13 +2361,15 @@ class BlitManager:
                         self._managed_axes.remove(art)
 
         else:
-            if art in self._artists[layer]:
+            if art in self._artists.get(layer, []):
                 art.set_animated(False)
                 self._artists[layer].remove(art)
 
                 # remove axes from the managed_axes set as well!
                 if art in self._managed_axes:
                     self._managed_axes.remove(art)
+            else:
+                _log.debug(f"The artist {art} is not on the layer '{layer}'")
 
     def _get_artist_zorder(self, a):
         try:

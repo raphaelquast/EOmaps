@@ -32,7 +32,7 @@ class InsetMaps(Maps):
     ):
 
         self._parent_m = self._proxy(parent)
-
+        self._indicators = []
         # inherit the layer from the parent Maps-object if not explicitly
         # provided
         if layer is None:
@@ -115,7 +115,7 @@ class InsetMaps(Maps):
         # TODO turn off navigation until the matpltolib pull-request on
         # zoom-events in overlapping axes is resolved
         # https://github.com/matplotlib/matplotlib/pull/22347
-        self.ax.set_navigate(False)
+        # self.ax.set_navigate(False)
 
         if boundary is not False:
             spine = self.ax.spines["geo"]
@@ -129,8 +129,6 @@ class InsetMaps(Maps):
         if indicate_extent is not False:
             self.indicate_inset_extent(
                 self._parent_m,
-                layer=self._parent_m.layer,
-                permanent=True,
                 **self._extent_kwargs,
             )
 
@@ -145,6 +143,39 @@ class InsetMaps(Maps):
             )
         else:
             self._bg_patch = None
+
+        # attach callback to update indicator patches
+        self.BM._before_fetch_bg_actions.append(self._update_indicator)
+
+    def _get_spine_verts(self):
+        s = self.ax.spines["geo"]
+        s._adjust_location()
+        verts = s.get_verts()
+
+        verts = self.ax.transData.inverted().transform(s.get_verts())
+        verts = np.column_stack(self._transf_plot_to_lonlat.transform(*verts.T))
+
+        return verts
+
+    def _update_indicator(self, *args, **kwargs):
+        from matplotlib.patches import Polygon
+
+        if not hasattr(self, "_patches"):
+            self._patches = set()
+
+        while len(self._patches) > 0:
+            patch = self._patches.pop()
+            self.BM.remove_artist(patch)
+            patch.remove()
+
+        verts = self._get_spine_verts()
+        for m, kwargs in self._indicators:
+            verts_t = np.column_stack(m._transf_lonlat_to_plot.transform(*verts.T))
+
+            p = Polygon(verts_t, **kwargs)
+            art = self._parent_m.ax.add_patch(p)
+            self.BM.add_artist(art, layer=m.layer)
+            self._patches.add(art)
 
     def _add_background_patch(self, color, layer="all"):
         (art,) = self.ax.fill(
@@ -191,12 +222,8 @@ class InsetMaps(Maps):
             (e.g. "facecolor", "edgecolor" etc.)
 
         """
-
         defaultargs = {**self._extent_kwargs}
-
-        defaultargs.setdefault("permanent", True)
         defaultargs.setdefault("zorder", 9999)
-
         defaultargs.update(kwargs)
 
         if not any((i in defaultargs for i in ["fc", "facecolor"])):
@@ -206,15 +233,8 @@ class InsetMaps(Maps):
         if not any((i in defaultargs for i in ["lw", "linewidth"])):
             defaultargs["lw"] = 1
 
-        m.add_marker(
-            shape=self._inset_props["shape"],
-            xy=self._inset_props["xy"],
-            xy_crs=self._inset_props["xy_crs"],
-            radius=self._inset_props["radius"],
-            radius_crs=self._inset_props["radius_crs"],
-            n=n,
-            **defaultargs,
-        )
+        self._indicators.append((m, defaultargs))
+        self._update_indicator()
 
     def add_indicator_line(self, m=None, **kwargs):
         """
@@ -291,12 +311,18 @@ class InsetMaps(Maps):
         x1 = (bbox.x1 + bbox.x0) / 2
         y1 = (bbox.y1 + bbox.y0) / 2
 
+        verts = self._get_spine_verts()
+
+        verts_t = verts.mean(axis=0)
+        verts_t = np.column_stack(self._transf_lonlat_to_plot.transform(*verts_t.T))
+        verts_t = (self.ax.transData + self.f.transFigure.inverted()).transform(verts_t)
+        x1, y1 = verts_t[0]
+
         for l, m in self._indicator_lines:
-            # get inset map extent in ax projection
-            t = m._get_transformer(props["xy_crs"], m.ax.projection)
-            xy = t.transform(*props["xy"])
-            # get inset map extent in figure coordinates
-            x0, y0 = (m.ax.transData + m.f.transFigure.inverted()).transform(xy)
+            verts_t = verts.mean(axis=0)
+            verts_t = np.column_stack(m._transf_lonlat_to_plot.transform(*verts_t.T))
+            verts_t = (m.ax.transData + m.f.transFigure.inverted()).transform(verts_t)
+            x0, y0 = verts_t[0]
 
             l.set_xdata([x0, x1])
             l.set_ydata([y0, y1])
