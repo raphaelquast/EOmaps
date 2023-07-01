@@ -106,7 +106,7 @@ def _handle_backends():
             plt.ion()
         else:
             plt.ioff()
-            _log.info(
+            _log.debug(
                 "EOmaps: matplotlib's interactive mode is turned off. "
                 "Call `m.show()` to show the map!"
             )
@@ -159,7 +159,8 @@ class _MapsMeta(type):
         snapshot_on_update=None,
         companion_widget_key=None,
         always_on_top=None,
-        use_interactive_mode=True,
+        use_interactive_mode=None,
+        log_level=None,
     ):
         """
         Set global configuration parameters for figures created with EOmaps.
@@ -167,7 +168,7 @@ class _MapsMeta(type):
         This function must be called before initializing any :py:class:`Maps` object!
 
         >>> from eomaps import Maps
-        >>> Maps.global_config(always_on_top=True)
+        >>> Maps.config(always_on_top=True)
 
         (parameters set to None are NOT updated!)
 
@@ -197,8 +198,19 @@ class _MapsMeta(type):
 
             If False, a call to `m.show()` is required to trigger showing the figure!
 
-            The default is True.
+            The default is None.
+        log_level : str or int, optional
+            The logging level.
+            If set, a StreamHandler will be attached to the logger that prints to
+            the active terminal at the specified log level.
+
+            See :py:meth:`set_loglevel` on how to customize logging format.
+
+            The default is None.
         """
+
+        from . import set_loglevel
+
         if companion_widget_key is not None:
             Maps._companion_widget_key = companion_widget_key
 
@@ -210,6 +222,9 @@ class _MapsMeta(type):
 
         if use_interactive_mode is not None:
             Maps._use_interactive_mode = use_interactive_mode
+
+        if log_level is not None:
+            set_loglevel(log_level)
 
 
 class Maps(metaclass=_MapsMeta):
@@ -3164,6 +3179,7 @@ class Maps(metaclass=_MapsMeta):
             If True, clear the active cell before plotting a snapshot of the figure.
             The default is True.
         """
+
         self.show_layer(self.layer)
 
         if not plt.isinteractive():
@@ -3822,13 +3838,13 @@ class Maps(metaclass=_MapsMeta):
             self._save_to_clipboard(**Maps._clipboard_kwargs)
 
     def _init_figure(self, ax=None, plot_crs=None, **kwargs):
-        # do this on any new figure since "%matpltolib inline" tries to re-activate
-        # interactive mode all the time!
-
-        _handle_backends()
-
         if self.parent.f is None:
+            # do this on any new figure since "%matpltolib inline" tries to re-activate
+            # interactive mode all the time!
+            _handle_backends()
+
             self._f = plt.figure(**kwargs)
+            _log.debug("EOmaps: New figure created")
 
             # make sure we keep a "real" reference otherwise overwriting the
             # variable of the parent Maps-object while keeping the figure open
