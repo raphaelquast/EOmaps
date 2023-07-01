@@ -3923,8 +3923,6 @@ class Maps(metaclass=_MapsMeta):
             # are added (and clipped) before actual limits are set
             self.ax.set_global()
 
-            # do this only on xlims and NOT on ylims to avoid recursion
-            # (plot aspect ensures that y changes if x changes)
             self._cid_xlim = self.ax.callbacks.connect(
                 "xlim_changed", self._on_xlims_change
             )

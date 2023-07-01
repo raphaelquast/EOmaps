@@ -235,6 +235,8 @@ class NaturalEarth_presets:
             return {subst.get(key, key): val for key, val in kwargs.items()}
 
         def __call__(self, scale=50, **kwargs):
+            _log.debug(f"EOmaps: Adding feature: {self.category}: {self.name}")
+
             k = dict(**self.kwargs)
             k.update(kwargs)
 
@@ -486,6 +488,8 @@ class NaturalEarth_features(object):
             ) + self.__doc__
 
         def __call__(self, layer=None, scale="auto", **kwargs):
+            _log.debug(f"EOmaps: Adding feature: {self._category}: {self._name}")
+
             self._set_scale(scale)
 
             from . import MapsGrid  # do this here to avoid circular imports!
