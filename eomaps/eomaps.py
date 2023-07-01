@@ -3825,9 +3825,9 @@ class Maps(metaclass=_MapsMeta):
         # do this on any new figure since "%matpltolib inline" tries to re-activate
         # interactive mode all the time!
 
-        _handle_backends()
-
         if self.parent.f is None:
+            _handle_backends()
+
             self._f = plt.figure(**kwargs)
 
             # make sure we keep a "real" reference otherwise overwriting the
