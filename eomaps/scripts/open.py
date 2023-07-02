@@ -7,6 +7,7 @@ try:
     import matplotlib
 
     matplotlib.use("qt5agg")
+
 except Exception:
     click.echo("... unable to activate PyQt5 backend... defaulting to 'tkinter'")
 
@@ -142,7 +143,14 @@ def _identify_crs(crs):
     multiple=False,
     help=("Query OpenStreetMap for a location and set the map extent accordingly."),
 )
-def cli(crs=None, file=None, ne=None, wms=None, location=None):
+@click.option(
+    "--loglevel",
+    type=str,
+    default=None,
+    multiple=False,
+    help=("Set the log level. (info, warning, error, debug"),
+)
+def cli(crs=None, file=None, ne=None, wms=None, location=None, loglevel=None):
     """
     Command line interface for EOmaps.
 
