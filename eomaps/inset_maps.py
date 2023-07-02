@@ -165,7 +165,7 @@ class InsetMaps(Maps):
 
         while len(self._patches) > 0:
             patch = self._patches.pop()
-            self.BM.remove_artist(patch)
+            self.BM.remove_bg_artist(patch, draw=False)
             patch.remove()
 
         verts = self._get_spine_verts()
@@ -174,7 +174,7 @@ class InsetMaps(Maps):
 
             p = Polygon(verts_t, **kwargs)
             art = self._parent_m.ax.add_patch(p)
-            self.BM.add_artist(art, layer=m.layer)
+            self.BM.add_bg_artist(art, layer=m.layer, draw=False)
             self._patches.add(art)
 
     def _add_background_patch(self, color, layer="all"):
@@ -273,7 +273,7 @@ class InsetMaps(Maps):
         defaultargs.update(kwargs)
 
         l = plt.Line2D([0, 0], [1, 1], transform=self.f.transFigure, **defaultargs)
-        l = self._parent.ax.add_artist(l)
+        l = self._parent.ax.add_bg_artist(l)
         l.set_clip_on(False)
 
         self.BM.add_bg_artist(l, self.layer)
@@ -305,22 +305,14 @@ class InsetMaps(Maps):
         self.BM._before_fetch_bg_actions.append(self._update_indicator_lines)
 
     def _update_indicator_lines(self, *args, **kwargs):
-        props = self._inset_props
-        bbox = self.ax.get_position()
-        # get current inset-map position
-        x1 = (bbox.x1 + bbox.x0) / 2
-        y1 = (bbox.y1 + bbox.y0) / 2
+        verts = self._get_spine_verts().mean(axis=0)
 
-        verts = self._get_spine_verts()
-
-        verts_t = verts.mean(axis=0)
-        verts_t = np.column_stack(self._transf_lonlat_to_plot.transform(*verts_t.T))
+        verts_t = np.column_stack(self._transf_lonlat_to_plot.transform(*verts.T))
         verts_t = (self.ax.transData + self.f.transFigure.inverted()).transform(verts_t)
         x1, y1 = verts_t[0]
 
         for l, m in self._indicator_lines:
-            verts_t = verts.mean(axis=0)
-            verts_t = np.column_stack(m._transf_lonlat_to_plot.transform(*verts_t.T))
+            verts_t = np.column_stack(m._transf_lonlat_to_plot.transform(*verts.T))
             verts_t = (m.ax.transData + m.f.transFigure.inverted()).transform(verts_t)
             x0, y0 = verts_t[0]
 
