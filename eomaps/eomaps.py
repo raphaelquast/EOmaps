@@ -106,7 +106,7 @@ def _handle_backends():
             plt.ion()
         else:
             plt.ioff()
-            _log.info(
+            _log.debug(
                 "EOmaps: matplotlib's interactive mode is turned off. "
                 "Call `m.show()` to show the map!"
             )
@@ -167,7 +167,7 @@ class _MapsMeta(type):
         This function must be called before initializing any :py:class:`Maps` object!
 
         >>> from eomaps import Maps
-        >>> Maps.global_config(always_on_top=True)
+        >>> Maps.config(always_on_top=True)
 
         (parameters set to None are NOT updated!)
 
@@ -3164,6 +3164,7 @@ class Maps(metaclass=_MapsMeta):
             If True, clear the active cell before plotting a snapshot of the figure.
             The default is True.
         """
+
         self.show_layer(self.layer)
 
         if not plt.isinteractive():
@@ -3829,6 +3830,7 @@ class Maps(metaclass=_MapsMeta):
 
         if self.parent.f is None:
             self._f = plt.figure(**kwargs)
+            _log.debug("EOmaps: New figure created")
 
             # make sure we keep a "real" reference otherwise overwriting the
             # variable of the parent Maps-object while keeping the figure open
