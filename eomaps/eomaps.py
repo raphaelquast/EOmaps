@@ -998,7 +998,7 @@ class Maps(metaclass=_MapsMeta):
             - If a dict is provided, it will be used to update the appearance of the
               added polygon (e.g. facecolor, edgecolor, linewidth etc.)
 
-            NOTE: you can also use `m_inset.indicate_inset_extent(...)` to manually
+            NOTE: you can also use `m_inset.add_extent_indicator(...)` to manually
             indicate the inset-shape on arbitrary Maps-objects.
 
             The default is True.
@@ -1022,7 +1022,7 @@ class Maps(metaclass=_MapsMeta):
 
         See Also
         --------
-        Maps.indicate_inset_extent : Indicate inset-extent on another map (as polygon).
+        Maps.add_extent_indicator : Indicate inset-extent on another map (as polygon).
         Maps.set_inset_position : Set the (center) position and size of the inset-map.
 
         Examples
@@ -1055,7 +1055,7 @@ class Maps(metaclass=_MapsMeta):
         >>> m2.set_data([1, 2, 3], [5, 6, 7], [45, 46, 47], crs=4326)
         >>> m2.plot_map()
         >>> m2.add_annotation(ID=1)
-        >>> m2.indicate_inset_extent(m, ec="g", fc=(0,1,0,.25))
+        >>> m2.add_extent_indicator(m, ec="g", fc=(0,1,0,.25))
 
         Multi-layer inset-maps:
 

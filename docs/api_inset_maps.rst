@@ -39,7 +39,7 @@ For convenience, inset-map objects have the following special methods defined:
     :nosignatures:
 
     InsetMaps.set_inset_position
-    InsetMaps.indicate_inset_extent
+    InsetMaps.add_extent_indicator
     InsetMaps.add_indicator_line
 
 

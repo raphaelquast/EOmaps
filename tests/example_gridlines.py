@@ -35,7 +35,7 @@ g.add_labels(where="lr", offset=7, fontsize=6, c="g")
 g = mi.add_gridlines(([40, 45, 50], None), c="b", lw=2)
 g.add_labels(where="tb", offset=7, fontsize=6, c="b")
 
-mi.indicate_inset_extent(m, fc="darkred", ec="none", alpha=0.5)
+mi.add_extent_indicator(m, fc="darkred", ec="none", alpha=0.5)
 mi.add_indicator_line()
 
 # ----------------- second inset-map
@@ -49,7 +49,7 @@ mi = m.new_inset_map(
 mi.add_feature.preset.ocean()
 mi.add_feature.preset.land()
 
-mi.indicate_inset_extent(m, fc=".5", ec="none", alpha=0.5)
+mi.add_extent_indicator(m, fc=".5", ec="none", alpha=0.5)
 mi.add_indicator_line(c="k")
 
 # draw a regular 1 degree grid

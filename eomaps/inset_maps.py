@@ -5,6 +5,7 @@ import matplotlib.pyplot as plt
 from matplotlib.path import Path
 
 from . import Maps
+from .helpers import _deprecated
 
 
 class InsetMaps(Maps):
@@ -127,7 +128,7 @@ class InsetMaps(Maps):
         )
 
         if indicate_extent is not False:
-            self.indicate_inset_extent(
+            self.add_extent_indicator(
                 self._parent_m,
                 **self._extent_kwargs,
             )
@@ -204,10 +205,14 @@ class InsetMaps(Maps):
         set_extent = kwargs.pop("set_extent", False)
         super().plot_map(*args, **kwargs, set_extent=set_extent)
 
+    @_deprecated("Use `add_extent_indicator` instead!")
+    def indicate_inset_extent(self, *args, **kwargs):
+        return self.add_extent_indicator(*args, **kwargs)
+
     # a convenience-method to add a boundary-polygon to a map
-    def indicate_inset_extent(self, m, n=100, **kwargs):
+    def add_extent_indicator(self, m, n=100, **kwargs):
         """
-        Add a polygon to a  map that indicates the extent of the inset-map.
+        Add a polygon to a map that indicates the current extent of this inset-map.
 
         Parameters
         ----------
