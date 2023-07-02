@@ -3823,12 +3823,11 @@ class Maps(metaclass=_MapsMeta):
             self._save_to_clipboard(**Maps._clipboard_kwargs)
 
     def _init_figure(self, ax=None, plot_crs=None, **kwargs):
-        # do this on any new figure since "%matpltolib inline" tries to re-activate
-        # interactive mode all the time!
-
-        _handle_backends()
-
         if self.parent.f is None:
+            # do this on any new figure since "%matpltolib inline" tries to re-activate
+            # interactive mode all the time!
+            _handle_backends()
+
             self._f = plt.figure(**kwargs)
             _log.debug("EOmaps: New figure created")
 
