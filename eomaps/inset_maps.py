@@ -273,10 +273,10 @@ class InsetMaps(Maps):
         defaultargs.update(kwargs)
 
         l = plt.Line2D([0, 0], [1, 1], transform=self.f.transFigure, **defaultargs)
-        l = self._parent.ax.add_bg_artist(l)
+        l = self._parent.ax.add_artist(l)
         l.set_clip_on(False)
 
-        self.BM.add_bg_artist(l, self.layer)
+        self.BM.add_bg_artist(l, self.layer, draw=False)
         self._indicator_lines.append((l, m))
 
         if isinstance(m, InsetMaps):
