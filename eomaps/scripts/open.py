@@ -161,10 +161,7 @@ def cli(crs=None, file=None, ne=None, wms=None, location=None):
     """
     from eomaps import Maps
 
-    # disable interactive mode (e.g. tell show to block)
-    import matplotlib.pyplot as plt
-
-    plt.ioff()
+    Maps.config(use_interactive_mode=False, log_level=loglevel)
 
     if crs is None and wms is not None:
         crs = "google_mercator"
