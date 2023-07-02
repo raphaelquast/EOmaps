@@ -210,15 +210,17 @@ class InsetMaps(Maps):
         return self.add_extent_indicator(*args, **kwargs)
 
     # a convenience-method to add a boundary-polygon to a map
-    def add_extent_indicator(self, m, n=100, **kwargs):
+    def add_extent_indicator(self, m=None, n=100, **kwargs):
         """
         Add a polygon to a map that indicates the current extent of this inset-map.
 
         Parameters
         ----------
-        m : eomaps.Maps
+        m : eomaps.Maps or None
             The Maps-object that will be used to draw the marker.
             (e.g. the map on which the extent of the inset should be indicated)
+            If None, the parent Maps-object that was used to create the inset-map
+            is used. The default is None.
         n : int
             The number of points used to represent the polygon.
             The default is 100.
@@ -227,6 +229,9 @@ class InsetMaps(Maps):
             (e.g. "facecolor", "edgecolor" etc.)
 
         """
+        if m is None:
+            m = self._parent_m
+
         defaultargs = {**self._extent_kwargs}
         defaultargs.setdefault("zorder", 9999)
         defaultargs.update(kwargs)
