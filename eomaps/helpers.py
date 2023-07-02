@@ -24,6 +24,24 @@ from matplotlib.spines import Spine
 _log = logging.getLogger(__name__)
 
 
+def _deprecated(message):
+    def deprecated_decorator(func):
+        def deprecated_func(*args, **kwargs):
+            warnings.warn(
+                f"EOmaps: '{func.__name__}' is deprecated and will be removed "
+                f"in upcoming releases. {message}",
+                category=DeprecationWarning,
+                stacklevel=2,
+            )
+            warnings.simplefilter("default", DeprecationWarning)
+
+            return func(*args, **kwargs)
+
+        return deprecated_func
+
+    return deprecated_decorator
+
+
 @lru_cache()
 def _do_import_module(name):
     return import_module(name)
