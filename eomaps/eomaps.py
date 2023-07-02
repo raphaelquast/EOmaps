@@ -160,6 +160,7 @@ class _MapsMeta(type):
         companion_widget_key=None,
         always_on_top=None,
         use_interactive_mode=True,
+        log_level=None,
     ):
         """
         Set global configuration parameters for figures created with EOmaps.
@@ -198,7 +199,18 @@ class _MapsMeta(type):
             If False, a call to `m.show()` is required to trigger showing the figure!
 
             The default is True.
+        log_level : str or int, optional
+            The logging level.
+            If set, a StreamHandler will be attached to the logger that prints to
+            the active terminal at the specified log level.
+
+            See :py:meth:`set_loglevel` on how to customize logging format.
+
+            The default is None.
         """
+
+        from . import set_loglevel
+
         if companion_widget_key is not None:
             Maps._companion_widget_key = companion_widget_key
 
@@ -210,6 +222,9 @@ class _MapsMeta(type):
 
         if use_interactive_mode is not None:
             Maps._use_interactive_mode = use_interactive_mode
+
+        if log_level is not None:
+            set_loglevel(log_level)
 
 
 class Maps(metaclass=_MapsMeta):
