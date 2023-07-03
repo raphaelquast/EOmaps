@@ -2492,7 +2492,7 @@ class BlitManager:
             chain(*self._bg_artists.values(), *self._artists.values())
         )
 
-        axes = {m.ax for m in (self._m, *self._m._children)}
+        axes = {m.ax for m in (self._m, *self._m._children) if m.ax is not None}
 
         allartists = set()
         for ax in axes:
