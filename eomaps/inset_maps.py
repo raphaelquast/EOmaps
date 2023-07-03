@@ -5,6 +5,7 @@ import matplotlib.pyplot as plt
 from matplotlib.path import Path
 
 from . import Maps
+from .helpers import _deprecated
 
 
 class InsetMaps(Maps):
@@ -127,7 +128,7 @@ class InsetMaps(Maps):
         )
 
         if indicate_extent is not False:
-            self.indicate_inset_extent(
+            self.add_extent_indicator(
                 self._parent_m,
                 **self._extent_kwargs,
             )
@@ -165,7 +166,7 @@ class InsetMaps(Maps):
 
         while len(self._patches) > 0:
             patch = self._patches.pop()
-            self.BM.remove_bg_artist(patch)
+            self.BM.remove_bg_artist(patch, draw=False)
             patch.remove()
 
         verts = self._get_spine_verts()
@@ -174,7 +175,7 @@ class InsetMaps(Maps):
 
             p = Polygon(verts_t, **kwargs)
             art = self._parent_m.ax.add_patch(p)
-            self.BM.add_bg_artist(art, layer=m.layer)
+            self.BM.add_bg_artist(art, layer=m.layer, draw=False)
             self._patches.add(art)
 
     def _add_background_patch(self, color, layer="all"):
@@ -204,16 +205,22 @@ class InsetMaps(Maps):
         set_extent = kwargs.pop("set_extent", False)
         super().plot_map(*args, **kwargs, set_extent=set_extent)
 
+    @_deprecated("Use `add_extent_indicator` instead!")
+    def indicate_inset_extent(self, *args, **kwargs):
+        return self.add_extent_indicator(*args, **kwargs)
+
     # a convenience-method to add a boundary-polygon to a map
-    def indicate_inset_extent(self, m, n=100, **kwargs):
+    def add_extent_indicator(self, m=None, n=100, **kwargs):
         """
-        Add a polygon to a  map that indicates the extent of the inset-map.
+        Add a polygon to a map that indicates the current extent of this inset-map.
 
         Parameters
         ----------
-        m : eomaps.Maps
+        m : eomaps.Maps or None
             The Maps-object that will be used to draw the marker.
             (e.g. the map on which the extent of the inset should be indicated)
+            If None, the parent Maps-object that was used to create the inset-map
+            is used. The default is None.
         n : int
             The number of points used to represent the polygon.
             The default is 100.
@@ -222,6 +229,9 @@ class InsetMaps(Maps):
             (e.g. "facecolor", "edgecolor" etc.)
 
         """
+        if m is None:
+            m = self._parent_m
+
         defaultargs = {**self._extent_kwargs}
         defaultargs.setdefault("zorder", 9999)
         defaultargs.update(kwargs)
@@ -276,7 +286,7 @@ class InsetMaps(Maps):
         l = self._parent.ax.add_artist(l)
         l.set_clip_on(False)
 
-        self.BM.add_bg_artist(l, self.layer)
+        self.BM.add_bg_artist(l, self.layer, draw=False)
         self._indicator_lines.append((l, m))
 
         if isinstance(m, InsetMaps):

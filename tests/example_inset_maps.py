@@ -68,7 +68,7 @@ m3.plot_map(alpha=1, ec="k", lw=0.5, set_extent=False)
 m3.add_annotation(ID=1, xytext=(-120, 80))
 
 # indicate the extent of the second inset on the first inset
-m3.indicate_inset_extent(m2, ec="g", lw=2, fc="g", alpha=0.5, zorder=0)
+m3.add_extent_indicator(m2, ec="g", lw=2, fc="g", alpha=0.5, zorder=0)
 
 # add some additional text to the inset-maps
 for m_i, txt, color in zip([m2, m3], ["epsg: 4326", "epsg: 3035"], ["r", "g"]):

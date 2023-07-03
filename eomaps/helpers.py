@@ -24,6 +24,24 @@ from matplotlib.spines import Spine
 _log = logging.getLogger(__name__)
 
 
+def _deprecated(message):
+    def deprecated_decorator(func):
+        def deprecated_func(*args, **kwargs):
+            warnings.warn(
+                f"EOmaps: '{func.__name__}' is deprecated and will be removed "
+                f"in upcoming releases. {message}",
+                category=DeprecationWarning,
+                stacklevel=2,
+            )
+            warnings.simplefilter("default", DeprecationWarning)
+
+            return func(*args, **kwargs)
+
+        return deprecated_func
+
+    return deprecated_decorator
+
+
 @lru_cache()
 def _do_import_module(name):
     return import_module(name)
@@ -1514,6 +1532,8 @@ class BlitManager:
         self._bg_artists = dict()
         self._bg_layers = dict()
 
+        self._pending_webmaps = dict()
+
         # the name of the layer at which all "unmanaged" artists are drawn
         self._unmanaged_artists_layer = "base"
 
@@ -1667,6 +1687,10 @@ class BlitManager:
                             "EOmaps: Issue while executing a layer-change action",
                             exc_info=_log.getEffectiveLevel() == logging.DEBUG,
                         )
+
+            # clear the list of pending webmaps once the layer has been activated
+            if layer in self._pending_webmaps:
+                self._pending_webmaps.pop(layer)
 
     @contextmanager
     def _without_artists(self, artists=None, layer=None):
@@ -1959,8 +1983,10 @@ class BlitManager:
                     rgba[int(y0) : int(y0 + h), int(x0) : int(x0 + w), :],
                 )
             # cache the combined background
-            self._bg_layers[layer] = self._m.f.canvas.copy_from_bbox(self._m.f.bbox)
+            bg = self._m.f.canvas.copy_from_bbox(self._m.f.bbox)
+            # self._bg_layers[layer] = bg
             gc.restore()
+            return bg
 
     def _get_array(self, l, a=1):
         if l not in self._bg_layers:
@@ -1970,6 +1996,27 @@ class BlitManager:
             rgba = rgba.copy()
             rgba[..., -1] = (rgba[..., -1] * a).astype(rgba.dtype)
         return rgba
+
+    def _get_background(self, layer, bbox=None, cache=False):
+        if layer not in self._bg_layers:
+            current_bg = self.canvas.copy_from_bbox(self.figure.bbox)
+
+            if "|" in layer:
+                bg = self._combine_bgs(layer)
+            else:
+                self.fetch_bg(layer, bbox=bbox)
+                bg = self._bg_layers[layer]
+
+            self.canvas.restore_region(current_bg)
+        else:
+            bg = self._bg_layers[layer]
+
+        if cache is True:
+            # explicitly cache the layer
+            # (for peek-layer callbacks to avoid re-fetching the layers all the time)
+            self._bg_layers[layer] = bg
+
+        return bg
 
     def _do_fetch_bg(self, layer, bbox=None):
         cv = self.canvas
@@ -2064,10 +2111,10 @@ class BlitManager:
         if self._m.parent._layout_editor._modifier_pressed:
             return
 
-        initial_layer = self.bg_layer
-
         if layer is None:
-            layer = initial_layer
+            layer = self.bg_layer
+
+        initial_layer = self.canvas.copy_from_bbox(self.figure.bbox)
 
         if layer in self._bg_layers:
             # don't re-fetch existing layers
@@ -2079,7 +2126,7 @@ class BlitManager:
             self._do_fetch_bg(layer, bbox)
 
             if initial_layer in self._bg_layers:
-                self.canvas.restore_region(self._bg_layers[initial_layer])
+                self.canvas.restore_region(initial_layer)
 
     @contextmanager
     def _disconnect_draw(self):
@@ -2591,7 +2638,7 @@ class BlitManager:
             # make sure the background is properly fetched
             self.fetch_bg(show_layer)
 
-        cv.restore_region(self._bg_layers[show_layer])
+        cv.restore_region(self._get_background(show_layer))
 
         # execute after restore actions (e.g. peek layer callbacks)
         while len(self._after_restore_actions) > 0:
@@ -2703,7 +2750,7 @@ class BlitManager:
             x0, y0, w, h = bbox.bounds
 
             # convert the buffer to rgba so that we can add transparency
-            buffer = self._bg_layers[layer]
+            buffer = self._get_background(layer, cache=True)
 
             x = buffer.get_extents()
             ncols, nrows = x[2] - x[0], x[3] - x[1]

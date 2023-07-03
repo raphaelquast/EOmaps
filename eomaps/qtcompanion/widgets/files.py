@@ -483,7 +483,8 @@ class PlotFileWidget(QtWidgets.QWidget):
     def open_file(self, file_path=None):
         self._open_filehandle(file_path)
 
-        self.do_open_file(file_path)
+        if file_path is not None:
+            self.file_path = file_path
 
         if self.file_endings is not None:
             if file_path.suffix.lower() not in self.file_endings:
@@ -493,8 +494,7 @@ class PlotFileWidget(QtWidgets.QWidget):
                 self.file_path = None
                 return
 
-        if file_path is not None:
-            self.file_path = file_path
+        self.do_open_file(file_path)
 
         self.file_info.setText(self.get_info_text())
 
@@ -818,8 +818,15 @@ class PlotGeoTIFFWidget(PlotXarrayWidget):
         self.x.setText("x")
         self.y.setText("y")
 
-        # set layer-name to filename by default
-        self.layer.setPlaceholderText(self.m.BM.bg_layer)
+        # set default layer-name to current layer if a single layer is selected,
+        # else use the filename
+        use_layer = self.m.BM.bg_layer
+        if "|" in use_layer:
+            use_layer = self.file_path.stem
+        else:
+            use_layer = use_layer.split("{")[0].strip()
+
+        self.layer.setPlaceholderText(use_layer)
 
         # set values for autocompletion
         cols = sorted(set(variables + coords))
@@ -883,9 +890,15 @@ class PlotNetCDFWidget(PlotXarrayWidget):
         sel_layout = self.get_sel_layout(f)
         self.layout.addLayout(sel_layout)
 
-        # set layer-name to filename by default
-        # self.layer.setPlaceholderText(file_path.stem)
-        self.layer.setPlaceholderText(self.m.BM.bg_layer)
+        # set default layer-name to current layer if a single layer is selected,
+        # else use the filename
+        use_layer = self.m.BM.bg_layer
+        if "|" in use_layer:
+            use_layer = self.file_path.stem
+        else:
+            use_layer = use_layer.split("{")[0].strip()
+
+        self.layer.setPlaceholderText(use_layer)
 
         # update info text
         self.update_info_text()
@@ -973,9 +986,15 @@ class PlotCSVWidget(PlotFileWidget):
 
             self.parameter.setText(cols[3])
 
-        # set layer-name to filename by default
-        # self.layer.setPlaceholderText(file_path.stem)
-        self.layer.setPlaceholderText(self.m.BM.bg_layer)
+        # set default layer-name to current layer if a single layer is selected,
+        # else use the filename
+        use_layer = self.m.BM.bg_layer
+        if "|" in use_layer:
+            use_layer = self.file_path.stem
+        else:
+            use_layer = use_layer.split("{")[0].strip()
+
+        self.layer.setPlaceholderText(use_layer)
 
     def get_info_text(self):
         import pandas as pd
@@ -1128,7 +1147,6 @@ class PlotGeoDataFrameWidget(QtWidgets.QWidget):
         # layer
         layerlabel = QtWidgets.QLabel("Layer:")
         self.layer = LayerInput()
-        self.layer.setPlaceholderText(str(self.m.BM.bg_layer))
 
         setlayername = QtWidgets.QWidget()
         layername = QtWidgets.QHBoxLayout()
@@ -1190,6 +1208,16 @@ class PlotGeoDataFrameWidget(QtWidgets.QWidget):
         self.gdf = gpd.read_file(self.file_path)
 
         self.file_info.setText(self.gdf.__repr__())
+
+        # set default layer-name to current layer if a single layer is selected,
+        # else use the filename
+        use_layer = self.m.BM.bg_layer
+        if "|" in use_layer:
+            use_layer = self.file_path.stem
+        else:
+            use_layer = use_layer.split("{")[0].strip()
+
+        self.layer.setPlaceholderText(use_layer)
 
     def open_file(self, file_path=None):
         if self.file_endings is not None:
@@ -1388,7 +1416,7 @@ class OpenFileTabs(QtWidgets.QTabWidget):
         widget.m2.cleanup()
 
         # redraw if the layer was currently visible
-        if self.m.BM.bg_layer.contains(widget.m2.layer):
+        if widget.m2.layer in self.m.BM.bg_layer:
             self.m.redraw(widget.m2.layer)
 
         del widget.m2

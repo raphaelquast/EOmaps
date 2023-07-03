@@ -1,7 +1,7 @@
 import logging
 
 from PyQt5 import QtCore, QtWidgets, QtGui
-from PyQt5.QtCore import Qt, pyqtSignal, pyqtSlot, QSize, QPointF
+from PyQt5.QtCore import Qt, pyqtSignal, pyqtSlot, QPointF
 from PyQt5.QtGui import QFont
 
 from matplotlib.colors import to_rgba_array
@@ -9,9 +9,11 @@ from matplotlib.colors import to_rgba_array
 from ...inset_maps import InsetMaps
 from ..common import iconpath
 from .wms import AddWMSMenuButton
-from .utils import ColorWithSlidersWidget, GetColorWidget
+from .utils import ColorWithSlidersWidget, GetColorWidget, AlphaSlider
 from .annotate import AddAnnotationWidget
 from .draw import DrawerTabs
+from .files import OpenDataStartTab
+from .utils import EditLayoutButton
 
 _log = logging.getLogger(__name__)
 
@@ -163,7 +165,8 @@ class ShowHideToolButton(QtWidgets.QToolButton):
             QtWidgets.QToolTip.showText(
                 e.globalPos(),
                 "<h3>Show/Hide Artist</h3>"
-                "Make the corresponding artist visible (eye open) or invisible (eye closed).",
+                "Make the corresponding artist visible (eye open) "
+                "or invisible (eye closed).",
             )
 
 
@@ -318,10 +321,6 @@ class NewLayerLineEdit(QtWidgets.QLineEdit):
             )
 
 
-from .files import OpenDataStartTab
-from .utils import EditLayoutButton
-
-
 class OpenFileButton(QtWidgets.QPushButton):
     def enterEvent(self, e):
         OpenDataStartTab.enterEvent(self, e)
@@ -335,12 +334,6 @@ class EditActionsWidget(QtWidgets.QFrame):
         super().__init__(*args, **kwargs)
 
         self.m = m
-
-        # button to add WebMap services to the currently selected layer
-        try:
-            self.addwms = AddWMSMenuButton(m=self.m, new_layer=False)
-        except:
-            self.addwms = None
 
         self.edit_layout = EditLayoutButton("Edit Layout", m=self.m)
 
@@ -357,8 +350,6 @@ class EditActionsWidget(QtWidgets.QFrame):
         layout = QtWidgets.QHBoxLayout()
         layout.setAlignment(Qt.AlignLeft)
 
-        if self.addwms is not None:
-            layout.addWidget(self.addwms)
         layout.addWidget(self.open_file_button)
         layout.addWidget(self.edit_layout)
 
@@ -402,7 +393,7 @@ class LayerArtistTabs(QtWidgets.QTabWidget):
                 "<li><b>drag</b> tabs to change the layer ordering!</li>"
                 "</ul>"
                 "<ul>"
-                "<li><b>click</b> on a tab to select it (e.g. to add/remove features)</li>"
+                "<li><b>click</b> on a tab to select it (to add/remove features)</li>"
                 "<li><b>control + click</b> on a tab to make it the visible layer.</li>"
                 "<li><b>shift + click</b> on tabs to make multiple layers visible.</li>"
                 "</ul>"
@@ -434,9 +425,43 @@ class OptionTabs(QtWidgets.QTabWidget):
             )
 
 
+class LayerTransparencySlider(AlphaSlider):
+    _alphas = dict()
+
+    def enterEvent(self, e):
+        if self.window().showhelp is True:
+            QtWidgets.QToolTip.showText(
+                e.globalPos(),
+                "<h3>Layer Transparency</h3> Set the global layer transparency.",
+            )
+
+
 class LayerTabBar(QtWidgets.QTabBar):
     _number_of_min_tabs_for_size = 6
     _n_layer_msg_shown = False
+
+    def mousePressEvent(self, event):
+        # TODO a more clean implementation of this would be nice
+        # explicitly handle control+click and shift+click events
+        # to avoid activating the currently clicked tab
+        # (we want to activate the currently active tab which is shifted to the
+        # start-position!)
+        modifiers = QtWidgets.QApplication.keyboardModifiers()
+        if (
+            modifiers == Qt.ControlModifier
+            and event.button() == Qt.MouseButton.LeftButton
+        ):
+
+            idx = self.tabAt(event.pos())
+            self.tabchanged(idx)
+        elif (
+            modifiers == Qt.ShiftModifier
+            and event.button() == Qt.MouseButton.LeftButton
+        ):
+            idx = self.tabAt(event.pos())
+            self.tabchanged(idx)
+        else:
+            super().mousePressEvent(event)
 
     def __init__(self, m=None, populate=False, *args, **kwargs):
         """
@@ -597,9 +622,9 @@ class LayerTabBar(QtWidgets.QTabBar):
         ntabs = self.count()
         layer_order = []
         for i in range(ntabs):
-            l = self.tabText(i)
-            if l in active_layers:
-                layer_order.append(self.tabText(i))
+            txt = self.tabText(i)
+            if txt in active_layers:
+                layer_order.append(txt)
 
         # set the new layer-order
         if active_layers != layer_order:  # avoid recursions
@@ -701,7 +726,7 @@ class LayerTabBar(QtWidgets.QTabBar):
 
         self.populate()
 
-    def color_active_tab(self, m=None, layer=None):
+    def color_active_tab(self, m=None, layer=None, adjust_order=True):
         # defaultcolor = self.palette().color(self.foregroundRole())
         defaultcolor = QtGui.QColor(100, 100, 100)
         activecolor = QtGui.QColor(50, 150, 50)  # QtGui.QColor(0, 128, 0)
@@ -729,19 +754,21 @@ class LayerTabBar(QtWidgets.QTabBar):
             if layer == selected_layer:
                 self.setTabTextColor(i, activecolor)
 
-        # --- adjust the sort-order of the tabs to the order of the visible layers
-        # disconnect tab_moved callback to avoid recursions
-        self.tabMoved.disconnect(self.tab_moved)
-        # to avoid issues with non-existent and private layers (e.g. the background
-        # layer on savefig etc.) use the following strategy:
-        # go through the layers in reverse and move each found layer to the position 0
-        for cl in active_layers[::-1]:
-            for i in range(self.count()):
-                layer = self.tabText(i)
-                if layer == cl:
-                    self.moveTab(i, 0)
-        # re-connect tab_moved callback
-        self.tabMoved.connect(self.tab_moved)
+        if adjust_order:
+            # --- adjust the sort-order of the tabs to the order of the visible layers
+            # disconnect tab_moved callback to avoid recursions
+            self.tabMoved.disconnect(self.tab_moved)
+            # to avoid issues with non-existent and private layers (e.g. the background
+            # layer on savefig etc.) use the following strategy:
+            # - go through the layers in reverse
+            # - move each found layer to the position 0
+            for cl in active_layers[::-1]:
+                for i in range(self.count()):
+                    layer = self.tabText(i)
+                    if layer == cl:
+                        self.moveTab(i, 0)
+            # re-connect tab_moved callback
+            self.tabMoved.connect(self.tab_moved)
 
     @pyqtSlot()
     def populate_on_layer(self, *args, **kwargs):
@@ -813,10 +840,10 @@ class LayerTabBar(QtWidgets.QTabBar):
                 # don't show the close button for this tab
                 self.setTabButton(self.count() - 1, self.RightSide, None)
 
+        self.color_active_tab()
+
         # try to restore the previously opened tab
         self.set_current_tab_by_name(self._current_tab_name)
-
-        self.color_active_tab()
 
     @pyqtSlot(str)
     def set_current_tab_by_name(self, layer):
@@ -840,7 +867,7 @@ class LayerTabBar(QtWidgets.QTabBar):
         # TODO
         # modifiers are only released if the canvas has focus while the event happens!!
         # (e.g. button is released but event is not fired on the canvas)
-        # see https://stackoverflow.com/questions/60978379/why-alt-modifier-does-not-trigger-key-release-event-the-first-time-you-press-it
+        # see https://stackoverflow.com/q/60978379/9703451
 
         # simply calling  canvas.setFocus() does not work!
 
@@ -858,7 +885,9 @@ class LayerTabBar(QtWidgets.QTabBar):
         modifiers = QtWidgets.QApplication.keyboardModifiers()
         if modifiers == Qt.ControlModifier:
             if layer != "":
-                self.m.show_layer(layer)
+                self.m.show_layer(
+                    (layer, LayerTransparencySlider._alphas.get(layer, 1))
+                )
                 # TODO this is a workaround since modifier-releases are not
                 # forwarded to the canvas if it is not in focus
                 self.m.f.canvas.key_release_event("control")
@@ -872,26 +901,29 @@ class LayerTabBar(QtWidgets.QTabBar):
             # get currently active layers
             active_layers, alphas = self.m.BM._get_layers_alphas(self.m.BM.bg_layer)
 
-            for l in (i for i in layer.split("|") if i != "_"):
-                if l not in active_layers:
-                    active_layers.append(l)
+            for x in (i for i in layer.split("|") if i != "_"):
+                if x not in active_layers:
+                    active_layers.append(x)
+                    alphas.append(LayerTransparencySlider._alphas.get(layer, 1))
                 else:
-                    active_layers.remove(l)
+                    idx = active_layers.index(x)
+                    active_layers.pop(idx)
+                    alphas.pop(idx)
 
-            if len(active_layers) > 1:
-                uselayer = "|".join(active_layers)
-
-                self.m.show_layer(uselayer)
-            elif len(active_layers) == 1:
-                self.m.show_layer(active_layers[0])
+            if len(active_layers) >= 1:
+                self.m.show_layer(*zip(active_layers, alphas))
             else:
-                self.m.show_layer(layer)
+                self.m.show_layer(
+                    (layer, LayerTransparencySlider._alphas.get(layer, 1))
+                )
             # TODO this is a workaround since modifier-releases are not
             # forwarded to the canvas if it is not in focus
             self.m.f.canvas.key_release_event("shift")
 
         # make sure to reflect the layer-changes in the tab-colors (and positions)
         self.color_active_tab()
+
+        self.set_current_tab_by_name(layer)
 
 
 class ArtistEditorTabs(LayerArtistTabs):
@@ -922,6 +954,7 @@ class ArtistEditorTabs(LayerArtistTabs):
                 i for i in range(self.count()) if self.tabText(i) == self.m.BM._bg_layer
             )
             self.setCurrentIndex(idx)
+
         except StopIteration:
             pass
 
@@ -1053,7 +1086,7 @@ class ArtistEditorTabs(LayerArtistTabs):
             )
             b_c.setMaximumWidth(25)
 
-        except:
+        except Exception:
             b_c = None
             use_cmap = True
             pass
@@ -1068,7 +1101,7 @@ class ArtistEditorTabs(LayerArtistTabs):
                 b_cmap.activated.connect(
                     self.set_cmap(artist=a, layer=layer, widget=b_cmap)
                 )
-            except:
+            except Exception:
                 b_cmap = None
                 pass
         else:
@@ -1101,11 +1134,22 @@ class ArtistEditorTabs(LayerArtistTabs):
     def populate_on_layer(self, *args, **kwargs):
         lastlayer = getattr(self, "_last_populated_layer", "")
         currlayer = self.m.BM.bg_layer
+
+        # ignore global layer transparencies (no need to re-populate if global)
+        # transparency changes.
+        # NOTE: This is necessary to avoid recursions for multi-layers!
+        last_layers = set(self.m.BM._get_layers_alphas(lastlayer)[0])
+        curr_layers = set(self.m.BM._get_layers_alphas(currlayer)[0])
+
         # only populate if the current layer is not part of the last set of layers
         # (e.g. to allow show/hide of selected layers without removing the tabs)
-        if not set(lastlayer.split("|")).issuperset(set(currlayer.split("|"))):
+        if not last_layers.issuperset(curr_layers):
             self.populate(*args, **kwargs)
             self._last_populated_layer = currlayer
+        else:
+            # TODO check why adjusting the tab-order causes recursions if multiple
+            # layers are selected (and the transparency of a sub-layer is changed)
+            self.tabBar().color_active_tab(adjust_order=False)
 
     @pyqtSlot()
     def populate(self, *args, **kwargs):
@@ -1116,15 +1160,7 @@ class ArtistEditorTabs(LayerArtistTabs):
         self._current_tab_idx = self.currentIndex()
         self._current_tab_name = self.tabText(self._current_tab_idx)
 
-        alllayers = sorted(list(self.m._get_layers()))
-
-        self._current_tab_idx = self.currentIndex()
-        self._current_tab_name = self.tabText(self._current_tab_idx)
-
-        alllayers = set(self.m._get_layers())
-
         # go through the layers in reverse and remove any no longer existing layers
-
         alllayers = set(self.m._get_layers())
         nlayers = len(alllayers)
         max_n_layers = self.m._companion_widget_n_layer_tabs
@@ -1176,9 +1212,24 @@ class ArtistEditorTabs(LayerArtistTabs):
                 # don't show the close button for this tab
                 tabbar.setTabButton(self.count() - 1, tabbar.RightSide, None)
 
+        tabbar.color_active_tab()
+
         # try to restore the previously opened tab
         tabbar.set_current_tab_by_name(self._current_tab_name)
-        tabbar.color_active_tab()
+
+    def get_layer_alpha(self, layer):
+        layers, alphas = self.m.BM._get_layers_alphas(self.m.BM.bg_layer)
+        if layer in layers:
+            idx = layers.index(layer)
+            alpha = alphas[idx]
+            LayerTransparencySlider._alphas[layer] = alpha
+
+        elif layer in LayerTransparencySlider._alphas:
+            # use last set alpha value for the layer
+            alpha = LayerTransparencySlider._alphas[layer]
+        else:
+            alpha = 1
+        return alpha
 
     @pyqtSlot()
     def populate_layer(self, layer=None):
@@ -1198,11 +1249,10 @@ class ArtistEditorTabs(LayerArtistTabs):
             # ignore events without tabs (they happen on re-population of the tabs)
             return
 
-        layout = QtWidgets.QGridLayout()
-        layout.setAlignment(Qt.AlignTop | Qt.AlignLeft)
+        edit_layout = QtWidgets.QGridLayout()
+        edit_layout.setAlignment(Qt.AlignTop | Qt.AlignLeft)
 
         # make sure that we don't create an empty entry !
-
         # TODO the None check is to address possible race-conditions
         # with Maps objects that have no axes defined.
         if layer in self.m.BM._bg_artists and self.m.ax is not None:
@@ -1215,7 +1265,56 @@ class ArtistEditorTabs(LayerArtistTabs):
         for i, a in enumerate(artists):
             for art, pos in self._get_artist_layout(a, layer):
                 if art is not None:
-                    layout.addWidget(art, i, pos)
+                    edit_layout.addWidget(art, i, pos)
+
+        # ------------------------ layer-actions menu
+        # button to add WebMap services to the currently selected layer
+        try:
+            self.addwms = AddWMSMenuButton(m=self.m, new_layer=False, layer=layer)
+            self.addwms.wmsLayerCreated.connect(self.populate_layer)
+        except Exception:
+            self.addwms = None
+
+        # slider to set the global layer transparency
+        self.layer_transparency_slider = LayerTransparencySlider(Qt.Horizontal)
+        self.layer_transparency_slider.set_alpha_stylesheet()
+        self.layer_transparency_slider.setValue(self.get_layer_alpha(layer) * 100)
+        layer_transparency_label = QtWidgets.QLabel("<b>Transparency:</b>")
+
+        def update_layerslider(alpha):
+            self.set_layer_alpha(layer, alpha / 100)
+            LayerTransparencySlider._alphas[layer] = alpha / 100
+
+        self.layer_transparency_slider.valueChanged.connect(update_layerslider)
+
+        layer_actions_layout = QtWidgets.QHBoxLayout()
+        if self.addwms is not None:
+            layer_actions_layout.addWidget(self.addwms)
+
+        spacer = QtWidgets.QSpacerItem(50, 1)
+        layer_actions_layout.addItem(spacer)
+
+        layer_actions_layout.addWidget(layer_transparency_label)
+        layer_actions_layout.addWidget(self.layer_transparency_slider, 1)
+        # ------------------------
+
+        # a separator line
+        separator = QtWidgets.QFrame()
+        separator.setFrameShape(QtWidgets.QFrame.HLine)
+        separator.setFixedHeight(1)
+        separator.setStyleSheet("background-color: rgb(150,150,150)")
+
+        layout = QtWidgets.QVBoxLayout()
+        layout.setContentsMargins(0, 0, 0, 0)
+
+        layout.addLayout(layer_actions_layout)
+        # layout.addWidget(separator)
+
+        for text in self.m.BM._pending_webmaps.get(layer, []):
+            layout.addWidget(QtWidgets.QLabel(f"<b>PENDING WebMap</b>: {text}"))
+
+        layout.addLayout(edit_layout)
+        layout.addStretch(1)
 
         tabwidget = QtWidgets.QWidget()
         tabwidget.setLayout(layout)
@@ -1335,6 +1434,15 @@ class ArtistEditorTabs(LayerArtistTabs):
 
         return cb
 
+    @pyqtSlot()
+    def set_layer_alpha(self, layer, alpha):
+        layers, alphas = self.m.BM._get_layers_alphas(self.m.BM.bg_layer)
+        if layer in layers:
+            idx = layers.index(layer)
+            alphas[idx] = alpha
+
+        self.m.show_layer(*zip(layers, alphas))
+
 
 class ArtistEditor(QtWidgets.QWidget):
     def __init__(self, m=None, show_editor=False):
@@ -1431,15 +1539,12 @@ class ArtistEditor(QtWidgets.QWidget):
 
         # repopulate the layer if features or webmaps are added
         self.addfeature.selector.FeatureAdded.connect(self.artist_tabs.populate_layer)
-        self.edit_actions.addwms.wmsLayerCreated.connect(
-            self.artist_tabs.populate_layer
-        )
 
         option_widget = QtWidgets.QWidget()
         option_layout = QtWidgets.QVBoxLayout()
+        option_layout.addWidget(self.edit_actions)
         option_layout.addWidget(self.option_tabs)
 
-        option_layout.addWidget(self.edit_actions)
         option_widget.setLayout(option_layout)
 
         splitter = QtWidgets.QSplitter(Qt.Vertical)
@@ -1479,8 +1584,5 @@ class ArtistEditor(QtWidgets.QWidget):
         self.addfeature.selector.set_layer(layer)
         if self.draw is not None:
             self.draw.set_layer(layer)
-
-        if self.edit_actions.addwms is not None:
-            self.edit_actions.addwms.set_layer(layer)
 
         self.addannotation.set_layer(layer)

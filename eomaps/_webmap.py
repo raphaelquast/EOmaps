@@ -25,6 +25,11 @@ from .helpers import _sanitize
 _log = logging.getLogger(__name__)
 
 
+def _add_pending_webmap(m, layer, name):
+    # indicate that there is a pending webmap in the companion-widget editor
+    m.BM._pending_webmaps.setdefault(layer, []).append(name)
+
+
 class _WebMapLayer:
     # base class for adding methods to the _WMSLayer- and _WMTSLayer objects
     def __init__(self, m, wms, name):
@@ -381,6 +386,7 @@ class _WMTSLayer(_WebMapLayer):
                 )
             else:
                 # delay adding the layer until it is effectively activated
+                _add_pending_webmap(self._m, self._layer, self.name)
                 self._m.BM.on_layer(
                     func=partial(
                         self._do_add_layer,
@@ -485,6 +491,7 @@ class _WMSLayer(_WebMapLayer):
                 )
             else:
                 # delay adding the layer until it is effectively activated
+                _add_pending_webmap(self._m, self._layer, self.name)
                 m.BM.on_layer(
                     func=partial(
                         self._do_add_layer,
@@ -1163,6 +1170,7 @@ class _XyzTileService:
                 self._do_add_layer(self._m, layer=self._layer, **kwargs)
             else:
                 # delay adding the layer until it is effectively activated
+                _add_pending_webmap(self._m, self._layer, self.name)
                 self._m.BM.on_layer(
                     func=partial(self._do_add_layer, **kwargs),
                     layer=self._layer,

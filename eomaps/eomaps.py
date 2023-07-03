@@ -106,7 +106,7 @@ def _handle_backends():
             plt.ion()
         else:
             plt.ioff()
-            _log.info(
+            _log.debug(
                 "EOmaps: matplotlib's interactive mode is turned off. "
                 "Call `m.show()` to show the map!"
             )
@@ -160,6 +160,7 @@ class _MapsMeta(type):
         companion_widget_key=None,
         always_on_top=None,
         use_interactive_mode=True,
+        log_level=None,
     ):
         """
         Set global configuration parameters for figures created with EOmaps.
@@ -167,7 +168,7 @@ class _MapsMeta(type):
         This function must be called before initializing any :py:class:`Maps` object!
 
         >>> from eomaps import Maps
-        >>> Maps.global_config(always_on_top=True)
+        >>> Maps.config(always_on_top=True)
 
         (parameters set to None are NOT updated!)
 
@@ -198,7 +199,18 @@ class _MapsMeta(type):
             If False, a call to `m.show()` is required to trigger showing the figure!
 
             The default is True.
+        log_level : str or int, optional
+            The logging level.
+            If set, a StreamHandler will be attached to the logger that prints to
+            the active terminal at the specified log level.
+
+            See :py:meth:`set_loglevel` on how to customize logging format.
+
+            The default is None.
         """
+
+        from . import set_loglevel
+
         if companion_widget_key is not None:
             Maps._companion_widget_key = companion_widget_key
 
@@ -210,6 +222,9 @@ class _MapsMeta(type):
 
         if use_interactive_mode is not None:
             Maps._use_interactive_mode = use_interactive_mode
+
+        if log_level is not None:
+            set_loglevel(log_level)
 
 
 class Maps(metaclass=_MapsMeta):
@@ -983,7 +998,7 @@ class Maps(metaclass=_MapsMeta):
             - If a dict is provided, it will be used to update the appearance of the
               added polygon (e.g. facecolor, edgecolor, linewidth etc.)
 
-            NOTE: you can also use `m_inset.indicate_inset_extent(...)` to manually
+            NOTE: you can also use `m_inset.add_extent_indicator(...)` to manually
             indicate the inset-shape on arbitrary Maps-objects.
 
             The default is True.
@@ -1007,7 +1022,7 @@ class Maps(metaclass=_MapsMeta):
 
         See Also
         --------
-        Maps.indicate_inset_extent : Indicate inset-extent on another map (as polygon).
+        Maps.add_extent_indicator : Indicate inset-extent on another map (as polygon).
         Maps.set_inset_position : Set the (center) position and size of the inset-map.
 
         Examples
@@ -1040,7 +1055,7 @@ class Maps(metaclass=_MapsMeta):
         >>> m2.set_data([1, 2, 3], [5, 6, 7], [45, 46, 47], crs=4326)
         >>> m2.plot_map()
         >>> m2.add_annotation(ID=1)
-        >>> m2.indicate_inset_extent(m, ec="g", fc=(0,1,0,.25))
+        >>> m2.add_extent_indicator(m, ec="g", fc=(0,1,0,.25))
 
         Multi-layer inset-maps:
 
@@ -1471,7 +1486,7 @@ class Maps(metaclass=_MapsMeta):
                 xy=(r["lon"], r["lat"]), xy_crs=4326, text=text, fontsize=8
             )
         else:
-            _log.info("Centering Map to:\n    ", r["display_name"])
+            _log.info(f"Centering Map to:\n    {r['display_name']}")
 
     @staticmethod
     def _set_clipboard_kwargs(**kwargs):
@@ -3028,12 +3043,6 @@ class Maps(metaclass=_MapsMeta):
 
     @lru_cache()
     def _get_combined_layer_name(self, *args):
-        if len(args) == 1:
-            assert isinstance(
-                args[0], str
-            ), "EOmaps: Single arguments passed to 'show_layer()', must be strings!"
-            return args[0]
-
         try:
             combnames = []
             for i in args:
@@ -3164,6 +3173,7 @@ class Maps(metaclass=_MapsMeta):
             If True, clear the active cell before plotting a snapshot of the figure.
             The default is True.
         """
+
         self.show_layer(self.layer)
 
         if not plt.isinteractive():
@@ -3822,13 +3832,13 @@ class Maps(metaclass=_MapsMeta):
             self._save_to_clipboard(**Maps._clipboard_kwargs)
 
     def _init_figure(self, ax=None, plot_crs=None, **kwargs):
-        # do this on any new figure since "%matpltolib inline" tries to re-activate
-        # interactive mode all the time!
-
-        _handle_backends()
-
         if self.parent.f is None:
+            # do this on any new figure since "%matpltolib inline" tries to re-activate
+            # interactive mode all the time!
+            _handle_backends()
+
             self._f = plt.figure(**kwargs)
+            _log.debug("EOmaps: New figure created")
 
             # make sure we keep a "real" reference otherwise overwriting the
             # variable of the parent Maps-object while keeping the figure open
