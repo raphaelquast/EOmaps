@@ -1486,7 +1486,7 @@ class Maps(metaclass=_MapsMeta):
                 xy=(r["lon"], r["lat"]), xy_crs=4326, text=text, fontsize=8
             )
         else:
-            _log.info("Centering Map to:\n    ", r["display_name"])
+            _log.info(f"Centering Map to:\n    {r['display_name']}")
 
     @staticmethod
     def _set_clipboard_kwargs(**kwargs):
@@ -3043,12 +3043,6 @@ class Maps(metaclass=_MapsMeta):
 
     @lru_cache()
     def _get_combined_layer_name(self, *args):
-        if len(args) == 1:
-            assert isinstance(
-                args[0], str
-            ), "EOmaps: Single arguments passed to 'show_layer()', must be strings!"
-            return args[0]
-
         try:
             combnames = []
             for i in args:
