@@ -1278,7 +1278,7 @@ class ArtistEditorTabs(LayerArtistTabs):
         # slider to set the global layer transparency
         self.layer_transparency_slider = LayerTransparencySlider(Qt.Horizontal)
         self.layer_transparency_slider.set_alpha_stylesheet()
-        self.layer_transparency_slider.setValue(self.get_layer_alpha(layer) * 100)
+        self.layer_transparency_slider.setValue(int(self.get_layer_alpha(layer) * 100))
         layer_transparency_label = QtWidgets.QLabel("<b>Transparency:</b>")
 
         def update_layerslider(alpha):
