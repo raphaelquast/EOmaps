@@ -1416,7 +1416,7 @@ class OpenFileTabs(QtWidgets.QTabWidget):
         widget.m2.cleanup()
 
         # redraw if the layer was currently visible
-        if self.m.BM.bg_layer.contains(widget.m2.layer):
+        if widget.m2.layer in self.m.BM.bg_layer:
             self.m.redraw(widget.m2.layer)
 
         del widget.m2
