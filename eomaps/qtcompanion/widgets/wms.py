@@ -24,7 +24,7 @@ def remove_prefix(text, prefix):
 
 def _log_problem(name):
     _log.error(
-        "EOmaps: Problem while fetching wmslayers for {name}",
+        f"EOmaps: Problem while fetching wmslayers for {name}",
         exc_info=_log.getEffectiveLevel() == logging.DEBUG,
     )
 
