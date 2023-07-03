@@ -592,12 +592,14 @@ class StatusTipFilter(QObject):
 class AddWMSMenuButton(QtWidgets.QPushButton):
     wmsLayerCreated = pyqtSignal(str)
 
-    def __init__(self, *args, m=None, new_layer=False, show_layer=False, **kwargs):
+    def __init__(
+        self, *args, m=None, new_layer=False, show_layer=False, layer=None, **kwargs
+    ):
         super().__init__(*args, **kwargs)
         self.m = m
         self._new_layer = new_layer
         self._show_layer = show_layer
-        self.layer = None
+        self.layer = layer
 
         self.wms_dict = {
             "OpenStreetMap": WMS_OSM,
@@ -801,7 +803,7 @@ class AddWMSMenuButton(QtWidgets.QPushButton):
                 )
 
             else:
-                layer = self.layer
+                layer = str(self.layer)
                 if layer.startswith("_") and "|" in layer:
                     self.window().statusBar().showMessage(
                         "Adding features to temporary multi-layers is not supported!",
@@ -819,14 +821,14 @@ class AddWMSMenuButton(QtWidgets.QPushButton):
             # update the cached layer-names if necessary
             self._update_layer_cache(wmsname, wms.wmslayers)
 
-            # emit a signal that a new layer has been created
-            self.wmsLayerCreated.emit(str(layer))
-
             if self._show_layer:
                 self.m.show_layer(layer)
 
+            # emit a signal that a new layer has been created
+            self.wmsLayerCreated.emit(layer)
+
             # call draw to make sure the wms service is properly fetched
-            self.m.BM.canvas.draw_idle()
+            self.m.redraw(layer)
 
         return wms_cb
 
