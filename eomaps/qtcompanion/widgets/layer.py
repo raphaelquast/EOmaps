@@ -83,6 +83,8 @@ class AutoUpdatePeekLayerDropdown(QtWidgets.QComboBox):
         view.setTextElideMode(Qt.ElideNone)
 
         for key in layers:
+            if key == "all":
+                continue
             self.addItem(str(key))
         # set the size of the dropdown to be 10 + the longest item
         view.setFixedWidth(view.sizeHintForColumn(0) + 10)
