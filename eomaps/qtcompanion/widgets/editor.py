@@ -345,7 +345,6 @@ class LayerArtistTabs(QtWidgets.QTabWidget):
         # Set the plus button location in a visible area
         h = self.geometry().top()
         w = self.window().width()
-        print("resizingg", w, h)
 
         self.plusButton.move(w - 60, -3)
 
