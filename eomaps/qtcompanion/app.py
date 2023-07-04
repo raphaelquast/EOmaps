@@ -81,11 +81,6 @@ class CompareTab(QtWidgets.QWidget):
 
         layer_tab_layout = QtWidgets.QHBoxLayout()
         layer_tab_layout.setAlignment(Qt.AlignLeft)
-        # layer_tab_layout.addWidget(
-        #     QtWidgets.QLabel(
-        #         "<b>Layers: </b><br>" "<small><code> [ctrl / shift] </code></small>"
-        #     )
-        # )
         layer_tab_layout.addWidget(self.layer_button)
         layer_tab_layout.addWidget(self.layer_tabs)
 
