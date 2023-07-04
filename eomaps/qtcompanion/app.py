@@ -106,9 +106,6 @@ class ControlTabs(QtWidgets.QTabWidget):
 
         # connect the open-file-button to the button from the "Open Files" tab
         self.tab_compare.open_file_button.clicked.connect(self.trigger_open_file_button)
-        self.tab_edit.edit_actions.open_file_button.clicked.connect(
-            self.trigger_open_file_button
-        )
 
         self.addTab(self.tab_compare, "Compare")
         self.addTab(self.tab_edit, "Edit")

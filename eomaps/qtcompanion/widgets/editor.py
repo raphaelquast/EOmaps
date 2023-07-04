@@ -326,61 +326,34 @@ class OpenFileButton(QtWidgets.QPushButton):
         OpenDataStartTab.enterEvent(self, e)
 
 
-class EditActionsWidget(QtWidgets.QFrame):
-    NewLayerCreated = pyqtSignal(str)
-
-    def __init__(self, *args, m=None, **kwargs):
-
-        super().__init__(*args, **kwargs)
-
-        self.m = m
-
-        self.edit_layout = EditLayoutButton("Edit Layout", m=self.m)
-
-        self.open_file_button = OpenFileButton("Open File")
-        self.open_file_button.setFixedSize(self.open_file_button.sizeHint())
-
-        # input-box to create new layers
-        new_layer_label = QtWidgets.QLabel("<b>Create a new layer:</b>")
-        self.new_layer_name = NewLayerLineEdit()
-        self.new_layer_name.setMaximumWidth(300)
-        self.new_layer_name.setPlaceholderText("my_layer")
-        self.new_layer_name.returnPressed.connect(self.new_layer)
-
-        layout = QtWidgets.QHBoxLayout()
-        layout.setAlignment(Qt.AlignLeft)
-
-        layout.addWidget(self.open_file_button)
-        layout.addWidget(self.edit_layout)
-
-        layout.addStretch(1)
-        layout.addWidget(new_layer_label)
-        layout.addWidget(self.new_layer_name)
-
-        self.setLayout(layout)
-
-    @pyqtSlot()
-    def new_layer(self):
-        # use .strip() to make sure the layer does not start or end with whitespaces
-        layer = self.new_layer_name.text().strip()
-        if len(layer) == 0:
-            QtWidgets.QToolTip.showText(
-                self.mapToGlobal(self.new_layer_name.pos()),
-                "Type a layer-name and press return!",
-            )
-            return
-
-        m2 = self.m.new_layer(layer)
-        self.NewLayerCreated.emit(layer)
-        self.new_layer_name.clear()
-        # self.m.show_layer(layer)
-
-        return m2
-
-
 class LayerArtistTabs(QtWidgets.QTabWidget):
+    plusClicked = pyqtSignal()
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+
+        # Plus Button
+        self.plusButton = QtWidgets.QToolButton(self)
+        self.plusButton.setIcon(QtGui.QIcon(str(iconpath / "plus.png")))
+        self.plusButton.setFixedSize(30, 30)  # Small Fixed size
+        self.plusButton.clicked.connect(self.plusClicked.emit)
+
+        self.movePlusButton()  # Move to the correct location
+
+    def movePlusButton(self, *args, **kwargs):
+        """Move the plus button to the correct location."""
+        # Set the plus button location in a visible area
+        h = self.geometry().top()
+        w = self.window().width()
+        print("resizingg", w, h)
+
+        self.plusButton.move(w - 60, -3)
+
+    def resizeEvent(self, *args, **kwargs):
+        super().resizeEvent(*args, **kwargs)
+        # make some space for the + button
+        self.tabBar().setFixedWidth(self.window().width() - 60)
+        self.movePlusButton()
 
     def enterEvent(self, e):
         if self.window().showhelp is True:
@@ -944,6 +917,24 @@ class ArtistEditorTabs(LayerArtistTabs):
         self.m._on_show_companion_widget.append(self.populate)
         self.m._on_show_companion_widget.append(self.populate_layer)
 
+        self.plusClicked.connect(self.new_layer_button_clicked)
+
+    def new_layer_button_clicked(self, *args, **kwargs):
+        inp = QtWidgets.QInputDialog()
+        inp.setWindowIcon(QtGui.QIcon(str(iconpath / "plus.png")))
+        inp.setWindowFlags(inp.windowFlags() & ~Qt.WindowContextHelpButtonHint)
+        inp.setInputMode(QtWidgets.QInputDialog.TextInput)
+        inp.setFixedSize(200, 100)
+
+        inp.setWindowTitle("New Layer")
+        inp.setLabelText("Name:")
+
+        if inp.exec_() == QtWidgets.QDialog.Accepted:
+            # use .strip to remove any trailing spaces
+            self.m.new_layer(inp.textValue().strip())
+
+        inp.deleteLater()
+
     def repopulate_and_activate_current(self, *args, **kwargs):
         self.populate()
 
@@ -1480,9 +1471,6 @@ class ArtistEditor(QtWidgets.QWidget):
             }
             """
         )
-        self.edit_actions = EditActionsWidget(m=self.m)
-        # # re-populate layers on new layer creation
-        self.edit_actions.NewLayerCreated.connect(self.artist_tabs.populate)
 
         self.addfeature = AddFeatureWidget(m=self.m)
         self.addannotation = AddAnnotationWidget(m=self.m)
@@ -1541,7 +1529,6 @@ class ArtistEditor(QtWidgets.QWidget):
 
         option_widget = QtWidgets.QWidget()
         option_layout = QtWidgets.QVBoxLayout()
-        option_layout.addWidget(self.edit_actions)
         option_layout.addWidget(self.option_tabs)
 
         option_widget.setLayout(option_layout)
