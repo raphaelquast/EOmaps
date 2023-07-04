@@ -611,7 +611,7 @@ class LayerTabBar(QtWidgets.QTabBar):
     @pyqtSlot()
     def tab_moved(self):
         # get currently active layers
-        active_layers, alphas = self.m.BM._get_layers_alphas(self.m.BM.bg_layer)
+        active_layers, alphas = self.m.BM._get_layers_alphas()
 
         # get the name of the layer that was moved
         layer = self.tabText(self.currentIndex())
@@ -671,7 +671,7 @@ class LayerTabBar(QtWidgets.QTabBar):
             return
 
         # get currently active layers
-        active_layers, alphas = self.m.BM._get_layers_alphas(self.m.BM.bg_layer)
+        active_layers, alphas = self.m.BM._get_layers_alphas()
 
         # cleanup the layer and remove any artists etc.
         for m in list(self.m._children):
@@ -733,7 +733,7 @@ class LayerTabBar(QtWidgets.QTabBar):
         multicolor = QtGui.QColor(50, 150, 50)  # QtGui.QColor(0, 128, 0)
 
         # get currently active layers
-        active_layers, alphas = self.m.BM._get_layers_alphas(self.m.BM.bg_layer)
+        active_layers, alphas = self.m.BM._get_layers_alphas()
 
         for i in range(self.count()):
             selected_layer = self.tabText(i)
@@ -899,7 +899,7 @@ class LayerTabBar(QtWidgets.QTabBar):
                 return
 
             # get currently active layers
-            active_layers, alphas = self.m.BM._get_layers_alphas(self.m.BM.bg_layer)
+            active_layers, alphas = self.m.BM._get_layers_alphas()
 
             for x in (i for i in layer.split("|") if i != "_"):
                 if x not in active_layers:
@@ -1218,7 +1218,7 @@ class ArtistEditorTabs(LayerArtistTabs):
         tabbar.set_current_tab_by_name(self._current_tab_name)
 
     def get_layer_alpha(self, layer):
-        layers, alphas = self.m.BM._get_layers_alphas(self.m.BM.bg_layer)
+        layers, alphas = self.m.BM._get_layers_alphas()
         if layer in layers:
             idx = layers.index(layer)
             alpha = alphas[idx]
@@ -1436,7 +1436,7 @@ class ArtistEditorTabs(LayerArtistTabs):
 
     @pyqtSlot()
     def set_layer_alpha(self, layer, alpha):
-        layers, alphas = self.m.BM._get_layers_alphas(self.m.BM.bg_layer)
+        layers, alphas = self.m.BM._get_layers_alphas()
         if layer in layers:
             idx = layers.index(layer)
             alphas[idx] = alpha
