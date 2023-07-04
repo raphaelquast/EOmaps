@@ -77,8 +77,8 @@ Contents
 
     api_read_data
     api_command_line_interface
+    api_logging
     api_misc
-
 
 
 .. toctree::
@@ -86,7 +86,6 @@ Contents
    :caption: Examples
 
    EOmaps_examples
-
 
 
 .. toctree::

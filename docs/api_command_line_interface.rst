@@ -3,7 +3,7 @@
 ⛭ Command Line Interface
 =========================
 
-EOmapss provides a basic command line interface to quickly create simple maps or to get a quick-look at a dataset without having to open an editor.
+EOmaps provides a basic command line interface to quickly create simple maps or to get a quick-look at a dataset without having to open an editor.
 
 To start a new EOmaps map from the command-line, simply type ``eomaps`` and hit enter.
 
