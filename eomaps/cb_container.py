@@ -316,6 +316,12 @@ class _CallbackContainer(object):
             True if callbacks should be executed irrespective of the visible layer.
         """
 
+        if q:
+            _log.debug(
+                f"EOmaps: {self._method} callbacks of the Maps-object {self._m} "
+                "are executed on all layers!"
+            )
+
         if self._parent_container is not None:
             raise TypeError(
                 f"EOmaps: 'execute_on_all_layers' is inherited for {self._method}!"
