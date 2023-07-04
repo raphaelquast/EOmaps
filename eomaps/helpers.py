@@ -1931,7 +1931,10 @@ class BlitManager:
 
         return artists
 
-    def _get_layers_alphas(self, layer):
+    def _get_layers_alphas(self, layer=None):
+        if layer is None:
+            layer = self.bg_layer
+
         layers, alphas = [], []
         for l in layer.split("|"):
             if l.endswith("}") and "{" in l:

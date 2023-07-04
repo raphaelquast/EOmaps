@@ -158,7 +158,7 @@ class _WebMapLayer:
             legax.imshow(legend)
 
             # hide the legend if the corresponding layer is not active at the moment
-            if self._layer not in self._m.BM._bg_layer.split("|"):
+            if self._layer not in self.BM._get_layers_alphas()[0]:
                 legax.set_visible(False)
 
             self._m.BM.add_artist(legax, self._layer)

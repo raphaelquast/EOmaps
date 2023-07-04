@@ -112,7 +112,7 @@ class AutoUpdateLayerLabel(QtWidgets.QLabel):
         self.setText(self.get_text())
 
     def get_text(self):
-        layers, alphas = self.m.BM._get_layers_alphas(self.m.BM.bg_layer)
+        layers, alphas = self.m.BM._get_layers_alphas()
 
         prefix = "&nbsp;&nbsp;&nbsp;&nbsp;" "<font color=gray>"
         suffix = "<\font>"
