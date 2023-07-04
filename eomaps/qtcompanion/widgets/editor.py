@@ -565,13 +565,12 @@ class LayerTabBar(QtWidgets.QTabBar):
         icon = QtGui.QIcon(canvas)
         return icon
 
-    def sizeHint(self):
-        # make sure the TabBar does not expand the window width
-
-        hint = super().sizeHint()
-        width = self.window().width()
-        hint.setWidth(width)
-        return hint
+    # def sizeHint(self):
+    #     # make sure the TabBar does not expand the window width
+    #     hint = super().sizeHint()
+    #     width = self.window().width()
+    #     hint.setWidth(width)
+    #     return hint
 
     def minimumTabSizeHint(self, index):
         # the minimum width of the tabs is determined such that at least
