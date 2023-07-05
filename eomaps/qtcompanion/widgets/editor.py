@@ -8,6 +8,7 @@ from matplotlib.colors import to_rgba_array
 
 from ...inset_maps import InsetMaps
 from ..common import iconpath
+from ..base import BasicCheckableToolButton
 from .wms import AddWMSMenuButton
 from .utils import ColorWithSlidersWidget, GetColorWidget, AlphaSlider
 from .annotate import AddAnnotationWidget
@@ -144,8 +145,9 @@ class ZorderInput(QtWidgets.QLineEdit):
         if self.window().showhelp is True:
             QtWidgets.QToolTip.showText(
                 e.globalPos(),
-                "<h3>Zorder</h3> Set the zorder of the artist (e.g. the vertical "
-                "stacking order with respect to other artists in the figure)",
+                "<h3>Zorder</h3>"
+                "Set the zorder of the artist (e.g. the vertical stacking "
+                "order with respect to other artists on the same layer)",
             )
 
 
@@ -326,6 +328,19 @@ class OpenFileButton(QtWidgets.QPushButton):
         OpenDataStartTab.enterEvent(self, e)
 
 
+class PlusButton(BasicCheckableToolButton):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        self.set_icons(
+            normal_icon=str(iconpath / "plus.png"),
+            hoover_icon=str(iconpath / "plus_hoover.png"),
+        )
+
+        self.setFixedSize(30, 30)
+        self.setCheckable(False)
+
+
 class LayerArtistTabs(QtWidgets.QTabWidget):
     plusClicked = pyqtSignal()
 
@@ -333,9 +348,7 @@ class LayerArtistTabs(QtWidgets.QTabWidget):
         super().__init__(*args, **kwargs)
 
         # Plus Button
-        self.plusButton = QtWidgets.QToolButton(self)
-        self.plusButton.setIcon(QtGui.QIcon(str(iconpath / "plus.png")))
-        self.plusButton.setFixedSize(30, 30)  # Small Fixed size
+        self.plusButton = PlusButton(self)
         self.plusButton.clicked.connect(self.plusClicked.emit)
 
         self.movePlusButton()  # Move to the correct location
@@ -411,6 +424,14 @@ class LayerTransparencySlider(AlphaSlider):
 class LayerTabBar(QtWidgets.QTabBar):
     _number_of_min_tabs_for_size = 6
     _n_layer_msg_shown = False
+
+    def event(self, event):
+        # don't show normal tooltips while showhelp is active
+        # (they would cause the help-popups to disappear after ~ 1 sec)
+        if event.type() == QtCore.QEvent.ToolTip and self.window().showhelp:
+            return
+
+        return super().event(event)
 
     def mousePressEvent(self, event):
         # TODO a more clean implementation of this would be nice
@@ -561,9 +582,9 @@ class LayerTabBar(QtWidgets.QTabBar):
                 "<h3>Layer Tabs</h3>"
                 "Select, combine and re-arrange layers of the map. "
                 "<ul>"
-                "<li><b>control + click</b> to make the selected layer visible.</li>"
-                "<li><b>shift + click</b> to select multiple layers. </li>"
-                "<li><b>drag</b> layers to change the stacking-order. "
+                "<li><b>ctrl + click:</b> make selected layer visible</li>"
+                "<li><b>shift + click:</b> select multiple layers </li>"
+                "<li><b>drag:</b> change the layer stacking-order. "
                 "</ul>",
             )
 
@@ -613,6 +634,9 @@ class LayerTabBar(QtWidgets.QTabBar):
 
         self._msg = QtWidgets.QMessageBox(self)
         self._msg.setIcon(QtWidgets.QMessageBox.Question)
+
+        self._msg.setWindowIcon(QtGui.QIcon(str(iconpath / "info.png")))
+
         self._msg.setText(f"Do you really want to delete the layer '{layer}'")
         self._msg.setWindowTitle(f"Delete layer: '{layer}'?")
 
@@ -918,8 +942,20 @@ class ArtistEditorTabs(LayerArtistTabs):
 
         self.plusClicked.connect(self.new_layer_button_clicked)
 
+        self.setStyleSheet(
+            """
+            QTabWidget::pane {
+                border: 0px;
+                top:0px;
+                background: rgb(240, 240, 240);
+                border-radius: 10px;
+            }
+            QScrollArea {border:0px}
+            """
+        )
+
     def new_layer_button_clicked(self, *args, **kwargs):
-        inp = QtWidgets.QInputDialog()
+        inp = QtWidgets.QInputDialog(self)
         inp.setWindowIcon(QtGui.QIcon(str(iconpath / "plus.png")))
         inp.setWindowFlags(inp.windowFlags() & ~Qt.WindowContextHelpButtonHint)
         inp.setInputMode(QtWidgets.QInputDialog.TextInput)
@@ -1441,14 +1477,6 @@ class ArtistEditor(QtWidgets.QWidget):
         self.m = m
 
         self.artist_tabs = ArtistEditorTabs(m=self.m)
-        self.artist_tabs.setStyleSheet(
-            """
-              border: 0px;
-              top:0px;
-              background: rgb(240, 240, 240);
-              border-radius: 10px;
-            """
-        )
 
         self.artist_tabs.tabBar().setStyleSheet(
             """

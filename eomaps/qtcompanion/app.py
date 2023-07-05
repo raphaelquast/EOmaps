@@ -196,8 +196,6 @@ class MenuWindow(AlwaysOnTopWindow):
         self.tabs = ControlTabs(m=self.m)
         self.tabs.setMouseTracking(True)
 
-        # self.cb_transparentQ()
-
         menu_layout = QtWidgets.QVBoxLayout()
         menu_layout.addWidget(self.tabs)
         menu_widget = QtWidgets.QWidget()
