@@ -305,6 +305,9 @@ class ClickCallbacks(QtWidgets.QFrame):
         # make sure we re-attach pick-callback on a layer change
         self.m.BM.on_layer(self.on_layer_change, persistent=True)
 
+        self.m._connect_signal("dataPlotted", self.populate_dropdown)
+        self.m._connect_signal("dataPlotted", self.update_buttons)
+
     def showEvent(self, event):
         self.widgetShown.emit()
 

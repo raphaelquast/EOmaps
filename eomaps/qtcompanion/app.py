@@ -1,12 +1,6 @@
 from PyQt5 import QtWidgets
-from PyQt5.QtCore import Qt, pyqtSignal, pyqtSlot, QSize
+from PyQt5.QtCore import Qt, pyqtSignal, pyqtSlot, QSize, QObject
 from PyQt5.QtGui import QKeySequence
-
-# TODO make sure a QApplication has been instantiated
-app = QtWidgets.QApplication.instance()
-if app is None:
-    # if it does not exist then a QApplication is created
-    app = QtWidgets.QApplication([])
 
 from .base import AlwaysOnTopWindow
 from .widgets.peek import PeekTabs
@@ -20,6 +14,12 @@ from .widgets.click_callbacks import ClickCallbacks
 
 from .widgets.editor import LayerTabBar
 from .widgets.utils import EditLayoutButton
+
+# TODO make sure a QApplication has been instantiated
+app = QtWidgets.QApplication.instance()
+if app is None:
+    # if it does not exist then a QApplication is created
+    app = QtWidgets.QApplication([])
 
 
 class OpenFileButton(QtWidgets.QPushButton):
@@ -174,13 +174,6 @@ class ControlTabs(QtWidgets.QTabWidget):
 
 
 class MenuWindow(AlwaysOnTopWindow):
-
-    cmapsChanged = pyqtSignal()
-    clipboardKwargsChanged = pyqtSignal()
-    annotationSelected = pyqtSignal()
-    annotationEdited = pyqtSignal()
-    dataPlotted = pyqtSignal()
-
     def __init__(self, *args, m=None, **kwargs):
 
         # assign m before calling the init of the AlwaysOnTopWindow
@@ -217,23 +210,7 @@ class MenuWindow(AlwaysOnTopWindow):
 
         # clear the colormaps-dropdown pixmap cache if the colormaps have changed
         # (the pyqtSignal is emmited by Maps-objects if a new colormap is registered)
-        self.cmapsChanged.connect(self.clear_pixmap_cache)
-
-        # set save-file args to values set as clipboard kwargs
-        self.clipboardKwargsChanged.connect(
-            self.tabs.tab_compare.save_widget.set_export_props
-        )
-
-        self.annotationSelected.connect(
-            self.tabs.tab_edit.addannotation.set_selected_annotation_props
-        )
-
-        self.annotationEdited.connect(
-            self.tabs.tab_edit.addannotation.set_edited_annotation_props
-        )
-
-        self.dataPlotted.connect(self.tabs.tab_compare.click_cbs.populate_dropdown)
-        self.dataPlotted.connect(self.tabs.tab_compare.click_cbs.update_buttons)
+        self.m._connect_signal("cmapsChanged", self.clear_pixmap_cache)
 
     def show(self):
         super().show()

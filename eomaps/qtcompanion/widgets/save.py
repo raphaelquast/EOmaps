@@ -239,6 +239,9 @@ class SaveFileWidget(QtWidgets.QFrame):
             """
         )
 
+        # set current widget export parameters as copy-to-clipboard args
+        self.m._connect_signal("clipboardKwargsChanged", self.set_export_props)
+
         # set export props to current state of Maps._clipboard_kwargs
         self.set_export_props()
 

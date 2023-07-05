@@ -208,9 +208,9 @@ class AddAnnotationWidget(QtWidgets.QWidget):
 
         self.annotate_button = AnnotateButton()
         self.annotate_button.clicked.connect(self.do_add_annotation)
-        self.annotate_button.setSizePolicy(
-            QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Preferred
-        )
+        # self.annotate_button.setSizePolicy(
+        #     QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Preferred
+        # )
 
         self.dial = AnnotationDial()
         self.dial.valueChanged.connect(self.dial_value_changed)
@@ -270,7 +270,7 @@ class AddAnnotationWidget(QtWidgets.QWidget):
         layout_h.addWidget(self.text_inp, 1)
 
         blayout = QtWidgets.QHBoxLayout()
-        blayout.addWidget(self.edit_annotations)
+        # blayout.addWidget(self.edit_annotations)
 
         layout = QtWidgets.QVBoxLayout()
         layout.addLayout(layout_h)
@@ -283,6 +283,9 @@ class AddAnnotationWidget(QtWidgets.QWidget):
         self.widgetShown.connect(self.update_buttons)
 
         self.text_inp.installEventFilter(self)
+
+        self.m._connect_signal("annotationSelected", self.set_selected_annotation_props)
+        self.m._connect_signal("annotationEdited", self.set_edited_annotation_props)
 
     def eventFilter(self, widget, event):
         from PyQt5 import QtCore

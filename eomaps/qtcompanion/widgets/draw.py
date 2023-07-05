@@ -29,6 +29,37 @@ class RemoveButton(QtWidgets.QPushButton):
 
 
 class PolyButton(QtWidgets.QPushButton):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        self.setCheckable(True)
+
+        self.setStyleSheet(
+            """
+            PolyButton {
+                border-radius: 5px;
+                border-width: 1px;
+                border-style: solid;
+                border-color: rgb(100, 100, 100);
+                background-color: rgb(220, 220, 220);
+                padding: 3px
+                }
+
+            PolyButton:pressed {
+                background-color: rgb(150, 150, 150);
+                }
+
+            PolyButton:hover:!pressed {
+                background-color: rgb(180, 180, 180);
+                }
+
+            PolyButton:checked {
+                background-color: rgb(180, 0, 0);
+                border-color: rgb(100, 0, 0);
+                }
+            """
+        )
+
     def enterEvent(self, e):
         if self.window().showhelp is True:
             name = self.text()
@@ -214,7 +245,7 @@ class DrawerWidget(QtWidgets.QWidget):
         "Circle": "circle",
     }
 
-    def __init__(self, m=None, *args, **kwargs):
+    def __init__(self, *args, m=None, **kwargs):
 
         super().__init__(*args, **kwargs)
 
@@ -233,15 +264,19 @@ class DrawerWidget(QtWidgets.QWidget):
         self.save_button.clicked.connect(self.save_shapes)
         self.remove_button.clicked.connect(self.remove_last_shape)
 
-        polybuttons = []
+        self.polybuttons = []
         for name, poly in self._polynames.items():
             poly_b = PolyButton(name)
             poly_b.clicked.connect(self.draw_shape_callback(poly=poly))
             poly_b.setMaximumWidth(100)
-            polybuttons.append(poly_b)
+            self.polybuttons.append(poly_b)
 
         b_layout = QtWidgets.QVBoxLayout()
-        for b in polybuttons:
+        b_layout.setAlignment(Qt.AlignTop)
+        b_layout.setContentsMargins(0, 0, 0, 0)
+        b_layout.setSpacing(2)
+
+        for b in self.polybuttons:
             b_layout.addWidget(b)
 
         save_layout = QtWidgets.QVBoxLayout()
@@ -250,19 +285,27 @@ class DrawerWidget(QtWidgets.QWidget):
 
         self.colorselector = ColorWithSlidersWidget(linewidth=1)
         self.colorselector.colorSelected.connect(lambda: self.colorSelected.emit())
-
-        layout_colorselector_tight = QtWidgets.QVBoxLayout()
-        layout_colorselector_tight.addStretch(1)
-        layout_colorselector_tight.addWidget(self.colorselector)
-        layout_colorselector_tight.addStretch(1)
+        self.colorselector.layout().setContentsMargins(0, 0, 0, 0)
 
         layout = QtWidgets.QHBoxLayout()
         layout.addLayout(b_layout)
         layout.addLayout(save_layout)
-        layout.addLayout(layout_colorselector_tight)
-
-        layout.setAlignment(Qt.AlignLeft | Qt.AlignCenter)
+        layout.addWidget(self.colorselector)
+        layout.setAlignment(Qt.AlignLeft | Qt.AlignTop)
         self.setLayout(layout)
+
+        self.m._connect_signal("drawFinished", self.uncheck_polybuttons)
+        self.m._connect_signal("drawAborted", self.uncheck_polybuttons)
+        self.m._connect_signal("drawStarted", self.check_polybuttons)
+
+    def check_polybuttons(self, poly):
+        for b in self.polybuttons:
+            if b.text() == poly:
+                b.setChecked(True)
+
+    def uncheck_polybuttons(self):
+        for b in self.polybuttons:
+            b.setChecked(False)
 
     def enterEvent(self, e):
         if self.window().showhelp is True:
@@ -293,7 +336,13 @@ class DrawerWidget(QtWidgets.QWidget):
     def draw_shape_callback(self, poly):
         @pyqtSlot()
         def cb():
-            # self.window().hide()
+            s = self.sender()
+            for b in self.polybuttons:
+                if s is b:
+                    b.setChecked(True)
+                else:
+                    b.setChecked(False)
+
             self.m.f.canvas.show()
             self.m.f.canvas.activateWindow()
 

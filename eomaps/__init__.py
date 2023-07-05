@@ -100,7 +100,7 @@ def set_loglevel(level, fmt="timed"):
 
     Parameters
     ----------
-    level : {"notset", "debug", "info", "warning", "error", "critical"}
+    level : {"notset", "debug", "info", "warning", "error", "critical"} or int
         The log level of the handler.
     fmt : str
         A short-name or a logging format-string.
@@ -123,8 +123,11 @@ def set_loglevel(level, fmt="timed"):
     function simply manipulates the logger and handler's level.
 
     """
-    _log.setLevel(level.upper())
-    _ensure_handler().setLevel(level.upper())
+    if isinstance(level, str):
+        level = level.upper()
+
+    _log.setLevel(level)
+    _ensure_handler().setLevel(level)
 
     if fmt is not None:
         _set_logfmt(*_log_format_presets.get(fmt, (fmt,)))

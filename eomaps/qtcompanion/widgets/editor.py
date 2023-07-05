@@ -1470,7 +1470,7 @@ class ArtistEditorTabs(LayerArtistTabs):
 
 
 class ArtistEditor(QtWidgets.QWidget):
-    def __init__(self, m=None, show_editor=False):
+    def __init__(self, *args, m=None, show_editor=False, **kwargs):
 
         super().__init__()
 

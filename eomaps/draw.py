@@ -177,6 +177,11 @@ class ShapeDrawer:
         """
         self._m.cb.execute_callbacks(True)
 
+        if cb is not None:
+            self._m._emit_signal("drawFinished")
+        else:
+            self._m._emit_signal("drawAborted")
+
         active_drawer = self._active_drawer
         if active_drawer is None:
             return
@@ -350,10 +355,6 @@ class ShapeDrawer:
         manager) selects a point.
         """
 
-        # make sure all active drawings are finished before starting a new one
-        self._active_drawer._finish_drawing()
-        self._active_drawer = self
-
         canvas = self._m.BM.canvas
         # self.fetch_bg()
 
@@ -363,7 +364,7 @@ class ShapeDrawer:
             self._init_draw_line()
 
             if event.name == "close_event":
-                self._finish_drawing(cb=cb)
+                self._finish_drawing()
                 return
 
             if (canvas.toolbar is not None) and canvas.toolbar.mode != "":
@@ -521,10 +522,6 @@ class ShapeDrawer:
         manager) selects a point.
         """
 
-        # make sure all active drawings are finished before starting a new one
-        self._active_drawer._finish_drawing()
-        self._active_drawer = self
-
         canvas = self._m.BM.canvas
         # self.fetch_bg()
         self._m.cb.execute_callbacks(False)
@@ -643,6 +640,12 @@ class ShapeDrawer:
         def cb():
             self._polygon(**kwargs)
 
+        # make sure all active drawings are finished before starting a new one
+        self._active_drawer._finish_drawing()
+        self._active_drawer = self
+
+        self._m._emit_signal("drawStarted", "Polygon")
+
         self._ginput(-1, timeout=-1, draw_on_drag=draw_on_drag, cb=cb)
 
     def _polygon(self, **kwargs):
@@ -718,6 +721,12 @@ class ShapeDrawer:
 
                 self._m.BM.blit_artists(artists, bg=self._background)
 
+        # make sure all active drawings are finished before starting a new one
+        self._active_drawer._finish_drawing()
+        self._active_drawer = self
+
+        self._m._emit_signal("drawStarted", "Circle")
+
         self._ginput2(2, timeout=-1, draw_on_drag=True, movecb=movecb, cb=cb)
 
     def _circle(self, **kwargs):
@@ -792,6 +801,12 @@ class ShapeDrawer:
                     artists = (*artists, *self._artists.values())
 
                 self._m.BM.blit_artists(artists, bg=self._background)
+
+        # make sure all active drawings are finished before starting a new one
+        self._active_drawer._finish_drawing()
+        self._active_drawer = self
+
+        self._m._emit_signal("drawStarted", "Rectangle")
 
         self._ginput2(2, timeout=-1, draw_on_drag=True, movecb=movecb, cb=cb)
 

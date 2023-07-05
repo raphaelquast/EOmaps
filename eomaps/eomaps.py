@@ -371,6 +371,15 @@ class Maps(metaclass=_MapsMeta):
         self._log_on_event_messages = dict()
         self._log_on_event_cids = dict()
 
+        try:
+            from .qtcompanion.signal_container import _SignalContainer
+
+            # initialize the signal container (MUST be done before init of the widget!)
+            self._signal_container = _SignalContainer()
+        except Exception:
+            _log.debug("SignalContainer could not be initialized", exc_info=True)
+            self._signal_container = None
+
         # make sure the used layer-name is valid
         layer = self._check_layer_name(layer)
 
@@ -1530,17 +1539,16 @@ class Maps(metaclass=_MapsMeta):
 
         """
         # use Maps to make sure InsetMaps do the same thing!
-        Maps._set_clipboard_kwargs(kwargs)
-
+        Maps._set_clipboard_kwargs(**kwargs)
         # trigger companion-widget setter for all open figures that contain maps
         for i in plt.get_fignums():
             try:
                 m = getattr(plt.figure(i), "_EOmaps_parent", None)
                 if m is not None:
                     if m._companion_widget is not None:
-                        m._companion_widget.clipboardKwargsChanged.emit()
+                        m._emit_signal("clipboardKwargsChanged")
             except Exception:
-                pass
+                _log.exception("UPS")
 
     def add_title(self, title, x=0.5, y=1.01, **kwargs):
         """
@@ -2890,8 +2898,7 @@ class Maps(metaclass=_MapsMeta):
             )
 
             plt.colormaps.register(name=cmapname, cmap=cmap)
-            if self._companion_widget is not None:
-                self._companion_widget.cmapsChanged.emit()
+            self._emit_signal("cmapsChanged")
             # remember registered colormaps (to de-register on close)
             self._registered_cmaps.append(cmapname)
 
@@ -2973,8 +2980,7 @@ class Maps(metaclass=_MapsMeta):
 
         self._data_plotted = True
 
-        if self._companion_widget is not None:
-            self._companion_widget.dataPlotted.emit()
+        self._emit_signal("dataPlotted")
 
         self.BM.update()
 
@@ -4304,8 +4310,7 @@ class Maps(metaclass=_MapsMeta):
             cbcmap = cmap
             norm = mpl.colors.BoundaryNorm(bins, cmap.N)
 
-            if self._companion_widget is not None:
-                self._companion_widget.cmapsChanged.emit()
+            self._emit_signal("cmapsChanged")
 
             if cmap._rgba_bad:
                 cbcmap.set_bad(cmap._rgba_bad)
@@ -5144,11 +5149,58 @@ class Maps(metaclass=_MapsMeta):
                 return
 
             self._companion_widget = MenuWindow(m=self, parent=self.f.canvas)
+
+            # connect any pending signals
+            for key, funcs in getattr(self, "_connect_signals_on_init", dict()).items():
+                while len(funcs) > 0:
+                    self._connect_signal(key, funcs.pop())
+
             # make sure that we clear the colormap-pixmap cache on startup
-            self._companion_widget.cmapsChanged.emit()
+            self._emit_signal("cmapsChanged")
 
         except Exception:
             _log.exception("EOmaps: Unable to initialize companion widget.")
+
+    def _connect_signal(self, name, func):
+        parent = self.parent
+        widget = parent._companion_widget
+
+        # NOTE: use Maps.config(log_level=5) to get signal log messages!
+        if widget is None:
+            if not hasattr(parent, "_connect_signals_on_init"):
+                parent._connect_signals_on_init = dict()
+
+            parent._connect_signals_on_init.setdefault(name, set()).add(func)
+
+        if widget is not None:
+            try:
+                getattr(parent._signal_container, name).connect(func)
+                _log.log(5, f"Signal connected: {name} ({func.__name__})")
+
+            except Exception:
+                _log.log(
+                    5,
+                    f"There was a problem while trying to connect the function {func} "
+                    f"to the signal {name} ",
+                    exc_info=True,
+                )
+
+    def _emit_signal(self, name, *args):
+        parent = self.parent
+        widget = parent._companion_widget
+
+        # NOTE: use Maps.config(log_level=5) to get signal log messages!
+        if widget is not None:
+            try:
+                getattr(parent._signal_container, name).emit(*args)
+                _log.log(5, f"Signal emitted: {name} {args}")
+            except Exception:
+                _log.log(
+                    5,
+                    f"There was a problem while trying to emit the signal {name} "
+                    f"with the args {args}",
+                    exc_info=True,
+                )
 
     @staticmethod
     def _proxy(obj):

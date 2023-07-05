@@ -210,10 +210,10 @@ class AnnotationEditor:
         _eomaps_picked_ann = ann
 
     def emit_selected_signal(self, *args, **kwargs):
-        self.m._companion_widget.annotationSelected.emit()
+        self.m._emit_signal("annotationSelected")
 
     def emit_edit_signal(self, *args, **kwargs):
-        self.m._companion_widget.annotationEdited.emit()
+        self.m._emit_signal("annotationEdited")
 
     def _add(self, a, kwargs, transf=None, drag_coords=True):
         if a not in self._annotations:
