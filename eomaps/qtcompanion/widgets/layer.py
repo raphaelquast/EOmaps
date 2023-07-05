@@ -167,6 +167,7 @@ class AutoUpdateLayerMenuButton(QtWidgets.QPushButton):
         # set font properties before the stylesheet to avoid clipping of bold text!
         font = QFont("sans seriv", 8, QFont.Bold, False)
         self.setFont(font)
+        self.setText("Layers:")
 
     def enterEvent(self, e):
         if self.window().showhelp is True:
@@ -222,7 +223,6 @@ class AutoUpdateLayerMenuButton(QtWidgets.QPushButton):
 
     def update_display_text(self, l):
         if not self._auto_text:
-            self.setText("Layers:")
             return
         # make sure that we don't use too long labels as text
         if len(l) > 50:

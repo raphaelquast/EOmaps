@@ -15,6 +15,7 @@ from .annotate import AddAnnotationWidget
 from .draw import DrawerTabs
 from .files import OpenDataStartTab
 from .utils import EditLayoutButton
+from .layer import AutoUpdateLayerMenuButton
 
 _log = logging.getLogger(__name__)
 
@@ -344,28 +345,55 @@ class PlusButton(BasicCheckableToolButton):
 class LayerArtistTabs(QtWidgets.QTabWidget):
     plusClicked = pyqtSignal()
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, m=None, **kwargs):
         super().__init__(*args, **kwargs)
+        self.m = m
+        self.margin_left = 25
+        self.margin_right = 60
 
         # Plus Button
-        self.plusButton = PlusButton(self)
-        self.plusButton.clicked.connect(self.plusClicked.emit)
+        self.plus_button = PlusButton(self)
+        self.plus_button.clicked.connect(self.plusClicked.emit)
 
-        self.movePlusButton()  # Move to the correct location
+        self.layer_button = AutoUpdateLayerMenuButton(self, m=self.m)
+        self.layer_button.setFixedWidth(30)
+        self.layer_button.setText("")
+        self.layer_button.setIcon(QtGui.QIcon(str(iconpath / "layers.png")))
 
-    def movePlusButton(self, *args, **kwargs):
+        self.layer_button.setStyleSheet(
+            """
+            QPushButton {border: 0px;}
+            QPushButton::menu-indicator { width: 0; }
+            """
+        )
+
+        self.move_plus_button()  # Move to the correct location
+        self.move_layer_button()  # Move to the correct location
+
+    def move_plus_button(self, *args, **kwargs):
         """Move the plus button to the correct location."""
         # Set the plus button location in a visible area
         h = self.geometry().top()
         w = self.window().width()
 
-        self.plusButton.move(w - 60, -3)
+        self.plus_button.move(w - self.margin_right, -3)
 
-    def resizeEvent(self, *args, **kwargs):
-        super().resizeEvent(*args, **kwargs)
+    def move_layer_button(self, *args, **kwargs):
+        """Move the plus button to the correct location."""
+        # Set the plus button location in a visible area
+        h = self.geometry().top()
+
+        self.layer_button.move(-5, 2)
+
+    def paintEvent(self, *args, **kwargs):
         # make some space for the + button
-        self.tabBar().setFixedWidth(self.window().width() - 60)
-        self.movePlusButton()
+        self.tabBar().setFixedWidth(
+            self.window().width() - self.margin_left - self.margin_right
+        )
+        self.tabBar().move(self.margin_left, 0)
+        self.move_plus_button()
+        self.move_layer_button()
+        super().paintEvent(*args, **kwargs)
 
     def enterEvent(self, e):
         if self.window().showhelp is True:
@@ -923,8 +951,7 @@ class LayerTabBar(QtWidgets.QTabBar):
 
 class ArtistEditorTabs(LayerArtistTabs):
     def __init__(self, m=None):
-        super().__init__()
-        self.m = m
+        super().__init__(m=m)
 
         self.setTabBar(LayerTabBar(m=self.m))
 
