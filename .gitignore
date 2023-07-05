@@ -24,3 +24,5 @@ EOmaps.egg-info
 examples/.ipynb_checkpoints
 tests/.ipynb_checkpoints
 tests/.pylint.d
+
+_exclude*
