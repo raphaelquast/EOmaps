@@ -272,7 +272,6 @@ class DrawerWidget(QtWidgets.QWidget):
             self.polybuttons.append(poly_b)
 
         b_layout = QtWidgets.QVBoxLayout()
-        b_layout.setAlignment(Qt.AlignTop)
         b_layout.setContentsMargins(0, 0, 0, 0)
         b_layout.setSpacing(2)
 
