@@ -1220,6 +1220,9 @@ class LayoutEditor:
 
         self._color_axes()
         self._attach_callbacks()
+
+        self.m._emit_signal("layoutEditorActivated")
+
         self.m.redraw()
 
     def _add_revert_props(self, child, *args):
@@ -1289,6 +1292,8 @@ class LayoutEditor:
 
         # remove snap-grid (if it's still visible)
         self._remove_snap_grid()
+
+        self.m._emit_signal("layoutEditorDeactivated")
 
         self.m.redraw()
 
