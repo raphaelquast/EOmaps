@@ -7,24 +7,19 @@ from .widgets.peek import PeekTabs
 from .widgets.editor import ArtistEditor
 from .widgets.wms import AddWMSMenuButton
 from .widgets.save import SaveFileWidget
-from .widgets.files import OpenFileTabs, OpenDataStartTab
+from .widgets.files import OpenFileTabs
 from .widgets.utils import get_cmap_pixmaps
 from .widgets.extent import SetExtentToLocation
 from .widgets.click_callbacks import ClickCallbacks
 
 from .widgets.editor import LayerTabBar
-from .widgets.utils import EditLayoutButton
+from .widgets.layer import AutoUpdateLayerMenuButton
 
 # TODO make sure a QApplication has been instantiated
 app = QtWidgets.QApplication.instance()
 if app is None:
     # if it does not exist then a QApplication is created
     app = QtWidgets.QApplication([])
-
-
-class OpenFileButton(QtWidgets.QPushButton):
-    def enterEvent(self, e):
-        OpenDataStartTab.enterEvent(self, e)
 
 
 class CompareTab(QtWidgets.QWidget):
@@ -57,25 +52,11 @@ class CompareTab(QtWidgets.QWidget):
         except:
             addwms = None
 
-        # open file button
-        self.open_file_button = OpenFileButton("Open File")
-        self.open_file_button.setFixedSize(self.open_file_button.sizeHint())
-
-        # edit layout button
-        b_edit = EditLayoutButton("Edit layout", m=self.m)
-        width = b_edit.fontMetrics().boundingRect(b_edit.text()).width()
-        b_edit.setFixedWidth(width + 30)
-
-        # layer dropdown button
-        from .widgets.layer import AutoUpdateLayerMenuButton
-
         self.layer_button = AutoUpdateLayerMenuButton(m=self.m)
 
         options_layout = QtWidgets.QHBoxLayout()
         if addwms:
             options_layout.addWidget(addwms)
-        options_layout.addWidget(self.open_file_button)
-        options_layout.addWidget(b_edit)
         options_layout.addStretch(1)
         options_layout.addWidget(setextent)
 
@@ -103,9 +84,6 @@ class ControlTabs(QtWidgets.QTabWidget):
         self.tab_compare = CompareTab(m=self.m)
         self.tab_open = OpenFileTabs(m=self.m)
         self.tab_edit = ArtistEditor(m=self.m)
-
-        # connect the open-file-button to the button from the "Open Files" tab
-        self.tab_compare.open_file_button.clicked.connect(self.trigger_open_file_button)
 
         self.addTab(self.tab_compare, "Compare")
         self.addTab(self.tab_edit, "Edit")
@@ -149,10 +127,6 @@ class ControlTabs(QtWidgets.QTabWidget):
             }
             """
         )
-
-    @pyqtSlot()
-    def trigger_open_file_button(self):
-        self.tab_open.starttab.open_button.clicked.emit()
 
     @pyqtSlot()
     def tabchanged(self):

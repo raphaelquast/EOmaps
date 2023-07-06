@@ -1,7 +1,7 @@
 import logging
 
 from PyQt5 import QtWidgets, QtGui
-from PyQt5.QtCore import Qt, QLocale
+from PyQt5.QtCore import Qt, QLocale, pyqtSignal
 from pathlib import Path
 import io
 import numpy as np
@@ -21,6 +21,7 @@ from .utils import (
 )
 
 from ..base import NewWindow, get_dummy_spacer
+from ..common import iconpath
 
 
 def _none_or_val(val):
@@ -1276,10 +1277,16 @@ class OpenDataStartTab(QtWidgets.QWidget):
 
         self.m = m
 
+        icon = iconpath / "open.png"
+        self.b_str = (
+            f"<img src={icon} height=20 "
+            "style='display: inline; vertical-align:bottom;'>"
+            "</img>"
+        )
         self.t1 = QtWidgets.QLabel()
         # self.t1.setAlignment(Qt.AlignBottom | Qt.AlignCenter)
         self.t1.setText(
-            "<h3>Open or DRAG & DROP files!</h3>"
+            f"<h3>Click on {self.b_str} or DRAG & DROP to plot data frmo files!</h3>"
             "<p>"
             "Supported filetypes:"
             "<ul>"
@@ -1290,13 +1297,9 @@ class OpenDataStartTab(QtWidgets.QWidget):
             "</ul>"
         )
 
-        self.open_button = QtWidgets.QPushButton("Open File")
-
         layout = QtWidgets.QVBoxLayout()
         layout.addSpacing(10)
         layout.addWidget(self.t1)
-        layout.addSpacing(10)
-        layout.addWidget(self.open_button)
 
         layout.setAlignment(Qt.AlignCenter | Qt.AlignTop)
         self.setLayout(layout)
@@ -1308,7 +1311,7 @@ class OpenDataStartTab(QtWidgets.QWidget):
             QtWidgets.QToolTip.showText(
                 e.globalPos(),
                 "<h3>Plot Data from Files</h3>"
-                "Click on the 'Open File' button or simply drag-and-drop one of the "
+                f"Click on {self.b_str} or simply drag-and-drop one of the "
                 "supported filetypes to get a popup window where you can specify how "
                 "you want to visualize the data."
                 "<p>"
@@ -1334,17 +1337,19 @@ class OpenDataStartTab(QtWidgets.QWidget):
 
 
 class OpenFileTabs(QtWidgets.QTabWidget):
+    openNewFile = pyqtSignal()
+
     def __init__(self, *args, m=None, **kwargs):
         super().__init__(*args, **kwargs)
 
         self.m = m
+        self.openNewFile.connect(
+            lambda *args, **kwargs: self.new_file_tab(file_path=None)
+        )
 
         self.gdf_file_endings = _get_gdf_file_endings()
 
         self.starttab = OpenDataStartTab(m=self.m)
-        self.starttab.open_button.clicked.connect(
-            lambda: self.new_file_tab(file_path=None)
-        )
 
         self.setTabsClosable(True)
         self.tabCloseRequested.connect(self.close_handler)

@@ -352,46 +352,6 @@ class GetColorWidget(QtWidgets.QFrame):
         )
 
 
-class EditLayoutButton(QtWidgets.QPushButton):
-    def __init__(self, *args, m=None, **kwargs):
-        super().__init__(*args, **kwargs)
-
-        self.m = m
-
-        self.clicked.connect(self.callback)
-
-    def enterEvent(self, e):
-        if self.window().showhelp is True:
-            QtWidgets.QToolTip.showText(
-                e.globalPos(),
-                "<h3>Layout Editor</h3>"
-                "Toggle the EOmaps LayoutEditor to re-arrange the position and size "
-                "of the axes in the figure."
-                "<ul>"
-                "<li><b>Right-click</b> on axes with the mouse to select them (hold "
-                "down 'shift' to select multiple axes).</li>"
-                "<li><b>Drag</b> selected axes (or the <b>arrow-keys</b>) to adjust "
-                "their position</li>"
-                "<li>Use the <b>scroll-wheel</b> (or the <b>+/- keys</b>) to scale "
-                "the size of selected axes</li>"
-                "<li>Hold down <b>'h'</b> or <b>'v'</b> key to adjust "
-                "horizontal/vertical size. "
-                "(maps always keep their aspect-ratio!)</li>"
-                "<li>Hold down <b>'control'</b> to adjust the colorbar/histogram size."
-                "<li>Press <b>control + z</b> to undo the last step</li>"
-                "<li>Press <b>control + y</b> to redo the last undone step</li>"
-                "<li>Press <b>escape</b> to exit the LayoutEditor</li>"
-                "</ul>",
-            )
-
-    @pyqtSlot()
-    def callback(self):
-        if not self.m.parent._layout_editor._modifier_pressed:
-            self.m.parent.edit_layout()
-        else:
-            self.m.parent._layout_editor._undo_draggable()
-
-
 class AlphaSlider(QtWidgets.QSlider):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)

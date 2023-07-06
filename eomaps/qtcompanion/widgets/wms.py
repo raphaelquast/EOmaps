@@ -620,9 +620,9 @@ class AddWMSMenuButton(QtWidgets.QPushButton):
         }
 
         if self._new_layer:
-            self.setText("Create new WebMap Layer")
+            self.setText("New WebMap Layer")
         else:
-            self.setText("Add WebMap Service")
+            self.setText("Add WebMap")
 
         width = self.fontMetrics().boundingRect(self.text()).width()
         self.setFixedWidth(width + 30)
@@ -652,6 +652,20 @@ class AddWMSMenuButton(QtWidgets.QPushButton):
 
         # set event-filter to avoid showing tooltips on hovver over QMenu items
         self.installEventFilter(StatusTipFilter(self))
+
+        self.setStyleSheet(
+            """
+            QPushButton {
+                border: 0px;
+                border-radius: 4px;
+                padding: 4px;
+            }
+            QPushButton:hover {
+                background-color: rgb(210, 210, 210);
+            }
+
+            """
+        )
 
     def enterEvent(self, e):
         if self.window().showhelp is True:

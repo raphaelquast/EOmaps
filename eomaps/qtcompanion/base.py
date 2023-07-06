@@ -58,12 +58,34 @@ class BasicCheckableToolButton(QtWidgets.QToolButton):
 
         self.toggled.connect(self.swap_icon)
 
-    def set_icons(self, normal_icon=None, hoover_icon=None, checked_icon=None):
+        self.setStyleSheet(
+            """
+            QToolButton {
+                border: 0px;
+                border-radius: 4px;
+                padding: 4px;
+            }
+            QToolButton:hover {
+                background-color: rgb(210, 210, 210);
+            }
+
+            """
+        )
+
+    def set_icons(
+        self, normal_icon=None, hoover_icon=None, checked_icon=None, size=None
+    ):
+        if size is None:
+            size = self.size()
+        else:
+            size = QtCore.QSize(*size)
+
         if normal_icon:
             pm = QtGui.QPixmap(normal_icon)
+
             self.normal_icon = QtGui.QIcon(
                 pm.scaled(
-                    self.size(),
+                    size,
                     QtCore.Qt.KeepAspectRatio,
                     QtCore.Qt.SmoothTransformation,
                 )
@@ -74,7 +96,7 @@ class BasicCheckableToolButton(QtWidgets.QToolButton):
             pm = QtGui.QPixmap(hoover_icon)
             self.hoover_icon = QtGui.QIcon(
                 pm.scaled(
-                    self.size(),
+                    size,
                     QtCore.Qt.KeepAspectRatio,
                     QtCore.Qt.SmoothTransformation,
                 )
@@ -83,7 +105,7 @@ class BasicCheckableToolButton(QtWidgets.QToolButton):
             pm = QtGui.QPixmap(checked_icon)
             self.checked_icon = QtGui.QIcon(
                 pm.scaled(
-                    self.size(),
+                    size,
                     QtCore.Qt.KeepAspectRatio,
                     QtCore.Qt.SmoothTransformation,
                 )
@@ -132,12 +154,13 @@ class HelpButton(BasicCheckableToolButton):
         super().__init__(*args, **kwargs)
 
         self.setToolTip("Toggle showing help-tooltips.")
-        self.setFixedSize(18, 18)
+        self.setFixedSize(30, 30)
 
         self.set_icons(
             normal_icon=str(iconpath / "info.png"),
             hoover_icon=str(iconpath / "info_hoover.png"),
             checked_icon=str(iconpath / "info_checked.png"),
+            size=(17, 17),
         )
 
 
@@ -165,6 +188,78 @@ class AlwaysOnTopToolButton(BasicCheckableToolButton):
         return super().enterEvent(event)
 
 
+class OpenFileButton(BasicCheckableToolButton):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.setCheckable(False)
+
+        self.setFixedSize(30, 30)
+        self.set_icons(
+            normal_icon=str(iconpath / "open.png"),
+            hoover_icon=str(iconpath / "open_hover.png"),
+        )
+
+    def enterEvent(self, e):
+        super().enterEvent(e)
+
+        self.window().tabs.tab_open.starttab.enterEvent(e)
+
+
+class EditLayoutButton(BasicCheckableToolButton):
+    def __init__(self, *args, m=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.setFixedSize(30, 30)
+
+        self.m = m
+        self.clicked.connect(self.callback)
+
+        self.m._connect_signal(
+            "layoutEditorActivated", lambda *args: self.setChecked(True)
+        )
+        self.m._connect_signal(
+            "layoutEditorDeactivated", lambda *args: self.setChecked(False)
+        )
+
+        self.set_icons(
+            normal_icon=str(iconpath / "edit_layout.png"),
+            hoover_icon=str(iconpath / "edit_layout_hover.png"),
+            checked_icon=str(iconpath / "edit_layout_active.png"),
+        )
+
+    def enterEvent(self, e):
+        super().enterEvent(e)
+
+        if self.window().showhelp is True:
+            QtWidgets.QToolTip.showText(
+                e.globalPos(),
+                "<h3>Layout Editor</h3>"
+                "Toggle the EOmaps LayoutEditor to re-arrange the position and size "
+                "of the axes in the figure."
+                "<ul>"
+                "<li><b>Right-click</b> on axes with the mouse to select them (hold "
+                "down 'shift' to select multiple axes).</li>"
+                "<li><b>Drag</b> selected axes (or the <b>arrow-keys</b>) to adjust "
+                "their position</li>"
+                "<li>Use the <b>scroll-wheel</b> (or the <b>+/- keys</b>) to scale "
+                "the size of selected axes</li>"
+                "<li>Hold down <b>'h'</b> or <b>'v'</b> key to adjust "
+                "horizontal/vertical size. "
+                "(maps always keep their aspect-ratio!)</li>"
+                "<li>Hold down <b>'control'</b> to adjust the colorbar/histogram size."
+                "<li>Press <b>control + z</b> to undo the last step</li>"
+                "<li>Press <b>control + y</b> to redo the last undone step</li>"
+                "<li>Press <b>escape</b> to exit the LayoutEditor</li>"
+                "</ul>",
+            )
+
+    @pyqtSlot()
+    def callback(self):
+        if not self.m.parent._layout_editor._modifier_pressed:
+            self.m.parent.edit_layout()
+        else:
+            self.m.parent._layout_editor._undo_draggable()
+
+
 class ToolBar(QtWidgets.QToolBar):
     def __init__(
         self,
@@ -174,6 +269,7 @@ class ToolBar(QtWidgets.QToolBar):
         title=None,
         on_close=None,
         layers="text",
+        add_buttons=False,
         **kwargs,
     ):
         super().__init__(*args, **kwargs)
@@ -192,18 +288,24 @@ class ToolBar(QtWidgets.QToolBar):
 
         b_close = QtWidgets.QToolButton()
         b_close.setAutoRaise(True)
-        b_close.setFixedSize(25, 25)
+        b_close.setFixedSize(22, 22)
         b_close.setIcon(QtGui.QIcon(str(iconpath / "close.png")))
         b_close.clicked.connect(self.close_button_callback)
 
         self.b_minmax = QtWidgets.QToolButton()
         self.b_minmax.setAutoRaise(True)
-        self.b_minmax.setFixedSize(25, 25)
+        self.b_minmax.setFixedSize(22, 22)
         self.b_minmax.setIcon(QtGui.QIcon(str(iconpath / "maximize.png")))
         self.b_minmax.clicked.connect(self.maximize_button_callback)
 
         self.b_showhelp = HelpButton()
         self.b_showhelp.toggled.connect(self.toggle_show_help)
+
+        if add_buttons:
+            self.b_open = OpenFileButton()
+            self.b_open.clicked.connect(self.open_file_button_callback)
+
+            self.b_edit = EditLayoutButton(m=self.m)
 
         if left_widget:
             self.addWidget(left_widget)
@@ -216,6 +318,9 @@ class ToolBar(QtWidgets.QToolBar):
 
         self.addWidget(self.b_showhelp)
 
+        if add_buttons:
+            self.addWidget(self.b_open)
+            self.addWidget(self.b_edit)
         if m is not None:
             if layers == "dropdown":
                 from .widgets.layer import AutoUpdateLayerMenuButton
@@ -228,6 +333,7 @@ class ToolBar(QtWidgets.QToolBar):
                 showlayer = AutoUpdateLayerLabel(
                     m=self.m,
                 )
+                self.addWidget(get_dummy_spacer())
                 self.addWidget(showlayer)
 
         self.addWidget(get_dummy_spacer())
@@ -240,8 +346,10 @@ class ToolBar(QtWidgets.QToolBar):
 
         self.setStyleSheet(
             """
-            border: none;
-            spacing:5px;
+            QToolBar {
+                border: none;
+                spacing:5px;
+            }
             """
         )
 
@@ -266,6 +374,10 @@ class ToolBar(QtWidgets.QToolBar):
 
         if self._on_close is not None:
             self._on_close()
+
+    @pyqtSlot()
+    def open_file_button_callback(self):
+        self.window().tabs.tab_open.openNewFile.emit()
 
     @pyqtSlot()
     def maximize_button_callback(self):
@@ -345,7 +457,9 @@ class AlwaysOnTopWindow(QtWidgets.QMainWindow):
 
         self.on_top = AlwaysOnTopToolButton()
 
-        self.toolbar = ToolBar(m=self.m, left_widget=self.on_top, layers="text")
+        self.toolbar = ToolBar(
+            m=self.m, left_widget=self.on_top, layers="text", add_buttons=True
+        )
         self.on_top.clicked.connect(self.toggle_always_on_top)
 
         self.addToolBar(self.toolbar)

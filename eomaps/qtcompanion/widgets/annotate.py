@@ -287,6 +287,9 @@ class AddAnnotationWidget(QtWidgets.QWidget):
         self.m._connect_signal("annotationSelected", self.set_selected_annotation_props)
         self.m._connect_signal("annotationEdited", self.set_edited_annotation_props)
 
+        self.m._connect_signal("annotationEditorActivated", self.update_buttons)
+        self.m._connect_signal("annotationEditorDeactivated", self.update_buttons)
+
     def eventFilter(self, widget, event):
         from PyQt5 import QtCore
 

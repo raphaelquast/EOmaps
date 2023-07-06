@@ -14,7 +14,6 @@ from .utils import ColorWithSlidersWidget, GetColorWidget, AlphaSlider
 from .annotate import AddAnnotationWidget
 from .draw import DrawerTabs
 from .files import OpenDataStartTab
-from .utils import EditLayoutButton
 from .layer import AutoUpdateLayerMenuButton
 
 _log = logging.getLogger(__name__)
@@ -310,20 +309,6 @@ class AddFeatureWidget(QtWidgets.QFrame):
         self.alphaslider.setValue(int(-(-self.colorselector.alpha * 100 // 1)))
 
 
-class NewLayerLineEdit(QtWidgets.QLineEdit):
-    def enterEvent(self, e):
-        if self.window().showhelp is True:
-            QtWidgets.QToolTip.showText(
-                e.globalPos(),
-                "<h3>New Layer</h3>"
-                "Enter a layer-name and press <b>enter</b> to create "
-                "a new (empty) layer on the map!"
-                "<p>"
-                "NTOE: The tab of the new layer will be activated once the layer is "
-                "created, but it is NOT automatically set as the visible layer!",
-            )
-
-
 class OpenFileButton(QtWidgets.QPushButton):
     def enterEvent(self, e):
         OpenDataStartTab.enterEvent(self, e)
@@ -357,15 +342,6 @@ class LayerArtistTabs(QtWidgets.QTabWidget):
 
         self.layer_button = AutoUpdateLayerMenuButton(self, m=self.m)
         self.layer_button.setFixedWidth(30)
-        self.layer_button.setText("")
-        self.layer_button.setIcon(QtGui.QIcon(str(iconpath / "layers.png")))
-
-        self.layer_button.setStyleSheet(
-            """
-            QPushButton {border: 0px;}
-            QPushButton::menu-indicator { width: 0; }
-            """
-        )
 
         self.move_plus_button()  # Move to the correct location
         self.move_layer_button()  # Move to the correct location
@@ -453,37 +429,6 @@ class LayerTabBar(QtWidgets.QTabBar):
     _number_of_min_tabs_for_size = 6
     _n_layer_msg_shown = False
 
-    def event(self, event):
-        # don't show normal tooltips while showhelp is active
-        # (they would cause the help-popups to disappear after ~ 1 sec)
-        if event.type() == QtCore.QEvent.ToolTip and self.window().showhelp:
-            return
-
-        return super().event(event)
-
-    def mousePressEvent(self, event):
-        # TODO a more clean implementation of this would be nice
-        # explicitly handle control+click and shift+click events
-        # to avoid activating the currently clicked tab
-        # (we want to activate the currently active tab which is shifted to the
-        # start-position!)
-        modifiers = QtWidgets.QApplication.keyboardModifiers()
-        if (
-            modifiers == Qt.ControlModifier
-            and event.button() == Qt.MouseButton.LeftButton
-        ):
-
-            idx = self.tabAt(event.pos())
-            self.tabchanged(idx)
-        elif (
-            modifiers == Qt.ShiftModifier
-            and event.button() == Qt.MouseButton.LeftButton
-        ):
-            idx = self.tabAt(event.pos())
-            self.tabchanged(idx)
-        else:
-            super().mousePressEvent(event)
-
     def __init__(self, m=None, populate=False, *args, **kwargs):
         """
         Parameters
@@ -561,6 +506,37 @@ class LayerTabBar(QtWidgets.QTabBar):
             }
             """
         )
+
+    def event(self, event):
+        # don't show normal tooltips while showhelp is active
+        # (they would cause the help-popups to disappear after ~ 1 sec)
+        if event.type() == QtCore.QEvent.ToolTip and self.window().showhelp:
+            return
+
+        return super().event(event)
+
+    def mousePressEvent(self, event):
+        # TODO a more clean implementation of this would be nice
+        # explicitly handle control+click and shift+click events
+        # to avoid activating the currently clicked tab
+        # (we want to activate the currently active tab which is shifted to the
+        # start-position!)
+        modifiers = QtWidgets.QApplication.keyboardModifiers()
+        if (
+            modifiers == Qt.ControlModifier
+            and event.button() == Qt.MouseButton.LeftButton
+        ):
+
+            idx = self.tabAt(event.pos())
+            self.tabchanged(idx)
+        elif (
+            modifiers == Qt.ShiftModifier
+            and event.button() == Qt.MouseButton.LeftButton
+        ):
+            idx = self.tabAt(event.pos())
+            self.tabchanged(idx)
+        else:
+            super().mousePressEvent(event)
 
     @pyqtSlot()
     def get_tab_icon(self, color="red"):
@@ -648,13 +624,8 @@ class LayerTabBar(QtWidgets.QTabBar):
 
         # set the new layer-order
         if active_layers != layer_order:  # avoid recursions
-
             alpha_order = [alphas[active_layers.index(i)] for i in layer_order]
-
             self.m.show_layer(*zip(layer_order, alpha_order))
-
-            # self.m.BM.bg_layer = "|".join(layer_order)
-            # self.m.BM.update()
 
     @pyqtSlot(int)
     def close_handler(self, index):
@@ -993,7 +964,10 @@ class ArtistEditorTabs(LayerArtistTabs):
 
         if inp.exec_() == QtWidgets.QDialog.Accepted:
             # use .strip to remove any trailing spaces
-            self.m.new_layer(inp.textValue().strip())
+            layer = inp.textValue().strip()
+            # only create layers if at least 1 character has been provided
+            if len(layer) > 0:
+                self.m.new_layer(layer)
 
         inp.deleteLater()
 
@@ -1331,7 +1305,7 @@ class ArtistEditorTabs(LayerArtistTabs):
         self.layer_transparency_slider = LayerTransparencySlider(Qt.Horizontal)
         self.layer_transparency_slider.set_alpha_stylesheet()
         self.layer_transparency_slider.setValue(int(self.get_layer_alpha(layer) * 100))
-        layer_transparency_label = QtWidgets.QLabel("<b>Transparency:</b>")
+        layer_transparency_label = QtWidgets.QLabel("<b>Layer Transparency:</b>")
 
         def update_layerslider(alpha):
             self.set_layer_alpha(layer, alpha / 100)
