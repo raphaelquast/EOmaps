@@ -375,7 +375,7 @@ class _WMTSLayer(_WebMapLayer):
             else:
                 self._layer = layer
 
-            if self._layer == "all" or self._layer in m.BM.bg_layer.split("|"):
+            if self._layer == "all" or self._layer in m.BM._get_layers_alphas()[0]:
                 # add the layer immediately if the layer is already active
                 self._do_add_layer(
                     self._m,
