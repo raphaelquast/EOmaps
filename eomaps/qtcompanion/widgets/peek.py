@@ -311,9 +311,7 @@ class ModifierInput(QtWidgets.QLineEdit):
 
 
 class PeekLayerWidget(QtWidgets.QWidget):
-    def __init__(
-        self, *args, m=None, layers=None, exclude=None, how=(0.5, 0.5), **kwargs
-    ):
+    def __init__(self, *args, m=None, layers=None, exclude=None, **kwargs):
         """
         A dropdown-list that attaches a peek-callback to look at the selected layer
 
@@ -326,10 +324,6 @@ class PeekLayerWidget(QtWidgets.QWidget):
         exclude : list, optional
             A list of layer-names to exclude. The default is None.
 
-        Returns
-        -------
-        None.
-
         """
         super().__init__(*args, **kwargs)
 
@@ -341,7 +335,7 @@ class PeekLayerWidget(QtWidgets.QWidget):
         self.current_layer = None
 
         self.layerselector = AutoUpdatePeekLayerDropdown(
-            m=self.m, layers=layers, exclude=exclude
+            m=self.m, layers=self._layers, exclude=exclude
         )
         self.layerselector.update_layers()  # do this before attaching the callback!
         self.layerselector.currentIndexChanged[str].connect(self.set_layer_callback)

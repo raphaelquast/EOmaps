@@ -12,7 +12,7 @@ class SetExtentToLocation(QtWidgets.QWidget):
         super().__init__(*args, **kwargs)
         self.m = m
 
-        label = QtWidgets.QLabel("<b>Set extent to location:</b>")
+        label = QtWidgets.QLabel("<b>Query Location:</b>")
         self.inp = QtWidgets.QLineEdit()
         self.inp.returnPressed.connect(self.set_extent)
         layout = QtWidgets.QHBoxLayout()

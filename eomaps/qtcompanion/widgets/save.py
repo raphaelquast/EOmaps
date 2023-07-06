@@ -128,7 +128,7 @@ class SaveFileWidget(QtWidgets.QFrame):
         super().__init__(*args, **kwargs)
         self.m = m
 
-        b1 = SaveButton("Save!")
+        b1 = SaveButton("Save")
         width = b1.fontMetrics().boundingRect(b1.text()).width()
         b1.setFixedWidth(width + 30)
 
@@ -198,7 +198,7 @@ class SaveFileWidget(QtWidgets.QFrame):
         # ------------ LAYOUT ------------
 
         save_label = QtWidgets.QLabel(
-            "<b>Export Figure:</b><br>" "<small>[<code>ctrl + c</code>]</small>"
+            "<b>Export:</b><br>" "<small>[<code>ctrl + c</code>]</small>"
         )
 
         layout = QtWidgets.QHBoxLayout()
