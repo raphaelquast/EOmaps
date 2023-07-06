@@ -1670,7 +1670,7 @@ class BlitManager:
                 except Exception as ex:
                     _log.error(
                         "EOmaps: Issue while executing a layer-change action",
-                        exc_info=_log.getEffectiveLevel() == logging.DEBUG,
+                        exc_info=_log.getEffectiveLevel() <= logging.DEBUG,
                     )
 
             if new:
@@ -1690,7 +1690,7 @@ class BlitManager:
                     except Exception as ex:
                         _log.error(
                             "EOmaps: Issue while executing a layer-change action",
-                            exc_info=_log.getEffectiveLevel() == logging.DEBUG,
+                            exc_info=_log.getEffectiveLevel() <= logging.DEBUG,
                         )
 
             # clear the list of pending webmaps once the layer has been activated

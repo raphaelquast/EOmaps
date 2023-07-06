@@ -262,7 +262,7 @@ except Exception:
     _log.error(
         "EOmaps: Could not load available NaturalEarth features from\n"
         f"{_NE_features_path}",
-        exc_info=_log.getEffectiveLevel() == logging.DEBUG,
+        exc_info=_log.getEffectiveLevel() <= logging.DEBUG,
     )
     _NE_features = dict()
     _NE_features_all = dict()

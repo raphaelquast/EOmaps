@@ -285,7 +285,7 @@ class _WebMapLayer:
             _log.error(
                 "EOmaps: could not determine bbox from 'boundingBox'... "
                 + "defaulting to 'boundingBoxWGS84'",
-                exc_info=_log.getEffectiveLevel() == logging.DEBUG,
+                exc_info=_log.getEffectiveLevel() <= logging.DEBUG,
             )
             (x0, y0, x1, y1) = getattr(self.wms_layer, "boundingBoxWGS84", None)
             incrs = CRS.from_user_input(4326)
@@ -1359,7 +1359,7 @@ class SlippyImageArtistNew(AxesImage):
                 except Exception:
                     _log.error(
                         "EOmaps: unable to set clippath for WMS images",
-                        exc_info=_log.getEffectiveLevel() == logging.DEBUG,
+                        exc_info=_log.getEffectiveLevel() <= logging.DEBUG,
                     )
 
                 with ax.hold_limits():
@@ -1371,7 +1371,7 @@ class SlippyImageArtistNew(AxesImage):
         except Exception:
             _log.error(
                 "EOmaps: ... could not fetch WebMap service",
-                exc_info=_log.getEffectiveLevel() == logging.DEBUG,
+                exc_info=_log.getEffectiveLevel() <= logging.DEBUG,
             )
 
             if self in self.axes._mouseover_set:

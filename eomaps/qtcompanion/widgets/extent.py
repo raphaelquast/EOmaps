@@ -56,5 +56,5 @@ class SetExtentToLocation(QtWidgets.QWidget):
         except Exception as ex:
             _log.error(
                 "There was an error while trying to set the extent.",
-                exc_info=_log.getEffectiveLevel() == logging.DEBUG,
+                exc_info=_log.getEffectiveLevel() <= logging.DEBUG,
             )

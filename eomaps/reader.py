@@ -66,7 +66,7 @@ def identify_geotiff_cmap(path, band=1):
     except ImportError as ex:
         _log.info(
             "EOmaps: Unable to identify cmap for GeoTIFF, using: 'viridis'",
-            exc_info=_log.getEffectiveLevel() == logging.DEBUG,
+            exc_info=_log.getEffectiveLevel() <= logging.DEBUG,
         )
         return "viridis", None
 

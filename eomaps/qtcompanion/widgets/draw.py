@@ -201,7 +201,7 @@ class DrawerTabs(QtWidgets.QTabWidget):
         except Exception:
             _log.error(
                 "EOmaps: Encountered some problems while clearing the drawer!",
-                exc_info=_log.getEffectiveLevel() == logging.DEBUG,
+                exc_info=_log.getEffectiveLevel() <= logging.DEBUG,
             )
 
         self.m.BM.update()
@@ -386,7 +386,7 @@ class DrawerWidget(QtWidgets.QWidget):
         except Exception:
             _log.error(
                 "EOmaps: Encountered a problem while trying to save " "drawn shapes...",
-                exc_info=_log.getEffectiveLevel() == logging.DEBUG,
+                exc_info=_log.getEffectiveLevel() <= logging.DEBUG,
             )
 
     @pyqtSlot()
@@ -399,7 +399,7 @@ class DrawerWidget(QtWidgets.QWidget):
             _log.error(
                 "EOmaps: Encountered a problem while trying to remove "
                 "the last drawn shape...",
-                exc_info=_log.getEffectiveLevel() == logging.DEBUG,
+                exc_info=_log.getEffectiveLevel() <= logging.DEBUG,
             )
 
     def _new_drawer(self):

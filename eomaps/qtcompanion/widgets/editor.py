@@ -75,7 +75,7 @@ class AddFeaturesMenuButton(QtWidgets.QPushButton):
             except Exception:
                 _log.warning(
                     f"There was a problem with the NaturalEarth feature: {featuretype}",
-                    exc_info=_log.getEffectiveLevel() == logging.DEBUG,
+                    exc_info=_log.getEffectiveLevel() <= logging.DEBUG,
                 )
                 continue
 
@@ -134,7 +134,7 @@ class AddFeaturesMenuButton(QtWidgets.QPushButton):
                     featuretype,
                     feature,
                     "did not work----",
-                    exc_info=_log.getEffectiveLevel() == logging.DEBUG,
+                    exc_info=_log.getEffectiveLevel() <= logging.DEBUG,
                 )
 
         return cb
@@ -1368,7 +1368,7 @@ class ArtistEditorTabs(LayerArtistTabs):
         except Exception:
             _log.error(
                 "EOmaps: There was an error while trying to remove the artist",
-                exc_info=_log.getEffectiveLevel() == logging.DEBUG,
+                exc_info=_log.getEffectiveLevel() <= logging.DEBUG,
             )
 
         # explicit treatment for gridlines

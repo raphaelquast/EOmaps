@@ -576,7 +576,7 @@ class PlotFileWidget(QtWidgets.QWidget):
             except Exception as ex:
                 _log.error(
                     "EOmaps: encountered a problem while closing the file.",
-                    exc_info=_log.getEffectiveLevel() == logging.DEBUG,
+                    exc_info=_log.getEffectiveLevel() <= logging.DEBUG,
                 )
 
         self._file_handle = None

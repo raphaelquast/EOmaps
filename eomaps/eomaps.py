@@ -3758,7 +3758,10 @@ class Maps(metaclass=_MapsMeta):
             if self.parent != self:
                 self.show_layer(self.parent.layer)
         except Exception:
-            _log.error("EOmaps-cleanup: Problem while updating map to reflect changes")
+            _log.error(
+                "EOmaps-cleanup: Problem while updating map to reflect changes",
+                exc_info=_log.getEffectiveLevel() <= logging.DEBUG,
+            )
 
     def _check_layer_name(self, layer):
         if not isinstance(layer, str):

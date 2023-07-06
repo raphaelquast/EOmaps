@@ -25,7 +25,7 @@ def remove_prefix(text, prefix):
 def _log_problem(name):
     _log.error(
         f"EOmaps: Problem while fetching wmslayers for {name}",
-        exc_info=_log.getEffectiveLevel() == logging.DEBUG,
+        exc_info=_log.getEffectiveLevel() <= logging.DEBUG,
     )
 
 
@@ -754,7 +754,7 @@ class AddWMSMenuButton(QtWidgets.QPushButton):
         except Exception as ex:
             _log.error(
                 f"EOmaps: problem while trying to fetch the submenu for {wmsname}",
-                exc_info=_log.getEffectiveLevel() == logging.DEBUG,
+                exc_info=_log.getEffectiveLevel() <= logging.DEBUG,
             )
 
     def _fetch_submenu(self, wmsname):
