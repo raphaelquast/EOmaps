@@ -7,13 +7,21 @@ from PyQt5.QtCore import QObject, pyqtSignal
 class _SignalContainer(QObject):
     cmapsChanged = pyqtSignal()
 
+    clipboardKwargsChanged = pyqtSignal()
+
+    dataPlotted = pyqtSignal()
+
+    # -------- shape drawer
     drawFinished = pyqtSignal()
     drawAborted = pyqtSignal()
     drawStarted = pyqtSignal(str)
 
-    clipboardKwargsChanged = pyqtSignal()
-
+    # -------- annotation editor
+    annotationEditorActivated = pyqtSignal()
+    annotationEditorDeactivated = pyqtSignal()
     annotationSelected = pyqtSignal()
     annotationEdited = pyqtSignal()
 
-    dataPlotted = pyqtSignal()
+    # -------- layout editor
+    layoutEditorActivated = pyqtSignal()
+    layoutEditorDeactivated = pyqtSignal()

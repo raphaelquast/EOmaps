@@ -266,6 +266,8 @@ class AnnotationEditor:
                 "key_press_event", self.remove_selected_annotation
             )
 
+            self.m._emit_signal("annotationEditorActivated")
+
             _log.info(
                 "EOmaps: Annotations editable! Shortcuts:\n"
                 " -    ---   : move annotation\n"
@@ -287,6 +289,7 @@ class AnnotationEditor:
             if self._remove_cid:
                 self.m.f.canvas.mpl_disconnect(self._remove_cid)
 
+            self.m._emit_signal("annotationEditorDeactivated")
             self.m.BM.update()
 
     def _make_ann_editable(self, ann, drag_coords=True):
