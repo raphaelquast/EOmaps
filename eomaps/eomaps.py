@@ -889,6 +889,12 @@ class Maps(metaclass=_MapsMeta):
         """
         if layer is None:
             layer = copy.deepcopy(self.layer)
+        else:
+            layer = str(layer)
+            if len(layer) == 0:
+                raise SyntaxError(
+                    "EOmaps: Unable to create a layer with an empty layer-name!"
+                )
 
         m = self.copy(
             data_specs=copy_data_specs,
