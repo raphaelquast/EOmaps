@@ -999,6 +999,11 @@ class ArtistEditorTabs(LayerArtistTabs):
         # for artists that should not show up in the editor
         if name.startswith("__EOmaps_exclude"):
             return [(None, None)]
+        elif name.startswith("__EOmaps_deactivate"):
+            name = name[20:].strip()
+            deactivated = True
+        else:
+            deactivated = False
 
         if len(name) > 80:
             label = QtWidgets.QLabel(name[:76] + "... >")
@@ -1134,7 +1139,8 @@ class ArtistEditorTabs(LayerArtistTabs):
             b_cmap = None
 
         layout = []
-        layout.append((b_sh, 0))  # show hide
+        if not deactivated:
+            layout.append((b_sh, 0))  # show hide
 
         # if b_c is not None:
         #     layout.append((b_c, 1))  # color
@@ -1152,7 +1158,12 @@ class ArtistEditorTabs(LayerArtistTabs):
         # if b_cmap is not None:
         #     layout.append((b_cmap, 6))  # cmap
 
-        layout.append((b_r, 7))  # remove
+        if not deactivated:
+            layout.append((b_r, 7))  # remove
+
+        if deactivated:
+            for w in layout:
+                w[0].setEnabled(False)
 
         return layout
 

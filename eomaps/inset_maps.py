@@ -167,14 +167,23 @@ class InsetMaps(Maps):
         while len(self._patches) > 0:
             patch = self._patches.pop()
             self.BM.remove_bg_artist(patch, draw=False)
-            patch.remove()
+            try:
+                patch.remove()
+            except ValueError:
+                # ignore ValueErrors in here (they are caused by cleanup methods
+                # that already removed the artist)
+                pass
 
         verts = self._get_spine_verts()
         for m, kwargs in self._indicators:
             verts_t = np.column_stack(m._transf_lonlat_to_plot.transform(*verts.T))
 
             p = Polygon(verts_t, **kwargs)
-            art = self._parent_m.ax.add_patch(p)
+            # TODO implement this as a proper artist that updates itself
+            # indicate the artist in the companion widget editor but deactivate
+            # all buttons since they will not work on dynamically re-created artists...
+            p.set_label("__EOmaps_deactivated InsetMap indicator")
+            art = m.ax.add_patch(p)
             self.BM.add_bg_artist(art, layer=m.layer, draw=False)
             self._patches.add(art)
 
