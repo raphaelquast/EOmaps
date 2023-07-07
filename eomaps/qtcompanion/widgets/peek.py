@@ -421,6 +421,15 @@ class PeekLayerWidget(QtWidgets.QWidget):
             shape=self.buttons.shape,
         )
 
+        # execute the attached callback with the last available
+        # event of the click-move container (to get a dynamic update
+        # of the peek-region when the method changes)
+        if self.m.all.cb._click_move._event is not None:
+            self.m.all.cb._click_move._execute_cbs(
+                self.m.all.cb._click_move._event, [self.cid]
+            )
+            self.m.BM.update()
+
     def remove_peek_cb(self):
         if self.cid is not None:
             if self.cid in self.m.all.cb.click.get.attached_callbacks:
