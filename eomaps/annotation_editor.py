@@ -1,6 +1,5 @@
 """Functionalities for editable annotations."""
 import logging
-from matplotlib.offsetbox import DraggableBase
 from types import SimpleNamespace
 import numpy as np
 
@@ -9,13 +8,90 @@ _log = logging.getLogger(__name__)
 _eomaps_picked_ann = None
 
 
-class DraggableAnnotationNew(DraggableBase):
+class DraggableBase:
+    """
+    Helper base class for a draggable artist (legend, offsetbox).
+
+    This class is a copy of the DraggableBase class of matplotlib
+    to handle the drawing of artists with EOmaps.
+
+    >>> from matplotlib.offsetbox import DraggableBase
+
+    """
+
+    def __init__(self, ref_artist, use_blit=False):
+        self.ref_artist = ref_artist
+        if not ref_artist.pickable():
+            ref_artist.set_picker(True)
+        self.got_artist = False
+        self._use_blit = use_blit and self.canvas.supports_blit
+        self.cids = [
+            self.canvas.callbacks._connect_picklable("pick_event", self.on_pick),
+            self.canvas.callbacks._connect_picklable(
+                "button_release_event", self.on_release
+            ),
+        ]
+
+    # A property, not an attribute, to maintain picklability.
+    canvas = property(lambda self: self.ref_artist.figure.canvas)
+
+    def on_motion(self, evt):
+        if self._check_still_parented() and self.got_artist:
+            dx = evt.x - self.mouse_x
+            dy = evt.y - self.mouse_y
+            self.update_offset(dx, dy)
+
+    def on_pick(self, evt):
+        if self._check_still_parented() and evt.artist == self.ref_artist:
+            self.mouse_x = evt.mouseevent.x
+            self.mouse_y = evt.mouseevent.y
+            self.got_artist = True
+            self._c1 = self.canvas.callbacks._connect_picklable(
+                "motion_notify_event", self.on_motion
+            )
+            self.save_offset()
+
+    def on_release(self, event):
+        if self._check_still_parented() and self.got_artist:
+            self.finalize_offset()
+            self.got_artist = False
+            self.canvas.mpl_disconnect(self._c1)
+
+    def _check_still_parented(self):
+        if self.ref_artist.figure is None:
+            self.disconnect()
+            return False
+        else:
+            return True
+
+    def disconnect(self):
+        """Disconnect the callbacks."""
+        for cid in self.cids:
+            self.canvas.mpl_disconnect(cid)
+        try:
+            c1 = self._c1
+        except AttributeError:
+            pass
+        else:
+            self.canvas.mpl_disconnect(c1)
+
+    def save_offset(self):
+        pass
+
+    def update_offset(self, dx, dy):
+        pass
+
+    def finalize_offset(self):
+        pass
+
+
+class DraggableAnnotation(DraggableBase):
     """Base class for draggable annotations."""
 
     def __init__(
         self,
         annotation,
-        use_blit=False,
+        use_blit=True,
         drag_coords=True,
         select_signal=None,
         edit_signal=None,
@@ -158,6 +234,7 @@ class DraggableAnnotationNew(DraggableBase):
                 # emit signal if provided
                 if self._select_signal is not None:
                     self._select_signal()
+        self.annotation.figure._EOmaps_parent.BM.update()
 
     def on_motion(self, evt):
         # check if a keypress event triggered a change of the interaction
@@ -172,7 +249,7 @@ class DraggableAnnotationNew(DraggableBase):
                 self.mouse_y = evt.y
 
         super().on_motion(evt)
-
+        self.annotation.figure._EOmaps_parent.BM.update(artists=[self.annotation])
         # emit signal if provided
         if self._edit_signal is not None:
             self._edit_signal()
@@ -322,7 +399,7 @@ class AnnotationEditor(_EditorBase):
                 )
             )
             if self._drag_active:
-                a._draggable = DraggableAnnotationNew(
+                a._draggable = DraggableAnnotation(
                     a,
                     drag_coords=drag_coords,
                     select_signal=self.emit_selected_signal,
@@ -396,7 +473,7 @@ class AnnotationEditor(_EditorBase):
         if drag:
             drag.disconnect()
 
-        ann._draggable = DraggableAnnotationNew(
+        ann._draggable = DraggableAnnotation(
             ann,
             drag_coords=drag_coords,
             select_signal=self.emit_selected_signal,
