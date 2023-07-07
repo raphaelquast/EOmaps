@@ -191,8 +191,10 @@ class DraggableAnnotationNew(DraggableBase):
 
 class _EditorBase:
     """
-    A base class for "Editor" classes that should display an info-text
-    on initialization that is removed on the next left-click.
+    A base class for "Editor" classes that should display an info textbox.
+
+    - left click: toggle help-text visibility
+
     """
 
     def __init__(self, *args, m=None, **kwargs):
@@ -206,7 +208,7 @@ class _EditorBase:
 
     def _on_press(self, event):
         if event.button == 3:
-            self.remove_info_text()
+            self.toggle_info_text()
 
     def show_info_text(self):
         # only re-draw if info-text is None
@@ -234,7 +236,11 @@ class _EditorBase:
             self.m.f.canvas.mpl_connect("button_press_event", self._on_press)
         )
         self.m.BM._before_fetch_bg_actions.append(self._update_info_fontsize)
+        self.m.BM.update()
 
+    def toggle_info_text(self):
+        if getattr(self, "_info_artist", None) is not None:
+            self._info_artist.set_visible(not self._info_artist.get_visible())
         self.m.BM.update()
 
     def remove_info_text(self):
@@ -276,11 +282,12 @@ class AnnotationEditor(_EditorBase):
             (
                 "AnnotationEditor Controls:\n\n"
                 "CLICK:   Select annotation\n"
-                "DRAG:    Move text-box\n"
+                "  -      Move text-box\n"
+                "\n"
                 "CONTROL: Move anchor\n"
                 "SHIFT:   Resize\n"
-                "R:       Rotate text-box\n"
-                "DELETE:  Delete annotation\n\n"
+                "R:       Rotate\n"
+                "DELETE:  Delete\n\n"
                 "Note: Use the widget to set\n"
                 "      text, style etc. of\n"
                 "      selected annotations"
