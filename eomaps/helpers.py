@@ -2152,7 +2152,7 @@ class BlitManager:
     def on_draw(self, event):
         """Callback to register with 'draw_event'."""
         cv = self.canvas
-
+        _log.log(5, "draw")
         try:
             if (
                 "RendererBase._draw_disabled"

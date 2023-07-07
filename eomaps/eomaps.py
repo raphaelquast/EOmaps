@@ -5186,11 +5186,11 @@ class Maps(metaclass=_MapsMeta):
         if widget is not None:
             try:
                 getattr(parent._signal_container, name).connect(func)
-                _log.log(5, f"Signal connected: {name} ({func.__name__})")
+                _log.log(1, f"Signal connected: {name} ({func.__name__})")
 
             except Exception:
                 _log.log(
-                    5,
+                    1,
                     f"There was a problem while trying to connect the function {func} "
                     f"to the signal {name} ",
                     exc_info=True,
@@ -5204,10 +5204,10 @@ class Maps(metaclass=_MapsMeta):
         if widget is not None:
             try:
                 getattr(parent._signal_container, name).emit(*args)
-                _log.log(5, f"Signal emitted: {name} {args}")
+                _log.log(1, f"Signal emitted: {name} {args}")
             except Exception:
                 _log.log(
-                    5,
+                    1,
                     f"There was a problem while trying to emit the signal {name} "
                     f"with the args {args}",
                     exc_info=True,
