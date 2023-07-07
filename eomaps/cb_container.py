@@ -1289,7 +1289,11 @@ class PickContainer(_ClickContainer):
 
             - if `int` or `float`, the radius of the circle in units of the plot_crs
             - if `str`, a multiplication-factor for the estimated data-radius.
-              in plot projection. (e.g. r=search_radius * shape_radius)
+
+              NOTE: The multiplied radius is defined in the plot projection!
+              If the data was provided in a different projection, the radius
+              estimated from the re-projected data is used (might be different
+              from the actual shape radius!)
 
             The default is "50" (e.g. 50 times the data-radius).
 
