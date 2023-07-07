@@ -361,15 +361,7 @@ class AnnotationEditor(_EditorBase):
             self.m._emit_signal("annotationEditorActivated")
 
             self.show_info_text()
-
-            _log.info(
-                "EOmaps: Annotations editable! Shortcuts:\n"
-                " -    ---   : move annotation\n"
-                " - 'control': move anchor\n"
-                " - 'shift':   resize\n"
-                " - 'r':       rotate\n"
-                " - 'delete':  remove annotation\n"
-            )
+            _log.info("EOmaps: Annotations editable!")
         else:
             for ann in self._annotations:
                 self._undo_ann_editable(ann.a)

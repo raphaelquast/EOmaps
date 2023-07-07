@@ -1137,7 +1137,7 @@ class LayoutEditor:
         self._filepath = filepath
         self.modifier_pressed = True
         _log.info(
-            "EOmaps: Layout Editor activated! (press 'esc' to exit and 'q' for info)"
+            "EOmaps: Layout Editor activated! (press 'esc' to exit " "and 'q' for info)"
         )
 
         self._history.clear()
