@@ -601,7 +601,10 @@ class GridLabels:
             while len(self._texts) > 0:
                 try:
                     t = self._texts.pop(-1)
-                    t.remove()
+                    try:
+                        t.remove()
+                    except ValueError:
+                        pass
                     self._g.m.BM.remove_bg_artist(t, draw=False)
                 except Exception:
                     _log.exception(
@@ -875,8 +878,6 @@ class GridLabels:
 
         for axis in use_axes:
             self._add_axis_labels(lines=lines, axis=axis)
-
-        m.f.canvas.draw_idle()
 
 
 class GridFactory:
