@@ -4882,6 +4882,8 @@ class Maps(metaclass=_MapsMeta):
             **kwargs,
         )
 
+        coll.set_label("Dataset " f"({self.shape.name}  |  {zdata.shape})")
+
         self._coll = coll
 
         if dynamic is True:
