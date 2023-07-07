@@ -189,15 +189,107 @@ class DraggableAnnotationNew(DraggableBase):
             pass
 
 
-class AnnotationEditor:
+class _EditorBase:
+    """
+    A base class for "Editor" classes that should display an info-text
+    on initialization that is removed on the next left-click.
+    """
+
+    def __init__(self, *args, m=None, **kwargs):
+        self.m = m
+        self._info_cids = set()
+
+    def set_info(self, x, y, text):
+        self._info_x = x
+        self._info_y = y
+        self._info_text = text
+
+    def _on_press(self, event):
+        if event.button == 3:
+            self.remove_info_text()
+
+    def show_info_text(self):
+        # only re-draw if info-text is None
+        if getattr(self, "_info_artist", None) is not None:
+            return
+
+        self._info_artist = self.m.f.text(
+            self._info_x,
+            self._info_y,
+            self._info_text,
+            transform=self.m.f.transFigure,
+            ha="left",
+            va="top",
+            fontsize=min(self.m.f.bbox.width * 72 / self.m.f.dpi / 60, 12),
+            bbox=dict(
+                boxstyle="round", facecolor=".8", edgecolor="k", lw=0.5, alpha=0.9
+            ),
+            zorder=1e6,
+            fontfamily="monospace",
+        )
+
+        self.m.BM.add_artist(self._info_artist, "all")
+
+        self._info_cids.add(
+            self.m.f.canvas.mpl_connect("button_press_event", self._on_press)
+        )
+        self.m.BM._before_fetch_bg_actions.append(self._update_info_fontsize)
+
+        self.m.BM.update()
+
+    def remove_info_text(self):
+        while len(self._info_cids) > 0:
+            self.m.f.canvas.mpl_disconnect(self._info_cids.pop())
+
+        try:
+            self.m.BM._before_fetch_bg_actions.remove(self._update_info_fontsize)
+        except ValueError:
+            pass
+
+        if getattr(self, "_info_artist", None) is not None:
+            self.m.BM.remove_artist(self._info_artist, "all")
+            try:
+                self._info_artist.remove()
+            except Exception:
+                _log.error(
+                    "There was a problem while trying to remove the "
+                    "Editor info text artist."
+                )
+
+            self._info_artist = None
+            self.m.BM.update()
+
+    def _update_info_fontsize(self, *args, **kwargs):
+        if getattr(self, "_info_artist", None) is not None:
+            fontsize = min(self.m.f.bbox.width * 72 / self.m.f.dpi / 60, 15)
+            self._info_artist.set_fontsize(fontsize)
+
+
+class AnnotationEditor(_EditorBase):
     """Class to handle interactive annotation edits."""
 
     def __init__(self, m):
-        self.m = m
+        super().__init__(m=m)
+        self.set_info(
+            0.72,
+            0.98,
+            (
+                "AnnotationEditor Controls:\n\n"
+                "CLICK:   Select annotation\n"
+                "DRAG:    Move text-box\n"
+                "CONTROL: Move anchor\n"
+                "SHIFT:   Resize\n"
+                "R:       Rotate text-box\n"
+                "DELETE:  Delete annotation\n\n"
+                "Note: Use the widget to set\n"
+                "      text, style etc. of\n"
+                "      selected annotations"
+                "\n\n(right-click to hide info)"
+            ),
+        )
+
         self._annotations = list()
-
         self._drag_active = False
-
         self._remove_cid = None
 
     @property
@@ -268,6 +360,8 @@ class AnnotationEditor:
 
             self.m._emit_signal("annotationEditorActivated")
 
+            self.show_info_text()
+
             _log.info(
                 "EOmaps: Annotations editable! Shortcuts:\n"
                 " -    ---   : move annotation\n"
@@ -288,6 +382,8 @@ class AnnotationEditor:
 
             if self._remove_cid:
                 self.m.f.canvas.mpl_disconnect(self._remove_cid)
+
+            self.remove_info_text()
 
             self.m._emit_signal("annotationEditorDeactivated")
             self.m.BM.update()
