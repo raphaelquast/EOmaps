@@ -1,6 +1,6 @@
 .. _basics:
 
-🚀 Basics
+🌱 Basics
 ---------
 
 .. contents:: Contents
