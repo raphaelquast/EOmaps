@@ -326,6 +326,8 @@ class PlusButton(BasicCheckableToolButton):
         self.setFixedSize(30, 30)
         self.setCheckable(False)
 
+        self.setStyleSheet("PlusButton {border: 0}")
+
 
 class LayerArtistTabs(QtWidgets.QTabWidget):
     plusClicked = pyqtSignal()
