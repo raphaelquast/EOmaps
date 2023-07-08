@@ -1,7 +1,7 @@
 
 <p align="center">
     <a href=https://github.com/raphaelquast/EOmaps>
-    <img src="https://github.com/raphaelquast/EOmaps/blob/dev/docs/_static/logo.png?raw=true" alt="EOmaps logo" width="55%">
+    <img src="https://github.com/raphaelquast/EOmaps/blob/master/docs/_static/logo.png?raw=true" alt="EOmaps logo" width="55%">
     </a>
 </p>
 
@@ -28,22 +28,22 @@
 It is built on top of [matplotlib](matplotlib.org/) and [cartopy](https://scitools.org.uk/cartopy/docs/latest/) and provides an intuitive and easy-to-use interface to speed up and simplify the creation and comparison of maps.
 
 ### What can EOmaps do for you?
-- Create [▤ multi-layered maps](https://eomaps.readthedocs.io/en/dev/api.html#basics) and interactively compare different layers with each other
-- [🔴 Visualize datasets](https://eomaps.readthedocs.io/en/dev/api.html#data-visualization) with  millions of datapoints and handle reprojections
+- Create [▤ multi-layered maps](https://eomaps.readthedocs.io/en/latest/api.html#basics) and interactively compare different layers with each other
+- [🔴 Visualize datasets](https://eomaps.readthedocs.io/en/latest/api.html#data-visualization) with  millions of datapoints and handle reprojections
 - Provide a comprehensive set of tools to customize the map
-  - [🌵NaturalEarth features](https://eomaps.readthedocs.io/en/dev/api.html#naturalearth-features)
-  - [📏Scalebars](https://eomaps.readthedocs.io/en/dev/api.html#scalebars)
-  - [▦ Gridlines](https://eomaps.readthedocs.io/en/dev/api.html#gridlines)
-  - [🛰 WebMap layers](https://eomaps.readthedocs.io/en/dev/api.html#webmap-layers)
+  - [🌵NaturalEarth features](https://eomaps.readthedocs.io/en/latest/api.html#naturalearth-features)
+  - [📏Scalebars](https://eomaps.readthedocs.io/en/latest/api.html#scalebars)
+  - [▦ Gridlines](https://eomaps.readthedocs.io/en/latest/api.html#gridlines)
+  - [🛰 WebMap layers](https://eomaps.readthedocs.io/en/latest/api.html#webmap-layers)
   - [🏕 Annotations, Markers, Lines, Logos...](https://eomaps.readthedocs.io/en/latest/api.html#annotations-markers-lines-logos-etc)
   - . . .
-- Use [🛸 Callbacks](https://eomaps.readthedocs.io/en/latest/api.html#callbacks-make-the-map-interactive) and the [🧰 CompanionWidget](https://eomaps.readthedocs.io/en/dev/api.html#companion-widget) to interact with the figure
-- Interactively re-arrange multiple maps in a figure with the [🏗️ LayoutEditor](https://eomaps.readthedocs.io/en/dev/api.html#layout-editor)
-- [🗺 Export](https://eomaps.readthedocs.io/en/dev/api.html#export-the-map-as-jpeg-png-etc) publication ready high resolution images (png, jpeg, tiff, ...)  
+- Use [🛸 Callbacks](https://eomaps.readthedocs.io/en/latest/api.html#callbacks-make-the-map-interactive) and the [🧰 CompanionWidget](https://eomaps.readthedocs.io/en/latest/api.html#companion-widget) to interact with the figure
+- Interactively re-arrange multiple maps in a figure with the [🏗️ LayoutEditor](https://eomaps.readthedocs.io/en/latest/api.html#layout-editor)
+- [🗺 Export](https://eomaps.readthedocs.io/en/latest/api.html#export-the-map-as-jpeg-png-etc) publication ready high resolution images (png, jpeg, tiff, ...)  
 or export figures as vektor graphics (svg, eps, pdf ...)
 - . . . and much more!  
 
-Checkout the [🌱 Basics](https://eomaps.readthedocs.io/en/dev/api.html#basics) in the documentation to get started!
+Checkout the [🌱 Basics](https://eomaps.readthedocs.io/en/latest/api.html#basics) in the documentation to get started!
 
 <img src=https://eomaps.readthedocs.io/en/latest/_images/intro.png width=50%>
 
@@ -77,7 +77,7 @@ Support the development and add a citation to your publication!
 
 Interested in contributing to EOmaps? Awesome!
 
-- Checkout the [🚀 Contribution Guide](https://eomaps.readthedocs.io/en/dev/contribute.html) on how to get started!
+- Checkout the [🚀 Contribution Guide](https://eomaps.readthedocs.io/en/latest/contribute.html) on how to get started!
 
 > Found a bug or got an idea for an interesting feature?  
 > Open an [issue](https://github.com/raphaelquast/EOmaps/issues) or start a [discussion](https://github.com/raphaelquast/EOmaps/discussions), and I'll see what I can do!  
@@ -86,15 +86,15 @@ Interested in contributing to EOmaps? Awesome!
 <table>
   <tr>
     <td valign="center" style="width:50%">
-        <img src="https://github.com/raphaelquast/EOmaps/blob/dev/docs/_static/fig6.gif?raw=true" alt="EOmaps example 6">
+        <img src="https://github.com/raphaelquast/EOmaps/blob/master/docs/_static/fig6.gif?raw=true" alt="EOmaps example 6">
       </td>
     <td valign="center">
-        <img src="https://github.com/raphaelquast/EOmaps/blob/dev/docs/_static/minigifs/advanced_wms.gif?raw=true" alt="EOmaps example 2">
+        <img src="https://github.com/raphaelquast/EOmaps/blob/master/docs/_static/minigifs/advanced_wms.gif?raw=true" alt="EOmaps example 2">
       </td>
   </tr>
   <tr>
     <td valign="center">
-        <img src="https://github.com/raphaelquast/EOmaps/blob/dev/docs/_static/fig9.gif?raw=true" alt="EOmaps example 9">
+        <img src="https://github.com/raphaelquast/EOmaps/blob/master/docs/_static/fig9.gif?raw=true" alt="EOmaps example 9">
     </td>
     <td valign="center">
         <img src="https://github.com/raphaelquast/EOmaps/blob/master/docs/_static/fig4.gif?raw=true" alt="EOmaps example 4">
@@ -102,10 +102,10 @@ Interested in contributing to EOmaps? Awesome!
   </tr>
   <tr>
     <td valign="center">
-        <img src="https://github.com/raphaelquast/EOmaps/blob/dev/docs/_static/fig7.gif?raw=true" alt="EOmaps example 7">
+        <img src="https://github.com/raphaelquast/EOmaps/blob/master/docs/_static/fig7.gif?raw=true" alt="EOmaps example 7">
       </td>
     <td valign="center">
-        <img src="https://github.com/raphaelquast/EOmaps/blob/dev/docs/_static/fig2.gif?raw=true" alt="EOmaps example 8">
+        <img src="https://github.com/raphaelquast/EOmaps/blob/master/docs/_static/fig2.gif?raw=true" alt="EOmaps example 8">
       </td>
   </tr>
   <tr>
@@ -113,7 +113,7 @@ Interested in contributing to EOmaps? Awesome!
         <img src="https://github.com/raphaelquast/EOmaps/blob/master/docs/_static/minigifs/layout_editor.gif?raw=true" alt="EOmaps inset-maps">
     </td>
     <td valign="center">
-        <img src="https://github.com/raphaelquast/EOmaps/blob/dev/docs/_static/fig8.gif?raw=true" alt="EOmaps example 3">
+        <img src="https://github.com/raphaelquast/EOmaps/blob/master/docs/_static/fig8.gif?raw=true" alt="EOmaps example 3">
     </td>
   </tr>
   <tr>
@@ -121,7 +121,7 @@ Interested in contributing to EOmaps? Awesome!
         <img src="https://github.com/raphaelquast/EOmaps/blob/master/docs/_static/example_lines.png?raw=true" alt="EOmaps example 9">
     </td>
     <td valign="center">
-        <img src="https://github.com/raphaelquast/EOmaps/blob/dev/docs/_static/inset_maps.png?raw=true" alt="EOmaps example 4">
+        <img src="https://github.com/raphaelquast/EOmaps/blob/master/docs/_static/inset_maps.png?raw=true" alt="EOmaps example 4">
     </td>
   </tr>
 </table>
