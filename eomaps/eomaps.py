@@ -1123,19 +1123,25 @@ class Maps(metaclass=_MapsMeta):
 
     def _set_always_on_top(self, q):
         # keep pyqt window on top
-        if "qt" in plt.get_backend().lower():
+        try:
             from PyQt5 import QtCore
 
-            w = self.f.canvas.window()
-            ws = w.size()
             if q:
                 # only do this if necessary to avoid flickering
                 # see https://stackoverflow.com/a/40007740/9703451
                 if not self._get_always_on_top():
-                    w.setWindowFlags(w.windowFlags() | QtCore.Qt.WindowStaysOnTopHint)
-                    w.resize(ws)
-                    w.show()
+                    # in case pyqt is used as backend, also keep the figure on top
+                    if "qt" in plt.get_backend().lower():
+                        w = self.f.canvas.window()
+                        ws = w.size()
+                        w.setWindowFlags(
+                            w.windowFlags() | QtCore.Qt.WindowStaysOnTopHint
+                        )
+                        w.resize(ws)
+                        w.show()
 
+                    # handle the widget in case it was activated (possible also for
+                    # backends other than qt)
                     if self._companion_widget is not None:
                         cw = self._companion_widget.window()
                         cws = cw.size()
@@ -1146,12 +1152,15 @@ class Maps(metaclass=_MapsMeta):
                         cw.show()
 
             else:
-                # only do this if necessary to avoid flickering
-                # see https://stackoverflow.com/a/40007740/9703451
                 if self._get_always_on_top():
-                    w.setWindowFlags(w.windowFlags() & ~QtCore.Qt.WindowStaysOnTopHint)
-                    w.resize(ws)
-                    w.show()
+                    if "qt" in plt.get_backend().lower():
+                        w = self.f.canvas.window()
+                        ws = w.size()
+                        w.setWindowFlags(
+                            w.windowFlags() & ~QtCore.Qt.WindowStaysOnTopHint
+                        )
+                        w.resize(ws)
+                        w.show()
 
                     if self._companion_widget is not None:
                         cw = self._companion_widget.window()
@@ -1161,6 +1170,8 @@ class Maps(metaclass=_MapsMeta):
                         )
                         cw.resize(cws)
                         cw.show()
+        except Exception:
+            pass
 
     @property
     @wraps(Shapes)
@@ -3839,8 +3850,7 @@ class Maps(metaclass=_MapsMeta):
                 cb.setImage(QImage.fromData(buffer.getvalue()))
 
     def _on_keypress(self, event):
-        # NOTE: callback is only attached if PyQt5 is used as backend!
-        #       callback is only attached to the parent Maps object!
+        # NOTE: callback is only attached to the parent Maps object!
         if event.key == self._companion_widget_key:
             self._open_companion_widget((event.x, event.y))
         elif event.key == "ctrl+c":
@@ -3867,19 +3877,18 @@ class Maps(metaclass=_MapsMeta):
                 self.parent.f._EOmaps_parent = self.parent._real_self
             self.parent._add_child(self)
 
-        if plt.get_backend() in ["QtAgg", "Qt5Agg"]:
-            # attach a callback to show/hide the companion-widget with the "w" key
-            if self.parent._cid_keypress is None:
-                # NOTE the companion-widget is ONLY attached to the parent map
-                # since it will identify the clicked map automatically! The
-                # widget will only be initialized on Maps-objects that create
-                # NEW axes. This is required to make sure that any additional
-                # Maps-object on the same axes will then always use the
-                # same widget. (otherwise each layer would get its own widget)
+        # attach a callback to show/hide the companion-widget with the "w" key
+        if self.parent._cid_keypress is None:
+            # NOTE the companion-widget is ONLY attached to the parent map
+            # since it will identify the clicked map automatically! The
+            # widget will only be initialized on Maps-objects that create
+            # NEW axes. This is required to make sure that any additional
+            # Maps-object on the same axes will then always use the
+            # same widget. (otherwise each layer would get its own widget)
 
-                self.parent._cid_keypress = self.f.canvas.mpl_connect(
-                    "key_press_event", self.parent._on_keypress
-                )
+            self.parent._cid_keypress = self.f.canvas.mpl_connect(
+                "key_press_event", self.parent._on_keypress
+            )
 
         if isinstance(ax, plt.Axes):
             # check if the axis is already used by another maps-object
@@ -5146,13 +5155,6 @@ class Maps(metaclass=_MapsMeta):
             The default is "w".
         """
         try:
-            if plt.get_backend() not in ["QtAgg", "Qt5Agg"]:
-                _log.error(
-                    "EOmaps: Using m.open_widget() is only possible if you use"
-                    + f" 'Qt5Agg' as backend! (active backend: '{plt.get_backend()}')"
-                )
-                return
-
             from .qtcompanion.app import MenuWindow
 
             if self._companion_widget is not None:
@@ -5161,8 +5163,12 @@ class Maps(metaclass=_MapsMeta):
                     " Maps-object!"
                 )
                 return
-
-            self._companion_widget = MenuWindow(m=self, parent=self.f.canvas)
+            if plt.get_backend() in ["QtAgg", "Qt5Agg"]:
+                # only pass parent if Qt is used as a backend for matplotlib!
+                self._companion_widget = MenuWindow(m=self, parent=self.f.canvas)
+            else:
+                self._companion_widget = MenuWindow(m=self)
+                self._companion_widget.toggle_always_on_top()
 
             # connect any pending signals
             for key, funcs in getattr(self, "_connect_signals_on_init", dict()).items():
@@ -5173,7 +5179,10 @@ class Maps(metaclass=_MapsMeta):
             self._emit_signal("cmapsChanged")
 
         except Exception:
-            _log.exception("EOmaps: Unable to initialize companion widget.")
+            _log.exception(
+                "EOmaps: Unable to initialize companion widget.",
+                exc_info=_log.getEffectiveLevel() <= logging.DEBUG,
+            )
 
     def _connect_signal(self, name, func):
         parent = self.parent

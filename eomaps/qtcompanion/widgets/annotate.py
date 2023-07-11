@@ -600,10 +600,6 @@ class AddAnnotationWidget(QtWidgets.QWidget):
         # update args (colors, linewidth etc) with respect to current widget states
         self.patch_colorselected()
 
-        # self.window().hide()
-        self.m.f.canvas.show()
-        self.m.f.canvas.activateWindow()
-
         arrow_props = self._get_arrowprops()
 
         def cb(pos, **kwargs):
