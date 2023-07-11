@@ -1,36 +1,40 @@
+import logging
+
+import requests
 from functools import lru_cache, partial
 from warnings import warn, filterwarnings, catch_warnings
 from types import SimpleNamespace
 from contextlib import contextmanager
+from urllib3.exceptions import InsecureRequestWarning
+from io import BytesIO
+from pprint import PrettyPrinter
 
 from packaging import version
 
 from PIL import Image
-from io import BytesIO
-from pprint import PrettyPrinter
-
-from cartopy.io.img_tiles import GoogleWTS
-from cartopy import crs as ccrs
 import numpy as np
-
 from pyproj import CRS, Transformer
 
-from owslib.wmts import WebMapTileService
-from owslib.wms import WebMapService
-import requests
-from urllib3.exceptions import InsecureRequestWarning
+import cartopy
+from cartopy import crs as ccrs
+from cartopy.io.img_tiles import GoogleWTS
+from cartopy.io import RasterSource
 
 from .helpers import _sanitize
 
-import cartopy
-from cartopy.io import ogc_clients
-from cartopy.io import RasterSource
-from cartopy.io.ogc_clients import _target_extents
+_log = logging.getLogger(__name__)
 
 
-class _WebMap_layer:
-    # base class for adding methods to the _wms_layer- and wmts_layer objects
+def _add_pending_webmap(m, layer, name):
+    # indicate that there is a pending webmap in the companion-widget editor
+    m.BM._pending_webmaps.setdefault(layer, []).append(name)
+
+
+class _WebMapLayer:
+    # base class for adding methods to the _WMSLayer- and _WMTSLayer objects
     def __init__(self, m, wms, name):
+        from cartopy.io.ogc_clients import _CRS_TO_OGC_SRS
+
         self._m = m
         self.name = name
         self._wms = wms
@@ -51,16 +55,13 @@ class _WebMap_layer:
             # (see from cartopy.io.ogc_clients import _CRS_TO_OGC_SRS)
             if hasattr(self.wms_layer, "crsOptions"):
                 if "EPSG:3857" in self.wms_layer.crsOptions:
-                    ogc_clients._CRS_TO_OGC_SRS[ccrs.GOOGLE_MERCATOR] = "EPSG:3857"
+                    _CRS_TO_OGC_SRS[ccrs.GOOGLE_MERCATOR] = "EPSG:3857"
                     if "epsg:3857" in self.wms_layer.crsOptions:
-                        ogc_clients._CRS_TO_OGC_SRS[ccrs.GOOGLE_MERCATOR] = "epsg:3857"
+                        _CRS_TO_OGC_SRS[ccrs.GOOGLE_MERCATOR] = "epsg:3857"
 
     @property
     def info(self):
-        """
-        pretty-print the available properties of the wms_layer to the console
-        """
-
+        """Pretty-print the available properties of the wms_layer to the console."""
         txt = ""
         for key, val in self.wms_layer.__dict__.items():
             if not val:
@@ -72,11 +73,7 @@ class _WebMap_layer:
             txt += f"{key} : {s}\n"
 
         try:
-
-            if any(("legend" in val for key, val in self.wms_layer.styles.items())):
-                legQ = True
-            else:
-                legQ = False
+            legQ = any(("legend" in val for key, val in self.wms_layer.styles.items()))
         except Exception:
             legQ = False
 
@@ -110,7 +107,7 @@ class _WebMap_layer:
 
     def add_legend(self, style=None, img=None):
         """
-        Add a legend to the plot (if available)
+        Add a legend to the plot (if available).
 
         If you click on the legend you can drag it around!
         The size of the legend can be changed by turning the mouse-wheel
@@ -122,6 +119,7 @@ class _WebMap_layer:
             The style to use. The default is "default".
         img : BytesIO
             A pre-fetched legend (if provided the "style" kwarg is ignored!)
+
         Returns
         -------
         legax : matpltolib.axes
@@ -143,7 +141,9 @@ class _WebMap_layer:
             if not hasattr(self, "_layer"):
                 # use the currently active layer if the webmap service has not yet
                 # been added to the map
-                print("EOmaps: The WebMap for the legend is not yet added to the map!")
+                _log.warning(
+                    "EOmaps: The WebMap for the legend is not yet added to the map!"
+                )
                 self._layer = self._m.BM._bg_layer
 
             axpos = self._m.ax.get_position()
@@ -158,7 +158,7 @@ class _WebMap_layer:
             legax.imshow(legend)
 
             # hide the legend if the corresponding layer is not active at the moment
-            if self._layer not in self._m.BM._bg_layer.split("|"):
+            if self._layer not in self._m.BM._get_layers_alphas()[0]:
                 legax.set_visible(False)
 
             self._m.BM.add_artist(legax, self._layer)
@@ -282,9 +282,10 @@ class _WebMap_layer:
             (x0, y0, x1, y1, crs) = bbox
             incrs = CRS.from_user_input(crs)
         except Exception:
-            print(
+            _log.error(
                 "EOmaps: could not determine bbox from 'boundingBox'... "
-                + "defaulting to 'boundingBoxWGS84'"
+                + "defaulting to 'boundingBoxWGS84'",
+                exc_info=_log.getEffectiveLevel() <= logging.DEBUG,
             )
             (x0, y0, x1, y1) = getattr(self.wms_layer, "boundingBoxWGS84", None)
             incrs = CRS.from_user_input(4326)
@@ -326,12 +327,11 @@ class _WebMap_layer:
         return style
 
 
-class _wmts_layer(_WebMap_layer):
+class _WMTSLayer(_WebMapLayer):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        pass
 
-    def __call__(self, layer=None, zorder=-5, alpha=1, **kwargs):
+    def __call__(self, layer=None, zorder=0, alpha=1, **kwargs):
         """
         Add the WMTS layer to the map
 
@@ -375,7 +375,7 @@ class _wmts_layer(_WebMap_layer):
             else:
                 self._layer = layer
 
-            if self._layer == "all" or self._layer in m.BM.bg_layer.split("|"):
+            if self._layer == "all" or self._layer in m.BM._get_layers_alphas()[0]:
                 # add the layer immediately if the layer is already active
                 self._do_add_layer(
                     self._m,
@@ -386,6 +386,7 @@ class _wmts_layer(_WebMap_layer):
                 )
             else:
                 # delay adding the layer until it is effectively activated
+                _add_pending_webmap(self._m, self._layer, self.name)
                 self._m.BM.on_layer(
                     func=partial(
                         self._do_add_layer,
@@ -411,29 +412,30 @@ class _wmts_layer(_WebMap_layer):
         # Allow a fail-fast error if the raster source cannot provide
         # images in the current projection.
         wms.validate_projection(ax.projection)
-        img = SlippyImageArtist_NEW(ax, wms, **kwargs)
+        img = SlippyImageArtistNew(ax, wms, **kwargs)
         with ax.hold_limits():
             ax.add_image(img)
         return img
 
     def _do_add_layer(self, m, layer, **kwargs):
         # actually add the layer to the map.
-        print(f"EOmaps: Adding wmts-layer: {self.name}")
+        _log.info(f"EOmaps: Adding wmts-layer: {self.name}")
 
         # use slightly adapted implementation of cartopy's ax.add_wmts
         art = self._add_wmts(
             m.ax, self._wms, self.name, interpolation="spline36", **kwargs
         )
 
+        art.set_label(f"WebMap service: {self.name}")
+
         m.BM.add_bg_artist(art, layer=layer)
 
 
-class _wms_layer(_WebMap_layer):
+class _WMSLayer(_WebMapLayer):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        pass
 
-    def __call__(self, layer=None, zorder=-5, alpha=1, **kwargs):
+    def __call__(self, layer=None, zorder=0, alpha=1, **kwargs):
         """
         Add the WMS layer to the map
 
@@ -489,6 +491,7 @@ class _wms_layer(_WebMap_layer):
                 )
             else:
                 # delay adding the layer until it is effectively activated
+                _add_pending_webmap(self._m, self._layer, self.name)
                 m.BM.on_layer(
                     func=partial(
                         self._do_add_layer,
@@ -514,7 +517,7 @@ class _wms_layer(_WebMap_layer):
         if version.parse(cartopy.__version__) < version.parse("0.21.2"):
             from cartopy.io.ogc_clients import WMSRasterSource
 
-            class WMSRasterSource_NEW(WMSRasterSource):
+            class WMSRasterSourceNew(WMSRasterSource):
 
                 # Temporary fix for WMS services provided in a known srs but not
                 # in the srs of the axis
@@ -540,14 +543,14 @@ class _wms_layer(_WebMap_layer):
                         else:
                             return None
 
-            wms = WMSRasterSource_NEW(wms, layers, getmap_extra_kwargs=wms_kwargs)
+            wms = WMSRasterSourceNew(wms, layers, getmap_extra_kwargs=wms_kwargs)
         else:
             wms = WMSRasterSource(wms, layers, getmap_extra_kwargs=wms_kwargs)
 
         # Allow a fail-fast error if the raster source cannot provide
         # images in the current projection.
         wms.validate_projection(ax.projection)
-        img = SlippyImageArtist_NEW(ax, wms, **kwargs)
+        img = SlippyImageArtistNew(ax, wms, **kwargs)
         with ax.hold_limits():
             ax.add_image(img)
 
@@ -555,17 +558,19 @@ class _wms_layer(_WebMap_layer):
 
     def _do_add_layer(self, m, layer, **kwargs):
         # actually add the layer to the map.
-        print(f"EOmaps: ... adding wms-layer {self.name}")
+        _log.info(f"EOmaps: ... adding wms-layer {self.name}")
 
         # use slightly adapted implementation of cartopy's ax.add_wms
         art = self._add_wms(
             m.ax, self._wms, self.name, interpolation="spline36", **kwargs
         )
 
+        art.set_label(f"WebMap service: {self.name}")
+
         m.BM.add_bg_artist(art, layer=layer)
 
 
-class _WebServiec_collection(object):
+class _WebServiceCollection:
     def __init__(self, m, service_type="wmts", url=None):
         self._m = m
         self._service_type = service_type
@@ -578,8 +583,8 @@ class _WebServiec_collection(object):
     def __repr__(self):
         if hasattr(self, "info"):
             return self.info
-        else:
-            return object.__repr__(self)
+
+        return object.__repr__(self)
 
     @property
     @lru_cache()
@@ -610,11 +615,19 @@ class _WebServiec_collection(object):
     @staticmethod
     def _get_wmts(url):
         # TODO expose useragent
+
+        # lazy import used to avoid long import times
+        from owslib.wmts import WebMapTileService
+
         return WebMapTileService(url)
 
     @staticmethod
     def _get_wms(url):
         # TODO expose useragent
+
+        # lazy import used to avoid long import times
+        from owslib.wms import WebMapService
+
         return WebMapService(url)
 
     @property
@@ -624,18 +637,18 @@ class _WebServiec_collection(object):
             wmts = self._get_wmts(self._url)
             layers = dict()
             for key in wmts.contents.keys():
-                layers[_sanitize(key)] = _wmts_layer(self._m, wmts, key)
+                layers[_sanitize(key)] = _WMTSLayer(self._m, wmts, key)
 
         elif self._service_type == "wms":
             wms = self._get_wms(self._url)
             layers = dict()
             for key in wms.contents.keys():
-                layers[_sanitize(key)] = _wms_layer(self._m, wms, key)
+                layers[_sanitize(key)] = _WMSLayer(self._m, wms, key)
 
         return SimpleNamespace(**layers)
 
 
-class REST_API_services:
+class RestApiServices:
     def __init__(
         self, m, url, name, service_type="wmts", layers=None, _params={"f": "pjson"}
     ):
@@ -663,12 +676,12 @@ class REST_API_services:
 
         """
         self._m = m
-        self._REST_url = url
+        self._rest_url = url
         self._name = name
         self._service_type = service_type
         self._params = _params
         self._fetched = False
-        self._REST_API = None
+        self._rest_api = None
 
         if layers is None:
             layers = set()
@@ -697,38 +710,38 @@ class REST_API_services:
         # set _fetched to True immediately to avoid issues in __getattribute__
         self._fetched = True
 
-        if self._REST_API is None:
-            print(f"EOmaps: ... fetching services for '{self._name}'")
-            self._REST_API = _REST_API(self._REST_url, _params=self._params)
+        if self._rest_api is None:
+            _log.info(f"EOmaps: ... fetching services for '{self._name}'")
+            self._rest_api = _RestApi(self._rest_url, _params=self._params)
 
             found_folders = set()
-            for foldername, services in self._REST_API._structure.items():
+            for foldername, services in self._rest_api._structure.items():
                 setattr(
                     self,
                     foldername,
-                    _multi_REST_WMSservice(
+                    _MultiRestWmsService(
                         m=self._m,
                         services=services,
                         service_type=self._service_type,
-                        url=self._REST_url,
+                        url=self._rest_url,
                     ),
                 )
                 found_folders.add(foldername)
 
             new_layers = found_folders - self._layers
             if len(new_layers) > 0:
-                print(f"EOmaps: ... found some new folders: {new_layers}")
+                _log.info(f"EOmaps: ... found some new folders: {new_layers}")
 
             invalid_layers = self._layers - found_folders
             if len(invalid_layers) > 0:
-                print(f"EOmaps: ... could not find the folders: {invalid_layers}")
+                _log.info(f"EOmaps: ... could not find the folders: {invalid_layers}")
             for i in invalid_layers:
                 delattr(self, i)
 
-            print("EOmaps: done!")
+            _log.info("EOmaps: done!")
 
 
-class _REST_WMSservice(_WebServiec_collection):
+class _RestWmsService(_WebServiceCollection):
     def __init__(self, service, s_name, s_type, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self._service = service
@@ -739,7 +752,6 @@ class _REST_WMSservice(_WebServiec_collection):
 
     @property
     def _url(self):
-        print(self._s_name)
         url = "/".join([self._service, self._s_name, self._s_type])
 
         if self._service_type == "wms":
@@ -773,18 +785,18 @@ class _REST_WMSservice(_WebServiec_collection):
                 wms = self._get_wms(url)
                 layer_names = list(wms.contents.keys())
                 for lname in layer_names:
-                    self._layers["layer_" + _sanitize(lname)] = _wms_layer(
+                    self._layers["layer_" + _sanitize(lname)] = _WMSLayer(
                         self._m, wms, lname
                     )
             elif self._service_type == "wmts":
                 wmts = self._get_wmts(url)
                 layer_names = list(wmts.contents.keys())
                 for lname in layer_names:
-                    self._layers["layer_" + _sanitize(lname)] = _wmts_layer(
+                    self._layers["layer_" + _sanitize(lname)] = _WMTSLayer(
                         self._m, wmts, lname
                     )
             elif self._service_type == "xyz":
-                self._layers["xyz_layer"] = _xyz_tile_service(
+                self._layers["xyz_layer"] = _XyzTileService(
                     self._m, url, 19, "xyz_layer"
                 )
 
@@ -793,13 +805,15 @@ class _REST_WMSservice(_WebServiec_collection):
     def add_layer(self):
         self._fetch_layers()
         if len(self._layers) == 0:
-            print(f"EOmaps: found no {self._service_type} layers for {self._s_name}")
+            _log.error(
+                f"EOmaps: found no {self._service_type} layers for {self._s_name}"
+            )
             return
-        else:
-            return SimpleNamespace(**self._layers)
+
+        return SimpleNamespace(**self._layers)
 
 
-class _multi_REST_WMSservice:
+class _MultiRestWmsService:
     def __init__(self, m, services, service_type, url, *args, **kwargs):
         self._m = m
         self._services = services
@@ -811,7 +825,7 @@ class _multi_REST_WMSservice:
     @lru_cache()
     def _fetch_services(self):
         for (s_name, s_type) in self._services:
-            wms_layer = _REST_WMSservice(
+            wms_layer = _RestWmsService(
                 m=self._m,
                 service=self._url,
                 s_name=s_name,
@@ -822,7 +836,7 @@ class _multi_REST_WMSservice:
             setattr(self, _sanitize(s_name), wms_layer)
 
 
-class _REST_API(object):
+class _RestApi(object):
     # adapted from https://gis.stackexchange.com/a/113213
     def __init__(self, url, _params={"f": "pjson"}):
         self._url = url
@@ -894,13 +908,13 @@ class TileFactory(GoogleWTS):
             return self._url(x=x, y=y, z=z)
 
 
-class xyzRasterSource(RasterSource):
-    """
-    A RasterSource that can be used with a SlippyImageArtist to fetch tiles.
-    """
+class XyzRasterSource(RasterSource):
+    """RasterSource that can be used with a SlippyImageArtist to fetch tiles."""
 
     def __init__(self, url, crs, maxzoom=19, transparent=True):
         """
+        Class to fetch tiles from xyz services with a SlippyImageArtist.
+
         Parameters
         ----------
         service: string or WebMapService instance
@@ -908,6 +922,7 @@ class xyzRasterSource(RasterSource):
             from whence to retrieve the image.
         layers: string or list of strings
             The name(s) of layers to use from the WMS service.
+
         """
         self.url = url
 
@@ -978,6 +993,7 @@ class xyzRasterSource(RasterSource):
         target_resolution,
     ):
         import shapely.geometry as sgeom
+        from cartopy.io.ogc_clients import LocatedImage, _target_extents
 
         x0, x1, y0, y1 = wms_extent
 
@@ -1012,7 +1028,7 @@ class xyzRasterSource(RasterSource):
 
             # reproject the extent to the output-crs
 
-            target_extent = ogc_clients._target_extents(extent, wms_proj, output_proj)
+            target_extent = _target_extents(extent, wms_proj, output_proj)
             if len(target_extent) > 0:
                 target_extent = target_extent[0]
             else:
@@ -1043,11 +1059,11 @@ class xyzRasterSource(RasterSource):
                 # revert to the initial origin
                 img = img[::-1]
 
-        from cartopy.io.ogc_clients import LocatedImage
-
         return LocatedImage(img, extent)
 
     def fetch_raster(self, projection, extent, target_resolution):
+        from cartopy.io.ogc_clients import _target_extents
+
         target_resolution = [np.ceil(val) for val in target_resolution]
 
         if projection == self._crs:
@@ -1072,10 +1088,8 @@ class xyzRasterSource(RasterSource):
         return located_images
 
 
-class _xyz_tile_service:
-    """
-    general class for using x/y/z tile-service urls as WebMap layers
-    """
+class _XyzTileService:
+    """General class for using x/y/z tile-service urls as WebMap layers."""
 
     def __init__(self, m, url, maxzoom=19, name=None):
         self._m = m
@@ -1087,9 +1101,7 @@ class _xyz_tile_service:
         self.name = name
 
     def _reinit(self, m):
-        return _xyz_tile_service(
-            m, url=self.url, maxzoom=self._maxzoom, name=self._name
-        )
+        return _XyzTileService(m, url=self.url, maxzoom=self._maxzoom, name=self.name)
 
     def __call__(
         self,
@@ -1097,7 +1109,7 @@ class _xyz_tile_service:
         transparent=False,
         alpha=1,
         interpolation="spline36",
-        zorder=-5,
+        zorder=0,
         **kwargs,
     ):
         """
@@ -1153,11 +1165,12 @@ class _xyz_tile_service:
             kwargs.setdefault("alpha", alpha)
             kwargs.setdefault("origin", "lower")
 
-            if self._layer == "all" or self._m.BM.bg_layer == self._layer:
+            if self._layer in ["all", self._m.BM.bg_layer]:
                 # add the layer immediately if the layer is already active
                 self._do_add_layer(self._m, layer=self._layer, **kwargs)
             else:
                 # delay adding the layer until it is effectively activated
+                _add_pending_webmap(self._m, self._layer, self.name)
                 self._m.BM.on_layer(
                     func=partial(self._do_add_layer, **kwargs),
                     layer=self._layer,
@@ -1167,9 +1180,9 @@ class _xyz_tile_service:
 
     def _do_add_layer(self, m, layer, **kwargs):
         # actually add the layer to the map.
-        print(f"EOmaps: ... adding wms-layer {self.name}")
+        _log.info(f"EOmaps: ... adding wms-layer {self.name}")
 
-        self._raster_source = xyzRasterSource(
+        self._raster_source = XyzRasterSource(
             self.url,
             crs=ccrs.GOOGLE_MERCATOR,
             maxzoom=self._maxzoom,
@@ -1183,18 +1196,20 @@ class _xyz_tile_service:
         #         (only SlippyImageArtist has been subclassed)
 
         self._raster_source.validate_projection(m.ax.projection)
-        img = SlippyImageArtist_NEW(m.ax, self._raster_source, **kwargs)
+        img = SlippyImageArtistNew(m.ax, self._raster_source, **kwargs)
         with self._m.ax.hold_limits():
             m.ax.add_image(img)
         self._artist = img
 
+        self._artist.set_label(f"WebMap service: {self.name}")
+
         m.BM.add_bg_artist(self._artist, layer=layer)
 
 
-class _xyz_tile_service_nonearth(_xyz_tile_service):
+class _XyzTileServiceNonEarth(_XyzTileService):
     def __call__(self, *args, **kwargs):
-        print(
-            f"EOmaps WARNING: The WebMap service '{self.name}' shows images from a "
+        _log.info(
+            f"EOmaps: The WebMap service '{self.name}' shows images from a "
             "different celestrial body projected to an earth-based crs! "
             "Units used in scalebars, geod_crices etc. represent earth-based units!"
         )
@@ -1227,8 +1242,8 @@ def refetch_wms_on_size_change(refetch):
 
     By default, WebMap services are dynamically re-fetched on any size-change.
     (this also means that saving figures at high dpi-values will cause a
-     re-fetch of webmap services which might result in a different look
-     of the exported image!)
+    re-fetch of webmap services which might result in a different look
+    of the exported image!)
 
     Note
     ----
@@ -1242,22 +1257,21 @@ def refetch_wms_on_size_change(refetch):
         - If False: WebMap services are only re-fetched if the axis-extent
           changes.
     """
-    SlippyImageArtist_NEW._refetch_on_size_change = refetch
+    SlippyImageArtistNew._refetch_on_size_change = refetch
 
 
 @contextmanager
 def _cx_refetch_wms_on_size_change(refetch):
-    val = SlippyImageArtist_NEW._refetch_on_size_change
+    val = SlippyImageArtistNew._refetch_on_size_change
 
     try:
-        SlippyImageArtist_NEW._refetch_on_size_change = refetch
+        SlippyImageArtistNew._refetch_on_size_change = refetch
         yield
     finally:
-        SlippyImageArtist_NEW._refetch_on_size_change = val
+        SlippyImageArtistNew._refetch_on_size_change = val
 
 
-class SlippyImageArtist_NEW(AxesImage):
-
+class SlippyImageArtistNew(AxesImage):
     """
     A subclass of :class:`~matplotlib.image.AxesImage` which provides an
     interface for getting a raster from the given object with interactive
@@ -1342,8 +1356,11 @@ class SlippyImageArtist_NEW(AxesImage):
                         clippath.get_path(),
                         transform=self.axes.projection._as_mpl_transform(self.axes),
                     )
-                except:
-                    print("EOmaps: unable to set clippath for WMS images")
+                except Exception:
+                    _log.error(
+                        "EOmaps: unable to set clippath for WMS images",
+                        exc_info=_log.getEffectiveLevel() <= logging.DEBUG,
+                    )
 
                 with ax.hold_limits():
                     self.set_array(img)
@@ -1352,7 +1369,11 @@ class SlippyImageArtist_NEW(AxesImage):
             self.stale = False
 
         except Exception:
-            print("EOmaps: ... could not fetch WebMap service")
+            _log.error(
+                "EOmaps: ... could not fetch WebMap service",
+                exc_info=_log.getEffectiveLevel() <= logging.DEBUG,
+            )
+
             if self in self.axes._mouseover_set:
                 self.axes._mouseover_set.remove(self)
 

@@ -1,18 +1,20 @@
+"""Mapsgrid class definition (helper for initialization of regular Maps-grids)."""
+
 from functools import wraps, lru_cache
 
 import numpy as np
 from matplotlib.gridspec import GridSpec
 import matplotlib.pyplot as plt
 
-from ._shapes import shapes
+from .shapes import Shapes
 from .eomaps import Maps
 
 from .ne_features import NaturalEarth_features
 
 try:
-    from ._webmap_containers import wms_container
+    from .webmap_containers import WebMapContainer
 except ImportError:
-    wms_container = None
+    WebMapContainer = None
 
 
 class MapsGrid:
@@ -144,8 +146,8 @@ class MapsGrid:
         self._Maps = []
         self._names = dict()
 
-        if wms_container is not None:
-            self._wms_container = wms_container(self)
+        if WebMapContainer is not None:
+            self._wms_container = WebMapContainer(self)
 
         gskwargs = dict(bottom=0.01, top=0.99, left=0.01, right=0.99)
         gskwargs.update(kwargs)
@@ -374,21 +376,19 @@ class MapsGrid:
 
     @property
     @lru_cache()
-    @wraps(shapes)
+    @wraps(Shapes)
     def set_shape(self):
-        s = shapes(self)
+        s = Shapes(self)
         s.__doc__ = self._doc_prefix + s.__doc__
 
         return s
 
-    @wraps(Maps.set_data_specs)
-    def set_data_specs(self, *args, **kwargs):
+    @wraps(Maps.set_data)
+    def set_data(self, *args, **kwargs):
         for m in self:
-            m.set_data_specs(*args, **kwargs)
+            m.set_data(*args, **kwargs)
 
-    set_data_specs.__doc__ = _doc_prefix + set_data_specs.__doc__
-
-    set_data = set_data_specs
+    set_data.__doc__ = _doc_prefix + set_data.__doc__
 
     @wraps(Maps.set_classify_specs)
     def set_classify_specs(self, scheme=None, **kwargs):
@@ -444,6 +444,13 @@ class MapsGrid:
             m.add_scalebar(*args, **kwargs)
 
     add_scalebar.__doc__ = _doc_prefix + add_scalebar.__doc__
+
+    @wraps(Maps.add_compass)
+    def add_compass(self, *args, **kwargs):
+        for m in self:
+            m.add_compass(*args, **kwargs)
+
+    add_compass.__doc__ = _doc_prefix + add_compass.__doc__
 
     @wraps(Maps.add_colorbar)
     def add_colorbar(self, *args, **kwargs):

@@ -1,5 +1,5 @@
 from PyQt5 import QtWidgets, QtGui
-from PyQt5.QtCore import Qt, QRectF, QSize, pyqtSlot
+from PyQt5.QtCore import Qt, QRectF, QSize, pyqtSlot, pyqtSignal
 from eomaps import Maps
 from functools import lru_cache
 
@@ -131,6 +131,19 @@ class InputCRS(LineEditComplete):
 
         return t
 
+    def enterEvent(self, e):
+        if self.window().showhelp is True:
+            QtWidgets.QToolTip.showText(
+                e.globalPos(),
+                "<h3>CRS</h3>"
+                "Set the coordinate reference system of the coordinates (x, y)."
+                "<ul>"
+                "<li>A name of a crs accessible via <code>Maps.CRS</code></li>"
+                "<li>An EPSG code</li>"
+                "<li>A PROJ or WKT string</li>"
+                "</ul>",
+            )
+
 
 class CmapDropdown(QtWidgets.QComboBox):
     def __init__(self, *args, startcmap="viridis", **kwargs):
@@ -148,13 +161,29 @@ class CmapDropdown(QtWidgets.QComboBox):
         if idx != -1:
             self.setCurrentIndex(idx)
 
+    def enterEvent(self, e):
+        if self.window().showhelp is True:
+            QtWidgets.QToolTip.showText(
+                e.globalPos(),
+                "<h3>Colormap</h3>"
+                "Set the colormap that should be used when plotting the data.",
+            )
+
     def wheelEvent(self, e):
         # ignore mouse-wheel events to disable changing the colormap with the mousewheel
         pass
 
 
 class GetColorWidget(QtWidgets.QFrame):
-    def __init__(self, facecolor="#ff0000", edgecolor="#000000", linewidth=1, alpha=1):
+    def __init__(
+        self,
+        facecolor="#ff0000",
+        edgecolor="#000000",
+        linewidth=1,
+        alpha=1,
+        tooltip=None,
+        helptext=None,
+    ):
         """
         A widget that indicates a selected color (and opens a popup to change the
         color on click)
@@ -173,6 +202,22 @@ class GetColorWidget(QtWidgets.QFrame):
             To get the hex-string, use    the  ".name()" property.
 
         """
+
+        if tooltip is None:
+            self._tooltip = (
+                "<b>click</b>: set facecolor <br> <b>alt + click</b>: set edgecolor"
+            )
+        else:
+            self._tooltip = tooltip
+
+        if helptext is None:
+            self._helptext = (
+                "<h3>Facecolor / Edgecolor</h3>"
+                "<ul><li><b>click</b> to set the facecolor</li>"
+                "<li><b>alt+click</b> to set the edgecolor</li></ul>"
+            )
+        else:
+            self._helptext = helptext
 
         super().__init__()
 
@@ -195,9 +240,7 @@ class GetColorWidget(QtWidgets.QFrame):
             QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Expanding
         )
 
-        self.setToolTip(
-            "<b>click</b>: set facecolor <br> <b>alt + click</b>: set edgecolor"
-        )
+        self.setToolTip(self._tooltip)
 
         self.setStyleSheet(
             """QToolTip {
@@ -212,12 +255,7 @@ class GetColorWidget(QtWidgets.QFrame):
 
     def enterEvent(self, e):
         if self.window().showhelp is True:
-            QtWidgets.QToolTip.showText(
-                e.globalPos(),
-                "<h3>Facecolor / Edgecolor</h3>"
-                "<ul><li><b>click</b> to set the facecolor</li>"
-                "<li><b>alt+click</b> to set the edgecolor</li></ul>",
-            )
+            QtWidgets.QToolTip.showText(e.globalPos(), self._helptext)
 
     def resizeEvent(self, e):
         # make frame rectangular
@@ -284,6 +322,8 @@ class GetColorWidget(QtWidgets.QFrame):
     def set_facecolor(self, color):
         if isinstance(color, str):
             color = QtGui.QColor(color)
+        elif isinstance(color, (list, tuple)):
+            color = QtGui.QColor(*color)
 
         self.alpha = color.alpha() / 255
 
@@ -295,6 +335,8 @@ class GetColorWidget(QtWidgets.QFrame):
     def set_edgecolor(self, color):
         if isinstance(color, str):
             color = QtGui.QColor(color)
+        elif isinstance(color, (list, tuple)):
+            color = QtGui.QColor(*color)
 
         self.edgecolor = color
         self.update()
@@ -310,51 +352,12 @@ class GetColorWidget(QtWidgets.QFrame):
         )
 
 
-class EditLayoutButton(QtWidgets.QPushButton):
-    def __init__(self, *args, m=None, **kwargs):
-        super().__init__(*args, **kwargs)
-
-        self.m = m
-
-        self.clicked.connect(self.callback)
-
-    def enterEvent(self, e):
-        if self.window().showhelp is True:
-            QtWidgets.QToolTip.showText(
-                e.globalPos(),
-                "<h3>Layout Editor</h3>"
-                "Toggle the EOmaps LayoutEditor to re-arrange the position and size"
-                "of the axes in the figure."
-                "<ul>"
-                "<li><b>Right-click</b> on axes with the mouse to select them (hold "
-                "down 'shift' to select multiple axes).</li>"
-                "<li><b>Drag</b> selected axes (or the <b>arrow-keys</b>) to adjust "
-                "their position</li>"
-                "<li>Use the <b>scroll-wheel</b> (or the <b>+/- keys</b>) to scale "
-                "the size of selected axes</li>"
-                "<li>Hold down <b>'h'</b> or <b>'v'</b> key to adjust "
-                "horizontal/vertical size. "
-                "(maps always keep their aspect-ratio!)</li>"
-                "<li>Hold down <b>'control'</b> to adjust the colorbar/histogram size."
-                "<li>Press <b>control + z</b> to undo the last step</li>"
-                "<li>Press <b>control + y</b> to redo the last undone step</li>"
-                "<li>Press <b>escape</b> to exit the LayoutEditor</li>"
-                "</ul>",
-            )
-
-    @pyqtSlot()
-    def callback(self):
-        if not self.m.parent._layout_editor._modifier_pressed:
-            self.m.parent.edit_layout()
-        else:
-            self.m.parent._layout_editor._undo_draggable()
-
-
 class AlphaSlider(QtWidgets.QSlider):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
         self.alpha = 1
+        self._style = ""
 
         self.setRange(0, 100)
         self.setSingleStep(1)
@@ -363,7 +366,7 @@ class AlphaSlider(QtWidgets.QSlider):
         self.setValue(100)
 
         # self.setMinimumWidth(50)
-        self.setMaximumWidth(300)
+        # self.setMaximumWidth(300)
         self.setSizePolicy(
             QtWidgets.QSizePolicy.MinimumExpanding, QtWidgets.QSizePolicy.Minimum
         )
@@ -402,6 +405,151 @@ class AlphaSlider(QtWidgets.QSlider):
             """
         )
 
+    def enterEvent(self, e):
+        if self.window().showhelp is True:
+            if self._style == "linewidth":
+                QtWidgets.QToolTip.showText(
+                    e.globalPos(),
+                    "<h3>Linewidth</h3> Set the linewidth of the shape boundary.",
+                )
+            elif self._style == "alpha":
+                QtWidgets.QToolTip.showText(
+                    e.globalPos(),
+                    "<h3>Transparency</h3> Set the transparency of the facecolor.",
+                )
+
+    def set_stylesheet(self):
+        if self._style == "linewidth":
+            self.set_linewidth_stylesheet()
+        elif self._style == "alpha":
+            self.set_alpha_stylesheet()
+
     @pyqtSlot(int)
     def value_changed(self, i):
         self.alpha = i / 100
+        self.set_stylesheet()
+
+    def set_linewidth_stylesheet(self):
+        self._style = "linewidth"
+
+        self.setStyleSheet(
+            """
+            QSlider::handle:horizontal {
+                background-color: black;
+                border: none;
+                border-radius: 0px;
+                height: 10px;
+                width: 5px;
+                margin: -10px 0;
+                padding: -10px 0px;
+            }
+            QSlider::groove:horizontal {
+                border-radius: 1px;
+                height: 1px;
+                margin: 5px;
+                background-color: rgba(0,0,0,50);
+            }
+            QSlider::groove:horizontal:hover {
+                background-color: rgba(0,0,0,255);
+            }
+            """
+        )
+
+    def set_alpha_stylesheet(self):
+        self._style = "alpha"
+        a = self.alpha * 255
+        s = 12
+        self.setStyleSheet(
+            f"""
+            QSlider::handle:horizontal {{
+                background-color: rgba(0,0,0,{a});
+                border: 1px solid black;
+                border-radius: {s//2}px;
+                height: {s}px;
+                width: {s}px;
+                margin: -{s//2}px 0px;
+                padding: -{s//2}px 0px;
+            }}
+            QSlider::groove:horizontal {{
+                border-radius: 1px;
+                height: 1px;
+                margin: 5px;
+                background-color: rgba(0,0,0,50);
+            }}
+            QSlider::groove:horizontal:hover {{
+                background-color: rgba(0,0,0,255);
+            }}
+            """
+        )
+
+
+class ColorWithSlidersWidget(QtWidgets.QWidget):
+    colorSelected = pyqtSignal()
+    alpha_slider_scale = 100
+    linewidth_slider_scale = 10
+
+    def __init__(
+        self,
+        *args,
+        facecolor="red",
+        edgecolor="black",
+        linewidth=1,
+        alpha=0.5,
+        **kwargs,
+    ):
+
+        super().__init__(*args, **kwargs)
+
+        self.color = GetColorWidget(
+            facecolor=facecolor, edgecolor=edgecolor, linewidth=linewidth, alpha=alpha
+        )
+        self.color.cb_colorselected = self.color_selected
+        self.color.setMaximumWidth(60)
+
+        self.alphaslider = AlphaSlider(Qt.Horizontal)
+        self.alphaslider.set_alpha_stylesheet()
+        self.alphaslider.valueChanged.connect(self.set_alpha_with_slider)
+        self.alphaslider.setValue(int(alpha * self.alpha_slider_scale))
+
+        self.linewidthslider = AlphaSlider(Qt.Horizontal)
+        self.linewidthslider.set_linewidth_stylesheet()
+        self.linewidthslider.valueChanged.connect(self.set_linewidth_with_slider)
+        self.linewidthslider.setValue(int(linewidth * self.linewidth_slider_scale))
+
+        layout_sliders = QtWidgets.QVBoxLayout()
+        layout_sliders.addWidget(self.alphaslider)
+        layout_sliders.addWidget(self.linewidthslider)
+
+        layout = QtWidgets.QHBoxLayout()
+        layout.addWidget(self.color)
+        layout.addLayout(layout_sliders)
+        self.setLayout(layout)
+
+    @property
+    def facecolor(self):
+        return self.color.facecolor
+
+    @property
+    def edgecolor(self):
+        return self.color.edgecolor
+
+    @property
+    def linewidth(self):
+        return self.color.linewidth
+
+    @property
+    def alpha(self):
+        return self.color.alpha
+
+    @pyqtSlot(int)
+    def set_alpha_with_slider(self, i):
+        self.color.set_alpha(i / self.alpha_slider_scale)
+        self.colorSelected.emit()
+
+    @pyqtSlot(int)
+    def set_linewidth_with_slider(self, i):
+        self.color.set_linewidth(i / self.linewidth_slider_scale)
+        self.colorSelected.emit()
+
+    def color_selected(self):
+        self.colorSelected.emit()

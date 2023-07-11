@@ -49,11 +49,11 @@ def cb(m, ind, ID, *args, **kwargs):
     # use "dynamic=True" to avoid re-drawing the background on each pick
     # use "set_extent=False" to avoid resetting the plot extent on each draw
     m2.set_data(m.data_specs.data[:, c], m.data_specs.x[:, c], m.data_specs.y[:, c])
-    m2.plot_map(fc="none", ec="b", set_extent=False, dynamic=True, verbose=0)
+    m2.plot_map(fc="none", ec="b", set_extent=False, dynamic=True)
 
     # ---- highlight the picked row
     m3.set_data(m.data_specs.data[r, :], m.data_specs.x[r, :], m.data_specs.y[r, :])
-    m3.plot_map(fc="none", ec="r", set_extent=False, dynamic=True, verbose=0)
+    m3.plot_map(fc="none", ec="r", set_extent=False, dynamic=True)
 
     # ---- plot the data for the selected column
     (art0,) = ax_col.plot(m.data_specs.y[:, c], m.data_specs.data[:, c], c="b")

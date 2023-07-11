@@ -22,7 +22,7 @@ intuitive and easy-to-use interface to handle the following tasks:
 | ▶ Get a nice colorbar with a histogram on top
 | ▶ Export high resolution images
 |
-| A detailed overview on how to use EOmaps is given in the :doc:`api` section.
+| A detailed overview on how to use EOmaps is given in the :doc:`api`.
 | Make sure to check out the :doc:`EOmaps_examples` for an overview of the capabilities (incl. source code)!
 
 ----------
@@ -31,22 +31,71 @@ intuitive and easy-to-use interface to handle the following tasks:
 Contents
 --------
 
-.. table::
-   :align: center
-   :widths: auto
+ .. toctree::
+    :maxdepth: 1
+    :caption: General
 
-   +---------------------------------+-------------------------------+
-   | .. toctree::                    | .. toctree::                  |
-   |    :maxdepth: 2                 |    :maxdepth: 2               |
-   |    :caption: How to use EOmaps: |    :caption: Code-examples:   |
-   |                                 |                               |
-   |    general                      |                               |
-   |    api                          |    EOmaps_examples            |
-   |    FAQ                          |                               |
-   +---------------------------------+-------------------------------+
+    installation
+    FAQ
 
 
 .. toctree::
-  :hidden:
+    :maxdepth: 1
+    :caption: How to use EOmaps
 
-  generated
+    api_basics
+    api_data_visualization
+
+.. toctree::
+    :maxdepth: 1
+    :caption: Map Features
+
+    api_inset_maps
+    api_naturalearth_features
+    api_webmaps
+    api_vector_data
+
+    api_annotations_markers_etc
+    api_scalebar
+    api_compass
+    api_gridlines
+
+.. toctree::
+    :maxdepth: 1
+    :caption: Interactivity
+
+    api_callbacks
+    api_companion_widget
+    api_layout_editor
+    api_draw
+    api_utils
+
+
+.. toctree::
+    :maxdepth: 1
+    :caption: Miscellaneous
+
+    api_read_data
+    api_command_line_interface
+    api_logging
+    api_misc
+
+
+.. toctree::
+   :maxdepth: 2
+   :caption: Examples
+
+   EOmaps_examples
+
+
+.. toctree::
+   :maxdepth: 2
+   :caption: Contribute
+
+   contribute
+
+.. toctree::
+   :maxdepth: 1
+   :caption: API Reference
+
+   reference

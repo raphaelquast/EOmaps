@@ -1,43 +1,15 @@
+"""Classes to read files (NetCDF, GeoTIFF, CSV etc.)"""
+
+import logging
 from functools import wraps
-import numpy as np
-from pyproj import CRS
 from pathlib import Path
 
-pd = None
+import numpy as np
+from pyproj import CRS
 
+from .helpers import register_modules
 
-def _register_pandas():
-    global pd
-    try:
-        import pandas as pd
-    except ImportError:
-        return False
-
-    return True
-
-
-xar = None
-
-
-def _register_xarray():
-    global xar
-    try:
-        import xarray as xar
-    except ImportError:
-        return False
-    return True
-
-
-rioxarray = None
-
-
-def _register_rioxarray():
-    global rioxarray
-    try:
-        import rioxarray
-    except ImportError:
-        return False
-    return True
+_log = logging.getLogger(__name__)
 
 
 def identify_geotiff_cmap(path, band=1):
@@ -77,14 +49,14 @@ def identify_geotiff_cmap(path, band=1):
 
             classify_specs = dict(scheme="UserDefined", bins=bins)
         except ValueError:
-            print(
-                f"EOmaps: No cmap found for GeoTIFF band {band}, defaulting to 'viridis'"
+            _log.info(
+                f"EOmaps: No cmap found for GeoTIFF band {band}, using: 'viridis'"
             )
             classify_specs = None
             cmap = "viridis"
         except IndexError:
-            print(
-                f"EOmaps: No cmap found for GeoTIFF band {band}, defaulting to 'viridis'"
+            _log.info(
+                f"EOmaps: No cmap found for GeoTIFF band {band}, using: 'viridis'"
             )
             classify_specs = None
             cmap = "viridis"
@@ -92,7 +64,10 @@ def identify_geotiff_cmap(path, band=1):
         return cmap, classify_specs
 
     except ImportError as ex:
-        print("EOmaps: Unable to identify cmap for GeoTIFF:", ex)
+        _log.info(
+            "EOmaps: Unable to identify cmap for GeoTIFF, using: 'viridis'",
+            exc_info=_log.getEffectiveLevel() <= logging.DEBUG,
+        )
         return "viridis", None
 
 
@@ -218,12 +193,7 @@ class read_file:
         >>> m.read_file.GeoTIFF(path, set_data=m)
 
         """
-
-        assert _register_xarray() and _register_rioxarray(), (
-            "EOmaps: missing dependency for read_GeoTIFF: 'xarray' 'rioxarray'\n"
-            + "To install, use 'conda install -c conda-forge xarray'"
-            + "To install, use 'conda install -c conda-forge rioxarray'"
-        )
+        xar, rioxarray = register_modules("xarray", "rioxarray")
 
         if isel is None and sel is None:
             isel = {"band": 0}
@@ -452,11 +422,7 @@ class read_file:
 
 
         """
-
-        assert _register_xarray(), (
-            "EOmaps: missing dependency for read_GeoTIFF: 'xarray'\n"
-            + "To install, use 'conda install -c conda-forge xarray'"
-        )
+        (xar,) = register_modules("xarray")
 
         opened = False  # just an indicator if we have to close the file in the end
         try:
@@ -484,7 +450,7 @@ class read_file:
 
             if parameter is None:
                 parameter = next(iter(ncfile))
-                print(f"EOmaps: Using NetCDF variable '{parameter}' as parameter.")
+                _log.info(f"EOmaps: Using NetCDF variable '{parameter}' as parameter.")
             else:
                 assert parameter in ncfile, (
                     f"EOmaps: The provided parameter-name '{parameter}' is not valid."
@@ -503,7 +469,7 @@ class read_file:
                         + f"Available variables: {list(ncfile)}"
                     )
                 else:
-                    print(f"EOmaps: Using NetCDF coordinates: {coords}")
+                    _log.info(f"EOmaps: Using NetCDF coordinates: {coords}")
 
             if data_crs is None:
                 for crskey in ["spatial_ref", "crs", "crs_wkt"]:
@@ -647,10 +613,7 @@ class read_file:
             A dict that contains the data required for plotting.
 
         """
-        assert _register_pandas(), (
-            "EOmaps: missing dependency for read_csv: 'pandas'\n"
-            + "To install, use 'conda install -c conda-forge pandas'"
-        )
+        (pd,) = register_modules("pandas")
 
         data = pd.read_csv(path, **kwargs)
 
@@ -660,9 +623,13 @@ class read_file:
                 + f"Available columns are: {list(data)}"
             )
 
+        # make sure only unique columns are selected
+        # (multiple columns with the same name cause problems!)
+        usecols = list(dict.fromkeys([parameter, x, y]))
+
         if set_data is not None:
             set_data.set_data(
-                data=data[[parameter, x, y]],
+                data=data[usecols],
                 x=x,
                 y=y,
                 crs=crs,
@@ -670,7 +637,7 @@ class read_file:
             )
         else:
             return dict(
-                data=data[[parameter, x, y]],
+                data=data[usecols],
                 x=x,
                 y=y,
                 crs=crs,
@@ -789,7 +756,9 @@ def _from_file(
 
             except Exception:
                 crs = 4326
-                print(f"EOmaps: could not use native crs... defaulting to epsg={crs}.")
+                _log.warning(
+                    f"EOmaps: could not use native crs... defaulting to epsg={crs}."
+                )
 
         m = Maps(crs=crs, figsize=figsize, layer=layer)
 
@@ -816,14 +785,14 @@ def _from_file(
             elif len(extent) == 4:
                 m.set_extent(extent)
             else:
-                print(
+                _log.warning(
                     "EOmaps: unable to identify the provided extent"
                     f"{extent}... defaulting to global"
                 )
         elif isinstance(extent, str):
             m.set_extent_to_location(extent)
         else:
-            print(
+            _log.warning(
                 "EOmaps: unable to identify the provided extent"
                 f"{extent}... defaulting to global"
             )
@@ -1030,11 +999,6 @@ class from_file:
 
         """
 
-        assert _register_xarray(), (
-            "EOmaps: missing dependency for read_NetCDF: 'xarray'\n"
-            + "To install, use 'conda install -c conda-forge xarray'"
-        )
-
         # read data
         data = read_file.NetCDF(
             path_or_dataset,
@@ -1231,13 +1195,6 @@ class from_file:
         >>>     m = Maps.from_file.GeoTIFF(file)
 
         """
-
-        assert _register_xarray() and _register_rioxarray(), (
-            "EOmaps: missing dependency for read_GeoTIFF: 'xarray' 'rioxarray'\n"
-            + "To install, use 'conda install -c conda-forge xarray'"
-            + "To install, use 'conda install -c conda-forge rioxarray'"
-        )
-
         # read data
         data = read_file.GeoTIFF(
             path_or_dataset,
@@ -1264,6 +1221,8 @@ class from_file:
                 band = sel.get("band", 1)
 
             elif isel is not None and "band" in isel:
+                (xar,) = register_modules("xarray")
+
                 with xar.open_dataset(path_or_dataset) as ncfile:
                     band = np.atleast_1d(ncfile.isel(**isel).band.values)[0]
             else:

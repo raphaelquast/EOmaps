@@ -1,5 +1,9 @@
+import logging
+
 import numpy as np
 from pyproj import CRS, Transformer
+
+_log = logging.getLogger(__name__)
 
 
 class DataManager:
@@ -94,6 +98,9 @@ class DataManager:
         dynamic=False,
         only_pick=False,
     ):
+        # cleanup existing callbacks before attaching new ones
+        self.cleanup_callbacks()
+
         self._only_pick = only_pick
 
         if self.m._data_plotted:
@@ -104,7 +111,7 @@ class DataManager:
         self.layer = layer
 
         if len(self.x0) == 0:
-            print("EOmaps: There is no data to plot")
+            _log.info("EOmaps: There is no data to plot")
             return
 
         if self.x0_1D is not None:
@@ -133,13 +140,21 @@ class DataManager:
             # attach a hook that updates the collection whenever a new
             # background is fetched
             # ("shade" shapes take care about updating the data themselves!)
+            self.attach_callbacks(dynamic=dynamic)
 
-            if dynamic is True:
-                if self.on_fetch_bg not in self.m.BM._before_update_actions:
-                    self.m.BM._before_update_actions.append(self.on_fetch_bg)
-            else:
-                if self.on_fetch_bg not in self.m.BM._before_fetch_bg_actions:
-                    self.m.BM._before_fetch_bg_actions.append(self.on_fetch_bg)
+    def attach_callbacks(self, dynamic):
+        if dynamic is True:
+            if self.on_fetch_bg not in self.m.BM._before_update_actions:
+                self.m.BM._before_update_actions.append(self.on_fetch_bg)
+        else:
+            if self.on_fetch_bg not in self.m.BM._before_fetch_bg_actions:
+                self.m.BM._before_fetch_bg_actions.append(self.on_fetch_bg)
+
+    def cleanup_callbacks(self):
+        if self.on_fetch_bg in self.m.BM._before_fetch_bg_actions:
+            self.m.BM._before_fetch_bg_actions.remove(self.on_fetch_bg)
+        if self.on_fetch_bg in self.m.BM._before_update_actions:
+            self.m.BM._before_update_actions.remove(self.on_fetch_bg)
 
     def _prepare_data(self, assume_sorted=True):
         in_crs = self.m.data_specs.crs
@@ -182,6 +197,7 @@ class DataManager:
                     and len(yorig.shape) == 1
                     and len(z_data.shape) == 2
                 ):
+                    _log.info("EOmaps: Sorting coordinates...")
 
                     xs, ys = np.argsort(xorig), np.argsort(yorig)
                     np.take(xorig, xs, out=xorig, mode="wrap")
@@ -194,13 +210,13 @@ class DataManager:
                         mode="wrap",
                     )
                 else:
-                    print(
+                    _log.info(
                         "EOmaps: using 'assume_sorted=False' is only possible"
                         + "if you use 1D coordinates + 2D data!"
                         + "...continuing without sorting."
                     )
             else:
-                print(
+                _log.info(
                     "EOmaps: using 'assume_sorted=False' is only relevant for "
                     + "the shapes ['raster', 'shade_raster']! "
                     + "...continuing without sorting."
@@ -229,6 +245,8 @@ class DataManager:
             x0, y0 = xorig, yorig
 
         else:
+            _log.info(f"EOmaps: Starting to reproject {z_data.size} datapoints")
+
             # transform center-points to the plot_crs
             transformer = Transformer.from_crs(
                 crs1,
@@ -246,6 +264,7 @@ class DataManager:
                 self._z_transposed = True
 
             x0, y0 = transformer.transform(xorig, yorig)
+            _log.info("EOmaps: Done reprojecting")
 
         # use np.asanyarray to ensure that the output is a proper numpy-array
         # (relevant for categorical dtypes in pandas.DataFrames)
@@ -285,7 +304,7 @@ class DataManager:
 
     @property
     def current_extent(self):
-        return self.m.get_extent(self.m.ax.projection)
+        return self.m.get_extent(self.m.crs_plot)
 
     @property
     def extent_changed(self):
@@ -332,8 +351,8 @@ class DataManager:
                 self.m.BM.remove_bg_artist(self._masked_points_artist)
                 self._masked_points_artist.remove()
                 self._masked_points_artist = None
-            except Exception as ex:
-                print(ex)
+            except Exception:
+                _log.exception("EOmaps: Error while indicating masked points.")
 
         if not hasattr(self.m, "_data_mask") or self.m._data_mask is None:
             return
@@ -344,7 +363,7 @@ class DataManager:
             return
 
         if npts > 1e5:
-            print(
+            _log.warning(
                 "EOmaps: There are more than 100 000 masked points! "
                 "... indicating masked points will affect performance!"
             )
@@ -415,8 +434,8 @@ class DataManager:
                 if self.m.coll.axes is not None:
                     self.m.coll.remove()
                 self.m._coll = None
-            except Exception as ex:
-                print(ex)
+            except Exception:
+                _log.exception("EOmaps: Error while trying to remove collection.")
 
     def _get_current_datasize(self):
         if self._current_data:
@@ -460,6 +479,8 @@ class DataManager:
             coll = self.m._get_coll(props, **self.m._coll_kwargs)
             coll.set_clim(self.m._vmin, self.m._vmax)
 
+            coll.set_label("Dataset " f"({self.m.shape.name}  |  {self.z_data.shape})")
+
             if self.m.shape.name != "scatter_points":
                 # avoid use "autolim=True" since it can cause problems in
                 # case the data-limits are infinite (e.g. for projected
@@ -492,10 +513,9 @@ class DataManager:
             self.m.cb.pick._set_artist(coll)
 
         except Exception as ex:
-            print(
-                f"EOmaps: Unable to plot the data for the layer '{layer}' !"
-                f"\n        {ex}"
-            )
+            raise AssertionError(
+                f"EOmaps: Unable to plot the data for the layer '{layer}'!"
+            ) from ex
 
     def data_in_extent(self, extent):
         # check if the data extent collides with the map extent
@@ -672,11 +692,11 @@ class DataManager:
                 txt = f"EOmaps: Plotting {s:.1E} points as {self.m.shape.name}"
 
             if s < 5e6:
-                print(f"{txt}...\n       this might take a few seconds...")
+                _log.info(f"{txt}...\n       this might take a few seconds...")
             elif s < 2e7:
-                print(f"{txt}...\n       this might take some time...")
+                _log.info(f"{txt}...\n       this might take some time...")
             else:
-                print(f"{txt}...\n       this might take A VERY LONG TIME❗❗")
+                _log.info(f"{txt}...\n       this might take A VERY LONG TIME❗❗")
         else:
             if name in ["rectangles", "ellipses", "geod_circles"]:
                 txt = f"EOmaps: Plotting {s:.1E} {self.m.shape.name}"
@@ -686,11 +706,11 @@ class DataManager:
                 return
 
             if s < 5e5:
-                print(f"{txt}...\n       this might take a few seconds...")
+                _log.info(f"{txt}...\n       this might take a few seconds...")
             elif s < 1e6:
-                print(f"{txt}...\n       this might take some time...")
+                _log.info(f"{txt}...\n       this might take some time...")
             else:
-                print(f"{txt}...\n       this might take A VERY LONG TIME❗❗")
+                _log.info(f"{txt}...\n       this might take A VERY LONG TIME❗❗")
 
     def _get_xy_from_index(self, ind, reprojected=False):
         """
@@ -815,11 +835,8 @@ class DataManager:
         return self._get_xy_from_index(inds, reprojected=reprojected)
 
     def cleanup(self):
+        self.cleanup_callbacks()
+
         self._all_data.clear()
         self._current_data.clear()
         self.last_extent = None
-
-        if self.on_fetch_bg in self.m.BM._before_fetch_bg_actions:
-            self.m.BM._before_fetch_bg_actions.remove(self.on_fetch_bg)
-        if self.on_fetch_bg in self.m.BM._before_update_actions:
-            self.m.BM._before_update_actions.remove(self.on_fetch_bg)

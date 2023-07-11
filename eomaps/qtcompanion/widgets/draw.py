@@ -1,25 +1,11 @@
+import logging
+
 from PyQt5 import QtWidgets
-from PyQt5.QtCore import Qt, pyqtSlot
+from PyQt5.QtCore import Qt, pyqtSlot, pyqtSignal
 
-from .utils import GetColorWidget, AlphaSlider
+from .utils import ColorWithSlidersWidget
 
-
-class TransparencySlider(AlphaSlider):
-    def enterEvent(self, e):
-        if self.window().showhelp is True:
-            QtWidgets.QToolTip.showText(
-                e.globalPos(),
-                "<h3>Transparency</h3> Set the transparency of the facecolor.",
-            )
-
-
-class LineWidthSlider(AlphaSlider):
-    def enterEvent(self, e):
-        if self.window().showhelp is True:
-            QtWidgets.QToolTip.showText(
-                e.globalPos(),
-                "<h3>Linewidth</h3> Set the linewidth of the shape boundary.",
-            )
+_log = logging.getLogger(__name__)
 
 
 class SaveButton(QtWidgets.QPushButton):
@@ -43,6 +29,37 @@ class RemoveButton(QtWidgets.QPushButton):
 
 
 class PolyButton(QtWidgets.QPushButton):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        self.setCheckable(True)
+
+        self.setStyleSheet(
+            """
+            PolyButton {
+                border-radius: 5px;
+                border-width: 1px;
+                border-style: solid;
+                border-color: rgb(100, 100, 100);
+                background-color: rgb(220, 220, 220);
+                padding: 3px
+                }
+
+            PolyButton:pressed {
+                background-color: rgb(150, 150, 150);
+                }
+
+            PolyButton:hover:!pressed {
+                background-color: rgb(180, 180, 180);
+                }
+
+            PolyButton:checked {
+                background-color: rgb(180, 0, 0);
+                border-color: rgb(100, 0, 0);
+                }
+            """
+        )
+
     def enterEvent(self, e):
         if self.window().showhelp is True:
             name = self.text()
@@ -104,6 +121,7 @@ class DrawerTabs(QtWidgets.QTabWidget):
 
         w = self._get_new_drawer()
         self.addTab(w, "0")
+        self.update_tab_icon(w=w)
 
         # a tab that is used to create new tabs
         newtabwidget = QtWidgets.QWidget()
@@ -118,6 +136,37 @@ class DrawerTabs(QtWidgets.QTabWidget):
 
         self.tabBarClicked.connect(self.tabbar_clicked)
         self.setCurrentIndex(0)
+
+        self.setStyleSheet(
+            """
+            QTabWidget::pane {
+              border: 0px;
+              top:0px;
+              background: rgb(150, 150, 150);
+              border-radius: 10px;
+            }
+
+            QTabBar::tab {
+              background: rgb(185, 185, 185);
+              border: 0px;
+              padding: 3px;
+              padding-bottom: 6px;
+              padding-left: 6px;
+              padding-right: 6px;
+              margin-left: 10px;
+              margin-bottom: -2px;
+              border-radius: 4px;
+              font-weight: normal;
+            }
+
+            QTabBar::tab:selected {
+              background: rgb(150, 150, 150);
+              border: 0px;
+              margin-bottom: -2px;
+              font-weight: normal;
+            }
+            """
+        )
 
     def enterEvent(self, e):
         if self.window().showhelp is True:
@@ -139,6 +188,7 @@ class DrawerTabs(QtWidgets.QTabWidget):
         if self.tabText(index) == "+":
             w = self._get_new_drawer()
             self.insertTab(self.count() - 1, w, "0")
+            self.update_tab_icon(w=w)
 
     @pyqtSlot(int)
     def close_handler(self, index):
@@ -149,7 +199,10 @@ class DrawerTabs(QtWidgets.QTabWidget):
             while len(drawerwidget.drawer._artists) > 0:
                 drawerwidget.drawer.remove_last_shape()
         except Exception:
-            print("EOmaps: Encountered some problems while clearing the drawer!")
+            _log.error(
+                "EOmaps: Encountered some problems while clearing the drawer!",
+                exc_info=_log.getEffectiveLevel() <= logging.DEBUG,
+            )
 
         self.m.BM.update()
 
@@ -167,7 +220,7 @@ class DrawerTabs(QtWidgets.QTabWidget):
 
         w.drawer._on_new_poly.append(cb)
         w.drawer._on_poly_remove.append(cb)
-
+        w.colorSelected.connect(self.update_tab_icon)
         return w
 
     def set_layer(self, layer):
@@ -175,8 +228,16 @@ class DrawerTabs(QtWidgets.QTabWidget):
             if self.tabText(i) != "+":
                 self.widget(i).set_layer(layer)
 
+    @pyqtSlot()
+    def update_tab_icon(self, w=None):
+        if w is None:
+            w = self.sender()
+        self.setTabIcon(self.indexOf(w), w.get_tab_icon())
+
 
 class DrawerWidget(QtWidgets.QWidget):
+
+    colorSelected = pyqtSignal()
 
     _polynames = {
         "Polygon": "polygon",
@@ -184,7 +245,7 @@ class DrawerWidget(QtWidgets.QWidget):
         "Circle": "circle",
     }
 
-    def __init__(self, m=None, *args, **kwargs):
+    def __init__(self, *args, m=None, **kwargs):
 
         super().__init__(*args, **kwargs)
 
@@ -198,45 +259,60 @@ class DrawerWidget(QtWidgets.QWidget):
         self.remove_button.setMaximumSize(self.remove_button.sizeHint())
         self.remove_button.setEnabled(False)
 
+        self.cancel_button = RemoveButton("Cancel")
+        self.cancel_button.setMaximumSize(self.cancel_button.sizeHint())
+        self.cancel_button.setEnabled(False)
+
         self._new_drawer()
 
         self.save_button.clicked.connect(self.save_shapes)
         self.remove_button.clicked.connect(self.remove_last_shape)
+        self.cancel_button.clicked.connect(self.cancel_draw)
 
-        polybuttons = []
+        self.polybuttons = []
         for name, poly in self._polynames.items():
             poly_b = PolyButton(name)
             poly_b.clicked.connect(self.draw_shape_callback(poly=poly))
             poly_b.setMaximumWidth(100)
-            polybuttons.append(poly_b)
+            self.polybuttons.append(poly_b)
 
-        self.colorselector = GetColorWidget()
+        b_layout = QtWidgets.QVBoxLayout()
+        b_layout.setContentsMargins(0, 0, 0, 0)
+        b_layout.setSpacing(2)
 
-        self.alphaslider = TransparencySlider(Qt.Horizontal)
-        self.alphaslider.valueChanged.connect(self.set_alpha_with_slider)
-        self.alphaslider.setValue(50)
-
-        self.linewidthslider = LineWidthSlider(Qt.Horizontal)
-        self.linewidthslider.valueChanged.connect(self.set_linewidth_with_slider)
-        self.linewidthslider.setValue(20)
+        for b in self.polybuttons:
+            b_layout.addWidget(b)
 
         save_layout = QtWidgets.QVBoxLayout()
         save_layout.addWidget(self.save_button)
         save_layout.addWidget(self.remove_button)
+        save_layout.addWidget(self.cancel_button)
 
-        b_layout = QtWidgets.QVBoxLayout()
-        for b in polybuttons:
-            b_layout.addWidget(b)
+        self.colorselector = ColorWithSlidersWidget(linewidth=1)
+        self.colorselector.colorSelected.connect(lambda: self.colorSelected.emit())
+        self.colorselector.layout().setContentsMargins(0, 0, 0, 0)
 
-        layout = QtWidgets.QGridLayout()
-        layout.addWidget(self.colorselector, 0, 0, 2, 1)
-        layout.addWidget(self.alphaslider, 0, 1)
-        layout.addWidget(self.linewidthslider, 1, 1)
-        layout.addLayout(b_layout, 0, 2, 2, 1)
-        layout.addLayout(save_layout, 0, 3, 2, 1)
-
-        layout.setAlignment(Qt.AlignCenter | Qt.AlignTop)
+        layout = QtWidgets.QHBoxLayout()
+        layout.addLayout(b_layout)
+        layout.addLayout(save_layout)
+        layout.addWidget(self.colorselector)
+        layout.setAlignment(Qt.AlignLeft | Qt.AlignTop)
         self.setLayout(layout)
+
+        self.m._connect_signal("drawFinished", self.uncheck_polybuttons)
+        self.m._connect_signal("drawAborted", self.uncheck_polybuttons)
+        self.m._connect_signal("drawStarted", self.check_polybuttons)
+
+    def check_polybuttons(self, poly):
+        for b in self.polybuttons:
+            if b.text() == poly:
+                b.setChecked(True)
+        self.cancel_button.setEnabled(True)
+
+    def uncheck_polybuttons(self):
+        for b in self.polybuttons:
+            b.setChecked(False)
+        self.cancel_button.setEnabled(False)
 
     def enterEvent(self, e):
         if self.window().showhelp is True:
@@ -267,14 +343,17 @@ class DrawerWidget(QtWidgets.QWidget):
     def draw_shape_callback(self, poly):
         @pyqtSlot()
         def cb():
-            self.window().hide()
-            self.m.f.canvas.show()
-            self.m.f.canvas.activateWindow()
+            s = self.sender()
+            for b in self.polybuttons:
+                if s is b:
+                    b.setChecked(True)
+                else:
+                    b.setChecked(False)
 
             getattr(self.drawer, poly)(
                 facecolor=self.colorselector.facecolor.getRgbF(),
                 edgecolor=self.colorselector.edgecolor.getRgbF(),
-                linewidth=self.linewidthslider.alpha * 10,
+                linewidth=self.colorselector.linewidth,
             )
 
         return cb
@@ -310,8 +389,9 @@ class DrawerWidget(QtWidgets.QWidget):
                 # after saving the polygons, start with a new drawer
                 self._new_drawer()
         except Exception:
-            print(
-                "EOmaps: Encountered a problem while trying to save " "drawn shapes..."
+            _log.error(
+                "EOmaps: Encountered a problem while trying to save " "drawn shapes...",
+                exc_info=_log.getEffectiveLevel() <= logging.DEBUG,
             )
 
     @pyqtSlot()
@@ -321,18 +401,15 @@ class DrawerWidget(QtWidgets.QWidget):
             # update to make sure the changes are reflected on the map immediately
             self.m.BM.update()
         except Exception:
-            print(
+            _log.error(
                 "EOmaps: Encountered a problem while trying to remove "
-                "the last drawn shape..."
+                "the last drawn shape...",
+                exc_info=_log.getEffectiveLevel() <= logging.DEBUG,
             )
 
-    @pyqtSlot(int)
-    def set_alpha_with_slider(self, i):
-        self.colorselector.set_alpha(i / 100)
-
-    @pyqtSlot(int)
-    def set_linewidth_with_slider(self, i):
-        self.colorselector.set_linewidth(i / 10)
+    @pyqtSlot()
+    def cancel_draw(self):
+        self.drawer._finish_drawing()
 
     def _new_drawer(self):
         self.drawer = self.m.draw.new_drawer()
@@ -344,3 +421,41 @@ class DrawerWidget(QtWidgets.QWidget):
 
     def set_layer(self, layer):
         self.drawer.set_layer(layer)
+
+    @pyqtSlot()
+    def get_tab_icon(self):
+        from PyQt5 import QtGui
+        from PyQt5.QtCore import QRectF
+
+        canvas = QtGui.QPixmap(20, 20)
+        canvas.fill(Qt.transparent)
+
+        painter = QtGui.QPainter(canvas)
+        painter.setRenderHints(QtGui.QPainter.HighQualityAntialiasing)
+
+        painter.setBrush(QtGui.QBrush(self.colorselector.facecolor, Qt.SolidPattern))
+
+        if self.colorselector.linewidth > 0.01:
+            painter.setPen(
+                QtGui.QPen(
+                    self.colorselector.edgecolor,
+                    0.5 * self.colorselector.linewidth,
+                    Qt.SolidLine,
+                )
+            )
+        else:
+            painter.setPen(
+                QtGui.QPen(
+                    self.colorselector.facecolor,
+                    0.5 * self.colorselector.linewidth,
+                    Qt.SolidLine,
+                )
+            )
+
+        rect = QRectF(2.5, 2.5, 15, 15)
+        painter.drawRoundedRect(rect, 5, 5)
+        painter.end()
+
+        icon = QtGui.QIcon(canvas)
+
+        return icon

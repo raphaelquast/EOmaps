@@ -13,22 +13,270 @@ def get_dummy_spacer():
     return space
 
 
-class TransparentQToolButton(QtWidgets.QToolButton):
+class BasicCheckableToolButton(QtWidgets.QToolButton):
+    def __init__(
+        self,
+        *args,
+        normal_icon=None,
+        hoover_icon=None,
+        checked_icon=None,
+        tooltip=None,
+        **kwargs,
+    ):
+        """
+        Basic tool button with a hoover state
+
+        Parameters
+        ----------
+        normal_icon : str, optional
+            Path to the normal icon. The default is None.
+        hoover_icon : str, optional
+            Path to the hoover icon. The default is None.
+        checked_icon : str, optional
+            Path to the checked icon. If None, the hoover icon is used! The default is None.
+        kwargs :
+            additional kwargs passed to QToolButton.
+        """
+
+        super().__init__(*args, **kwargs)
+
+        self.setStyleSheet(
+            """
+            BasicCheckableToolButton { border: 0px};
+            """
+        )
+
+        self.setCheckable(True)
+        self.setAutoRaise(False)
+        self.setFixedSize(25, 25)
+
+        self.normal_icon = None
+        self.hoover_icon = None
+        self.checked_icon = None
+
+        self.set_icons(normal_icon, hoover_icon, checked_icon)
+
+        self.toggled.connect(self.swap_icon)
+
+        self.setStyleSheet(
+            """
+            QToolButton {
+                border: 0px;
+                border-radius: 4px;
+                padding: 4px;
+            }
+            QToolButton:hover {
+                background-color: rgb(210, 210, 210);
+            }
+
+            """
+        )
+
+    def set_icons(
+        self, normal_icon=None, hoover_icon=None, checked_icon=None, size=None
+    ):
+        if size is None:
+            size = self.size()
+        else:
+            size = QtCore.QSize(*size)
+
+        if normal_icon:
+            pm = QtGui.QPixmap(normal_icon)
+
+            self.normal_icon = QtGui.QIcon(
+                pm.scaled(
+                    size,
+                    QtCore.Qt.KeepAspectRatio,
+                    QtCore.Qt.SmoothTransformation,
+                )
+            )
+            self.setIcon(self.normal_icon)
+            self.active_icon = self.normal_icon
+        if hoover_icon:
+            pm = QtGui.QPixmap(hoover_icon)
+            self.hoover_icon = QtGui.QIcon(
+                pm.scaled(
+                    size,
+                    QtCore.Qt.KeepAspectRatio,
+                    QtCore.Qt.SmoothTransformation,
+                )
+            )
+        if checked_icon:
+            pm = QtGui.QPixmap(checked_icon)
+            self.checked_icon = QtGui.QIcon(
+                pm.scaled(
+                    size,
+                    QtCore.Qt.KeepAspectRatio,
+                    QtCore.Qt.SmoothTransformation,
+                )
+            )
+        else:
+            self.checked_icon = self.hoover_icon
+
+    def enterEvent(self, event):
+        if self.isCheckable():
+            if self.hoover_icon and not self.isChecked():
+                self.setIcon(self.hoover_icon)
+            else:
+                self.setIcon(self.normal_icon)
+        else:
+            if self.hoover_icon:
+                self.setIcon(self.hoover_icon)
+
+        return super().enterEvent(event)
+
+    def leaveEvent(self, event):
+        if self.active_icon:
+            self.setIcon(self.active_icon)
+
+        return super().enterEvent(event)
+
+    def swap_icon(self, *args, **kwargs):
+        if self.normal_icon and self.hoover_icon:
+            if self.isChecked():
+                self.active_icon = self.checked_icon
+            else:
+                self.active_icon = self.normal_icon
+            self.setIcon(self.active_icon)
+
+    def sizeHint(self):
+        # to keep checked button centered
+        hint = super().sizeHint()
+        if hint.width() & 1:
+            hint.setWidth(hint.width() + 1)
+        if hint.height() & 1:
+            hint.setHeight(hint.height() + 1)
+        return hint
+
+
+class HelpButton(BasicCheckableToolButton):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        self.setToolTip("Toggle showing help-tooltips.")
+        self.setFixedSize(30, 30)
+
+        self.set_icons(
+            normal_icon=str(iconpath / "info.png"),
+            hoover_icon=str(iconpath / "info_hoover.png"),
+            checked_icon=str(iconpath / "info_checked.png"),
+            size=(17, 17),
+        )
+
+
+class AlwaysOnTopToolButton(BasicCheckableToolButton):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        self.setFixedSize(30, 30)
+
+        self.set_icons(
+            normal_icon=str(iconpath / "eye_closed.png"),
+            hoover_icon=str(iconpath / "eye_open.png"),
+            checked_icon=str(iconpath / "eye_open.png"),
+        )
+
+    def enterEvent(self, event):
+        if self.window().showhelp is True:
+            QtWidgets.QToolTip.showText(
+                event.globalPos(),
+                "<h3>Keep plot window on top</h3>"
+                "If activated, the figure will remain <b>always on top</b> of other"
+                " applications",
+            )
+
+        return super().enterEvent(event)
+
+
+class OpenFileButton(BasicCheckableToolButton):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.setCheckable(False)
+
+        self.setFixedSize(30, 30)
+        self.set_icons(
+            normal_icon=str(iconpath / "open.png"),
+            hoover_icon=str(iconpath / "open_hover.png"),
+        )
+
     def enterEvent(self, e):
+        super().enterEvent(e)
+
+        self.window().tabs.tab_open.starttab.enterEvent(e)
+
+
+class EditLayoutButton(BasicCheckableToolButton):
+    def __init__(self, *args, m=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.setFixedSize(30, 30)
+
+        self.m = m
+        self.clicked.connect(self.callback)
+
+        self.m._connect_signal(
+            "layoutEditorActivated", lambda *args: self.setChecked(True)
+        )
+        self.m._connect_signal(
+            "layoutEditorDeactivated", lambda *args: self.setChecked(False)
+        )
+
+        self.set_icons(
+            normal_icon=str(iconpath / "edit_layout.png"),
+            hoover_icon=str(iconpath / "edit_layout_hover.png"),
+            checked_icon=str(iconpath / "edit_layout_active.png"),
+        )
+
+    def enterEvent(self, e):
+        super().enterEvent(e)
+
         if self.window().showhelp is True:
             QtWidgets.QToolTip.showText(
                 e.globalPos(),
-                "<h3>Toggle window Transparency</h3>"
-                "If activated, the companion-widget will get semi-transparent if it "
-                "is out of focus.",
+                "<h3>Layout Editor</h3>"
+                "Toggle the EOmaps LayoutEditor to re-arrange the position and size "
+                "of the axes in the figure."
+                "<ul>"
+                "<li><b>Right-click</b> on axes with the mouse to select them (hold "
+                "down 'shift' to select multiple axes).</li>"
+                "<li><b>Drag</b> axes (or use the <b>arrow-keys</b>) to adjust "
+                "their position</li>"
+                "<li>Use the <b>scroll-wheel</b> (or the <b>+/- keys</b>) to adjust "
+                "their size</li>"
+                "<li>Hold down <b>'h'</b> or <b>'v'</b> key to adjust "
+                "horizontal/vertical size.<br>"
+                "(maps always keep their aspect-ratio!)</li>"
+                "<li>Hold down <b>'control'</b> to adjust the colorbar/histogram size."
+                "<li>Press <b>control + z</b> to undo the last step</li>"
+                "<li>Press <b>control + y</b> to redo the last undone step</li>"
+                "<li>Press <b>escape</b> to exit the LayoutEditor</li>"
+                "</ul>",
             )
+
+    @pyqtSlot()
+    def callback(self):
+        if not self.m.parent._layout_editor._modifier_pressed:
+            self.m.parent.edit_layout()
+        else:
+            self.m.parent._layout_editor._undo_draggable()
 
 
 class ToolBar(QtWidgets.QToolBar):
-    def __init__(self, *args, m=None, left_widget=None, title=None, **kwargs):
+    def __init__(
+        self,
+        *args,
+        m=None,
+        left_widget=None,
+        title=None,
+        on_close=None,
+        layers="text",
+        add_buttons=False,
+        **kwargs,
+    ):
         super().__init__(*args, **kwargs)
 
         self.m = m
+
+        self._on_close = on_close
 
         logo = QtGui.QPixmap(str(iconpath / "logo.png"))
         logolabel = QtWidgets.QLabel()
@@ -40,22 +288,24 @@ class ToolBar(QtWidgets.QToolBar):
 
         b_close = QtWidgets.QToolButton()
         b_close.setAutoRaise(True)
-        b_close.setFixedSize(25, 25)
+        b_close.setFixedSize(22, 22)
         b_close.setIcon(QtGui.QIcon(str(iconpath / "close.png")))
         b_close.clicked.connect(self.close_button_callback)
 
         self.b_minmax = QtWidgets.QToolButton()
         self.b_minmax.setAutoRaise(True)
-        self.b_minmax.setFixedSize(25, 25)
+        self.b_minmax.setFixedSize(22, 22)
         self.b_minmax.setIcon(QtGui.QIcon(str(iconpath / "maximize.png")))
         self.b_minmax.clicked.connect(self.maximize_button_callback)
 
-        self.b_showhelp = QtWidgets.QToolButton()
-        self.b_showhelp.setText("?")
-        self.b_showhelp.setCheckable(True)
-        self.b_showhelp.setAutoRaise(True)
+        self.b_showhelp = HelpButton()
         self.b_showhelp.toggled.connect(self.toggle_show_help)
-        self.b_showhelp.setToolTip("Toggle showing help-tooltips.")
+
+        if add_buttons:
+            self.b_open = OpenFileButton()
+            self.b_open.clicked.connect(self.open_file_button_callback)
+
+            self.b_edit = EditLayoutButton(m=self.m)
 
         if left_widget:
             self.addWidget(left_widget)
@@ -68,13 +318,25 @@ class ToolBar(QtWidgets.QToolBar):
 
         self.addWidget(self.b_showhelp)
 
-        self.addWidget(get_dummy_spacer())
-
+        if add_buttons:
+            self.addWidget(self.b_open)
+            self.addWidget(self.b_edit)
         if m is not None:
-            from .widgets.layer import AutoUpdateLayerMenuButton
+            if layers == "dropdown":
+                from .widgets.layer import AutoUpdateLayerMenuButton
 
-            showlayer = AutoUpdateLayerMenuButton(m=self.m)
-            self.addWidget(showlayer)
+                showlayer = AutoUpdateLayerMenuButton(m=self.m)
+                self.addWidget(showlayer)
+            elif layers == "text":
+                from .widgets.layer import AutoUpdateLayerLabel
+
+                showlayer = AutoUpdateLayerLabel(
+                    m=self.m,
+                )
+                self.addWidget(get_dummy_spacer())
+                self.addWidget(showlayer)
+
+        self.addWidget(get_dummy_spacer())
 
         self.addWidget(logolabel)
         self.addWidget(self.b_minmax)
@@ -83,15 +345,14 @@ class ToolBar(QtWidgets.QToolBar):
         self.setMovable(False)
 
         self.setStyleSheet(
-            "QToolBar{border: none; spacing:5px;}"
-            'QToolButton[autoRaise="true"]{text-align:center;}'
-            "QPushButton{border:none;}"
             """
-            QToolButton:checked {background-color:rgba(255,50,50, 150);
-            border: none;
-            border-radius: 5px;}
+            QToolBar {
+                border: none;
+                spacing:5px;
+            }
             """
         )
+
         self.setContentsMargins(0, 0, 0, 0)
 
         self.press_pos = None
@@ -100,16 +361,23 @@ class ToolBar(QtWidgets.QToolBar):
     def toggle_show_help(self):
         if self.b_showhelp.isChecked():
             self.window().showhelp = True
-            self.b_showhelp.setText("Click here to hide help tooltips")
+            # self.b_showhelp.setText("Click to hide help tooltips")
         else:
             self.window().showhelp = False
-            self.b_showhelp.setText("?")
+            # self.b_showhelp.setText("?")
 
     @pyqtSlot()
     def close_button_callback(self):
         self.window().close()
         if self.m is not None:
             self.m._indicate_companion_map(False)
+
+        if self._on_close is not None:
+            self._on_close()
+
+    @pyqtSlot()
+    def open_file_button_callback(self):
+        self.window().tabs.tab_open.openNewFile.emit()
 
     @pyqtSlot()
     def maximize_button_callback(self):
@@ -142,14 +410,14 @@ class ToolBar(QtWidgets.QToolBar):
 
 
 class NewWindow(QtWidgets.QMainWindow):
-    def __init__(self, *args, m=None, title=None, **kwargs):
+    def __init__(self, *args, m=None, title=None, on_close=None, **kwargs):
         super().__init__(*args, **kwargs)
         self.m = m
         self.setWindowTitle("OpenFile")
 
         self.showhelp = False
 
-        toolbar = ToolBar(title=title)
+        toolbar = ToolBar(title=title, on_close=on_close)
         self.addToolBar(toolbar)
 
         self.layout = QtWidgets.QVBoxLayout()
@@ -170,7 +438,7 @@ class NewWindow(QtWidgets.QMainWindow):
         self.close()
 
 
-class transparentWindow(QtWidgets.QMainWindow):
+class AlwaysOnTopWindow(QtWidgets.QMainWindow):
     def __init__(self, *args, m=None, **kwargs):
         super().__init__(*args, **kwargs)
         self.out_alpha = 0.25
@@ -178,7 +446,6 @@ class transparentWindow(QtWidgets.QMainWindow):
 
         # get the current PyQt app and connect the focus-change callback
         self.app = QtWidgets.QApplication([]).instance()
-        self.app.focusChanged.connect(self.on_window_focus)
 
         # make sure the window does not steal focus from the matplotlib-canvas
         # on show (otherwise callbacks are inactive as long as the window is focused!)
@@ -188,44 +455,22 @@ class transparentWindow(QtWidgets.QMainWindow):
         )
         self.setFocusPolicy(Qt.ClickFocus)
 
-        self.transparentQ = TransparentQToolButton()
-        self.transparentQ.setStyleSheet("border:none")
-        self.transparentQ.setIcon(QtGui.QIcon(str(iconpath / "eye_closed.png")))
+        self.on_top = AlwaysOnTopToolButton()
 
-        self.toolbar = ToolBar(m=self.m, left_widget=self.transparentQ)
-        self.transparentQ.clicked.connect(self.cb_transparentQ)
+        self.toolbar = ToolBar(
+            m=self.m, left_widget=self.on_top, layers="text", add_buttons=True
+        )
+        self.on_top.clicked.connect(self.toggle_always_on_top)
 
         self.addToolBar(self.toolbar)
 
     @pyqtSlot()
-    def cb_transparentQ(self):
-        if self.out_alpha == 1:
-            self.out_alpha = 0.25
-            self.setFocus()
-            self.transparentQ.setIcon(QtGui.QIcon(str(iconpath / "eye_closed.png")))
+    def toggle_always_on_top(self, *args, **kwargs):
+        q = self.m._get_always_on_top()
 
+        if q:
+            self.m._set_always_on_top(False)
+            self.on_top.setChecked(False)
         else:
-            self.out_alpha = 1
-            self.setFocus()
-            self.transparentQ.setIcon(QtGui.QIcon(str(iconpath / "eye_open.png")))
-
-    @pyqtSlot("QWidget*", "QWidget*")
-    def on_window_focus(self, old, new):
-        if new is not None:
-            if new is self or hasattr(new, "window") and new.window() is self:
-                self.setWindowOpacity(1)
-
-                # Uncheck avtive pan/zoom actions of the matplotlib toolbar.
-                # This is done to avoid capturing of draw-events during pan/zoom
-                # so that draw-events triggered by the companion take effect immediately
-
-                toolbar = getattr(self.m.BM.canvas, "toolbar", None)
-                if toolbar is not None:
-                    for key in ["pan", "zoom"]:
-                        val = toolbar._actions.get(key, None)
-                        if val is not None and val.isCheckable() and val.isChecked():
-                            val.trigger()
-            else:
-                self.setWindowOpacity(self.out_alpha)
-        else:
-            self.setWindowOpacity(1)
+            self.m._set_always_on_top(True)
+            self.on_top.setChecked(True)

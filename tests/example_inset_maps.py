@@ -48,14 +48,14 @@ m3.add_wms.OpenStreetMap.add_layer.stamen_terrain_background()
 x, y = np.meshgrid(np.linspace(-50, 50, 100), np.linspace(-30, 70, 100))
 data = x + y
 
-for m_i in [m, m2, m3]:
-    m_i.set_data(data, x, y, crs=4326)
-
+m.set_data(data, x, y, crs=4326)
 m.set_classify.Quantiles(k=4)
 m.plot_map(alpha=0.5, ec="none", set_extent=False)
 
-m2.inherit_classification(m)
-m3.inherit_classification(m)
+# use the same data and classification for the inset-maps
+for m_i in [m2, m3]:
+    m_i.inherit_data(m)
+    m_i.inherit_classification(m)
 
 m2.set_shape.ellipses(np.mean(m.shape.radius) / 2)
 m2.plot_map(alpha=0.75, ec="k", lw=0.5, set_extent=False)
@@ -68,7 +68,7 @@ m3.plot_map(alpha=1, ec="k", lw=0.5, set_extent=False)
 m3.add_annotation(ID=1, xytext=(-120, 80))
 
 # indicate the extent of the second inset on the first inset
-m3.indicate_inset_extent(m2, ec="g", lw=2, fc="g", alpha=0.5, zorder=0)
+m3.add_extent_indicator(m2, ec="g", lw=2, fc="g", alpha=0.5, zorder=0)
 
 # add some additional text to the inset-maps
 for m_i, txt, color in zip([m2, m3], ["epsg: 4326", "epsg: 3035"], ["r", "g"]):

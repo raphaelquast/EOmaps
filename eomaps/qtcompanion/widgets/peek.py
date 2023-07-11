@@ -193,7 +193,7 @@ class PeekMethodButtons(QtWidgets.QWidget):
         border = (
             "2px solid black"
             if self.rectangle_size < 0.99
-            else "2px solid rgb(200,200,200)"
+            else "2px solid rgb(140,140,140)"
         )
 
         self.rectangle_slider.setStyleSheet(
@@ -311,9 +311,7 @@ class ModifierInput(QtWidgets.QLineEdit):
 
 
 class PeekLayerWidget(QtWidgets.QWidget):
-    def __init__(
-        self, *args, m=None, layers=None, exclude=None, how=(0.5, 0.5), **kwargs
-    ):
+    def __init__(self, *args, m=None, layers=None, exclude=None, **kwargs):
         """
         A dropdown-list that attaches a peek-callback to look at the selected layer
 
@@ -326,10 +324,6 @@ class PeekLayerWidget(QtWidgets.QWidget):
         exclude : list, optional
             A list of layer-names to exclude. The default is None.
 
-        Returns
-        -------
-        None.
-
         """
         super().__init__(*args, **kwargs)
 
@@ -341,7 +335,7 @@ class PeekLayerWidget(QtWidgets.QWidget):
         self.current_layer = None
 
         self.layerselector = AutoUpdatePeekLayerDropdown(
-            m=self.m, layers=layers, exclude=exclude
+            m=self.m, layers=self._layers, exclude=exclude
         )
         self.layerselector.update_layers()  # do this before attaching the callback!
         self.layerselector.currentIndexChanged[str].connect(self.set_layer_callback)
@@ -427,6 +421,15 @@ class PeekLayerWidget(QtWidgets.QWidget):
             shape=self.buttons.shape,
         )
 
+        # execute the attached callback with the last available
+        # event of the click-move container (to get a dynamic update
+        # of the peek-region when the method changes)
+        if self.m.all.cb._click_move._event is not None:
+            self.m.all.cb._click_move._execute_cbs(
+                self.m.all.cb._click_move._event, [self.cid]
+            )
+            self.m.BM.update()
+
     def remove_peek_cb(self):
         if self.cid is not None:
             if self.cid in self.m.all.cb.click.get.attached_callbacks:
@@ -450,6 +453,17 @@ class TabBar(QtWidgets.QTabBar):
         return QSize(min(size.width(), 150), size.height())
 
 
+class NewPeekTabWidget(QtWidgets.QWidget):
+    def __init__(self, *args, peektabs=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.peektabs = peektabs
+
+    def mousePressEvent(self, e):
+        # create a new peek-tab if the base-tab of the peek-widget is clicked
+        self.peektabs.make_new_tab()
+        self.peektabs.setCurrentIndex(0)
+
+
 class PeekTabs(QtWidgets.QTabWidget):
     def __init__(self, *args, m=None, **kwargs):
         super().__init__(*args, **kwargs)
@@ -461,7 +475,8 @@ class PeekTabs(QtWidgets.QTabWidget):
         self.tabCloseRequested.connect(self.close_handler)
 
         w = PeekLayerWidget(m=self.m)
-        self.addTab(w, peek_icons[w.buttons._method], "    ")
+        # self.addTab(w, peek_icons[w.buttons._method], "    ")
+
         self.setIconSize(QSize(10, 10))
         # update the tab title with the modifier key
         cb = self.settxt_factory(w)
@@ -473,9 +488,9 @@ class PeekTabs(QtWidgets.QTabWidget):
         w.buttons.methodChanged.emit(w.buttons._method)
 
         # a tab that is used to create new tabs
-        newtabwidget = QtWidgets.QWidget()
+        newtabwidget = NewPeekTabWidget(peektabs=self)
         newtablayout = QtWidgets.QHBoxLayout()
-        l = QtWidgets.QLabel("Click on <b>+</b> to open a new peek layer tab!")
+        l = QtWidgets.QLabel("Click to open a new <b>peek layer</b> tab!")
         newtablayout.addWidget(l)
         newtabwidget.setLayout(newtablayout)
 
@@ -485,6 +500,34 @@ class PeekTabs(QtWidgets.QTabWidget):
 
         self.tabBarClicked.connect(self.tabbar_clicked)
         self.setCurrentIndex(0)
+
+        self.setTabPosition(0)
+        self.setStyleSheet(
+            """
+            QTabWidget::pane {
+              border: 0px;
+              top:0px;
+              background: rgb(200, 200, 200);
+              border-radius: 10px;
+            }
+
+            QTabBar::tab {
+              background: rgb(220, 220, 220);
+              border: 0px;
+              padding: 3px;
+              padding-bottom: 6px;
+              margin-left: 10px;
+              margin-bottom: -2px;
+              border-radius: 4px;
+            }
+
+            QTabBar::tab:selected {
+              background: rgb(200, 200, 200);
+              border: 0px;
+              margin-bottom: -2px;
+            }
+            """
+        )
 
     def setTabText(self, index, tip):
         # set ToolTip as well wenn setting the TabText
@@ -506,19 +549,24 @@ class PeekTabs(QtWidgets.QTabWidget):
                 "on the keyboard.",
             )
 
+    def make_new_tab(self):
+        w = PeekLayerWidget(m=self.m)
+        self.insertTab(self.count() - 1, w, "    ")
+
+        # update the tab title with the modifier key
+        cb = self.settxt_factory(w)
+        w.modifier.textChanged.connect(cb)
+        w.buttons.methodChanged.connect(cb)
+        w.layerselector.currentIndexChanged[str].connect(cb)
+        # emit pyqtSignal to set text
+        w.buttons.methodChanged.emit(w.buttons._method)
+
+        return w
+
     @pyqtSlot(int)
     def tabbar_clicked(self, index):
         if self.tabText(index) == "+":
-            w = PeekLayerWidget(m=self.m)
-            self.insertTab(self.count() - 1, w, "    ")
-
-            # update the tab title with the modifier key
-            cb = self.settxt_factory(w)
-            w.modifier.textChanged.connect(cb)
-            w.buttons.methodChanged.connect(cb)
-            w.layerselector.currentIndexChanged[str].connect(cb)
-            # emit pyqtSignal to set text
-            w.buttons.methodChanged.emit(w.buttons._method)
+            self.make_new_tab()
 
     @pyqtSlot(int)
     def close_handler(self, index):
@@ -534,9 +582,10 @@ class PeekTabs(QtWidgets.QTabWidget):
             self.setTabIcon(self.indexOf(w), peek_icons[w.buttons._method])
             mod = w.modifier.text().strip()
 
-            txt = ""
             if mod != "":
-                txt += f"[{mod}] "
+                txt = f"[{mod}] "
+            else:
+                txt = "  "
 
             tabtext = txt + (w.current_layer if w.current_layer is not None else "")
 

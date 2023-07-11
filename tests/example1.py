@@ -13,6 +13,7 @@ data = data.sample(15000)  # take 15000 random datapoints from the dataset
 # ------------------------------------
 
 m = Maps(crs=4326)
+m.add_title("Click on the map to pick datapoints!")
 m.add_feature.preset.ocean()
 m.add_feature.preset.coastline()
 m.set_data(

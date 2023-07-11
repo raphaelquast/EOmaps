@@ -1,32 +1,15 @@
+"""Classes to fetch and draw NaturalEarth features."""
+
+import logging
 from textwrap import dedent
-from warnings import warn
 from pathlib import Path
 import json
-from matplotlib.colors import rgb2hex
+
 from cartopy import crs as ccrs
 
-cfeature = None
-shapereader = None
+from .helpers import register_modules
 
-
-def _register_cartopy_feature_io():
-    global cfeature
-    global shapereader
-    import cartopy.feature as cfeature
-    from cartopy.io import shapereader
-
-
-gpd = None
-
-
-def _register_geopandas():
-    global gpd
-    try:
-        import geopandas as gpd
-    except ImportError:
-        return False
-
-    return True
+_log = logging.getLogger(__name__)
 
 
 def combdoc(*args):
@@ -34,10 +17,57 @@ def combdoc(*args):
     return "\n".join(dedent(str(i)) for i in args)
 
 
-class _NaturalEarth_presets:
+class NaturalEarth_presets:
+    """
+    Feature presets.
+
+    To add single preset-features (or customize the appearance), use:
+
+    >>> m.add_feature.preset.coastline(ec="r", scale=50, ...)
+
+    To quickly add multiple features in one go, use:
+
+    >>> m.add_feature.preset("coastline", "ocean", "land")
+
+    """
+
     def __init__(self, m):
-        _register_cartopy_feature_io()
         self._m = m
+
+    def __call__(self, *args, scale=50, layer=None):
+        """
+        Add multiple preset-features in one go.
+
+        >>> m.add_feature.preset("coastline", "ocean", "land")
+
+        Parameters
+        ----------
+        *args : str
+            The names of the features to add.
+        scale : int or str
+            Set the scale of the feature preset (10, 50, 110 or "auto")
+            The default is "auto"
+        layer : str or None, optional
+            The name of the layer at which map-features are plotted.
+
+            - If "all": the corresponding feature will be added to ALL layers
+            - If None, the layer of the parent object is used.
+
+            The default is None.
+
+        """
+        wrong_names = set(args).difference(self._feature_names)
+        assert len(wrong_names) == 0, (
+            f"EOmaps: {wrong_names} are not valid preset-feature names!\n"
+            f"Use one of: {self._feature_names}."
+        )
+
+        for a in args:
+            getattr(self, a)(scale=scale, layer=layer)
+
+    @property
+    def _feature_names(self):
+        return [i for i in self.__dir__() if not i.startswith("_")]
 
     @property
     def coastline(self):
@@ -50,7 +80,7 @@ class _NaturalEarth_presets:
 
         - fc="none", ec="k", zorder=100
         """
-        return self._feature(
+        return self._Feature(
             self._m,
             "physical",
             "coastline",
@@ -71,9 +101,9 @@ class _NaturalEarth_presets:
         - fc=(0.59375, 0.71484375, 0.8828125), ec="none", zorder=-2, reproject="cartopy"
         """
         # convert color to hex to avoid issues with geopandas
-        color = rgb2hex(cfeature.COLORS["water"])
+        color = "#97b6e1"  # rgb2hex(cfeature.COLORS["water"])
 
-        return self._feature(
+        return self._Feature(
             self._m, "physical", "ocean", facecolor=color, edgecolor="none", zorder=-2
         )
 
@@ -90,9 +120,9 @@ class _NaturalEarth_presets:
 
         """
         # convert color to hex to avoid issues with geopandas
-        color = rgb2hex(cfeature.COLORS["land"])
+        color = "#efefdb"  # rgb2hex(cfeature.COLORS["land"])
 
-        return self._feature(
+        return self._Feature(
             self._m, "physical", "land", facecolor=color, edgecolor="none", zorder=-1
         )
 
@@ -108,7 +138,7 @@ class _NaturalEarth_presets:
         - fc="none", ec=".5", lw=0.5, zorder=99
 
         """
-        return self._feature(
+        return self._Feature(
             self._m,
             "cultural",
             "admin_0_countries",
@@ -130,7 +160,7 @@ class _NaturalEarth_presets:
         - fc="r", lw=0., zorder=100
 
         """
-        return self._feature(
+        return self._Feature(
             self._m,
             "cultural",
             "urban_areas",
@@ -151,7 +181,7 @@ class _NaturalEarth_presets:
         - fc="b", ec="none", lw=0., zorder=98
 
         """
-        return self._feature(
+        return self._Feature(
             self._m,
             "physical",
             "lakes",
@@ -172,7 +202,7 @@ class _NaturalEarth_presets:
         - fc="none", ec="b", lw=0.75, zorder=97
 
         """
-        return self._feature(
+        return self._Feature(
             self._m,
             "physical",
             "rivers_lake_centerlines",
@@ -182,7 +212,7 @@ class _NaturalEarth_presets:
             zorder=97,
         )
 
-    class _feature:
+    class _Feature:
         def __init__(self, m, category, name, **kwargs):
             self._m = m
             self.category = category
@@ -211,7 +241,7 @@ class _NaturalEarth_presets:
             subst = dict(fc="facecolor", ec="edgecolor", lw="linewidth", ls="linestyle")
             return {subst.get(key, key): val for key, val in kwargs.items()}
 
-        def __call__(self, scale=50, **kwargs):
+        def __call__(self, scale=50, layer=None, **kwargs):
             k = dict(**self.kwargs)
             k.update(kwargs)
 
@@ -221,7 +251,7 @@ class _NaturalEarth_presets:
                 )
 
             self.__doc__ = self.feature.__doc__
-            return self.feature(scale=scale, **self._handle_synonyms(k))
+            return self.feature(scale=scale, layer=layer, **self._handle_synonyms(k))
 
 
 _NE_features_path = Path(__file__).parent / "NE_features.json"
@@ -236,9 +266,10 @@ try:
                 _NE_features_all.setdefault(category, set()).update(category_items)
 
 except Exception:
-    print(
+    _log.error(
         "EOmaps: Could not load available NaturalEarth features from\n"
-        f"{_NE_features_path}"
+        f"{_NE_features_path}",
+        exc_info=_log.getEffectiveLevel() <= logging.DEBUG,
     )
     _NE_features = dict()
     _NE_features_all = dict()
@@ -292,42 +323,17 @@ class NaturalEarth_features(object):
     """
 
     def __init__(self, m):
-        _register_cartopy_feature_io()
-
         self._m = m
-
-        self._depreciated_names = dict()
-
-        for scale, scale_items in _NE_features.items():
-            for category, category_items in scale_items.items():
-                ns = dict()
-                for name in category_items:
-                    ns[name] = self._get_feature(category, name)
-
-                c = self._category(scale, category, **ns)
-                self._depreciated_names[f"{category}_{scale}"] = c
-
         for category, names in _NE_features_all.items():
-            func = lambda name: self._feature(self._m, category, name)
+            func = lambda name: self._Feature(self._m, category, name)
             ns = dict(zip(names, map(func, names)))
 
-            c = self._category(scale, category, **ns)
+            c = self._Category(scale, category, **ns)
             setattr(self, category, c)
 
     def __call__(self, category, scale, name, **kwargs):
         feature = self._get_feature(category, name)
         return feature(**kwargs)
-
-    def __getattribute__(self, key):
-        if key != "_depreciated_names" and key in self._depreciated_names:
-            warn(
-                f"EOmaps: Using 'm.add_feature.{key}.< name >()' is depreciated! "
-                f"use 'm.add_feature.{key.split('_')[0]}.< name >(scale=...)' instead! ",
-                stacklevel=99,
-            )
-            return self._depreciated_names[key]
-        else:
-            return object.__getattribute__(self, key)
 
     def __getitem__(self, key):
         return getattr(self, key)
@@ -349,7 +355,7 @@ class NaturalEarth_features(object):
                 + (f"did you mean one of {matches}?" if matches else "")
             )
 
-        return self._feature(self._m, category, name)
+        return self._Feature(self._m, category, name)
 
     @property
     def preset(self):
@@ -361,9 +367,9 @@ class NaturalEarth_features(object):
         - "land" - beige land coloring
         - "countries" - gray country boarder lines
         """
-        return _NaturalEarth_presets(self._m)
+        return NaturalEarth_presets(self._m)
 
-    class _category:
+    class _Category:
         def __init__(self, scale, category, **kwargs):
 
             self._s = scale
@@ -399,7 +405,7 @@ class NaturalEarth_features(object):
                 f"EOmaps interface for {self._s} {self._c} " + "NaturalEarth features"
             )
 
-    class _feature:
+    class _Feature:
         """
         Natural Earth Feature.
 
@@ -428,7 +434,7 @@ class NaturalEarth_features(object):
 
             If 'auto' the scale is automatically adjusted based on the map-extent.
 
-        layer : int, str or None, optional
+        layer : str or None, optional
             The name of the layer at which map-features are plotted.
 
             - If "all": the corresponding feature will be added to ALL layers
@@ -487,6 +493,8 @@ class NaturalEarth_features(object):
             ) + self.__doc__
 
         def __call__(self, layer=None, scale="auto", **kwargs):
+            _log.debug(f"EOmaps: Adding feature: {self._category}: {self._name}")
+
             self._set_scale(scale)
 
             from . import MapsGrid  # do this here to avoid circular imports!
@@ -500,6 +508,9 @@ class NaturalEarth_features(object):
                 feature = self._get_cartopy_feature(self._scale)
                 feature._kwargs.update(kwargs)
                 art = m.ax.add_feature(feature)
+                art.set_label(
+                    f"NaturalEarth feature: {feature.category}  |  {feature.name}"
+                )
                 m.BM.add_bg_artist(art, layer=uselayer)
 
         def _set_scale(self, scale):
@@ -520,15 +531,15 @@ class NaturalEarth_features(object):
             self._scale = self._get_available_scale(scale)
 
             if self._scale != scale:
-                print(
+                _log.warning(
                     f"EOmaps: The NaturalEarth feature '{self._name}' is not "
                     f"available at 1:{scale} scale... using 1:{self._scale} instead!"
                 )
 
         def get_validated_scaler(self, *args, **kwargs):
-            _register_cartopy_feature_io()
+            from cartopy.feature import AdaptiveScaler
 
-            class AdaptiveValidatedScaler(cfeature.AdaptiveScaler):
+            class AdaptiveValidatedScaler(AdaptiveScaler):
                 # subclass of the AdaptiveScaler to make sure the dataset exists
                 def __init__(self, default_scale, limits, validator=None):
                     super().__init__(default_scale, limits)
@@ -547,6 +558,8 @@ class NaturalEarth_features(object):
             return AdaptiveValidatedScaler(*args, **kwargs)
 
         def _get_cartopy_feature(self, scale):
+            from cartopy.feature import NaturalEarthFeature
+
             self._set_scale(scale)
 
             if (
@@ -566,7 +579,7 @@ class NaturalEarth_features(object):
                 usescale = self._scale
 
             # get an instance of the corresponding cartopy-feature
-            self._cartopy_feature = cfeature.NaturalEarthFeature(
+            self._cartopy_feature = NaturalEarthFeature(
                 category=self._category, name=self._name, scale=usescale
             )
 
@@ -609,13 +622,13 @@ class NaturalEarth_features(object):
             gdf : geopandas.GeoDataFrame
                 A GeoDataFrame with all geometries of the feature
             """
-            assert (
-                _register_geopandas()
-            ), "EOmaps: Missing dependency `geopandas` for `feature.get_gdf()`"
+            (gpd,) = register_modules("geopandas")
 
             self._set_scale(scale)
 
             if what == "full":
+                from cartopy.io import shapereader
+
                 gdf = gpd.read_file(
                     shapereader.natural_earth(
                         resolution=self._scale, category=self._category, name=self._name
@@ -629,7 +642,7 @@ class NaturalEarth_features(object):
                         extent = self._m.get_extent(feature.crs)
                         feature.scaler.scale_from_extent(extent)
                     except:
-                        print("EOmaps: unable to determine extent")
+                        _log.error("EOmaps: unable to determine extent")
                         pass
                     geoms = list(feature.geometries())
                 elif what == "geoms":

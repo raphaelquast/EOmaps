@@ -160,8 +160,9 @@ class ClickCallbacks(QtWidgets.QFrame):
         self.setStyleSheet(
             """
             ClickCallbacks{
-                border: 1px solid rgb(200,200,200);
+                border: 0px solid rgb(200,200,200);
                 border-radius: 10px;
+                background-color: rgb(200,200,200);
                 };
             """
         )
@@ -304,23 +305,21 @@ class ClickCallbacks(QtWidgets.QFrame):
         # make sure we re-attach pick-callback on a layer change
         self.m.BM.on_layer(self.on_layer_change, persistent=True)
 
+        self.m._connect_signal("dataPlotted", self.populate_dropdown)
+        self.m._connect_signal("dataPlotted", self.update_buttons)
+
     def showEvent(self, event):
         self.widgetShown.emit()
 
     def identify_pick_map(self):
+        layers, _ = self.m.BM._get_layers_alphas()
+        layers.extend(("all", "inset_all"))
+
         pickm = list()
         for m in (self.m.parent, *self.m.parent._children):
-            if (
-                m.coll is not None
-                and m.ax == self.m.ax
-                and m.layer
-                in (
-                    "all",
-                    m.BM._bg_layer,
-                    *m.BM._bg_layer.split("|"),
-                )
-            ):
+            if m.coll is not None and m.ax == self.m.ax and m.layer in layers:
                 pickm.append(m)
+
         return pickm
 
     @pyqtSlot()
@@ -349,7 +348,7 @@ class ClickCallbacks(QtWidgets.QFrame):
             if self.cids.get(key, None) is not None:
                 self.attach_callback(key)
 
-    def populate_dropdown(self):
+    def populate_dropdown(self, *args, **kwargs):
         self.map_dropdown.clear()
 
         # the QAbstractItemView object that holds the dropdown-items
@@ -420,14 +419,30 @@ class ClickCallbacks(QtWidgets.QFrame):
                     val.setEnabled(True)
 
                 if self.cids.get(key, None) is not None:
-                    val.setStyleSheet("background-color : rgb(200,100,100);")
+                    val.setStyleSheet(
+                        "background-color : rgb(200,100,100);"
+                        "padding: 4px;"
+                        "border-radius : 4px;"
+                    )
                 else:
-                    val.setStyleSheet("background-color : rgba(200,100,100,50);")
+                    val.setStyleSheet(
+                        "background-color : rgba(200,100,100,50);"
+                        "padding: 4px;"
+                        "border-radius : 4px;"
+                    )
             else:
                 if self.cids.get(key, None) is not None:
-                    val.setStyleSheet("background-color : rgb(100,150,100);")
+                    val.setStyleSheet(
+                        "background-color : rgb(100,150,100);"
+                        "padding: 4px;"
+                        "border-radius : 4px;"
+                    )
                 else:
-                    val.setStyleSheet("background-color : rgba(100,150,100,50);")
+                    val.setStyleSheet(
+                        "background-color : rgba(100,150,100,50);"
+                        "padding: 4px;"
+                        "border-radius : 4px;"
+                    )
 
     def remove_callback(self, key):
         mcid = self.cids.get(key, None)

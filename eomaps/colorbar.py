@@ -1,33 +1,21 @@
-from matplotlib.gridspec import GridSpecFromSubplotSpec, SubplotSpec
+"""Interactive Colorbar."""
 
+import logging
+from functools import partial, lru_cache
+from textwrap import dedent
+import copy
+
+import numpy as np
+
+from matplotlib.gridspec import GridSpecFromSubplotSpec, SubplotSpec
 import matplotlib.transforms as mtransforms
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 from matplotlib.colors import LinearSegmentedColormap
 
-import numpy as np
-import copy
+from .helpers import pairwise, _TransformedBoundsLocator, register_modules
 
-from functools import partial, wraps
-from textwrap import dedent
-
-from .helpers import pairwise, _TransformedBoundsLocator
-
-
-ds, mpl_ext = None, None
-
-
-def _register_datashader():
-    global ds
-    global mpl_ext
-
-    try:
-        import datashader as ds
-        from datashader import mpl_ext
-    except ImportError:
-        return False
-
-    return True
+_log = logging.getLogger(__name__)
 
 
 def get_named_bins_formatter(bins, names, show_values=False):
@@ -70,6 +58,8 @@ def get_named_bins_formatter(bins, names, show_values=False):
 
 
 class ColorBar:
+    """Class to draw colorbars with a histogram on top."""
+
     def __init__(
         self,
         m,
@@ -113,7 +103,7 @@ class ColorBar:
               The axes of the Maps-object will be shrinked accordingly to make space
               for the colorbar.
             - 4-tuple (x0, y0, width, height):
-              Absolute position at which the colorbar should be placed in units.
+              Absolute position of the colorbar in relative figure-units (0-1).
               In this case, existing axes are NOT automatically re-positioned!
 
             Note: By default, multiple colorbars on different layers share their
@@ -234,7 +224,7 @@ class ColorBar:
 
         See Also
         --------
-        set_bin_labels:  Use custom names for classified colorbar bins.
+        ColorBar.set_bin_labels:  Use custom names for classified colorbar bins.
 
         Examples
         --------
@@ -296,7 +286,8 @@ class ColorBar:
         self._log = log
         self._out_of_range_vals = out_of_range_vals
 
-        kwargs["label"] = label
+        # kwargs["label"] = label
+
         self._kwargs = copy.deepcopy(kwargs)
 
         self._coll = self._m.coll
@@ -319,7 +310,7 @@ class ColorBar:
 
         self._set_data()
         self._setup_axes()
-
+        self.set_labels(label)
         if ylabel is not None:
             self.ax_cb_plot.set_ylabel(ylabel)
 
@@ -354,12 +345,35 @@ class ColorBar:
 
         if self._orientation == "horizontal":
             if cb_label:
-                self._cb_label = self.ax_cb.set_xlabel(cb_label, **kwargs)
+                if self._hist_size < 0.001:
+                    # label colorbar
+                    self.ax_cb_plot.set_xlabel("")
+                    label = self.ax_cb.set_xlabel(cb_label, **kwargs)
+                elif self._hist_size > 0.999:
+                    # label plot
+                    self.ax_cb_plot.set_xlabel(cb_label, **kwargs)
+                    self.ax_cb.set_xlabel("")
+                else:
+                    # label colorbar
+                    self.ax_cb_plot.set_xlabel("")
+                    label = self.ax_cb.set_xlabel(cb_label, **kwargs)
             if hist_label:
                 self._hist_label = self.ax_cb_plot.set_ylabel(hist_label, **kwargs)
         else:
             if cb_label:
-                self._cb_label = self.ax_cb.set_ylabel(cb_label, **kwargs)
+                if self._hist_size < 0.001:
+                    # label colorbar
+                    self.ax_cb_plot.set_ylabel("")
+                    label = self.ax_cb.set_ylabel(cb_label, **kwargs)
+                elif self._hist_size > 0.999:
+                    # label plot
+                    self.ax_cb_plot.set_ylabel(cb_label, **kwargs)
+                    self.ax_cb.set_xlabel("")
+                else:
+                    # label colorbar
+                    self.ax_cb_plot.set_ylabel("")
+                    label = self.ax_cb.set_ylabel(cb_label, **kwargs)
+
             if hist_label:
                 self._hist_label = self.ax_cb_plot.set_xlabel(hist_label, **kwargs)
 
@@ -397,6 +411,9 @@ class ColorBar:
         >>> cb.set_labels(hist_label="histogram count", fontsize=6, color="k")
 
         """
+
+        self._label_kwargs = {"cb_label": cb_label, "hist_label": hist_label, **kwargs}
+
         self._set_labels(cb_label=cb_label, hist_label=hist_label, **kwargs)
 
         if not self._dynamic_shade_indicator:
@@ -405,6 +422,7 @@ class ColorBar:
         else:
             self._m.BM.update()
 
+    @lru_cache()
     def _default_cb_tick_formatter(self, x, pos, precision=None):
         """
         A formatter to format the tick-labels of the colorbar for encoded datasets.
@@ -413,6 +431,7 @@ class ColorBar:
         # if precision=None the shortest representation of the number is used
         return np.format_float_positional(self._m._decode_values(x), precision)
 
+    @lru_cache()
     def _classified_cb_tick_formatter(self, x, pos, precision=None):
         """
         A formatter to format the tick-labels of the colorbar for classified datasets.
@@ -484,15 +503,27 @@ class ColorBar:
         else:
             self.ax_cb_plot.set_visible(False)  # to avoid singular matrix errors
 
-        if self.ax_cb.bbox.width > 1 and self.ax_cb.bbox.height > 1:
+        # avoid singular matrix errors caused by visible axes with 0 size
+        # when activating the layout editor
+        if self._hist_size > 0.999:
+            self.ax_cb.set_visible(False)  # to avoid singular matrix errors
+            self.ax_cb_plot.set_visible(True)
+            [i.set_visible(False) for i in self.ax_cb.patches]
+            [i.set_visible(False) for i in self.ax_cb.collections]
+            self.ax_cb_plot.tick_params(bottom=True, labelbottom=True)
+        elif self._hist_size < 0.001:
             self.ax_cb.set_visible(True)
+            self.ax_cb_plot.set_visible(False)  # to avoid singular matrix errors
             [i.set_visible(True) for i in self.ax_cb.patches]
             [i.set_visible(True) for i in self.ax_cb.collections]
         else:
-            self.ax_cb.set_visible(False)  # to avoid singular matrix errors
-            [i.set_visible(False) for i in self.ax_cb.patches]
-            [i.set_visible(False) for i in self.ax_cb.collections]
+            self.ax_cb.set_visible(True)
+            self.ax_cb_plot.set_visible(True)
+            self.ax_cb_plot.tick_params(bottom=False, labelbottom=False)
+            [i.set_visible(True) for i in self.ax_cb.patches]
+            [i.set_visible(True) for i in self.ax_cb.collections]
 
+        self.set_labels(**self._label_kwargs)
         # tag layer for refetch
         self._m.redraw(self._m.layer)
 
@@ -529,9 +560,11 @@ class ColorBar:
             return parent
 
     def _setup_axes(self):
-        horizontal = self._orientation == "horizontal"
-        add_hist = self._hist_size > 0.0001
+        zorder = 9999
 
+        horizontal = self._orientation == "horizontal"
+        hide_hist = self._hist_size < 0.0001
+        hide_axes = self._hist_size > 0.999
         # check if one of the parent colorbars has a colorbar, and if so,
         # use it to set the position of the colorbar.
         if self._inherit_position:
@@ -546,13 +579,13 @@ class ColorBar:
                     self._ax = self._m.f.add_subplot(
                         parent_subplotspec,
                         label="cb",
-                        zorder=9999,
+                        zorder=zorder,
                     )
                 else:
                     self._ax = self._m.f.add_axes(
                         self._parent_cb._ax.get_position(),
                         label="cb",
-                        zorder=9999,
+                        zorder=zorder,
                     )
 
                 parent_extend = getattr(
@@ -567,7 +600,7 @@ class ColorBar:
                         )
 
                     except Exception:
-                        print(
+                        _log.exception(
                             "EOmaps: unable to determine automatic extension arrow"
                             "size of parent colorbar."
                         )
@@ -598,7 +631,7 @@ class ColorBar:
                     self._ax = self._m.f.add_subplot(
                         gs[1, 0],
                         label="cb",
-                        zorder=9999,
+                        zorder=zorder,
                     )
                 else:
                     gs = GridSpecFromSubplotSpec(
@@ -612,13 +645,13 @@ class ColorBar:
                     self._ax = self._m.f.add_subplot(
                         gs[0, 1],
                         label="cb",
-                        zorder=9999,
+                        zorder=zorder,
                     )
             elif isinstance(self._pos, SubplotSpec):
                 self._ax = self._m.f.add_subplot(
                     self._pos,
                     label="cb",
-                    zorder=9999,
+                    zorder=zorder,
                 )
             elif isinstance(self._pos, (list, tuple)):
                 x0, y0, w, h = self._pos
@@ -627,7 +660,7 @@ class ColorBar:
                 bbox = mtransforms.Bbox(((x0, y0), (x1, y1)))
 
                 # the parent axes holding the 2 child-axes
-                self._ax = plt.Axes(self._m.f, bbox, label="cb", zorder=9999)
+                self._ax = plt.Axes(self._m.f, bbox, label="cb", zorder=zorder)
                 self._m.f.add_axes(self._ax)
 
         # make all spines, labels etc. invisible for the base-axis
@@ -637,14 +670,20 @@ class ColorBar:
         self.ax_cb = self._ax.figure.add_axes(
             self._ax.get_position(),
             label="EOmaps_cb",
-            zorder=9998,
+            zorder=zorder - 1,  # make zorder 1 lower than container axes for picking
         )
+
         # histogram axes
         self.ax_cb_plot = self._ax.figure.add_axes(
             self._ax.get_position(),
             label="EOmaps_cb_hist",
-            zorder=9998,
+            zorder=zorder - 1,  # make zorder 1 lower than container axes for picking
         )
+        # hide histogram and coorbar axes if they are 0 size
+        if hide_axes:
+            self.ax_cb.set_visible(False)
+        if hide_hist:
+            self.ax_cb_plot.set_visible(False)
 
         if self._inherit_position:
             # handle axis size in case parent colorbar has extension arrows
@@ -696,10 +735,6 @@ class ColorBar:
             else:
                 self.ax_cb_plot.set_xscale("linear")
 
-        # hide histogram axis if no histogram should be drawn
-        if not add_hist:
-            self.ax_cb_plot.set_visible(False)
-
         # add all axes as artists
         for a in self._axes:
             a.set_navigate(False)
@@ -723,7 +758,7 @@ class ColorBar:
             self._extend = self._parent_cb._extend
             # warn if provided extend behavior differs from the inherited behavior
             if self._extend != self._init_extend:
-                print(
+                _log.warning(
                     f"EOmaps Warning: m.add_colorbar(extend='{self._extend}') is "
                     "inherited from the parent colorbar! Explicitly set the 'extend' "
                     "behavior to silence this warning."
@@ -750,13 +785,13 @@ class ColorBar:
 
         dynamic_shade = False
         if self._dynamic_shade_indicator:
-            if _register_datashader() and isinstance(
-                self._coll, mpl_ext.ScalarDSArtist
-            ):
+            ds, mpl_ext = register_modules("datashader", "datashader.mpl_ext")
+
+            if all((ds, mpl_ext)) and isinstance(self._coll, mpl_ext.ScalarDSArtist):
                 dynamic_shade = True
             else:
-                print(
-                    "EOmaps: using 'dynamic_shade_indicator=True' is only possible "
+                _log.error(
+                    "EOmaps: Using 'dynamic_shade_indicator=True' is only possible "
                     "with 'shade' shapes (e.g. 'shade_raster' or 'shade_points'.\n"
                     "... creating a normal colorbar instead."
                 )
@@ -769,7 +804,7 @@ class ColorBar:
             else:
                 renorm = True
                 # TODO check this without requiring import of datashader!
-                # print(
+                # _log.error(
                 #     "EOmaps: Only dynamic colorbars are possible when using"
                 #     + f" '{aggname}' as datashader-aggregation reduction method "
                 #     + "...creating a 'dynamic_shade_indicator' colorbar instead."
@@ -927,7 +962,7 @@ class ColorBar:
         if self._vmin != self._vmax:
             limsetfunc(self._vmin, self._vmax)
         else:
-            print(
+            _log.error(
                 "EOMaps-Warning: Attempting to set identical upper and "
                 + "lower limits for the colorbar... limits will be ignored!"
             )
@@ -1085,8 +1120,8 @@ class ColorBar:
         self.ax_cb_plot.clear()
         self._plot_histogram()
 
-        if self._hist_label_kwargs:
-            self._set_labels(**self._hist_label_kwargs)
+        # if self._hist_label_kwargs:
+        #     self._set_labels(**self._hist_label_kwargs)
 
     def set_bin_labels(self, bins, names, tick_lines="center", show_values=False):
         """

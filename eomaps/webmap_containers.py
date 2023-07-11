@@ -1,29 +1,33 @@
+"""Collection of WebMap services."""
+
+import logging
 from functools import lru_cache
 from textwrap import dedent
-
 from types import SimpleNamespace
 
+_log = logging.getLogger(__name__)
 
-def combdoc(*args):
+
+def _combdoc(*args):
     """Combine docstrings."""
     return "\n".join(dedent(str(i)) for i in args)
 
 
 def _register_imports():
-    global _WebServiec_collection
-    global REST_API_services
-    global _xyz_tile_service
-    global _xyz_tile_service_nonearth
+    global _WebServiceCollection
+    global RestApiServices
+    global _XyzTileService
+    global _XyzTileServiceNonEarth
 
     from ._webmap import (
-        _WebServiec_collection,
-        REST_API_services,
-        _xyz_tile_service,
-        _xyz_tile_service_nonearth,
+        _WebServiceCollection,
+        RestApiServices,
+        _XyzTileService,
+        _XyzTileServiceNonEarth,
     )
 
 
-class wms_container(object):
+class WebMapContainer(object):
     """
     A collection of open-access WebMap services that can be added to the maps.
 
@@ -81,7 +85,7 @@ class wms_container(object):
             self._service_type = service_type
             self._fetched = False
 
-            # default layers (see REST_API_services for details)
+            # default layers (see RestApiServices for details)
             self._layers = {
                 "nitrogen",
                 "phh2o",
@@ -111,7 +115,7 @@ class wms_container(object):
             return object.__getattribute__(self, name)
 
         def _fetch_services(self):
-            print("EOmaps: fetching IRIS layers...")
+            _log.info("EOmaps: fetching IRIS layers...")
 
             import requests
             import json
@@ -129,7 +133,7 @@ class wms_container(object):
             found_layers = set()
             for i in _layers:
                 name = i["property"]
-                setattr(self, name, _WebServiec_collection(self._m, service_type="wms"))
+                setattr(self, name, _WebServiceCollection(self._m, service_type="wms"))
                 getattr(
                     self, name
                 )._url = f"https://maps.isric.org/mapserv?map=/map/{name}.map"
@@ -138,11 +142,11 @@ class wms_container(object):
 
             new_layers = found_layers - self._layers
             if len(new_layers) > 0:
-                print(f"EOmaps: ... found some new folders: {new_layers}")
+                _log.info(f"EOmaps: ... found some new folders: {new_layers}")
 
             invalid_layers = self._layers - found_layers
             if len(invalid_layers) > 0:
-                print(f"EOmaps: ... could not find the folders: {invalid_layers}")
+                _log.info(f"EOmaps: ... could not find the folders: {invalid_layers}")
             for i in invalid_layers:
                 delattr(self, i)
 
@@ -185,13 +189,13 @@ class wms_container(object):
         datasets and the journal article as in the following citation.
         """
         if self._m.parent._preferred_wms_service == "wms":
-            WMS = _WebServiec_collection(
+            WMS = _WebServiceCollection(
                 m=self._m,
                 service_type="wms",
                 url="https://services.terrascope.be/wms/v2",
             )
         elif self._m.parent._preferred_wms_service == "wmts":
-            WMS = _WebServiec_collection(
+            WMS = _WebServiceCollection(
                 m=self._m,
                 service_type="wmts",
                 url="https://services.terrascope.be/wmts/v2",
@@ -236,7 +240,7 @@ class wms_container(object):
         (check: https://www.gebco.net/ for full details)
 
         """
-        WMS = _WebServiec_collection(
+        WMS = _WebServiceCollection(
             m=self._m,
             service_type="wms",
             url="https://www.gebco.net/data_and_products/gebco_web_services/web_map_service/mapserv?request=getcapabilities&service=wms&version=1.1.1",
@@ -277,7 +281,7 @@ class wms_container(object):
         (check: https://gmrt.org/about/terms_of_use.php for full details)
 
         """
-        WMS = _WebServiec_collection(
+        WMS = _WebServiceCollection(
             m=self._m,
             service_type="wms",
             url="https://www.gmrt.org/services/mapserver/wms_merc?request=GetCapabilities&service=WMS&version=1.3.0",
@@ -302,7 +306,7 @@ class wms_container(object):
         (check: https://glad.earthengine.app/ for full details)
 
         """
-        WMS = _WebServiec_collection(
+        WMS = _WebServiceCollection(
             m=self._m,
             service_type="wms",
             url="https://glad.umd.edu/mapcache/?SERVICE=WMS",
@@ -343,7 +347,7 @@ class wms_container(object):
         if self._m._preferred_wms_service == "wms":
             WMS = self._NASA_GIBS(self._m)
         elif self._m._preferred_wms_service == "wmts":
-            WMS = _WebServiec_collection(
+            WMS = _WebServiceCollection(
                 m=self._m,
                 service_type="wmts",
                 url="https://gibs.earthdata.nasa.gov/wmts/epsg4326/all/1.0.0/WMTSCapabilities.xml",
@@ -360,7 +364,7 @@ class wms_container(object):
         @property
         @lru_cache()
         def EPSG_4326(self):
-            WMS = _WebServiec_collection(
+            WMS = _WebServiceCollection(
                 m=self._m,
                 service_type="wms",
                 url="https://gibs.earthdata.nasa.gov/wms/epsg4326/best/wms.cgi?SERVICE=WMS&REQUEST=GetCapabilities&VERSION=1.1.1",
@@ -371,7 +375,7 @@ class wms_container(object):
         @property
         @lru_cache()
         def EPSG_3857(self):
-            WMS = _WebServiec_collection(
+            WMS = _WebServiceCollection(
                 m=self._m,
                 service_type="wms",
                 url="https://gibs.earthdata.nasa.gov/wms/epsg3857/best/wms.cgi?SERVICE=WMS&REQUEST=GetCapabilities&VERSION=1.1.1",
@@ -382,7 +386,7 @@ class wms_container(object):
         @property
         @lru_cache()
         def EPSG_3413(self):
-            WMS = _WebServiec_collection(
+            WMS = _WebServiceCollection(
                 m=self._m,
                 service_type="wms",
                 url="https://gibs.earthdata.nasa.gov/wms/epsg3413/best/wms.cgi?SERVICE=WMS&REQUEST=GetCapabilities&VERSION=1.1.1",
@@ -393,7 +397,7 @@ class wms_container(object):
         @property
         @lru_cache()
         def EPSG_3031(self):
-            WMS = _WebServiec_collection(
+            WMS = _WebServiceCollection(
                 m=self._m,
                 service_type="wms",
                 url="https://gibs.earthdata.nasa.gov/wms/epsg3031/best/wms.cgi?SERVICE=WMS&REQUEST=GetCapabilities&VERSION=1.1.1",
@@ -472,12 +476,12 @@ class wms_container(object):
             def __init__(self, m):
                 self._m = m
 
-                self.default = _xyz_tile_service(
+                self.default = _XyzTileService(
                     self._m,
                     "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
                     name="OSM_default",
                 )
-                self.default.__doc__ = combdoc(
+                self.default.__doc__ = _combdoc(
                     """
                     OpenStreetMap's standard tile layer
                     https://www.openstreetmap.org/
@@ -491,12 +495,12 @@ class wms_container(object):
                     self.default.__call__.__doc__,
                 )
 
-                self.default_german = _xyz_tile_service(
+                self.default_german = _XyzTileService(
                     self._m,
                     "https://tile.openstreetmap.de/{z}/{x}/{y}.png",
                     name="OSM_default_german",
                 )
-                self.default_german.__doc__ = combdoc(
+                self.default_german.__doc__ = _combdoc(
                     """
                     German fork of OpenStreetMap's standard tile layer
                     https://www.openstreetmap.de/
@@ -510,12 +514,12 @@ class wms_container(object):
                     self.default_german.__call__.__doc__,
                 )
 
-                self.humanitarian = _xyz_tile_service(
+                self.humanitarian = _XyzTileService(
                     self._m,
                     "https://a.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png",
                     name="OSM_humanitarian",
                 )
-                self.humanitarian.__doc__ = combdoc(
+                self.humanitarian.__doc__ = _combdoc(
                     """
                     OpenStreetMap's Humanitarian style
 
@@ -543,13 +547,13 @@ class wms_container(object):
                     self.humanitarian.__call__.__doc__,
                 )
 
-                self.OpenTopoMap = _xyz_tile_service(
+                self.OpenTopoMap = _XyzTileService(
                     m=self._m,
                     url="https://c.tile.opentopomap.org/{z}/{x}/{y}.png",
                     maxzoom=16,
                     name="OSM_OpenTopoMap",
                 )
-                self.OpenTopoMap.__doc__ = combdoc(
+                self.OpenTopoMap.__doc__ = _combdoc(
                     """
                     A project aiming at rendering topographic maps from OSM
                     and SRTM data. The map style is similar to some official
@@ -565,13 +569,13 @@ class wms_container(object):
                     self.OpenTopoMap.__call__.__doc__,
                 )
 
-                self.OpenRiverboatMap = _xyz_tile_service(
+                self.OpenRiverboatMap = _XyzTileService(
                     m=self._m,
                     url="https://a.tile.openstreetmap.fr/openriverboatmap/{z}/{x}/{y}.png",
                     maxzoom=16,
                     name="OSM_OpenRiverboatMap",
                 )
-                self.OpenRiverboatMap.__doc__ = combdoc(
+                self.OpenRiverboatMap.__doc__ = _combdoc(
                     """
                     Open Riverboat Map plans to make an open source CartoCSS map style
                     of navigable waterways, on top of OpenStreetMap project.
@@ -592,13 +596,13 @@ class wms_container(object):
                     self.OpenRiverboatMap.__call__.__doc__,
                 )
 
-                self.OpenSeaMap = _xyz_tile_service(
+                self.OpenSeaMap = _XyzTileService(
                     m=self._m,
                     url="http://tiles.openseamap.org/seamark/{z}/{x}/{y}.png",
                     maxzoom=16,
                     name="OSM_OpenSeaMap",
                 )
-                self.OpenSeaMap.__doc__ = combdoc(
+                self.OpenSeaMap.__doc__ = _combdoc(
                     """
                     OpenSeaMap is an open source, worldwide project to create a free
                     nautical chart. There is a great need for freely accessible maps
@@ -624,13 +628,13 @@ class wms_container(object):
                     self.OpenSeaMap.__call__.__doc__,
                 )
 
-                self.CyclOSM = _xyz_tile_service(
+                self.CyclOSM = _XyzTileService(
                     m=self._m,
                     url="https://a.tile-cyclosm.openstreetmap.fr/cyclosm/{z}/{x}/{y}.png",
                     maxzoom=16,
                     name="CyclOSM",
                 )
-                self.CyclOSM.__doc__ = combdoc(
+                self.CyclOSM.__doc__ = _combdoc(
                     """
                     CyclOSM is a bicycle-oriented map built on top of OpenStreetMap data.
                     It aims at providing a beautiful and practical map for cyclists, no
@@ -654,14 +658,14 @@ class wms_container(object):
                     self.CyclOSM.__call__.__doc__,
                 )
 
-                self.CyclOSM_lite = _xyz_tile_service(
+                self.CyclOSM_lite = _XyzTileService(
                     m=self._m,
                     url="https://a.tile-cyclosm.openstreetmap.fr/cyclosm-lite/{z}/{x}/{y}.png",
                     maxzoom=16,
                     name="CyclOSM",
                 )
 
-                self.CyclOSM_lite.__doc__ = combdoc(
+                self.CyclOSM_lite.__doc__ = _combdoc(
                     """
                     CyclOSM is a bicycle-oriented map built on top of OpenStreetMap data.
                     It aims at providing a beautiful and practical map for cyclists, no
@@ -685,14 +689,14 @@ class wms_container(object):
                     self.CyclOSM_lite.__call__.__doc__,
                 )
 
-                self.OEPNV_public_transport = _xyz_tile_service(
+                self.OEPNV_public_transport = _XyzTileService(
                     m=self._m,
                     url="http://tile.memomaps.de/tilegen/{z}/{x}/{y}.png",
                     maxzoom=16,
                     name="CyclOSM",
                 )
 
-                self.OEPNV_public_transport.__doc__ = combdoc(
+                self.OEPNV_public_transport.__doc__ = _combdoc(
                     """
                     We display worldwide public transport facilities on a uniform map,
                     so that you can forget about browsing individual operators websites.
@@ -713,60 +717,60 @@ class wms_container(object):
                     self.OEPNV_public_transport.__call__.__doc__,
                 )
 
-                self.stamen_toner = _xyz_tile_service(
+                self.stamen_toner = _XyzTileService(
                     self._m,
                     "https://stamen-tiles.a.ssl.fastly.net/toner/{z}/{x}/{y}.png",
                     name="OSM_stamen_toner",
                 )
-                self.stamen_toner_lines = _xyz_tile_service(
+                self.stamen_toner_lines = _XyzTileService(
                     self._m,
                     "https://stamen-tiles.a.ssl.fastly.net/toner-lines/{z}/{x}/{y}.png",
                     name="OSM_stamen_toner_lines",
                 )
-                self.stamen_toner_background = _xyz_tile_service(
+                self.stamen_toner_background = _XyzTileService(
                     self._m,
                     "https://stamen-tiles.a.ssl.fastly.net/toner-background/{z}/{x}/{y}.png",
                     name="OSM_stamen_toner_background",
                 )
-                self.stamen_toner_lite = _xyz_tile_service(
+                self.stamen_toner_lite = _XyzTileService(
                     self._m,
                     "https://stamen-tiles.a.ssl.fastly.net/toner-lite/{z}/{x}/{y}.png",
                     name="OSM_stamen_toner_lite",
                 )
-                self.stamen_toner_hybrid = _xyz_tile_service(
+                self.stamen_toner_hybrid = _XyzTileService(
                     self._m,
                     "https://stamen-tiles.a.ssl.fastly.net/toner-hybrid/{z}/{x}/{y}.png",
                     name="OSM_stamen_toner_hybrid",
                 )
-                self.stamen_toner_labels = _xyz_tile_service(
+                self.stamen_toner_labels = _XyzTileService(
                     self._m,
                     "https://stamen-tiles.a.ssl.fastly.net/toner-labels/{z}/{x}/{y}.png",
                     name="OSM_stamen_toner_labels",
                 )
 
-                self.stamen_watercolor = _xyz_tile_service(
+                self.stamen_watercolor = _XyzTileService(
                     self._m,
                     "http://c.tile.stamen.com/watercolor/{z}/{x}/{y}.jpg",
                     name="OSM_stamen_watercolor",
                     maxzoom=18,
                 )
 
-                self.stamen_terrain = _xyz_tile_service(
+                self.stamen_terrain = _XyzTileService(
                     self._m,
                     "http://c.tile.stamen.com/terrain/{z}/{x}/{y}.jpg",
                     name="OSM_stamen_terrain",
                 )
-                self.stamen_terrain_lines = _xyz_tile_service(
+                self.stamen_terrain_lines = _XyzTileService(
                     self._m,
                     "http://c.tile.stamen.com/terrain-lines/{z}/{x}/{y}.jpg",
                     name="OSM_stamen_terrain_lines",
                 )
-                self.stamen_terrain_labels = _xyz_tile_service(
+                self.stamen_terrain_labels = _XyzTileService(
                     self._m,
                     "http://c.tile.stamen.com/terrain-labels/{z}/{x}/{y}.jpg",
                     name="OSM_stamen_terrain_labels",
                 )
-                self.stamen_terrain_background = _xyz_tile_service(
+                self.stamen_terrain_background = _XyzTileService(
                     self._m,
                     "http://c.tile.stamen.com/terrain-background/{z}/{x}/{y}.jpg",
                     name="OSM_stamen_terrain_background",
@@ -794,7 +798,7 @@ class wms_container(object):
                     attribution provided in the link above.
                     """
 
-                stamen_toner_doc = combdoc(
+                stamen_toner_doc = _combdoc(
                     """
                     **Stamen Toner**
 
@@ -804,7 +808,7 @@ class wms_container(object):
                     self.stamen_toner.__call__.__doc__,
                 )
 
-                stamen_terrain_doc = combdoc(
+                stamen_terrain_doc = _combdoc(
                     """
                     **Stamen Terrain**
 
@@ -815,7 +819,7 @@ class wms_container(object):
                     self.stamen_toner.__call__.__doc__,
                 )
 
-                stamen_watercolor_doc = combdoc(
+                stamen_watercolor_doc = _combdoc(
                     """
                     **Stamen Watercolor**
 
@@ -872,7 +876,7 @@ class wms_container(object):
                         "skating",
                     ]:
 
-                        srv = _xyz_tile_service(
+                        srv = _XyzTileService(
                             m,
                             (
                                 "https://tile.waymarkedtrails.org/"
@@ -884,7 +888,7 @@ class wms_container(object):
 
                         setattr(self, v, srv)
 
-                        getattr(self, v).__doc__ = combdoc(
+                        getattr(self, v).__doc__ = _combdoc(
                             (
                                 f"WaymarkedTrails {v} layer\n"
                                 "\n"
@@ -927,7 +931,7 @@ class wms_container(object):
                         "gauge",
                     ]:
 
-                        srv = _xyz_tile_service(
+                        srv = _XyzTileService(
                             m,
                             (
                                 "https://a.tiles.openrailwaymap.org/"
@@ -939,7 +943,7 @@ class wms_container(object):
 
                         setattr(self, v, srv)
 
-                        getattr(self, v).__doc__ = combdoc(
+                        getattr(self, v).__doc__ = _combdoc(
                             (
                                 f"OpenRailwayMap {v} layer\n"
                                 "\n"
@@ -989,7 +993,7 @@ class wms_container(object):
                         "rastertiles/voyager_labels_under",
                     ]:
 
-                        srv = _xyz_tile_service(
+                        srv = _XyzTileService(
                             m,
                             (
                                 "https://cartodb-basemaps-a.global.ssl.fastly.net/"
@@ -1003,7 +1007,7 @@ class wms_container(object):
 
                         setattr(self, name, srv)
 
-                        getattr(self, name).__doc__ = combdoc(
+                        getattr(self, name).__doc__ = _combdoc(
                             (
                                 f"CartoDB basemap {v} layer\n"
                                 "\n"
@@ -1019,12 +1023,12 @@ class wms_container(object):
         @property
         @lru_cache()
         def OSM_terrestis(self):
-            WMS = _WebServiec_collection(
+            WMS = _WebServiceCollection(
                 m=self._m,
                 service_type="wms",
                 url="https://ows.terrestris.de/osm/service?SERVICE=WMS&VERSION=1.1.1&REQUEST=GetCapabilities",
             )
-            WMS.__doc__ = combdoc(
+            WMS.__doc__ = _combdoc(
                 type(self).__doc__,
                 """
                 Note
@@ -1040,12 +1044,12 @@ class wms_container(object):
         @property
         @lru_cache()
         def OSM_mundialis(self):
-            WMS = _WebServiec_collection(
+            WMS = _WebServiceCollection(
                 m=self._m,
                 service_type="wms",
                 url="http://ows.mundialis.de/services/service?",
             )
-            WMS.__doc__ = combdoc(
+            WMS.__doc__ = _combdoc(
                 type(self).__doc__,
                 """
                 Note
@@ -1061,12 +1065,12 @@ class wms_container(object):
         @property
         @lru_cache()
         def OSM_wheregroup(self):
-            WMS = _WebServiec_collection(
+            WMS = _WebServiceCollection(
                 m=self._m,
                 service_type="wms",
                 url="https://osm-demo.wheregroup.com/service?REQUEST=GetCapabilities",
             )
-            WMS.__doc__ = combdoc(
+            WMS.__doc__ = _combdoc(
                 type(self).__doc__,
                 """
                 Note
@@ -1085,12 +1089,12 @@ class wms_container(object):
         @property
         @lru_cache()
         def OSM_wms(self):
-            WMS = _WebServiec_collection(
+            WMS = _WebServiceCollection(
                 m=self._m,
                 service_type="wms",
                 url=r"https://maps.heigit.org/osm-wms/service?REQUEST=GetCapabilities&SERVICE=WMS",
             )
-            WMS.__doc__ = combdoc(
+            WMS.__doc__ = _combdoc(
                 type(self).__doc__,
                 """
                 The first version of osm-wms.de was put online at 13th of February
@@ -1137,12 +1141,12 @@ class wms_container(object):
         @property
         @lru_cache()
         def OSM_landuse(self):
-            WMS = _WebServiec_collection(
+            WMS = _WebServiceCollection(
                 m=self._m,
                 service_type="wms",
                 url=r"https://maps.heigit.org/osmlanduse/service?REQUEST=GetCapabilities",
             )
-            WMS.__doc__ = combdoc(
+            WMS.__doc__ = _combdoc(
                 type(self).__doc__,
                 """
                 OSM Landuse Landcover is a WebGIS application to explore the
@@ -1229,13 +1233,13 @@ class wms_container(object):
             European Environment Agency discomap Image collection
             https://discomap.eea.europa.eu/Index/
             """
-            API = REST_API_services(
+            API = RestApiServices(
                 m=self._m,
                 url="https://image.discomap.eea.europa.eu/arcgis/rest/services",
                 name="EEA_REST_Image",
                 service_type="wms",
             )
-            API.__doc__ = combdoc(
+            API.__doc__ = _combdoc(
                 type(self).__doc__,
                 """
                 ... access to the 'Image' subfolder
@@ -1262,13 +1266,13 @@ class wms_container(object):
             European Environment Agency discomap Land collection
             https://discomap.eea.europa.eu/Index/
             """
-            API = REST_API_services(
+            API = RestApiServices(
                 m=self._m,
                 url="https://land.discomap.eea.europa.eu/arcgis/rest/services",
                 name="EEA_REST_Land",
                 service_type="wms",
             )
-            API.__doc__ = combdoc(
+            API.__doc__ = _combdoc(
                 type(self).__doc__,
                 """
                 ... access to the 'Land' subfolder
@@ -1295,13 +1299,13 @@ class wms_container(object):
             European Environment Agency discomap Climate collection
             https://discomap.eea.europa.eu/Index/
             """
-            API = REST_API_services(
+            API = RestApiServices(
                 m=self._m,
                 url="https://climate.discomap.eea.europa.eu/arcgis/rest/services",
                 name="EEA_REST_Climate",
                 service_type="wms",
             )
-            API.__doc__ = combdoc(
+            API.__doc__ = _combdoc(
                 type(self).__doc__,
                 """
                 ... access to the 'Climate' subfolder
@@ -1328,13 +1332,13 @@ class wms_container(object):
             European Environment Agency discomap Bio collection
             https://discomap.eea.europa.eu/Index/
             """
-            API = REST_API_services(
+            API = RestApiServices(
                 m=self._m,
                 url="https://bio.discomap.eea.europa.eu/arcgis/rest/services",
                 name="EEA_REST_Bio",
                 service_type="wms",
             )
-            API.__doc__ = combdoc(
+            API.__doc__ = _combdoc(
                 type(self).__doc__,
                 """
                 ... access to the 'Bio' subfolder
@@ -1361,13 +1365,13 @@ class wms_container(object):
             European Environment Agency discomap Copernicus collection
             https://discomap.eea.europa.eu/Index/
             """
-            API = REST_API_services(
+            API = RestApiServices(
                 m=self._m,
                 url="https://copernicus.discomap.eea.europa.eu/arcgis/rest/services",
                 name="EEA_REST_Copernicus",
                 service_type="wms",
             )
-            API.__doc__ = combdoc(
+            API.__doc__ = _combdoc(
                 type(self).__doc__,
                 """
                 ... access to the 'Copernicus' subfolder
@@ -1394,13 +1398,13 @@ class wms_container(object):
             European Environment Agency discomap Water collection
             https://discomap.eea.europa.eu/Index/
             """
-            API = REST_API_services(
+            API = RestApiServices(
                 m=self._m,
                 url="https://water.discomap.eea.europa.eu/arcgis/rest/services",
                 name="EEA_REST_Water",
                 service_type="wms",
             )
-            API.__doc__ = combdoc(
+            API.__doc__ = _combdoc(
                 type(self).__doc__,
                 """
                 ... access to the 'Water' subfolder
@@ -1427,13 +1431,13 @@ class wms_container(object):
             European Environment Agency discomap SOER collection
             https://discomap.eea.europa.eu/Index/
             """
-            API = REST_API_services(
+            API = RestApiServices(
                 m=self._m,
                 url="https://soer.discomap.eea.europa.eu/arcgis/rest/services",
                 name="EEA_REST_SOER",
                 service_type="wms",
             )
-            API.__doc__ = combdoc(
+            API.__doc__ = _combdoc(
                 type(self).__doc__,
                 """
                 ... access to the 'SOER' subfolder
@@ -1460,13 +1464,13 @@ class wms_container(object):
             European Environment Agency discomap MARATLAS collection
             https://discomap.eea.europa.eu/Index/
             """
-            API = REST_API_services(
+            API = RestApiServices(
                 m=self._m,
                 url="https://maratlas.discomap.eea.europa.eu/arcgis/rest/services",
                 name="EEA_REST_SOER",
                 service_type="wms",
             )
-            API.__doc__ = combdoc(
+            API.__doc__ = _combdoc(
                 type(self).__doc__,
                 """
                 ... access to the 'MARATLAS' subfolder
@@ -1493,13 +1497,13 @@ class wms_container(object):
             European Environment Agency discomap MARINE collection
             https://discomap.eea.europa.eu/Index/
             """
-            API = REST_API_services(
+            API = RestApiServices(
                 m=self._m,
                 url="https://marine.discomap.eea.europa.eu/arcgis/rest/services",
                 name="EEA_REST_SOER",
                 service_type="wms",
             )
-            API.__doc__ = combdoc(
+            API.__doc__ = _combdoc(
                 type(self).__doc__,
                 """
                 ... access to the 'MARINE' subfolder
@@ -1565,25 +1569,25 @@ class wms_container(object):
 
         @property
         def vv(self):
-            WMS = _xyz_tile_service(
+            WMS = _XyzTileService(
                 self._m,
                 lambda x, y, z: f"https://s1map.eodc.eu/vv/{z}/{x}/{2**z-1-y}.png",
                 13,
                 name="S1GBM_vv",
             )
 
-            WMS.__doc__ = combdoc("Polarization: VV", type(self).__doc__)
+            WMS.__doc__ = _combdoc("Polarization: VV", type(self).__doc__)
             return WMS
 
         @property
         def vh(self):
-            WMS = _xyz_tile_service(
+            WMS = _XyzTileService(
                 self._m,
                 lambda x, y, z: f"https://s1map.eodc.eu/vh/{z}/{x}/{2**z-1-y}.png",
                 13,
                 name="S1GBM_vh",
             )
-            WMS.__doc__ = combdoc("Polarization: VH", type(self).__doc__)
+            WMS.__doc__ = _combdoc("Polarization: VH", type(self).__doc__)
             return WMS
 
     class _OpenPlanetary:
@@ -1652,13 +1656,13 @@ class wms_container(object):
                         self._addlayer(v, url, f"OPM_Moon_{v}", docstring)
 
                 def _addlayer(self, name, url, srv_name, docstring, maxzoom=19):
-                    srv = _xyz_tile_service_nonearth(
+                    srv = _XyzTileServiceNonEarth(
                         self._m, url, name=srv_name, maxzoom=maxzoom
                     )
 
                     setattr(self, name, srv)
 
-                    getattr(self, name).__doc__ = combdoc(
+                    getattr(self, name).__doc__ = _combdoc(
                         docstring,
                         getattr(self, name).__call__.__doc__,
                     )
@@ -1844,13 +1848,13 @@ class wms_container(object):
                     )
 
                 def _addlayer(self, name, url, srv_name, docstring, maxzoom=19):
-                    srv = _xyz_tile_service_nonearth(
+                    srv = _XyzTileServiceNonEarth(
                         self._m, url, name=srv_name, maxzoom=maxzoom
                     )
 
                     setattr(self, name, srv)
 
-                    getattr(self, name).__doc__ = combdoc(
+                    getattr(self, name).__doc__ = _combdoc(
                         docstring,
                         getattr(self, name).__call__.__doc__,
                     )
@@ -1864,6 +1868,12 @@ class wms_container(object):
     OpenPlanetary.__doc__ = _OpenPlanetary.__doc__
 
     class _GOOGLE_layers:
+        """
+        WebMaps provided by GOOGLE
+        https://www.google.com
+
+        """
+
         def __init__(self, m):
             self._m = m
             self.add_layer = self._add_layer(m)
@@ -1902,11 +1912,11 @@ class wms_container(object):
                     self._addlayer(v, url, f"GOOGLE_{v}", docstring)
 
             def _addlayer(self, name, url, srv_name, docstring, maxzoom=19):
-                srv = _xyz_tile_service(self._m, url, name=srv_name, maxzoom=maxzoom)
+                srv = _XyzTileService(self._m, url, name=srv_name, maxzoom=maxzoom)
 
                 setattr(self, name, srv)
 
-                getattr(self, name).__doc__ = combdoc(
+                getattr(self, name).__doc__ = _combdoc(
                     docstring,
                     getattr(self, name).__call__.__doc__,
                 )
@@ -1948,7 +1958,7 @@ class wms_container(object):
         (check: https://s2maps.eu/ for full details)
 
         """
-        WMS = _WebServiec_collection(
+        WMS = _WebServiceCollection(
             m=self._m,
             service_type="wms",
             url="https://tiles.maps.eox.at/wms?service=wms&request=getcapabilities",
@@ -1987,7 +1997,7 @@ class wms_container(object):
 
         (check: https://apps.ecmwf.int/datasets/licences/copernicus/ for full details)
         """
-        WMS = _WebServiec_collection(
+        WMS = _WebServiceCollection(
             m=self._m,
             service_type="wms",
             url="https://eccharts.ecmwf.int/wms/?token=public",
@@ -2031,13 +2041,13 @@ class wms_container(object):
         (check: https://geoservice.dlr.de/web/about for full details)
         """
 
-        WMS = _WebServiec_collection(
+        WMS = _WebServiceCollection(
             m=self._m,
             service_type="wms",
             url="https://geoservice.dlr.de/eoc/basemap/wms?SERVICE=WMS&REQUEST=GetCapabilities",
         )
 
-        WMS.__doc__ = type(self).CAMS.__doc__
+        WMS.__doc__ = type(self).DLR_basemaps.__doc__
         return WMS
 
     @property
@@ -2056,7 +2066,7 @@ class wms_container(object):
 
         """
 
-        API = REST_API_services(
+        API = RestApiServices(
             m=self._m,
             url="http://server.arcgisonline.com/arcgis/rest/services",
             name="ERSI_ArcGIS_REST",
@@ -2074,6 +2084,61 @@ class wms_container(object):
 
         return API
 
+    class _Austria:
+        # container for WebMap services specific to Austria
+        def __init__(self, m):
+            _register_imports()
+
+            self._m = m
+
+        @property
+        @lru_cache()
+        def AT_basemap(self):
+            """
+            Basemap for Austria
+            https://basemap.at/
+
+            Note
+            ----
+            **LICENSE-info (without any warranty for correctness!!)**
+
+            (check: https://basemap.at/#lizenz for full details)
+
+            basemap.at ist gemäß der Open Government Data Österreich Lizenz
+            CC-BY 4.0 sowohl für private als auch kommerzielle Zwecke frei
+            sowie entgeltfrei nutzbar.
+            """
+            WMTS = _WebServiceCollection(
+                m=self._m,
+                service_type="wmts",
+                url="http://maps.wien.gv.at/basemap/1.0.0/WMTSCapabilities.xml",
+            )
+            WMTS.__doc__ = type(self).AT_basemap.__doc__
+            return WMTS
+
+        @property
+        @lru_cache()
+        def Wien_basemap(self):
+            """
+            Basemaps for the city of Vienna (Austria)
+            https://www.wien.gv.at
+
+            Note
+            ----
+            **LICENSE-info (without any warranty for correctness!!)**
+
+            check: https://www.data.gv.at/katalog/dataset/stadt-wien_webmaptileservicewmtswien
+
+            Most services are under CC-BY 4.0
+            """
+            WMTS = _WebServiceCollection(
+                m=self._m,
+                service_type="wmts",
+                url="http://maps.wien.gv.at/wmts/1.0.0/WMTSCapabilities.xml",
+            )
+            WMTS.__doc__ = type(self).Wien_basemap.__doc__
+            return WMTS
+
     @property
     @lru_cache()
     def Austria(self):
@@ -2084,7 +2149,7 @@ class wms_container(object):
             - AT_basemap: Basemaps for whole of austria
             - Wien: Basemaps for the city of Vienna
         """
-        WMS = Austria(self._m)
+        WMS = self._Austria(self._m)
         WMS.__doc__ = type(self).Austria.__doc__
         return WMS
 
@@ -2139,7 +2204,7 @@ class wms_container(object):
 
         Returns
         -------
-        service : _WebServiec_collection
+        service : _WebServiceCollection
             An object that behaves just like `m.add_wms.<service>`
             and provides easy-access to available WMS layers
 
@@ -2191,76 +2256,22 @@ class wms_container(object):
         """
         if service_type == "xyz":
             if rest_API:
-                print("EOmaps: rest_API=True is not supported for service_type='xyz'")
+                _log.warning(
+                    "EOmaps: rest_API=True is not supported for service_type='xyz'"
+                )
 
-            s = _xyz_tile_service(self._m, url, maxzoom=maxzoom)
+            s = _XyzTileService(self._m, url, maxzoom=maxzoom)
             service = SimpleNamespace(add_layer=SimpleNamespace(xyz_layer=s))
 
         else:
             if rest_API:
-                service = REST_API_services(
+                service = RestApiServices(
                     m=self._m,
                     url=url,
                     name="custom_service",
                     service_type=service_type,
                 )
             else:
-                service = _WebServiec_collection(self._m, service_type="wms", url=url)
+                service = _WebServiceCollection(self._m, service_type="wms", url=url)
 
         return service
-
-
-class Austria:
-    # container for WebMap services specific to Austria
-    def __init__(self, m):
-        _register_imports()
-
-        self._m = m
-
-    @property
-    @lru_cache()
-    def AT_basemap(self):
-        """
-        Basemap for Austria
-        https://basemap.at/
-
-        Note
-        ----
-        **LICENSE-info (without any warranty for correctness!!)**
-
-        (check: https://basemap.at/#lizenz for full details)
-
-        basemap.at ist gemäß der Open Government Data Österreich Lizenz
-        CC-BY 4.0 sowohl für private als auch kommerzielle Zwecke frei
-        sowie entgeltfrei nutzbar.
-        """
-        WMTS = _WebServiec_collection(
-            m=self._m,
-            service_type="wmts",
-            url="http://maps.wien.gv.at/basemap/1.0.0/WMTSCapabilities.xml",
-        )
-        WMTS.__doc__ = type(self).AT_basemap.__doc__
-        return WMTS
-
-    @property
-    @lru_cache()
-    def Wien_basemap(self):
-        """
-        Basemaps for the city of Vienna (Austria)
-        https://www.wien.gv.at
-
-        Note
-        ----
-        **LICENSE-info (without any warranty for correctness!!)**
-
-        check: https://www.data.gv.at/katalog/dataset/stadt-wien_webmaptileservicewmtswien
-
-        Most services are under CC-BY 4.0
-        """
-        WMTS = _WebServiec_collection(
-            m=self._m,
-            service_type="wmts",
-            url="http://maps.wien.gv.at/wmts/1.0.0/WMTSCapabilities.xml",
-        )
-        WMTS.__doc__ = type(self).Wien_basemap.__doc__
-        return WMTS

@@ -1,3 +1,5 @@
+"""Collection of utility classes (layer sliders, layer selectors etc.)"""
+
 from matplotlib.legend import DraggableLegend
 from matplotlib.lines import Line2D
 from matplotlib.widgets import Slider
@@ -224,9 +226,8 @@ class LayerSelector(SelectorButtons):
 
         See Also
         --------
-
-        - m.util.layer_slider() : A slider widget to switch between layers.
-        - m.show_layer(): Set the currently visible layer.
+        utilities.layer_slider : A slider widget to switch between layers.
+        Maps.show_layer: Set the currently visible layer.
 
         """
 
@@ -570,7 +571,6 @@ class utilities:
     Methods
     -------
     layer_selector: A legend-like widget to switch between layers
-
     layer_slider: A slider widget to switch between layers
 
     """

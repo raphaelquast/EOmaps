@@ -1,6 +1,19 @@
 from PyQt5 import QtWidgets
-from PyQt5.QtCore import Qt, pyqtSignal, pyqtSlot, QSize
+from PyQt5.QtCore import Qt, pyqtSignal, pyqtSlot, QSize, QObject
 from PyQt5.QtGui import QKeySequence
+
+from .base import AlwaysOnTopWindow
+from .widgets.peek import PeekTabs
+from .widgets.editor import ArtistEditor
+from .widgets.wms import AddWMSMenuButton
+from .widgets.save import SaveFileWidget
+from .widgets.files import OpenFileTabs
+from .widgets.utils import get_cmap_pixmaps
+from .widgets.extent import SetExtentToLocation
+from .widgets.click_callbacks import ClickCallbacks
+
+from .widgets.editor import LayerTabBar
+from .widgets.layer import AutoUpdateLayerMenuButton
 
 # TODO make sure a QApplication has been instantiated
 app = QtWidgets.QApplication.instance()
@@ -9,25 +22,7 @@ if app is None:
     app = QtWidgets.QApplication([])
 
 
-from .base import transparentWindow
-from .widgets.peek import PeekTabs
-from .widgets.editor import ArtistEditor
-from .widgets.wms import AddWMSMenuButton
-from .widgets.save import SaveFileWidget
-from .widgets.files import OpenFileTabs, OpenDataStartTab
-from .widgets.utils import get_cmap_pixmaps
-from .widgets.extent import SetExtentToLocation
-from .widgets.click_callbacks import ClickCallbacks
-
-from .widgets.editor import LayerTabBar
-
-
-class OpenFileButton(QtWidgets.QPushButton):
-    def enterEvent(self, e):
-        OpenDataStartTab.enterEvent(self, e)
-
-
-class Tab1(QtWidgets.QWidget):
+class CompareTab(QtWidgets.QWidget):
     def __init__(self, *args, m=None, **kwargs):
         super().__init__(*args, **kwargs)
         self.m = m
@@ -35,7 +30,7 @@ class Tab1(QtWidgets.QWidget):
         peektabs = PeekTabs(m=self.m)
 
         setextent = SetExtentToLocation(m=self.m)
-        save = SaveFileWidget(m=self.m)
+        self.save_widget = SaveFileWidget(m=self.m)
 
         # -------------
         self.layer_tabs = LayerTabBar(self.m, populate=True)
@@ -46,39 +41,37 @@ class Tab1(QtWidgets.QWidget):
         self.layer_tabs.setTabsClosable(False)
         # -------------
 
-        click_cbs = ClickCallbacks(m=self.m)
+        self.click_cbs = ClickCallbacks(m=self.m)
 
+        # add wms button
         try:
             addwms = AddWMSMenuButton(m=self.m, new_layer=True)
             addwms.wmsLayerCreated.connect(
                 self.layer_tabs.repopulate_and_activate_current
             )
         except:
-            addwms = QtWidgets.QPushButton("WMS services unavailable")
+            addwms = None
 
-        self.open_file_button = OpenFileButton("Open File")
-        self.open_file_button.setFixedSize(self.open_file_button.sizeHint())
+        self.layer_button = AutoUpdateLayerMenuButton(m=self.m)
 
-        l2 = QtWidgets.QHBoxLayout()
-        l2.addWidget(addwms)
-        l2.addWidget(self.open_file_button)
-        l2.addStretch(1)
-        l2.addWidget(setextent)
+        options_layout = QtWidgets.QHBoxLayout()
+        if addwms:
+            options_layout.addWidget(addwms)
+        options_layout.addStretch(1)
+        options_layout.addWidget(setextent)
 
         layer_tab_layout = QtWidgets.QHBoxLayout()
         layer_tab_layout.setAlignment(Qt.AlignLeft)
-        layer_tab_layout.addWidget(QtWidgets.QLabel("<b>Layers: </b>"))
+        layer_tab_layout.addWidget(self.layer_button)
         layer_tab_layout.addWidget(self.layer_tabs)
 
         layout = QtWidgets.QVBoxLayout()
         layout.addWidget(peektabs)
-        layout.addStretch(1)
-        layout.addWidget(click_cbs)
-        layout.addStretch(1)
-        layout.addLayout(l2)
+        layout.addWidget(self.click_cbs)
+        layout.addLayout(options_layout)
         layout.addStretch(1)
         layout.addLayout(layer_tab_layout)
-        layout.addWidget(save)
+        layout.addWidget(self.save_widget)
 
         self.setLayout(layout)
 
@@ -88,31 +81,58 @@ class ControlTabs(QtWidgets.QTabWidget):
         super().__init__(*args, **kwargs)
         self.m = m
 
-        self.tab1 = Tab1(m=self.m)
+        self.tab_compare = CompareTab(m=self.m)
         self.tab_open = OpenFileTabs(m=self.m)
-
-        # connect the open-file-button to the button from the "Open Files" tab
-        self.tab1.open_file_button.clicked.connect(self.trigger_open_file_button)
-
         self.tab_edit = ArtistEditor(m=self.m)
 
-        self.addTab(self.tab1, "Compare")
+        self.addTab(self.tab_compare, "Compare")
         self.addTab(self.tab_edit, "Edit")
-        self.addTab(self.tab_open, "Open Files")
+        self.addTab(self.tab_open, "Data")
 
         # re-populate artists on tab-change
         self.currentChanged.connect(self.tabchanged)
 
         self.setAcceptDrops(True)
 
-    @pyqtSlot()
-    def trigger_open_file_button(self):
-        self.tab_open.starttab.open_button.clicked.emit()
+        self.setStyleSheet(
+            """
+            ControlTabs {
+                font-size: 10pt;
+                font-weight: bold;
+            }
+
+            QTabWidget::pane {
+              border: 0px;
+              top:0px;
+              background: rgb(240, 240, 240);
+              border-radius: 10px;
+            }
+
+            QTabBar::tab {
+              background: rgb(240, 240, 240);
+              border: 0px;
+              padding: 3px;
+              padding-bottom: 6px;
+              padding-left: 6px;
+              padding-right: 6px;
+              margin-left: 10px;
+              margin-bottom: -2px;
+              border-radius: 4px;
+            }
+
+            QTabBar::tab:selected {
+              background: rgb(200, 200, 200);
+              border:1px solid rgb(150, 150, 150);
+              margin-bottom: 2px;
+            }
+            """
+        )
 
     @pyqtSlot()
     def tabchanged(self):
-        if self.currentWidget() == self.tab1:
-            self.tab1.layer_tabs.repopulate_and_activate_current()
+
+        if self.currentWidget() == self.tab_compare:
+            self.tab_compare.layer_tabs.repopulate_and_activate_current()
 
         elif self.currentWidget() == self.tab_edit:
             self.tab_edit.artist_tabs.repopulate_and_activate_current()
@@ -127,13 +147,10 @@ class ControlTabs(QtWidgets.QTabWidget):
         self.tab_open.dropEvent(e)
 
 
-class MenuWindow(transparentWindow):
-
-    cmapsChanged = pyqtSignal()
-
+class MenuWindow(AlwaysOnTopWindow):
     def __init__(self, *args, m=None, **kwargs):
 
-        # assign m before calling the init of the transparentWindow
+        # assign m before calling the init of the AlwaysOnTopWindow
         # to show the layer-selector!
         self.m = m
 
@@ -143,23 +160,8 @@ class MenuWindow(transparentWindow):
 
         super().__init__(*args, m=self.m, **kwargs)
 
-        # clear the colormaps-dropdown pixmap cache if the colormaps have changed
-        # (the pyqtSignal is emmited by Maps-objects if a new colormap is registered)
-        self.cmapsChanged.connect(self.clear_pixmap_cache)
-
         self.tabs = ControlTabs(m=self.m)
         self.tabs.setMouseTracking(True)
-
-        self.setStyleSheet(
-            """QToolTip {
-            font-family: "SansSerif";
-            font-size:10;
-            background-color: rgb(53, 53, 53);
-            color: white;
-            border: none;
-            }"""
-        )
-        self.cb_transparentQ()
 
         menu_layout = QtWidgets.QVBoxLayout()
         menu_layout.addWidget(self.tabs)
@@ -167,6 +169,8 @@ class MenuWindow(transparentWindow):
         menu_widget.setLayout(menu_layout)
 
         statusbar = QtWidgets.QStatusBar(self)
+        statusbar.addPermanentWidget(QtWidgets.QLabel(f"EOmaps v{self.m.__version__}"))
+
         self.setStatusBar(statusbar)
 
         # prevent context-menu's from appearing to avoid the "hide toolbar"
@@ -177,6 +181,10 @@ class MenuWindow(transparentWindow):
 
         # sh = self.sizeHint()
         # self.resize(int(sh.width() * 1.35), sh.height())
+
+        # clear the colormaps-dropdown pixmap cache if the colormaps have changed
+        # (the pyqtSignal is emmited by Maps-objects if a new colormap is registered)
+        self.m._connect_signal("cmapsChanged", self.clear_pixmap_cache)
 
     def show(self):
         super().show()

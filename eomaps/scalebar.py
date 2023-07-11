@@ -1,7 +1,8 @@
-from .helpers import pairwise
+"""Interactive scalebar."""
+
+import logging
 from collections import OrderedDict
 from functools import lru_cache
-import warnings
 
 import numpy as np
 
@@ -12,7 +13,11 @@ from matplotlib.transforms import Affine2D
 from matplotlib.font_manager import FontProperties
 from matplotlib.colors import to_hex
 
+from .helpers import pairwise
+
 _picked_scalebars = set()
+
+_log = logging.getLogger(__name__)
 
 
 class ScaleBar:
@@ -284,6 +289,7 @@ class ScaleBar:
             if return_str:
                 return s
         except ImportError:
+            _log.debug("Error during code formatting", exc_info=True)
             print(s)
             if return_str:
                 return s
@@ -503,7 +509,7 @@ class ScaleBar:
 
         See Also
         --------
-        set_n : Set the number of segments to use.
+        ScaleBar.set_n : Set the number of segments to use.
 
         """
         self._scale = scale
@@ -520,7 +526,7 @@ class ScaleBar:
 
         See Also
         --------
-        set_scale : Set the length of the scalebar segments.
+        ScaleBar.set_scale : Set the length of the scalebar segments.
 
         """
         self._n = n
@@ -545,15 +551,11 @@ class ScaleBar:
 
         See Also
         --------
-        set_scale : Set a fixed length of the scalebar segments.
-
-        set_n : Set the number of segments to use.
-
-        set_patch_props : Set style properties of the scalebar frame.
-
-        set_label_props : Set style properties of the labels.
-
-        set_line_props : Set style properties of the lines between scalebar and labels.
+        ScaleBar.set_scale : Set a fixed length of the scalebar segments.
+        ScaleBar.set_n : Set the number of segments to use.
+        ScaleBar.set_patch_props : Set style properties of the scalebar frame.
+        ScaleBar.set_label_props : Set style properties of the labels.
+        ScaleBar.set_line_props : Set style of the lines between scalebar and labels.
 
         """
         self._set_scale_props(width=width, colors=colors, **kwargs)
@@ -561,30 +563,6 @@ class ScaleBar:
         self._update(BM_update=True)
 
     def _set_scale_props(self, width=None, colors=None, **kwargs):
-        if "n" in kwargs:
-            warnings.warn(
-                "EOmaps: Setting the number of scalebar segments ('n') via the "
-                "`scale_props` is depreciated and will raise an error in the next "
-                "major release! \n"
-                "Use `s = m.add_scalebar(n=...)` or `s.set_n(...)` instead! ",
-                FutureWarning,
-                stacklevel=4,
-            )
-            self._n = kwargs.pop("n")
-            if hasattr(self, "_lon"):
-                self._redraw_minitxt()
-
-        if "scale" in kwargs:
-            warnings.warn(
-                "EOmaps: Setting the length of the scalebar segments ('scale') via the "
-                "`scale_props` is depreciated and will raise an error in the next major "
-                " release! \n"
-                "Use `s = m.add_scalebar(scale=...)` or `s.set_scale(...)` instead! ",
-                FutureWarning,
-                stacklevel=4,
-            )
-            self._scale = kwargs.pop("scale")
-
         if len(kwargs) > 0:
             raise TypeError(f"{list(kwargs)} are not allowed as 'scale_props' kwargs.")
 
@@ -614,11 +592,9 @@ class ScaleBar:
 
         See Also
         --------
-        set_scale_props : Set style properties of the scale.
-
-        set_label_props : Set style properties of the labels.
-
-        set_line_props : Set style properties of the lines between scalebar and labels.
+        ScaleBar.set_scale_props : Set style of the scale.
+        ScaleBar.set_label_props : Set style of the labels.
+        ScaleBar.set_line_props : Set style of the lines between scalebar and labels.
 
         """
         for key in kwargs:
@@ -662,11 +638,9 @@ class ScaleBar:
 
         See Also
         --------
-        set_scale_props : Set style properties of the scale.
-
-        set_patch_props : Set style properties of the scalebar frame.
-
-        set_label_props : Set style properties of the labels.
+        ScaleBar.set_scale_props : Set style of the scale.
+        ScaleBar.set_patch_props : Set style of the scalebar frame.
+        ScaleBar.set_label_props : Set style of the labels.
 
         """
         for key in kwargs:
@@ -735,11 +709,9 @@ class ScaleBar:
 
         See Also
         --------
-        set_scale_props : Set style properties of the scale.
-
-        set_patch_props : Set style properties of the scalebar frame.
-
-        set_line_props : Set style properties of the lines between scalebar and labels.
+        ScaleBar.set_scale_props : Set style of the scale.
+        ScaleBar.set_patch_props : Set style of the scalebar frame.
+        ScaleBar.set_line_props : Set style of the lines between scalebar and labels.
 
         """
         for key in kwargs:
@@ -1443,7 +1415,7 @@ class ScaleBar:
                 event.xdata, event.ydata
             )
         except Exception:
-            print("EOmaps: Unable to position scalebar.")
+            _log.info("EOmaps: Unable to position scalebar.")
             return
 
         self._update(lon=lon + ox, lat=lat + oy, BM_update=True)
@@ -1472,7 +1444,7 @@ class ScaleBar:
                     0.99,
                 )
             else:
-                print(
+                _log.warning(
                     "EOmaps: The scale of the scalebar is fixed! "
                     "Use s.set_scale(None) to use autoscaling!"
                 )

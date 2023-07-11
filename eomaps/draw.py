@@ -1,8 +1,7 @@
 """
-A class to draw shapes on maps created with EOmaps
+Functionalities to draw shapes on maps created with EOmaps.
 
 Known Issues:
--------------
 
 It can happen that geopandas silently ignores the crs when writing shapefiles
 (in case WKT2 strings are required to represent the crs)
@@ -12,34 +11,22 @@ It can happen that geopandas silently ignores the crs when writing shapefiles
 https://github.com/geopandas/geopandas/issues/2387
 
 """
+
+import logging
 from contextlib import contextmanager
 
 import numpy as np
 import matplotlib.pyplot as plt
 
-import eomaps._shapes as eoshp
+from .shapes import Shapes
+from .helpers import register_modules
 
-gpd = None
-pd = None
-shapely_Polygon = None
-
-
-def _register_geopandas():
-    global pd
-    global gpd
-    global shapely_Polygon
-    try:
-        import geopandas as gpd
-        import pandas as pd
-        from shapely.geometry import Polygon as shapely_Polygon
-    except ImportError:
-        return False
-
-    return True
+_log = logging.getLogger(__name__)
 
 
 @contextmanager
 def autoscale_turned_off(ax=None):
+    """Contextmanager to revert axis-limits."""
     ax = ax or plt.gca()
     lims = [ax.get_xlim(), ax.get_ylim()]
     yield
@@ -51,6 +38,8 @@ def autoscale_turned_off(ax=None):
 
 
 class ShapeDrawer:
+    """Base-class for drawing shapes on a map."""
+
     def __init__(self, m, layer=None, dynamic=True):
         """
         Base-class for drawing shapes on a map.
@@ -68,6 +57,11 @@ class ShapeDrawer:
             the background after the draw is finished.
             If False, the shapes are added as background-artists.
         """
+        global gpd, pd, sh_geom
+        gpd, pd, sh_geom = register_modules(
+            "geopandas", "pandas", "shapely.geometry", raise_exception=False
+        )
+        self._can_save = all((gpd, pd, sh_geom))
 
         self._m = m
 
@@ -86,7 +80,7 @@ class ShapeDrawer:
         else:
             self._crs = self._m.crs_plot.to_wkt()
 
-        if _register_geopandas():
+        if gpd:
             self.gdf = gpd.GeoDataFrame(geometry=[], crs=self._crs)
             ShapeDrawer.save_shapes.__doc__ = gpd.GeoDataFrame.to_file.__doc__
         else:
@@ -128,8 +122,9 @@ class ShapeDrawer:
     @property
     def _background(self):
         # always use the currently active background as draw-background
+        # (and make sure to cache it)
         layer = self._m.BM._get_showlayer_name(self._m.BM._bg_layer)
-        return self._m.BM._bg_layers.get(layer, None)
+        return self._m.BM._get_background(layer, cache=True)
 
     @_active_drawer.setter
     def _active_drawer(self, val):
@@ -182,6 +177,9 @@ class ShapeDrawer:
         """
         self._m.cb.execute_callbacks(True)
 
+        if cb is None:
+            self._m._emit_signal("drawAborted")
+
         active_drawer = self._active_drawer
         if active_drawer is None:
             return
@@ -200,12 +198,16 @@ class ShapeDrawer:
             try:
                 cb()
             except Exception:
-                print("EOmaps: There was a problem while executing a draw-callback!")
+                _log.exception(
+                    "EOmaps: There was a problem while executing a draw-callback!"
+                )
 
         active_drawer._clicks.clear()
 
         self._m.BM.update()
         self._active_drawer = None
+
+        self._m._emit_signal("drawFinished")
 
     def save_shapes(self, filename, **kwargs):
         """
@@ -222,14 +224,14 @@ class ShapeDrawer:
         if len(self.gdf) > 0:
             self.gdf.to_file(filename, **kwargs)
         else:
-            print("EOmaps: There are no polygons to save!")
+            _log.error("EOmaps: There are no polygons to save!")
 
     def remove_last_shape(self):
         """
         Remove the most recently plotted polygon from the map.
         """
         if len(self._artists) == 0:
-            print("EOmaps: There is no shape to remove!")
+            _log.error("EOmaps: There is no shape to remove!")
             return
 
         ID = list(self._artists)[-1]
@@ -240,7 +242,7 @@ class ShapeDrawer:
             self._m.BM.remove_bg_artist(a)
         a.remove()
 
-        if _register_geopandas():
+        if self._can_save:
             self.gdf = self.gdf.drop(ID)
 
         for cb in self._on_poly_remove:
@@ -281,6 +283,7 @@ class ShapeDrawer:
         )
 
     def redraw(self, blit=True, *args):
+        """Trigger re-drawing shapes."""
         # NOTE: If a drawer is active, this function is also called on any ordinary
         # draw-event (e.g. zoom/pan/resize) to keep the indicators visible.
         # see "m.BM.on_draw()"
@@ -352,10 +355,6 @@ class ShapeDrawer:
         manager) selects a point.
         """
 
-        # make sure all active drawings are finished before starting a new one
-        self._active_drawer._finish_drawing()
-        self._active_drawer = self
-
         canvas = self._m.BM.canvas
         # self.fetch_bg()
 
@@ -365,7 +364,7 @@ class ShapeDrawer:
             self._init_draw_line()
 
             if event.name == "close_event":
-                self._finish_drawing(cb=cb)
+                self._finish_drawing()
                 return
 
             if (canvas.toolbar is not None) and canvas.toolbar.mode != "":
@@ -523,10 +522,6 @@ class ShapeDrawer:
         manager) selects a point.
         """
 
-        # make sure all active drawings are finished before starting a new one
-        self._active_drawer._finish_drawing()
-        self._active_drawer = self
-
         canvas = self._m.BM.canvas
         # self.fetch_bg()
         self._m.cb.execute_callbacks(False)
@@ -551,15 +546,6 @@ class ShapeDrawer:
                         self._pointer.set_data([], [])
 
                     movecb(event, self._clicks)
-
-                artists = (
-                    i for i in (self._shape_indicator, self._line, self._pointer) if i
-                )
-                if self._dynamic:
-                    # draw all previously drawn shapes as well
-                    artists = (*artists, *self._artists.values())
-
-                self._m.BM.blit_artists(artists, bg=self._background)
                 return
 
             is_button = event.name == "button_press_event"
@@ -645,6 +631,12 @@ class ShapeDrawer:
         def cb():
             self._polygon(**kwargs)
 
+        # make sure all active drawings are finished before starting a new one
+        self._active_drawer._finish_drawing()
+        self._active_drawer = self
+
+        self._m._emit_signal("drawStarted", "Polygon")
+
         self._ginput(-1, timeout=-1, draw_on_drag=draw_on_drag, cb=cb)
 
     def _polygon(self, **kwargs):
@@ -664,8 +656,8 @@ class ShapeDrawer:
                 ID = max(self._artists) + 1 if self._artists else 0
                 self._artists[ID] = ph
 
-            if _register_geopandas():
-                gdf = gpd.GeoDataFrame(index=[ID], geometry=[shapely_Polygon(pts)])
+            if self._can_save:
+                gdf = gpd.GeoDataFrame(index=[ID], geometry=[sh_geom.Polygon(pts)])
                 gdf = gdf.set_crs(crs=self._crs)
                 self.gdf = pd.concat([self.gdf, gdf])
 
@@ -703,7 +695,7 @@ class ShapeDrawer:
 
                 r = np.sqrt((x - pts[0][0]) ** 2 + (y - pts[0][1]) ** 2)
 
-                pts = eoshp.shapes._ellipses(self._m)._get_ellipse_points(
+                pts = Shapes._Ellipses(self._m)._get_ellipse_points(
                     np.array([pts[0][0]]),
                     np.array([pts[0][1]]),
                     "out",
@@ -714,11 +706,23 @@ class ShapeDrawer:
                 self._shape_indicator.set_xy(np.column_stack((pts[0][0], pts[1][0])))
 
                 artists = (self._shape_indicator, self._line)
+
                 if self._dynamic:
                     # draw all previously drawn shapes as well
                     artists = (*artists, *self._artists.values())
 
                 self._m.BM.blit_artists(artists, bg=self._background)
+            else:
+                if self._pointer is not None:
+                    self._m.BM.blit_artists(
+                        (*self._artists.values(), self._pointer), bg=self._background
+                    )
+
+        # make sure all active drawings are finished before starting a new one
+        self._active_drawer._finish_drawing()
+        self._active_drawer = self
+
+        self._m._emit_signal("drawStarted", "Circle")
 
         self._ginput2(2, timeout=-1, draw_on_drag=True, movecb=movecb, cb=cb)
 
@@ -728,7 +732,7 @@ class ShapeDrawer:
             pts = np.asarray(pts)
 
             r = np.sqrt(sum((pts[1] - pts[0]) ** 2))
-            pts = eoshp.shapes._ellipses(self._m)._get_ellipse_points(
+            pts = Shapes._Ellipses(self._m)._get_ellipse_points(
                 np.array([pts[0][0]]), np.array([pts[0][1]]), "out", [r, r], "out", 100
             )
 
@@ -744,9 +748,9 @@ class ShapeDrawer:
                 ID = max(self._artists) + 1 if self._artists else 0
                 self._artists[ID] = ph
 
-            if _register_geopandas():
+            if self._can_save:
                 pts = np.column_stack((pts[0][0], pts[1][0]))
-                gdf = gpd.GeoDataFrame(index=[ID], geometry=[shapely_Polygon(pts)])
+                gdf = gpd.GeoDataFrame(index=[ID], geometry=[sh_geom.Polygon(pts)])
                 gdf = gdf.set_crs(crs=self._crs)
                 self.gdf = pd.concat([self.gdf, gdf])
 
@@ -782,7 +786,7 @@ class ShapeDrawer:
                     return
 
                 r = abs(x - pts[0][0]), abs(y - pts[0][1])
-                pts = eoshp.shapes._rectangles(self._m)._get_rectangle_verts(
+                pts = Shapes._Rectangles(self._m)._get_rectangle_verts(
                     np.array([pts[0][0]]), np.array([pts[0][1]]), "out", r, "out", 50
                 )[0][0]
 
@@ -794,6 +798,17 @@ class ShapeDrawer:
                     artists = (*artists, *self._artists.values())
 
                 self._m.BM.blit_artists(artists, bg=self._background)
+            else:
+                if self._pointer is not None:
+                    self._m.BM.blit_artists(
+                        (*self._artists.values(), self._pointer), bg=self._background
+                    )
+
+        # make sure all active drawings are finished before starting a new one
+        self._active_drawer._finish_drawing()
+        self._active_drawer = self
+
+        self._m._emit_signal("drawStarted", "Rectangle")
 
         self._ginput2(2, timeout=-1, draw_on_drag=True, movecb=movecb, cb=cb)
 
@@ -802,7 +817,7 @@ class ShapeDrawer:
         if pts is not None and len(pts) == 2:
             r = abs(pts[1][0] - pts[0][0]), abs(pts[1][1] - pts[0][1])
 
-            pts = eoshp.shapes._rectangles(self._m)._get_rectangle_verts(
+            pts = Shapes._Rectangles(self._m)._get_rectangle_verts(
                 np.array([pts[0][0]]), np.array([pts[0][1]]), "out", r, "out", 50
             )[0][0]
 
@@ -818,8 +833,8 @@ class ShapeDrawer:
                 ID = max(self._artists) + 1 if self._artists else 0
                 self._artists[ID] = ph
 
-            if _register_geopandas():
-                gdf = gpd.GeoDataFrame(index=[ID], geometry=[shapely_Polygon(pts)])
+            if self._can_save:
+                gdf = gpd.GeoDataFrame(index=[ID], geometry=[sh_geom.Polygon(pts)])
                 gdf = gdf.set_crs(crs=self._crs)
                 self.gdf = pd.concat([self.gdf, gdf])
 

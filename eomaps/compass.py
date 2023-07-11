@@ -1,3 +1,7 @@
+"""Interactive Compass (or North Arrow)."""
+
+import logging
+
 import numpy as np
 
 from matplotlib.collections import PolyCollection
@@ -5,6 +9,8 @@ from matplotlib.textpath import TextPath
 from matplotlib.patches import PathPatch, CirclePolygon
 from matplotlib.offsetbox import AuxTransformBox
 import matplotlib.transforms as transforms
+
+_log = logging.getLogger(__name__)
 
 
 class Compass:
@@ -256,15 +262,15 @@ class Compass:
         try:
             ang = -np.arctan2(x[1] - x[0], y[1] - y[0])
         except Exception:
-            print("EOmaps: could not add scalebar at the desired location")
+            _log.error("EOmaps: Unable to add a compass at the desired location.")
             return
 
         if np.isnan(ang):
             if not self._ignore_invalid_angles:
                 if self._last_ang != self._ang:
-                    print(
+                    _log.error(
                         "EOmaps: Compass rotation-angle could not be determined! "
-                        f"... using last found angle: {np.rad2deg(self._ang):.2f}"
+                        f"... using angle: {np.rad2deg(self._ang):.2f}"
                     )
                     patch = self._artist.get_children()[0]
                     self._patch_ec = patch.get_edgecolor()
@@ -289,9 +295,16 @@ class Compass:
         r = transforms.Affine2D().rotate(ang)
         # apply the scale-factor with respect to the current figure dpi to keep the
         # relative size of the north-arrow on dpi-changes!
-        s = transforms.Affine2D().scale(self._scale * self._m.f.dpi / self._init_dpi)
+        s = transforms.Affine2D().scale(
+            self._scale
+        )  # * self._m.f.dpi / self._init_dpi)
         t = transforms.Affine2D().translate(*self._m.ax.transData.transform(pos))
         trans = r + s + t
+
+        # cycle position once through transFigure to ensure correct positioning
+        # of the compass for agg exports (png, jpeg.. pixel-based) and
+        # svg/pdf based exports (point-based)
+        trans = trans + self._m.f.transFigure.inverted() + self._m.f.transFigure
         return trans
 
     def _on_motion(self, evt):

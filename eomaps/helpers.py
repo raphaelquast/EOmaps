@@ -1,11 +1,14 @@
 """a collection of useful helper-functions."""
+
+import logging
 from itertools import tee
 import re
 import sys
 from itertools import chain
 from contextlib import contextmanager, ExitStack
+from importlib import import_module
 from textwrap import indent, dedent
-from functools import wraps
+from functools import wraps, lru_cache
 from pathlib import Path
 import json
 import warnings
@@ -17,7 +20,48 @@ from matplotlib.colors import LinearSegmentedColormap, ListedColormap
 from matplotlib.transforms import Bbox, TransformedBbox
 from matplotlib.axis import XAxis, YAxis
 from matplotlib.spines import Spine
-from matplotlib.text import Text
+
+_log = logging.getLogger(__name__)
+
+
+def _deprecated(message):
+    def deprecated_decorator(func):
+        def deprecated_func(*args, **kwargs):
+            warnings.warn(
+                f"EOmaps: '{func.__name__}' is deprecated and will be removed "
+                f"in upcoming releases. {message}",
+                category=DeprecationWarning,
+                stacklevel=2,
+            )
+            warnings.simplefilter("default", DeprecationWarning)
+
+            return func(*args, **kwargs)
+
+        return deprecated_func
+
+    return deprecated_decorator
+
+
+@lru_cache()
+def _do_import_module(name):
+    return import_module(name)
+
+
+def register_modules(*names, raise_exception=True):
+    """Lazy-loading for optional dependencies."""
+    modules = []
+    for name in names:
+        try:
+            modules.append(_do_import_module(name))
+        except ImportError as ex:
+            if raise_exception:
+                raise ImportError(
+                    f"EOmaps: Missing required dependency: {name} \n {ex}"
+                )
+            else:
+                modules.append(None)
+    return modules
+
 
 # class copied from matplotlib.axes
 class _TransformedBoundsLocator:
@@ -111,6 +155,26 @@ def cmap_alpha(cmap, alpha, interpolate=False, name="new_cmap"):
 # a simple progressbar
 # taken from https://stackoverflow.com/a/34482761/9703451
 def progressbar(it, prefix="", size=60, file=sys.stdout):
+    """
+    A (very) simple progressbar generator.
+
+    Parameters
+    ----------
+    it : iter
+        The iterator for which a progressbr should be shown.
+    prefix : str, optional
+        Prefix for the output. The default is "".
+    size : int, optional
+        The size of the progressbar (in characters). The default is 60.
+    file : filehandle, optional
+        The file-handle to write to. The default is sys.stdout.
+
+    Yields
+    ------
+    item :
+        Consecutive items from the iterator.
+
+    """
     count = len(it)
 
     def show(j):
@@ -181,7 +245,9 @@ def _add_to_docstring(prefix=None, suffix=None, insert=None):
                         )
                         doc = "\n".join(docsplit)
                     except ValueError:
-                        print(f"EOmaps: Unable to update docstring for {f.__name__}")
+                        _log.debug(
+                            f"EOmaps: Unable to update docstring for {f.__name__}"
+                        )
 
             if prefix is not None:
                 doc = prefix + "\n" + doc
@@ -191,16 +257,18 @@ def _add_to_docstring(prefix=None, suffix=None, insert=None):
             inner.__doc__ = doc
             return inner
         except Exception:
-            print(f"EOmaps: Unable to update docstring for {f.__name__}")
+            _log.debug(f"EOmaps: Unable to update docstring for {f.__name__}")
             return f
 
     return decorator
 
 
-class searchtree:
+class SearchTree:
+    """Class to perform fast nearest-neighbour queries."""
+
     def __init__(self, m):
         """
-        Nearest-neighbour search.
+        Class to perform fast nearest-neighbour queries.
 
         Parameters
         ----------
@@ -211,11 +279,9 @@ class searchtree:
         # set starting pick-distance to 50 times the radius
         self.set_search_radius("50")
 
-        self._misses = 0
-
     @property
     def d(self):
-        """Side-length of the search-rectangle (in units of the plot-crs)"""
+        """Side-length of the search-rectangle (in units of the plot-crs)."""
         return self._d
 
     def set_search_radius(self, r):
@@ -239,24 +305,28 @@ class searchtree:
               used if possible and else np.inf is used.
 
             The default is "50" (e.g. 50 times the pixel-radius).
+
         """
-
         self._search_radius = r
-
         if isinstance(r, str):
             # evaluate an appropriate pick-distance
-            if getattr(self._m.shape, "radius_crs", None) != "out":
+            if getattr(self._m.shape, "radius_crs", None) == "out":
+                radius = self._m.shape.radius
+            else:
                 try:
-                    radius = self._m.set_shape._estimate_radius(self._m, "out", np.max)
+                    if self._m.get_crs("in") == self._m.get_crs(self._m._crs_plot):
+                        radius = self._m.shape.radius
+                    else:
+                        radius = self._m.set_shape._estimate_radius(
+                            self._m, "out", np.max
+                        )
                 except AssertionError:
-                    print(
+                    _log.error(
                         "EOmaps: Unable to estimate search-radius based on data."
                         "Defaulting to `np.inf`. "
                         "See `m.cb.pick.set_props(search_radius=...)` for more details!"
                     )
                     radius = [np.inf]
-            else:
-                radius = self._m.shape.radius
 
             self._d = np.max(radius) * float(self._search_radius)
         elif isinstance(r, (int, float, np.number)):
@@ -438,31 +508,14 @@ class searchtree:
                     )[:k]
                 ]
         else:
-            # show a warning if no points are found in the search area
-            if self._misses < 3:
-                self._misses += 1
-            else:
-                text = "Found no data here...\n Increase search_radius?"
-                # TODO fix cleanup of temporary artists!!
-                self._m.add_annotation(
-                    xy=x,
-                    permanent=False,
-                    text=text,
-                    xytext=(0.98, 0.98),
-                    textcoords=self._m.ax.transAxes,
-                    horizontalalignment="right",
-                    verticalalignment="top",
-                    arrowprops=None,
-                    fontsize=7,
-                    bbox=dict(ec="r", fc=(1, 0.9, 0.9, 0.5), lw=0.25, boxstyle="round"),
-                )
-
             i = None
 
         return i
 
 
 class LayoutEditor:
+    """Class to handle interactive re-positioning of figure-objects."""
+
     def __init__(self, m, modifier="alt+d", cb_modifier="control"):
         self.modifier = modifier
         self.cb_modifier = cb_modifier
@@ -482,6 +535,7 @@ class LayoutEditor:
         self._reattach_pick_cb = False
 
         self.f.canvas.mpl_connect("key_press_event", self.cb_key_press)
+        self.f.canvas.mpl_connect("resize_event", self._on_resize)
 
         # the snap-to-grid interval (0 means no snapping)
         self._snap_id = 5
@@ -499,6 +553,55 @@ class LayoutEditor:
         self._max_hist_steps = 1000
         self._history = list()
         self._history_undone = list()
+
+        self._current_bg = None
+
+        self._info_text = None
+        self._info_text_hidden = False
+
+    def add_info_text(self):
+        self._info_text_hidden = False
+
+        a = self.m.f.text(
+            0.72,
+            0.98,
+            (
+                "LayoutEditor Controls:\n\n"
+                "0 - 9:  Snap-grid spacing\n"
+                "SHIFT:  Multi-select\n"
+                "P:      Print to console\n"
+                "ESCAPE (or ALT + L): Exit\n"
+                "\n"
+                "ARROW-KEYS:   Move\n"
+                "SCROLL (+/-): Resize\n"
+                "  H:    horizontal\n"
+                "  V:    vertical\n"
+                "  ctrl: histogram"
+                "\n\n(right-click to hide info)"
+            ),
+            transform=self.m.f.transFigure,
+            ha="left",
+            va="top",
+            fontsize=min(self.m.f.bbox.width * 72 / self.m.f.dpi / 60, 12),
+            bbox=dict(
+                boxstyle="round", facecolor=".8", edgecolor="k", lw=0.5, alpha=0.9
+            ),
+            zorder=1e6,
+            fontfamily="monospace",
+        )
+        return a
+
+    def _update_info_text(self):
+        if getattr(self, "_info_text", None) is not None:
+            self._info_text.set_fontsize(
+                min(self.m.f.bbox.width * 72 / self.m.f.dpi / 60, 15)
+            )
+
+    def _on_resize(self, *args, **kwargs):
+        # update snap-grid on resize
+        if self.modifier_pressed:
+            self._add_snap_grid()
+            self._update_info_text()
 
     @property
     def modifier_pressed(self):
@@ -694,7 +797,6 @@ class LayoutEditor:
 
     def cb_release(self, event):
         self._set_startpos(event)
-        self._remove_snap_grid()
 
     def cb_pick(self, event):
         if not self.modifier_pressed:
@@ -702,19 +804,33 @@ class LayoutEditor:
         if (self.f.canvas.toolbar is not None) and self.f.canvas.toolbar.mode != "":
             return False
 
+        # toggle info-text visibility on left-click
+        if event.button == 3:
+            if getattr(self, "_info_text", None) is not None:
+                vis = not self._info_text.get_visible()
+                self._info_text.set_visible(vis)
+                self._info_text_hidden = not vis
+
         eventax = event.inaxes
 
         if eventax not in self.axes:
             # if no axes is clicked "unpick" previously picked axes
             if len(self._ax_picked) + len(self._cb_picked) == 0:
-                # if there was nothing picked there's nothing to do...
+                # if there was nothing picked there's nothing to do
+                # except updating the info-text visibility
+
+                if getattr(self, "_info_text", None) is not None:
+                    self.blit_artists()
+
                 return
 
             self._ax_picked = []
             self._cb_picked = []
             self._m_picked = []
             self._color_axes()
-            self.m.redraw()
+            self._remove_snap_grid()
+            self.fetch_current_background()
+            self.blit_artists()
             return
 
         if self._shift_pressed:
@@ -763,14 +879,36 @@ class LayoutEditor:
                         self._cb_picked = []
                         self._ax_picked.append(eventax)
 
-                    self._show_snap_grid()
+                    self._add_snap_grid()
 
             else:
-                self._show_snap_grid()
+                self._add_snap_grid()
 
-        self._color_axes()
         self._set_startpos(event)
-        self.m.redraw()
+        self._color_axes()
+        self.fetch_current_background()
+        self.blit_artists()
+
+    def fetch_current_background(self):
+        # make sure blank background has been fetched
+        self.m.BM._do_fetch_blank()
+
+        with ExitStack() as stack:
+            for ax in self._ax_picked:
+                stack.enter_context(ax._cm_set(visible=False))
+
+            for cb in self._cb_picked:
+                stack.enter_context(cb.ax_cb._cm_set(visible=False))
+                stack.enter_context(cb.ax_cb_plot._cm_set(visible=False))
+
+            self.m.BM.blit_artists(self.axes, self.m.BM._blank_bg, False)
+
+            grid = getattr(self, "_snap_grid_artist", None)
+            if grid is not None:
+                self.m.BM.blit_artists([grid], None, False)
+
+            self.m.BM.canvas.blit()
+            self._current_bg = self.m.BM.canvas.copy_from_bbox(self.m.f.bbox)
 
     def cb_move_with_key(self, event):
         if not self.modifier_pressed:
@@ -789,9 +927,9 @@ class LayoutEditor:
             bbox = self._get_move_with_key_bbox(cb._ax, event.key)
             cb.set_position(bbox)
 
-        self._color_axes()
-        self.m.redraw()
         self._add_to_history()
+        self._color_axes()
+        self.blit_artists()
 
     def cb_move(self, event):
         if (self.f.canvas.toolbar is not None) and self.f.canvas.toolbar.mode != "":
@@ -817,8 +955,20 @@ class LayoutEditor:
             bbox = self._get_move_bbox(cb._ax, event.x, event.y)
             cb.set_position(bbox)
 
-        self.m.redraw()
         self._add_to_history()
+        self._color_axes()
+        self.blit_artists()
+
+    def blit_artists(self):
+        artists = [*self._ax_picked]
+        for cb in self._cb_picked:
+            artists.append(cb.ax_cb)
+            artists.append(cb.ax_cb_plot)
+
+        if getattr(self, "_info_text", None) is not None:
+            artists.append(self._info_text)
+
+        self.m.BM.blit_artists(artists, self._current_bg)
 
     def cb_scroll(self, event):
         if (self.f.canvas.toolbar is not None) and self.f.canvas.toolbar.mode != "":
@@ -850,16 +1000,13 @@ class LayoutEditor:
                 if resize_bbox is not None:
                     cb.set_position(resize_bbox)
 
-        self._color_axes()
-        self.m.redraw()
         self._add_to_history()
+        # self._color_axes()
+        self.blit_artists()
 
     def cb_key_press(self, event):
         # release shift key on every keypress
         self._shift_pressed = False
-
-        if (self.f.canvas.toolbar is not None) and self.f.canvas.toolbar.mode != "":
-            return False
 
         if (event.key == self.modifier) and (not self.modifier_pressed):
             self._make_draggable()
@@ -869,6 +1016,13 @@ class LayoutEditor:
         ):
             self._undo_draggable()
             return
+        elif (event.key.lower() == "p") and (self.modifier_pressed):
+            s = "\nlayout = {\n    "
+            s += "\n    ".join(
+                f'"{key}": {val},' for key, val in self.get_layout().items()
+            )
+            s += "\n}\n"
+            print(s)
         elif (event.key.lower() == "q") and (self.modifier_pressed):
             print(
                 "\n##########################\n\n"
@@ -915,7 +1069,9 @@ class LayoutEditor:
         # assign snaps with keys 0-9
         if event.key in map(str, range(10)):
             self._snap_id = int(event.key)
-            self._show_snap_grid()
+            self._add_snap_grid()
+            self.fetch_current_background()
+            self.blit_artists()
 
         # assign snaps with keys 0-9
         if event.key in ["+", "-", "ctrl++", "ctrl+-"]:
@@ -949,9 +1105,24 @@ class LayoutEditor:
         return snap
 
     def _make_draggable(self, filepath=None):
+        # Uncheck avtive pan/zoom actions of the matplotlib toolbar.
+        # use a try-except block to avoid issues with ipympl in jupyter notebooks
+        # (see https://github.com/matplotlib/ipympl/issues/530#issue-1780919042)
+        try:
+            toolbar = getattr(self.m.BM.canvas, "toolbar", None)
+            if toolbar is not None:
+                for key in ["pan", "zoom"]:
+                    val = toolbar._actions.get(key, None)
+                    if val is not None and val.isCheckable() and val.isChecked():
+                        val.trigger()
+        except AttributeError:
+            pass
+
         self._filepath = filepath
         self.modifier_pressed = True
-        print("EOmaps: Layout Editor activated! (press 'esc' to exit and 'q' for info)")
+        _log.info(
+            "EOmaps: Layout Editor activated! (press 'esc' to exit " "and 'q' for info)"
+        )
 
         self._history.clear()
         self._history_undone.clear()
@@ -988,27 +1159,21 @@ class LayoutEditor:
             ax.set_frame_on(True)
 
             for child in ax.get_children():
-                for prop in [
-                    "facecolor",
+                revert_props = [
                     "edgecolor",
                     "linewidth",
                     "linestyle",
                     "alpha",
                     "animated",
                     "visible",
-                ]:
-                    if hasattr(child, f"set_{prop}") and hasattr(child, f"get_{prop}"):
-                        self._revert_props.append(
-                            (
-                                getattr(child, f"set_{prop}"),
-                                getattr(child, f"get_{prop}")(),
-                            )
-                        )
+                ]
+                self._add_revert_props(child, *revert_props)
 
                 if isinstance(child, Spine) and not cbaxQ:
                     # make sure spines are visible (and re-drawn on draw)
                     child.set_animated(False)
                     child.set_visible(True)
+
                 elif (
                     ax not in self.maxes
                     and showXY
@@ -1017,21 +1182,48 @@ class LayoutEditor:
                     # keep all tick labels etc. of normal axes and colorbars visible
                     child.set_animated(False)
                     child.set_visible(True)
+
                 elif child is ax.patch and not cbaxQ:
+                    # only reset facecolors for axes-patches to avoid issues with
+                    # black spines (TODO check why this happens!)
+                    self._add_revert_props(child, "facecolor")
+
                     # make sure patches are visible (and re-drawn on draw)
                     child.set_visible(True)
                     child.set_facecolor("w")
                     child.set_alpha(0.75)  # for overlapping axes
+
                 else:
                     # make all other childs invisible (to avoid drawing them)
                     child.set_visible(False)
                     child.set_animated(True)
 
+        # only re-draw if info-text is None
+        if getattr(self, "_info_text", None) is None:
+            self._info_text = self.add_info_text()
+
         self._color_axes()
         self._attach_callbacks()
+
+        self.m._emit_signal("layoutEditorActivated")
+
         self.m.redraw()
 
+    def _add_revert_props(self, child, *args):
+        for prop in args:
+            if hasattr(child, f"set_{prop}") and hasattr(child, f"get_{prop}"):
+                self._revert_props.append(
+                    (
+                        getattr(child, f"set_{prop}"),
+                        getattr(child, f"get_{prop}")(),
+                    )
+                )
+
     def _undo_draggable(self):
+        if getattr(self, "_info_text", None) not in (None, False):
+            self._info_text.remove()
+            # set to None to avoid crating the info-text again
+            self._info_text = None
 
         self._history.clear()
         self._history_undone.clear()
@@ -1045,22 +1237,24 @@ class LayoutEditor:
                 try:
                     toolbar.update()
                 except Exception:
-                    print("EOmaps: Error while trying to reset the axes stack!")
+                    _log.exception(
+                        "EOmaps: Error while trying to reset the axes stack!"
+                    )
 
         # clear all picks on exit
         self._ax_picked = []
         self._cb_picked = []
         self._m_picked = []
 
-        print("EOmaps: Exiting layout-editor mode...")
+        _log.info("EOmaps: Exiting layout-editor mode...")
 
         # in case a filepath was provided, save the new layout
         if self._filepath:
             try:
                 self.m.get_layout(filepath=self._filepath, override=True)
             except Exception:
-                print(
-                    "EOmaps WARNING: The layout could not be saved to the provided "
+                _log.exception(
+                    "EOmaps: Layout could not be saved to the provided "
                     + f"filepath: '{self._filepath}'."
                 )
 
@@ -1079,6 +1273,11 @@ class LayoutEditor:
         for m in self.ms:
             for cb in m._colorbars:
                 cb.set_hist_size()
+
+        # remove snap-grid (if it's still visible)
+        self._remove_snap_grid()
+
+        self.m._emit_signal("layoutEditorDeactivated")
 
         self.m.redraw()
 
@@ -1104,7 +1303,7 @@ class LayoutEditor:
         for event, cb in events:
             self.cids.append(self.f.canvas.mpl_connect(event, cb))
 
-    def _show_snap_grid(self, snap=None):
+    def _add_snap_grid(self, snap=None):
         # snap = (snapx, snapy)
 
         if snap is None:
@@ -1131,21 +1330,16 @@ class LayoutEditor:
             *g.T,
             lw=0,
             marker=".",
-            markerfacecolor="k",
+            markerfacecolor="steelblue",
             markeredgecolor="none",
             ms=(snapx + snapy) / 6,
         )
         self._snap_grid_artist = self.m.f.add_artist(l)
 
-        self.f.draw_artist(self._snap_grid_artist)
-        self.f.canvas.blit()
-
     def _remove_snap_grid(self):
         if hasattr(self, "_snap_grid_artist"):
             self._snap_grid_artist.remove()
             del self._snap_grid_artist
-
-        self.m.redraw()
 
     def get_layout(self, filepath=None, override=False, precision=5):
         """
@@ -1224,7 +1418,7 @@ class LayoutEditor:
             ), f"The file {filepath} already exists! Use override=True to relace it."
             with open(filepath, "w") as file:
                 json.dump(layout, file)
-            print("EOmaps: Layout saved to:\n       ", filepath)
+            _log.info(f"EOmaps: Layout saved to:\n       {filepath}")
 
         return layout
 
@@ -1301,8 +1495,14 @@ class LayoutEditor:
 
 # taken from https://matplotlib.org/stable/tutorials/advanced/blitting.html#class-based-example
 class BlitManager:
+    """Manager used to schedule draw events, cache backgrounds, etc."""
+
+    _snapshot_on_update = None
+
     def __init__(self, m):
         """
+        Manager used to schedule draw events, cache backgrounds, etc.
+
         Parameters
         ----------
         canvas : FigureCanvasAgg
@@ -1312,15 +1512,16 @@ class BlitManager:
 
         animated_artists : Iterable[Artist]
             List of the artists to manage
-        """
 
+        """
         self._m = m
 
-        self._bg = None
         self._artists = dict()
 
         self._bg_artists = dict()
         self._bg_layers = dict()
+
+        self._pending_webmaps = dict()
 
         # the name of the layer at which all "unmanaged" artists are drawn
         self._unmanaged_artists_layer = "base"
@@ -1330,7 +1531,7 @@ class BlitManager:
 
         self._after_update_actions = []
         self._after_restore_actions = []
-        self._bg_layer = 0
+        self._bg_layer = "base"
 
         self._artists_to_clear = dict()
 
@@ -1369,6 +1570,22 @@ class BlitManager:
 
         self._clear_on_layer_change = False
 
+        self._on_layer_change_running = False
+
+    def _get_renderer(self):
+        # don't return the renderer if the figure is saved.
+        # in this case the normal draw-routines are used (see m.savefig) so there is
+        # no need to trigger updates (also `canvas.get_renderer` is undefined for
+        # pdf/svg exports since those canvas do not expose the renderer)
+        # ... this is required to support vektor format outputs!
+        if self.canvas.is_saving():
+            return None
+
+        try:
+            return self.canvas.get_renderer()
+        except Exception:
+            return None
+
     def _get_all_map_axes(self):
         maxes = {
             m.ax for m in (self._m.parent, *self._m.parent._children) if m._new_axis_map
@@ -1391,56 +1608,78 @@ class BlitManager:
 
     @property
     def figure(self):
+        """The matplotlib figure instance."""
         return self._m.f
 
     @property
     def canvas(self):
+        """The figure canvas instance."""
         return self.figure.canvas
 
+    @contextmanager
+    def _cx_on_layer_change_running(self):
+        # a context-manager to avoid recursive on_layer_change calls
+        try:
+            self._on_layer_change_running = True
+            yield
+        finally:
+            self._on_layer_change_running = False
+
     def _do_on_layer_change(self, layer, new=False):
+        # avoid recursive calls to "_do_on_layer_change"
+        # This is required in case the executed functions trigger actions that would
+        # trigger "_do_on_layer_change" again which can result in a mixed-up order of
+        # the scheduled functions.
+        if self._on_layer_change_running is True:
+            return
+
         # do not execute layer-change callbacks on private layer activation!
         if layer.startswith("__"):
             return
 
-        # only execute persistent layer-change callbacks if the layer changed!
-        if new:
-            # general callbacks executed on any layer change
-            # persistent callbacks
-            for f in self._on_layer_change[True]:
-                f(layer=layer)
-
-        # single-shot callbacks
-        # (execute also if the layer is already active)
-        while len(self._on_layer_change[False]) > 0:
-            try:
-                f = self._on_layer_change[False].pop(-1)
-                f(layer=layer)
-            except Exception as ex:
-                print(
-                    "EOmaps: there was an issue while trying to execute a "
-                    f"layer-change action: {ex}"
-                )
-
-        if new:
-            for l in layer.split("|"):
-                # individual callables executed if a specific layer is activate
+        with self._cx_on_layer_change_running():
+            # only execute persistent layer-change callbacks if the layer changed!
+            if new:
+                # general callbacks executed on any layer change
                 # persistent callbacks
-                for f in self._on_layer_activation[True].get(layer, []):
-                    f(layer=l)
+                for f in reversed(self._on_layer_change[True]):
+                    f(layer=layer)
 
-        for l in layer.split("|"):
             # single-shot callbacks
-            single_shot_funcs = self._on_layer_activation[False].get(l, [])
-            while len(single_shot_funcs) > 0:
+            # (execute also if the layer is already active)
+            while len(self._on_layer_change[False]) > 0:
                 try:
-                    f = single_shot_funcs.pop(-1)
-                    f(layer=l)
+                    f = self._on_layer_change[False].pop(0)
+                    f(layer=layer)
                 except Exception as ex:
-                    raise (ex)
-                    print(
-                        "EOmaps: there was an issue while trying to execute a "
-                        f"layer-change action: {ex}"
+                    _log.error(
+                        "EOmaps: Issue while executing a layer-change action",
+                        exc_info=_log.getEffectiveLevel() <= logging.DEBUG,
                     )
+
+            if new:
+                for l in layer.split("|"):
+                    # individual callables executed if a specific layer is activate
+                    # persistent callbacks
+                    for f in reversed(self._on_layer_activation[True].get(layer, [])):
+                        f(layer=l)
+
+            for l in layer.split("|"):
+                # single-shot callbacks
+                single_shot_funcs = self._on_layer_activation[False].get(l, [])
+                while len(single_shot_funcs) > 0:
+                    try:
+                        f = single_shot_funcs.pop(0)
+                        f(layer=l)
+                    except Exception as ex:
+                        _log.error(
+                            "EOmaps: Issue while executing a layer-change action",
+                            exc_info=_log.getEffectiveLevel() <= logging.DEBUG,
+                        )
+
+            # clear the list of pending webmaps once the layer has been activated
+            if layer in self._pending_webmaps:
+                self._pending_webmaps.pop(layer)
 
     @contextmanager
     def _without_artists(self, artists=None, layer=None):
@@ -1483,6 +1722,7 @@ class BlitManager:
 
     @property
     def bg_layer(self):
+        """The currently visible layer-name."""
         return self._bg_layer
 
     @bg_layer.setter
@@ -1555,9 +1795,9 @@ class BlitManager:
             The callable to use.
             The call-signature is:
 
-            >>> def func(m, l):
-            >>>    # m... the Maps-object
-            >>>    # l... the name of the layer
+            >>> def func(m, layer):
+            >>>    # m     ... the Maps-object
+            >>>    # layer ... the name of the layer
 
 
         layer : str or None, optional
@@ -1570,6 +1810,9 @@ class BlitManager:
             Indicator if the function should be called only once (False) or if it
             should be called whenever a layer is activated.
             The default is False.
+        m : eomaps.Maps
+            The Maps-object to pass as argument to the function execution.
+            If None, the parent Maps-object is used.
 
         """
         if m is None:
@@ -1608,6 +1851,21 @@ class BlitManager:
         return sortp
 
     def get_bg_artists(self, layer):
+        """
+        Get all (sorted) background artists assigned to a given layer-name.
+
+        Parameters
+        ----------
+        layer : str
+            The layer name for which artists should be fetched.
+
+        Returns
+        -------
+        artists : list
+            A list of artists on the specified layer, sorted with respect to the
+            vertical stacking (layer-order / zorder).
+
+        """
         artists = list()
         for l in np.atleast_1d(layer):
             # get all relevant artists for combined background layers
@@ -1628,12 +1886,49 @@ class BlitManager:
 
         return artists
 
-    def _combine_bgs(self, layer):
+    def get_artists(self, layer):
+        """
+        Get all (sorted) dynamically updated artists assigned to a given layer-name.
+
+        Parameters
+        ----------
+        layer : str
+            The layer name for which artists should be fetched.
+
+        Returns
+        -------
+        artists : list
+            A list of artists on the specified layer, sorted with respect to the
+            vertical stacking (layer-order / zorder).
+
+        """
+
+        artists = list()
+        for l in np.atleast_1d(layer):
+            # get all relevant artists for combined background layers
+            l = str(l)  # w make sure we convert non-string layer names to string!
+
+            # get artists defined on the layer itself
+            # Note: it's possible to create explicit multi-layers and attach
+            # artists that are only visible if both layers are visible! (e.g. "l1|l2")
+            artists.extend(self._artists.get(l, []))
+
+        # make the list unique but maintain order (dicts keep order for python>3.7)
+        artists = dict.fromkeys(artists)
+        # sort artists by zorder (respecting inset-map priority)
+        artists = sorted(artists, key=self._bg_artists_sort)
+
+        return artists
+
+    def _get_layers_alphas(self, layer=None):
+        if layer is None:
+            layer = self.bg_layer
+
         layers, alphas = [], []
         for l in layer.split("|"):
             if l.endswith("}") and "{" in l:
                 try:
-                    name, a = l.split("{")
+                    name, a = l.split("{", maxsplit=1)
                     a = float(a.replace("}", ""))
 
                     layers.append(name)
@@ -1645,6 +1940,10 @@ class BlitManager:
             else:
                 layers.append(l)
                 alphas.append(1)
+        return layers, alphas
+
+    def _combine_bgs(self, layer):
+        layers, alphas = self._get_layers_alphas(layer)
 
         # make sure all layers are already fetched
         for l in layers:
@@ -1654,37 +1953,66 @@ class BlitManager:
                 self._do_on_layer_change(layer=l, new=False)
                 self._do_fetch_bg(l)
 
-        gc = self.canvas.renderer.new_gc()
-        gc.set_clip_rectangle(self.canvas.figure.bbox)
+        renderer = self._get_renderer()
+        if renderer:
+            gc = renderer.new_gc()
+            gc.set_clip_rectangle(self.canvas.figure.bbox)
 
-        # switch to a blank background layer before merging backgrounds
-        # TODO is there a beter way to avoid drawing on initial backgrounds?
-        self.canvas.restore_region(self._blank_bg)
+            # switch to a blank background layer before merging backgrounds
+            # TODO is there a beter way to avoid drawing on initial backgrounds?
+            self.canvas.restore_region(self._blank_bg)
 
-        x0, y0, w, h = self.figure.bbox.bounds
-        for l, a in zip(layers, alphas):
-
-            rgba = self._get_array(l, a=a)
-            self.canvas.renderer.draw_image(
-                gc,
-                int(x0),
-                int(y0),
-                rgba[int(y0) : int(y0 + h), int(x0) : int(x0 + w), :],
-            )
-        # cache the combined background
-        self._bg_layers[layer] = self._m.f.canvas.copy_from_bbox(self._m.f.bbox)
-        gc.restore()
+            x0, y0, w, h = self.figure.bbox.bounds
+            for l, a in zip(layers, alphas):
+                rgba = self._get_array(l, a=a)
+                if rgba is None:
+                    # to handle completely empty layers
+                    continue
+                renderer.draw_image(
+                    gc,
+                    int(x0),
+                    int(y0),
+                    rgba[int(y0) : int(y0 + h), int(x0) : int(x0 + w), :],
+                )
+            # cache the combined background
+            bg = self._m.f.canvas.copy_from_bbox(self._m.f.bbox)
+            # self._bg_layers[layer] = bg
+            gc.restore()
+            return bg
 
     def _get_array(self, l, a=1):
+        if l not in self._bg_layers:
+            return None
         rgba = np.array(self._bg_layers[l])[::-1, :, :]
         if a != 1:
             rgba = rgba.copy()
             rgba[..., -1] = (rgba[..., -1] * a).astype(rgba.dtype)
         return rgba
 
+    def _get_background(self, layer, bbox=None, cache=False):
+        if layer not in self._bg_layers:
+            current_bg = self.canvas.copy_from_bbox(self.figure.bbox)
+
+            if "|" in layer:
+                bg = self._combine_bgs(layer)
+            else:
+                self.fetch_bg(layer, bbox=bbox)
+                bg = self._bg_layers[layer]
+
+            self.canvas.restore_region(current_bg)
+        else:
+            bg = self._bg_layers[layer]
+
+        if cache is True:
+            # explicitly cache the layer
+            # (for peek-layer callbacks to avoid re-fetching the layers all the time)
+            self._bg_layers[layer] = bg
+
+        return bg
+
     def _do_fetch_bg(self, layer, bbox=None):
         cv = self.canvas
-        renderer = cv.get_renderer()
+        renderer = self._get_renderer()
 
         if bbox is None:
             bbox = self.figure.bbox
@@ -1732,14 +2060,15 @@ class BlitManager:
             if no_stale_artists and (self._bg_layers.get(layer, None) is not None):
                 return
 
-            self.canvas.restore_region(self._blank_bg)
+            if renderer:
+                self.canvas.restore_region(self._blank_bg)
 
-            if not self._m.parent._layout_editor._modifier_pressed:
-                for art in allartists:
-                    if art not in self._hidden_artists:
-                        art.draw(renderer)
-                        art.stale = False
-                self._bg_layers[layer] = cv.copy_from_bbox(bbox)
+                if not self._m.parent._layout_editor._modifier_pressed:
+                    for art in allartists:
+                        if art not in self._hidden_artists:
+                            art.draw(renderer)
+                            art.stale = False
+                            self._bg_layers[layer] = cv.copy_from_bbox(bbox)
 
     def _do_fetch_blank(self):
         # fetch a blank background
@@ -1756,13 +2085,28 @@ class BlitManager:
             self._m.f.set_visible(True)
 
     def fetch_bg(self, layer=None, bbox=None):
+        """
+        Trigger fetching (and caching) the background for a given layer-name.
+
+        Parameters
+        ----------
+        layer : str, optional
+            The layer for which the background should be fetched.
+            If None, the currently visible layer is fetched.
+            The default is None.
+        bbox : bbox, optional
+            The region-boundaries (in figure coordinates) for which the background
+            should be fetched (x0, y0, w, h). If None, the whole figure is fetched.
+            The default is None.
+
+        """
         if self._m.parent._layout_editor._modifier_pressed:
             return
 
-        initial_layer = self.bg_layer
-
         if layer is None:
-            layer = initial_layer
+            layer = self.bg_layer
+
+        initial_layer = self.canvas.copy_from_bbox(self.figure.bbox)
 
         if layer in self._bg_layers:
             # don't re-fetch existing layers
@@ -1774,7 +2118,7 @@ class BlitManager:
             self._do_fetch_bg(layer, bbox)
 
             if initial_layer in self._bg_layers:
-                self.canvas.restore_region(self._bg_layers[initial_layer])
+                self.canvas.restore_region(initial_layer)
 
     @contextmanager
     def _disconnect_draw(self):
@@ -1792,17 +2136,24 @@ class BlitManager:
     def on_draw(self, event):
         """Callback to register with 'draw_event'."""
         cv = self.canvas
+        _log.log(5, "draw")
+        try:
+            if (
+                "RendererBase._draw_disabled"
+                in cv.get_renderer().draw_image.__qualname__
+            ):
+                # TODO this fixes issues when saving figues with a "tight" bbox, e.g.:
+                # m.savefig(bbox_inches='tight', pad_inches=0.1)
 
-        if "RendererBase._draw_disabled" in cv.get_renderer().draw_image.__qualname__:
-            # TODO this fixes issues when saving figues with a "tight" bbox, e.g.:
-            # m.savefig(bbox_inches='tight', pad_inches=0.1)
-
-            # This workaround is necessary but the implementation is suboptimal since
-            # it relies on the __qualname__ to identify if the
-            # `matplotlib.backend_bases.RendererBase._draw_disabled()` context is active
-            # The reason why the "_draw_disabled" context has to be handled explicitly
-            # is because otherwise empty backgrounds would be fetched (and cached) by
-            # the draw-event and the export would result in an empty figure.
+                # This workaround is necessary but the implementation is suboptimal since
+                # it relies on the __qualname__ to identify if the
+                # `matplotlib.backend_bases.RendererBase._draw_disabled()` context is active
+                # The reason why the "_draw_disabled" context has to be handled explicitly
+                # is because otherwise empty backgrounds would be fetched (and cached) by
+                # the draw-event and the export would result in an empty figure.
+                return
+        except AttributeError:
+            # return on AttributeError to handle backends that don't expose the renderer
             return
 
         if event is not None:
@@ -1895,7 +2246,7 @@ class BlitManager:
             if isinstance(art, plt.Axes):
                 self._managed_axes.add(art)
 
-    def add_bg_artist(self, art, layer=None):
+    def add_bg_artist(self, art, layer=None, draw=True):
         """
         Add a background-artist to be managed.
         (Background artists are only updated on zoom-events... they are NOT animated!)
@@ -1903,7 +2254,6 @@ class BlitManager:
         Parameters
         ----------
         art : Artist
-
             The artist to be added.  Will be set to 'animated' (just
             to be safe).  *art* must be in the figure associated with
             the canvas this class is managing.
@@ -1913,6 +2263,9 @@ class BlitManager:
             - If "all": the corresponding feature will be added to ALL layers
 
             The default is None in which case the layer of the base-Maps object is used.
+        draw : bool, optional
+            If True, `figure.draw_idle()` is called after adding the artist.
+            The default is True.
         """
 
         if layer is None:
@@ -1932,7 +2285,7 @@ class BlitManager:
         ):
             layer = "__inset_" + str(layer)
         if layer in self._bg_artists and art in self._bg_artists[layer]:
-            print(f"EOmaps: Background-artist '{art}' already added")
+            _log.info(f"EOmaps: Background-artist '{art}' already added")
             return
 
         art.set_animated(True)
@@ -1947,9 +2300,30 @@ class BlitManager:
         for f in self._on_add_bg_artist:
             f()
 
-        self.canvas.draw_idle()
+        if draw:
+            self.canvas.draw_idle()
 
-    def remove_bg_artist(self, art, layer=None):
+    def remove_bg_artist(self, art, layer=None, draw=True):
+        """
+        Remove a (background) artist from the map.
+
+        Parameters
+        ----------
+        art : Artist
+            The artist that should be removed.
+        layer : str or None, optional
+            If provided, the artist is only searched on the provided layer, otherwise
+            all map layers are searched. The default is None.
+        draw : bool, optional
+            If True, `figure.draw_idle()` is called after removing the artist.
+            The default is True.
+
+        Note
+        ----
+        This only removes the artist from the blit-manager and does not call its
+        remove method!
+
+        """
         # handle the "__inset_" prefix of inset-map artists
         if (
             layer is not None
@@ -1994,12 +2368,27 @@ class BlitManager:
             # tag all relevant layers for refetch
             self._refetch_layer(layer)
 
-        self.canvas.draw_idle()
+        if draw:
+            self.canvas.draw_idle()
 
     def remove_artist(self, art, layer=None):
-        # this only removes the artist from the blit-manager,
-        # it does not clear it from the plot!
+        """
+        Remove a (dynamically updated) artist from the blit-manager.
 
+        Parameters
+        ----------
+        art : matpltolib.Artist
+            The artist to remove.
+        layer : str, optional
+            The layer to search for the artist. If None, all layers are searched.
+            The default is None.
+
+        Note
+        ----
+        This only removes the artist from the blit-manager and does not call its
+        remove method!
+
+        """
         if layer is None:
             for key, layerartists in self._artists.items():
                 if art in layerartists:
@@ -2011,19 +2400,21 @@ class BlitManager:
                         self._managed_axes.remove(art)
 
         else:
-            if art in self._artists[layer]:
+            if art in self._artists.get(layer, []):
                 art.set_animated(False)
                 self._artists[layer].remove(art)
 
                 # remove axes from the managed_axes set as well!
                 if art in self._managed_axes:
                     self._managed_axes.remove(art)
+            else:
+                _log.debug(f"The artist {art} is not on the layer '{layer}'")
 
     def _get_artist_zorder(self, a):
         try:
             return a.get_zorder()
         except Exception:
-            print(r"EOmaps: unalble to identify zorder of {a}... using 99")
+            _log.error(r"EOmaps: unalble to identify zorder of {a}... using 99")
             return 99
 
     def _draw_animated(self, layers=None, artists=None):
@@ -2036,6 +2427,9 @@ class BlitManager:
 
         """
         fig = self.canvas.figure
+        renderer = self._get_renderer()
+        if renderer is None:
+            return
 
         # make sure to strip-off transparency-assignments (e.g. "layer1{0.5}")
         if layers is None:
@@ -2063,7 +2457,7 @@ class BlitManager:
         # - NOTE: this must be done before drawing managed artists to properly support
         #   temporary artists on unmanaged axes!
         for ax in self._get_unmanaged_axes():
-            ax.draw(self.canvas.renderer)
+            ax.draw(renderer)
 
         # redraw artists from the selected layers and explicitly provided artists
         # (sorted by zorder for each layer)
@@ -2090,15 +2484,21 @@ class BlitManager:
             chain(*self._bg_artists.values(), *self._artists.values())
         )
 
-        axes = {m.ax for m in (self._m, *self._m._children)}
+        axes = {m.ax for m in (self._m, *self._m._children) if m.ax is not None}
 
         allartists = set()
         for ax in axes:
+            # only include axes titles if they are actually set
+            # (otherwise empty artists appear in the widget)
+            titles = [
+                i
+                for i in (ax.title, ax._left_title, ax._right_title)
+                if len(i.get_text()) > 0
+            ]
+
             axartists = {
                 *ax._children,
-                ax.title,
-                ax._left_title,
-                ax._right_title,
+                *titles,
                 *([ax.legend_] if ax.legend_ is not None else []),
             }
 
@@ -2151,7 +2551,7 @@ class BlitManager:
                     # ignore errors if the artist is not present in the list
                     pass
 
-    def _get_showlayer_name(self, layer=None):
+    def _get_showlayer_name(self, layer=None, transparent=False):
         # combine all layers that should be shown
         # (e.g. to add spines, backgrounds and inset-maps)
 
@@ -2162,7 +2562,10 @@ class BlitManager:
         if layer.startswith("__"):
             return layer
 
-        show_layers = [layer, "__SPINES__"]
+        if transparent is True:
+            show_layers = [layer, "__SPINES__"]
+        else:
+            show_layers = ["__BG__", layer, "__SPINES__"]
 
         # show inset map layers and spines only if they contain at least 1 artist
         inset_Q = False
@@ -2222,17 +2625,19 @@ class BlitManager:
         # restore the background
         # add additional layers (background, spines etc.)
         show_layer = self._get_showlayer_name()
+
         if show_layer not in self._bg_layers:
             # make sure the background is properly fetched
             self.fetch_bg(show_layer)
 
-        cv.restore_region(self._bg_layers[show_layer])
+        cv.restore_region(self._get_background(show_layer))
 
-        # draw all of the animated artists
+        # execute after restore actions (e.g. peek layer callbacks)
         while len(self._after_restore_actions) > 0:
             action = self._after_restore_actions.pop(0)
             action()
 
+        # draw all of the animated artists
         self._draw_animated(layers=layers, artists=artists)
         if blit:
             # workaround for nbagg backend to avoid glitches
@@ -2261,6 +2666,13 @@ class BlitManager:
         # don't do this! it is causing infinite loops
         # cv.flush_events()
 
+        if (
+            blit
+            and not getattr(self._m, "_snapshotting", False)
+            and BlitManager._snapshot_on_update is True
+        ):
+            self._m.snapshot(clear=True)
+
     def blit_artists(self, artists, bg="active", blit=True):
         """
         Blit artists (optionally on top of a given background)
@@ -2277,11 +2689,10 @@ class BlitManager:
             The default is True
         """
         cv = self.canvas
-
-        # paranoia in case we missed the first draw event
-        if getattr(self.figure, "_cachedRenderer", None) is None:
-            with self._disconnect_draw():
-                self.figure.canvas.draw()
+        renderer = self._get_renderer()
+        if renderer is None:
+            _log.error("EOmaps: encountered a problem while trying to blit artists...")
+            return
 
         # restore the background
         if bg is not None:
@@ -2309,13 +2720,16 @@ class BlitManager:
 
         bbox_bounds = (x, y, width, height)
         """
-
         if bbox_bounds is None:
             bbox = self.figure.bbox
         else:
             bbox = Bbox.from_bounds(*bbox_bounds)
 
         def action():
+            renderer = self._get_renderer()
+            if renderer is None:
+                return
+
             if self.bg_layer == layer:
                 return
 
@@ -2328,7 +2742,7 @@ class BlitManager:
             x0, y0, w, h = bbox.bounds
 
             # convert the buffer to rgba so that we can add transparency
-            buffer = self._bg_layers[layer]
+            buffer = self._get_background(layer, cache=True)
 
             x = buffer.get_extents()
             ncols, nrows = x[2] - x[0], x[3] - x[1]
@@ -2340,13 +2754,13 @@ class BlitManager:
 
             argb[:, :, -1] = (argb[:, :, -1] * alpha).astype(np.int8)
 
-            gc = self.canvas.renderer.new_gc()
+            gc = renderer.new_gc()
 
             gc.set_clip_rectangle(bbox)
             if set_clip_path is True:
                 gc.set_clip_path(clip_path)
 
-            self.canvas.renderer.draw_image(
+            renderer.draw_image(
                 gc,
                 int(x0),
                 int(y0),
@@ -2357,6 +2771,7 @@ class BlitManager:
         return action
 
     def cleanup_layer(self, layer):
+        """Trigger cleanup methods for a given layer."""
         self._cleanup_bg_artists(layer)
         self._cleanup_artists(layer)
         self._cleanup_bg_layers(layer)
@@ -2375,7 +2790,7 @@ class BlitManager:
                 if not isinstance(a, Spine):
                     a.remove()
             except Exception:
-                print(f"EOmaps-cleanup: Problem while clearing bg artist:\n {a}")
+                _log.debug(f"EOmaps-cleanup: Problem while clearing bg artist:\n {a}")
 
         del self._bg_artists[layer]
 
@@ -2392,7 +2807,9 @@ class BlitManager:
                 if not isinstance(a, Spine):
                     a.remove()
             except Exception:
-                print(f"EOmaps-cleanup: Problem while clearing dynamic artist:\n {a}")
+                _log.debug(
+                    f"EOmaps-cleanup: Problem while clearing dynamic artist:\n {a}"
+                )
 
         del self._artists[layer]
 
@@ -2402,7 +2819,9 @@ class BlitManager:
             if layer in self._bg_layers:
                 del self._bg_layers[layer]
         except Exception:
-            print("EOmaps-cleanup: Problem while clearing cached background layers")
+            _log.debug(
+                "EOmaps-cleanup: Problem while clearing cached background layers"
+            )
 
     def _cleanup_on_layer_activation(self, layer):
 
@@ -2412,4 +2831,6 @@ class BlitManager:
             if layer in self._on_layer_activation:
                 del self._on_layer_activation[layer]
         except Exception:
-            print("EOmaps-cleanup: Problem while clearing layer activation methods")
+            _log.debug(
+                "EOmaps-cleanup: Problem while clearing layer activation methods"
+            )

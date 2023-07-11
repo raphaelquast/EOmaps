@@ -1,26 +1,20 @@
+"""Plot shape classes (for data visualization)."""
+
+import logging
+from functools import partial, wraps
+
 from matplotlib.collections import PolyCollection, QuadMesh, TriMesh
 from matplotlib.tri import Triangulation
+
+from pyproj import CRS
 import numpy as np
 
-from pyproj import CRS, Transformer
-from functools import partial, wraps, lru_cache
-import warnings
+from .helpers import register_modules
 
-ds = None
+_log = logging.getLogger(__name__)
 
 
-def _register_datashader():
-    global ds
-
-    try:
-        import datashader as ds
-    except ImportError:
-        return False
-
-    return True
-
-
-class shapes(object):
+class Shapes(object):
     """
     Set the plot-shape to represent the data-points.
 
@@ -83,7 +77,11 @@ class shapes(object):
         self._radius_estimation_range = 100000
 
     def _get(self, shape, **kwargs):
-        shp = getattr(self, f"_{shape}")(self._m)
+        # get the name of the class for a given shape
+        # (CamelCase without underscores)
+        shapeclass_name = "_" + "".join(i.capitalize() for i in shape.split("_"))
+
+        shp = getattr(self, shapeclass_name)(self._m)
         for key, val in kwargs.items():
             setattr(shp, key, val)
         return shp
@@ -96,21 +94,19 @@ class shapes(object):
                 if m._data_manager.x0 is None:
                     m._data_manager.set_props(None)
 
-                print("EOmaps: estimating radius...")
-                radiusx, radiusy = shapes._estimate_radius(m, radius_crs)
+                _log.info("EOmaps: Estimating shape radius...")
+                radiusx, radiusy = Shapes._estimate_radius(m, radius_crs)
 
                 if radiusx == radiusy:
-                    print(
-                        "EOmaps: radius:",
-                        np.format_float_scientific(radiusx, precision=4),
+                    _log.info(
+                        "EOmaps: radius = "
+                        f"{np.format_float_scientific(radiusx, precision=4)}"
                     )
                 else:
-                    print(
-                        "EOmaps: radius:" "(",
-                        np.format_float_scientific(radiusx, precision=4),
-                        ",",
-                        np.format_float_scientific(radiusy, precision=4),
-                        ")",
+                    _log.info(
+                        "EOmaps: radius = "
+                        f"({np.format_float_scientific(radiusx, precision=4)}, "
+                        f"{np.format_float_scientific(radiusy, precision=4)})"
                     )
                 radius = (radiusx, radiusy)
                 # remember estimated radius to avoid re-calculating it all the time
@@ -263,13 +259,6 @@ class shapes(object):
             color_vals["array"] = None
             return color_vals
 
-    @staticmethod
-    @lru_cache()
-    def _get_transformer(in_crs, out_crs):
-        # cache transformers to avoid re-initialization for each feature
-        t = Transformer.from_crs(in_crs, out_crs, always_xy=True)
-        return t
-
     # a base class for shapes that support setting the number of intermediate points
     class _ShapeBase:
         name = "none"
@@ -315,14 +304,12 @@ class shapes(object):
         def n(self, val):
             if self.name == "rectangles" and self.mesh is True:
                 if val is not None and val != 1:
-                    warnings.warn(
-                        "EOmaps: rectangles with 'mesh=True' only supports n=1"
-                    )
+                    _log.info("EOmaps: rectangles with 'mesh=True' only support n=1")
                 self._n = 1
             else:
                 self._n = val
 
-    class _geod_circles(_ShapeBase):
+    class _GeodCircles(_ShapeBase):
         name = "geod_circles"
 
         def __init__(self, m):
@@ -379,7 +366,7 @@ class shapes(object):
 
         @property
         def radius_crs(self):
-            return self._m.get_crs("geod")
+            return "geod"
 
         def __repr__(self):
             try:
@@ -426,12 +413,12 @@ class shapes(object):
 
             geod = self._m.crs_plot.get_geod()
             lons, lats, back_azim = geod.fwd(
-                np.broadcast_to(lon[:, None], (size, n)),
-                np.broadcast_to(lat[:, None], (size, n)),
-                np.linspace(
+                lons=np.broadcast_to(lon[:, None], (size, n)),
+                lats=np.broadcast_to(lat[:, None], (size, n)),
+                az=np.linspace(
                     [start_angle] * size, [360 - start_angle] * size, n, axis=1
                 ),
-                radius,
+                dist=radius,
                 radians=False,
             )
 
@@ -441,12 +428,12 @@ class shapes(object):
             x, y = np.asarray(x), np.asarray(y)
 
             # transform from in-crs to lon/lat
-            radius_t = shapes._get_transformer(
+            radius_t = self._m._get_transformer(
                 self._m.get_crs(crs),
                 self._m.CRS.PlateCarree(globe=self._m.crs_plot.globe),
             )
             # transform from lon/lat to the plot_crs
-            plot_t = shapes._get_transformer(
+            plot_t = self._m._get_transformer(
                 self._m.CRS.PlateCarree(globe=self._m.crs_plot.globe),
                 CRS.from_user_input(self._m.crs_plot),
             )
@@ -498,7 +485,7 @@ class shapes(object):
                 i.compressed().reshape(-1, 2) for i, m in zip(verts, vertmask) if m
             )
 
-            color_and_array = shapes._get_colors_and_array(kwargs, vertmask)
+            color_and_array = Shapes._get_colors_and_array(kwargs, vertmask)
 
             coll = PolyCollection(
                 verts,
@@ -509,7 +496,7 @@ class shapes(object):
 
             return coll
 
-    class _ellipses(_ShapeBase):
+    class _Ellipses(_ShapeBase):
         name = "ellipses"
 
         def __init__(self, m):
@@ -553,7 +540,7 @@ class shapes(object):
 
         @property
         def radius(self):
-            radius = shapes._get_radius(self._m, self._radius, self.radius_crs)
+            radius = Shapes._get_radius(self._m, self._radius, self.radius_crs)
             return radius
 
         @radius.setter
@@ -620,11 +607,11 @@ class shapes(object):
             crs = self._m.get_crs(crs)
             radius_crs = self._m.get_crs(radius_crs)
             # transform from crs to the plot_crs
-            t_in_plot = shapes._get_transformer(crs, self._m.crs_plot)
+            t_in_plot = self._m._get_transformer(crs, self._m.crs_plot)
             # transform from crs to the radius_crs
-            t_in_radius = shapes._get_transformer(crs, radius_crs)
+            t_in_radius = self._m._get_transformer(crs, radius_crs)
             # transform from crs to the radius_crs
-            t_radius_plot = shapes._get_transformer(radius_crs, self._m.crs_plot)
+            t_radius_plot = self._m._get_transformer(radius_crs, self._m.crs_plot)
 
             if isinstance(radius, (int, float, np.number)):
                 rx, ry = radius, radius
@@ -689,8 +676,8 @@ class shapes(object):
 
                     return quadrants
 
-                t_in_lonlat = shapes._get_transformer(crs, 4326)
-                t_plot_lonlat = shapes._get_transformer(self._m.crs_plot, 4326)
+                t_in_lonlat = self._m._get_transformer(crs, 4326)
+                t_plot_lonlat = self._m._get_transformer(self._m.crs_plot, 4326)
 
                 # transform the coordinates to lon/lat
                 xp, _ = t_in_lonlat.transform(x, y)
@@ -731,7 +718,7 @@ class shapes(object):
             # remember masked points
             self._m._data_mask = mask
 
-            color_and_array = shapes._get_colors_and_array(kwargs, mask)
+            color_and_array = Shapes._get_colors_and_array(kwargs, mask)
 
             coll = PolyCollection(
                 verts,
@@ -742,7 +729,7 @@ class shapes(object):
 
             return coll
 
-    class _rectangles(_ShapeBase):
+    class _Rectangles(_ShapeBase):
         name = "rectangles"
 
         def __init__(self, m):
@@ -802,7 +789,7 @@ class shapes(object):
 
         @property
         def radius(self):
-            radius = shapes._get_radius(self._m, self._radius, self.radius_crs)
+            radius = Shapes._get_radius(self._m, self._radius, self.radius_crs)
             return radius
 
         @radius.setter
@@ -832,13 +819,13 @@ class shapes(object):
             if radius_crs == crs:
                 in_crs = self._m.get_crs(crs)
                 # transform from crs to the plot_crs
-                t = shapes._get_transformer(
+                t = self._m._get_transformer(
                     CRS.from_user_input(in_crs), self._m.crs_plot
                 )
 
                 # make sure we do not transform out of bounds (if possible)
                 if in_crs.area_of_use is not None:
-                    transformer = shapes._get_transformer(in_crs.geodetic_crs, in_crs)
+                    transformer = self._m._get_transformer(in_crs.geodetic_crs, in_crs)
 
                     xmin, ymin, xmax, ymax = transformer.transform_bounds(
                         *in_crs.area_of_use.bounds
@@ -854,13 +841,13 @@ class shapes(object):
                 r_crs = self._m.get_crs(radius_crs)
 
                 # transform from crs to the radius_crs
-                t_in_radius = shapes._get_transformer(in_crs, r_crs)
+                t_in_radius = self._m._get_transformer(in_crs, r_crs)
                 # transform from radius_crs to the plot_crs
-                t = shapes._get_transformer(r_crs, self._m.crs_plot)
+                t = self._m._get_transformer(r_crs, self._m.crs_plot)
 
                 # make sure we do not transform out of bounds (if possible)
                 if r_crs.area_of_use is not None:
-                    transformer = shapes._get_transformer(r_crs.geodetic_crs, r_crs)
+                    transformer = self._m._get_transformer(r_crs.geodetic_crs, r_crs)
 
                     xmin, ymin, xmax, ymax = transformer.transform_bounds(
                         *r_crs.area_of_use.bounds
@@ -917,7 +904,7 @@ class shapes(object):
 
             # remember masked points
             self._m._data_mask = mask
-            color_and_array = shapes._get_colors_and_array(kwargs, mask)
+            color_and_array = Shapes._get_colors_and_array(kwargs, mask)
 
             coll = PolyCollection(
                 verts=verts,
@@ -970,7 +957,7 @@ class shapes(object):
             # remember masked points
             self._m._data_mask = mask
 
-            color_and_array = shapes._get_colors_and_array(kwargs, mask)
+            color_and_array = Shapes._get_colors_and_array(kwargs, mask)
 
             def broadcast_colors_and_array(array):
                 if array is None:
@@ -1002,7 +989,7 @@ class shapes(object):
             else:
                 return self._get_polygon_coll(x, y, crs, **kwargs)
 
-    class _scatter_points(object):
+    class _ScatterPoints(object):
         name = "scatter_points"
 
         def __init__(self, m):
@@ -1043,7 +1030,7 @@ class shapes(object):
 
         @property
         def radius(self):
-            radius = shapes._get_radius(self._m, "estimate", "in")
+            radius = Shapes._get_radius(self._m, "estimate", "in")
             return radius
 
         @property
@@ -1051,7 +1038,7 @@ class shapes(object):
             return "in"
 
         def get_coll(self, x, y, crs, **kwargs):
-            color_and_array = shapes._get_colors_and_array(
+            color_and_array = Shapes._get_colors_and_array(
                 kwargs, np.full((x.size,), True)
             )
             color_and_array["c"] = color_and_array["array"]
@@ -1060,7 +1047,7 @@ class shapes(object):
             )
             return coll
 
-    class _voronoi_diagram(object):
+    class _VoronoiDiagram(object):
         name = "voronoi_diagram"
 
         def __init__(self, m):
@@ -1105,7 +1092,7 @@ class shapes(object):
 
         @property
         def mask_radius(self):
-            r = shapes._get_radius(self._m, self._mask_radius, "out")
+            r = Shapes._get_radius(self._m, self._mask_radius, "out")
             if self._mask_radius is None:
                 return (i * 4 for i in r)
             else:
@@ -1123,7 +1110,7 @@ class shapes(object):
                 raise ImportError("'scipy' is required for 'voronoi'!")
 
             # transform from crs to the plot_crs
-            t_in_plot = shapes._get_transformer(self._m.get_crs(crs), self._m.crs_plot)
+            t_in_plot = self._m._get_transformer(self._m.get_crs(crs), self._m.crs_plot)
 
             x0, y0 = t_in_plot.transform(x, y)
 
@@ -1173,7 +1160,7 @@ class shapes(object):
             # remember the mask
             self._m._data_mask = mask2
 
-            color_and_array = shapes._get_colors_and_array(
+            color_and_array = Shapes._get_colors_and_array(
                 kwargs, np.logical_and(datamask, mask)
             )
 
@@ -1188,14 +1175,14 @@ class shapes(object):
 
         @property
         def radius(self):
-            radius = shapes._get_radius(self._m, "estimate", "in")
+            radius = Shapes._get_radius(self._m, "estimate", "in")
             return radius
 
         @property
         def radius_crs(self):
             return "in"
 
-    class _delaunay_triangulation(object):
+    class _DelaunayTriangulation(object):
         name = "delaunay_triangulation"
 
         def __init__(self, m):
@@ -1257,7 +1244,7 @@ class shapes(object):
         @property
         def mask_radius(self):
             if self.masked:
-                r = shapes._get_radius(self._m, self._mask_radius, self.mask_radius_crs)
+                r = Shapes._get_radius(self._m, self._mask_radius, self.mask_radius_crs)
                 if self._mask_radius is None:
                     return (i * 4 for i in r)
                 else:
@@ -1280,7 +1267,7 @@ class shapes(object):
                 raise ImportError("'scipy' is required for 'delaunay_triangulation'!")
 
             # transform from crs to the plot_crs
-            t_in_plot = shapes._get_transformer(self._m.get_crs(crs), self._m.crs_plot)
+            t_in_plot = self._m._get_transformer(self._m.get_crs(crs), self._m.crs_plot)
 
             x0, y0 = t_in_plot.transform(x, y)
             datamask = np.isfinite(x0) & np.isfinite(y0)
@@ -1340,7 +1327,7 @@ class shapes(object):
             # remember the mask
             self._m._data_mask = mask
 
-            color_and_array = shapes._get_colors_and_array(kwargs, datamask)
+            color_and_array = Shapes._get_colors_and_array(kwargs, datamask)
 
             if self.flat == False:
                 for key, val in color_and_array.items():
@@ -1387,14 +1374,14 @@ class shapes(object):
 
         @property
         def radius(self):
-            radius = shapes._get_radius(self._m, "estimate", "in")
+            radius = Shapes._get_radius(self._m, "estimate", "in")
             return radius
 
         @property
         def radius_crs(self):
             return "in"
 
-    class _shade_points(object):
+    class _ShadePoints(object):
         name = "shade_points"
 
         def __init__(self, m):
@@ -1427,10 +1414,7 @@ class shapes(object):
                 The default is None.
             """
 
-            assert _register_datashader(), (
-                "EOmaps: Missing dependency: 'datashader' \n ... please install"
-                + " (conda install -c conda-forge datashader) to use 'shade_points'"
-            )
+            (ds,) = register_modules("datashader")
 
             if aggregator is None:
                 aggregator = ds.mean("val")
@@ -1467,14 +1451,14 @@ class shapes(object):
 
         @property
         def radius(self):
-            radius = shapes._get_radius(self._m, "estimate", "in")
+            radius = Shapes._get_radius(self._m, "estimate", "in")
             return radius
 
         @property
         def radius_crs(self):
             return "in"
 
-    class _shade_raster(object):
+    class _ShadeRaster(object):
         name = "shade_raster"
 
         def __init__(self, m):
@@ -1527,10 +1511,7 @@ class shapes(object):
                 The default is None.
             """
 
-            assert _register_datashader(), (
-                "EOmaps: Missing dependency: 'datashader' \n ... please install"
-                + " (conda install -c conda-forge datashader) to use 'shade_raster'"
-            )
+            (ds,) = register_modules("datashader")
 
             if aggregator is None:
                 aggregator = ds.mean("val")
@@ -1543,7 +1524,7 @@ class shapes(object):
             if agg_hook is None:
                 pass
 
-            # this might be changed by m._shade_raster depending on the dataset-shape
+            # this might be changed by m._ShadeRaster depending on the dataset-shape
             glyph = None
 
             from . import MapsGrid  # do this here to avoid circular imports!
@@ -1567,14 +1548,14 @@ class shapes(object):
 
         @property
         def radius(self):
-            radius = shapes._get_radius(self._m, "estimate", "in")
+            radius = Shapes._get_radius(self._m, "estimate", "in")
             return radius
 
         @property
         def radius_crs(self):
             return "in"
 
-    class _raster(object):
+    class _Raster(object):
         name = "raster"
 
         def __init__(self, m):
@@ -1629,7 +1610,7 @@ class shapes(object):
         @property
         def radius(self):
             if self._radius is None:
-                radius = shapes._get_radius(self._m, self._radius, self.radius_crs)
+                radius = Shapes._get_radius(self._m, self._radius, self.radius_crs)
                 return radius
 
             return self._radius
@@ -1660,11 +1641,11 @@ class shapes(object):
             # transform corner-points
             in_crs = self._m.get_crs(crs)
             # transform from crs to the plot_crs
-            t = shapes._get_transformer(in_crs, self._m.crs_plot)
+            t = self._m._get_transformer(in_crs, self._m.crs_plot)
 
             # make sure we do not transform out of bounds (if possible)
             if in_crs.area_of_use is not None:
-                transformer = shapes._get_transformer(in_crs.geodetic_crs, in_crs)
+                transformer = self._m._get_transformer(in_crs.geodetic_crs, in_crs)
 
                 xmin, ymin, xmax, ymax = transformer.transform_bounds(
                     *in_crs.area_of_use.bounds
@@ -1706,7 +1687,7 @@ class shapes(object):
             # TODO masking is skipped for now...
             self._m._data_mask = None
             # don't use a mask here since we need the full 2D array
-            color_and_array = shapes._get_colors_and_array(
+            color_and_array = Shapes._get_colors_and_array(
                 kwargs, np.full_like(mask, True)
             )
 
@@ -1734,51 +1715,51 @@ class shapes(object):
 
             return self._get_polygon_coll(x, y, crs, **kwargs)
 
-    @wraps(_scatter_points.__call__)
+    @wraps(_ScatterPoints.__call__)
     def scatter_points(self, *args, **kwargs):
-        shp = self._scatter_points(m=self._m)
+        shp = self._ScatterPoints(m=self._m)
         return shp.__call__(*args, **kwargs)
 
-    @wraps(_geod_circles.__call__)
+    @wraps(_GeodCircles.__call__)
     def geod_circles(self, *args, **kwargs):
-        shp = self._geod_circles(m=self._m)
+        shp = self._GeodCircles(m=self._m)
         return shp.__call__(*args, **kwargs)
 
-    @wraps(_ellipses.__call__)
+    @wraps(_Ellipses.__call__)
     def ellipses(self, *args, **kwargs):
-        shp = self._ellipses(m=self._m)
+        shp = self._Ellipses(m=self._m)
         return shp.__call__(*args, **kwargs)
 
-    @wraps(_rectangles.__call__)
+    @wraps(_Rectangles.__call__)
     def rectangles(self, *args, **kwargs):
-        shp = self._rectangles(m=self._m)
+        shp = self._Rectangles(m=self._m)
         return shp.__call__(*args, **kwargs)
 
-    @wraps(_raster.__call__)
+    @wraps(_Raster.__call__)
     def raster(self, *args, **kwargs):
-        shp = self._raster(m=self._m)
+        shp = self._Raster(m=self._m)
         return shp.__call__(*args, **kwargs)
 
-    @wraps(_voronoi_diagram.__call__)
+    @wraps(_VoronoiDiagram.__call__)
     def voronoi_diagram(self, *args, **kwargs):
-        shp = self._voronoi_diagram(m=self._m)
+        shp = self._VoronoiDiagram(m=self._m)
         # increase radius margins for voronoi diagrams since
         # outer points are otherwise always masked!
         self._m._data_manager.set_margin_factors(20, 0.1)
 
         return shp.__call__(*args, **kwargs)
 
-    @wraps(_delaunay_triangulation.__call__)
+    @wraps(_DelaunayTriangulation.__call__)
     def delaunay_triangulation(self, *args, **kwargs):
-        shp = self._delaunay_triangulation(m=self._m)
+        shp = self._DelaunayTriangulation(m=self._m)
         return shp.__call__(*args, **kwargs)
 
-    @wraps(_shade_points.__call__)
+    @wraps(_ShadePoints.__call__)
     def shade_points(self, *args, **kwargs):
-        shp = self._shade_points(m=self._m)
+        shp = self._ShadePoints(m=self._m)
         return shp.__call__(*args, **kwargs)
 
-    @wraps(_shade_raster.__call__)
+    @wraps(_ShadeRaster.__call__)
     def shade_raster(self, *args, **kwargs):
-        shp = self._shade_raster(m=self._m)
+        shp = self._ShadeRaster(m=self._m)
         return shp.__call__(*args, **kwargs)

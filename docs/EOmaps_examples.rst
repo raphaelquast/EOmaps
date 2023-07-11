@@ -7,8 +7,13 @@
 
 ... a collection of examples that show how to create beautiful interactive maps.
 
-🐣 Quickly visualize your data
-------------------------------
+.. contents:: Contents:
+  :local:
+  :depth: 1
+
+
+Basic data visualization
+-------------------------
 
 There are 3 basic steps required to visualize your data:
 
@@ -26,9 +31,30 @@ There are 3 basic steps required to visualize your data:
   :width: 75%
 
 
+Customize the appearance of the plot
+------------------------------------
 
-🌍 Data-classification and multiple Maps in one figure
-------------------------------------------------------
+-  use ``m.set_plot_specs()`` to set the general appearance of the plot
+-  after creating the plot, you can access individual objects via ``m.figure.<...>`` … most importantly:
+
+   -  ``f`` : the matplotlib figure
+   -  ``ax``, ``ax_cb``, ``ax_cb_plot`` : the axes used for plotting the map, colorbar and histogram
+   -  ``gridspec``, ``cb_gridspec`` : the matplotlib GridSpec instances for the plot and the colorbar
+   -  ``coll`` : the collection representing the data on the map
+
+|toggleStart|
+
+.. literalinclude:: ../tests/example3.py
+
+|toggleEnd|
+
+.. image:: _static/fig3.png
+  :width: 75%
+
+
+
+Data-classification and multiple Maps in a figure
+-------------------------------------------------
 
 -  Create grids of maps via ``MapsGrid``
 -  | Classify your data via ``m.set_classify_specs(scheme, **kwargs)``
@@ -49,29 +75,8 @@ There are 3 basic steps required to visualize your data:
   :width: 75%
 
 
-🗺 Customize the appearance of the plot
----------------------------------------
-
--  use ``m.set_plot_specs()`` to set the general appearance of the plot
--  after creating the plot, you can access individual objects via ``m.figure.<...>`` … most importantly:
-
-   -  ``f`` : the matplotlib figure
-   -  ``ax``, ``ax_cb``, ``ax_cb_plot`` : the axes used for plotting the map, colorbar and histogram
-   -  ``gridspec``, ``cb_gridspec`` : the matplotlib GridSpec instances for the plot and the colorbar
-   -  ``coll`` : the collection representing the data on the map
-
-|toggleStart|
-
-.. literalinclude:: ../tests/example3.py
-
-|toggleEnd|
-
-.. image:: _static/fig3.png
-  :width: 75%
-
-
-🛸 Turn your maps into powerful widgets
----------------------------------------
+Callbacks - turn your maps into interactive widgets
+---------------------------------------------------
 
 -  **Callback functions** can easily be attached to the plot to turn it
    into an interactive plot-widget!
@@ -97,8 +102,8 @@ There are 3 basic steps required to visualize your data:
   :width: 75%
 
 
-🌲 🏡🌳 Add overlays and indicators
------------------------------------
+Overlays, markers and annotations
+---------------------------------
 
 (… plot-generation might take a bit longer since overlays need to be downloaded first!)
 
@@ -118,8 +123,8 @@ There are 3 basic steps required to visualize your data:
 The data displayed in the above gif is taken from:
     - NaturalEarth (https://www.naturalearthdata.com/)
 
-🛰 WebMap services and layer-switching
---------------------------------------
+WebMap services and layer-switching
+-----------------------------------
 
 - add WebMap services using ``m.add_wms`` and ``m.add_wmts``
 - compare different data-layers and WebMap services using ``m.cb.click.peek_layer`` and ``m.cb.keypress.switch_layer``
@@ -138,13 +143,15 @@ The data displayed in the above gif is taken from:
     - OpenStreetMap hosted by Mundialis (https://www.mundialis.de/en/ows-mundialis/)
 
 
-🚀 Using geopandas - interactive shapes!
-----------------------------------------
+Vektor data - interactive geometries
+-------------------------------------
 
-geopandas.GeoDataFrames can be used to assign callbacks with EOmaps.
-    - to make a GeoDataFrame pickable, first use ``m.add_gdf(picker_name="MyPicker")``
-        - now you can assign callbacks via ``m.cb.MyPicker.attach...`` just as you
-          would do with the ordinary ``m.cb.click`` or ``m.cb.pick`` callbacks
+EOmaps can be used to assign callbacks to vektor-data (e.g. ``geopandas.GeoDataFrames``).
+
+- to make a GeoDataFrame pickable, first use ``m.add_gdf(picker_name="MyPicker")``
+
+    - now you can assign callbacks via ``m.cb.pick__MyPicker.attach...`` just as you
+      would do with the ordinary ``m.cb.click`` or ``m.cb.pick`` callbacks
 
 .. Note::
     For large datasets that are visualized as simple rectangles, ellipses etc.
@@ -171,8 +178,8 @@ The data displayed in the above gif is taken from:
     - NaturalEarth (https://www.naturalearthdata.com/)
 
 
-📏 Adding scalebars - what about distances?
--------------------------------------------
+Using Scalebars
+---------------
 
 EOmaps has a nice customizable scalebar feature!
     - use ``s = m.add_scalebar(lon, lat, azim)`` to attach a scalebar to the plot
@@ -210,8 +217,8 @@ The data displayed in the above gif is taken from:
 
 
 
-🌌 Data analysis widgets - Interacting with a database
--------------------------------------------------------
+Data analysis widgets - Timeseries and histograms
+-------------------------------------------------
 
 Callback-functions can be used to trigger updates on other plots.
 This example shows how to use EOmaps to analyze a database that is associated with a map.
@@ -231,8 +238,8 @@ This example shows how to use EOmaps to analyze a database that is associated wi
   :width: 75%
 
 
-🧮 Select 1D slices of a 2D dataset
-------------------------------------
+Data analysis widgets - Select 1D slices of a 2D dataset
+--------------------------------------------------------
 
 Use custom callback functions to perform arbitrary tasks on the data when clicking on the map.
 
@@ -254,8 +261,8 @@ Use custom callback functions to perform arbitrary tasks on the data when clicki
 
 .. _EOmaps_examples_inset_maps:
 
-🔬 Inset-maps - get a zoomed-in view on selected areas
-------------------------------------------------------
+Inset-maps - get a zoomed-in view on selected areas
+---------------------------------------------------
 
 Quickly create nice inset-maps to show details for specific regions.
 
@@ -278,8 +285,8 @@ Quickly create nice inset-maps to show details for specific regions.
   :width: 75%
 
 
-🚲 Lines and Annotations
--------------------------
+Lines and Annotations
+---------------------
 
 Draw lines defined by a set of anchor-points and add some nice annotations.
 
@@ -304,8 +311,8 @@ Connect the anchor-points via:
 
 
 
-🌐 Gridlines and Grid Labels
------------------------------
+Gridlines and Grid Labels
+-------------------------
 
 Draw custom grids and add grid labels.
 

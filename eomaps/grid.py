@@ -1,11 +1,19 @@
-from matplotlib.collections import LineCollection
-import numpy as np
+"""Grid lines and grid labels."""
+
+import logging
 from itertools import chain
 from functools import lru_cache
-from .helpers import pairwise
+
+import numpy as np
+
+from matplotlib.collections import LineCollection
+
+_log = logging.getLogger(__name__)
 
 
 class GridLines:
+    """Class to draw grid-lines."""
+
     def __init__(self, m, d=None, auto_n=10, layer=None, bounds=None, n=100):
         self.m = m._proxy(m)
 
@@ -22,10 +30,12 @@ class GridLines:
 
     @property
     def d(self):
+        """The fixed grid-spacing distance (if specified)."""
         return self._d
 
     @property
     def layer(self):
+        """The layer assigned to the grid"""
         if self._layer is None:
             return self.m.layer
         else:
@@ -33,14 +43,17 @@ class GridLines:
 
     @property
     def auto_n(self):
+        """Number of automatic grid-lines to evaluate (if d=None)"""
         return self._auto_n
 
     @property
     def n(self):
+        """Number of intermediate points to draw for each gridline"""
         return self._n
 
     @property
     def bounds(self):
+        """The boundaries of the grid"""
         if self._bounds is None:
             return (-180, 180, -90, 90)
         return self._bounds
@@ -58,6 +71,7 @@ class GridLines:
         """
         self._bounds = bounds
         self._redraw()
+        self.m.redraw(self.layer)
 
     def set_d(self, d):
         """
@@ -80,6 +94,7 @@ class GridLines:
         """
         self._d = d
         self._redraw()
+        self.m.redraw(self.layer)
 
     def set_auto_n(self, auto_n):
         """
@@ -97,6 +112,7 @@ class GridLines:
         """
         self._auto_n = auto_n
         self._redraw()
+        self.m.redraw(self.layer)
 
     def set_n(self, n):
         """
@@ -110,6 +126,7 @@ class GridLines:
         """
         self._n = n
         self._redraw()
+        self.m.redraw(self.layer)
 
     def _update_line_props(self, **kwargs):
         color = None
@@ -143,6 +160,7 @@ class GridLines:
         """
         self._update_line_props(**kwargs)
         self._redraw()
+        self.m.redraw(self.layer)
 
     @staticmethod
     def _calc_lines(d, bounds, n=100):
@@ -292,8 +310,13 @@ class GridLines:
 
         self._coll = self._get_coll(**self._kwargs)
         if self._coll is not None:
+            # exclude artist in companion widget editor
+            self._coll.set_label("__EOmaps_exclude")
+
             self.m.ax.add_collection(self._coll)
-            self.m.BM.add_bg_artist(self._coll, layer=self.layer)
+            # don't trigger draw since this would result in a recursion!
+            # (_redraw is called on each fetch-bg event)
+            self.m.BM.add_bg_artist(self._coll, layer=self.layer, draw=False)
 
     def _redraw(self):
         self._get_lines.cache_clear()
@@ -313,7 +336,9 @@ class GridLines:
         if self._coll is None:
             return
 
-        self.m.BM.remove_bg_artist(self._coll, layer=self.layer)
+        # don't trigger draw since this would result in a recursion!
+        # (_redraw is called on each fetch-bg event)
+        self.m.BM.remove_bg_artist(self._coll, layer=self.layer, draw=False)
         try:
             self._coll.remove()
         except ValueError:
@@ -435,6 +460,8 @@ class GridLines:
 
 
 class GridLabels:
+    """Class to draw grid-labels."""
+
     def __init__(
         self,
         g,
@@ -574,20 +601,21 @@ class GridLabels:
             while len(self._texts) > 0:
                 try:
                     t = self._texts.pop(-1)
-                    t.remove()
-                    self._g.m.BM.remove_bg_artist(t)
-                except Exception as ex:
-                    print("EOmaps: Problem while trying to remove a grid-label:", ex)
+                    try:
+                        t.remove()
+                    except ValueError:
+                        pass
+                    self._g.m.BM.remove_bg_artist(t, draw=False)
+                except Exception:
+                    _log.exception(
+                        "EOmaps: Problem while trying to remove a grid-label:"
+                    )
                     pass
 
             self.add_labels()
-        except Exception as ex:
-            import traceback
-
-            print(
-                "EOmaps: Encountered a problem while re-drawing grid-labels:",
-                ex,
-                traceback.format_exc(),
+        except Exception:
+            _log.exception(
+                "EOmaps: Encountered a problem while re-drawing grid-labels:"
             )
             pass
 
@@ -606,8 +634,8 @@ class GridLabels:
             verts = m._transf_lonlat_to_plot.transform(*verts.T)
             verts = m.ax.transData.transform(np.column_stack(verts))
         else:
+            m.ax.spines["geo"]._adjust_location()
             verts = m.ax.spines["geo"].get_verts()
-
         return verts
 
     def _get_spine_intersections(self, lines, axis=None):
@@ -781,6 +809,9 @@ class GridLabels:
         if intersection_points is None:
             return
 
+        transf = m.f.transFigure
+        transf_inv = transf.inverted()
+
         if len(intersection_points) > 0:
             # make sure only unique pairs of coordinates are used
             # pts = np.unique(np.rec.fromarrays(pts)).view((pts.dtype, 2)).T
@@ -808,21 +839,30 @@ class GridLabels:
                         if uselabel is None:
                             uselabel = label
 
+                    # route positions through dpi_scale_trans to avoid wrong positioning
+                    # on figure export with different dpi since (x, y) are in
+                    # display-coordinates!
+                    x, y = transf_inv.transform((x, y))
                     t = m.ax.text(
                         x,
                         y,
                         uselabel,
-                        transform=None,  # None is the same as using IdentityTransform()
+                        transform=transf,  # None,
                         animated=True,
                         rotation=r,
                         ha="center",
                         va="center",
                         **txt_kwargs,
                     )
-                    m.BM.add_bg_artist(t, layer=self._g.layer)
+                    # exclude artist in companion widget editor
+                    t.set_label("__EOmaps_exclude")
+                    m.BM.add_bg_artist(t, layer=self._g.layer, draw=False)
                     self._texts.append(t)
 
     def add_labels(self):
+        """
+        Add labels to the grid.
+        """
         m = self._g.m
         lines = self._g._get_lines()
         aspect = m.ax.bbox.height / m.ax.bbox.width
@@ -841,6 +881,8 @@ class GridLabels:
 
 
 class GridFactory:
+    """Class to handle grids on a map."""
+
     def __init__(self, m):
         self.m = m
         self._gridlines = []
@@ -855,6 +897,7 @@ class GridFactory:
         layer=None,
         *,
         m=None,
+        labels=False,
         **kwargs,
     ):
         """
@@ -901,6 +944,16 @@ class GridFactory:
             The number of intermediate points to draw for each line.
             (e.g. to nicely draw curved grid lines)
             The default is 100
+        labels : bool or dict, optional
+            If True, add grid-labels to the map.
+            If a dict is provided, it is passed to :py:meth:`GridLines.add_labels`.
+
+            This is a shortcut for using:
+
+            >>> g = m.add_gridlines()
+            >>> g.add_labels(fontsize=7, color="b", ...)
+
+            The default is False.
         kwargs :
             Additional kwargs passed to matplotlib.collections.LineCollection.
 
@@ -942,6 +995,15 @@ class GridFactory:
         g._add_grid(**kwargs)
         self._gridlines.append(g)
 
+        if labels:
+            if labels is True:
+                g.add_labels()
+            elif isinstance(labels, dict):
+                g.add_labels(**labels)
+            else:
+                raise TypeError(f"{labels} is not a valid input for labels")
+
+        self.m.f.canvas.draw_idle()
         return g
 
     def _update_autogrid(self, *args, **kwargs):
