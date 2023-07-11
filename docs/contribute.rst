@@ -10,9 +10,17 @@
 Hey! Nice to see that you're interested in contributing to `EOmaps <https://github.com/raphaelquast/EOmaps>`_!
 
 If you need help to get started or got some questions, open a new `Issue on GitHub <https://github.com/raphaelquast/EOmaps/issues>`_,
-start a `Discussion on GitHub <https://github.com/raphaelquast/EOmaps/discussions>`_ or post a message on `gitter <https://app.gitter.im/#/room/#EOmaps:gitter.im>`_ and I'll see what I can do!
+start a `Discussion on GitHub <https://github.com/raphaelquast/EOmaps/discussions/categories/contribution>`_ or post a message on `gitter <https://app.gitter.im/#/room/#EOmaps:gitter.im>`_ and I'll see what I can do!
 
 Any contributions are welcome!
+
+- New feature implementations (or ideas for new features)
+- Enhancements for existing features
+- Bug-fixes, code-style improvements, unittests etc.
+- Documentation updates
+- Outreach (e.g. blog-posts, tutorials, talks ... )
+- ...
+
 
 .. _setup_a_dev_env:
 

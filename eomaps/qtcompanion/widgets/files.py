@@ -1286,7 +1286,7 @@ class OpenDataStartTab(QtWidgets.QWidget):
         self.t1 = QtWidgets.QLabel()
         # self.t1.setAlignment(Qt.AlignBottom | Qt.AlignCenter)
         self.t1.setText(
-            f"<h3>Click on {self.b_str} or DRAG & DROP to plot data frmo files!</h3>"
+            f"<h3>Click on {self.b_str} or DRAG & DROP to plot data from files!</h3>"
             "<p>"
             "Supported filetypes:"
             "<ul>"

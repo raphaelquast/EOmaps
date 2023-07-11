@@ -875,6 +875,8 @@ class ClickContainer(_ClickContainer):
         self._cid_button_release_event = None
         self._cid_motion_event = None
 
+        self._event = None
+
     def _init_cbs(self):
         if self._m.parent is self._m:
             self._add_click_callback()
@@ -888,6 +890,27 @@ class ClickContainer(_ClickContainer):
         )
 
         return clickdict
+
+    def _execute_cbs(self, event, cids):
+        """
+        Execute a list of callbacks based on an event and the cid
+
+        Parameters
+        ----------
+        event :
+            The event to use.
+        cids : list of str
+            A list of the cids of the callbacks that should be executed.
+
+        """
+        clickdict = self._get_clickdict(event)
+
+        for cid in cids:
+            name, layer, ds, button, mod = self._parse_cid(cid)
+            cbs = self.get.cbs.get(ds, dict()).get(f"{button}__{mod}", dict())
+            cb = cbs.get(f"{name}__{layer}", None)
+            if cb is not None:
+                cb(**clickdict)
 
     def _onclick(self, event):
         clickdict = self._get_clickdict(event)
@@ -908,6 +931,8 @@ class ClickContainer(_ClickContainer):
             event_key = event.key
 
         button_modifier = f"{event.button}__{event_key}"
+
+        self._event = event
 
         if button_modifier in cbs:
             bcbs = cbs[button_modifier]
@@ -995,6 +1020,8 @@ class ClickContainer(_ClickContainer):
                 return
 
             try:
+                self._event = event
+
                 # don't execute callbacks if a toolbar-action is active
                 if (
                     self._m.f.canvas.toolbar is not None
@@ -1288,11 +1315,14 @@ class PickContainer(_ClickContainer):
             pixels when searching for nearest-neighbours.
 
             - if `int` or `float`, the radius of the circle in units of the plot_crs
-            - if `str`, a multiplication-factor for the estimated pixel-radius.
-              (e.g. a circle with (r=search_radius * m.shape.radius) is
-              used if possible and else np.inf is used.
+            - if `str`, a multiplication-factor for the estimated data-radius.
 
-            The default is "50" (e.g. 50 times the pixel-radius).
+              NOTE: The multiplied radius is defined in the plot projection!
+              If the data was provided in a different projection, the radius
+              estimated from the re-projected data is used (might be different
+              from the actual shape radius!)
+
+            The default is "50" (e.g. 50 times the data-radius).
 
         """
         if n is not None:

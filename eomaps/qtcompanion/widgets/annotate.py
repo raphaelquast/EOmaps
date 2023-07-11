@@ -648,10 +648,7 @@ class AddAnnotationWidget(QtWidgets.QWidget):
     def toggle_annotations_editable(self):
         if not self._annotations_editable:
             self.m._edit_annotations(True)
-            self.window().statusBar().showMessage(
-                "Annotations editable! "
-                "< control >: Move  |  < shift >: Resize  |   < R >: Rotate"
-            )
+            self.window().statusBar().showMessage("Annotations editable! ")
         else:
             self.m._edit_annotations(False)
             self.window().statusBar().showMessage("")
@@ -661,13 +658,8 @@ class AddAnnotationWidget(QtWidgets.QWidget):
     @pyqtSlot()
     def update_buttons(self):
         if self._annotations_editable:
-            self.edit_annotations.setText(
-                "Annotations editable!    "
-                "< control >: Move  |  < shift >: Resize  |  < R >: Rotate"
-                "  |  < delete >: Delete"
-            )
+            self.edit_annotations.setText("Annotations editable!")
             self.edit_annotations.setStyleSheet("background-color : rgb(100,150,100);")
-
         else:
             self.edit_annotations.setText("Edit Annotations")
             self.edit_annotations.setStyleSheet(

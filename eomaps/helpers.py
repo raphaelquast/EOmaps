@@ -279,8 +279,6 @@ class SearchTree:
         # set starting pick-distance to 50 times the radius
         self.set_search_radius("50")
 
-        self._misses = 0
-
     @property
     def d(self):
         """Side-length of the search-rectangle (in units of the plot-crs)."""
@@ -316,7 +314,13 @@ class SearchTree:
                 radius = self._m.shape.radius
             else:
                 try:
-                    radius = self._m.set_shape._estimate_radius(self._m, "out", np.max)
+                    if self._m.get_crs("in") == self._m.get_crs(self._m._crs_plot):
+                        print("here")
+                        radius = self._m.shape.radius
+                    else:
+                        radius = self._m.set_shape._estimate_radius(
+                            self._m, "out", np.max
+                        )
                 except AssertionError:
                     _log.error(
                         "EOmaps: Unable to estimate search-radius based on data."
@@ -505,25 +509,6 @@ class SearchTree:
                     )[:k]
                 ]
         else:
-            # show a warning if no points are found in the search area
-            if self._misses < 3:
-                self._misses += 1
-            else:
-                text = "Found no data here...\n Increase search_radius?"
-                # TODO fix cleanup of temporary artists!!
-                self._m.add_annotation(
-                    xy=x,
-                    permanent=False,
-                    text=text,
-                    xytext=(0.98, 0.98),
-                    textcoords=self._m.ax.transAxes,
-                    horizontalalignment="right",
-                    verticalalignment="top",
-                    arrowprops=None,
-                    fontsize=7,
-                    bbox=dict(ec="r", fc=(1, 0.9, 0.9, 0.5), lw=0.25, boxstyle="round"),
-                )
-
             i = None
 
         return i
@@ -1137,7 +1122,7 @@ class LayoutEditor:
         self._filepath = filepath
         self.modifier_pressed = True
         _log.info(
-            "EOmaps: Layout Editor activated! (press 'esc' to exit and 'q' for info)"
+            "EOmaps: Layout Editor activated! (press 'esc' to exit " "and 'q' for info)"
         )
 
         self._history.clear()
@@ -2152,7 +2137,7 @@ class BlitManager:
     def on_draw(self, event):
         """Callback to register with 'draw_event'."""
         cv = self.canvas
-
+        _log.log(5, "draw")
         try:
             if (
                 "RendererBase._draw_disabled"

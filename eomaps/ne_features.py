@@ -34,7 +34,7 @@ class NaturalEarth_presets:
     def __init__(self, m):
         self._m = m
 
-    def __call__(self, *args, scale=50):
+    def __call__(self, *args, scale=50, layer=None):
         """
         Add multiple preset-features in one go.
 
@@ -47,6 +47,13 @@ class NaturalEarth_presets:
         scale : int or str
             Set the scale of the feature preset (10, 50, 110 or "auto")
             The default is "auto"
+        layer : str or None, optional
+            The name of the layer at which map-features are plotted.
+
+            - If "all": the corresponding feature will be added to ALL layers
+            - If None, the layer of the parent object is used.
+
+            The default is None.
 
         """
         wrong_names = set(args).difference(self._feature_names)
@@ -56,7 +63,7 @@ class NaturalEarth_presets:
         )
 
         for a in args:
-            getattr(self, a)(scale=scale)
+            getattr(self, a)(scale=scale, layer=layer)
 
     @property
     def _feature_names(self):
@@ -234,7 +241,7 @@ class NaturalEarth_presets:
             subst = dict(fc="facecolor", ec="edgecolor", lw="linewidth", ls="linestyle")
             return {subst.get(key, key): val for key, val in kwargs.items()}
 
-        def __call__(self, scale=50, **kwargs):
+        def __call__(self, scale=50, layer=None, **kwargs):
             k = dict(**self.kwargs)
             k.update(kwargs)
 
@@ -244,7 +251,7 @@ class NaturalEarth_presets:
                 )
 
             self.__doc__ = self.feature.__doc__
-            return self.feature(scale=scale, **self._handle_synonyms(k))
+            return self.feature(scale=scale, layer=layer, **self._handle_synonyms(k))
 
 
 _NE_features_path = Path(__file__).parent / "NE_features.json"
@@ -427,7 +434,7 @@ class NaturalEarth_features(object):
 
             If 'auto' the scale is automatically adjusted based on the map-extent.
 
-        layer : int, str or None, optional
+        layer : str or None, optional
             The name of the layer at which map-features are plotted.
 
             - If "all": the corresponding feature will be added to ALL layers
