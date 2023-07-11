@@ -259,10 +259,15 @@ class DrawerWidget(QtWidgets.QWidget):
         self.remove_button.setMaximumSize(self.remove_button.sizeHint())
         self.remove_button.setEnabled(False)
 
+        self.cancel_button = RemoveButton("Cancel")
+        self.cancel_button.setMaximumSize(self.cancel_button.sizeHint())
+        self.cancel_button.setEnabled(False)
+
         self._new_drawer()
 
         self.save_button.clicked.connect(self.save_shapes)
         self.remove_button.clicked.connect(self.remove_last_shape)
+        self.cancel_button.clicked.connect(self.cancel_draw)
 
         self.polybuttons = []
         for name, poly in self._polynames.items():
@@ -281,6 +286,7 @@ class DrawerWidget(QtWidgets.QWidget):
         save_layout = QtWidgets.QVBoxLayout()
         save_layout.addWidget(self.save_button)
         save_layout.addWidget(self.remove_button)
+        save_layout.addWidget(self.cancel_button)
 
         self.colorselector = ColorWithSlidersWidget(linewidth=1)
         self.colorselector.colorSelected.connect(lambda: self.colorSelected.emit())
@@ -301,10 +307,12 @@ class DrawerWidget(QtWidgets.QWidget):
         for b in self.polybuttons:
             if b.text() == poly:
                 b.setChecked(True)
+        self.cancel_button.setEnabled(True)
 
     def uncheck_polybuttons(self):
         for b in self.polybuttons:
             b.setChecked(False)
+        self.cancel_button.setEnabled(False)
 
     def enterEvent(self, e):
         if self.window().showhelp is True:
@@ -341,9 +349,6 @@ class DrawerWidget(QtWidgets.QWidget):
                     b.setChecked(True)
                 else:
                     b.setChecked(False)
-
-            self.m.f.canvas.show()
-            self.m.f.canvas.activateWindow()
 
             getattr(self.drawer, poly)(
                 facecolor=self.colorselector.facecolor.getRgbF(),
@@ -401,6 +406,10 @@ class DrawerWidget(QtWidgets.QWidget):
                 "the last drawn shape...",
                 exc_info=_log.getEffectiveLevel() <= logging.DEBUG,
             )
+
+    @pyqtSlot()
+    def cancel_draw(self):
+        self.drawer._finish_drawing()
 
     def _new_drawer(self):
         self.drawer = self.m.draw.new_drawer()
