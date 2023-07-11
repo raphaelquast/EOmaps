@@ -177,9 +177,7 @@ class ShapeDrawer:
         """
         self._m.cb.execute_callbacks(True)
 
-        if cb is not None:
-            self._m._emit_signal("drawFinished")
-        else:
+        if cb is None:
             self._m._emit_signal("drawAborted")
 
         active_drawer = self._active_drawer
@@ -208,6 +206,8 @@ class ShapeDrawer:
 
         self._m.BM.update()
         self._active_drawer = None
+
+        self._m._emit_signal("drawFinished")
 
     def save_shapes(self, filename, **kwargs):
         """
