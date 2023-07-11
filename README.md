@@ -83,7 +83,13 @@ Interested in contributing to EOmaps? Awesome!
 > Found a bug or got an idea for an interesting feature?  
 > Open an [issue](https://github.com/raphaelquast/EOmaps/issues) or start a [discussion](https://github.com/raphaelquast/EOmaps/discussions), and I'll see what I can do!  
 
+
 ---------------
+
+
+<center><img src="https://github.com/raphaelquast/EOmaps/blob/master/docs/_static/minigifs/companion_widget.gif?raw=true" alt="EOmaps example 6" width=50%></center>
+
+
 <table>
   <tr>
     <td valign="center" style="width:50%">
