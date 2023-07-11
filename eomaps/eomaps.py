@@ -3995,6 +3995,7 @@ class Maps(metaclass=_MapsMeta):
         # make sure the background is re-fetched if the canvas has been resized
         # (required for peeking layers after the canvas has been resized
         #  and for webagg and nbagg backends to correctly re-draw the layer)
+
         self.BM._refetch_bg = True
         self.BM._refetch_blank = True
 
@@ -4002,17 +4003,19 @@ class Maps(metaclass=_MapsMeta):
         self._update_shade_axis_size()
 
     def _update_shade_axis_size(self, dpi=None):
-
         # set the axis-size that is used to determine the number of pixels used
-        # when using "shade" shapes
+        # when using "shade" shapes for ALL maps objects of a figure
+        w, h = self.ax.bbox.width, self.ax.bbox.height
+        fig_dpi = self.f.dpi
 
-        if self.coll is not None and self.shape.name.startswith("shade_"):
-            if dpi is None:
-                self.coll.plot_width = int(self.ax.bbox.width)
-                self.coll.plot_height = int(self.ax.bbox.height)
-            else:
-                self.coll.plot_width = int(self.ax.bbox.width / self.f.dpi * dpi)
-                self.coll.plot_height = int(self.ax.bbox.height / self.f.dpi * dpi)
+        for m in (self.parent, *self.parent._children):
+            if m.coll is not None and m.shape.name.startswith("shade_"):
+                if dpi is None:
+                    m.coll.plot_width = int(w)
+                    m.coll.plot_height = int(h)
+                else:
+                    m.coll.plot_width = int(w / fig_dpi * dpi)
+                    m.coll.plot_height = int(h / fig_dpi * dpi)
 
     def _on_close(self, event):
         # reset attributes that might use up a lot of memory when the figure is closed
