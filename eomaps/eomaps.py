@@ -3485,7 +3485,7 @@ class Maps(metaclass=_MapsMeta):
         assert nlayers > 0, "EOmaps: There are no layers to fetch."
 
         for i, l in enumerate(layers):
-            _log.info("EOmaps: fetching layer", f"{i + 1}/{nlayers}:", l)
+            _log.info(f"EOmaps: fetching layer {i + 1}/{nlayers}: {l}")
             self.show_layer(l)
 
         self.show_layer(active_layer)
