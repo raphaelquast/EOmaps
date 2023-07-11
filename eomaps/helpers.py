@@ -571,7 +571,7 @@ class LayoutEditor:
                 "0 - 9:  Snap-grid spacing\n"
                 "SHIFT:  Multi-select\n"
                 "P:      Print to console\n"
-                "ESCAPE: Exit\n"
+                "ESCAPE (or ALT + L): Exit\n"
                 "\n"
                 "ARROW-KEYS:   Move\n"
                 "SCROLL (+/-): Resize\n"
