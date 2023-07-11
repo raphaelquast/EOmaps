@@ -54,11 +54,11 @@ To install EOmaps (and all its dependencies) via the [conda](https://docs.conda.
 ```python
 conda install -c conda-forge eomaps
 ```
-... to get a <u>**huge speedup**</u>, use [mamba](https://mamba.readthedocs.io/en/latest/) to solve the dependencies!
-```python
-conda install -c conda-forge mamba
-mamba install -c conda-forge eomaps
-```
+> ... to get a <u>**huge speedup**</u>, use [mamba](https://mamba.readthedocs.io/en/latest/) to solve the dependencies!
+> ```python
+> conda install -c conda-forge mamba
+> mamba install -c conda-forge eomaps
+> ```
 Need more information?
 - Have a look at the [🐛Installation](https://eomaps.readthedocs.io/en/latest/general.html#installation) instructions in the docs.
 - Checkout the quickstart guide [🚀 From 0 to EOmaps](https://eomaps.readthedocs.io/en/latest/FAQ.html#from-0-to-eomaps-a-quickstart-guide).
