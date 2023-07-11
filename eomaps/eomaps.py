@@ -2528,6 +2528,7 @@ class Maps(metaclass=_MapsMeta):
                 # (e.g. "r.", "go", "C0x" etc.)
                 (art2,) = self.ax.plot(xplot, yplot, mark_points, zorder=zorder, lw=0)
 
+            art2.set_label(f"Line Marker ({connect})")
             self.BM.add_bg_artist(art2, layer)
 
         return out_d_int, out_d_tot
