@@ -546,15 +546,6 @@ class ShapeDrawer:
                         self._pointer.set_data([], [])
 
                     movecb(event, self._clicks)
-
-                artists = (
-                    i for i in (self._shape_indicator, self._line, self._pointer) if i
-                )
-                if self._dynamic:
-                    # draw all previously drawn shapes as well
-                    artists = (*artists, *self._artists.values())
-
-                self._m.BM.blit_artists(artists, bg=self._background)
                 return
 
             is_button = event.name == "button_press_event"
@@ -715,11 +706,17 @@ class ShapeDrawer:
                 self._shape_indicator.set_xy(np.column_stack((pts[0][0], pts[1][0])))
 
                 artists = (self._shape_indicator, self._line)
+
                 if self._dynamic:
                     # draw all previously drawn shapes as well
                     artists = (*artists, *self._artists.values())
 
                 self._m.BM.blit_artists(artists, bg=self._background)
+            else:
+                if self._pointer is not None:
+                    self._m.BM.blit_artists(
+                        (*self._artists.values(), self._pointer), bg=self._background
+                    )
 
         # make sure all active drawings are finished before starting a new one
         self._active_drawer._finish_drawing()
@@ -801,6 +798,11 @@ class ShapeDrawer:
                     artists = (*artists, *self._artists.values())
 
                 self._m.BM.blit_artists(artists, bg=self._background)
+            else:
+                if self._pointer is not None:
+                    self._m.BM.blit_artists(
+                        (*self._artists.values(), self._pointer), bg=self._background
+                    )
 
         # make sure all active drawings are finished before starting a new one
         self._active_drawer._finish_drawing()
