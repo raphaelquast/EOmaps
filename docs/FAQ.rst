@@ -61,23 +61,38 @@ in the **Python Scientific** preferences since it forces plots to be rendered as
 Jupyter Notebooks
 -----------------
 
-While EOmaps works best with matplotlib's ``Qt5Agg`` backend, most of the functionalities work
-reasonably well if you want the figures embedded in a Jupyter Notebook.
+To get the most out of EOmaps in Jupyter Notebooks, use
+`jupyter lab <https://jupyterlab.readthedocs.io/en/stable/>`_  together with the
+ `ipympl <https://github.com/matplotlib/ipympl>`_ (``widget``) backend.
+
+- To install, use ``conda install -c conda-forge ipympl``
+
+Once it's installed, use the command ``%matplotlib widget`` at the start of the code to activate the backend.
+
+Using the Companion Widget
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+To use the Companion Widget in backends other than ``Qt`` the Qt event-loop must be integrated.
+This can be done with the ``%gui qt`` command.
+
+.. code-block:: python
+
+  %matplotlib widget
+  %gui qt
+
+  from eomaps import Maps
+  m = Maps()
+  m.add_feature.preset("coastline", "ocean")
 
 
-🔸 For jupyter-lab (and classic notebooks) you can use the ``ipympl`` backend
-
-- To install, simply use ``conda install -c conda-forge ipympl``
-- Once it's installed, (and before you start plotting) use the magic ``%matplotlib widget`` to activate the backend.
-- See here for more details: https://github.com/matplotlib/ipympl
-
-🔸 For classical notebooks, there's also the ``nbagg`` backend provided by matplotlib
+Alternative backends:
+~~~~~~~~~~~~~~~~~~~~~
+For classical notebooks, there's also the ``nbagg`` backend provided by matplotlib
 
 - To use it, simply execute the magic ``%matplotlib notebook`` before starting to plot.
 
-🔸 Finally, you can also use the magic ``%matplotlib qt`` and use the ``qt5agg`` backend within Jupyter Notebooks!
+And you can also use the magic ``%matplotlib qt`` to use the default ``qt5agg`` backend.
 
-- This way the plots will NOT be embedded in the notebook but they are created as separate widgets.
+- This way the plots will NOT be embedded in the notebook, they show up as popups.
 
 
 .. note::
