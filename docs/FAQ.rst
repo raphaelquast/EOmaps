@@ -61,9 +61,7 @@ in the **Python Scientific** preferences since it forces plots to be rendered as
 Jupyter Notebooks
 -----------------
 
-To get the most out of EOmaps in Jupyter Notebooks, use
-`jupyter lab <https://jupyterlab.readthedocs.io/en/stable/>`_  together with the
- `ipympl <https://github.com/matplotlib/ipympl>`_ (``widget``) backend.
+To get the most out of EOmaps in Jupyter Notebooks, use `jupyter lab <https://jupyterlab.readthedocs.io/en/stable/>`_  together with the `ipympl <https://github.com/matplotlib/ipympl>`_ (``widget``) backend.
 
 - To install, use ``conda install -c conda-forge ipympl``
 
@@ -71,7 +69,7 @@ Once it's installed, use the command ``%matplotlib widget`` at the start of the 
 
 Using the Companion Widget
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
-To use the Companion Widget in backends other than ``Qt`` the Qt event-loop must be integrated.
+To use the :ref:`companion_widget` in backends other than ``Qt`` the Qt event-loop must be integrated.
 This can be done with the ``%gui qt`` command.
 
 .. code-block:: python
