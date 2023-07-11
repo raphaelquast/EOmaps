@@ -2511,6 +2511,7 @@ class Maps(metaclass=_MapsMeta):
         else:
             raise TypeError(f"EOmaps: '{connect}' is not a valid connection-method!")
 
+        art.set_label(f"Line ({connect})")
         self.BM.add_bg_artist(art, layer)
 
         if mark_points:

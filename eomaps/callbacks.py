@@ -476,7 +476,7 @@ class _ClickCallbacks(object):
             annotation.set_visible(True)
             annotation.xy = picked_pos
             annotation.set_text(printstr)
-            annotation.set_label(f"EOmaps Annotation {pos}")
+            annotation.set_label(f"Annotation {pos}")
 
             return annotation
 
@@ -699,7 +699,7 @@ class _ClickCallbacks(object):
 
         marker.set_zorder(zorder)
 
-        marker.set_label(f"EOmaps Marker {pos}")
+        marker.set_label(f"Marker {pos}")
 
         if layer is None:
             layer = self.m.layer
