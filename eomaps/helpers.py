@@ -315,7 +315,6 @@ class SearchTree:
             else:
                 try:
                     if self._m.get_crs("in") == self._m.get_crs(self._m._crs_plot):
-                        print("here")
                         radius = self._m.shape.radius
                     else:
                         radius = self._m.set_shape._estimate_radius(
