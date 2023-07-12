@@ -21,13 +21,13 @@ _data_dir = os.path.join(os.environ.get("XDG_DATA_HOME", _writable_dir), "eomaps
 # (see https://github.com/matplotlib/matplotlib/blob/main/lib/matplotlib/__init__.py)
 
 import logging
-import functools
+from functools import lru_cache
 
 _log = logging.getLogger(__name__)
 _log.setLevel(logging.WARNING)
 
 
-@functools.cache
+@lru_cache()
 def _ensure_handler():
     """
     The first time this function is called, attach a `StreamHandler` using the
