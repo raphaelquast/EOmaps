@@ -76,6 +76,7 @@ Content of ``eomaps.yml``:
     - pytest-cov
     # -------------- for version control
     - git
+    - pre-commit
     # -------------- for building the docs
     - sphinx-copybutton
     - sphinx
@@ -118,3 +119,35 @@ Then, create a new feature or bug-fix branch and start coding!
 
 
 Once you're done or in case you want/need some feedback, open a `pull request <https://github.com/raphaelquast/EOmaps/pulls>`_ on GitHub!
+
+
+Pre-commit hooks
+----------------
+
+To ensure uniform code formatting, EOmaps uses `pre-commit hooks <https://pre-commit.com/>`_ to automatically check (and fix) code-style issues such as:
+
+
+- trailing spaces in `.py` files
+- compliance to the used `black <https://github.com/psf/black>`_ code formatting standards
+
+
+To initialize pre-commit hooks in your environment, navigate to the directory where you cloned the EOmaps repository and run the following command:
+(e.g. the parent directory containing the file `.pre-commit-config.yaml`)
+
+
+.. code-block:: console
+
+  pre-commit install
+
+This will install the required pre-commit hooks in your current environment so that they are run **automatically prior to each commit**.
+(The first time pre-commit is run, the necessary packages will have to be installed which might take a short moment)
+
+
+.. note::
+
+  This means that all files will be auto-formatted prior to each commit to comply with the used code-formatting standards and
+  only commits that comply with all pre-commit hooks can be pushed to GitHub.
+
+
+To run the pre-commit hooks manually on selected files, simply **add the files you want to commit** with ``git add < filename >`` and then run ``pre-commit``.
+(If you want to run the hooks on all files, use ``pre-commit run --all-files``)
