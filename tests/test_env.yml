@@ -1,15 +1,15 @@
-name: testMaps
+name: eomaps
 channels:
   - conda-forge
 
 dependencies:
   - rtree
-  - numpy<1.24 # check progress of https://github.com/numba/numba/pull/8691
+  - numpy
   - scipy
   - pandas
   - geopandas
-  - matplotlib>=3.0
-  - cartopy>=0.20.0
+  - matplotlib >=3.4
+  - cartopy >=0.20.0
   - descartes
   - mapclassify
   - pyproj
@@ -32,7 +32,7 @@ dependencies:
   # --------------for building the docs
   - sphinx-copybutton
   - sphinx
-  - docutils==0.18.1
+  - docutils
   - pip
   - pip:
-    - sphinx_rtd_theme==1.2.0
+    - sphinx_rtd_theme
