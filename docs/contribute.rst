@@ -39,7 +39,7 @@ I recommend using `miniconda <https://docs.conda.io/en/latest/miniconda.html>`_ 
 
 Content of ``eomaps.yml``:
 
-.. literalinclude:: ../tests/test_env.yml
+.. literalinclude:: ../docs/contribute_env.yml
 
 As editor, I recommend using the awesome, free and open-source `Spyder IDE <https://github.com/spyder-ide/spyder>`_.
 You can install it directly into your environment via:
@@ -54,14 +54,6 @@ Getting started
 ---------------
 
 The source code of EOmaps is managed on `GitHub <https://github.com/raphaelquast/EOmaps>`_.
-
-.. note::
-
-  To contribute to the repository, you'll need a working installation of `git <https://git-scm.com/>`_ and `pre-commit <https://pre-commit.com/>`_.
-
-  - To install ``git``, either get the latest installer from `here <https://git-scm.com/>`_ or install only for your current environment via ``mamba install -c conda-forge git``.
-  - To install ``pre-commit``, use ``mamba install -c conda-forge pre-commit`` (see :ref:`below <pre_commit>`).
-
 
 To get started, create a new **fork** of the `EOmaps repository <https://github.com/raphaelquast/EOmaps/fork>`_
 to get your own copy of the source code.
@@ -92,8 +84,6 @@ To ensure uniform code formatting, EOmaps uses `pre-commit hooks <https://pre-co
 
 - Trailing spaces in `.py` files
 - Compliance to the used `black <https://github.com/psf/black>`_ code formatting standards
-
-To install ``pre-commit`` in your current environment, use ``mamba install -c conda-forge pre-commit``.
 
 To initialize pre-commit hooks in your current environment, navigate to the directory where you cloned the EOmaps repository and run the following command:
 (e.g. the parent directory containing the file `.pre-commit-config.yaml`)
