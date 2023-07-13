@@ -30,63 +30,18 @@ Any contributions are welcome!
 To get started you need a working ``python`` installation.
 I recommend using `miniconda <https://docs.conda.io/en/latest/miniconda.html>`_ to set up ``python`` with the following steps:
 
-- download latest `miniconda <https://docs.conda.io/en/latest/miniconda.html>`_ installer and install
-- open `anaconda prompt <https://docs.conda.io/projects/conda/en/latest/user-guide/getting-started.html#starting-conda>`_ (or normal terminal on ``linux``)
-- | install `mamba <https://github.com/mamba-org/mamba>`_ with
+- Download the latest `miniconda <https://docs.conda.io/en/latest/miniconda.html>`_ installer and install
+- Open `anaconda prompt <https://docs.conda.io/projects/conda/en/latest/user-guide/getting-started.html#starting-conda>`_ (or normal terminal on ``linux``)
+- | Install `mamba <https://github.com/mamba-org/mamba>`_ with
   | ``conda install -c conda-forge mamba``
-- | create a development environment from the ``eomaps.yml`` file with
+- | Create a development environment from the ``eomaps.yml`` file with
   | ``mamba env create -f < path to eomaps.yml >``
 
 Content of ``eomaps.yml``:
 
-.. code-block:: console
+.. literalinclude:: ../tests/test_env.yml
 
-    name: eomaps
-    channels:
-    - conda-forge
-
-    dependencies:
-    # -------------- for EOmaps
-    - numpy
-    - scipy
-    - matplotlib>=3.0
-    - cartopy>=0.20.0
-    - descartes
-    - mapclassify
-    - pyproj
-    - pyepsg
-    # -------------- for DataFrames
-    - pandas
-    # -------------- for vector data
-    - geopandas
-    # -------------- for data-shading
-    - datashader
-    # -------------- for GeoTIFF and NetCDF files
-    - netcdf4
-    - xarray
-    - rioxarray
-    # -------------- for WebMaps
-    - owslib
-    - requests
-    - xmltodict
-    - cairosvg
-    # -------------- for testing
-    - coveralls
-    - pytest
-    - pytest-cov
-    # -------------- for version control
-    - git
-    - pre-commit
-    # -------------- for building the docs
-    - sphinx-copybutton
-    - sphinx
-    - docutils
-    - pip
-    - pip:
-        - sphinx_rtd_theme
-
-
-As editor, I recommend using the awesome, free and open-source `Spyder <https://github.com/spyder-ide/spyder>`_ IDE.
+As editor, I recommend using the awesome, free and open-source `Spyder IDE <https://github.com/spyder-ide/spyder>`_.
 You can install it directly into your environment via:
 
 .. code-block:: console
@@ -98,7 +53,15 @@ You can install it directly into your environment via:
 Getting started
 ---------------
 
-The source code of EOmaps is managed on GitHub.
+The source code of EOmaps is managed on `GitHub <https://github.com/raphaelquast/EOmaps>`_.
+
+.. note::
+
+  To contribute to the repository, you'll need a working installation of `git <https://git-scm.com/>`_ and `pre-commit <https://pre-commit.com/>`_.
+
+  - To install ``git``, either get the latest installer from `here <https://git-scm.com/>`_ or install only for your current environment via ``mamba install -c conda-forge git``.
+  - To install ``pre-commit``, use ``mamba install -c conda-forge pre-commit`` (see :ref:`below <pre_commit>`).
+
 
 To get started, create a new **fork** of the `EOmaps repository <https://github.com/raphaelquast/EOmaps/fork>`_
 to get your own copy of the source code.
@@ -120,18 +83,19 @@ Then, create a new feature or bug-fix branch and start coding!
 
 Once you're done or in case you want/need some feedback, open a `pull request <https://github.com/raphaelquast/EOmaps/pulls>`_ on GitHub!
 
+.. _pre_commit:
 
 Pre-commit hooks
 ----------------
 
 To ensure uniform code formatting, EOmaps uses `pre-commit hooks <https://pre-commit.com/>`_ to automatically check (and fix) code-style issues such as:
 
+- Trailing spaces in `.py` files
+- Compliance to the used `black <https://github.com/psf/black>`_ code formatting standards
 
-- trailing spaces in `.py` files
-- compliance to the used `black <https://github.com/psf/black>`_ code formatting standards
+To install ``pre-commit`` in your current environment, use ``mamba install -c conda-forge pre-commit``.
 
-
-To initialize pre-commit hooks in your environment, navigate to the directory where you cloned the EOmaps repository and run the following command:
+To initialize pre-commit hooks in your current environment, navigate to the directory where you cloned the EOmaps repository and run the following command:
 (e.g. the parent directory containing the file `.pre-commit-config.yaml`)
 
 

@@ -1,0 +1,13 @@
+name: testMaps
+channels:
+  - conda-forge
+
+dependencies:
+  - eomaps
+  # --------------for building the docs
+  - sphinx-copybutton
+  - sphinx
+  - docutils
+  - pip
+  - pip:
+    - sphinx_rtd_theme
