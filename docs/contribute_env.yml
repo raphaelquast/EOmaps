@@ -1,4 +1,4 @@
-name: testMaps
+name: eomaps
 channels:
   - conda-forge
 
