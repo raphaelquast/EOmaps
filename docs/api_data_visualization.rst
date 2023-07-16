@@ -1,7 +1,9 @@
+.. include:: substitutions.rst
+
 .. _visualize_data:
 
-🔴 Data Visualization
-----------------------
+|iconVisualization| Data Visualization
+--------------------------------------
 
 .. contents:: Contents:
     :depth: 1
