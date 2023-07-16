@@ -1,5 +1,8 @@
-👀 FAQ
-=======
+.. include:: substitutions.rst
+
+
+|iconFAQ| FAQ
+=============
 
 .. contents:: Contents:
   :local:

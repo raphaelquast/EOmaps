@@ -1,7 +1,9 @@
+.. include:: substitutions.rst
+
 .. _basics:
 
-🌱 Basics
----------
+|iconBasics| Basics
+-------------------
 
 .. contents:: Contents
     :depth: 1

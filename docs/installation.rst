@@ -1,8 +1,10 @@
+.. include:: substitutions.rst
+
 .. _installation:
 
 
-🐛 Installation
-================
+|iconInstallation| Installation
+===============================
 
 .. contents:: Contents:
     :local:
@@ -11,7 +13,7 @@
 Recommended way (via ``conda`` and ``mamba``)
 ---------------------------------------------
 
-EOmaps is available via the ``conda-forge`` channel and can be installed via:
+EOmaps is  available via the ``conda-forge`` channel and can be installed via:
 
   .. code-block:: console
 
