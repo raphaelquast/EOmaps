@@ -1,8 +1,6 @@
-.. include:: substitutions.rst
-
 .. _visualize_data:
 
-|iconVisualization| Data Visualization
+|iconDatavisualization| Data Visualization
 --------------------------------------
 
 .. contents:: Contents:

@@ -3,8 +3,8 @@
 
 .. _shape_drawer:
 
-✏️ Draw shapes on the map
--------------------------
+|iconDraw| Draw shapes on the map
+---------------------------------
 
 .. currentmodule:: eomaps.eomaps
 

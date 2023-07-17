@@ -1,7 +1,7 @@
 .. _command_line_interface:
 
-⛭ Command Line Interface
-=========================
+|iconCli| Command Line Interface
+================================
 
 EOmaps provides a basic command line interface to quickly create simple maps or to get a quick-look at a dataset without having to open an editor.
 

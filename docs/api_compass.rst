@@ -2,8 +2,8 @@
 
 .. _compass:
 
-🧭 Compass (or North Arrow)
----------------------------
+|iconCompass| Compass (or North Arrow)
+--------------------------------------
 .. currentmodule:: eomaps.eomaps
 
 A compass can be added to the map via :py:meth:`Maps.add_compass`:

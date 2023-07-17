@@ -1,8 +1,8 @@
 .. _contribute:
 
 
-🚀 Contribution Guide
-======================
+|iconContribution| Contribution Guide
+=====================================
 
 👷 Get in touch
 ---------------

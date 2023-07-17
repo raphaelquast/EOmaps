@@ -1,5 +1,3 @@
-.. include:: substitutions.rst
-
 .. image:: _static/logo.png
   :width: 40%
   :align: center

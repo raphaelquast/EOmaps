@@ -2,8 +2,8 @@
 
 .. _companion_widget:
 
-🧰 Companion Widget
---------------------
+|iconCompanionwidget| Companion Widget
+--------------------------------------
 
 EOmaps comes with an awesome companion widget that provides many useful features for interactive data analysis.
 

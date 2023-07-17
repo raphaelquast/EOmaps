@@ -1,10 +1,8 @@
-.. include:: substitutions.rst
-
 .. _installation:
 
 
-|iconInstallation| Installation
-===============================
+|iconInstall| Installation
+==========================
 
 .. contents:: Contents:
     :local:

@@ -2,8 +2,8 @@
 
 .. _EOmaps_examples:
 
-🗺 EOmaps examples
-==================
+|iconExamples| EOmaps examples
+==============================
 
 ... a collection of examples that show how to create beautiful interactive maps.
 

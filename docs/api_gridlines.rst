@@ -1,8 +1,8 @@
 
 .. _gridlines:
 
-▦ Gridlines
-------------
+|iconGridlines| Gridlines
+-------------------------
 
 .. contents:: Contents:
     :local:

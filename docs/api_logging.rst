@@ -1,5 +1,5 @@
-📚Logging
-==========
+|iconLogging| Logging
+=====================
 
 .. currentmodule:: eomaps
 

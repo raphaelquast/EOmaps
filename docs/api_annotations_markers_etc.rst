@@ -1,8 +1,8 @@
 
 .. _annotations_and_markers:
 
-🏕 Annotations, Markers, Logos, etc.
--------------------------------------
+|iconAnnotations| Annotations, Markers, Logos, etc.
+---------------------------------------------------
 
 .. contents:: Contents:
   :local:

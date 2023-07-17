@@ -1,5 +1,8 @@
 # Configuration file for the Sphinx documentation builder.
-import sys, os
+from eomaps import Maps  # to run __init__.py
+import sys
+import os
+from pathlib import Path
 
 sys.path.insert(0, os.path.abspath(".." + os.sep + ".."))
 sys.path.insert(0, os.path.abspath(".."))
@@ -9,10 +12,7 @@ def setup(app):
     app.add_css_file("custom_css.css")
 
 
-from eomaps import Maps  # to run __init__.py
-
 # -- Project information
-
 project = "EOmaps"
 author = "Raphael Quast"
 
@@ -75,3 +75,11 @@ rst_prolog = """
 
        <span style="display: inline-block; width: 20vw; height: 0px;"></span>
     """
+
+for icon in (Path(__file__).parent / "_static" / "icons").iterdir():
+    rst_prolog += (
+        "\n\n"
+        f".. |icon{icon.stem.capitalize()}| raw:: html\n"
+        "\n"
+        f"   <img style='display:inline-block; height:1.5em; width:auto; transform:translate(0, 0)' src=_static/icons/{icon.name} width=1em>\n"
+    )

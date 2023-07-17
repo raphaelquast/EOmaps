@@ -1,7 +1,5 @@
-.. include:: substitutions.rst
 
-
-|iconFAQ| FAQ
+|iconFaq| FAQ
 =============
 
 .. contents:: Contents:

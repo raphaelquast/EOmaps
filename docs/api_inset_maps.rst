@@ -1,6 +1,6 @@
 
-🔬 Inset Maps
---------------
+|iconInset| Inset Maps
+--------------------------
 
 .. contents:: Contents:
     :local:
