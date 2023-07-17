@@ -1700,7 +1700,7 @@ class Maps(metaclass=_MapsMeta):
         reproject="gpd",
         verbose=False,
         only_valid=False,
-        set_extent=True,
+        set_extent=False,
         **kwargs,
     ):
         """
@@ -1824,7 +1824,13 @@ class Maps(metaclass=_MapsMeta):
               (this might result in errors for infinite geometries etc.)
 
             The default is True
+        set_extent: bool, optional
 
+            - if True, set the map extent to the extent of the geometries with
+              a +-5% margin.
+            - if float, use the value se margin.
+
+            The default is True.
         kwargs :
             all remaining kwargs are passed to `geopandas.GeoDataFrame.plot(**kwargs)`
 
@@ -1914,14 +1920,36 @@ class Maps(metaclass=_MapsMeta):
                     "EOmaps: {n_invald} invalid GeoDataFrame geometries are ignored!"
                 )
 
-        with self._disable_autoscale(set_extent):
-            for geomtype, geoms in gdf.groupby(gdf.geom_type):
-                gdf.plot(ax=self.ax, aspect=self.ax.get_aspect(), **kwargs)
-                artists = [i for i in self.ax.collections if id(i) not in colls]
-                for i in artists:
-                    prefixes.append(
-                        f"_{i.__class__.__name__.replace('Collection', '')}"
-                    )
+        # with self._disable_autoscale(set_extent):
+        if set_extent:
+            extent = np.array(
+                [
+                    gdf.bounds["minx"].min(),
+                    gdf.bounds["maxx"].max(),
+                    gdf.bounds["miny"].min(),
+                    gdf.bounds["maxy"].max(),
+                ]
+            )
+
+            if isinstance(set_extent, (int, float, np.number)):
+                margin = set_extent
+            else:
+                margin = 0.05
+
+            dx = extent[1] - extent[0]
+            dy = extent[3] - extent[2]
+
+            d = max(dx, dy) * margin
+            extent[[0, 2]] -= d
+            extent[[1, 3]] += d
+
+            self.set_extent(extent, crs=gdf.crs)
+
+        for geomtype, geoms in gdf.groupby(gdf.geom_type):
+            gdf.plot(ax=self.ax, aspect=self.ax.get_aspect(), **kwargs)
+            artists = [i for i in self.ax.collections if id(i) not in colls]
+            for i in artists:
+                prefixes.append(f"_{i.__class__.__name__.replace('Collection', '')}")
 
         if picker_name is not None:
             if isinstance(pick_method, str):
