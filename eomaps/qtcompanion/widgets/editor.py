@@ -22,12 +22,13 @@ _log = logging.getLogger(__name__)
 class AddFeaturesMenuButton(QtWidgets.QPushButton):
     FeatureAdded = pyqtSignal(str)
 
-    def __init__(self, *args, m=None, **kwargs):
+    def __init__(self, *args, m=None, sub_menu="preset", **kwargs):
         super().__init__(*args, **kwargs)
 
         self.m = m
         self._menu_fetched = False
 
+        self.sub_menu = sub_menu
         # the layer to which features are added
         self.layer = None
 
@@ -39,14 +40,16 @@ class AddFeaturesMenuButton(QtWidgets.QPushButton):
             zorder=0,
         )
 
-        self.setText("Add Feature")
+        self.setText(self.sub_menu.capitalize())
         # self.setMaximumWidth(200)
 
         width = self.fontMetrics().boundingRect(self.text()).width()
         self.setFixedWidth(width + 30)
 
         self.feature_menu = QtWidgets.QMenu()
+
         self.feature_menu.setStyleSheet("QMenu { menu-scrollable: 1;}")
+
         self.feature_menu.aboutToShow.connect(self.fetch_menu)
 
         self.setMenu(self.feature_menu)
@@ -56,28 +59,41 @@ class AddFeaturesMenuButton(QtWidgets.QPushButton):
         if self._menu_fetched:
             return
 
-        feature_types = [i for i in dir(self.m.add_feature) if not i.startswith("_")]
+        features = getattr(self.m.add_feature, self.sub_menu)
 
-        for featuretype in feature_types:
-            try:
-                sub_menu = self.feature_menu.addMenu(featuretype)
+        feature_types = [i for i in dir(features) if not i.startswith("_")]
 
-                sub_features = [
-                    i
-                    for i in dir(getattr(self.m.add_feature, featuretype))
-                    if not i.startswith("_")
-                ]
+        def grouped(iterable, splits=2):
+            # group objects by prefix (before last underscore)
+            levels = dict()
+
+            special_prefixes = ["bathymetry"]
+            for i in iterable:
+                if i.count("_") >= 2 and i.split("_")[0] not in special_prefixes:
+                    prefix = "_".join(i.split("_", 2)[:2])
+                else:
+                    prefix = i.split("_")[0]
+
+                levels.setdefault(prefix, []).append(i)
+
+            return levels
+
+        feature_types = grouped(sorted(feature_types))
+
+        for feature_group, sub_features in feature_types.items():
+            if len(sub_features) == 1:
+                feature = sub_features[0]
+                action = self.feature_menu.addAction(str(feature))
+                action.triggered.connect(
+                    self.menu_callback_factory(self.sub_menu, feature)
+                )
+            else:
+                sub_menu = self.feature_menu.addMenu(feature_group)
                 for feature in sub_features:
                     action = sub_menu.addAction(str(feature))
                     action.triggered.connect(
-                        self.menu_callback_factory(featuretype, feature)
+                        self.menu_callback_factory(self.sub_menu, feature)
                     )
-            except Exception:
-                _log.warning(
-                    f"There was a problem with the NaturalEarth feature: {featuretype}",
-                    exc_info=_log.getEffectiveLevel() <= logging.DEBUG,
-                )
-                continue
 
         self._menu_fetched = True
 
@@ -198,10 +214,14 @@ class AddFeatureWidget(QtWidgets.QFrame):
 
         self.m = m
 
-        self.selector = AddFeaturesMenuButton(m=self.m)
-        self.selector.clicked.connect(self.update_props)
-
-        self.selector.menu().aboutToShow.connect(self.update_props)
+        self.selectors = [
+            AddFeaturesMenuButton(m=self.m, sub_menu="preset"),
+            AddFeaturesMenuButton(m=self.m, sub_menu="cultural"),
+            AddFeaturesMenuButton(m=self.m, sub_menu="physical"),
+        ]
+        for s in self.selectors:
+            s.clicked.connect(self.update_props)
+            s.menu().aboutToShow.connect(self.update_props)
 
         self.colorselector = ColorWithSlidersWidget(facecolor="#aaaa7f")
 
@@ -226,7 +246,9 @@ class AddFeatureWidget(QtWidgets.QFrame):
         zorder_label.setAlignment(Qt.AlignRight | Qt.AlignCenter)
 
         layout_buttons = QtWidgets.QVBoxLayout()
-        layout_buttons.addWidget(self.selector)
+        for s in self.selectors:
+            layout_buttons.addWidget(s)
+
         layout_buttons.addLayout(zorder_layout)
 
         layout = QtWidgets.QHBoxLayout()
@@ -244,15 +266,17 @@ class AddFeatureWidget(QtWidgets.QFrame):
     @pyqtSlot()
     def update_props(self):
         # don't specify alpha! it interferes with the alpha of the colors!
-        self.selector.props.update(
-            dict(
-                facecolor=self.colorselector.facecolor.getRgbF(),
-                edgecolor=self.colorselector.edgecolor.getRgbF(),
-                linewidth=self.colorselector.linewidth,
-                zorder=int(self.zorder.text()),
-                # alpha = self.colorselector.alpha,
+
+        for s in self.selectors:
+            s.props.update(
+                dict(
+                    facecolor=self.colorselector.facecolor.getRgbF(),
+                    edgecolor=self.colorselector.edgecolor.getRgbF(),
+                    linewidth=self.colorselector.linewidth,
+                    zorder=int(self.zorder.text()),
+                    # alpha = self.colorselector.alpha,
+                )
             )
-        )
 
     def set_linewidth_slider_stylesheet(self):
         self.linewidthslider.setStyleSheet(
@@ -1566,7 +1590,8 @@ class ArtistEditor(QtWidgets.QWidget):
         )
 
         # repopulate the layer if features or webmaps are added
-        self.addfeature.selector.FeatureAdded.connect(self.artist_tabs.populate_layer)
+        for s in self.addfeature.selectors:
+            s.FeatureAdded.connect(self.artist_tabs.populate_layer)
 
         option_widget = QtWidgets.QWidget()
         option_layout = QtWidgets.QVBoxLayout()
@@ -1608,7 +1633,8 @@ class ArtistEditor(QtWidgets.QWidget):
     @pyqtSlot()
     def set_layer(self):
         layer = self.artist_tabs.tabText(self.artist_tabs.currentIndex())
-        self.addfeature.selector.set_layer(layer)
+        for s in self.addfeature.selectors:
+            s.set_layer(layer)
         if self.draw is not None:
             self.draw.set_layer(layer)
 
