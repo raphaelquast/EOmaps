@@ -1,8 +1,8 @@
 
 .. _layout_editor:
 
-|iconLayouteditor| Layout Editor
---------------------------------
+|iconLayout| Layout Editor
+--------------------------
 
 EOmaps provides a **Layout Editor** that can be used to quickly re-arrange the positions of all axes of a figure.
 You can use it to simply drag the axes the mouse to the desired locations and change their size with the scroll-wheel.

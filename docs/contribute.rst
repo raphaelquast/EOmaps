@@ -4,8 +4,8 @@
 |iconContribution| Contribution Guide
 =====================================
 
-👷 Get in touch
----------------
+|iconGetintouch| Get in touch
+-----------------------------
 
 Hey! Nice to see that you're interested in contributing to `EOmaps <https://github.com/raphaelquast/EOmaps>`_!
 
