@@ -40,15 +40,34 @@ class AddFeaturesMenuButton(QtWidgets.QPushButton):
             zorder=0,
         )
 
-        self.setText(self.sub_menu.capitalize())
+        self.setText("●   " + self.sub_menu.capitalize().ljust(8))
         # self.setMaximumWidth(200)
 
         width = self.fontMetrics().boundingRect(self.text()).width()
         self.setFixedWidth(width + 30)
 
         self.feature_menu = QtWidgets.QMenu()
+        self.feature_menu.setStyleSheet(
+            """
+            QMenu {
+                menu-scrollable: 1;
+            }
+            """
+        )
 
-        self.feature_menu.setStyleSheet("QMenu { menu-scrollable: 1;}")
+        self.setStyleSheet(
+            """
+            QPushButton {
+                border: 1px solid rgb(140, 140, 140);
+                border-radius: 4px;
+                padding: 4px;
+            }
+            QPushButton:hover {
+                background-color: rgb(210, 210, 210);
+                font-weight: bold;
+            }
+            """
+        )
 
         self.feature_menu.aboutToShow.connect(self.fetch_menu)
 
