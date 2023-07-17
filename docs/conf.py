@@ -1,11 +1,12 @@
 # Configuration file for the Sphinx documentation builder.
-from eomaps import Maps  # to run __init__.py
 import sys
 import os
 from pathlib import Path
 
 sys.path.insert(0, os.path.abspath(".." + os.sep + ".."))
 sys.path.insert(0, os.path.abspath(".."))
+
+from eomaps import Maps  # to run __init__.py
 
 
 def setup(app):
