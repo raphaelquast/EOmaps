@@ -1359,10 +1359,11 @@ class ColorBar:
             The maps object whose contours should be indicated.
             If None, the Maps-object associated with this colorbar is used.
             The default is None.
-        add_labels : str or None, optional
+        add_labels : str, float or None, optional
 
             - "bottom": add labels at the bottom of the colorbar
             - "top": add labels to the top of the colorbar histogram
+            - If float: The relative position of the label in axis-coordinates (0-1)
             - None: don't add labels
 
             The default is "bottom".
@@ -1509,6 +1510,13 @@ class ColorBar:
             label_kwargs.setdefault("horizontalalignment", "center")
             label_kwargs.setdefault("verticalalignment", "top")
             label_kwargs.setdefault("y", self.ax_cb_plot.dataLim.y0)
+        elif isinstance(add_labels, float):
+            label_kwargs.setdefault("horizontalalignment", "left")
+            label_kwargs.setdefault("verticalalignment", "center")
+            t = self.ax_cb_plot.transAxes + self.ax_cb_plot.transData.inverted()
+            pos = t.transform((0, add_labels))
+
+            label_kwargs.setdefault("y", pos[1])
 
         for level, label in zip(used_levels, label_names):
             self.ax_cb_plot.text(x=level, s=label, **label_kwargs)
