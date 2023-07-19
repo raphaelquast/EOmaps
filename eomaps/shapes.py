@@ -14,6 +14,61 @@ from .helpers import register_modules
 _log = logging.getLogger(__name__)
 
 
+from matplotlib.collections import Collection
+
+
+class _CollectionAccessor:
+    """Accessor class to handle contours drawn by plt.contour"""
+
+    def __init__(self, cont, filled):
+        self._cont = cont
+        self._filled = filled
+
+        self._label = ""
+        self.collections = self._cont.collections
+
+        methods = [
+            f
+            for f in dir(Collection)
+            if (callable(getattr(Collection, f)) and not f.startswith("__"))
+        ]
+
+        for name in methods:
+            if name in ["set_label", "get_label", "norm"]:
+                continue
+
+            setattr(self, name, self.get_func(name))
+
+    def __getattr__(self, name):
+        return getattr(self.collections[0], name)
+
+    @property
+    def levels(self):
+        return self._cont.levels
+
+    @property
+    def norm(self):
+        return self._cont.norm
+
+    def get_label(self):
+        return self._label
+
+    def set_label(self, s):
+        self._label = s
+        for i, c in enumerate(self.collections):
+            c.set_label(f"__EOmaps_exclude {s} (level {i})")
+
+    def get_func(self, name):
+        @wraps(getattr(self.collections[0], name))
+        def cb(*args, **kwargs):
+            returns = []
+            for c in self.collections:
+                returns.append(getattr(c, name)(*args, **kwargs))
+            return returns
+
+        return cb
+
+
 class Shapes(object):
     """
     Set the plot-shape to represent the data-points.
@@ -238,7 +293,7 @@ class Shapes(object):
 
         color_vals = dict()
         for c_key in ["fc", "facecolor", "color"]:
-            color = kwargs.pop("fc", None)
+            color = kwargs.pop(c_key, None)
             if color is not None:
                 # explicit treatment for recarrays (to avoid performance issues)
                 # with matplotlib.colors.to_rgba_array()
@@ -1712,6 +1767,107 @@ class Shapes(object):
             kwargs.setdefault("antialiased", False)
 
             return self._get_polygon_coll(x, y, crs, **kwargs)
+
+    class _Contour(object):
+        name = "contour"
+
+        def __init__(self, m):
+            self._m = m
+            self._radius = None
+            self.radius_crs = "in"
+
+        def __call__(self, filled=True):
+            """
+            Draw a contour-plot of the data.
+
+            (similar to plt.contourf)
+            """
+
+            from . import MapsGrid  # do this here to avoid circular imports!
+
+            for m in self._m if isinstance(self._m, MapsGrid) else [self._m]:
+                shape = self.__class__(m)
+                shape._filled = filled
+
+                m._shape = shape
+
+        @property
+        def _initargs(self):
+            return dict(filled=self._filled)
+
+        @property
+        def radius(self):
+            if self._radius is None:
+                radius = Shapes._get_radius(self._m, self._radius, self.radius_crs)
+                return radius
+
+            return self._radius
+
+        def __repr__(self):
+            try:
+                s = f"{self.name}(radius={self.radius}, radius_crs={self.radius_crs})"
+            except AttributeError:
+                s = f"{self.name}(radius, radius_crs)"
+
+            return s
+
+        def _get_contourf_colls(self, x, y, crs, **kwargs):
+            # if manual levels were specified, use them, otherwise check for
+            # classification values
+            if "levels" not in kwargs:
+                bins = getattr(self._m.classify_specs, "_bins", None)
+                if bins:
+                    kwargs["levels"] = bins
+
+            # transform from crs to the plot_crs
+            in_crs = self._m.get_crs(crs)
+            t_in_plot = self._m._get_transformer(in_crs, self._m.crs_plot)
+
+            # don't use a mask here since we need the full 2D array
+            mask = np.full(x.shape, True, dtype=bool)
+            self._m._data_mask = None
+
+            # make sure the array is not dropped from kwargs since we need it for
+            # evaluating the contours
+            z = kwargs.pop("array", None)
+            color_and_array = Shapes._get_colors_and_array(kwargs, mask)
+            # since the "array" parameter is added by default (even if None),
+            # remove it again to avoid warnings that the parameter is unused.
+            color_and_array.pop("array")
+
+            xs, ys = np.ma.masked_invalid(t_in_plot.transform(x, y), copy=False)
+
+            data = dict(x=xs, y=ys, z=z.reshape(x.shape))
+            color_and_array.update(kwargs)
+
+            # if manual colors are specified, cmap and norm must be set to None
+            # otherwise contour complains about ambiguous arguments!
+            if "colors" in kwargs:
+                color_and_array.pop("cmap", None)
+                color_and_array.pop("norm", None)
+
+            if self._filled:
+                return self._m.ax.contourf("x", "y", "z", data=data, **color_and_array)
+            else:
+                return self._m.ax.contour("x", "y", "z", data=data, **color_and_array)
+
+        def get_coll(self, x, y, crs, **kwargs):
+            x, y = np.asanyarray(x), np.asanyarray(y)
+            # don't use antialiasing by default since it introduces unwanted
+            # transparency for reprojected QuadMeshes!
+            # kwargs.setdefault("antialiased", False)
+
+            cont = self._get_contourf_colls(x, y, crs, **kwargs)
+
+            for c in cont.collections:
+                self._m.BM._ignored_unmanaged_artists.add(c)
+
+            return _CollectionAccessor(cont, self._filled)
+
+    @wraps(_Contour.__call__)
+    def contour(self, *args, **kwargs):
+        shp = self._Contour(m=self._m)
+        return shp.__call__(*args, **kwargs)
 
     @wraps(_ScatterPoints.__call__)
     def scatter_points(self, *args, **kwargs):

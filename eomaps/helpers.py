@@ -12,6 +12,7 @@ from functools import wraps, lru_cache
 from pathlib import Path
 import json
 import warnings
+from weakref import WeakSet
 
 import numpy as np
 import matplotlib.pyplot as plt
@@ -1572,6 +1573,10 @@ class BlitManager:
 
         self._on_layer_change_running = False
 
+        # a weak set containing artists that should NOT be identified as
+        # unmanaged artists
+        self._ignored_unmanaged_artists = WeakSet()
+
     def _get_renderer(self):
         # don't return the renderer if the figure is saved.
         # in this case the normal draw-routines are used (see m.savefig) so there is
@@ -2481,7 +2486,11 @@ class BlitManager:
         # return all artists not explicitly managed by the blit-manager
         # (e.g. any artist added via cartopy or matplotlib functions)
         managed_artists = set(
-            chain(*self._bg_artists.values(), *self._artists.values())
+            chain(
+                *self._bg_artists.values(),
+                *self._artists.values(),
+                self._ignored_unmanaged_artists,
+            )
         )
 
         axes = {m.ax for m in (self._m, *self._m._children) if m.ax is not None}
