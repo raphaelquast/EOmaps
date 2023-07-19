@@ -2942,7 +2942,11 @@ class Maps(metaclass=_MapsMeta):
 
         # make sure zorder is set to 1 by default
         # (by default shading would use 0 while ordinary collections use 1)
-        kwargs.setdefault("zorder", 1)
+        if self.shape.name != "contour":
+            kwargs.setdefault("zorder", 1)
+        else:
+            # put contours at level 10
+            kwargs.setdefault("zorder", 10)
 
         if getattr(self, "coll", None) is not None and len(self.cb.pick.get.cbs) > 0:
             _log.info(
