@@ -2769,12 +2769,14 @@ class Maps(metaclass=_MapsMeta):
                     vmin = np.min(use_vals)
                 if calc_max:
                     vmax = np.max(use_vals)
-        else:
-            # use nanmin/nanmax for all other arrays
-            if calc_min:
-                vmin = np.nanmin(self._data_manager.z_data)
-            if calc_max:
-                vmax = np.nanmax(self._data_manager.z_data)
+
+                return vmin, vmax
+
+        # use nanmin/nanmax for all other arrays
+        if calc_min:
+            vmin = np.nanmin(self._data_manager.z_data)
+        if calc_max:
+            vmax = np.nanmax(self._data_manager.z_data)
 
         return vmin, vmax
 
@@ -4348,10 +4350,14 @@ class Maps(metaclass=_MapsMeta):
             if self.classify_specs.scheme == "UserDefined":
                 bins = self.classify_specs.bins
             else:
+                # use "np.ma.compressed" to make sure values excluded via
+                # masked-arrays are not used to evaluate classification levels
+                # (normal arrays are passed through!)
                 mapc = getattr(mapclassify, classify_specs.scheme)(
-                    z_data[~np.isnan(z_data)], **classify_specs
+                    np.ma.compressed(z_data[~np.isnan(z_data)]), **classify_specs
                 )
                 bins = mapc.bins
+
             if vmin < min(bins):
                 bins = [vmin, *bins]
 
@@ -4959,7 +4965,7 @@ class Maps(metaclass=_MapsMeta):
         """
         encoding = self.data_specs.encoding
 
-        if encoding is not None:
+        if encoding is not None and encoding is not False:
             try:
                 scale_factor = encoding.get("scale_factor", None)
                 add_offset = encoding.get("add_offset", None)
