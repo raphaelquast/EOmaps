@@ -1837,7 +1837,8 @@ class Shapes(object):
 
             xs, ys = np.ma.masked_invalid(t_in_plot.transform(x, y), copy=False)
 
-            data = dict(x=xs, y=ys, z=z.reshape(x.shape))
+            data = dict(x=xs, y=ys, z=z)
+
             color_and_array.update(kwargs)
 
             # if manual colors are specified, cmap and norm must be set to None
