@@ -34,13 +34,16 @@ class _CollectionAccessor:
         ]
 
         for name in methods:
-            if name in ["set_label", "get_label", "norm"]:
+            if name in ["set_label", "get_label", "get_zorder", "norm"]:
                 continue
 
             setattr(self, name, self.get_func(name))
 
     def __getattr__(self, name):
         return getattr(self.collections[0], name)
+
+    def get_zorder(self):
+        return self.collections[0].get_zorder()
 
     @property
     def levels(self):

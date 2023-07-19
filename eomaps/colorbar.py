@@ -1337,13 +1337,14 @@ class ColorBar:
         self,
         contour_map=None,
         add_labels="top",
-        rotation=90,
+        use_levels=None,
         exclude_levels=None,
         colors=None,
         linewidths=None,
         linestyles=None,
-        label_color="k",
-        **kwargs,
+        label_names=None,
+        label_precision=4,
+        label_kwargs=None,
     ):
         """
         Indicate contour locations in the colorbar.
@@ -1367,13 +1368,27 @@ class ColorBar:
             The default is "bottom".
         rotation : float, optional
             The rotation of the labels (in degrees). The default is 90.
+        use_levels : list of int, optional
+            A list of integers that specify levels that should be used.
+            (negative values count from right)
+
+            If None, all values are used.
+
+            For example, to draw the first and 3rd level and name them "A" and "B", use:
+
+                >>> cb.indicate_contours(use_levels = [-1, 2], label_names=["A", "B"])
+
+
+            The default is None.
+
         exclude_levels : list of int, optional
+            Only relevant if "use_levels" is None!
             A list of integers that specify levels that should be ignored.
             (negative values count from right)
 
-            By default, the first and last level are ignored, e.g.:
+            By default, the last level are ignored, e.g.:
 
-            >>> exclude_levels = [0, 5, -1]
+            >>> exclude_levels = [-1]
 
         colors : str or list, optional
             Custom colors that will be used for the lines.
@@ -1393,17 +1408,18 @@ class ColorBar:
 
             If None, the contour-linestyles are used.
             The default is None.
-        label_color : str, optional
-            The color for the labels. The default is "k".
-        kwargs :
-            Additional kwargs are passed to the creation of the labels.
+        label_kwargs : dict
+            Additional kwargs passed to the creation of the labels. See ``plt.text``.
             (e.g. "fontsize", "fontweight" etc.)
 
         """
-        kwargs.setdefault("fontsize", "x-small")
+        if label_kwargs is None:
+            label_kwargs = dict()
+
+        label_kwargs.setdefault("fontsize", "x-small")
 
         if exclude_levels is None:
-            exclude_levels = [0, -1]
+            exclude_levels = [-1]
 
         if contour_map is None:
             coll = self._m.coll
@@ -1450,7 +1466,7 @@ class ColorBar:
         else:
             linestyles = cycle(linestyles)
 
-        use_levels = []
+        used_levels = []
         for i, (level, c, ls, lw) in enumerate(
             zip(
                 levels,
@@ -1459,63 +1475,42 @@ class ColorBar:
                 linewidths,
             )
         ):
-            if i in exclude_levels:
+            if use_levels is None and i in exclude_levels:
                 continue
-            self.ax_cb_plot.plot(
+
+            if use_levels is not None and i not in use_levels:
+                continue
+
+            (a,) = self.ax_cb_plot.plot(
                 [level, level],
                 [self.ax_cb_plot.dataLim.y0, self.ax_cb_plot.dataLim.y1],
                 c=c,
                 ls=tuple(ls),  # linestyles must be provided as tuples!
                 lw=lw,
+                zorder=99999,
             )
 
-            use_levels.append(level)
+            used_levels.append(level)
 
-        if add_labels == "bottom":
-            self.ax_cb.set_xticks(use_levels, minor=True)
-            labels = self.ax_cb.set_xticklabels(use_levels, minor=True, **kwargs)
+        if label_names is None:
+            label_names = [
+                np.format_float_positional(i, precision=label_precision)
+                for i in used_levels
+            ]
+        else:
+            label_names = label_names
 
-            self.ax_cb.tick_params(
-                which="minor",
-                axis="x",
-                rotation=rotation,
-                bottom=False,
-                labelbottom=True,
-                top=False,
-                labeltop=False,
-                labelcolor=label_color,
-            )
-            self.ax_cb_plot.tick_params(
-                which="minor",
-                axis="x",
-                rotation=rotation,
-                bottom=False,
-                labelbottom=False,
-                top=False,
-                labeltop=False,
-            )
-        elif add_labels == "top":
-            self.ax_cb_plot.set_xticks(use_levels, minor=True)
-            labels = self.ax_cb_plot.set_xticklabels(use_levels, minor=True, **kwargs)
+        if add_labels == "top":
+            label_kwargs.setdefault("horizontalalignment", "center")
+            label_kwargs.setdefault("verticalalignment", "bottom")
+            label_kwargs.setdefault("y", self.ax_cb_plot.dataLim.y1)
 
-            self.ax_cb.tick_params(
-                which="minor",
-                axis="x",
-                rotation=rotation,
-                bottom=False,
-                labelbottom=False,
-                top=False,
-                labeltop=False,
-            )
-            self.ax_cb_plot.tick_params(
-                which="minor",
-                axis="x",
-                rotation=rotation,
-                bottom=False,
-                labelbottom=False,
-                top=False,
-                labeltop=True,
-                labelcolor=label_color,
-            )
+        elif add_labels == "bottom":
+            label_kwargs.setdefault("horizontalalignment", "center")
+            label_kwargs.setdefault("verticalalignment", "top")
+            label_kwargs.setdefault("y", self.ax_cb_plot.dataLim.y0)
+
+        for level, label in zip(used_levels, label_names):
+            self.ax_cb_plot.text(x=level, s=label, **label_kwargs)
 
         self._m.redraw(self._m.layer)
