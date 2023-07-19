@@ -2,8 +2,10 @@
 
 import logging
 from functools import partial, lru_cache
+from itertools import cycle
 from textwrap import dedent
 import copy
+
 
 import numpy as np
 
@@ -1330,3 +1332,190 @@ class ColorBar:
         "    - 'histogram' : histogram ticks (same as `m.colorbar.ax_cb_plot.tick_params`)\n"
         "\n\n----------------\n\n" + dedent(plt.Axes.tick_params.__doc__)
     )
+
+    def indicate_contours(
+        self,
+        contour_map=None,
+        add_labels="top",
+        rotation=90,
+        exclude_levels=None,
+        colors=None,
+        linewidths=None,
+        linestyles=None,
+        label_color="k",
+        **kwargs,
+    ):
+        """
+        Indicate contour locations in the colorbar.
+
+        Note: Before using this function you must draw a dataset with the ``"contour"``
+        shape! (you can also indicate contours from other Maps-objects by using
+        the optional ``contour_map`` argument.)
+
+        Parameters
+        ----------
+        contour_map : eomaps.Maps, optional
+            The maps object whose contours should be indicated.
+            If None, the Maps-object associated with this colorbar is used.
+            The default is None.
+        add_labels : str or None, optional
+
+            - "bottom": add labels at the bottom of the colorbar
+            - "top": add labels to the top of the colorbar histogram
+            - None: don't add labels
+
+            The default is "bottom".
+        rotation : float, optional
+            The rotation of the labels (in degrees). The default is 90.
+        exclude_levels : list of int, optional
+            A list of integers that specify levels that should be ignored.
+            (negative values count from right)
+
+            By default, the first and last level are ignored, e.g.:
+
+            >>> exclude_levels = [0, 5, -1]
+
+        colors : str or list, optional
+            Custom colors that will be used for the lines.
+            NOTE: If less values than levels are specified, values are cycled!
+
+            If None, the contour-colors are used.
+            The default is None.
+        linewidths : float or list, optional
+            Custom linewidths that will be used for the lines.
+            NOTE: If less values than levels are specified, values are cycled!
+
+            If None, the contour-linewidths are used.
+            The default is None.
+        linestyles : float, tuple or list, optional
+            Custom linestyles that will be used for the lines.
+            NOTE: If less values than levels are specified, values are cycled!
+
+            If None, the contour-linestyles are used.
+            The default is None.
+        label_color : str, optional
+            The color for the labels. The default is "k".
+        kwargs :
+            Additional kwargs are passed to the creation of the labels.
+            (e.g. "fontsize", "fontweight" etc.)
+
+        """
+        kwargs.setdefault("fontsize", "x-small")
+
+        if exclude_levels is None:
+            exclude_levels = [0, -1]
+
+        if contour_map is None:
+            coll = self._m.coll
+        else:
+            coll = contour_map.coll
+
+        if not coll.__class__.__name__ == "_CollectionAccessor":
+            raise TypeError(
+                "EOmaps: Contour-lines can only be added to the colorbar if a contour "
+                "was plotted first! If you want to indicate contours plotted on a "
+                "different Maps-object, provide it via the 'contour_map' argument!"
+            )
+
+        levels = contour_map.coll.levels
+
+        # add support for using -1 to exclude the last level
+        for i, val in enumerate(exclude_levels):
+            if val < 0:
+                exclude_levels[i] = len(levels) + val
+
+        if colors is None:
+            if coll._filled is False:
+                colors = (
+                    np.array(coll.get_edgecolors(), dtype=object).squeeze().tolist()
+                )
+            else:
+                colors = (
+                    np.array(coll.get_facecolors(), dtype=object).squeeze().tolist()
+                )
+        else:
+            colors = cycle(colors)
+
+        if linewidths is None:
+            linewidths = (
+                np.array(coll.get_linewidths(), dtype=object).squeeze().tolist()
+            )
+        else:
+            linewidths = cycle(linewidths)
+
+        if linestyles is None:
+            linestyles = (
+                np.array(coll.get_linestyles(), dtype=object).squeeze().tolist()
+            )
+        else:
+            linestyles = cycle(linestyles)
+
+        use_levels = []
+        for i, (level, c, ls, lw) in enumerate(
+            zip(
+                levels,
+                colors,
+                linestyles,
+                linewidths,
+            )
+        ):
+            if i in exclude_levels:
+                continue
+            self.ax_cb_plot.plot(
+                [level, level],
+                [self.ax_cb_plot.dataLim.y0, self.ax_cb_plot.dataLim.y1],
+                c=c,
+                ls=tuple(ls),  # linestyles must be provided as tuples!
+                lw=lw,
+            )
+
+            use_levels.append(level)
+
+        if add_labels == "bottom":
+            self.ax_cb.set_xticks(use_levels, minor=True)
+            labels = self.ax_cb.set_xticklabels(use_levels, minor=True, **kwargs)
+
+            self.ax_cb.tick_params(
+                which="minor",
+                axis="x",
+                rotation=rotation,
+                bottom=False,
+                labelbottom=True,
+                top=False,
+                labeltop=False,
+                labelcolor=label_color,
+            )
+            self.ax_cb_plot.tick_params(
+                which="minor",
+                axis="x",
+                rotation=rotation,
+                bottom=False,
+                labelbottom=False,
+                top=False,
+                labeltop=False,
+            )
+        elif add_labels == "top":
+            self.ax_cb_plot.set_xticks(use_levels, minor=True)
+            labels = self.ax_cb_plot.set_xticklabels(use_levels, minor=True, **kwargs)
+
+            self.ax_cb.tick_params(
+                which="minor",
+                axis="x",
+                rotation=rotation,
+                bottom=False,
+                labelbottom=False,
+                top=False,
+                labeltop=False,
+            )
+            self.ax_cb_plot.tick_params(
+                which="minor",
+                axis="x",
+                rotation=rotation,
+                bottom=False,
+                labelbottom=False,
+                top=False,
+                labeltop=True,
+                labelcolor=label_color,
+            )
+
+        self._m.redraw(self._m.layer)
