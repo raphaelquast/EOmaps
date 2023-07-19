@@ -393,8 +393,9 @@ class DataManager:
         """
         if not self.m._data_plotted:
             return
-        # if self.m.shape.name == "contour":
-        #     return False
+
+        if self.m.shape.name == "contour":
+            return False
 
         # don't re-draw while the layout-editor is active!
         if self.m.parent._layout_editor.modifier_pressed:
