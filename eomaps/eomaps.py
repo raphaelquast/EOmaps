@@ -830,9 +830,10 @@ class Maps(metaclass=_MapsMeta):
     def new_layer(
         self,
         layer=None,
-        copy_data_specs=False,
-        copy_classify_specs=False,
-        copy_shape=True,
+        inherit_data=False,
+        inherit_classification=False,
+        inherit_shape=True,
+        **kwargs,
     ):
         """
         Create a new Maps-object that shares the same plot-axes.
@@ -846,9 +847,14 @@ class Maps(metaclass=_MapsMeta):
             - If None, the layer of the parent object is used.
 
             The default is None.
-        copy_data_specs, copy_shape, copy_classify_specs : bool
-            Indicator if the corresponding properties should be copied to
-            the new layer. By default no settings are copied.
+        inherit_data, inherit_classification, inherit_shape : bool
+            Indicator if the corresponding properties should be inherited from
+            the parent Maps-object.
+
+            By default only the shape is inherited.
+
+            For more details, see :py:meth:`Maps.inherit_data` and
+            :py:meth:`Maps.inherit_classification`
 
         Returns
         -------
@@ -887,6 +893,20 @@ class Maps(metaclass=_MapsMeta):
         Maps.copy : general way for copying Maps objects
 
         """
+        depreciated_names = [
+            ("copy_data_specs", "inherit_data"),
+            ("copy_classify_specs", "inherit_classification"),
+            ("copy_shape", "inherit_shape"),
+        ]
+
+        for old, new in depreciated_names:
+            if old in kwargs:
+                raise TypeError(
+                    f"EOmaps: Using {old} is depreciated! Use {new} instead! "
+                    "NOTE: attributes are now inherited and no longer copied. To "
+                    "get back to the initial behavior, explicitly use m.copy!",
+                )
+
         if layer is None:
             layer = copy.deepcopy(self.layer)
         else:
@@ -897,12 +917,20 @@ class Maps(metaclass=_MapsMeta):
                 )
 
         m = self.copy(
-            data_specs=copy_data_specs,
-            classify_specs=copy_classify_specs,
-            shape=copy_shape,
+            data_specs=False,
+            classify_specs=False,
+            shape=False,
             ax=self.ax,
             layer=layer,
         )
+
+        if inherit_data:
+            m.inherit_data(self)
+        if inherit_classification:
+            m.inherit_classification(self)
+        if inherit_shape:
+            getattr(m.set_shape, self.shape.name)(**self.shape._initargs)
+
         # make sure the new layer does not attempt to reset the extent if
         # it has already been set on the parent layer
         m._set_extent_on_plot = self._set_extent_on_plot
