@@ -745,6 +745,7 @@ class LayoutEditor:
     def _color_unpicked(self, ax):
         for spine in ax.spines.values():
             spine.set_edgecolor("b")
+            spine._EOmaps_linestyle = spine.get_linestyle()
             spine.set_linestyle("-")
             spine.set_linewidth(1)
 
@@ -1163,7 +1164,6 @@ class LayoutEditor:
                 revert_props = [
                     "edgecolor",
                     "linewidth",
-                    "linestyle",
                     "alpha",
                     "animated",
                     "visible",
@@ -1174,7 +1174,9 @@ class LayoutEditor:
                     # make sure spines are visible (and re-drawn on draw)
                     child.set_animated(False)
                     child.set_visible(True)
-
+                    if hasattr(child, "_EOmaps_linestyle"):
+                        child.set_linestyle(getattr(child, "_EOmaps_linestyle", "-"))
+                        del child._EOmaps_linestyle
                 elif (
                     ax not in self.maxes
                     and showXY
