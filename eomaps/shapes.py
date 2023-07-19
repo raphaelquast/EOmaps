@@ -1636,8 +1636,6 @@ class Shapes(object):
             x = x - dx
             y = y - dy
 
-            in_crs = self._m.get_crs(crs)
-
             # transform corner-points
             in_crs = self._m.get_crs(crs)
             # transform from crs to the plot_crs
