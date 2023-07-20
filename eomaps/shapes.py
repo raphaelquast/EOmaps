@@ -2,9 +2,11 @@
 
 import logging
 from functools import partial, wraps
+from contextlib import contextmanager, ExitStack
 
 from matplotlib.collections import PolyCollection, QuadMesh, TriMesh
 from matplotlib.tri import Triangulation
+from matplotlib.collections import Collection
 
 from pyproj import CRS
 import numpy as np
@@ -14,11 +16,13 @@ from .helpers import register_modules
 _log = logging.getLogger(__name__)
 
 
-from matplotlib.collections import Collection
-
-
 class _CollectionAccessor:
-    """Accessor class to handle contours drawn by plt.contour"""
+    """
+    Accessor class to handle contours drawn by plt.contour.
+
+    The purpose of this class is to serve as a single Artist-like container
+    that executes relevant functions on ALL collections returned.
+    """
 
     def __init__(self, cont, filled):
         self._cont = cont
@@ -33,14 +37,23 @@ class _CollectionAccessor:
             if (callable(getattr(Collection, f)) and not f.startswith("__"))
         ]
 
+        custom_funcs = [i for i in dir(self) if not i.startswith("__")]
         for name in methods:
-            if name in ["set_label", "get_label", "get_zorder", "norm"]:
-                continue
-
-            setattr(self, name, self.get_func(name))
+            if name not in custom_funcs:
+                setattr(self, name, self._get_func_for_all_colls(name))
 
     def __getattr__(self, name):
         return getattr(self.collections[0], name)
+
+    def _get_func_for_all_colls(self, name):
+        @wraps(getattr(self.collections[0], name))
+        def cb(*args, **kwargs):
+            returns = []
+            for c in self.collections:
+                returns.append(getattr(c, name)(*args, **kwargs))
+            return returns
+
+        return cb
 
     def get_zorder(self):
         return self.collections[0].get_zorder()
@@ -61,15 +74,15 @@ class _CollectionAccessor:
         for i, c in enumerate(self.collections):
             c.set_label(f"__EOmaps_exclude {s} (level {i})")
 
-    def get_func(self, name):
-        @wraps(getattr(self.collections[0], name))
-        def cb(*args, **kwargs):
-            returns = []
-            for c in self.collections:
-                returns.append(getattr(c, name)(*args, **kwargs))
-            return returns
-
-        return cb
+    @contextmanager
+    def _cm_set(self, **kwargs):
+        with ExitStack() as stack:
+            try:
+                for c in self.collections:
+                    stack.enter_context(c._cm_set(**kwargs))
+                yield
+            finally:
+                pass
 
 
 class Shapes(object):
