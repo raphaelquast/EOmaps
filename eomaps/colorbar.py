@@ -1410,14 +1410,29 @@ class ColorBar:
             If None, the contour-linestyles are used.
             The default is None.
         label_kwargs : dict
-            Additional kwargs passed to the creation of the labels. See ``plt.text``.
-            (e.g. "fontsize", "fontweight" etc.)
+            Additional kwargs passed to the creation of the labels.
+
+            - Font-properties like "fontsize", "fontweight", "rotation", etc..
+            - To offset the text (in points) from the xy value, use "xytext".
+            - To add an arrow, use "arrowprops".
+
+            For more details, see ``plt.annotate``.
+
+
+            The default is:
+
+            >>> {fontsize: "x-small",
+            >>>  textcoords: "offset points"
+            >>>  xytext: (0, 0)}
+
 
         """
         if label_kwargs is None:
             label_kwargs = dict()
 
         label_kwargs.setdefault("fontsize", "x-small")
+        label_kwargs.setdefault("textcoords", "offset points")
+        label_kwargs.setdefault("xytext", (0, 0))
 
         if exclude_levels is None:
             exclude_levels = [-1]
@@ -1518,7 +1533,8 @@ class ColorBar:
 
             label_kwargs.setdefault("y", pos[1])
 
+        y = label_kwargs.pop("y")
         for level, label in zip(used_levels, label_names):
-            self.ax_cb_plot.text(x=level, s=label, **label_kwargs)
+            self.ax_cb_plot.annotate(xy=(level, y), text=label, **label_kwargs)
 
         self._m.redraw(self._m.layer)
