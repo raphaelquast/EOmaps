@@ -43,7 +43,7 @@ class _CollectionAccessor:
         self._filled = filled
 
         self._label = ""
-        self.collections = self._cont.collections
+        self.collections = self.contour_set.collections
 
         methods = [
             f
