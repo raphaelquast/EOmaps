@@ -901,11 +901,21 @@ class Maps(metaclass=_MapsMeta):
 
         for old, new in depreciated_names:
             if old in kwargs:
-                raise TypeError(
-                    f"EOmaps: Using {old} is depreciated! Use {new} instead! "
-                    "NOTE: attributes are now inherited and no longer copied. To "
-                    "get back to the initial behavior, explicitly use m.copy!",
+                from warnings import warn
+
+                warn(
+                    f"EOmaps: Using '{old}' is depreciated! Use '{new}' instead! "
+                    "NOTE: Datasets are now inherited (e.g. shared) and not copied."
+                    "To explicitly copy attributes, see m.copy(...)!",
+                    category=FutureWarning,
+                    stacklevel=2,
                 )
+
+        inherit_data = kwargs.get("copy_data_specs", inherit_data)
+        inherit_classification = kwargs.get(
+            "copy_classify_specs", inherit_classification
+        )
+        inherit_shape = kwargs.get("copy_shape", inherit_shape)
 
         if layer is None:
             layer = copy.deepcopy(self.layer)
