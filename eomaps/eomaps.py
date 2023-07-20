@@ -488,8 +488,6 @@ class Maps(metaclass=_MapsMeta):
         self._data_plotted = False
         self._set_extent_on_plot = True
 
-        self._edit_annotations = AnnotationEditor(self)
-
         # Make sure the figure-background patch is on an explicit layer
         # This is used to avoid having the background patch on each fetched
         # background while maintaining the capability of restoring it
@@ -702,6 +700,12 @@ class Maps(metaclass=_MapsMeta):
             self._set_parent()
 
         return self._parent
+
+    @property
+    def _edit_annotations(self):
+        if getattr(self.parent, "_edit_annotations_parent", None) is None:
+            self.parent._edit_annotations_parent = AnnotationEditor(self.parent)
+        return self.parent._edit_annotations_parent
 
     @property
     def _real_self(self):
