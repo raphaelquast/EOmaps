@@ -20,12 +20,26 @@ class _CollectionAccessor:
     """
     Accessor class to handle contours drawn by plt.contour.
 
-    The purpose of this class is to serve as a single Artist-like container
-    that executes relevant functions on ALL collections returned.
+    The main purpose of this class is to serve as a single Artist-like container
+    that executes relevant functions on ALL collections returned by plt.contour.
+
+    The `ContourSet` returned by plt.contour is accessible via `.contour_set`
+
+    To add labels to the contours on the map, use:
+
+    >>> m = Maps()
+    >>> m.set_data(...)
+    >>> m.set_shape.contour()
+    >>> m.plot_map()
+    >>>
+    >>> labels = m3_1.ax.clabel(m.coll.contour_set)
+    >>> for i in labels:
+    >>>     m.BM.add_bg_artist(i, layer=m.layer)
+
     """
 
     def __init__(self, cont, filled):
-        self._cont = cont
+        self.contour_set = cont
         self._filled = filled
 
         self._label = ""
@@ -60,11 +74,11 @@ class _CollectionAccessor:
 
     @property
     def levels(self):
-        return self._cont.levels
+        return self.contour_set.levels
 
     @property
     def norm(self):
-        return self._cont.norm
+        return self.contour_set.norm
 
     def get_label(self):
         return self._label
