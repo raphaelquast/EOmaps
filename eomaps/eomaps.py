@@ -748,7 +748,15 @@ class Maps(metaclass=_MapsMeta):
         """Create a new layer from a file."""
         return self._new_layer_from_file
 
-    def new_map(self, ax=None, keep_on_top=False, **kwargs):
+    def new_map(
+        self,
+        ax=None,
+        keep_on_top=False,
+        inherit_data=False,
+        inherit_classification=False,
+        inherit_shape=False,
+        **kwargs,
+    ):
         """
         Create a new map that shares the figure with this Maps-object.
 
@@ -802,6 +810,14 @@ class Maps(metaclass=_MapsMeta):
             Set the preferred way for accessing WebMap services if both WMS and WMTS
             capabilities are possible.
             The default is "wms"
+        inherit_data, inherit_classification, inherit_shape : bool
+            Indicator if the corresponding properties should be inherited from
+            the parent Maps-object.
+
+            By default only the shape is inherited.
+
+            For more details, see :py:meth:`Maps.inherit_data` and
+            :py:meth:`Maps.inherit_classification`
         kwargs :
             additional kwargs are passed to `matplotlib.pyplot.figure()`
             - e.g. figsize=(10,5)
@@ -813,6 +829,13 @@ class Maps(metaclass=_MapsMeta):
 
         """
         m2 = Maps(f=self.f, ax=ax, **kwargs)
+
+        if inherit_data:
+            m2.inherit_data(self)
+        if inherit_classification:
+            m2.inherit_classification(self)
+        if inherit_shape:
+            getattr(m2.set_shape, self.shape.name)(**self.shape._initargs)
 
         if np.allclose(self.ax.bbox.bounds, m2.ax.bbox.bounds):
             _log.warning(
