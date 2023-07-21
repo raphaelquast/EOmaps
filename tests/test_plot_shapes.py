@@ -11,11 +11,14 @@ import matplotlib.pyplot as plt
 
 class TestPlotShapes(unittest.TestCase):
     def setUp(self):
-        x, y = np.meshgrid(np.linspace(-40, 40, 50), np.linspace(-25, 30, 150))
+        x, y = np.meshgrid(np.linspace(-40, 40, 50), np.linspace(-25, 30, 50))
         data = x**2 + y**2
 
+        # use an irregular sample of the data to check irregular datasets as well
         self.data_pandas = dict(
-            data=pd.DataFrame(dict(lon=x.ravel(), lat=y.ravel(), value=data.ravel())),
+            data=pd.DataFrame(
+                dict(lon=x.ravel(), lat=y.ravel(), value=data.ravel())
+            ).sample(500),
             x="lon",
             y="lat",
             parameter="value",
@@ -48,11 +51,11 @@ class TestPlotShapes(unittest.TestCase):
             )
 
             m3 = m.new_map(ax=224, inherit_data=True)
-            m3.set_shape.raster()
+            m3.set_shape.ellipses()
             m3.plot_map(alpha=0.25)
             cb3 = m3.add_colorbar()
 
-            m3_1 = m3.new_layer("asdf", inherit_data=True)
+            m3_1 = m3.new_layer("contours", inherit_data=True)
             m3_1.set_shape.contour(filled=False)
             m3_1.plot_map(linestyles=["--", "-", ":", "-."])
 
@@ -77,4 +80,5 @@ class TestPlotShapes(unittest.TestCase):
             for a in arts:
                 m3_1.BM.add_bg_artist(a, layer=m3_1.layer)
 
-        plt.close("all")
+            m.show_layer("base", "contours")
+            plt.close("all")
