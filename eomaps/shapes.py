@@ -1810,9 +1810,14 @@ class Shapes(object):
             """
             Draw a contour-plot of the data.
 
-            (similar to plt.contourf)
-            """
+            Note
+            ----
+            This is a wrapper for matpltolibs contour-plot capabilities.
 
+            - contours for 2D datasets are evaluated with `plt.contour`
+            - contours for 1D datasets are evaluated with `plt.tricontour`
+
+            """
             from . import MapsGrid  # do this here to avoid circular imports!
 
             for m in self._m if isinstance(self._m, MapsGrid) else [self._m]:
@@ -1867,6 +1872,18 @@ class Shapes(object):
 
             xs, ys = np.ma.masked_invalid(t_in_plot.transform(x, y), copy=False)
 
+            # for 2D data use normal contour, for irregular data use tricontour
+            if len(xs.shape) == 2 and len(ys.shape) == 2:
+                use_tri = False
+            else:
+                use_tri = True
+
+            # tricontours do not accept masked values -> drop all masked values!
+            if use_tri and isinstance(z, np.ma.MaskedArray):
+                xs = xs[~z.mask]
+                ys = ys[~z.mask]
+                z = z.compressed()
+
             data = dict(x=xs, y=ys, z=z)
 
             color_and_array.update(kwargs)
@@ -1878,9 +1895,25 @@ class Shapes(object):
                 color_and_array.pop("norm", None)
 
             if self._filled:
-                return self._m.ax.contourf("x", "y", "z", data=data, **color_and_array)
+                if use_tri:
+                    cont = self._m.ax.tricontourf(
+                        *[i.ravel() for i in data.values()], **color_and_array
+                    )
+                else:
+                    cont = self._m.ax.contourf(
+                        "x", "y", "z", data=data, **color_and_array
+                    )
             else:
-                return self._m.ax.contour("x", "y", "z", data=data, **color_and_array)
+                if use_tri:
+                    cont = self._m.ax.tricontour(
+                        *[i.ravel() for i in data.values()], **color_and_array
+                    )
+                else:
+                    cont = self._m.ax.contour(
+                        "x", "y", "z", data=data, **color_and_array
+                    )
+
+            return _CollectionAccessor(cont, self._filled)
 
         def get_coll(self, x, y, crs, **kwargs):
             x, y = np.asanyarray(x), np.asanyarray(y)
@@ -1888,12 +1921,13 @@ class Shapes(object):
             # transparency for reprojected QuadMeshes!
             # kwargs.setdefault("antialiased", False)
 
-            cont = self._get_contourf_colls(x, y, crs, **kwargs)
+            coll = self._get_contourf_colls(x, y, crs, **kwargs)
 
-            for c in cont.collections:
-                self._m.BM._ignored_unmanaged_artists.add(c)
+            if isinstance(coll, _CollectionAccessor):
+                for c in coll.collections:
+                    self._m.BM._ignored_unmanaged_artists.add(c)
 
-            return _CollectionAccessor(cont, self._filled)
+            return coll
 
     @wraps(_Contour.__call__)
     def contour(self, *args, **kwargs):

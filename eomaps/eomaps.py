@@ -2982,8 +2982,11 @@ class Maps(metaclass=_MapsMeta):
         if self.shape.name != "contour":
             kwargs.setdefault("zorder", 1)
         else:
-            # put contours at level 10
-            kwargs.setdefault("zorder", 10)
+            # put contour lines by default at level 10
+            if self.shape._filled:
+                kwargs.setdefault("zorder", 1)
+            else:
+                kwargs.setdefault("zorder", 10)
 
         if getattr(self, "coll", None) is not None and len(self.cb.pick.get.cbs) > 0:
             _log.info(
@@ -4753,7 +4756,14 @@ class Maps(metaclass=_MapsMeta):
                 array=props["z_data"], cmap=self._cbcmap, norm=self._norm, **kwargs
             )
 
-        if self.shape.name in ["raster", "contour"]:
+        if (
+            self.shape.name in ["contour"]
+            and len(self._xshape) == 2
+            and len(self._yshape) == 2
+        ):
+            # if 2D data is provided for a contour plot, keep the data 2d!
+            coll = self.shape.get_coll(props["xorig"], props["yorig"], "in", **args)
+        elif self.shape.name in ["raster"]:
             # if input-data is 1D, try to convert data to 2D (required for raster)
             # TODO make an explicit data-conversion function for 2D-only shapes
             if len(self._xshape) == 2 and len(self._yshape) == 2:
