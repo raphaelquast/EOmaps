@@ -3048,9 +3048,7 @@ class Maps(metaclass=_MapsMeta):
         if not self._inherit_classification:
             if self.classify_specs.scheme is not None:
                 _log.debug("EOmaps: Classifying...")
-            elif (
-                self.shape.name == "contour" and kwargs.get("levels", None) is not None
-            ):
+            elif self.shape.name == "contour" and kwargs.get("levels", None) is None:
                 # TODO use custom contour-levels as UserDefined classification?
                 self.set_classify.EqualInterval(k=5)
 
