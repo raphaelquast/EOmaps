@@ -1449,7 +1449,7 @@ class ColorBar:
                 "different Maps-object, provide it via the 'contour_map' argument!"
             )
 
-        levels = contour_map.coll.levels
+        levels = coll.levels
 
         # add support for using -1 to exclude the last level
         for i, val in enumerate(exclude_levels):
