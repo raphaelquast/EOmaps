@@ -3041,15 +3041,19 @@ class Maps(metaclass=_MapsMeta):
         )
 
         # ---------------------- classify the data
-        if not self._inherit_classification:
-            if self.classify_specs.scheme is not None:
-                _log.debug("EOmaps: Classifying...")
-            elif self.shape.name == "contour":
-                self.set_classify.EqualInterval(k=5)
-
         self._set_vmin_vmax(
             vmin=kwargs.pop("vmin", None), vmax=kwargs.pop("vmax", None)
         )
+
+        if not self._inherit_classification:
+            if self.classify_specs.scheme is not None:
+                _log.debug("EOmaps: Classifying...")
+            elif (
+                self.shape.name == "contour" and kwargs.get("levels", None) is not None
+            ):
+                # TODO use custom contour-levels as UserDefined classification?
+                self.set_classify.EqualInterval(k=5)
+
         cbcmap, norm, bins, classified = self._classify_data(
             vmin=self._vmin,
             vmax=self._vmax,
