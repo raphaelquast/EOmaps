@@ -1461,7 +1461,7 @@ class PickContainer(_ClickContainer):
                 return clickdicts
 
     def _onpick(self, event):
-        if event.artist is not self._artist:
+        if not self._artist_picked(event):
             return
 
         # only execute onpick if the correct layer is visible
@@ -1526,6 +1526,17 @@ class PickContainer(_ClickContainer):
             self._m.f.canvas.mpl_disconnect(cid)
         self._cid_pick_event.clear()
 
+    def _artist_picked(self, event):
+        if self._artist is event.artist:
+            return True
+        else:
+            # handle contour-plot artists explicitly
+            if self._artist.__class__.__name__ == "_CollectionAccessor":
+                if any(i is event.artist for i in self._artist.collections):
+                    return True
+            else:
+                return False
+
     def _add_pick_callback(self):
         # execute onpick and forward the event to all connected Maps-objects
 
@@ -1544,7 +1555,7 @@ class PickContainer(_ClickContainer):
                 ) and self._m.f.canvas.toolbar.mode != "":
                     return
 
-                if not self._artist is event.artist:
+                if not self._artist_picked(event):
                     return
 
                 self._event = event
