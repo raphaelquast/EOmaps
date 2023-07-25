@@ -4434,6 +4434,8 @@ class Maps(metaclass=_MapsMeta):
                 )
                 bins = mapc.bins
 
+            bins = np.unique(np.clip(bins, vmin, vmax))
+
             if vmin < min(bins):
                 bins = [vmin, *bins]
 

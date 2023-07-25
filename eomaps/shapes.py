@@ -45,6 +45,12 @@ class _CollectionAccessor:
         self._label = ""
         self.collections = self.contour_set.collections
 
+        # TODO check why cmap and norm are not properly set on the collections
+        # of the contourplot ("over", "under" colors etc. get lost)
+        for c in self.collections:
+            c.set_cmap(self.cmap)
+            c.set_norm(self.norm)
+
         methods = [
             f
             for f in dir(Collection)
@@ -79,6 +85,10 @@ class _CollectionAccessor:
     @property
     def norm(self):
         return self.contour_set.norm
+
+    @property
+    def cmap(self):
+        return self.contour_set.cmap
 
     def get_label(self):
         return self._label
@@ -1847,12 +1857,20 @@ class Shapes(object):
             return s
 
         def _get_contourf_colls(self, x, y, crs, **kwargs):
+            # make sure the array is not dropped from kwargs since we need it for
+            # evaluating the contours
+            z = kwargs.pop("array", None)
+
             # if manual levels were specified, use them, otherwise check for
             # classification values
             if "levels" not in kwargs:
                 bins = getattr(self._m.classify_specs, "_bins", None)
-                if bins:
-                    kwargs["levels"] = bins
+                if bins is not None:
+                    # in order to ensure that values above or below vmin/vmax are
+                    # colored with the appropriate "under" and "over" colors,
+                    # we need to extend the classification bins with the min/max values
+                    # of the data (otherwise only intermediate levels would be drawn!)
+                    kwargs["levels"] = np.unique([z.min(), *bins, z.max()])
 
             # transform from crs to the plot_crs
             in_crs = self._m.get_crs(crs)
@@ -1862,12 +1880,10 @@ class Shapes(object):
             mask = np.full(x.shape, True, dtype=bool)
             self._m._data_mask = None
 
-            # make sure the array is not dropped from kwargs since we need it for
-            # evaluating the contours
-            z = kwargs.pop("array", None)
             color_and_array = Shapes._get_colors_and_array(kwargs, mask)
             # since the "array" parameter is added by default (even if None),
             # remove it again to avoid warnings that the parameter is unused.
+            # TODO implement better treatment for "array" kwarg
             color_and_array.pop("array")
 
             xs, ys = np.ma.masked_invalid(t_in_plot.transform(x, y), copy=False)
@@ -1893,7 +1909,6 @@ class Shapes(object):
             if "colors" in kwargs:
                 color_and_array.pop("cmap", None)
                 color_and_array.pop("norm", None)
-
             if self._filled:
                 if use_tri:
                     cont = self._m.ax.tricontourf(
