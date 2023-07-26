@@ -2006,14 +2006,12 @@ class WebMapContainer(object):
         WMS.__doc__ = type(self).CAMS.__doc__
         return WMS
 
-    @property
-    @lru_cache()
-    def DLR_basemaps(self):
+    class _DLR:
         """
-        Basemaps hosted by DLR's EOC Geoservice
+        WebMap services hosted by DLR's EOC Geoservice
         https://geoservice.dlr.de
 
-        A collection of basemaps provided by the EOC Geoservice of the Earth
+        A collection of WebMaps provided by the EOC Geoservice of the Earth
         Observation Center (EOC) of the German Aerospace Center (DLR).
 
         Note
@@ -2039,15 +2037,142 @@ class WebMapContainer(object):
         its usage.
 
         (check: https://geoservice.dlr.de/web/about for full details)
+
         """
 
-        WMS = _WebServiceCollection(
+        def __init__(self, m):
+            self._m = m
+
+        @property
+        @lru_cache()
+        def basemap(self):
+            WMS = _WebServiceCollection(
+                m=self._m,
+                service_type="wms",
+                url="https://geoservice.dlr.de/eoc/basemap/wms?SERVICE=WMS&REQUEST=GetCapabilities",
+            )
+            WMS.__doc__ = _combdoc(
+                """
+                EOC Basemap Coverage Service
+
+                This Web Coverage Service provides access to geospatial core coverage
+                products within the Earth Observation Center (EOC).
+
+                """,
+                type(self).__doc__,
+            )
+
+            return WMS
+
+        @property
+        @lru_cache()
+        def land(self):
+            WMS = _WebServiceCollection(
+                m=self._m,
+                service_type="wms",
+                url="https://geoservice.dlr.de/eoc/land/wms?SERVICE=WMS&REQUEST=GetCapabilities",
+            )
+            WMS.__doc__ = _combdoc(
+                """
+                EOC Land Map Service
+
+                This Web Coverage Service provides access to land coverage products
+                within the Earth Observation Center (EOC).
+
+                """,
+                type(self).__doc__,
+            )
+
+            return WMS
+
+        @property
+        @lru_cache()
+        def imagery(self):
+            WMS = _WebServiceCollection(
+                m=self._m,
+                service_type="wms",
+                url="https://geoservice.dlr.de/eoc/imagery/wms?SERVICE=WMS&REQUEST=GetCapabilities",
+            )
+            WMS.__doc__ = _combdoc(
+                """
+                EOC Imagery Map Service
+
+                This Web Mapping Service provides access to Orthoimagery products
+                within the Earth Observation Center (EOC).
+
+                """,
+                type(self).__doc__,
+            )
+
+            return WMS
+
+        @property
+        @lru_cache()
+        def elevation(self):
+            WMS = _WebServiceCollection(
+                m=self._m,
+                service_type="wms",
+                url="https://geoservice.dlr.de/eoc/elevation/wms?SERVICE=WMS&REQUEST=GetCapabilities",
+            )
+            WMS.__doc__ = _combdoc(
+                """
+                EOC Elevation Map Service
+
+                This Web Mapping Service provides access to geospatial elevation map
+                products within the Earth Observation Center (EOC).
+
+                """,
+                type(self).__doc__,
+            )
+
+            return WMS
+
+        @property
+        @lru_cache()
+        def atmosphere(self):
+            WMS = _WebServiceCollection(
+                m=self._m,
+                service_type="wms",
+                url="https://geoservice.dlr.de/eoc/atmosphere/wms?SERVICE=WMS&REQUEST=GetCapabilities",
+            )
+            WMS.__doc__ = _combdoc(
+                """
+                EOC Atmosphere Map Service
+
+                This Web Mapping Service provides access to geospatial atmospheric
+                products within the Earth Observation Center (EOC).
+
+                """,
+                type(self).__doc__,
+            )
+
+            return WMS
+
+    @property
+    def DLR(self):
+        WMS = self._DLR(self._m)
+        WMS.__doc__ = self._DLR.__doc__
+        return WMS
+
+    @property
+    @lru_cache()
+    def DLR_basemaps(self):
+        class _DepreciatedWebServiceCollection(_WebServiceCollection):
+            def __init__(self, *args, **kwargs):
+                print(
+                    "EOmaps: The WebMap service 'DLR_basemaps' is depreciated and will "
+                    "be removed in the next minor version!\n"
+                    "Use `m.add_wms.DLR.basemaps...` instead!",
+                )
+                super().__init__(*args, **kwargs)
+
+        WMS = _DepreciatedWebServiceCollection(
             m=self._m,
             service_type="wms",
             url="https://geoservice.dlr.de/eoc/basemap/wms?SERVICE=WMS&REQUEST=GetCapabilities",
         )
 
-        WMS.__doc__ = type(self).DLR_basemaps.__doc__
+        WMS.__doc__ = type(self).DLR.__doc__
         return WMS
 
     @property

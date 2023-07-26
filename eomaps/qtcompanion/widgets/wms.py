@@ -508,20 +508,27 @@ class WMS_ISRIC_SoilGrids(WMSBase):
         self.ask_for_legend(wms, wmslayer)
 
 
-class WMS_DLR_basemaps(WMSBase):
-    layer_prefix = "DLR_bm_"
-    name = "DLR basemaps"
+class WMS_DLR(WMSBase):
+    layer_prefix = "DLR_"
+    name = "DLR"
 
     def __init__(self, m=None):
         self.m = m
-        try:
-            self.wmslayers = self.m.add_wms.DLR_basemaps.layers
-        except Exception:
-            self.wmslayers = []
-            _log_problem(self.name)
+        self.wmslayers = []
+
+        for name in [i for i in dir(m.add_wms.DLR) if not i.startswith("_")]:
+            try:
+                self.wmslayers += [
+                    f"{name}__" + i
+                    for i in getattr(m.add_wms.DLR, name).add_layer.__dict__
+                ]
+            except Exception:
+                _log_problem(f"DLR_{name}")
 
     def do_add_layer(self, wmslayer, layer):
-        wms = getattr(self.m.add_wms.DLR_basemaps.add_layer, wmslayer)
+        name, wmslayer = wmslayer.split("__", 1)
+        wms = getattr(getattr(self.m.add_wms.DLR, name).add_layer, wmslayer)
+
         wms(layer=layer, transparent=True)
         self.ask_for_legend(wms, wmslayer)
 
@@ -613,7 +620,7 @@ class AddWMSMenuButton(QtWidgets.QPushButton):
             "NASA GIBS": WMS_NASA_GIBS,
             "CAMS": WMS_CAMS,
             "ISRIC SoilGrids": WMS_ISRIC_SoilGrids,
-            "DLR Basemaps": WMS_DLR_basemaps,
+            "DLR": WMS_DLR,
             "ESRI_ArcGIS": ESRI_ArcGIS,
             "Austria Basemaps": WMS_Austria,
             "OpenPlanetary": WMS_OpenPlanetary,
@@ -790,6 +797,64 @@ class AddWMSMenuButton(QtWidgets.QPushButton):
             for wmslayer in sub_features:
                 action = submenu.addAction(wmslayer)
                 action.triggered.connect(self.menu_callback_factory(wmsname, wmslayer))
+
+        except Exception:
+            _log.error(f"There was a problem with the WMS: {wmsname}")
+
+    def populate_submenu(self, wmsname=None):
+        def grouped(iterable, splits=2):
+            # group objects by prefix (before last underscore)
+            levels = dict()
+
+            special_prefixes = []
+            for i in iterable:
+                # check if there is a double-underscore, if so, use it to get the prefix
+                # otherwise use single-underscore split
+                if "__" in i and i.split("__", 1)[0] not in special_prefixes:
+                    prefix = i.split("__")[0]
+                else:
+                    prefix = i.split("_")[0]
+
+                levels.setdefault(prefix, []).append(i)
+
+            return levels
+
+        if wmsname not in self._submenus:
+            _log.info("No layers found for the WMS: {wmsname}")
+            return
+        else:
+            sub_features = self.select_wmslayers(wmsname, self._submenus[wmsname])
+
+        feature_groups = grouped(sorted(sub_features))
+
+        # add sub-menu groups for all webmap serviecs
+        try:
+            menu = self.sub_menus[wmsname]
+
+            if len(feature_groups) == 1:
+                # if there is only one group, just add the layers directly
+                for wmslayer in sub_features:
+                    action = menu.addAction(wmslayer)
+                    action.triggered.connect(
+                        self.menu_callback_factory(wmsname, wmslayer)
+                    )
+            else:
+                for feature_group, sub_features in feature_groups.items():
+                    if len(sub_features) == 1:
+                        # if there is only one feature in a group, add it directly
+                        wmslayer = sub_features[0]
+                        action = menu.addAction(wmslayer)
+                        action.triggered.connect(
+                            self.menu_callback_factory(wmsname, wmslayer)
+                        )
+                    else:
+                        # add individual sub-menus for each roup
+                        sub_menu = menu.addMenu(feature_group)
+                        for wmslayer in sub_features:
+                            action = sub_menu.addAction(wmslayer)
+                            action.triggered.connect(
+                                self.menu_callback_factory(wmsname, wmslayer)
+                            )
 
         except Exception:
             _log.error(f"There was a problem with the WMS: {wmsname}")
