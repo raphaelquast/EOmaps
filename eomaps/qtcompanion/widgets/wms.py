@@ -801,23 +801,24 @@ class AddWMSMenuButton(QtWidgets.QPushButton):
         except Exception:
             _log.error(f"There was a problem with the WMS: {wmsname}")
 
+    def _group_services(self, iterable, splits=2):
+        # group objects by prefix (before last underscore)
+        levels = dict()
+
+        special_prefixes = []
+        for i in iterable:
+            # check if there is a double-underscore, if so, use it to get the prefix
+            # otherwise use single-underscore split
+            if "__" in i and i.split("__", 1)[0] not in special_prefixes:
+                prefix = i.split("__")[0]
+            else:
+                prefix = i.split("_")[0]
+
+            levels.setdefault(prefix, []).append(i)
+
+        return levels
+
     def populate_submenu(self, wmsname=None):
-        def grouped(iterable, splits=2):
-            # group objects by prefix (before last underscore)
-            levels = dict()
-
-            special_prefixes = []
-            for i in iterable:
-                # check if there is a double-underscore, if so, use it to get the prefix
-                # otherwise use single-underscore split
-                if "__" in i and i.split("__", 1)[0] not in special_prefixes:
-                    prefix = i.split("__")[0]
-                else:
-                    prefix = i.split("_")[0]
-
-                levels.setdefault(prefix, []).append(i)
-
-            return levels
 
         if wmsname not in self._submenus:
             _log.info("No layers found for the WMS: {wmsname}")
@@ -825,7 +826,7 @@ class AddWMSMenuButton(QtWidgets.QPushButton):
         else:
             sub_features = self.select_wmslayers(wmsname, self._submenus[wmsname])
 
-        feature_groups = grouped(sorted(sub_features))
+        feature_groups = self._group_services(sorted(sub_features))
 
         # add sub-menu groups for all webmap serviecs
         try:
@@ -839,7 +840,9 @@ class AddWMSMenuButton(QtWidgets.QPushButton):
                         self.menu_callback_factory(wmsname, wmslayer)
                     )
             else:
-                for feature_group, sub_features in feature_groups.items():
+                for feature_group in sorted(feature_groups, key=lambda x: x.lower()):
+                    sub_features = feature_groups[feature_group]
+
                     if len(sub_features) == 1:
                         # if there is only one feature in a group, add it directly
                         wmslayer = sub_features[0]
