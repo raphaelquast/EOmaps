@@ -201,6 +201,11 @@ class WebMapContainer(object):
                 url="https://services.terrascope.be/wmts/v2",
             )
 
+        WMS._EOmaps_info = type(self).ESA_WorldCover.__doc__
+        WMS._EOmaps_source_code = (
+            "m.add_wms.ESA_WorldCover.add_layer." f"<layer>(transparent=True)"
+        )
+
         WMS.__doc__ = type(self).ESA_WorldCover.__doc__
         return WMS
 
@@ -246,6 +251,10 @@ class WebMapContainer(object):
             url="https://www.gebco.net/data_and_products/gebco_web_services/web_map_service/mapserv?request=getcapabilities&service=wms&version=1.1.1",
         )
 
+        WMS._EOmaps_info = type(self).GEBCO.__doc__
+        WMS._EOmaps_source_code = (
+            "m.add_wms.GEBCO.add_layer." f"<layer>(transparent=True)"
+        )
         WMS.__doc__ = type(self).GEBCO.__doc__
         return WMS
 
@@ -286,7 +295,10 @@ class WebMapContainer(object):
             service_type="wms",
             url="https://www.gmrt.org/services/mapserver/wms_merc?request=GetCapabilities&service=WMS&version=1.3.0",
         )
-
+        WMS._EOmaps_info = type(self).GMRT.__doc__
+        WMS._EOmaps_source_code = (
+            "m.add_wms.GMRT.add_layer." f"<layer>(transparent=True)"
+        )
         WMS.__doc__ = type(self).GMRT.__doc__
         return WMS
 
@@ -311,7 +323,10 @@ class WebMapContainer(object):
             service_type="wms",
             url="https://glad.umd.edu/mapcache/?SERVICE=WMS",
         )
-
+        WMS._EOmaps_info = type(self).GLAD.__doc__
+        WMS._EOmaps_source_code = (
+            "m.add_wms.GLAD.add_layer." f"<layer>(transparent=True)"
+        )
         WMS.__doc__ = type(self).GLAD.__doc__
         return WMS
 
@@ -352,6 +367,10 @@ class WebMapContainer(object):
                 service_type="wmts",
                 url="https://gibs.earthdata.nasa.gov/wmts/epsg4326/all/1.0.0/WMTSCapabilities.xml",
             )
+            WMS._EOmaps_info = type(self).NASA_GIBS.__doc__
+            WMS._EOmaps_source_code = (
+                "m.add_wms.NASA_GIBS.add_layer." f"<layer>(transparent=True)"
+            )
 
         WMS.__doc__ = type(self).NASA_GIBS.__doc__
         return WMS
@@ -369,7 +388,11 @@ class WebMapContainer(object):
                 service_type="wms",
                 url="https://gibs.earthdata.nasa.gov/wms/epsg4326/best/wms.cgi?SERVICE=WMS&REQUEST=GetCapabilities&VERSION=1.1.1",
             )
-            WMS.__doc__ = type(self).__doc__
+            WMS._EOmaps_info = WebMapContainer.NASA_GIBS.__doc__
+            WMS._EOmaps_source_code = (
+                "m.add_wms.NASA_GIBS.EPSG_4326.add_layer." f"<layer>(transparent=True)"
+            )
+            WMS.__doc__ = WebMapContainer.NASA_GIBS.__doc__
             return WMS
 
         @property
@@ -380,7 +403,11 @@ class WebMapContainer(object):
                 service_type="wms",
                 url="https://gibs.earthdata.nasa.gov/wms/epsg3857/best/wms.cgi?SERVICE=WMS&REQUEST=GetCapabilities&VERSION=1.1.1",
             )
-            WMS.__doc__ = type(self).__doc__
+            WMS._EOmaps_info = WebMapContainer.NASA_GIBS.__doc__
+            WMS._EOmaps_source_code = (
+                "m.add_wms.NASA_GIBS.EPSG_3857.add_layer." f"<layer>(transparent=True)"
+            )
+            WMS.__doc__ = WebMapContainer.NASA_GIBS.__doc__
             return WMS
 
         @property
@@ -391,7 +418,11 @@ class WebMapContainer(object):
                 service_type="wms",
                 url="https://gibs.earthdata.nasa.gov/wms/epsg3413/best/wms.cgi?SERVICE=WMS&REQUEST=GetCapabilities&VERSION=1.1.1",
             )
-            WMS.__doc__ = type(self).__doc__
+            WMS._EOmaps_info = WebMapContainer.NASA_GIBS.__doc__
+            WMS._EOmaps_source_code = (
+                "m.add_wms.NASA_GIBS.EPSG_3413.add_layer." f"<layer>(transparent=True)"
+            )
+            WMS.__doc__ = WebMapContainer.NASA_GIBS.__doc__
             return WMS
 
         @property
@@ -402,7 +433,11 @@ class WebMapContainer(object):
                 service_type="wms",
                 url="https://gibs.earthdata.nasa.gov/wms/epsg3031/best/wms.cgi?SERVICE=WMS&REQUEST=GetCapabilities&VERSION=1.1.1",
             )
-            WMS.__doc__ = type(self).__doc__
+            WMS._EOmaps_info = WebMapContainer.NASA_GIBS.__doc__
+            WMS._EOmaps_source_code = (
+                "m.add_wms.NASA_GIBS.EPSG_3031.add_layer." f"<layer>(transparent=True)"
+            )
+            WMS.__doc__ = WebMapContainer.NASA_GIBS.__doc__
             return WMS
 
     class _OpenStreetMap:
@@ -481,8 +516,7 @@ class WebMapContainer(object):
                     "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
                     name="OSM_default",
                 )
-                self.default.__doc__ = _combdoc(
-                    """
+                self.default._EOmaps_info = """
                     OpenStreetMap's standard tile layer
                     https://www.openstreetmap.org/
 
@@ -491,17 +525,14 @@ class WebMapContainer(object):
                     **LICENSE-info (without any warranty for correctness!!)**
 
                     check: https://operations.osmfoundation.org/policies/tiles/
-                    """,
-                    self.default.__call__.__doc__,
-                )
+                    """
 
                 self.default_german = _XyzTileService(
                     self._m,
                     "https://tile.openstreetmap.de/{z}/{x}/{y}.png",
                     name="OSM_default_german",
                 )
-                self.default_german.__doc__ = _combdoc(
-                    """
+                self.default_german._EOmaps_info = """
                     German fork of OpenStreetMap's standard tile layer
                     https://www.openstreetmap.de/
 
@@ -510,17 +541,15 @@ class WebMapContainer(object):
                     **LICENSE-info (without any warranty for correctness!!)**
 
                     check: https://www.openstreetmap.de/germanstyle.html
-                    """,
-                    self.default_german.__call__.__doc__,
-                )
+                    """
 
                 self.humanitarian = _XyzTileService(
                     self._m,
                     "https://a.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png",
                     name="OSM_humanitarian",
                 )
-                self.humanitarian.__doc__ = _combdoc(
-                    """
+
+                self.humanitarian._EOmaps_info = """
                     OpenStreetMap's Humanitarian style
 
                     Focuses on the developing countries with an emphasis on features
@@ -531,9 +560,9 @@ class WebMapContainer(object):
                     in developing countries) and more nuanced surface track-type
                     rendering.
 
-                    https://www.openstreetmap.org/
-                    https://wiki.openstreetmap.org/wiki/HOT_style
-                    https://wiki.openstreetmap.org/wiki/Humanitarian_OSM_Team
+                    - https://www.openstreetmap.org/
+                    - https://wiki.openstreetmap.org/wiki/HOT_style
+                    - https://wiki.openstreetmap.org/wiki/Humanitarian_OSM_Team
 
                     Note
                     ----
@@ -543,9 +572,7 @@ class WebMapContainer(object):
 
                     - https://operations.osmfoundation.org/policies/tiles/
                     - https://www.openstreetmap.fr/fonds-de-carte/
-                    """,
-                    self.humanitarian.__call__.__doc__,
-                )
+                    """
 
                 self.OpenTopoMap = _XyzTileService(
                     m=self._m,
@@ -553,8 +580,7 @@ class WebMapContainer(object):
                     maxzoom=16,
                     name="OSM_OpenTopoMap",
                 )
-                self.OpenTopoMap.__doc__ = _combdoc(
-                    """
+                self.OpenTopoMap._EOmaps_info = """
                     A project aiming at rendering topographic maps from OSM
                     and SRTM data. The map style is similar to some official
                     German or French topographic maps, such as TK50 or TOP 25.
@@ -565,9 +591,7 @@ class WebMapContainer(object):
                     **LICENSE-info (without any warranty for correctness!!)**
 
                     check: https://wiki.openstreetmap.org/wiki/OpenTopoMap
-                    """,
-                    self.OpenTopoMap.__call__.__doc__,
-                )
+                    """
 
                 self.OpenRiverboatMap = _XyzTileService(
                     m=self._m,
@@ -575,8 +599,7 @@ class WebMapContainer(object):
                     maxzoom=16,
                     name="OSM_OpenRiverboatMap",
                 )
-                self.OpenRiverboatMap.__doc__ = _combdoc(
-                    """
+                self.OpenRiverboatMap._EOmaps_info = """
                     Open Riverboat Map plans to make an open source CartoCSS map style
                     of navigable waterways, on top of OpenStreetMap project.
 
@@ -592,9 +615,7 @@ class WebMapContainer(object):
                         - https://openstreetmap.fr
                         - https://operations.osmfoundation.org/policies/tiles/
 
-                    """,
-                    self.OpenRiverboatMap.__call__.__doc__,
-                )
+                    """
 
                 self.OpenSeaMap = _XyzTileService(
                     m=self._m,
@@ -602,8 +623,7 @@ class WebMapContainer(object):
                     maxzoom=16,
                     name="OSM_OpenSeaMap",
                 )
-                self.OpenSeaMap.__doc__ = _combdoc(
-                    """
+                self.OpenSeaMap._EOmaps_info = """
                     OpenSeaMap is an open source, worldwide project to create a free
                     nautical chart. There is a great need for freely accessible maps
                     for navigation purposes, so in 2009, OpenSeaMap came into life.
@@ -624,9 +644,7 @@ class WebMapContainer(object):
                         - https://wiki.openstreetmap.org/wiki/OpenSeaMap
                         - https://operations.osmfoundation.org/policies/tiles/
 
-                    """,
-                    self.OpenSeaMap.__call__.__doc__,
-                )
+                    """
 
                 self.CyclOSM = _XyzTileService(
                     m=self._m,
@@ -634,8 +652,7 @@ class WebMapContainer(object):
                     maxzoom=16,
                     name="CyclOSM",
                 )
-                self.CyclOSM.__doc__ = _combdoc(
-                    """
+                self.CyclOSM._EOmaps_info = """
                     CyclOSM is a bicycle-oriented map built on top of OpenStreetMap data.
                     It aims at providing a beautiful and practical map for cyclists, no
                     matter their cycling habits or abilities.
@@ -654,9 +671,7 @@ class WebMapContainer(object):
                         - https://openstreetmap.fr
                         - https://operations.osmfoundation.org/policies/tiles/
 
-                    """,
-                    self.CyclOSM.__call__.__doc__,
-                )
+                    """
 
                 self.CyclOSM_lite = _XyzTileService(
                     m=self._m,
@@ -665,8 +680,7 @@ class WebMapContainer(object):
                     name="CyclOSM",
                 )
 
-                self.CyclOSM_lite.__doc__ = _combdoc(
-                    """
+                self.CyclOSM_lite._EOmaps_info = """
                     CyclOSM is a bicycle-oriented map built on top of OpenStreetMap data.
                     It aims at providing a beautiful and practical map for cyclists, no
                     matter their cycling habits or abilities.
@@ -685,9 +699,7 @@ class WebMapContainer(object):
                         - https://openstreetmap.fr
                         - https://operations.osmfoundation.org/policies/tiles/
 
-                    """,
-                    self.CyclOSM_lite.__call__.__doc__,
-                )
+                    """
 
                 self.OEPNV_public_transport = _XyzTileService(
                     m=self._m,
@@ -695,9 +707,7 @@ class WebMapContainer(object):
                     maxzoom=16,
                     name="CyclOSM",
                 )
-
-                self.OEPNV_public_transport.__doc__ = _combdoc(
-                    """
+                self.OEPNV_public_transport._EOmaps_info = """
                     We display worldwide public transport facilities on a uniform map,
                     so that you can forget about browsing individual operators websites.
 
@@ -713,9 +723,7 @@ class WebMapContainer(object):
                         - https://memomaps.de/
                         - https://operations.osmfoundation.org/policies/tiles/
 
-                    """,
-                    self.OEPNV_public_transport.__call__.__doc__,
-                )
+                    """
 
                 self.stamen_toner = _XyzTileService(
                     self._m,
@@ -798,17 +806,16 @@ class WebMapContainer(object):
                     attribution provided in the link above.
                     """
 
-                stamen_toner_doc = _combdoc(
+                stamen_toner_info = _combdoc(
                     """
                     **Stamen Toner**
 
                     High-contrast B+W (black and white) maps provided by Stamen
                     """,
                     stamen_doc,
-                    self.stamen_toner.__call__.__doc__,
                 )
 
-                stamen_terrain_doc = _combdoc(
+                stamen_terrain_info = _combdoc(
                     """
                     **Stamen Terrain**
 
@@ -816,10 +823,9 @@ class WebMapContainer(object):
                     provided by Stamen
                     """,
                     stamen_doc,
-                    self.stamen_toner.__call__.__doc__,
                 )
 
-                stamen_watercolor_doc = _combdoc(
+                stamen_watercolor_info = _combdoc(
                     """
                     **Stamen Watercolor**
 
@@ -827,22 +833,34 @@ class WebMapContainer(object):
                     provided by Stamen
                     """,
                     stamen_doc,
-                    self.stamen_toner.__call__.__doc__,
                 )
 
-                self.stamen_toner.__doc__ = stamen_toner_doc
-                self.stamen_toner_lines.__doc__ = stamen_toner_doc
-                self.stamen_toner_background.__doc__ = stamen_toner_doc
-                self.stamen_toner_lite.__doc__ = stamen_toner_doc
-                self.stamen_toner_hybrid.__doc__ = stamen_toner_doc
-                self.stamen_toner_labels.__doc__ = stamen_toner_doc
+                self.stamen_toner._EOmaps_info = stamen_toner_info
+                self.stamen_toner_lines._EOmaps_info = stamen_toner_info
+                self.stamen_toner_background._EOmaps_info = stamen_toner_info
+                self.stamen_toner_lite._EOmaps_info = stamen_toner_info
+                self.stamen_toner_hybrid._EOmaps_info = stamen_toner_info
+                self.stamen_toner_labels._EOmaps_info = stamen_toner_info
 
-                self.stamen_terrain.__doc__ = stamen_terrain_doc
-                self.stamen_terrain_lines.__doc__ = stamen_terrain_doc
-                self.stamen_terrain_labels.__doc__ = stamen_terrain_doc
-                self.stamen_terrain_background.__doc__ = stamen_terrain_doc
+                self.stamen_terrain._EOmaps_info = stamen_terrain_info
+                self.stamen_terrain_lines._EOmaps_info = stamen_terrain_info
+                self.stamen_terrain_labels._EOmaps_info = stamen_terrain_info
+                self.stamen_terrain_background._EOmaps_info = stamen_terrain_info
 
-                self.stamen_watercolor.__doc__ = stamen_watercolor_doc
+                self.stamen_watercolor._EOmaps_info = stamen_watercolor_info
+
+                # update docstrings
+                for wmsname in filter(lambda x: not x.startswith("_"), dir(self)):
+                    obj = getattr(self, wmsname)
+                    info = getattr(obj, "_EOmaps_info", wmsname)
+                    obj.__doc__ = _combdoc(
+                        info,
+                        obj.__call__.__doc__,
+                    )
+
+                    obj._EOmaps_source_code = (
+                        f"m.add_wms.OpenStreetMap.add_layer.{wmsname}()"
+                    )
 
         class _OSM_waymarkedtrails:
             """
@@ -888,16 +906,22 @@ class WebMapContainer(object):
 
                         setattr(self, v, srv)
 
+                        srv._EOmaps_info = f"""
+                            OSM WaymarkedTrails {v} layer
+
+                            Note
+                            ----
+                            **LICENSE-info** (without any warranty for correctness!!)
+
+                            check: https://{v}.waymarkedtrails.org/#help-legal
+                            """
+                        srv._EOmaps_source_code = (
+                            "m.add_wms.OpenStreetMap.OSM_waymarkedtrails.add_layer."
+                            f"{v}(transparent=True)"
+                        )
+
                         getattr(self, v).__doc__ = _combdoc(
-                            (
-                                f"WaymarkedTrails {v} layer\n"
-                                "\n"
-                                "Note\n"
-                                "----\n"
-                                "**LICENSE-info (without any warranty for correctness!!)**\n"
-                                "\n"
-                                f"check: https://{v}.waymarkedtrails.org/#help-legal\n"
-                            ),
+                            srv._EOmaps_info,
                             getattr(self, v).__call__.__doc__,
                         )
 
@@ -943,16 +967,22 @@ class WebMapContainer(object):
 
                         setattr(self, v, srv)
 
+                        srv._EOmaps_info = f"""
+                            OSM OpenRailwayMap {v} layer
+
+                            Note
+                            ----
+                            **LICENSE-info** (without any warranty for correctness!!)
+
+                            check: https://wiki.openstreetmap.org/wiki/OpenRailwayMap/API
+                            """
+                        srv._EOmaps_source_code = (
+                            "m.add_wms.OpenStreetMap.OSM_openrailwaymap.add_layer."
+                            f"{v}(transparent=True)"
+                        )
+
                         getattr(self, v).__doc__ = _combdoc(
-                            (
-                                f"OpenRailwayMap {v} layer\n"
-                                "\n"
-                                "Note\n"
-                                "----\n"
-                                "**LICENSE-info (without any warranty for correctness!!)**\n"
-                                "\n"
-                                f"check: https://wiki.openstreetmap.org/wiki/OpenRailwayMap/API\n"
-                            ),
+                            srv._EOmaps_info,
                             getattr(self, v).__call__.__doc__,
                         )
 
@@ -1007,16 +1037,26 @@ class WebMapContainer(object):
 
                         setattr(self, name, srv)
 
+                        setattr(self, v, srv)
+
+                        srv._EOmaps_info = f"""
+                            OSM CartoDB basemap {v} layer
+
+                            Note
+                            ----
+                            **LICENSE-info** (without any warranty for correctness!!)
+
+                            - https://github.com/CartoDB/basemap-styles
+                            - https://carto.com
+
+                            """
+                        srv._EOmaps_source_code = (
+                            "m.add_wms.OpenStreetMap.OSM_cartodb.add_layer."
+                            f"{v}(transparent=True)"
+                        )
+
                         getattr(self, name).__doc__ = _combdoc(
-                            (
-                                f"CartoDB basemap {v} layer\n"
-                                "\n"
-                                "Note\n"
-                                "----\n"
-                                "**LICENSE-info (without any warranty for correctness!!)**\n"
-                                "\n"
-                                f"check: https://github.com/CartoDB/basemap-styles\n"
-                            ),
+                            srv._EOmaps_info,
                             getattr(self, name).__call__.__doc__,
                         )
 
@@ -1028,16 +1068,26 @@ class WebMapContainer(object):
                 service_type="wms",
                 url="https://ows.terrestris.de/osm/service?SERVICE=WMS&VERSION=1.1.1&REQUEST=GetCapabilities",
             )
-            WMS.__doc__ = _combdoc(
-                type(self).__doc__,
-                """
+
+            WMS._EOmaps_info = """
+                OpenStreetMap Terrestis <layer> layer.
+
                 Note
                 ----
                 **LICENSE-info (without any warranty for correctness!!)**
 
-                ... this service is hosted by Terrestris... check:
-                https://www.terrestris.de/en/openstreetmap-wms/
-                """,
+                This service is hosted by Terrestris... check:
+
+                - https://www.terrestris.de/en/openstreetmap-wms/
+                """
+            WMS._EOmaps_source_code = (
+                "m.add_wms.OpenStreetMap.OSM_terrestis.add_layer."
+                "<layer>(transparent=True)"
+            )
+
+            WMS.__doc__ = _combdoc(
+                type(self).__doc__,
+                WMS._EOmaps_info,
             )
             return WMS
 
@@ -1049,16 +1099,26 @@ class WebMapContainer(object):
                 service_type="wms",
                 url="http://ows.mundialis.de/services/service?",
             )
-            WMS.__doc__ = _combdoc(
-                type(self).__doc__,
-                """
+
+            WMS._EOmaps_info = """
+                OpenStreetMap Mundialis <layer> layer.
+
                 Note
                 ----
                 **LICENSE-info (without any warranty for correctness!!)**
 
                 ... this service is hosted by Mundialis... check:
-                https://www.mundialis.de/en/ows-mundialis/
-                """,
+
+                - https://www.mundialis.de/en/ows-mundialis/
+                """
+            WMS._EOmaps_source_code = (
+                "m.add_wms.OpenStreetMap.OSM_mundialis.add_layer."
+                "<layer>(transparent=True)"
+            )
+
+            WMS.__doc__ = _combdoc(
+                type(self).__doc__,
+                WMS._EOmaps_info,
             )
             return WMS
 
@@ -1070,9 +1130,10 @@ class WebMapContainer(object):
                 service_type="wms",
                 url="https://osm-demo.wheregroup.com/service?REQUEST=GetCapabilities",
             )
-            WMS.__doc__ = _combdoc(
-                type(self).__doc__,
-                """
+
+            WMS._EOmaps_info = """
+                OpenStreetMap Mundialis <layer> layer.
+
                 Note
                 ----
                 **LICENSE-info (without any warranty for correctness!!)**
@@ -1081,9 +1142,19 @@ class WebMapContainer(object):
 
                 It is ONLY allowed for private use and testing! For more details, check:
 
-                https://wheregroup.com/kontakt/
-                """,
+                - https://wheregroup.com/kontakt/
+
+                """
+            WMS._EOmaps_source_code = (
+                "m.add_wms.OpenStreetMap.OSM_wheregroup.add_layer."
+                "<layer>(transparent=True)"
             )
+
+            WMS.__doc__ = _combdoc(
+                type(self).__doc__,
+                WMS._EOmaps_info,
+            )
+
             return WMS
 
         @property
@@ -1094,9 +1165,8 @@ class WebMapContainer(object):
                 service_type="wms",
                 url=r"https://maps.heigit.org/osm-wms/service?REQUEST=GetCapabilities&SERVICE=WMS",
             )
-            WMS.__doc__ = _combdoc(
-                type(self).__doc__,
-                """
+
+            WMS._EOmaps_info = """
                 The first version of osm-wms.de was put online at 13th of February
                 2009. Since these days it serves OpenStreetMap based maps. As the
                 name indicates it does provide the maps via the OGC-WMS format
@@ -1134,8 +1204,16 @@ class WebMapContainer(object):
 
                 For more details, please visit:
                 https://osm-wms.de
-                """,
+                """
+            WMS._EOmaps_source_code = (
+                "m.add_wms.OpenStreetMap.OSM_wms.add_layer." "<layer>(transparent=True)"
             )
+
+            WMS.__doc__ = _combdoc(
+                type(self).__doc__,
+                WMS._EOmaps_info,
+            )
+
             return WMS
 
         @property
@@ -1146,9 +1224,8 @@ class WebMapContainer(object):
                 service_type="wms",
                 url=r"https://maps.heigit.org/osmlanduse/service?REQUEST=GetCapabilities",
             )
-            WMS.__doc__ = _combdoc(
-                type(self).__doc__,
-                """
+
+            WMS._EOmaps_info = """
                 OSM Landuse Landcover is a WebGIS application to explore the
                 OpenStreetMap database specifically in terms of landuse and
                 landcover information. Land use tags were predicted when absent
@@ -1179,8 +1256,17 @@ class WebMapContainer(object):
 
                 For more details, plese visit:
                 https://osmlanduse.org
-                """,
+                """
+            WMS._EOmaps_source_code = (
+                "m.add_wms.OpenStreetMap.OSM_wheregroup.add_layer."
+                "<layer>(transparent=True)"
             )
+
+            WMS.__doc__ = _combdoc(
+                type(self).__doc__,
+                WMS._EOmaps_info,
+            )
+
             return WMS
 
     @property
@@ -1575,8 +1661,10 @@ class WebMapContainer(object):
                 13,
                 name="S1GBM_vv",
             )
+            WMS.__doc__ = _combdoc("Polarization: VV", WebMapContainer.S1GBM.__doc__)
+            WMS._EOmaps_info = WMS.__doc__
+            WMS._EOmaps_source_code = "m.add_wms.S1GBM.add_layer.vv(transparent=True)"
 
-            WMS.__doc__ = _combdoc("Polarization: VV", type(self).__doc__)
             return WMS
 
         @property
@@ -1587,7 +1675,10 @@ class WebMapContainer(object):
                 13,
                 name="S1GBM_vh",
             )
-            WMS.__doc__ = _combdoc("Polarization: VH", type(self).__doc__)
+            WMS.__doc__ = _combdoc("Polarization: VH", WebMapContainer.S1GBM.__doc__)
+            WMS._EOmaps_info = WMS.__doc__
+            WMS._EOmaps_source_code = "m.add_wms.S1GBM.add_layer.vh(transparent=True)"
+
             return WMS
 
     class _OpenPlanetary:
@@ -1662,6 +1753,12 @@ class WebMapContainer(object):
 
                     setattr(self, name, srv)
 
+                    srv._EOmaps_info = docstring
+                    srv._EOmaps_source_code = (
+                        "m.add_wms.OpenPlanetary.Moon.add_layer."
+                        f"{name}(transparent=True)"
+                    )
+
                     getattr(self, name).__doc__ = _combdoc(
                         docstring,
                         getattr(self, name).__call__.__doc__,
@@ -1709,19 +1806,19 @@ class WebMapContainer(object):
                             + "/{z}/{x}/{y}.png"
                         )
 
-                        docstring = (
-                            f"OpenPlanetary Mars basemap {v} layer\n"
-                            "\n"
-                            "Note\n"
-                            "----\n"
-                            "**LICENSE-info (without any warranty for correctness!!)**\n"
-                            "\n"
-                            f"check: https://www.openplanetary.org\n"
-                        )
+                        docstring = f"""
+                            OpenPlanetary Mars basemap {v} layer
+
+                            Note
+                            ----
+                            **LICENSE-info (without any warranty for correctness!!)**
+
+                            check: https://www.openplanetary.org
+                            """
 
                         self._addlayer(v, url, f"OPM_Mars_{v}", docstring)
 
-                    docstring = f"""
+                    docstring = """
                         OpenPlanetary Mars hillshade basemap
 
                         This basemap is a single hillshade raster data layer based on
@@ -1729,7 +1826,7 @@ class WebMapContainer(object):
 
                         Note
                         ----
-                        **LICENSE-info (without any warranty for correctness!!)**\n"
+                        **LICENSE-info (without any warranty for correctness!!)**
 
                         check: https://www.openplanetary.org
                         """
@@ -1737,12 +1834,12 @@ class WebMapContainer(object):
                     self._addlayer(
                         "hillshade",
                         "https://s3.us-east-2.amazonaws.com/opmmarstiles/hillshade-tiles/{z}/{x}/{y}.png",
-                        f"OPM_Mars_hillshade",
+                        "OPM_Mars_hillshade",
                         docstring=docstring,
                         maxzoom=6,
                     )
 
-                    docstring = f"""
+                    docstring = """
                         OpenPlanetary Mars viking_mdim21_global basemap
 
                         This basemap is a single raster data layer based on Viking
@@ -1750,7 +1847,7 @@ class WebMapContainer(object):
 
                         Note
                         ----
-                        **LICENSE-info (without any warranty for correctness!!)**\n"
+                        **LICENSE-info (without any warranty for correctness!!)**
 
                         check: https://www.openplanetary.org
                         """
@@ -1758,12 +1855,12 @@ class WebMapContainer(object):
                     self._addlayer(
                         "viking_mdim21_global",
                         lambda x, y, z: f"http://s3-eu-west-1.amazonaws.com/whereonmars.cartodb.net/viking_mdim21_global/{z}/{x}/{2**z-1-y}.png",
-                        f"OPM_Mars_viking_mdim21_global",
+                        "OPM_Mars_viking_mdim21_global",
                         docstring=docstring,
                         maxzoom=7,
                     )
 
-                    docstring = f"""
+                    docstring = """
                         OpenPlanetary Mars celestia_mars_shaded_16k basemap
 
                         This basemap is a single Mars texture raster data layer based
@@ -1771,7 +1868,7 @@ class WebMapContainer(object):
 
                         Note
                         ----
-                        **LICENSE-info (without any warranty for correctness!!)**\n"
+                        **LICENSE-info (without any warranty for correctness!!)**
 
                         check: https://www.openplanetary.org
                         """
@@ -1779,12 +1876,12 @@ class WebMapContainer(object):
                     self._addlayer(
                         "celestia_mars_shaded_16k",
                         lambda x, y, z: f"http://s3-eu-west-1.amazonaws.com/whereonmars.cartodb.net/celestia_mars-shaded-16k_global/{z}/{x}/{2**z-1-y}.png",
-                        f"OPM_Mars_celestia_mars_shaded_16k",
+                        "OPM_Mars_celestia_mars_shaded_16k",
                         docstring=docstring,
                         maxzoom=5,
                     )
 
-                    docstring = f"""
+                    docstring = """
                         OpenPlanetary Mars mola_gray basemap
 
                         This basemap is a single shared grayscale raster data layer
@@ -1792,7 +1889,7 @@ class WebMapContainer(object):
 
                         Note
                         ----
-                        **LICENSE-info (without any warranty for correctness!!)**\n"
+                        **LICENSE-info (without any warranty for correctness!!)**
 
                         check: https://www.openplanetary.org
                         """
@@ -1800,12 +1897,12 @@ class WebMapContainer(object):
                     self._addlayer(
                         "mola_gray",
                         lambda x, y, z: f"http://s3-eu-west-1.amazonaws.com/whereonmars.cartodb.net/mola-gray/{z}/{x}/{2**z-1-y}.png",
-                        f"OPM_Mars_mola_gray",
+                        "OPM_Mars_mola_gray",
                         docstring=docstring,
                         maxzoom=9,
                     )
 
-                    docstring = f"""
+                    docstring = """
                         OpenPlanetary Mars mola_color basemap
 
                         This basemap is a single shared color-coded raster data layer
@@ -1813,7 +1910,7 @@ class WebMapContainer(object):
 
                         Note
                         ----
-                        **LICENSE-info (without any warranty for correctness!!)**\n"
+                        **LICENSE-info (without any warranty for correctness!!)**
 
                         check: https://www.openplanetary.org
                         """
@@ -1821,12 +1918,12 @@ class WebMapContainer(object):
                     self._addlayer(
                         "mola_color",
                         lambda x, y, z: f"http://s3-eu-west-1.amazonaws.com/whereonmars.cartodb.net/mola-color/{z}/{x}/{2**z-1-y}.png",
-                        f"OPM_Mars_mola_color",
+                        "OPM_Mars_mola_color",
                         docstring=docstring,
                         maxzoom=6,
                     )
 
-                    docstring = f"""
+                    docstring = """
                         OpenPlanetary Mars mola_color_noshade basemap
 
                         This basemap is a single color-coded raster data layer based
@@ -1834,7 +1931,7 @@ class WebMapContainer(object):
 
                         Note
                         ----
-                        **LICENSE-info (without any warranty for correctness!!)**\n"
+                        **LICENSE-info (without any warranty for correctness!!)**
 
                         check: https://www.openplanetary.org
                         """
@@ -1842,7 +1939,7 @@ class WebMapContainer(object):
                     self._addlayer(
                         "mola_color_noshade",
                         lambda x, y, z: f"http://s3-eu-west-1.amazonaws.com/whereonmars.cartodb.net/mola_color-noshade_global/{z}/{x}/{2**z-1-y}.png",
-                        f"OPM_Mars_mola_color_noshade",
+                        "OPM_Mars_mola_color_noshade",
                         docstring=docstring,
                         maxzoom=6,
                     )
@@ -1853,6 +1950,11 @@ class WebMapContainer(object):
                     )
 
                     setattr(self, name, srv)
+                    srv._EOmaps_info = docstring
+                    srv._EOmaps_source_code = (
+                        "m.add_wms.OpenPlanetary.Mars.add_layer."
+                        f"{name}(transparent=True)"
+                    )
 
                     getattr(self, name).__doc__ = _combdoc(
                         docstring,
@@ -1899,15 +2001,15 @@ class WebMapContainer(object):
                         + "&hl=en&x={x}&y={y}&z={z}&s=Ga"
                     )
 
-                    docstring = (
-                        f"GOOGLE Maps {v} layer\n"
-                        "\n"
-                        "Note\n"
-                        "----\n"
-                        "**LICENSE-info (without any warranty for correctness!!)**\n"
-                        "\n"
-                        f"check: https://www.google.com\n"
-                    )
+                    docstring = f"""
+                        GOOGLE Maps {v} layer
+
+                        Note
+                        ----
+                        **LICENSE-info (without any warranty for correctness!!)**
+
+                        check: https://www.google.com
+                        """
 
                     self._addlayer(v, url, f"GOOGLE_{v}", docstring)
 
@@ -1915,6 +2017,10 @@ class WebMapContainer(object):
                 srv = _XyzTileService(self._m, url, name=srv_name, maxzoom=maxzoom)
 
                 setattr(self, name, srv)
+                srv._EOmaps_info = docstring
+                srv._EOmaps_source_code = (
+                    f"m.add_wms.GOOGLE.add_layer.{name}(transparent=True)"
+                )
 
                 getattr(self, name).__doc__ = _combdoc(
                     docstring,
@@ -1964,7 +2070,12 @@ class WebMapContainer(object):
             url="https://tiles.maps.eox.at/wms?service=wms&request=getcapabilities",
         )
 
-        WMS.__doc__ = type(self).S2_cloudless.__doc__
+        WMS._EOmaps_info = WebMapContainer.S2_cloudless.__doc__
+        WMS._EOmaps_source_code = (
+            f"m.add_wms.S2_cloudless.add_layer.<layer>(transparent=True)"
+        )
+
+        WMS.__doc__ = WebMapContainer.S2_cloudless.__doc__
         return WMS
 
     @property
@@ -2002,8 +2113,9 @@ class WebMapContainer(object):
             service_type="wms",
             url="https://eccharts.ecmwf.int/wms/?token=public",
         )
-
-        WMS.__doc__ = type(self).CAMS.__doc__
+        WMS._EOmaps_info = WebMapContainer.CAMS.__doc__
+        WMS._EOmaps_source_code = f"m.add_wms.CAMS.add_layer.<layer>(transparent=True)"
+        WMS.__doc__ = WebMapContainer.CAMS.__doc__
         return WMS
 
     class _DLR:
@@ -2051,17 +2163,23 @@ class WebMapContainer(object):
                 service_type="wms",
                 url="https://geoservice.dlr.de/eoc/basemap/wms?SERVICE=WMS&REQUEST=GetCapabilities",
             )
-            WMS.__doc__ = _combdoc(
-                """
-                EOC Basemap Coverage Service
 
-                This Web Coverage Service provides access to geospatial core coverage
+            WMS._EOmaps_info = _combdoc(
+                """
+                EOC Basemap Service (<layer>)
+
+                This Web Service provides access to geospatial core coverage
                 products within the Earth Observation Center (EOC).
 
                 """,
-                type(self).__doc__,
+                WebMapContainer._DLR.__doc__,
             )
 
+            WMS._EOmaps_source_code = (
+                "m.add_wms.DLR.basemap.add_layer.<layer>(transparent=True)"
+            )
+
+            WMS.__doc__ = WMS._EOmaps_info
             return WMS
 
         @property
@@ -2072,16 +2190,21 @@ class WebMapContainer(object):
                 service_type="wms",
                 url="https://geoservice.dlr.de/eoc/land/wms?SERVICE=WMS&REQUEST=GetCapabilities",
             )
-            WMS.__doc__ = _combdoc(
+
+            WMS._EOmaps_info = _combdoc(
                 """
-                EOC Land Map Service
+                EOC Land Map Service (<layer>)
 
                 This Web Coverage Service provides access to land coverage products
                 within the Earth Observation Center (EOC).
 
                 """,
-                type(self).__doc__,
+                WebMapContainer._DLR.__doc__,
             )
+            WMS._EOmaps_source_code = (
+                "m.add_wms.DLR.land.add_layer.<layer>(transparent=True)"
+            )
+            WMS.__doc__ = WMS._EOmaps_info
 
             return WMS
 
@@ -2093,16 +2216,20 @@ class WebMapContainer(object):
                 service_type="wms",
                 url="https://geoservice.dlr.de/eoc/imagery/wms?SERVICE=WMS&REQUEST=GetCapabilities",
             )
-            WMS.__doc__ = _combdoc(
+            WMS._EOmaps_info = _combdoc(
                 """
-                EOC Imagery Map Service
+                EOC Imagery Map Service (<layer>)
 
                 This Web Mapping Service provides access to Orthoimagery products
                 within the Earth Observation Center (EOC).
 
                 """,
-                type(self).__doc__,
+                WebMapContainer._DLR.__doc__,
             )
+            WMS._EOmaps_source_code = (
+                "m.add_wms.DLR.imagery.add_layer.<layer>(transparent=True)"
+            )
+            WMS.__doc__ = WMS._EOmaps_info
 
             return WMS
 
@@ -2114,16 +2241,20 @@ class WebMapContainer(object):
                 service_type="wms",
                 url="https://geoservice.dlr.de/eoc/elevation/wms?SERVICE=WMS&REQUEST=GetCapabilities",
             )
-            WMS.__doc__ = _combdoc(
+            WMS._EOmaps_info = _combdoc(
                 """
-                EOC Elevation Map Service
+                EOC Elevation Map Service (<layer>)
 
                 This Web Mapping Service provides access to geospatial elevation map
                 products within the Earth Observation Center (EOC).
 
                 """,
-                type(self).__doc__,
+                WebMapContainer._DLR.__doc__,
             )
+            WMS._EOmaps_source_code = (
+                "m.add_wms.DLR.elevation.add_layer.<layer>(transparent=True)"
+            )
+            WMS.__doc__ = WMS._EOmaps_info
 
             return WMS
 
@@ -2135,16 +2266,20 @@ class WebMapContainer(object):
                 service_type="wms",
                 url="https://geoservice.dlr.de/eoc/atmosphere/wms?SERVICE=WMS&REQUEST=GetCapabilities",
             )
-            WMS.__doc__ = _combdoc(
+            WMS._EOmaps_info = _combdoc(
                 """
-                EOC Atmosphere Map Service
+                EOC Atmosphere Map Service (<layer>)
 
                 This Web Mapping Service provides access to geospatial atmospheric
                 products within the Earth Observation Center (EOC).
 
                 """,
-                type(self).__doc__,
+                WebMapContainer._DLR.__doc__,
             )
+            WMS._EOmaps_source_code = (
+                "m.add_wms.DLR.atmosphere.add_layer.<layer>(transparent=True)"
+            )
+            WMS.__doc__ = WMS._EOmaps_info
 
             return WMS
 
@@ -2233,12 +2368,17 @@ class WebMapContainer(object):
             CC-BY 4.0 sowohl für private als auch kommerzielle Zwecke frei
             sowie entgeltfrei nutzbar.
             """
+
             WMTS = _WebServiceCollection(
                 m=self._m,
                 service_type="wmts",
                 url="http://maps.wien.gv.at/basemap/1.0.0/WMTSCapabilities.xml",
             )
-            WMTS.__doc__ = type(self).AT_basemap.__doc__
+            WMTS._EOmaps_info = type(self).AT_basemap.__doc__
+            WMTS._EOmaps_source_code = (
+                "m.add_wms.Austria.AT_basemap.add_layer.<layer>(transparent=True)"
+            )
+            WMTS.__doc__ = WMTS._EOmaps_info
             return WMTS
 
         @property
@@ -2261,7 +2401,11 @@ class WebMapContainer(object):
                 service_type="wmts",
                 url="http://maps.wien.gv.at/wmts/1.0.0/WMTSCapabilities.xml",
             )
-            WMTS.__doc__ = type(self).Wien_basemap.__doc__
+            WMTS._EOmaps_info = type(self).Wien_basemap.__doc__
+            WMTS._EOmaps_source_code = (
+                "m.add_wms.Austria.Wien_basemap.add_layer.<layer>(transparent=True)"
+            )
+            WMTS.__doc__ = WMTS._EOmaps_info
             return WMTS
 
     @property
