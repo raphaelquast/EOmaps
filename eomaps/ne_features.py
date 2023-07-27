@@ -511,6 +511,37 @@ class NaturalEarth_features(object):
                 art.set_label(
                     f"NaturalEarth feature: {feature.category}  |  {feature.name}"
                 )
+
+                try:
+                    str_kwargs = json.dumps(feature._kwargs)
+                except Exception:
+                    str_kwargs = ""
+                    _log.debug(
+                        "There was something wrong while trying to convert "
+                        f"the following kwargs to a string: {kwargs}"
+                    )
+
+                source_code = (
+                    f"feature_kwargs = {str_kwargs}\n\n"
+                    f"m.add_feature.{feature.category}.{feature.name}(**feature_kwargs)"
+                )
+
+                # try to auto-format code in case black is installed
+                try:
+                    import black
+
+                    source_code = black.format_str(source_code, mode=black.Mode())
+                except Exception:
+                    pass
+
+                art._EOmaps_info = f"""
+                    NaturalEarth feature: {feature.category}  |  {feature.name}
+
+                    https://www.naturalearthdata.com/
+
+                    """
+                art._EOmaps_source_code = source_code
+
                 m.BM.add_bg_artist(art, layer=uselayer)
 
         def _set_scale(self, scale):
