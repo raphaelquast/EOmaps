@@ -310,13 +310,13 @@ class ToolBar(QtWidgets.QToolBar):
         if left_widget:
             self.addWidget(left_widget)
 
+        self.addWidget(self.b_showhelp)
+
         if title is not None:
             titlewidget = QtWidgets.QLabel(f"<b>{title}</b>")
             titlewidget.setAttribute(Qt.WA_TransparentForMouseEvents)
             self.addWidget(get_dummy_spacer())
             self.addWidget(titlewidget)
-
-        self.addWidget(self.b_showhelp)
 
         if add_buttons:
             self.addWidget(self.b_open)
