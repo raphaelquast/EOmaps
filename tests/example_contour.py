@@ -10,7 +10,7 @@ name = "some parameter"
 
 # ------------- left map
 m = Maps(ax=121)
-m.add_title("A raster plot with contour-levels")
+m.add_title("Raster plot with contour-levels")
 m.add_feature.preset.coastline()
 # plot raster-data
 m.set_data(data, lon, lat, parameter=name)
@@ -25,13 +25,13 @@ m_cont.plot_map(colors=("r", "g", "b", "m"))
 
 # ------------- right map
 m2 = m.new_map(ax=122, inherit_data=True)
-m2.add_title("A filled contour plot")
+m2.add_title("Filled contour plot")
 m2.set_classify.EqualInterval(k=4)
 m2.set_shape.contour(filled=True)
 m2.plot_map(cmap="viridis")
 
 # add a colorbar and indicate contour-levels
-cb = m.add_colorbar()
+cb = m.add_colorbar(label="Data histogram with indicated contour levels highlighted.")
 cb.indicate_contours(m_cont)
 
 # apply a customized layout

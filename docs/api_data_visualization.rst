@@ -180,13 +180,13 @@ Possible shapes that work nicely for datasets with up to ~500 000 data-points:
     delaunay_triangulation
 
 
-
 Possible shapes that work nicely for up to a few million data-points:
 
 .. autosummary::
     :nosignatures:
 
     raster
+    contour
 
 
 While :py:class:`raster` can still be used for datasets with a few million datapoints, for extremely large datasets
@@ -218,7 +218,7 @@ Possible shapes that can be used to quickly generate a plot for extremely large 
     m2 = m.new_layer()                        # create a new Maps-object on the same layer
     m2.set_data(data, x, y)                   # assign another dataset to the new Maps object
     m2.set_shape.geod_circles(radius=50000,   # draw geodetic circles with 50km radius
-                            n=100)          # use 100 intermediate points to represent the shape
+                            n=100)            # use 100 intermediate points to represent the shape
     m2.plot_map(ec="k", cmap="Reds",          # plot the data
                 zorder=2, set_extent=False)   # (and avoid resetting the plot-extent)
 
