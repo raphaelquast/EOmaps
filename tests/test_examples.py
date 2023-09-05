@@ -40,3 +40,6 @@ class TestExamples(unittest.TestCase):
 
     def test_example_gridlines(self):
         import example_gridlines
+
+    def test_example_contour(self):
+        import example_contour

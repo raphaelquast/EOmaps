@@ -327,3 +327,23 @@ Draw custom grids and add grid labels.
 
 .. image:: _static/example_gridlines.png
   :width: 75%
+
+
+
+Contour plots and Contour Levels
+--------------------------------
+
+Use the ``contour``-shape to draw contour-plots of regular (or irregular data)
+or to indicate contour-levels on top of other plots.
+
+(requires EOmaps >= v7.1)
+
+|toggleStart|
+
+.. literalinclude:: ../tests/example_contour.py
+
+|toggleEnd|
+
+
+.. image:: _static/example_contour.png
+  :width: 75%

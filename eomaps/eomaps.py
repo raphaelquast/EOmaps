@@ -2979,7 +2979,14 @@ class Maps(metaclass=_MapsMeta):
 
         # make sure zorder is set to 1 by default
         # (by default shading would use 0 while ordinary collections use 1)
-        kwargs.setdefault("zorder", 1)
+        if self.shape.name != "contour":
+            kwargs.setdefault("zorder", 1)
+        else:
+            # put contour lines by default at level 10
+            if self.shape._filled:
+                kwargs.setdefault("zorder", 1)
+            else:
+                kwargs.setdefault("zorder", 10)
 
         if getattr(self, "coll", None) is not None and len(self.cb.pick.get.cbs) > 0:
             _log.info(
@@ -3034,13 +3041,17 @@ class Maps(metaclass=_MapsMeta):
         )
 
         # ---------------------- classify the data
-        if not self._inherit_classification:
-            if self.classify_specs.scheme is not None:
-                _log.debug("EOmaps: Classifying...")
-
         self._set_vmin_vmax(
             vmin=kwargs.pop("vmin", None), vmax=kwargs.pop("vmax", None)
         )
+
+        if not self._inherit_classification:
+            if self.classify_specs.scheme is not None:
+                _log.debug("EOmaps: Classifying...")
+            elif self.shape.name == "contour" and kwargs.get("levels", None) is None:
+                # TODO use custom contour-levels as UserDefined classification?
+                self.set_classify.EqualInterval(k=5)
+
         cbcmap, norm, bins, classified = self._classify_data(
             vmin=self._vmin,
             vmax=self._vmax,
@@ -4423,6 +4434,8 @@ class Maps(metaclass=_MapsMeta):
                 )
                 bins = mapc.bins
 
+            bins = np.unique(np.clip(bins, vmin, vmax))
+
             if vmin < min(bins):
                 bins = [vmin, *bins]
 
@@ -4740,14 +4753,21 @@ class Maps(metaclass=_MapsMeta):
                 kwargs[key] = self._handle_explicit_colors(kwargs[key])
 
         # don't pass the array if explicit facecolors are set
-        if explicit_fc:
+        if explicit_fc and self.shape.name not in ["contour"]:
             args = dict(array=None, cmap=None, norm=None, **kwargs)
         else:
             args = dict(
                 array=props["z_data"], cmap=self._cbcmap, norm=self._norm, **kwargs
             )
 
-        if self.shape.name in ["raster"]:
+        if (
+            self.shape.name in ["contour"]
+            and len(self._xshape) == 2
+            and len(self._yshape) == 2
+        ):
+            # if 2D data is provided for a contour plot, keep the data 2d!
+            coll = self.shape.get_coll(props["xorig"], props["yorig"], "in", **args)
+        elif self.shape.name in ["raster"]:
             # if input-data is 1D, try to convert data to 2D (required for raster)
             # TODO make an explicit data-conversion function for 2D-only shapes
             if len(self._xshape) == 2 and len(self._yshape) == 2:

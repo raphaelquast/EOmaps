@@ -394,6 +394,9 @@ class DataManager:
         if not self.m._data_plotted:
             return
 
+        if self.m.shape.name == "contour":
+            return False
+
         # don't re-draw while the layout-editor is active!
         if self.m.parent._layout_editor.modifier_pressed:
             return False
@@ -481,7 +484,7 @@ class DataManager:
 
             coll.set_label("Dataset " f"({self.m.shape.name}  |  {self.z_data.shape})")
 
-            if self.m.shape.name != "scatter_points":
+            if self.m.shape.name not in ["scatter_points", "contour"]:
                 # avoid use "autolim=True" since it can cause problems in
                 # case the data-limits are infinite (e.g. for projected
                 # datasets containing points outside the used projection)
@@ -603,7 +606,7 @@ class DataManager:
             else:
                 ret = val
 
-        if self.m.shape.name not in ["raster", "shade_raster"]:
+        if self.m.shape.name not in ["raster", "shade_raster", "contour"]:
             ret = ret.ravel()
 
         return ret

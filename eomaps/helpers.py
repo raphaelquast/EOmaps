@@ -12,6 +12,7 @@ from functools import wraps, lru_cache
 from pathlib import Path
 import json
 import warnings
+from weakref import WeakSet
 
 import numpy as np
 import matplotlib.pyplot as plt
@@ -744,6 +745,7 @@ class LayoutEditor:
     def _color_unpicked(self, ax):
         for spine in ax.spines.values():
             spine.set_edgecolor("b")
+            spine._EOmaps_linestyle = spine.get_linestyle()
             spine.set_linestyle("-")
             spine.set_linewidth(1)
 
@@ -1162,7 +1164,6 @@ class LayoutEditor:
                 revert_props = [
                     "edgecolor",
                     "linewidth",
-                    "linestyle",
                     "alpha",
                     "animated",
                     "visible",
@@ -1173,7 +1174,9 @@ class LayoutEditor:
                     # make sure spines are visible (and re-drawn on draw)
                     child.set_animated(False)
                     child.set_visible(True)
-
+                    if hasattr(child, "_EOmaps_linestyle"):
+                        child.set_linestyle(getattr(child, "_EOmaps_linestyle", "-"))
+                        del child._EOmaps_linestyle
                 elif (
                     ax not in self.maxes
                     and showXY
@@ -1571,6 +1574,10 @@ class BlitManager:
         self._clear_on_layer_change = False
 
         self._on_layer_change_running = False
+
+        # a weak set containing artists that should NOT be identified as
+        # unmanaged artists
+        self._ignored_unmanaged_artists = WeakSet()
 
     def _get_renderer(self):
         # don't return the renderer if the figure is saved.
@@ -2481,7 +2488,11 @@ class BlitManager:
         # return all artists not explicitly managed by the blit-manager
         # (e.g. any artist added via cartopy or matplotlib functions)
         managed_artists = set(
-            chain(*self._bg_artists.values(), *self._artists.values())
+            chain(
+                *self._bg_artists.values(),
+                *self._artists.values(),
+                self._ignored_unmanaged_artists,
+            )
         )
 
         axes = {m.ax for m in (self._m, *self._m._children) if m.ax is not None}

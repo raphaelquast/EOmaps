@@ -2,8 +2,10 @@
 
 import logging
 from functools import partial, lru_cache
+from itertools import cycle
 from textwrap import dedent
 import copy
+
 
 import numpy as np
 
@@ -1330,3 +1332,209 @@ class ColorBar:
         "    - 'histogram' : histogram ticks (same as `m.colorbar.ax_cb_plot.tick_params`)\n"
         "\n\n----------------\n\n" + dedent(plt.Axes.tick_params.__doc__)
     )
+
+    def indicate_contours(
+        self,
+        contour_map=None,
+        add_labels="top",
+        use_levels=None,
+        exclude_levels=None,
+        colors=None,
+        linewidths=None,
+        linestyles=None,
+        label_names=None,
+        label_precision=4,
+        label_kwargs=None,
+    ):
+        """
+        Indicate contour locations in the colorbar.
+
+        Note: Before using this function you must draw a dataset with the ``"contour"``
+        shape! (you can also indicate contours from other Maps-objects by using
+        the optional ``contour_map`` argument.)
+
+        Parameters
+        ----------
+        contour_map : eomaps.Maps, optional
+            The maps object whose contours should be indicated.
+            If None, the Maps-object associated with this colorbar is used.
+            The default is None.
+        add_labels : str, float or None, optional
+
+            - "bottom": add labels at the bottom of the colorbar
+            - "top": add labels to the top of the colorbar histogram
+            - If float: The relative position of the label in axis-coordinates (0-1)
+            - None: don't add labels
+
+            The default is "bottom".
+        rotation : float, optional
+            The rotation of the labels (in degrees). The default is 90.
+        use_levels : list of int, optional
+            A list of integers that specify levels that should be used.
+            (negative values count from right)
+
+            If None, all values are used.
+
+            For example, to draw the first and 3rd level and name them "A" and "B", use:
+
+                >>> cb.indicate_contours(use_levels = [-1, 2], label_names=["A", "B"])
+
+
+            The default is None.
+
+        exclude_levels : list of int, optional
+            Only relevant if "use_levels" is None!
+            A list of integers that specify levels that should be ignored.
+            (negative values count from right)
+
+            By default, the last level are ignored, e.g.:
+
+            >>> exclude_levels = [-1]
+
+        colors : str or list, optional
+            Custom colors that will be used for the lines.
+            NOTE: If less values than levels are specified, values are cycled!
+
+            If None, the contour-colors are used.
+            The default is None.
+        linewidths : float or list, optional
+            Custom linewidths that will be used for the lines.
+            NOTE: If less values than levels are specified, values are cycled!
+
+            If None, the contour-linewidths are used.
+            The default is None.
+        linestyles : float, tuple or list, optional
+            Custom linestyles that will be used for the lines.
+            NOTE: If less values than levels are specified, values are cycled!
+
+            If None, the contour-linestyles are used.
+            The default is None.
+        label_kwargs : dict
+            Additional kwargs passed to the creation of the labels.
+
+            - Font-properties like "fontsize", "fontweight", "rotation", etc..
+            - To offset the text (in points) from the xy value, use "xytext".
+            - To add an arrow, use "arrowprops".
+
+            For more details, see ``plt.annotate``.
+
+
+            The default is:
+
+            >>> {fontsize: "x-small",
+            >>>  textcoords: "offset points"
+            >>>  xytext: (0, 0)}
+
+
+        """
+        if label_kwargs is None:
+            label_kwargs = dict()
+
+        label_kwargs.setdefault("fontsize", "x-small")
+        label_kwargs.setdefault("textcoords", "offset points")
+        label_kwargs.setdefault("xytext", (0, 0))
+
+        if exclude_levels is None:
+            exclude_levels = [-1]
+
+        if contour_map is None:
+            coll = self._m.coll
+        else:
+            coll = contour_map.coll
+
+        if not coll.__class__.__name__ == "_CollectionAccessor":
+            raise TypeError(
+                "EOmaps: Contour-lines can only be added to the colorbar if a contour "
+                "was plotted first! If you want to indicate contours plotted on a "
+                "different Maps-object, provide it via the 'contour_map' argument!"
+            )
+
+        levels = coll.levels
+
+        # add support for using -1 to exclude the last level
+        for i, val in enumerate(exclude_levels):
+            if val < 0:
+                exclude_levels[i] = len(levels) + val
+
+        if colors is None:
+            if coll._filled is False:
+                colors = (
+                    np.array(coll.get_edgecolors(), dtype=object).squeeze().tolist()
+                )
+            else:
+                colors = (
+                    np.array(coll.get_facecolors(), dtype=object).squeeze().tolist()
+                )
+        else:
+            colors = cycle(colors)
+
+        if linewidths is None:
+            linewidths = (
+                np.array(coll.get_linewidths(), dtype=object).squeeze().tolist()
+            )
+        else:
+            linewidths = cycle(linewidths)
+
+        if linestyles is None:
+            linestyles = (
+                np.array(coll.get_linestyles(), dtype=object).squeeze().tolist()
+            )
+        else:
+            linestyles = cycle(linestyles)
+
+        used_levels = []
+        for i, (level, c, ls, lw) in enumerate(
+            zip(
+                levels,
+                colors,
+                linestyles,
+                linewidths,
+            )
+        ):
+            if use_levels is None and i in exclude_levels:
+                continue
+
+            if use_levels is not None and i not in use_levels:
+                continue
+
+            (a,) = self.ax_cb_plot.plot(
+                [level, level],
+                [self.ax_cb_plot.dataLim.y0, self.ax_cb_plot.dataLim.y1],
+                c=c,
+                ls=tuple(ls),  # linestyles must be provided as tuples!
+                lw=lw,
+                zorder=99999,
+            )
+
+            used_levels.append(level)
+
+        if label_names is None:
+            label_names = [
+                np.format_float_positional(i, precision=label_precision)
+                for i in used_levels
+            ]
+        else:
+            label_names = label_names
+
+        if add_labels == "top":
+            label_kwargs.setdefault("horizontalalignment", "center")
+            label_kwargs.setdefault("verticalalignment", "bottom")
+            label_kwargs.setdefault("y", self.ax_cb_plot.dataLim.y1)
+
+        elif add_labels == "bottom":
+            label_kwargs.setdefault("horizontalalignment", "center")
+            label_kwargs.setdefault("verticalalignment", "top")
+            label_kwargs.setdefault("y", self.ax_cb_plot.dataLim.y0)
+        elif isinstance(add_labels, float):
+            label_kwargs.setdefault("horizontalalignment", "left")
+            label_kwargs.setdefault("verticalalignment", "center")
+            t = self.ax_cb_plot.transAxes + self.ax_cb_plot.transData.inverted()
+            pos = t.transform((0, add_labels))
+
+            label_kwargs.setdefault("y", pos[1])
+
+        y = label_kwargs.pop("y")
+        for level, label in zip(used_levels, label_names):
+            self.ax_cb_plot.annotate(xy=(level, y), text=label, **label_kwargs)
+
+        self._m.redraw(self._m.layer)
