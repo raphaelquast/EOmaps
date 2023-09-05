@@ -7,10 +7,84 @@
 
 ... a collection of examples that show how to create beautiful interactive maps.
 
+
+.. |eximg01| image:: _static/fig1.gif
+   :width: 100%
+   :align: middle
+   :target: `ex_1`_
+.. |eximg02| image:: _static/fig2.png
+   :width: 100%
+   :align: middle
+   :target: `ex_2`_
+.. |eximg03| image:: _static/fig3.gif
+   :width: 100%
+   :align: middle
+   :target: `ex_3`_
+.. |eximg04| image:: _static/fig4.gif
+   :width: 100%
+   :align: middle
+   :target: `ex_4`_
+.. |eximg05| image:: _static/fig5.gif
+   :width: 100%
+   :align: middle
+   :target: `ex_5`_
+.. |eximg06| image:: _static/fig6.gif
+   :width: 100%
+   :align: middle
+   :target: `ex_6`_
+.. |eximg07| image:: _static/fig7.gif
+   :width: 100%
+   :align: middle
+   :target: `ex_7`_
+.. |eximg08| image:: _static/fig8.gif
+   :width: 100%
+   :align: middle
+   :target: `ex_8`_
+.. |eximg09| image:: _static/fig9.gif
+   :width: 100%
+   :align: middle
+   :target: `ex_9`_
+.. |eximg10| image:: _static/example_row_col_selector.gif
+   :width: 100%
+   :align: middle
+   :target: `ex_10`_
+.. |eximg11| image:: _static/example_inset_maps.png
+   :width: 100%
+   :align: middle
+   :target: `ex_11`_
+.. |eximg12| image:: _static/example_lines.png
+   :width: 100%
+   :align: middle
+   :target: `ex_12`_
+.. |eximg13| image:: _static/example_gridlines.png
+   :width: 100%
+   :align: middle
+   :target: `ex_13`_
+.. |eximg14| image:: _static/example_contour.png
+   :width: 100%
+   :align: middle
+   :target: `ex_14`_
+
+.. |eximg15| replace:: ...
+
+
+.. table::
+  :width: 100%
+
+  +-----------+-----------+-----------+-----------+-----------+
+  | |eximg01| | |eximg02| | |eximg03| | |eximg04| | |eximg05| |
+  +-----------+-----------+-----------+-----------+-----------+
+  | |eximg06| | |eximg07| | |eximg08| | |eximg09| | |eximg10| |
+  +-----------+-----------+-----------+-----------+-----------+
+  | |eximg11| | |eximg12| | |eximg13| | |eximg14| | |eximg15| |
+  +-----------+-----------+-----------+-----------+-----------+
+
 .. contents:: Contents:
   :local:
   :depth: 1
 
+
+.. _ex_1:
 
 Basic data visualization
 -------------------------
@@ -30,6 +104,7 @@ There are 3 basic steps required to visualize your data:
 .. image:: _static/fig1.gif
   :width: 75%
 
+.. _ex_2:
 
 Customize the appearance of the plot
 ------------------------------------
@@ -48,10 +123,11 @@ Customize the appearance of the plot
 
 |toggleEnd|
 
-.. image:: _static/fig3.png
+.. image:: _static/fig2.png
   :width: 75%
 
 
+.. _ex_3:
 
 Data-classification and multiple Maps in a figure
 -------------------------------------------------
@@ -71,9 +147,11 @@ Data-classification and multiple Maps in a figure
 
 |toggleEnd|
 
-.. image:: _static/fig2.gif
+.. image:: _static/fig3.gif
   :width: 75%
 
+
+.. _ex_4:
 
 Callbacks - turn your maps into interactive widgets
 ---------------------------------------------------
@@ -102,6 +180,8 @@ Callbacks - turn your maps into interactive widgets
   :width: 75%
 
 
+.. _ex_5:
+
 Overlays, markers and annotations
 ---------------------------------
 
@@ -123,6 +203,9 @@ Overlays, markers and annotations
 The data displayed in the above gif is taken from:
     - NaturalEarth (https://www.naturalearthdata.com/)
 
+
+.. _ex_6:
+
 WebMap services and layer-switching
 -----------------------------------
 
@@ -142,6 +225,8 @@ The data displayed in the above gif is taken from:
     - Sentinel-1 Global Backscatter Model (https://researchdata.tuwien.ac.at/records/n2d1v-gqb91)
     - OpenStreetMap hosted by Mundialis (https://www.mundialis.de/en/ows-mundialis/)
 
+
+.. _ex_7:
 
 Vektor data - interactive geometries
 -------------------------------------
@@ -177,6 +262,8 @@ EOmaps can be used to assign callbacks to vektor-data (e.g. ``geopandas.GeoDataF
 The data displayed in the above gif is taken from:
     - NaturalEarth (https://www.naturalearthdata.com/)
 
+
+.. _ex_8:
 
 Using Scalebars
 ---------------
@@ -217,6 +304,8 @@ The data displayed in the above gif is taken from:
 
 
 
+.. _ex_9:
+
 Data analysis widgets - Timeseries and histograms
 -------------------------------------------------
 
@@ -237,6 +326,8 @@ This example shows how to use EOmaps to analyze a database that is associated wi
 .. image:: _static/fig9.gif
   :width: 75%
 
+
+.. _ex_10:
 
 Data analysis widgets - Select 1D slices of a 2D dataset
 --------------------------------------------------------
@@ -259,7 +350,7 @@ Use custom callback functions to perform arbitrary tasks on the data when clicki
   :width: 75%
 
 
-.. _EOmaps_examples_inset_maps:
+.. _ex_11:
 
 Inset-maps - get a zoomed-in view on selected areas
 ---------------------------------------------------
@@ -284,6 +375,8 @@ Quickly create nice inset-maps to show details for specific regions.
 .. image:: _static/example_inset_maps.png
   :width: 75%
 
+
+.. _ex_12:
 
 Lines and Annotations
 ---------------------
@@ -310,6 +403,7 @@ Connect the anchor-points via:
   :width: 75%
 
 
+.. _ex_13:
 
 Gridlines and Grid Labels
 -------------------------
@@ -328,7 +422,7 @@ Draw custom grids and add grid labels.
 .. image:: _static/example_gridlines.png
   :width: 75%
 
-
+.. _ex_14:
 
 Contour plots and Contour Levels
 --------------------------------

@@ -1,102 +1,57 @@
-# EOmaps example 2: Data-classification and multiple Maps in one figure
+# EOmaps example 3: Customize the appearance of the plot
 
 from eomaps import Maps
 import pandas as pd
 import numpy as np
 
 # ----------- create some example-data
-lon, lat = np.meshgrid(np.arange(-20, 40, 0.5), np.arange(30, 60, 0.5))
+lon, lat = np.meshgrid(np.arange(-30, 60, 0.25), np.arange(30, 60, 0.3))
 data = pd.DataFrame(
     dict(lon=lon.flat, lat=lat.flat, data_variable=np.sqrt(lon**2 + lat**2).flat)
 )
-data = data.sample(4000)  # take 4000 random datapoints from the dataset
+data = data.sample(3000)  # take 3000 random datapoints from the dataset
 # ------------------------------------
 
-# initialize a grid of Maps objects
-m = Maps(ax=131, crs=4326, figsize=(11, 5))
-m2 = Maps(f=m.f, ax=132, crs=Maps.CRS.Stereographic())
-m3 = Maps(f=m.f, ax=133, crs=3035)
+m = Maps(crs=3857, figsize=(9, 5))
+m.text(0.5, 0.97, "What a nice figure", fontsize=12)
 
-# --------- set specs for the first map
-m.text(0.5, 1.1, "epsg=4326", transform=m.ax.transAxes)
-m.set_classify_specs(scheme="EqualInterval", k=10)
+m.add_feature.preset.ocean(fc="lightsteelblue")
+m.add_feature.preset.coastline(lw=0.25)
 
-# --------- set specs for the second map
-m2.text(0.5, 1.1, "Stereographic", transform=m2.ax.transAxes)
-m2.set_shape.rectangles()
-m2.set_classify_specs(scheme="Quantiles", k=8)
-
-# --------- set specs for the third map
-m3.text(0.5, 1.1, "epsg=3035", transform=m3.ax.transAxes)
-m3.set_classify_specs(
-    scheme="StdMean",
-    multiples=[-1, -0.75, -0.5, -0.25, 0.25, 0.5, 0.75, 1],
+m.set_data(data=data, x="lon", y="lat", crs=4326)
+m.set_shape.geod_circles(radius=30000)  # plot geodesic-circles with 30 km radius
+m.set_classify_specs(
+    scheme="UserDefined", bins=[35, 36, 37, 38, 45, 46, 47, 48, 55, 56, 57, 58]
+)
+m.plot_map(
+    edgecolor="k",  # give shapes a black edgecolor
+    linewidth=0.5,  # with a linewidth of 0.5
+    cmap="RdYlBu",  # use a red-yellow-blue colormap
+    vmin=35,  # map colors to values between 35 and 60
+    vmax=60,
+    alpha=0.75,  # add some transparency
 )
 
-# --------- plot all maps and add colorbars to all maps
-# set the data on ALL maps-objects of the grid
-for m_i in [m, m2, m3]:
-    m_i.set_data(data=data, x="lon", y="lat", crs=4326)
-    m_i.plot_map()
-    m_i.add_colorbar(extend="neither")
+# add a colorbar
+m.add_colorbar(
+    label="some parameter",
+    hist_bins="bins",
+    hist_size=1,
+    hist_kwargs=dict(density=True),
+)
 
-    m_i.add_feature.preset.ocean()
-    m_i.add_feature.preset.land()
-    # add the coastline to all layers of the maps
-    m_i.add_feature.preset.coastline(layer="all")
+# add a y-label to the histogram
+m.colorbar.ax_cb_plot.set_ylabel("The Y label")
 
-
-# --------- add a new layer for the second axis
-# NOTE: this layer is not visible by default but it can be shown by clicking
-# on the layer-switcher utility buttons (bottom center of the figure)
-# or by using `m2.show()`   or via  `m.show_layer("layer 2")`
-m21 = m2.new_layer(layer="layer 2")
-m21.inherit_data(m2)
-m21.set_shape.delaunay_triangulation(mask_radius=0.5)
-m21.set_classify_specs(scheme="Quantiles", k=4)
-m21.plot_map(cmap="RdYlBu")
-m21.add_colorbar(extend="neither")
-# add an annotation that is only executed if "layer 2" is active
-m21.cb.click.attach.annotate(text="callbacks are layer-sensitive!")
-
-# --------- add some callbacks to indicate the clicked data-point to all maps
-for m_i in [m, m2, m3]:
-    m_i.cb.pick.attach.mark(fc="r", ec="none", buffer=1, permanent=True)
-    m_i.cb.pick.attach.mark(fc="none", ec="r", lw=1, buffer=5, permanent=True)
-    m_i.cb.move.attach.mark(fc="none", ec="k", lw=2, buffer=10, permanent=False)
-
-for m_i in [m, m2, m21, m3]:
-    # --------- rotate the ticks of the colorbars
-    m_i.colorbar.ax_cb.tick_params(rotation=90, labelsize=8)
-    # add logos
-    m_i.add_logo(size=0.05)
-
-# add an annotation-callback to the second map
-m2.cb.pick.attach.annotate(text="the closest point is here!", zorder=99)
-
-# share click & pick-events between all Maps-objects of the MapsGrid
-m.cb.move.share_events(m2, m3)
-m.cb.pick.share_events(m2, m3)
-
-# --------- add a layer-selector widget
-m.util.layer_selector(ncol=2, loc="lower center", draggable=False)
-
+# add a logo to the plot
+m.add_logo()
 
 m.apply_layout(
     {
-        "figsize": [11.0, 5.0],
-        "0_map": [0.015, 0.44, 0.3125, 0.34375],
-        "1_map": [0.35151, 0.363, 0.32698, 0.50973],
-        "2_map": [0.705, 0.44, 0.2875, 0.37872],
-        "3_cb": [0.05522, 0.0825, 0.2625, 0.2805],
-        "3_cb_histogram_size": 0.8,
-        "4_cb": [0.33625, 0.11, 0.3525, 0.2],
-        "4_cb_histogram_size": 0.8,
-        "5_cb": [0.72022, 0.0825, 0.2625, 0.2805],
-        "5_cb_histogram_size": 0.8,
-        "7_logo": [0.2725, 0.451, 0.05, 0.04538],
-        "8_logo": [0.625, 0.3795, 0.05, 0.04538],
-        "9_logo": [0.625, 0.3795, 0.05, 0.04538],
-        "10_logo": [0.93864, 0.451, 0.05, 0.04538],
+        "figsize": [9.0, 5.0],
+        "0_map": [0.10154, 0.2475, 0.79692, 0.6975],
+        "1_cb": [0.20125, 0.0675, 0.6625, 0.135],
+        "1_cb_histogram_size": 1,
+        "2_logo": [0.87501, 0.09, 0.09999, 0.07425],
     }
 )
