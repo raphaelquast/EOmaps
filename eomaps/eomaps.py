@@ -932,7 +932,7 @@ class Maps(metaclass=_MapsMeta):
 
                 warn(
                     f"EOmaps: Using '{old}' is depreciated! Use '{new}' instead! "
-                    "NOTE: Datasets are now inherited (e.g. shared) and not copied."
+                    "NOTE: Datasets are now inherited (e.g. shared) and not copied. "
                     "To explicitly copy attributes, see m.copy(...)!",
                     category=FutureWarning,
                     stacklevel=2,
