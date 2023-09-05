@@ -5151,7 +5151,7 @@ class Maps(metaclass=_MapsMeta):
         }
 
         resp = requests.get(
-            rf"https://nominatim.openstreetmap.org/search/{q}?format=json&addressdetails=1&limit=1",
+            rf"https://nominatim.openstreetmap.org/search?q={q}&format=json&addressdetails=1&limit=1",
             headers=headers,
         ).json()
 
