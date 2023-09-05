@@ -119,7 +119,7 @@ Customize the appearance of the plot
 
 |toggleStart|
 
-.. literalinclude:: ../tests/example3.py
+.. literalinclude:: ../tests/example2.py
 
 |toggleEnd|
 
@@ -143,7 +143,7 @@ Data-classification and multiple Maps in a figure
 
 |toggleStart|
 
-.. literalinclude:: ../tests/example2.py
+.. literalinclude:: ../tests/example3.py
 
 |toggleEnd|
 
