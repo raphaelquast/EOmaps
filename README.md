@@ -27,7 +27,13 @@
 
 It is built on top of [matplotlib](matplotlib.org/) and [cartopy](https://scitools.org.uk/cartopy/docs/latest/) and provides an intuitive and easy-to-use interface to speed up and simplify the creation and comparison of maps.
 
+> For a quick hands-on introduction, checkout this article on dev.to:  
+> [Geographic data visualization and analysis with EOmaps: Interactive maps in python!](https://dev.to/raphaelquast/geographic-data-visualization-and-analysis-with-eomaps-interactive-maps-in-python-48e1)
+>
+> ---
+
 ### What can EOmaps do for you?
+
 - Create [▤ multi-layered maps](https://eomaps.readthedocs.io/en/latest/api.html#basics) and interactively compare different layers with each other
 - [🔴 Visualize datasets](https://eomaps.readthedocs.io/en/latest/api.html#data-visualization) with  millions of datapoints and handle reprojections
 - Provide a comprehensive set of tools to customize the map
