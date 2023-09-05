@@ -180,13 +180,13 @@ Possible shapes that work nicely for datasets with up to ~500 000 data-points:
     delaunay_triangulation
 
 
-
 Possible shapes that work nicely for up to a few million data-points:
 
 .. autosummary::
     :nosignatures:
 
     raster
+    contour
 
 
 While :py:class:`raster` can still be used for datasets with a few million datapoints, for extremely large datasets
@@ -218,7 +218,7 @@ Possible shapes that can be used to quickly generate a plot for extremely large 
     m2 = m.new_layer()                        # create a new Maps-object on the same layer
     m2.set_data(data, x, y)                   # assign another dataset to the new Maps object
     m2.set_shape.geod_circles(radius=50000,   # draw geodetic circles with 50km radius
-                            n=100)          # use 100 intermediate points to represent the shape
+                            n=100)            # use 100 intermediate points to represent the shape
     m2.plot_map(ec="k", cmap="Reds",          # plot the data
                 zorder=2, set_extent=False)   # (and avoid resetting the plot-extent)
 
@@ -428,25 +428,25 @@ To apply a uniform color to all datapoints, you can use `matpltolib's named colo
     m.set_data(data=None, x=[10,20,30], y=[10,20,30])
 
     # Use any of matplotlibs "named colors"
-    m1 = m.new_layer(copy_data_specs=True)
+    m1 = m.new_layer(inherit_data=True)
     m1.set_shape.ellipses(radius=10)
     m1.plot_map(fc="r", zorder=0)
 
-    m2 = m.new_layer(copy_data_specs=True)
+    m2 = m.new_layer(inherit_data=True)
     m2.set_shape.ellipses(radius=8)
     m2.plot_map(fc="orange", zorder=1)
 
     # Use RGB or RGBA tuples
-    m3 = m.new_layer(copy_data_specs=True)
+    m3 = m.new_layer(inherit_data=True)
     m3.set_shape.ellipses(radius=6)
     m3.plot_map(fc=(1, 0, 0.5), zorder=2)
 
-    m4 = m.new_layer(copy_data_specs=True)
+    m4 = m.new_layer(inherit_data=True)
     m4.set_shape.ellipses(radius=4)
     m4.plot_map(fc=(1, 1, 1, .75), zorder=3)
 
     # For grayscale use a string of a number between 0 and 1
-    m5 = m.new_layer(copy_data_specs=True)
+    m5 = m.new_layer(inherit_data=True)
     m5.set_shape.ellipses(radius=2)
     m5.plot_map(fc="0.3", zorder=4)
 
@@ -466,26 +466,26 @@ To explicitly color each datapoint with a pre-defined color, simply provide a li
 
     # Use any of matplotlibs "named colors"
     # (https://matplotlib.org/stable/gallery/color/named_colors.html)
-    m1 = m.new_layer(copy_data_specs=True)
+    m1 = m.new_layer(inherit_data=True)
     m1.set_shape.ellipses(radius=10)
     m1.plot_map(fc=["indigo", "g", "orange"], zorder=1)
 
     # Use RGB tuples
-    m2 = m.new_layer(copy_data_specs=True)
+    m2 = m.new_layer(inherit_data=True)
     m2.set_shape.ellipses(radius=6)
     m2.plot_map(fc=[(1, 0, 0.5),
                     (0.3, 0.4, 0.5),
                     (1, 1, 0)], zorder=2)
 
     # Use RGBA tuples
-    m3 = m.new_layer(copy_data_specs=True)
+    m3 = m.new_layer(inherit_data=True)
     m3.set_shape.ellipses(radius=8)
     m3.plot_map(fc=[(1, 0, 0.5, 0.25),
                     (1, 0, 0.5, 0.75),
                     (0.1, 0.2, 0.5, 0.5)], zorder=3)
 
     # For grayscale use a string of a number between 0 and 1
-    m4 = m.new_layer(copy_data_specs=True)
+    m4 = m.new_layer(inherit_data=True)
     m4.set_shape.ellipses(radius=4)
     m4.plot_map(fc=[".1", ".2", "0.3"], zorder=4)
 

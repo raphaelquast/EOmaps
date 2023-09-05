@@ -43,7 +43,7 @@ For convenience, inset-map objects have the following special methods defined:
     InsetMaps.add_indicator_line
 
 
-Checkout the associated example on how to use inset-maps: :ref:`EOmaps_examples_inset_maps`
+Checkout the associated example on how to use inset-maps: :ref:`ex_11`
 
 To quickly re-position (and re-size) inset-maps, have a look at the :ref:`layout_editor`!
 

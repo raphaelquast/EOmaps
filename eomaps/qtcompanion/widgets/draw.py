@@ -34,32 +34,6 @@ class PolyButton(QtWidgets.QPushButton):
 
         self.setCheckable(True)
 
-        self.setStyleSheet(
-            """
-            PolyButton {
-                border-radius: 5px;
-                border-width: 1px;
-                border-style: solid;
-                border-color: rgb(100, 100, 100);
-                background-color: rgb(220, 220, 220);
-                padding: 3px
-                }
-
-            PolyButton:pressed {
-                background-color: rgb(150, 150, 150);
-                }
-
-            PolyButton:hover:!pressed {
-                background-color: rgb(180, 180, 180);
-                }
-
-            PolyButton:checked {
-                background-color: rgb(180, 0, 0);
-                border-color: rgb(100, 0, 0);
-                }
-            """
-        )
-
     def enterEvent(self, e):
         if self.window().showhelp is True:
             name = self.text()
@@ -271,7 +245,7 @@ class DrawerWidget(QtWidgets.QWidget):
 
         self.polybuttons = []
         for name, poly in self._polynames.items():
-            poly_b = PolyButton(name)
+            poly_b = PolyButton(name.center(15))
             poly_b.clicked.connect(self.draw_shape_callback(poly=poly))
             poly_b.setMaximumWidth(100)
             self.polybuttons.append(poly_b)
@@ -303,9 +277,50 @@ class DrawerWidget(QtWidgets.QWidget):
         self.m._connect_signal("drawAborted", self.uncheck_polybuttons)
         self.m._connect_signal("drawStarted", self.check_polybuttons)
 
+        self.setStyleSheet(
+            """
+            QPushButton {
+                border: 1px solid rgb(140, 140, 140);
+                border-radius: 4px;
+                padding: 4px;
+                background-color: rgb(220, 220, 220);
+            }
+            QPushButton:hover {
+                background-color: rgb(210, 210, 210);
+                font-weight: bold;
+            }
+            QPushButton:disabled {
+                background-color: rgb(180, 180, 180);
+            }
+            PolyButton {
+                border-radius: 5px;
+                border-width: 1px;
+                border-style: solid;
+                border-color: rgb(100, 100, 100);
+                background-color: rgb(220, 220, 220);
+                padding: 3px
+                }
+
+            PolyButton:pressed {
+                background-color: rgb(150, 150, 150);
+                }
+
+            PolyButton:hover:!pressed {
+                background-color: rgb(180, 180, 180);
+                font-weight: bold;
+                }
+
+            PolyButton:checked {
+                background-color: rgb(180, 0, 0);
+                border-color: rgb(100, 0, 0);
+                font-weight: bold;
+                }
+            """
+        )
+
     def check_polybuttons(self, poly):
         for b in self.polybuttons:
-            if b.text() == poly:
+            if b.text().strip() == poly:
                 b.setChecked(True)
         self.cancel_button.setEnabled(True)
 
@@ -369,12 +384,15 @@ class DrawerWidget(QtWidgets.QWidget):
             self.save_button.setEnabled(False)
             self.remove_button.setEnabled(False)
 
-        if npoly == 1:
-            txt = f"Save {npoly} Polygon"
+        if npoly == 0:
+            txt = f"Save Polygons".center(20)
+        elif npoly == 1:
+            txt = f"Save {npoly} Polygon".center(20)
         else:
-            txt = f"Save {npoly} Polygons"
+            txt = f"Save {npoly} Polygons".center(20)
 
         self.save_button.setText(txt)
+        self.save_button.setFixedSize(self.save_button.sizeHint())
 
     @pyqtSlot()
     def save_shapes(self):

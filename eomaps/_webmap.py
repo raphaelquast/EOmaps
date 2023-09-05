@@ -428,6 +428,12 @@ class _WMTSLayer(_WebMapLayer):
 
         art.set_label(f"WebMap service: {self.name}")
 
+        # attach the info to the artist so it can be identified by the companion widget
+        if hasattr(self, "_EOmaps_info"):
+            art._EOmaps_info = self._EOmaps_info
+        if hasattr(self, "_EOmaps_source_code"):
+            art._EOmaps_source_code = self._EOmaps_source_code
+
         m.BM.add_bg_artist(art, layer=layer)
 
 
@@ -567,6 +573,12 @@ class _WMSLayer(_WebMapLayer):
 
         art.set_label(f"WebMap service: {self.name}")
 
+        # attach the info to the artist so it can be identified by the companion widget
+        if hasattr(self, "_EOmaps_info"):
+            art._EOmaps_info = self._EOmaps_info
+        if hasattr(self, "_EOmaps_source_code"):
+            art._EOmaps_source_code = self._EOmaps_source_code
+
         m.BM.add_bg_artist(art, layer=layer)
 
 
@@ -637,13 +649,39 @@ class _WebServiceCollection:
             wmts = self._get_wmts(self._url)
             layers = dict()
             for key in wmts.contents.keys():
-                layers[_sanitize(key)] = _WMTSLayer(self._m, wmts, key)
+                layername = _sanitize(key)
+                wmtslayer = _WMTSLayer(self._m, wmts, key)
+                # attach the info to the artist so it can be identified by the companion
+                if hasattr(self, "_EOmaps_info") and self._EOmaps_info is not None:
+                    wmtslayer._EOmaps_info = self._EOmaps_info.replace("<layer>", key)
+                if (
+                    hasattr(self, "_EOmaps_source_code")
+                    and self._EOmaps_source_code is not None
+                ):
+                    wmtslayer._EOmaps_source_code = self._EOmaps_source_code.replace(
+                        "<layer>", layername
+                    )
+                layers[layername] = wmtslayer
 
         elif self._service_type == "wms":
             wms = self._get_wms(self._url)
             layers = dict()
             for key in wms.contents.keys():
-                layers[_sanitize(key)] = _WMSLayer(self._m, wms, key)
+                layername = _sanitize(key)
+
+                wmslayer = _WMSLayer(self._m, wms, key)
+                # attach the info to the artist so it can be identified by the companion
+                if hasattr(self, "_EOmaps_info") and self._EOmaps_info is not None:
+                    wmslayer._EOmaps_info = self._EOmaps_info.replace("<layer>", key)
+
+                if (
+                    hasattr(self, "_EOmaps_source_code")
+                    and self._EOmaps_source_code is not None
+                ):
+                    wmslayer._EOmaps_source_code = self._EOmaps_source_code.replace(
+                        "<layer>", layername
+                    )
+                layers[layername] = wmslayer
 
         return SimpleNamespace(**layers)
 
@@ -1202,6 +1240,12 @@ class _XyzTileService:
         self._artist = img
 
         self._artist.set_label(f"WebMap service: {self.name}")
+
+        # attach the info to the artist so it can be identified by the companion widget
+        if hasattr(self, "_EOmaps_info"):
+            self._artist._EOmaps_info = self._EOmaps_info
+        if hasattr(self, "_EOmaps_source_code"):
+            self._artist._EOmaps_source_code = self._EOmaps_source_code
 
         m.BM.add_bg_artist(self._artist, layer=layer)
 

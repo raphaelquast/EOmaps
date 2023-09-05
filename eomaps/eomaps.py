@@ -488,8 +488,6 @@ class Maps(metaclass=_MapsMeta):
         self._data_plotted = False
         self._set_extent_on_plot = True
 
-        self._edit_annotations = AnnotationEditor(self)
-
         # Make sure the figure-background patch is on an explicit layer
         # This is used to avoid having the background patch on each fetched
         # background while maintaining the capability of restoring it
@@ -704,6 +702,12 @@ class Maps(metaclass=_MapsMeta):
         return self._parent
 
     @property
+    def _edit_annotations(self):
+        if getattr(self.parent, "_edit_annotations_parent", None) is None:
+            self.parent._edit_annotations_parent = AnnotationEditor(self.parent)
+        return self.parent._edit_annotations_parent
+
+    @property
     def _real_self(self):
         # workaround to obtain a non-weak reference for the parent
         # (e.g. self.parent._real_self is a non-weak ref to parent)
@@ -744,7 +748,15 @@ class Maps(metaclass=_MapsMeta):
         """Create a new layer from a file."""
         return self._new_layer_from_file
 
-    def new_map(self, ax=None, keep_on_top=False, **kwargs):
+    def new_map(
+        self,
+        ax=None,
+        keep_on_top=False,
+        inherit_data=False,
+        inherit_classification=False,
+        inherit_shape=False,
+        **kwargs,
+    ):
         """
         Create a new map that shares the figure with this Maps-object.
 
@@ -798,6 +810,14 @@ class Maps(metaclass=_MapsMeta):
             Set the preferred way for accessing WebMap services if both WMS and WMTS
             capabilities are possible.
             The default is "wms"
+        inherit_data, inherit_classification, inherit_shape : bool
+            Indicator if the corresponding properties should be inherited from
+            the parent Maps-object.
+
+            By default only the shape is inherited.
+
+            For more details, see :py:meth:`Maps.inherit_data` and
+            :py:meth:`Maps.inherit_classification`
         kwargs :
             additional kwargs are passed to `matplotlib.pyplot.figure()`
             - e.g. figsize=(10,5)
@@ -809,6 +829,13 @@ class Maps(metaclass=_MapsMeta):
 
         """
         m2 = Maps(f=self.f, ax=ax, **kwargs)
+
+        if inherit_data:
+            m2.inherit_data(self)
+        if inherit_classification:
+            m2.inherit_classification(self)
+        if inherit_shape:
+            getattr(m2.set_shape, self.shape.name)(**self.shape._initargs)
 
         if np.allclose(self.ax.bbox.bounds, m2.ax.bbox.bounds):
             _log.warning(
@@ -830,9 +857,10 @@ class Maps(metaclass=_MapsMeta):
     def new_layer(
         self,
         layer=None,
-        copy_data_specs=False,
-        copy_classify_specs=False,
-        copy_shape=True,
+        inherit_data=False,
+        inherit_classification=False,
+        inherit_shape=True,
+        **kwargs,
     ):
         """
         Create a new Maps-object that shares the same plot-axes.
@@ -846,9 +874,14 @@ class Maps(metaclass=_MapsMeta):
             - If None, the layer of the parent object is used.
 
             The default is None.
-        copy_data_specs, copy_shape, copy_classify_specs : bool
-            Indicator if the corresponding properties should be copied to
-            the new layer. By default no settings are copied.
+        inherit_data, inherit_classification, inherit_shape : bool
+            Indicator if the corresponding properties should be inherited from
+            the parent Maps-object.
+
+            By default only the shape is inherited.
+
+            For more details, see :py:meth:`Maps.inherit_data` and
+            :py:meth:`Maps.inherit_classification`
 
         Returns
         -------
@@ -887,6 +920,30 @@ class Maps(metaclass=_MapsMeta):
         Maps.copy : general way for copying Maps objects
 
         """
+        depreciated_names = [
+            ("copy_data_specs", "inherit_data"),
+            ("copy_classify_specs", "inherit_classification"),
+            ("copy_shape", "inherit_shape"),
+        ]
+
+        for old, new in depreciated_names:
+            if old in kwargs:
+                from warnings import warn
+
+                warn(
+                    f"EOmaps: Using '{old}' is depreciated! Use '{new}' instead! "
+                    "NOTE: Datasets are now inherited (e.g. shared) and not copied. "
+                    "To explicitly copy attributes, see m.copy(...)!",
+                    category=FutureWarning,
+                    stacklevel=2,
+                )
+
+        inherit_data = kwargs.get("copy_data_specs", inherit_data)
+        inherit_classification = kwargs.get(
+            "copy_classify_specs", inherit_classification
+        )
+        inherit_shape = kwargs.get("copy_shape", inherit_shape)
+
         if layer is None:
             layer = copy.deepcopy(self.layer)
         else:
@@ -897,12 +954,20 @@ class Maps(metaclass=_MapsMeta):
                 )
 
         m = self.copy(
-            data_specs=copy_data_specs,
-            classify_specs=copy_classify_specs,
-            shape=copy_shape,
+            data_specs=False,
+            classify_specs=False,
+            shape=False,
             ax=self.ax,
             layer=layer,
         )
+
+        if inherit_data:
+            m.inherit_data(self)
+        if inherit_classification:
+            m.inherit_classification(self)
+        if inherit_shape:
+            getattr(m.set_shape, self.shape.name)(**self.shape._initargs)
+
         # make sure the new layer does not attempt to reset the extent if
         # it has already been set on the parent layer
         m._set_extent_on_plot = self._set_extent_on_plot
@@ -1700,7 +1765,7 @@ class Maps(metaclass=_MapsMeta):
         reproject="gpd",
         verbose=False,
         only_valid=False,
-        set_extent=True,
+        set_extent=False,
         **kwargs,
     ):
         """
@@ -1824,7 +1889,13 @@ class Maps(metaclass=_MapsMeta):
               (this might result in errors for infinite geometries etc.)
 
             The default is True
+        set_extent: bool, optional
 
+            - if True, set the map extent to the extent of the geometries with
+              a +-5% margin.
+            - if float, use the value se margin.
+
+            The default is True.
         kwargs :
             all remaining kwargs are passed to `geopandas.GeoDataFrame.plot(**kwargs)`
 
@@ -1914,14 +1985,36 @@ class Maps(metaclass=_MapsMeta):
                     "EOmaps: {n_invald} invalid GeoDataFrame geometries are ignored!"
                 )
 
-        with self._disable_autoscale(set_extent):
-            for geomtype, geoms in gdf.groupby(gdf.geom_type):
-                gdf.plot(ax=self.ax, aspect=self.ax.get_aspect(), **kwargs)
-                artists = [i for i in self.ax.collections if id(i) not in colls]
-                for i in artists:
-                    prefixes.append(
-                        f"_{i.__class__.__name__.replace('Collection', '')}"
-                    )
+        # with self._disable_autoscale(set_extent):
+        if set_extent:
+            extent = np.array(
+                [
+                    gdf.bounds["minx"].min(),
+                    gdf.bounds["maxx"].max(),
+                    gdf.bounds["miny"].min(),
+                    gdf.bounds["maxy"].max(),
+                ]
+            )
+
+            if isinstance(set_extent, (int, float, np.number)):
+                margin = set_extent
+            else:
+                margin = 0.05
+
+            dx = extent[1] - extent[0]
+            dy = extent[3] - extent[2]
+
+            d = max(dx, dy) * margin
+            extent[[0, 2]] -= d
+            extent[[1, 3]] += d
+
+            self.set_extent(extent, crs=gdf.crs)
+
+        for geomtype, geoms in gdf.groupby(gdf.geom_type):
+            gdf.plot(ax=self.ax, aspect=self.ax.get_aspect(), **kwargs)
+            artists = [i for i in self.ax.collections if id(i) not in colls]
+            for i in artists:
+                prefixes.append(f"_{i.__class__.__name__.replace('Collection', '')}")
 
         if picker_name is not None:
             if isinstance(pick_method, str):
@@ -2741,12 +2834,14 @@ class Maps(metaclass=_MapsMeta):
                     vmin = np.min(use_vals)
                 if calc_max:
                     vmax = np.max(use_vals)
-        else:
-            # use nanmin/nanmax for all other arrays
-            if calc_min:
-                vmin = np.nanmin(self._data_manager.z_data)
-            if calc_max:
-                vmax = np.nanmax(self._data_manager.z_data)
+
+                return vmin, vmax
+
+        # use nanmin/nanmax for all other arrays
+        if calc_min:
+            vmin = np.nanmin(self._data_manager.z_data)
+        if calc_max:
+            vmax = np.nanmax(self._data_manager.z_data)
 
         return vmin, vmax
 
@@ -2884,7 +2979,14 @@ class Maps(metaclass=_MapsMeta):
 
         # make sure zorder is set to 1 by default
         # (by default shading would use 0 while ordinary collections use 1)
-        kwargs.setdefault("zorder", 1)
+        if self.shape.name != "contour":
+            kwargs.setdefault("zorder", 1)
+        else:
+            # put contour lines by default at level 10
+            if self.shape._filled:
+                kwargs.setdefault("zorder", 1)
+            else:
+                kwargs.setdefault("zorder", 10)
 
         if getattr(self, "coll", None) is not None and len(self.cb.pick.get.cbs) > 0:
             _log.info(
@@ -2939,13 +3041,17 @@ class Maps(metaclass=_MapsMeta):
         )
 
         # ---------------------- classify the data
-        if not self._inherit_classification:
-            if self.classify_specs.scheme is not None:
-                _log.debug("EOmaps: Classifying...")
-
         self._set_vmin_vmax(
             vmin=kwargs.pop("vmin", None), vmax=kwargs.pop("vmax", None)
         )
+
+        if not self._inherit_classification:
+            if self.classify_specs.scheme is not None:
+                _log.debug("EOmaps: Classifying...")
+            elif self.shape.name == "contour" and kwargs.get("levels", None) is None:
+                # TODO use custom contour-levels as UserDefined classification?
+                self.set_classify.EqualInterval(k=5)
+
         cbcmap, norm, bins, classified = self._classify_data(
             vmin=self._vmin,
             vmax=self._vmax,
@@ -4320,10 +4426,16 @@ class Maps(metaclass=_MapsMeta):
             if self.classify_specs.scheme == "UserDefined":
                 bins = self.classify_specs.bins
             else:
+                # use "np.ma.compressed" to make sure values excluded via
+                # masked-arrays are not used to evaluate classification levels
+                # (normal arrays are passed through!)
                 mapc = getattr(mapclassify, classify_specs.scheme)(
-                    z_data[~np.isnan(z_data)], **classify_specs
+                    np.ma.compressed(z_data[~np.isnan(z_data)]), **classify_specs
                 )
                 bins = mapc.bins
+
+            bins = np.unique(np.clip(bins, vmin, vmax))
+
             if vmin < min(bins):
                 bins = [vmin, *bins]
 
@@ -4641,14 +4753,21 @@ class Maps(metaclass=_MapsMeta):
                 kwargs[key] = self._handle_explicit_colors(kwargs[key])
 
         # don't pass the array if explicit facecolors are set
-        if explicit_fc:
+        if explicit_fc and self.shape.name not in ["contour"]:
             args = dict(array=None, cmap=None, norm=None, **kwargs)
         else:
             args = dict(
                 array=props["z_data"], cmap=self._cbcmap, norm=self._norm, **kwargs
             )
 
-        if self.shape.name in ["raster"]:
+        if (
+            self.shape.name in ["contour"]
+            and len(self._xshape) == 2
+            and len(self._yshape) == 2
+        ):
+            # if 2D data is provided for a contour plot, keep the data 2d!
+            coll = self.shape.get_coll(props["xorig"], props["yorig"], "in", **args)
+        elif self.shape.name in ["raster"]:
             # if input-data is 1D, try to convert data to 2D (required for raster)
             # TODO make an explicit data-conversion function for 2D-only shapes
             if len(self._xshape) == 2 and len(self._yshape) == 2:
@@ -4931,7 +5050,7 @@ class Maps(metaclass=_MapsMeta):
         """
         encoding = self.data_specs.encoding
 
-        if encoding is not None:
+        if encoding is not None and encoding is not False:
             try:
                 scale_factor = encoding.get("scale_factor", None)
                 add_offset = encoding.get("add_offset", None)

@@ -1,4 +1,5 @@
 import logging
+from textwrap import dedent
 
 from PyQt5 import QtCore, QtWidgets, QtGui
 from PyQt5.QtCore import Qt, pyqtSignal, pyqtSlot, QPointF
@@ -8,7 +9,7 @@ from matplotlib.colors import to_rgba_array
 
 from ...inset_maps import InsetMaps
 from ..common import iconpath
-from ..base import BasicCheckableToolButton
+from ..base import BasicCheckableToolButton, NewWindow
 from .wms import AddWMSMenuButton
 from .utils import ColorWithSlidersWidget, GetColorWidget, AlphaSlider
 from .annotate import AddAnnotationWidget
@@ -22,12 +23,13 @@ _log = logging.getLogger(__name__)
 class AddFeaturesMenuButton(QtWidgets.QPushButton):
     FeatureAdded = pyqtSignal(str)
 
-    def __init__(self, *args, m=None, **kwargs):
+    def __init__(self, *args, m=None, sub_menu="preset", **kwargs):
         super().__init__(*args, **kwargs)
 
         self.m = m
         self._menu_fetched = False
 
+        self.sub_menu = sub_menu
         # the layer to which features are added
         self.layer = None
 
@@ -39,14 +41,35 @@ class AddFeaturesMenuButton(QtWidgets.QPushButton):
             zorder=0,
         )
 
-        self.setText("Add Feature")
+        self.setText("●   " + self.sub_menu.capitalize().ljust(8))
         # self.setMaximumWidth(200)
 
         width = self.fontMetrics().boundingRect(self.text()).width()
         self.setFixedWidth(width + 30)
 
         self.feature_menu = QtWidgets.QMenu()
-        self.feature_menu.setStyleSheet("QMenu { menu-scrollable: 1;}")
+        self.feature_menu.setStyleSheet(
+            """
+            QMenu {
+                menu-scrollable: 1;
+            }
+            """
+        )
+
+        self.setStyleSheet(
+            """
+            QPushButton {
+                border: 1px solid rgb(140, 140, 140);
+                border-radius: 4px;
+                padding: 4px;
+            }
+            QPushButton:hover {
+                background-color: rgb(210, 210, 210);
+                font-weight: bold;
+            }
+            """
+        )
+
         self.feature_menu.aboutToShow.connect(self.fetch_menu)
 
         self.setMenu(self.feature_menu)
@@ -56,28 +79,41 @@ class AddFeaturesMenuButton(QtWidgets.QPushButton):
         if self._menu_fetched:
             return
 
-        feature_types = [i for i in dir(self.m.add_feature) if not i.startswith("_")]
+        features = getattr(self.m.add_feature, self.sub_menu)
 
-        for featuretype in feature_types:
-            try:
-                sub_menu = self.feature_menu.addMenu(featuretype)
+        feature_types = [i for i in dir(features) if not i.startswith("_")]
 
-                sub_features = [
-                    i
-                    for i in dir(getattr(self.m.add_feature, featuretype))
-                    if not i.startswith("_")
-                ]
+        def grouped(iterable, splits=2):
+            # group objects by prefix (before last underscore)
+            levels = dict()
+
+            special_prefixes = ["bathymetry"]
+            for i in iterable:
+                if i.count("_") >= 2 and i.split("_")[0] not in special_prefixes:
+                    prefix = "_".join(i.split("_", 2)[:2])
+                else:
+                    prefix = i.split("_")[0]
+
+                levels.setdefault(prefix, []).append(i)
+
+            return levels
+
+        feature_types = grouped(sorted(feature_types))
+
+        for feature_group, sub_features in feature_types.items():
+            if len(sub_features) == 1:
+                feature = sub_features[0]
+                action = self.feature_menu.addAction(str(feature))
+                action.triggered.connect(
+                    self.menu_callback_factory(self.sub_menu, feature)
+                )
+            else:
+                sub_menu = self.feature_menu.addMenu(feature_group)
                 for feature in sub_features:
                     action = sub_menu.addAction(str(feature))
                     action.triggered.connect(
-                        self.menu_callback_factory(featuretype, feature)
+                        self.menu_callback_factory(self.sub_menu, feature)
                     )
-            except Exception:
-                _log.warning(
-                    f"There was a problem with the NaturalEarth feature: {featuretype}",
-                    exc_info=_log.getEffectiveLevel() <= logging.DEBUG,
-                )
-                continue
 
         self._menu_fetched = True
 
@@ -198,10 +234,14 @@ class AddFeatureWidget(QtWidgets.QFrame):
 
         self.m = m
 
-        self.selector = AddFeaturesMenuButton(m=self.m)
-        self.selector.clicked.connect(self.update_props)
-
-        self.selector.menu().aboutToShow.connect(self.update_props)
+        self.selectors = [
+            AddFeaturesMenuButton(m=self.m, sub_menu="preset"),
+            AddFeaturesMenuButton(m=self.m, sub_menu="cultural"),
+            AddFeaturesMenuButton(m=self.m, sub_menu="physical"),
+        ]
+        for s in self.selectors:
+            s.clicked.connect(self.update_props)
+            s.menu().aboutToShow.connect(self.update_props)
 
         self.colorselector = ColorWithSlidersWidget(facecolor="#aaaa7f")
 
@@ -226,7 +266,9 @@ class AddFeatureWidget(QtWidgets.QFrame):
         zorder_label.setAlignment(Qt.AlignRight | Qt.AlignCenter)
 
         layout_buttons = QtWidgets.QVBoxLayout()
-        layout_buttons.addWidget(self.selector)
+        for s in self.selectors:
+            layout_buttons.addWidget(s)
+
         layout_buttons.addLayout(zorder_layout)
 
         layout = QtWidgets.QHBoxLayout()
@@ -244,15 +286,17 @@ class AddFeatureWidget(QtWidgets.QFrame):
     @pyqtSlot()
     def update_props(self):
         # don't specify alpha! it interferes with the alpha of the colors!
-        self.selector.props.update(
-            dict(
-                facecolor=self.colorselector.facecolor.getRgbF(),
-                edgecolor=self.colorselector.edgecolor.getRgbF(),
-                linewidth=self.colorselector.linewidth,
-                zorder=int(self.zorder.text()),
-                # alpha = self.colorselector.alpha,
+
+        for s in self.selectors:
+            s.props.update(
+                dict(
+                    facecolor=self.colorselector.facecolor.getRgbF(),
+                    edgecolor=self.colorselector.edgecolor.getRgbF(),
+                    linewidth=self.colorselector.linewidth,
+                    zorder=int(self.zorder.text()),
+                    # alpha = self.colorselector.alpha,
+                )
             )
-        )
 
     def set_linewidth_slider_stylesheet(self):
         self.linewidthslider.setStyleSheet(
@@ -327,6 +371,154 @@ class PlusButton(BasicCheckableToolButton):
         self.setCheckable(False)
 
         self.setStyleSheet("PlusButton {border: 0}")
+
+
+class ArtistInfoDialog(NewWindow):
+    def __init__(self, info_text="-", source_code="", **kwargs):
+        super().__init__(**kwargs)
+        self.info_text = info_text
+        self.source_code = source_code
+
+        self.setWindowTitle("Info")
+        self.setWindowIcon(QtGui.QIcon(str(iconpath / "info.png")))
+        self.setWindowFlags(
+            Qt.FramelessWindowHint | Qt.WindowStaysOnTopHint | Qt.Dialog
+        )
+
+        if self.info_text:
+            self.info_widget = QtWidgets.QTextBrowser()
+            self.info_widget.setOpenExternalLinks(True)
+            self.info_widget.setMarkdown(dedent(self.info_text))
+            self.info_widget.setStyleSheet(
+                """
+                QTextBrowser {
+                    border-radius: 20px;
+                    border: 0px;
+                    }
+                """
+            )
+
+            self.layout.addWidget(self.info_widget)
+
+        code_label = QtWidgets.QLabel("<b>Code to reproduce:</b>")
+        self.source_code_widget = QtWidgets.QLabel()
+        if self.source_code:
+            self.source_code_widget = QtWidgets.QLabel()
+            self.source_code_widget.setText(dedent(self.source_code))
+            self.source_code_widget.setTextInteractionFlags(Qt.TextSelectableByMouse)
+            self.source_code_widget.setWordWrap(True)
+            self.source_code_widget.setStyleSheet(
+                """
+                QLabel {
+                    background-color : rgb(220, 220, 220);
+                    border-radius: 4px;
+                    min-height: 10px;
+                    border: 1px solid black;
+                    color : black;
+                    padding: 2px 2px 2px 2px;
+                    }
+                """
+            )
+            self.layout.addWidget(code_label)
+            self.layout.addWidget(self.source_code_widget)
+
+
+_last_info_button = None
+_init_size = (450, 300)
+_init_pos = None
+
+
+class ArtistInfoButton(BasicCheckableToolButton):
+    def __init__(self, *args, info_text=None, source_code=None, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        self.info_text = info_text
+        self.source_code = source_code
+
+        self.set_icons(
+            normal_icon=str(iconpath / "info.png"),
+            hoover_icon=str(iconpath / "info_hoover.png"),
+            checked_icon=str(iconpath / "info_checked.png"),
+        )
+
+        self.setFixedSize(13, 13)
+        self.setCheckable(True)
+        self.setStyleSheet("ArtistInfoButton {border: 0}")
+
+        self.clicked.connect(self.on_click)
+
+        # use a lambda here to make sure the closure keeps "self" alive
+        # so that we can call "self._on_destroyed()" (otherwise "self" might already
+        # be garbage-collected)
+        self.destroyed.connect(lambda: self._on_destroyed())
+
+    def _on_destroyed(self):
+        # Since buttons are destroyed and re-created on new population of the
+        # editor tabs, the widget must be closed to make sure that the
+        # button state always indicates the currently active info-artist.
+        global _last_info_button
+        if _last_info_button is not None:
+            _last_info_button._info_widget.close()
+            _last_info_button = None
+
+    def enterEvent(self, e):
+        if self.window().showhelp is True:
+            QtWidgets.QToolTip.showText(
+                e.globalPos(),
+                "<h3>Map Feature Info</h3>"
+                "Click to get a popup that provides additional "
+                "information on the feature."
+                "<ul>"
+                "<li>References / Sources</li>"
+                "<li>License-info</li>"
+                "<li>Code to reproduce</li>"
+                "<li>...</li>"
+                "</ul>",
+            )
+
+    @pyqtSlot()
+    def on_click(self, *args, **kwargs):
+        global _last_info_button
+        global _init_size
+        global _init_pos
+
+        if _last_info_button is not None:
+            try:
+                _init_pos = _last_info_button._info_widget.pos()
+                _init_size = (
+                    _last_info_button._info_widget.width(),
+                    _last_info_button._info_widget.height(),
+                )
+                _last_info_button.setChecked(False)
+                _last_info_button._info_widget.close()
+            except Exception:
+                _log.debug(
+                    "There was a problem while trying to close an info-popup",
+                    exc_info=_log.getEffectiveLevel() <= logging.DEBUG,
+                )
+
+            _last_info_button = None
+
+        if self.info_text is None and self.source_code is None:
+            return
+
+        # remember the last clicked button
+        _last_info_button = self
+
+        self._info_widget = ArtistInfoDialog(
+            parent=self.window(),
+            title="Map Feature Info",
+            info_text=self.info_text,
+            source_code=self.source_code,
+            on_close=lambda: self.setChecked(False),
+        )
+        self.setChecked(True)
+        self._info_widget.show()
+
+        if _init_pos:
+            self._info_widget.move(_init_pos)
+        if _init_size:
+            self._info_widget.resize(*_init_size)
 
 
 class LayerArtistTabs(QtWidgets.QTabWidget):
@@ -1012,6 +1204,7 @@ class ArtistEditorTabs(LayerArtistTabs):
             label.setToolTip(name)
         else:
             label = QtWidgets.QLabel(name)
+
         label.setStyleSheet(
             "border-radius: 5px;"
             "border-style: solid;"
@@ -1049,116 +1242,115 @@ class ArtistEditorTabs(LayerArtistTabs):
         b_z.setText(str(a.get_zorder()))
         b_z.returnPressed.connect(self.set_zorder(artist=a, layer=layer, widget=b_z))
 
-        # alpha
-        alpha = a.get_alpha()
-        if alpha is not None:
-            b_a = AlphaInput()
+        # # alpha
+        # alpha = a.get_alpha()
+        # if alpha is not None:
+        #     b_a = AlphaInput()
 
-            b_a.setMinimumWidth(25)
-            b_a.setMaximumWidth(50)
+        #     b_a.setMinimumWidth(25)
+        #     b_a.setMaximumWidth(50)
 
-            validator = QtGui.QDoubleValidator(0.0, 1.0, 3)
-            validator.setLocale(QtCore.QLocale("en_US"))
+        #     validator = QtGui.QDoubleValidator(0.0, 1.0, 3)
+        #     validator.setLocale(QtCore.QLocale("en_US"))
 
-            b_a.setValidator(validator)
-            b_a.setText(str(alpha))
-            b_a.returnPressed.connect(self.set_alpha(artist=a, layer=layer, widget=b_a))
+        #     b_a.setValidator(validator)
+        #     b_a.setText(str(alpha))
+        #     b_a.returnPressed.connect(self.set_alpha(artist=a, layer=layer, widget=b_a))
+        # else:
+        #     b_a = None
+
+        # # linewidth
+        # try:
+        #     lw = a.get_linewidth()
+        #     if isinstance(lw, list) and len(lw) > 1:
+        #         pass
+        #     else:
+        #         lw = lw[0]
+
+        #     if lw is not None:
+        #         b_lw = LineWidthInput()
+
+        #         b_lw.setMinimumWidth(25)
+        #         b_lw.setMaximumWidth(50)
+        #         validator = QtGui.QDoubleValidator(0, 100, 3)
+        #         validator.setLocale(QtCore.QLocale("en_US"))
+
+        #         b_lw.setValidator(validator)
+        #         b_lw.setText(str(lw))
+        #         b_lw.returnPressed.connect(
+        #             self.set_linewidth(artist=a, layer=layer, widget=b_lw)
+        #         )
+        #     else:
+        #         b_lw = None
+        # except Exception:
+        #     b_lw = None
+
+        # # color
+        # try:
+        #     facecolor = to_rgba_array(a.get_facecolor())
+        #     edgecolor = to_rgba_array(a.get_edgecolor())
+        #     if facecolor.shape[0] != 1:
+        #         facecolor = (0, 0, 0, 0)
+        #         use_cmap = True
+        #     else:
+        #         facecolor = (facecolor.squeeze() * 255).astype(int).tolist()
+        #         use_cmap = False
+
+        #     if edgecolor.shape[0] != 1:
+        #         edgecolor = (0, 0, 0, 0)
+        #     else:
+        #         edgecolor = (edgecolor.squeeze() * 255).astype(int).tolist()
+
+        #     b_c = GetColorWidget(facecolor=facecolor, edgecolor=edgecolor)
+        #     b_c.cb_colorselected = self.set_color(
+        #         artist=a, layer=layer, colorwidget=b_c
+        #     )
+        #     b_c.setFrameStyle(QtWidgets.QFrame.StyledPanel | QtWidgets.QFrame.Plain)
+
+        #     b_c.setSizePolicy(
+        #         QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Minimum
+        #     )
+        #     b_c.setMaximumWidth(25)
+
+        # except Exception:
+        #     b_c = None
+        #     use_cmap = True
+        #     pass
+
+        # # cmap
+        # from .utils import CmapDropdown
+
+        # if use_cmap is True:
+        #     try:
+        #         cmap = a.get_cmap()
+        #         b_cmap = CmapDropdown(startcmap=cmap.name)
+        #         b_cmap.activated.connect(
+        #             self.set_cmap(artist=a, layer=layer, widget=b_cmap)
+        #         )
+        #     except Exception:
+        #         b_cmap = None
+        #         pass
+        # else:
+        #     b_cmap = None
+
+        # button to show artist info popup
+        info_text = getattr(a, "_EOmaps_info", None)
+        source_code = getattr(a, "_EOmaps_source_code", None)
+        if info_text or source_code:
+            b_info = ArtistInfoButton(info_text=info_text, source_code=source_code)
         else:
-            b_a = None
-
-        # linewidth
-        try:
-            lw = a.get_linewidth()
-            if isinstance(lw, list) and len(lw) > 1:
-                pass
-            else:
-                lw = lw[0]
-
-            if lw is not None:
-                b_lw = LineWidthInput()
-
-                b_lw.setMinimumWidth(25)
-                b_lw.setMaximumWidth(50)
-                validator = QtGui.QDoubleValidator(0, 100, 3)
-                validator.setLocale(QtCore.QLocale("en_US"))
-
-                b_lw.setValidator(validator)
-                b_lw.setText(str(lw))
-                b_lw.returnPressed.connect(
-                    self.set_linewidth(artist=a, layer=layer, widget=b_lw)
-                )
-            else:
-                b_lw = None
-        except Exception:
-            b_lw = None
-
-        # color
-        try:
-            facecolor = to_rgba_array(a.get_facecolor())
-            edgecolor = to_rgba_array(a.get_edgecolor())
-            if facecolor.shape[0] != 1:
-                facecolor = (0, 0, 0, 0)
-                use_cmap = True
-            else:
-                facecolor = (facecolor.squeeze() * 255).astype(int).tolist()
-                use_cmap = False
-
-            if edgecolor.shape[0] != 1:
-                edgecolor = (0, 0, 0, 0)
-            else:
-                edgecolor = (edgecolor.squeeze() * 255).astype(int).tolist()
-
-            b_c = GetColorWidget(facecolor=facecolor, edgecolor=edgecolor)
-            b_c.cb_colorselected = self.set_color(
-                artist=a, layer=layer, colorwidget=b_c
-            )
-            b_c.setFrameStyle(QtWidgets.QFrame.StyledPanel | QtWidgets.QFrame.Plain)
-
-            b_c.setSizePolicy(
-                QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Minimum
-            )
-            b_c.setMaximumWidth(25)
-
-        except Exception:
-            b_c = None
-            use_cmap = True
-            pass
-
-        # cmap
-        from .utils import CmapDropdown
-
-        if use_cmap is True:
-            try:
-                cmap = a.get_cmap()
-                b_cmap = CmapDropdown(startcmap=cmap.name)
-                b_cmap.activated.connect(
-                    self.set_cmap(artist=a, layer=layer, widget=b_cmap)
-                )
-            except Exception:
-                b_cmap = None
-                pass
-        else:
-            b_cmap = None
+            b_info = None
 
         layout = []
         if not deactivated:
             layout.append((b_sh, 0))  # show hide
 
-        # if b_c is not None:
-        #     layout.append((b_c, 1))  # color
-
         layout.append((b_z, 2))  # zorder
 
         layout.append((label, 3))  # title
 
-        # if b_lw is not None:
-        #     layout.append((b_lw, 4))  # linewidth
-
-        # if b_a is not None:
-        #     layout.append((b_a, 5))  # alpha
-
-        # if b_cmap is not None:
-        #     layout.append((b_cmap, 6))  # cmap
+        if b_info is not None:
+            layout.append((b_info, 4))  # info button
 
         if not deactivated:
             layout.append((b_r, 7))  # remove
@@ -1241,10 +1433,10 @@ class ArtistEditorTabs(LayerArtistTabs):
                     # don't show empty layers
                     continue
 
-            scroll = QtWidgets.QScrollArea()
-            scroll.setWidgetResizable(True)
+            # use a QStackedWidget as tab-widget so contents can be switched dynamically
+            tabwidget = QtWidgets.QStackedWidget()
 
-            self.addTab(scroll, layer)
+            self.addTab(tabwidget, layer)
             self.setTabToolTip(i, layer)
 
             if layer == "all" or layer == self.m.layer:
@@ -1343,21 +1535,33 @@ class ArtistEditorTabs(LayerArtistTabs):
         separator.setFixedHeight(1)
         separator.setStyleSheet("background-color: rgb(150,150,150)")
 
+        # scroll area for the artists
+        edit_widget = QtWidgets.QWidget()
+        edit_widget.setLayout(edit_layout)
+
+        scroll = QtWidgets.QScrollArea()
+        scroll.setWidgetResizable(True)
+        scroll.setWidget(edit_widget)
+
         layout = QtWidgets.QVBoxLayout()
         layout.setContentsMargins(0, 0, 0, 0)
 
         layout.addLayout(layer_actions_layout)
-        # layout.addWidget(separator)
 
         for text in self.m.BM._pending_webmaps.get(layer, []):
             layout.addWidget(QtWidgets.QLabel(f"<b>PENDING WebMap</b>: {text}"))
 
-        layout.addLayout(edit_layout)
+        layout.addWidget(scroll)
         layout.addStretch(1)
 
         tabwidget = QtWidgets.QWidget()
         tabwidget.setLayout(layout)
-        widget.setWidget(tabwidget)
+
+        while widget.count() > 0:
+            widget.removeWidget(widget.widget(0))
+
+        widget.addWidget(tabwidget)
+        widget.setCurrentWidget(tabwidget)
 
     # --------
 
@@ -1566,7 +1770,8 @@ class ArtistEditor(QtWidgets.QWidget):
         )
 
         # repopulate the layer if features or webmaps are added
-        self.addfeature.selector.FeatureAdded.connect(self.artist_tabs.populate_layer)
+        for s in self.addfeature.selectors:
+            s.FeatureAdded.connect(self.artist_tabs.populate_layer)
 
         option_widget = QtWidgets.QWidget()
         option_layout = QtWidgets.QVBoxLayout()
@@ -1608,7 +1813,8 @@ class ArtistEditor(QtWidgets.QWidget):
     @pyqtSlot()
     def set_layer(self):
         layer = self.artist_tabs.tabText(self.artist_tabs.currentIndex())
-        self.addfeature.selector.set_layer(layer)
+        for s in self.addfeature.selectors:
+            s.set_layer(layer)
         if self.draw is not None:
             self.draw.set_layer(layer)
 

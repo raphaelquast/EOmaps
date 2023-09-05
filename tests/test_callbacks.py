@@ -525,7 +525,7 @@ class TestCallbacks(unittest.TestCase):
         # ---------- test as CLICK callback
         m = self.create_basic_map()
 
-        m2 = m.new_layer(copy_data_specs=True)
+        m2 = m.new_layer(inherit_data=True)
         m2.plot_map(layer="2", cmap="Reds")
 
         m.add_feature.preset.ocean(layer="ocean")
@@ -658,7 +658,7 @@ class TestCallbacks(unittest.TestCase):
         # ---------- test as CLICK callback
         m = self.create_basic_map()
 
-        m2 = m.new_layer(copy_data_specs=True)
+        m2 = m.new_layer(inherit_data=True)
         m3 = m.new_layer("3")
         m2.plot_map(layer="2", cmap="Reds")
 
@@ -697,7 +697,7 @@ class TestCallbacks(unittest.TestCase):
         # ---------- test as CLICK callback
         m = self.create_basic_map()
 
-        m2 = m.new_layer(copy_data_specs=True)
+        m2 = m.new_layer(inherit_data=True)
 
         # in EOmaps v6 its now possible to attach callbacks before
         # plotting the data (they will only start to trigger once the

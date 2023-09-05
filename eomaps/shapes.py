@@ -2,9 +2,11 @@
 
 import logging
 from functools import partial, wraps
+from contextlib import contextmanager, ExitStack
 
 from matplotlib.collections import PolyCollection, QuadMesh, TriMesh
 from matplotlib.tri import Triangulation
+from matplotlib.collections import Collection
 
 from pyproj import CRS
 import numpy as np
@@ -12,6 +14,99 @@ import numpy as np
 from .helpers import register_modules
 
 _log = logging.getLogger(__name__)
+
+
+class _CollectionAccessor:
+    """
+    Accessor class to handle contours drawn by plt.contour.
+
+    The main purpose of this class is to serve as a single Artist-like container
+    that executes relevant functions on ALL collections returned by plt.contour.
+
+    The `ContourSet` returned by plt.contour is accessible via `.contour_set`
+
+    To add labels to the contours on the map, use:
+
+    >>> m = Maps()
+    >>> m.set_data(...)
+    >>> m.set_shape.contour()
+    >>> m.plot_map()
+    >>>
+    >>> labels = m3_1.ax.clabel(m.coll.contour_set)
+    >>> for i in labels:
+    >>>     m.BM.add_bg_artist(i, layer=m.layer)
+
+    """
+
+    def __init__(self, cont, filled):
+        self.contour_set = cont
+        self._filled = filled
+
+        self._label = ""
+        self.collections = self.contour_set.collections
+
+        # TODO check why cmap and norm are not properly set on the collections
+        # of the contourplot ("over", "under" colors etc. get lost)
+        for c in self.collections:
+            c.set_cmap(self.cmap)
+            c.set_norm(self.norm)
+
+        methods = [
+            f
+            for f in dir(Collection)
+            if (callable(getattr(Collection, f)) and not f.startswith("__"))
+        ]
+
+        custom_funcs = [i for i in dir(self) if not i.startswith("__")]
+        for name in methods:
+            if name not in custom_funcs:
+                setattr(self, name, self._get_func_for_all_colls(name))
+
+    def __getattr__(self, name):
+        return getattr(self.collections[0], name)
+
+    def _get_func_for_all_colls(self, name):
+        @wraps(getattr(self.collections[0], name))
+        def cb(*args, **kwargs):
+            returns = []
+            for c in self.collections:
+                returns.append(getattr(c, name)(*args, **kwargs))
+            return returns
+
+        return cb
+
+    def get_zorder(self):
+        return self.collections[0].get_zorder()
+
+    @property
+    def levels(self):
+        return self.contour_set.levels
+
+    @property
+    def norm(self):
+        return self.contour_set.norm
+
+    @property
+    def cmap(self):
+        return self.contour_set.cmap
+
+    def get_label(self):
+        return self._label
+
+    def set_label(self, s):
+        self._label = s
+        for i, c in enumerate(self.collections):
+            c.set_label(f"__EOmaps_exclude {s} (level {i})")
+
+    @contextmanager
+    def _cm_set(self, **kwargs):
+        with ExitStack() as stack:
+            try:
+                for c in self.collections:
+                    stack.enter_context(c._cm_set(**kwargs))
+                yield
+            finally:
+                pass
 
 
 class Shapes(object):
@@ -238,7 +333,7 @@ class Shapes(object):
 
         color_vals = dict()
         for c_key in ["fc", "facecolor", "color"]:
-            color = kwargs.pop("fc", None)
+            color = kwargs.pop(c_key, None)
             if color is not None:
                 # explicit treatment for recarrays (to avoid performance issues)
                 # with matplotlib.colors.to_rgba_array()
@@ -1636,8 +1731,6 @@ class Shapes(object):
             x = x - dx
             y = y - dy
 
-            in_crs = self._m.get_crs(crs)
-
             # transform corner-points
             in_crs = self._m.get_crs(crs)
             # transform from crs to the plot_crs
@@ -1714,6 +1807,147 @@ class Shapes(object):
             kwargs.setdefault("antialiased", False)
 
             return self._get_polygon_coll(x, y, crs, **kwargs)
+
+    class _Contour(object):
+        name = "contour"
+
+        def __init__(self, m):
+            self._m = m
+            self._radius = None
+            self.radius_crs = "in"
+
+        def __call__(self, filled=True):
+            """
+            Draw a contour-plot of the data.
+
+            Note
+            ----
+            This is a wrapper for matpltolibs contour-plot capabilities.
+
+            - contours for 2D datasets are evaluated with `plt.contour`
+            - contours for 1D datasets are evaluated with `plt.tricontour`
+
+            """
+            from . import MapsGrid  # do this here to avoid circular imports!
+
+            for m in self._m if isinstance(self._m, MapsGrid) else [self._m]:
+                shape = self.__class__(m)
+                shape._filled = filled
+
+                m._shape = shape
+
+        @property
+        def _initargs(self):
+            return dict(filled=self._filled)
+
+        @property
+        def radius(self):
+            if self._radius is None:
+                radius = Shapes._get_radius(self._m, self._radius, self.radius_crs)
+                return radius
+
+            return self._radius
+
+        def __repr__(self):
+            try:
+                s = f"{self.name}(radius={self.radius}, radius_crs={self.radius_crs})"
+            except AttributeError:
+                s = f"{self.name}(radius, radius_crs)"
+
+            return s
+
+        def _get_contourf_colls(self, x, y, crs, **kwargs):
+            # make sure the array is not dropped from kwargs since we need it for
+            # evaluating the contours
+            z = kwargs.pop("array", None)
+
+            # if manual levels were specified, use them, otherwise check for
+            # classification values
+            if "levels" not in kwargs:
+                bins = getattr(self._m.classify_specs, "_bins", None)
+                if bins is not None:
+                    # in order to ensure that values above or below vmin/vmax are
+                    # colored with the appropriate "under" and "over" colors,
+                    # we need to extend the classification bins with the min/max values
+                    # of the data (otherwise only intermediate levels would be drawn!)
+                    kwargs["levels"] = np.unique([z.min(), *bins, z.max()])
+
+            # transform from crs to the plot_crs
+            in_crs = self._m.get_crs(crs)
+            t_in_plot = self._m._get_transformer(in_crs, self._m.crs_plot)
+
+            # don't use a mask here since we need the full 2D array
+            mask = np.full(x.shape, True, dtype=bool)
+            self._m._data_mask = None
+
+            color_and_array = Shapes._get_colors_and_array(kwargs, mask)
+            # since the "array" parameter is added by default (even if None),
+            # remove it again to avoid warnings that the parameter is unused.
+            # TODO implement better treatment for "array" kwarg
+            color_and_array.pop("array")
+
+            xs, ys = np.ma.masked_invalid(t_in_plot.transform(x, y), copy=False)
+
+            # for 2D data use normal contour, for irregular data use tricontour
+            if len(xs.shape) == 2 and len(ys.shape) == 2:
+                use_tri = False
+            else:
+                use_tri = True
+
+            # tricontours do not accept masked values -> drop all masked values!
+            if use_tri and isinstance(z, np.ma.MaskedArray):
+                xs = xs[~z.mask]
+                ys = ys[~z.mask]
+                z = z.compressed()
+
+            data = dict(x=xs, y=ys, z=z)
+
+            color_and_array.update(kwargs)
+
+            # if manual colors are specified, cmap and norm must be set to None
+            # otherwise contour complains about ambiguous arguments!
+            if "colors" in kwargs:
+                color_and_array.pop("cmap", None)
+                color_and_array.pop("norm", None)
+            if self._filled:
+                if use_tri:
+                    cont = self._m.ax.tricontourf(
+                        *[i.ravel() for i in data.values()], **color_and_array
+                    )
+                else:
+                    cont = self._m.ax.contourf(
+                        "x", "y", "z", data=data, **color_and_array
+                    )
+            else:
+                if use_tri:
+                    cont = self._m.ax.tricontour(
+                        *[i.ravel() for i in data.values()], **color_and_array
+                    )
+                else:
+                    cont = self._m.ax.contour(
+                        "x", "y", "z", data=data, **color_and_array
+                    )
+
+            return _CollectionAccessor(cont, self._filled)
+
+        def get_coll(self, x, y, crs, **kwargs):
+            x, y = np.asanyarray(x), np.asanyarray(y)
+            # don't use antialiasing by default since it introduces unwanted
+            # transparency for reprojected QuadMeshes!
+            # kwargs.setdefault("antialiased", False)
+
+            coll = self._get_contourf_colls(x, y, crs, **kwargs)
+
+            if isinstance(coll, _CollectionAccessor):
+                for c in coll.collections:
+                    self._m.BM._ignored_unmanaged_artists.add(c)
+
+            return coll
+
+    @wraps(_Contour.__call__)
+    def contour(self, *args, **kwargs):
+        shp = self._Contour(m=self._m)
+        return shp.__call__(*args, **kwargs)
 
     @wraps(_ScatterPoints.__call__)
     def scatter_points(self, *args, **kwargs):

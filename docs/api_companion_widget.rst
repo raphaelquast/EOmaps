@@ -52,3 +52,21 @@ EOmaps comes with an awesome companion widget that provides many useful features
         matplotlib.use("qt5agg")
 
     For more details, have a look at :ref:`configuring_the_editor`.
+
+
+
+Additional information on Features and WebMaps
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Starting with EOmaps v7.1 the widget provides a new useful functionality to **quickly access important
+information** of :ref:`Features <ne_features>` and :ref:`WebMaps <webmap_layers>` that were used to create a map.
+
+If there is additional information available for an artist of a map, a |question_symbol| symbol will appear
+next to the corresponding entry in the **Edit** tab that will open a popup window containing the following information:
+
+- **Notes** and **infos** on the features
+- Links to **sources**, **references** and **licensing details** (without warranty for correctness!)
+- The **source code** to reproduce the current appearance of the feature
+
+.. image:: _static/minigifs/companion_widget_feature_info.gif
+  :width: 50%

@@ -1,7 +1,12 @@
+import logging
+from weakref import WeakSet
+
 from PyQt5 import QtWidgets, QtCore, QtGui
 from PyQt5.QtCore import Qt, pyqtSlot
 
 from .common import iconpath
+
+_log = logging.getLogger(__name__)
 
 
 def get_dummy_spacer():
@@ -310,13 +315,13 @@ class ToolBar(QtWidgets.QToolBar):
         if left_widget:
             self.addWidget(left_widget)
 
+        self.addWidget(self.b_showhelp)
+
         if title is not None:
             titlewidget = QtWidgets.QLabel(f"<b>{title}</b>")
             titlewidget.setAttribute(Qt.WA_TransparentForMouseEvents)
             self.addWidget(get_dummy_spacer())
             self.addWidget(titlewidget)
-
-        self.addWidget(self.b_showhelp)
 
         if add_buttons:
             self.addWidget(self.b_open)
@@ -409,6 +414,9 @@ class ToolBar(QtWidgets.QToolBar):
             self.window().move(event.globalPos() - self.press_pos)
 
 
+_windows_to_close = WeakSet()
+
+
 class NewWindow(QtWidgets.QMainWindow):
     def __init__(self, *args, m=None, title=None, on_close=None, **kwargs):
         super().__init__(*args, **kwargs)
@@ -417,8 +425,8 @@ class NewWindow(QtWidgets.QMainWindow):
 
         self.showhelp = False
 
-        toolbar = ToolBar(title=title, on_close=on_close)
-        self.addToolBar(toolbar)
+        self.toolbar = ToolBar(title=title, on_close=on_close)
+        self.addToolBar(self.toolbar)
 
         self.layout = QtWidgets.QVBoxLayout()
         self.layout.setContentsMargins(5, 20, 5, 5)
@@ -431,7 +439,18 @@ class NewWindow(QtWidgets.QMainWindow):
         self.setCentralWidget(widget)
 
         # make sure that we close all remaining windows if the figure is closed
-        self.m.f.canvas.mpl_connect("close_event", self.on_close)
+        if self.m is not None:
+            self.m.f.canvas.mpl_connect("close_event", self.on_close)
+
+        self.setStyleSheet(
+            """
+            NewWindow{
+                border: 1px solid gray;
+                }
+            """
+        )
+
+        _windows_to_close.add(self)
 
     @pyqtSlot()
     def on_close(self, e):
@@ -474,3 +493,11 @@ class AlwaysOnTopWindow(QtWidgets.QMainWindow):
         else:
             self.m._set_always_on_top(True)
             self.on_top.setChecked(True)
+
+    def closeEvent(*args, **kwargs):
+        global _windows_to_close
+        for w in _windows_to_close:
+            try:
+                w.close()
+            except Exception:
+                _log.debug(f"There was a problem while trying to close the window {w}")

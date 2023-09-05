@@ -736,9 +736,9 @@ def _from_file(
             layer = parent.layer
 
         m = parent.new_layer(
-            copy_data_specs=False,
-            copy_classify_specs=False,
-            copy_shape=False,
+            inherit_data=False,
+            inherit_classification=False,
+            inherit_shape=False,
             layer=layer,
         )
     else:
