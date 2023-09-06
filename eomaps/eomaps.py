@@ -37,6 +37,7 @@ from .helpers import (
     _TransformedBoundsLocator,
     _add_to_docstring,
     register_modules,
+    _key_release_event,
 )
 from .shapes import Shapes
 from .colorbar import ColorBar
@@ -5257,7 +5258,8 @@ class Maps(metaclass=_MapsMeta):
                 # Activating the window during the callback steals focus and
                 # as a consequence the key-released-event is never triggered
                 # on the figure and "w" would remain activated permanently.
-                clicked_map.f.canvas.key_release_event("w")
+
+                _key_release_event(clicked_map.f.canvas, "w")
                 clicked_map._companion_widget.activateWindow()
 
     def _init_companion_widget(self, show_hide_key="w"):

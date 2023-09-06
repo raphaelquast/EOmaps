@@ -25,6 +25,17 @@ from matplotlib.spines import Spine
 _log = logging.getLogger(__name__)
 
 
+from matplotlib.backend_bases import KeyEvent
+
+
+def _key_release_event(canvas, key, guiEvent=None):
+    # copy of depreciated matplotlib functions for internal use
+    s = "key_release_event"
+    event = KeyEvent(s, canvas, key, guiEvent=guiEvent)
+    canvas.callbacks.process(s, event)
+    canvas._key = None
+
+
 def _deprecated(message):
     def deprecated_decorator(func):
         def deprecated_func(*args, **kwargs):

@@ -8,6 +8,7 @@ from PyQt5.QtGui import QFont
 from matplotlib.colors import to_rgba_array
 
 from ...inset_maps import InsetMaps
+from ...helpers import _key_release_event
 from ..common import iconpath
 from ..base import BasicCheckableToolButton, NewWindow
 from .wms import AddWMSMenuButton
@@ -1078,7 +1079,7 @@ class LayerTabBar(QtWidgets.QTabBar):
                 )
                 # TODO this is a workaround since modifier-releases are not
                 # forwarded to the canvas if it is not in focus
-                self.m.f.canvas.key_release_event("control")
+                _key_release_event(self.m.f.canvas, "control")
 
         elif modifiers == Qt.ShiftModifier:
             # The all layer should not be combined with other layers...
@@ -1106,7 +1107,7 @@ class LayerTabBar(QtWidgets.QTabBar):
                 )
             # TODO this is a workaround since modifier-releases are not
             # forwarded to the canvas if it is not in focus
-            self.m.f.canvas.key_release_event("shift")
+            _key_release_event(self.m.f.canvas, "shift")
 
         # make sure to reflect the layer-changes in the tab-colors (and positions)
         self.color_active_tab()
