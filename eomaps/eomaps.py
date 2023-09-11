@@ -2825,7 +2825,7 @@ class Maps(metaclass=_MapsMeta):
             # for details, see https://stackoverflow.com/a/934652/9703451
 
             fill_value = self.data_specs.encoding.get("_FillValue", None)
-            if fill_value:
+            if fill_value and any([calc_min, calc_max]):
                 # find values that are not fill-values
                 use_vals = self._data_manager.z_data[
                     self._data_manager.z_data != fill_value
