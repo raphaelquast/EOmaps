@@ -3837,49 +3837,45 @@ class Maps(metaclass=_MapsMeta):
 
         ONLY execute this if you do not need to do anything with the layer
         """
-        # disconnect callback on xlim-change (only relevant for parent)
-        if not self._is_sublayer:
+        try:
+            # disconnect callback on xlim-change (only relevant for parent)
+            if not self._is_sublayer:
+                try:
+                    if hasattr(self, "_cid_xlim"):
+                        self.ax.callbacks.disconnect(self._cid_xlim)
+                        del self._cid_xlim
+                except Exception:
+                    _log.error("EOmaps-cleanup: Problem while clearing xlim-cid")
+
+            # clear data-specs and all cached properties of the data
             try:
-                if hasattr(self, "_cid_xlim"):
-                    self.ax.callbacks.disconnect(self._cid_xlim)
-                    del self._cid_xlim
+                self._coll = None
+                self._data_manager.cleanup()
+
+                if hasattr(self, "tree"):
+                    del self.tree
+                self.data_specs.delete()
             except Exception:
-                _log.error("EOmaps-cleanup: Problem while clearing xlim-cid")
+                _log.error("EOmaps-cleanup: Problem while clearing data specs")
 
-        # clear data-specs and all cached properties of the data
-        try:
-            self._coll = None
-            self._data_manager.cleanup()
+            # disconnect all click, pick and keypress callbacks
+            try:
+                self.cb._reset_cids()
+                # cleanup callback-containers
+                self.cb._clear_callbacks()
+            except Exception:
+                _log.error("EOmaps-cleanup: Problem while clearing callbacks")
 
-            if hasattr(self, "tree"):
-                del self.tree
-            self.data_specs.delete()
-        except Exception:
-            _log.error("EOmaps-cleanup: Problem while clearing data specs")
+            # cleanup all artists and cached background-layers from the blit-manager
+            if not self._is_sublayer:
+                self.BM.cleanup_layer(self.layer)
 
-        # disconnect all click, pick and keypress callbacks
-        try:
-            self.cb._reset_cids()
-            # cleanup callback-containers
-            self.cb._clear_callbacks()
-        except Exception:
-            _log.error("EOmaps-cleanup: Problem while clearing callbacks")
-
-        # cleanup all artists and cached background-layers from the blit-manager
-        if not self._is_sublayer:
-            self.BM.cleanup_layer(self.layer)
-
-        # remove the child from the parent Maps object
-        if self in self.parent._children:
-            self.parent._children.remove(self)
-
-        # activate the base-layer (and re-initialize widgets)
-        try:
-            if self.parent != self:
-                self.show_layer(self.parent.layer)
+            # remove the child from the parent Maps object
+            if self in self.parent._children:
+                self.parent._children.remove(self)
         except Exception:
             _log.error(
-                "EOmaps-cleanup: Problem while updating map to reflect changes",
+                "EOmaps: Cleanup problem!",
                 exc_info=_log.getEffectiveLevel() <= logging.DEBUG,
             )
 
