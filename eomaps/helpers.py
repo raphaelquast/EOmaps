@@ -973,6 +973,13 @@ class LayoutEditor:
         self.blit_artists()
 
     def blit_artists(self):
+        # TODO the current colorbar implementation requires the parent colorbar
+        # to be drawn in order to change the inherited position.
+        # a full redraw takes care of that but it is slower than blitting...
+        if len(self._cb_picked) > 0:
+            self.m.redraw()
+            return
+
         artists = [*self._ax_picked]
         for cb in self._cb_picked:
             artists.append(cb.ax_cb)
@@ -1167,6 +1174,8 @@ class LayoutEditor:
             # keep singular axes hidden
             if not singularax:
                 ax.set_visible(True)
+            else:
+                ax.set_visible(False)
 
             ax.set_animated(False)
             ax.set_frame_on(True)
@@ -1211,6 +1220,11 @@ class LayoutEditor:
                     # make all other childs invisible (to avoid drawing them)
                     child.set_visible(False)
                     child.set_animated(True)
+
+        # hide all colorbars that are not on the visible layer
+        for cb in self.cbs:
+            if cb._m.layer != self.m.BM.bg_layer:
+                cb.set_visible(False)
 
         # only re-draw if info-text is None
         if getattr(self, "_info_text", None) is None:
@@ -1281,6 +1295,12 @@ class LayoutEditor:
                 p()
 
         self.modifier_pressed = False
+
+        # show all colorbars that are on the visible layer
+        active_layers = self.m.BM._get_layers_alphas()[0]
+        for cb in self.cbs:
+            if cb._m.layer in active_layers:
+                cb.set_visible(True)
 
         # reset the histogram-size of all colorbars to make sure previously hidden
         # axes (e.g. size=0) become visible if the size is now > 0.
