@@ -2452,7 +2452,7 @@ class BlitManager:
         try:
             return a.get_zorder()
         except Exception:
-            _log.error(r"EOmaps: unalble to identify zorder of {a}... using 99")
+            _log.error(f"EOmaps: unalble to identify zorder of {a}... using 99")
             return 99
 
     def _draw_animated(self, layers=None, artists=None):
