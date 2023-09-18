@@ -520,8 +520,9 @@ class _WMSLayer(_WebMapLayer):
         # fix of native-crs identifications for older cartopy versions
         # ...ported to cartopy >= 0.21.2:
         #    https://github.com/SciTools/cartopy/pull/2136
+        from cartopy.io.ogc_clients import WMSRasterSource
+
         if version.parse(cartopy.__version__) < version.parse("0.21.2"):
-            from cartopy.io.ogc_clients import WMSRasterSource
 
             class WMSRasterSourceNew(WMSRasterSource):
 
