@@ -118,7 +118,7 @@ Interested in contributing to EOmaps? Awesome!
         <img src="https://github.com/raphaelquast/EOmaps/blob/master/docs/_static/fig7.gif?raw=true" alt="EOmaps example 7">
       </td>
     <td valign="center">
-        <img src="https://github.com/raphaelquast/EOmaps/blob/master/docs/_static/fig2.gif?raw=true" alt="EOmaps example 8">
+        <img src="https://github.com/raphaelquast/EOmaps/blob/master/docs/_static/fig3.gif?raw=true" alt="EOmaps example 8">
       </td>
   </tr>
   <tr>
