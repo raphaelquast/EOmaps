@@ -251,6 +251,8 @@ class LayerSelector(SelectorButtons):
                     uselayers.append(l)
             layers = uselayers
 
+        layers = [i for i in layers if not i.startswith("_")]
+
         # assert (
         #     len(layers) > 0
         # ), "EOmaps: There are no layers with artists available.. plot something first!"
@@ -440,6 +442,8 @@ class LayerSlider(Slider):
                 else:
                     uselayers.append(l)
             layers = uselayers
+
+        layers = [i for i in layers if not i.startswith("_")]
 
         if pos is None:
             ax_slider = self._m.f.add_axes(

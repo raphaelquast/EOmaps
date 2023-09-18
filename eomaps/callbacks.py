@@ -347,7 +347,10 @@ class _ClickCallbacks(object):
             which is accessible via `m.cb.[click/pick].get.permanent_annotations`
 
             If None, the artists will be permanent but NOT added to the
-            `permanent_annotations` list!
+            `permanent_annotations` list and NOT editable!
+
+            If "fixed" the artists will become invariable background artists that
+            are only re-drawn if necessary (useful if you want to draw many annotations)
 
             The default is False
         text : callable or str, optional
@@ -457,9 +460,12 @@ class _ClickCallbacks(object):
                 self._temporary_artists.append(annotation)
                 self.m.BM.add_artist(annotation, layer=layer)
             else:
-                self.m.BM.add_artist(annotation, layer=layer)
 
-                if permanent is True:
+                if isinstance(permanent, str) and permanent == "fixed":
+                    self.m.BM.add_bg_artist(annotation, layer=layer)
+                else:
+                    self.m.BM.add_artist(annotation, layer=layer)
+
                     if not hasattr(self, "permanent_annotations"):
                         self.permanent_annotations = []
 

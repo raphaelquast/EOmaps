@@ -37,6 +37,7 @@ from .helpers import (
     _TransformedBoundsLocator,
     _add_to_docstring,
     register_modules,
+    _key_release_event,
 )
 from .shapes import Shapes
 from .colorbar import ColorBar
@@ -2824,7 +2825,7 @@ class Maps(metaclass=_MapsMeta):
             # for details, see https://stackoverflow.com/a/934652/9703451
 
             fill_value = self.data_specs.encoding.get("_FillValue", None)
-            if fill_value:
+            if fill_value and any([calc_min, calc_max]):
                 # find values that are not fill-values
                 use_vals = self._data_manager.z_data[
                     self._data_manager.z_data != fill_value
@@ -3836,49 +3837,45 @@ class Maps(metaclass=_MapsMeta):
 
         ONLY execute this if you do not need to do anything with the layer
         """
-        # disconnect callback on xlim-change (only relevant for parent)
-        if not self._is_sublayer:
+        try:
+            # disconnect callback on xlim-change (only relevant for parent)
+            if not self._is_sublayer:
+                try:
+                    if hasattr(self, "_cid_xlim"):
+                        self.ax.callbacks.disconnect(self._cid_xlim)
+                        del self._cid_xlim
+                except Exception:
+                    _log.error("EOmaps-cleanup: Problem while clearing xlim-cid")
+
+            # clear data-specs and all cached properties of the data
             try:
-                if hasattr(self, "_cid_xlim"):
-                    self.ax.callbacks.disconnect(self._cid_xlim)
-                    del self._cid_xlim
+                self._coll = None
+                self._data_manager.cleanup()
+
+                if hasattr(self, "tree"):
+                    del self.tree
+                self.data_specs.delete()
             except Exception:
-                _log.error("EOmaps-cleanup: Problem while clearing xlim-cid")
+                _log.error("EOmaps-cleanup: Problem while clearing data specs")
 
-        # clear data-specs and all cached properties of the data
-        try:
-            self._coll = None
-            self._data_manager.cleanup()
+            # disconnect all click, pick and keypress callbacks
+            try:
+                self.cb._reset_cids()
+                # cleanup callback-containers
+                self.cb._clear_callbacks()
+            except Exception:
+                _log.error("EOmaps-cleanup: Problem while clearing callbacks")
 
-            if hasattr(self, "tree"):
-                del self.tree
-            self.data_specs.delete()
-        except Exception:
-            _log.error("EOmaps-cleanup: Problem while clearing data specs")
+            # cleanup all artists and cached background-layers from the blit-manager
+            if not self._is_sublayer:
+                self.BM.cleanup_layer(self.layer)
 
-        # disconnect all click, pick and keypress callbacks
-        try:
-            self.cb._reset_cids()
-            # cleanup callback-containers
-            self.cb._clear_callbacks()
-        except Exception:
-            _log.error("EOmaps-cleanup: Problem while clearing callbacks")
-
-        # cleanup all artists and cached background-layers from the blit-manager
-        if not self._is_sublayer:
-            self.BM.cleanup_layer(self.layer)
-
-        # remove the child from the parent Maps object
-        if self in self.parent._children:
-            self.parent._children.remove(self)
-
-        # activate the base-layer (and re-initialize widgets)
-        try:
-            if self.parent != self:
-                self.show_layer(self.parent.layer)
+            # remove the child from the parent Maps object
+            if self in self.parent._children:
+                self.parent._children.remove(self)
         except Exception:
             _log.error(
-                "EOmaps-cleanup: Problem while updating map to reflect changes",
+                "EOmaps: Cleanup problem!",
                 exc_info=_log.getEffectiveLevel() <= logging.DEBUG,
             )
 
@@ -5151,7 +5148,7 @@ class Maps(metaclass=_MapsMeta):
         }
 
         resp = requests.get(
-            rf"https://nominatim.openstreetmap.org/search/{q}?format=json&addressdetails=1&limit=1",
+            rf"https://nominatim.openstreetmap.org/search?q={q}&format=json&addressdetails=1&limit=1",
             headers=headers,
         ).json()
 
@@ -5257,7 +5254,8 @@ class Maps(metaclass=_MapsMeta):
                 # Activating the window during the callback steals focus and
                 # as a consequence the key-released-event is never triggered
                 # on the figure and "w" would remain activated permanently.
-                clicked_map.f.canvas.key_release_event("w")
+
+                _key_release_event(clicked_map.f.canvas, "w")
                 clicked_map._companion_widget.activateWindow()
 
     def _init_companion_widget(self, show_hide_key="w"):

@@ -1189,7 +1189,7 @@ class Shapes(object):
         def mask_radius(self):
             r = Shapes._get_radius(self._m, self._mask_radius, "out")
             if self._mask_radius is None:
-                return (i * 4 for i in r)
+                return [i * 4 for i in r]
             else:
                 return r
 
@@ -1341,7 +1341,7 @@ class Shapes(object):
             if self.masked:
                 r = Shapes._get_radius(self._m, self._mask_radius, self.mask_radius_crs)
                 if self._mask_radius is None:
-                    return (i * 4 for i in r)
+                    return [i * 4 for i in r]
                 else:
                     return r
             else:
