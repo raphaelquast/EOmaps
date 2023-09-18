@@ -2034,10 +2034,11 @@ class Maps(metaclass=_MapsMeta):
                 return
 
             if len(artists) > 1:
+                log_names = [picker_name + prefix for prefix in np.unique(prefixes)]
                 _log.warning(
                     "EOmaps: Multiple geometry types encountered in `m.add_gdf`. "
                     + "The pick containers are re-named to"
-                    + f"{[picker_name + prefix for prefix in prefixes]}"
+                    + f"{log_names}"
                 )
             else:
                 prefixes = [""]
