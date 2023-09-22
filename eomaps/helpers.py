@@ -289,7 +289,7 @@ class SearchTree:
         """
         self._m = m
         # set starting pick-distance to 50 times the radius
-        self.set_search_radius("50")
+        self.set_search_radius(self._m.cb.pick._search_radius)
 
     @property
     def d(self):
