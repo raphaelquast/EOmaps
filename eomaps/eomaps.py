@@ -105,11 +105,17 @@ def _handle_backends():
     else:
         if Maps._use_interactive_mode:
             plt.ion()
+            _log.debug(
+                "EOmaps: matplotlib's interactive mode is turned on. "
+                "Maps will show up immediately and the console is NOT blocking! "
+                "To change, use Maps.config(use_interactive_mode=True/False)."
+            )
         else:
             plt.ioff()
             _log.debug(
                 "EOmaps: matplotlib's interactive mode is turned off. "
-                "Call `m.show()` to show the map!"
+                "Call `m.show()` to show the map (and block the console)! "
+                "To change, use Maps.config(use_interactive_mode=True/False)."
             )
 
     # check if we are in an ipython console using the inline-backend.
