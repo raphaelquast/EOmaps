@@ -1768,15 +1768,11 @@ class Maps(metaclass=_MapsMeta):
         clip=False,
         reproject="gpd",
         verbose=False,
-        **kwargs,
     ):
         (gpd,) = register_modules("geopandas")
 
         if isinstance(gdf, (str, Path)):
             gdf = gpd.read_file(gdf)
-
-        if val_key is None:
-            val_key = kwargs.get("column", None)
 
         if only_valid:
             gdf = gdf[gdf.is_valid]
@@ -1989,6 +1985,9 @@ class Maps(metaclass=_MapsMeta):
         """
         (gpd,) = register_modules("geopandas")
 
+        if val_key is None:
+            val_key = kwargs.get("column", None)
+
         gdf = self._handle_gdf(
             gdf,
             val_key=val_key,
@@ -1996,7 +1995,6 @@ class Maps(metaclass=_MapsMeta):
             clip=clip,
             reproject=reproject,
             verbose=verbose,
-            **kwargs,
         )
 
         # plot gdf and identify newly added collections
