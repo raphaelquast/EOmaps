@@ -1859,6 +1859,13 @@ class BlitManager:
         def cb(*args, **kwargs):
             func(m=m, *args, **kwargs)
 
+        if _log.getEffectiveLevel() <= 10:
+            logmsg = (
+                f"Adding {'persistent' if persistent else 'single-shot'} "
+                f"layer change action for: '{layer}'"
+            )
+            _log.debug(logmsg)
+
         if layer is None:
             self._on_layer_change[persistent].append(cb)
         else:
