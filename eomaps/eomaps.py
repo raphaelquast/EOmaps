@@ -2156,7 +2156,7 @@ class Maps(metaclass=_MapsMeta):
         # added to the "m.cb.click.get.permanent_markers" list that is
         # used to manage callback-markers
 
-        permanent = kwargs.pop("permanent", False)
+        permanent = kwargs.pop("permanent", None)
 
         # add marker
         marker = self.cb.click._cb.mark(
@@ -2169,7 +2169,7 @@ class Maps(metaclass=_MapsMeta):
             buffer=buffer,
             n=n,
             layer=layer,
-            permanent=None,
+            permanent=permanent,
             **kwargs,
         )
 
