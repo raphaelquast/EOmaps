@@ -607,7 +607,7 @@ class _ClickCallbacks(object):
             kwargs passed to the matplotlib patch.
             (e.g. `facecolor`, `edgecolor`, `linewidth`, `alpha` etc.)
         """
-        possible_shapes = ["ellipses", "rectangles", "geod_circles"]
+        possible_shapes = ["ellipses", "rectangles", "geod_circles", "scatter_points"]
 
         if shape is None:
             if self.m.shape is not None:
@@ -632,9 +632,12 @@ class _ClickCallbacks(object):
             if self.m.coll is not None:
                 radius = "pixel"
             else:
-                # make a dot with 1/20 of the width & height of the figure
                 t = self.m.ax.bbox.transformed(self.m.ax.transData.inverted())
-                radius = (t.width / 10.0, t.height / 10.0)
+                if shape == "scatter_points":
+                    radius = getattr(self.m.shape, "_size", 20)
+                else:
+                    # make a dot with 1/20 of the width & height of the figure
+                    radius = (t.width / 10.0, t.height / 10.0)
 
         ID, pos, val, ind, picker_name, val_color = self._popargs(kwargs)
         if ID is not None and picker_name == "default":
@@ -654,7 +657,11 @@ class _ClickCallbacks(object):
                     + "plot-shape does not set a radius! Please specify it explicitly."
                 )
                 return
-            radius = self.m.shape.radius
+
+            if shape == "scatter_points":
+                radius = getattr(self.m.shape, "_size", 20)
+            else:
+                radius = self.m.shape.radius
         else:
             pixelQ = False
 
@@ -694,6 +701,9 @@ class _ClickCallbacks(object):
             shp = self.m.set_shape._get(
                 "rectangles", radius=radius, radius_crs=radius_crs, mesh=False, n=n
             )
+        elif shape == "scatter_points":
+            marker = getattr(self.m.shape, "_marker", "o")
+            shp = self.m.set_shape._get("scatter_points", _size=radius, _marker=marker)
         else:
             raise TypeError(f"EOmaps: '{shape}' is not a valid marker-shape")
 
