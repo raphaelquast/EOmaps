@@ -2367,6 +2367,7 @@ class Maps(metaclass=_MapsMeta):
                 )
 
         self.BM.update(clear=False)
+        return ann
 
     @wraps(Compass.__call__)
     def add_compass(self, *args, **kwargs):
