@@ -25,7 +25,6 @@ from matplotlib.gridspec import GridSpec, SubplotSpec
 import matplotlib.patches as mpatches
 
 from cartopy import crs as ccrs
-from cartopy.mpl.geoaxes import GeoAxes
 
 from .helpers import (
     pairwise,
@@ -2791,9 +2790,22 @@ class Maps(metaclass=_MapsMeta):
 
         return f"EOmaps_alpha_{ncmaps + 1}"
 
-    @wraps(GeoAxes.set_extent)
     def set_extent(self, extents, crs=None):
-        """Set the extent of the map."""
+        """
+        Set the extent (x0, x1, y0, y1) of the map in the given coordinate system.
+
+        Parameters
+        ----------
+        extent : array-like
+            The extent in the given crs (x0, x1, y0, y1).
+        crs : a crs identifier, optional
+            The coordinate-system in which the extent is evaluated.
+
+            - if None, epsg=4326 (e.g. lon/lat projection) is used
+
+            The default is None.
+
+        """
         # just a wrapper to make sure that previously set extents are not
         # resetted when plotting data!
 
@@ -2806,7 +2818,6 @@ class Maps(metaclass=_MapsMeta):
         self.ax.set_extent(extents, crs=crs)
         self._set_extent_on_plot = False
 
-    @wraps(GeoAxes.get_extent)
     def get_extent(self, crs=None):
         """
         Get the extent (x0, x1, y0, y1) of the map in the given coordinate system.
