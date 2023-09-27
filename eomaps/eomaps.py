@@ -543,6 +543,12 @@ class Maps(metaclass=_MapsMeta):
             plt.close(self.f)
         gc.collect()
 
+    def __repr__(self):
+        try:
+            return f"<eomaps.Maps object on layer '{self.layer}'>"
+        except Exception:
+            return object.__repr__(self)
+
     def _parse_log_level(self, level):
         """
         Get the numerical log-level from string (or number).
