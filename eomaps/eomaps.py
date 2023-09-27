@@ -4628,7 +4628,11 @@ class Maps(metaclass=_MapsMeta):
             if not e2.IsValid():
                 e2 = e2.MakeValid()
 
-            gdf = gdf.to_crs(self.crs_plot)
+            # only reproject geometries if crs cannot be identified
+            # as the initially provided (or cartopy converted) crs
+            if gdf.crs != self.crs_plot and gdf.crs != self._crs_plot:
+                gdf = gdf.to_crs(self.crs_plot)
+
             clipgeoms = []
             for g in gdf.geometry:
                 g2 = gdal.ogr.CreateGeometryFromWkt(g.wkt)
