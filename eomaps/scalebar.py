@@ -440,6 +440,17 @@ class ScaleBar:
         else:
             return res
 
+    def _extent_changed(self):
+        extent = self._m.get_extent(self._m.crs_plot)
+
+        if not hasattr(self, "_prev_extent"):
+            self._prev_extent = extent
+            return True
+        else:
+            changed = not np.allclose(extent, self._prev_extent)
+            self._prev_extent = extent
+            return changed
+
     def _estimate_scale(self):
         try:
             x0, x1, y0, y1 = self._m.get_extent(4326)
@@ -1443,6 +1454,11 @@ class ScaleBar:
                     0.01,
                     0.99,
                 )
+                prev_scale = self._scale
+                try:
+                    self._estimate_scale()
+                except Exception:
+                    self._scale = prev_scale
             else:
                 _log.warning(
                     "EOmaps: The scale of the scalebar is fixed! "
@@ -1527,27 +1543,31 @@ class ScaleBar:
                 setattr(self, cidname, None)
 
     def _update(self, lon=None, lat=None, azim=None, BM_update=False, **kwargs):
-        # check if the scalebar is in the current field-of-view
-        # if not, avoid updating it and make it invisible
-        if self._auto_position is False:
-            bbox = self._artists["patch"].get_extents()
-            if not self._m.ax.bbox.overlaps(bbox):
-                for a in self._artists.values():
-                    a.set_visible(False)
-                return
-            else:
-                for a in self._artists.values():
-                    a.set_visible(True)
+        # only do this if the extent changed (to avoid performance issues)
+        if self._extent_changed():
+            # check if the scalebar is in the current field-of-view
+            # if not, avoid updating it and make it invisible
+            if self._auto_position is False:
+                bbox = self._artists["patch"].get_extents()
+                if not self._m.ax.bbox.overlaps(bbox):
+                    for a in self._artists.values():
+                        a.set_visible(False)
+                    return
+                else:
+                    for a in self._artists.values():
+                        a.set_visible(True)
 
-        # clear the cache to re-evaluate the text-width if label props have changed
-        self.__class__._get_maxw.cache_clear()
+            # clear the cache to re-evaluate the text-width if label
+            # props have changed
+            self.__class__._get_maxw.cache_clear()
 
-        if self._scale is None:
-            prev_scale = self._scale
-            try:
-                self._estimate_scale()
-            except Exception:
-                self._scale = prev_scale
+            # estimate a new scale if the scale is not fixed explicitly
+            if self._scale is None:
+                prev_scale = self._scale
+                try:
+                    self._estimate_scale()
+                except Exception:
+                    self._scale = prev_scale
 
         # make sure scalebars are not positioned out of bounds
         if lon is not None and lat is not None:
