@@ -289,7 +289,7 @@ class SearchTree:
         """
         self._m = m
         # set starting pick-distance to 50 times the radius
-        self.set_search_radius("50")
+        self.set_search_radius(self._m.cb.pick._search_radius)
 
     @property
     def d(self):
@@ -1858,6 +1858,13 @@ class BlitManager:
 
         def cb(*args, **kwargs):
             func(m=m, *args, **kwargs)
+
+        if _log.getEffectiveLevel() <= 10:
+            logmsg = (
+                f"Adding {'persistent' if persistent else 'single-shot'} "
+                f"layer change action for: '{layer}'"
+            )
+            _log.debug(logmsg)
 
         if layer is None:
             self._on_layer_change[persistent].append(cb)

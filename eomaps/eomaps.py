@@ -25,7 +25,6 @@ from matplotlib.gridspec import GridSpec, SubplotSpec
 import matplotlib.patches as mpatches
 
 from cartopy import crs as ccrs
-from cartopy.mpl.geoaxes import GeoAxes
 
 from .helpers import (
     pairwise,
@@ -105,11 +104,17 @@ def _handle_backends():
     else:
         if Maps._use_interactive_mode:
             plt.ion()
+            _log.debug(
+                "EOmaps: matplotlib's interactive mode is turned on. "
+                "Maps will show up immediately and the console is NOT blocking! "
+                "To change, use Maps.config(use_interactive_mode=True/False)."
+            )
         else:
             plt.ioff()
             _log.debug(
                 "EOmaps: matplotlib's interactive mode is turned off. "
-                "Call `m.show()` to show the map!"
+                "Call `m.show()` to show the map (and block the console)! "
+                "To change, use Maps.config(use_interactive_mode=True/False)."
             )
 
     # check if we are in an ipython console using the inline-backend.
@@ -537,6 +542,12 @@ class Maps(metaclass=_MapsMeta):
         if self.parent == self:
             plt.close(self.f)
         gc.collect()
+
+    def __repr__(self):
+        try:
+            return f"<eomaps.Maps object on layer '{self.layer}'>"
+        except Exception:
+            return object.__repr__(self)
 
     def _parse_log_level(self, level):
         """
@@ -1754,6 +1765,77 @@ class Maps(metaclass=_MapsMeta):
             if set_extent is False:
                 self.set_extent(init_extent)
 
+    def _handle_gdf(
+        self,
+        gdf,
+        val_key=None,
+        only_valid=True,
+        clip=False,
+        reproject="gpd",
+        verbose=False,
+    ):
+        (gpd,) = register_modules("geopandas")
+
+        if isinstance(gdf, (str, Path)):
+            gdf = gpd.read_file(gdf)
+
+        if only_valid:
+            gdf = gdf[gdf.is_valid]
+
+        try:
+            # explode the GeoDataFrame to avoid picking multi-part geometries
+            gdf = gdf.explode(index_parts=False)
+        except Exception:
+            # geopandas sometimes has problems exploding geometries...
+            # if it does not work, just continue with the Multi-geometries!
+            _log.error("EOmaps: Exploding geometries did not work!")
+            pass
+
+        if clip:
+            gdf = self._clip_gdf(gdf, clip)
+        if reproject == "gpd":
+            gdf = gdf.to_crs(self.crs_plot)
+        elif reproject == "cartopy":
+            # optionally use cartopy's re-projection routines to re-project
+            # geometries
+
+            cartopy_crs = self._get_cartopy_crs(gdf.crs)
+            if self.ax.projection != cartopy_crs:
+                # TODO this results in problems and sometimes masks way too much!!
+                # select only polygons that actually intersect with the CRS-boundary
+                # mask = gdf.buffer(1).intersects(
+                #     gpd.GeoDataFrame(
+                #         geometry=[self.ax.projection.domain], crs=self.ax.projection
+                #     )
+                #     .to_crs(gdf.crs)
+                #     .geometry[0]
+                # )
+                # gdf = gdf.copy()[mask]
+
+                geoms = gdf.geometry
+                if len(geoms) > 0:
+                    proj_geoms = []
+
+                    if verbose:
+                        for g in progressbar(geoms, "EOmaps: re-projecting... ", 20):
+                            proj_geoms.append(
+                                self.ax.projection.project_geometry(g, cartopy_crs)
+                            )
+                    else:
+                        for g in geoms:
+                            proj_geoms.append(
+                                self.ax.projection.project_geometry(g, cartopy_crs)
+                            )
+                    gdf = gdf.set_geometry(proj_geoms)
+                    gdf = gdf.set_crs(self.ax.projection, allow_override=True)
+                gdf = gdf[~gdf.is_empty]
+        else:
+            raise AssertionError(
+                f"EOmaps: '{reproject}' is not a valid reproject-argument."
+            )
+
+        return gdf
+
     def add_gdf(
         self,
         gdf,
@@ -1908,66 +1990,18 @@ class Maps(metaclass=_MapsMeta):
         """
         (gpd,) = register_modules("geopandas")
 
-        if isinstance(gdf, (str, Path)):
-            gdf = gpd.read_file(gdf)
-
         if val_key is None:
             val_key = kwargs.get("column", None)
 
-        if only_valid:
-            gdf = gdf[gdf.is_valid]
+        gdf = self._handle_gdf(
+            gdf,
+            val_key=val_key,
+            only_valid=only_valid,
+            clip=clip,
+            reproject=reproject,
+            verbose=verbose,
+        )
 
-        try:
-            # explode the GeoDataFrame to avoid picking multi-part geometries
-            gdf = gdf.explode(index_parts=False)
-        except Exception:
-            # geopandas sometimes has problems exploding geometries...
-            # if it does not work, just continue with the Multi-geometries!
-            _log.error("EOmaps: Exploding geometries did not work!")
-            pass
-
-        if clip:
-            gdf = self._clip_gdf(gdf, clip)
-        if reproject == "gpd":
-            gdf = gdf.to_crs(self.crs_plot)
-        elif reproject == "cartopy":
-            # optionally use cartopy's re-projection routines to re-project
-            # geometries
-
-            cartopy_crs = self._get_cartopy_crs(gdf.crs)
-            if self.ax.projection != cartopy_crs:
-                # TODO this results in problems and sometimes masks way too much!!
-                # select only polygons that actually intersect with the CRS-boundary
-                # mask = gdf.buffer(1).intersects(
-                #     gpd.GeoDataFrame(
-                #         geometry=[self.ax.projection.domain], crs=self.ax.projection
-                #     )
-                #     .to_crs(gdf.crs)
-                #     .geometry[0]
-                # )
-                # gdf = gdf.copy()[mask]
-
-                geoms = gdf.geometry
-                if len(geoms) > 0:
-                    proj_geoms = []
-
-                    if verbose:
-                        for g in progressbar(geoms, "EOmaps: re-projecting... ", 20):
-                            proj_geoms.append(
-                                self.ax.projection.project_geometry(g, cartopy_crs)
-                            )
-                    else:
-                        for g in geoms:
-                            proj_geoms.append(
-                                self.ax.projection.project_geometry(g, cartopy_crs)
-                            )
-                    gdf = gdf.set_geometry(proj_geoms)
-                    gdf = gdf.set_crs(self.ax.projection, allow_override=True)
-                gdf = gdf[~gdf.is_empty]
-        else:
-            raise AssertionError(
-                f"EOmaps: '{reproject}' is not a valid reproject-argument."
-            )
         # plot gdf and identify newly added collections
         # (geopandas always uses collections)
         colls = [id(i) for i in self.ax.collections]
@@ -2034,10 +2068,11 @@ class Maps(metaclass=_MapsMeta):
                 return
 
             if len(artists) > 1:
+                log_names = [picker_name + prefix for prefix in np.unique(prefixes)]
                 _log.warning(
                     "EOmaps: Multiple geometry types encountered in `m.add_gdf`. "
                     + "The pick containers are re-named to"
-                    + f"{[picker_name + prefix for prefix in prefixes]}"
+                    + f"{log_names}"
                 )
             else:
                 prefixes = [""]
@@ -2155,7 +2190,7 @@ class Maps(metaclass=_MapsMeta):
         # added to the "m.cb.click.get.permanent_markers" list that is
         # used to manage callback-markers
 
-        permanent = kwargs.pop("permanent", False)
+        permanent = kwargs.pop("permanent", None)
 
         # add marker
         marker = self.cb.click._cb.mark(
@@ -2168,7 +2203,7 @@ class Maps(metaclass=_MapsMeta):
             buffer=buffer,
             n=n,
             layer=layer,
-            permanent=None,
+            permanent=permanent,
             **kwargs,
         )
 
@@ -2337,6 +2372,7 @@ class Maps(metaclass=_MapsMeta):
                 )
 
         self.BM.update(clear=False)
+        return ann
 
     @wraps(Compass.__call__)
     def add_compass(self, *args, **kwargs):
@@ -2760,9 +2796,22 @@ class Maps(metaclass=_MapsMeta):
 
         return f"EOmaps_alpha_{ncmaps + 1}"
 
-    @wraps(GeoAxes.set_extent)
     def set_extent(self, extents, crs=None):
-        """Set the extent of the map."""
+        """
+        Set the extent (x0, x1, y0, y1) of the map in the given coordinate system.
+
+        Parameters
+        ----------
+        extent : array-like
+            The extent in the given crs (x0, x1, y0, y1).
+        crs : a crs identifier, optional
+            The coordinate-system in which the extent is evaluated.
+
+            - if None, epsg=4326 (e.g. lon/lat projection) is used
+
+            The default is None.
+
+        """
         # just a wrapper to make sure that previously set extents are not
         # resetted when plotting data!
 
@@ -2775,7 +2824,6 @@ class Maps(metaclass=_MapsMeta):
         self.ax.set_extent(extents, crs=crs)
         self._set_extent_on_plot = False
 
-    @wraps(GeoAxes.get_extent)
     def get_extent(self, crs=None):
         """
         Get the extent (x0, x1, y0, y1) of the map in the given coordinate system.
@@ -2847,8 +2895,8 @@ class Maps(metaclass=_MapsMeta):
         return vmin, vmax
 
     def _set_vmin_vmax(self, vmin=None, vmax=None):
-        self._vmin = self._encode_values(vmin)
-        self._vmax = self._encode_values(vmax)
+        vmin = self._encode_values(vmin)
+        vmax = self._encode_values(vmax)
 
         # handle inherited bounds
         if self._inherit_classification is not None:
@@ -4586,7 +4634,11 @@ class Maps(metaclass=_MapsMeta):
             if not e2.IsValid():
                 e2 = e2.MakeValid()
 
-            gdf = gdf.to_crs(self.crs_plot)
+            # only reproject geometries if crs cannot be identified
+            # as the initially provided (or cartopy converted) crs
+            if gdf.crs != self.crs_plot and gdf.crs != self._crs_plot:
+                gdf = gdf.to_crs(self.crs_plot)
+
             clipgeoms = []
             for g in gdf.geometry:
                 g2 = gdal.ogr.CreateGeometryFromWkt(g.wkt)
