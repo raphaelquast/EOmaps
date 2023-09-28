@@ -34,7 +34,7 @@ It is built on top of [matplotlib](matplotlib.org/) and [cartopy](https://scitoo
 
 ### What can EOmaps do for you?
 
-- Create [▤ multi-layered maps](https://eomaps.readthedocs.io/en/latest/api_basics.html) and interactively compare different layers with each other
+- Create [▤ multi-layered maps](https://eomaps.readthedocs.io/en/latest/api_basics.html#layer-management) and interactively compare different layers with each other
 - [🔴 Visualize datasets](https://eomaps.readthedocs.io/en/latest/api_data_visualization.html) with  millions of datapoints and handle reprojections
 - Provide a comprehensive set of tools to customize the map
   - [🌵NaturalEarth features](https://eomaps.readthedocs.io/en/latest/api_naturalearth_features.html)
