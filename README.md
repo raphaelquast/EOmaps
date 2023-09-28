@@ -34,23 +34,23 @@ It is built on top of [matplotlib](matplotlib.org/) and [cartopy](https://scitoo
 
 ### What can EOmaps do for you?
 
-- Create [▤ multi-layered maps](https://eomaps.readthedocs.io/en/latest/api.html#basics) and interactively compare different layers with each other
-- [🔴 Visualize datasets](https://eomaps.readthedocs.io/en/latest/api.html#data-visualization) with  millions of datapoints and handle reprojections
+- Create [▤ multi-layered maps](https://eomaps.readthedocs.io/en/latest/api_basics.html) and interactively compare different layers with each other
+- [🔴 Visualize datasets](https://eomaps.readthedocs.io/en/latest/api_data_visualization.html) with  millions of datapoints and handle reprojections
 - Provide a comprehensive set of tools to customize the map
-  - [🌵NaturalEarth features](https://eomaps.readthedocs.io/en/latest/api.html#naturalearth-features)
-  - [📏Scalebars](https://eomaps.readthedocs.io/en/latest/api.html#scalebars)
-  - [▦ Gridlines](https://eomaps.readthedocs.io/en/latest/api.html#gridlines)
-  - [🛰 WebMap layers](https://eomaps.readthedocs.io/en/latest/api.html#webmap-layers)
-  - [🏕 Annotations, Markers, Lines, Logos...](https://eomaps.readthedocs.io/en/latest/api.html#annotations-markers-lines-logos-etc)
+  - [🌵NaturalEarth features](https://eomaps.readthedocs.io/en/latest/api_naturalearth_features.html)
+  - [📏Scalebars](https://eomaps.readthedocs.io/en/latest/api_scalebar.html)
+  - [▦ Gridlines](https://eomaps.readthedocs.io/en/latest/api_gridlines.html)
+  - [🛰 WebMap layers](https://eomaps.readthedocs.io/en/latest/api_webmaps.html)
+  - [🏕 Annotations, Markers, Lines, Logos...](https://eomaps.readthedocs.io/en/latest/api_annotations_markers_etc.html)
   - . . .
-- Get a useful [🧰 CompanionWidget](https://eomaps.readthedocs.io/en/latest/api.html#companion-widget) GUI
-- Use [🛸 Callbacks](https://eomaps.readthedocs.io/en/latest/api.html#callbacks-make-the-map-interactive) to interact with the figure
-- Interactively re-arrange multiple maps in a figure with the [🏗️ LayoutEditor](https://eomaps.readthedocs.io/en/latest/api.html#layout-editor)
-- [🗺 Export](https://eomaps.readthedocs.io/en/latest/api.html#export-the-map-as-jpeg-png-etc) publication ready high resolution images (png, jpeg, tiff, ...)  
+- Get a useful [🧰 CompanionWidget](https://eomaps.readthedocs.io/en/latest/api_companion_widget.html) GUI
+- Use [🛸 Callbacks](https://eomaps.readthedocs.io/en/latest/api_callbacks.html) to interact with the figure
+- Interactively re-arrange multiple maps in a figure with the [🏗️ LayoutEditor](https://eomaps.readthedocs.io/en/latest/api_layout_editor.html)
+- [🗺 Export](https://eomaps.readthedocs.io/en/latest/api_basics.html#image-export-jpeg-png-svg-etc) publication ready high resolution images (png, jpeg, tiff, ...)  
 or export figures as vektor graphics (svg, eps, pdf ...)
 - . . . and much more!  
 
-Checkout the [🌱 Basics](https://eomaps.readthedocs.io/en/latest/api.html#basics) in the documentation to get started!
+Checkout the [🌱 Basics](https://eomaps.readthedocs.io/en/latest/api_basics.html) in the documentation to get started!
 
 <img src=https://eomaps.readthedocs.io/en/latest/_images/intro.png width=50%>
 
@@ -66,7 +66,7 @@ conda install -c conda-forge eomaps
 > mamba install -c conda-forge eomaps
 > ```
 Need more information?
-- Have a look at the [🐛Installation](https://eomaps.readthedocs.io/en/latest/general.html#installation) instructions in the docs.
+- Have a look at the [🐛Installation](https://eomaps.readthedocs.io/en/latest/installation.html) instructions in the docs.
 - Checkout the quickstart guide [🚀 From 0 to EOmaps](https://eomaps.readthedocs.io/en/latest/FAQ.html#from-0-to-eomaps-a-quickstart-guide).
 
 ## 📖 Documentation
