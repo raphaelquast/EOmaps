@@ -102,14 +102,14 @@ def _handle_backends():
     elif active_backend in ["module://ipympl.backend_nbagg"]:
         plt.ioff()
     else:
-        if Maps._use_interactive_mode:
+        if Maps._use_interactive_mode is True:
             plt.ion()
             _log.debug(
                 "EOmaps: matplotlib's interactive mode is turned on. "
                 "Maps will show up immediately and the console is NOT blocking! "
                 "To change, use Maps.config(use_interactive_mode=True/False)."
             )
-        else:
+        elif Maps._use_interactive_mode is False:
             plt.ioff()
             _log.debug(
                 "EOmaps: matplotlib's interactive mode is turned off. "
@@ -155,7 +155,7 @@ _CLASSIFIERS = (
 
 class _MapsMeta(type):
 
-    _use_interactive_mode = True
+    _use_interactive_mode = None
     _always_on_top = False
 
     _backend_warning_shown = False
@@ -165,7 +165,7 @@ class _MapsMeta(type):
         snapshot_on_update=None,
         companion_widget_key=None,
         always_on_top=None,
-        use_interactive_mode=True,
+        use_interactive_mode=None,
         log_level=None,
     ):
         """
@@ -198,11 +198,15 @@ class _MapsMeta(type):
             - If True, the figure will be kept "always on top" of other applications.
 
             The default is False.
-        use_interactive_mode : bool, optional
+        use_interactive_mode : bool or None, optional
             If True, matplotlibs interactive mode (`plt.ion()`) is activated by default
             for all backends except jupyter-notebook backends (`inline` and `ipympl`).
 
-            If False, a call to `m.show()` is required to trigger showing the figure!
+            If False, interactive mode is turned off (`plt.ioff()` and a call
+            to `m.show()` is required to trigger showing the figure!
+            Note that this will block the terminal!
+
+            If None, No changes are applied.
 
             The default is True.
         log_level : str or int, optional
