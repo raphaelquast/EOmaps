@@ -661,18 +661,158 @@ class DataManager:
 
         return idq
 
+    def _block_view(self, a, blockshape):
+        """
+        Return a view of an array in the desired block-structure.
+
+        (fast and without creating a copy!)
+
+        If the array-size cannot be broadcasted to the block-shape, boundary-values
+        are dropped!
+
+        This function is largely adapted from
+        https://github.com/ilastik/ilastik/blob/main/lazyflow/utility/blockwise_view.py
+
+        Parameters
+        ----------
+        a : numpy.array
+            The input array.
+        blockshape : tuple
+            The desired block shape.
+        Returns
+        -------
+        view : np.array
+            A view of the input-array with the desired block-shape.
+
+        """
+        blockshape = tuple(blockshape)
+        outershape = tuple(np.array(a.shape) // blockshape)
+        view_shape = outershape + blockshape
+
+        # make sure the blockshape can always be applied
+        # (drop boundary pixels from left and right until blockshape is possible)
+        mods = np.mod(a.shape, blockshape)
+        starts, stops = mods // 2 + mods % 2, mods // 2
+
+        slices = []
+        for i, (sta, sto) in enumerate(zip(starts, stops)):
+            if sto > 0:
+                s = slice(sta, -sto)
+            else:
+                s = slice(sta, a.shape[i])
+
+            slices.append(s)
+
+        if len(slices) == 2:
+            a = a[slices[0], slices[1]]
+        else:
+            a = a[slices[0]]
+
+        # a = a[*slices]   # TODO check why pre-commit can't resolve this line!!
+
+        # inner strides: strides within each block (same as original array)
+        intra_block_strides = a.strides
+
+        # outer strides: strides from one block to another
+        inter_block_strides = tuple(a.strides * np.array(blockshape))
+
+        # This is where the magic happens.
+        # Generate a view with our new strides (outer+inner).
+        view = np.lib.stride_tricks.as_strided(
+            a, shape=view_shape, strides=(inter_block_strides + intra_block_strides)
+        )
+
+        if isinstance(a, np.ma.masked_array):
+            blockmask = self._block_view(a.mask, blockshape)
+            view = np.ma.masked_array(view, blockmask, copy=False)
+
+        return view
+
     def _zoom(self):
+        method = getattr(self.m.shape, "_method", "first")
         maxsize = getattr(self.m.shape, "_maxsize", None)
         order = getattr(self.m.shape, "_interp_order", 0)
+        valid_fraction = getattr(self.m.shape, "_valid_fraction", 0)
 
         # only zoom if the shape provides a _maxsize attribute
         if maxsize is None:
             return
 
-        if self._current_data["z_data"].size < maxsize:
+        if method == "zoom":
+            return self._zoom_scipy(maxsize, order)
+        else:
+            return self._zoom_block(maxsize, method, valid_fraction)
+
+    def _zoom_block(self, maxsize, method, valid_fraction):
+        bs = int(np.sqrt(self._current_data["z_data"].size // maxsize))
+
+        if bs == 0:
             return
 
+        bs = (bs, bs)
+
+        zdata = self._current_data["z_data"]
+        blocks = self._block_view(zdata, bs)
+
+        if method == "first":
+            self._current_data["z_data"] = blocks[:, :, 0, 0]
+        elif method == "last":
+            self._current_data["z_data"] = blocks[:, :, -1, -1]
+        elif method == "mean":
+            self._current_data["z_data"] = blocks.mean(axis=(-1, -2))
+        elif method == "std":
+            self._current_data["z_data"] = blocks.std(axis=(-1, -2))
+        elif method == "min":
+            self._current_data["z_data"] = blocks.min(axis=(-1, -2))
+        elif method == "max":
+            self._current_data["z_data"] = blocks.max(axis=(-1, -2))
+        elif method == "median":
+            self._current_data["z_data"] = np.median(blocks, axis=(-1, -2))
+        elif method == "einsum":
+            if isinstance(blocks, np.ma.masked_array):
+                valid_fraction = 0.5
+
+                # make sure we don't count masked values
+                # (avoid using .filled since it creates a copy!)
+                zdata.data[zdata.mask] = 0
+
+                if valid_fraction == 0:
+                    data = np.einsum("ijkl->ij", blocks.data) / np.prod(bs)
+                    mask = np.einsum("ijkl->ij", blocks.mask)
+
+                    data = np.ma.masked_array(data, mask)
+                else:
+                    data = np.einsum("ijkl->ij", blocks.data) / np.prod(bs)
+                    nmask = np.count_nonzero(blocks.mask, axis=(-1, -2))
+                    # avoid einsum here to avoid overflows
+                    data = np.ma.masked_array(
+                        data, nmask > valid_fraction * np.prod(bs)
+                    )
+            else:
+                data = np.einsum("ijkl->ij", blocks) / np.prod(bs)
+
+            self._current_data["z_data"] = data
+        else:
+            raise TypeError(
+                "EOmaps: The mehtod {method} is not a valid aggregation-method!\n"
+                "Use one of:\n"
+                "['first', 'last', 'min', 'max', 'mean', 'std', 'median', 'einsum']"
+            )
+
+        # aggregate coordinates
+        for key, val in self._current_data.items():
+            if key.startswith("x") or key.startswith("y"):
+                self._current_data[key] = np.einsum(
+                    "ijkl->ij", self._block_view(val, bs)
+                ) / np.prod(bs)
+
+                # self._current_data[key] = self._block_view(val, bs).mean(axis=(-1, -2))
+
+    def _zoom_scipy(self, maxsize, order):
         from scipy.ndimage import zoom
+
+        if self._current_data["z_data"].size < maxsize:
+            return
 
         # estimate scale to approx. 2D data size
         scale = np.sqrt(maxsize / self._current_data["z_data"].size)
@@ -823,7 +963,7 @@ class DataManager:
 
     def _get_id_from_index(self, ind):
         """
-        Identify the ID from a 1D list or range object or a numpy.ndarray
+        Identify the ID from a 1D list or range object or a np.ndarray
         (to avoid very large numpy-arrays if no explicit IDs are provided)
 
         Parameters

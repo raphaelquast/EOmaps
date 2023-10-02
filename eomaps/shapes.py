@@ -1658,11 +1658,18 @@ class Shapes(object):
             self._radius = None
             self.radius_crs = "in"
 
-        def __call__(self, maxsize=None, interp_order=0):
+        def __call__(
+            self, maxsize=3e6, interp_order=0, method="mean", valid_fraction=0
+        ):
             """
             Draw the data as a rectangular raster.
 
-            (similar to plt.imshow)
+            For very large datasets it is highly recommended to pre-aggregate the data
+            prior to plotting (see 'maxsize' and 'method' kwargs).
+            Lower numbers for 'maxsize' will result in a (possibly huge) speedup!
+
+            By default, datasets are aggregated to contain not more than 3 million
+            datapoints.
 
             Note
             ----
@@ -1684,8 +1691,26 @@ class Shapes(object):
             ----------
             maxsize: int, None
                 The maximum data size before zooming is applied.
+
+                If provided, the dataset will be aggregated prior to plotting to
+                approximately maxsize datapoints based on the provided method.
                 The default is 5e6
+            method : str
+                The method used for aggregation.
+
+                - first, last : select first/last value of the aggregation blocks
+                  (this is very fast but a bit ambiguous)
+                - min, max, std, mean, median: calculate metrics of aggregation blocks
+                - scipy: use scipy.ndimage.zoom to aggregate the data.
+                  (interpolation order can be set via the 'interp_order' kwarg)
+
+            valid_fraction : float
+                (NOT used ind the "scipy" method!)
+
+                Percentage (0-1) of the masked pixels within an aggregation box
+                that will result in a masked value. The default is 0
             interp_order: int
+                (only used if method = "scipy")
                 The interpolation order for zooming.
             """
 
@@ -1695,11 +1720,18 @@ class Shapes(object):
                 shape = self.__class__(m)
                 shape._maxsize = maxsize
                 shape._interp_order = interp_order
+                shape._method = method
+                shape._valid_fraction = valid_fraction
                 m._shape = shape
 
         @property
         def _initargs(self):
-            return dict(maxsize=self._maxsize, interp_order=self._interp_order)
+            return dict(
+                maxsize=self._maxsize,
+                interp_order=self._interp_order,
+                method=self._method,
+                valid_fraction=self._valid_fraction,
+            )
 
         @property
         def radius(self):
