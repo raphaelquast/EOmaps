@@ -598,8 +598,24 @@ class DataManager:
         val = np.asanyarray(val)
 
         if len(val.shape) == 2 and qx is not None and qy is not None:
-            ret = val[qy.squeeze()][:, qx.squeeze()]
+            # TODO this requires sorted coordinate vectors to work!
+            qx = qx.squeeze()
+            qy = qy.squeeze()
 
+            # find the first and last indexes of the x-y-mask to select values
+            # (slicing is much faster than boolean indexing for large arrays!)
+            x0 = np.argmax(qx)
+            x1 = len(qx) - np.argmax(qx[::-1])
+            y0 = np.argmax(qy)
+            y1 = len(qy) - np.argmax(qy[::-1])
+
+            if x1 == -1:
+                x1 = len(qx)
+            if y1 == -1:
+                y1 = len(qy)
+
+            ret = val[y0:y1, x0:x1]
+            # ret = val[qy.squeeze()][:, qx.squeeze()]
         else:
             if q is not None:
                 ret = val.ravel()[q.squeeze()]
@@ -645,6 +661,31 @@ class DataManager:
 
         return idq
 
+    def _zoom(self):
+        maxsize = getattr(self.m.shape, "_maxsize", None)
+        order = getattr(self.m.shape, "_interp_order", 0)
+
+        # only zoom if the shape provides a _maxsize attribute
+        if maxsize is None:
+            return
+
+        if self._current_data["z_data"].size < maxsize:
+            return
+
+        from scipy.ndimage import zoom
+
+        # estimate scale to approx. 2D data size
+        scale = np.sqrt(maxsize / self._current_data["z_data"].size)
+        zoomargs = dict(zoom=scale, order=order, mode="reflect", cval=np.nan)
+
+        for key, val in self._current_data.items():
+            if key == "ids":
+                continue
+            if isinstance(val, np.ndarray) and len(val.shape) == 2:
+                self._current_data[key] = zoom(val, **zoomargs)
+            else:
+                self._current_data[key] = zoom(val, **zoomargs)
+
     def get_props(self, *args, **kwargs):
         q, qx, qy = self._get_q()
         self._last_qs = [q, qx, qy]
@@ -655,10 +696,11 @@ class DataManager:
             x0=self._select_vals(self.x0),
             y0=self._select_vals(self.y0),
             z_data=self._select_vals(self.z_data),
-            ids=self._select_ids(),
+            # ids=self._select_ids(),
         )
         self.last_extent = self.current_extent
 
+        self._zoom()
         return self._current_data
 
     def _get_datasize(self, z_data, x0, y0, **kwargs):

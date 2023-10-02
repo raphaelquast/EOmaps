@@ -1658,7 +1658,7 @@ class Shapes(object):
             self._radius = None
             self.radius_crs = "in"
 
-        def __call__(self):
+        def __call__(self, maxsize=None, interp_order=0):
             """
             Draw the data as a rectangular raster.
 
@@ -1682,25 +1682,24 @@ class Shapes(object):
 
             Parameters
             ----------
-            radius : tuple or str, optional
-                a tuple representing the radius in x- and y- direction.
-                The default is "estimate" in which case the radius is attempted
-                to be estimated from the input-coordinates.
-            radius_crs : crs-specification, optional
-                The crs in which the dimensions are defined.
-                The default is "in".
+            maxsize: int, None
+                The maximum data size before zooming is applied.
+                The default is 5e6
+            interp_order: int
+                The interpolation order for zooming.
             """
 
             from . import MapsGrid  # do this here to avoid circular imports!
 
             for m in self._m if isinstance(self._m, MapsGrid) else [self._m]:
                 shape = self.__class__(m)
-
+                shape._maxsize = maxsize
+                shape._interp_order = interp_order
                 m._shape = shape
 
         @property
         def _initargs(self):
-            return dict()
+            return dict(maxsize=self._maxsize, interp_order=self._interp_order)
 
         @property
         def radius(self):
