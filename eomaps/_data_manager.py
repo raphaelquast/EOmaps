@@ -788,9 +788,7 @@ class DataManager:
         return data
 
     def _zoom_block(self, maxsize, method, valid_fraction):
-        print(method)
         bs = int(np.sqrt(self._current_data["z_data"].size // maxsize))
-
         if bs == 0:
             return
 
