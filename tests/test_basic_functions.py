@@ -1214,7 +1214,7 @@ class TestBasicPlotting(unittest.TestCase):
             self.assertTrue(
                 all(
                     i in m._data_manager._current_data
-                    for i in ["xorig", "yorig", "x0", "y0", "ids", "z_data"]
+                    for i in ["xorig", "yorig", "x0", "y0", "z_data"]
                 )
             )
 
@@ -1237,7 +1237,7 @@ class TestBasicPlotting(unittest.TestCase):
                 self.assertTrue(
                     all(
                         i in m2._data_manager._current_data
-                        for i in ["xorig", "yorig", "x0", "y0", "ids", "z_data"]
+                        for i in ["xorig", "yorig", "x0", "y0", "z_data"]
                     )
                 )
 
@@ -1258,7 +1258,7 @@ class TestBasicPlotting(unittest.TestCase):
             self.assertTrue(
                 all(
                     i in m._data_manager._current_data
-                    for i in ["xorig", "yorig", "x0", "y0", "ids", "z_data"]
+                    for i in ["xorig", "yorig", "x0", "y0", "z_data"]
                 )
             )
             self.assertTrue(len(m.cb.click.get.cbs) == 1)
