@@ -1659,12 +1659,12 @@ class Shapes(object):
             self.radius_crs = "in"
 
         def __call__(
-            self, maxsize=1e7, interp_order=0, aggregator="mean", valid_fraction=0
+            self, maxsize=5e6, interp_order=0, aggregator="mean", valid_fraction=0
         ):
             """
             Draw the data as a rectangular raster (opt. aggregate before plotting).
 
-            By default, large datasets (>10 million datapoints) will be aggregated
+            By default, large datasets (>5 million datapoints) will be aggregated
             prior to plotting to considerably speed up initialization of the plot.
             (use `maxsize=None` to disable aggregation.)
 
@@ -1701,7 +1701,7 @@ class Shapes(object):
                 Lower numbers for 'maxsize' will reduce the image resolution in favor
                 of a (possibly huge) speedup for the initialization of the plot!
 
-                The default is 3e6  (e.g. 3 million datapoints)
+                The default is 5e6  (e.g. 5 million datapoints)
             aggregator : str
                 The method used for aggregation.
 

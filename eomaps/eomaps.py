@@ -4533,15 +4533,7 @@ class Maps(metaclass=_MapsMeta):
             size = np.size(self.data)
 
             if len(np.shape(self.data)) == 2 and size > 200_000:
-                if size > 5e6 and all(
-                    register_modules(
-                        "datashader", "datashader.mpl_ext", raise_exception=False
-                    )
-                ):
-                    # only try to use datashader for very large 2D datasets
-                    self.set_shape.shade_raster()
-                else:
-                    self.set_shape.raster()
+                self.set_shape.raster()
             else:
                 if size > 500_000:
                     if all(
