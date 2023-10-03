@@ -245,6 +245,14 @@ class DataManager:
             x0, y0 = xorig, yorig
 
         else:
+            if z_data.size > 1e7:
+                _log.warning(
+                    f"EOmaps Warning: Starting to reproject {z_data.size} "
+                    "datapoints! This might take a lot of time and consume "
+                    "a lot of memory... consider using the data-crs as "
+                    "plot-crs to avoid reprojections!"
+                )
+
             _log.info(f"EOmaps: Starting to reproject {z_data.size} datapoints")
 
             # transform center-points to the plot_crs
@@ -738,10 +746,46 @@ class DataManager:
         if maxsize is None:
             return
 
-        if method == "zoom":
+        if method == "spline":
             return self._zoom_scipy(maxsize, order)
         else:
             return self._zoom_block(maxsize, method, valid_fraction)
+
+    def _fast_block_metric(self, blocks, bs, calc_mean=True):
+        """
+        Fast way to calculate sum/mean of blocks using numpy's einsum.
+
+        NOTE: this method does NOT check for overflow errors and can cause problems
+        if the sum of the values in a block is larger than the max. number possible
+        for the dtype of the input-array!
+        """
+        if isinstance(blocks, np.ma.masked_array):
+            valid_fraction = 0.5
+
+            # make sure we don't count masked values
+            # (avoid using .filled since it creates a copy!)
+            blocks.data[blocks.mask] = 0
+
+            if calc_mean:
+                data = np.einsum("ijkl->ij", blocks.data) / np.prod(bs)
+            else:
+                data = np.einsum("ijkl->ij", blocks.data)
+
+            if valid_fraction == 0:
+                mask = np.einsum("ijkl->ij", blocks.mask)
+            else:
+                # avoid einsum here to avoid casting the boolean array to int
+                nmask = np.count_nonzero(blocks.mask, axis=(-1, -2))
+                mask = nmask > valid_fraction * np.prod(bs)
+
+            data = np.ma.masked_array(data, mask)
+        else:
+            if calc_mean:
+                data = np.einsum("ijkl->ij", blocks) / np.prod(bs)
+            else:
+                data = np.einsum("ijkl->ij", blocks)
+
+        return data
 
     def _zoom_block(self, maxsize, method, valid_fraction):
         bs = int(np.sqrt(self._current_data["z_data"].size // maxsize))
@@ -768,35 +812,16 @@ class DataManager:
             self._current_data["z_data"] = blocks.max(axis=(-1, -2))
         elif method == "median":
             self._current_data["z_data"] = np.median(blocks, axis=(-1, -2))
-        elif method == "einsum":
-            if isinstance(blocks, np.ma.masked_array):
-                valid_fraction = 0.5
-
-                # make sure we don't count masked values
-                # (avoid using .filled since it creates a copy!)
-                zdata.data[zdata.mask] = 0
-
-                if valid_fraction == 0:
-                    data = np.einsum("ijkl->ij", blocks.data) / np.prod(bs)
-                    mask = np.einsum("ijkl->ij", blocks.mask)
-
-                    data = np.ma.masked_array(data, mask)
-                else:
-                    data = np.einsum("ijkl->ij", blocks.data) / np.prod(bs)
-                    nmask = np.count_nonzero(blocks.mask, axis=(-1, -2))
-                    # avoid einsum here to avoid overflows
-                    data = np.ma.masked_array(
-                        data, nmask > valid_fraction * np.prod(bs)
-                    )
-            else:
-                data = np.einsum("ijkl->ij", blocks) / np.prod(bs)
-
-            self._current_data["z_data"] = data
+        elif method == "fast_sum":
+            self._current_data["z_data"] = self._fast_block_metric(blocks, bs, False)
+        elif method == "fast_mean":
+            self._current_data["z_data"] = self._fast_block_metric(blocks, bs, True)
         else:
             raise TypeError(
-                "EOmaps: The mehtod {method} is not a valid aggregation-method!\n"
+                "EOmaps: The method {method} is not a valid aggregation-method!\n"
                 "Use one of:\n"
-                "['first', 'last', 'min', 'max', 'mean', 'std', 'median', 'einsum']"
+                "['first', 'last', 'min', 'max', 'mean', 'std', 'median', "
+                "'fast_mean', 'fast_sum', 'spline']"
             )
 
         # aggregate coordinates

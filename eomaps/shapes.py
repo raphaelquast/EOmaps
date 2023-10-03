@@ -1659,17 +1659,14 @@ class Shapes(object):
             self.radius_crs = "in"
 
         def __call__(
-            self, maxsize=3e6, interp_order=0, method="mean", valid_fraction=0
+            self, maxsize=3e6, interp_order=0, aggregator="mean", valid_fraction=0
         ):
             """
             Draw the data as a rectangular raster.
 
-            For very large datasets it is highly recommended to pre-aggregate the data
-            prior to plotting (see 'maxsize' and 'method' kwargs).
-            Lower numbers for 'maxsize' will result in a (possibly huge) speedup!
-
-            By default, datasets are aggregated to contain not more than 3 million
-            datapoints.
+            Large datasets (>3 million datapoints) will be pre-aggregated prior to
+            plotting to considerably speed up initialization of the plot.
+            (use `maxsize=None` to disable aggregation.)
 
             Note
             ----
@@ -1685,33 +1682,55 @@ class Shapes(object):
             (e.g. the effective shape is a distorted rectangle with straight edges)
 
             - use `m.set_shape.rectangles()` if you need "curved" edges!
-            - use `m.set_shape.shade_raster()` for extremely large datasets
+            - use `m.set_shape.shade_raster()` to use datashader for aggregation
 
             Parameters
             ----------
             maxsize: int, None
-                The maximum data size before zooming is applied.
+                If provided, the dataset will be aggregated prior to plotting.
 
-                If provided, the dataset will be aggregated prior to plotting to
-                approximately maxsize datapoints based on the provided method.
-                The default is 5e6
-            method : str
+                Datasets larger than 'maxsize' will be resampled into a regular grid
+                such that the final dataset contains approximately 'maxsize' datapoints.
+                (aggregation is performed with respect to the selected 'method')
+
+                Lower numbers for 'maxsize' will reduce the image resolution in favor
+                of a (possibly huge) speedup for the initialization of the plot!
+
+                The default is 3e6  (e.g. 3 million datapoints)
+            aggregator : str
                 The method used for aggregation.
 
-                - first, last : select first/last value of the aggregation blocks
-                  (this is very fast but a bit ambiguous)
-                - min, max, std, mean, median: calculate metrics of aggregation blocks
-                - scipy: use scipy.ndimage.zoom to aggregate the data.
+                - "first", "last" : select first/last value of the aggregation blocks
+                  (this is very fast but the resulting dataset might not always be a
+                  reliable aggregated estimate of the actual data)
+                - "min", "max", "mean", "median", "std", "sum": calculate the
+                  corresponding metrics of the data inside the aggregation blocks.
+                - "fast_mean", "fast_sum": use a fast and memory-efficient method to
+                  evaluate the corresponding metrics.
+                  NOTE: this uses `numpy.einsum` for aggregation which does not check
+                  for overflow errors which might cause problems if the  dataset was
+                  provided in a dtype that cannot be used to store the resulting
+                  aggregated sum of data-values (e.g. int8, int16 etc).
+
+                  To avoid problems, cast the dataset to a larger dtype using
+                  `data = np.array([...]).astype(<desired dtype>)` or use ordinary
+                  aggregator metrics.
+
+                - "spline": aggregate with spline interpolation via `scipy.ndimage.zoom`
                   (interpolation order can be set via the 'interp_order' kwarg)
 
+                The default is "mean"
             valid_fraction : float
-                (NOT used ind the "scipy" method!)
+                (NOT used by the "scipy" method and only relevant for masked arrays!)
 
                 Percentage (0-1) of the masked pixels within an aggregation box
-                that will result in a masked value. The default is 0
+                that will result in a masked value.
+                (e.g. 0.1 -> if more than 10% of the data is masked in an aggregation
+                 box, the aggregated value will be masked). The default is 0
             interp_order: int
-                (only used if method = "scipy")
-                The interpolation order for zooming.
+                (ONLY used if method = "scipy")
+                The spline interpolation order for zooming.
+                See `scipy.ndimage.zoom` for more details.
             """
 
             from . import MapsGrid  # do this here to avoid circular imports!
@@ -1720,7 +1739,7 @@ class Shapes(object):
                 shape = self.__class__(m)
                 shape._maxsize = maxsize
                 shape._interp_order = interp_order
-                shape._method = method
+                shape._method = aggregator
                 shape._valid_fraction = valid_fraction
                 m._shape = shape
 
