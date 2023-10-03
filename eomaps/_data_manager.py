@@ -817,18 +817,8 @@ class DataManager:
 
         return data
 
-    @property
-    def _zoom_blocksize(self):
-        maxsize = getattr(self.m.shape, "_maxsize", None)
-        if maxsize is None:
-            return None
-
-        bs = int(np.sqrt(self._current_data["z_data"].size // maxsize))
-        if bs == 0:
-            return None
-        return (bs, bs)
-
     def _zoom_block(self, maxsize, method, valid_fraction, blocksize):
+        # zoom data based on a given blocksize
         bs = (blocksize, blocksize)
 
         zdata = self._current_data["z_data"]
