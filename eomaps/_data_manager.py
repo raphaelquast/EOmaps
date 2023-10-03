@@ -737,7 +737,7 @@ class DataManager:
         return view
 
     def _zoom(self):
-        method = getattr(self.m.shape, "_method", "first")
+        method = getattr(self.m.shape, "_aggregator", "first")
         maxsize = getattr(self.m.shape, "_maxsize", None)
         order = getattr(self.m.shape, "_interp_order", 0)
         valid_fraction = getattr(self.m.shape, "_valid_fraction", 0)
@@ -788,6 +788,7 @@ class DataManager:
         return data
 
     def _zoom_block(self, maxsize, method, valid_fraction):
+        print(method)
         bs = int(np.sqrt(self._current_data["z_data"].size // maxsize))
 
         if bs == 0:
@@ -802,14 +803,16 @@ class DataManager:
             self._current_data["z_data"] = blocks[:, :, 0, 0]
         elif method == "last":
             self._current_data["z_data"] = blocks[:, :, -1, -1]
-        elif method == "mean":
-            self._current_data["z_data"] = blocks.mean(axis=(-1, -2))
-        elif method == "std":
-            self._current_data["z_data"] = blocks.std(axis=(-1, -2))
         elif method == "min":
             self._current_data["z_data"] = blocks.min(axis=(-1, -2))
         elif method == "max":
             self._current_data["z_data"] = blocks.max(axis=(-1, -2))
+        elif method == "mean":
+            self._current_data["z_data"] = blocks.mean(axis=(-1, -2))
+        elif method == "std":
+            self._current_data["z_data"] = blocks.std(axis=(-1, -2))
+        elif method == "sum":
+            self._current_data["z_data"] = blocks.sum(axis=(-1, -2))
         elif method == "median":
             self._current_data["z_data"] = np.median(blocks, axis=(-1, -2))
         elif method == "fast_sum":
@@ -818,7 +821,7 @@ class DataManager:
             self._current_data["z_data"] = self._fast_block_metric(blocks, bs, True)
         else:
             raise TypeError(
-                "EOmaps: The method {method} is not a valid aggregation-method!\n"
+                f"EOmaps: The method {method} is not a valid aggregation-method!\n"
                 "Use one of:\n"
                 "['first', 'last', 'min', 'max', 'mean', 'std', 'median', "
                 "'fast_mean', 'fast_sum', 'spline']"

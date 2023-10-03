@@ -1739,7 +1739,7 @@ class Shapes(object):
                 shape = self.__class__(m)
                 shape._maxsize = maxsize
                 shape._interp_order = interp_order
-                shape._method = aggregator
+                shape._aggregator = aggregator
                 shape._valid_fraction = valid_fraction
                 m._shape = shape
 
@@ -1748,7 +1748,7 @@ class Shapes(object):
             return dict(
                 maxsize=self._maxsize,
                 interp_order=self._interp_order,
-                method=self._method,
+                aggregator=self._aggregator,
                 valid_fraction=self._valid_fraction,
             )
 
