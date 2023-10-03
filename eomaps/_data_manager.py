@@ -245,6 +245,14 @@ class DataManager:
             x0, y0 = xorig, yorig
 
         else:
+            if z_data.size > 1e7:
+                _log.warning(
+                    f"EOmaps Warning: Starting to reproject {z_data.size} "
+                    "datapoints! This might take a lot of time and consume "
+                    "a lot of memory... consider using the data-crs as "
+                    "plot-crs to avoid reprojections!"
+                )
+
             _log.info(f"EOmaps: Starting to reproject {z_data.size} datapoints")
 
             # transform center-points to the plot_crs
@@ -565,7 +573,7 @@ class DataManager:
         if self.full_data_in_extent((x0, x1, y0, y1)):
             self.last_extent = self.current_extent
             self._current_data = {**self._all_data}
-            return None, None, None
+            return True, True, True
 
         # get mask
         if self.x0_1D is not None:
@@ -589,76 +597,307 @@ class DataManager:
 
         return q, qx, qy
 
-    def _select_vals(self, val):
-        # select data based on currently visible region
-        q, qx, qy = self._last_qs
-        if all(i is None for i in (q, qx, qy)):
-            ret = val
-
-        val = np.asanyarray(val)
-
-        if len(val.shape) == 2 and qx is not None and qy is not None:
-            ret = val[qy.squeeze()][:, qx.squeeze()]
-
+    def _estimate_slice_blocksize(self, qx, qy):
+        if qx is True and qy is True:
+            x0, x1 = 0, len(self.x0)
+            y0, y1 = 0, len(self.y0)
         else:
-            if q is not None:
-                ret = val.ravel()[q.squeeze()]
-            else:
-                ret = val
+            qx = qx.squeeze()
+            qy = qy.squeeze()
 
-        if self.m.shape.name not in ["raster", "shade_raster", "contour"]:
-            ret = ret.ravel()
+            # find the first and last indexes of the x-y-mask to select values
+            # (slicing is much faster than boolean indexing for large arrays!)
+            x0 = np.argmax(qx)
+            x1 = len(qx) - np.argmax(qx[::-1])
+            y0 = np.argmax(qy)
+            y1 = len(qy) - np.argmax(qy[::-1])
+
+            if x1 == -1:
+                x1 = len(qx)
+            if y1 == -1:
+                y1 = len(qy)
+
+        maxsize = getattr(self.m.shape, "_maxsize", None)
+        if maxsize is not None:
+            # estimate a suitable blocksize based on the max. data size
+            # in x- or y- direction
+            d = max((x1 - x0), (y1 - y0))
+            bs = int(d / np.sqrt(maxsize))
+
+            if bs > 0:  # to avoid divided by zero errors in %
+                x0 = x0 - x0 % bs
+                y0 = y0 - y0 % bs
+                if x0 < 0:
+                    x1 = x1 - x0
+                    x0 = 0
+                if y0 < 0:
+                    y1 = y1 - y0
+                    y0 = 0
+
+                x1 = x1 - x1 % bs + bs
+                y1 = y1 - y1 % bs + bs
+        else:
+            bs = None
+
+        return (x0, x1, y0, y1), bs
+
+    def _select_vals(self, val, qs, slices=None):
+        # select data based on currently visible region
+        q, qx, qy = qs
+        if all(i is True for i in (q, qx, qy)):
+            ret = val
+        elif all(i is None for i in (q, qx, qy)):
+            ret = None
+        else:
+            val = np.asanyarray(val)
+
+            if len(val.shape) == 2 and qx is not None and qy is not None:
+                (x0, x1, y0, y1) = slices
+                ret = val[y0:y1, x0:x1]
+            else:
+                if q is not None:
+                    ret = val.ravel()[q.squeeze()]
+                else:
+                    ret = val
+
+            if self.m.shape.name not in ["raster", "shade_raster", "contour"]:
+                ret = ret.ravel()
 
         return ret
 
-    def _select_ids(self):
-        # identify ids based on currently visible region
-        q, qx, qy = self._last_qs
+    # def _select_ids(self, qs):
+    #     # identify ids based on currently visible region
+    #     q, qx, qy = qs
 
-        if all(i is None for i in (q, qx, qy)):
-            return self.ids
+    #     if all(i is None for i in (q, qx, qy)):
+    #         return self.ids
 
-        if q is None or len(q.shape) == 2:
-            # select columns that contain at least one value
-            wx, wy = np.where(qx)[0], np.where(qy)[0]
-            ind = np.ravel_multi_index(np.meshgrid(wx, wy), (qx.size, qy.size)).ravel()
+    #     if q is None or len(q.shape) == 2:
+    #         # select columns that contain at least one value
+    #         wx, wy = np.where(qx)[0], np.where(qy)[0]
+    #         ind = np.ravel_multi_index(np.meshgrid(wx, wy), (qx.size, qy.size)).ravel()
 
-            if isinstance(self.ids, (list, range)):
-                idq = [self.ids[i] for i in ind]
-                if len(idq) == 1:
-                    idq = idq[0]
-            elif isinstance(self.ids, np.ndarray):
-                idq = self.ids.flat[ind]
+    #         if isinstance(self.ids, (list, range)):
+    #             idq = [self.ids[i] for i in ind]
+    #             if len(idq) == 1:
+    #                 idq = idq[0]
+    #         elif isinstance(self.ids, np.ndarray):
+    #             idq = self.ids.flat[ind]
+    #         else:
+    #             idq = None
+    #     else:
+    #         ind = np.where(q)[0]
+
+    #         if isinstance(self.ids, (list, range)):
+    #             idq = [self.ids[i] for i in ind]
+    #             if len(idq) == 1:
+    #                 idq = idq[0]
+    #         elif isinstance(self.ids, np.ndarray):
+    #             idq = self.ids.flat[ind]
+    #         else:
+    #             idq = None
+
+    #     return idq
+
+    def _block_view(self, a, blockshape):
+        """
+        Return a view of an array in the desired block-structure.
+
+        (fast and without creating a copy!)
+
+        If the array-size cannot be broadcasted to the block-shape, boundary-values
+        are dropped!
+
+        This function is largely adapted from
+        https://github.com/ilastik/ilastik/blob/main/lazyflow/utility/blockwise_view.py
+
+        Parameters
+        ----------
+        a : numpy.array
+            The input array.
+        blockshape : tuple
+            The desired block shape.
+        Returns
+        -------
+        view : np.array
+            A view of the input-array with the desired block-shape.
+
+        """
+        blockshape = tuple(blockshape)
+        outershape = tuple(np.array(a.shape) // blockshape)
+        view_shape = outershape + blockshape
+
+        # make sure the blockshape can always be applied
+        # (drop boundary pixels from left and right until blockshape is possible)
+        mods = np.mod(a.shape, blockshape)
+        starts, stops = mods // 2 + mods % 2, mods // 2
+
+        slices = []
+        for i, (sta, sto) in enumerate(zip(starts, stops)):
+            if sto > 0:
+                s = slice(sta, -sto)
             else:
-                idq = None
+                s = slice(sta, a.shape[i])
+
+            slices.append(s)
+
+        if len(slices) == 2:
+            a = a[slices[0], slices[1]]
         else:
-            ind = np.where(q)[0]
+            a = a[slices[0]]
 
-            if isinstance(self.ids, (list, range)):
-                idq = [self.ids[i] for i in ind]
-                if len(idq) == 1:
-                    idq = idq[0]
-            elif isinstance(self.ids, np.ndarray):
-                idq = self.ids.flat[ind]
+        # a = a[*slices]   # TODO check why pre-commit can't resolve this line!!
+
+        # inner strides: strides within each block (same as original array)
+        intra_block_strides = a.strides
+
+        # outer strides: strides from one block to another
+        inter_block_strides = tuple(a.strides * np.array(blockshape))
+
+        # This is where the magic happens.
+        # Generate a view with our new strides (outer+inner).
+        view = np.lib.stride_tricks.as_strided(
+            a, shape=view_shape, strides=(inter_block_strides + intra_block_strides)
+        )
+
+        if isinstance(a, np.ma.masked_array):
+            blockmask = self._block_view(a.mask, blockshape)
+            view = np.ma.masked_array(view, blockmask, copy=False)
+
+        return view
+
+    def _zoom(self, blocksize):
+        method = getattr(self.m.shape, "_aggregator", "first")
+        maxsize = getattr(self.m.shape, "_maxsize", None)
+        order = getattr(self.m.shape, "_interp_order", 0)
+        valid_fraction = getattr(self.m.shape, "_valid_fraction", 0)
+
+        # only zoom if the shape provides a _maxsize attribute
+        if maxsize is None or self._current_data["z_data"].size < maxsize:
+            return
+
+        if method == "spline":
+            return self._zoom_scipy(maxsize, order)
+        else:
+            return self._zoom_block(maxsize, method, valid_fraction, blocksize)
+
+    def _fast_block_metric(self, blocks, bs, calc_mean=True):
+        """
+        Fast way to calculate sum/mean of blocks using numpy's einsum.
+
+        NOTE: this method does NOT check for overflow errors and can cause problems
+        if the sum of the values in a block is larger than the max. number possible
+        for the dtype of the input-array!
+        """
+        if isinstance(blocks, np.ma.masked_array):
+            valid_fraction = 0.5
+
+            # make sure we don't count masked values
+            # (avoid using .filled since it creates a copy!)
+            blocks.data[blocks.mask] = 0
+
+            if calc_mean:
+                data = np.einsum("ijkl->ij", blocks.data) / np.prod(bs)
             else:
-                idq = None
+                data = np.einsum("ijkl->ij", blocks.data)
 
-        return idq
+            if valid_fraction == 0:
+                mask = np.einsum("ijkl->ij", blocks.mask)
+            else:
+                # avoid einsum here to avoid casting the boolean array to int
+                nmask = np.count_nonzero(blocks.mask, axis=(-1, -2))
+                mask = nmask > valid_fraction * np.prod(bs)
+
+            data = np.ma.masked_array(data, mask)
+        else:
+            if calc_mean:
+                data = np.einsum("ijkl->ij", blocks) / np.prod(bs)
+            else:
+                data = np.einsum("ijkl->ij", blocks)
+
+        return data
+
+    def _zoom_block(self, maxsize, method, valid_fraction, blocksize):
+        # zoom data based on a given blocksize
+        bs = (blocksize, blocksize)
+
+        zdata = self._current_data["z_data"]
+        blocks = self._block_view(zdata, bs)
+
+        if method == "first":
+            self._current_data["z_data"] = blocks[:, :, 0, 0]
+        elif method == "last":
+            self._current_data["z_data"] = blocks[:, :, -1, -1]
+        elif method == "min":
+            self._current_data["z_data"] = blocks.min(axis=(-1, -2))
+        elif method == "max":
+            self._current_data["z_data"] = blocks.max(axis=(-1, -2))
+        elif method == "mean":
+            self._current_data["z_data"] = blocks.mean(axis=(-1, -2))
+        elif method == "std":
+            self._current_data["z_data"] = blocks.std(axis=(-1, -2))
+        elif method == "sum":
+            self._current_data["z_data"] = blocks.sum(axis=(-1, -2))
+        elif method == "median":
+            self._current_data["z_data"] = np.median(blocks, axis=(-1, -2))
+        elif method == "fast_sum":
+            self._current_data["z_data"] = self._fast_block_metric(blocks, bs, False)
+        elif method == "fast_mean":
+            self._current_data["z_data"] = self._fast_block_metric(blocks, bs, True)
+        else:
+            raise TypeError(
+                f"EOmaps: The method {method} is not a valid aggregation-method!\n"
+                "Use one of:\n"
+                "['first', 'last', 'min', 'max', 'mean', 'std', 'median', "
+                "'fast_mean', 'fast_sum', 'spline']"
+            )
+
+        # aggregate coordinates
+        for key, val in self._current_data.items():
+            if key.startswith("x") or key.startswith("y"):
+                self._current_data[key] = np.einsum(
+                    "ijkl->ij", self._block_view(val, bs)
+                ) / np.prod(bs)
+
+                # self._current_data[key] = self._block_view(val, bs).mean(axis=(-1, -2))
+
+    def _zoom_scipy(self, maxsize, order):
+        from scipy.ndimage import zoom
+
+        # estimate scale to approx. 2D data size
+        scale = np.sqrt(maxsize / self._current_data["z_data"].size)
+        zoomargs = dict(zoom=scale, order=order, mode="reflect", cval=np.nan)
+
+        for key, val in self._current_data.items():
+            if key == "ids":
+                continue
+            if isinstance(val, np.ndarray) and len(val.shape) == 2:
+                self._current_data[key] = zoom(val, **zoomargs)
+            else:
+                self._current_data[key] = zoom(val, **zoomargs)
 
     def get_props(self, *args, **kwargs):
-        q, qx, qy = self._get_q()
-        self._last_qs = [q, qx, qy]
+        # get the masks to select the currently visible data
+        # (qs = [<2d mask>, <1d x mask>, <1d y mask>]
+        qs = self._get_q()
+
+        # estimate slices (and optional blocksize if requred) for 2D data
+        if len(self.z_data.shape) == 2 and all(i is not None for i in qs[1:]):
+            slices, blocksize = self._estimate_slice_blocksize(*qs[1:])
+        else:
+            slices, blocksize = None, None
 
         self._current_data = dict(
-            xorig=self._select_vals(self.xorig),
-            yorig=self._select_vals(self.yorig),
-            x0=self._select_vals(self.x0),
-            y0=self._select_vals(self.y0),
-            z_data=self._select_vals(self.z_data),
-            ids=self._select_ids(),
+            xorig=self._select_vals(self.xorig, qs, slices),
+            yorig=self._select_vals(self.yorig, qs, slices),
+            x0=self._select_vals(self.x0, qs, slices),
+            y0=self._select_vals(self.y0, qs, slices),
+            z_data=self._select_vals(self.z_data, qs, slices),
+            # ids=self._select_ids(),
         )
         self.last_extent = self.current_extent
 
+        self._zoom(blocksize)
         return self._current_data
 
     def _get_datasize(self, z_data, x0, y0, **kwargs):
@@ -781,7 +1020,7 @@ class DataManager:
 
     def _get_id_from_index(self, ind):
         """
-        Identify the ID from a 1D list or range object or a numpy.ndarray
+        Identify the ID from a 1D list or range object or a np.ndarray
         (to avoid very large numpy-arrays if no explicit IDs are provided)
 
         Parameters
