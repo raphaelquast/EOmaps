@@ -1662,11 +1662,16 @@ class Shapes(object):
             self, maxsize=1e7, interp_order=0, aggregator="mean", valid_fraction=0
         ):
             """
-            Draw the data as a rectangular raster.
+            Draw the data as a rectangular raster (opt. aggregate before plotting).
 
-            Large datasets (>3 million datapoints) will be pre-aggregated prior to
-            plotting to considerably speed up initialization of the plot.
+            By default, large datasets (>10 million datapoints) will be aggregated
+            prior to plotting to considerably speed up initialization of the plot.
             (use `maxsize=None` to disable aggregation.)
+
+            The aggregation will apply the selected `aggregator` to datapoints within
+            regular data-blocks of the size (n, n) where `n` is selected such that the
+            plotted dataset contains approximately `maxsize` datapoints.
+            Lower values of `maxsize` will result in faster (but more coarse) plots.
 
             Note
             ----
@@ -1708,7 +1713,7 @@ class Shapes(object):
                 - "fast_mean", "fast_sum": use a fast and memory-efficient method to
                   evaluate the corresponding metrics.
                   NOTE: this uses `numpy.einsum` for aggregation which does not check
-                  for overflow errors which might cause problems if the  dataset was
+                  for overflow errors and might cause problems if the  dataset was
                   provided in a dtype that cannot be used to store the resulting
                   aggregated sum of data-values (e.g. int8, int16 etc).
 
