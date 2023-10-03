@@ -894,6 +894,8 @@ class DataManager:
         # estimate slices (and optional blocksize if requred) for 2D data
         if len(self.z_data.shape) == 2 and all(i is not None for i in qs[1:]):
             slices, blocksize = self._estimate_slice_blocksize(*qs[1:])
+        else:
+            slices, blocksize = None, None
 
         self._current_data = dict(
             xorig=self._select_vals(self.xorig, qs, slices),

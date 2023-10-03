@@ -1659,7 +1659,7 @@ class Shapes(object):
             self.radius_crs = "in"
 
         def __call__(
-            self, maxsize=3e6, interp_order=0, aggregator="mean", valid_fraction=0
+            self, maxsize=1e7, interp_order=0, aggregator="mean", valid_fraction=0
         ):
             """
             Draw the data as a rectangular raster.
