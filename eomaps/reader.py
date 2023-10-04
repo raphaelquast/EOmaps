@@ -1228,8 +1228,12 @@ class from_file:
             else:
                 band = 1
 
-            cmap, classify_specs = identify_geotiff_cmap(path_or_dataset, band=band)
-            kwargs["cmap"] = cmap
+            if kwargs.get("cmap", None) is None:
+                cmap, classify_specs = identify_geotiff_cmap(path_or_dataset, band=band)
+                kwargs["cmap"] = cmap
+                if classify_specs is not None:
+                    kwargs.setdefault("vmin", min(classify_specs["bins"]))
+                    kwargs.setdefault("vmax", max(classify_specs["bins"]))
 
         return _from_file(
             data,

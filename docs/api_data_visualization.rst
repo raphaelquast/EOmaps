@@ -165,6 +165,7 @@ To specify how a dataset is visualized on the map, you have to set the *"plot-sh
     The number of datapoints mentioned in the following always refer to the number of datapoints that are
     visible in the desired plot-extent.
 
+    For very large datasets, make sure to have a look at the :py:class:`raster`, :py:class:`shade_raster`, and :py:class:`shade_points` shapes!
 
 Possible shapes that work nicely for datasets with up to ~500 000 data-points:
 
@@ -185,22 +186,31 @@ Possible shapes that work nicely for up to a few million data-points:
 .. autosummary::
     :nosignatures:
 
-    raster
     contour
 
 
-While :py:class:`raster` can still be used for datasets with a few million datapoints, for extremely large datasets
-(> 10 million datapoints) it is recommended to use "shading" to **greatly speed-up plotting**.
-If shading is used, a dynamic averaging of the data based on the screen-resolution and the
-currently visible plot-extent is performed (resampling based on the mean-value is used by default).
+For **extremely large datasets** (> 5 million datapoints) there is little use in plotting all datapoints directly
+since you (and your screen) are most probably not able to distinguish such large amounts of data values. Therefore,
+it is recommended to aggregate the data prior to plotting to **greatly speed-up initialization times** and to
+keep the plot responsive.
 
-Possible shapes that can be used to quickly generate a plot for extremely large datasets are:
+EOmaps provides the following capabilities to visualize extremely large datasets:
+
+- The :py:class:`raster` shape provides capabilities to aggregate very large 2D datasets to a desired maximum
+  number of datapoints via the `maxsize` kwarg. If used, the dataset will be resampled to contain approx. `maxsize`
+  points based on the provided aggregation method.
+
+- The shapes :py:class:`shade_raster` and :py:class:`shade_points` use `datashader` to perform a dynamic
+  averaging of the data based on the screen-resolution and the currently visible plot-extent is performed
+  (resampling based on the mean-value is used by default).
+  Note that `datashader` takes a few seconds to import!
 
 .. autosummary::
     :nosignatures:
 
-    shade_points
+    raster
     shade_raster
+    shade_points
 
 
 .. code-block:: python
@@ -250,7 +260,7 @@ To get an overview of the existing shapes and their main use-cases, here's a sim
 .. _classify_the_data:
 
 
-3) Classify the data
+1) Classify the data
 ~~~~~~~~~~~~~~~~~~~~
 
 .. currentmodule:: eomaps.eomaps
