@@ -21,9 +21,6 @@ then select how you want to visualize the data and finally call :py:meth:`Maps.p
 3. (optional) :ref:`Classify the data <classify_the_data>` via  :py:class:`Maps.set_classify`
 4. :ref:`Plot the data <plot_the_data>` by calling :py:meth:`Maps.plot_map`
 
-A :py:class:`Maps` object can only manage a single dataset.
-To plot multiple datasets on the same map, use :py:meth:`Maps.new_layer` to get a unique :py:class:`Maps` object for each dataset!
-
 .. code-block:: python
     :name: test_data_visualization_quick
 
@@ -43,6 +40,16 @@ To plot multiple datasets on the same map, use :py:meth:`Maps.new_layer` to get 
     m_data.set_classify.EqualInterval(k=3)         # Classify into 3 equal intervals
     m_data.plot_map(vmin=0, ec="k", cmap="magma")  # Plot the data
     m_data.add_colorbar(hist_bins="bins")          # Add a colorbar
+
+
+.. note::
+
+    A :py:class:`Maps` object can only manage a single dataset!
+
+    To plot multiple datasets on the same map, use :py:meth:`Maps.new_layer` to get a unique :py:class:`Maps` object for each dataset!
+    Use ``m_2 = m.new_layer(inherit_data=True, inherit_classification=True, inherit_shape=True)`` to quickly create a new layer
+    that uses the same dataset, cassification and shape as the parent!
+
 
 
 .. _assign_the_data:
@@ -138,13 +145,14 @@ The following data-types are accepted as input:
 |                                                                     |     m.plot_map()                                                                   |
 +---------------------------------------------------------------------+------------------------------------------------------------------------------------+
 
+
 .. _set_the_shape:
 
-
-2) Set the shape
-~~~~~~~~~~~~~~~~
+2) Plot shapes
+~~~~~~~~~~~~~~
 
 To specify how a dataset is visualized on the map, you have to set the *"plot-shape"* via :py:meth:`Maps.set_shape`.
+
 
 .. currentmodule:: eomaps.eomaps
 
@@ -153,88 +161,49 @@ To specify how a dataset is visualized on the map, you have to set the *"plot-sh
 
     Maps.set_shape
 
-.. admonition:: A note on speed and performance
-
-    Some ways to visualize the data require more computational effort than others!
-    Make sure to select an appropriate shape based on the size of the dataset you want to plot!
-
-    EOmaps dynamically pre-selects the data with respect to the current plot-extent before the actual plot is created!
-    If you do not need to see the whole extent of the data, make sure to **set the desired plot-extent**
-    via :py:meth:`Maps.set_extent` or :py:meth:`Maps.set_shape_to_extent` **BEFORE** calling :py:meth:`Maps.plot_map` to get a (possibly huge) speedup!
-
-    The number of datapoints mentioned in the following always refer to the number of datapoints that are
-    visible in the desired plot-extent.
-
-    For very large datasets, make sure to have a look at the :py:class:`raster`, :py:class:`shade_raster`, and :py:class:`shade_points` shapes!
-
-Possible shapes that work nicely for datasets with up to ~500 000 data-points:
+Available shapes (see bleow for details on each plot-shape!):
 
 .. currentmodule:: eomaps.shapes.Shapes
 
 .. autosummary::
     :nosignatures:
 
-    geod_circles
     ellipses
     rectangles
+    geod_circles
     voronoi_diagram
     delaunay_triangulation
-
-
-Possible shapes that work nicely for up to a few million data-points:
-
-.. autosummary::
-    :nosignatures:
-
     contour
-
-
-For **extremely large datasets** (> 5 million datapoints) there is little use in plotting all datapoints directly
-since you (and your screen) are most probably not able to distinguish such large amounts of data values. Therefore,
-it is recommended to aggregate the data prior to plotting to **greatly speed-up initialization times** and to
-keep the plot responsive.
-
-EOmaps provides the following capabilities to visualize extremely large datasets:
-
-- The :py:class:`raster` shape provides capabilities to aggregate very large 2D datasets to a desired maximum
-  number of datapoints via the `maxsize` kwarg. If used, the dataset will be resampled to contain approx. `maxsize`
-  points based on the provided aggregation method.
-
-- The shapes :py:class:`shade_raster` and :py:class:`shade_points` use `datashader` to perform a dynamic
-  averaging of the data based on the screen-resolution and the currently visible plot-extent is performed
-  (resampling based on the mean-value is used by default).
-  Note that `datashader` takes a few seconds to import!
-
-.. autosummary::
-    :nosignatures:
-
+    scatter_points
     raster
     shade_raster
     shade_points
 
 
-.. code-block:: python
-    :name: test_set_shape
 
-    from eomaps import Maps
-    data, x, y = [.3,.64,.2,.5,1], [1,2,3,4,5], [2,5,3,7,5]
+.. admonition:: A note on speed and performance
 
-    m = Maps()                                # create a Maps-object
-    m.set_data(data, x, y)                    # assign some data to the Maps-object
-    m.set_shape.rectangles(radius=1,          # represent the datapoints as 1x1 degree rectangles
-                            radius_crs=4326)  # (in epsg=4326 projection)
-    m.plot_map(cmap="viridis", zorder=1)      # plot the data
+    Some ways to visualize the data require more computational effort than others!
+    Make sure to select an appropriate shape based on the size of the dataset you want to plot!
 
-    m2 = m.new_layer()                        # create a new Maps-object on the same layer
-    m2.set_data(data, x, y)                   # assign another dataset to the new Maps object
-    m2.set_shape.geod_circles(radius=50000,   # draw geodetic circles with 50km radius
-                            n=100)            # use 100 intermediate points to represent the shape
-    m2.plot_map(ec="k", cmap="Reds",          # plot the data
-                zorder=2, set_extent=False)   # (and avoid resetting the plot-extent)
+    .. currentmodule:: eomaps.eomaps
 
-.. note::
+    EOmaps dynamically pre-selects the data with respect to the current plot-extent before the actual plot is created!
+    If you do not need to see the whole extent of the data, make sure to **set the desired plot-extent**
+    via :py:meth:`Maps.set_extent` or :py:meth:`Maps.set_extent_to_location` **BEFORE** calling :py:meth:`Maps.plot_map` to get a (possibly huge) speedup!
 
-    The "shade"-shapes require the additional `datashader <https://datashader.org/>`_ dependency!
+    The suggested "suitable datasizes" mentioned below always refer to the number of datapoints that are
+    visible in the desired plot-extent.
+
+    .. currentmodule:: eomaps.shapes.Shapes
+
+    For very large datasets, make sure to have a look at the :py:class:`raster`, :py:class:`shade_raster`, and :py:class:`shade_points` shapes
+    which use fast aggregation techniques to resample the data prior to plotting. This way datasets with billions of datapoints can be
+    visualized fast.
+
+.. admonition:: Optional dependencies
+
+    :py:class:`shade_raster`, and :py:class:`shade_points` require the `datashader <https://datashader.org/>`_ package!
     You can install it via:
 
     .. code-block:: python
@@ -246,16 +215,292 @@ EOmaps provides the following capabilities to visualize extremely large datasets
     By default, the plot-shape is assigned based on the associated dataset.
 
     - For datasets with less than 500 000 pixels, ``m.set_shape.ellipses()`` is used.
-    - | For larger 2D datasets ``m.set_shape.shade_raster()`` is used
-      | ... and ``m.set_shape.shade_points()`` is used for the rest.
+    - | For larger 2D datasets ``m.set_shape.raster()`` is used
+      | ... and ``m.set_shape.shade_points()`` is attempted to be used for the rest.
 
-To get an overview of the existing shapes and their main use-cases, here's a simple decision-tree:
-(... and don't forget to set the plot-extent if you only want to see a subset of the data!)
 
-.. image:: _static/shapes_decision_tree.png
+Ellipses
+********
 
-.. image:: _static/minigifs/plot_shapes.gif
+.. image:: _static/shape_imgs/ellipses.png
+    :width: 50%
 
+.. list-table::
+   :header-rows: 1
+
+   * - Suitable data size
+     - Supported data structures
+   * - up to ~500k datapoints
+     - 1D, 2D or mixed
+
+.. autosummary::
+    :nosignatures:
+
+    ellipses
+
+.. code-block:: python
+
+    m.set_shape.Ellipses(radius=(2, 5),   # ellipse dimensions [rx , ry]
+                         radius_crs=4326, # projection in which the ellipse is defined
+                         n=50             # number of calculated points on the ellipse
+                         )
+
+Rectangles
+**********
+
+.. image:: _static/shape_imgs/rectangles.png
+    :width: 50%
+
+.. list-table::
+   :header-rows: 1
+
+   * - Suitable data size
+     - Supported data structures
+   * - up to ~500k datapoints
+     - 1D, 2D or mixed
+
+
+.. autosummary::
+    :nosignatures:
+
+    rectangles
+
+.. code-block:: python
+
+    m.set_shape.Ellipses(radius=(2, 5),   # rectangle dimensions [rx , ry]
+                         radius_crs=4326, # projection in which the rectangle is defined
+                         n=50             # number of calculated points on the ellipse
+                         )
+
+
+
+Geodesic Circles
+****************
+
+.. image:: _static/shape_imgs/geod_circles.png
+    :width: 50%
+
+.. list-table::
+   :header-rows: 1
+
+   * - Suitable data size
+     - Supported data structures
+   * - up to ~500k
+     - 1D, 2D or mixed
+
+
+.. autosummary::
+    :nosignatures:
+
+    geod_circles
+
+.. code-block:: python
+
+    m.set_shape.geod_circles(radius=(2, 5),  # radius in meters
+                            n=50             # number of calculated points on the circle
+                            )
+
+
+Voronoi Diagram
+***************
+
+.. image:: _static/shape_imgs/voronoi_diagram.png
+    :width: 50%
+
+
+.. list-table::
+   :header-rows: 1
+
+   * - Suitable data size
+     - Supported data structures
+   * - up to ~500k datapoints
+     - 1D, 2D or mixed
+
+
+.. autosummary::
+    :nosignatures:
+
+    voronoi_diagram
+
+.. code-block:: python
+
+    m.set_shape.voronoi_diagram(masked=True,      # mask too large polygons
+                                mask_radius=10,   # min. size for masked polygons
+                                )
+
+
+
+
+
+Delaunay Triangulation
+**********************
+
+.. image:: _static/shape_imgs/delaunay_triangulation.png
+    :width: 50%
+
+.. image:: _static/shape_imgs/delaunay_triangulation_flat.png
+    :width: 50%
+
+.. list-table::
+   :header-rows: 1
+
+   * - Suitable data size
+     - Supported data structures
+   * - up to ~500k datapoints
+     - 1D, 2D or mixed
+
+.. autosummary::
+    :nosignatures:
+
+    voronoi_diagram
+
+.. code-block:: python
+
+    m.set_shape.delaunay_triangulation(flat=False,       # color=mean of triplet (True) or interpolated values (False)
+                                       masked=True,      # mask too large polygons
+                                       mask_radius=10,   # min. size for masked polygons
+                                       mask_crs="in",     # projection of the mask dimension
+                                      )
+
+Contour plots
+*************
+
+.. image:: _static/shape_imgs/contour_filled.png
+    :width: 50%
+
+.. image:: _static/shape_imgs/contour.png
+    :width: 50%
+
+.. list-table::
+   :header-rows: 1
+
+   * - Suitable data size
+     - Supported data structures
+   * - up to a few million datapoints
+     - 1D, 2D or mixed
+
+
+.. autosummary::
+    :nosignatures:
+
+    contour
+
+.. code-block:: python
+
+    m.set_shape.contour(filled=True)   # filled contour polygons (True) or contour lines (False)
+
+
+Scatter Points
+**************
+
+.. image:: _static/shape_imgs/scatter_points.png
+    :width: 50%
+
+.. list-table::
+   :header-rows: 1
+
+   * - Suitable data size
+     - Supported data structures
+   * - ~500k datapoints
+     - 1D, 2D or mixed
+
+
+.. autosummary::
+    :nosignatures:
+
+    scatter_points
+
+.. code-block:: python
+
+    m.set_shape.scatter_points(size=[1, 2, 3],   # the marker size in points**2
+                               marker="*",       # the marker shape to use
+                               )
+
+
+Raster
+******
+
+.. image:: _static/shape_imgs/raster.png
+    :width: 50%
+
+.. list-table::
+   :header-rows: 1
+
+   * - Suitable data size
+     - Supported data structures
+   * - billions of datapoints (large datasets are pre-aggregated)
+     - 2D or 1D coordinates + 2D data
+
+
+.. autosummary::
+    :nosignatures:
+
+    raster
+
+.. code-block:: python
+
+    m.set_shape.raster(maxsize=5e5,         # data size at which aggregation kicks in
+                       aggregator='mean',   # aggregation method to use
+                       valid_fraction=0.5,  # % of masked values in aggregation bin for masked result
+                       interp_order=0,      # spline interpolation order for "spline" aggregator
+
+Shade Raster
+************
+
+.. image:: _static/shape_imgs/shade_raster.png
+    :width: 50%
+
+.. list-table::
+   :header-rows: 1
+
+   * - Suitable data size
+     - Supported data structures
+     - Optional dependencies
+   * - billions of datapoints (large datasets are pre-aggregated)
+     - 2D or 1D coordinates + 2D data
+     - `datashader <https://datashader.org/>`_
+
+
+.. autosummary::
+    :nosignatures:
+
+    shade_raster
+
+.. code-block:: python
+
+    m.set_shape.shade_raster(aggregator='mean',    # aggregation method
+                             shade_hook=None,      # datashader shade hook callback
+                             agg_hook=None,        # datashader aggregation hook callback
+    )
+
+Shade Points
+************
+
+.. image:: _static/shape_imgs/shade_points.png
+    :width: 50%
+
+.. list-table::
+   :header-rows: 1
+
+   * - Suitable data size
+     - Supported data structures
+     - Optional dependencies
+   * - no limit (large datasets are pre-aggregated)
+     - 1D, 2D or mixed
+     - `datashader <https://datashader.org/>`_
+
+
+.. autosummary::
+    :nosignatures:
+
+    shade_raster
+
+.. code-block:: python
+
+    m.set_shape.shade_raster(aggregator='mean',    # aggregation method
+                             shade_hook=None,      # datashader shade hook callback
+                             agg_hook=None,        # datashader aggregation hook callback
+    )
 
 .. _classify_the_data:
 
