@@ -246,7 +246,7 @@ Ellipses
 
 .. code-block:: python
 
-    m.set_shape.Ellipses(radius=(2, 5),   # ellipse dimensions [rx , ry]
+    m.set_shape.ellipses(radius=(2, 5),   # ellipse dimensions [rx , ry]
                          radius_crs=4326, # projection in which the ellipse is defined
                          n=50             # number of calculated points on the ellipse
                          )
@@ -273,10 +273,10 @@ Rectangles
 
 .. code-block:: python
 
-    m.set_shape.Ellipses(radius=(2, 5),   # rectangle dimensions [rx , ry]
-                         radius_crs=4326, # projection in which the rectangle is defined
-                         n=50             # number of calculated points on the ellipse
-                         )
+    m.set_shape.rectangles(radius=(2, 5),   # rectangle dimensions [rx , ry]
+                           radius_crs=4326, # projection in which the rectangle is defined
+                           n=50             # number of calculated points on the ellipse
+                           )
 
 
 
@@ -303,8 +303,8 @@ Geodesic Circles
 .. code-block:: python
 
     m.set_shape.geod_circles(radius=(2, 5),  # radius in meters
-                            n=50             # number of calculated points on the circle
-                            )
+                             n=50             # number of calculated points on the circle
+                             )
 
 
 Voronoi Diagram
@@ -477,7 +477,7 @@ Shade Raster
     m.set_shape.shade_raster(aggregator='mean',    # aggregation method
                              shade_hook=None,      # datashader shade hook callback
                              agg_hook=None,        # datashader aggregation hook callback
-    )
+                             )
 
 Shade Points
 ************
@@ -506,7 +506,7 @@ Shade Points
     m.set_shape.shade_raster(aggregator='mean',    # aggregation method
                              shade_hook=None,      # datashader shade hook callback
                              agg_hook=None,        # datashader aggregation hook callback
-    )
+                             )
 
 .. _classify_the_data:
 
