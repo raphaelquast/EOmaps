@@ -47,8 +47,14 @@ then select how you want to visualize the data and finally call :py:meth:`Maps.p
     A :py:class:`Maps` object can only manage a single dataset!
 
     To plot multiple datasets on the same map, use :py:meth:`Maps.new_layer` to get a unique :py:class:`Maps` object for each dataset!
-    Use ``m_2 = m.new_layer(inherit_data=True, inherit_classification=True, inherit_shape=True)`` to quickly create a new layer
-    that uses the same dataset, cassification and shape as the parent!
+    To quickly create a new layer that uses the same dataset, cassification and shape as the parent, use:
+
+    .. code-block:: python
+
+        m_1 = m.new_layer(inherit_data=True,            # m_1 inherits the data from m
+                          inherit_classification=True,  # m_1 inherits the classification and colormap from m
+                          inherit_shape=True            # m_1 inherits the plot-shape from m
+                          )
 
 
 
