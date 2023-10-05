@@ -840,6 +840,11 @@ class DataManager:
             self._current_data["z_data"] = blocks.sum(axis=(-1, -2))
         elif method == "median":
             self._current_data["z_data"] = np.median(blocks, axis=(-1, -2))
+        elif method == "mode":
+            from scipy.stats import mode
+
+            out, counts = mode(blocks, axis=(-1, -2), nan_policy="propagate")
+            self._current_data["z_data"] = out
         elif method == "fast_sum":
             self._current_data["z_data"] = self._fast_block_metric(blocks, bs, False)
         elif method == "fast_mean":
