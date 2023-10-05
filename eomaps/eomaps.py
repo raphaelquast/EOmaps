@@ -3484,6 +3484,12 @@ class Maps(metaclass=_MapsMeta):
     @wraps(plt.savefig)
     def savefig(self, *args, refetch_wms=False, rasterize_data=True, **kwargs):
         """Save the figure."""
+        if plt.get_backend() == "agg":
+            # make sure that a draw-event was triggered when using the agg backend
+            # (to avoid export-issues with some shapes)
+            # TODO properly assess why this is necessary!
+            self.f.canvas.draw_idle()
+
         with ExitStack() as stack:
             if refetch_wms is False:
                 if _cx_refetch_wms_on_size_change is not None:
@@ -3602,6 +3608,9 @@ class Maps(metaclass=_MapsMeta):
             # trigger a redraw of all savelayers to make sure unmanaged artists
             # and ordinary matplotlib axes are properly drawn
             self.redraw(*savelayers)
+            # flush events prior to savefig to avoi dissues with pending draw events
+            # that cause wrong positioning of grid-labels and missing artists!
+            self.f.canvas.flush_events()
             self.f.savefig(*args, **kwargs)
 
         if redraw is True:
