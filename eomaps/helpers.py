@@ -2043,8 +2043,6 @@ class BlitManager:
             else:
                 self.fetch_bg(layer, bbox=bbox)
                 bg = self._bg_layers[layer]
-
-            self.canvas.restore_region(current_bg)
         else:
             bg = self._bg_layers[layer]
 
