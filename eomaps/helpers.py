@@ -903,8 +903,9 @@ class LayoutEditor:
         self.blit_artists()
 
     def fetch_current_background(self):
-        # make sure blank background has been fetched
-        self.m.BM._do_fetch_blank()
+        # clear the renderer to avoid drawing on existing backgrounds
+        renderer = self.m.BM.frcanvas.get_renderer()
+        renderer.clear()
 
         with ExitStack() as stack:
             for ax in self._ax_picked:
@@ -914,7 +915,7 @@ class LayoutEditor:
                 stack.enter_context(cb.ax_cb._cm_set(visible=False))
                 stack.enter_context(cb.ax_cb_plot._cm_set(visible=False))
 
-            self.m.BM.blit_artists(self.axes, self.m.BM._blank_bg, False)
+            self.m.BM.blit_artists(self.axes, None, False)
 
             grid = getattr(self, "_snap_grid_artist", None)
             if grid is not None:
@@ -1987,6 +1988,10 @@ class BlitManager:
                 alphas.append(1)
         return layers, alphas
 
+    # cache the last 10 combined backgrounds to avoid re-combining backgrounds
+    # on updates of interactive artists
+    # cache is automatically cleared on draw if any layer is tagged for re-fetch!
+    @lru_cache(10)
     def _combine_bgs(self, layer):
         layers, alphas = self._get_layers_alphas(layer)
 
@@ -1996,16 +2001,14 @@ class BlitManager:
                 # execute actions on layer-changes
                 # (to make sure all lazy WMS services are properly added)
                 self._do_on_layer_change(layer=l, new=False)
-                self._do_fetch_bg(l)
+                self.fetch_bg(l)
 
         renderer = self._get_renderer()
+        # clear the renderer to avoid drawing on existing backgrounds
+        renderer.clear()
         if renderer:
             gc = renderer.new_gc()
             gc.set_clip_rectangle(self.canvas.figure.bbox)
-
-            # switch to a blank background layer before merging backgrounds
-            # TODO is there a beter way to avoid drawing on initial backgrounds?
-            self.canvas.restore_region(self._blank_bg)
 
             x0, y0, w, h = self.figure.bbox.bounds
             for l, a in zip(layers, alphas):
@@ -2019,9 +2022,7 @@ class BlitManager:
                     int(y0),
                     rgba[int(y0) : int(y0 + h), int(x0) : int(x0 + w), :],
                 )
-            # cache the combined background
-            bg = self._m.f.canvas.copy_from_bbox(self._m.f.bbox)
-            # self._bg_layers[layer] = bg
+            bg = renderer.copy_from_bbox(self._m.f.bbox)
             gc.restore()
             return bg
 
@@ -2036,8 +2037,6 @@ class BlitManager:
 
     def _get_background(self, layer, bbox=None, cache=False):
         if layer not in self._bg_layers:
-            current_bg = self.canvas.copy_from_bbox(self.figure.bbox)
-
             if "|" in layer:
                 bg = self._combine_bgs(layer)
             else:
@@ -2056,6 +2055,7 @@ class BlitManager:
     def _do_fetch_bg(self, layer, bbox=None):
         cv = self.canvas
         renderer = self._get_renderer()
+        renderer.clear()
 
         if bbox is None:
             bbox = self.figure.bbox
@@ -2104,28 +2104,12 @@ class BlitManager:
                 return
 
             if renderer:
-                self.canvas.restore_region(self._blank_bg)
-
                 if not self._m.parent._layout_editor._modifier_pressed:
                     for art in allartists:
                         if art not in self._hidden_artists:
                             art.draw(renderer)
                             art.stale = False
-                            self._bg_layers[layer] = cv.copy_from_bbox(bbox)
-
-    def _do_fetch_blank(self):
-        # fetch a blank background
-        if self._refetch_blank is False and self._blank_bg is not None:
-            # don't re-fetch the background if it is not necessary
-            return
-        try:
-            self._m.f.set_visible(False)
-            self.canvas._force_full = True
-            self.canvas.draw()
-            self._blank_bg = self.canvas.copy_from_bbox(self.figure.bbox)
-            self._refetch_blank = False
-        finally:
-            self._m.f.set_visible(True)
+                    self._bg_layers[layer] = renderer.copy_from_bbox(bbox)
 
     def fetch_bg(self, layer=None, bbox=None):
         """
@@ -2149,19 +2133,13 @@ class BlitManager:
         if layer is None:
             layer = self.bg_layer
 
-        initial_layer = self.canvas.copy_from_bbox(self.figure.bbox)
-
         if layer in self._bg_layers:
             # don't re-fetch existing layers
             # (layers get cleared automatically if re-draw is necessary)
             return
 
         with self._disconnect_draw():
-            self._do_fetch_blank()
             self._do_fetch_bg(layer, bbox)
-
-            if initial_layer in self._bg_layers:
-                self.canvas.restore_region(initial_layer)
 
     @contextmanager
     def _disconnect_draw(self):
@@ -2180,6 +2158,7 @@ class BlitManager:
         """Callback to register with 'draw_event'."""
         cv = self.canvas
         _log.log(5, "draw")
+
         try:
             if (
                 "RendererBase._draw_disabled"
@@ -2208,8 +2187,9 @@ class BlitManager:
                 self._bg_layers.clear()
                 self._layers_to_refetch.clear()
                 self._refetch_bg = False
-            else:
+                type(self)._combine_bgs.cache_clear()  # clear combined_bg cache
 
+            else:
                 # in case there is a stale (unmanaged) artists and the
                 # stale-artist layer is attempted to be drawn, re-draw the
                 # cached background for the unmanaged-artists layer
@@ -2217,15 +2197,12 @@ class BlitManager:
                     a.stale for a in self._get_unmanaged_artists()
                 ):
                     self._refetch_layer(self._unmanaged_artists_layer)
+                    type(self)._combine_bgs.cache_clear()  # clear combined_bg cache
 
                 # remove all cached backgrounds that were tagged for refetch
                 while len(self._layers_to_refetch) > 0:
                     self._bg_layers.pop(self._layers_to_refetch.pop(), None)
-
-            # # fetching relevant backgrounds is done in self.update()!
-            # show_layer = self._get_showlayer_name()
-            # if show_layer not in self._bg_layers:
-            #     self.fetch_bg(layer=show_layer)
+                    type(self)._combine_bgs.cache_clear()  # clear combined_bg cache
 
             # workaround for nbagg backend to avoid glitches
             # it's slow but at least it works...
@@ -2780,16 +2757,17 @@ class BlitManager:
             if self.bg_layer == layer:
                 return
 
-            # make sure the background is fetched
-            if layer not in self._bg_layers:
-                self.fetch_bg(layer)
-                # update to make sure spines etc. are properly displayed
-                self.update()
+            # TODO properly check if this is necessary...
+            # update to make sure spines etc. are properly displayed
+            # self.update()
 
             x0, y0, w, h = bbox.bounds
 
+            # make sure to restore the initial background
+            init_bg = renderer.copy_from_bbox(self._m.f.bbox)
             # convert the buffer to rgba so that we can add transparency
             buffer = self._get_background(layer, cache=True)
+            self.canvas.restore_region(init_bg)
 
             x = buffer.get_extents()
             ncols, nrows = x[2] - x[0], x[3] - x[1]
