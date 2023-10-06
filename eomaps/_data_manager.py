@@ -468,7 +468,7 @@ class DataManager:
                 return False
 
             props = self.get_props()
-            if props is None:
+            if props is None or props["x0"] is None or props["y0"] is None:
                 # fail-fast in case the data is completely outside the extent
                 return
 
@@ -524,9 +524,10 @@ class DataManager:
             self.m.cb.pick._set_artist(coll)
 
         except Exception as ex:
-            raise AssertionError(
-                f"EOmaps: Unable to plot the data for the layer '{layer}'!"
-            ) from ex
+            _log.exception(
+                f"EOmaps: Unable to plot the data for the layer '{layer}'!",
+                exc_info=_log.getEffectiveLevel() <= logging.DEBUG,
+            )
 
     def data_in_extent(self, extent):
         # check if the data extent collides with the map extent
@@ -773,7 +774,9 @@ class DataManager:
         valid_fraction = getattr(self.m.shape, "_valid_fraction", 0)
 
         # only zoom if the shape provides a _maxsize attribute
-        if maxsize is None or self._current_data["z_data"].size < maxsize:
+        if self._current_data["z_data"] is None or maxsize is None:
+            return
+        elif self._current_data["z_data"].size < maxsize:
             return
 
         if method == "spline":
