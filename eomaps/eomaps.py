@@ -4018,9 +4018,23 @@ class Maps(metaclass=_MapsMeta):
     def _on_keypress(self, event):
         # NOTE: callback is only attached to the parent Maps object!
         if event.key == self._companion_widget_key:
-            self._open_companion_widget((event.x, event.y))
+            try:
+                self._open_companion_widget((event.x, event.y))
+            except Exception:
+                _log.exception(
+                    "EOmaps: Encountered a problem while trying to open "
+                    "the companion widget",
+                    exec_info=_log.getEffectiveLevel() <= logging.DEBUG,
+                )
         elif event.key == "ctrl+c":
-            self._save_to_clipboard(**Maps._clipboard_kwargs)
+            try:
+                self._save_to_clipboard(**Maps._clipboard_kwargs)
+            except Exception:
+                _log.exception(
+                    "EOmaps: Encountered a problem while trying to export the figure "
+                    "to the clipboard.",
+                    exec_info=_log.getEffectiveLevel() <= logging.DEBUG,
+                )
 
     def _init_figure(self, ax=None, plot_crs=None, **kwargs):
         if self.parent.f is None:
