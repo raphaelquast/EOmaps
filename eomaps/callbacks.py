@@ -445,6 +445,9 @@ class _ClickCallbacks(object):
             )
 
             styledict.update(**kwargs)
+            # use a black font-color by default to avoid issues if rcparams are
+            # set differently
+            styledict.setdefault("color", "k")
             annotation = self.m.ax.annotate("", xy=picked_pos, **styledict)
             annotation.set_zorder(zorder)
 
