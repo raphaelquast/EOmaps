@@ -4016,6 +4016,9 @@ class Maps(metaclass=_MapsMeta):
                 cb.setImage(QImage.fromData(buffer.getvalue()))
 
     def _on_keypress(self, event):
+        if plt.get_backend().lower() == "webagg":
+            return
+
         # NOTE: callback is only attached to the parent Maps object!
         if event.key == self._companion_widget_key:
             try:
