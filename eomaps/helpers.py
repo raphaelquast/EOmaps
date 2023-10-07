@@ -904,7 +904,7 @@ class LayoutEditor:
 
     def fetch_current_background(self):
         # clear the renderer to avoid drawing on existing backgrounds
-        renderer = self.m.BM.frcanvas.get_renderer()
+        renderer = self.m.BM.canvas.get_renderer()
         renderer.clear()
 
         with ExitStack() as stack:
