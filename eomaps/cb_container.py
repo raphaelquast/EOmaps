@@ -1121,12 +1121,15 @@ class MoveContainer(ClickContainer):
 
     # this is just a copy of ClickContainer to manage motion-sensitive callbacks
 
-    def __init__(self, button_down=False, *args, **kwargs):
+    def __init__(self, button_down=False, update_on_trigger=True, *args, **kwargs):
+
         super().__init__(*args, **kwargs)
 
         self._cid_motion_event = None
 
         self._button_down = button_down
+
+        self._update_on_trigger = update_on_trigger
 
     def _init_cbs(self):
         if self._m.parent is self._m:
@@ -1148,7 +1151,7 @@ class MoveContainer(ClickContainer):
 
             try:
                 self._event = event
-                # only execute movecb if a mouse-button is holded down
+                # only execute movecb if a mouse-button is held down
                 # and only if the motion is happening inside the axes
                 if self._button_down:
                     if not event.button:  # or (event.inaxes != self._m.ax):
@@ -1192,8 +1195,8 @@ class MoveContainer(ClickContainer):
                     obj._fwd_cb(event)
 
                 # only update if a callback is attached
-                # (to avoid constantly calling update)
-                if update:
+                # (to avoid lag in webagg backed due to slow updates)
+                if self._update_on_trigger and update:
                     if self._button_down:
                         if event.button:
                             self._m.parent.BM.update(clear=self._method)
@@ -1963,6 +1966,7 @@ class CallbackContainer:
             method="_click_move",
             parent_container=self._click,
             button_down=True,
+            update_on_trigger=True,  # automatically trigger updates for click+move!
         )
 
         self._move = MoveContainer(
@@ -1971,6 +1975,7 @@ class CallbackContainer:
             method="move",
             button_down=False,
             default_button=None,
+            update_on_trigger=False,  # dont trigger updates for move!
         )
 
         self._pick = PickContainer(
