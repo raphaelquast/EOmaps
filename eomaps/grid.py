@@ -589,6 +589,27 @@ class GridLabels:
             return (float("inf"), float("inf"))
         return (x / z, y / z)
 
+    def remove(self):
+        """Remove the grid-labels from the map."""
+        if self._redraw in self._g.m.BM._before_fetch_bg_actions:
+            self._g.m.BM._before_fetch_bg_actions.remove(self._redraw)
+
+        while len(self._texts) > 0:
+            try:
+                t = self._texts.pop(-1)
+                try:
+                    t.remove()
+                except ValueError:
+                    pass
+
+                if self._g._dynamic:
+                    self._g.m.BM.remove_artist(t)
+                else:
+                    self._g.m.BM.remove_bg_artist(t, draw=False)
+            except Exception:
+                _log.exception("EOmaps: Problem while trying to remove a grid-label:")
+                pass
+
     def _redraw(self, **kwargs):
         try:
             m = self._g.m
@@ -609,19 +630,7 @@ class GridLabels:
             self._last_extent = extent
             self._last_ax_pos = pos
 
-            while len(self._texts) > 0:
-                try:
-                    t = self._texts.pop(-1)
-                    try:
-                        t.remove()
-                    except ValueError:
-                        pass
-                    self._g.m.BM.remove_bg_artist(t, draw=False)
-                except Exception:
-                    _log.exception(
-                        "EOmaps: Problem while trying to remove a grid-label:"
-                    )
-                    pass
+            self.remove()
 
             self.add_labels()
         except Exception:
@@ -867,6 +876,7 @@ class GridLabels:
                     )
                     # exclude artist in companion widget editor
                     t.set_label("__EOmaps_exclude")
+
                     if self._g._dynamic:
                         m.BM.add_artist(t, layer=self._g.layer)
                     else:
