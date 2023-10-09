@@ -14,7 +14,9 @@ _log = logging.getLogger(__name__)
 class GridLines:
     """Class to draw grid-lines."""
 
-    def __init__(self, m, d=None, auto_n=10, layer=None, bounds=None, n=100):
+    def __init__(
+        self, m, d=None, auto_n=10, layer=None, bounds=None, n=100, dynamic=False
+    ):
         self.m = m._proxy(m)
 
         self._d = d
@@ -27,6 +29,8 @@ class GridLines:
 
         self._layer = layer
         self._grid_labels = []
+
+        self._dynamic = dynamic
 
     @property
     def d(self):
@@ -316,7 +320,10 @@ class GridLines:
             self.m.ax.add_collection(self._coll)
             # don't trigger draw since this would result in a recursion!
             # (_redraw is called on each fetch-bg event)
-            self.m.BM.add_bg_artist(self._coll, layer=self.layer, draw=False)
+            if self._dynamic:
+                self.m.BM.add_artist(self._coll, layer=self.layer)
+            else:
+                self.m.BM.add_bg_artist(self._coll, layer=self.layer, draw=False)
 
     def _redraw(self):
         self._get_lines.cache_clear()
@@ -338,7 +345,11 @@ class GridLines:
 
         # don't trigger draw since this would result in a recursion!
         # (_redraw is called on each fetch-bg event)
-        self.m.BM.remove_bg_artist(self._coll, layer=self.layer, draw=False)
+        if self._dynamic:
+            self.m.BM.remove_artist(self._coll, layer=self.layer)
+        else:
+            self.m.BM.remove_bg_artist(self._coll, layer=self.layer, draw=False)
+
         try:
             self._coll.remove()
         except ValueError:
@@ -856,7 +867,10 @@ class GridLabels:
                     )
                     # exclude artist in companion widget editor
                     t.set_label("__EOmaps_exclude")
-                    m.BM.add_bg_artist(t, layer=self._g.layer, draw=False)
+                    if self._g._dynamic:
+                        m.BM.add_artist(t, layer=self._g.layer)
+                    else:
+                        m.BM.add_bg_artist(t, layer=self._g.layer, draw=False)
                     self._texts.append(t)
 
     def add_labels(self):
@@ -898,6 +912,7 @@ class GridFactory:
         *,
         m=None,
         labels=False,
+        dynamic=False,
         **kwargs,
     ):
         """
@@ -991,7 +1006,9 @@ class GridFactory:
         kwargs.setdefault("lw", lw)
         kwargs.setdefault("zorder", 100)
 
-        g = GridLines(m=m, d=d, auto_n=auto_n, n=n, bounds=bounds, layer=layer)
+        g = GridLines(
+            m=m, d=d, auto_n=auto_n, n=n, bounds=bounds, layer=layer, dynamic=dynamic
+        )
         g._add_grid(**kwargs)
         self._gridlines.append(g)
 
