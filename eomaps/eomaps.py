@@ -1958,29 +1958,24 @@ class Maps(metaclass=_MapsMeta):
             - if "gpd": re-project geometries geopandas
             - if "cartopy": re-project geometries with cartopy (slower but more robust)
 
+            The default is "gpd".
+
             >>> mg = MapsGrid(2, 1, crs=Maps.CRS.Stereographic())
             >>> mg.m_0_0.add_feature.preset.ocean(reproject="gpd")
             >>> mg.m_1_0.add_feature.preset.ocean(reproject="cartopy")
 
-            The default is "gpd".
-
         verbose : bool, optional
             Indicator if a progressbar should be printed when re-projecting
-            geometries with "use_gpd=False".
-            The default is False.
-
+            geometries with "use_gpd=False". The default is False.
         only_valid : bool, optional
-
             - If True, only valid geometries (e.g. `gdf.is_valid`) are plotted.
             - If False, all geometries are attempted to be plotted
               (this might result in errors for infinite geometries etc.)
 
             The default is True
         set_extent: bool, optional
-
-            - if True, set the map extent to the extent of the geometries with
-              a +-5% margin.
-            - if float, use the value se margin.
+            - if True, set map extent to the extent of the geometries with +-5% margin.
+            - if float, use the value as margin (0-1).
 
             The default is True.
         kwargs :

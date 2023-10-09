@@ -115,6 +115,7 @@ In addition, each callback-container supports the following useful methods:
     share_events
     forward_events
     add_temporary_artist
+    set_execute_during_toolbar_action
 
 
 Using callbacks with the companion-widget
