@@ -131,6 +131,7 @@ class _CallbackContainer(object):
         self._event = None
 
         self._execute_on_all_layers = False
+        self._execute_while_toolbar_active = False
 
     def _getobj(self, m):
         """Get the equivalent callback container on another maps object."""
@@ -327,6 +328,35 @@ class _CallbackContainer(object):
                 f"EOmaps: 'execute_on_all_layers' is inherited for {self._method}!"
             )
         self._execute_on_all_layers = q
+
+    def _check_toolbar_mode(self):
+        if self._execute_while_toolbar_active:
+            return False
+
+        # returns True if a toolbar mode is active and False otherwise
+        if (
+            self._m.f.canvas.toolbar is not None
+        ) and self._m.f.canvas.toolbar.mode != "":
+            return True
+        else:
+            return False
+
+    def set_execute_during_toolbar_action(self, q):
+        """
+        Set if callbacks should be executed during a toolbar action (e.g. pan/zoom).
+
+        By default, callbacks are not executed during toolbar actions to make sure
+        pan/zoom is smooth. (e.g. to avoid things like constant re-fetching of webmaps
+        if a peek-layer callback is active during pan/zoom)
+
+        Parameters
+        ----------
+        q : bool
+            If True, callbacks will be triggered independent of the toolbar state.
+            if False, callbacks will only trigger if no toolbar action is active.
+
+        """
+        self._execute_while_toolbar_active = q
 
 
 class _ClickContainer(_CallbackContainer):
@@ -993,9 +1023,7 @@ class ClickContainer(_ClickContainer):
                 self._event = event
 
                 # don't execute callbacks if a toolbar-action is active
-                if (
-                    self._m.f.canvas.toolbar is not None
-                ) and self._m.f.canvas.toolbar.mode != "":
+                if self._check_toolbar_mode():
                     return
 
                 # execute onclick on the maps object that belongs to the clicked axis
@@ -1023,9 +1051,7 @@ class ClickContainer(_ClickContainer):
                 self._event = event
 
                 # don't execute callbacks if a toolbar-action is active
-                if (
-                    self._m.f.canvas.toolbar is not None
-                ) and self._m.f.canvas.toolbar.mode != "":
+                if self._check_toolbar_mode():
                     return
 
                 # execute onclick on the maps object that belongs to the clicked axis
@@ -1121,12 +1147,15 @@ class MoveContainer(ClickContainer):
 
     # this is just a copy of ClickContainer to manage motion-sensitive callbacks
 
-    def __init__(self, button_down=False, *args, **kwargs):
+    def __init__(self, button_down=False, update_on_trigger=True, *args, **kwargs):
+
         super().__init__(*args, **kwargs)
 
         self._cid_motion_event = None
 
         self._button_down = button_down
+
+        self._update_on_trigger = update_on_trigger
 
     def _init_cbs(self):
         if self._m.parent is self._m:
@@ -1148,7 +1177,7 @@ class MoveContainer(ClickContainer):
 
             try:
                 self._event = event
-                # only execute movecb if a mouse-button is holded down
+                # only execute movecb if a mouse-button is held down
                 # and only if the motion is happening inside the axes
                 if self._button_down:
                     if not event.button:  # or (event.inaxes != self._m.ax):
@@ -1168,9 +1197,7 @@ class MoveContainer(ClickContainer):
                         return
 
                 # don't execute callbacks if a toolbar-action is active
-                if (
-                    self._m.f.canvas.toolbar is not None
-                ) and self._m.f.canvas.toolbar.mode != "":
+                if self._check_toolbar_mode():
                     return
 
                 # execute onclick on the maps object that belongs to the clicked axis
@@ -1192,8 +1219,8 @@ class MoveContainer(ClickContainer):
                     obj._fwd_cb(event)
 
                 # only update if a callback is attached
-                # (to avoid constantly calling update)
-                if update:
+                # (to avoid lag in webagg backed due to slow updates)
+                if self._update_on_trigger and update:
                     if self._button_down:
                         if event.button:
                             self._m.parent.BM.update(clear=self._method)
@@ -1470,9 +1497,7 @@ class PickContainer(_ClickContainer):
             return
 
         # don't execute callbacks if a toolbar-action is active
-        if (
-            self._m.f.canvas.toolbar is not None
-        ) and self._m.f.canvas.toolbar.mode != "":
+        if self._check_toolbar_mode():
             return
 
         # make sure temporary artists are cleared before executing new callbacks
@@ -1550,9 +1575,7 @@ class PickContainer(_ClickContainer):
                     return
 
                 # don't execute callbacks if a toolbar-action is active
-                if (
-                    self._m.f.canvas.toolbar is not None
-                ) and self._m.f.canvas.toolbar.mode != "":
+                if self._check_toolbar_mode():
                     return
 
                 if not self._artist_picked(event):
@@ -1963,6 +1986,7 @@ class CallbackContainer:
             method="_click_move",
             parent_container=self._click,
             button_down=True,
+            update_on_trigger=True,  # automatically trigger updates for click+move!
         )
 
         self._move = MoveContainer(
@@ -1971,6 +1995,7 @@ class CallbackContainer:
             method="move",
             button_down=False,
             default_button=None,
+            update_on_trigger=False,  # dont trigger updates for move!
         )
 
         self._pick = PickContainer(

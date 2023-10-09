@@ -1958,29 +1958,24 @@ class Maps(metaclass=_MapsMeta):
             - if "gpd": re-project geometries geopandas
             - if "cartopy": re-project geometries with cartopy (slower but more robust)
 
+            The default is "gpd".
+
             >>> mg = MapsGrid(2, 1, crs=Maps.CRS.Stereographic())
             >>> mg.m_0_0.add_feature.preset.ocean(reproject="gpd")
             >>> mg.m_1_0.add_feature.preset.ocean(reproject="cartopy")
 
-            The default is "gpd".
-
         verbose : bool, optional
             Indicator if a progressbar should be printed when re-projecting
-            geometries with "use_gpd=False".
-            The default is False.
-
+            geometries with "use_gpd=False". The default is False.
         only_valid : bool, optional
-
             - If True, only valid geometries (e.g. `gdf.is_valid`) are plotted.
             - If False, all geometries are attempted to be plotted
               (this might result in errors for infinite geometries etc.)
 
             The default is True
         set_extent: bool, optional
-
-            - if True, set the map extent to the extent of the geometries with
-              a +-5% margin.
-            - if float, use the value se margin.
+            - if True, set map extent to the extent of the geometries with +-5% margin.
+            - if float, use the value as margin (0-1).
 
             The default is True.
         kwargs :
@@ -3484,6 +3479,12 @@ class Maps(metaclass=_MapsMeta):
     @wraps(plt.savefig)
     def savefig(self, *args, refetch_wms=False, rasterize_data=True, **kwargs):
         """Save the figure."""
+        if plt.get_backend() == "agg":
+            # make sure that a draw-event was triggered when using the agg backend
+            # (to avoid export-issues with some shapes)
+            # TODO properly assess why this is necessary!
+            self.f.canvas.draw_idle()
+
         with ExitStack() as stack:
             if refetch_wms is False:
                 if _cx_refetch_wms_on_size_change is not None:
@@ -3602,6 +3603,9 @@ class Maps(metaclass=_MapsMeta):
             # trigger a redraw of all savelayers to make sure unmanaged artists
             # and ordinary matplotlib axes are properly drawn
             self.redraw(*savelayers)
+            # flush events prior to savefig to avoi dissues with pending draw events
+            # that cause wrong positioning of grid-labels and missing artists!
+            self.f.canvas.flush_events()
             self.f.savefig(*args, **kwargs)
 
         if redraw is True:
@@ -4007,11 +4011,28 @@ class Maps(metaclass=_MapsMeta):
                 cb.setImage(QImage.fromData(buffer.getvalue()))
 
     def _on_keypress(self, event):
+        if plt.get_backend().lower() == "webagg":
+            return
+
         # NOTE: callback is only attached to the parent Maps object!
         if event.key == self._companion_widget_key:
-            self._open_companion_widget((event.x, event.y))
+            try:
+                self._open_companion_widget((event.x, event.y))
+            except Exception:
+                _log.exception(
+                    "EOmaps: Encountered a problem while trying to open "
+                    "the companion widget",
+                    exec_info=_log.getEffectiveLevel() <= logging.DEBUG,
+                )
         elif event.key == "ctrl+c":
-            self._save_to_clipboard(**Maps._clipboard_kwargs)
+            try:
+                self._save_to_clipboard(**Maps._clipboard_kwargs)
+            except Exception:
+                _log.exception(
+                    "EOmaps: Encountered a problem while trying to export the figure "
+                    "to the clipboard.",
+                    exec_info=_log.getEffectiveLevel() <= logging.DEBUG,
+                )
 
     def _init_figure(self, ax=None, plot_crs=None, **kwargs):
         if self.parent.f is None:
