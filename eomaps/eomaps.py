@@ -5203,7 +5203,13 @@ class Maps(metaclass=_MapsMeta):
 
         # exclude private layers
         if exclude_private:
-            layers = {i.removeprefix("__inset_") for i in layers}
+            # for python <3.9 compatibility
+            def remove_prefix(text, prefix):
+                if text.startswith(prefix):
+                    return text[len(prefix) :]
+                return text
+
+            layers = {remove_prefix(i, "__inset_") for i in layers}
             layers = {i for i in layers if not i.startswith("__")}
 
         if exclude:
