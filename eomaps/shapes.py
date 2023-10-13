@@ -364,7 +364,7 @@ class Shapes(object):
             self._m = m
             self._n = None
 
-            self._select_radius = False
+            self._select_radius = True
 
         def _get_auto_n(self):
             s = self._m._data_manager._get_current_datasize()
