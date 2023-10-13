@@ -504,6 +504,9 @@ class Maps(metaclass=_MapsMeta):
         if self.f.patch not in self.BM._bg_artists.get("__BG__", []):
             self.BM.add_bg_artist(self.f.patch, layer="__BG__")
 
+        if self.ax.patch not in self.BM._bg_artists.get("__BG__", []):
+            self.BM.add_bg_artist(self.ax.patch, layer="__BG__")
+
         # Treat cartopy geo-spines separately in the blit-manager
         # to avoid issues with overlapping spines that are drawn on each layer
         # if multiple layers of a map are combined.

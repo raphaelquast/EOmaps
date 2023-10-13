@@ -2073,12 +2073,14 @@ class BlitManager:
         # use contextmanagers to make sure the background patches are not stored
         # in the buffer regions!
         with ExitStack() as stack:
-            # get rid of the axes background patches
-            # (the figure background patch is on the "__BG__" layer)
-            for ax_i in self._get_all_map_axes():
-                stack.enter_context(
-                    ax_i.patch._cm_set(facecolor="none", edgecolor="none")
-                )
+            if layer not in ["__BG__"]:
+                # get rid of the axes background patches for all layers except
+                # the __BG__ layer
+                # (the figure background patch is on the "__BG__" layer)
+                for ax_i in self._get_all_map_axes():
+                    stack.enter_context(
+                        ax_i.patch._cm_set(facecolor="none", edgecolor="none")
+                    )
 
             # execute actions before fetching new artists
             # (e.g. update data based on extent etc.)
