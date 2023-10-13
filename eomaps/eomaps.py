@@ -2861,7 +2861,7 @@ class Maps(metaclass=_MapsMeta):
         return self.ax.get_extent(crs=crs)
 
     def _calc_vmin_vmax(self, vmin=None, vmax=None):
-        if self._data_manager.z_data is None:
+        if self.data is None:
             return vmin, vmax
 
         calc_min, calc_max = vmin is None, vmax is None
