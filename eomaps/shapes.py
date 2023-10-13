@@ -404,6 +404,35 @@ class Shapes(object):
             else:
                 self._n = val
 
+        @property
+        def _selected_radius(self):
+            # if radius was provided as a array (for individual shape radius)
+            # select values according to the dat-manager query to get values
+            # of visible points
+
+            # check if mutiple individual x-y radius was provided
+            q1 = isinstance(self.radius, tuple) and isinstance(
+                self.radius[0], np.ndarray
+            )
+            # chedk if multiple radius values were provided
+            q2 = isinstance(self.radius, np.ndarray)
+
+            if q1 or q2:
+                mask = self._m._data_manager._get_q()[0]
+
+                # quick exit if full data is in extent
+                if mask is True:
+                    return self.radius
+
+            if q1:
+                radius = (self.radius[0][mask], self.radius[1][mask])
+            elif q2:
+                radius = self.radius[mask]
+            else:
+                radius = self.radius
+
+            return radius
+
     class _GeodCircles(_ShapeBase):
         name = "geod_circles"
 
@@ -562,8 +591,9 @@ class Shapes(object):
             return xs, ys, mask
 
         def get_coll(self, x, y, crs, **kwargs):
-
-            xs, ys, mask = self._get_geod_circle_points(x, y, crs, self.radius, self.n)
+            xs, ys, mask = self._get_geod_circle_points(
+                x, y, crs, self._selected_radius, self.n
+            )
 
             # only plot polygons if they contain 2 or more vertices
             vertmask = np.count_nonzero(mask, axis=0) > 2
@@ -800,7 +830,7 @@ class Shapes(object):
 
         def get_coll(self, x, y, crs, **kwargs):
             xs, ys, mask = self._get_ellipse_points(
-                x, y, crs, self.radius, self.radius_crs, n=self.n
+                x, y, crs, self._selected_radius, self.radius_crs, n=self.n
             )
 
             # compress the coordinates (masked arrays produce artefacts on the boundary
@@ -994,7 +1024,7 @@ class Shapes(object):
 
         def _get_polygon_coll(self, x, y, crs, **kwargs):
             verts, mask = self._get_rectangle_verts(
-                x, y, crs, self.radius, self.radius_crs, self.n
+                x, y, crs, self._selected_radius, self.radius_crs, self.n
             )
 
             # remember masked points
@@ -1047,7 +1077,7 @@ class Shapes(object):
 
         def _get_trimesh_coll(self, x, y, crs, **kwargs):
             tri, mask = self._get_trimesh_rectangle_triangulation(
-                x, y, crs, self.radius, self.radius_crs, self.n
+                x, y, crs, self._selected_radius, self.radius_crs, self.n
             )
             # remember masked points
             self._m._data_mask = mask
@@ -1124,6 +1154,24 @@ class Shapes(object):
             return dict(size=self._size, marker=self._marker)
 
         @property
+        def _selected_size(self):
+            # chedck if multiple size values were provided
+            q = isinstance(self._size, np.ndarray)
+
+            if q:
+                mask = self._m._data_manager._get_q()[0]
+
+                # quick exit if full data is in extent
+                if mask is True:
+                    return self._size
+
+                size = self._size[mask]
+            else:
+                size = self._size
+
+            return size
+
+        @property
         def radius(self):
             radius = Shapes._get_radius(self._m, "estimate", "in")
             return radius
@@ -1138,7 +1186,12 @@ class Shapes(object):
             )
             color_and_array["c"] = color_and_array["array"]
             coll = self._m.ax.scatter(
-                x, y, s=self._size, marker=self._marker, **color_and_array, **kwargs
+                x,
+                y,
+                s=self._selected_size,
+                marker=self._marker,
+                **color_and_array,
+                **kwargs,
             )
             return coll
 
