@@ -177,6 +177,8 @@ class Shapes(object):
         shapeclass_name = "_" + "".join(i.capitalize() for i in shape.split("_"))
 
         shp = getattr(self, shapeclass_name)(self._m)
+        shp._select_radius = False  # disable radius selection based on dataset
+
         for key, val in kwargs.items():
             setattr(shp, key, val)
         return shp
@@ -362,6 +364,8 @@ class Shapes(object):
             self._m = m
             self._n = None
 
+            self._select_radius = False
+
         def _get_auto_n(self):
             s = self._m._data_manager._get_current_datasize()
 
@@ -406,9 +410,18 @@ class Shapes(object):
 
         @property
         def _selected_radius(self):
+            # option to override radius-selection in case the shape is used
+            # to create markers (e.g. call is independent of plot-extent)
+            if self._select_radius is False:
+                return self.radius
+
             # if radius was provided as a array (for individual shape radius)
             # select values according to the dat-manager query to get values
             # of visible points
+
+            # if no data is assigned, just return the radius
+            if not self._m._data_manager._current_data:
+                return self.radius
 
             # check if mutiple individual x-y radius was provided
             q1 = isinstance(self.radius, tuple) and isinstance(
