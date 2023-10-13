@@ -4418,7 +4418,7 @@ class Maps(metaclass=_MapsMeta):
                 + f"x={xorig.shape}, y={yorig.shape} do not match!"
             )
 
-        return z_data, xorig, yorig, ids, parameter
+        return z_data, np.asanyarray(xorig), np.asanyarray(yorig), ids, parameter
 
     def inherit_classification(self, m):
         """
