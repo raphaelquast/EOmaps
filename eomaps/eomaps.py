@@ -1853,6 +1853,7 @@ class Maps(metaclass=_MapsMeta):
         verbose=False,
         only_valid=False,
         set_extent=False,
+        permanent=True,
         **kwargs,
     ):
         """
@@ -1978,6 +1979,10 @@ class Maps(metaclass=_MapsMeta):
             - if float, use the value as margin (0-1).
 
             The default is True.
+        permanent : bool, optional
+            If True, all created artists are added as "permanent" background
+            artists. If  False, artists are added as dynamic artists.
+            The default is True.
         kwargs :
             all remaining kwargs are passed to `geopandas.GeoDataFrame.plot(**kwargs)`
 
@@ -2097,7 +2102,10 @@ class Maps(metaclass=_MapsMeta):
         else:
             for art, prefix in zip(artists, prefixes):
                 art.set_label(f"EOmaps GeoDataframe ({prefix.lstrip('_')}, {len(gdf)})")
-                self.BM.add_bg_artist(art, layer)
+                if permanent is True:
+                    self.BM.add_bg_artist(art, layer)
+                else:
+                    self.BM.add_artist(art, layer)
         return artists
 
     def add_marker(
