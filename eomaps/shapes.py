@@ -499,7 +499,10 @@ class Shapes(object):
 
         @radius.setter
         def radius(self, val):
-            self._radius = np.asanyarray(np.atleast_1d(val))
+            if isinstance(val, (int, float, np.number)):
+                self._radius = val
+            else:
+                self._radius = np.asanyarray(np.atleast_1d(val))
 
         @property
         def radius_crs(self):
