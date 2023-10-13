@@ -4033,7 +4033,7 @@ class Maps(metaclass=_MapsMeta):
                 _log.exception(
                     "EOmaps: Encountered a problem while trying to open "
                     "the companion widget",
-                    exec_info=_log.getEffectiveLevel() <= logging.DEBUG,
+                    exc_info=_log.getEffectiveLevel() <= logging.DEBUG,
                 )
         elif event.key == "ctrl+c":
             try:
@@ -4042,7 +4042,7 @@ class Maps(metaclass=_MapsMeta):
                 _log.exception(
                     "EOmaps: Encountered a problem while trying to export the figure "
                     "to the clipboard.",
-                    exec_info=_log.getEffectiveLevel() <= logging.DEBUG,
+                    exc_info=_log.getEffectiveLevel() <= logging.DEBUG,
                 )
 
     def _init_figure(self, ax=None, plot_crs=None, **kwargs):
