@@ -177,7 +177,7 @@ class DraggableAnnotation(DraggableBase):
                 ann.get_transform().inverted().transform((self.ox + dx, self.oy + dy))
             )
         elif self._what == "xy":
-            if not self._drag_coords:
+            if not self._drag_coords and self.annotation.figure is not None:
                 self.annotation.figure._EOmaps_parent._log_on_event(
                     "warning",
                     "EOmaps: The position of annotations based on IDs "
@@ -234,7 +234,9 @@ class DraggableAnnotation(DraggableBase):
                 # emit signal if provided
                 if self._select_signal is not None:
                     self._select_signal()
-        self.annotation.figure._EOmaps_parent.BM.update()
+
+        if self.annotation.figure is not None:
+            self.annotation.figure._EOmaps_parent.BM.update()
 
     def on_motion(self, evt):
         # check if a keypress event triggered a change of the interaction
@@ -249,7 +251,8 @@ class DraggableAnnotation(DraggableBase):
                 self.mouse_y = evt.y
 
         super().on_motion(evt)
-        self.annotation.figure._EOmaps_parent.BM.update(artists=[self.annotation])
+        if self.annotation.figure is not None:
+            self.annotation.figure._EOmaps_parent.BM.update(artists=[self.annotation])
         # emit signal if provided
         if self._edit_signal is not None:
             self._edit_signal()
