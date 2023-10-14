@@ -353,6 +353,9 @@ class AddAnnotationWidget(QtWidgets.QWidget):
             # put the text of the currently selected annotation in the input-box
             text = ann.get_text()
             self.text_inp.setText(text)
+            # remember last input text
+            self._last_text_inp = text
+
             # set current annotation text color
             self.text_color.set_facecolor(
                 [int(i * 255) for i in to_rgba(ann.get_color())]
