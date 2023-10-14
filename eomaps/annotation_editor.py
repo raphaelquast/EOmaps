@@ -446,8 +446,10 @@ class AnnotationEditor(_EditorBase):
             )
 
             self.m._emit_signal("annotationEditorActivated")
+            self.m.BM._clear_all_temp_artists()
 
             self.show_info_text()
+            self.m.cb.execute_callbacks(False)
             _log.info("EOmaps: Annotations editable!")
         else:
             for ann in self._annotations:
@@ -466,6 +468,7 @@ class AnnotationEditor(_EditorBase):
 
             self.m._emit_signal("annotationEditorDeactivated")
             self.m.BM.update()
+            self.m.cb.execute_callbacks(True)
 
     def _make_ann_editable(self, ann, drag_coords=True):
         # avoid issues with annotations that are removed during interactive editing

@@ -2532,6 +2532,13 @@ class BlitManager:
 
         return allartists.difference(managed_artists)
 
+    def _clear_all_temp_artists(self):
+        for method in self._m.cb._methods:
+            container = getattr(self._m.cb, method, None)
+            if container:
+                container._clear_temporary_artists()
+            self._clear_temp_artists(method)
+
     def _clear_temp_artists(self, method, forward=True):
         # clear artists from connected methods
         if method == "_click_move" and forward:

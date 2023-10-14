@@ -1016,7 +1016,10 @@ class ClickContainer(_ClickContainer):
 
     def _add_click_callback(self):
         def clickcb(event):
-            if not self._m.cb.get_execute_callbacks():
+            if (
+                not self._m.cb.get_execute_callbacks()
+                and not self._method == "_always_active"
+            ):
                 return
 
             try:
@@ -1044,7 +1047,10 @@ class ClickContainer(_ClickContainer):
                 pass
 
         def releasecb(event):
-            if not self._m.cb.get_execute_callbacks():
+            if (
+                not self._m.cb.get_execute_callbacks()
+                and not self._method == "_always_active"
+            ):
                 return
 
             try:
@@ -1972,13 +1978,29 @@ class CallbackContainer:
     def __init__(self, m):
         self._m = m
 
-        self._methods = {"click", "pick", "move", "keypress", "_click_move"}
+        self._methods = {
+            "click",
+            "pick",
+            "move",
+            "keypress",
+            "_click_move",
+            "_always_active",
+        }
 
         self._click = ClickContainer(
             m=self._m,
             cb_cls=ClickCallbacks,
             method="click",
         )
+        # internal "always_active" click container to handle click-callbacks
+        # that should be executed even if m._execute_callbacks is False.
+        # (used in AnnotationEditor)
+        self._always_active = ClickContainer(
+            m=self._m,
+            cb_cls=ClickCallbacks,
+            method="_always_active",
+        )
+
         # a move-container that shares temporary artists with the click-container
         self._click_move = MoveContainer(
             m=self._m,
