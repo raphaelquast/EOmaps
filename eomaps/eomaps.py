@@ -2122,6 +2122,7 @@ class Maps(metaclass=_MapsMeta):
         buffer=1,
         n=100,
         layer=None,
+        update=True,
         **kwargs,
     ):
         """
@@ -2169,6 +2170,9 @@ class Maps(metaclass=_MapsMeta):
         kwargs :
             kwargs passed to the matplotlib patch.
             (e.g. `zorder`, `facecolor`, `edgecolor`, `linewidth`, `alpha` etc.)
+        update : bool, optional
+            If True, call m.BM.update() to immediately show dynamic annotations
+            If False, dynamic annotations will only be shown at the next update
 
         Examples
         --------
@@ -2217,7 +2221,7 @@ class Maps(metaclass=_MapsMeta):
             **kwargs,
         )
 
-        if permanent is False:
+        if permanent is False and update:
             self.BM.update()
 
         return marker
@@ -2228,6 +2232,7 @@ class Maps(metaclass=_MapsMeta):
         xy=None,
         xy_crs=None,
         text=None,
+        update=True,
         **kwargs,
     ):
         """
@@ -2258,7 +2263,9 @@ class Maps(metaclass=_MapsMeta):
                 >>>     return "the string to print"
 
             The default is None.
-
+        update : bool, optional
+            If True, call m.BM.update() to immediately show dynamic annotations
+            If False, dynamic annotations will only be shown at the next update
         **kwargs
             kwargs passed to m.cb.annotate
 
@@ -2381,7 +2388,8 @@ class Maps(metaclass=_MapsMeta):
                     drag_coords=is_ID_annotation,
                 )
 
-        self.BM.update(clear=False)
+        if update:
+            self.BM.update(clear=False)
         return ann
 
     @wraps(Compass.__call__)
