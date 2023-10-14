@@ -559,7 +559,12 @@ class AnnotationEditor(_EditorBase):
         self.m.BM.update()
 
     def print_code(
-        self, m_name="m", what="all", sanitize_coordinates=True, replace=None
+        self,
+        m_name="m",
+        what="all",
+        sanitize_coordinates=True,
+        replace=None,
+        use_ids=False,
     ):
         """
         Print the code to reproduce the annotations to the console.
@@ -607,6 +612,12 @@ class AnnotationEditor(_EditorBase):
 
             >>> my_textfunc = lambda ID, **kwargs: str(ID)
             >>> m._edit_annotations.print_code(replace={"text": my_textfunc})
+        use_ids : bool, optional
+            If True, ID values are used to identify the annotation-positions.
+            (NOTE: this can cause problems because the Maps-object must have
+             the correct data assigned to identify the annotation!)
+            If False, always use the current position of the annotation
+            as input-argument for the returned code.
 
         """
 
@@ -667,7 +678,7 @@ class AnnotationEditor(_EditorBase):
             # remove arguments that should not be printed
             kwargs.pop("permanent", None)
             if "ID" in kwargs:
-                if kwargs["ID"] is None:
+                if kwargs["ID"] is None or use_ids is False:
                     kwargs.pop("ID")
                 else:
                     kwargs.pop("xy")
