@@ -2762,7 +2762,7 @@ class Maps(metaclass=_MapsMeta):
 
         figax.set_navigate(False)
         figax.set_axis_off()
-        _ = figax.imshow(im, aspect="equal", zorder=999)
+        _ = figax.imshow(im, aspect="equal", zorder=999, interpolation_stage="rgba")
 
         self.BM.add_bg_artist(figax, layer)
 
