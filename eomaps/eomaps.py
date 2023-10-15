@@ -3292,7 +3292,7 @@ class Maps(metaclass=_MapsMeta):
         except Exception:
             raise TypeError(f"EOmaps: Unable to combine the layer-names {args}")
 
-    def show_layer(self, *args):
+    def show_layer(self, *args, clear=True):
         """
         Show a single layer or (transparently) overlay multiple selected layers.
 
@@ -3303,6 +3303,12 @@ class Maps(metaclass=_MapsMeta):
             - if str: The name of the layer to show.
             - if tuple: A combination of a layer-name and a transparency assignment
               ( < layer name >, < transparency [0-1] > )
+        clear : bool, optional
+            Only relevant if the `inline` backend is used in a jupyter-notebook
+            or an Ipython console.
+
+            If True, clear the active cell before plotting a snapshot of the figure.
+            The default is True.
 
         Examples
         --------
@@ -3370,6 +3376,20 @@ class Maps(metaclass=_MapsMeta):
         # invoke the bg_layer setter of the blit-manager
         self.BM.bg_layer = name
         self.BM.update()
+
+        if not plt.isinteractive():
+            try:
+                __IPYTHON__
+            except NameError:
+                plt.show()
+            else:
+                active_backend = plt.get_backend()
+                # print a snapshot to the active ipython cell in case the
+                # inline-backend is used
+                if active_backend in ["module://matplotlib_inline.backend_inline"]:
+                    self.BM.update(clear=clear)
+                else:
+                    plt.show()
 
     def show(self, clear=True):
         """
