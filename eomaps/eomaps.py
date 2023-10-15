@@ -517,6 +517,9 @@ class Maps(metaclass=_MapsMeta):
         # TODO find a better way to deal with this!
         self._handle_spines()
 
+        # evaluate and cache crs boundary bounds (for extent clipping)
+        self._crs_boundary_bounds = self.crs_plot.boundary.bounds
+
         # a factory to create gridlines
         if self.parent == self:
             self._grid = GridFactory(self.parent)
@@ -2862,16 +2865,28 @@ class Maps(metaclass=_MapsMeta):
         extent : The extent in the given crs (x0, x1, y0, y1).
 
         """
+        bnds = self._crs_boundary_bounds
+
         # fast track if plot-crs is requested
         if crs == self.crs_plot:
-            return (*self.ax.get_xlim(), *self.ax.get_ylim())
-
-        if crs is not None:
-            crs = self._get_cartopy_crs(crs)
+            x0, x1, y0, y1 = (*self.ax.get_xlim(), *self.ax.get_ylim())
         else:
-            crs = self._get_cartopy_crs(4326)
+            if crs is not None:
+                crs = self._get_cartopy_crs(crs)
+            else:
+                crs = self._get_cartopy_crs(4326)
 
-        return self.ax.get_extent(crs=crs)
+            x0, x1, y0, y1 = self.ax.get_extent(crs=crs)
+
+        # clip the map-extent with respect to the boundary bounds
+        # (to avoid returning values outside the crs bounds)
+        try:
+            x0, x1 = np.clip([x0, x1], bnds[0], bnds[2])
+            y0, y1 = np.clip([y0, y1], bnds[1], bnds[3])
+        except Exception:
+            _log.debug("EOmaps: Error while trying to clip map extent", exc_info=True)
+
+        return x0, x1, y0, y1
 
     def _calc_vmin_vmax(self, vmin=None, vmax=None):
         if self.data is None:
