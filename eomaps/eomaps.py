@@ -23,6 +23,7 @@ import matplotlib.pyplot as plt
 from matplotlib.gridspec import GridSpec, SubplotSpec
 
 import matplotlib.patches as mpatches
+from matplotlib.path import Path as mpath
 
 from cartopy import crs as ccrs
 
@@ -5582,3 +5583,79 @@ class Maps(metaclass=_MapsMeta):
         def refetch_wms_on_size_change(self, *args, **kwargs):
             """Set the behavior for WebMap services on axis or figure size changes."""
             refetch_wms_on_size_change(*args, **kwargs)
+
+    def update_spine_props(self, rounded=0, **kwargs):
+        """
+        Update the properties of the map boundary line (e.g. the spine)
+
+        Parameters
+        ----------
+        rounded : float, optional
+            If provided, use a rectangle with rounded corners as map boundary
+            line. The corners will be rounded with respect to the provided
+            fraction (0=no rounding, 1=max. radius). The default is None.
+        kwargs :
+            Additional kwargs to style the spine
+            (e.g. edgecolor, linewidth, linestyle ...).
+
+        """
+        self.ax.spines["geo"].update(kwargs)
+
+        if rounded:
+            assert (
+                rounded <= 1
+            ), "EOmaps: rounded corner fraction must be between 0 and 1"
+
+            self.ax._EOmaps_rounded_spine_frac = rounded
+            theta = np.linspace(0, np.pi / 2, 50)  # use 50 intermediate points
+            s, c = np.sin(theta), np.cos(theta)
+
+            # attach a function to dynamically update the corners of the
+            # map boundary prior to fetching a background
+            # Note: this function is only attached once and the relevant
+            # properties are fetched from the axes!
+            if not getattr(self.ax, "_EOmaps_rounded_spine_attached", False):
+
+                def cb(*args, **kwargs):
+                    if self.ax._EOmaps_rounded_spine_frac == 0:
+                        return
+
+                    x0, x1, y0, y1 = self.get_extent(self.crs_plot)
+                    r = min(x1 - x0, y1 - y0) * self.ax._EOmaps_rounded_spine_frac / 2
+
+                    xs = [
+                        x0,
+                        *(x0 + r - r * c),
+                        x0 + r,
+                        x1 - r,
+                        *(x1 - r + r * s),
+                        x1,
+                        x1,
+                        *(x1 - r + r * c),
+                        x1 - r,
+                        x0 + r,
+                        *(x0 + r - r * s),
+                        x0,
+                    ]
+
+                    ys = [
+                        y1 - r,
+                        *(y1 - r + r * s),
+                        y1,
+                        y1,
+                        *(y1 - r + r * c),
+                        y1 - r,
+                        y0 + r,
+                        *(y0 + r - r * s),
+                        y0,
+                        y0,
+                        *(y0 + r - r * c),
+                        y0 + r,
+                    ]
+
+                    path = mpath(np.column_stack((xs, ys)))
+                    self.ax.set_boundary(path, transform=self.crs_plot)
+
+                self.BM._before_fetch_bg_actions.append(cb)
+                self.ax._EOmaps_rounded_spine_attached = True
+                self.BM.update()
