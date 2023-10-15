@@ -502,9 +502,11 @@ class Maps(metaclass=_MapsMeta):
         # This is used to avoid having the background patch on each fetched
         # background while maintaining the capability of restoring it
         if self.f.patch not in self.BM._bg_artists.get("__BG__", []):
+            self.f.patch.set_zorder(-2)
             self.BM.add_bg_artist(self.f.patch, layer="__BG__")
 
         if self.ax.patch not in self.BM._bg_artists.get("__BG__", []):
+            self.ax.patch.set_zorder(-1)
             self.BM.add_bg_artist(self.ax.patch, layer="__BG__")
 
         # Treat cartopy geo-spines separately in the blit-manager
