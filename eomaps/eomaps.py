@@ -4233,9 +4233,9 @@ class Maps(metaclass=_MapsMeta):
 
             m.cleanup()
 
-        # close the pyqt widget if there is one
-        if self._companion_widget is not None:
-            self._companion_widget.close()
+            # close the pyqt widget if there is one
+            if m._companion_widget is not None:
+                m._companion_widget.close()
 
         # de-register colormaps
         for cmap in self._registered_cmaps:
