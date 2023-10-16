@@ -1227,7 +1227,7 @@ class TestBasicPlotting(unittest.TestCase):
                 m2.set_data(*[[1, 2, 3]] * 3)
                 m2.plot_map()
                 m2.cb.click.attach.annotate()
-                m2.show()  # show the layer to trigger drawing
+                m.show_layer(m2.layer)  # show the layer to trigger drawing
                 self.assertTrue(
                     all(
                         i in m2._data_manager._all_data
