@@ -13,16 +13,23 @@ How to create inset maps
 
 Inset maps are used to show zoomed-in regions of a map and can be created with :py:meth:`Maps.new_inset_map`.
 
-.. code-block:: python
-    :name: test_inset_maps_01
+.. table::
+    :widths: 60 40
+    :align: center
 
-    from eomaps import Maps
-    m = Maps()                                      # the "parent" Maps-object (e.g. the "big" map)
-    m.add_feature.preset.coastline()
-    m_i = m.new_inset_map(xy=(125, 40), radius=10)  # a new Maps-object that represents the inset-map
-    m_i.add_feature.preset.ocean()                  # it can be used just like any other Maps-objects!
-    m_i.add_indicator_line()
+    +-----------------------------------------------------+---------------------------------------------------+
+    | .. code-block:: python                              | .. image:: _static/inset_maps/inset_maps_fig1.png |
+    |     :name: test_inset_maps_01                       |    :align: center                                 |
+    |                                                     |                                                   |
+    |     from eomaps import Maps                         | |img_minsize|                                     |
+    |     m = Maps()                                      |                                                   |
+    |     m.add_feature.preset.coastline()                |                                                   |
+    |     m_i = m.new_inset_map(xy=(125, 40), radius=10)  |                                                   |
+    |     m_i.add_feature.preset.ocean()                  |                                                   |
+    |     m_i.add_indicator_line()                        |                                                   |
+    +-----------------------------------------------------+---------------------------------------------------+
 
+    
 - An inset-map is defined by it's center-position and a radius
 - The used boundary-shape can be one of:
 
@@ -52,7 +59,7 @@ To quickly re-position (and re-size) inset-maps, have a look at the :ref:`layout
     :align: center
 
     +-----------------------------------------------------------------+--------------------------------------------+
-    | .. code-block:: python                                          | .. image:: _static/minigifs/inset_maps.png |
+    | .. code-block:: python                                          | .. image:: _static/inset_maps/inset_maps.png |
     |     :name: test_inset_maps_02                                   |   :align: center                           |
     |                                                                 |                                            |
     |     from eomaps import Maps                                     | |img_minsize|                              |
