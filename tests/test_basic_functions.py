@@ -1310,7 +1310,7 @@ class TestBasicPlotting(unittest.TestCase):
         self.assertTrue(len(m.BM._on_layer_activation[True][m2.layer]) == 1)
         self.assertTrue(len(m.BM._on_layer_activation[False][m2.layer]) == 1)
 
-        m2.show()  # show the layer to draw the artists!
+        m.show_layer(m2.layer)  # show the layer to draw the artists!
         m.f.canvas.draw()  # redraw since otherwise the map might not yet be created!
         self.assertTrue(len(m.BM._on_layer_activation[True][m2.layer]) == 1)
         self.assertTrue(len(m.BM._on_layer_activation[False][m2.layer]) == 0)
