@@ -1731,7 +1731,9 @@ class Shapes(object):
             self, maxsize=5e6, interp_order=0, aggregator="mean", valid_fraction=0
         ):
             """
-            Draw the data as a rectangular raster (opt. aggregate before plotting).
+            Draw the data as a rectangular raster  (>> usable for very large datasets!)
+
+            (optionally aggregate data prior to plotting)
 
             By default, large datasets (>5 million datapoints) will be aggregated
             prior to plotting to considerably speed up initialization of the plot.
@@ -1779,6 +1781,9 @@ class Shapes(object):
                   reliable aggregated estimate of the actual data)
                 - "min", "max", "mean", "median", "std", "sum": calculate the
                   corresponding metrics of the data inside the aggregation blocks.
+                - "mode": evaluate the most commonly encountered value within each
+                  aggregation bin (NOTE: this is computationally intense and can become
+                  slow if `maxsize` is set too large!)
                 - "fast_mean", "fast_sum": use a fast and memory-efficient method to
                   evaluate the corresponding metrics.
                   NOTE: this uses `numpy.einsum` for aggregation which does not check
@@ -1800,7 +1805,7 @@ class Shapes(object):
                 Percentage (0-1) of the masked pixels within an aggregation box
                 that will result in a masked value.
                 (e.g. 0.1 -> if more than 10% of the data is masked in an aggregation
-                 box, the aggregated value will be masked). The default is 0
+                box, the aggregated value will be masked). The default is 0
             interp_order: int
                 (ONLY used if method = "scipy")
                 The spline interpolation order for zooming.
