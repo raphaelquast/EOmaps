@@ -29,7 +29,7 @@ Inset maps are used to show zoomed-in regions of a map and can be created with :
     |     m_i.add_indicator_line()                        |                                                   |
     +-----------------------------------------------------+---------------------------------------------------+
 
-    
+
 - An inset-map is defined by it's center-position and a radius
 - The used boundary-shape can be one of:
 
