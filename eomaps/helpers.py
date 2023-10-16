@@ -2622,6 +2622,7 @@ class BlitManager:
         artists=None,
         clear=False,
         blit=True,
+        clear_snapshot=True,
     ):
         """
         Update the screen with animated artists.
@@ -2639,6 +2640,19 @@ class BlitManager:
             A list of artists to update.
             If provided NO layer will be automatically updated!
             The default is None.
+        clear : bool, optional
+            If True, all temporary artists tagged for removal will be cleared.
+            The default is False.
+        blit : bool, optional
+            If True, figure.cavas.blit() will be called to update the figure.
+            If False, changes will only be visible on the next blit-event!
+            The default is True.
+        clear_snapshot : bool, optional
+            Only relevant if the `inline` backend is used in a jupyter-notebook
+            or an Ipython console.
+
+            If True, clear the active cell before plotting a snapshot of the figure.
+            The default is True.
         """
         if self._m.parent._layout_editor._modifier_pressed:
             # don't update during layout-editing
@@ -2704,7 +2718,7 @@ class BlitManager:
             and not getattr(self._m, "_snapshotting", False)
             and BlitManager._snapshot_on_update is True
         ):
-            self._m.snapshot(clear=True)
+            self._m.snapshot(clear=clear_snapshot)
 
     def blit_artists(self, artists, bg="active", blit=True):
         """

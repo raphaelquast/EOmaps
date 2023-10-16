@@ -3303,12 +3303,6 @@ class Maps(metaclass=_MapsMeta):
             - if str: The name of the layer to show.
             - if tuple: A combination of a layer-name and a transparency assignment
               ( < layer name >, < transparency [0-1] > )
-        clear : bool, optional
-            Only relevant if the `inline` backend is used in a jupyter-notebook
-            or an Ipython console.
-
-            If True, clear the active cell before plotting a snapshot of the figure.
-            The default is True.
 
         Examples
         --------
@@ -3377,28 +3371,13 @@ class Maps(metaclass=_MapsMeta):
         self.BM.bg_layer = name
         self.BM.update()
 
-        if not plt.isinteractive():
-            try:
-                __IPYTHON__
-            except NameError:
-                plt.show()
-            else:
-                active_backend = plt.get_backend()
-                # print a snapshot to the active ipython cell in case the
-                # inline-backend is used
-                if active_backend in ["module://matplotlib_inline.backend_inline"]:
-                    self.BM.update(clear=clear)
-                else:
-                    plt.show()
-
     def show(self, clear=True):
         """
-        Make the layer of this `Maps`-object visible.
+        Show the map (only required for non-interactive matplotlib backends).
 
-        This is just a shortcut for `m.show_layer(m.layer)`
+        This is just a convenience function to call matplotlib's `plt.show()`!
 
-        If matploltib is used in non-interactive mode, (e.g. `plt.ioff()`)
-        `plt.show()` is called as well!
+        To switch the currently visible layer, see :py:meth:`Maps.show_layer`
 
         Parameters
         ----------
@@ -3408,9 +3387,10 @@ class Maps(metaclass=_MapsMeta):
 
             If True, clear the active cell before plotting a snapshot of the figure.
             The default is True.
+        See Also
+        --------
+        show_layer : Set the currently visible layer.
         """
-
-        self.show_layer(self.layer)
 
         if not plt.isinteractive():
             try:
@@ -3422,7 +3402,7 @@ class Maps(metaclass=_MapsMeta):
                 # print a snapshot to the active ipython cell in case the
                 # inline-backend is used
                 if active_backend in ["module://matplotlib_inline.backend_inline"]:
-                    self.BM.update(clear=clear)
+                    self.BM.update(clear_snapshot=clear)
                 else:
                     plt.show()
 
