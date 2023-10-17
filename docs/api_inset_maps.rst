@@ -110,27 +110,35 @@ For this purpose, EOmaps provides 2 convenience-functions:
   - Note that this means that the classification specs as well as ``vmin``, ``vmax`` and the used ``colormap`` will be the same!
 
 
-.. code-block:: python
-    :name: test_zoomed_in_data_maps
+.. table::
+    :widths: 60 40
+    :align: center
 
-    from eomaps import Maps
-    import numpy as np
-
-    x, y = np.meshgrid(np.linspace(-20, 20, 50), np.linspace(-50, 60, 100))
-    data = x + y
-
-    m = Maps(ax=131)
-    m.set_data(data, x, y)
-    m.set_shape.raster()
-    m.set_classify.Quantiles(k=10)
-    m.plot_map(cmap="tab10", vmin=-10, vmax=40)
-
-    # Create a new inset-map that shows a zoomed-in view on a given dataset
-    m_inset = m.new_inset_map(xy=(5, 20), radius=8, plot_position=(0.75, .5))
-
-    # inherit both the data and the classification specs from "m"
-    m_inset.inherit_data(m)
-    m_inset.inherit_classification(m)
-
-    m_inset.set_shape.rectangles()
-    m_inset.plot_map(ec="k", lw=0.25)
++-------------------------------------------------------------------------------+--+
+| .. code-block:: python                                                        |  |
+|     :name: test_inset_maps_3                                                  |  |
+|                                                                               |  |
+|     from eomaps import Maps                                                   |  |
+|     import numpy as np                                                        |  |
+|                                                                               |  |
+|     x, y = np.meshgrid(np.linspace(-20, 20, 50), np.linspace(-50, 60, 100))   |  |
+|     data = x + y                                                              |  |
+|                                                                               |  |
+|     m = Maps(ax=131)                                                          |  |
+|     m.set_data(data, x, y)                                                    |  |
+|     m.set_shape.raster()                                                      |  |
+|     m.set_classify.Quantiles(k=10)                                            |  |
+|     m.plot_map(cmap="tab10", vmin=-10, vmax=40)                               |  |
+|                                                                               |  |
+|     # Create a new inset-map that shows a zoomed-in view on a given dataset   |  |
+|     m_inset = m.new_inset_map(xy=(5, 20), radius=8, plot_position=(0.75, .5)) |  |
+|                                                                               |  |
+|     # inherit both the data and the classification specs from "m"             |  |
+|     m_inset.inherit_data(m)                                                   |  |
+|     m_inset.inherit_classification(m)                                         |  |
+|                                                                               |  |
+|     m_inset.set_shape.rectangles()                                            |  |
+|     m_inset.plot_map(ec="k", lw=0.25)                                         |  |
+|                                                                               |  |
+|                                                                               |  |
++-------------------------------------------------------------------------------+--+
