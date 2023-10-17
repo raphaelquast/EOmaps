@@ -19,7 +19,7 @@ Inset maps are used to show zoomed-in regions of a map and can be created with :
 
     +-----------------------------------------------------+---------------------------------------------------+
     | .. code-block:: python                              | .. image:: _static/inset_maps/inset_maps_fig1.png |
-    |     :name: test_inset_maps_01                       |    :align: center                                 |
+    |     :name: test_inset_maps_1                        |    :align: center                                 |
     |                                                     |                                                   |
     |     from eomaps import Maps                         | |img_minsize|                                     |
     |     m = Maps()                                      |                                                   |
@@ -58,31 +58,31 @@ To quickly re-position (and re-size) inset-maps, have a look at the :ref:`layout
     :widths: 60 40
     :align: center
 
-    +-----------------------------------------------------------------+--------------------------------------------+
-    | .. code-block:: python                                          | .. image:: _static/inset_maps/inset_maps.png |
-    |     :name: test_inset_maps_02                                   |   :align: center                           |
-    |                                                                 |                                            |
-    |     from eomaps import Maps                                     | |img_minsize|                              |
-    |     m = Maps(Maps.CRS.PlateCarree(central_longitude=-60))       |                                            |
-    |     m.add_feature.preset.ocean()                                |                                            |
-    |                                                                 |                                            |
-    |     m_i = m.new_inset_map(xy=(5, 45), radius=10,                |                                            |
-    |                           plot_position=(.3, .5), plot_size=.7, |                                            |
-    |                           boundary=dict(ec="r", lw=4),          |                                            |
-    |                           indicate_extent=dict(fc=(1,0,0,.5),   |                                            |
-    |                                                ec="r", lw=1)    |                                            |
-    |                           )                                     |                                            |
-    |     m_i.add_indicator_line(m, c="r")                            |                                            |
-    |                                                                 |                                            |
-    |     m_i.add_feature.preset.coastline()                          |                                            |
-    |     m_i.add_feature.preset.countries()                          |                                            |
-    |     m_i.add_feature.preset.ocean()                              |                                            |
-    |     m_i.add_feature.cultural.urban_areas(fc="r", scale=10)      |                                            |
-    |     m_i.add_feature.physical.rivers_europe(ec="b", lw=0.25,     |                                            |
-    |                                            fc="none", scale=10) |                                            |
-    |     m_i.add_feature.physical.lakes_europe(fc="b", scale=10)     |                                            |
-    |                                                                 |                                            |
-    +-----------------------------------------------------------------+--------------------------------------------+
+    +-----------------------------------------------------------------+---------------------------------------------------+
+    | .. code-block:: python                                          | .. image:: _static/inset_maps/inset_maps_fig2.png |
+    |     :name: test_inset_maps_2                                    |   :align: center                                  |
+    |                                                                 |                                                   |
+    |     from eomaps import Maps                                     | |img_minsize|                                     |
+    |     m = Maps(Maps.CRS.PlateCarree(central_longitude=-60))       |                                                   |
+    |     m.add_feature.preset.ocean()                                |                                                   |
+    |                                                                 |                                                   |
+    |     m_i = m.new_inset_map(xy=(5, 45), radius=10,                |                                                   |
+    |                           plot_position=(.3, .5), plot_size=.7, |                                                   |
+    |                           boundary=dict(ec="r", lw=4),          |                                                   |
+    |                           indicate_extent=dict(fc=(1,0,0,.5),   |                                                   |
+    |                                                ec="r", lw=1)    |                                                   |
+    |                           )                                     |                                                   |
+    |     m_i.add_indicator_line(m, c="r")                            |                                                   |
+    |                                                                 |                                                   |
+    |     m_i.add_feature.preset.coastline()                          |                                                   |
+    |     m_i.add_feature.preset.countries()                          |                                                   |
+    |     m_i.add_feature.preset.ocean()                              |                                                   |
+    |     m_i.add_feature.cultural.urban_areas(fc="r", scale=10)      |                                                   |
+    |     m_i.add_feature.physical.rivers_europe(ec="b", lw=0.25,     |                                                   |
+    |                                            fc="none", scale=10) |                                                   |
+    |     m_i.add_feature.physical.lakes_europe(fc="b", scale=10)     |                                                   |
+    |                                                                 |                                                   |
+    +-----------------------------------------------------------------+---------------------------------------------------+
 
 .. currentmodule:: eomaps.eomaps.Maps
 
