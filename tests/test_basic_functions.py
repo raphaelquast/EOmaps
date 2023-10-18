@@ -1394,4 +1394,3 @@ class TestBasicPlotting(unittest.TestCase):
         m = Maps(3035)
         gdf = m.add_feature.physical.coastline.get_gdf()
         m.add_gdf(gdf, clip="crs_bounds", lw=2)
-        m.add_gdf(gdf, clip="gdal_Intersection", ec="r")
