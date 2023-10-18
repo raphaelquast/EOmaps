@@ -1382,3 +1382,16 @@ class TestBasicPlotting(unittest.TestCase):
 
         self.assertTrue(m2.ax.spines["geo"].get_edgecolor() == (0, 1, 0, 1))
         self.assertTrue(m2.ax.spines["geo"].get_linewidth() == 4)
+
+    def test_add_gdf(self):
+        # test some basic gdf clipping capabilities
+
+        m = Maps()
+        m.set_extent([30, 50, 20, 60])
+        gdf = m.add_feature.physical.coastline.get_gdf()
+        m.add_gdf(gdf, clip="extent")
+
+        m = Maps(3035)
+        gdf = m.add_feature.physical.coastline.get_gdf()
+        m.add_gdf(gdf, clip="crs_bounds", lw=2)
+        m.add_gdf(gdf, clip="gdal_Intersection", ec="r")
