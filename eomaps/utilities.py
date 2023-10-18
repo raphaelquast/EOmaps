@@ -100,7 +100,6 @@ class SelectorButtons(Artist):
 
     def _clicked(self, event):
         if event.button == 1:
-            print([i.contains(event) for i in self.circles])
             for i, c in enumerate(self.circles):
                 q, data = c.contains(event)
                 if q:
