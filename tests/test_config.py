@@ -1,6 +1,7 @@
 import unittest
 import matplotlib.pyplot as plt
 from eomaps import Maps, _log
+from eomaps.helpers import BlitManager
 
 
 class TestConfig(unittest.TestCase):
@@ -43,6 +44,8 @@ class TestConfig(unittest.TestCase):
         self.assertTrue(m._use_interactive_mode is False)
         self.assertTrue(_log.getEffectiveLevel() == 30)
 
+        # revert to defaults
         Maps._use_interactive_mode = None
+        BlitManager._snapshot_on_update = None
 
         plt.close("all")

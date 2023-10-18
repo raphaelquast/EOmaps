@@ -3445,7 +3445,6 @@ class Maps(metaclass=_MapsMeta):
             self._snapshotting = True
 
             from PIL import Image
-            from IPython.display import display
 
             with ExitStack() as stack:
                 # don't clear on layer-changes
@@ -3478,8 +3477,21 @@ class Maps(metaclass=_MapsMeta):
                         self.show_layer(initial_layer)
                     else:
                         sn = self._get_snapshot()
+            try:
+                from IPython.display import display
 
-            display(Image.fromarray(sn, "RGBA"), display_id=True, clear=clear)
+                display(Image.fromarray(sn, "RGBA"), display_id=True, clear=clear)
+            except Exception:
+                _log.exception(
+                    "Unable to display the snapshot... is the script "
+                    "running in an IPython console?",
+                    exc_info=_log.getEffectiveLevel() <= logging.DEBUG,
+                )
+        except Exception:
+            _log.exception(
+                "Encountered an error while trying to create a snapshot.",
+                exc_info=_log.getEffectiveLevel() <= logging.DEBUG,
+            )
         finally:
             self._snapshotting = False
 
