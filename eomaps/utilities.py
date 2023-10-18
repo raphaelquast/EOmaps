@@ -72,7 +72,9 @@ class SelectorButtons(Artist):
         for c in self.circles:
             c.set_picker(10)
 
-        f.canvas.mpl_connect("pick_event", self._clicked)
+        # use "button_press_event" instead of "pick_event" to make sure that the
+        # selector can be used during toolbar-actions (e.g. if pan/zoom is active)
+        f.canvas.mpl_connect("button_press_event", self._clicked)
 
         self._draggable_box = None
 
@@ -97,9 +99,13 @@ class SelectorButtons(Artist):
         pass
 
     def _clicked(self, event):
-        if event.mouseevent.button == 1 and event.artist in self.circles:
-            self.set_active(event.artist)
-            self.on_clicked(self.circles.index(event.artist))
+        if event.button == 1:
+            print([i.contains(event) for i in self.circles])
+            for i, c in enumerate(self.circles):
+                q, data = c.contains(event)
+                if q:
+                    self.set_active(c)
+                    self.on_clicked(i)
 
     def set_draggable(self, b, m):
         """
