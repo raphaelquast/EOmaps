@@ -164,7 +164,11 @@ class _CallbackContainer(object):
                     obj = self._getobj(m)
 
                     # only include objects that are on the same layer
-                    if obj is not None and self._execute_cb(obj._m.layer):
+                    if (
+                        obj is not None
+                        and obj._execute_cb(obj._m.layer)
+                        and not obj._check_toolbar_mode()
+                    ):
                         objs.append(obj)
             else:
                 for m in ms:
@@ -173,7 +177,11 @@ class _CallbackContainer(object):
                     if event.inaxes == m.ax:
                         obj = self._getobj(m)
                         # only include objects that are on the same layer
-                        if obj is not None and self._execute_cb(obj._m.layer):
+                        if (
+                            obj is not None
+                            and obj._execute_cb(obj._m.layer)
+                            and not obj._check_toolbar_mode()
+                        ):
                             objs.append(obj)
         return objs
 
@@ -276,7 +284,6 @@ class _CallbackContainer(object):
             Indicator if the callback should be executed on the currently visible
             layer or not.
         """
-
         if self.execute_on_all_layers:
             return True
 
@@ -1025,10 +1032,6 @@ class ClickContainer(_ClickContainer):
             try:
                 self._event = event
 
-                # don't execute callbacks if a toolbar-action is active
-                if self._check_toolbar_mode():
-                    return
-
                 # execute onclick on the maps object that belongs to the clicked axis
                 # and forward the event to all forwarded maps-objects
                 for obj in self._objs:
@@ -1055,10 +1058,6 @@ class ClickContainer(_ClickContainer):
 
             try:
                 self._event = event
-
-                # don't execute callbacks if a toolbar-action is active
-                if self._check_toolbar_mode():
-                    return
 
                 # execute onclick on the maps object that belongs to the clicked axis
                 # and forward the event to all forwarded maps-objects
@@ -1201,10 +1200,6 @@ class MoveContainer(ClickContainer):
                                 obj._clear_temporary_artists()
                             self._m.BM._clear_temp_artists(self._method)
                         return
-
-                # don't execute callbacks if a toolbar-action is active
-                if self._check_toolbar_mode():
-                    return
 
                 # execute onclick on the maps object that belongs to the clicked axis
                 # and forward the event to all forwarded maps-objects
@@ -1502,10 +1497,6 @@ class PickContainer(_ClickContainer):
         if not self._execute_cb(self._m.layer):
             return
 
-        # don't execute callbacks if a toolbar-action is active
-        if self._check_toolbar_mode():
-            return
-
         # make sure temporary artists are cleared before executing new callbacks
         # to avoid having old artists around when callbacks are triggered again
         self._clear_temporary_artists()
@@ -1578,10 +1569,6 @@ class PickContainer(_ClickContainer):
             try:
                 # make sure pickcb is only executed if we are on the right layer
                 if not self._execute_cb(self._m.layer):
-                    return
-
-                # don't execute callbacks if a toolbar-action is active
-                if self._check_toolbar_mode():
                     return
 
                 if not self._artist_picked(event):
