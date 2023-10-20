@@ -470,6 +470,12 @@ class Maps(metaclass=_MapsMeta):
             crs=4326,
         )
 
+        # initialize the data-manager
+        self._data_manager = DataManager(self._proxy(self))
+        self._data_plotted = False
+        self._set_extent_on_plot = True
+
+
         self._layout_editor = None
 
         self._cb = CallbackContainer(weakref.proxy(self))  # accessor for the callbacks
@@ -493,11 +499,6 @@ class Maps(metaclass=_MapsMeta):
 
         if not hasattr(self.parent, "_execute_callbacks"):
             self.parent._execute_callbacks = True
-
-        # initialize the data-manager
-        self._data_manager = DataManager(self._proxy(self))
-        self._data_plotted = False
-        self._set_extent_on_plot = True
 
         # Make sure the figure-background patch is on an explicit layer
         # This is used to avoid having the background patch on each fetched
