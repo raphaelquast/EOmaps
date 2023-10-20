@@ -3655,7 +3655,7 @@ class Maps(metaclass=_MapsMeta):
             # flush events prior to savefig to avoi dissues with pending draw events
             # that cause wrong positioning of grid-labels and missing artists!
             self.f.canvas.flush_events()
-            self.f.savefig(*args, **kwargs)
+            self.f._mpl_orig_savefig(*args, **kwargs)
 
         if redraw is True:
             # reset the shading-axis-size to the used figure dpi
@@ -4090,6 +4090,14 @@ class Maps(metaclass=_MapsMeta):
             _handle_backends()
 
             self._f = plt.figure(**kwargs)
+
+            # override Figure.savefig with Maps.savefig but keep original
+            # method accessible via Figure._mpl_orig_savefig
+            # (this ensures that using the save-buttons in the gui or pressing
+            # control+s will redirect the save process to the eomaps routine)
+            self._f._mpl_orig_savefig = self._f.savefig
+            self._f.savefig = self.savefig
+
             _log.debug("EOmaps: New figure created")
 
             # make sure we keep a "real" reference otherwise overwriting the
