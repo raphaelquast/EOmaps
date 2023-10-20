@@ -19,3 +19,4 @@ Some additional functions and properties that might come in handy:
     Maps.fetch_companion_wms_layers
     Maps.inherit_classification
     Maps.inherit_data
+    Maps.update_spine_props
