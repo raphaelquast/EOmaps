@@ -5596,9 +5596,9 @@ class Maps(metaclass=_MapsMeta):
             """Set the behavior for WebMap services on axis or figure size changes."""
             refetch_wms_on_size_change(*args, **kwargs)
 
-    def update_spine_props(self, rounded=0, **kwargs):
+    def set_frame(self, rounded=0, **kwargs):
         """
-        Update the properties of the map boundary line (e.g. the spine)
+        Set the properties of the map boundary and the background patch.
 
         Parameters
         ----------
@@ -5607,10 +5607,40 @@ class Maps(metaclass=_MapsMeta):
             line. The corners will be rounded with respect to the provided
             fraction (0=no rounding, 1=max. radius). The default is None.
         kwargs :
-            Additional kwargs to style the spine
-            (e.g. edgecolor, linewidth, linestyle ...).
+            Additional kwargs to style the boundary line (e.g. the spine)
+            and the background patch
+
+            Possible args for the boundary-line:
+
+            - "edgecolor" or "ec": The line color
+            - "linewidth" or "lw": The line width
+            - "linestyle" or "ls": The line style
+            - "path_effects": A list of path-effects to apply to the line
+
+            Possible args for the background-patch:
+
+            - "facecolor" or "fc": The color of the background patch
+
+        Examples
+        --------
+
+        >>> m = Maps()
+        >>> m.add_feature.preset.ocean()
+        >>> m.set_frame(fc="r", ec="b", lw=3, rounded=.2)
+
+        >>> import matplotlib.patheffects as pe
+        >>> m = Maps()
+        >>> m.add_feature.preset.ocean(fc="k")
+        >>> m.set_frame(
+        >>>     facecolor=(.8, .8, 0, .5), edgecolor="w", linewidth=2,
+        >>>     rounded=.5,
+        >>>     path_effects=[pe.withStroke(linewidth=7, foreground="m")])
 
         """
+        for key in ("fc", "facecolor"):
+            if key in kwargs:
+                self.ax.patch.set_facecolor(kwargs.pop(key))
+
         self.ax.spines["geo"].update(kwargs)
 
         if rounded:

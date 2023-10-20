@@ -1370,12 +1370,12 @@ class TestBasicPlotting(unittest.TestCase):
         m.BM.blit_artists([line])
         plt.close("all")
 
-    def test_update_spine_props(self):
+    def test_set_frame(self):
         m = Maps(ax=211)
         m2 = m.new_map(crs=3857, ax=212)
 
-        m.update_spine_props(0.5, ec=(1, 1, 0, 1), lw=2)
-        m2.update_spine_props(0.9, ec=(0, 1, 0, 1), lw=4)
+        m.set_frame(0.5, ec=(1, 1, 0, 1), lw=2)
+        m2.set_frame(0.9, ec=(0, 1, 0, 1), lw=4)
 
         self.assertTrue(m.ax.spines["geo"].get_edgecolor() == (1, 1, 0, 1))
         self.assertTrue(m.ax.spines["geo"].get_linewidth() == 2)
