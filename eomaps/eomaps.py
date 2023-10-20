@@ -3664,10 +3664,12 @@ class Maps(metaclass=_MapsMeta):
             self.redraw()
 
         # restore the previous layer
-        if transparent is False:
+        elif transparent is False:
+            self.BM._refetch_layer("__SPINES__")
+            self.BM._refetch_layer("__BG__")
             self.BM._refetch_layer(layer_with_bg)
-            self.show_layer(initial_layer)
             self.BM.on_draw(None)
+            self.show_layer(initial_layer)
 
     def fetch_layers(self, layers=None):
         """
