@@ -475,7 +475,6 @@ class Maps(metaclass=_MapsMeta):
         self._data_plotted = False
         self._set_extent_on_plot = True
 
-
         self._layout_editor = None
 
         self._cb = CallbackContainer(weakref.proxy(self))  # accessor for the callbacks
