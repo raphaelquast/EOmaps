@@ -518,7 +518,6 @@ class GridLabels:
         if self._g._bounds is not None:
             self._kwargs.setdefault("clip_on", True)
             self._kwargs.setdefault("clip_box", self._g.m.ax.bbox)
-
         self._g.m.BM._before_fetch_bg_actions.append(self._redraw)
 
     def _set_exclude(self, exclude):
@@ -589,11 +588,7 @@ class GridLabels:
             return (float("inf"), float("inf"))
         return (x / z, y / z)
 
-    def remove(self):
-        """Remove the grid-labels from the map."""
-        if self._redraw in self._g.m.BM._before_fetch_bg_actions:
-            self._g.m.BM._before_fetch_bg_actions.remove(self._redraw)
-
+    def _remove(self):
         while len(self._texts) > 0:
             try:
                 t = self._texts.pop(-1)
@@ -609,6 +604,13 @@ class GridLabels:
             except Exception:
                 _log.exception("EOmaps: Problem while trying to remove a grid-label:")
                 pass
+
+    def remove(self):
+        """Remove the grid-labels from the map."""
+        if self._redraw in self._g.m.BM._before_fetch_bg_actions:
+            self._g.m.BM._before_fetch_bg_actions.remove(self._redraw)
+
+        self._remove()
 
     def _redraw(self, **kwargs):
         try:
@@ -630,7 +632,7 @@ class GridLabels:
             self._last_extent = extent
             self._last_ax_pos = pos
 
-            self.remove()
+            self._remove()
 
             self.add_labels()
         except Exception:

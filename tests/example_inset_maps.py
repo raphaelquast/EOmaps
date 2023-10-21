@@ -41,7 +41,8 @@ m3 = m.new_inset_map(
 )
 
 # populate the inset with some features
-m3.add_wms.OpenStreetMap.add_layer.stamen_terrain_background()
+m3.add_feature.preset("ocean", "land")
+m3.add_feature.preset.urban_areas(zorder=1)
 
 # print some data on all of the maps
 

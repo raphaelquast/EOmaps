@@ -353,6 +353,9 @@ class AddAnnotationWidget(QtWidgets.QWidget):
             # put the text of the currently selected annotation in the input-box
             text = ann.get_text()
             self.text_inp.setText(text)
+            # remember last input text
+            self._last_text_inp = text
+
             # set current annotation text color
             self.text_color.set_facecolor(
                 [int(i * 255) for i in to_rgba(ann.get_color())]
@@ -548,7 +551,7 @@ class AddAnnotationWidget(QtWidgets.QWidget):
 
     def stop(self):
         while len(self.cb_cids) > 0:
-            self.m.all.cb.click.remove(self.cb_cids.pop())
+            self.m.all.cb._always_active.remove(self.cb_cids.pop())
 
         self.set_selected_annotation_props()
 
@@ -618,7 +621,7 @@ class AddAnnotationWidget(QtWidgets.QWidget):
         # remove old callback if it is still attached
         self.stop()
         # attach new callback
-        self.cb_cids.append(self.m.all.cb.click.attach(cb))
+        self.cb_cids.append(self.m.all.cb._always_active.attach(cb))
         self.text_inp.setStyleSheet("background-color: rgba(200,0,0,100)")
         self.text_inp.setText(
             "<h3>Click on the map to add the annotation!</h3>"

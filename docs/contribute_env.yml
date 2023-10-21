@@ -3,7 +3,7 @@ channels:
   - conda-forge
 
 dependencies:
-  - rtree
+  - python = 3.10
   - numpy
   - scipy
   - pandas

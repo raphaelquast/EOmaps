@@ -1227,7 +1227,7 @@ class TestBasicPlotting(unittest.TestCase):
                 m2.set_data(*[[1, 2, 3]] * 3)
                 m2.plot_map()
                 m2.cb.click.attach.annotate()
-                m2.show()  # show the layer to trigger drawing
+                m.show_layer(m2.layer)  # show the layer to trigger drawing
                 self.assertTrue(
                     all(
                         i in m2._data_manager._all_data
@@ -1310,7 +1310,7 @@ class TestBasicPlotting(unittest.TestCase):
         self.assertTrue(len(m.BM._on_layer_activation[True][m2.layer]) == 1)
         self.assertTrue(len(m.BM._on_layer_activation[False][m2.layer]) == 1)
 
-        m2.show()  # show the layer to draw the artists!
+        m.show_layer(m2.layer)  # show the layer to draw the artists!
         m.f.canvas.draw()  # redraw since otherwise the map might not yet be created!
         self.assertTrue(len(m.BM._on_layer_activation[True][m2.layer]) == 1)
         self.assertTrue(len(m.BM._on_layer_activation[False][m2.layer]) == 0)
@@ -1369,3 +1369,28 @@ class TestBasicPlotting(unittest.TestCase):
         )
         m.BM.blit_artists([line])
         plt.close("all")
+
+    def test_set_frame(self):
+        m = Maps(ax=211)
+        m2 = m.new_map(crs=3857, ax=212)
+
+        m.set_frame(0.5, ec=(1, 1, 0, 1), lw=2)
+        m2.set_frame(0.9, ec=(0, 1, 0, 1), lw=4)
+
+        self.assertTrue(m.ax.spines["geo"].get_edgecolor() == (1, 1, 0, 1))
+        self.assertTrue(m.ax.spines["geo"].get_linewidth() == 2)
+
+        self.assertTrue(m2.ax.spines["geo"].get_edgecolor() == (0, 1, 0, 1))
+        self.assertTrue(m2.ax.spines["geo"].get_linewidth() == 4)
+
+    def test_add_gdf(self):
+        # test some basic gdf clipping capabilities
+
+        m = Maps()
+        m.set_extent([30, 50, 20, 60])
+        gdf = m.add_feature.physical.coastline.get_gdf()
+        m.add_gdf(gdf, clip="extent")
+
+        m = Maps(3035)
+        gdf = m.add_feature.physical.coastline.get_gdf()
+        m.add_gdf(gdf, clip="crs_bounds", lw=2)

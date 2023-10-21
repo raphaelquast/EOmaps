@@ -23,6 +23,7 @@ import matplotlib.pyplot as plt
 from matplotlib.gridspec import GridSpec, SubplotSpec
 
 import matplotlib.patches as mpatches
+from matplotlib.path import Path as mpath
 
 from cartopy import crs as ccrs
 
@@ -469,6 +470,11 @@ class Maps(metaclass=_MapsMeta):
             crs=4326,
         )
 
+        # initialize the data-manager
+        self._data_manager = DataManager(self._proxy(self))
+        self._data_plotted = False
+        self._set_extent_on_plot = True
+
         self._layout_editor = None
 
         self._cb = CallbackContainer(weakref.proxy(self))  # accessor for the callbacks
@@ -493,16 +499,16 @@ class Maps(metaclass=_MapsMeta):
         if not hasattr(self.parent, "_execute_callbacks"):
             self.parent._execute_callbacks = True
 
-        # initialize the data-manager
-        self._data_manager = DataManager(self._proxy(self))
-        self._data_plotted = False
-        self._set_extent_on_plot = True
-
         # Make sure the figure-background patch is on an explicit layer
         # This is used to avoid having the background patch on each fetched
         # background while maintaining the capability of restoring it
         if self.f.patch not in self.BM._bg_artists.get("__BG__", []):
+            self.f.patch.set_zorder(-2)
             self.BM.add_bg_artist(self.f.patch, layer="__BG__")
+
+        if self.ax.patch not in self.BM._bg_artists.get("__BG__", []):
+            self.ax.patch.set_zorder(-1)
+            self.BM.add_bg_artist(self.ax.patch, layer="__BG__")
 
         # Treat cartopy geo-spines separately in the blit-manager
         # to avoid issues with overlapping spines that are drawn on each layer
@@ -511,6 +517,9 @@ class Maps(metaclass=_MapsMeta):
         # is viewed on its own, but overlapping spines cause blurry boundaries)
         # TODO find a better way to deal with this!
         self._handle_spines()
+
+        # evaluate and cache crs boundary bounds (for extent clipping)
+        self._crs_boundary_bounds = self.crs_plot.boundary.bounds
 
         # a factory to create gridlines
         if self.parent == self:
@@ -1853,6 +1862,7 @@ class Maps(metaclass=_MapsMeta):
         verbose=False,
         only_valid=False,
         set_extent=False,
+        permanent=True,
         **kwargs,
     ):
         """
@@ -1978,6 +1988,10 @@ class Maps(metaclass=_MapsMeta):
             - if float, use the value as margin (0-1).
 
             The default is True.
+        permanent : bool, optional
+            If True, all created artists are added as "permanent" background
+            artists. If  False, artists are added as dynamic artists.
+            The default is True.
         kwargs :
             all remaining kwargs are passed to `geopandas.GeoDataFrame.plot(**kwargs)`
 
@@ -2097,7 +2111,10 @@ class Maps(metaclass=_MapsMeta):
         else:
             for art, prefix in zip(artists, prefixes):
                 art.set_label(f"EOmaps GeoDataframe ({prefix.lstrip('_')}, {len(gdf)})")
-                self.BM.add_bg_artist(art, layer)
+                if permanent is True:
+                    self.BM.add_bg_artist(art, layer)
+                else:
+                    self.BM.add_artist(art, layer)
         return artists
 
     def add_marker(
@@ -2111,6 +2128,7 @@ class Maps(metaclass=_MapsMeta):
         buffer=1,
         n=100,
         layer=None,
+        update=True,
         **kwargs,
     ):
         """
@@ -2158,6 +2176,9 @@ class Maps(metaclass=_MapsMeta):
         kwargs :
             kwargs passed to the matplotlib patch.
             (e.g. `zorder`, `facecolor`, `edgecolor`, `linewidth`, `alpha` etc.)
+        update : bool, optional
+            If True, call m.BM.update() to immediately show dynamic annotations
+            If False, dynamic annotations will only be shown at the next update
 
         Examples
         --------
@@ -2206,7 +2227,7 @@ class Maps(metaclass=_MapsMeta):
             **kwargs,
         )
 
-        if permanent is False:
+        if permanent is False and update:
             self.BM.update()
 
         return marker
@@ -2217,6 +2238,7 @@ class Maps(metaclass=_MapsMeta):
         xy=None,
         xy_crs=None,
         text=None,
+        update=True,
         **kwargs,
     ):
         """
@@ -2247,7 +2269,9 @@ class Maps(metaclass=_MapsMeta):
                 >>>     return "the string to print"
 
             The default is None.
-
+        update : bool, optional
+            If True, call m.BM.update() to immediately show dynamic annotations
+            If False, dynamic annotations will only be shown at the next update
         **kwargs
             kwargs passed to m.cb.annotate
 
@@ -2370,7 +2394,8 @@ class Maps(metaclass=_MapsMeta):
                     drag_coords=is_ID_annotation,
                 )
 
-        self.BM.update(clear=False)
+        if update:
+            self.BM.update(clear=False)
         return ann
 
     @wraps(Compass.__call__)
@@ -2737,7 +2762,7 @@ class Maps(metaclass=_MapsMeta):
 
         figax.set_navigate(False)
         figax.set_axis_off()
-        _ = figax.imshow(im, aspect="equal", zorder=999)
+        _ = figax.imshow(im, aspect="equal", zorder=999, interpolation_stage="rgba")
 
         self.BM.add_bg_artist(figax, layer)
 
@@ -2841,19 +2866,31 @@ class Maps(metaclass=_MapsMeta):
         extent : The extent in the given crs (x0, x1, y0, y1).
 
         """
+        bnds = self._crs_boundary_bounds
+
         # fast track if plot-crs is requested
         if crs == self.crs_plot:
-            return (*self.ax.get_xlim(), *self.ax.get_ylim())
-
-        if crs is not None:
-            crs = self._get_cartopy_crs(crs)
+            x0, x1, y0, y1 = (*self.ax.get_xlim(), *self.ax.get_ylim())
         else:
-            crs = self._get_cartopy_crs(4326)
+            if crs is not None:
+                crs = self._get_cartopy_crs(crs)
+            else:
+                crs = self._get_cartopy_crs(4326)
 
-        return self.ax.get_extent(crs=crs)
+            x0, x1, y0, y1 = self.ax.get_extent(crs=crs)
+
+        # clip the map-extent with respect to the boundary bounds
+        # (to avoid returning values outside the crs bounds)
+        try:
+            x0, x1 = np.clip([x0, x1], bnds[0], bnds[2])
+            y0, y1 = np.clip([y0, y1], bnds[1], bnds[3])
+        except Exception:
+            _log.debug("EOmaps: Error while trying to clip map extent", exc_info=True)
+
+        return x0, x1, y0, y1
 
     def _calc_vmin_vmax(self, vmin=None, vmax=None):
-        if self._data_manager.z_data is None:
+        if self.data is None:
             return vmin, vmax
 
         calc_min, calc_max = vmin is None, vmax is None
@@ -3255,7 +3292,7 @@ class Maps(metaclass=_MapsMeta):
         except Exception:
             raise TypeError(f"EOmaps: Unable to combine the layer-names {args}")
 
-    def show_layer(self, *args):
+    def show_layer(self, *args, clear=True):
         """
         Show a single layer or (transparently) overlay multiple selected layers.
 
@@ -3336,12 +3373,11 @@ class Maps(metaclass=_MapsMeta):
 
     def show(self, clear=True):
         """
-        Make the layer of this `Maps`-object visible.
+        Show the map (only required for non-interactive matplotlib backends).
 
-        This is just a shortcut for `m.show_layer(m.layer)`
+        This is just a convenience function to call matplotlib's `plt.show()`!
 
-        If matploltib is used in non-interactive mode, (e.g. `plt.ioff()`)
-        `plt.show()` is called as well!
+        To switch the currently visible layer, see :py:meth:`Maps.show_layer`
 
         Parameters
         ----------
@@ -3351,9 +3387,10 @@ class Maps(metaclass=_MapsMeta):
 
             If True, clear the active cell before plotting a snapshot of the figure.
             The default is True.
+        See Also
+        --------
+        show_layer : Set the currently visible layer.
         """
-
-        self.show_layer(self.layer)
 
         if not plt.isinteractive():
             try:
@@ -3365,7 +3402,7 @@ class Maps(metaclass=_MapsMeta):
                 # print a snapshot to the active ipython cell in case the
                 # inline-backend is used
                 if active_backend in ["module://matplotlib_inline.backend_inline"]:
-                    self.BM.update(clear=clear)
+                    self.BM.update(clear_snapshot=clear)
                 else:
                     plt.show()
 
@@ -3408,7 +3445,6 @@ class Maps(metaclass=_MapsMeta):
             self._snapshotting = True
 
             from PIL import Image
-            from IPython.display import display
 
             with ExitStack() as stack:
                 # don't clear on layer-changes
@@ -3441,8 +3477,21 @@ class Maps(metaclass=_MapsMeta):
                         self.show_layer(initial_layer)
                     else:
                         sn = self._get_snapshot()
+            try:
+                from IPython.display import display
 
-            display(Image.fromarray(sn, "RGBA"), display_id=True, clear=clear)
+                display(Image.fromarray(sn, "RGBA"), display_id=True, clear=clear)
+            except Exception:
+                _log.exception(
+                    "Unable to display the snapshot... is the script "
+                    "running in an IPython console?",
+                    exc_info=_log.getEffectiveLevel() <= logging.DEBUG,
+                )
+        except Exception:
+            _log.exception(
+                "Encountered an error while trying to create a snapshot.",
+                exc_info=_log.getEffectiveLevel() <= logging.DEBUG,
+            )
         finally:
             self._snapshotting = False
 
@@ -3606,7 +3655,7 @@ class Maps(metaclass=_MapsMeta):
             # flush events prior to savefig to avoi dissues with pending draw events
             # that cause wrong positioning of grid-labels and missing artists!
             self.f.canvas.flush_events()
-            self.f.savefig(*args, **kwargs)
+            self.f._mpl_orig_savefig(*args, **kwargs)
 
         if redraw is True:
             # reset the shading-axis-size to the used figure dpi
@@ -3615,10 +3664,12 @@ class Maps(metaclass=_MapsMeta):
             self.redraw()
 
         # restore the previous layer
-        if transparent is False:
+        elif transparent is False:
+            self.BM._refetch_layer("__SPINES__")
+            self.BM._refetch_layer("__BG__")
             self.BM._refetch_layer(layer_with_bg)
-            self.show_layer(initial_layer)
             self.BM.on_draw(None)
+            self.show_layer(initial_layer)
 
     def fetch_layers(self, layers=None):
         """
@@ -4022,7 +4073,7 @@ class Maps(metaclass=_MapsMeta):
                 _log.exception(
                     "EOmaps: Encountered a problem while trying to open "
                     "the companion widget",
-                    exec_info=_log.getEffectiveLevel() <= logging.DEBUG,
+                    exc_info=_log.getEffectiveLevel() <= logging.DEBUG,
                 )
         elif event.key == "ctrl+c":
             try:
@@ -4031,7 +4082,7 @@ class Maps(metaclass=_MapsMeta):
                 _log.exception(
                     "EOmaps: Encountered a problem while trying to export the figure "
                     "to the clipboard.",
-                    exec_info=_log.getEffectiveLevel() <= logging.DEBUG,
+                    exc_info=_log.getEffectiveLevel() <= logging.DEBUG,
                 )
 
     def _init_figure(self, ax=None, plot_crs=None, **kwargs):
@@ -4041,6 +4092,14 @@ class Maps(metaclass=_MapsMeta):
             _handle_backends()
 
             self._f = plt.figure(**kwargs)
+
+            # override Figure.savefig with Maps.savefig but keep original
+            # method accessible via Figure._mpl_orig_savefig
+            # (this ensures that using the save-buttons in the gui or pressing
+            # control+s will redirect the save process to the eomaps routine)
+            self._f._mpl_orig_savefig = self._f.savefig
+            self._f.savefig = self.savefig
+
             _log.debug("EOmaps: New figure created")
 
             # make sure we keep a "real" reference otherwise overwriting the
@@ -4212,9 +4271,9 @@ class Maps(metaclass=_MapsMeta):
 
             m.cleanup()
 
-        # close the pyqt widget if there is one
-        if self._companion_widget is not None:
-            self._companion_widget.close()
+            # close the pyqt widget if there is one
+            if m._companion_widget is not None:
+                m._companion_widget.close()
 
         # de-register colormaps
         for cmap in self._registered_cmaps:
@@ -4407,7 +4466,7 @@ class Maps(metaclass=_MapsMeta):
                 + f"x={xorig.shape}, y={yorig.shape} do not match!"
             )
 
-        return z_data, xorig, yorig, ids, parameter
+        return z_data, np.asanyarray(xorig), np.asanyarray(yorig), ids, parameter
 
     def inherit_classification(self, m):
         """
@@ -5192,6 +5251,13 @@ class Maps(metaclass=_MapsMeta):
 
         # exclude private layers
         if exclude_private:
+            # for python <3.9 compatibility
+            def remove_prefix(text, prefix):
+                if text.startswith(prefix):
+                    return text[len(prefix) :]
+                return text
+
+            layers = {remove_prefix(i, "__inset_") for i in layers}
             layers = {i for i in layers if not i.startswith("__")}
 
         if exclude:
@@ -5539,3 +5605,109 @@ class Maps(metaclass=_MapsMeta):
         def refetch_wms_on_size_change(self, *args, **kwargs):
             """Set the behavior for WebMap services on axis or figure size changes."""
             refetch_wms_on_size_change(*args, **kwargs)
+
+    def set_frame(self, rounded=0, **kwargs):
+        """
+        Set the properties of the map boundary and the background patch.
+
+        Parameters
+        ----------
+        rounded : float, optional
+            If provided, use a rectangle with rounded corners as map boundary
+            line. The corners will be rounded with respect to the provided
+            fraction (0=no rounding, 1=max. radius). The default is None.
+        kwargs :
+            Additional kwargs to style the boundary line (e.g. the spine)
+            and the background patch
+
+            Possible args for the boundary-line:
+
+            - "edgecolor" or "ec": The line color
+            - "linewidth" or "lw": The line width
+            - "linestyle" or "ls": The line style
+            - "path_effects": A list of path-effects to apply to the line
+
+            Possible args for the background-patch:
+
+            - "facecolor" or "fc": The color of the background patch
+
+        Examples
+        --------
+
+        >>> m = Maps()
+        >>> m.add_feature.preset.ocean()
+        >>> m.set_frame(fc="r", ec="b", lw=3, rounded=.2)
+
+        >>> import matplotlib.patheffects as pe
+        >>> m = Maps()
+        >>> m.add_feature.preset.ocean(fc="k")
+        >>> m.set_frame(
+        >>>     facecolor=(.8, .8, 0, .5), edgecolor="w", linewidth=2,
+        >>>     rounded=.5,
+        >>>     path_effects=[pe.withStroke(linewidth=7, foreground="m")])
+
+        """
+        for key in ("fc", "facecolor"):
+            if key in kwargs:
+                self.ax.patch.set_facecolor(kwargs.pop(key))
+
+        self.ax.spines["geo"].update(kwargs)
+
+        if rounded:
+            assert (
+                rounded <= 1
+            ), "EOmaps: rounded corner fraction must be between 0 and 1"
+
+            self.ax._EOmaps_rounded_spine_frac = rounded
+            theta = np.linspace(0, np.pi / 2, 50)  # use 50 intermediate points
+            s, c = np.sin(theta), np.cos(theta)
+
+            # attach a function to dynamically update the corners of the
+            # map boundary prior to fetching a background
+            # Note: this function is only attached once and the relevant
+            # properties are fetched from the axes!
+            if not getattr(self.ax, "_EOmaps_rounded_spine_attached", False):
+
+                def cb(*args, **kwargs):
+                    if self.ax._EOmaps_rounded_spine_frac == 0:
+                        return
+
+                    x0, x1, y0, y1 = self.get_extent(self.crs_plot)
+                    r = min(x1 - x0, y1 - y0) * self.ax._EOmaps_rounded_spine_frac / 2
+
+                    xs = [
+                        x0,
+                        *(x0 + r - r * c),
+                        x0 + r,
+                        x1 - r,
+                        *(x1 - r + r * s),
+                        x1,
+                        x1,
+                        *(x1 - r + r * c),
+                        x1 - r,
+                        x0 + r,
+                        *(x0 + r - r * s),
+                        x0,
+                    ]
+
+                    ys = [
+                        y1 - r,
+                        *(y1 - r + r * s),
+                        y1,
+                        y1,
+                        *(y1 - r + r * c),
+                        y1 - r,
+                        y0 + r,
+                        *(y0 + r - r * s),
+                        y0,
+                        y0,
+                        *(y0 + r - r * c),
+                        y0 + r,
+                    ]
+
+                    path = mpath(np.column_stack((xs, ys)))
+                    self.ax.set_boundary(path, transform=self.crs_plot)
+
+                self.BM._before_fetch_bg_actions.append(cb)
+                self.ax._EOmaps_rounded_spine_attached = True
+                self.BM.update()

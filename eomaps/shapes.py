@@ -177,6 +177,8 @@ class Shapes(object):
         shapeclass_name = "_" + "".join(i.capitalize() for i in shape.split("_"))
 
         shp = getattr(self, shapeclass_name)(self._m)
+        shp._select_radius = False  # disable radius selection based on dataset
+
         for key, val in kwargs.items():
             setattr(shp, key, val)
         return shp
@@ -362,6 +364,8 @@ class Shapes(object):
             self._m = m
             self._n = None
 
+            self._select_radius = True
+
         def _get_auto_n(self):
             s = self._m._data_manager._get_current_datasize()
 
@@ -403,6 +407,44 @@ class Shapes(object):
                 self._n = 1
             else:
                 self._n = val
+
+        @property
+        def _selected_radius(self):
+            # option to override radius-selection in case the shape is used
+            # to create markers (e.g. call is independent of plot-extent)
+            if self._select_radius is False:
+                return self.radius
+
+            # if radius was provided as a array (for individual shape radius)
+            # select values according to the dat-manager query to get values
+            # of visible points
+
+            # if no data is assigned, just return the radius
+            if not self._m._data_manager._current_data:
+                return self.radius
+
+            # check if mutiple individual x-y radius was provided
+            q1 = isinstance(self.radius, tuple) and isinstance(
+                self.radius[0], np.ndarray
+            )
+            # chedk if multiple radius values were provided
+            q2 = isinstance(self.radius, np.ndarray)
+
+            if q1 or q2:
+                mask = self._m._data_manager._get_q()[0]
+
+                # quick exit if full data is in extent
+                if mask is True:
+                    return self.radius
+
+            if q1:
+                radius = (self.radius[0][mask], self.radius[1][mask])
+            elif q2:
+                radius = self.radius[mask]
+            else:
+                radius = self.radius
+
+            return radius
 
     class _GeodCircles(_ShapeBase):
         name = "geod_circles"
@@ -457,7 +499,10 @@ class Shapes(object):
 
         @radius.setter
         def radius(self, val):
-            self._radius = np.asanyarray(np.atleast_1d(val))
+            if isinstance(val, (int, float, np.number)):
+                self._radius = val
+            else:
+                self._radius = np.asanyarray(np.atleast_1d(val))
 
         @property
         def radius_crs(self):
@@ -562,8 +607,9 @@ class Shapes(object):
             return xs, ys, mask
 
         def get_coll(self, x, y, crs, **kwargs):
-
-            xs, ys, mask = self._get_geod_circle_points(x, y, crs, self.radius, self.n)
+            xs, ys, mask = self._get_geod_circle_points(
+                x, y, crs, self._selected_radius, self.n
+            )
 
             # only plot polygons if they contain 2 or more vertices
             vertmask = np.count_nonzero(mask, axis=0) > 2
@@ -800,7 +846,7 @@ class Shapes(object):
 
         def get_coll(self, x, y, crs, **kwargs):
             xs, ys, mask = self._get_ellipse_points(
-                x, y, crs, self.radius, self.radius_crs, n=self.n
+                x, y, crs, self._selected_radius, self.radius_crs, n=self.n
             )
 
             # compress the coordinates (masked arrays produce artefacts on the boundary
@@ -994,7 +1040,7 @@ class Shapes(object):
 
         def _get_polygon_coll(self, x, y, crs, **kwargs):
             verts, mask = self._get_rectangle_verts(
-                x, y, crs, self.radius, self.radius_crs, self.n
+                x, y, crs, self._selected_radius, self.radius_crs, self.n
             )
 
             # remember masked points
@@ -1047,7 +1093,7 @@ class Shapes(object):
 
         def _get_trimesh_coll(self, x, y, crs, **kwargs):
             tri, mask = self._get_trimesh_rectangle_triangulation(
-                x, y, crs, self.radius, self.radius_crs, self.n
+                x, y, crs, self._selected_radius, self.radius_crs, self.n
             )
             # remember masked points
             self._m._data_mask = mask
@@ -1124,6 +1170,24 @@ class Shapes(object):
             return dict(size=self._size, marker=self._marker)
 
         @property
+        def _selected_size(self):
+            # chedck if multiple size values were provided
+            q = isinstance(self._size, np.ndarray)
+
+            if q:
+                mask = self._m._data_manager._get_q()[0]
+
+                # quick exit if full data is in extent
+                if mask is True:
+                    return self._size
+
+                size = self._size[mask]
+            else:
+                size = self._size
+
+            return size
+
+        @property
         def radius(self):
             radius = Shapes._get_radius(self._m, "estimate", "in")
             return radius
@@ -1138,7 +1202,12 @@ class Shapes(object):
             )
             color_and_array["c"] = color_and_array["array"]
             coll = self._m.ax.scatter(
-                x, y, s=self._size, marker=self._marker, **color_and_array, **kwargs
+                x,
+                y,
+                s=self._selected_size,
+                marker=self._marker,
+                **color_and_array,
+                **kwargs,
             )
             return coll
 
@@ -1662,7 +1731,9 @@ class Shapes(object):
             self, maxsize=5e6, interp_order=0, aggregator="mean", valid_fraction=0
         ):
             """
-            Draw the data as a rectangular raster (opt. aggregate before plotting).
+            Draw the data as a rectangular raster  (>> usable for very large datasets!)
+
+            (optionally aggregate data prior to plotting)
 
             By default, large datasets (>5 million datapoints) will be aggregated
             prior to plotting to considerably speed up initialization of the plot.
@@ -1710,6 +1781,9 @@ class Shapes(object):
                   reliable aggregated estimate of the actual data)
                 - "min", "max", "mean", "median", "std", "sum": calculate the
                   corresponding metrics of the data inside the aggregation blocks.
+                - "mode": evaluate the most commonly encountered value within each
+                  aggregation bin (NOTE: this is computationally intense and can become
+                  slow if `maxsize` is set too large!)
                 - "fast_mean", "fast_sum": use a fast and memory-efficient method to
                   evaluate the corresponding metrics.
                   NOTE: this uses `numpy.einsum` for aggregation which does not check
@@ -1731,7 +1805,7 @@ class Shapes(object):
                 Percentage (0-1) of the masked pixels within an aggregation box
                 that will result in a masked value.
                 (e.g. 0.1 -> if more than 10% of the data is masked in an aggregation
-                 box, the aggregated value will be masked). The default is 0
+                box, the aggregated value will be masked). The default is 0
             interp_order: int
                 (ONLY used if method = "scipy")
                 The spline interpolation order for zooming.

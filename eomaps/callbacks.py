@@ -1181,7 +1181,10 @@ class PickCallbacks(_ClickCallbacks):
             # get the selected geometry and re-project it to the desired crs
             geom = self.m.cb.pick[picker_name].data.loc[[ID]].geometry
             # add the geometry to the map
-            self.m.add_gdf(geom, temporary_picker=picker_name, **kwargs)
+            if permanent is False:
+                self.m.add_gdf(geom, temporary_picker=picker_name, **kwargs)
+            else:
+                self.m.add_gdf(geom, permanent=permanent, **kwargs)
 
 
 class ClickCallbacks(_ClickCallbacks):

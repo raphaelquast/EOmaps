@@ -13,6 +13,7 @@ data = data.sample(3000)  # take 3000 random datapoints from the dataset
 # ------------------------------------
 
 m = Maps(crs=3857, figsize=(9, 5))
+m.set_frame(rounded=0.2, lw=1.5, ec="midnightblue", fc="ivory")
 m.text(0.5, 0.97, "What a nice figure", fontsize=12)
 
 m.add_feature.preset.ocean(fc="lightsteelblue")

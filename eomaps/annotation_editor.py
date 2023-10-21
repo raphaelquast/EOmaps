@@ -177,7 +177,7 @@ class DraggableAnnotation(DraggableBase):
                 ann.get_transform().inverted().transform((self.ox + dx, self.oy + dy))
             )
         elif self._what == "xy":
-            if not self._drag_coords:
+            if not self._drag_coords and self.annotation.figure is not None:
                 self.annotation.figure._EOmaps_parent._log_on_event(
                     "warning",
                     "EOmaps: The position of annotations based on IDs "
@@ -234,7 +234,9 @@ class DraggableAnnotation(DraggableBase):
                 # emit signal if provided
                 if self._select_signal is not None:
                     self._select_signal()
-        self.annotation.figure._EOmaps_parent.BM.update()
+
+        if self.annotation.figure is not None:
+            self.annotation.figure._EOmaps_parent.BM.update()
 
     def on_motion(self, evt):
         # check if a keypress event triggered a change of the interaction
@@ -249,7 +251,8 @@ class DraggableAnnotation(DraggableBase):
                 self.mouse_y = evt.y
 
         super().on_motion(evt)
-        self.annotation.figure._EOmaps_parent.BM.update(artists=[self.annotation])
+        if self.annotation.figure is not None:
+            self.annotation.figure._EOmaps_parent.BM.update(artists=[self.annotation])
         # emit signal if provided
         if self._edit_signal is not None:
             self._edit_signal()
@@ -443,8 +446,10 @@ class AnnotationEditor(_EditorBase):
             )
 
             self.m._emit_signal("annotationEditorActivated")
+            self.m.BM._clear_all_temp_artists()
 
             self.show_info_text()
+            self.m.cb.execute_callbacks(False)
             _log.info("EOmaps: Annotations editable!")
         else:
             for ann in self._annotations:
@@ -463,6 +468,7 @@ class AnnotationEditor(_EditorBase):
 
             self.m._emit_signal("annotationEditorDeactivated")
             self.m.BM.update()
+            self.m.cb.execute_callbacks(True)
 
     def _make_ann_editable(self, ann, drag_coords=True):
         # avoid issues with annotations that are removed during interactive editing
@@ -553,7 +559,12 @@ class AnnotationEditor(_EditorBase):
         self.m.BM.update()
 
     def print_code(
-        self, m_name="m", what="all", sanitize_coordinates=True, replace=None
+        self,
+        m_name="m",
+        what="all",
+        sanitize_coordinates=True,
+        replace=None,
+        use_ids=False,
     ):
         """
         Print the code to reproduce the annotations to the console.
@@ -601,6 +612,12 @@ class AnnotationEditor(_EditorBase):
 
             >>> my_textfunc = lambda ID, **kwargs: str(ID)
             >>> m._edit_annotations.print_code(replace={"text": my_textfunc})
+        use_ids : bool, optional
+            If True, ID values are used to identify the annotation-positions.
+            (NOTE: this can cause problems because the Maps-object must have
+             the correct data assigned to identify the annotation!)
+            If False, always use the current position of the annotation
+            as input-argument for the returned code.
 
         """
 
@@ -661,7 +678,7 @@ class AnnotationEditor(_EditorBase):
             # remove arguments that should not be printed
             kwargs.pop("permanent", None)
             if "ID" in kwargs:
-                if kwargs["ID"] is None:
+                if kwargs["ID"] is None or use_ids is False:
                     kwargs.pop("ID")
                 else:
                     kwargs.pop("xy")
