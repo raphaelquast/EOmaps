@@ -361,8 +361,15 @@ class GridLines:
         """Remove the grid from the map."""
         self._remove()
 
-        if self in self.m._grid._gridlines:
-            self.m._grid._gridlines.remove(self)
+        factory = self.m.parent._grid
+        if self in factory._gridlines:
+            factory._gridlines.remove(self)
+
+        for gl in self._grid_labels:
+            gl.remove()
+
+        if self._dynamic is False:
+            self.m.redraw(self.layer)
 
     def add_labels(
         self,
@@ -466,6 +473,9 @@ class GridLines:
 
         # remember attached labels
         self._grid_labels.append(gl)
+
+        if self._dynamic is False:
+            self.m.redraw(self.layer)
 
         return gl
 
