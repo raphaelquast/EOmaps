@@ -15,7 +15,27 @@ How to attach callbacks to a map
 
 Callbacks are used to **execute functions** when you **click on a map** or **press a key** on the keyboard**.
 
-They are grouped into the following event categories:
+There are many useful :ref:`predefined_callbacks`, but it is also possible to define :ref:`custom_callbacks` and attach them to the map.
+
+
+- To attach a :ref:`pre-defined callback <predefined_callbacks>` to a :py:class:`Maps` object, use:
+
+
+  .. code-block:: python
+
+      m.cb.< EVENT CATEGORY >.attach.< CALLBACK NAME >( **kwargs )
+
+- To attach a :ref:`custom callback <custom_callbacks>` to a :py:class:`Maps` object, use:
+
+  .. code-block:: python
+
+      def my_callback(**kwargs):
+          ...
+
+      m.cb.< EVENT CATEGORY >.attach(my_callback, **kwargs )
+
+
+The ``< EVENT CATEGORY >`` hereby specifies the event that will trigger the callback:
 
 .. table::
     :width: 100 %
@@ -32,27 +52,18 @@ They are grouped into the following event categories:
     +--------------------------------------------------------------+----------------------------------------------------------------------------------+
 
 
-There are many useful :ref:`predefined_callbacks`, but it is also possible to define :ref:`custom_callbacks` and attach them to the map.
-
-To attach a :ref:`pre-defined callback <predefined_callbacks>` to a :py:class:`Maps` object, use  ``m.cb.< EVENT >.attach.< CALLBACK >( **kwargs )``
-
-- ``< EVENT >`` specifies the event that will trigger the callback (e.g. click, pick, move, keypress).
-- ``< CALLBACK >`` specifies the action you want to assign to the event.
-
-To attach a :ref:`custom callback <custom_callbacks>` to a :py:class:`Maps` object, use  ``m.cb.< EVENT >.attach.(< CALLBACK FUNCTION >, **kwargs )``
-
-- ``< EVENT >`` specifies the event that will trigger the callback (e.g. click, pick, move, keypress).
-- ``< CALLBACK FUNCTION >`` is the function you want to execute
 
 
 .. admonition:: Callbacks are layer sensitive!
 
-    - Callbacks are only executed if the layer of the associated :py:class:`Maps` object is visible!
+    Callbacks are only executed if the layer of the associated :py:class:`Maps` object is visible!
 
-        - To define callbacks that are executed independent of the visible layer, attach it to the ``"all"``
-          layer using something like ``m.all.cb.click.attach.annotate()``.
+    To define callbacks that are executed independent of the visible layer, you have the following possibilities:
 
-    - Before attaching **pick** callbacks you must plot a dataset first!
+        - | Attach the callbacks to the ``"all"`` layer using something like:
+          | ``m.all.cb.click.attach.annotate()``
+        - | Execute callbacks of an event category independent of the visible layer by setting:
+          | ``m.cb.< EVENT CATEGORY >.set_execute_on_all_layers(True)``
 
 
 .. table::
@@ -96,16 +107,13 @@ In addition, each callback-container supports the following useful methods:
     :width: 100 %
     :widths: auto
 
-    +---------------------------------------------------------------------------------------------+---------------------------------------------------------------------------+
-    | :class:`attach <eomaps.cb_container.ClickContainer._attach>`                                | Attach custom or pre-defined callbacks to the map.                        |
-    +---------------------------------------------------------------------------------------------+---------------------------------------------------------------------------+
-    | :class:`remove <eomaps.cb_container.ClickContainer.remove>`                                 | Remove previously attached callbacks from the map.                        |
-    +---------------------------------------------------------------------------------------------+---------------------------------------------------------------------------+
-    | :class:`get <eomaps.cb_container.ClickContainer._get>`                                      | Accessor for objects generated/retrieved by callbacks.                    |
-    +---------------------------------------------------------------------------------------------+---------------------------------------------------------------------------+
-    | :class:`set_sticky_modifiers <eomaps.cb_container.ClickContainer.set_sticky_modifiers>`     | Define keys on the keyboard that should be treated as "sticky modifiers". |
-    +---------------------------------------------------------------------------------------------+---------------------------------------------------------------------------+
-
+    +--------------------------------------------------------------------------------------------------+--------------------------------------------------------------------------+
+    | :class:`attach <eomaps.cb_container.ClickContainer._attach>`                                     | Attach custom or pre-defined callbacks to the map.                       |
+    +--------------------------------------------------------------------------------------------------+--------------------------------------------------------------------------+
+    | :class:`remove <eomaps.cb_container.ClickContainer.remove>`                                      | Remove previously attached callbacks from the map.                       |
+    +--------------------------------------------------------------------------------------------------+--------------------------------------------------------------------------+
+    | :class:`get <eomaps.cb_container.ClickContainer._get>`                                           | Accessor for objects generated/retrieved by callbacks.                   |
+    +--------------------------------------------------------------------------------------------------+--------------------------------------------------------------------------+
 
 .. currentmodule:: eomaps.cb_container.ClickContainer
 
@@ -115,7 +123,9 @@ In addition, each callback-container supports the following useful methods:
     share_events
     forward_events
     add_temporary_artist
+    set_sticky_modifiers
     set_execute_during_toolbar_action
+    set_execute_on_all_layers
 
 
 Using callbacks with the companion-widget
