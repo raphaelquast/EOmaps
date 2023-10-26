@@ -114,16 +114,16 @@ With a few lines of code, you can turn your maps into interactive data-analysis 
     :width: 100%
     :widths: 50 50
 
-    * - |  :doc:`api_callbacks`
+    * - |  :doc:`api_companion_widget`
+        |  A graphical user-interface to interact with the map.
+      - |  :doc:`api_callbacks`
         |  Turn your maps into interactive data-analysis widgets.
-      - |  :doc:`api_layout_editor`
+    * - |  :doc:`api_layout_editor`
         |  Interactively re-arrange and re-size axes of a figure.
-    * - |  :doc:`api_draw`
+      - |  :doc:`api_draw`
         |  Interactively draw geometries on a map and export them as shapefiles.
-      - |  :doc:`api_utils`
+    * - |  :doc:`api_utils`
         |  A collection of utility widgets (layer-sliders, layer-selectors)
-    * - |  :doc:`api_read_data`
-        |  Read data from NetCDF, GeoTIFF or CSV files.
       -
 
 Miscellaneous
@@ -137,10 +137,10 @@ Miscellaneous
         |  Details on logging.
       - |  :doc:`api_command_line_interface`
         |  How to use the command-line interface `eomaps`.
-    * - |  :doc:`api_misc`
+    * - |  :doc:`api_read_data`
+        |  Read data from NetCDF, GeoTIFF or CSV files.
+      - |  :doc:`api_misc`
         |  Additional functions and properties that might come in handy.
-      -
-
 
 
 
