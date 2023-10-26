@@ -124,9 +124,7 @@ With a few lines of code, you can turn your maps into interactive data-analysis 
         |  A collection of utility widgets (layer-sliders, layer-selectors)
     * - |  :doc:`api_read_data`
         |  Read data from NetCDF, GeoTIFF or CSV files.
-      - |  :doc:`api_misc`
-        |  Additional functions and properties that might come in handy.
-
+      -
 
 Miscellaneous
 ~~~~~~~~~~~~~
@@ -139,6 +137,9 @@ Miscellaneous
         |  Details on logging.
       - |  :doc:`api_command_line_interface`
         |  How to use the command-line interface `eomaps`.
+    * - |  :doc:`api_misc`
+        |  Additional functions and properties that might come in handy.
+
 
 
 
