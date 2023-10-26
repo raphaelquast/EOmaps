@@ -8,66 +8,6 @@
 ... a collection of examples that show how to create beautiful interactive maps.
 
 
-.. |eximg01| image:: _static/fig1.gif
-   :width: 100%
-   :align: middle
-   :target: `ex_1`_
-.. |eximg02| image:: _static/fig2.png
-   :width: 100%
-   :align: middle
-   :target: `ex_2`_
-.. |eximg03| image:: _static/fig3.gif
-   :width: 100%
-   :align: middle
-   :target: `ex_3`_
-.. |eximg04| image:: _static/fig4.gif
-   :width: 100%
-   :align: middle
-   :target: `ex_4`_
-.. |eximg05| image:: _static/fig5.gif
-   :width: 100%
-   :align: middle
-   :target: `ex_5`_
-.. |eximg06| image:: _static/fig6.gif
-   :width: 100%
-   :align: middle
-   :target: `ex_6`_
-.. |eximg07| image:: _static/fig7.gif
-   :width: 100%
-   :align: middle
-   :target: `ex_7`_
-.. |eximg08| image:: _static/fig8.gif
-   :width: 100%
-   :align: middle
-   :target: `ex_8`_
-.. |eximg09| image:: _static/fig9.gif
-   :width: 100%
-   :align: middle
-   :target: `ex_9`_
-.. |eximg10| image:: _static/example_row_col_selector.gif
-   :width: 100%
-   :align: middle
-   :target: `ex_10`_
-.. |eximg11| image:: _static/example_inset_maps.png
-   :width: 100%
-   :align: middle
-   :target: `ex_11`_
-.. |eximg12| image:: _static/example_lines.png
-   :width: 100%
-   :align: middle
-   :target: `ex_12`_
-.. |eximg13| image:: _static/example_gridlines.png
-   :width: 100%
-   :align: middle
-   :target: `ex_13`_
-.. |eximg14| image:: _static/example_contour.png
-   :width: 100%
-   :align: middle
-   :target: `ex_14`_
-
-.. |eximg15| replace:: ...
-
-
 .. table::
   :width: 100%
 
@@ -78,6 +18,7 @@
   +-----------+-----------+-----------+-----------+-----------+
   | |eximg11| | |eximg12| | |eximg13| | |eximg14| | |eximg15| |
   +-----------+-----------+-----------+-----------+-----------+
+
 
 .. contents:: Contents:
   :local:

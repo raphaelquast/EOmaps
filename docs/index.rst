@@ -1,37 +1,168 @@
+.. include:: substitutions.rst
+
 .. image:: _static/logo.png
   :width: 40%
   :align: center
   :target: https://github.com/raphaelquast/EOmaps
 
-|
+.. raw:: html
 
-Welcome to the documentation for **EOmaps**!
-
-EOmaps is a Python package to visualize and analyze geographical datasets.
-It is built on top of ``matplotlib`` and ``cartopy`` and aims to provide an
-intuitive and easy-to-use interface to handle the following tasks:
-
-| ▶ Speed up and simplify the creation and comparison of maps
-| ▶ Visualize small datasets as well as millions of datapoints
-| ▶ Handle 1D and 2D datasets and create plots from NetCDF, GeoTIFF or CSV files
-| ▶ Take care of re-projecting the data
-| ▶ Compare or overlay different plot-layers and WebMap services
-| ▶ Use the maps as interactive data-analysis widgets (e.g. execute functions if you click on the map)
-| ▶ Provide a versatile set of tools to customize the maps
-| ▶ Arrange multiple maps in one figure
-| ▶ Get a nice colorbar with a histogram on top
-| ▶ Export high resolution images
-|
-| A detailed overview on how to use EOmaps is given in the :doc:`api`.
-| Make sure to check out the :doc:`EOmaps_examples` for an overview of the capabilities (incl. source code)!
-
-----------
+    <br>
+    <font size=5>Welcome to the documentation for <b>EOmaps</b>!</font>
+    <p>
 
 
-Contents
+Here you can find detailed explanations on all the functionalities of EOmaps.
+
+.. admonition:: Interested in contributing to EOmaps?
+
+    | Found a bug or got an idea for an interesting feature?
+    | Open an issue on `GitHub <https://github.com/raphaelquast/EOmaps>`_ or head over to the :doc:`contribute` to see how to setup EOmaps for development!
+
+
+
+Getting Started
+---------------
+
+To get started, have a look at the :doc:`api_basics` section to get to know
+the basic concepts of EOmaps.
+
+In addition, EOmaps also provides a GUI widget (the :doc:`api_companion_widget`) that can be used to interactively edit/compare/overlay maps and explore the features and functionalities.
+
+Data Visualization
+------------------
+
+.. toctree::
+    :hidden:
+    :maxdepth: 3
+
+    api_basics
+    api_data_visualization
+
+
+
+Want to visualize some data? Have a look at the :doc:`api_data_visualization` section to learn how to create beautiful maps with your datasets!
+
+EOmaps provides a variety of plot-shapes so you can select a shape that best suit the structure and spatial representativeness of your data:
+
+
+.. raw:: html
+
+    <table>
+    <tr>
+    <th>Ellipses<br/><a href=api_data_visualization.html#ellipses><img src="_static/shape_imgs/ellipses.png"/></a></th>
+    <th>Rectangles<br/><a href=api_data_visualization.html#rectangles><img src="_static/shape_imgs/rectangles.png"/></a></th>
+    <th>Geodesic Circles<br/><a href=api_data_visualization.html#geodesic-circles><img src="_static/shape_imgs/geod_circles.png"/></a></th>
+    <th>Raster<br/><a href=api_data_visualization.html#raster><img src="_static/shape_imgs/raster.png"/></a></th>
+    <th>Scatter Points<br/><a href=api_data_visualization.html#scatter-points><img src="_static/shape_imgs/scatter_points.png"/></a></th>
+    </tr>
+    <tr>
+    <th>Contour<br/><a href=api_data_visualization.html#contour><img src="_static/shape_imgs/contour.png"/></a></th>
+    <th>Voronoi Diagram<br/><a href=api_data_visualization.html#voronoi-diagram><img src="_static/shape_imgs/voronoi_diagram.png"/></a></th>
+    <th>Delaunay Triangulation<br/><a href=api_data_visualization.html#delaunay-triangulation><img src="_static/shape_imgs/delaunay_triangulation.png"/></a></th>
+    <th>Shade Raster<br/><a href=api_data_visualization.html#shade-raster><img src="_static/shape_imgs/shade_raster.png"/></a></th>
+    <th>Shade Points<br/><a href=api_data_visualization.html#shade-points><img src="_static/shape_imgs/shade_points.png"/></a></th>
+
+    </tr>
+    </table>
+
+
+.. raw:: html
+
+    </p>
+
+
+
+Map Features
+------------
+
+
+EOmaps provides many useful tools to create highly customized the maps.
+
+
+.. list-table::
+    :width: 100%
+    :widths: 50 50
+
+    * - |  :doc:`api_inset_maps`
+        |  Create zoomed-in views on specific regions of a map.
+      - |  :doc:`api_naturalearth_features`
+        |  Add basic map features (coastlines, ocean-coloring etc. ) to the map.
+
+    * - |  :doc:`api_webmaps`
+        |  Add imagery provided by WebMap services (ts, wms, wmts, xyz) to the map.
+      - |  :doc:`api_vector_data`
+        |  Add vector geometries to the map.
+
+    * - |  :doc:`api_annotations_markers_etc`
+        |  Add markers, annotations, lines, logos etc. to the map.
+      - |  :doc:`api_scalebar`
+        |  Add a scalebar to the map.
+
+    * - |  :doc:`api_compass`
+        |  Add a compass (or North Arrow) to the map.
+      - |  :doc:`api_gridlines`
+        |  Add grid-lines (and optionally grid-labels) to the map.
+
+
+Interactivity
+-------------
+
+With a few lines of code, you can turn your maps into interactive data-analysis widgets!
+
+.. list-table::
+    :width: 100%
+    :widths: 50 50
+
+    * - |  :doc:`api_callbacks`
+        |  Turn your maps into interactive data-analysis widgets.
+      - |  :doc:`api_layout_editor`
+        |  Interactively re-arrange and re-size axes of a figure.
+    * - |  :doc:`api_draw`
+        |  Interactively draw geometries on a map and export them as shapefiles.
+      - |  :doc:`api_utils`
+        |  A collection of utility widgets (layer-sliders, layer-selectors)
+    * - |  :doc:`api_read_data`
+        |  Read data from NetCDF, GeoTIFF or CSV files.
+      - |  :doc:`api_misc`
+        |  Additional functions and properties that might come in handy.
+
+
+Miscellaneous
+~~~~~~~~~~~~~
+
+.. list-table::
+    :width: 100%
+    :widths: 50 50
+
+    * - |  :doc:`api_logging`
+        |  Details on logging.
+      - |  :doc:`api_command_line_interface`
+        |  How to use the command-line interface `eomaps`.
+
+
+
+
+
+Examples
 --------
 
- .. toctree::
+Make sure to check out the :doc:`EOmaps_examples` for an overview of the capabilities (incl. source code)!
+
+.. table::
+   :width: 100%
+
+   +-----------+-----------+-----------+-----------+-----------+
+   | |eximg01| | |eximg02| | |eximg03| | |eximg04| | |eximg05| |
+   +-----------+-----------+-----------+-----------+-----------+
+   | |eximg06| | |eximg07| | |eximg08| | |eximg09| | |eximg10| |
+   +-----------+-----------+-----------+-----------+-----------+
+   | |eximg11| | |eximg12| | |eximg13| | |eximg14| | |eximg15| |
+   +-----------+-----------+-----------+-----------+-----------+
+
+
+.. toctree::
+    :hidden:
     :maxdepth: 1
     :caption: General
 
@@ -40,6 +171,7 @@ Contents
 
 
 .. toctree::
+    :hidden:
     :maxdepth: 1
     :caption: How to use EOmaps
 
@@ -47,6 +179,7 @@ Contents
     api_data_visualization
 
 .. toctree::
+    :hidden:
     :maxdepth: 1
     :caption: Map Features
 
@@ -61,6 +194,7 @@ Contents
     api_gridlines
 
 .. toctree::
+    :hidden:
     :maxdepth: 1
     :caption: Interactivity
 
@@ -72,6 +206,7 @@ Contents
 
 
 .. toctree::
+    :hidden:
     :maxdepth: 1
     :caption: Miscellaneous
 
@@ -82,6 +217,7 @@ Contents
 
 
 .. toctree::
+   :hidden:
    :maxdepth: 2
    :caption: Examples
 
@@ -89,12 +225,14 @@ Contents
 
 
 .. toctree::
+   :hidden:
    :maxdepth: 2
    :caption: Contribute
 
    contribute
 
 .. toctree::
+   :hidden:
    :maxdepth: 1
    :caption: API Reference
 

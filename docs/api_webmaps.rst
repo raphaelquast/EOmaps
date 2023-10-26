@@ -91,7 +91,7 @@ Pre-defined WebMap services
     GMRT
     GLAD
     CAMS
-    DLR_basemaps
+    DLR
     OpenPlanetary
 
 
