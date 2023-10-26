@@ -32,15 +32,6 @@ In addition, EOmaps also provides a GUI widget (the :doc:`api_companion_widget`)
 Data Visualization
 ------------------
 
-.. toctree::
-    :hidden:
-    :maxdepth: 3
-
-    api_basics
-    api_data_visualization
-
-
-
 Want to visualize some data? Have a look at the :doc:`api_data_visualization` section to learn how to create beautiful maps with your datasets!
 
 EOmaps provides a variety of plot-shapes so you can select a shape that best suit the structure and spatial representativeness of your data:
