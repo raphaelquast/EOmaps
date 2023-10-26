@@ -77,7 +77,7 @@ Map Features
 ------------
 
 
-EOmaps provides many useful tools to create highly customized the maps.
+EOmaps provides many useful tools to customize your maps.
 
 
 .. list-table::
