@@ -139,7 +139,7 @@ Miscellaneous
         |  How to use the command-line interface `eomaps`.
     * - |  :doc:`api_misc`
         |  Additional functions and properties that might come in handy.
-
+      -
 
 
 
