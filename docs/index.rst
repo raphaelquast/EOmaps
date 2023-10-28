@@ -39,21 +39,34 @@ EOmaps provides a variety of plot-shapes so you can select a shape that best sui
 
 .. raw:: html
 
-    <table>
+    <table width="100%" style="font-size:90%; table-layout:fixed; overflow:scroll;">
     <tr>
-    <th>Ellipses<br/><a href=api_data_visualization.html#ellipses><img src="_static/shape_imgs/ellipses.png"/></a></th>
-    <th>Rectangles<br/><a href=api_data_visualization.html#rectangles><img src="_static/shape_imgs/rectangles.png"/></a></th>
-    <th>Geodesic Circles<br/><a href=api_data_visualization.html#geodesic-circles><img src="_static/shape_imgs/geod_circles.png"/></a></th>
-    <th>Raster<br/><a href=api_data_visualization.html#raster><img src="_static/shape_imgs/raster.png"/></a></th>
-    <th>Scatter Points<br/><a href=api_data_visualization.html#scatter-points><img src="_static/shape_imgs/scatter_points.png"/></a></th>
+    <th width="20%">Ellipses</th>
+    <th width="20%">Rectangles</th>
+    <th width="20%">Geodesic Circles</th>
+    <th width="20%">Raster</th>
+    <th width="20%">Scatter Points</th>
     </tr>
     <tr>
-    <th>Contour<br/><a href=api_data_visualization.html#contour><img src="_static/shape_imgs/contour.png"/></a></th>
-    <th>Voronoi Diagram<br/><a href=api_data_visualization.html#voronoi-diagram><img src="_static/shape_imgs/voronoi_diagram.png"/></a></th>
-    <th>Delaunay Triangulation<br/><a href=api_data_visualization.html#delaunay-triangulation><img src="_static/shape_imgs/delaunay_triangulation.png"/></a></th>
-    <th>Shade Raster<br/><a href=api_data_visualization.html#shade-raster><img src="_static/shape_imgs/shade_raster.png"/></a></th>
-    <th>Shade Points<br/><a href=api_data_visualization.html#shade-points><img src="_static/shape_imgs/shade_points.png"/></a></th>
-
+    <th width="20%"><a href=api_data_visualization.html#ellipses><img src="_static/shape_imgs/ellipses.png"/></a></th>
+    <th width="20%"><a href=api_data_visualization.html#rectangles><img src="_static/shape_imgs/rectangles.png"/></a></th>
+    <th width="20%"><a href=api_data_visualization.html#geodesic-circles><img src="_static/shape_imgs/geod_circles.png"/></a></th>
+    <th width="20%"><a href=api_data_visualization.html#raster><img src="_static/shape_imgs/raster.png"/></a></th>
+    <th width="20%"><a href=api_data_visualization.html#scatter-points><img src="_static/shape_imgs/scatter_points.png"/></a></th>
+    </tr>
+    <tr>
+    <th width="20%">Contour</th>
+    <th width="20%">Voronoi Diagram</th>
+    <th width="20%">Delaunay Triangulation</th>
+    <th width="20%">Shade Raster</th>
+    <th width="20%">Shade Points</th>
+    </tr>
+    <tr>
+    <th width="20%"><a href=api_data_visualization.html#contour><img src="_static/shape_imgs/contour_filled.png"/></a></th>
+    <th width="20%"><a href=api_data_visualization.html#voronoi-diagram><img src="_static/shape_imgs/voronoi_diagram.png"/></a></th>
+    <th width="20%"><a href=api_data_visualization.html#delaunay-triangulation><img src="_static/shape_imgs/delaunay_triangulation.png"/></a></th>
+    <th width="20%"><a href=api_data_visualization.html#shade-raster><img src="_static/shape_imgs/shade_raster.png"/></a></th>
+    <th width="20%"><a href=api_data_visualization.html#shade-points><img src="_static/shape_imgs/shade_points.png"/></a></th>
     </tr>
     </table>
 
