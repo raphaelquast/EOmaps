@@ -27,14 +27,14 @@ Getting Started
 To get started, have a look at the :doc:`api_basics` section to get to know
 the basic concepts of EOmaps.
 
-In addition, EOmaps also provides a GUI widget (the :doc:`api_companion_widget`) that can be used to interactively edit/compare/overlay maps and explore the features and functionalities.
+In addition, there is also the :doc:`api_companion_widget` GUI that can be used to interactively edit/compare/overlay maps and explore the features and functionalities.
 
 Data Visualization
 ------------------
 
 Want to visualize some data? Have a look at the :doc:`api_data_visualization` section to learn how to create beautiful maps with your datasets!
 
-EOmaps provides a variety of plot-shapes so you can select a shape that best suit the structure and spatial representativeness of your data:
+EOmaps provides a variety of plot-shapes so you can select a shape that suits the structure, size and spatial representativeness of your data:
 
 
 .. raw:: html
