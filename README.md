@@ -25,7 +25,7 @@
 
 **EOmaps** is a <tt>python</tt> package to visualize and analyze geographical datasets.
 
-It is built on top of [matplotlib](matplotlib.org/) and [cartopy](https://scitools.org.uk/cartopy/docs/latest/) and provides an intuitive and easy-to-use interface to speed up and simplify the creation and comparison of maps.
+It is built on top of [matplotlib](https://matplotlib.org/) and [cartopy](https://scitools.org.uk/cartopy/docs/latest/) and provides an intuitive and easy-to-use interface to speed up and simplify the creation and comparison of maps.
 
 > For a quick hands-on introduction, checkout this article on dev.to:  
 > [Geographic data visualization and analysis with EOmaps: Interactive maps in python!](https://dev.to/raphaelquast/geographic-data-visualization-and-analysis-with-eomaps-interactive-maps-in-python-48e1)
