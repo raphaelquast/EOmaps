@@ -1689,7 +1689,7 @@ class Maps(metaclass=_MapsMeta):
         kwargs.setdefault("verticalalignment", "bottom")
 
         self.text(
-            0.5, 1.01, title, transform=self.ax.transAxes, layer=self.layer, **kwargs
+            x, y, title, transform=self.ax.transAxes, layer=self.layer, **kwargs
         )
 
     @lru_cache()
