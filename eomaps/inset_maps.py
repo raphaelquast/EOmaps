@@ -73,7 +73,7 @@ class InsetMaps(Maps):
             # use same edgecolor for boundary and indicator by default
             self._extent_kwargs["ec"] = boundary["ec"]
             self._line_kwargs["c"] = boundary["ec"]
-        elif isinstance(boundary, str):
+        elif isinstance(boundary, (str, tuple)):
             boundary_kwargs.update({"ec": boundary})
             # use same edgecolor for boundary and indicator by default
             self._extent_kwargs["ec"] = boundary
