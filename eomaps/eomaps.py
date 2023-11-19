@@ -1688,9 +1688,7 @@ class Maps(metaclass=_MapsMeta):
         kwargs.setdefault("horizontalalignment", "center")
         kwargs.setdefault("verticalalignment", "bottom")
 
-        self.text(
-            0.5, 1.01, title, transform=self.ax.transAxes, layer=self.layer, **kwargs
-        )
+        self.text(x, y, title, transform=self.ax.transAxes, layer=self.layer, **kwargs)
 
     @lru_cache()
     def get_crs(self, crs="plot"):
@@ -5647,7 +5645,11 @@ class Maps(metaclass=_MapsMeta):
         >>>     path_effects=[pe.withStroke(linewidth=7, foreground="m")])
 
         """
+        self.redraw("__SPINES__")
+
         for key in ("fc", "facecolor"):
+            self.redraw("__BG__")
+
             if key in kwargs:
                 self.ax.patch.set_facecolor(kwargs.pop(key))
 
@@ -5710,4 +5712,3 @@ class Maps(metaclass=_MapsMeta):
 
                 self.BM._before_fetch_bg_actions.append(cb)
                 self.ax._EOmaps_rounded_spine_attached = True
-                self.BM.update()

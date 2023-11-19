@@ -6,6 +6,7 @@ from matplotlib.path import Path
 
 from . import Maps
 from .helpers import _deprecated
+from .grid import _intersect, _get_intersect
 
 
 class InsetMaps(Maps):
@@ -72,7 +73,7 @@ class InsetMaps(Maps):
             # use same edgecolor for boundary and indicator by default
             self._extent_kwargs["ec"] = boundary["ec"]
             self._line_kwargs["c"] = boundary["ec"]
-        elif isinstance(boundary, str):
+        elif isinstance(boundary, (str, tuple)):
             boundary_kwargs.update({"ec": boundary})
             # use same edgecolor for boundary and indicator by default
             self._extent_kwargs["ec"] = boundary
@@ -305,7 +306,7 @@ class InsetMaps(Maps):
 
             # This is because all artists on inset-map axes are always on top of other
             # (normal map) artists... (and so the line would be behind the background)
-            from matplotlib.transforms import Path, TransformedPath
+            from matplotlib.transforms import TransformedPath
 
             clip_path = TransformedPath(
                 m.ax.patch.get_path(), m.ax.projection._as_mpl_transform(m.ax)
@@ -324,19 +325,37 @@ class InsetMaps(Maps):
         self.BM._before_fetch_bg_actions.append(self._update_indicator_lines)
 
     def _update_indicator_lines(self, *args, **kwargs):
-        verts = self._get_spine_verts().mean(axis=0)
+        spine_verts = self._get_spine_verts()
 
-        verts_t = np.column_stack(self._transf_lonlat_to_plot.transform(*verts.T))
-        verts_t = (self.ax.transData + self.f.transFigure.inverted()).transform(verts_t)
-        x1, y1 = verts_t[0]
+        # find center of the inset map in the figure (in figure coordinates)
+        verts = np.column_stack(self._transf_lonlat_to_plot.transform(*spine_verts.T))
+        verts = (self.ax.transData + self.f.transFigure.inverted()).transform(verts)
 
         for l, m in self._indicator_lines:
-            verts_t = np.column_stack(m._transf_lonlat_to_plot.transform(*verts.T))
+            # find center of inset-map indicator on the map (in figure coordinates)
+            verts_t = np.column_stack(
+                m._transf_lonlat_to_plot.transform(*spine_verts.T)
+            )
             verts_t = (m.ax.transData + m.f.transFigure.inverted()).transform(verts_t)
-            x0, y0 = verts_t[0]
+            p_map = verts_t.mean(axis=0)
 
-            l.set_xdata([x0, x1])
-            l.set_ydata([y0, y1])
+            p_inset = verts.mean(axis=0)
+            # find intersection points of lines connecting the centers
+            # 1) with the inset-map boundary
+            q = _intersect(p_map, p_inset, verts[:-1], verts[1:])
+            if q.any():
+                x0, y0 = _get_intersect(p_map, p_inset, verts[:-1][q], verts[1:][q])
+            else:
+                x0, y0 = p_inset
+
+            # 2) with the inset-map indicator on the map
+            q = _intersect(p_map, p_inset, verts_t[:-1], verts_t[1:])
+            if q.any():
+                x1, y1 = _get_intersect(p_map, p_inset, verts_t[:-1][q], verts_t[1:][q])
+                # update indicator line vertices
+                l.set_xdata([x0, x1])
+                l.set_ydata([y0, y1])
+                continue
 
     # a convenience-method to set the position based on the center of the axis
     def set_inset_position(self, x=None, y=None, size=None):

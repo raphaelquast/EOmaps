@@ -11,6 +11,39 @@ from matplotlib.collections import LineCollection
 _log = logging.getLogger(__name__)
 
 
+def _ccw(A, B, C):
+    # determine if 3 points are listed in a counter-clockwise order
+    return (C[..., 1] - A[..., 1]) * (B[..., 0] - A[..., 0]) > (
+        B[..., 1] - A[..., 1]
+    ) * (C[..., 0] - A[..., 0])
+
+
+def _intersect(A, B, C, D):
+    # determine if 2 line-segments intersect with each other
+    # see https://stackoverflow.com/a/9997374/9703451
+    # see https://bryceboe.com/2006/10/23/line-segment-intersection-algorithm/
+
+    A, B, C, D = map(np.atleast_2d, (A, B, C, D))
+    return np.logical_and(
+        _ccw(A, C, D) != _ccw(B, C, D),
+        _ccw(A, B, C) != _ccw(A, B, D),
+    )
+
+
+def _get_intersect(a1, a2, b1, b2):
+    # get the intersection-point between 2 lines defined by points
+    # taken from https://stackoverflow.com/a/42727584/9703451
+
+    s = np.vstack([a1, a2, b1, b2])  # s for stacked
+    h = np.hstack((s, np.ones((4, 1))))  # h for homogeneous
+    l1 = np.cross(h[0], h[1])  # get first line
+    l2 = np.cross(h[2], h[3])  # get second line
+    x, y, z = np.cross(l1, l2)  # point of intersection
+    if z == 0:  # lines are parallel
+        return (float("inf"), float("inf"))
+    return (x / z, y / z)
+
+
 class GridLines:
     """Class to draw grid-lines."""
 
@@ -361,8 +394,15 @@ class GridLines:
         """Remove the grid from the map."""
         self._remove()
 
-        if self in self.m._grid._gridlines:
-            self.m._grid._gridlines.remove(self)
+        factory = self.m.parent._grid
+        if self in factory._gridlines:
+            factory._gridlines.remove(self)
+
+        for gl in self._grid_labels:
+            gl.remove()
+
+        if self._dynamic is False:
+            self.m.redraw(self.layer)
 
     def add_labels(
         self,
@@ -467,6 +507,9 @@ class GridLines:
         # remember attached labels
         self._grid_labels.append(gl)
 
+        if self._dynamic is False:
+            self.m.redraw(self.layer)
+
         return gl
 
 
@@ -557,36 +600,6 @@ class GridLabels:
 
     def _set_rotation(self, rotation):
         self._rotation = np.deg2rad(rotation)
-
-    def _ccw(self, A, B, C):
-        # determine if 3 points are listed in a counter-clockwise order
-        return (C[..., 1] - A[..., 1]) * (B[..., 0] - A[..., 0]) > (
-            B[..., 1] - A[..., 1]
-        ) * (C[..., 0] - A[..., 0])
-
-    def _intersect(self, A, B, C, D):
-        # determine if 2 line-segments intersect with each other
-        # see https://stackoverflow.com/a/9997374/9703451
-        # see https://bryceboe.com/2006/10/23/line-segment-intersection-algorithm/
-
-        A, B, C, D = map(np.atleast_2d, (A, B, C, D))
-        return np.logical_and(
-            self._ccw(A, C, D) != self._ccw(B, C, D),
-            self._ccw(A, B, C) != self._ccw(A, B, D),
-        )
-
-    def _get_intersect(self, a1, a2, b1, b2):
-        # get the intersection-point between 2 lines defined by points
-        # taken from https://stackoverflow.com/a/42727584/9703451
-
-        s = np.vstack([a1, a2, b1, b2])  # s for stacked
-        h = np.hstack((s, np.ones((4, 1))))  # h for homogeneous
-        l1 = np.cross(h[0], h[1])  # get first line
-        l2 = np.cross(h[2], h[3])  # get second line
-        x, y, z = np.cross(l1, l2)  # point of intersection
-        if z == 0:  # lines are parallel
-            return (float("inf"), float("inf"))
-        return (x / z, y / z)
 
     def _remove(self):
         while len(self._texts) > 0:
@@ -734,10 +747,10 @@ class GridLabels:
             b0 = np.stack((b0x, b0y), axis=2)
             b1 = np.stack((b1x, b1y), axis=2)
 
-            q = self._intersect(l0, l1, b0, b1)
+            q = _intersect(l0, l1, b0, b1)
 
             for la, lb, ba, bb in zip(l0[q], l1[q], b0[q], b1[q]):
-                x, y = self._get_intersect(la, lb, ba, bb)
+                x, y = _get_intersect(la, lb, ba, bb)
 
                 xt, yt = tr_ax.transform((x, y))
 

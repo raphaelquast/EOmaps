@@ -1870,6 +1870,9 @@ class BlitManager:
         if layer is None:
             self._on_layer_change[persistent].append(cb)
         else:
+            # treat inset-map layers like normal layers
+            if layer.startswith("__inset_"):
+                layer = layer[8:]
             self._on_layer_activation[persistent].setdefault(layer, list()).append(cb)
 
     def _refetch_layer(self, layer):
