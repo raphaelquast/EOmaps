@@ -330,10 +330,8 @@ class InsetMaps(Maps):
         # find center of the inset map in the figure (in figure coordinates)
         verts = np.column_stack(self._transf_lonlat_to_plot.transform(*spine_verts.T))
         verts = (self.ax.transData + self.f.transFigure.inverted()).transform(verts)
-        p_inset = verts.mean(axis=0)
 
         for l, m in self._indicator_lines:
-
             # find center of inset-map indicator on the map (in figure coordinates)
             verts_t = np.column_stack(
                 m._transf_lonlat_to_plot.transform(*spine_verts.T)
@@ -341,14 +339,23 @@ class InsetMaps(Maps):
             verts_t = (m.ax.transData + m.f.transFigure.inverted()).transform(verts_t)
             p_map = verts_t.mean(axis=0)
 
+            p_inset = verts.mean(axis=0)
             # find intersection points of lines connecting the centers
+            # 1) with the inset-map boundary
+            q = _intersect(p_map, p_inset, verts[:-1], verts[1:])
+            if q.any():
+                x0, y0 = _get_intersect(p_map, p_inset, verts[:-1][q], verts[1:][q])
+            else:
+                x0, y0 = p_inset
+
+            # 2) with the inset-map indicator on the map
             q = _intersect(p_map, p_inset, verts_t[:-1], verts_t[1:])
             if q.any():
                 x1, y1 = _get_intersect(p_map, p_inset, verts_t[:-1][q], verts_t[1:][q])
                 # update indicator line vertices
-                l.set_xdata([p_inset[0], x1])
-                l.set_ydata([p_inset[1], y1])
-                return
+                l.set_xdata([x0, x1])
+                l.set_ydata([y0, y1])
+                continue
 
     # a convenience-method to set the position based on the center of the axis
     def set_inset_position(self, x=None, y=None, size=None):
