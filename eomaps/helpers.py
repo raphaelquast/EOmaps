@@ -1510,7 +1510,7 @@ class LayoutEditor:
                 try:
                     # try to get extent if axis is associated with a Maps object
                     m = next((m for m in self.ms if m.ax is ax))
-                    layout[f"{name}_extent"] = str(m.get_extent())
+                    layout[f"{name}_extent"] = m.get_extent()
                 except StopIteration:
                     pass
 
@@ -1581,7 +1581,7 @@ class LayoutEditor:
             )
 
         # set the figsize
-        figsize = layout.pop("figsize", None)
+        figsize = layout.get("figsize", None)
         if figsize is not None:
             self.f.set_size_inches(*figsize)
 
@@ -1594,6 +1594,9 @@ class LayoutEditor:
         cbs = [(colorbars[cbaxes.index(a)] if a in cbaxes else None) for a in axes]
 
         for key in valid_keys.intersection(set(layout)):
+            if key == "figsize":
+                continue
+
             val = layout[key]
 
             i = int(key[: key.find("_")])
