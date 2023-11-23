@@ -4567,7 +4567,7 @@ class Maps(metaclass=_MapsMeta):
                 bins = [vmin, *bins]
 
             if vmax > max(bins):
-                bins[np.argmax(bins)] = vmax
+                bins = [*bins, vmax]
 
             cbcmap = cmap
             norm = mpl.colors.BoundaryNorm(bins, cmap.N)
