@@ -1599,7 +1599,7 @@ class LayoutEditor:
             i = int(key[: key.find("_")])
             if key.endswith("_histogram_size"):
                 cbs[i].set_hist_size(val)
-            if key.endswith("_extent"):
+            elif key.endswith("_extent"):
                 try:
                     # try to find an associated Maps object for the axis
                     m = next((m for m in self.ms if m.ax is axes[i]))
