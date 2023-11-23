@@ -1688,9 +1688,7 @@ class Maps(metaclass=_MapsMeta):
         kwargs.setdefault("horizontalalignment", "center")
         kwargs.setdefault("verticalalignment", "bottom")
 
-        self.text(
-            0.5, 1.01, title, transform=self.ax.transAxes, layer=self.layer, **kwargs
-        )
+        self.text(x, y, title, transform=self.ax.transAxes, layer=self.layer, **kwargs)
 
     @lru_cache()
     def get_crs(self, crs="plot"):
