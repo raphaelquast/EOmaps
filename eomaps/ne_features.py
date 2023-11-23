@@ -34,7 +34,7 @@ class NaturalEarth_presets:
     def __init__(self, m):
         self._m = m
 
-    def __call__(self, *args, scale=50, layer=None):
+    def __call__(self, *args, scale=50, layer=None, **kwargs):
         """
         Add multiple preset-features in one go.
 
@@ -42,7 +42,7 @@ class NaturalEarth_presets:
 
         Parameters
         ----------
-        *args : str
+        \*args : str
             The names of the features to add.
         scale : int or str
             Set the scale of the feature preset (10, 50, 110 or "auto")
@@ -54,7 +54,9 @@ class NaturalEarth_presets:
             - If None, the layer of the parent object is used.
 
             The default is None.
-
+        \*\*kwargs:
+            Additional style kwargs passed to all features
+            (e.g. alpha, facecolor, edgecolor, linewidth, ...)
         """
         wrong_names = set(args).difference(self._feature_names)
         assert len(wrong_names) == 0, (
@@ -63,7 +65,7 @@ class NaturalEarth_presets:
         )
 
         for a in args:
-            getattr(self, a)(scale=scale, layer=layer)
+            getattr(self, a)(scale=scale, layer=layer, **kwargs)
 
     @property
     def _feature_names(self):
