@@ -4090,6 +4090,9 @@ class Maps(metaclass=_MapsMeta):
             _handle_backends()
 
             self._f = plt.figure(**kwargs)
+            # to hide canvas header in jupyter notebooks (default figure label)
+            self._f.canvas.header_visible = False
+
 
             # override Figure.savefig with Maps.savefig but keep original
             # method accessible via Figure._mpl_orig_savefig
