@@ -3478,7 +3478,7 @@ class Maps(metaclass=_MapsMeta):
             try:
                 from IPython.display import display
 
-                display(Image.fromarray(sn, "RGBA"), display_id=True, clear=clear)
+                display(Image.fromarray(sn, "RGBA").convert('RGB'), display_id=True, clear=clear)
             except Exception:
                 _log.exception(
                     "Unable to display the snapshot... is the script "
