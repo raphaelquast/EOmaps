@@ -3478,7 +3478,11 @@ class Maps(metaclass=_MapsMeta):
             try:
                 from IPython.display import display
 
-                display(Image.fromarray(sn, "RGBA").convert('RGB'), display_id=True, clear=clear)
+                display(
+                    Image.fromarray(sn, "RGBA").convert("RGB"),
+                    display_id=True,
+                    clear=clear,
+                )
             except Exception:
                 _log.exception(
                     "Unable to display the snapshot... is the script "
@@ -4092,7 +4096,6 @@ class Maps(metaclass=_MapsMeta):
             self._f = plt.figure(**kwargs)
             # to hide canvas header in jupyter notebooks (default figure label)
             self._f.canvas.header_visible = False
-
 
             # override Figure.savefig with Maps.savefig but keep original
             # method accessible via Figure._mpl_orig_savefig
