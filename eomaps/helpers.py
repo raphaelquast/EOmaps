@@ -1500,7 +1500,7 @@ class LayoutEditor:
         # check if all relevant axes are specified in the layout
         valid_keys = set(self.get_layout())
         if valid_keys != set(layout):
-            warnings.warn(
+            _log.warning(
                 "EOmaps: The the layout does not match the expected structure! "
                 "Layout might not be properly restored. "
                 "Invalid or missing keys:\n"
