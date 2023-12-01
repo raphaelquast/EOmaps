@@ -584,11 +584,14 @@ class _WMSLayer(_WebMapLayer):
 
 
 class _WebServiceCollection:
-    def __init__(self, m, service_type="wmts", url=None):
+    def __init__(self, m, service_type="wmts", url=None, **kwargs):
         self._m = m
         self._service_type = service_type
         if url is not None:
             self._url = url
+
+        # additional kwargs that will be passed to owslib.WebMapService()
+        self._service_kwargs = kwargs.copy()
 
     def __getitem__(self, key):
         return self.add_layer.__dict__[key]
@@ -626,28 +629,28 @@ class _WebServiceCollection:
         return [i for i in self.layers if name.lower() in i.lower()]
 
     @staticmethod
-    def _get_wmts(url):
+    def _get_wmts(url, **kwargs):
         # TODO expose useragent
 
         # lazy import used to avoid long import times
         from owslib.wmts import WebMapTileService
 
-        return WebMapTileService(url)
+        return WebMapTileService(url, **kwargs)
 
     @staticmethod
-    def _get_wms(url):
+    def _get_wms(url, **kwargs):
         # TODO expose useragent
 
         # lazy import used to avoid long import times
         from owslib.wms import WebMapService
 
-        return WebMapService(url)
+        return WebMapService(url, **kwargs)
 
     @property
     @lru_cache()
     def add_layer(self):
         if self._service_type == "wmts":
-            wmts = self._get_wmts(self._url)
+            wmts = self._get_wmts(self._url, **self._service_kwargs)
             layers = dict()
             for key in wmts.contents.keys():
                 layername = _sanitize(key)
@@ -665,7 +668,7 @@ class _WebServiceCollection:
                 layers[layername] = wmtslayer
 
         elif self._service_type == "wms":
-            wms = self._get_wms(self._url)
+            wms = self._get_wms(self._url, **self._service_kwargs)
             layers = dict()
             for key in wms.contents.keys():
                 layername = _sanitize(key)
@@ -821,14 +824,14 @@ class _RestWmsService(_WebServiceCollection):
         url = self._url
         if url is not None:
             if self._service_type == "wms":
-                wms = self._get_wms(url)
+                wms = self._get_wms(url, **self._service_kwargs)
                 layer_names = list(wms.contents.keys())
                 for lname in layer_names:
                     self._layers["layer_" + _sanitize(lname)] = _WMSLayer(
                         self._m, wms, lname
                     )
             elif self._service_type == "wmts":
-                wmts = self._get_wmts(url)
+                wmts = self._get_wmts(url, **self._service_kwargs)
                 layer_names = list(wmts.contents.keys())
                 for lname in layer_names:
                     self._layers["layer_" + _sanitize(lname)] = _WMTSLayer(
