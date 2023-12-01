@@ -3462,10 +3462,18 @@ class Maps(metaclass=_MapsMeta):
                     else:
                         sn = self._get_snapshot()
             try:
-                from IPython.display import display
+                from IPython.display import display, Image as IpyImage
+                from io import BytesIO
+
+                # fix issues with PILLOW 10.0 and transparent snapshots
+                # in jupyter notebooks (TODO should be fixed in PILLOW 10.1.0)
+                # ...bug causes unwanted errors in _repr__jpeg_ for RGBA images
+                # the fix enforces png as format
+                temp = BytesIO()
+                Image.fromarray(sn, "RGBA").save(temp, format="png")
 
                 display(
-                    Image.fromarray(sn, "RGBA").convert("RGB"),
+                    IpyImage(temp.getvalue()),
                     display_id=True,
                     clear=clear,
                 )
