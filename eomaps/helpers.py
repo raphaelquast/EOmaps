@@ -2162,26 +2162,36 @@ class BlitManager:
     def on_draw(self, event):
         """Callback to register with 'draw_event'."""
         cv = self.canvas
-        _log.log(5, "draw")
+        loglevel = _log.getEffectiveLevel()
 
-        try:
-            if (
-                "RendererBase._draw_disabled"
-                in cv.get_renderer().draw_image.__qualname__
-            ):
-                # TODO this fixes issues when saving figues with a "tight" bbox, e.g.:
-                # m.savefig(bbox_inches='tight', pad_inches=0.1)
+        if loglevel <= 5:
+            _log.log(5, "draw")
 
-                # This workaround is necessary but the implementation is suboptimal since
-                # it relies on the __qualname__ to identify if the
-                # `matplotlib.backend_bases.RendererBase._draw_disabled()` context is active
-                # The reason why the "_draw_disabled" context has to be handled explicitly
-                # is because otherwise empty backgrounds would be fetched (and cached) by
-                # the draw-event and the export would result in an empty figure.
+        if hasattr(cv, "get_renderer"):
+            # TODO this fixes issues when saving figues with a "tight" bbox, e.g.:
+            # m.savefig(bbox_inches='tight', pad_inches=0.1)
+
+            # This workaround is necessary but the implementation is suboptimal since
+            # it relies on the __qualname__ to identify if the
+            # `matplotlib.backend_bases.RendererBase._draw_disabled()` context is active
+            # The reason why the "_draw_disabled" context has to be handled explicitly
+            # is because otherwise empty backgrounds would be fetched (and cached) by
+            # the draw-event and the export would result in an empty figure.
+
+            try:
+                if (
+                    "RendererBase._draw_disabled"
+                    in cv.get_renderer().draw_image.__qualname__
+                ):
+                    return
+            except AttributeError:
+                # return on AttributeError to handle backends that don't expose the renderer
+                if loglevel <= 5:
+                    _log.log(
+                        5,
+                        "error during draw: there was no renderer to check",
+                    )
                 return
-        except AttributeError:
-            # return on AttributeError to handle backends that don't expose the renderer
-            return
 
         if event is not None:
             if event.canvas != cv:
@@ -2226,7 +2236,8 @@ class BlitManager:
 
         except Exception:
             # we need to catch exceptions since QT does not like them...
-            pass
+            if loglevel <= 5:
+                _log.log(5, "There was an error during draw!", exc_info=True)
 
     def add_artist(self, art, layer=None):
         """
