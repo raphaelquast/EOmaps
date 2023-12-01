@@ -625,11 +625,11 @@ class LayoutEditor:
         self.m.cb.execute_callbacks(not val)
 
         if self._modifier_pressed:
-            self._disable_draw = True
-            self._disable_update = True
+            self.m.BM._disable_draw = True
+            self.m.BM._disable_update = True
         else:
-            self._disable_draw = False
-            self._disable_update = False
+            self.m.BM._disable_draw = False
+            self.m.BM._disable_update = False
 
     @property
     def ms(self):
