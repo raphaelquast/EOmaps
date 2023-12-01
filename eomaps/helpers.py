@@ -2175,35 +2175,11 @@ class BlitManager:
         cv = self.canvas
         loglevel = _log.getEffectiveLevel()
 
-        if hasattr(cv, "get_renderer"):
-            # TODO this fixes issues when saving figues with a "tight" bbox, e.g.:
-            # m.savefig(bbox_inches='tight', pad_inches=0.1)
-
-            # This workaround is necessary but the implementation is suboptimal since
-            # it relies on the __qualname__ to identify if the
-            # `matplotlib.backend_bases.RendererBase._draw_disabled()` context is active
-            # The reason why the "_draw_disabled" context has to be handled explicitly
-            # is because otherwise empty backgrounds would be fetched (and cached) by
-            # the draw-event and the export would result in an empty figure.
+        if hasattr(cv, "get_renderer") and not cv.is_saving():
 
             renderer = cv.get_renderer()
             if renderer is None:
                 # don't run on_draw if no renderer is available
-                return
-
-            try:
-                if (
-                    "RendererBase._draw_disabled"
-                    in cv.get_renderer().draw_image.__qualname__
-                ):
-                    return
-            except AttributeError:
-                # return on AttributeError to handle backends that don't expose the renderer
-                if loglevel <= 5:
-                    _log.log(
-                        5,
-                        "error during draw: there was no renderer to check",
-                    )
                 return
         else:
             # don't run on_draw if no renderer is available
