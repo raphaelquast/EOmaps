@@ -3391,19 +3391,19 @@ class Maps(metaclass=_MapsMeta):
         show_layer : Set the currently visible layer.
         """
 
-        if not plt.isinteractive():
-            try:
-                __IPYTHON__
-            except NameError:
-                plt.show()
+        # if not plt.isinteractive():
+        try:
+            __IPYTHON__
+        except NameError:
+            plt.show()
+        else:
+            active_backend = plt.get_backend()
+            # print a snapshot to the active ipython cell in case the
+            # inline-backend is used
+            if active_backend in ["module://matplotlib_inline.backend_inline"]:
+                self.BM.update(clear_snapshot=clear)
             else:
-                active_backend = plt.get_backend()
-                # print a snapshot to the active ipython cell in case the
-                # inline-backend is used
-                if active_backend in ["module://matplotlib_inline.backend_inline"]:
-                    self.BM.update(clear_snapshot=clear)
-                else:
-                    plt.show()
+                plt.show()
 
     def snapshot(self, *layer, transparent=False, clear=False):
         """
@@ -4222,16 +4222,17 @@ class Maps(metaclass=_MapsMeta):
         if self.parent._layout_editor is None:
             self.parent._layout_editor = LayoutEditor(self.parent, modifier="alt+l")
 
-        if newfig:
-            # we only need to call show if a new figure has been created!
-            if (
-                # plt.isinteractive() or
-                plt.get_backend()
-                == "module://ipympl.backend_nbagg"
-            ):
-                # make sure to call show only if we use an interactive backend...
-                # or within the ipympl backend (otherwise it will block subsequent code!)
-                plt.show()
+        active_backend = plt.get_backend()
+        # we only need to call show if a new figure has been created!
+        if newfig and active_backend == "module://ipympl.backend_nbagg":
+            # make sure to call show only if we use an interactive backend...
+            # or within the ipympl backend (otherwise it will block subsequent code!)
+            plt.show()
+
+        if active_backend == "module://matplotlib_inline.backend_inline":
+            # close the figure to avoid duplicated (empty) plots created
+            # by the inline-backend manager in jupyter notebooks
+            plt.close(self.f)
 
     def _get_ax_label(self):
         return "map"
