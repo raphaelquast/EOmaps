@@ -624,6 +624,13 @@ class LayoutEditor:
         self._modifier_pressed = val
         self.m.cb.execute_callbacks(not val)
 
+        if self._modifier_pressed:
+            self._disable_draw = True
+            self._disable_update = True
+        else:
+            self._disable_draw = False
+            self._disable_update = False
+
     @property
     def ms(self):
         return [self.m.parent, *self.m.parent._children]
@@ -1549,6 +1556,9 @@ class BlitManager:
             List of the artists to manage
 
         """
+        self._disable_draw = False
+        self._disable_update = False
+
         self._m = m
 
         self._artists = dict()
@@ -2109,12 +2119,11 @@ class BlitManager:
                 return
 
             if renderer:
-                if not self._m.parent._layout_editor._modifier_pressed:
-                    for art in allartists:
-                        if art not in self._hidden_artists:
-                            art.draw(renderer)
-                            art.stale = False
-                    self._bg_layers[layer] = renderer.copy_from_bbox(bbox)
+                for art in allartists:
+                    if art not in self._hidden_artists:
+                        art.draw(renderer)
+                        art.stale = False
+                self._bg_layers[layer] = renderer.copy_from_bbox(bbox)
 
     def fetch_bg(self, layer=None, bbox=None):
         """
@@ -2132,8 +2141,6 @@ class BlitManager:
             The default is None.
 
         """
-        if self._m.parent._layout_editor._modifier_pressed:
-            return
 
         if layer is None:
             layer = self.bg_layer
@@ -2161,6 +2168,10 @@ class BlitManager:
 
     def on_draw(self, event):
         """Callback to register with 'draw_event'."""
+
+        if self._disable_draw:
+            return
+
         cv = self.canvas
         loglevel = _log.getEffectiveLevel()
 
@@ -2681,7 +2692,7 @@ class BlitManager:
             If True, clear the active cell before plotting a snapshot of the figure.
             The default is True.
         """
-        if self._m.parent._layout_editor._modifier_pressed:
+        if self._disable_update:
             # don't update during layout-editing
             return
 
