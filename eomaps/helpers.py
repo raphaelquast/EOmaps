@@ -1150,7 +1150,6 @@ class LayoutEditor:
         return snap
 
     def _apply_modifications(self):
-
         for ax in self.axes:
             from matplotlib.transforms import Bbox
 
@@ -1259,38 +1258,39 @@ class LayoutEditor:
 
     def _make_draggable(self, filepath=None):
         self.modifier_pressed = True
+        with self.m.BM._cx_toggle_draw(True):
+            # Uncheck avtive pan/zoom actions of the matplotlib toolbar.
+            # use a try-except block to avoid issues with ipympl in jupyter notebooks
+            # (see https://github.com/matplotlib/ipympl/issues/530#issue-1780919042)
+            try:
+                toolbar = getattr(self.m.BM.canvas, "toolbar", None)
+                if toolbar is not None:
+                    for key in ["pan", "zoom"]:
+                        val = toolbar._actions.get(key, None)
+                        if val is not None and val.isCheckable() and val.isChecked():
+                            val.trigger()
+            except AttributeError:
+                pass
 
-        # Uncheck avtive pan/zoom actions of the matplotlib toolbar.
-        # use a try-except block to avoid issues with ipympl in jupyter notebooks
-        # (see https://github.com/matplotlib/ipympl/issues/530#issue-1780919042)
-        try:
-            toolbar = getattr(self.m.BM.canvas, "toolbar", None)
-            if toolbar is not None:
-                for key in ["pan", "zoom"]:
-                    val = toolbar._actions.get(key, None)
-                    if val is not None and val.isCheckable() and val.isChecked():
-                        val.trigger()
-        except AttributeError:
-            pass
+            self._filepath = filepath
+            _log.info(
+                "EOmaps: Layout Editor activated! (press 'esc' to exit "
+                "and 'q' for info)"
+            )
 
-        self._filepath = filepath
-        _log.info(
-            "EOmaps: Layout Editor activated! (press 'esc' to exit " "and 'q' for info)"
-        )
+            self._history.clear()
+            self._history_undone.clear()
+            self._add_to_history()
 
-        self._history.clear()
-        self._history_undone.clear()
-        self._add_to_history()
+            # only re-draw if info-text is None
+            if getattr(self, "_info_text", None) is None:
+                self._info_text = self.add_info_text()
 
-        # only re-draw if info-text is None
-        if getattr(self, "_info_text", None) is None:
-            self._info_text = self.add_info_text()
+            self._apply_modifications()
+            self._attach_callbacks()
 
-        self._apply_modifications()
-        self._attach_callbacks()
-
-        self.m._emit_signal("layoutEditorActivated")
-        self.m.redraw()
+            self.m._emit_signal("layoutEditorActivated")
+            self.m.redraw()
 
     def _add_revert_props(self, child, *args):
         for prop in args:
@@ -1831,6 +1831,15 @@ class BlitManager:
             # clear the list of pending webmaps once the layer has been activated
             if layer in self._pending_webmaps:
                 self._pending_webmaps.pop(layer)
+
+    @contextmanager
+    def _cx_toggle_draw(self, val):
+        # a contextmanager to temporarily enable/disable calling on_draw
+        try:
+            self._disable_draw = val
+            yield
+        finally:
+            self._disable_draw = ~val
 
     @contextmanager
     def _without_artists(self, artists=None, layer=None):
