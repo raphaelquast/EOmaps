@@ -93,8 +93,9 @@ def _handle_backends():
             _log.info(
                 "EOmaps disables matplotlib's interactive mode (e.g. 'plt.ioff()') "
                 f"for the backend {plt.get_backend()}.\n"
-                "Call `m.snapshot()` to print a static snapshot of the map "
-                "to a Jupyter Notebook cell (or an IPython console)!"
+                "Call `m.show()`, `m.show_layer` or `m.snapshot()` to print a "
+                "static snapshot of the map to a Jupyter Notebook cell "
+                "(or an IPython console)!"
             )
 
             Maps._backend_warning_shown = True
