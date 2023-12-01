@@ -86,22 +86,8 @@ def _handle_backends():
 
     active_backend = plt.get_backend()
 
-    if active_backend in ["module://matplotlib_inline.backend_inline"]:
-        plt.ioff()
-
-        if not Maps._backend_warning_shown and not BlitManager._snapshot_on_update:
-            _log.info(
-                "EOmaps disables matplotlib's interactive mode (e.g. 'plt.ioff()') "
-                f"for the backend {plt.get_backend()}.\n"
-                "Call `m.show()`, `m.show_layer` or `m.snapshot()` to print a "
-                "static snapshot of the map to a Jupyter Notebook cell "
-                "(or an IPython console)!"
-            )
-
-            Maps._backend_warning_shown = True
-
     # to avoid flickering in the layout editor in jupyter notebooks
-    elif active_backend in ["module://ipympl.backend_nbagg"]:
+    if active_backend in ["module://ipympl.backend_nbagg"]:
         plt.ioff()
     else:
         if Maps._use_interactive_mode is True:
@@ -3391,7 +3377,6 @@ class Maps(metaclass=_MapsMeta):
         show_layer : Set the currently visible layer.
         """
 
-        # if not plt.isinteractive():
         try:
             __IPYTHON__
         except NameError:
