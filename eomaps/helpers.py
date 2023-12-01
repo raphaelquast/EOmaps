@@ -1303,10 +1303,21 @@ class LayoutEditor:
                 )
 
     def refetch_axes_images(self):
+        # remember visibility of info-textbox
+        if self._info_text and self._info_text.get_visible() is False:
+            info_txt_hidden = True
+        else:
+            info_txt_hidden = False
+
         self.m.redraw()
         self._undo_draggable()
         self.m.f.canvas.draw()
         self._make_draggable()
+
+        # hide info-text in case it was hidden before
+        if self._info_text and info_txt_hidden:
+            self._info_text.set_visible(False)
+            self._info_text_hidden = True
 
     def _undo_draggable(self):
         self.modifier_pressed = False
