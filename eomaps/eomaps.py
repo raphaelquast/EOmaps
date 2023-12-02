@@ -4827,7 +4827,9 @@ class Maps(metaclass=_MapsMeta):
 
     def _sel_c_transp(self, c):
         return self._data_manager._select_vals(
-            c.T if self._data_manager._z_transposed else c
+            c.T if self._data_manager._z_transposed else c,
+            qs=self._data_manager._last_qs,
+            slices=self._data_manager._last_slices,
         )
 
     def _handle_explicit_colors(self, color):
