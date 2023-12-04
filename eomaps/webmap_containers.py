@@ -2422,7 +2422,9 @@ class WebMapContainer(object):
         WMS.__doc__ = type(self).Austria.__doc__
         return WMS
 
-    def get_service(self, url, service_type="wms", rest_API=False, maxzoom=19):
+    def get_service(
+        self, url, service_type="wms", rest_API=False, maxzoom=19, **kwargs
+    ):
         """
         Get a object that can be used to add WMS, WMTS or XYZ services based on
         a GetCapabilities-link or a link to a ArcGIS REST API
@@ -2470,6 +2472,11 @@ class WebMapContainer(object):
 
             The maximum zoom-level available (to avoid http-request errors) for too
             high zoom levels. The default is 19.
+        kwargs :
+            Additional keyword arguments passed to `owslib.WebMapService()`.
+            (only relevant if type is "wms" or "wmts")
+
+            For example: `version=1.3.0`
 
         Returns
         -------
@@ -2541,6 +2548,8 @@ class WebMapContainer(object):
                     service_type=service_type,
                 )
             else:
-                service = _WebServiceCollection(self._m, service_type="wms", url=url)
+                service = _WebServiceCollection(
+                    self._m, service_type="wms", url=url, **kwargs
+                )
 
         return service

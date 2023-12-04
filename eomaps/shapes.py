@@ -326,7 +326,6 @@ class Shapes(object):
         # identify colors and the array
         # special treatment of array input to properly mask values
         array = kwargs.pop("array", None)
-
         if array is not None:
             if mask is not None:
                 array = array[mask]
@@ -336,17 +335,18 @@ class Shapes(object):
         color_vals = dict()
         for c_key in ["fc", "facecolor", "color"]:
             color = kwargs.pop(c_key, None)
+
             if color is not None:
                 # explicit treatment for recarrays (to avoid performance issues)
                 # with matplotlib.colors.to_rgba_array()
                 # (recarrays are used to convert 3/4 arrays into an rgb(a) array
                 # in m._handle_explicit_colors() )
                 if isinstance(color, np.recarray):
-                    color_vals[c_key] = color[mask].view(
+                    color_vals[c_key] = color[mask.reshape(color.shape)].view(
                         (float, len(color.dtype.names))
                     )  # .ravel()
                 elif isinstance(color, np.ndarray):
-                    color_vals[c_key] = color[mask]
+                    color_vals[c_key] = color[mask.reshape(color.shape)]
                 else:
                     color_vals[c_key] = color
 

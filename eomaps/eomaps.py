@@ -86,21 +86,8 @@ def _handle_backends():
 
     active_backend = plt.get_backend()
 
-    if active_backend in ["module://matplotlib_inline.backend_inline"]:
-        plt.ioff()
-
-        if not Maps._backend_warning_shown and not BlitManager._snapshot_on_update:
-            _log.info(
-                "EOmaps disables matplotlib's interactive mode (e.g. 'plt.ioff()') "
-                f"for the backend {plt.get_backend()}.\n"
-                "Call `m.snapshot()` to print a static snapshot of the map "
-                "to a Jupyter Notebook cell (or an IPython console)!"
-            )
-
-            Maps._backend_warning_shown = True
-
     # to avoid flickering in the layout editor in jupyter notebooks
-    elif active_backend in ["module://ipympl.backend_nbagg"]:
+    if active_backend in ["module://ipympl.backend_nbagg"]:
         plt.ioff()
     else:
         if Maps._use_interactive_mode is True:
@@ -3390,19 +3377,18 @@ class Maps(metaclass=_MapsMeta):
         show_layer : Set the currently visible layer.
         """
 
-        if not plt.isinteractive():
-            try:
-                __IPYTHON__
-            except NameError:
-                plt.show()
+        try:
+            __IPYTHON__
+        except NameError:
+            plt.show()
+        else:
+            active_backend = plt.get_backend()
+            # print a snapshot to the active ipython cell in case the
+            # inline-backend is used
+            if active_backend in ["module://matplotlib_inline.backend_inline"]:
+                self.BM.update(clear_snapshot=clear)
             else:
-                active_backend = plt.get_backend()
-                # print a snapshot to the active ipython cell in case the
-                # inline-backend is used
-                if active_backend in ["module://matplotlib_inline.backend_inline"]:
-                    self.BM.update(clear_snapshot=clear)
-                else:
-                    plt.show()
+                plt.show()
 
     def snapshot(self, *layer, transparent=False, clear=False):
         """
@@ -3476,9 +3462,13 @@ class Maps(metaclass=_MapsMeta):
                     else:
                         sn = self._get_snapshot()
             try:
-                from IPython.display import display
+                from IPython.display import display_png, clear_output
 
-                display(Image.fromarray(sn, "RGBA"), display_id=True, clear=clear)
+                if clear:
+                    clear_output(wait=True)
+                # use display_png to avoid issues with transparent snapshots
+                display_png(Image.fromarray(sn, "RGBA"), raw=False)
+
             except Exception:
                 _log.exception(
                     "Unable to display the snapshot... is the script "
@@ -4090,6 +4080,8 @@ class Maps(metaclass=_MapsMeta):
             _handle_backends()
 
             self._f = plt.figure(**kwargs)
+            # to hide canvas header in jupyter notebooks (default figure label)
+            self._f.canvas.header_visible = False
 
             # override Figure.savefig with Maps.savefig but keep original
             # method accessible via Figure._mpl_orig_savefig
@@ -4215,16 +4207,17 @@ class Maps(metaclass=_MapsMeta):
         if self.parent._layout_editor is None:
             self.parent._layout_editor = LayoutEditor(self.parent, modifier="alt+l")
 
-        if newfig:
-            # we only need to call show if a new figure has been created!
-            if (
-                # plt.isinteractive() or
-                plt.get_backend()
-                == "module://ipympl.backend_nbagg"
-            ):
-                # make sure to call show only if we use an interactive backend...
-                # or within the ipympl backend (otherwise it will block subsequent code!)
-                plt.show()
+        active_backend = plt.get_backend()
+        # we only need to call show if a new figure has been created!
+        if newfig and active_backend == "module://ipympl.backend_nbagg":
+            # make sure to call show only if we use an interactive backend...
+            # or within the ipympl backend (otherwise it will block subsequent code!)
+            plt.show()
+
+        if active_backend == "module://matplotlib_inline.backend_inline":
+            # close the figure to avoid duplicated (empty) plots created
+            # by the inline-backend manager in jupyter notebooks
+            plt.close(self.f)
 
     def _get_ax_label(self):
         return "map"
@@ -4567,7 +4560,7 @@ class Maps(metaclass=_MapsMeta):
                 bins = [vmin, *bins]
 
             if vmax > max(bins):
-                bins[np.argmax(bins)] = vmax
+                bins = [*bins, vmax]
 
             cbcmap = cmap
             norm = mpl.colors.BoundaryNorm(bins, cmap.N)
@@ -4826,7 +4819,9 @@ class Maps(metaclass=_MapsMeta):
 
     def _sel_c_transp(self, c):
         return self._data_manager._select_vals(
-            c.T if self._data_manager._z_transposed else c
+            c.T if self._data_manager._z_transposed else c,
+            qs=self._data_manager._last_qs,
+            slices=self._data_manager._last_slices,
         )
 
     def _handle_explicit_colors(self, color):
@@ -5645,11 +5640,8 @@ class Maps(metaclass=_MapsMeta):
         >>>     path_effects=[pe.withStroke(linewidth=7, foreground="m")])
 
         """
-        self.redraw("__SPINES__")
 
         for key in ("fc", "facecolor"):
-            self.redraw("__BG__")
-
             if key in kwargs:
                 self.ax.patch.set_facecolor(kwargs.pop(key))
 
@@ -5712,3 +5704,6 @@ class Maps(metaclass=_MapsMeta):
 
                 self.BM._before_fetch_bg_actions.append(cb)
                 self.ax._EOmaps_rounded_spine_attached = True
+
+            self.redraw("__SPINES__")
+        self.redraw("__BG__")

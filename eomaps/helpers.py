@@ -624,6 +624,13 @@ class LayoutEditor:
         self._modifier_pressed = val
         self.m.cb.execute_callbacks(not val)
 
+        if self._modifier_pressed:
+            self.m.BM._disable_draw = True
+            self.m.BM._disable_update = True
+        else:
+            self.m.BM._disable_draw = False
+            self.m.BM._disable_update = False
+
     @property
     def ms(self):
         return [self.m.parent, *self.m.parent._children]
@@ -1493,7 +1500,7 @@ class LayoutEditor:
         # check if all relevant axes are specified in the layout
         valid_keys = set(self.get_layout())
         if valid_keys != set(layout):
-            warnings.warn(
+            _log.warning(
                 "EOmaps: The the layout does not match the expected structure! "
                 "Layout might not be properly restored. "
                 "Invalid or missing keys:\n"
@@ -1549,6 +1556,9 @@ class BlitManager:
             List of the artists to manage
 
         """
+        self._disable_draw = False
+        self._disable_update = False
+
         self._m = m
 
         self._artists = dict()
@@ -2109,12 +2119,11 @@ class BlitManager:
                 return
 
             if renderer:
-                if not self._m.parent._layout_editor._modifier_pressed:
-                    for art in allartists:
-                        if art not in self._hidden_artists:
-                            art.draw(renderer)
-                            art.stale = False
-                    self._bg_layers[layer] = renderer.copy_from_bbox(bbox)
+                for art in allartists:
+                    if art not in self._hidden_artists:
+                        art.draw(renderer)
+                        art.stale = False
+                self._bg_layers[layer] = renderer.copy_from_bbox(bbox)
 
     def fetch_bg(self, layer=None, bbox=None):
         """
@@ -2132,8 +2141,6 @@ class BlitManager:
             The default is None.
 
         """
-        if self._m.parent._layout_editor._modifier_pressed:
-            return
 
         if layer is None:
             layer = self.bg_layer
@@ -2161,27 +2168,30 @@ class BlitManager:
 
     def on_draw(self, event):
         """Callback to register with 'draw_event'."""
-        cv = self.canvas
-        _log.log(5, "draw")
 
-        try:
-            if (
-                "RendererBase._draw_disabled"
-                in cv.get_renderer().draw_image.__qualname__
-            ):
-                # TODO this fixes issues when saving figues with a "tight" bbox, e.g.:
-                # m.savefig(bbox_inches='tight', pad_inches=0.1)
-
-                # This workaround is necessary but the implementation is suboptimal since
-                # it relies on the __qualname__ to identify if the
-                # `matplotlib.backend_bases.RendererBase._draw_disabled()` context is active
-                # The reason why the "_draw_disabled" context has to be handled explicitly
-                # is because otherwise empty backgrounds would be fetched (and cached) by
-                # the draw-event and the export would result in an empty figure.
-                return
-        except AttributeError:
-            # return on AttributeError to handle backends that don't expose the renderer
+        if self._disable_draw:
             return
+
+        cv = self.canvas
+        loglevel = _log.getEffectiveLevel()
+
+        if hasattr(cv, "get_renderer") and not cv.is_saving():
+
+            renderer = cv.get_renderer()
+            if renderer is None:
+                # don't run on_draw if no renderer is available
+                return
+        else:
+            # don't run on_draw if no renderer is available
+            # (this is true for svg export where mpl export routines
+            # are used to avoid issues)
+            if loglevel <= 5:
+                _log.log(5, " not drawing")
+
+            return
+
+        if loglevel <= 5:
+            _log.log(5, "draw")
 
         if event is not None:
             if event.canvas != cv:
@@ -2226,7 +2236,8 @@ class BlitManager:
 
         except Exception:
             # we need to catch exceptions since QT does not like them...
-            pass
+            if loglevel <= 5:
+                _log.log(5, "There was an error during draw!", exc_info=True)
 
     def add_artist(self, art, layer=None):
         """
@@ -2657,7 +2668,7 @@ class BlitManager:
             If True, clear the active cell before plotting a snapshot of the figure.
             The default is True.
         """
-        if self._m.parent._layout_editor._modifier_pressed:
+        if self._disable_update:
             # don't update during layout-editing
             return
 

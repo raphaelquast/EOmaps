@@ -652,7 +652,12 @@ class DataManager:
         else:
             val = np.asanyarray(val)
 
-            if len(val.shape) == 2 and qx is not None and qy is not None:
+            if (
+                len(val.shape) == 2
+                and qx is not None
+                and qy is not None
+                and slices is not None
+            ):
                 (x0, x1, y0, y1) = slices
                 ret = val[y0:y1, x0:x1]
             else:
@@ -894,6 +899,11 @@ class DataManager:
             slices, blocksize = self._estimate_slice_blocksize(*qs[1:])
         else:
             slices, blocksize = None, None
+
+        # remember last selection and slices (required in case explicit
+        # colors are provided since they must be selected accordingly)
+        self._last_qs = qs
+        self._last_slices = slices
 
         self._current_data = dict(
             xorig=self._select_vals(self.xorig, qs, slices),
