@@ -6,8 +6,16 @@ from matplotlib.patches import PathPatch
 from matplotlib.transforms import TransformedPath
 import warnings
 import logging
+import sys
 
 _log = logging.getLogger(__name__)
+
+
+def _removesuffix(s, suffix):
+    if s.endswith(suffix):
+        return s[: -len(suffix)]
+    else:
+        return s[:]
 
 
 class _ClickCallbacks(object):
@@ -1347,7 +1355,11 @@ class KeypressCallbacks:
         if not self._m.BM.bg_layer.endswith(f"|{layer}"):
             self._m.show_layer(self._m.BM.bg_layer, layer)
         else:
-            newlayer = self._m.BM.bg_layer.removesuffix(f"|{layer}")
+            if sys.version_info >= (3, 9):
+                newlayer = self._m.BM.bg_layer.removesuffix(f"|{layer}")
+            else:
+                newlayer = _removesuffix(self._m.BM.bg_layer, f"|{layer}")
+
             if len(newlayer) > 0:
                 self._m.show_layer(newlayer)
 
