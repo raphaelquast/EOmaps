@@ -1232,7 +1232,7 @@ class MoveCallbacks(_ClickCallbacks):
 class KeypressCallbacks:
     """Collection of callbacks that are executed if you press a key on the keyboard."""
 
-    _cb_list = ["switch_layer", "fetch_layers"]
+    _cb_list = ["switch_layer", "fetch_layers", "overlay_layer"]
 
     def __init__(self, m, temp_artists):
         self._temporary_artists = temp_artists
@@ -1240,16 +1240,14 @@ class KeypressCallbacks:
 
     def switch_layer(self, layer, key="x"):
         """
-        Change the default layer of the map.
-
-        Use the keyboard events to set the default layer (e.g. the visible layer)
-        displayed in the plot.
+        Set the currently visible layer of the map.
 
         Parameters
         ----------
-        layer : str
-            The layer-name to use.
-            If a non-string value is provided, it will be converted to string!
+        layer : str or list
+            The layer-name to use (or a list of layer-names to combine).
+
+            For details on how to specify layer-names, see :py:meth:`Maps.show_layer`
 
         Additional Parameters
         ---------------------
@@ -1258,8 +1256,100 @@ class KeypressCallbacks:
             Modifiers are indicated with a "+", e.g. "alt+x".
             The default is "x".
 
+        Examples
+        --------
+        Show layer A:
+
+        >>> m.cb.keypress.attach.overlay_layer(layer="A", key="x")
+
+        Show layer B with 50% transparency on top of layer A
+
+        >>> m.cb.keypress.attach.overlay_layer(layer="A|B{0.5}", key="x")
+
+        Show layer B on top of layer A:
+
+        >>> m.cb.keypress.attach.overlay_layer(layer=["A", "B"], key="x")
+
+        Show layer B with 50% transparency on top of layer A
+
+        >>> m.cb.keypress.attach.overlay_layer(layer=["A", ("B", 0.5)], key="x")
+
+
         """
-        self._m.show_layer(layer)
+        if isinstance(layer, (list, tuple)):
+            self._m.show_layer(*layer)
+        elif isinstance(layer, str):
+            self._m.show_layer(layer)
+
+    def overlay_layer(self, layer, key="x"):
+        """
+        Toggle displaying a layer on top of the currently visible layers.
+
+        - If the layer is not part of the currently visible layers, it will be
+          added on top.
+        - If the layer is part of the currently visible layers, it will be removed.
+
+        Parameters
+        ----------
+        layer : str, tuple or list
+            The layer-name to use, a tuple (layer, transparency) or a list of
+            the aforementioned types to combine.
+
+            For details on how to specify layer-names, see :py:meth:`Maps.show_layer`
+
+        Additional Parameters
+        ---------------------
+        key : str, optional
+            The key to use for triggering the callback.
+            Modifiers are indicated with a "+", e.g. "alt+x".
+            The default is "x".
+
+        Note
+        ----
+        If the visible layer changes **while the overlay-layer is active**,
+        triggering the callback again might not properly remove the previous overlay!
+        (e.g. the overlay is only removed if the top-layer corresponds exactly to
+         the overlay-layer specifications)
+
+        Examples
+        --------
+        Toggle overlaying layer A:
+
+        >>> m.cb.keypress.attach.overlay_layer(layer="A", key="x")
+
+        Toggle overlaying layer A with 50% transparency:
+
+        >>> m.cb.keypress.attach.overlay_layer(layer=("A", 0.5), key="x")
+
+        Toggle overlaying a combined layer (showing layer B with 50% transparency
+        on top of layer A)
+
+        >>> m.cb.keypress.attach.overlay_layer(layer="A|B{0.5}", key="x")
+
+        Toggle overlaying a combined layer (showing layer B on top of layer A)
+
+        >>> m.cb.keypress.attach.overlay_layer(layer=["A", "B"], key="x")
+
+        Toggle overlaying a combined layer (showing layer B with 50% transparency
+        on top of layer A)
+
+        >>> m.cb.keypress.attach.overlay_layer(layer=["A", ("B", 0.5)], key="x")
+
+        """
+
+        if isinstance(layer, list):
+            layer = self._m._get_combined_layer_name(*layer)
+        elif isinstance(layer, tuple):
+            # e.g. (layer-name, layer-transparency)
+            layer = self._m._get_combined_layer_name(layer)
+
+        # in case the layer is currently on top, remove it
+        if not self._m.BM.bg_layer.endswith(f"|{layer}"):
+            self._m.show_layer(self._m.BM.bg_layer, layer)
+        else:
+            newlayer = self._m.BM.bg_layer.removesuffix(f"|{layer}")
+            if len(newlayer) > 0:
+                self._m.show_layer(newlayer)
 
     def fetch_layers(self, layers=None, verbose=True, key="x"):
         """
