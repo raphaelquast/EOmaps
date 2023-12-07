@@ -199,6 +199,7 @@ Callbacks that can be used with ``m.cb.keypress``
     :nosignatures:
 
     switch_layer
+    overlay_layer
     fetch_layers
 
 
