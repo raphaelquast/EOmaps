@@ -4,7 +4,6 @@ channels:
 
 dependencies:
 
-  - python = 3.10
   - numpy
   - scipy
   - pandas
@@ -27,6 +26,7 @@ dependencies:
   - xmltodict
   - cairosvg
 
+  - pip
   # --------------for building the docs
   - docutils<0.19
   - sphinx=7.2.6
