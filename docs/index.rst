@@ -189,7 +189,7 @@ Make sure to check out the :doc:`EOmaps_examples` for an overview of the capabil
     :caption: Map Features
 
     api_inset_maps
-    api_naturalearth_features
+    notebooks/basic_features.ipynb
     api_webmaps
     api_vector_data
 
