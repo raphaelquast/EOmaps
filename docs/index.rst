@@ -188,8 +188,8 @@ Make sure to check out the :doc:`EOmaps_examples` for an overview of the capabil
     :maxdepth: 1
     :caption: Map Features
 
-    api_inset_maps
-    notebooks/basic_features.ipynb
+    notebooks/inset_maps.ipynb
+    notebooks/naturalearth_features.ipynb
     api_webmaps
     api_vector_data
 
