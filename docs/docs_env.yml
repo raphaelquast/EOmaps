@@ -3,11 +3,34 @@ channels:
   - conda-forge
 
 dependencies:
-  - eomaps
+
+  - python = 3.10
+  - numpy
+  - scipy
+  - pandas
+  - geopandas
+  - matplotlib >=3.4
+  - cartopy >=0.20.0
+  - descartes
+  - mapclassify
+  - pyproj
+  - pyepsg
+  # --------------for data-shading
+  - datashader
+  # --------------for GeoTIFF and NetCDF files
+  - netcdf4
+  - xarray
+  - rioxarray
+  # --------------for WebMaps
+  - owslib
+  - requests
+  - xmltodict
+  - cairosvg
+
   # --------------for building the docs
-  - sphinx-copybutton
-  - sphinx
-  - docutils
-  - pip
-  - pip:
-    - sphinx_rtd_theme
+  - docutils<0.19
+  - sphinx=7.2.6
+  - sphinx-copybutton=0.5.2
+  - myst_nb=1.0.0
+  - sphinx-design=0.5.0
+  - sphinx_rtd_theme=1.3
