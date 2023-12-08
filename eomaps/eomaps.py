@@ -5705,5 +5705,5 @@ class Maps(metaclass=_MapsMeta):
                 self.BM._before_fetch_bg_actions.append(cb)
                 self.ax._EOmaps_rounded_spine_attached = True
 
-            self.redraw("__SPINES__")
+        self.redraw("__SPINES__")
         self.redraw("__BG__")
