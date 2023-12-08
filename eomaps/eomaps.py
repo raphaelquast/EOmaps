@@ -3373,7 +3373,7 @@ class Maps(metaclass=_MapsMeta):
             # print a snapshot to the active ipython cell in case the
             # inline-backend is used
             if active_backend in ["module://matplotlib_inline.backend_inline"]:
-                self.BM.update(clear_snapshot=clear)
+                self.snapshot(clear=clear)
             else:
                 plt.show()
 
