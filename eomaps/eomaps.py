@@ -105,20 +105,7 @@ def _handle_backends():
                 "To change, use Maps.config(use_interactive_mode=True/False)."
             )
 
-    # check if we are in an ipython console using the inline-backend.
-    # If yes, put a snapshot of the map into the active cell on each update
-    if BlitManager._snapshot_on_update is None:
-        try:
-            __IPYTHON__
-        except NameError:
-            BlitManager._snapshot_on_update = False
-        else:
-            active_backend = plt.get_backend()
-            # print a snapshot to the active ipython cell in case the
-            # inline-backend is used
-            if active_backend in ["module://matplotlib_inline.backend_inline"]:
-                BlitManager._snapshot_on_update = True
-
+    BlitManager._snapshot_on_update = False
 
 # hardcoded list of available mapclassify-classifiers
 # (to avoid importing it on startup)
