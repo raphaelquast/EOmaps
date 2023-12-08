@@ -107,6 +107,7 @@ def _handle_backends():
 
     BlitManager._snapshot_on_update = False
 
+
 # hardcoded list of available mapclassify-classifiers
 # (to avoid importing it on startup)
 _CLASSIFIERS = (
