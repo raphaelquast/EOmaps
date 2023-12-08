@@ -6,4 +6,9 @@ build:
     python: "mambaforge-4.10"
 
 conda:
-  environment: tests/test_env.yml
+  environment: tests/docs_env.yml
+
+python:
+  install:
+    - method: pip
+      path: .
