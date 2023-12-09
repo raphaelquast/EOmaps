@@ -105,8 +105,6 @@ def _handle_backends():
                 "To change, use Maps.config(use_interactive_mode=True/False)."
             )
 
-    BlitManager._snapshot_on_update = False
-
 
 # hardcoded list of available mapclassify-classifiers
 # (to avoid importing it on startup)
