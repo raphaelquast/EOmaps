@@ -1,7 +1,7 @@
 import logging
 
-from PyQt5 import QtWidgets, QtGui
-from PyQt5.QtCore import Qt, QLocale, pyqtSignal
+from qtpy import QtWidgets, QtGui
+from qtpy.QtCore import Qt, QLocale, Signal
 from pathlib import Path
 import io
 import numpy as np
@@ -1337,7 +1337,7 @@ class OpenDataStartTab(QtWidgets.QWidget):
 
 
 class OpenFileTabs(QtWidgets.QTabWidget):
-    openNewFile = pyqtSignal()
+    openNewFile = Signal()
 
     def __init__(self, *args, m=None, **kwargs):
         super().__init__(*args, **kwargs)

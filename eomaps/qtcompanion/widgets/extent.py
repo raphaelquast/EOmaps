@@ -1,8 +1,8 @@
 import logging
 from datetime import datetime
 
-from PyQt5 import QtWidgets
-from PyQt5.QtCore import pyqtSlot
+from qtpy import QtWidgets
+from qtpy.QtCore import Slot
 
 _log = logging.getLogger(__name__)
 
@@ -34,7 +34,7 @@ class SetExtentToLocation(QtWidgets.QWidget):
                 "'location' can be a country-name, a city-name an address etc.",
             )
 
-    @pyqtSlot()
+    @Slot()
     def set_extent(self):
         # make sure that queries have a couple of seconds delay
         # to comply to OpenStreetMap Nominatim Usage Policy

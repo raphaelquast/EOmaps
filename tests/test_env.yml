@@ -29,6 +29,8 @@ dependencies:
   - coveralls
   - pytest
   - pytest-cov
+  # --------------to support multiple Qt versions
+  - qtpy
   # --------------for building the docs
   - sphinx-copybutton
   - sphinx
