@@ -25,6 +25,52 @@ the plot-settings must be adjusted to ensure that ``matplotlib`` plots remain in
 
 .. image:: _static/spyder_preferences.png
 
+.. _config_vscode:
+
+VSCode / VSCodium
+-----------------
+
+.. currentmodule:: eomaps
+
+In general, EOmaps works "out of the box" with `VSCode <https://code.visualstudio.com/>`_ or the open-source variant `VSCodium <https://vscodium.com/>`_ (together with the standard `Python <https://marketplace.visualstudio.com/items?itemName=ms-python.python>`_ extension).
+
+However, there are some tipps that might help with your mapping workflow:
+
+- In a normal python-terminal, the default matplotlib backend will be ``QtAgg`` in a **non-interactive mode**.
+  This means that you must call `m.show()` at the end of the script to actually show the figure.
+  Once the figure is shown, **the terminal is blocked until the figure is closed**.
+
+- To **avoid blocking the terminal** while a figure is running, you can **activate matplotlib's interactive-mode** using
+
+  .. code-block:: python
+
+      from eomaps import Maps
+      Maps.config(use_interactive_mode=True)
+
+  Once activated, figures are immediately shown as soon as a new :py:class:`Maps` object is created and the terminal is **not blocked** (e.g. you can continue to execute commands that update the figure).
+
+.. note::
+
+   If you run a whole script using the **interactive mode**, the script will run until the end and then usually terminate the associated kernel... and in turn also closing the figure! If you want to keep the figure open, either make sure that the terminal is kept alive by entering debug-mode, or avoid activating the interactive mode and block the terminal with `m.show()`.
+
+Interactive IPython (e.g. Jupyter)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+If you enjoy interactive coding in a Jupyter-Notebook style, make sure to have a look at the nice `Jupyter <https://marketplace.visualstudio.com/items?itemName=ms-toolsai.jupyter>`_ extension!
+
+It allows you to work with an interactive IPython terminal and execute code-blocks (separated by the ``# %%`` indicator).
+
+- With IPython, the default behavior is to create static (inline) figures (same as with Jupyter Notebooks)!
+  To print a snapshot of the current state of a figure to the IPython terminal, call :py:meth:`Maps.show` or :py:meth:`Maps.snapshot`.
+
+- Same as with Jupyter Notebooks, you can use *"magic"* commands to set the used matpltolib backend.
+
+  - For interactive (popup) figures, switch to the default Qt backend using ``%matplotlib qt``
+  - For interactive (inline) figures, you'll need to install `ipympl <https://github.com/matplotlib/ipympl>`_ and then activate the ``widget`` with ``%matplotlib widget``.
+
+  - For more details, see the associated section for :ref:`config_jupyter_notebook`
+
+
 .. _config_pycharm:
 
 PyCharm IDE
