@@ -30,7 +30,7 @@ the plot-settings must be adjusted to ensure that ``matplotlib`` plots remain in
 VSCode / VSCodium
 -----------------
 
-.. currentmodule:: eomaps
+.. currentmodule:: eomaps.eomaps
 
 In general, EOmaps works "out of the box" with `VSCode <https://code.visualstudio.com/>`_ or the open-source variant `VSCodium <https://vscodium.com/>`_ (together with the standard `Python <https://marketplace.visualstudio.com/items?itemName=ms-python.python>`_ extension).
 
@@ -95,7 +95,6 @@ To my knowledge there are 2 possibilities to force ``pycharm`` to use the origin
   | (to ensure that the ``matplotlib`` backend is always set prior to running a script)
 
   .. image:: _static/pycharm_preferences.png
-
 
 In addition, if you use a **commercial version** of PyCharm, make sure to **disable** *"Show plots in tool window"*
 in the **Python Scientific** preferences since it forces plots to be rendered as static images.
