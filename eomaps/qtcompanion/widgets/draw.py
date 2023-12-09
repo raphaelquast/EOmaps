@@ -1,7 +1,7 @@
 import logging
 
-from PyQt5 import QtWidgets
-from PyQt5.QtCore import Qt, pyqtSlot, pyqtSignal
+from qtpy import QtWidgets
+from qtpy.QtCore import Qt, Slot, Signal
 
 from .utils import ColorWithSlidersWidget
 
@@ -157,14 +157,14 @@ class DrawerTabs(QtWidgets.QTabWidget):
                 "are removed from the map.",
             )
 
-    @pyqtSlot(int)
+    @Slot(int)
     def tabbar_clicked(self, index):
         if self.tabText(index) == "+":
             w = self._get_new_drawer()
             self.insertTab(self.count() - 1, w, "0")
             self.update_tab_icon(w=w)
 
-    @pyqtSlot(int)
+    @Slot(int)
     def close_handler(self, index):
         curridx = self.currentIndex()
         drawerwidget = self.widget(index)
@@ -202,7 +202,7 @@ class DrawerTabs(QtWidgets.QTabWidget):
             if self.tabText(i) != "+":
                 self.widget(i).set_layer(layer)
 
-    @pyqtSlot()
+    @Slot()
     def update_tab_icon(self, w=None):
         if w is None:
             w = self.sender()
@@ -211,7 +211,7 @@ class DrawerTabs(QtWidgets.QTabWidget):
 
 class DrawerWidget(QtWidgets.QWidget):
 
-    colorSelected = pyqtSignal()
+    colorSelected = Signal()
 
     _polynames = {
         "Polygon": "polygon",
@@ -356,7 +356,7 @@ class DrawerWidget(QtWidgets.QWidget):
             )
 
     def draw_shape_callback(self, poly):
-        @pyqtSlot()
+        @Slot()
         def cb():
             s = self.sender()
             for b in self.polybuttons:
@@ -373,7 +373,7 @@ class DrawerWidget(QtWidgets.QWidget):
 
         return cb
 
-    @pyqtSlot()
+    @Slot()
     def _new_poly_cb(self):
         # callback executed on creation of a new polygon
         npoly = len(self.drawer._artists)
@@ -394,7 +394,7 @@ class DrawerWidget(QtWidgets.QWidget):
         self.save_button.setText(txt)
         self.save_button.setFixedSize(self.save_button.sizeHint())
 
-    @pyqtSlot()
+    @Slot()
     def save_shapes(self):
         try:
             save_path, widget = QtWidgets.QFileDialog.getSaveFileName(
@@ -412,7 +412,7 @@ class DrawerWidget(QtWidgets.QWidget):
                 exc_info=_log.getEffectiveLevel() <= logging.DEBUG,
             )
 
-    @pyqtSlot()
+    @Slot()
     def remove_last_shape(self):
         try:
             self.drawer.remove_last_shape()
@@ -425,7 +425,7 @@ class DrawerWidget(QtWidgets.QWidget):
                 exc_info=_log.getEffectiveLevel() <= logging.DEBUG,
             )
 
-    @pyqtSlot()
+    @Slot()
     def cancel_draw(self):
         self.drawer._finish_drawing()
 
@@ -440,16 +440,17 @@ class DrawerWidget(QtWidgets.QWidget):
     def set_layer(self, layer):
         self.drawer.set_layer(layer)
 
-    @pyqtSlot()
+    @Slot()
     def get_tab_icon(self):
-        from PyQt5 import QtGui
-        from PyQt5.QtCore import QRectF
+        from qtpy import QtGui
+        from qtpy.QtCore import QRectF
 
         canvas = QtGui.QPixmap(20, 20)
         canvas.fill(Qt.transparent)
 
         painter = QtGui.QPainter(canvas)
-        painter.setRenderHints(QtGui.QPainter.HighQualityAntialiasing)
+        painter.setRenderHint(QtGui.QPainter.Antialiasing, True)
+        painter.setRenderHint(QtGui.QPainter.SmoothPixmapTransform, True)
 
         painter.setBrush(QtGui.QBrush(self.colorselector.facecolor, Qt.SolidPattern))
 

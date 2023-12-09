@@ -1,6 +1,6 @@
-from PyQt5 import QtWidgets
-from PyQt5.QtCore import Qt, pyqtSignal, pyqtSlot, QSize, QObject
-from PyQt5.QtGui import QKeySequence
+from qtpy import QtWidgets
+from qtpy.QtCore import Qt, Signal, Slot, QSize, QObject
+from qtpy.QtGui import QKeySequence
 
 from .base import AlwaysOnTopWindow
 from .widgets.peek import PeekTabs
@@ -128,7 +128,7 @@ class ControlTabs(QtWidgets.QTabWidget):
             """
         )
 
-    @pyqtSlot()
+    @Slot()
     def tabchanged(self):
 
         if self.currentWidget() == self.tab_compare:
@@ -183,7 +183,7 @@ class MenuWindow(AlwaysOnTopWindow):
         # self.resize(int(sh.width() * 1.35), sh.height())
 
         # clear the colormaps-dropdown pixmap cache if the colormaps have changed
-        # (the pyqtSignal is emmited by Maps-objects if a new colormap is registered)
+        # (the Signal is emmited by Maps-objects if a new colormap is registered)
         self.m._connect_signal("cmapsChanged", self.clear_pixmap_cache)
 
     def show(self):
@@ -196,7 +196,7 @@ class MenuWindow(AlwaysOnTopWindow):
         self.shortcut.activated.connect(self.toggle_show)
         self.shortcut.activatedAmbiguously.connect(self.toggle_show)
 
-    @pyqtSlot()
+    @Slot()
     def toggle_show(self):
         if self.isVisible():
             self.hide()
@@ -206,6 +206,6 @@ class MenuWindow(AlwaysOnTopWindow):
             self.activateWindow()
             self.m._indicate_companion_map(True)
 
-    @pyqtSlot()
+    @Slot()
     def clear_pixmap_cache(self):
         get_cmap_pixmaps.cache_clear()

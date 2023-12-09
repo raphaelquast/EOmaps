@@ -25,6 +25,8 @@ dependencies:
   - requests
   - xmltodict
   - cairosvg
+  # --------------to support multiple Qt versions
+  - qtpy
   # --------------for testing
   - coveralls
   - pytest

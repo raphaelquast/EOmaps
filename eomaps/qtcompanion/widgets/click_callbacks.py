@@ -1,5 +1,5 @@
-from PyQt5 import QtWidgets, QtGui
-from PyQt5.QtCore import Qt, pyqtSignal, pyqtSlot
+from qtpy import QtWidgets, QtGui
+from qtpy.QtCore import Qt, Signal, Slot
 
 
 class AnnotateButton(QtWidgets.QPushButton):
@@ -152,7 +152,7 @@ class ClearButton(QtWidgets.QPushButton):
 
 
 class ClickCallbacks(QtWidgets.QFrame):
-    widgetShown = pyqtSignal()
+    widgetShown = Signal()
 
     def __init__(self, *args, m=None, **kwargs):
         super().__init__(*args, **kwargs)
@@ -322,7 +322,7 @@ class ClickCallbacks(QtWidgets.QFrame):
 
         return pickm
 
-    @pyqtSlot()
+    @Slot()
     def clear_annotations_and_markers(self):
         # clear all annotations and markers from this axis
         # (irrespective of the visible layer!)
@@ -401,7 +401,7 @@ class ClickCallbacks(QtWidgets.QFrame):
         self.populate_dropdown()
         self.update_buttons()
 
-    @pyqtSlot()
+    @Slot()
     def update_buttons(self):
         if self._pick_map is None or self._pick_map.coll is None:
             self.t_pick.setEnabled(False)
@@ -494,7 +494,7 @@ class ClickCallbacks(QtWidgets.QFrame):
 
             self.cids[key] = (self.m.all, method(**self._kwargs.get(key, dict())))
 
-    @pyqtSlot()
+    @Slot()
     def radius_changed(self):
         try:
             radius = float(self.radius_inp.text())
@@ -504,7 +504,7 @@ class ClickCallbacks(QtWidgets.QFrame):
         self.attach_callback("mark")
         self.update_buttons()
 
-    @pyqtSlot()
+    @Slot()
     def n_points_changed(self):
         try:
             n = int(self.n_points_inp.text())
@@ -516,7 +516,7 @@ class ClickCallbacks(QtWidgets.QFrame):
         self.update_buttons()
 
     def button_clicked(self, key):
-        @pyqtSlot()
+        @Slot()
         def cb():
             if self.cids.get(key, None) is not None:
                 self.remove_callback(key)

@@ -1,9 +1,9 @@
 import logging
 from textwrap import dedent
 
-from PyQt5 import QtCore, QtWidgets, QtGui
-from PyQt5.QtCore import Qt, pyqtSignal, pyqtSlot, QPointF
-from PyQt5.QtGui import QFont
+from qtpy import QtCore, QtWidgets, QtGui
+from qtpy.QtCore import Qt, Signal, Slot, QPointF
+from qtpy.QtGui import QFont
 
 from matplotlib.colors import to_rgba_array
 
@@ -22,7 +22,7 @@ _log = logging.getLogger(__name__)
 
 
 class AddFeaturesMenuButton(QtWidgets.QPushButton):
-    FeatureAdded = pyqtSignal(str)
+    FeatureAdded = Signal(str)
 
     def __init__(self, *args, m=None, sub_menu="preset", **kwargs):
         super().__init__(*args, **kwargs)
@@ -134,7 +134,7 @@ class AddFeaturesMenuButton(QtWidgets.QPushButton):
 
         super().enterEvent(e)
 
-    @pyqtSlot()
+    @Slot()
     def show_menu(self):
         self.feature_menu.popup(self.mapToGlobal(self.menu_button.pos()))
 
@@ -142,7 +142,7 @@ class AddFeaturesMenuButton(QtWidgets.QPushButton):
         self.layer = layer
 
     def menu_callback_factory(self, featuretype, feature):
-        @pyqtSlot()
+        @Slot()
         def cb():
             # TODO set the layer !!!!
             if self.layer is None:
@@ -284,7 +284,7 @@ class AddFeatureWidget(QtWidgets.QFrame):
 
         self.setLayout(layout_tight)
 
-    @pyqtSlot()
+    @Slot()
     def update_props(self):
         # don't specify alpha! it interferes with the alpha of the colors!
 
@@ -477,7 +477,7 @@ class ArtistInfoButton(BasicCheckableToolButton):
                 "</ul>",
             )
 
-    @pyqtSlot()
+    @Slot()
     def on_click(self, *args, **kwargs):
         global _last_info_button
         global _init_size
@@ -523,7 +523,7 @@ class ArtistInfoButton(BasicCheckableToolButton):
 
 
 class LayerArtistTabs(QtWidgets.QTabWidget):
-    plusClicked = pyqtSignal()
+    plusClicked = Signal()
 
     def __init__(self, *args, m=None, **kwargs):
         super().__init__(*args, **kwargs)
@@ -733,7 +733,7 @@ class LayerTabBar(QtWidgets.QTabBar):
         else:
             super().mousePressEvent(event)
 
-    @pyqtSlot()
+    @Slot()
     def get_tab_icon(self, color="red"):
         if isinstance(color, str):
             color = QtGui.QColor(color)
@@ -744,7 +744,8 @@ class LayerTabBar(QtWidgets.QTabBar):
         canvas.fill(Qt.transparent)
 
         painter = QtGui.QPainter(canvas)
-        painter.setRenderHints(QtGui.QPainter.HighQualityAntialiasing)
+        painter.setRenderHint(QtGui.QPainter.Antialiasing, True)
+        painter.setRenderHint(QtGui.QPainter.SmoothPixmapTransform, True)
 
         pencolor = QtGui.QColor(color)
         pencolor.setAlpha(100)
@@ -799,7 +800,7 @@ class LayerTabBar(QtWidgets.QTabBar):
         except StopIteration:
             pass
 
-    @pyqtSlot()
+    @Slot()
     def tab_moved(self):
         # get currently active layers
         active_layers, alphas = self.m.BM._get_layers_alphas()
@@ -822,7 +823,7 @@ class LayerTabBar(QtWidgets.QTabBar):
             alpha_order = [alphas[active_layers.index(i)] for i in layer_order]
             self.m.show_layer(*zip(layer_order, alpha_order))
 
-    @pyqtSlot(int)
+    @Slot(int)
     def close_handler(self, index):
         layer = self.tabText(index)
 
@@ -842,7 +843,7 @@ class LayerTabBar(QtWidgets.QTabBar):
         _ = self._msg.show()
 
     def get_close_tab_cb(self, index):
-        @pyqtSlot()
+        @Slot()
         def cb():
             self._do_close_tab(index)
 
@@ -959,7 +960,7 @@ class LayerTabBar(QtWidgets.QTabBar):
             # re-connect tab_moved callback
             self.tabMoved.connect(self.tab_moved)
 
-    @pyqtSlot()
+    @Slot()
     def populate_on_layer(self, *args, **kwargs):
         lastlayer = getattr(self, "_last_populated_layer", "")
         currlayer = self.m.BM.bg_layer
@@ -972,7 +973,7 @@ class LayerTabBar(QtWidgets.QTabBar):
             # still update tab colors  (e.g. if layers are removed from multi)
             self.color_active_tab()
 
-    @pyqtSlot()
+    @Slot()
     def populate(self, *args, **kwargs):
         if not self.isVisible():
             return
@@ -1034,7 +1035,7 @@ class LayerTabBar(QtWidgets.QTabBar):
         # try to restore the previously opened tab
         self.set_current_tab_by_name(self._current_tab_name)
 
-    @pyqtSlot(str)
+    @Slot(str)
     def set_current_tab_by_name(self, layer):
         if layer is None:
             layer = self.m.BM.bg_layer
@@ -1051,7 +1052,7 @@ class LayerTabBar(QtWidgets.QTabBar):
             if found is False:
                 self.setCurrentIndex(0)
 
-    @pyqtSlot(int)
+    @Slot(int)
     def tabchanged(self, index):
         # TODO
         # modifiers are only released if the canvas has focus while the event happens!!
@@ -1362,7 +1363,7 @@ class ArtistEditorTabs(LayerArtistTabs):
 
         return layout
 
-    @pyqtSlot()
+    @Slot()
     def populate_on_layer(self, *args, **kwargs):
         lastlayer = getattr(self, "_last_populated_layer", "")
         currlayer = self.m.BM.bg_layer
@@ -1383,7 +1384,7 @@ class ArtistEditorTabs(LayerArtistTabs):
             # layers are selected (and the transparency of a sub-layer is changed)
             self.tabBar().color_active_tab(adjust_order=False)
 
-    @pyqtSlot()
+    @Slot()
     def populate(self, *args, **kwargs):
         if not self.isVisible():
             return
@@ -1463,7 +1464,7 @@ class ArtistEditorTabs(LayerArtistTabs):
             alpha = 1
         return alpha
 
-    @pyqtSlot()
+    @Slot()
     def populate_layer(self, layer=None):
         if not self.isVisible():
             return
@@ -1599,7 +1600,7 @@ class ArtistEditorTabs(LayerArtistTabs):
         self.m.redraw(layer)
 
     def remove(self, artist, layer):
-        @pyqtSlot()
+        @Slot()
         def cb():
             self._msg = QtWidgets.QMessageBox(self)
 
@@ -1620,7 +1621,7 @@ class ArtistEditorTabs(LayerArtistTabs):
         return cb
 
     def show_hide(self, artist, layer):
-        @pyqtSlot()
+        @Slot()
         def cb():
             if artist in self.m.BM._hidden_artists:
                 self.m.BM._hidden_artists.remove(artist)
@@ -1635,7 +1636,7 @@ class ArtistEditorTabs(LayerArtistTabs):
         return cb
 
     def set_zorder(self, artist, layer, widget):
-        @pyqtSlot()
+        @Slot()
         def cb():
             val = widget.text()
             if len(val) > 0:
@@ -1646,7 +1647,7 @@ class ArtistEditorTabs(LayerArtistTabs):
         return cb
 
     def set_alpha(self, artist, layer, widget):
-        @pyqtSlot()
+        @Slot()
         def cb():
             val = widget.text()
             if len(val) > 0:
@@ -1657,7 +1658,7 @@ class ArtistEditorTabs(LayerArtistTabs):
         return cb
 
     def set_linewidth(self, artist, layer, widget):
-        @pyqtSlot()
+        @Slot()
         def cb():
             val = widget.text()
             if len(val) > 0:
@@ -1668,7 +1669,7 @@ class ArtistEditorTabs(LayerArtistTabs):
         return cb
 
     def set_cmap(self, artist, layer, widget):
-        @pyqtSlot()
+        @Slot()
         def cb():
             val = widget.currentText()
             if len(val) > 0:
@@ -1678,7 +1679,7 @@ class ArtistEditorTabs(LayerArtistTabs):
 
         return cb
 
-    @pyqtSlot()
+    @Slot()
     def set_layer_alpha(self, layer, alpha):
         layers, alphas = self.m.BM._get_layers_alphas()
         if layer in layers:
@@ -1811,7 +1812,7 @@ class ArtistEditor(QtWidgets.QWidget):
         # with respect to the currently selected layer-tab
         self.artist_tabs.tabBar().currentChanged.connect(self.set_layer)
 
-    @pyqtSlot()
+    @Slot()
     def set_layer(self):
         layer = self.artist_tabs.tabText(self.artist_tabs.currentIndex())
         for s in self.addfeature.selectors:
