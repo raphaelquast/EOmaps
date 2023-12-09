@@ -26,6 +26,7 @@ dependencies:
   - xmltodict
   - cairosvg
   # --------------for testing
+  - nbformat     # to parse Jupyter Notebooks
   - coveralls
   - pytest
   - pytest-cov
