@@ -37,7 +37,7 @@ In general, EOmaps works "out of the box" with `VSCode <https://code.visualstudi
 However, there are some tipps that might help with your mapping workflow:
 
 - In a normal python-terminal, the default matplotlib backend will be ``QtAgg`` in a **non-interactive mode**.
-  This means that you must call `m.show()` at the end of the script to actually show the figure.
+  This means that you must call :py:meth:`Maps.show` at the end of the script to actually show the figure.
   Once the figure is shown, **the terminal is blocked until the figure is closed**.
 
 - To **avoid blocking the terminal** while a figure is running, you can **activate matplotlib's interactive-mode** using
