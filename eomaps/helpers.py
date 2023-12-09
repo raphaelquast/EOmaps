@@ -1539,7 +1539,7 @@ class LayoutEditor:
 class BlitManager:
     """Manager used to schedule draw events, cache backgrounds, etc."""
 
-    _snapshot_on_update = None
+    _snapshot_on_update = False
 
     def __init__(self, m):
         """
