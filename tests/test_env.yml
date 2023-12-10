@@ -30,12 +30,7 @@ dependencies:
   - coveralls
   - pytest
   - pytest-cov
-  # --------------to support multiple Qt versions
-  - qtpy
-  # --------------for building the docs
-  - sphinx-copybutton
-  - sphinx
+  # --------------for testing the docs
   - docutils
-  - pip
-  - pip:
-    - sphinx_rtd_theme
+  - jupyter
+  - nbformat
