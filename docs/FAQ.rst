@@ -25,10 +25,9 @@ used to create EOmaps maps!
 Configuring the editor (IDE)
 ****************************
 
-EOmaps can be used with whatever editor you like... however, some editors have special settings that can be
-adjusted to improve your mapping experience with **EOmaps**:
+EOmaps can be used with whatever editor you like!
 
-.. _config_spyder:
+However, for some editors there are special settings that can be adjusted to improve your mapping experience with **EOmaps**:
 
 .. dropdown:: Spyder
 
@@ -49,15 +48,11 @@ adjusted to improve your mapping experience with **EOmaps**:
 
       If the gaphics-backend is set to *"Automatic"*, you can still plot static snapshots of a figure to the "plots-pane" with :py:meth:`Maps.snapshot`!
 
-
-.. _config_vscode:
-
-
 .. dropdown:: VSCode / VSCodium
 
     .. currentmodule:: eomaps.eomaps
 
-    In general, EOmaps works "out of the box" with `VSCode <https://code.visualstudio.com/>`_ or the open-source variant `VSCodium <https://vscodium.com/>`_ (together with the standard `Python <https://marketplace.visualstudio.com/items?itemName=ms-python.python>`_ extension).
+    In general, EOmaps should work "out of the box" with `VSCode <https://code.visualstudio.com/>`_ or the open-source variant `VSCodium <https://vscodium.com/>`_ (together with the standard `Python <https://marketplace.visualstudio.com/items?itemName=ms-python.python>`_ extension).
 
     However, there are some tipps that might help with your mapping workflow:
 
@@ -78,8 +73,9 @@ adjusted to improve your mapping experience with **EOmaps**:
 
        If you run a whole script using the **interactive mode**, the script will run until the end and then usually terminate the associated kernel... and in turn also closing the figure! If you want to keep the figure open, either make sure that the terminal is kept alive by entering debug-mode, or avoid activating the interactive mode and block the terminal with `m.show()`.
 
-    Interactive IPython (e.g. Jupyter)
-    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    .. raw:: html
+
+       <font size=+1><b>Interactive IPython (e.g. Jupyter)</b></font><p>
 
     If you enjoy interactive coding in a Jupyter-Notebook style, make sure to have a look at the nice `Jupyter <https://marketplace.visualstudio.com/items?itemName=ms-toolsai.jupyter>`_ extension!
 
@@ -94,9 +90,6 @@ adjusted to improve your mapping experience with **EOmaps**:
       - For interactive (inline) figures, you'll need to install `ipympl <https://github.com/matplotlib/ipympl>`_ and then activate the ``widget`` with ``%matplotlib widget``.
 
       - For more details, see the associated section for :ref:`config_jupyter_notebook`
-
-
-.. _config_pycharm:
 
 .. dropdown:: PyCharm
 
@@ -125,19 +118,23 @@ adjusted to improve your mapping experience with **EOmaps**:
 
     .. image:: _static/pycharm_preferences_2.png
 
-
-.. _config_jupyter_notebook:
-
 .. dropdown:: Jupyter Notebooks
 
-    To get the most out of EOmaps in Jupyter Notebooks, use `jupyter lab <https://jupyterlab.readthedocs.io/en/stable/>`_  together with the `ipympl <https://github.com/matplotlib/ipympl>`_ (``widget``) backend.
+    .. currentmodule:: eomaps.eomaps
 
-    - To install, use ``conda install -c conda-forge ipympl``
+    When working with Jupyter Notebooks, we recommend to use `Jupyter Lab <https://jupyterlab.readthedocs.io/en/stable/>`_.
 
-    Once it's installed, use the command ``%matplotlib widget`` at the start of the code to activate the backend.
+    - By default, EOmaps will use the ``inline`` backend and put a **static snapshot** of the current state of the figure to the Jupyter Notebook cell whenever you call :py:meth:`Maps.show` or :py:meth:`Maps.snapshot`.
 
-    Using the Companion Widget
-    ~~~~~~~~~~~~~~~~~~~~~~~~~~
+    - To get **interactive inline figures** in Jupyter Notebooks, you have to switch to the `ipympl <https://github.com/matplotlib/ipympl>`_ (``widget``) backend.
+
+      - To install, use ``conda install -c conda-forge ipympl``
+      - Once it's installed, you can use the *"magic command"* ``%matplotlib widget`` at the start of the code to activate the backend.
+
+    .. raw:: html
+
+       <font size=+1><b>Using the Companion Widget</b></font><p>
+
     To use the :ref:`companion_widget` in backends other than ``Qt`` the Qt event-loop must be integrated.
     This can be done with the ``%gui qt`` command.
 
@@ -150,26 +147,33 @@ adjusted to improve your mapping experience with **EOmaps**:
       m = Maps()
       m.add_feature.preset("coastline", "ocean")
 
-    Alternative backends:
-    ~~~~~~~~~~~~~~~~~~~~~
-    For classical notebooks, there's also the ``nbagg`` backend provided by matplotlib
+    .. raw:: html
 
-    - To use it, simply execute the magic ``%matplotlib notebook`` before starting to plot.
+       <font size=+1><b>Alternative backends</b></font><p>
 
-    And you can also use the magic ``%matplotlib qt`` to use the default ``qt5agg`` backend.
+    - For classical notebooks, there's also the ``nbagg`` backend provided by matplotlib
 
-    - This way the plots will NOT be embedded in the notebook, they show up as popups.
+      - To use it, simply execute the magic ``%matplotlib notebook`` before starting to plot.
+
+    - You can also use the magic ``%matplotlib qt`` to use the default ``qt5agg`` backend.
+
+      - This way the plots will NOT be embedded in the notebook, they show up as **interactive popup figures**!
 
     .. note::
 
-      It is possible to plot **static snapshots** of the current state of a map to a Jupyter Notebook
-      irrespective of the used backend by using `m.snapshot()`, e.g.:
+      .. currentmodule:: eomaps.eomaps
+
+      Irrespective of the used backend, you can always plot a **static snapshots** of the current state of a map to a Jupyter Notebook
+      with :py:meth:`Maps.snapshot`!
 
       .. code-block:: python
 
+        %matplotlib qt    # Create figures as interactive popup widgets
+
+        from eomaps import Maps
         m = Maps()
-        m.add_feature.preset.coastline()
-        m.snapshot()
+        m.add_feature.preset("coastline", "ocean")
+        m.snapshot()      # Print a snapshot of the current state of the figure to the Jupyter Notebook
 
 
     Checkout the `matplotlib doc <https://matplotlib.org/stable/users/explain/interactive.html#jupyter-notebooks-jupyterlab>`_
