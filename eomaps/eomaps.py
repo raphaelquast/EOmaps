@@ -1177,7 +1177,7 @@ class Maps(metaclass=_MapsMeta):
 
     def _get_always_on_top(self):
         if "qt" in plt.get_backend().lower():
-            from PyQt5 import QtCore
+            from qtpy import QtCore
 
             w = self.f.canvas.window()
             return bool(w.windowFlags() & QtCore.Qt.WindowStaysOnTopHint)
@@ -1187,7 +1187,7 @@ class Maps(metaclass=_MapsMeta):
     def _set_always_on_top(self, q):
         # keep pyqt window on top
         try:
-            from PyQt5 import QtCore
+            from qtpy import QtCore
 
             if q:
                 # only do this if necessary to avoid flickering
@@ -4006,9 +4006,9 @@ class Maps(metaclass=_MapsMeta):
         """
         import io
         import mimetypes
-        from PyQt5.QtCore import QMimeData
-        from PyQt5.QtWidgets import QApplication
-        from PyQt5.QtGui import QImage
+        from qtpy.QtCore import QMimeData
+        from qtpy.QtWidgets import QApplication
+        from qtpy.QtGui import QImage
 
         # guess the MIME type from the provided file-extension
         fmt = kwargs.get("format", "png")

@@ -1,5 +1,5 @@
-from PyQt5 import QtWidgets, QtGui
-from PyQt5.QtCore import Qt, pyqtSlot
+from qtpy import QtWidgets, QtGui
+from qtpy.QtCore import Qt, Slot
 
 
 class FiletypeComboBox(QtWidgets.QComboBox):
@@ -245,14 +245,14 @@ class SaveFileWidget(QtWidgets.QFrame):
         # set export props to current state of Maps._clipboard_kwargs
         self.set_export_props()
 
-    @pyqtSlot()
+    @Slot()
     def tight_cb_callback(self):
         if self.tightbbox_cb.isChecked():  # e.g. checked
             self.tightbbox_input.setVisible(True)
         else:
             self.tightbbox_input.setVisible(False)
 
-    @pyqtSlot()
+    @Slot()
     def rasterize_cb_callback(self, *args, **kwargs):
         if self.filetype_dropdown.currentText() in ["svg", "pdf", "eps"]:
             self.rasterize_cb.setVisible(True)
@@ -261,7 +261,7 @@ class SaveFileWidget(QtWidgets.QFrame):
             self.rasterize_cb.setVisible(False)
             self.rasterize_label.setVisible(False)
 
-    @pyqtSlot()
+    @Slot()
     def save_file(self):
         selected_filetype = self.filetype_dropdown.currentText()
 
@@ -295,7 +295,7 @@ class SaveFileWidget(QtWidgets.QFrame):
                 **kwargs,
             )
 
-    @pyqtSlot()
+    @Slot()
     def update_clipboard_kwargs(self, *args, **kwargs):
         clipboard_kwargs = dict(
             format=self.filetype_dropdown.currentText(),
@@ -312,7 +312,7 @@ class SaveFileWidget(QtWidgets.QFrame):
         # use private setter to avoid triggering callbacks on set
         self.m._set_clipboard_kwargs(**clipboard_kwargs)
 
-    @pyqtSlot()
+    @Slot()
     def set_export_props(self, *args, **kwargs):
         # callback that is triggerd on Maps.set_clipboard_kwargs
 

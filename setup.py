@@ -55,6 +55,7 @@ setup(
         "cairosvg",
         "packaging",
         "click",
+        "qtpy",
     ],
     entry_points={"console_scripts": ["eomaps = eomaps.scripts.open:cli"]},
     keywords=["visualization", "plotting", "maps", "geographical data"],
